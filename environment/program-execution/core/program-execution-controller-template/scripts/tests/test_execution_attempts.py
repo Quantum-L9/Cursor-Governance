@@ -19,6 +19,7 @@ from helpers import (
     SCRIPTS,
     bootstrap_repo,
     cleanup_worktree,
+    prepare_attempt,
     register_contract,
     run_cli,
     write_json,
@@ -44,6 +45,16 @@ def _rows(workspace: Path) -> list[dict[str, Any]]:
         ]
     finally:
         conn.close()
+
+
+def _task_state(workspace: Path) -> str:
+    db = StateDB(workspace / "runtime" / "state.sqlite")
+    try:
+        task = db.task("TASK-001")
+    finally:
+        db.close()
+    assert task is not None
+    return str(task["runtime_state"])
 
 
 def _start(temp: Path, workspace: Path) -> tuple[dict[str, Any], Path, dict[str, Any]]:
@@ -290,6 +301,51 @@ class DurableAttemptTests(unittest.TestCase):
                 )
             cleanup_worktree(repo, workspace)
 
+    def test_verify_refuses_a_bad_baseline_without_stranding_the_task(self) -> None:
+        """A baseline fault must fail `verify` closed while the task stays SUBMITTED.
+
+        `verify` used to take SUBMITTED -> VERIFYING (autocommitted) before it
+        loaded the attempt baseline, so a missing or corrupt artifact stranded
+        the task in VERIFYING with no receipt to replay and no way back. The
+        refusal must leave the task where it was, and repairing the evidence
+        must let the same attempt verify normally.
+        """
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            prepare_attempt(temp, workspace)
+            db = StateDB(workspace / "runtime" / "state.sqlite")
+            try:
+                attempt = db.execution_attempts("TASK-001")[-1]
+            finally:
+                db.close()
+            artifact = Path(attempt["baseline_path"])
+            original = artifact.read_bytes()
+
+            # Corrupt (rebound fingerprints -> digest mismatch): refused, still SUBMITTED.
+            payload = json.loads(original)
+            payload["baseline"] = {"docs/result.txt": "file:deadbeef"}
+            artifact.write_text(json.dumps(payload), encoding="utf-8")
+            refused = run_cli("verify", "TASK-001", "--workspace", str(workspace), expect=2)
+            self.assertEqual(refused["error_code"], "EXECUTION_BASELINE_MISSING")
+            self.assertEqual(_task_state(workspace), "SUBMITTED")
+
+            # Missing: refused, still SUBMITTED, nothing verified.
+            artifact.unlink()
+            refused = run_cli("verify", "TASK-001", "--workspace", str(workspace), expect=2)
+            self.assertEqual(refused["error_code"], "EXECUTION_BASELINE_MISSING")
+            self.assertEqual(_task_state(workspace), "SUBMITTED")
+            self.assertFalse((workspace / "receipts" / "verification" / "TASK-001.json").exists())
+
+            # Repaired evidence: the same attempt verifies and the task follows its verdict.
+            artifact.write_bytes(original)
+            verified = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            self.assertIn(verified["verdict"], {"PASSED_LOCAL", "FAILED"})
+            self.assertNotIn("replayed", verified)
+            self.assertEqual(_task_state(workspace), verified["verdict"])
+            cleanup_worktree(repo, workspace)
+
     def test_failure_settles_the_attempt_and_a_retry_mints_a_successor(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
@@ -314,6 +370,41 @@ class DurableAttemptTests(unittest.TestCase):
             self.assertNotEqual(second["attempt_id"], first["attempt_id"])
             self.assertEqual(second["attempt_number"], 2)
             self.assertEqual(len(_rows(workspace)), 2)
+            cleanup_worktree(repo, workspace)
+
+    def test_retry_verification_excludes_work_preserved_before_its_baseline(self) -> None:
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            _first, worktree, _ = _start(temp, workspace)
+            (worktree / "docs").mkdir(parents=True, exist_ok=True)
+            (worktree / "docs" / "result.txt").write_text("ok\n", encoding="utf-8")
+            run_cli(
+                "fail",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--reason",
+                "provider died after writing",
+                "--actor",
+                "worker",
+            )
+            _second, reused_worktree, contract = _start(temp, workspace)
+            self.assertEqual(reused_worktree, worktree)
+            run_cli(
+                "record-attempt",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--receipt",
+                str(_receipt(temp, contract, changed_files=[])),
+            )
+
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+
+            self.assertEqual(verification["observed_changed_files"], [])
+            self.assertEqual(verification["gates"]["changed_files_exact"], "PASS")
             cleanup_worktree(repo, workspace)
 
     def test_bind_dispatch_records_provider_correlation_on_the_live_attempt(self) -> None:

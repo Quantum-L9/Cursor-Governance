@@ -177,6 +177,26 @@ def test_cli_failure_is_warn_and_exit_zero(tmp_path: Path, monkeypatch: pytest.M
     assert receipt["returncode"] == 3
 
 
+def test_a_failed_publish_write_is_announced_loudly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Never a quiet WARN line: the banner goes to stdout AND stderr."""
+    (tmp_path / ".l9" / "pr").mkdir(parents=True)
+    (tmp_path / hook.SUMMARY_REL).write_text(json.dumps(_summary()), encoding="utf-8")
+    monkeypatch.delenv("L9_PR_PUBLISH_MEMORY", raising=False)
+    monkeypatch.setenv("L9_MEMORY_ENABLED", "1")
+    monkeypatch.setattr(
+        hook,
+        "run_write",
+        lambda argv, cwd: SimpleNamespace(returncode=3, stdout="", stderr="unbound"),
+    )
+    hook.main(["--workspace", str(tmp_path), "--gov-root", str(tmp_path)])
+    captured = capsys.readouterr()
+    for stream in (captured.out, captured.err):
+        assert "!!! L9 MEMORY WRITE FAILED" in stream
+        assert "was NOT written to memory (exit 3)" in stream
+
+
 def test_cli_is_spawned_from_the_hooks_own_tree_not_the_resolver_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

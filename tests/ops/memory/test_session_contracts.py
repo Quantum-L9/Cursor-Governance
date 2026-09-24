@@ -112,3 +112,31 @@ def test_no_provider_vocabulary_in_the_session_contract() -> None:
     text = Path(sc.__file__).read_text(encoding="utf-8")
     for token in ("add_memory", "search_memory_facts", "GRAPHITI_MCP", "PICKUP|"):
         assert token not in text
+
+
+# --- Post-publish handoff carried by the capsule ------------------------------
+
+
+def _capsule(**extra: object) -> sc.ContinuationCapsuleV2:
+    return sc.ContinuationCapsuleV2(
+        session_id="s-1",
+        repository_identity="Org/repo",
+        objective="Ship it",
+        next_action="merge",
+        repository_state_digest="d" * 40,
+        producer_version="t",
+        **extra,
+    )
+
+
+def test_a_capsule_without_a_handoff_keeps_its_exact_payload() -> None:
+    """Additive: capsules that carry no handoff serialize as before."""
+    assert "handoff" not in _capsule().to_payload()
+
+
+def test_the_handoff_round_trips_losslessly() -> None:
+    brief = {"schema": "l9.session_handoff.v1", "objective": "Ship it", "blocked": [{"item": "x"}]}
+    capsule = _capsule(handoff=brief)
+    restored = sc.ContinuationCapsuleV2.from_payload(json.loads(capsule.canonical()))
+    assert restored.handoff == brief
+    assert restored.digest() == capsule.digest()

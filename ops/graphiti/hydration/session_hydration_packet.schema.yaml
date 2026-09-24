@@ -118,6 +118,13 @@ properties:
   memory:
     type: object
     description: Canonical hydration integration receipt (plan §31). No memory content.
+  handoff:
+    type: [object, "null"]
+    description: >-
+      The resumed continuation's post-publish repository handoff
+      (l9.session_handoff.v1), carried losslessly from the capsule; null when the
+      continuation carries none. Its full contract is
+      ops/memory/schemas/l9.session_handoff.v1.schema.json.
   warnings:
     type: array
     items: { type: string, maxLength: 400 }

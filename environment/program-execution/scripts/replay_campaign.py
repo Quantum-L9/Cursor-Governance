@@ -189,6 +189,10 @@ def materialize_task(
     hold_back: dict[str, dict[str, tuple[str, ...]]] | None = None,
 ) -> dict[str, Any]:
     """Copy the task's declared writable paths from *ref* into its worktree."""
+    raise ReplayError(
+        "campaign materialize is disabled: it bypasses Controller lease, task-state, and "
+        "recovery authority. Use a Controller-owned recovery workflow instead."
+    )
     worktree = workspace / "worktrees" / task_id
     contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
     if not worktree.is_dir():
@@ -316,6 +320,10 @@ def reset_campaign(
     l9_root: Path,
 ) -> dict[str, Any]:
     """Retire the live runtime, rewind the target, and re-arm."""
+    raise ReplayError(
+        "campaign reset is disabled: it can retire live Controller state and rewind branches "
+        "without a Controller recovery receipt. Use Controller recovery instead."
+    )
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     programs = l9_root / "programs"
     live = programs / campaign_id

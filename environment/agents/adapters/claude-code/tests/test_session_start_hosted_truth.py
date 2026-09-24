@@ -11,10 +11,16 @@ RULE = Path(__file__).resolve().parents[5] / "rules" / "22-context7-auto-invoke.
 
 
 class SessionStartHostedTruthTests(unittest.TestCase):
-    def test_hook_marks_stale_workspace(self) -> None:
+    def test_hook_hands_workspace_ownership_to_the_reader(self) -> None:
+        """A receipt for another workspace is named by the ONE reader rule.
+
+        The hook used to parse the receipt inline and prefix STALE on a
+        single-field mismatch, a rule that disagreed with the reader's
+        covered_roots and with the runtime report about the same receipt.
+        """
         text = HOOK.read_text(encoding="utf-8")
-        self.assertIn('prefix="STALE: "', text)
-        self.assertIn("STALE: bootstrap receipt workspace", text)
+        self.assertIn('--workspace "$WORKSPACE"', text)
+        self.assertNotIn('prefix="STALE: "', text)
 
     def test_hook_prints_two_clone_banner(self) -> None:
         text = HOOK.read_text(encoding="utf-8")

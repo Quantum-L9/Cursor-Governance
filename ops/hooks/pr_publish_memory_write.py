@@ -265,6 +265,20 @@ def _write_receipt(workspace: Path, body: dict[str, Any]) -> None:
         pass
 
 
+def _loud(detail: str) -> None:
+    """A memory write that did not happen is announced, never a quiet WARN line.
+
+    Printed to stdout and stderr so it survives either stream being captured;
+    the agent running make pr must relay it (rules/48 publish report).
+    """
+    banner = (
+        f"!!! L9 MEMORY WRITE FAILED — {detail}\n"
+        "!!! Report this to the user; receipt: .l9/pr/pr-publish-memory.json"
+    )
+    print(banner)
+    print(banner, file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, required=True)
@@ -319,6 +333,7 @@ def main(argv: list[str] | None = None) -> int:
     fact = format_fact(summary, remediates=remediates, fallback=fallback)
     if not fact:
         print("pr publish memory: SKIP (no PR identity)")
+        _loud("publish fact NOT written: make pr supplied no PR identity (repo/number)")
         _write_receipt(
             workspace,
             {
@@ -344,6 +359,11 @@ def main(argv: list[str] | None = None) -> int:
     preview = (proc.stdout or proc.stderr or "").strip().splitlines()
     tail = preview[-1] if preview else f"exit {proc.returncode}"
     print(f"pr publish memory: {status} ({tail[:200]})")
+    if status != "OK":
+        _loud(
+            f"publish fact for {args.repo}#{args.number} was NOT written to memory "
+            f"(exit {proc.returncode}): {tail[:200]}"
+        )
     _write_receipt(
         workspace,
         {

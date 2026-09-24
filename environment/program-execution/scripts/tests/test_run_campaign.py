@@ -2923,8 +2923,13 @@ class RunCampaignTests(unittest.TestCase):
             executed: list[tuple[str, str]] = []
             # The fixture runtime carries no Controller state; identity
             # admission is the Controller's and is pinned in its own suite.
-            with unittest.mock.patch.object(
-                self.mod, "admit_resume_identity", return_value={"decision": "EXACT_MATCH"}
+            with (
+                unittest.mock.patch.object(
+                    self.mod, "admit_resume_identity", return_value={"decision": "EXACT_MATCH"}
+                ),
+                unittest.mock.patch.object(
+                    self.mod, "reconcile_resumed_source", return_value={"status": "CURRENT"}
+                ),
             ):
                 report = self.mod.run_campaign(
                     root / "intent.yaml",

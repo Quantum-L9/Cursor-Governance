@@ -404,25 +404,39 @@ def test_memory_write_by_one_agent_does_not_block_another_agent_coding(
 
 
 def test_memory_namespace_is_repository_scoped_not_branch_scoped() -> None:
-    """E9: the namespace never derives from branch identity."""
+    """E9: the namespace is the in-scope repository's own, never a branch.
+
+    The contract used to carry a static ``default_namespaces:
+    ["cursor-governance"]``, so every consumer repository's session requested
+    the governance SSOT's namespace. Requested namespaces now come from the
+    repositories in session scope (or an explicit L9_MEMORY_NAMESPACES).
+    """
     import sys
 
     sys.path.insert(0, str(CLAUDE / "memory"))
     import memory_state as st
 
     contract = st.load_contract()
-    namespaces = contract["memory"]["default_namespaces"]
-    assert namespaces == ["cursor-governance"]
-    forbidden = {"main", "master", "default", "test", ""}
-    assert not (set(namespaces) & forbidden)
+    assert "default_namespaces" not in contract["memory"], "no governance-repo constant"
 
     previous = os.environ.get("L9_MEMORY_NAMESPACES")
     try:
         os.environ.pop("L9_MEMORY_NAMESPACES", None)
-        first = st.resolve_namespaces(contract)
+        # A consumer repository in scope requests its own namespace only.
+        assert st.resolve_namespaces(contract, ["website-bot"]) == ["website-bot"]
+        # Cross-repo session: each in-scope repository, once, in order.
+        assert st.resolve_namespaces(contract, ["a", "b", "a"]) == ["a", "b"]
+        # Nothing resolved in scope: nothing requested — never a default.
+        assert st.resolve_namespaces(contract, []) == []
+        forbidden = {"main", "master", "default", "test", ""}
+        assert not (set(st.resolve_namespaces(contract, ["website-bot"])) & forbidden)
         # Namespace resolution takes no branch input at all.
-        assert first == st.resolve_namespaces(contract)
+        assert st.resolve_namespaces(contract, ["x"]) == st.resolve_namespaces(contract, ["x"])
+        # An explicit request still wins.
+        os.environ["L9_MEMORY_NAMESPACES"] = "explicit-ns"
+        assert st.resolve_namespaces(contract, ["website-bot"]) == ["explicit-ns"]
     finally:
+        os.environ.pop("L9_MEMORY_NAMESPACES", None)
         if previous is not None:
             os.environ["L9_MEMORY_NAMESPACES"] = previous
 
