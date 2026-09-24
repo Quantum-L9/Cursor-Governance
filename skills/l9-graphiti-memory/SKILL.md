@@ -250,47 +250,72 @@ repository facts, verification or friction.
 one closely coupled relationship that can be superseded without touching
 unrelated knowledge. Independent facts get separate writes, and several
 sequential writes are normal. A direct write is never a session summary or a
-transcript. Session continuity belongs to `ContinuationCapsuleV2`.
+transcript. Session continuity belongs to the post-publish repository handoff
+(below), which the close carries inside `ContinuationCapsuleV2`.
 
-**Continuation state, precisely.** The capsule's surfaces are `next_action`,
-`decisions`, `unfinished_work`, `blockers` and `active_files`. At close,
-`close_session.py` folds your last-24h agent-lane records into them. A
-`decision` record lands in `decisions`. A record whose content starts with
-`TODO:` / `NEXT:` / `BLOCKED:` / `WIP:`, or that carries one of those tags,
-lands in `unfinished_work`. Anything else stays evidence. The fold fails
-open: if the 24h agent-lane search is refused (see the hydrate warnings),
-the records stay searchable but do not reach the capsule. So:
+**Continuation state, precisely.** After `make pr`, write the repository
+handoff `.l9/memory/handoff.json` (`l9.session_handoff.v1`,
+[`ops/memory/HANDOFF_CONTRACT.md`](../../ops/memory/HANDOFF_CONTRACT.md)). It
+has one section per kind of state, so a next session can tell what it can
+execute, what it cannot, what needs the human, what needs a decision and what
+is already finished, without reading prose:
 
-- Finished work: write it unmarked. A marked finished item is resent as
-  pending work.
-- Executable next step: `NEXT: <concrete action>`.
-- Blocked work: `BLOCKED: <item> — blocker: <what> — unblocks when: <condition>`.
-- Human-only action: `BLOCKED: human — <action> at <where>, because <why>; then <resume step>`.
-- Open question: ask it in the turn. It is not a TODO, and the capsule has
-  no field for it.
+| State | Section | Item shape |
+|---|---|---|
+| Done and verified | `completed` | string |
+| Contracted work left unfinished | `not_completed` | `{item, reason}` |
+| Cannot proceed until a condition changes | `blocked` | `{item, blocker, unblock}` |
+| Operator-only action outside your authority or environment | `human_actions` | `{action, where, why, then}` |
+| Concrete work the next authorized session can execute | `next_actions` | string |
+| A genuinely unresolved question or decision | `open_questions` | string |
+| Commands run and their results | `verification` | string |
 
-The capsule has no `verification`, `human_actions` or `open_questions`
-field. Its reader drops unknown keys. Do not add fields to express these.
+Keep them distinct:
+- A human action is not a blocker. Use `blocked` only when the work waits on
+  a named condition.
+- `not_completed` is unfinished contracted work. It does not cover future
+  enhancements, questions or operator steps.
+- `open_questions` is not a TODO list.
+
+The handoff's `pr_number` must equal this publication's PR. The first Stop
+after publication asks for the handoff once if it is missing or invalid.
+
+*Compatibility, not the preferred path:* before any publication, and for
+mid-session writes, `close_session.py` still folds last-24h agent-lane
+records into the capsule. A `decision` record lands in `decisions`, and a
+record whose content starts with `TODO:` / `NEXT:` / `BLOCKED:` / `WIP:`
+(or carries one of those tags) lands in `unfinished_work`. Anything else
+stays evidence, so do not mark finished work. The fold fails open: if the
+24h agent-lane search is refused (see the hydrate warnings), the records
+stay searchable but do not reach the capsule. When a handoff exists, record
+this state in its sections, not with markers.
 
 **Verified frontier.** Record what was proven, the command where there is
-one, the outcome, and any material limitation:
-`pytest tests/ops/memory/test_session_contracts.py — passed; capsule list surfaces stay distinct; full suite not run`,
-not `tests pass`. Proof for this change goes in the commit message and PR
-description (`rules/80` Phase 6). A durable verified fact goes in a
-`write_agent` record with the same shape.
+one, the outcome, and any material limitation, in the handoff's
+`verification` section:
+`pytest tests/ops/memory/test_handoff_schemas.py — passed; schema/runtime verdict parity covered; full suite not run`,
+not `tests pass`. The commit message and PR description still carry the
+proof for the change (`rules/80` Phase 6). A verification insight that is
+reusable on its own (for example, which test proves a contract) may also go
+in a separate `write_agent` record. That record does not replace the
+handoff's `verification`.
 
-**Governance friction is evidence.** Before proposing a governance or tooling
-change, search memory (`memcli search` / `memory.search`) and
-`learning/failures/` (`rules/92`) for earlier occurrences. Recurrence makes a
-proposal stronger for a human to judge. It never creates a task, a PR or
-authorization by itself. When nothing material went wrong, write nothing.
+**Governance friction is evidence.** Record friction in the governance
+handoff `.l9/memory/governance-handoff.json` (`l9.governance_handoff.v1`:
+`environment_friction`, `blockers`, `degraded_bootstrap`, `workarounds`,
+`governance_actions`), never in the repository handoff. Before proposing a
+governance or tooling change, search memory (`memcli search` /
+`memory.search`) and `learning/failures/` (`rules/92`) for earlier
+occurrences. Recurrence makes a proposal stronger for a human to judge. It
+never creates a task, a PR or authorization by itself. When nothing material
+went wrong, leave every section empty. The hook then writes no record.
 
 **Clean continuation.** When work reaches a natural boundary, or the
 conversation is mostly stale exploration, a fresh session is acceptable once
-durable facts are written and the capsule will carry `next_action`.
-Continuity comes from hydration, durable records and the capsule, not from
-keeping a long context alive. Deciding this is the operator's or agent's
-judgment. Nothing automates it.
+durable facts are written and the handoff is captured. Continuity comes from
+hydration, durable records and the handoff, not from keeping a long context
+alive. Deciding this is the operator's or agent's judgment. Nothing
+automates it.
 
 **Contracts vs memory.** An execution contract states what this executor may
 do now. Memory states what the repository already knows. When a durable

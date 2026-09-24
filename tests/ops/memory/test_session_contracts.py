@@ -39,9 +39,9 @@ def test_round_trip_is_lossless_and_digest_stable() -> None:
 def test_continuation_surfaces_stay_distinct_through_round_trip() -> None:
     """Blocked, decided and unfinished work are separate surfaces, not one TODO bucket."""
     original = capsule(
-        blockers=("BLOCKED: human — rotate token at vault; then re-run gate",),
+        blockers=("schema parity: waits on PR 651 merge",),
         decisions=("hook and agent lanes both end at MemoryService",),
-        unfinished_work=("NEXT: add close-path regression",),
+        unfinished_work=("close-path regression not yet added",),
     )
     payload = json.loads(original.canonical())
     restored = sc.ContinuationCapsuleV2.from_payload(payload)

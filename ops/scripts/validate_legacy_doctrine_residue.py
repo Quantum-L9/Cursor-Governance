@@ -247,6 +247,10 @@ MEMORY_DOCTRINE_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
         AGENT_WRITE_TOKEN,
         "Memory is context, not authority",
         "independently retrievable assertion",
+        "l9.session_handoff.v1",
+        "`human_actions`",
+        "`open_questions`",
+        "`verification`",
     ),
     "skills/l9-end-session/SKILL.md": (AGENT_WRITE_TOKEN, "repair-write"),
     "skills/l9-end-session/references/end-session-protocol.md": (
