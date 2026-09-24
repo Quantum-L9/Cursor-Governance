@@ -576,7 +576,9 @@ def cancel_older(cache: Path, sha: str) -> None:
         try:
             os.killpg(int(current["pgid"]), signal.SIGTERM)
         except (OSError, ValueError, KeyError):
-            pass
+            # Already exited, or a malformed record: nothing left to cancel. The
+            # clone lock still serializes us behind anything that survives.
+            return
 
 
 class clone_lock:
