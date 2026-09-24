@@ -84,7 +84,10 @@ class WritebackFanOutTest(unittest.TestCase):
             }
             if hydrated_roots is not None:
                 payload["hydrated_roots"] = [str(r) for r in hydrated_roots]
-            st.write_receipt(contract, self.session_id, payload)
+            # Keyed exactly as memory_prefetch stamps it: the writer-scoped
+            # receipt id, never the raw session id (that mismatch hid the bug).
+            receipt_id = st.resolve_receipt_id(event={"session_id": self.session_id})
+            st.write_receipt(contract, receipt_id, payload)
 
             sys.modules.pop("memory_writeback", None)
             import memory_writeback as wb  # noqa: PLC0415

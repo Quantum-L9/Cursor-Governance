@@ -12,9 +12,6 @@
     "agent_id_env": "L9_MEMORY_AGENT_ID",
     "default_agent_id": "claude-code",
     "namespace_env": "L9_MEMORY_NAMESPACES",
-    "default_namespaces": [
-      "cursor-governance"
-    ],
     "forbidden_side_doors": [
       "L9_MEMORY_HTTP_URL",
       "L9_MEMORY_CLIENT_TOKEN",

@@ -502,16 +502,15 @@ class ResumeSourceReconciliationTests(_Base):
             self._reconcile(write_root, source, l9_home)
         self.assertEqual(ctx.exception.error_code, "SOURCE_DRIFT_ON_RESUME")
 
-    def test_no_source_is_not_drift(self) -> None:
-        self.assertEqual(
+    def test_missing_source_refuses_unverified_resume(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
             self.mod.reconcile_resumed_source(
                 campaign_id="CAMP-1",
                 source=self.tmp / "absent.yaml",
                 pec_workspace=self.tmp / "ws",
                 l9_home=self.tmp / "l9",
-            )["status"],
-            "NO_SOURCE",
-        )
+            )
+        self.assertEqual(ctx.exception.error_code, "RESUME_SOURCE_UNVERIFIED")
 
     def _legacy_runtime(self) -> tuple[Path, Path, Path, Path]:
         """A live runtime prepared before the compiled-source shape record existed."""
