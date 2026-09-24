@@ -9,10 +9,13 @@
 #
 # Every memory this server admits must name the agent that wrote it (ADR-0031):
 # the server therefore starts only with the signed agent door. The door is
-# minted HERE, at spawn, from one scoped secret in the environment Claude Code
-# is started with — L9_MEMORY_AGENT_AUTHORITY_JSON = {"agents_door_secret": …,
-# "agent_signing_keys": {"<agent-id>": …}} — or, on a workstation, from the
-# local maps export_agent_assertion_env.sh already reads. Grants come from the
+# minted HERE, at spawn, from the local maps export_agent_assertion_env.sh
+# reads (~/.config/l9-memory). A hosted container mints those maps itself — at
+# environment setup (web/setup.sh) and, failing that, here — so nothing secret
+# is ever pasted into the account environment settings. A workstation adds its
+# key once. A launcher that deliberately supplies one scoped secret,
+# L9_MEMORY_AGENT_AUTHORITY_JSON = {"agents_door_secret": …,
+# "agent_signing_keys": {"<agent-id>": …}}, still takes precedence. Grants come from the
 # canonical registry, never from the secret. Without a door the server does
 # NOT fall back to the anonymous local-operator principal (whose writes carry
 # no agent); it refuses to start and says why. L9_MEMORY_ALLOW_LOCAL_OPERATOR=1
@@ -73,6 +76,16 @@ if [[ -n "${L9_MEMORY_AGENT_AUTHORITY_JSON:-}" ]]; then
   fi
   export L9_MEMORY_SECRET_MAP="$_authority_dir/agent_tokens.local.json"
   export L9_MEMORY_GRANTS_MAP="$_authority_dir/agent_grants.json"
+elif [[ "$(printf '%s' "${CLAUDE_CODE_REMOTE:-}" | tr '[:upper:]' '[:lower:]')" == "true" ]]; then
+  # A hosted container with no authority in its environment: mint (or reuse)
+  # the container-local authority the exporter below reads. The server verifies
+  # against keys handed to this very process, so an in-container key is as
+  # valid as a workstation one, and no secret ever goes in the plaintext,
+  # model-readable environment settings. Additive and idempotent; web/setup.sh
+  # normally did this already. stdout is the MCP channel: report on stderr.
+  PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.materialize_agent_authority \
+    --provision-hosted --governance "$GOV" --agent-id "$L9_MEMORY_AGENT_ID" >&2 \
+    || echo "run_memory_mcp: hosted authority provisioning FAILED for ${L9_MEMORY_AGENT_ID}" >&2
 fi
 unset L9_MEMORY_AGENT_AUTHORITY_JSON L9_MEMORY_HUMAN_DOOR_SECRET
 _exporter="$GOV/ops/memory/export_agent_assertion_env.sh"
@@ -95,7 +108,7 @@ if [[ "${#_door_missing[@]}" -ne 0 ]]; then
   if [[ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" == "1" ]]; then
     echo "run_memory_mcp: WARNING signed agent door absent (${_door_missing[*]}); L9_MEMORY_ALLOW_LOCAL_OPERATOR=1 — writes carry NO agent identity" >&2
   else
-    echo "run_memory_mcp: signed agent door unavailable for ${L9_MEMORY_AGENT_ID} (missing ${_door_missing[*]}) — refuse to launch: a memory must name the agent that wrote it. Provision L9_MEMORY_AGENT_AUTHORITY_JSON in the environment Claude Code starts with (ops/memory/AGENT_WRITE_CONTRACT.md)." >&2
+    echo "run_memory_mcp: signed agent door unavailable for ${L9_MEMORY_AGENT_ID} (missing ${_door_missing[*]}) — refuse to launch: a memory must name the agent that wrote it. A hosted container mints it itself (materialize_agent_authority --provision-hosted); a workstation adds its key once with --add-keys-to (ops/memory/AGENT_WRITE_CONTRACT.md)." >&2
     exit 1
   fi
 fi

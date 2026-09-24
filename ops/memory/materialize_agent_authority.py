@@ -165,8 +165,9 @@ def export_authority(secret_map: Path, agent_ids: list[str], output: Path) -> No
 def add_missing_keys(secret_map: Path, agent_ids: list[str]) -> list[str]:
     """Give each named identity a signing key in the local map if it has none.
 
-    For the operator adding a new identity (e.g. claude-code-desktop/-mobile
-    after the one "claude-code" identity was split, or manus). Existing keys are never
+    For the operator adding a new identity on a workstation (e.g.
+    claude-code-desktop after the one "claude-code" identity was split, or manus).
+    Hosted containers need no operator step: see ``provision_local``. Existing keys are never
     replaced, the file stays 0600, and no value is printed. Returns the ids added.
     """
     import secrets  # noqa: PLC0415
@@ -186,12 +187,75 @@ def add_missing_keys(secret_map: Path, agent_ids: list[str]) -> list[str]:
     return added
 
 
+#: The container-local maps the launcher's exporter reads when the environment
+#: carries no L9_MEMORY_AGENT_AUTHORITY_JSON (export_agent_assertion_env.sh).
+LOCAL_DIR = Path.home() / ".config" / "l9-memory"
+
+
+def hosted_identities() -> list[str]:
+    """The identities a hosted (cloud) Claude Code container can run as.
+
+    Derived from the one resolver's REMOTE_ENTRYPOINTS, never listed here, so a
+    new hosted surface is provisioned the moment the resolver knows it.
+    """
+    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS  # noqa: PLC0415
+
+    return sorted(set(REMOTE_ENTRYPOINTS.values()))
+
+
+def _replace_private_json(path: Path, payload: dict[str, Any]) -> None:
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.unlink(missing_ok=True)
+    _write_private_json(temporary, payload)
+    os.replace(temporary, path)
+
+
+def provision_local(governance: Path, directory: Path, agent_ids: list[str]) -> list[str]:
+    """Container-local signed authority for ``agent_ids``; returns the ids newly keyed.
+
+    The package server verifies the agent's assertion against the door and
+    signing keys handed to that same process (l9_graphite_memory/server.py), so a
+    key minted inside a hosted container is exactly as valid as one exported from
+    a workstation — and it never has to pass through the account environment
+    variables field, which is plaintext and model-readable (and, by its own
+    contract, carries no credentials).
+
+    Additive and idempotent: an existing door or key is never replaced; grants
+    are (re)rendered from the registry for ``agent_ids`` only, keeping any other
+    entry. Directory 0700, files 0600, values never printed.
+    """
+    if not agent_ids:
+        raise AuthorityMaterializationError("no identity to provision")
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(directory, 0o700)
+    tokens = directory / "agent_tokens.local.json"
+    if not tokens.exists():
+        import secrets  # noqa: PLC0415
+
+        _write_private_json(
+            tokens, {"agents_door_secret": secrets.token_hex(32), "agent_signing_keys": {}}
+        )
+    added = add_missing_keys(tokens, agent_ids)
+    grants_path = directory / "agent_grants.json"
+    try:
+        current = json.loads(grants_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        current = {}
+    grants = current.get("grants") if isinstance(current, dict) else None
+    if not isinstance(grants, dict):
+        grants = {}
+    for agent_id in agent_ids:
+        grants.update(agent_grants(governance, agent_id)["grants"])
+    _replace_private_json(grants_path, {**current, "grants": grants})
+    return added
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--agent-id",
         action="append",
-        required=True,
+        default=[],
         help="the running identity; repeat with --export-from for a shared hosted environment",
     )
     parser.add_argument("--governance", type=Path)
@@ -203,12 +267,33 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--output", type=Path, help="operator: new 0600 file for --export-from")
     parser.add_argument(
+        "--provision-hosted",
+        action="store_true",
+        help=(
+            "hosted container: mint container-local authority for the hosted identities "
+            "(or each --agent-id) into --config-dir; nothing is pasted anywhere"
+        ),
+    )
+    parser.add_argument("--config-dir", type=Path, default=LOCAL_DIR)
+    parser.add_argument(
         "--add-keys-to",
         type=Path,
         help="operator: add a signing key for each --agent-id missing from this local map",
     )
     args = parser.parse_args(argv)
     try:
+        if args.provision_hosted:
+            if args.governance is None:
+                raise AuthorityMaterializationError("--provision-hosted needs --governance")
+            ids = args.agent_id or hosted_identities()
+            added = provision_local(args.governance.resolve(), args.config_dir, ids)
+            print(
+                f"hosted memory authority for {', '.join(ids)} in {args.config_dir} "
+                f"(new keys: {', '.join(added) or 'none, all present'}; values hidden)"
+            )
+            return 0
+        if not args.agent_id:
+            raise AuthorityMaterializationError("--agent-id is required")
         if args.add_keys_to is not None:
             added = add_missing_keys(args.add_keys_to, args.agent_id)
             print(

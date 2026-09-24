@@ -118,7 +118,9 @@ role, `assigned_groups` and `status: active`.
   write is refused as drift.
 - **At spawn**, `ops/memory/run_memory_mcp.sh`:
   1. derives the identity;
-  2. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` or the workstation key maps;
+  2. reads the local key maps in `~/.config/l9-memory` (on a hosted container
+     it mints them first if they are missing), or `L9_MEMORY_AGENT_AUTHORITY_JSON`
+     when a launcher deliberately supplies one;
   3. passes on only that identity's key, never the human door;
   4. derives the grants from `environment/agents/agent_registry.yaml`;
   5. mints the signed assertion.
@@ -131,22 +133,29 @@ role, `assigned_groups` and `status: active`.
 
 ### Provisioning, once per surface
 
-Run these on the workstation that holds the local key maps. No values are ever
-printed. Paste secrets only into environment settings, never into a chat.
+No key ever goes into the Claude Code environment settings. That field is
+plaintext and model-readable, and by its own contract
+(`environment/agents/adapters/claude-code/web/environment.env.example`) carries
+no credentials. It does not need one: the memory server verifies the agent's
+assertion against the door and keys handed to that same process
+(`l9_graphite_memory/server.py`). So a key minted where the server runs is
+exactly as valid as one minted anywhere else.
 
-1. **Give the identities keys** (existing keys are kept):
-   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop --agent-id claude-code-mobile`
-2. **Claude Code Desktop:** nothing more. The launcher reads the local maps,
-   and the server runs as `claude-code-desktop`.
-3. **Claude Code Mobile (cloud):**
-   1. Write the scoped secret:
-      `python -m ops.memory.materialize_agent_authority --export-from ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-mobile --output ./claude-code-mobile-authority.json`
-   2. Add the file's contents as `L9_MEMORY_AGENT_AUTHORITY_JSON` in the
-      Claude Code environment settings (the environment menu in the session
-      title bar, then Edit).
-   3. Delete the file.
-   4. While you're there, remove any `L9_MEMORY_AGENT_ID`, `USER_ID` or
-      `L9_MEMORY_SOURCE` from those settings. They are ignored, and reported as
-      drift until removed.
-4. **Cursor:** its SessionStart mints the `cursor` door from the same local
+1. **Claude Code Mobile (hosted): nothing to do.** The container mints its own
+   authority into `~/.config/l9-memory` (directory 0700, files 0600). This
+   happens at environment setup (`web/setup.sh`) and, if that did not run, at
+   MCP spawn (`run_memory_mcp.sh`):
+   `python -m ops.memory.materialize_agent_authority --provision-hosted --governance ~/.cursor-governance`.
+   The hosted identities come from `ops/memory/agent_identity.py`, and the
+   grants from `agent_registry.yaml`. It only ever adds: an existing key is
+   never replaced. SessionStart reports `signed-agent door: PROVISIONED`.
+2. **Claude Code Desktop (workstation): once.** Existing keys are kept and no
+   values are printed:
+   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop`
+3. **Cursor:** its SessionStart mints the `cursor` door from the same local
    maps (`ops/hooks/session_start_bootstrap.sh`).
+4. **Environment settings:** delete any `L9_MEMORY_AGENT_ID`, `USER_ID`,
+   `L9_MEMORY_SOURCE` or `L9_MEMORY_AGENT_AUTHORITY_JSON` still there. The
+   first three are ignored and reported as drift. The last is a credential in a
+   plaintext field that the hosted container no longer needs.
+   `web/environment.env.example` is the text to paste, and it sets none of them.

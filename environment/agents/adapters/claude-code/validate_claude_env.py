@@ -635,7 +635,11 @@ def check_memory_identity_distinct(failures: list[str]) -> None:
     always the surface that ran and always distinct from Cursor's. A value in
     the environment template would be pasted into the hosted environment and
     drift from the surface that actually runs — the template must not set
-    L9_MEMORY_AGENT_ID or USER_ID at all.
+    L9_MEMORY_AGENT_ID, USER_ID or L9_MEMORY_SOURCE at all.
+
+    Nor L9_MEMORY_AGENT_AUTHORITY_JSON: it is a signing credential, the template
+    is pasted into a plaintext model-readable field that carries none, and a
+    hosted container mints its own (materialize_agent_authority --provision-hosted).
     """
     path = HERE / "web" / "environment.env.example"
     if not path.is_file():
@@ -646,7 +650,13 @@ def check_memory_identity_distinct(failures: list[str]) -> None:
         if stripped.startswith("#") or "=" not in stripped:
             continue
         assigned.add(stripped.partition("=")[0].strip())
-    configured = sorted(assigned & {"L9_MEMORY_AGENT_ID", "USER_ID"})
+    configured = sorted(assigned & {"L9_MEMORY_AGENT_ID", "USER_ID", "L9_MEMORY_SOURCE"})
+    if "L9_MEMORY_AGENT_AUTHORITY_JSON" in assigned:
+        _fail(
+            "environment.env.example must not set L9_MEMORY_AGENT_AUTHORITY_JSON: it is a "
+            "credential, and a hosted container mints its own memory authority",
+            failures,
+        )
     if configured:
         _fail(
             f"environment.env.example must not set {', '.join(configured)}: the memory "
@@ -654,7 +664,10 @@ def check_memory_identity_distinct(failures: list[str]) -> None:
             failures,
         )
     else:
-        print("  OK: memory identity is derived (no L9_MEMORY_AGENT_ID / USER_ID in the template)")
+        print(
+            "  OK: memory identity is derived (no L9_MEMORY_AGENT_ID / USER_ID / "
+            "L9_MEMORY_SOURCE in the template)"
+        )
 
 
 def check_skill_activation(failures: list[str]) -> None:
