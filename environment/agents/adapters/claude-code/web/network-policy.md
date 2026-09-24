@@ -28,11 +28,16 @@ astral.sh
 *.astral.sh
 semgrep.dev
 *.semgrep.dev
+app.infisical.com
+mcp.context7.com
+sonarcloud.io
+api.osv.dev
 ```
 
-**`app.infisical.com` and `sonarcloud.io` are deliberately NOT in this list.**
-See "Egress the agent must not need" below — an agent container that can reach
-a secret backend is one bad line away from using it.
+Amended 2026-09-24 (`AGENTS.md` INFISICAL_MACHINE_IDENTITY_V1 and
+CI_PARITY_HOSTED_CLAUDE_V1): the hosted surface binds its secrets from Infisical
+as its own least-privilege machine identity, so `app.infisical.com` is required;
+the CI-parity scanners add `sonarcloud.io` (read-only) and `api.osv.dev`.
 
 ### Host → owning capability
 
@@ -46,7 +51,12 @@ a secret backend is one bad line away from using it.
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
 | _(none for memory)_ | Since realignment stage C9/C11 memory is the canonical `l9-graphite-memory` control plane over **stdio** to the bound runtime (`ops/memory`); the session opens no memory HTTPS egress and holds no memory bearer. `memory.quantumaipartners.com` is no longer required (ADR-0030) |
-| `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
+| `semgrep.dev`, `*.semgrep.dev` | Semgrep registry rulesets (`p/python`, `p/secrets`) for CE, and the org policy for the Semgrep Pro `semgrep ci --dry-run` lane (`ops/secrets/capability_exec.py`; no scan is created) |
+| `app.infisical.com` | Machine-identity login + in-process secret binds (`capability_bind.py`, `vault_mcp_bridge.py`) |
+| `mcp.context7.com` | Context7 docs through the vault-bound stdio bridge |
+| `sonarcloud.io` | Read-only PR quality gate / issues (`ops/ci_parity/sonar_status.py`); never a scanner run |
+| `api.osv.dev` | `osv-scanner` vulnerability lookups for changed lockfiles (`ops/ci_parity`) |
+| `github.com` release assets (via `*.githubusercontent.com`) | CI-parity tool downloads pinned by sha256 in `ops/ci_parity/tools.yaml` (CodeQL bundle, actionlint, shellcheck, osv-scanner, Biome) |
 
 ### Egress the agent must not need (contract §16)
 
@@ -56,9 +66,6 @@ that can reach a secret backend is one mistake away from using one.
 
 | Host | Who reaches it | Why not the agent |
 |---|---|---|
-| `app.infisical.com` | **operator / hydrate only** | The secret backend. The agent holds no Infisical credential and has no reason to speak to it; blocking egress makes that structural rather than conventional |
-| `sonarcloud.io`, `*.sonarcloud.io` | **optional public read** | Unauthenticated public Sonar reads. Do not paste `SONAR_TOKEN` here; the capability broker never shipped |
-| `semgrep.dev` authenticated API | **trusted worker only** | CE rule downloads are fine from the agent; authenticated AppSec is not |
 | AWS Secrets Manager endpoints | **nobody** | The AWS bootstrap path is removed entirely (contract S1). Do not re-add it |
 
 Broker egress allow-list (if a broker is ever deployed — it is **not** the

@@ -1,5 +1,5 @@
 {
-  "generation_id": "446455939929d647f2d8b70d1f0792052587df9b169de79e9dfcdaf40c3bd738",
+  "generation_id": "d171f87680cc6420efeac46bca824a98cb7d514678b4111da64115ffed6c9a8c",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -932,7 +932,7 @@
       "path": "skills/l9-aws-secrets",
       "reason": "",
       "skill_md": "skills/l9-aws-secrets/SKILL.md",
-      "skill_sha256": "85d35e59ec147ca6adbbbb33daa8333fb5e79f261c8070db5646ac2edb5601c2",
+      "skill_sha256": "daece176244a22d84d4d2ee791137b06f2d767fc2d605fc44340b0aa39228589",
       "user_invocable": true,
       "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
-  "source_skill_corpus_sha256": "b771425e022051e16b1ceaff8f9354c600b359c1b6e16376065d2e5153e12886"
+  "source_skill_corpus_sha256": "6f12a4e984f0ab8b3ea92d3eb0756d40ce97b3dcd126d9f0e202c5c7815f9bd9"
 }

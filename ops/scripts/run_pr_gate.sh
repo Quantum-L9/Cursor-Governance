@@ -139,6 +139,13 @@ _GATE_CODE_FILES=(
   "ops/scripts/lib/fetch_receipt.sh"
   "ops/scripts/lib/resolve_pr_stack.sh"
   "ops/scripts/resolve_stack_tip.py"
+  # CI-parity wave (Claude surfaces): a change to how findings are judged or
+  # which versions run can flip the verdict.
+  "ops/ci_parity/run.py"
+  "ops/ci_parity/findings.py"
+  "ops/ci_parity/manifest.py"
+  "ops/ci_parity/tools.yaml"
+  "ops/ci_parity/lanes/yamllint.yaml"
 )
 _gate_code_digest() {
   local rel present=()
@@ -943,6 +950,27 @@ _gate_run_security() {
   PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
 }
 
+# CI-parity lanes (ops/ci_parity) — hosted/desktop Claude only. They reuse the
+# commit-time receipts the Claude PostToolUse hook produced, so this job is
+# usually instant; it fails only on a NEW CI-blocking finding on a changed
+# line. On every other surface the wave list is unchanged (not started at all).
+_gate_ci_parity_enabled() {
+  [[ "${L9_CI_PARITY:-1}" != "0" ]] || return 1
+  [[ -f "$GOV_ROOT/ops/ci_parity/run.py" && -f "$GOV_ROOT/ops/scripts/lib/surface_detect.sh" ]] || return 1
+  (
+    # shellcheck source=lib/surface_detect.sh
+    . "$GOV_ROOT/ops/scripts/lib/surface_detect.sh"
+    l9_is_claude_gate_surface
+  )
+}
+
+_gate_run_ci_parity() {
+  echo "--- ci-parity ---"
+  local py="$GOV_ROOT/.venv/bin/python"
+  [[ -x "$py" ]] || py="python3"
+  nice -n 10 "$py" "$GOV_ROOT/ops/ci_parity/run.py" --gate HEAD --workspace "$WS" --base "$PR_BASE"
+}
+
 _gate_run_readers() {
   echo "--- pre-commit readers (once) ---"
   local rc=0
@@ -998,6 +1026,9 @@ _wave_start skill-activation _gate_run_skill_activation
 _wave_start projection _gate_run_projection_check
 _wave_start wiring _gate_run_wiring
 _wave_start security _gate_run_security
+if _gate_ci_parity_enabled; then
+  _wave_start ci-parity _gate_run_ci_parity
+fi
 _wave_rc=0
 _wave_i=0
 while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do

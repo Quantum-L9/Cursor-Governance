@@ -235,6 +235,22 @@ else
   exit 1
 fi
 
+# 4c) CI-parity scanners (ops/ci_parity/tools.yaml): CodeQL, Semgrep, Biome,
+#     actionlint, zizmor, shellcheck, osv-scanner, yamllint, pip-audit — pinned
+#     to what CI runs and sha256-verified. Installed here so the cached snapshot
+#     carries them; SessionStart (hooks/session_deps_cloud.sh) installs anything
+#     missing in the background, so a failure here never fails the environment.
+log "CI-parity scanners"
+CI_PARITY_PY="$GOV_DIR/.venv/bin/python3"
+[ -x "$CI_PARITY_PY" ] || CI_PARITY_PY="python3"
+if [ -f "$GOV_DIR/ops/ci_parity/install.py" ]; then
+  # Reported, not swallowed: install.py prints each failing tool, and
+  # session_deps_cloud.sh re-runs it at every SessionStart until --check passes.
+  if ! "$CI_PARITY_PY" "$GOV_DIR/ops/ci_parity/install.py"; then
+    echo "WARN: ci-parity tools incomplete (see lines above) — SessionStart retries in the background"
+  fi
+fi
+
 # NOT here: the consumer workspace's own language toolchain (uv/pip/npm) and
 # pre-commit warm. This account Setup script is environment provisioning and
 # may be cached for ~7 days; project dependencies are per-repository work and

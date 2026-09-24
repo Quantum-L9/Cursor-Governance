@@ -1,0 +1,10 @@
+---
+# yamllint config for the ci-parity lane. `relaxed` keeps structural errors
+# (syntax, duplicate keys, bad indentation) as errors and style as warnings;
+# only errors on changed lines block. GitHub workflow `on:` keys and long
+# expressions are normal here, so truthy and line-length are off.
+extends: relaxed
+rules:
+  line-length: disable
+  truthy: disable
+  document-start: disable
