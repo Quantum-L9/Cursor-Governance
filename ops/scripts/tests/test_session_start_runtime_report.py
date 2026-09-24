@@ -153,21 +153,21 @@ class SecretsPlaneClassificationTests(unittest.TestCase):
         self.assertIn("GITHUB_TOKEN", BIND_NAMES)
 
     def test_aws_source_is_a_fault(self) -> None:
-        line = report.classify_secrets_bind(
+        line = report.classify_bind_line(
             [{"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "aws"}]
         )
         self.assertEqual(line["class"], report.FAILED)
         self.assertIn("source=aws is a fault", line["summary"])
 
     def test_unbound_is_degraded_not_a_paste(self) -> None:
-        line = report.classify_secrets_bind(
+        line = report.classify_bind_line(
             [{"name": "SONAR_TOKEN", "bound": False, "source": "unbound"}]
         )
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("do not paste a token", line["summary"])
 
     def test_missing_receipt_is_unread_not_a_live_probe(self) -> None:
-        line = report.classify_secrets_bind(None)
+        line = report.classify_bind_line(None)
         self.assertEqual(line["class"], report.DEGRADED)
         self.assertIn("secrets-plane receipt unread", line["summary"])
         self.assertNotIn("capability_bind", line["summary"])
@@ -319,13 +319,13 @@ class InfisicalIdentityClassificationTests(unittest.TestCase):
     def test_unbound_names_degrade_whatever_the_state(self) -> None:
         for state in ("failed", "ok", "", "unavailable_by_surface"):
             with self.subTest(state=state):
-                line = report.classify_secrets_bind(self.UNBOUND, state)
+                line = report.classify_bind_line(self.UNBOUND, state)
                 self.assertEqual(line["class"], report.DEGRADED)
                 self.assertTrue(line["include_in_degraded"])
 
     def test_source_aws_is_a_fault(self) -> None:
         leftover = [{"name": "SONAR_TOKEN", "bound": True, "source": "aws"}]
-        line = report.classify_secrets_bind(leftover, "ok")
+        line = report.classify_bind_line(leftover, "ok")
         self.assertEqual(line["class"], report.FAILED)
 
 

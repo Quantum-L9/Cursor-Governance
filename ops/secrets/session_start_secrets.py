@@ -99,37 +99,26 @@ def _bind_line(binds: list[dict[str, Any]]) -> str:
     return " ".join(f"{name}={cb.literal_source(by_name.get(name))}" for name in BIND_NAMES)
 
 
+#: Identity sources the receipt may carry, as literals.
+IDENTITY_SOURCES = ("env", "profile")
+
+
 def identity_status(login_state: str, source: str) -> dict[str, Any]:
-    """The machine identity's state, names only."""
+    """The machine identity's state as module literals only (names, codes, messages)."""
     if login_state == "skipped":
-        return {
-            "ok": False,
-            "code": IDENTITY_AWS_UNAVAILABLE,
-            "source": "",
-            "summary": IDENTITY_MESSAGES[IDENTITY_AWS_UNAVAILABLE],
-        }
-    if login_state in {"env", "present", "seeded"}:
-        return {
-            "ok": True,
-            "code": IDENTITY_OK,
-            "source": source,
-            "summary": f"Infisical machine identity logged in (source={source})",
-        }
-    if login_state == "absent":
-        return {
-            "ok": False,
-            "code": IDENTITY_ABSENT,
-            "source": "",
-            "summary": (
-                f"no Infisical machine identity — set {login.ENV_CLIENT_ID} and "
-                f"{login.ENV_CLIENT_SECRET} in the environment settings"
-            ),
-        }
+        code = IDENTITY_AWS_UNAVAILABLE
+    elif login_state in {"env", "present", "seeded"}:
+        code = IDENTITY_OK
+    elif login_state == "absent":
+        code = IDENTITY_ABSENT
+    else:
+        code = IDENTITY_REFUSED
+    shown = next((known for known in IDENTITY_SOURCES if known == source), "")
     return {
-        "ok": False,
-        "code": IDENTITY_REFUSED,
-        "source": source,
-        "summary": "Infisical refused the machine identity or was unreachable",
+        "ok": code == IDENTITY_OK,
+        "code": code,
+        "source": shown if code in {IDENTITY_OK, IDENTITY_REFUSED} else "",
+        "summary": IDENTITY_MESSAGES[code],
     }
 
 
@@ -161,9 +150,9 @@ def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         status = cb.bind_status(name)
         binds.append(
             {
-                "name": str(status.get("name") or name),
+                "name": name,  # the module's own literal, not the bind result's echo
                 "bound": bool(status.get("bound")),
-                "source": str(status.get("source") or "unbound"),
+                "source": cb.literal_source(status.get("source")),
             }
         )
     plane_ok = bool(identity["ok"]) and (aws is None or bool(aws.get("ok")))

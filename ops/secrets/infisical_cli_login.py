@@ -61,6 +61,9 @@ ENV_PROJECT_ID = "L9_INFISICAL_PROJECT_ID"
 ENV_ENVIRONMENT = "L9_INFISICAL_ENV"
 ENV_HOST = "L9_INFISICAL_HOST"
 
+#: Printed as written: a literal, never interpolated from a secret-named value.
+ABSENT_MESSAGE = "identity absent — set L9_INFISICAL_CLIENT_ID and L9_INFISICAL_CLIENT_SECRET"
+
 SOURCE_ENV = "env"
 SOURCE_PROFILE = "profile"
 
@@ -160,6 +163,19 @@ def _write_profile(payload: dict[str, str]) -> None:
     os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
 
 
+#: resolve_secret error codes echoed by the seed, as literals.
+AWS_SEED_CODES = (
+    "UNREGISTERED",
+    "NOT_PROVISIONED",
+    "NOT_FOUND",
+    "FIELD_NOT_FOUND",
+    "NOT_JSON",
+    "RESOLUTION_ERROR",
+    "AWS_CLI_NOT_FOUND",
+    "TIMEOUT",
+)
+
+
 def _seed_from_aws() -> dict[str, str] | None:
     """Cursor / operator: the AWS Secrets Manager login seed (unchanged behaviour).
 
@@ -170,7 +186,9 @@ def _seed_from_aws() -> dict[str, str] | None:
 
     raw, error = aws_secret.fetch_secret_string(login_registry.AWS_SM_LOGIN_SECRET, "us-east-1")
     if error or not raw:
-        _status(f"aws seed failed code={error or 'empty'}")
+        # A literal code, never the resolver's error text (CodeQL clear-text logging).
+        code = next((c for c in AWS_SEED_CODES if c == error), "UNKNOWN" if error else "EMPTY")
+        _status(f"aws seed failed code={code}")
         return None
     try:
         parsed = json.loads(raw)
@@ -240,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
                 else "identity present source=profile"
             )
             return 0
-        _status(f"identity absent — set {ENV_CLIENT_ID} and {ENV_CLIENT_SECRET}")
+        _status(ABSENT_MESSAGE)
         return 1
     state = ensure_machine_profile(allow_aws_seed=True)
     if state == "seeded":
@@ -253,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
         _status("login ok project=cursor-governance source=profile")
         return 0
     if state == "absent":
-        _status(f"identity absent — set {ENV_CLIENT_ID} and {ENV_CLIENT_SECRET}")
+        _status(ABSENT_MESSAGE)
     else:
         _status("login failed (identity refused or Infisical unreachable)")
     return 1

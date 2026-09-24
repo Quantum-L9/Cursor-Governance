@@ -537,7 +537,23 @@ def classify_infisical_identity(result: dict[str, Any] | None) -> dict[str, Any]
     )
 
 
-def classify_secrets_bind(
+#: The bind sources capability_bind reports, as literals.
+BIND_SOURCES = ("env", "infisical", "infisical-machine-absent", "unbound", "refused", "aws")
+
+
+def _owner_bind_names() -> tuple[str, ...]:
+    """The plane owner's BIND_NAMES (one owner; this reporter defines none)."""
+    owner = Path(__file__).resolve().parents[1] / "secrets"
+    if str(owner) not in sys.path:
+        sys.path.insert(0, str(owner))
+    try:
+        from session_start_secrets import BIND_NAMES as names  # noqa: PLC0415
+    except Exception:  # noqa: BLE001 - the reporter never fails on an import
+        return ()
+    return tuple(names)
+
+
+def classify_bind_line(
     statuses: list[dict[str, Any]] | None, plane_state: str = ""
 ) -> dict[str, Any]:
     """SessionStart visibility for local bind. Never includes a secret value.
@@ -556,9 +572,12 @@ def classify_secrets_bind(
     parts: list[str] = []
     unbound: list[str] = []
     aws_leftover: list[str] = []
+    owner_names = _owner_bind_names()
     for raw in statuses:
-        name = str(raw.get("name") or "?").strip() or "?"
-        source = str(raw.get("source") or "unbound").strip() or "unbound"
+        # Literals only: the owner's inventory names and the known sources — never
+        # a string read from the receipt (CodeQL py/clear-text-logging).
+        name = next((known for known in owner_names if known == raw.get("name")), "?")
+        source = next((known for known in BIND_SOURCES if known == raw.get("source")), "unknown")
         if name.upper() in {"VALUE", "TOKEN", "SECRET"}:
             continue
         parts.append(f"{name}={source}")
@@ -742,7 +761,7 @@ def collect(
         classify_publish_path(evaluate(load_receipt())),
         classify_infisical_identity(identity),
         *([line] if (line := classify_aws_cli(aws_cli)) is not None else []),
-        classify_secrets_bind(secrets_bind, plane_state),
+        classify_bind_line(secrets_bind, plane_state),
         classify_skill_usage(skill_note),
     ]
     receipt = read_claude_receipt(path=root / ".l9" / "claude" / "bootstrap-state.json")
