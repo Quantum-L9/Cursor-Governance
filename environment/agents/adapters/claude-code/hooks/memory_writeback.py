@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Stop-hook write-back — thin wrap of the canonical session close (stage C8).
+"""Stop-hook write-back — the post-publish handoff close (stage C8).
+
+WHEN: once per publication of this session, after it — never on an ordinary
+turn. The first Stop after ``make pr`` asks the agent (once) for the
+comprehensive handoff (``.l9/memory/handoff.json``, l9.session_handoff.v1)
+and, in the same single request, the governance handoff
+(``.l9/memory/governance-handoff.json``, l9.governance_handoff.v1); the next
+Stop closes the in-scope repository with the repository brief carried in its
+continuation capsule and announces exactly what was written — or loudly, what
+was not. The governance handoff is written by its own Stop hook,
+``governance_handoff_writeback.py``, running in parallel with this one, to the
+cursor-governance namespace only.
 
 Multi-repository by construction, because hydration is. A cloud container puts
 several repositories side by side and ``WORKSPACE`` then names the *container*,
@@ -31,6 +42,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
 
@@ -58,6 +70,7 @@ sys.path.insert(0, str(MEM))
 
 import memory_bridge as mb  # noqa: E402
 import memory_state as st  # noqa: E402
+import post_publish as pp  # noqa: E402
 
 #: Receipt key suffix. Reuses st.write_receipt (the existing mechanism) under a
 #: distinct id so this never overwrites the SessionStart prefetch receipt that
@@ -90,7 +103,7 @@ MIN_ROOT_BUDGET = 9.0
 # nothing, and a non-write outcome (a policy skip, a failure) is announced when
 # it first appears or changes, not on every turn.
 
-_ITEM_CHARS = 200
+_ITEM_CHARS = 600
 _ITEMS = 8
 
 
@@ -136,32 +149,123 @@ def _repo_block(repo: Path, report: dict, session_id: str) -> list[str]:
     return lines
 
 
-def compose_announcement(
-    session_id: str, reports: list[tuple[Path, dict]], deferred: list[str]
-) -> str | None:
-    """The formal announcement for this Stop, or None when nothing happened.
+#: Bound by main() after the governance tree is importable (ops.* is not on the
+#: path at import time of this hook).
+session_handoff: Any = None
+governance_handoff: Any = None
 
-    Written when at least one root wrote durably or did not close cleanly.
-    A Stop where every root was an idempotent skip announces nothing.
-    """
-    wrote = any(any(w.get("written") for w in _writes(r)) for _, r in reports)
-    failed = [
-        (repo, r)
-        for repo, r in reports
-        if str(r.get("status")) not in {"closed_canonically", "idempotent_skip"}
-    ]
-    if not wrote and not failed and not deferred:
+
+def _bind_runtime(handoff_module: Any, governance_module: Any) -> None:
+    global session_handoff, governance_handoff  # noqa: PLW0603 - bound once per hook run
+    session_handoff = handoff_module
+    governance_handoff = governance_module
+
+
+#: Per-publication ledger: one handoff request and one close per publication.
+#: The governance hook keeps its own (``.l9/memory/governance-handoffs``).
+HANDOFF_LEDGER_REL = Path(".l9") / "memory" / "handoffs"
+
+
+def _pending_publication(root: Path, started_at: float) -> dict | None:
+    """This session's newest publication in ``root`` that has not closed yet."""
+    pub = pp.publication(root, started_at)
+    if pub is None or pp.ledger(root, HANDOFF_LEDGER_REL, pub["key"]).get("closed"):
         return None
-    title = "FAILED" if (failed or deferred) and not wrote else "WRITTEN"
-    if wrote and (failed or deferred):
+    return pub
+
+
+def _section(title: str, items: list, render) -> list[str]:
+    if not items:
+        return [f"  {title}: none"]
+    return [f"  {title}:"] + [f"    - {render(i)}" for i in items]
+
+
+def compose_handoff_announcement(
+    session_id: str,
+    root: Path,
+    pub: dict,
+    report: dict,
+    brief: dict | None,
+    handoff_error: str,
+) -> str:
+    """The formal record of what the post-publish close wrote — or failed to."""
+    wrote = any(w.get("written") for w in _writes(report))
+    closed = str(report.get("status")) == "closed_canonically"
+    if closed and brief is not None:
+        title = "WRITTEN"
+    elif wrote:
         title = "PARTIAL"
-    lines = [f"L9 MEMORY WRITE-BACK — {title} (session {session_id}, agent claude-code)"]
-    for repo, report in reports:
-        if str(report.get("status")) == "idempotent_skip":
-            continue
-        lines.extend(_repo_block(repo, report, session_id))
-    for root in deferred:
-        lines.append(f"• {Path(root).name}: NOT closed — hydration budget exhausted this turn")
+    else:
+        title = "FAILED"
+    lines = [
+        f"L9 MEMORY HANDOFF — {title} ({pub['label']}, session {session_id}, "
+        f"agent {os.environ.get('L9_MEMORY_AGENT_ID') or 'unknown-agent'})",
+        f"publication: {pub['url'] or pub['label']}",
+    ]
+    lines.extend(_repo_block(root, {**report, "pickup": {}}, session_id))
+    if report.get("supersedes"):
+        lines.append(f"  superseded earlier continuation {report['supersedes']}")
+    if brief is None:
+        lines.append(
+            f"  HANDOFF NOT CAPTURED: {handoff_error or 'no handoff'} — the continuation "
+            "carries only the generic session capsule"
+        )
+    else:
+        lines.append(f"  objective: {_clip(brief['objective'])}")
+        lines.append(f"  status: {_clip(brief['status'])}")
+        for key in (
+            "published",
+            "completed",
+            "next_actions",
+            "open_questions",
+            "risks",
+            "verification",
+        ):
+            lines.extend(_section(key.replace("_", " "), brief.get(key) or [], _clip))
+        lines.extend(
+            _section(
+                "not completed",
+                brief.get("not_completed") or [],
+                lambda i: _clip(f"{i['item']} — {i.get('reason', '')}"),
+            )
+        )
+        lines.extend(
+            _section(
+                "blocked",
+                brief.get("blocked") or [],
+                lambda i: _clip(
+                    f"{i['item']} — {i.get('blocker', '')} (unblock: {i.get('unblock', '?')})"
+                ),
+            )
+        )
+        lines.extend(
+            _section(
+                "decisions",
+                brief.get("decisions") or [],
+                lambda i: _clip(f"{i['decision']} — {i.get('rationale', '')}"),
+            )
+        )
+        lines.extend(
+            _section(
+                "conflicts",
+                brief.get("conflicts") or [],
+                lambda i: _clip(f"{i['conflict']} — {i.get('resolution', '')}"),
+            )
+        )
+        lines.extend(
+            _section(
+                "YOUR ACTIONS ELSEWHERE",
+                brief.get("human_actions") or [],
+                lambda i: _clip(
+                    f"{i['action']} @ {i.get('where', '?')} — "
+                    f"{i.get('why', '')}; then {i.get('then', '')}"
+                ),
+            )
+        )
+    lines.append(
+        "• governance handoff → namespace cursor-governance: written separately by "
+        "governance_handoff_writeback.py (its own announcement)"
+    )
     return "\n".join(lines)
 
 
@@ -173,9 +277,7 @@ def _previous(contract: dict, session_id: str) -> dict:
         return {}
 
 
-def _emit(message: str) -> None:
-    """Stop-hook output: a user-visible message that does not continue the turn."""
-    print(json.dumps({"systemMessage": message}, ensure_ascii=False))
+_emit = pp.emit
 
 
 def _announce_state(contract: dict, session_id: str, status: str, message: str) -> str | None:
@@ -215,13 +317,6 @@ def _runtime_failure(contract: dict, session_id: str, **fields: object) -> None:
     )
 
 
-def _is_subagent(event: dict) -> bool:
-    """A subagent / background run never closes the parent session's memory."""
-    if event.get("is_background_agent") or event.get("isBackgroundAgent"):
-        return True
-    return str(event.get("agent_type") or event.get("agentType") or "").lower() == "subagent"
-
-
 def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[Path]:
     """Repositories to close, preferring the ones this session hydrated.
 
@@ -230,19 +325,7 @@ def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[P
     container root again, which is the exact defect this function exists to
     remove.
     """
-    try:
-        data = json.loads(st.receipt_path(contract, receipt_id).read_text(encoding="utf-8"))
-        roots = [Path(r) for r in (data.get("hydrated_roots") or []) if r]
-        roots = [r for r in roots if r.is_dir()]
-        if roots:
-            return roots
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
-        # Deliberately swallowed, and the fallback below is the whole point: an
-        # absent, truncated or malformed prefetch receipt is an ordinary state
-        # (a session that never hydrated, a container reaped mid-write), not an
-        # error to propagate out of a fail-open Stop hook.
-        pass
-    return _shared_workspace_roots(workspace)
+    return pp.session_roots(contract, receipt_id, _shared_workspace_roots, workspace)
 
 
 def main() -> int:
@@ -256,7 +339,7 @@ def main() -> int:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
         return 0
-    if _is_subagent(event):
+    if pp.is_subagent(event):
         # Authority narrowing: the parent session owns its continuation and its
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
@@ -271,7 +354,11 @@ def main() -> int:
         receipt_id = st.resolve_receipt_id(event=event)
     except ValueError:
         receipt_id = ""
-    if not receipt_id or not st.fresh_receipt(contract, receipt_id):
+    # usable, not fresh: fresh_receipt() is False for a DEGRADED hydration, which
+    # made a degraded session indistinguishable from one that never started —
+    # it was never closed and was announced as "no prefetch receipt". The write
+    # gate made the same move for the same reason (memory_state.usable_receipt).
+    if not st.usable_receipt(contract, receipt_id):
         # A policy skip: this session never prefetched, so there is nothing to
         # close. Recorded so it stays distinguishable from a runtime failure.
         announced = _announce_state(
@@ -293,13 +380,42 @@ def main() -> int:
 
     workspace = st.workspace_root()
     roots = _writeback_roots(contract, receipt_id, workspace)
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
-    os.environ.setdefault("USER_ID", "claude_code_agent")
+    agent_id = st.bind_identity_env()
+    if not agent_id:
+        # Accountability: never close under a guessed or configured author.
+        reason = st.unresolved_identity_reason()
+        announced = _announce_state(
+            contract,
+            session_id,
+            "identity_unresolved",
+            f"L9 MEMORY WRITE-BACK — FAILED (session {session_id}): no memory identity "
+            f"for this surface ({reason}); nothing was written. Every memory must name "
+            "the surface that wrote it (ops/memory/agent_identity.py).",
+        )
+        _record(
+            contract,
+            session_id,
+            status="identity_unresolved",
+            reason=reason,
+            announcement=announced or _previous(contract, session_id).get("announcement"),
+        )
+        return 0
 
     mb.ensure_importable()
 
     try:
+        # ``from <full.dotted.module> import name`` resolves the module through
+        # sys.modules by its full name (never a stale package attribute left by
+        # an earlier import) and still goes through __import__, so an import
+        # failure is raised HERE and classified below.
         from ops.graphiti.hydration.close_session import close_session
+        from ops.memory.governance_handoff import GOVERNANCE_SCHEMA  # noqa: F401
+        from ops.memory.session_handoff import HANDOFF_SCHEMA  # noqa: F401
+
+        _bind_runtime(
+            sys.modules["ops.memory.session_handoff"],
+            sys.modules["ops.memory.governance_handoff"],
+        )
     except ModuleNotFoundError as exc:
         # The F-13 failure: the hook reached this line on an interpreter without
         # the locked dependencies, so write-back never ran. Previously this was
@@ -330,91 +446,129 @@ def main() -> int:
         _runtime_failure(contract, session_id, error=type(exc).__name__, interpreter=sys.executable)
         return 0
 
+    # --- Post-publish only ---------------------------------------------------
+    # The close fires ONCE per publication, after it, carrying the agent's
+    # comprehensive handoff — never on an ordinary turn. It used to fire on the
+    # first Stop of a session, freeze a generic "Continue work in <repo>"
+    # capsule from turn one, and idempotent-skip every turn after.
+    started_at = pp.prefetch_started_at(contract, receipt_id)
+    pending = [
+        (root, pub) for root in roots if (pub := _pending_publication(root, started_at)) is not None
+    ]
+    if not pending:
+        _record(contract, session_id, status="no_publication", roots=[str(r) for r in roots])
+        return 0
+
     try:
         total_budget = float(os.environ.get("L9_MEMORY_WRITEBACK_BUDGET", DEFAULT_TOTAL_BUDGET))
     except ValueError:
         total_budget = DEFAULT_TOTAL_BUDGET
     deadline = time.monotonic() + total_budget
 
+    announcements: list[str] = []
     statuses: list[str] = []
-    reports: list[tuple[Path, dict]] = []
-    deferred: list[str] = []
-    writes = 0
-    warnings = 0
+    for root, pub in pending:
+        key = pub["key"]
+        handoff, handoff_error = None, ""
+        missing: dict[str, str] = {}
+        try:
+            handoff = session_handoff.load(root, pr_number=pub["number"])
+        except session_handoff.HandoffError as exc:
+            handoff_error = str(exc)
+            missing[str(session_handoff.HANDOFF_REL)] = handoff_error
+        try:
+            governance_handoff.load(root, pr_number=pub["number"])
+        except session_handoff.HandoffError as exc:
+            missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
+        ledger_rel = HANDOFF_LEDGER_REL
+        if (
+            missing
+            and not pp.ledger(root, ledger_rel, key).get("requested")
+            and not event.get("stop_hook_active")
+        ):
+            # Ask ONCE, for both handoffs in one reason: this is the only hook
+            # that blocks (the governance hook runs in parallel and never does).
+            # Blocking hands the agent the schemas and one more turn; the next
+            # Stop closes with what exists and each hook announces the rest.
+            pp.write_ledger(
+                root,
+                ledger_rel,
+                key,
+                {"requested": True, "request_missing": missing},
+                who="memory-writeback",
+            )
+            _record(contract, session_id, status="handoff_requested", publication=key)
+            gov_rel = str(governance_handoff.GOVERNANCE_REL)
+            print(
+                json.dumps(
+                    {
+                        "decision": "block",
+                        "reason": session_handoff.request_reason(
+                            pr_label=pub["label"],
+                            pr_number=pub["number"],
+                            missing=missing,
+                            governance=(
+                                gov_rel,
+                                governance_handoff.GOVERNANCE_SCHEMA,
+                                governance_handoff.example(pub["number"]),
+                            ),
+                        ),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        # Asked and the repository brief is still absent or invalid: close with
+        # what the session has, and say LOUDLY that the handoff was not captured.
 
-    for index, repo in enumerate(roots):
-        left = deadline - time.monotonic()
-        # `index > 0` is load-bearing: the FIRST root is always attempted, however
-        # little time remains. Guarding it too meant a budget below the threshold
-        # closed nothing at all and recorded four deferrals — reproducing the
-        # writes=0 outcome this hook exists to remove, from the other direction.
-        # Phase A (capsule + close) is not bounded by this budget; only Phase B
-        # is. So a starved root still closes canonically and merely skips
-        # distillation, which is the correct degradation.
-        if index > 0 and left < MIN_ROOT_BUDGET:
-            # Name what was not closed. A truncated loop that reports only its
-            # successes is the same lie as a skipped write that reports "ran".
-            deferred.extend(str(r) for r in roots[index:])
-            break
-        # An even split of what is actually left, recomputed per iteration so a
-        # fast root hands its unused time to the roots after it rather than to a
-        # fixed slice that expires unused.
-        per_root = max(0.0, left) / max(1, len(roots) - index)
+        left = max(MIN_ROOT_BUDGET, deadline - time.monotonic())
         try:
             report = close_session(
-                project_dir=repo,
+                project_dir=root,
                 session_id=session_id,
-                reason=str(event.get("reason") or "completed"),
+                reason=f"published {pub['label']}",
                 transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
-                agent_id="claude-code",
+                agent_id=agent_id,
                 is_background_agent=False,
                 dry_run=False,
-                budget=per_root,
+                budget=left,
                 surface="claude-session-end",
+                handoff=handoff,
+                publication=key,
             )
-            statuses.append(f"{repo.name}={report.get('status')}")
-            reports.append((repo, report))
-            writes += len(report.get("writes") or [])
-            warnings += len(report.get("warnings") or [])
-        except Exception as exc:  # noqa: BLE001 - one bad root must not lose the rest
-            print(
-                f"memory-writeback: {repo.name} FAILED ({type(exc).__name__}); continuing",
-                file=sys.stderr,
-            )
-            statuses.append(f"{repo.name}=error")
-            reports.append((repo, {"status": "error", "writes": [], "error": type(exc).__name__}))
-            warnings += 1
-
-    # Do not echo warning text — may carry secret-adjacent skip reasons
-    # (CodeQL clear-text-logging).
-    print(
-        f"memory-writeback: roots={len(roots)} closed={len(statuses)} "
-        f"deferred={len(deferred)} writes={writes} warnings={warnings}",
-        file=sys.stderr,
-    )
-    try:
-        announcement = compose_announcement(session_id, reports, deferred)
-    except Exception as exc:  # noqa: BLE001 - the announcement must never lose the receipt
-        announcement = (
-            f"L9 MEMORY WRITE-BACK — ran (session {session_id}) but the announcement "
-            f"could not be composed ({type(exc).__name__}); see the write-back receipt."
+        except Exception as exc:  # noqa: BLE001 - fail-open, but never silent
+            report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
+        text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
+        announcements.append(text)
+        statuses.append(f"{root.name}={report.get('status')}")
+        pp.write_ledger(
+            root,
+            ledger_rel,
+            key,
+            {
+                "requested": True,
+                "closed": str(report.get("status")),
+                "handoff_captured": handoff is not None,
+                "handoff_error": handoff_error,
+                "continuation": (report.get("continuation") or {}).get("record_id"),
+                "announcement": text,
+            },
+            who="memory-writeback",
         )
-    if announcement:
-        _emit(announcement)
+
+    announcement = "\n\n".join(announcements)
+    _emit(announcement)
     _record(
         contract,
         session_id,
-        announcement=announcement or _previous(contract, session_id).get("announcement"),
+        announcement=announcement,
         status="ran",
         transport="memory-control-plane/v1",
         close_status=";".join(statuses) or "none",
-        writes=writes,
-        warnings=warnings,
-        roots=[str(r) for r in roots],
-        deferred_roots=deferred,
+        publications=[pub["key"] for _, pub in pending],
     )
     # Exit 0 either way: the Stop hook contract is fail-open and must not block
-    # session termination. Observability lives in the receipt, not the exit code.
+    # session termination. Observability lives in the announcement and receipt.
     return 0
 
 

@@ -62,12 +62,12 @@ it. Who calls what:
 
 | Lane | Caller | Adapter | Operation(s) | Role |
 |---|---|---|---|---|
-| agent | Model, mid-session, ordinary durable fact (cold OK); real-time handoff to another agent | `l9-graphite-memory` MCP stdio (or `l9-memory write` from a shell) | `memory.write_agent` | **Ordinary agent write (ADR-0031 / ADR-0033).** Direct and ungated — no SessionStart receipt, no phase, no session close, no PR step, no Cursor-Governance approval. Immediately visible to the next `hydrate` / `search`. |
+| agent | Model, mid-session, ordinary durable fact (cold OK); real-time handoff to another agent | `l9-graphite-memory` MCP stdio (or `l9-memory write` from a shell) | `memory.write_agent` | **Ordinary agent write (ADR-0031 / ADR-0033).** Direct and ungated — no SessionStart receipt, no phase, no session close, no PR step, no Cursor-Governance approval. Immediately visible to the next `hydrate` / `search`. Arguments follow `l9.agent_memory_write.v1`, built by the agent with `python -m ops.memory.agent_write` (`AGENT_WRITE_CONTRACT.md`). |
 | agent | Model, mid-session, conflict-sensitive durable fact | `l9-graphite-memory` MCP stdio | `memory.phase_lock` → `memory.write_governed` | **Optional high-stakes pair.** Lock + snapshot digest; never required before `write_agent`. |
 | agent | Model or PE worker reading on its own behalf | MCP `memory.search` / `memory.hydrate`; `l9-memory search` located via `runtime_binding.resolve_runtime_binding()` (`context_reader.py`) | read | evidence only; never constructs the hook client |
 | hook | SessionStart (`cursor-session-start`, `claude-session-start`) | `hydration.py` (`canonical_hydrate(surface=…)`) | `health`, `hydrate` | bounded, read-only envelope |
 | hook | sessionEnd (`cursor-session-end`, `claude-session-end`) | `ops/graphiti/hydration/close_session.py` | `ingest_candidate`, `close` (idempotent, exact-request replay), `distill` (redacted excerpt → `l9-memory distill`) | bounded write envelope; `principal.type=hook` |
-| hook | Plan prefetch (`plan-prefetch`), PR publish (`pr-publish`), PE/SGD ingest (`pe-sgd-ingest`) | `cli.py --surface <name>` / `MemoryControlPlaneClient(surface=…)` | read / `write` / `ingest_candidate` per envelope | bounded; refused client-side outside `ops/config/memory-hook-envelopes.json` |
+| hook | Plan prefetch (`plan-prefetch`), PR publish (`pr-publish`), PE/SGD ingest (`pe-sgd-ingest`), post-publish governance handoff (`claude-governance-handoff`, namespace-restricted to `cursor-governance`; see `HANDOFF_CONTRACT.md`) | `cli.py --surface <name>` / `MemoryControlPlaneClient(surface=…)` | read / `write` / `ingest_candidate` per envelope | bounded; refused client-side outside `ops/config/memory-hook-envelopes.json` |
 | operator | `/end-session` repair | `ops/graphiti/hydration/pickup_write.py` (`hydration.cli repair-write`) | canonical `write` + close-receipt stamp | deterministic adapter |
 | operator | Legacy provider history | `legacy_reconciliation.py` | canonical admission, tag `legacy_unverified` | human-run one-shot |
 | operator | Diagnostics | `diagnostics.py`, `runtime_binding.py`, `environment_heal.py` | `readiness`, `health`, `capabilities`; one-shot lock-drift heal | operator / hooks |
@@ -96,7 +96,13 @@ Rules that follow from the table:
 - The memory phase-lock is a **memory-write consistency precondition**. It
   never authorizes a source edit, never serializes git, never replaces
   worktree / branch / publication governance (`rules/96` E7/E8/E10,
-  `rules/98`).
+  `rules/98`). It is also **not** the SessionStart prefetch receipt
+  (`preconditions.session_prefetch`) and never a prerequisite for
+  `memory.write_agent` (ADR-0037 INV-AMW-04/06).
+- One `memory.write_agent` record is one independently retrievable,
+  independently supersedable assertion or closely coupled relationship;
+  several independent memories are several sequential writes, not a batch
+  (ADR-0037; `tests/ops/memory/test_agent_write_semantics.py`).
 - Generic `memory.ingest` and the operator CLI `write` are **not** the model's
   alternative to `write_governed`; routing a model-authored fact through them
   to avoid the lock is a doctrine violation. An unbound MCP server is a

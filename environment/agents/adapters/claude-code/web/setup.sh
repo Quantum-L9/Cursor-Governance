@@ -242,6 +242,21 @@ fi
 # (hooks/session_start_claude_governance.sh -> hooks/session_deps_cloud.sh),
 # which runs on every session and resume.
 
+# 4b) Signed memory authority for the hosted identity (ADR-0031).
+# Every agent memory must name its author, so the l9-graphite-memory server
+# starts only with a signed agent door. The server verifies it against keys
+# handed to that same process, so the container mints its own: nothing secret
+# is ever pasted into the environment settings (plaintext, model-readable, and
+# by environment.env.example's contract credential-free). The hosted identities
+# come from ops/memory/agent_identity.py; the grants from agent_registry.yaml.
+# Additive and idempotent. Non-fatal: run_memory_mcp.sh retries at spawn and
+# SessionStart reports the door either way.
+log "Hosted memory authority (container-local; nothing to paste)"
+if ! PYTHONPATH="$GOV_DIR${PYTHONPATH:+:$PYTHONPATH}" "$GOV_DIR/.venv/bin/python" \
+  -m ops.memory.materialize_agent_authority --provision-hosted --governance "$GOV_DIR"; then
+  echo "WARN: hosted memory authority not provisioned — run_memory_mcp.sh retries at spawn" >&2
+fi
+
 # 5) Versions for the setup log.
 log "Tool versions"
 have gh      && gh --version | head -1        || true

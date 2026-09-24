@@ -445,7 +445,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
       "pre_tool_hook_required": true,
       "task_transport": "claude-code-task"
     },
-    "peer_ref": "claude-code",
+    "peer_ref": "claude-code-desktop",
     "protocol_version": "1.0.0",
     "provider_ref": "claude-code-direct",
     "supports_agent_identity": true,

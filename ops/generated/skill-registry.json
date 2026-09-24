@@ -1,5 +1,5 @@
 {
-  "generation_id": "45192b152115903d3404b921c06254a7067b295e3b3ee0f0d02b6a77e91e17e7",
+  "generation_id": "ce450fa2c5394e5b14aa06c7c945fdb94ade29cd20fdd2b512e4bfd9c94a00b0",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1205,7 +1205,7 @@
       "path": "skills/l9-graphiti-memory",
       "reason": "",
       "skill_md": "skills/l9-graphiti-memory/SKILL.md",
-      "skill_sha256": "4fc74830bbbb37273643d91f5348ec12d19d2b9b5c7ae8716b302f766b5e424a",
+      "skill_sha256": "1e110580ed09a69ba1803f46d184c69a73739c1d87119c91f44b41c4f03b642c",
       "user_invocable": true,
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2cc1c76dd45b8a970c3ecabce7a832b7d5c9f8b6fc36cb56bb15cd69d7269c5b",
-  "source_skill_corpus_sha256": "759a464043edc4765acbf244272d64541056de2acf4ae951644287a5a0489c6e"
+  "source_skill_corpus_sha256": "cd86963654c7a7a98d947ecc8ac1f4b0f306771e7b40b3c74a03e793e0ada830"
 }

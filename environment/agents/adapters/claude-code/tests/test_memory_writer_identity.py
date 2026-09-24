@@ -15,8 +15,8 @@ import memory_state as st  # noqa: E402
 from errors import MemoryWriteDenied  # noqa: E402
 
 CLAUDE = {
-    "agent_id": "claude-code",
-    "user_id": "claude_code_agent",
+    "agent_id": "claude-code-desktop",
+    "user_id": "claude_code_desktop_agent",
     "namespace": "cursor-governance",
 }
 
@@ -26,17 +26,21 @@ class ValidateMemoryWriter(unittest.TestCase):
         st.validate_memory_writer(dict(CLAUDE))
 
     def test_missing_namespace_denies_write(self) -> None:
-        ident = {"agent_id": "claude-code", "user_id": "claude_code_agent"}
+        ident = {"agent_id": "claude-code-desktop", "user_id": "claude_code_desktop_agent"}
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
     def test_missing_agent_id_denies_write(self) -> None:
-        ident = {"agent_id": "", "user_id": "claude_code_agent", "namespace": "cursor-governance"}
+        ident = {
+            "agent_id": "",
+            "user_id": "claude_code_desktop_agent",
+            "namespace": "cursor-governance",
+        }
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
     def test_missing_user_id_denies_write(self) -> None:
-        ident = {"agent_id": "claude-code", "user_id": "", "namespace": "cursor-governance"}
+        ident = {"agent_id": "claude-code-desktop", "user_id": "", "namespace": "cursor-governance"}
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
@@ -65,16 +69,37 @@ class ResolveWriterIdentity(unittest.TestCase):
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
-    def test_defaults_apply_only_in_bootstrap_mode(self) -> None:
+    def test_there_is_no_default_identity_in_any_mode(self) -> None:
+        """A default would attribute a write to a surface that did not run."""
         with unittest.mock.patch.dict("os.environ", {}, clear=True):
             ident = st.resolve_writer_identity(require_explicit=False)
-        self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
+        self.assertEqual(ident, {"agent_id": "", "user_id": ""})
 
-    def test_explicit_env_is_read_verbatim(self) -> None:
-        env = {"L9_MEMORY_AGENT_ID": "claude-code", "USER_ID": "claude_code_agent"}
-        with unittest.mock.patch.dict("os.environ", env, clear=True):
+    def test_the_identity_is_derived_and_configured_values_are_ignored(self) -> None:
+        configured = {"L9_MEMORY_AGENT_ID": "claude-code", "USER_ID": "claude_code_agent"}
+        desktop = {**configured, "CLAUDECODE": "1"}
+        with unittest.mock.patch.dict("os.environ", desktop, clear=True):
             ident = st.resolve_writer_identity(require_explicit=True)
-        self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
+        self.assertEqual(
+            ident, {"agent_id": "claude-code-desktop", "user_id": "claude_code_desktop_agent"}
+        )
+        mobile = {
+            **desktop,
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+        }
+        with unittest.mock.patch.dict("os.environ", mobile, clear=True):
+            ident = st.resolve_writer_identity(require_explicit=True)
+        self.assertEqual(
+            ident, {"agent_id": "claude-code-mobile", "user_id": "claude_code_mobile_agent"}
+        )
+
+    def test_the_retired_single_identity_is_denied(self) -> None:
+        with unittest.mock.patch.dict(
+            "os.environ", {"L9_MEMORY_AGENT_ID": "claude-code"}, clear=True
+        ):
+            ident = st.resolve_writer_identity(require_explicit=True)
+        self.assertEqual(ident, {"agent_id": "", "user_id": ""})
 
 
 class NoHttpSideDoor(unittest.TestCase):

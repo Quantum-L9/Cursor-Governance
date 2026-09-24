@@ -98,11 +98,16 @@
         "cold_write_prerequisite",
         "governed_write_prerequisite",
         "governed_write_operation",
-        "http_transport"
+        "http_transport",
+        "payload_contract"
       ],
       "properties": {
         "canonical_mcp_server": {
           "const": "l9-graphite-memory"
+        },
+        "payload_contract": {
+          "const": "ops/memory/schemas/l9.agent_memory_write.v1.schema.json",
+          "description": "The shape of a model-authored write's arguments (l9.agent_memory_write.v1). The agent builds and keeps it; it is a payload shape, never a prerequisite: cold_write_prerequisite stays none."
         },
         "prerequisite": {
           "const": "memory.phase_lock"
@@ -195,7 +200,8 @@
       "required": [
         "prefetch",
         "gate",
-        "writeback"
+        "writeback",
+        "governance_writeback"
       ],
       "properties": {
         "prefetch": {
@@ -205,6 +211,9 @@
           "$ref": "#/definitions/hook"
         },
         "writeback": {
+          "$ref": "#/definitions/hook"
+        },
+        "governance_writeback": {
           "$ref": "#/definitions/hook"
         }
       }

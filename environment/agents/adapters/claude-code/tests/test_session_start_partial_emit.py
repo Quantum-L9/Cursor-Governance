@@ -422,12 +422,51 @@ class SelfImposedDeadlineTest(unittest.TestCase):
         )
 
 
-class RepairBudgetTest(unittest.TestCase):
-    """The repair is sized by what is LEFT, and records that it was attempted."""
+class ReceiptGenerationTest(unittest.TestCase):
+    """Every bootstrap generates its receipt, then reads THAT receipt.
 
-    def _fake_governance(
-        self, tmp: Path, *, installer_body: str, state: str = "blocked", repairable_cause: str = ""
-    ) -> Path:
+    Observed on a hosted session: SessionStart printed an earlier session's
+    receipt ("ready … 1056s ago") as the verdict of a bootstrap that generated
+    nothing; and a session that ran the installer printed the expired verdict it
+    had just replaced and never read the receipt the installer wrote.
+    """
+
+    # Fake installer: records its ceremony id, stamps it into the receipt it
+    # writes, and counts runs. Fake reader: records the id it was bound to and
+    # reports whether the on-disk receipt carries it.
+    INSTALLER = textwrap.dedent(
+        """\
+        #!/usr/bin/env bash
+        d="$HOME/.l9/claude"; mkdir -p "$d"
+        echo run >>"$d/installer-runs"
+        printf '%s' "${L9_BOOTSTRAP_ID:-}" >"$d/installer-id"
+        printf '{"state": "READY", "bootstrap_id": "%s"}\\n' "${L9_BOOTSTRAP_ID:-}" \\
+          >"$d/bootstrap-state.json"
+        """
+    )
+
+    READER = textwrap.dedent(
+        """\
+        import json, pathlib, sys
+        home = pathlib.Path.home() / ".l9" / "claude"
+        want = None
+        if "--bootstrap-id" in sys.argv:
+            want = sys.argv[sys.argv.index("--bootstrap-id") + 1]
+        if want is not None:
+            (home / "reader-id").write_text(want)
+        try:
+            got = json.loads((home / "bootstrap-state.json").read_text()).get("bootstrap_id", "")
+        except Exception:
+            got = None
+        state = "ready" if want is not None and got == want else "unknown"
+        if "--json" in sys.argv:
+            print(json.dumps({"state": state}))
+        else:
+            print(f"claude bootstrap: {state} — stub (receipt id {got}, ceremony id {want})")
+        """
+    )
+
+    def _fake_governance(self, tmp: Path, *, installer_body: str | None = None) -> Path:
         gov = tmp / "home" / ".cursor-governance"
         (gov / "ops" / "scripts" / "lib").mkdir(parents=True)
         (gov / "environment" / "agents" / "adapters" / "claude-code").mkdir(parents=True)
@@ -435,208 +474,86 @@ class RepairBudgetTest(unittest.TestCase):
         (gov / "ops" / "scripts" / "lib" / "run_with_timeout.sh").write_text(
             RUN_WITH_TIMEOUT.read_text(encoding="utf-8"), encoding="utf-8"
         )
-        # Reader stub. `blocked` is the default because these tests are about
-        # the repair's BUDGET and its marker, and they need a state that arms
-        # it: `blocked` is "a required component could not be wired", which a
-        # re-run can genuinely move. `degraded` with a futile cause (and the
-        # env var set) no longer arms — see
-        # test_a_degraded_receipt_does_not_re_run_the_installer below.
-        # `degraded` with no cause or a non-futile cause DOES arm — see
-        # test_degraded_with_unknown_cause_arms_repair.
-        #
-        # The hook's inline Python expects this JSON structure when state=degraded:
-        #   {"state": "degraded", "components": {"shared_bootstrap": "DEGRADED"},
-        #    "reasons": {"shared_bootstrap": "<cause>"}}
-        # If repairable_cause is set, we need a component that is DEGRADED and
-        # whose reason matches the cause.
-        if repairable_cause and state == "degraded":
-            components_json = ', "components": {"shared_bootstrap": "DEGRADED"}'
-            reasons_json = f', "reasons": {{"shared_bootstrap": "{repairable_cause}"}}'
-        else:
-            components_json = ""
-            reasons_json = ""
         (gov / "ops" / "scripts" / "claude_bootstrap_receipt.py").write_text(
-            textwrap.dedent(
-                f"""
-                import sys
-                if "--json" in sys.argv:
-                    print('{{"state": "{state}"{components_json}{reasons_json}}}')
-                else:
-                    print("claude bootstrap: {state} — stub")
-                """
-            ).strip()
-            + "\n",
-            encoding="utf-8",
+            self.READER, encoding="utf-8"
         )
         (gov / "environment" / "agents" / "adapters" / "claude-code" / "install.sh").write_text(
-            installer_body, encoding="utf-8"
+            installer_body if installer_body is not None else self.INSTALLER, encoding="utf-8"
         )
         return gov
 
-    def test_defers_when_the_budget_cannot_cover_it(self) -> None:
+    def _run(self, tmp: str, budget: str = "120") -> str:
+        env = _base_env(Path(tmp) / "home")
+        env["L9_SESSION_START_BUDGET"] = budget
+        proc = subprocess.run(
+            ["bash", str(HOOK)],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=tmp,
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0)
+        return _context(proc.stdout)
+
+    def test_every_bootstrap_generates_its_receipt(self) -> None:
+        """A READY receipt already on disk does not excuse a generation."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(root)
+            state = root / "home" / ".l9" / "claude"
+            state.mkdir(parents=True)
+            (state / "bootstrap-state.json").write_text(
+                '{"state": "READY", "bootstrap_id": "an-earlier-session"}', encoding="utf-8"
+            )
+            first = self._run(tmp)
+            second = self._run(tmp)
+            runs = (state / "installer-runs").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(runs), 2, "each bootstrap must generate its own receipt")
+            for context in (first, second):
+                self.assertIn("bootstrap receipt: generated this bootstrap", context)
+                self.assertIn("claude bootstrap: ready", context)
+            self.assertEqual(list(state.glob("*.attempted")), [], "no once-per-revision marker")
+
+    def test_reader_is_bound_to_the_receipt_this_bootstrap_generated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._fake_governance(root)
+            self._run(tmp)
+            state = root / "home" / ".l9" / "claude"
+            installer_id = (state / "installer-id").read_text(encoding="utf-8")
+            reader_id = (state / "reader-id").read_text(encoding="utf-8")
+            self.assertTrue(installer_id, "the installer must receive a ceremony id")
+            self.assertEqual(reader_id, installer_id, "read back the receipt just generated")
+
+    def test_generation_is_not_started_when_the_budget_cannot_cover_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._fake_governance(root, installer_body="#!/usr/bin/env bash\nsleep 300\n")
-            env = _base_env(root / "home")
-            # 5s total minus the 4s reserve leaves nothing for a >=15s repair.
-            env["L9_SESSION_START_BUDGET"] = "5"
-            proc = subprocess.run(
-                ["bash", str(HOOK)],
-                capture_output=True,
-                text=True,
-                env=env,
-                cwd=tmp,
-                timeout=120,
-                check=False,
+            state = root / "home" / ".l9" / "claude"
+            state.mkdir(parents=True)
+            (state / "bootstrap-state.json").write_text(
+                '{"state": "READY", "bootstrap_id": "an-earlier-session"}', encoding="utf-8"
             )
-            self.assertEqual(proc.returncode, 0)
-            context = _context(proc.stdout)
-            self.assertIn("bootstrap repair: DEFERRED", context)
-            self.assertNotIn(
-                "running the installer once",
-                context,
-                "a repair that cannot finish must not be started",
-            )
+            # 5s total minus the 4s reserve leaves nothing for a >=15s generation.
+            context = self._run(tmp, budget="5")
+            self.assertIn("bootstrap receipt: NOT GENERATED", context)
+            self.assertNotIn("generated this bootstrap", context)
+            # The earlier session's READY receipt is not reported as this one's.
+            self.assertIn("claude bootstrap: unknown", context)
+            self.assertNotIn("claude bootstrap: ready", context)
 
-    def test_marker_is_written_on_attempt_not_on_success(self) -> None:
-        """Otherwise an unfinishable repair re-arms every session, forever."""
+    def test_a_failed_generation_is_reported_and_not_masked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._fake_governance(
                 root, installer_body="#!/usr/bin/env bash\necho 'boom' >&2\nexit 1\n"
             )
-            env = _base_env(root / "home")
-            env["L9_SESSION_START_BUDGET"] = "120"
-            proc = subprocess.run(
-                ["bash", str(HOOK)],
-                capture_output=True,
-                text=True,
-                env=env,
-                cwd=tmp,
-                timeout=120,
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0)
-            context = _context(proc.stdout)
-            self.assertIn("running the installer once", context)
-            self.assertIn("bootstrap repair: FAILED", context)
-
-            markers = list((root / "home" / ".l9" / "claude").glob("*.attempted"))
-            self.assertEqual(
-                len(markers), 1, "a FAILED repair must still record that it was attempted"
-            )
-            body = markers[0].read_text(encoding="utf-8")
-            self.assertIn("attempted", body)
-            self.assertIn("failed rc=", body, "the outcome is recorded alongside the attempt")
-
-    def test_a_degraded_receipt_does_not_re_run_the_installer(self) -> None:
-        """A `degraded` receipt with a FUTILE cause does NOT re-arm the repair.
-
-        The repair is declined when the receipt names a `repairable_cause` that
-        matches a FUTILE_CAUSES key AND the corresponding environment variable
-        is set in this hook's environment. The logic is: a cause that is an
-        INPUT to the installer (like L9_SKIP_SHARED_BOOTSTRAP) will reproduce
-        on re-run, so attempting the repair is futile.
-
-        If the receipt has no recorded cause, or the cause is not futile, the
-        repair DOES arm — see test_degraded_with_unknown_cause_arms_repair.
-        """
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._fake_governance(
-                root,
-                installer_body="#!/usr/bin/env bash\necho 'installer ran' >&2\nexit 0\n",
-                state="degraded",
-                repairable_cause="shared bootstrap skipped by request",
-            )
-            env = _base_env(root / "home")
-            env["L9_SESSION_START_BUDGET"] = "120"  # ample: nothing but state declines it
-            # Set the env var that makes this cause futile
-            env["L9_SKIP_SHARED_BOOTSTRAP"] = "1"
-            proc = subprocess.run(
-                ["bash", str(HOOK)],
-                capture_output=True,
-                text=True,
-                env=env,
-                cwd=tmp,
-                timeout=120,
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0)
-            context = _context(proc.stdout)
-            self.assertIn("bootstrap repair: NOT ARMED", context)
-            self.assertNotIn("running the installer once", context)
-            self.assertNotIn("bootstrap repair: DEFERRED", context)
-            # The remediation still reaches the operator, so this is a decline,
-            # not a silence.
-            self.assertIn("make claude-install", context)
-            # No attempt marker: nothing was attempted.
-            markers = list((root / "home" / ".l9" / "claude").glob("*.attempted"))
-            self.assertEqual(markers, [], "a declined repair must not record an attempt")
-
-    def test_degraded_with_unknown_cause_arms_repair(self) -> None:
-        """A `degraded` receipt with no recorded cause DOES arm the repair.
-
-        If the receipt says `degraded` but doesn't tell us WHY, the hook tries
-        to repair it because the cause might be fixable. Only a KNOWN futile
-        cause (one whose environment switch is currently set) declines.
-        """
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._fake_governance(
-                root,
-                installer_body="#!/usr/bin/env bash\necho 'installer ran' >&2\nexit 0\n",
-                state="degraded",
-            )
-            env = _base_env(root / "home")
-            env["L9_SESSION_START_BUDGET"] = "120"
-            proc = subprocess.run(
-                ["bash", str(HOOK)],
-                capture_output=True,
-                text=True,
-                env=env,
-                cwd=tmp,
-                timeout=120,
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0)
-            context = _context(proc.stdout)
-            self.assertIn("running the installer once", context)
-            self.assertIn("repairable cause: cause not recorded in the receipt", context)
-
-    def test_states_a_re_run_can_move_still_arm(self) -> None:
-        """Narrowing `degraded` must not disarm the states that need the repair.
-
-        `unknown` is the one that carries auto-heal: an expired receipt and a
-        superseded governance revision both become `unknown` in the reader, so
-        an environment fixed since the last run is still picked up.
-        """
-        for state in ("never_ran", "failed", "blocked", "unknown"):
-            with self.subTest(state=state), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                self._fake_governance(
-                    root,
-                    installer_body="#!/usr/bin/env bash\nexit 0\n",
-                    state=state,
-                )
-                env = _base_env(root / "home")
-                env["L9_SESSION_START_BUDGET"] = "120"
-                proc = subprocess.run(
-                    ["bash", str(HOOK)],
-                    capture_output=True,
-                    text=True,
-                    env=env,
-                    cwd=tmp,
-                    timeout=120,
-                    check=False,
-                )
-                self.assertEqual(proc.returncode, 0)
-                context = _context(proc.stdout)
-                self.assertIn(
-                    "running the installer once",
-                    context,
-                    f"{state} must still arm the repair",
-                )
+            context = self._run(tmp)
+            self.assertIn("bootstrap receipt: installer FAILED rc=1", context)
+            self.assertIn("boom", context)
+            self.assertNotIn("claude bootstrap: ready", context)
 
 
 class BudgetRegistrationLockstepTest(unittest.TestCase):

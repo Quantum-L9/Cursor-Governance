@@ -638,7 +638,7 @@ def _path_is_git_tracked(workspace: Path, rel: Path | str) -> bool:
       healthy session corrects.
 
     This call runs several times per SessionStart, so the timeout is bounded
-    well inside the hook budget (`L9_SESSION_START_BUDGET`, 30s).
+    well inside the hook budget (`L9_SESSION_START_BUDGET`, 60s).
     """
     try:
         proc = subprocess.run(

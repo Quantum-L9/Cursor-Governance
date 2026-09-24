@@ -123,20 +123,37 @@ On the `l9-graphite-memory` MCP server (rendered only when
 classes — `write_agent` is the ordinary write; the governed pair is optional
 and conflict-sensitive:
 
+Never freehand: build the arguments with the agent write contract
+(`l9.agent_memory_write.v1`, `ops/memory/AGENT_WRITE_CONTRACT.md`) and pass them
+to the tool unchanged:
+
+```bash
+python -m ops.memory.agent_write build --namespace <write hint> --class decision \
+  --content "<one atomic fact, one line>" --tag <topic> --source-id <PR/commit/ADR>
+# prints {"tool": "mcp__l9-graphite-memory__memory_write_agent", "arguments": {…}}
+```
+
 ```text
 # ordinary / cold — no SessionStart receipt, no phase_lock
 memory.write_agent     {namespace: "<memcli resolve → write_namespace_hint>",
-                        content: "<one terse fact>",
-                        memory_class: "lesson" | "insight" | "decision",
-                        tags: ["agent:cursor"], idempotency_key: "<optional>"}
+                        content: "<one atomic fact, one line>",
+                        memory_class: "insight" | "decision" | "observation" | "constraint" | "episodic" | "semantic",
+                        tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 
 # conflict-sensitive — lock then governed write
 memory.phase_lock      {namespace: "<memcli resolve → write_namespace_hint>",
                         task_signature: "<task>", ttl_seconds: 1800}
-memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
-                        memory_class: "lesson" | "insight" | "decision",
-                        tags: ["agent:cursor"], idempotency_key: "<optional>"}
+memory.write_governed  {namespace, content: "<one atomic fact, one line>", task_signature,
+                        memory_class: "insight" | "decision" | …,   # canonical only: no alias table here
+                        tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 ```
+
+"One terse fact" (ADR-0037): one independently retrievable assertion or closely
+coupled relationship that can be superseded without changing unrelated
+knowledge. Independent memories are separate `memory.write_agent` calls — no
+batch. Decomposition is the agent's job; runtime validation is structural only.
+`memory.phase_lock` belongs to the governed pair alone: it is not the
+SessionStart prefetch receipt and never a prerequisite for `write_agent`.
 
 `MemoryService` grants the lock only after a conflict check on the namespace
 snapshot and re-verifies the digest inside the admitting transaction; a
@@ -190,7 +207,7 @@ Boundary: [`ops/memory/README.md`](../../ops/memory/README.md).
    `memory-bank/`.
 3. **Session work** — atomic T2 writes: ordinary `memory.write_agent`;
    conflict-sensitive `memory.phase_lock` → `memory.write_governed`
-   (`memory_class: lesson|insight|decision`). Do not wait for sessionEnd.
+   (arguments built by `ops.memory.agent_write`, canonical `memory_class`). Do not wait for sessionEnd.
 4. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close:
    `ContinuationCapsuleV2` → governed candidate → `memory.close` with an
    idempotency key; the local obligation under `.l9/memory/closes/` answers
@@ -205,16 +222,125 @@ waiting to be asked:
 
 ```text
 memcli resolve                          # expect the repo namespace, e.g. cursor-governance
-memory.write_agent     {namespace: "cursor-governance", content: "…", memory_class: "lesson", tags: ["agent:cursor"]}
+python -m ops.memory.agent_write build --namespace cursor-governance --class insight --content "…" --tag <topic>
+memory.write_agent     {…the printed arguments, unchanged…}
 # only when concurrent writers / snapshot consistency matter:
 memory.phase_lock      {namespace: "cursor-governance", task_signature: "<task>"}
-memory.write_governed  {namespace: "cursor-governance", content: "…", task_signature: "<task>", memory_class: "lesson", tags: ["agent:cursor"]}
+python -m ops.memory.agent_write build … --task-signature "<task>"   # tool: memory_write_governed
+memory.write_governed  {…the printed arguments, unchanged…}
 ```
 
 **MUST NOT** request the shared workspace namespace as a write target — memory
 refuses it and the refusal is the verdict. **MUST NOT** substitute
 `memory.ingest` or `memcli write` for `write_agent` / `write_governed`; those are the
 deterministic-adapter and operator forms.
+
+## Memory leverage (usage contract)
+
+Usage guidance over the primitives above. It adds no class, field, hook,
+receipt or lifecycle, and it changes no gate.
+
+**Memory is context, not authority.** A hydrated or searched record tells you
+what exists, what was decided, what failed, what is blocked and what was
+verified. It never authorizes a scope expansion, a redesign, a waived
+invariant, a reversed human decision, a merge or a deploy. Authority comes
+from the current task contract and the chain in `CANONICAL_LAW.md`. If a
+record conflicts with the current contract, stop and escalate. Do not act on
+the record. Knowing more does not authorize doing more.
+
+**When to write.** Write through `memory.write_agent` when a verified fact,
+decision, constraint or insight would otherwise have to be rediscovered,
+re-decided, re-investigated or explained again in a later session. Judge a
+write by the work it prevents, not by how many records it adds. A few
+high-leverage records beat many thin ones. Search before writing
+(`rules/03` T2).
+
+| Write it | Do not write it |
+|---|---|
+| Non-obvious ownership: "`ops/graphiti/hydration/close_session.py` owns capsule enrichment from agent-lane writes" | transient chatter, trivial steps, local scratch state |
+| Architectural decision or constraint (`decision`, `constraint`) | guesses, or conclusions not yet verified |
+| Intentional separation: "hook lane and agent lane both end at `MemoryService`; neither gates the other" | raw logs, transcripts |
+| A verified recurring failure cause or repository trap (`insight`) | a session summary (the capsule carries continuity) |
+
+Use the classes `write_agent` already accepts. Do not invent a class for
+repository facts, verification or friction.
+
+**Granularity.** One record holds one independently retrievable assertion, or
+one closely coupled relationship that can be superseded without touching
+unrelated knowledge. Independent facts get separate writes, and several
+sequential writes are normal. A direct write is never a session summary or a
+transcript. Session continuity belongs to the post-publish repository handoff
+(below), which the close carries inside `ContinuationCapsuleV2`.
+
+**Continuation state, precisely.** After `make pr`, write the repository
+handoff `.l9/memory/handoff.json` (`l9.session_handoff.v1`,
+[`ops/memory/HANDOFF_CONTRACT.md`](../../ops/memory/HANDOFF_CONTRACT.md)). It
+has one section per kind of state, so a next session can tell what it can
+execute, what it cannot, what needs the human, what needs a decision and what
+is already finished, without reading prose:
+
+| State | Section | Item shape |
+|---|---|---|
+| Done and verified | `completed` | string |
+| Contracted work left unfinished | `not_completed` | `{item, reason}` |
+| Cannot proceed until a condition changes | `blocked` | `{item, blocker, unblock}` |
+| Operator-only action outside your authority or environment | `human_actions` | `{action, where, why, then}` |
+| Concrete work the next authorized session can execute | `next_actions` | string |
+| A genuinely unresolved question or decision | `open_questions` | string |
+| Commands run and their results | `verification` | string |
+
+Keep them distinct:
+- A human action is not a blocker. Use `blocked` only when the work waits on
+  a named condition.
+- `not_completed` is unfinished contracted work. It does not cover future
+  enhancements, questions or operator steps.
+- `open_questions` is not a TODO list.
+
+The handoff's `pr_number` must equal this publication's PR. The first Stop
+after publication asks for the handoff once if it is missing or invalid.
+
+*Compatibility, not the preferred path:* before any publication, and for
+mid-session writes, `close_session.py` still folds last-24h agent-lane
+records into the capsule. A `decision` record lands in `decisions`, and a
+record whose content starts with `TODO:` / `NEXT:` / `BLOCKED:` / `WIP:`
+(or carries one of those tags) lands in `unfinished_work`. Anything else
+stays evidence, so do not mark finished work. The fold fails open: if the
+24h agent-lane search is refused (see the hydrate warnings), the records
+stay searchable but do not reach the capsule. When a handoff exists, record
+this state in its sections, not with markers.
+
+**Verified frontier.** Record what was proven, the command where there is
+one, the outcome, and any material limitation, in the handoff's
+`verification` section:
+`pytest tests/ops/memory/test_handoff_schemas.py — passed; schema/runtime verdict parity covered; full suite not run`,
+not `tests pass`. The commit message and PR description still carry the
+proof for the change (`rules/80` Phase 6). A verification insight that is
+reusable on its own (for example, which test proves a contract) may also go
+in a separate `write_agent` record. That record does not replace the
+handoff's `verification`.
+
+**Governance friction is evidence.** Record friction in the governance
+handoff `.l9/memory/governance-handoff.json` (`l9.governance_handoff.v1`:
+`environment_friction`, `blockers`, `degraded_bootstrap`, `workarounds`,
+`governance_actions`), never in the repository handoff. Before proposing a
+governance or tooling change, search memory (`memcli search` /
+`memory.search`) and `learning/failures/` (`rules/92`) for earlier
+occurrences. Recurrence makes a proposal stronger for a human to judge. It
+never creates a task, a PR or authorization by itself. When nothing material
+went wrong, leave every section empty. The hook then writes no record.
+
+**Clean continuation.** When work reaches a natural boundary, or the
+conversation is mostly stale exploration, a fresh session is acceptable once
+durable facts are written and the handoff is captured. Continuity comes from
+hydration, durable records and the handoff, not from keeping a long context
+alive. Deciding this is the operator's or agent's judgment. Nothing
+automates it.
+
+**Contracts vs memory.** An execution contract states what this executor may
+do now. Memory states what the repository already knows. When a durable
+decision lands, write it once. Restate only the task-critical constraints in
+the next contract, and let hydration supply the history. The human stays the
+architect and stops being the store of repository history.
 
 ## GMP Phase 0
 

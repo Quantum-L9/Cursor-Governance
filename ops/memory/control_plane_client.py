@@ -315,6 +315,7 @@ class MemoryControlPlaneClient:
         records: int = 0,
         byte_size: int | None = None,
         provenance: bool | None = None,
+        namespace: str | None = None,
     ) -> OperationOutcome | None:
         """Refuse before spawning: unbound runtime, then hook-envelope violation.
 
@@ -340,6 +341,7 @@ class MemoryControlPlaneClient:
             records=records,
             byte_size=byte_size,
             provenance=provenance,
+            namespace=namespace,
         )
         if reason is None:
             return None
@@ -701,6 +703,7 @@ class MemoryControlPlaneClient:
             records=0 if dry_run else 1,
             byte_size=len(content.encode("utf-8")),
             provenance=bool(source and source_id),
+            namespace=namespace,
         ):
             return guard
         argv = [

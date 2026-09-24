@@ -50,14 +50,14 @@ def test_safe_edit_and_read_envelope_is_no_prompt() -> None:
 def test_canonical_memory_operations_are_no_prompt() -> None:
     allow = set(_settings(TEMPLATE)["permissions"]["allow"])  # type: ignore[index]
     required = {
-        "mcp__l9-graphite-memory__memory.health",
-        "mcp__l9-graphite-memory__memory.search",
-        "mcp__l9-graphite-memory__memory.hydrate",
-        "mcp__l9-graphite-memory__memory.conflicts",
-        "mcp__l9-graphite-memory__memory.phase_lock",
-        "mcp__l9-graphite-memory__memory.write_agent",
-        "mcp__l9-graphite-memory__memory.write_governed",
-        "mcp__l9-graphite-memory__memory.close",
+        "mcp__l9-graphite-memory__memory_health",
+        "mcp__l9-graphite-memory__memory_search",
+        "mcp__l9-graphite-memory__memory_hydrate",
+        "mcp__l9-graphite-memory__memory_conflicts",
+        "mcp__l9-graphite-memory__memory_phase_lock",
+        "mcp__l9-graphite-memory__memory_write_agent",
+        "mcp__l9-graphite-memory__memory_write_governed",
+        "mcp__l9-graphite-memory__memory_close",
     }
     assert required <= allow
 

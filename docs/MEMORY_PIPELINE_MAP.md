@@ -131,6 +131,8 @@ Entry points:
 |---------|-------|-------|
 | Cursor | `ops/hooks/session_start_memory_orchestrator.sh` | `ops/hooks/graphiti-session-end.sh` |
 | Claude | `environment/agents/adapters/claude-code/hooks/memory_prefetch.py` | `environment/agents/adapters/claude-code/hooks/memory_writeback.py` |
+
+**Claude close = two post-publish handoffs (2026-09-23).** Two `Stop` hooks run in parallel, once per publication of this session (`.l9/pr/pr-summary.json` newer than the session's prefetch; a degraded hydration still counts — `usable_receipt`, not `fresh_receipt`). `memory_writeback.py` closes the in-scope repository with `.l9/memory/handoff.json` (`l9.session_handoff.v1`: objective, status, published, completed, not_completed, blocked + unblock, decisions + rationale, conflicts + resolution, human_actions, next_actions, open_questions, risks, verification) carried losslessly in the continuation capsule (≤32 KB, supersedes the session's earlier continuation). `governance_handoff_writeback.py` writes `.l9/memory/governance-handoff.json` (`l9.governance_handoff.v1`: environment_friction, blockers, degraded_bootstrap, workarounds, governance_actions) plus a receipt-copied `observed` block (non-ready bootstrap, degraded prefetch, hook skips) as ONE observation record to `cursor-governance` only, on surface `claude-governance-handoff`. Only `memory_writeback.py` blocks — once, asking for whichever file is missing — because parallel `decision: block` outputs have no documented merge. Every outcome is announced to the user (Stop `systemMessage`); every hook-lane memory read and write fails loudly. Contract: `ops/memory/HANDOFF_CONTRACT.md`; schemas: `ops/memory/schemas/`.
 | CLI | `python -m ops.graphiti.hydration.cli compile` | `… cli close` |
 
 ## Identity
@@ -178,5 +180,7 @@ T3 full-chat ingest remains **forbidden** — redacted excerpts only.
 - `ops/graphiti/hydration/session_hydration_packet.schema.yaml`
 - `ops/config/memory-receipt-contract.json` (Cursor's view of memory's receipts, incl. `DistillationReceipt`)
 - `ops/config/memory-hook-envelopes.json` (hook-lane capability envelopes)
+- `ops/memory/schemas/l9.agent_memory_write.v1.schema.json` (agent-lane write arguments; `ops/memory/AGENT_WRITE_CONTRACT.md`)
+- `ops/memory/schemas/l9.session_handoff.v1.schema.json`, `l9.governance_handoff.v1.schema.json` (post-publish handoffs; `ops/memory/HANDOFF_CONTRACT.md`)
 
 WIP packs under `WIP/World Model/` are design evidence only — not runtime SSOT.
