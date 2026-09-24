@@ -747,6 +747,22 @@ say "shared memory: canonical memory control plane only (ops/memory; l9-graphite
 # which activated nothing anywhere. This block never mints and never exports;
 # it reports, by variable NAME only, whether the inherited environment carries
 # the door. Values are never printed. Memory never gates repository writes.
+# True when ~/.config/l9-memory holds a signing key and a grant for $1 (the
+# maps export_agent_assertion_env.sh reads). Reads key NAMES only.
+_l9_local_door_has() {
+  local dir="${HOME}/.config/l9-memory"
+  [ -f "$dir/agent_tokens.local.json" ] && [ -f "$dir/agent_grants.json" ] || return 1
+  "$PY" - "$dir" "$1" <<'PYEOF' 2>/dev/null
+import json, sys
+from pathlib import Path
+d, agent = Path(sys.argv[1]), sys.argv[2]
+tokens = json.loads((d / "agent_tokens.local.json").read_text())
+grants = json.loads((d / "agent_grants.json").read_text())
+ok = agent in (tokens.get("agent_signing_keys") or {}) and bool(tokens.get("agents_door_secret"))
+sys.exit(0 if ok and agent in (grants.get("grants") or {}) else 1)
+PYEOF
+}
+
 _l9_door_status() {
   local missing=()
   # The memory identity is DERIVED from host markers (ops/memory/agent_identity.py):
@@ -776,16 +792,25 @@ _l9_door_status() {
     # spawn, so the MCP server's principal is the agent itself and every memory
     # it admits names its author. Values are never printed.
     say "signed-agent door: PROVISIONED — L9_MEMORY_AGENT_AUTHORITY_JSON is in the Claude environment; run_memory_mcp.sh mints the ${_agent:-UNRESOLVED} door at MCP spawn (grants from environment/agents/agent_registry.yaml). Every agent memory names its author"
+  elif [ -n "$_agent" ] && _l9_local_door_has "$_agent"; then
+    # ~/.config/l9-memory holds this identity's key and grants: on a hosted
+    # container web/setup.sh minted them there (nothing pasted anywhere); on a
+    # workstation the operator added the key once.
+    say "signed-agent door: PROVISIONED — ~/.config/l9-memory holds the $_agent key and grants (container-local on a hosted session; never in the environment settings); run_memory_mcp.sh mints the door at MCP spawn. Every agent memory names its author"
   elif [ "${#missing[@]}" -eq 0 ]; then
     say "signed-agent door: pre-launch handoff PRESENT (agent_id=${_agent:-UNRESOLVED}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
   elif [ "${#missing[@]}" -eq 4 ] && [ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" = "1" ]; then
     say "signed-agent door: ABSENT with L9_MEMORY_ALLOW_LOCAL_OPERATOR=1 — the memory server runs as the anonymous local-operator: agent memory writes carry NO agent identity this session (operator opt-out)"
+  elif [ "${#missing[@]}" -eq 4 ] && [ "$(printf '%s' "${CLAUDE_CODE_REMOTE:-}" | tr '[:upper:]' '[:lower:]')" = "true" ] && [ -n "$_agent" ]; then
+    # Hosted: nothing for the operator to do. run_memory_mcp.sh mints the
+    # container-local authority at spawn when setup did not.
+    say "signed-agent door: NOT YET MINTED on this hosted container — run_memory_mcp.sh mints the $_agent authority into ~/.config/l9-memory at MCP spawn (nothing to paste). If the l9-graphite-memory tools are absent this session, its stderr names why"
   elif [ "${#missing[@]}" -eq 4 ]; then
     # A memory must name the agent that wrote it, so run_memory_mcp.sh refuses
     # to start the server without the door rather than fall back to the
     # anonymous local-operator principal. Say that here, at session start, so an
     # absent memory tool is never a mystery.
-    say "signed-agent door: UNAVAILABLE — AGENT MEMORY WRITES ARE OFF this session. The l9-graphite-memory MCP server refuses to start without the signed ${_agent:-UNRESOLVED} door (a memory must name the agent that wrote it). Fix: add L9_MEMORY_AGENT_AUTHORITY_JSON to the Claude Code environment settings (ops/memory/AGENT_WRITE_CONTRACT.md → Signed agent identity); the next session mints the door at spawn. Hook-lane hydrate/close are unaffected. Do not reroute a model-authored fact through the operator CLI (ADR-0033 / INV-03b)"
+    say "signed-agent door: UNAVAILABLE — AGENT MEMORY WRITES ARE OFF this session. The l9-graphite-memory MCP server refuses to start without the signed ${_agent:-UNRESOLVED} door (a memory must name the agent that wrote it). Fix (workstation, once): python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id ${_agent:-<id>} (ops/memory/AGENT_WRITE_CONTRACT.md → Signed agent identity); the next session mints the door at spawn. Never paste a key into the environment settings. Hook-lane hydrate/close are unaffected. Do not reroute a model-authored fact through the operator CLI (ADR-0033 / INV-03b)"
   else
     say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi
