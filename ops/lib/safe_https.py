@@ -167,7 +167,14 @@ def exchange(
     allow_loopback_http: bool = False,
     label: str = "URL",
 ) -> HttpsResponse:
-    """HTTP/1.0 exchange over a raw socket. No redirects, no urlopen.
+    """HTTP/1.1 exchange over a raw socket, one request per connection.
+
+    No redirects, no urlopen. HTTP/1.1 (with ``Connection: close``) rather than
+    HTTP/1.0: the hosted egress proxy and origins such as Infisical and Context7
+    answer an HTTP/1.0 request with ``426 Upgrade Required``, which silently broke
+    every Infisical bind on that surface. The response parser already handles
+    what HTTP/1.1 adds (chunked bodies); the connection closes after one
+    response, so reading to EOF stays correct.
 
     HTTPS is always verified (CERT_REQUIRED + check_hostname). Plain HTTP is
     allowed only for loopback when ``allow_loopback_http`` is set.
@@ -203,7 +210,7 @@ def exchange(
         raise urllib.error.URLError(exc) from exc
     header_host = host if parsed.port in (None, 80, 443) else f"{host}:{port}"
     header_lines = [
-        f"{method} {path} HTTP/1.0",
+        f"{method} {path} HTTP/1.1",
         f"Host: {header_host}",
         "Connection: close",
     ]
@@ -211,7 +218,7 @@ def exchange(
         if key.lower() == "host":
             continue
         header_lines.append(f"{key}: {value}")
-    if payload:
+    if payload or method in {"POST", "PUT", "PATCH"}:
         header_lines.append(f"Content-Length: {len(payload)}")
     blob = ("\r\n".join(header_lines) + "\r\n\r\n").encode("latin-1") + bytes(payload)
     try:

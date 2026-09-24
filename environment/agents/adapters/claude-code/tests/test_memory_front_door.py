@@ -280,9 +280,9 @@ class FrontDoorTests(unittest.TestCase):
     def test_mcp_template_holds_no_literal_credential(self) -> None:
         """Contract S3/§12: no credential VALUE, in the template or the render.
 
-        A bearer may be referenced as ``${VAR}`` (Context7). What must never
-        appear is a resolved secret: any Bearer whose argument is not a bare
-        ``${VAR}`` reference.
+        No server carries a credential header: Context7's key is bound from
+        Infisical by its stdio bridge. Should a bearer ever reappear it may only
+        reference a variable — never a resolved secret.
         """
 
         def walk(node: object) -> list[str]:
@@ -305,12 +305,11 @@ class FrontDoorTests(unittest.TestCase):
                 r"^\$\{[A-Z0-9_]+\}$",
                 f"Bearer must reference a variable, not a literal: {match.group(1)!r}",
             )
-        self.assertTrue(found, "expected at least one ${VAR} bearer reference to check")
+        self.assertEqual(found, 0, "no server carries a bearer; Context7 is bridged")
 
     def test_render_ships_the_wrapper_and_retires_the_legacy_key(self) -> None:
         """The wrapper always renders; a stale legacy key is removed; context7
-        renders whether or not its key is proxied (2026-09-19: an unpopulated
-        key is a visible auth failure to fix, never a silently absent server)."""
+        always renders as its vault bridge (never gated out, never a header)."""
         sys.path.insert(0, str(REPO / "ops" / "scripts"))
         import claude_projection as cp
 
@@ -323,9 +322,14 @@ class FrontDoorTests(unittest.TestCase):
             "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
         )
         self.assertNotIn("graphiti-memory", unbound, "retired keys are removed, not preserved")
-        self.assertIn("context7", unbound, "context7 is never gated out; the key decides auth")
+        self.assertIn("context7", unbound, "context7 is never gated out")
         self.assertEqual(
-            unbound["context7"]["headers"]["Authorization"], "Bearer ${CONTEXT7_API_KEY}"
+            unbound["context7"],
+            {
+                "type": "stdio",
+                "command": "${HOME}/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh",
+                "args": ["context7"],
+            },
         )
         self.assertNotIn("_requires_env", json.dumps(unbound), "private directives never ship")
 
@@ -340,7 +344,7 @@ class FrontDoorTests(unittest.TestCase):
         )
         self.assertEqual(bound["l9-graphite-memory"]["args"], MEMORY_ARGS)
         self.assertNotIn("env", bound["l9-graphite-memory"])
-        self.assertEqual(bound["context7"]["url"], "https://mcp.context7.com/mcp")
+        self.assertEqual(bound["context7"], unbound["context7"], "the key never reaches the render")
 
     # -- validator agrees with the design ------------------------------------
 
@@ -420,9 +424,8 @@ class FrontDoorTests(unittest.TestCase):
         self.assertIn("classify_workspace_kind", hook)
         self.assertIn("ssot_checkout", hook)
         self.assertIn("env -u L9_MEMORY_INTERPRETER", hook)
-        # context7 renders unconditionally (2026-09-19): stripping its key at
-        # projection time no longer changes the render and would only re-teach
-        # the silent-absence the gate removal ended.
+        # context7 renders unconditionally as its vault bridge: stripping a key
+        # at projection time could only re-teach the silent absence.
         self.assertNotIn("-u CONTEXT7_API_KEY", hook)
         committed = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
         memory = (committed.get("mcpServers") or {}).get("l9-graphite-memory") or {}

@@ -52,26 +52,31 @@ already resolve to. It matters that it exists: the sandbox's system `python3` is
 locked venv the memory gate cannot import its brain and governed writes are
 denied.
 
-### Secrets, and why this environment carries none
+### Secrets: one machine identity, everything else bound from Infisical
 
-The account environment carries **no credentials at all**. Anthropic stores the
-variables field in plaintext and everything in it is readable by the model, so a
-token there is a token the model possesses — including `INFISICAL_CLIENT_SECRET`,
-which would be a master key to the entire inventory.
+Infisical project `cursor-governance` is the secret vault, and this surface
+reaches it with no AWS (2026-09-24; Cursor keeps its own AWS login seed). The account environment carries exactly **one**
+credential: this surface's Infisical machine identity,
+`L9_INFISICAL_CLIENT_SECRET`, beside the non-secret `L9_INFISICAL_CLIENT_ID`.
+Anthropic stores the variables field in plaintext and the model can read it, so
+that identity is dedicated to this surface, least-privilege, and revocable in
+Infisical without touching any other surface. It is never an operator's or
+another agent's identity.
 
-Authenticated work resolves through the shared **capability plane** instead. The
-session asks for a named capability; a trusted broker holds the credential and
-returns only sanitized results. `ops/secrets` remains the SSOT.
+Every other secret is bound in-process by `ops/secrets/capability_bind.py` as
+that identity and never exported. A remote MCP server that needs a key is a
+local vault bridge (`ops/secrets/vault_mcp_bridge.py`), so Context7 needs no
+header and no pasted key.
 
 ```bash
-# capability names and status only — there is no value-returning call here
-python3 ops/secrets/bootstrap_agent_env.sh --check --surface claude-code \
-  --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
+# names and sources only — never a value
+"$HOME/.cursor-governance/.venv/bin/python" \
+  "$HOME/.cursor-governance/ops/secrets/capability_bind.py" --check CONTEXT7_API_KEY SONAR_TOKEN
 ```
 
-Raw secret export is **denied** on this surface, and on every unregistered
-surface. If a capability is unavailable, the fix is broker delivery — never
-pasting a credential into the variables field to turn a check green.
+Raw secret export (`hydrate --export`) is **denied** on this surface. An
+unbound name is fixed in Infisical (or by setting this surface's identity) —
+never by pasting that secret into the variables field to turn a check green.
 
 Two things are deliberately **absent** from the variables field because they
 name one repository while the environment is reused across many:

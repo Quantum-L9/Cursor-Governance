@@ -158,6 +158,10 @@ done
 # no transport credential on this surface at all: the only memory server is
 # the canonical l9-graphite-memory stdio entry (memory-control-plane/v1), which
 # resolves its own credentials (memory ADR-016).
+# L9_INFISICAL_CLIENT_SECRET (+ the non-secret L9_INFISICAL_CLIENT_ID) is
+# deliberately NOT swept, here or in the unset list below: it is the one
+# sanctioned bootstrap secret, this surface's Infisical machine identity, from
+# which every other secret is bound in-process (ops/secrets/capability_bind.py).
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \

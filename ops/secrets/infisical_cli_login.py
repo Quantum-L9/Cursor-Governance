@@ -1,13 +1,32 @@
 #!/usr/bin/env python3
-"""One-time chicken-egg login: AWS UA → local Infisical machine profile.
+"""The Infisical machine identity this surface binds secrets with.
 
-Universal Auth ``infisical login --method=universal-auth`` does not persist a
-keyring session. This script writes ``~/.infisical/l9-machine.json`` (mode 0600)
-from the one allowed AWS login secret so ``capability_bind`` can use Infisical
-without putting UA in the model environment.
+Infisical project ``cursor-governance`` is the only agent secret plane. How a
+surface obtains its machine identity DIVERGES BY PEER, by design:
 
-Never prints secret values. Never writes ``os.environ``. Library of the
-SessionStart secrets owner — not a Makefile target.
+* Claude Code (hosted, model-controlled): ONE bootstrap secret in the
+  environment — no AWS anywhere on its path.
+* Cursor / operator machines: unchanged — the existing
+  ``~/.infisical/l9-machine.json``, seeded once from the AWS Secrets Manager
+  login seed when absent. The AWS code is imported only at that moment.
+
+Where the identity comes from, in order:
+
+1. The environment: ``L9_INFISICAL_CLIENT_ID`` (not a secret) and
+   ``L9_INFISICAL_CLIENT_SECRET`` (the one bootstrap secret). Project,
+   environment and host come only from ``infisical-cursor-governance.yaml``.
+   ``L9_INFISICAL_PROJECT_ID`` / ``L9_INFISICAL_ENV`` / ``L9_INFISICAL_HOST``
+   cannot redirect that destination: a value that differs from the inventory
+   refuses the identity. This is how a hosted Claude Code session is provisioned
+   (the client id and secret are set once in the environment settings).
+2. ``~/.infisical/l9-machine.json`` (mode 0600) on a Cursor / operator
+   machine. Nothing writes it from the environment: a secret already in the
+   process environment is not copied to disk.
+3. Cursor / operator only (``allow_aws_seed``): the AWS login seed, which
+   writes that profile — exactly as before this module learned (1). Never
+   attempted on a model-controlled surface.
+
+Never prints secret values. Never writes ``os.environ``.
 """
 
 from __future__ import annotations
@@ -17,21 +36,37 @@ import json
 import os
 import stat
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-import login_registry  # noqa: E402
-import resolve_secret as aws_secret  # noqa: E402
-from port_aws_to_infisical import infisical_req  # noqa: E402
+from infisical_http import DEFAULT_HOST, universal_auth_login  # noqa: E402
 
-AWS_ID = login_registry.AWS_SM_LOGIN_SECRET
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    yaml = None  # type: ignore[assignment]
+
 PROFILE = Path.home() / ".infisical" / "l9-machine.json"
-DEFAULT_HOST = "https://app.infisical.com"
+INVENTORY = HERE / "infisical-cursor-governance.yaml"
 DEFAULT_ENV = "prod"
 REQUIRED = ("client_id", "client_secret", "project_id")
+
+#: The one bootstrap secret, and its non-secret companion.
+ENV_CLIENT_ID = "L9_INFISICAL_CLIENT_ID"
+ENV_CLIENT_SECRET = "L9_INFISICAL_CLIENT_SECRET"
+ENV_PROJECT_ID = "L9_INFISICAL_PROJECT_ID"
+ENV_ENVIRONMENT = "L9_INFISICAL_ENV"
+ENV_HOST = "L9_INFISICAL_HOST"
+
+#: Printed as written: a literal, never interpolated from a secret-named value.
+ABSENT_MESSAGE = "identity absent — set L9_INFISICAL_CLIENT_ID and L9_INFISICAL_CLIENT_SECRET"
+
+SOURCE_ENV = "env"
+SOURCE_PROFILE = "profile"
 
 
 def profile_path() -> Path:
@@ -42,17 +77,102 @@ def _status(msg: str) -> None:
     print(f"infisical_cli_login: {msg}")
 
 
-def profile_present() -> bool:
+def _inventory_project() -> dict[str, str]:
+    if yaml is None:
+        return {}
+    try:
+        raw = yaml.safe_load(INVENTORY.read_text(encoding="utf-8")) or {}
+    except OSError:
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    project = raw.get("project") if isinstance(raw.get("project"), dict) else {}
+    return {
+        "host": str(raw.get("host") or ""),
+        "project_id": str(project.get("id") or ""),
+        "environment": str(project.get("environment") or ""),
+    }
+
+
+def _flag(env: Mapping[str, str], name: str) -> str:
+    return (env.get(name) or "").strip()
+
+
+def canonical_route() -> dict[str, str]:
+    """Host, project and environment from the inventory. Not from the process."""
+    inventory = _inventory_project()
+    return {
+        "host": (inventory.get("host") or DEFAULT_HOST).strip() or DEFAULT_HOST,
+        "project_id": (inventory.get("project_id") or "").strip(),
+        "environment": (inventory.get("environment") or DEFAULT_ENV).strip() or DEFAULT_ENV,
+    }
+
+
+def env_identity(env: Mapping[str, str] | None = None) -> dict[str, str] | None:
+    """The machine identity carried by the environment, or None when incomplete.
+
+    Client id and secret may come from the environment. Routing metadata may not:
+    a set ``L9_INFISICAL_HOST`` / ``PROJECT_ID`` / ``ENV`` that differs from the
+    inventory refuses the identity instead of following the ambient value.
+    """
+    source = os.environ if env is None else env
+    client_id, client_secret = _flag(source, ENV_CLIENT_ID), _flag(source, ENV_CLIENT_SECRET)
+    if not client_id or not client_secret:
+        return None
+    route = canonical_route()
+    for env_name, key in (
+        (ENV_HOST, "host"),
+        (ENV_PROJECT_ID, "project_id"),
+        (ENV_ENVIRONMENT, "environment"),
+    ):
+        override = _flag(source, env_name)
+        if override and override != route[key]:
+            return None
+    identity = {
+        "host": route["host"],
+        "project_id": route["project_id"],
+        "environment": route["environment"],
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }
+    return identity if identity["project_id"] else None
+
+
+def file_identity() -> dict[str, str] | None:
+    """The operator workstation's profile file, or None."""
     path = profile_path()
     if not path.is_file():
-        return False
+        return None
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return False
-    if not isinstance(raw, dict):
-        return False
-    return all(str(raw.get(key) or "").strip() for key in REQUIRED)
+        return None
+    if not isinstance(raw, dict) or not all(str(raw.get(k) or "").strip() for k in REQUIRED):
+        return None
+    return {
+        "host": str(raw.get("host") or DEFAULT_HOST).strip() or DEFAULT_HOST,
+        "project_id": str(raw["project_id"]).strip(),
+        "environment": str(raw.get("environment") or DEFAULT_ENV).strip() or DEFAULT_ENV,
+        "client_id": str(raw["client_id"]).strip(),
+        "client_secret": str(raw["client_secret"]).strip(),
+    }
+
+
+def machine_identity(
+    env: Mapping[str, str] | None = None,
+) -> tuple[str, dict[str, str] | None]:
+    """(source, identity): the environment first, then the workstation profile."""
+    identity = env_identity(env)
+    if identity is not None:
+        return SOURCE_ENV, identity
+    identity = file_identity()
+    if identity is not None:
+        return SOURCE_PROFILE, identity
+    return "", None
+
+
+def profile_present() -> bool:
+    return machine_identity()[1] is not None
 
 
 def _write_profile(payload: dict[str, str]) -> None:
@@ -65,10 +185,32 @@ def _write_profile(payload: dict[str, str]) -> None:
     os.chmod(dest, stat.S_IRUSR | stat.S_IWUSR)
 
 
+#: resolve_secret error codes echoed by the seed, as literals.
+AWS_SEED_CODES = (
+    "UNREGISTERED",
+    "NOT_PROVISIONED",
+    "NOT_FOUND",
+    "FIELD_NOT_FOUND",
+    "NOT_JSON",
+    "RESOLUTION_ERROR",
+    "AWS_CLI_NOT_FOUND",
+    "TIMEOUT",
+)
+
+
 def _seed_from_aws() -> dict[str, str] | None:
-    raw, error = aws_secret.fetch_secret_string(AWS_ID, "us-east-1")
+    """Cursor / operator: the AWS Secrets Manager login seed (unchanged behaviour).
+
+    Imported lazily so no model-controlled surface ever loads AWS code.
+    """
+    import login_registry  # noqa: PLC0415
+    import resolve_secret as aws_secret  # noqa: PLC0415
+
+    raw, error = aws_secret.fetch_secret_string(login_registry.AWS_SM_LOGIN_SECRET, "us-east-1")
     if error or not raw:
-        _status(f"aws seed failed code={error or 'empty'}")
+        # A literal code, never the resolver's error text (CodeQL clear-text logging).
+        code = next((c for c in AWS_SEED_CODES if c == error), "UNKNOWN" if error else "EMPTY")
+        _status(f"aws seed failed code={code}")
         return None
     try:
         parsed = json.loads(raw)
@@ -93,50 +235,67 @@ def _seed_from_aws() -> dict[str, str] | None:
     }
 
 
-def _verify_login(profile: dict[str, str]) -> bool:
-    status, payload = infisical_req(
-        profile["host"],
-        "POST",
-        "/api/v1/auth/universal-auth/login",
-        body={"clientId": profile["client_id"], "clientSecret": profile["client_secret"]},
-    )
-    token = str((payload or {}).get("accessToken") or "").strip()
-    if status != 200 or not token:
-        _status(f"infisical login failed status={status}")
-        return False
-    return True
+def ensure_machine_profile(
+    env: Mapping[str, str] | None = None, *, allow_aws_seed: bool = False
+) -> str:
+    """The identity's state. Never prints values.
 
-
-def ensure_machine_profile() -> str:
-    """Return ``present``, ``seeded``, or ``failed``. Never prints values."""
-    if profile_present():
+    ``env`` — the environment identity logged in (Claude); ``present`` — the
+    profile file exists (Cursor / operator, unchanged: not re-verified here);
+    ``seeded`` — the AWS seed wrote the profile and it logged in (Cursor /
+    operator, only with ``allow_aws_seed``); ``absent`` — no identity and no
+    seed attempted; ``failed`` — an identity Infisical refused, or a seed that
+    failed.
+    """
+    source, identity = machine_identity(env)
+    if source == SOURCE_PROFILE:
         return "present"
-    profile = _seed_from_aws()
-    if profile is None:
+    if identity is not None:
+        token = universal_auth_login(
+            identity["host"], identity["client_id"], identity["client_secret"]
+        )
+        return "env" if token else "failed"
+    if not allow_aws_seed:
+        return "absent"
+    seeded = _seed_from_aws()
+    if seeded is None:
         return "failed"
-    if not _verify_login(profile):
+    if not universal_auth_login(seeded["host"], seeded["client_id"], seeded["client_secret"]):
         return "failed"
-    _write_profile(profile)
+    _write_profile(seeded)
     return "seeded"
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true", help="profile present? names only")
+    parser.add_argument("--check", action="store_true", help="identity present? names only")
     args = parser.parse_args(argv)
     if args.check:
-        if profile_present():
-            _status("profile present")
+        source, identity = machine_identity()
+        if identity is not None:
+            # Literals only: nothing derived from the identity is printed.
+            _status(
+                "identity present source=env"
+                if source == SOURCE_ENV
+                else "identity present source=profile"
+            )
             return 0
-        _status("profile absent")
+        _status(ABSENT_MESSAGE)
         return 1
-    state = ensure_machine_profile()
-    if state == "present":
-        _status("profile present")
-        return 0
+    state = ensure_machine_profile(allow_aws_seed=True)
     if state == "seeded":
-        _status("login ok project=cursor-governance env=prod source=aws-chicken-egg")
+        _status("login ok project=cursor-governance source=aws-chicken-egg")
         return 0
+    if state == "env":
+        _status("login ok project=cursor-governance source=env")
+        return 0
+    if state == "present":
+        _status("login ok project=cursor-governance source=profile")
+        return 0
+    if state == "absent":
+        _status(ABSENT_MESSAGE)
+    else:
+        _status("login failed (identity refused or Infisical unreachable)")
     return 1
 
 

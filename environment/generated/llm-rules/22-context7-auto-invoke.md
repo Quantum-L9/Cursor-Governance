@@ -4,30 +4,30 @@ description: Auto-invoke Context7 MCP before coding on external libraries —Fas
 
 # Context7 Auto-Invoke (External Docs)
 
-**MCP servers:** `context7` (Claude Code plugin, and the governed remote HTTP
-server in `mcp.template.json`) **and** `user-Context7` (Cursor).
+**MCP servers:** `context7` (Claude Code plugin, and the governed vault bridge
+in `mcp.template.json`) **and** `user-Context7` (Cursor).
 **Skill:** `@.cursor-commands/skills/l9-context7-docs/`
 
 Hosted Web/Mobile runs with `SKIP_PLUGIN_MARKETPLACE=true`, so the marketplace
-plugin never installs there. The governed remote server closes that gap without
-a pasted secret: `mcp.template.json` declares `context7` at
-`https://mcp.context7.com/mcp` with `Authorization: Bearer ${CONTEXT7_API_KEY}`.
-The variable is **proxied**, never pasted — `${VAR}` is expanded by Claude Code
-at load and no value is written to any file or to the account variables field.
+plugin never installs there. The governed server closes that gap without a
+pasted key (2026-09-24): `mcp.template.json` declares `context7` as a local
+stdio bridge (`ops/secrets/run_vault_mcp_bridge.sh context7`) that binds
+`CONTEXT7_API_KEY` from Infisical in-process, as this surface's machine
+identity, and forwards to `https://mcp.context7.com/mcp`. The key is never in
+the environment, argv, `.mcp.json` or a file, and no header references it.
 
-The server renders **unconditionally** (2026-09-19; it used to be
-`_requires_env`-gated, which turned a missing secret into a silently absent
-server on every hosted session). When `CONTEXT7_API_KEY` is not populated the
-server fails to authenticate. That is a failure to **fix**, never to skip or
-remove: the fix is the secret populating (Infisical inventory key
-`CONTEXT7_API_KEY`, proxied into the session environment), and SessionStart
-reports whether it did.
+The server renders **unconditionally** (never `_requires_env`-gated: that turned
+a missing secret into a silently absent server). When the key cannot be bound
+the bridge refuses to start and names the fix — the surface's Infisical machine
+identity (`L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET`, set once in
+the environment settings). That is a failure to **fix**, never to skip or
+remove, and SessionStart reports the bind by name and source.
 
 Until it does, and only until then, the obligation when `mcp__context7__*`
 tools are **absent or failing** is unchanged: skill `l9-context7-docs` or an
 official docs GET. Never treat a missing MCP tool as permission to skip docs,
-never close the gap by pasting a literal key into the account variables field,
-into `mcp.template.json`, or into `.mcp.json`, and never close it by gating the
+never close the gap by pasting `CONTEXT7_API_KEY` into the account variables
+field, `mcp.template.json` or `.mcp.json`, and never close it by gating the
 server out of `.mcp.json` again.
 
 Call whichever server this surface exposes. Do not treat a missing allow-list
