@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-24T04:49:49Z`. Source: `rules/*.mdc`.
+Generated: `2026-09-24T17:23:09Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -74,7 +74,7 @@ Generated: `2026-09-24T04:49:49Z`. Source: `rules/*.mdc`.
 | `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 73 | `7121eb2a6c46` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 93 | `240b44175cfd` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
-| `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 220 | `069af57fbc05` |
+| `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 244 | `2d61de831bed` |
 | `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 97 | `8faa1ff8d5be` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | agent_requested | 40 | `3b1b5e0cfd03` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 106 | `0e67f1cc2c17` |
