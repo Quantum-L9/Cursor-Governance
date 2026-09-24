@@ -53,7 +53,6 @@ SCOPED_OR_UNRELATED = [
     ".venv/bin/python -m pytest tests/ops/scripts/ -q -p no:cacheprovider",
     ".venv/bin/python -m pytest a.py b.py -n auto -q",
     "make pr",
-    "make pr-check",  # leftover Makefile leaf; not a catalog pytest run
     "PR_REMEDIATE=0 make pr",
     "git status --porcelain",
     "ruff check ops/scripts/select_pr_pytest_paths.py",

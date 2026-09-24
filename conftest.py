@@ -16,6 +16,43 @@ root. Keep the whole adapter-layer test surface out of root discovery. `core/`
 tests use repo-root-compatible imports and remain in the default suite.
 """
 
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+import pytest
+
+
+def _git_in(repo: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+
+@pytest.fixture
+def stacked_repo(tmp_path: Path) -> Path:
+    """Provide a committed feature branch for all autonomy gate tests.
+
+    This fixture must be root-visible. The scoped publication runner selects
+    test files from multiple top-level roots; keeping it in one child
+    ``conftest.py`` made the fixture unavailable in that legitimate composite
+    selection even though each autonomy module passed in isolation.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_in(repo, "init")
+    _git_in(repo, "config", "user.email", "test@example.com")
+    _git_in(repo, "config", "user.name", "test")
+    (repo / "README.md").write_text("x\n", encoding="utf-8")
+    _git_in(repo, "add", "README.md")
+    _git_in(repo, "commit", "-m", "init")
+    _git_in(repo, "branch", "-M", "main")
+    _git_in(repo, "checkout", "-b", "feat/l4-stack")
+    (repo / "a.txt").write_text("a\n", encoding="utf-8")
+    _git_in(repo, "add", "a.txt")
+    _git_in(repo, "commit", "-m", "local work")
+    return repo
+
+
 collect_ignore = [
     "environment/program-execution/peer_execution",
     # Owned Claude autonomy suite (python-contract.json claude-code-autonomy).
@@ -31,6 +68,7 @@ collect_ignore = [
     "skills/l9-cli-optimization/scripts/self_test.py",
     "skills/l9-repository-renovation/scripts/self_test.py",
     "skills/l9-structured-reasoning/scripts/self_test.py",
+    "skills/l9-audit-plans/scripts/self_test.py",
     "skills/l9-plan/scripts/self_test.py",
     "skills/l9-code-maintenance/scripts/self_test.py",
     "skills/l9-plan-audit/scripts/self_test.py",

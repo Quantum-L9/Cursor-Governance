@@ -563,7 +563,7 @@
     },
     {
       "path": "campaigns/eie-inference-isolation-v1/CAMPAIGN_SOURCE.yaml",
-      "sha256": "65176b0ffcb6eebf508c8c4f758c1ac2f9ffd71141e0e0def01e4540b547e97f"
+      "sha256": "6122f0a94729e8a62e5ec8db7b78a560a9be582d3f1bbcd2f4f99e1895b85b69"
     },
     {
       "path": "campaigns/eie-inference-isolation-v1/source-integrity-receipt.json",

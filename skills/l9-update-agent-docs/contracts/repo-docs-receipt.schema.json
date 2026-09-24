@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://quantum-l9.local/contracts/repo-docs-receipt.schema.json",
+  "$id": "https://quantum-l9.local/contracts/repo-docs-receipt.v4.schema.json",
   "title": "L9 Repository Documentation Receipt",
   "type": "object",
   "additionalProperties": false,
@@ -11,6 +11,9 @@
     "adapter",
     "changes",
     "impact",
+    "consumer_snapshot",
+    "architecture_delta",
+    "adr_catalog",
     "surfaces",
     "obligations",
     "summary",
@@ -24,7 +27,7 @@
     "blockers"
   ],
   "properties": {
-    "schema": {"const": "l9.repo-docs.receipt.v3"},
+    "schema": {"const": "l9.repo-docs.receipt.v4"},
     "final_status": {"enum": ["PASS", "PARTIAL", "BLOCKED", "FAIL"]},
     "revision": {"$ref": "#/$defs/revision"},
     "adapter": {
@@ -55,6 +58,95 @@
           "type": "object",
           "additionalProperties": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
         }
+      }
+    },
+    "consumer_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "revision", "changed_files", "surface_paths", "documents", "facts", "publication_markers", "authority_graph", "digest"],
+      "properties": {
+        "schema": {"const": "l9.repo-docs.consumer-snapshot.v1"},
+        "revision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "tested_revision_sha"],
+          "properties": {
+            "repository": {"type": "string"},
+            "tested_revision_sha": {"type": "string"}
+          }
+        },
+        "changed_files": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "surface_paths": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+        "documents": {"type": "object", "additionalProperties": {"type": "object"}},
+        "facts": {"type": "array", "items": {"type": "object"}},
+        "publication_markers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "authority_graph": {"type": "object"},
+        "digest": {"type": "string", "minLength": 64, "maxLength": 64}
+      }
+    },
+    "architecture_delta": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "kind", "path", "evidence_id"],
+        "properties": {
+          "action": {"enum": ["change", "unknown"]},
+          "kind": {"type": "string"},
+          "path": {"type": "string"},
+          "evidence_id": {"type": "string"}
+        }
+      }
+    },
+    "adr_catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "status", "conventions", "records", "findings", "enforcement", "digest"],
+      "properties": {
+        "schema": {"const": "l9.repo-docs.adr-catalog.v1"},
+        "status": {"enum": ["PASS", "PARTIAL", "FAIL", "NotApplicable"]},
+        "conventions": {"type": "object"},
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+              "required": ["path", "present", "number", "title", "status", "date", "headings", "content_digest", "active", "validation"],
+              "properties": {
+                "path": {"type": "string", "minLength": 1},
+                "present": {"type": "boolean"},
+                "number": {"type": "string", "minLength": 3},
+              "title": {"type": ["string", "null"]},
+              "status": {"type": ["string", "null"]},
+              "date": {"type": ["string", "null"]},
+              "headings": {"type": "array", "items": {"type": "string"}},
+              "content_digest": {"type": ["string", "null"]},
+              "active": {"type": "boolean"},
+              "validation": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["status", "findings"],
+                "properties": {
+                  "status": {"enum": ["PASS", "NEEDS_IMPROVEMENT", "BLOCKED"]},
+                  "findings": {"type": "array", "items": {"$ref": "#/$defs/adrFinding"}}
+                }
+              }
+            }
+          }
+        },
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/adrFinding"}},
+        "enforcement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["active_paths", "historical_paths", "active_finding_count", "historical_finding_count"],
+          "properties": {
+            "active_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "historical_paths": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+            "active_finding_count": {"type": "integer", "minimum": 0},
+            "historical_finding_count": {"type": "integer", "minimum": 0}
+          }
+        },
+        "digest": {"type": "string", "minLength": 64, "maxLength": 64}
       }
     },
     "surfaces": {
@@ -150,6 +242,23 @@
                 "retire": {"type": "integer", "minimum": 0},
                 "conflict": {"type": "integer", "minimum": 0}
               }
+            },
+            "quality": {
+              "description": "Deterministic source-evidence coverage per README target.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "completeness", "eligible_source_count", "extracted_source_count", "extraction_issue_count", "relationship_count"],
+                "properties": {
+                  "path": {"type": "string"},
+                  "completeness": {"enum": ["complete", "partial", "minimal-by-design"]},
+                  "eligible_source_count": {"type": "integer", "minimum": 0},
+                  "extracted_source_count": {"type": "integer", "minimum": 0},
+                  "extraction_issue_count": {"type": "integer", "minimum": 0},
+                  "relationship_count": {"type": "integer", "minimum": 0}
+                }
+              }
             }
           }
         }
@@ -214,6 +323,21 @@
     "blockers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
   },
   "$defs": {
+    "adrFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "severity", "property", "observed_state", "expected_state", "source", "line", "remediation_class"],
+      "properties": {
+        "rule_id": {"type": "string", "minLength": 1},
+        "severity": {"enum": ["material", "blocking"]},
+        "property": {"type": "string", "minLength": 1},
+        "observed_state": {"type": "string"},
+        "expected_state": {"type": "string"},
+        "source": {"type": "string", "minLength": 1},
+        "line": {"type": ["integer", "null"], "minimum": 1},
+        "remediation_class": {"const": "HANDOFF"}
+      }
+    },
     "revision": {
       "type": "object",
       "additionalProperties": false,

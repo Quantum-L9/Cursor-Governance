@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import fnmatch
 import json
 import re
@@ -20,9 +21,13 @@ POLICY_PATH = PACK / "references/doc-surface-policy.yaml"
 POLICY_SCHEMA = PACK / "contracts/doc-surface-policy.schema.json"
 OBLIGATION_SCHEMA = PACK / "contracts/documentation-obligation.schema.json"
 RECEIPT_SCHEMA = PACK / "contracts/repo-docs-receipt.schema.json"
+LEGACY_RECEIPT_V3_SCHEMA = PACK / "contracts/repo-docs-receipt.v3.schema.json"
 POINTER_MAP = PACK / "references/pointer-heading-map.yaml"
 HEADINGS = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 DIRECTIVES = re.compile(r"<!--\s*L9_DOCS\s*\n(.*?)\n\s*-->", re.DOTALL)
+PYTHON_FENCE_OPEN = re.compile(
+    r"^(?P<indent> {0,3})(?P<delimiter>`{3,}|~{3,})[ \t]*python[ \t]*(?:\r?\n|$)"
+)
 
 
 def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -52,7 +57,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def _schema_registry() -> Registry:
     registry = Registry()
-    for path in (POLICY_SCHEMA, OBLIGATION_SCHEMA, RECEIPT_SCHEMA):
+    for path in (POLICY_SCHEMA, OBLIGATION_SCHEMA, LEGACY_RECEIPT_V3_SCHEMA, RECEIPT_SCHEMA):
         if not path.is_file():
             continue
         schema = load_json(path)
@@ -98,6 +103,19 @@ def validate_policy(policy: dict[str, Any]) -> list[str]:
         unknown = sorted(set(rule["surfaces"]) - known)
         if unknown:
             errors.append(f"impact rule {name}: unknown surfaces {unknown}")
+    source_registry = policy.get("source_evidence") or {}
+    source_patterns = {
+        pattern
+        for group in ("extensions", "filenames")
+        for entry in (source_registry.get(group) or {}).values()
+        if isinstance(entry, dict)
+        for pattern in entry.get("patterns") or []
+    }
+    module_rule = policy["impact_rules"].get("module_implementation_change") or {}
+    if set(module_rule.get("patterns") or []) != source_patterns:
+        errors.append(
+            "module_implementation_change patterns must exactly match source_evidence patterns"
+        )
     for surface, rules in policy["semantic_harvest"]["activation"].items():
         if surface not in known:
             errors.append(f"semantic activation references unknown surface {surface!r}")
@@ -198,6 +216,64 @@ def pointer_validate_root(root: Path) -> dict[str, Any]:
         findings.extend(local)
     status = "FAIL" if findings else "PARTIAL" if unknown else "PASS"
     return {"status": status, "findings": findings + unknown, "files": rows}
+
+
+def _python_fences(text: str) -> list[tuple[int, str]]:
+    """Extract declared Python fences using the Markdown delimiter rules.
+
+    This intentionally recognizes only ``python`` info strings. A closing
+    fence must use the opener's delimiter character and be at least as long as
+    the opener; Markdown permits a longer close. The scanner never attempts to
+    recover an unclosed fence or inspect arbitrary document content.
+    """
+    lines = text.splitlines(keepends=True)
+    fences: list[tuple[int, str]] = []
+    index = 0
+    while index < len(lines):
+        opening = PYTHON_FENCE_OPEN.match(lines[index])
+        if not opening:
+            index += 1
+            continue
+        delimiter = opening.group("delimiter")
+        character = re.escape(delimiter[0])
+        closing = re.compile(rf"^ {{0,3}}{character}{{{len(delimiter)},}}[ \t]*(?:\r?\n|$)")
+        source_start = index
+        index += 1
+        source: list[str] = []
+        while index < len(lines) and not closing.match(lines[index]):
+            source.append(lines[index])
+            index += 1
+        if index < len(lines):
+            fences.append((source_start, "".join(source)))
+            index += 1
+    return fences
+
+
+def python_fence_validate_root(root: Path) -> dict[str, Any]:
+    """Parse only explicitly marked Python fences in declared root documents.
+
+    This is a bounded syntax check borrowed from the donor validator. It never
+    executes a snippet, traverses arbitrary Markdown, or decides root-document
+    membership itself; ``pointer-heading-map.yaml`` remains the topology owner.
+    """
+    mapping = yaml.safe_load(POINTER_MAP.read_text(encoding="utf-8"))
+    findings: list[str] = []
+    rows: list[dict[str, Any]] = []
+    for rel in mapping["files"]:
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        fences = _python_fences(text)
+        rows.append({"path": rel, "fence_count": len(fences)})
+        for fence_start, source in fences:
+            try:
+                ast.parse(source, filename=rel)
+            except SyntaxError as exc:
+                fence_line = fence_start + 1
+                source_line = fence_line + (exc.lineno or 1)
+                findings.append(f"{rel}:{source_line}: invalid Python fence: {exc.msg}")
+    return {"status": "FAIL" if findings else "PASS", "findings": findings, "files": rows}
 
 
 def selector_paths(root: Path, selectors: list[str]) -> list[str]:

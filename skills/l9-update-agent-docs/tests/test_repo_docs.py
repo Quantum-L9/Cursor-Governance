@@ -199,6 +199,28 @@ def test_policy_and_receipt_contracts_are_deeply_executable(tmp_path: Path):
     assert rd.validate_receipt_shape(broken_receipt)
 
 
+def test_receipt_validation_dispatches_current_and_legacy_versions(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    commit(root, "base")
+
+    current = rd.audit_repository(root)
+    assert current["schema"] == rd.RECEIPT_ID
+    assert rd.validate_receipt_shape(current) == []
+
+    legacy = copy.deepcopy(current)
+    legacy["schema"] = rd.LEGACY_RECEIPT_ID
+    legacy.pop("adr_catalog")
+    assert rd.validate_receipt_shape(legacy) == []
+
+    legacy["schema"] = "l9.repo-docs.receipt.v999"
+    assert rd.validate_receipt_shape(legacy) == [
+        "schema: unsupported receipt schema 'l9.repo-docs.receipt.v999'"
+    ]
+
+
 def test_workflow_change_compiles_target_resolved_semantic_obligations(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -291,6 +313,13 @@ def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
     }
     assert planned["create"] >= 1
     assert planned["conflict"] == 0
+    quality = receipt["capabilities"]["module_readmes"]["quality"]
+    assert quality
+    assert {row["completeness"] for row in quality} <= {
+        "complete",
+        "partial",
+        "minimal-by-design",
+    }
     # The histogram is diagnostics on the capability, not a second ledger.
     assert receipt["final_status"] == "PASS"
 
@@ -341,9 +370,9 @@ def test_policy_capability_controls_are_executable(tmp_path: Path):
     assert capability["status"] == "AVAILABLE"
     assert capability["owner"] == "l9-update-agent-docs"
     assert capability["present"]["generator"] is True
-    partial = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
-    assert partial["status"] == "PARTIAL"
-    assert partial["unsupported_impacted_extensions"] == [".xml"]
+    xml = dc.probe_module_readme_capability(root, policy, ["skills/x.xml"])
+    assert xml["status"] == "AVAILABLE"
+    assert xml["unsupported_impacted_extensions"] == []
 
 
 def test_default_llm_projection_is_created_and_closed(tmp_path: Path):
@@ -566,11 +595,13 @@ def test_current_owned_targets_close_without_a_rewrite(tmp_path: Path):
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged again.\n")
     commit(root)
     receipt = rd.audit_repository(root, changed_since=base)
-    assert receipt["llm_txt"]["admission"] == "unchanged"
-    assert receipt["llm_txt"]["written"] is False
+    # The v3 LLM manifest carries every indexed source digest, so an
+    # architecture byte change requires a projection refresh.
+    assert receipt["llm_txt"]["admission"] == "refresh"
+    assert receipt["llm_txt"]["written"] is True
     assert receipt["filetree"]["admission"] == "unchanged"
     assert receipt["filetree"]["written"] is False
-    assert "llm.txt" not in receipt["changes"]["run_mutations"]
+    assert "llm.txt" in receipt["changes"]["run_mutations"]
     rows = {row["surface"]: row for row in receipt["obligations"]}
     for surface in ("llm_txt", "filetree"):
         assert rows[surface]["lifecycle"]["status"] == "CLOSED"
@@ -607,6 +638,92 @@ def test_skipped_admission_keeps_refresh_obligation_open(tmp_path: Path):
     )
     assert freshness["status"] == "UNKNOWN"
     assert receipt["final_status"] == "PARTIAL"
+
+
+def test_declared_root_python_fences_are_syntax_checked_without_execution(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(
+        root / "README.md",
+        (root / "README.md").read_text(encoding="utf-8")
+        + "\n```python\nraise RuntimeError('must not execute')\n```\n",
+    )
+    fence = dp.python_fence_validate_root(root)
+    assert fence["status"] == "PASS"
+    assert fence["findings"] == []
+
+
+def test_invalid_root_python_fence_is_bounded_to_declared_pointer_documents(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(root / "notes.md", "```python\ndef broken(:\n```\n")
+    assert dp.python_fence_validate_root(root)["status"] == "PASS"
+    write(
+        root / "README.md",
+        (root / "README.md").read_text(encoding="utf-8") + "\n```python\ndef broken(:\n```\n",
+    )
+    fence = dp.python_fence_validate_root(root)
+    assert fence["status"] == "FAIL"
+    assert fence["findings"]
+    assert fence["findings"][0].startswith("README.md:")
+    assert "invalid Python fence" in fence["findings"][0]
+
+
+def test_root_python_fence_scanner_accepts_markdown_indentation_and_delimiters(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    for fence in (
+        "   ```python\ndef broken(:\n   ```\n",
+        "````python\ndef broken(:\n````\n",
+        "~~~python\ndef broken(:\n~~~\n",
+    ):
+        write(root / "README.md", "# Repo\n\n" + fence)
+        checked = dp.python_fence_validate_root(root)
+        assert checked["status"] == "FAIL"
+        assert next(row for row in checked["files"] if row["path"] == "README.md") == {
+            "path": "README.md",
+            "fence_count": 1,
+        }
+
+
+def test_root_python_fence_scanner_requires_the_opening_delimiter_length(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    write(
+        root / "README.md",
+        "# Repo\n\n````python\nx = 1\n```\ny = 2\n````\n",
+    )
+    assert dp.python_fence_validate_root(root)["status"] == "FAIL"
+    write(root / "README.md", "# Repo\n\n````python\nx = 1\n`````\n")
+    assert dp.python_fence_validate_root(root)["status"] == "PASS"
+
+
+def test_invalid_root_python_fence_is_a_receipt_structural_failure(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    base = commit(root, "base")
+    write(
+        root / "README.md",
+        (root / "README.md").read_text(encoding="utf-8") + "\n```python\ndef broken(:\n```\n",
+    )
+    commit(root, "invalid root fence")
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert receipt["final_status"] == "FAIL"
+    assert any(item["code"] == "python_fence_validation" for item in receipt["structural_failures"])
+    validator = next(
+        item for item in receipt["validators_executed"] if item["name"] == "root_python_fences"
+    )
+    assert validator["status"] == "FAIL"
 
 
 def test_dirty_managed_region_fails_closed(tmp_path: Path):

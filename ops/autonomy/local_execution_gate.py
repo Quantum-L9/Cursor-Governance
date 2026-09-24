@@ -87,7 +87,7 @@ from verification_bypass_gate import command_bypasses_verification  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
 #: git/gh forms that reach GitHub. `make` is NOT matched by regex here: see
-#: MAKE_REMOTE_GOALS, because `\bmake\s+pr\b` also matches `make pr-check`.
+#: MAKE_REMOTE_GOALS, because exact goal parsing avoids prefix false positives.
 REMOTE_BASH_PATTERNS = (
     re.compile(r"\bgit\s+push\b", re.I),
     re.compile(r"\bgh\s+pr\s+create\b", re.I),
@@ -158,10 +158,10 @@ def make_goals(segment: str) -> tuple[str, ...]:
     not be able to stall it: this scan is linear in the token count.
 
     Goals are exact tokens, which is the whole point: a regex for ``make pr``
-    also matches ``make pr-check``, because ``\\b`` closes on the hyphen.
+    must not classify unrelated goal tokens as `pr`.
 
-    All goals are returned, not just the first — ``make pr-check pr`` runs both,
-    so a caller asking "does this publish?" must see the ``pr``.
+    All goals are returned, not just the first, so a caller asking "does this
+    publish?" sees every explicit `pr` goal.
     """
     tokens = segment.split()
     index = 0
@@ -224,14 +224,19 @@ def command_make_workspace(command: str, root: Path) -> Path | None:
     return None
 
 
-def is_make_pr(segment: str) -> bool:
-    """True when this segment invokes the `pr` goal — the sanctioned publish path.
+def _make_gate_only(segment: str) -> bool:
+    """True when a Make invocation deliberately suppresses publication."""
+    return any(token == "OPEN_PR=0" for token in segment.split())
 
-    The leftover Makefile target ``make pr-check`` is not a publish. It never
-    reaches GitHub, so it is not this path and must not be gated as one.
-    Agents must not type that target; Diagnose is ``OPEN_PR=0 make pr``.
+
+def is_make_pr(segment: str) -> bool:
+    """True when this segment invokes the publishing form of the `pr` goal.
+
+    `OPEN_PR=0 make pr` is the direct, non-publishing diagnosis form. It still
+    runs the reader wave but must not require an L4 release receipt or be
+    classified as remote mutation.
     """
-    return "pr" in make_goals(segment)
+    return "pr" in make_goals(segment) and not _make_gate_only(segment)
 
 
 PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
@@ -307,7 +312,13 @@ def command_has_make_remote(command: str) -> bool:
     for segment in split_segments(strip_heredoc_bodies(command)):
         segments.append(segment)
         segments.extend(wrapper_subcommands(segment))
-    return any(bool(MAKE_REMOTE_GOALS.intersection(make_goals(segment))) for segment in segments)
+    for segment in segments:
+        goals = MAKE_REMOTE_GOALS.intersection(make_goals(segment))
+        if "push" in goals:
+            return True
+        if "pr" in goals and not _make_gate_only(segment):
+            return True
+    return False
 
 
 def publish_path_workflow_deny(command: str) -> str | None:
@@ -346,7 +357,7 @@ REMEDIATOR_ENV = "L9_REMEDIATOR"
 
 #: Makefile goals that run the reader wave / ceremony publish. Remediator
 #: verify is ``make precommit-repo`` and must not invoke these.
-MAKE_CEREMONY_WAVE_GOALS = frozenset({"pr-check", "pr", "pr-full"})
+MAKE_CEREMONY_WAVE_GOALS = frozenset({"pr", "pr-full"})
 
 #: Makefile goals that run the whole Python catalog.
 MAKE_FULL_CATALOG_GOALS = frozenset({"test", "pr-full"})
@@ -505,8 +516,8 @@ def command_is_remote_mutation(command: str) -> bool:
     ``ssh host 'git push'`` / ``sudo git push`` heads are not pattern targets.
 
     A `make` segment is classified by its goals, not by a regex over the text.
-    ``\\bmake\\s+pr\\b`` matches ``make pr-check`` — the word boundary closes on
-    the hyphen — which denied the leftover quality target as if it were a publish.
+    Exact token parsing prevents unrelated Make goals from being treated as
+    the sanctioned `pr` publication goal.
     """
     segments: list[str] = []
     for segment in split_segments(strip_heredoc_bodies(command)):
@@ -518,7 +529,8 @@ def command_is_remote_mutation(command: str) -> bool:
             continue
         name = PurePosixPath(head).name
         if name == "make":
-            if MAKE_REMOTE_GOALS.intersection(make_goals(segment)):
+            goals = MAKE_REMOTE_GOALS.intersection(make_goals(segment))
+            if "push" in goals or ("pr" in goals and not _make_gate_only(segment)):
                 return True
             continue
         if name not in {"git", "gh"}:

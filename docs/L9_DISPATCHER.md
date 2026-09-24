@@ -73,8 +73,10 @@ l9 claude-env                  # structural + runtime readiness for this repo's 
 `l9 pr` is **the** sanctioned publish verb, on every surface and in every repo:
 it runs the **governance** Makefile's `pr` target (`make -C "$GOV" pr WS="$PWD"`)
 regardless of the consumer repo's own Makefile. A consumer repo therefore needs
-**no** local `pr` / `pr-check` target, and there is no raw-`git push` fallback
-where one is absent — the governance Makefile is always the publish authority
+**no** local `pr` target, and there is no raw-`git push` fallback where one
+is absent — the governance Makefile is always the publish authority.
+Gate-only diagnosis is `OPEN_PR=0 l9 pr`; the governance Makefile exposes
+no secondary PR-gate target.
 (rules `48-make-pr-remediation`, `88-l4-local-autonomy`; surface profile
 "make pr only").
 

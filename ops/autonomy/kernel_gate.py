@@ -88,7 +88,7 @@ PLAN_SKIP_PREFIXES = (
 
 
 def _rel_path(raw: str) -> str:
-    return raw.strip().lstrip("./")
+    return kernel_predicates.relative_path(raw)
 
 
 def _is_corpus_path(rel: str) -> bool:
@@ -391,7 +391,7 @@ def _agent_required_tree(root: Path, gov: Path) -> str:
         "     entry per file you changed (path + kernel + note). For a skeleton:\n"
         f"       {template_command(root, gov)}\n"
         f"  5. {record_command(root, gov)}\n"
-        "  6. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
+        "  6. Re-run the same command (make precommit-repo / OPEN_PR=0 make pr / make pr).\n"
         "     Hooks and tests run once after this hook passes.\n"
         "The report IS the receipt. record refuses an absent report, empty deltas, a\n"
         "path outside .l9/autonomy/, or a delta naming a file that does not exist —\n"
@@ -479,7 +479,7 @@ def _load_plan_checker(gov: Path):
 def verify_plans(changed_paths: list[str], *, workspace: Path, gov: Path) -> str | None:
     plans: list[Path] = []
     for raw in changed_paths:
-        rel = raw.strip().lstrip("./")
+        rel = _rel_path(raw)
         if not rel.endswith(".plan.md"):
             continue
         if _is_corpus_path(rel):

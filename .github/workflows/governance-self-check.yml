@@ -222,6 +222,26 @@ jobs:
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
               output.write("\n".join(lines) + "\n")
 
+          # Documentation obligation debt remains advisory during the pilot,
+          # but an ADR added, edited, or deleted in this delta is an explicit
+          # architecture-contract change. It must reach its specialist owner
+          # as a red CI result rather than being hidden by the pilot warning.
+          catalog = receipt.get("adr_catalog")
+          enforcement = catalog.get("enforcement") if isinstance(catalog, dict) else None
+          if not isinstance(enforcement, dict):
+              print("::error::repo-docs receipt lacks ADR enforcement evidence")
+              raise SystemExit(1)
+          active_adr_findings = enforcement.get("active_finding_count")
+          if not isinstance(active_adr_findings, int) or active_adr_findings < 0:
+              print("::error::repo-docs receipt has invalid ADR enforcement evidence")
+              raise SystemExit(1)
+          if active_adr_findings:
+              print(
+                  "::error::repo-docs found active ADR contract violation(s); "
+                  "route the evidence-bound handoff to l9-architecture-decision-records"
+              )
+              raise SystemExit(1)
+
           if rc == 3:
               print(
                   "::warning::repo-docs found actionable documentation obligations; "
