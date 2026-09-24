@@ -13,12 +13,38 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 import emit_claude_readiness as er  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_ceremony(monkeypatch) -> None:
+    """A SessionStart ceremony id in the runner's env must not bind these reads."""
+    monkeypatch.delenv("L9_BOOTSTRAP_ID", raising=False)
+
+
+def _bootstrap_receipt(*, mcp: str = "READY", ceremony: str = "ceremony-1", written=None) -> dict:
+    """A bootstrap receipt the reader classifies as current (installer shape)."""
+    from datetime import UTC, datetime
+
+    stamp = written or datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {
+        "schema": "l9.claude-bootstrap.v1",
+        "state": "READY",
+        "generated_at": stamp,
+        "ttl_seconds": 86400,
+        "bootstrap_id": ceremony,
+        **{key: "READY" for key in er.bootstrap_receipt.COMPONENTS},
+        "mcp": mcp,
+    }
+
 
 READY, DEGRADED, BLOCKED, UNKNOWN = er.READY, er.DEGRADED, er.BLOCKED, er.UNKNOWN
 
@@ -101,7 +127,8 @@ def test_mcp_note_names_every_gated_out_server_except_memory() -> None:
     repeated here; the verdict is untouched — gating annotates, never upgrades.
     """
     gated = frozenset({"context7", er._MEMORY_MCP_SERVER})
-    for bootstrap, proj in ((None, READY), ({"mcp": "READY"}, READY), (None, DEGRADED)):
+    current = {"state": "ready", "components": {"mcp": "READY"}}
+    for bootstrap, proj in ((None, READY), (current, READY), (None, DEGRADED)):
         status, note = er._mcp_status(bootstrap, proj, gated_out=gated)
         assert status == er._mcp_status(bootstrap, proj)[0]
         assert "context7" in note
@@ -604,7 +631,9 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY", gated_out: list[str] | Non
             if entry["domain"] == "mcp":
                 entry["detail"] = {"gated_out_servers": list(gated_out), "managed_servers": []}
     (cl / "projection-receipt.json").write_text(json.dumps({"domains": domains}), encoding="utf-8")
-    (cl / "bootstrap-state.json").write_text(json.dumps({"mcp": mcp}), encoding="utf-8")
+    (cl / "bootstrap-state.json").write_text(
+        json.dumps(_bootstrap_receipt(mcp=mcp)), encoding="utf-8"
+    )
     return home
 
 
@@ -814,10 +843,25 @@ def test_receipt_carries_a_write_time_and_expires(tmp_path: Path, monkeypatch) -
 # --- SessionStart reuse: the receipt is handed back only while it is believable
 
 
+#: The bootstrap receipt identity a reusable readiness receipt is bound to.
+_WRITTEN = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+_BINDING = f"ceremony-1@{_WRITTEN}"
+
+
+def _seed_bootstrap_receipt(home: Path, ceremony: str = "ceremony-1") -> None:
+    """The bootstrap receipt this ceremony generated, matching ``_BINDING``."""
+    state = home / ".l9" / "claude" / "bootstrap-state.json"
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(
+        json.dumps(_bootstrap_receipt(ceremony=ceremony, written=_WRITTEN)), encoding="utf-8"
+    )
+
+
 def _fresh_receipt(sha: str = "abc123", workspace: str = "/ws") -> dict:
     from datetime import UTC, datetime
 
     return {
+        "bootstrap_receipt": _BINDING,
         "schema_version": er.SCHEMA_VERSION,
         "generated_at": datetime.now(UTC).strftime(er._TIMESTAMP_FORMAT),
         "ttl_seconds": er.RECEIPT_TTL_SECONDS,
@@ -841,6 +885,8 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     from datetime import UTC, datetime, timedelta
 
     gov = tmp_path / "gov"
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _seed_bootstrap_receipt(tmp_path)
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
     receipt = _fresh_receipt()
 
@@ -853,10 +899,80 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     assert er.reusable_receipt(None, gov=gov, workspace="/ws") is None
     assert er.reusable_receipt({**receipt, "schema_version": "x"}, gov=gov, workspace="/ws") is None
 
+    # No bootstrap receipt on disk: nothing this ceremony generated to bind to.
+    (tmp_path / ".l9" / "claude" / "bootstrap-state.json").unlink()
+    assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
+    _seed_bootstrap_receipt(tmp_path)
+
     # An unknowable live SHA is not a match — a missing probe must not
     # manufacture reuse out of a receipt that may describe another revision.
     monkeypatch.setattr(er, "_git", lambda _g, *a: "")
     assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
+
+
+def test_reusable_receipt_is_bound_to_the_bootstrap_receipt_on_disk(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A readiness receipt built from an earlier bootstrap receipt is not reused.
+
+    Every bootstrap ceremony generates a new bootstrap receipt, and MCP_status
+    is read from it. Reusing a readiness receipt across that boundary would
+    report the previous bootstrap's receipt as this one's.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("L9_BOOTSTRAP_ID", raising=False)
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    _seed_bootstrap_receipt(tmp_path)
+    built_here = _fresh_receipt()
+    assert er.reusable_receipt(built_here, gov=tmp_path, workspace="/ws") is built_here
+
+    _seed_bootstrap_receipt(tmp_path, ceremony="ceremony-2")
+    assert er.reusable_receipt(built_here, gov=tmp_path, workspace="/ws") is None
+    # A readiness receipt predating the binding cannot vouch for any bootstrap.
+    unbound = {k: v for k, v in _fresh_receipt().items() if k != "bootstrap_receipt"}
+    assert er.reusable_receipt(unbound, gov=tmp_path, workspace="/ws") is None
+
+
+def test_a_bootstrap_receipt_the_reader_rejects_binds_nothing(tmp_path: Path, monkeypatch) -> None:
+    """An expired, foreign-ceremony or other-workspace receipt is not evidence.
+
+    The emitter used to json.load the receipt and trust it raw; the reader's
+    verdict is the only thing that may license MCP_status or reuse.
+    """
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    _seed_bootstrap_receipt(tmp_path)
+    # Another ceremony is running: the receipt on disk is not its receipt.
+    monkeypatch.setenv("L9_BOOTSTRAP_ID", "ceremony-9")
+    verdict = er._bootstrap_verdict(tmp_path, "/ws")
+    assert verdict["state"] == "unknown"
+    assert er._bootstrap_binding(verdict) == ""
+    status, note = er._mcp_status(verdict, READY)
+    assert status == DEGRADED
+    assert "not generated by this bootstrap" in note
+    assert er.reusable_receipt(_fresh_receipt(), gov=tmp_path, workspace="/ws") is None
+
+
+def test_a_partial_bootstrap_receipt_binds_nothing(tmp_path: Path, monkeypatch) -> None:
+    """A verdict missing its id or timestamp is no binding at all.
+
+    Formatting the fields blind produced "@" / "id@", a non-empty identity that
+    matched another equally empty binding and licensed reuse.
+    """
+    ready = {"state": "ready"}
+    assert er._bootstrap_binding({}) == ""
+    assert er._bootstrap_binding({**ready, "bootstrap_id": "c-1"}) == ""
+    assert er._bootstrap_binding({**ready, "generated_at": "2026-09-23T17:00:00Z"}) == ""
+    assert er._bootstrap_binding({**ready, "bootstrap_id": " ", "generated_at": " "}) == ""
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("L9_BOOTSTRAP_ID", raising=False)
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    state = tmp_path / ".l9" / "claude" / "bootstrap-state.json"
+    state.parent.mkdir(parents=True)
+    state.write_text("{}", encoding="utf-8")
+    forged = {**_fresh_receipt(), "bootstrap_receipt": "@"}
+    assert er.reusable_receipt(forged, gov=tmp_path, workspace="/ws") is None
 
 
 def test_compact_names_the_receipt_source() -> None:
@@ -873,6 +989,8 @@ def test_reuse_fresh_skips_every_probe_and_leaves_the_file_untouched(
     receipt = _fresh_receipt(workspace=str(tmp_path))
     path.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
     before = path.read_bytes()
+    monkeypatch.setenv("HOME", str(tmp_path))
+    _seed_bootstrap_receipt(tmp_path)
     monkeypatch.setenv("L9_READINESS_RECEIPT_FILE", str(path))
     monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
 

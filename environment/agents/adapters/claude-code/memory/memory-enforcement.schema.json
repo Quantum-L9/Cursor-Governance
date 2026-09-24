@@ -46,7 +46,6 @@
         "front_door",
         "bridge",
         "control_plane_contract",
-        "default_namespaces",
         "forbidden_side_doors"
       ],
       "properties": {
@@ -71,13 +70,6 @@
         },
         "namespace_env": {
           "type": "string"
-        },
-        "default_namespaces": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
         },
         "forbidden_side_doors": {
           "type": "array",
