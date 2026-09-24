@@ -36,6 +36,28 @@ def test_round_trip_is_lossless_and_digest_stable() -> None:
     assert payload["schema"] == sc.CONTINUATION_SCHEMA
 
 
+def test_continuation_surfaces_stay_distinct_through_round_trip() -> None:
+    """Blocked, decided and unfinished work are separate surfaces, not one TODO bucket."""
+    original = capsule(
+        blockers=("schema parity: waits on PR 651 merge",),
+        decisions=("hook and agent lanes both end at MemoryService",),
+        unfinished_work=("close-path regression not yet added",),
+    )
+    payload = json.loads(original.canonical())
+    restored = sc.ContinuationCapsuleV2.from_payload(payload)
+    assert restored.blockers == original.blockers
+    assert restored.decisions == original.decisions
+    assert restored.unfinished_work == original.unfinished_work
+    assert not set(restored.blockers) & set(restored.unfinished_work)
+    assert not set(restored.decisions) & set(restored.unfinished_work)
+    structured = original.to_governed_candidate(
+        namespace="cursor-governance", source_sha=HEAD, agent_id="cursor"
+    )["knowledge"]["structured_payload"]
+    assert structured["blockers"] == list(original.blockers)
+    assert structured["decisions"] == list(original.decisions)
+    assert structured["unfinished_work"] == list(original.unfinished_work)
+
+
 def test_task_signature_is_derived_from_objective_and_repository() -> None:
     first = capsule()
     same_task_other_session = capsule(session_id="session-2")
