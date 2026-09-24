@@ -3128,11 +3128,22 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # Surfaces here must exist in the topology SSOT
     # (environment/agents/PEER_RUNTIME_BINDINGS.yaml); a default that names a
     # surface the SSOT does not declare can never resolve a provider.
+    # Claude Code is three peers, one per surface (ops/memory/agent_identity.py):
+    # desktop (CLI / IDE / desktop app), mobile, web — never one "claude-code".
+    remote = os.environ.get("CLAUDE_CODE_REMOTE", "").strip().lower() == "true"
+    entry = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
+    claude_here = (
+        ("claude-code-mobile", "claude-mobile")
+        if remote and entry == "remote_mobile"
+        else ("claude-code-web", "claude-web")
+        if remote
+        else ("claude-code-desktop", "claude-cli")
+    )
     aliases = {
-        "claude-code": ("claude-code", "claude-cli"),
-        "claude-cli": ("claude-code", "claude-cli"),
-        "claude-web": ("claude-code", "claude-web"),
-        "claude-mobile": ("claude-code", "claude-mobile"),
+        "claude-code": claude_here,
+        "claude-cli": ("claude-code-desktop", "claude-cli"),
+        "claude-web": ("claude-code-web", "claude-web"),
+        "claude-mobile": ("claude-code-mobile", "claude-mobile"),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
         "codex": ("codex", "codex-cloud"),

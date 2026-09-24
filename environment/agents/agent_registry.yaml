@@ -107,22 +107,58 @@ agents:
     adapter: cursor                  # existing .cursor-commands activation, unchanged
     status: active
 
-  claude-code:
-    agent_id: claude-code
-    user_id: claude_code_agent       # matches environment/agents/adapters/claude-code/web/environment.env.example
-    source: claude-code
-    principal_id: claude-code-memory-client
-    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE
+  claude-code-desktop:
+    agent_id: claude-code-desktop
+    user_id: claude_code_desktop_agent
+    source: claude-code-desktop
+    principal_id: claude-code-desktop-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE_DESKTOP
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE_DESKTOP
     role: implementer
-    surfaces: [claude-cli, claude-web, claude-mobile]
-    # A claude-code session routinely carries two roots: the consumer workspace
-    # it was opened on and the governance SSOT. Grants are per-agent, not
-    # per-session, so a namespace absent here is unwritable through the agent
-    # lane for that whole session (Tier 2). Tier 3 freezes the principal at
-    # spawn from the server's cwd, so it covers exactly one of the two.
+    surfaces: [claude-desktop, claude-cli, claude-ide]
+    # Claude Code on the operator's machine (desktop app, CLI, IDE): CLAUDE_CODE_REMOTE unset.
+    # Resolved by ops/memory/agent_identity.py; the three Claude Code identities
+    # share a role and grants but never an identity, so every memory says which
+    # surface wrote it. Grants are per-agent: a namespace absent here is
+    # unwritable through the agent lane (Tier 2).
     assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
-    adapter: claude-code             # environment/agents/adapters/claude-code/, identities now rendered from here
+    adapter: claude-code             # environment/agents/adapters/claude-code/
+    status: active
+
+  claude-code-mobile:
+    agent_id: claude-code-mobile
+    user_id: claude_code_mobile_agent
+    source: claude-code-mobile
+    principal_id: claude-code-mobile-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE_MOBILE
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE_MOBILE
+    role: implementer
+    surfaces: [claude-mobile]
+    # Claude Code cloud session from the mobile app: CLAUDE_CODE_ENTRYPOINT=remote_mobile.
+    # Resolved by ops/memory/agent_identity.py; the three Claude Code identities
+    # share a role and grants but never an identity, so every memory says which
+    # surface wrote it. Grants are per-agent: a namespace absent here is
+    # unwritable through the agent lane (Tier 2).
+    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
+    adapter: claude-code             # environment/agents/adapters/claude-code/
+    status: active
+
+  claude-code-web:
+    agent_id: claude-code-web
+    user_id: claude_code_web_agent
+    source: claude-code-web
+    principal_id: claude-code-web-memory-client
+    token_env: L9_MEMORY_TOKEN__CLAUDE_CODE_WEB
+    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE_WEB
+    role: implementer
+    surfaces: [claude-web]
+    # Any other Claude Code cloud session (web, API-started): CLAUDE_CODE_REMOTE=true.
+    # Resolved by ops/memory/agent_identity.py; the three Claude Code identities
+    # share a role and grants but never an identity, so every memory says which
+    # surface wrote it. Grants are per-agent: a namespace absent here is
+    # unwritable through the agent lane (Tier 2).
+    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
+    adapter: claude-code             # environment/agents/adapters/claude-code/
     status: active
 
   manus:

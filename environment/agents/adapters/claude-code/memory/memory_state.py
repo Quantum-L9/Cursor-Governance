@@ -120,13 +120,60 @@ def extract_chat_id(event: dict[str, Any] | None) -> tuple[str, str]:
     return "", ""
 
 
+_IDENTITY_MODULE: Any = None
+
+
+def _identity_module() -> Any:
+    """ops/memory/agent_identity.py from this checkout, loaded by path (no sys.path edit)."""
+    global _IDENTITY_MODULE  # noqa: PLW0603 - loaded once per process
+    if _IDENTITY_MODULE is None:
+        import importlib.util  # noqa: PLC0415
+
+        # Walk up rather than count parents: a fixed parents[N] binds the wrong
+        # directory the moment this file moves (memory_prefetch.py learned this).
+        path = next(
+            (
+                parent / "ops" / "memory" / "agent_identity.py"
+                for parent in Path(__file__).resolve().parents
+                if (parent / "ops" / "memory" / "agent_identity.py").is_file()
+            ),
+            Path("ops/memory/agent_identity.py"),
+        )
+        spec = importlib.util.spec_from_file_location("l9_agent_identity", path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"agent identity resolver not loadable at {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _IDENTITY_MODULE = module
+    return _IDENTITY_MODULE
+
+
+def writer_identity(env: dict[str, str] | None = None) -> str:
+    """This surface's memory identity: cursor, claude-code-desktop/-mobile/-web, …
+
+    Never the bare family marker ``claude-code``: every memory must say which
+    surface wrote it (ops/memory/agent_identity.py).
+    """
+    return _identity_module().resolve_agent_id(os.environ if env is None else env)
+
+
+def bind_identity_env() -> str:
+    """Stamp the resolved identity (and its USER_ID) into this process's env."""
+    module = _identity_module()
+    agent_id = module.resolve_agent_id(os.environ) or "unknown-agent"
+    os.environ["L9_MEMORY_AGENT_ID"] = agent_id
+    if os.environ.get("USER_ID", "") in ("", "claude_code_agent"):
+        os.environ["USER_ID"] = module.user_id_for(agent_id)
+    return agent_id
+
+
 def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
     if event:
         for key in ("agent_id", "agentId"):
             value = str(event.get(key) or "").strip()
             if value:
                 return value
-    return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
+    return writer_identity() or "unknown-agent"
 
 
 def receipt_identity(

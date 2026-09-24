@@ -14,7 +14,7 @@ def _build(**extra: object) -> dict:
         "namespace": "cursor-governance",
         "memory_class": "lesson",
         "content": "  Stop hooks gate on usable_receipt,\tnot fresh_receipt  ",
-        "agent_id": "claude-code",
+        "agent_id": "claude-code-desktop",
         "tags": ["hooks"],
         **extra,
     }
@@ -25,7 +25,7 @@ def test_build_maps_aliases_collapses_whitespace_and_stamps_agent_and_key() -> N
     payload = _build()
     assert payload["memory_class"] == "insight"
     assert payload["content"] == "Stop hooks gate on usable_receipt, not fresh_receipt"
-    assert payload["tags"] == ["agent:claude-code", "hooks"]
+    assert payload["tags"] == ["agent:claude-code-desktop", "hooks"]
     assert payload["idempotency_key"].startswith("agent:cursor-governance:")
 
 
@@ -69,13 +69,13 @@ def test_the_cli_prints_tool_and_arguments(capsys: pytest.CaptureFixture[str]) -
             "--tag",
             "claude-settings",
             "--agent-id",
-            "claude-code",
+            "claude-code-desktop",
         ]
     )
     assert code == 0
     out = json.loads(capsys.readouterr().out)
     assert out["tool"] == aw.WRITE_TOOL
-    assert out["arguments"]["tags"] == ["agent:claude-code", "claude-settings"]
+    assert out["arguments"]["tags"] == ["agent:claude-code-desktop", "claude-settings"]
 
 
 def test_the_cli_refuses_loudly(capsys: pytest.CaptureFixture[str], tmp_path) -> None:
@@ -108,4 +108,5 @@ def test_the_module_does_no_memory_io() -> None:
         "datetime",
         "pathlib",
         "typing",
+        "ops.memory.agent_identity",  # pure resolver, no I/O
     }, sorted(imported)

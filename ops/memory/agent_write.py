@@ -29,13 +29,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from ops.memory.agent_identity import CLAUDE_FAMILY, resolve_agent_id
 
 SCHEMA_ID = "l9.agent_memory_write.v1"
 WRITE_TOOL = "mcp__l9-graphite-memory__memory_write_agent"
@@ -180,6 +181,10 @@ def validate(payload: Any) -> dict[str, Any]:
     agent_tags = [t for t in tags if re.search(AGENT_TAG_RE, t)]
     if len(agent_tags) != 1:
         raise AgentWriteError("tags must carry exactly one agent:<id> tag")
+    if agent_tags[0] == f"agent:{CLAUDE_FAMILY}":
+        raise AgentWriteError(
+            "agent:claude-code names no surface: use claude-code-desktop, -mobile or -web"
+        )
 
     key = payload["idempotency_key"]
     if not isinstance(key, str) or not re.search(IDEMPOTENCY_RE, key):
@@ -269,7 +274,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--class", dest="memory_class", required=True, help=", ".join(CLASSES))
     b.add_argument("--content", required=True, help="one atomic fact, one line")
     b.add_argument("--tag", action="append", default=[], help="topic tag (repeatable)")
-    b.add_argument("--agent-id", default=os.environ.get("L9_MEMORY_AGENT_ID") or None)
+    b.add_argument(
+        "--agent-id",
+        default=resolve_agent_id() or None,
+        help="default: this surface's identity (ops/memory/agent_identity.py)",
+    )
     b.add_argument("--source-id", help="evidence: PR, commit, ADR, file path")
     b.add_argument("--task-signature", help="present => memory_write_governed")
     b.add_argument("--supersedes", action="append", default=[], help="record id replaced")

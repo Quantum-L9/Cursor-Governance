@@ -246,10 +246,12 @@ class MemoryGateTests(unittest.TestCase):
 
     def test_precomposed_receipt_key_is_reduced_not_doubled(self) -> None:
         """An old-style hint that passes the composed key still repairs the right file."""
-        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "claude-code"}):
+        # A concrete identity: the bare "claude-code" family marker is refined
+        # from the surface markers of whatever machine runs the test.
+        with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "claude-code-desktop"}):
             raw = st.resolve_receipt_id(event={}, cli_arg="chat-42")
-            composed = st.resolve_receipt_id(event={}, cli_arg="claude-code__chat-42")
-        self.assertEqual(raw, "claude-code__chat-42")
+            composed = st.resolve_receipt_id(event={}, cli_arg="claude-code-desktop__chat-42")
+        self.assertEqual(raw, "claude-code-desktop__chat-42")
         self.assertEqual(composed, raw)
         with mock.patch.dict(os.environ, {"L9_MEMORY_AGENT_ID": "agent-b"}):
             # Another writer's prefix is chat text, not this writer's key.

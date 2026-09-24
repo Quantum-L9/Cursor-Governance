@@ -75,41 +75,61 @@ agent-set.
   `settings.template.json` under the names Claude Code actually emits
   (`memory_write_agent`, …). The ordinary write runs with no popup.
 
-## Signed agent identity: every memory names its author
+## Signed agent identity: every memory names its author and its surface
 
-A memory must name the agent that wrote it. The `l9-graphite-memory` MCP server
-therefore runs only as a signed agent principal (ADR-0031). It never runs as
-the anonymous `local-operator`, whose writes carry no agent.
+A memory must name the agent that wrote it. Each surface is its own agent;
+there is no single "Claude Code" identity. `ops/memory/agent_identity.py` is the
+one resolver, used by the hook lane and by the MCP launcher:
 
-- **At spawn, `ops/memory/run_memory_mcp.sh`:**
-  1. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` from the environment Claude Code
+| Identity | Surface | Resolved from |
+|---|---|---|
+| `cursor` | Cursor | `CURSOR_AGENT` (wins over an inherited `claude-code` marker) |
+| `claude-code-desktop` | Claude Code on your machine: desktop app, CLI, IDE | Claude Code markers, `CLAUDE_CODE_REMOTE` unset |
+| `claude-code-mobile` | Claude Code cloud session started from the mobile app | `CLAUDE_CODE_REMOTE=true`, `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
+| `claude-code-web` | Any other Claude Code cloud session (web, API) | `CLAUDE_CODE_REMOTE=true`, any other entrypoint |
+
+`L9_MEMORY_AGENT_ID=claude-code`, projected by `settings.template.json`, is
+only the family marker. It is refined to one of the three identities above and
+is never written as an identity. The builder refuses `agent:claude-code`.
+
+- **At spawn**, `ops/memory/run_memory_mcp.sh`:
+  1. resolves the identity;
+  2. reads `L9_MEMORY_AGENT_AUTHORITY_JSON` from the environment Claude Code
      starts with;
-  2. scopes it with `ops/memory/materialize_agent_authority.py`: only the
-     agents door and this agent's key, and never the human door;
-  3. derives the agent's grants from `environment/agents/agent_registry.yaml`,
-     never from the secret;
-  4. mints the signed assertion.
+  3. scopes it with `ops/memory/materialize_agent_authority.py`: only the
+     agents door and this identity's key pass through, and never the human
+     door;
+  4. derives the grants from `environment/agents/agent_registry.yaml`, never
+     from the secret;
+  5. mints the signed assertion.
 
-  The server's principal is then the agent (`claude-code-memory-client`), and
-  its write grants are the agent's `assigned_groups`, whichever directory the
-  server starts in.
+  The server's principal is then that identity (for example
+  `claude-code-mobile-memory-client`), and its write grants are that agent's
+  `assigned_groups`, whichever directory the server starts in.
 - **Without the door** the launcher **refuses to start the server** and says
   why, and SessionStart announces `AGENT MEMORY WRITES ARE OFF`.
   `L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the explicit operator opt-out, and it is
   announced as such.
-- **Grants** are reviewed repository policy. Adding a repository to
-  `claude-code`'s `assigned_groups` is a one-line registry change.
-  `tests/ops/memory/test_assigned_groups_lockstep.py` requires every entry to be
-  a registered namespace.
+- **SessionStart prints** `memory identity: <id>` in every Claude session.
 
-### Provisioning a hosted (cloud) environment, once
+### Provisioning, once per surface
 
-1. On a workstation that holds the local key maps, write the scoped authority
-   to a private file:
-   `python -m ops.memory.materialize_agent_authority --agent-id claude-code --export-from ~/.config/l9-memory/agent_tokens.local.json --output ./claude-code-authority.json`
-   This writes a `0600` file and prints no values.
-2. Add the file's contents as the environment variable
-   `L9_MEMORY_AGENT_AUTHORITY_JSON` in the Claude Code environment settings
-   (the environment menu in the session title bar, then Edit). Never paste it
-   into a chat.
-3. Delete the local file. The next session mints the door at spawn.
+Run these on the workstation that holds the local key maps. No values are ever
+printed. Paste secrets only into environment settings, never into a chat.
+
+1. **Give the new identities keys** (existing keys are kept):
+   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop --agent-id claude-code-mobile --agent-id claude-code-web`
+2. **Claude Code Desktop:** nothing more. The launcher reads the local maps
+   through `export_agent_assertion_env.sh`, and the server runs as
+   `claude-code-desktop`.
+3. **Claude Code cloud sessions, mobile and web:** they share one hosted
+   environment, so its one secret carries both keys, and the launcher passes on
+   only the key of the surface that is running.
+   1. Write the scoped secret:
+      `python -m ops.memory.materialize_agent_authority --export-from ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-mobile --agent-id claude-code-web --output ./claude-code-hosted-authority.json`
+   2. Add the file's contents as `L9_MEMORY_AGENT_AUTHORITY_JSON` in the
+      Claude Code environment settings (the environment menu in the session
+      title bar, then Edit).
+   3. Delete the file.
+4. **Cursor:** its SessionStart mints the `cursor` door from the same local
+   maps (`ops/hooks/session_start_bootstrap.sh`).

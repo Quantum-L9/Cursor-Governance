@@ -139,7 +139,7 @@ memcli write \
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
 3. **Pre-classify.** Use the correct `--kind` (lesson, insight, note, rule, pattern, preference, decision, observation, pickup_context) — see the canonical list above. Not `error`.
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
-5. **Stamp identity.** Pass `--agent-id` or export `L9_MEMORY_AGENT_ID` (Cursor=`cursor`).
+5. **Stamp identity.** One identity per surface, resolved by `ops/memory/agent_identity.py`: Cursor=`cursor`, Claude Code=`claude-code-desktop` | `claude-code-mobile` | `claude-code-web` (never the bare family `claude-code`). The agent-write builder defaults to it; the operator CLI takes `--agent-id`.
 
 ### Anti-pattern (NEVER do this)
 

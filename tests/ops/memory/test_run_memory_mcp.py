@@ -21,6 +21,7 @@ EXPORTER = REPO_ROOT / "ops" / "memory" / "export_agent_assertion_env.sh"
 #: names its author); these stand in for a minted door (presence is checked,
 #: values never read here).
 DOOR = {
+    "L9_MEMORY_AGENT_ID": "claude-code-desktop",
     "L9_MEMORY_AGENTS_DOOR_SECRET": "stub-door",
     "L9_MEMORY_AGENT_ASSERTION": "stub-assertion",
     "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": "{}",
@@ -55,6 +56,7 @@ def _stub_gov(tmp_path: Path) -> Path:
     (memory / "runtime_binding.py").write_text(_STUB, encoding="utf-8")
     shutil.copy(BINDER, lib / "bind_memory_interpreter.sh")
     shutil.copy(EXPORTER, memory / "export_agent_assertion_env.sh")
+    shutil.copy(REPO_ROOT / "ops" / "memory" / "agent_identity.py", memory / "agent_identity.py")
     return gov
 
 
@@ -111,7 +113,8 @@ def test_proven_interpreter_is_execd_with_forwarded_argv(tmp_path: Path) -> None
 def test_a_proven_interpreter_without_a_door_is_not_launched(tmp_path: Path) -> None:
     gov = _stub_gov(tmp_path)
     launched = _executable(tmp_path / "proven-python")
-    result = _run(gov, {"STUB_FALLBACK": str(launched)}, args=["-m", "x"])
+    env = {"STUB_FALLBACK": str(launched), "L9_MEMORY_AGENT_ID": "claude-code-desktop"}
+    result = _run(gov, env, args=["-m", "x"])
     assert result.returncode == 1
     assert "LAUNCH" not in result.stdout
     assert "a memory must name the agent that wrote it" in result.stderr

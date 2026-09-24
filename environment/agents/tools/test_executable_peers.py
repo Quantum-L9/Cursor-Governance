@@ -10,7 +10,8 @@
 #   updated: 2026-08-12
 """Regression tests for the Executable Peer Contract validator (E1-E15).
 
-Positive: the live repo is coherent and only Wave A (cursor, claude-code) has
+Positive: the live repo is coherent and only Wave A (cursor and the three Claude Code
+identities: desktop, mobile, web) has
 execution.required. Negatives: each targeted rule bites when its invariant is
 broken. Also gates that governed readers no longer consume agent_registry.execution.
 """
@@ -41,13 +42,16 @@ class ExecutablePeerContractTests(unittest.TestCase):
         module = _load()
         report = module.validate(REPO_ROOT)
         self.assertEqual(report["status"], "PASS", report["errors"])
-        self.assertEqual(set(report["executable_peers"]), {"cursor", "claude-code"})
+        self.assertEqual(
+            set(report["executable_peers"]),
+            {"cursor", "claude-code-desktop", "claude-code-mobile", "claude-code-web"},
+        )
 
     def test_bindings_schema_only_passes(self) -> None:
         module = _load()
         report = module.validate_bindings_schema(REPO_ROOT)
         self.assertEqual(report["status"], "PASS", report["errors"])
-        self.assertEqual(report["peer_count"], 5)
+        self.assertEqual(report["peer_count"], 7)
 
     def test_e1_missing_bindings_fails_closed(self) -> None:
         module = _load()

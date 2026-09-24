@@ -64,9 +64,15 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
     The hook is Claude-owned, but ``--session-id`` is a repair override that
     also runs on Cursor. Hard-coding ``claude-code`` stamped the wrong
     surface onto Cursor hydrate blocks (SESSION_START_SPEC: a Cursor session
-    contains zero ``agent_id=claude-code`` hydrate blocks).
+    contains zero ``agent_id=claude-code`` hydrate blocks). The Claude family
+    is split by surface (claude-code-desktop / -mobile / -web) by the one
+    resolver, ops/memory/agent_identity.py.
     """
-    return "claude-code" if is_claude_gate_surface(env) else "cursor"
+    source = dict(os.environ if env is None else env)
+    resolved = st.writer_identity(source)
+    if resolved:
+        return resolved
+    return "claude-code-desktop" if is_claude_gate_surface(source) else "cursor"
 
 
 #: Cloud containers put several repositories side by side. Hydrating each costs
@@ -251,10 +257,10 @@ def main() -> int:
         workspace = session_ws
         namespaces = st.resolve_namespaces(contract)
     agent_id = prefetch_agent_id()
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", agent_id)
-    os.environ.setdefault(
-        "USER_ID", "claude_code_agent" if agent_id == "claude-code" else "cursor_agent"
-    )
+    if os.environ.get("L9_MEMORY_AGENT_ID", "") in ("", "claude-code"):
+        os.environ["L9_MEMORY_AGENT_ID"] = agent_id
+    if os.environ.get("USER_ID", "") in ("", "claude_code_agent"):
+        os.environ["USER_ID"] = f"{os.environ['L9_MEMORY_AGENT_ID'].replace('-', '_')}_agent"
 
     # BEFORE root selection: the namespace predicate imports ops.memory from the
     # governance root, and its except-branch fails OPEN so a resolver fault can

@@ -27,7 +27,20 @@ from typing import Any
 
 import yaml
 
+from ops.memory.agent_identity import HOSTED_CLAUDE
+
 MIN_SECRET = 24
+
+
+def allowed_peers(agent_id: str) -> frozenset[str]:
+    """Identities whose keys may travel in the same secret as ``agent_id``'s.
+
+    Claude Code mobile and web cloud sessions run in one hosted environment, so
+    its one provisioned secret carries both keys; the materializer passes on
+    only the key of the identity actually running. Every other agent's secret
+    carries exactly its own key.
+    """
+    return HOSTED_CLAUDE if agent_id in HOSTED_CLAUDE else frozenset({agent_id})
 
 
 class AuthorityMaterializationError(ValueError):
@@ -47,7 +60,7 @@ def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def scoped_tokens(raw: object, agent_id: str) -> dict[str, object]:
-    """Accept only {agents_door_secret, agent_signing_keys: {<agent_id>: key}}."""
+    """Accept {agents_door_secret, agent_signing_keys}; keep only ``agent_id``'s key."""
     if not isinstance(raw, dict):
         raise AuthorityMaterializationError("agent authority must be a JSON object")
     if "human_door_secret" in raw:
@@ -60,10 +73,20 @@ def scoped_tokens(raw: object, agent_id: str) -> dict[str, object]:
     keys = raw.get("agent_signing_keys")
     if not isinstance(door, str) or len(door) < MIN_SECRET:
         raise AuthorityMaterializationError("agents door is absent or too short")
-    if not isinstance(keys, dict) or set(keys) != {agent_id}:
+    if (
+        not isinstance(keys, dict)
+        or agent_id not in keys
+        or not set(keys) <= allowed_peers(agent_id)
+    ):
+        allowed = ", ".join(sorted(allowed_peers(agent_id)))
         raise AuthorityMaterializationError(
-            f"agent authority must contain only the {agent_id} signing key"
+            f"agent authority must hold the {agent_id} signing key and no key beyond {allowed}"
         )
+    for peer, peer_key in keys.items():
+        if not isinstance(peer_key, str) or len(peer_key) < MIN_SECRET or peer_key == door:
+            raise AuthorityMaterializationError(
+                f"{peer} signing key is absent, too short, or reused"
+            )
     key = keys.get(agent_id)
     if not isinstance(key, str) or len(key) < MIN_SECRET or key == door:
         raise AuthorityMaterializationError(
@@ -120,8 +143,8 @@ def materialize(governance: Path, output_directory: Path, authority: object, age
         raise
 
 
-def export_authority(secret_map: Path, agent_id: str, output: Path) -> None:
-    """Write the scoped authority for ``agent_id`` from a full local token map.
+def export_authority(secret_map: Path, agent_ids: list[str], output: Path) -> None:
+    """Write the scoped authority for ``agent_ids`` from a full local token map.
 
     For the operator provisioning a hosted environment: the result is exactly
     what L9_MEMORY_AGENT_AUTHORITY_JSON must hold — the shared agents door and
@@ -132,21 +155,53 @@ def export_authority(secret_map: Path, agent_id: str, output: Path) -> None:
     if not isinstance(full, dict):
         raise AuthorityMaterializationError("secret map must be a JSON object")
     keys = full.get("agent_signing_keys") or {}
-    if not isinstance(keys, dict) or agent_id not in keys:
-        raise AuthorityMaterializationError(f"secret map has no {agent_id} signing key")
-    scoped = scoped_tokens(
-        {
-            "agents_door_secret": full.get("agents_door_secret"),
-            "agent_signing_keys": {agent_id: keys[agent_id]},
-        },
-        agent_id,
+    missing = [a for a in agent_ids if not isinstance(keys, dict) or a not in keys]
+    if missing:
+        raise AuthorityMaterializationError(f"secret map has no signing key for {missing}")
+    selected = {a: keys[a] for a in agent_ids}
+    for agent_id in agent_ids:  # each must be a legal travelling set for every member
+        scoped_tokens(
+            {"agents_door_secret": full.get("agents_door_secret"), "agent_signing_keys": selected},
+            agent_id,
+        )
+    _write_private_json(
+        output,
+        {"agents_door_secret": full.get("agents_door_secret"), "agent_signing_keys": selected},
     )
-    _write_private_json(output, scoped)
+
+
+def add_missing_keys(secret_map: Path, agent_ids: list[str]) -> list[str]:
+    """Give each named identity a signing key in the local map if it has none.
+
+    For the operator adding a new identity (e.g. claude-code-desktop/-mobile/-web
+    after the one "claude-code" identity was split). Existing keys are never
+    replaced, the file stays 0600, and no value is printed. Returns the ids added.
+    """
+    import secrets  # noqa: PLC0415
+
+    full = json.loads(secret_map.read_text(encoding="utf-8"))
+    if not isinstance(full, dict) or not isinstance(full.get("agent_signing_keys"), dict):
+        raise AuthorityMaterializationError("secret map must hold an agent_signing_keys object")
+    keys = full["agent_signing_keys"]
+    added = [a for a in agent_ids if a not in keys]
+    for agent_id in added:
+        keys[agent_id] = secrets.token_hex(32)
+    if added:
+        temporary = secret_map.with_name(secret_map.name + ".tmp")
+        temporary.unlink(missing_ok=True)
+        _write_private_json(temporary, full)
+        os.replace(temporary, secret_map)
+    return added
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--agent-id", required=True)
+    parser.add_argument(
+        "--agent-id",
+        action="append",
+        required=True,
+        help="the running identity; repeat with --export-from for a shared hosted environment",
+    )
     parser.add_argument("--governance", type=Path)
     parser.add_argument("--output-directory", type=Path)
     parser.add_argument(
@@ -155,20 +210,34 @@ def main(argv: list[str] | None = None) -> int:
         help="operator: a full local token map (agent_tokens.local.json) to scope",
     )
     parser.add_argument("--output", type=Path, help="operator: new 0600 file for --export-from")
+    parser.add_argument(
+        "--add-keys-to",
+        type=Path,
+        help="operator: add a signing key for each --agent-id missing from this local map",
+    )
     args = parser.parse_args(argv)
     try:
+        if args.add_keys_to is not None:
+            added = add_missing_keys(args.add_keys_to, args.agent_id)
+            print(
+                f"added signing keys for {', '.join(added) or 'none (all present)'} (values hidden)"
+            )
+            return 0
         if args.export_from is not None:
             if args.output is None:
                 raise AuthorityMaterializationError("--export-from needs --output")
             export_authority(args.export_from, args.agent_id, args.output)
-            print(f"wrote scoped {args.agent_id} authority to {args.output} (0600, values hidden)")
+            names = ", ".join(args.agent_id)
+            print(f"wrote scoped {names} authority to {args.output} (0600, values hidden)")
             return 0
         if args.governance is None or args.output_directory is None:
             raise AuthorityMaterializationError("--governance and --output-directory are required")
+        if len(args.agent_id) != 1:
+            raise AuthorityMaterializationError("materialize takes exactly one --agent-id")
         authority = json.load(sys.stdin)
-        materialize(args.governance, args.output_directory, authority, args.agent_id)
+        materialize(args.governance, args.output_directory, authority, args.agent_id[0])
     except (AuthorityMaterializationError, json.JSONDecodeError, OSError, yaml.YAMLError) as exc:
-        print(f"agent-memory-authority ERROR ({args.agent_id}): {exc}", file=sys.stderr)
+        print(f"agent-memory-authority ERROR ({', '.join(args.agent_id)}): {exc}", file=sys.stderr)
         return 1
     return 0
 

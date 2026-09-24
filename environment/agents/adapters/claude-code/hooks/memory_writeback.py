@@ -198,7 +198,8 @@ def compose_handoff_announcement(
     else:
         title = "FAILED"
     lines = [
-        f"L9 MEMORY HANDOFF — {title} ({pub['label']}, session {session_id}, agent claude-code)",
+        f"L9 MEMORY HANDOFF — {title} ({pub['label']}, session {session_id}, "
+        f"agent {os.environ.get('L9_MEMORY_AGENT_ID') or 'unknown-agent'})",
         f"publication: {pub['url'] or pub['label']}",
     ]
     lines.extend(_repo_block(root, {**report, "pickup": {}}, session_id))
@@ -379,8 +380,7 @@ def main() -> int:
 
     workspace = st.workspace_root()
     roots = _writeback_roots(contract, receipt_id, workspace)
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
-    os.environ.setdefault("USER_ID", "claude_code_agent")
+    agent_id = st.bind_identity_env()
 
     mb.ensure_importable()
 
@@ -509,7 +509,7 @@ def main() -> int:
                 session_id=session_id,
                 reason=f"published {pub['label']}",
                 transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
-                agent_id="claude-code",
+                agent_id=agent_id,
                 is_background_agent=False,
                 dry_run=False,
                 budget=left,

@@ -703,6 +703,12 @@ say "shared memory: canonical memory control plane only (ops/memory; l9-graphite
 # the door. Values are never printed. Memory never gates repository writes.
 _l9_door_status() {
   local missing=()
+  # One memory identity per surface (ops/memory/agent_identity.py): cursor,
+  # claude-code-desktop, claude-code-mobile, claude-code-web — never one
+  # "claude-code" for every surface.
+  local _agent
+  _agent="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.agent_identity 2>/dev/null || true)"
+  say "memory identity: ${_agent:-UNRESOLVED} — every memory this session writes names this agent (ops/memory/agent_identity.py)"
   [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
   [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
   [ -n "${L9_MEMORY_AGENT_SIGNING_KEYS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_SIGNING_KEYS_JSON)
@@ -714,9 +720,9 @@ _l9_door_status() {
     # The launcher (ops/memory/run_memory_mcp.sh) mints the door from this at
     # spawn, so the MCP server's principal is the agent itself and every memory
     # it admits names its author. Values are never printed.
-    say "signed-agent door: PROVISIONED — L9_MEMORY_AGENT_AUTHORITY_JSON is in the Claude environment; run_memory_mcp.sh mints the ${L9_MEMORY_AGENT_ID:-claude-code} door at MCP spawn (grants from environment/agents/agent_registry.yaml). Every agent memory names its author"
+    say "signed-agent door: PROVISIONED — L9_MEMORY_AGENT_AUTHORITY_JSON is in the Claude environment; run_memory_mcp.sh mints the ${_agent:-UNRESOLVED} door at MCP spawn (grants from environment/agents/agent_registry.yaml). Every agent memory names its author"
   elif [ "${#missing[@]}" -eq 0 ]; then
-    say "signed-agent door: pre-launch handoff PRESENT (agent_id=${L9_MEMORY_AGENT_ID:-unset}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
+    say "signed-agent door: pre-launch handoff PRESENT (agent_id=${_agent:-UNRESOLVED}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
   elif [ "${#missing[@]}" -eq 4 ] && [ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" = "1" ]; then
     say "signed-agent door: ABSENT with L9_MEMORY_ALLOW_LOCAL_OPERATOR=1 — the memory server runs as the anonymous local-operator: agent memory writes carry NO agent identity this session (operator opt-out)"
   elif [ "${#missing[@]}" -eq 4 ]; then
@@ -724,7 +730,7 @@ _l9_door_status() {
     # to start the server without the door rather than fall back to the
     # anonymous local-operator principal. Say that here, at session start, so an
     # absent memory tool is never a mystery.
-    say "signed-agent door: UNAVAILABLE — AGENT MEMORY WRITES ARE OFF this session. The l9-graphite-memory MCP server refuses to start without the signed ${L9_MEMORY_AGENT_ID:-claude-code} door (a memory must name the agent that wrote it). Fix: add L9_MEMORY_AGENT_AUTHORITY_JSON to the Claude Code environment settings (ops/memory/AGENT_WRITE_CONTRACT.md → Signed agent identity); the next session mints the door at spawn. Hook-lane hydrate/close are unaffected. Do not reroute a model-authored fact through the operator CLI (ADR-0033 / INV-03b)"
+    say "signed-agent door: UNAVAILABLE — AGENT MEMORY WRITES ARE OFF this session. The l9-graphite-memory MCP server refuses to start without the signed ${_agent:-UNRESOLVED} door (a memory must name the agent that wrote it). Fix: add L9_MEMORY_AGENT_AUTHORITY_JSON to the Claude Code environment settings (ops/memory/AGENT_WRITE_CONTRACT.md → Signed agent identity); the next session mints the door at spawn. Hook-lane hydrate/close are unaffected. Do not reroute a model-authored fact through the operator CLI (ADR-0033 / INV-03b)"
   else
     say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi

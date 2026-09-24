@@ -27,7 +27,7 @@ class PeerNeutralAutonomyTests(unittest.TestCase):
     def test_current_examples_bind_canonical_peer_and_surface(self) -> None:
         for name, peer_ref, surface in (
             ("adapters/cursor.json", "cursor", "cursor-ide"),
-            ("adapters/claude-code.json", "claude-code", "claude-cli"),
+            ("adapters/claude-code.json", "claude-code-desktop", "claude-cli"),
         ):
             config = AdapterConfig.from_dict(load_example(name))
             self.assertEqual((config.peer_ref, config.surface), (peer_ref, surface))

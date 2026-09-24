@@ -52,8 +52,15 @@ if [[ -z "${L9_MEMORY_INTERPRETER:-}" || ! -x "$L9_MEMORY_INTERPRETER" ]]; then
 fi
 
 # --- Signed agent door (ADR-0031): every memory names its author ------------
-export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-claude-code}"
 export L9_GOVERNANCE_DIR="$GOV"
+# One identity per surface (cursor, claude-code-desktop, claude-code-mobile,
+# claude-code-web, …) from the one resolver — never the bare "claude-code".
+if ! _agent_id="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.agent_identity)" \
+  || [[ -z "$_agent_id" ]]; then
+  echo "run_memory_mcp: no agent identity for this surface (ops/memory/agent_identity.py) — refuse to launch: a memory must name the agent that wrote it" >&2
+  exit 1
+fi
+export L9_MEMORY_AGENT_ID="$_agent_id"
 if [[ -n "${L9_MEMORY_AGENT_AUTHORITY_JSON:-}" ]]; then
   _authority_dir="$(mktemp -d "${TMPDIR:-/tmp}/l9-memory-authority.XXXXXX")"
   chmod 700 "$_authority_dir"

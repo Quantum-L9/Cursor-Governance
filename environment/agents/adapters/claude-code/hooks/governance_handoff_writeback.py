@@ -203,7 +203,7 @@ def compose_announcement(
         title = ("WRITTEN" if brief is not None else "PARTIAL") if ok else "FAILED"
     lines = [
         f"L9 GOVERNANCE HANDOFF — {title} ({pub['label']}, session {session_id}, "
-        "agent claude-code)",
+        f"agent {os.environ.get('L9_MEMORY_AGENT_ID') or 'unknown-agent'})",
         f"target: namespace {namespace} ONLY (never the repository's)",
     ]
     if outcome is not None:
@@ -242,7 +242,7 @@ def _write(text: str, pub: dict, session_id: str) -> object:
                 "governance-handoff",
                 f"repo:{pub['repo']}",
                 f"publication:{pub['key']}",
-                "agent:claude-code",
+                f"agent:{os.environ.get('L9_MEMORY_AGENT_ID') or 'unknown-agent'}",
             ],
             idempotency_key=f"governance-handoff:{pub['key']}",
             source="claude-post-publish-governance-handoff",
@@ -305,7 +305,7 @@ def main() -> int:
         _record(contract, session_id, status="no_publication")
         return 0
 
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", "claude-code")
+    st.bind_identity_env()
     mb.ensure_importable()
     global governance_handoff  # noqa: PLW0603 - bound once per hook run
     try:
@@ -344,6 +344,7 @@ def main() -> int:
                 brief,
                 observed,
                 repository=pub["repo"],
+                agent_id=os.environ.get("L9_MEMORY_AGENT_ID") or "unknown-agent",
                 pr_label=pub["label"],
                 session_id=session_id,
             )

@@ -95,10 +95,25 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
             ),
             "cursor",
         )
-        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code")
+        # One identity per surface, never one "claude-code" (ops/memory/agent_identity.py).
+        self.assertEqual(prefetch.prefetch_agent_id({"CLAUDECODE": "1"}), "claude-code-desktop")
         self.assertEqual(
             prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}),
-            "claude-code",
+            "claude-code-desktop",
+        )
+        self.assertEqual(
+            prefetch.prefetch_agent_id(
+                {
+                    "CLAUDECODE": "1",
+                    "CLAUDE_CODE_REMOTE": "true",
+                    "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+                }
+            ),
+            "claude-code-mobile",
+        )
+        self.assertEqual(
+            prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}),
+            "claude-code-web",
         )
 
     def test_a_degraded_read_is_shown_to_the_user(self) -> None:
