@@ -43,169 +43,196 @@ plane = _load()
 capability_client = _load("capability_client")
 
 
+BINDS_OK = [
+    {"name": name, "bound": True, "source": "infisical"}
+    for name in ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN", "CONTEXT7_API_KEY")
+]
+BINDS_NONE = [{**row, "bound": False, "source": "infisical-machine-absent"} for row in BINDS_OK]
+
+
+HOSTED = {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"}
+AWS_OK = {"ok": True, "code": "OK", "summary": "authorized"}
+AWS_DOWN = {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "AWS_CLI_NOT_FOUND"}
+
+
+def _run(
+    login_state: str,
+    source: str,
+    binds: list[dict[str, Any]],
+    argv: list[str],
+    env: dict,
+    aws: dict | None = None,
+) -> tuple[dict[str, Any], int, str, str]:
+    with (
+        mock.patch.dict("os.environ", env, clear=True),
+        mock.patch.object(plane, "_aws_probe", return_value=aws or AWS_OK),
+        mock.patch.object(plane.login, "ensure_machine_profile", return_value=login_state),
+        mock.patch.object(plane.login, "machine_identity", return_value=(source, None)),
+        mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
+        mock.patch("sys.stdout", new_callable=io.StringIO) as out,
+        mock.patch("sys.stderr", new_callable=io.StringIO) as err,
+    ):
+        result = plane.run_plane()
+        rc = plane.main(argv)
+    return result, rc, out.getvalue(), err.getvalue()
+
+
 class SessionStartSecretsTests(unittest.TestCase):
-    def test_aws_fail_skips_seed_and_exits_1(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "unbound"},
-            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
-            {"name": "GITHUB_TOKEN", "bound": False, "source": "unbound"},
-        ]
-        # Pinned to an operator surface, where this contract is unchanged. The
-        # surface was previously implicit, which made the assertion depend on
-        # the machine the suite happened to run on; see SurfaceCarveOutTests
-        # for the model-controlled case.
+    """Claude: the environment machine identity, no AWS step (run as hosted)."""
+
+    def test_an_identity_that_logs_in_binds_and_exits_0(self) -> None:
+        result, rc, _, err = _run("env", "env", BINDS_OK, [], HOSTED)
+        self.assertTrue(result["plane_ok"])
+        self.assertEqual(result["state"], plane.STATE_OK)
+        self.assertEqual(result["identity"]["code"], plane.IDENTITY_OK)
+        self.assertEqual(result["identity"]["source"], "env")
+        self.assertEqual(rc, 0)
+        self.assertIn("CONTEXT7_API_KEY=infisical", err)
+
+    def test_context7_is_among_the_names_the_plane_binds(self) -> None:
+        self.assertIn("CONTEXT7_API_KEY", plane.BIND_NAMES)
+
+    def test_a_missing_identity_fails_loudly_and_names_the_fix(self) -> None:
+        result, rc, _, err = _run("absent", "", BINDS_NONE, [], HOSTED)
+        self.assertFalse(result["plane_ok"])
+        self.assertEqual(result["identity"]["code"], plane.IDENTITY_ABSENT)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAILED: no Infisical machine identity", err)
+        self.assertIn("L9_INFISICAL_CLIENT_ID", err)
+        self.assertIn("L9_INFISICAL_CLIENT_SECRET", err)
+
+    def test_a_refused_identity_fails(self) -> None:
+        result, rc, _, err = _run("failed", "env", BINDS_NONE, [], HOSTED)
+        self.assertEqual(result["identity"]["code"], plane.IDENTITY_REFUSED)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAILED: Infisical refused the machine identity", err)
+
+    def test_no_surface_is_exempt(self) -> None:
+        """The retired carve-out scored a hosted surface's absence as 'not a fault'."""
+        for env, aws in (
+            (HOSTED, None),
+            ({"CLAUDE_CODE_REMOTE_ENVIRONMENT_ID": "ccpool_x"}, AWS_DOWN),
+            ({}, AWS_DOWN),
+        ):
+            with self.subTest(env=env):
+                result, rc, _, _ = _run("absent", "", BINDS_NONE, [], env, aws)
+                self.assertEqual(result["state"], plane.STATE_FAILED)
+                self.assertEqual(rc, 1)
+
+    def test_claude_never_probes_aws(self) -> None:
+        with (
+            mock.patch.dict("os.environ", HOSTED, clear=True),
+            mock.patch.object(plane, "_aws_probe") as probe,
+            mock.patch.object(
+                plane.login, "ensure_machine_profile", return_value="absent"
+            ) as ensure,
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_NONE)),
+        ):
+            result = plane.run_plane()
+        probe.assert_not_called()
+        ensure.assert_called_once()
+        self.assertNotIn("allow_aws_seed", ensure.call_args.kwargs)
+        self.assertNotIn("aws", plane.receipt_payload(result))
+
+
+class OperatorPathTests(unittest.TestCase):
+    """Cursor / operator: main's behaviour, unchanged — AWS preflight, then seed."""
+
+    def test_aws_down_fails_with_mains_message_and_never_seeds(self) -> None:
         with (
             mock.patch.dict("os.environ", {}, clear=True),
-            mock.patch.object(
-                plane.aws_preflight,
-                "probe",
-                return_value={"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "down"},
-            ),
+            mock.patch.object(plane, "_aws_probe", return_value=AWS_DOWN),
+            mock.patch.object(plane.login, "machine_identity", return_value=("", None)),
             mock.patch.object(plane.login, "ensure_machine_profile") as ensure,
-            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_NONE)),
             mock.patch("sys.stderr", new_callable=io.StringIO) as err,
         ):
             result = plane.run_plane()
             rc = plane.main([])
-        self.assertFalse(result["plane_ok"])
-        self.assertEqual(result["login"], "skipped")
         ensure.assert_not_called()
+        self.assertEqual(result["login"], "skipped")
         self.assertEqual(rc, 1)
         self.assertIn("FAILED: AWS CLI is missing or not authorized", err.getvalue())
-        self.assertNotIn("AKIA", err.getvalue())
+        self.assertEqual(plane.receipt_payload(result)["aws"]["code"], "AWS_CLI_NOT_FOUND")
 
-    def test_aws_ok_with_profile_does_not_reseed(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "GITHUB_TOKEN", "bound": True, "source": "env"},
-        ]
+    def test_aws_ok_seeds_or_uses_the_profile(self) -> None:
+        for state in ("present", "seeded"):
+            with self.subTest(state=state):
+                with (
+                    mock.patch.dict("os.environ", {}, clear=True),
+                    mock.patch.object(plane, "_aws_probe", return_value=AWS_OK),
+                    mock.patch.object(
+                        plane.login, "machine_identity", return_value=("profile", None)
+                    ),
+                    mock.patch.object(
+                        plane.login, "ensure_machine_profile", return_value=state
+                    ) as ensure,
+                    mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_OK)),
+                ):
+                    result = plane.run_plane()
+                self.assertTrue(ensure.call_args.kwargs.get("allow_aws_seed"))
+                self.assertTrue(result["plane_ok"])
+                self.assertTrue(plane.receipt_payload(result)["aws"]["ok"])
+
+    def test_an_environment_identity_on_an_operator_needs_no_aws(self) -> None:
         with (
-            mock.patch.object(
-                plane.aws_preflight,
-                "probe",
-                return_value={"ok": True, "code": "OK", "summary": "ok"},
-            ),
-            mock.patch.object(plane.login, "ensure_machine_profile", return_value="present"),
-            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-            mock.patch("sys.stderr", new_callable=io.StringIO) as err,
+            mock.patch.dict("os.environ", {}, clear=True),
+            mock.patch.object(plane, "_aws_probe") as probe,
+            mock.patch.object(plane.login, "machine_identity", return_value=("env", None)),
+            mock.patch.object(plane.login, "ensure_machine_profile", return_value="env"),
+            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(BINDS_OK)),
         ):
             result = plane.run_plane()
-            rc = plane.main(["--json"])
+        probe.assert_not_called()
         self.assertTrue(result["plane_ok"])
-        self.assertEqual(result["login"], "present")
-        self.assertEqual(rc, 0)
-        self.assertIn("SEMGREP_APP_TOKEN=infisical", err.getvalue())
-        self.assertNotIn("client_secret", err.getvalue())
-
-    def test_login_failed_is_plane_failure(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": False, "source": "unbound"},
-            {"name": "SONAR_TOKEN", "bound": False, "source": "unbound"},
-            {"name": "GITHUB_TOKEN", "bound": False, "source": "unbound"},
-        ]
-        with (
-            mock.patch.object(
-                plane.aws_preflight,
-                "probe",
-                return_value={"ok": True, "code": "OK", "summary": "ok"},
-            ),
-            mock.patch.object(plane.login, "ensure_machine_profile", return_value="failed"),
-            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-            mock.patch("sys.stderr", new_callable=io.StringIO) as err,
-        ):
-            result = plane.run_plane()
-            rc = plane.main([])
-        self.assertFalse(result["plane_ok"])
-        self.assertEqual(result["login"], "failed")
-        self.assertEqual(rc, 1)
-        self.assertIn("FAILED: Infisical machine profile failed", err.getvalue())
 
     def test_json_stdout_has_no_values(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
-        ]
-        with (
-            mock.patch.object(
-                plane.aws_preflight,
-                "probe",
-                return_value={"ok": True, "code": "OK", "summary": "ok"},
-            ),
-            mock.patch.object(plane.login, "ensure_machine_profile", return_value="present"),
-            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-            mock.patch("sys.stdout", new_callable=io.StringIO) as out,
-            mock.patch("sys.stderr", new_callable=io.StringIO),
-        ):
-            rc = plane.main(["--json"])
+        _, rc, out, _ = _run("env", "env", BINDS_OK, ["--json"], HOSTED)
         self.assertEqual(rc, 0)
-        payload = json.loads(out.getvalue())
+        payload = json.loads(out)
         self.assertEqual(payload["ok"], True)
-        self.assertEqual(payload["login"], "present")
-        self.assertEqual(payload["aws"]["ok"], True)
-        self.assertEqual(payload["aws"]["code"], "OK")
-        self.assertEqual(payload["aws"]["summary"], "ok")
-        self.assertEqual(payload["binds"][0]["source"], "infisical")
+        self.assertEqual(payload["identity"]["ok"], True)
+        self.assertNotIn("aws", payload)
         blob = json.dumps(payload)
-        self.assertNotIn("secret", blob.lower())
+        self.assertNotIn("client_secret", blob.lower())
         self.assertNotIn("AKIA", blob)
 
     def test_receipt_out_writes_same_object(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
-        ]
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "secrets-plane.json"
-            with (
-                mock.patch.object(
-                    plane.aws_preflight,
-                    "probe",
-                    return_value={"ok": True, "code": "OK", "summary": "authorized"},
-                ),
-                mock.patch.object(plane.login, "ensure_machine_profile", return_value="present"),
-                mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-                mock.patch("sys.stderr", new_callable=io.StringIO),
-            ):
-                rc = plane.main(["--receipt-out", str(dest)])
+            _, rc, _, _ = _run("env", "env", BINDS_OK, ["--receipt-out", str(dest)], HOSTED)
             self.assertEqual(rc, 0)
             payload = json.loads(dest.read_text(encoding="utf-8"))
-            self.assertEqual(payload["ok"], True)
-            self.assertEqual(payload["aws"]["summary"], "authorized")
-            self.assertEqual(len(payload["binds"]), 3)
+            self.assertEqual(payload["identity"]["source"], "env")
+            self.assertEqual(len(payload["binds"]), len(plane.BIND_NAMES))
 
     def test_omit_receipt_out_writes_no_file(self) -> None:
-        binds = [
-            {"name": "SEMGREP_APP_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "SONAR_TOKEN", "bound": True, "source": "infisical"},
-            {"name": "GITHUB_TOKEN", "bound": True, "source": "infisical"},
-        ]
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "secrets-plane.json"
-            with (
-                mock.patch.object(
-                    plane.aws_preflight,
-                    "probe",
-                    return_value={"ok": True, "code": "OK", "summary": "ok"},
-                ),
-                mock.patch.object(plane.login, "ensure_machine_profile", return_value="present"),
-                mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-                mock.patch("sys.stderr", new_callable=io.StringIO),
-            ):
-                rc = plane.main([])
+            _, rc, _, _ = _run("env", "env", BINDS_OK, [], HOSTED)
             self.assertEqual(rc, 0)
             self.assertFalse(dest.exists())
 
+    def test_the_plane_imports_nothing_from_aws(self) -> None:
+        import subprocess
 
-class SurfaceCarveOutTests(unittest.TestCase):
-    """An absent AWS CLI is a fault everywhere EXCEPT a model-controlled surface.
+        probe = (
+            "import sys; sys.path.insert(0, sys.argv[1]); import session_start_secrets; "
+            "bad = sorted(m for m in sys.modules if m in "
+            "{'aws_cli_preflight','resolve_secret','login_registry','port_aws_to_infisical',"
+            "'boto3','botocore'}); print(','.join(bad))"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", probe, str(SECRETS)],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(out, "", f"AWS modules imported by the plane: {out}")
 
-    That surface holds no Infisical bind by design, so scoring its absence as a
-    bootstrap fault is a false DEGRADED. A present-but-broken CLI stays a fault
-    on every surface, including that one.
-    """
+
+class SurfaceClassTests(unittest.TestCase):
+    """Surface class is reported for context; it no longer exempts anything."""
 
     HOSTED = {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"}
     POOL = {
@@ -214,24 +241,6 @@ class SurfaceCarveOutTests(unittest.TestCase):
     }
     OPERATOR: dict[str, str] = {}
 
-    def _plane(self, env: dict[str, str], code: str) -> tuple[dict[str, Any], int, str]:
-        binds = [
-            {"name": name, "bound": False, "source": "unbound"}
-            for name in ("SEMGREP_APP_TOKEN", "SONAR_TOKEN", "GITHUB_TOKEN")
-        ]
-        probe = {"ok": False, "code": code, "summary": f"{code} — down"}
-        with (
-            mock.patch.dict("os.environ", env, clear=True),
-            mock.patch.object(plane.aws_preflight, "probe", return_value=probe),
-            mock.patch.object(plane.login, "ensure_machine_profile") as ensure,
-            mock.patch.object(plane.cb, "bind_status", side_effect=_bind_status(binds)),
-            mock.patch("sys.stderr", new_callable=io.StringIO) as err,
-        ):
-            result = plane.run_plane()
-            rc = plane.main([])
-            ensure.assert_not_called()
-        return result, rc, err.getvalue()
-
     def test_surface_class_predicate(self) -> None:
         self.assertEqual(plane.surface_class(self.HOSTED), plane.MODEL_CONTROLLED)
         self.assertEqual(plane.surface_class(self.OPERATOR), plane.OPERATOR)
@@ -239,42 +248,13 @@ class SurfaceCarveOutTests(unittest.TestCase):
         # silence a real fault, so the ccpool_ test runs first.
         self.assertEqual(plane.surface_class(self.POOL), plane.SELF_HOSTED)
 
-    def test_hosted_missing_cli_is_unavailable_by_surface_and_exits_0(self) -> None:
-        result, rc, err = self._plane(self.HOSTED, plane.aws_preflight.AWS_CLI_NOT_FOUND)
-        self.assertEqual(result["state"], plane.STATE_UNAVAILABLE_BY_SURFACE)
-        self.assertEqual(result["surface_class"], plane.MODEL_CONTROLLED)
-        self.assertEqual(rc, 0)
-        # Visible, but not as a fault, and never as something to repair here.
-        self.assertIn("unavailable by surface", err)
-        self.assertNotIn("FAILED", err)
-        # The plane still reports that it did not bind. Truth is preserved.
-        self.assertFalse(result["plane_ok"])
-        self.assertFalse(plane.receipt_payload(result)["ok"])
-
-    def test_hosted_broken_cli_is_still_a_failure(self) -> None:
-        for code in ("AWS_NOT_AUTHORIZED", "TIMEOUT"):
-            with self.subTest(code=code):
-                result, rc, err = self._plane(self.HOSTED, code)
-                self.assertEqual(result["state"], plane.STATE_FAILED)
-                self.assertEqual(rc, 1)
-                self.assertIn("FAILED: AWS CLI is missing or not authorized", err)
-
-    def test_pool_and_operator_missing_cli_still_degrade(self) -> None:
-        for label, env in (("self_hosted", self.POOL), ("operator", self.OPERATOR)):
-            with self.subTest(surface=label):
-                result, rc, err = self._plane(env, plane.aws_preflight.AWS_CLI_NOT_FOUND)
-                self.assertEqual(result["state"], plane.STATE_FAILED)
-                self.assertEqual(rc, 1)
-                self.assertIn("FAILED: AWS CLI is missing or not authorized", err)
-
     def test_predicate_agrees_with_the_capability_client_precedent(self) -> None:
         """The surface predicate now has two owners. Pin them together.
 
         ``surface_class`` copies the hosted/pool distinction from
         ``capability_client.session_identity``. Copying it is what makes the
-        carve-out narrow and reviewable, but it also means the two can drift
-        apart silently — and a drift that reclassified a pool as hosted would
-        silence a real fault. This test fails when they stop agreeing.
+        classification reviewable, but it also means the two can drift apart
+        silently. This test fails when they stop agreeing.
         """
         # capability_client treats cloud_default as issuing no session identity,
         # with a hosted-specific reason. That is its name for model_controlled.
@@ -314,12 +294,30 @@ class SurfaceCarveOutTests(unittest.TestCase):
         self.assertNotEqual(plane.surface_class(self.POOL), plane.MODEL_CONTROLLED)
 
     def test_receipt_carries_state_and_surface_class(self) -> None:
-        result, _, _ = self._plane(self.HOSTED, plane.aws_preflight.AWS_CLI_NOT_FOUND)
+        result, _, _, _ = _run("absent", "", BINDS_NONE, [], HOSTED)
         payload = plane.receipt_payload(result)
-        self.assertEqual(payload["state"], plane.STATE_UNAVAILABLE_BY_SURFACE)
+        self.assertEqual(payload["state"], plane.STATE_FAILED)
         self.assertEqual(payload["surface_class"], plane.MODEL_CONTROLLED)
-        self.assertEqual(payload["aws"]["code"], plane.aws_preflight.AWS_CLI_NOT_FOUND)
+        self.assertEqual(payload["identity"]["code"], plane.IDENTITY_ABSENT)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LiteralOutputTests(unittest.TestCase):
+    """stderr carries module literals only — never a string from the identity."""
+
+    def test_a_planted_identity_summary_never_reaches_stderr(self) -> None:
+        planted = {"ok": False, "code": plane.IDENTITY_ABSENT, "source": "", "summary": "CANARY"}
+        with mock.patch.object(plane, "identity_status", return_value=planted):
+            _, rc, out, err = _run("absent", "", BINDS_NONE, ["--json"], HOSTED)
+        self.assertEqual(rc, 1)
+        self.assertNotIn("CANARY", err)
+        self.assertIn("no Infisical machine identity", err)
+
+    def test_bind_sources_are_mapped_to_literals(self) -> None:
+        odd = [{**row, "source": "CANARY-SOURCE"} for row in BINDS_OK]
+        _, _, _, err = _run("env", "env", odd, [], HOSTED)
+        self.assertNotIn("CANARY-SOURCE", err)
+        self.assertIn("CONTEXT7_API_KEY=unknown", err)

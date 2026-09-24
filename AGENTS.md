@@ -1939,3 +1939,36 @@ diagnosis is `OPEN_PR=0 make pr` or `OPEN_PR=0 l9 pr`. `make pr` invokes
 `pr-preflight` and `ops/scripts/run_pr_gate.sh` directly. Remediation-local
 verification remains `make precommit-repo`; do not create a second Make
 gate alias.
+
+<!-- INFISICAL_MACHINE_IDENTITY_V1 -->
+## Claude binds Infisical with a machine identity; Cursor keeps its AWS seed (2026-09-24) — amends "SessionStart owns the secrets plane (2026-09-07)"
+
+Append-only. Infisical project `cursor-governance` is the agent secret vault on
+every surface. How a surface obtains its Infisical machine identity DIVERGES BY
+PEER, by design:
+
+- **Claude Code (hosted, model-controlled)** — no AWS anywhere on its path. ONE
+  bootstrap secret, the Universal Auth client secret of a machine identity
+  dedicated to that surface: `L9_INFISICAL_CLIENT_SECRET`, beside the
+  non-secret `L9_INFISICAL_CLIENT_ID` (project, environment and host come from
+  `ops/secrets/infisical-cursor-governance.yaml`), set once in the environment
+  settings. SessionStart runs no AWS preflight and imports no AWS code there.
+- **Cursor / operator machines** — unchanged: the AWS CLI preflight, then the
+  existing `~/.infisical/l9-machine.json` or the AWS login seed that writes it,
+  and the reporter's `aws-cli` line. Leave that path alone; Cursor needs no
+  connector.
+- `infisical_cli_login.py` resolves the identity in that order (environment,
+  profile, AWS seed on Cursor / operator only). `capability_bind.py` binds each
+  name in-process as that identity and refuses to hand out the bootstrap secret.
+  `infisical_http.py` is the one Infisical transport; the AWS modules are
+  imported lazily, only by the Cursor / operator seed.
+- **No surface is exempt**: the `unavailable_by_surface` carve-out is retired. A
+  hosted surface without its identity FAILS with the fix named (reporter line
+  `infisical-identity`). Secrets are not optional.
+- A remote MCP server that needs a key is a local stdio bridge
+  (`ops/secrets/vault_mcp_bridge.py`, declared in `vault-mcp-bridges.json`) that
+  binds the key from Infisical at spawn. Context7 is the first; its key is never
+  in the environment, argv, `.mcp.json` or a file.
+- On a hosted surface the bootstrap secret is readable by the model, like any
+  environment value. Its mitigation is scope: one least-privilege identity per
+  surface, revocable in Infisical without touching any other surface.

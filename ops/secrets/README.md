@@ -1,8 +1,11 @@
 # ops/secrets — secret + capability control plane (Cursor-Governance SSOT)
 
-> **Agent surfaces never receive raw secret material.** They request named
-> capabilities; secret resolution happens only beyond the model-controlled trust
-> boundary. See `capabilities.yaml` and `ADAPTER_CONTRACT.md` → *Capability carrier*.
+> **Agent surfaces bind secrets in-process and never export them.** Each surface
+> authenticates to Infisical as its own machine identity — the ONE bootstrap
+> secret, `L9_INFISICAL_CLIENT_SECRET` beside the non-secret `L9_INFISICAL_CLIENT_ID`
+> — and `capability_bind.py` holds each bound value in the calling process only.
+> Claude obtains that identity from the environment with no AWS; Cursor / operator
+> machines keep the AWS login seed (2026-09-24; `AGENTS.md` → INFISICAL_MACHINE_IDENTITY_V1).
 
 This directory owns the **openclaw-igorbot/\*** inventory for Quantum-L9 coding
 workspaces. Other repos consume refs from here — they do not supply the
@@ -10,19 +13,21 @@ manifest back into Governance.
 
 Infisical project **Cursor-Governance** (`cursor-governance`, prod) holds a
 ported copy of every `openclaw-igorbot/*` AWS secret (env-var names at `/`,
-structured copies at `/aws/openclaw-igorbot/<name>/`). Bootstrap Universal
-Auth for that project is still in AWS as
-`openclaw-igorbot/infisical-cursor-governance` (chicken-egg). See
-`infisical-cursor-governance.yaml` (IDs and key names only).
+structured copies at `/aws/openclaw-igorbot/<name>/`). Surfaces reach it with
+their own machine identity (`infisical_cli_login.py`): Claude from the
+environment; Cursor / operator from the profile seeded by the AWS login seed. See `infisical-cursor-governance.yaml` (IDs and key names only).
 
 ## Layout
 
 | Path | Role |
 |---|---|
 | `openclaw-igorbot.registry.yaml` | Operator AWS inventory (IDs + JSON key names + annotations only) |
-| `infisical-login.registry.yaml` | Agent AWS inventory: Infisical login secret only (SM name in `login_registry.py`) |
-| `session_start_secrets.py` | SessionStart owner (preflight → login seed → Infisical bind `--check`) |
-| `capability_bind.py` | In-process Infisical bind (never export; `source=aws` is a fault) |
+| `infisical-login.registry.yaml` | Cursor / operator AWS login-seed inventory (SM name in `login_registry.py`); Claude never reads it |
+| `session_start_secrets.py` | SessionStart owner: Claude — environment identity, no AWS; Cursor / operator — AWS preflight → profile / seed. Then Infisical bind `--check` |
+| `infisical_cli_login.py` | This surface's machine identity: environment, else the operator profile file |
+| `infisical_http.py` | The one Infisical HTTP transport (split from the AWS port tool) |
+| `capability_bind.py` | In-process Infisical bind as the machine identity (never export; `source=aws` is a fault) |
+| `vault_mcp_bridge.py` + `vault-mcp-bridges.json` | stdio bridge for remote MCP servers whose key is bound from Infisical (Context7) |
 | `infisical-cursor-governance.yaml` | Infisical project inventory (IDs + env key names, no values) |
 | `port_aws_to_infisical.py` | Re-port AWS `openclaw-igorbot/*` → Infisical prod |
 | `registry.overlays.yaml` | Local stubs not yet in AWS (`ui-session-*`, `provisioned: false`) |

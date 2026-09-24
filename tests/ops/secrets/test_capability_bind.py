@@ -136,3 +136,165 @@ def test_check_cli_prints_source_never_value() -> None:
     assert "CANARY_MUST_NOT_APPEAR" not in result.stderr
     assert "SEMGREP_APP_TOKEN:" in result.stdout
     assert "source=" in result.stdout
+
+
+# --- the machine identity: one non-AWS bootstrap secret ----------------------
+
+import infisical_cli_login as machine_login  # noqa: E402
+
+IDENTITY_ENV = {
+    "L9_INFISICAL_CLIENT_ID": "client-id-not-secret",
+    "L9_INFISICAL_CLIENT_SECRET": "CANARY_BOOTSTRAP_SECRET_VALUE",
+}
+
+
+def test_env_identity_takes_the_project_from_the_inventory() -> None:
+    identity = machine_login.env_identity(IDENTITY_ENV)
+    assert identity is not None
+    assert identity["client_id"] == "client-id-not-secret"
+    assert identity["project_id"] == "9f92179d-3caa-4d7a-90a9-bb896499bfe6"
+    assert identity["environment"] == "prod"
+    assert identity["host"] == "https://app.infisical.com"
+
+
+def test_env_identity_needs_both_halves() -> None:
+    assert machine_login.env_identity({"L9_INFISICAL_CLIENT_ID": "x"}) is None
+    assert machine_login.env_identity({"L9_INFISICAL_CLIENT_SECRET": "x"}) is None
+    assert machine_login.env_identity({}) is None
+
+
+def test_env_identity_refuses_ambient_routing_overrides() -> None:
+    """Hosted bootstrap cannot be pointed at another host, project, or environment."""
+    route = machine_login.canonical_route()
+    assert machine_login.env_identity(IDENTITY_ENV)["host"] == route["host"]
+    assert (
+        machine_login.env_identity({**IDENTITY_ENV, "L9_INFISICAL_HOST": "https://evil.example"})
+        is None
+    )
+    assert (
+        machine_login.env_identity(
+            {**IDENTITY_ENV, "L9_INFISICAL_PROJECT_ID": "00000000-0000-0000-0000-000000000000"}
+        )
+        is None
+    )
+    assert machine_login.env_identity({**IDENTITY_ENV, "L9_INFISICAL_ENV": "dev"}) is None
+    repeated = machine_login.env_identity(
+        {
+            **IDENTITY_ENV,
+            "L9_INFISICAL_HOST": route["host"],
+            "L9_INFISICAL_PROJECT_ID": route["project_id"],
+            "L9_INFISICAL_ENV": route["environment"],
+        }
+    )
+    assert repeated is not None
+    assert repeated["host"] == route["host"]
+    assert repeated["project_id"] == route["project_id"]
+    assert repeated["environment"] == route["environment"]
+
+
+def test_infisical_transport_refuses_a_noncanonical_host() -> None:
+    import infisical_http
+
+    with pytest.raises(ValueError, match="refusing"):
+        infisical_http.infisical_req("https://evil.example", "GET", "/api/v1/workspace")
+
+
+def test_the_environment_identity_wins_over_the_workstation_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    profile = tmp_path / "l9-machine.json"
+    profile.write_text(
+        json.dumps({"client_id": "file", "client_secret": "file-secret", "project_id": "p"})
+    )
+    monkeypatch.setattr(machine_login, "PROFILE", profile)
+    assert machine_login.machine_identity(IDENTITY_ENV)[0] == "env"
+    assert machine_login.machine_identity({})[0] == "profile"
+    monkeypatch.setattr(machine_login, "PROFILE", tmp_path / "absent.json")
+    assert machine_login.machine_identity({}) == ("", None)
+
+
+def test_ensure_reports_absent_refused_and_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(machine_login, "PROFILE", Path("/nonexistent/l9-machine.json"))
+    assert machine_login.ensure_machine_profile({}) == "absent"
+    monkeypatch.setattr(machine_login, "universal_auth_login", lambda *a, **k: "")
+    assert machine_login.ensure_machine_profile(IDENTITY_ENV) == "failed"
+    monkeypatch.setattr(machine_login, "universal_auth_login", lambda *a, **k: "token")
+    assert machine_login.ensure_machine_profile(IDENTITY_ENV) == "env"
+
+
+def test_bind_as_the_env_identity_over_http_never_exports(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End to end through capability_bind: env identity -> UA login -> one secret."""
+    import infisical_http
+
+    cb.reset_cache()
+    for name, value in IDENTITY_ENV.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("CONTEXT7_API_KEY", raising=False)
+    calls: list[tuple[str, str]] = []
+
+    def fake_req(host, method, path, token=None, body=None, retries=6):
+        calls.append((method, path.split("?")[0]))
+        if path == "/api/v1/auth/universal-auth/login":
+            assert body == {
+                "clientId": "client-id-not-secret",
+                "clientSecret": "CANARY_BOOTSTRAP_SECRET_VALUE",
+            }
+            return 200, {"accessToken": "ua-token"}
+        assert token == "ua-token"
+        return 200, {"secret": {"secretKey": "CONTEXT7_API_KEY", "secretValue": "ctx7sk-CANARY"}}
+
+    monkeypatch.setattr(infisical_http, "infisical_req", fake_req)
+    assert cb.bind("CONTEXT7_API_KEY") == "ctx7sk-CANARY"
+    assert cb.bind_status("CONTEXT7_API_KEY")["source"] == "infisical"
+    assert "CONTEXT7_API_KEY" not in os.environ
+    assert calls == [
+        ("POST", "/api/v1/auth/universal-auth/login"),
+        ("GET", "/api/v3/secrets/raw/CONTEXT7_API_KEY"),
+    ]
+    cb.reset_cache()
+
+
+def test_the_bootstrap_secret_itself_is_never_bound() -> None:
+    cb.reset_cache()
+    assert cb.bind_status("L9_INFISICAL_CLIENT_SECRET")["source"] == "refused"
+    cb.reset_cache()
+
+
+def test_the_aws_seed_is_cursors_path_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Cursor / operator seed the profile from AWS; Claude never calls the seed."""
+    import stat
+
+    profile = tmp_path / "l9-machine.json"
+    monkeypatch.setattr(machine_login, "PROFILE", profile)
+    calls: list[str] = []
+
+    def seed() -> dict[str, str]:
+        calls.append("seed")
+        return {
+            "schema": "1",
+            "host": "https://app.infisical.com",
+            "project_id": "p",
+            "environment": "prod",
+            "client_id": "cid",
+            "client_secret": "seeded-secret",
+        }
+
+    monkeypatch.setattr(machine_login, "_seed_from_aws", seed)
+    monkeypatch.setattr(machine_login, "universal_auth_login", lambda *a, **k: "token")
+    assert machine_login.ensure_machine_profile({}) == "absent"
+    assert calls == [], "no seed without allow_aws_seed (Claude)"
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "seeded"
+    assert calls == ["seed"]
+    assert stat.S_IMODE(profile.stat().st_mode) == 0o600
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "present"
+    assert calls == ["seed"], "an existing profile is used as before, never re-seeded"
+
+
+def test_a_failed_seed_is_failed_not_absent(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(machine_login, "PROFILE", tmp_path / "l9-machine.json")
+    monkeypatch.setattr(machine_login, "_seed_from_aws", lambda: None)
+    assert machine_login.ensure_machine_profile({}, allow_aws_seed=True) == "failed"

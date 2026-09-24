@@ -364,7 +364,7 @@ fi
 
 # --- 3) SessionStart secrets plane ------------------------------------------
 # One owner. The capability broker stays retired. Values are never exported.
-# This is not a Makefile ceremony (no secrets-bind / secrets-aws-preflight).
+# This is not a Makefile ceremony (no secrets-bind target). No AWS step exists.
 # Prefer the workspace script so a two-clone checkout is not bound to a stale
 # SSOT plane. Receipt path is required --receipt-out (cwd may be $GOV_DIR).
 log "SessionStart secrets plane"
@@ -379,23 +379,12 @@ fi
 if [ -n "$SECRETS_PY" ]; then
   say "secrets plane: session_start_secrets.py"
   mkdir -p "$(dirname "$SECRETS_RECEIPT")"
-  # This counter and the proxy-sentinel carve-out below are ONE decision, made
-  # twice: an environment property reported as a bootstrap fault is a false
-  # DEGRADED. A model-controlled surface holds no Infisical bind by design, so
-  # the owner exits 0 with state=unavailable_by_surface there and only a surface
-  # that should have bound, and did not, still exits 1.
+  # Infisical is the only secret plane and every surface binds it through its
+  # machine identity (L9_INFISICAL_CLIENT_ID + L9_INFISICAL_CLIENT_SECRET, or an
+  # operator's ~/.infisical/l9-machine.json). No surface is exempt: a missing or
+  # refused identity exits 1 and the reporter shows ### FAILED with the fix.
   if "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT"; then
-    SECRETS_STATE=$("$GOV_PY" -c '
-import json, sys
-try:
-    data = json.load(open(sys.argv[1], encoding="utf-8"))
-except Exception:
-    data = {}
-print(str((data or {}).get("state") or ""))
-' "$SECRETS_RECEIPT" 2>/dev/null || printf '')
-    if [ "$SECRETS_STATE" = "unavailable_by_surface" ]; then
-      say "secrets plane unavailable by surface (model-controlled; no Infisical bind by design) — not a fault"
-    fi
+    say "secrets plane: Infisical machine identity logged in"
   else
     warn "session_start_secrets failed — reporter will show ### FAILED"
     DEGRADED=$((DEGRADED + 1))
@@ -416,6 +405,9 @@ fi
 # class of lie as a false READY and just as expensive to chase. setup.sh already
 # made this exact carve-out for GH_TOKEN; the other names never got it.
 PROXY_SENTINEL="proxy-injected"
+# L9_INFISICAL_CLIENT_SECRET is deliberately NOT in this list: it is the one
+# sanctioned bootstrap secret (the surface's Infisical machine identity), the
+# only credential a surface holds. Every other secret is bound from Infisical.
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN INFISICAL_CLIENT_SECRET \
               INFISICAL_TOKEN INFISICAL_PASSWORD GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY \
               AWS_ACCESS_KEY_ID; do

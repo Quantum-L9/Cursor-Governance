@@ -128,32 +128,22 @@ class RetiredCapabilityPlaneTests(_PlaneBootstrapCase):
         self.assertEqual(self._degraded_count(), 0)
 
 
-class SecretsPlaneSurfaceCarveOutTests(_PlaneBootstrapCase):
-    """The AWS-absent path at the plane counter — previously uncovered.
+class SecretsPlaneNoSurfaceExemptionTests(_PlaneBootstrapCase):
+    """Infisical is the only plane and no surface is exempt from binding it.
 
-    That gap is why the sentinel carve-out shipped without this one: nothing
-    failed when the counter scored an environment property as a fault.
+    The retired AWS carve-out scored a hosted surface's missing plane as "not a
+    fault". Every surface now binds through its machine identity, so a hosted
+    surface that did not bind degrades exactly like any other.
     """
 
     HOSTED = {"CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default"}
 
-    UNAVAILABLE: dict[str, object] = {
-        "ok": False,
-        "state": "unavailable_by_surface",
-        "surface_class": "model_controlled",
-        "login": "skipped",
-        "aws": {"ok": False, "code": "AWS_CLI_NOT_FOUND", "summary": "absent"},
-        "binds": [],
-    }
-
-    def test_unavailable_by_surface_does_not_degrade(self) -> None:
-        self._write_owner(exit_code=0, receipt=self.UNAVAILABLE)
+    def test_a_hosted_surface_without_an_identity_degrades(self) -> None:
+        self._write_owner(exit_code=1)
         result = self._run(self.HOSTED)
-        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
-        self.assertIn("secrets plane unavailable by surface", result.stderr)
-        self.assertNotIn("session_start_secrets failed", result.stderr)
-        self.assertIn("Agent environment ready", result.stderr)
-        self.assertEqual(self._degraded_count(), 0)
+        self.assertIn("session_start_secrets failed", result.stderr)
+        self.assertNotIn("unavailable by surface", result.stderr)
+        self.assertEqual(self._degraded_count(), 1)
 
     def test_owner_failure_still_degrades(self) -> None:
         """The negative: a surface that should have bound, and did not."""
@@ -164,7 +154,7 @@ class SecretsPlaneSurfaceCarveOutTests(_PlaneBootstrapCase):
         self.assertEqual(self._degraded_count(), 1)
 
     def test_plane_ok_says_nothing_about_the_surface(self) -> None:
-        """state=ok must not print the carve-out line."""
+        """state=ok reports the identity and prints no exemption line."""
         self._write_owner(
             exit_code=0,
             receipt={"ok": True, "state": "ok", "surface_class": "operator", "binds": []},
