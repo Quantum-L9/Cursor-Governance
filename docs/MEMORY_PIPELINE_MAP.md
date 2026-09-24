@@ -180,5 +180,7 @@ T3 full-chat ingest remains **forbidden** — redacted excerpts only.
 - `ops/graphiti/hydration/session_hydration_packet.schema.yaml`
 - `ops/config/memory-receipt-contract.json` (Cursor's view of memory's receipts, incl. `DistillationReceipt`)
 - `ops/config/memory-hook-envelopes.json` (hook-lane capability envelopes)
+- `ops/memory/schemas/l9.agent_memory_write.v1.schema.json` (agent-lane write arguments; `ops/memory/AGENT_WRITE_CONTRACT.md`)
+- `ops/memory/schemas/l9.session_handoff.v1.schema.json`, `l9.governance_handoff.v1.schema.json` (post-publish handoffs; `ops/memory/HANDOFF_CONTRACT.md`)
 
 WIP packs under `WIP/World Model/` are design evidence only — not runtime SSOT.

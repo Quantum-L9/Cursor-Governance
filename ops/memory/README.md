@@ -62,7 +62,7 @@ it. Who calls what:
 
 | Lane | Caller | Adapter | Operation(s) | Role |
 |---|---|---|---|---|
-| agent | Model, mid-session, ordinary durable fact (cold OK); real-time handoff to another agent | `l9-graphite-memory` MCP stdio (or `l9-memory write` from a shell) | `memory.write_agent` | **Ordinary agent write (ADR-0031 / ADR-0033).** Direct and ungated — no SessionStart receipt, no phase, no session close, no PR step, no Cursor-Governance approval. Immediately visible to the next `hydrate` / `search`. |
+| agent | Model, mid-session, ordinary durable fact (cold OK); real-time handoff to another agent | `l9-graphite-memory` MCP stdio (or `l9-memory write` from a shell) | `memory.write_agent` | **Ordinary agent write (ADR-0031 / ADR-0033).** Direct and ungated — no SessionStart receipt, no phase, no session close, no PR step, no Cursor-Governance approval. Immediately visible to the next `hydrate` / `search`. Arguments follow `l9.agent_memory_write.v1`, built by the agent with `python -m ops.memory.agent_write` (`AGENT_WRITE_CONTRACT.md`). |
 | agent | Model, mid-session, conflict-sensitive durable fact | `l9-graphite-memory` MCP stdio | `memory.phase_lock` → `memory.write_governed` | **Optional high-stakes pair.** Lock + snapshot digest; never required before `write_agent`. |
 | agent | Model or PE worker reading on its own behalf | MCP `memory.search` / `memory.hydrate`; `l9-memory search` located via `runtime_binding.resolve_runtime_binding()` (`context_reader.py`) | read | evidence only; never constructs the hook client |
 | hook | SessionStart (`cursor-session-start`, `claude-session-start`) | `hydration.py` (`canonical_hydrate(surface=…)`) | `health`, `hydrate` | bounded, read-only envelope |

@@ -122,9 +122,14 @@ class Harness:
     # -- environment --------------------------------------------------------
     def env(self) -> dict[str, str]:
         """ONE environment for stamping and reading: the receipt key is writer-scoped."""
+        # The Claude Code Desktop surface, stated in full so the ambient host's
+        # markers (a Mobile cloud session, say) cannot change the identity.
         return {
             "CLAUDE_PROJECT_DIR": str(self.repo),
-            "L9_MEMORY_AGENT_ID": "claude-code",
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "false",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CURSOR_AGENT": "",
             "L9_HOOK_SKIP_LOG": str(self.skip_log),
         }
 
@@ -293,8 +298,10 @@ class StopStateMachineTest(unittest.TestCase):
         self.assertEqual(h.blocks(), [], "nothing to ask for")
         self.assertEqual(len(h.closes), 1)
         self.assertEqual(h.closes[0]["handoff"]["objective"], HANDOFF.example(PR)["objective"])
+        self.assertEqual(h.closes[0]["agent_id"], "claude-code-desktop", "the derived writer")
         self.assertEqual(len(h.gov_writes), 1)
         self.assertEqual(h.gov_writes[0]["namespace"], "cursor-governance")
+        self.assertIn("agent:claude-code-desktop", h.gov_writes[0]["tags"])
         self.assertIn("L9 MEMORY HANDOFF — WRITTEN", outputs[REPO_HOOK][0]["systemMessage"])
         self.assertIn("L9 GOVERNANCE HANDOFF — WRITTEN", outputs[GOV_HOOK][0]["systemMessage"])
         self.settle(h)

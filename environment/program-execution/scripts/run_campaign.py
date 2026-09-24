@@ -3128,17 +3128,28 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # Surfaces here must exist in the topology SSOT
     # (environment/agents/PEER_RUNTIME_BINDINGS.yaml); a default that names a
     # surface the SSOT does not declare can never resolve a provider.
+    # Claude Code is two peers, DERIVED from host markers — Claude Code Desktop
+    # (the operator's machine) and Claude Code Mobile (cloud) — never one
+    # "claude-code". An unrecognised cloud entrypoint has no peer and fails
+    # below rather than being labelled as either.
+    remote = os.environ.get("CLAUDE_CODE_REMOTE", "").strip().lower() == "true"
+    entry = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
+    claude_here = (
+        (("claude-code-mobile", "claude-mobile") if entry == "remote_mobile" else None)
+        if remote
+        else ("claude-code-desktop", "claude-cli")
+    )
     aliases = {
-        "claude-code": ("claude-code", "claude-cli"),
-        "claude-cli": ("claude-code", "claude-cli"),
-        "claude-web": ("claude-code", "claude-web"),
-        "claude-mobile": ("claude-code", "claude-mobile"),
+        "claude-cli": ("claude-code-desktop", "claude-cli"),
+        "claude-mobile": ("claude-code-mobile", "claude-mobile"),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
         "codex": ("codex", "codex-cloud"),
         "gemini": ("gemini", "gemini-cli"),
         "manus": ("manus", "manus-cloud"),
     }
+    if claude_here is not None:
+        aliases["claude-code"] = claude_here
     identity = aliases.get(governance_surface)
     if identity is None:
         raise CampaignError(

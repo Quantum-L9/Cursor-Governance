@@ -104,7 +104,13 @@ class PostPublishHandoffTest(unittest.TestCase):
     # -- fixtures -----------------------------------------------------------
     def _env(self) -> dict[str, str]:
         """ONE environment for stamping and reading: the receipt key is writer-scoped."""
-        return {"CLAUDE_PROJECT_DIR": str(self.repo), "L9_MEMORY_AGENT_ID": "claude-code"}
+        return {
+            "CLAUDE_PROJECT_DIR": str(self.repo),
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "false",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CURSOR_AGENT": "",
+        }
 
     def _prefetch(self, degraded: bool = False) -> None:
         with mock.patch.dict(os.environ, self._env()):

@@ -9,14 +9,17 @@ ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / "environment/agents/adapters/claude-code/settings.template.json"
 
 CANONICAL_MEMORY_ALLOW = {
-    "mcp__l9-graphite-memory__memory.health",
-    "mcp__l9-graphite-memory__memory.search",
-    "mcp__l9-graphite-memory__memory.hydrate",
-    "mcp__l9-graphite-memory__memory.conflicts",
-    "mcp__l9-graphite-memory__memory.phase_lock",
-    "mcp__l9-graphite-memory__memory.write_governed",
-    "mcp__l9-graphite-memory__memory.close",
+    "mcp__l9-graphite-memory__memory_health",
+    "mcp__l9-graphite-memory__memory_search",
+    "mcp__l9-graphite-memory__memory_hydrate",
+    "mcp__l9-graphite-memory__memory_conflicts",
+    "mcp__l9-graphite-memory__memory_phase_lock",
+    "mcp__l9-graphite-memory__memory_write_agent",
+    "mcp__l9-graphite-memory__memory_write_governed",
+    "mcp__l9-graphite-memory__memory_close",
 }
+
+MEMORY_PREFIX = "mcp__l9-graphite-memory__"
 
 LEGACY_ALIASES = {
     "mcp__l9-graphite-memory__write",
@@ -26,8 +29,8 @@ LEGACY_ALIASES = {
     "mcp__l9-graphite-memory__phase_lock",
     "mcp__l9-graphite-memory__verify_phase_lock",
     "mcp__l9-graphite-memory__conflicts",
-    "mcp__l9-graphite-memory__graphiti.query",
-    "mcp__l9-graphite-memory__graphiti.write_governed",
+    "mcp__l9-graphite-memory__graphiti_query",
+    "mcp__l9-graphite-memory__graphiti_write_governed",
 }
 
 
@@ -64,15 +67,15 @@ def test_retired_provider_memory_plane_is_denied() -> None:
 def test_generic_and_admin_memory_writes_are_not_ambient_capabilities() -> None:
     allow, deny = _permissions()
     forbidden = {
-        "mcp__l9-graphite-memory__memory.ingest",
-        "mcp__l9-graphite-memory__memory.delete",
-        "mcp__l9-graphite-memory__memory.promote",
-        "mcp__l9-graphite-memory__memory.bootstrap",
-        "mcp__l9-graphite-memory__memory.distill",
-        "mcp__l9-graphite-memory__memory.synthesize_procedures",
-        "mcp__l9-graphite-memory__memory.ingest_governed_candidate",
-        "mcp__l9-graphite-memory__memory.record_reuse",
-        "mcp__l9-graphite-memory__memory.invalidate_source",
+        "mcp__l9-graphite-memory__memory_ingest",
+        "mcp__l9-graphite-memory__memory_delete",
+        "mcp__l9-graphite-memory__memory_promote",
+        "mcp__l9-graphite-memory__memory_bootstrap",
+        "mcp__l9-graphite-memory__memory_distill",
+        "mcp__l9-graphite-memory__memory_synthesize_procedures",
+        "mcp__l9-graphite-memory__memory_ingest_governed_candidate",
+        "mcp__l9-graphite-memory__memory_record_reuse",
+        "mcp__l9-graphite-memory__memory_invalidate_source",
     }
     assert forbidden <= deny
     assert allow.isdisjoint(forbidden)
@@ -88,3 +91,34 @@ def test_phase_lock_is_memory_write_precondition_not_repository_authority() -> N
     text = TEMPLATE.read_text(encoding="utf-8")
     assert "memory.phase_lock governs memory-write consistency only" in text
     assert "it is never repository-write" in text
+
+
+def _exposed_memory_tools() -> set[str]:
+    """Every tool the installed server registers, as Claude Code names it."""
+    from l9_graphite_memory import mcp_tools  # noqa: PLC0415 - the locked, vendored package
+
+    return {MEMORY_PREFIX + tool["name"].replace(".", "_") for tool in mcp_tools.tool_definitions()}
+
+
+def test_every_memory_permission_names_a_tool_claude_code_can_match() -> None:
+    """Regression: every entry was dotted (memory.write_agent), which Claude Code never
+    emits — it maps '.' to '_' — so no allow matched (every write prompted) and no
+    admin deny applied."""
+    allow, deny = _permissions()
+    exposed = _exposed_memory_tools()
+    for entry in sorted(allow | deny):
+        if not entry.startswith(MEMORY_PREFIX):
+            continue
+        assert "." not in entry, f"{entry}: Claude Code tool names never contain '.'"
+        assert entry in exposed, f"{entry}: not a tool the l9-graphite-memory server exposes"
+
+
+def test_every_exposed_admin_or_alias_tool_is_decided() -> None:
+    """No exposed memory tool is left to an ad-hoc prompt by omission, except the
+    two read-only capability probes the package documents as operator-facing."""
+    allow, deny = _permissions()
+    undecided = _exposed_memory_tools() - allow - deny
+    assert undecided <= {
+        MEMORY_PREFIX + "memory_retention",
+        MEMORY_PREFIX + "memory_generated_data_capabilities",
+    }, sorted(undecided)

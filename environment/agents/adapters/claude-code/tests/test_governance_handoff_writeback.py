@@ -107,7 +107,11 @@ class GovernanceHandoffHookTest(unittest.TestCase):
     def _env(self) -> dict[str, str]:
         return {
             "CLAUDE_PROJECT_DIR": str(self.repo),
-            "L9_MEMORY_AGENT_ID": "claude-code",
+            # Claude Code Desktop, stated: the identity is derived from host markers
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_REMOTE": "false",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "CURSOR_AGENT": "",
             "L9_HOOK_SKIP_LOG": str(self.skip_log),
         }
 

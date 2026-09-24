@@ -149,11 +149,12 @@ def record_text(
     repository: str,
     pr_label: str,
     session_id: str,
+    agent_id: str = "unknown-agent",
 ) -> str:
     """The ONE record written to cursor-governance, bounded by MAX_RECORD_BYTES."""
     head = [
         f"Governance handoff from {repository} ({pr_label}), session {session_id}, "
-        "agent claude-code."
+        f"agent {agent_id}."
     ]
     body = render_sections(brief) if brief else ["agent governance handoff: NOT CAPTURED"]
     text = "\n".join(head + body + render_observed(observed))

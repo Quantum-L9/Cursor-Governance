@@ -24,7 +24,17 @@ class PeerNeutralAutonomyBindingTests(unittest.TestCase):
     def test_all_registered_peers_require_canonical_root_autonomy(self) -> None:
         module = _load_validator()
         model = module.ExecutablePeerModel(ROOT)
-        self.assertEqual(set(model.peers), {"cursor", "claude-code", "codex", "gemini", "manus"})
+        self.assertEqual(
+            set(model.peers),
+            {
+                "cursor",
+                "claude-code-desktop",
+                "claude-code-mobile",
+                "codex",
+                "gemini",
+                "manus",
+            },
+        )
         for name, peer in model.peers.items():
             with self.subTest(peer=name):
                 self.assertEqual(
@@ -45,7 +55,10 @@ class PeerNeutralAutonomyBindingTests(unittest.TestCase):
     def test_execution_required_remains_independent_of_autonomy_required(self) -> None:
         module = _load_validator()
         model = module.ExecutablePeerModel(ROOT)
-        self.assertEqual(set(model.required_peers()), {"cursor", "claude-code"})
+        self.assertEqual(
+            set(model.required_peers()),
+            {"cursor", "claude-code-desktop", "claude-code-mobile"},
+        )
         for name in ("codex", "gemini", "manus"):
             self.assertFalse(model.peers[name]["execution"]["required"])
             self.assertTrue(model.peers[name]["autonomy"]["required"])

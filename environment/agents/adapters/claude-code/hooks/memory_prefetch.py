@@ -64,9 +64,12 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
     The hook is Claude-owned, but ``--session-id`` is a repair override that
     also runs on Cursor. Hard-coding ``claude-code`` stamped the wrong
     surface onto Cursor hydrate blocks (SESSION_START_SPEC: a Cursor session
-    contains zero ``agent_id=claude-code`` hydrate blocks).
+    contains zero ``agent_id=claude-code`` hydrate blocks). The identity is
+    DERIVED from host markers by ops/memory/agent_identity.py (cursor,
+    claude-code-desktop, claude-code-mobile); a configured value never
+    overrides it. "" when this process has no derivable identity.
     """
-    return "claude-code" if is_claude_gate_surface(env) else "cursor"
+    return st.writer_identity(dict(os.environ if env is None else env))
 
 
 #: Cloud containers put several repositories side by side. Hydrating each costs
@@ -248,11 +251,9 @@ def main() -> int:
         workspace = Path(args.workspace).expanduser().resolve()
     else:
         workspace = session_ws
-    agent_id = prefetch_agent_id()
-    os.environ.setdefault("L9_MEMORY_AGENT_ID", agent_id)
-    os.environ.setdefault(
-        "USER_ID", "claude_code_agent" if agent_id == "claude-code" else "cursor_agent"
-    )
+    # Derived identity overwrites a configured value. The later receipt uses
+    # the in-scope namespaces, so this site does not resolve them early.
+    agent_id = st.bind_identity_env()
 
     # BEFORE root selection: the namespace predicate imports ops.memory from the
     # governance root, and its except-branch fails OPEN so a resolver fault can

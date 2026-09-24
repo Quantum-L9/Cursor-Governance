@@ -338,6 +338,17 @@ class WritebackObservabilityTests(unittest.TestCase):
             mock.patch.object(self.wb.st, "load_contract", return_value={"memory": {}}),
             mock.patch.object(self.wb.st, "write_receipt", side_effect=fake_write_receipt),
             mock.patch.object(self.wb.st, "workspace_root", return_value=self.state),
+            # The writer identity is DERIVED from host markers; state the surface
+            # (Claude Code Desktop) so these tests reach the runtime stage on any runner.
+            mock.patch.dict(
+                "os.environ",
+                {
+                    "CLAUDECODE": "1",
+                    "CLAUDE_CODE_REMOTE": "false",
+                    "CLAUDE_CODE_ENTRYPOINT": "cli",
+                    "CURSOR_AGENT": "",
+                },
+            ),
         ]
         for patch in self.patches:
             patch.start()

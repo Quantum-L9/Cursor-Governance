@@ -120,13 +120,72 @@ def extract_chat_id(event: dict[str, Any] | None) -> tuple[str, str]:
     return "", ""
 
 
+_IDENTITY_MODULE: Any = None
+
+
+def _identity_module() -> Any:
+    """ops/memory/agent_identity.py from this checkout, loaded by path (no sys.path edit)."""
+    global _IDENTITY_MODULE  # noqa: PLW0603 - loaded once per process
+    if _IDENTITY_MODULE is None:
+        import importlib.util  # noqa: PLC0415
+
+        # Walk up rather than count parents: a fixed parents[N] binds the wrong
+        # directory the moment this file moves (memory_prefetch.py learned this).
+        path = next(
+            (
+                parent / "ops" / "memory" / "agent_identity.py"
+                for parent in Path(__file__).resolve().parents
+                if (parent / "ops" / "memory" / "agent_identity.py").is_file()
+            ),
+            Path("ops/memory/agent_identity.py"),
+        )
+        spec = importlib.util.spec_from_file_location("l9_agent_identity", path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"agent identity resolver not loadable at {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _IDENTITY_MODULE = module
+    return _IDENTITY_MODULE
+
+
+def writer_identity(env: dict[str, str] | None = None) -> str:
+    """This process's memory identity, DERIVED from host markers ("" when none).
+
+    cursor / claude-code-desktop / claude-code-mobile (ops/memory/agent_identity.py).
+    A configured L9_MEMORY_AGENT_ID never overrides the markers on those
+    surfaces, so the author recorded is always the surface that ran.
+    """
+    return _identity_module().resolve_agent_id(os.environ if env is None else env)
+
+
+def unresolved_identity_reason() -> str:
+    return _identity_module().unresolved_reason(os.environ)
+
+
+def bind_identity_env() -> str:
+    """Stamp the DERIVED identity and USER_ID into this process's env; "" when none.
+
+    Both are overwritten, never defaulted: a stale or projected value (the
+    retired single "claude-code") must not survive into a record. With no
+    derivable identity nothing is stamped and the caller refuses to write.
+    """
+    module = _identity_module()
+    agent_id = module.resolve_agent_id(os.environ)
+    if agent_id:
+        os.environ["L9_MEMORY_AGENT_ID"] = agent_id
+        os.environ["USER_ID"] = module.user_id_for(agent_id)
+    else:
+        os.environ.pop("L9_MEMORY_AGENT_ID", None)
+    return agent_id
+
+
 def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
     if event:
         for key in ("agent_id", "agentId"):
             value = str(event.get(key) or "").strip()
             if value:
                 return value
-    return os.environ.get("L9_MEMORY_AGENT_ID", "").strip() or "unknown-agent"
+    return writer_identity() or "unknown-agent"
 
 
 def receipt_identity(
@@ -266,25 +325,20 @@ RESERVED_WRITER_IDENTITIES = frozenset({"cursor_agent", "cursor-agent"})
 def resolve_writer_identity(
     contract: dict[str, Any] | None = None, *, require_explicit: bool = True
 ) -> dict[str, str]:
-    """Resolve the memory writer's identity from the environment.
+    """The memory writer's identity, DERIVED from host markers (no drift).
 
-    ``agent_id`` comes from the contract-declared ``agent_id_env`` (default
-    ``L9_MEMORY_AGENT_ID``); ``user_id`` comes from ``USER_ID``. When
-    ``require_explicit`` is True — every write path — an unset value is returned
-    as an empty string so :func:`validate_memory_writer` denies it. The contract
-    defaults are applied only for read/bootstrap resolution
-    (``require_explicit=False``); this keeps a missing runtime identity from
-    being silently defaulted into a valid write, so ``test_missing_agent_id``
-    can actually deny.
+    ``agent_id`` is ops/memory/agent_identity.py's answer for this process and
+    ``user_id`` is derived from it. Neither is read from a configured
+    L9_MEMORY_AGENT_ID / USER_ID or defaulted from the contract: a missing
+    identity comes back empty so :func:`validate_memory_writer` denies the
+    write rather than attributing it to a surface that did not run.
+    ``contract`` and ``require_explicit`` are kept for call compatibility.
     """
-    mem = (contract or {}).get("memory", {})
-    agent_env = mem.get("agent_id_env", "L9_MEMORY_AGENT_ID")
-    default_agent = mem.get("default_agent_id", "claude-code")
-    agent_id = os.environ.get(agent_env, "").strip()
-    user_id = os.environ.get("USER_ID", "").strip()
-    if not require_explicit:
-        agent_id = agent_id or default_agent
-        user_id = user_id or "claude_code_agent"
+    del contract  # the identity is derived, never a contract default (no drift)
+    module = _identity_module()
+    agent_id = module.resolve_agent_id(os.environ)
+    user_id = module.user_id_for(agent_id) if agent_id else ""
+    del require_explicit  # no default either way: an unknown author is denied
     return {"agent_id": agent_id, "user_id": user_id}
 
 
