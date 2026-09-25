@@ -624,7 +624,9 @@ if GOV=$(resolve_governance_dir); then
     _gen_cap="${L9_BOOTSTRAP_GENERATE_BUDGET:-90}"
     [ "$_gen_cap" -gt "$_gen_left" ] && _gen_cap="$_gen_left"
     if [ "$_gen_cap" -ge "${L9_BOOTSTRAP_GENERATE_MIN:-15}" ] \
-       && [ "${L9_BOOTSTRAP_DETACH:-1}" != "0" ] && command -v setsid >/dev/null 2>&1; then
+       && [ "${L9_BOOTSTRAP_DETACH:-1}" != "0" ] \
+       && setsid --wait true >/dev/null 2>&1 \
+       && flock --version 2>&1 | grep -q 'util-linux'; then
       # The installer is NOT killed at the hook deadline. Killing it mid-run
       # left capabilities/memory UNKNOWN until someone ran it by hand, and it
       # could tear a venv install in half. It runs in its own session (outside
@@ -632,9 +634,34 @@ if GOV=$(resolve_governance_dir); then
       # pipes, and this hook waits for it only as long as the budget allows.
       # `setsid --wait` keeps $! alive, with the installer's status, until the
       # installer exits.
-      setsid --wait env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID" L9_BOOTSTRAP_LOG_PATH="$_gen_log" \
-        bash "$BOOTSTRAP_INSTALLER" --governance "$GOV" --workspace "$WORKSPACE" \
-        </dev/null >"$_gen_log" 2>&1 &
+      #
+      # Because it can now outlive the hook it is also serialized:
+      #   * one installer at a time (SessionStart fires again on resume/clear/
+      #     compact): flock -n on bootstrap.lock; a refused ceremony exits 75
+      #     WITHOUT touching the running one's log (the redirect is inside);
+      #   * against make pr and the other automated writers of this workspace:
+      #     the repo-write lock (rules/49), label bootstrap-installer; held by
+      #     make pr past the wait, the installer is skipped (76), fail-soft.
+      # Feature probes, not names: busybox setsid/flock lack --wait/-n -E.
+      # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
+      setsid --wait flock -n -E 75 "$HOME/.l9/claude/bootstrap.lock" \
+        env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID" L9_BOOTSTRAP_LOG_PATH="$_gen_log" \
+          _L9_GEN_GOV="$GOV" _L9_GEN_WS="$WORKSPACE" \
+        bash -c '
+          exec >"$L9_BOOTSTRAP_LOG_PATH" 2>&1 </dev/null
+          lib="$_L9_GEN_GOV/ops/scripts/lib/repo_write_lock.sh"
+          if [ -f "$lib" ]; then
+            . "$lib"
+            export L9_REPO_WRITE_LOCK_LABEL=bootstrap-installer
+            if ! repo_write_lock_acquire "$_L9_GEN_WS" "${L9_BOOTSTRAP_REPO_LOCK_WAIT_S:-20}"; then
+              echo "bootstrap installer skipped: $(repo_write_lock_skip_note "$_L9_GEN_WS")"
+              exit 76
+            fi
+            trap repo_write_lock_release EXIT
+          fi
+          bash "$0" "$@"
+        ' "$BOOTSTRAP_INSTALLER" --governance "$GOV" --workspace "$WORKSPACE" \
+        </dev/null >/dev/null 2>&1 &
       _gen_pid=$!
       _gen_until=$(( $(date +%s) + _gen_cap ))
       while kill -0 "$_gen_pid" 2>/dev/null && [ "$(date +%s)" -lt "$_gen_until" ]; do
@@ -648,6 +675,11 @@ if GOV=$(resolve_governance_dir); then
         wait "$_gen_pid" || _gen_rc=$?
         if [ "$_gen_rc" = 0 ]; then
           say "bootstrap receipt: generated this bootstrap (id $_L9_CEREMONY_ID, ${_gen_rev:0:8})"
+        elif [ "$_gen_rc" = 75 ]; then
+          say "bootstrap receipt: NOT GENERATED — an installer from an earlier ceremony is still running; its receipt lands when it finishes (log $_gen_log). Do not start another."
+        elif [ "$_gen_rc" = 76 ]; then
+          _gen_how="$(tail -n 1 "$_gen_log" 2>/dev/null)"
+          say "bootstrap receipt: NOT GENERATED — ${_gen_how:-workspace repo-write lock held}; run 'make claude-install' once it is free"
         else
           _gen_how="$(head -n 3 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
           say "bootstrap receipt: installer FAILED rc=${_gen_rc} — ${_gen_how:-no log bytes}"
