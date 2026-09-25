@@ -44,8 +44,10 @@ DEFAULT_WAIT_S = 15.0
 _POLL_S = 0.1
 
 #: First-wait deadline per lock path, shared by every later wait in this process
-#: while the lock stays held. Cleared once the lock is acquired.
+#: while the lock stays held. Cleared once the lock is acquired, and ignored
+#: once it is older than _SHARED_DEADLINE_TTL_S past its expiry.
 _DEADLINES: dict[Path, float] = {}
+_SHARED_DEADLINE_TTL_S = 60.0
 
 
 @dataclass(frozen=True)
@@ -107,7 +109,12 @@ def venv_ready(root: Path, *, timeout: float | None = None) -> Iterator[VenvRead
     try:
         budget = wait_budget() if timeout is None else max(0.0, timeout)
         started = time.monotonic()
-        deadline = _DEADLINES.setdefault(lock_path, started + budget)
+        deadline = _DEADLINES.get(lock_path)
+        if deadline is None or started > deadline + _SHARED_DEADLINE_TTL_S:
+            # A long-lived process (an MCP server, a pytest session) must not
+            # carry a give-up from one install into the next, unrelated one.
+            deadline = started + budget
+            _DEADLINES[lock_path] = deadline
         while True:
             try:
                 fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)

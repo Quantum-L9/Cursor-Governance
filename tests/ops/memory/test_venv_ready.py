@@ -110,6 +110,23 @@ def test_the_wait_is_bounded_per_process_not_per_call(tmp_path: Path) -> None:
         _release(fd)
 
 
+def test_an_old_give_up_does_not_poison_a_later_install(tmp_path: Path, monkeypatch) -> None:
+    """A long-lived process waits afresh for a new, unrelated install."""
+    root = _gov(tmp_path)
+    fd = _hold_exclusive(root)
+    try:
+        with vr.venv_ready(root, timeout=0.1) as ready:
+            assert not ready.ready
+    finally:
+        _release(fd)
+    monkeypatch.setattr(vr, "_SHARED_DEADLINE_TTL_S", 0.0)
+    time.sleep(0.05)
+    fd = _hold_exclusive(root)
+    threading.Timer(0.4, _release, args=(fd,)).start()
+    with vr.venv_ready(root, timeout=5) as ready:
+        assert ready.ready, ready.reason
+
+
 def test_an_interrupted_install_is_refused(tmp_path: Path) -> None:
     root = _gov(tmp_path)
     (root / vr.LOCK_REL).touch()
