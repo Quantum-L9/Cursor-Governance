@@ -234,12 +234,15 @@ class BoundedSubEngineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._fake_governance(root, readiness_body="import time\ntime.sleep(300)\n")
-            # 16 s minus reserve (4), grace (2) and the one-second margin
-            # leaves 9 s: enough to START the emitter (floor 8), not enough
-            # for a 300 s stall to finish. The parent's deadline is 10 s, so
-            # the child names the timeout and still completes.
+            # 19 s minus reserve (4), grace (2) and the one-second margin
+            # leaves 12 s: enough to START the emitter (floor 8) with 4 s of
+            # slack for a loaded runner, not enough for a 300 s stall to
+            # finish. The parent's deadline is 13 s, so the child names the
+            # timeout and still completes. (At 16 s the slack was 1 s, and
+            # under `-n 8` the hook's own startup could spend it: the emitter
+            # was then DEFERRED, not started, and this test failed.)
             started = time.monotonic()
-            context = self._run(root, budget="16")
+            context = self._run(root, budget="19")
             elapsed = time.monotonic() - started
             self.assertIn("claude readiness: TIMED OUT", context)
             self.assertNotIn("PARTIAL", context, "a named timeout is a complete run")

@@ -1122,3 +1122,66 @@ def test_binding_reasons_name_a_manifest_module_the_release_lacks(
     binding = bind(Environment(tmp_path, schema_export=export))
     reason = next(r for r in binding.reasons if "does not have" in r)
     assert "l9_graphite_memory.gone" in reason
+
+
+# --- a governance .venv being installed is waited for, never probed or healed --
+
+
+def _hold_install_lock(gov: Path) -> int:
+    import fcntl
+    import os
+
+    (gov / ".l9").mkdir(exist_ok=True)
+    fd = os.open(gov / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o644)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    return fd
+
+
+def _release_install_lock(fd: int) -> None:
+    import fcntl
+    import os
+
+    fcntl.flock(fd, fcntl.LOCK_UN)
+    os.close(fd)
+
+
+def test_a_venv_being_installed_is_not_probed_or_healed(tmp_path: Path, monkeypatch) -> None:
+    """2026-09-24: a probe mid-reinstall read as drift and the heal forced a resync."""
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    monkeypatch.setenv("L9_VENV_READY_WAIT_S", "0.3")
+    gov, env = _drifted_governance_env(tmp_path)
+    heals: list[Path] = []
+    fd = _hold_install_lock(gov)
+    try:
+        binding = rb.resolve_runtime_binding(
+            env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+            runner=env.run,
+            heal=lambda root, **_kw: (heals.append(root), (rb.environment_heal.HEAL_HEALED, []))[1],
+        )
+    finally:
+        _release_install_lock(fd)
+    assert binding.status == rb.STATUS_UNBOUND
+    assert binding.environment_fault is True
+    assert heals == [], "an install in progress must never be healed"
+    assert env.calls == [], "no probe may run inside a venv being installed"
+    assert binding.environment_heal == "skipped:install-in-progress"
+    assert any("install still in progress" in reason for reason in binding.reasons)
+
+
+def test_a_venv_whose_install_finishes_is_probed_after_the_wait(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import threading
+
+    monkeypatch.setattr(rb.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
+    gov, env = _drifted_governance_env(tmp_path)
+    env.version = EXPECTED_VERSION
+    fd = _hold_install_lock(gov)
+    threading.Timer(0.3, _release_install_lock, args=(fd,)).start()
+    binding = rb.resolve_runtime_binding(
+        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+        runner=env.run,
+        heal=lambda root, **_kw: pytest.fail("a healthy venv must not be healed"),
+    )
+    assert binding.ok, binding.reasons
