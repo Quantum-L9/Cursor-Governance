@@ -18,10 +18,10 @@ side: take the same lock SHARED before a runtime is spawned, hold it for the
 call so no sync can start underneath it, and refuse a venv whose install never
 completed.
 
-It never creates the lock file: an environment no new-style writer has touched
-has nothing to wait for. Waiting is bounded per process and per lock, not per
-call, so a hook that makes several memory calls cannot multiply the wait past
-its own registration timeout.
+It creates the lock file when absent, so a reader that arrives first also makes
+a later writer wait. Waiting is bounded per install, not per call, so a hook
+that makes several memory calls cannot multiply the wait past its own
+registration timeout.
 """
 
 from __future__ import annotations
@@ -109,10 +109,11 @@ def venv_ready(root: Path, *, timeout: float | None = None) -> Iterator[VenvRead
 
     lock_path = root / LOCK_REL
     try:
-        fd = os.open(lock_path, os.O_RDONLY)
-    except FileNotFoundError:
-        yield _interrupted(root) or VenvReadiness(True)
-        return
+        # Created, not merely opened: with no lock file a reader would skip the
+        # wait entirely, and the first install after this contract lands (or
+        # after a governance directory swap) would race exactly as before.
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock_path, os.O_RDONLY | os.O_CREAT, 0o644)
     except OSError as exc:
         # An unreadable lock is not proof of a sync in progress; say so and go on.
         yield _interrupted(root) or VenvReadiness(True, f"venv lock unreadable: {exc}")

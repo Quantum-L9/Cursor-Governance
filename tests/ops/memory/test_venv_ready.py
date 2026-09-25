@@ -68,11 +68,27 @@ def test_cli_root_is_only_a_governed_venv() -> None:
     assert vr.governance_root_for_cli(None) is None
 
 
-def test_no_lock_file_is_ready_and_creates_nothing(tmp_path: Path) -> None:
+def test_a_first_reader_creates_the_lock_so_a_later_writer_waits(tmp_path: Path) -> None:
+    """No lock file yet (first install after merge, a directory swap) is no gap."""
     root = _gov(tmp_path)
     with vr.venv_ready(root, timeout=0) as ready:
         assert ready.ready
-    assert not (root / vr.LOCK_REL).exists()
+        assert (root / vr.LOCK_REL).exists()
+        probe = os.open(root / vr.LOCK_REL, os.O_RDWR)
+        try:
+            with pytest.raises(BlockingIOError):
+                fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        finally:
+            os.close(probe)
+
+
+def test_an_unwritable_root_does_not_block_the_reader(tmp_path: Path) -> None:
+    root = tmp_path / "gov"
+    (root / ".venv").mkdir(parents=True)
+    (root / ".l9").write_text("not a directory\n", encoding="utf-8")
+    with vr.venv_ready(root, timeout=0) as ready:
+        assert ready.ready
+        assert "venv lock unreadable" in ready.reason
 
 
 def test_reader_waits_for_the_writer_then_proceeds(tmp_path: Path) -> None:
@@ -284,7 +300,11 @@ def _writer_root(tmp_path: Path, *, sync_sleep: float = 0.0) -> tuple[Path, dict
         '  marker="$UV_TEST_ROOT/.l9/uv-environment.installing"\n'
         '  [ -e "$marker" ] && echo marked >> "$UV_TEST_PROBE"\n'
         '  mkdir -p "$UV_TEST_ROOT/.venv/bin"\n'
-        "  printf '%s\\n' '#!/usr/bin/env bash' 'exec python3 \"$@\"' "
+        "  printf '%s\\n' '#!/usr/bin/env bash' "
+        # UV_TEST_BROKEN_IMPORT: the venv carries a half-installed memory package.
+        '\'case "$*" in *"import l9_graphite_memory"*) '
+        '[ -n "${UV_TEST_BROKEN_IMPORT:-}" ] && exit 1;; esac\' '
+        "'exec python3 \"$@\"' "
         '> "$UV_TEST_ROOT/.venv/bin/python3"\n'
         '  chmod +x "$UV_TEST_ROOT/.venv/bin/python3"\n'
         "  exit 0\nfi\nexit 2\n",
@@ -364,12 +384,9 @@ def test_an_interrupted_install_forces_a_resync(tmp_path: Path) -> None:
 def test_an_unverifiable_venv_keeps_the_marker(tmp_path: Path) -> None:
     root, env = _writer_root(tmp_path)
     (root / "uv.lock").write_text('version = 1\n\n[[package]]\nname = "l9-graphite-memory"\n')
-    # Deterministic regardless of which python3 the shim resolves: a package
-    # that is present but half-installed, first on the import path.
-    broken = tmp_path / "broken" / "l9_graphite_memory"
-    broken.mkdir(parents=True)
-    (broken / "__init__.py").write_text("raise ImportError('half-installed')\n")
-    env["PYTHONPATH"] = str(broken.parent)
+    # The venv itself is broken — not the caller's import path, which the
+    # verification ignores (python -I).
+    env["UV_TEST_BROKEN_IMPORT"] = "1"
     done = subprocess.run(
         ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=60
     )
@@ -475,3 +492,30 @@ def test_without_flock_or_setsid_the_sync_runs_unlocked_and_says_so(tmp_path: Pa
     assert done.returncode == 0, done.stderr
     assert "flock/setsid unavailable" in done.stderr
     assert (root / ".venv" / ".l9-uv-fingerprint").exists()
+
+
+@needs_util_linux
+def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> None:
+    """The lock is waited for by the caller, not by a detached orphan.
+
+    Waiting inside the detached child let a caller killed mid-wait (a hook
+    deadline, the environment heal's timeout) leave a process that synced the
+    venv minutes later, at no one's request.
+    """
+    root, env = _writer_root(tmp_path)
+    (root / ".l9").mkdir()
+    fd = _hold_exclusive(root)
+    caller = subprocess.Popen(
+        ["bash", str(ENSURE), str(root)],
+        env={**env, "L9_UV_ENV_LOCK_WAIT_S": "30"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    time.sleep(0.5)
+    os.killpg(caller.pid, signal.SIGKILL)
+    caller.wait(timeout=10)
+    _release(fd)
+    time.sleep(1.5)
+    assert not (tmp_path / "lock-held-during-sync").exists(), "an orphan ran uv sync"
+    assert not (root / ".venv" / ".l9-uv-fingerprint").exists()

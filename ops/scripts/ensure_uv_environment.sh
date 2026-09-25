@@ -87,7 +87,7 @@ PY
 if [ "$MODE" = "check" ] && [ -e "$IN_PROGRESS" ]; then
   # A marker under a HELD lock is an install still running, not a dead one.
   if command -v flock >/dev/null 2>&1 && [ -e "$LOCK_FILE" ] \
-     && ! flock -n "$LOCK_FILE" true 2>/dev/null; then
+     && ! flock -n -s "$LOCK_FILE" true 2>/dev/null; then
     echo "UV: install in progress ($LOCK_FILE held); synchronization required" >&2
   else
     echo "UV: previous install did not complete ($IN_PROGRESS); synchronization required" >&2
@@ -110,15 +110,25 @@ esac
 # child can never hold the hook's stdout open. The caller waits for it and
 # replays the log; if the caller is killed first, the work completes anyway.
 #
+# The lock is WAITED FOR here, by the caller, on fd 8, and only then handed to
+# the detached child (which inherits fd 8, so the lock outlives the caller).
+# Waiting inside the detached child instead let a caller killed mid-wait leave
+# an orphan that mutated the venv minutes later, at no one's request.
+#
 # Linux flock has no writer preference: readers (ops/memory/venv_ready.py)
 # overlapping continuously for the whole wait below would starve this writer
 # into exit 75. Each reader holds the lock for one memory call, so that takes
 # $_lock_wait seconds of back-to-back calls; accepted, and reported if it happens.
+_have_util_linux_locking() {
+  # Feature probes, not names: busybox ships both without --wait / -E / -w.
+  setsid --wait true >/dev/null 2>&1 \
+    && flock --version 2>&1 | grep -q 'util-linux'
+}
 if [ "$MODE" != "check" ] && [ -z "${_L9_UV_ENV_LOCKED:-}" ]; then
-  if command -v flock >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 \
-     && mkdir -p "$GOV_ROOT/.l9" 2>/dev/null; then
-    # A caller killed while waiting never reaches its own `rm`; sweep the logs
-    # of callers that are gone.
+  if _have_util_linux_locking && mkdir -p "$GOV_ROOT/.l9" 2>/dev/null \
+     && exec 8>>"$LOCK_FILE"; then
+    # A caller killed before it could `rm` its log leaves it; sweep the logs of
+    # callers that are gone.
     for _old in "$GOV_ROOT"/.l9/uv-environment.*.log; do
       [ -e "$_old" ] || continue
       _pid="${_old##*/uv-environment.}"
@@ -126,16 +136,16 @@ if [ "$MODE" != "check" ] && [ -z "${_L9_UV_ENV_LOCKED:-}" ]; then
       case "$_pid" in ''|*[!0-9]*) continue ;; esac
       kill -0 "$_pid" 2>/dev/null || rm -f "$_old"
     done
+    if ! flock -w "$_lock_wait" 8; then
+      echo "UV: $LOCK_FILE still held after ${_lock_wait}s; another sync owns this environment" >&2
+      exit 75
+    fi
     _log="$GOV_ROOT/.l9/uv-environment.$$.log"
     _rc=0
     _L9_UV_ENV_LOCKED=1 setsid --wait \
-      flock -E 75 -w "$_lock_wait" "$LOCK_FILE" \
       bash "$SCRIPT_PATH" "$GOV_ROOT" "$MODE" </dev/null >"$_log" 2>&1 || _rc=$?
     cat "$_log" >&2 2>/dev/null || true
     rm -f "$_log"
-    if [ "$_rc" -eq 75 ]; then
-      echo "UV: $LOCK_FILE still held after ${_lock_wait}s; another sync owns this environment" >&2
-    fi
     exit "$_rc"
   fi
   echo "UV: flock/setsid unavailable; synchronizing without the environment lock" >&2
@@ -147,7 +157,8 @@ _verify_environment() {
   if grep -q '^name = "l9-graphite-memory"$' "$GOV_ROOT/uv.lock" 2>/dev/null; then
     probe='import l9_graphite_memory'
   fi
-  if [ -x "$VENV_PYTHON" ] && "$VENV_PYTHON" -c "$probe" >/dev/null 2>&1; then
+  # -I: the caller's PYTHONPATH / cwd must not lend a broken venv a package.
+  if [ -x "$VENV_PYTHON" ] && "$VENV_PYTHON" -I -c "$probe" >/dev/null 2>&1; then
     rm -f "$IN_PROGRESS"
     return 0
   fi
