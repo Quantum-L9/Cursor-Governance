@@ -179,3 +179,28 @@ def test_heal_holds_the_repo_write_lock_during_the_sync(tmp_path: Path) -> None:
     assert str(os.getpid()) in str(seen["owner"])
     assert seen["child_owner"] == str(os.getpid())
     assert not eh.repo_write_lock_dir(root, env).exists()
+
+
+def test_heal_is_skipped_while_an_install_holds_the_environment_lock(tmp_path: Path) -> None:
+    """Drift seen during an install is the install; healing would queue a resync."""
+    import fcntl
+    import os
+
+    root = tmp_path / "gov"
+    (root / "ops" / "scripts").mkdir(parents=True)
+    (root / "ops" / "scripts" / "ensure_uv_environment.sh").write_text("#!/bin/sh\nexit 0\n")
+    (root / ".l9").mkdir()
+    fd = os.open(root / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o600)
+    fcntl.flock(fd, fcntl.LOCK_EX)
+    calls: list[object] = []
+    try:
+        outcome, reasons = eh.heal_environment(
+            root, env={"HOME": str(tmp_path)}, runner=lambda *a, **k: calls.append(a)
+        )
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+    assert outcome == "skipped:install-in-progress"
+    assert calls == []
+    assert reasons and "held by a running install" in reasons[0]
+    assert not eh.install_in_progress(root)

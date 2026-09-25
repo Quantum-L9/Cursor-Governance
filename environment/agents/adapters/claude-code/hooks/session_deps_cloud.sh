@@ -199,7 +199,15 @@ write_deps_stamp() {
 install_repo() {
   local repo="$1" failed=0
   echo "session-deps: installing toolchain for $repo" >&2
-  if [ -f "$repo/uv.lock" ] && have uv; then
+  if [ -f "$repo/uv.lock" ] && have uv && [ -f "$repo/ops/scripts/ensure_uv_environment.sh" ]; then
+    # A governance checkout's .venv has a locked writer: go through it, so this
+    # sync takes the environment lock and marker readers wait on, instead of
+    # replacing packages under a memory runtime or gate importing them.
+    if ! bash "$repo/ops/scripts/ensure_uv_environment.sh" "$repo" apply; then
+      failed=1
+      echo "WARN: $repo ensure_uv_environment.sh apply failed" >&2
+    fi
+  elif [ -f "$repo/uv.lock" ] && have uv; then
     if ! ( cd "$repo" && { uv sync --locked --extra dev 2>/dev/null || uv sync --locked 2>/dev/null; } ); then
       failed=1
       echo "WARN: $repo uv sync --locked failed" >&2

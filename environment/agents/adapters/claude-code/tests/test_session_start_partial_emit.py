@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -233,12 +234,15 @@ class BoundedSubEngineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._fake_governance(root, readiness_body="import time\ntime.sleep(300)\n")
-            # 16 s minus reserve (4), grace (2) and the one-second margin
-            # leaves 9 s: enough to START the emitter (floor 8), not enough
-            # for a 300 s stall to finish. The parent's deadline is 10 s, so
-            # the child names the timeout and still completes.
+            # 19 s minus reserve (4), grace (2) and the one-second margin
+            # leaves 12 s: enough to START the emitter (floor 8) with 4 s of
+            # slack for a loaded runner, not enough for a 300 s stall to
+            # finish. The parent's deadline is 13 s, so the child names the
+            # timeout and still completes. (At 16 s the slack was 1 s, and
+            # under `-n 8` the hook's own startup could spend it: the emitter
+            # was then DEFERRED, not started, and this test failed.)
             started = time.monotonic()
-            context = self._run(root, budget="16")
+            context = self._run(root, budget="19")
             elapsed = time.monotonic() - started
             self.assertIn("claude readiness: TIMED OUT", context)
             self.assertNotIn("PARTIAL", context, "a named timeout is a complete run")
@@ -563,11 +567,134 @@ class ReceiptGenerationTest(unittest.TestCase):
             )
             context = self._run(
                 tmp,
-                extra_env={"L9_BOOTSTRAP_GENERATE_BUDGET": "2", "L9_BOOTSTRAP_GENERATE_MIN": "1"},
+                extra_env={
+                    "L9_BOOTSTRAP_GENERATE_BUDGET": "2",
+                    "L9_BOOTSTRAP_GENERATE_MIN": "1",
+                    "L9_BOOTSTRAP_DETACH": "0",
+                },
             )
             self.assertIn("bootstrap receipt: installer TIMED OUT after 2s (hook budget)", context)
             self.assertIn("reached stage-x", context)
             self.assertNotIn("installer FAILED", context)
+
+    def test_an_installer_the_budget_does_not_cover_finishes_detached(self) -> None:
+        """The deadline no longer kills the installer: it completes on its own.
+
+        Killing it at the deadline left the bootstrap receipt INTERRUPTED with
+        capabilities and memory never evaluated (2026-09-24, SIGTERM at stage
+        memory-readiness after a 15 s clamp).
+        """
+        if shutil.which("setsid") is None:
+            self.skipTest("setsid (util-linux) is not installed; the bounded fallback applies")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            done = root / "installer-finished"
+            self._fake_governance(
+                root,
+                installer_body=(
+                    "#!/usr/bin/env bash\necho 'reached stage-x'\nsleep 4\n"
+                    f"echo finished > '{done}'\n"
+                ),
+            )
+            started = time.monotonic()
+            context = self._run(
+                tmp,
+                extra_env={"L9_BOOTSTRAP_GENERATE_BUDGET": "1", "L9_BOOTSTRAP_GENERATE_MIN": "1"},
+            )
+            self.assertLess(time.monotonic() - started, 4, "the hook must not wait it out")
+            self.assertIn("bootstrap receipt: installer still running after 1s", context)
+            self.assertIn("NOT killed", context)
+            self.assertIn("reached stage-x", context)
+            self.assertNotIn("TIMED OUT", context)
+            deadline = time.monotonic() + 15
+            while not done.exists() and time.monotonic() < deadline:
+                time.sleep(0.2)
+            self.assertTrue(done.exists(), "the detached installer must run to completion")
+
+    def test_a_second_ceremony_does_not_start_a_second_installer(self) -> None:
+        """SessionStart fires again on resume/clear/compact; one installer at a time.
+
+        The refused ceremony must also leave the running installer's log intact.
+        """
+        if shutil.which("setsid") is None or shutil.which("flock") is None:
+            self.skipTest("setsid/flock (util-linux) not installed; the bounded fallback applies")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            done = root / "installer-finished"
+            self._fake_governance(
+                root,
+                installer_body=(
+                    '#!/usr/bin/env bash\nd="$HOME/.l9/claude"; mkdir -p "$d"\n'
+                    'echo run >>"$d/installer-runs"\necho "reached stage-x"\nsleep 4\n'
+                    f"echo finished > '{done}'\n"
+                ),
+            )
+            fast = {"L9_BOOTSTRAP_GENERATE_BUDGET": "1", "L9_BOOTSTRAP_GENERATE_MIN": "1"}
+            first = self._run(tmp, extra_env=fast)
+            second = self._run(tmp, extra_env=fast)
+            self.assertIn("installer still running after 1s", first)
+            self.assertIn("an installer from an earlier ceremony is still running", second)
+            deadline = time.monotonic() + 15
+            while not done.exists() and time.monotonic() < deadline:
+                time.sleep(0.2)
+            state = root / "home" / ".l9" / "claude"
+            runs = (state / "installer-runs").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(runs), 1, "the second ceremony must not start an installer")
+            log = next(state.glob("bootstrap-*.log")).read_text(encoding="utf-8")
+            self.assertIn("reached stage-x", log, "the refused ceremony truncated the log")
+
+    def test_the_installer_yields_to_a_workspace_writer_such_as_make_pr(self) -> None:
+        """rules/49: automated writers serialize on the workspace repo-write lock."""
+        if shutil.which("setsid") is None or shutil.which("flock") is None:
+            self.skipTest("setsid/flock (util-linux) not installed; the bounded fallback applies")
+        lib = REPO_ROOT / "ops" / "scripts" / "lib" / "repo_write_lock.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            gov = self._fake_governance(root)
+            (gov / "ops" / "scripts" / "lib" / "repo_write_lock.sh").write_text(
+                lib.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            home = root / "home"
+            holder = subprocess.Popen(
+                [
+                    "bash",
+                    "-c",
+                    '. "$1"; L9_REPO_WRITE_LOCK_LABEL=make-pr-gate repo_write_lock_acquire "$2" 0'
+                    " && echo held && sleep 30",
+                    "_",
+                    str(lib),
+                    os.path.realpath(tmp),
+                ],
+                env={**_base_env(home)},
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                self.assertEqual(holder.stdout.readline().strip(), "held")
+                context = self._run(tmp, extra_env={"L9_BOOTSTRAP_REPO_LOCK_WAIT_S": "0"})
+            finally:
+                holder.kill()
+                holder.wait()
+            self.assertIn("bootstrap receipt: NOT GENERATED — bootstrap installer skipped", context)
+            self.assertIn("make-pr-gate", context)
+            self.assertFalse((home / ".l9" / "claude" / "installer-runs").exists())
+
+    def test_a_stale_session_budget_is_named(self) -> None:
+        """Settings are read before this session's governance refresh."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            gov = self._fake_governance(root)
+            template = gov / "environment" / "agents" / "adapters" / "claude-code"
+            (template / "settings.template.json").write_text(
+                '{"env": {"L9_SESSION_START_BUDGET": "240"}}\n', encoding="utf-8"
+            )
+            context = self._run(tmp, budget="120")
+            self.assertIn("SessionStart budget: 120s loaded at session start", context)
+            self.assertIn("registers 240s", context)
+            (template / "settings.template.json").write_text(
+                '{"env": {"L9_SESSION_START_BUDGET": "120"}}\n', encoding="utf-8"
+            )
+            self.assertNotIn("SessionStart budget:", self._run(tmp, budget="120"))
 
     def test_a_failed_generation_is_reported_and_not_masked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

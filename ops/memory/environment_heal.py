@@ -42,6 +42,8 @@ DEFAULT_HEAL_TIMEOUT = 180.0
 HEAL_SCRIPT_REL = Path("ops/scripts/ensure_uv_environment.sh")
 FINGERPRINT_REL = Path(".venv/.l9-uv-fingerprint")
 HEAL_LOCK_REL = Path(".l9/memory-env-heal.lock")
+#: The writer's own lock (ops/scripts/ensure_uv_environment.sh, venv_ready.py).
+UV_ENV_LOCK_REL = Path(".l9/uv-environment.lock")
 
 HEAL_HEALED = "healed"
 HEAL_FAILED = "failed"
@@ -214,6 +216,26 @@ def release_repo_write_lock(lock_dir: Path | None) -> None:
     shutil.rmtree(lock_dir, ignore_errors=True)
 
 
+def install_in_progress(root: Path) -> bool:
+    """True while ``ensure_uv_environment.sh`` holds the environment lock."""
+
+    try:
+        fd = os.open(root / UV_ENV_LOCK_REL, os.O_RDONLY)
+    except OSError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return True
+    except OSError:
+        return False
+    else:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
+
+
 def heal_script(root: Path) -> Path | None:
     script = root / HEAL_SCRIPT_REL
     return script if script.is_file() else None
@@ -263,6 +285,12 @@ def heal_environment(
     script = heal_script(root)
     if script is None:
         return f"{HEAL_SKIPPED_PREFIX}no-heal-script", reasons
+    if install_in_progress(root):
+        # Drift observed DURING an install is the install, not drift. Healing
+        # would delete the fingerprint and queue a second full resync behind it.
+        return f"{HEAL_SKIPPED_PREFIX}install-in-progress", [
+            f"{root / UV_ENV_LOCK_REL} is held by a running install"
+        ]
     budget = timeout if timeout is not None else heal_timeout(env)
     started = time.monotonic()
     repo_lock, skip = acquire_repo_write_lock(root, env, timeout=0.0)

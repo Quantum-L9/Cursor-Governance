@@ -44,6 +44,12 @@ def run(
         "HOME": str(home),
         "CLAUDE_CODE_REMOTE": remote,
         "L9_SESSION_DEPS_BUDGET": budget,
+        # Not under test here. Left on, every case launched a detached install
+        # of the whole CI-parity toolchain (codeql, semgrep, biome, …; ~1.9 GB
+        # with its uv cache) into its temporary HOME whenever the caller's
+        # environment named a governance checkout — as `make pr` does — and
+        # a pytest run filled the session disk (ENOSPC in unrelated tests).
+        "L9_CI_PARITY": "0",
     }
     if path_prefix is not None:
         env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
@@ -218,3 +224,35 @@ def test_unapplied_pip_manifest_is_not_reported_ready(tmp_path: Path) -> None:
     )
     stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
     assert stamps == [], "a stamp must never be written for an unproven pip toolchain"
+
+
+def test_a_governance_checkout_syncs_through_its_locked_writer(tmp_path: Path) -> None:
+    """A raw `uv sync` bypassed the environment lock readers wait on.
+
+    A governance checkout's .venv has one writer, ensure_uv_environment.sh,
+    which holds .l9/uv-environment.lock for the whole install; a second writer
+    replacing packages beside it is how a memory runtime imported a
+    half-installed package (2026-09-24).
+    """
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "governance")
+    (repo / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    (repo / "pyproject.toml").write_text('[project]\nname="g"\n', encoding="utf-8")
+    calls = tmp_path / "calls.log"
+    ensure = repo / "ops" / "scripts" / "ensure_uv_environment.sh"
+    ensure.parent.mkdir(parents=True)
+    ensure.write_text(f'#!/usr/bin/env bash\necho "ensure $*" >> "{calls}"\n', encoding="utf-8")
+    shims = tmp_path / "bin"
+    shims.mkdir()
+    (shims / "uv").write_text(
+        f'#!/usr/bin/env bash\necho "uv $*" >> "{calls}"\n'
+        '[ "${1:-}" = "--version" ] && echo "uv 9.9.9"\nexit 0\n',
+        encoding="utf-8",
+    )
+    (shims / "uv").chmod(0o755)
+    result = run(workspace, tmp_path / "home", budget="20", path_prefix=shims)
+    assert result.returncode == 0
+    lines = calls.read_text(encoding="utf-8").splitlines() if calls.exists() else []
+    assert f"ensure {repo} apply" in lines, lines
+    assert not [line for line in lines if line.startswith("uv sync --locked --extra dev")], lines

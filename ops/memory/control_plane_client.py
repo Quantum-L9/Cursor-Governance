@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
@@ -47,6 +48,7 @@ from ops.memory.search_identity import (
     require_search_identity,
     verify_request_identity,
 )
+from ops.memory.venv_ready import governance_root_for_cli, venv_ready
 
 TRANSPORT = "cli"
 
@@ -83,6 +85,13 @@ _UNAUTHORIZED_ERRORS = frozenset({"AuthorizationError"})
 _UNAVAILABLE_ERRORS = frozenset(
     {"ConfigurationError", "StoreError", "OSError", "ConnectionError", "BackendTransitionError"}
 )
+#: The runtime never started: its own package could not be imported, or the
+#: environment it lives in was still installing (``ops/memory/venv_ready.py``).
+#: Nothing canonical was reached, so this is an environment fault, never a
+#: canonical ``INVALID_RECEIPT``.
+_ENVIRONMENT_NOT_READY = "EnvironmentNotReady"
+_IMPORT_FAILURE_PREFIXES = ("ModuleNotFoundError:", "ImportError:")
+_EXCEPTION_LINE = re.compile(r"^[A-Za-z_][\w.]*(?:Error|Exception):")
 
 
 class OutcomeStatus(StrEnum):
@@ -272,6 +281,22 @@ class MemoryControlPlaneClient:
             if key not in PROVIDER_TRANSPORT_ENV and not key.startswith("GRAPHITI_SSH_")
         }
 
+    def _spawn(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: str | None,
+        input_text: str | None,
+    ) -> subprocess.CompletedProcess[str]:
+        assert self.binding.memory_cli is not None  # guarded by _guard()
+        return self._run(
+            [self.binding.memory_cli, *argv],
+            cwd=cwd,
+            input_text=input_text,
+            timeout=self.timeout,
+            env=self._child_env(),
+        )
+
     def _invoke(
         self,
         argv: Sequence[str],
@@ -294,14 +319,19 @@ class MemoryControlPlaneClient:
                     _ms(started),
                 )
             self._v2_store_prepared = True
+        # Parallel SessionStart hooks can be installing this very environment;
+        # the shared lock is held for the call so no sync starts underneath it.
+        root = governance_root_for_cli(self.binding.memory_cli)
         try:
-            completed = self._run(
-                [self.binding.memory_cli, *argv],
-                cwd=cwd,
-                input_text=input_text,
-                timeout=self.timeout,
-                env=self._child_env(),
-            )
+            if root is None:
+                completed = self._spawn(argv, cwd=cwd, input_text=input_text)
+            else:
+                with venv_ready(root) as readiness:
+                    if not readiness.ready:
+                        return _Raw(
+                            None, None, _ENVIRONMENT_NOT_READY, readiness.reason, _ms(started)
+                        )
+                    completed = self._spawn(argv, cwd=cwd, input_text=input_text)
         except subprocess.TimeoutExpired:
             return _Raw(None, None, "Timeout", "memory CLI timed out", _ms(started), True)
         except OSError as exc:
@@ -431,6 +461,8 @@ class MemoryControlPlaneClient:
     def _classify_failure(self, raw: _Raw) -> OutcomeStatus:
         if raw.timed_out:
             return OutcomeStatus.TIMEOUT
+        if raw.error_name == _ENVIRONMENT_NOT_READY or _import_failure(raw):
+            return OutcomeStatus.BINDING_FAILED
         if raw.error_name in _UNAUTHORIZED_ERRORS:
             return OutcomeStatus.UNAUTHORIZED_NAMESPACE
         if raw.error_name in _UNAVAILABLE_ERRORS or raw.error_name == "OSError":
@@ -1321,6 +1353,19 @@ def _recorded_since(record: Any, floor: datetime) -> bool:
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
     return moment >= floor.astimezone(UTC)
+
+
+def _import_failure(raw: _Raw) -> bool:
+    """The runtime died importing its own package: a traceback, no receipt."""
+
+    if raw.payload is not None or raw.error_name is not None or not raw.error_message:
+        return False
+    # The raised exception is the LAST "<Name>Error: …" line; interpreter
+    # shutdown noise ("Exception ignored in …", a RuntimeWarning) may follow it.
+    for line in reversed(raw.error_message.strip().splitlines()):
+        if _EXCEPTION_LINE.match(line):
+            return line.startswith(_IMPORT_FAILURE_PREFIXES)
+    return False
 
 
 def _parse_stderr(stderr: str) -> tuple[str | None, str | None]:

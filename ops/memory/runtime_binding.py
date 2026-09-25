@@ -48,6 +48,7 @@ from typing import Any
 from ops.memory import environment_heal
 from ops.memory.receipt_contract import ReceiptContractError, merge_receipt_schemas
 from ops.memory.receipts import CapabilitiesReceipt, InvalidReceiptError
+from ops.memory.venv_ready import venv_ready
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST_PATH = _REPO_ROOT / "ops" / "config" / "memory-binding.json"
@@ -657,6 +658,37 @@ def resolve_runtime_binding(
     candidates, reasons = interpreter_candidates(interpreter, environment)
     if not candidates:
         return _unbound(manifest, mode=MODE_DEVELOPMENT, reasons=reasons)
+
+    # 0. Never probe a governance .venv that is being installed. The probes
+    #    below import the package and run the console script; mid-reinstall they
+    #    fail, the failure reads as drift, and the heal then deletes the
+    #    fingerprint and forces a SECOND full resync (2026-09-24: hydrate raced
+    #    ensure_uv_environment.sh). Wait for the install (bounded), then probe;
+    #    a venv still installing, or left half-installed, is skipped and named —
+    #    never healed from here. The shared lock is released before probing on
+    #    purpose: the heal below runs the writer, which needs it exclusively.
+    ready: list[InterpreterCandidate] = []
+    for candidate in candidates:
+        if candidate.governance_root is None:
+            ready.append(candidate)
+            continue
+        with venv_ready(candidate.governance_root) as readiness:
+            if readiness.ready:
+                ready.append(candidate)
+            else:
+                reasons.append(f"{candidate.interpreter} not probed: {readiness.reason}")
+    if not ready:
+        last = candidates[-1]
+        return _unbound(
+            manifest,
+            mode=last.mode,
+            reasons=reasons,
+            interpreter=last.interpreter,
+            governance_root=str(last.governance_root) if last.governance_root else None,
+            environment_heal=f"{environment_heal.HEAL_SKIPPED_PREFIX}install-in-progress",
+            candidates_tried=[],
+        )
+    candidates = ready
 
     # 1. Package present in a governance interpreter, at the expected version.
     #    Every candidate is probed in order; the first that carries the pinned
