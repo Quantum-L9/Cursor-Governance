@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 from collections.abc import Mapping, Sequence
@@ -90,6 +91,7 @@ _UNAVAILABLE_ERRORS = frozenset(
 #: canonical ``INVALID_RECEIPT``.
 _ENVIRONMENT_NOT_READY = "EnvironmentNotReady"
 _IMPORT_FAILURE_PREFIXES = ("ModuleNotFoundError:", "ImportError:")
+_EXCEPTION_LINE = re.compile(r"^[A-Za-z_][\w.]*(?:Error|Exception):")
 
 
 class OutcomeStatus(StrEnum):
@@ -1358,8 +1360,12 @@ def _import_failure(raw: _Raw) -> bool:
 
     if raw.payload is not None or raw.error_name is not None or not raw.error_message:
         return False
-    lines = raw.error_message.strip().splitlines()
-    return bool(lines) and lines[-1].startswith(_IMPORT_FAILURE_PREFIXES)
+    # The raised exception is the LAST "<Name>Error: …" line; interpreter
+    # shutdown noise ("Exception ignored in …", a RuntimeWarning) may follow it.
+    for line in reversed(raw.error_message.strip().splitlines()):
+        if _EXCEPTION_LINE.match(line):
+            return line.startswith(_IMPORT_FAILURE_PREFIXES)
+    return False
 
 
 def _parse_stderr(stderr: str) -> tuple[str | None, str | None]:

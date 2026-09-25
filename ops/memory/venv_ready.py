@@ -27,6 +27,7 @@ its own registration timeout.
 from __future__ import annotations
 
 import fcntl
+import math
 import os
 import time
 from collections.abc import Iterator, Mapping
@@ -43,11 +44,13 @@ ENV_WAIT = "L9_VENV_READY_WAIT_S"
 DEFAULT_WAIT_S = 15.0
 _POLL_S = 0.1
 
-#: First-wait deadline per lock path, shared by every later wait in this process
-#: while the lock stays held. Cleared once the lock is acquired, and ignored
-#: once it is older than _SHARED_DEADLINE_TTL_S past its expiry.
-_DEADLINES: dict[Path, float] = {}
-_SHARED_DEADLINE_TTL_S = 60.0
+#: Give-up deadline per lock path, keyed to the install it was waiting on (the
+#: writer's ``.l9/uv-environment.installing`` text: pid + start time). Every
+#: later wait on the SAME install shares it, so several calls cannot multiply
+#: the wait; a different install — a long-lived MCP server or pytest session
+#: meeting the next, unrelated sync — gets a fresh budget. Cleared once the
+#: lock is acquired.
+_DEADLINES: dict[Path, tuple[str, float]] = {}
 
 
 @dataclass(frozen=True)
@@ -63,7 +66,15 @@ def wait_budget(env: Mapping[str, str] | None = None) -> float:
         value = float(raw) if raw else DEFAULT_WAIT_S
     except ValueError:
         return DEFAULT_WAIT_S
-    return value if value >= 0 else DEFAULT_WAIT_S
+    # Finite and non-negative only: `inf` would wait past every hook timeout.
+    return value if math.isfinite(value) and value >= 0 else DEFAULT_WAIT_S
+
+
+def _install_token(root: Path) -> str:
+    try:
+        return (root / IN_PROGRESS_REL).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
 
 
 def governance_root_for_cli(cli: str | os.PathLike[str] | None) -> Path | None:
@@ -107,20 +118,23 @@ def venv_ready(root: Path, *, timeout: float | None = None) -> Iterator[VenvRead
         yield _interrupted(root) or VenvReadiness(True, f"venv lock unreadable: {exc}")
         return
     try:
-        budget = wait_budget() if timeout is None else max(0.0, timeout)
+        budget = wait_budget() if timeout is None else timeout
+        if not math.isfinite(budget) or budget < 0:
+            budget = DEFAULT_WAIT_S
         started = time.monotonic()
-        deadline = _DEADLINES.get(lock_path)
-        if deadline is None or started > deadline + _SHARED_DEADLINE_TTL_S:
-            # A long-lived process (an MCP server, a pytest session) must not
-            # carry a give-up from one install into the next, unrelated one.
-            deadline = started + budget
-            _DEADLINES[lock_path] = deadline
+        call_deadline = started + budget
         while True:
             try:
                 fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
                 break
             except BlockingIOError:
-                if time.monotonic() >= deadline:
+                now = time.monotonic()
+                token = _install_token(root)
+                shared = _DEADLINES.get(lock_path)
+                if shared is None or shared[0] != token:
+                    shared = (token, now + budget)
+                    _DEADLINES[lock_path] = shared
+                if now >= min(shared[1], call_deadline):
                     yield VenvReadiness(
                         False,
                         "governance venv install still in progress "

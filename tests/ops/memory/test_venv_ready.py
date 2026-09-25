@@ -110,21 +110,41 @@ def test_the_wait_is_bounded_per_process_not_per_call(tmp_path: Path) -> None:
         _release(fd)
 
 
-def test_an_old_give_up_does_not_poison_a_later_install(tmp_path: Path, monkeypatch) -> None:
-    """A long-lived process waits afresh for a new, unrelated install."""
+def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
+    """A long-lived process waits afresh for a new, unrelated install.
+
+    The give-up is keyed to the install it waited on (the writer's marker), so
+    a second install starting moments later is waited for, not refused.
+    """
     root = _gov(tmp_path)
+    marker = root / vr.IN_PROGRESS_REL
+    marker.write_text("111 2026-09-25T00:00:00Z\n", encoding="utf-8")
     fd = _hold_exclusive(root)
     try:
-        with vr.venv_ready(root, timeout=0.1) as ready:
+        with vr.venv_ready(root, timeout=0.2) as ready:
             assert not ready.ready
     finally:
+        marker.unlink()
         _release(fd)
-    monkeypatch.setattr(vr, "_SHARED_DEADLINE_TTL_S", 0.0)
-    time.sleep(0.05)
+    time.sleep(0.3)
+    marker.write_text("222 2026-09-25T00:00:01Z\n", encoding="utf-8")
     fd = _hold_exclusive(root)
-    threading.Timer(0.4, _release, args=(fd,)).start()
+
+    def _finish() -> None:
+        marker.unlink()
+        _release(fd)
+
+    threading.Timer(0.5, _finish).start()
     with vr.venv_ready(root, timeout=5) as ready:
         assert ready.ready, ready.reason
+        assert ready.waited_s >= 0.4
+
+
+def test_an_unbounded_wait_budget_is_refused(monkeypatch) -> None:
+    monkeypatch.setenv(vr.ENV_WAIT, "inf")
+    assert vr.wait_budget() == vr.DEFAULT_WAIT_S
+    monkeypatch.setenv(vr.ENV_WAIT, "abc")
+    assert vr.wait_budget() == vr.DEFAULT_WAIT_S
 
 
 def test_an_interrupted_install_is_refused(tmp_path: Path) -> None:
@@ -209,6 +229,27 @@ def test_a_runtime_that_cannot_import_itself_is_an_environment_fault(
     assert outcome.status is OutcomeStatus.BINDING_FAILED
     assert outcome.integration_receipt["fault_class"] == FAULT_ENVIRONMENT
     assert "ModuleNotFoundError" in (outcome.error or "")
+
+
+@pytest.mark.parametrize(
+    "trailer",
+    [
+        "Exception ignored in: <function _shutdown at 0x7f>\n",
+        "/usr/lib/python3.12/warnings.py:1: RuntimeWarning: coroutine never awaited\n",
+    ],
+)
+def test_an_import_failure_followed_by_shutdown_noise_is_still_an_environment_fault(
+    bound: RuntimeBinding, fake_cli: FakeMemoryCli, trailer: str
+) -> None:
+    stderr = (
+        "Traceback (most recent call last):\n"
+        "ModuleNotFoundError: No module named 'l9_graphite_memory.contracts.review'\n" + trailer
+    )
+    fake_cli.reply("hydrate", 1, None, stderr)
+    outcome = MemoryControlPlaneClient(bound, runner=fake_cli.run).hydrate(
+        "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+    )
+    assert outcome.status is OutcomeStatus.BINDING_FAILED
 
 
 def test_a_non_import_crash_is_still_an_invalid_receipt(
@@ -335,3 +376,102 @@ def test_an_unverifiable_venv_keeps_the_marker(tmp_path: Path) -> None:
     assert done.returncode == 1
     assert "environment verification failed (import l9_graphite_memory)" in done.stderr
     assert (root / ".l9" / "uv-environment.installing").exists()
+
+
+@needs_util_linux
+def test_a_held_lock_times_out_with_exit_75_and_a_reason(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    (root / ".l9").mkdir()
+    fd = _hold_exclusive(root)
+    try:
+        done = subprocess.run(
+            ["bash", str(ENSURE), str(root)],
+            env={**env, "L9_UV_ENV_LOCK_WAIT_S": "1"},
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    finally:
+        _release(fd)
+    assert done.returncode == 75
+    assert "still held after 1s" in done.stderr
+    assert done.stdout == ""
+
+
+@needs_util_linux
+def test_a_non_numeric_lock_wait_falls_back_instead_of_failing(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)],
+        env={**env, "L9_UV_ENV_LOCK_WAIT_S": "abc"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+
+
+@needs_util_linux
+def test_check_during_a_live_install_says_in_progress(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    (root / ".l9").mkdir()
+    (root / ".l9" / "uv-environment.installing").write_text("1 now\n", encoding="utf-8")
+    fd = _hold_exclusive(root)
+    try:
+        check = subprocess.run(
+            ["bash", str(ENSURE), str(root), "check"],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    finally:
+        _release(fd)
+    assert check.returncode == 1
+    assert "install in progress" in check.stderr
+    assert "synchronization required" in check.stderr  # still classified DEGRADED
+
+
+@needs_util_linux
+def test_logs_of_dead_callers_are_swept(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    (root / ".l9").mkdir()
+    dead = subprocess.Popen(["true"])
+    dead.wait()
+    stale = root / ".l9" / f"uv-environment.{dead.pid}.log"
+    stale.write_text("old\n", encoding="utf-8")
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    assert not stale.exists()
+    assert not list((root / ".l9").glob("uv-environment.*.log"))
+
+
+def test_without_flock_or_setsid_the_sync_runs_unlocked_and_says_so(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    # `command -v` must not find them: every PATH dir that holds flock/setsid is
+    # replaced by a mirror of its other tools.
+    mirror = tmp_path / "tools"
+    mirror.mkdir()
+    keep = []
+    for d in env["PATH"].split(os.pathsep):
+        if not d:
+            continue
+        if not any((Path(d) / t).exists() for t in ("flock", "setsid")):
+            keep.append(d)
+            continue
+        for tool in Path(d).iterdir():
+            if tool.name not in ("flock", "setsid") and not (mirror / tool.name).exists():
+                (mirror / tool.name).symlink_to(tool)
+    keep.append(str(mirror))
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)],
+        env={**env, "PATH": os.pathsep.join(keep)},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert done.returncode == 0, done.stderr
+    assert "flock/setsid unavailable" in done.stderr
+    assert (root / ".venv" / ".l9-uv-fingerprint").exists()

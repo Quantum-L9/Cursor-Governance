@@ -85,9 +85,21 @@ PY
 }
 
 if [ "$MODE" = "check" ] && [ -e "$IN_PROGRESS" ]; then
-  echo "UV: previous install did not complete ($IN_PROGRESS); synchronization required" >&2
+  # A marker under a HELD lock is an install still running, not a dead one.
+  if command -v flock >/dev/null 2>&1 && [ -e "$LOCK_FILE" ] \
+     && ! flock -n "$LOCK_FILE" true 2>/dev/null; then
+    echo "UV: install in progress ($LOCK_FILE held); synchronization required" >&2
+  else
+    echo "UV: previous install did not complete ($IN_PROGRESS); synchronization required" >&2
+  fi
   exit 1
 fi
+
+# flock rejects a non-numeric timeout with its own exit 64 and no UV: reason.
+_lock_wait="${L9_UV_ENV_LOCK_WAIT_S:-600}"
+case "$_lock_wait" in
+  ''|*[!0-9]*) _lock_wait=600 ;;
+esac
 
 # Apply runs under the lock, in its OWN session. A SessionStart hook that
 # reaches its deadline tears down its whole process group (the installer's
@@ -97,18 +109,32 @@ fi
 # and its output goes to a file, not the caller's pipes, so an outliving
 # child can never hold the hook's stdout open. The caller waits for it and
 # replays the log; if the caller is killed first, the work completes anyway.
+#
+# Linux flock has no writer preference: readers (ops/memory/venv_ready.py)
+# overlapping continuously for the whole wait below would starve this writer
+# into exit 75. Each reader holds the lock for one memory call, so that takes
+# $_lock_wait seconds of back-to-back calls; accepted, and reported if it happens.
 if [ "$MODE" != "check" ] && [ -z "${_L9_UV_ENV_LOCKED:-}" ]; then
   if command -v flock >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 \
      && mkdir -p "$GOV_ROOT/.l9" 2>/dev/null; then
+    # A caller killed while waiting never reaches its own `rm`; sweep the logs
+    # of callers that are gone.
+    for _old in "$GOV_ROOT"/.l9/uv-environment.*.log; do
+      [ -e "$_old" ] || continue
+      _pid="${_old##*/uv-environment.}"
+      _pid="${_pid%.log}"
+      case "$_pid" in ''|*[!0-9]*) continue ;; esac
+      kill -0 "$_pid" 2>/dev/null || rm -f "$_old"
+    done
     _log="$GOV_ROOT/.l9/uv-environment.$$.log"
     _rc=0
     _L9_UV_ENV_LOCKED=1 setsid --wait \
-      flock -E 75 -w "${L9_UV_ENV_LOCK_WAIT_S:-600}" "$LOCK_FILE" \
+      flock -E 75 -w "$_lock_wait" "$LOCK_FILE" \
       bash "$SCRIPT_PATH" "$GOV_ROOT" "$MODE" </dev/null >"$_log" 2>&1 || _rc=$?
     cat "$_log" >&2 2>/dev/null || true
     rm -f "$_log"
     if [ "$_rc" -eq 75 ]; then
-      echo "UV: $LOCK_FILE still held after ${L9_UV_ENV_LOCK_WAIT_S:-600}s; another sync owns this environment" >&2
+      echo "UV: $LOCK_FILE still held after ${_lock_wait}s; another sync owns this environment" >&2
     fi
     exit "$_rc"
   fi
