@@ -113,7 +113,7 @@ def venv_ready(root: Path, *, timeout: float | None = None) -> Iterator[VenvRead
         # wait entirely, and the first install after this contract lands (or
         # after a governance directory swap) would race exactly as before.
         lock_path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(lock_path, os.O_RDONLY | os.O_CREAT, 0o644)
+        fd = os.open(lock_path, os.O_RDONLY | os.O_CREAT, 0o600)
     except OSError as exc:
         # An unreadable lock is not proof of a sync in progress; say so and go on.
         yield _interrupted(root) or VenvReadiness(True, f"venv lock unreadable: {exc}")

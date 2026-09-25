@@ -1132,7 +1132,7 @@ def _hold_install_lock(gov: Path) -> int:
     import os
 
     (gov / ".l9").mkdir(exist_ok=True)
-    fd = os.open(gov / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o644)
+    fd = os.open(gov / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o600)
     fcntl.flock(fd, fcntl.LOCK_EX)
     return fd
 

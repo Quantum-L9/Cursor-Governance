@@ -190,7 +190,7 @@ def test_heal_is_skipped_while_an_install_holds_the_environment_lock(tmp_path: P
     (root / "ops" / "scripts").mkdir(parents=True)
     (root / "ops" / "scripts" / "ensure_uv_environment.sh").write_text("#!/bin/sh\nexit 0\n")
     (root / ".l9").mkdir()
-    fd = os.open(root / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o644)
+    fd = os.open(root / ".l9" / "uv-environment.lock", os.O_RDWR | os.O_CREAT, 0o600)
     fcntl.flock(fd, fcntl.LOCK_EX)
     calls: list[object] = []
     try:

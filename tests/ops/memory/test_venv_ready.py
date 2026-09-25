@@ -49,7 +49,7 @@ def _gov(tmp_path: Path) -> Path:
 
 
 def _hold_exclusive(root: Path) -> int:
-    fd = os.open(root / vr.LOCK_REL, os.O_RDWR | os.O_CREAT, 0o644)
+    fd = os.open(root / vr.LOCK_REL, os.O_RDWR | os.O_CREAT, 0o600)
     fcntl.flock(fd, fcntl.LOCK_EX)
     return fd
 
