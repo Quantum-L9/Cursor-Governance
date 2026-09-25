@@ -519,3 +519,47 @@ def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> 
     time.sleep(1.5)
     assert not (tmp_path / "lock-held-during-sync").exists(), "an orphan ran uv sync"
     assert not (root / ".venv" / ".l9-uv-fingerprint").exists()
+
+
+# --- shell reader: ops/scripts/lib/venv_ready.sh (MCP launcher, python hooks) --
+
+SHELL_READER = ROOT / "ops" / "scripts" / "lib" / "venv_ready.sh"
+
+
+def _shell_wait(root: Path, seconds: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bash", "-c", f'. "{SHELL_READER}"; venv_ready_wait "$1" "$2"', "_", str(root), seconds],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+def test_shell_reader_is_ready_without_a_lock_and_writes_nothing(tmp_path: Path) -> None:
+    root = tmp_path / "gov"
+    root.mkdir()
+    assert _shell_wait(root, "0").returncode == 0
+    assert not (root / ".l9").exists()
+
+
+@needs_util_linux
+def test_shell_reader_waits_then_reports_an_install_in_progress(tmp_path: Path) -> None:
+    root = _gov(tmp_path)
+    fd = _hold_exclusive(root)
+    try:
+        started = time.monotonic()
+        held = _shell_wait(root, "1")
+    finally:
+        _release(fd)
+    assert held.returncode == 1
+    assert time.monotonic() - started >= 0.9
+    assert "still in progress" in held.stderr
+    assert _shell_wait(root, "1").returncode == 0
+
+
+def test_shell_reader_refuses_an_interrupted_install(tmp_path: Path) -> None:
+    root = _gov(tmp_path)
+    (root / vr.IN_PROGRESS_REL).write_text("1 then\n", encoding="utf-8")
+    broken = _shell_wait(root, "0")
+    assert broken.returncode == 2
+    assert "interrupted" in broken.stderr
