@@ -44,6 +44,12 @@ def run(
         "HOME": str(home),
         "CLAUDE_CODE_REMOTE": remote,
         "L9_SESSION_DEPS_BUDGET": budget,
+        # Not under test here. Left on, every case launched a detached install
+        # of the whole CI-parity toolchain (codeql, semgrep, biome, …; ~1.9 GB
+        # with its uv cache) into its temporary HOME whenever the caller's
+        # environment named a governance checkout — as `make pr` does — and
+        # a pytest run filled the session disk (ENOSPC in unrelated tests).
+        "L9_CI_PARITY": "0",
     }
     if path_prefix is not None:
         env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
