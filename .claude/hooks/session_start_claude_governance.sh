@@ -609,10 +609,51 @@ if GOV=$(resolve_governance_dir); then
     _gen_rev="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
     _gen_log="$HOME/.l9/claude/bootstrap-${_gen_rev}.log"
     mkdir -p "$HOME/.l9/claude"
+    # Claude Code reads settings ONCE, before any hook runs — including the
+    # governance refresh this very SessionStart performs. A container cached
+    # at an older revision therefore runs this session under that revision's
+    # budget: 2026-09-24 a cache made at b575601 (30 s, the #652 regression)
+    # clamped the installer to 30-2-4-2-1-6 = 15 s although a29657e, fetched
+    # seconds earlier, registers 60 s. Say which budget is in force and why.
+    _gen_want="$(sed -n 's/.*"L9_SESSION_START_BUDGET": *"\([0-9][0-9]*\)".*/\1/p' \
+      "$GOV/environment/agents/adapters/claude-code/settings.template.json" 2>/dev/null | head -n 1)"
+    if [ -n "$_gen_want" ] && [ "${L9_SESSION_START_BUDGET:-60}" != "$_gen_want" ]; then
+      say "SessionStart budget: ${L9_SESSION_START_BUDGET:-60}s loaded at session start; governance ${_gen_rev:0:8} registers ${_gen_want}s — settings predate this session's governance refresh and are read once, so ${_gen_want}s applies from the next session"
+    fi
     _gen_left=$(( $(_l9_budget_left) - ${L9_BOOTSTRAP_REPORT_FLOOR:-6} ))
     _gen_cap="${L9_BOOTSTRAP_GENERATE_BUDGET:-90}"
     [ "$_gen_cap" -gt "$_gen_left" ] && _gen_cap="$_gen_left"
-    if ! type run_with_timeout >/dev/null 2>&1; then
+    if [ "$_gen_cap" -ge "${L9_BOOTSTRAP_GENERATE_MIN:-15}" ] \
+       && [ "${L9_BOOTSTRAP_DETACH:-1}" != "0" ] && command -v setsid >/dev/null 2>&1; then
+      # The installer is NOT killed at the hook deadline. Killing it mid-run
+      # left capabilities/memory UNKNOWN until someone ran it by hand, and it
+      # could tear a venv install in half. It runs in its own session (outside
+      # the process group the deadline tears down), with no fd on this hook's
+      # pipes, and this hook waits for it only as long as the budget allows.
+      # `setsid --wait` keeps $! alive, with the installer's status, until the
+      # installer exits.
+      setsid --wait env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID" L9_BOOTSTRAP_LOG_PATH="$_gen_log" \
+        bash "$BOOTSTRAP_INSTALLER" --governance "$GOV" --workspace "$WORKSPACE" \
+        </dev/null >"$_gen_log" 2>&1 &
+      _gen_pid=$!
+      _gen_until=$(( $(date +%s) + _gen_cap ))
+      while kill -0 "$_gen_pid" 2>/dev/null && [ "$(date +%s)" -lt "$_gen_until" ]; do
+        sleep 0.2
+      done
+      if kill -0 "$_gen_pid" 2>/dev/null; then
+        _gen_how="$(tail -n 2 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
+        say "bootstrap receipt: installer still running after ${_gen_cap}s (hook budget ${L9_SESSION_START_BUDGET:-60}s) — NOT killed; it finishes detached and writes ~/.l9/claude/bootstrap-state.json (log $_gen_log) — last: ${_gen_how:-no log bytes}"
+      else
+        _gen_rc=0
+        wait "$_gen_pid" || _gen_rc=$?
+        if [ "$_gen_rc" = 0 ]; then
+          say "bootstrap receipt: generated this bootstrap (id $_L9_CEREMONY_ID, ${_gen_rev:0:8})"
+        else
+          _gen_how="$(head -n 3 "$_gen_log" 2>/dev/null | tr '\n' ' ')"
+          say "bootstrap receipt: installer FAILED rc=${_gen_rc} — ${_gen_how:-no log bytes}"
+        fi
+      fi
+    elif ! type run_with_timeout >/dev/null 2>&1; then
       say "bootstrap receipt: NOT GENERATED — run_with_timeout.sh missing; installer not started"
     elif [ "$_gen_cap" -lt "${L9_BOOTSTRAP_GENERATE_MIN:-15}" ]; then
       say "bootstrap receipt: NOT GENERATED — ${_gen_left}s of generation budget left (hook budget minus ${L9_BOOTSTRAP_REPORT_FLOOR:-6}s report floor), needs >=${L9_BOOTSTRAP_GENERATE_MIN:-15}s"

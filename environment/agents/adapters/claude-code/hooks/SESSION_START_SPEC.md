@@ -191,8 +191,24 @@ minus `L9_BOOTSTRAP_REPORT_FLOOR` (6 s) kept for the must-emit lines, and is
 **not started**, with a named remediation, when less than
 `L9_BOOTSTRAP_GENERATE_MIN` (15 s) is left.
 
-When the clamp expires, `timeout` TERMs the installer's process group (rc 124).
-That is an **interruption**, not a failure: the hook prints `installer TIMED
+When the clamp expires the installer is **not killed** (2026-09-25). It runs
+under `setsid` in its own session, with no fd on the hook's pipes, outside the
+process group the hook deadline tears down. The hook stops waiting, prints
+`installer still running after <n>s (hook budget <b>s) — NOT killed` with the
+log tail, and the installer finishes on its own and writes its full receipt.
+A kill here used to leave capabilities and memory `UNKNOWN` until someone ran
+`make claude-install`, and could land mid venv install.
+
+Settings, and with them `L9_SESSION_START_BUDGET`, are read once before any
+hook runs, including this ceremony's governance refresh. When the budget loaded
+differs from the one the refreshed `settings.template.json` registers, the hook
+prints `SessionStart budget: <b>s loaded at session start; governance <rev>
+registers <n>s …`, so a clamp from a stale container cache is named rather than
+mistaken for a slow stage.
+
+Without `setsid` (or with `L9_BOOTSTRAP_DETACH=0`) the bounded fallback
+applies: when the clamp expires, `timeout` TERMs the installer's process group
+(rc 124). That is an **interruption**, not a failure: the hook prints `installer TIMED
 OUT after <n>s (hook budget)` with the log tail (the stage reached), and
 `install.sh` traps the signal and writes `state: interrupted` with
 `interrupted_by` and `elapsed_seconds`. Components whose stage finished keep
