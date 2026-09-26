@@ -453,8 +453,26 @@ _compose_title_and_body() {
     _additive_measured=1
     _touched_additive=""
   fi
+  # Resolve the template the way GitHub does: the repository's own copy, then
+  # the org default in <owner>/.github. Skipping the org step composed every
+  # inherit-class consumer's body from the governance fork (Protected-root,
+  # Type of Change) while the org PR gates judge against the org template.
+  # The governance fork stays the last resort when the org copy is unreachable.
+  _org_template=""
+  if [[ ! -f "$WS/.github/pull_request_template.md" && -n "${owner:-}" && "${name:-}" != ".github" ]]; then
+    mkdir -p "$WS/.l9/pr"
+    _org_template="$WS/.l9/pr/org-pull_request_template.md"
+    if ! gh api -H "Accept: application/vnd.github.raw" \
+        "repos/${owner}/.github/contents/.github/pull_request_template.md" \
+        >"$_org_template" 2>/dev/null || [[ ! -s "$_org_template" ]]; then
+      echo "NOTE: org PR template ${owner}/.github unreachable; composing from the governance template"
+      rm -f "$_org_template"
+      _org_template=""
+    fi
+  fi
   for candidate in \
     "$WS/.github/pull_request_template.md" \
+    ${_org_template:+"$_org_template"} \
     "$GOV_ROOT/.github/pull_request_template.md"; do
     if [[ -f "$candidate" ]]; then
       template_file="$candidate"

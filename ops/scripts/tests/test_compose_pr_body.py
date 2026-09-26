@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -13,6 +14,7 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 from compose_pr_body import (  # noqa: E402
+    GATE_UNVERIFIED,
     SCHEMA,
     THIN_PROBLEM_NOTE,
     UNMEASURED,
@@ -582,6 +584,91 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertEqual(doc["pr_number"], 12)
         self.assertEqual(doc["commit_count"], 1)
         self.assertEqual(doc["needs_completion"], [])
+
+
+# The org PR gates (Quantum-L9/.github .github/workflows/pr-gates.yml and the
+# reusable governance-pr.yml) judge every body make pr composes. These are
+# their rules, ported verbatim, so a composer change that would turn those
+# checks red fails here first instead of on an open PR.
+_ORG_GATE_REASON = re.compile(r"(n/a|not applicable|—|--|:)\s*\S{4,}", re.I)
+
+
+def _org_section(body: str, name: str) -> str:
+    match = re.search(rf"##\s*{name}([\s\S]*?)(?=\n##\s|$)", body, re.I)
+    return match.group(1) if match else ""
+
+
+def _org_gate_failures(body: str) -> list[str]:
+    fail: list[str] = []
+    problem = re.sub(r"<!--[\s\S]*?-->", "", _org_section(body, "Problem"))
+    problem = re.sub(r"Closes #\d*", "", problem, count=1, flags=re.I).strip()
+    if len(problem) < 30:
+        fail.append("problem")
+    risk = re.findall(r"^\s*-\s*\[([ xX])\]", _org_section(body, "Risk"), re.M)
+    if len([mark for mark in risk if mark != " "]) != 1:
+        fail.append("risk")
+    evidence = _org_section(body, "Evidence")
+    if not re.search(r"```[\s\S]*?```", evidence) and not re.search(r"actions/runs/\d+", evidence):
+        fail.append("evidence")
+    for line in _org_section(body, "Gates").splitlines():
+        match = re.match(r"^\s*-\s*\[ \]\s*(.+)$", line)
+        if match and not _ORG_GATE_REASON.search(match.group(1).strip()):
+            fail.append(f"gate: {match.group(1)[:60]}")
+    return fail
+
+
+def _org_undeclared(body: str, name_status: list[str]) -> list[str]:
+    """pr-files.yml: every changed row must be declared under Changes by intent."""
+    intent = _org_section(body, "Changes by intent")
+    intent = re.sub(r"<!--[\s\S]*?-->", "", intent)
+    rows = [" -> ".join(line.split("\t")[1:]) for line in name_status]
+    declared = {
+        token.strip()
+        for token in re.findall(r"`([^`]+)`", intent)
+        if "/" in token or "." in token or token.strip() in rows
+    }
+
+    return [row for row in rows if row not in declared]
+
+
+class OrgPrGateContractTests(unittest.TestCase):
+    NAME_STATUS = [
+        "M\tops/scripts/compose_pr_body.py",
+        "A\ttests/test_new.py",
+        "R100\told/name.py\tnew/name.py",
+        "M\tMakefile",
+    ]
+
+    def _facts(self) -> MechanicalFacts:
+        return MechanicalFacts(
+            commits=["fix(pr): align composer with org gates", "test: cover it"],
+            commit_bodies=["Every composed body failed the org Gate reason check.", ""],
+            changed_files=list(self.NAME_STATUS),
+            gate_receipt={"schema": "l9.pr_gate_receipt.v2", "content_digest": "d"},
+        )
+
+    def test_composed_body_passes_org_pr_gates(self) -> None:
+        for label, template in (
+            ("inline", TEMPLATE),
+            ("governance fork", (REPO / ".github" / "pull_request_template.md").read_text()),
+        ):
+            with self.subTest(template=label):
+                body = compose_pr_body(self._facts(), template).body
+                self.assertEqual(_org_gate_failures(body), [])
+
+    def test_unmeasured_gates_are_not_claimed_not_applicable(self) -> None:
+        body = compose_pr_body(self._facts(), TEMPLATE).body
+        gates = _org_section(body, "Gates")
+        regression = "Regression test added that fails without this fix"
+        self.assertIn(f"{regression} — {GATE_UNVERIFIED}", gates)
+        self.assertNotIn("not this change", gates)
+        self.assertNotIn(UNMEASURED, gates)
+
+    def test_rename_is_declared_for_pr_files(self) -> None:
+        body = compose_pr_body(self._facts(), TEMPLATE).body
+        self.assertIn("`new/name.py` — ", body)
+        self.assertIn("(renamed: `old/name.py -> new/name.py`)", body)
+        self.assertEqual(_org_undeclared(body, self.NAME_STATUS), [])
 
 
 if __name__ == "__main__":
