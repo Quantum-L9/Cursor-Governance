@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -586,49 +589,43 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertEqual(doc["needs_completion"], [])
 
 
-# The org PR gates (Quantum-L9/.github .github/workflows/pr-gates.yml and the
-# reusable governance-pr.yml) judge every body make pr composes. These are
-# their rules, ported verbatim, so a composer change that would turn those
-# checks red fails here first instead of on an open PR.
-_ORG_GATE_REASON = re.compile(r"(n/a|not applicable|—|--|:)\s*\S{4,}", re.I)
+# The org PR-body validators judge every body make pr composes. They are
+# vendored byte-exact under fixtures/org_pr_gates (manifest.json names the
+# source ref and sha256) and executed with node, so these tests prove
+# compatibility with a named validator version instead of a hand-kept copy of
+# its rules. Moving the pin means refreshing the file and its digest together.
+ORG_GATES = Path(__file__).resolve().parent / "fixtures" / "org_pr_gates"
 
 
-def _org_section(body: str, name: str) -> str:
-    match = re.search(rf"##\s*{name}([\s\S]*?)(?=\n##\s|$)", body, re.I)
+def _run_org_validator(workflow: str, body: str, name_status: list[str] | None = None) -> dict:
+    node = shutil.which("node")
+    if node is None:
+        # Not a skip: without node these tests cannot prove the composer
+        # passes the real validator, and silence would read as a pass.
+        raise AssertionError("node is required to run the vendored org PR validators")
+    with tempfile.TemporaryDirectory() as tmp:
+        body_file = Path(tmp) / "body.md"
+        body_file.write_text(body, encoding="utf-8")
+        args = [
+            node,
+            str(ORG_GATES / "run_workflow_script.js"),
+            str(ORG_GATES / workflow),
+            str(body_file),
+        ]
+        if name_status is not None:
+            changed = Path(tmp) / "changed.txt"
+            changed.write_text("".join(f"{line}\n" for line in name_status), encoding="utf-8")
+            args.append(str(changed))
+        proc = subprocess.run(args, capture_output=True, text=True, check=False, timeout=60)
+    if proc.returncode != 0:
+        raise AssertionError(f"{workflow} runner failed: {proc.stderr.strip()}")
+    return json.loads(proc.stdout)
+
+
+def _section(body: str, heading: str) -> str:
+    """Text under one ``## heading`` — for assertions, not a validator rule."""
+    match = re.search(rf"^## {re.escape(heading)}\n([\s\S]*?)(?=^## |\Z)", body, re.M)
     return match.group(1) if match else ""
-
-
-def _org_gate_failures(body: str) -> list[str]:
-    fail: list[str] = []
-    problem = re.sub(r"<!--[\s\S]*?-->", "", _org_section(body, "Problem"))
-    problem = re.sub(r"Closes #\d*", "", problem, count=1, flags=re.I).strip()
-    if len(problem) < 30:
-        fail.append("problem")
-    risk = re.findall(r"^\s*-\s*\[([ xX])\]", _org_section(body, "Risk"), re.M)
-    if len([mark for mark in risk if mark != " "]) != 1:
-        fail.append("risk")
-    evidence = _org_section(body, "Evidence")
-    if not re.search(r"```[\s\S]*?```", evidence) and not re.search(r"actions/runs/\d+", evidence):
-        fail.append("evidence")
-    for line in _org_section(body, "Gates").splitlines():
-        match = re.match(r"^\s*-\s*\[ \]\s*(.+)$", line)
-        if match and not _ORG_GATE_REASON.search(match.group(1).strip()):
-            fail.append(f"gate: {match.group(1)[:60]}")
-    return fail
-
-
-def _org_undeclared(body: str, name_status: list[str]) -> list[str]:
-    """pr-files.yml: every changed row must be declared under Changes by intent."""
-    intent = _org_section(body, "Changes by intent")
-    intent = re.sub(r"<!--[\s\S]*?-->", "", intent)
-    rows = [" -> ".join(line.split("\t")[1:]) for line in name_status]
-    declared = {
-        token.strip()
-        for token in re.findall(r"`([^`]+)`", intent)
-        if "/" in token or "." in token or token.strip() in rows
-    }
-
-    return [row for row in rows if row not in declared]
 
 
 class OrgPrGateContractTests(unittest.TestCase):
@@ -647,28 +644,49 @@ class OrgPrGateContractTests(unittest.TestCase):
             gate_receipt={"schema": "l9.pr_gate_receipt.v2", "content_digest": "d"},
         )
 
-    def test_composed_body_passes_org_pr_gates(self) -> None:
+    def test_vendored_validators_match_their_manifest(self) -> None:
+        manifest = json.loads((ORG_GATES / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["schema"], "l9.org_pr_gate_fixtures.v1")
+        for entry in manifest["fixtures"]:
+            with self.subTest(fixture=entry["file"]):
+                self.assertRegex(entry["ref"], r"^[0-9a-f]{40}$")
+                digest = hashlib.sha256((ORG_GATES / entry["file"]).read_bytes()).hexdigest()
+                self.assertEqual(digest, entry["sha256"])
+
+    def test_composed_body_passes_pinned_governance_pr(self) -> None:
         for label, template in (
             ("inline", TEMPLATE),
             ("governance fork", (REPO / ".github" / "pull_request_template.md").read_text()),
         ):
             with self.subTest(template=label):
                 body = compose_pr_body(self._facts(), template).body
-                self.assertEqual(_org_gate_failures(body), [])
+                result = _run_org_validator("governance-pr.yml", body)
+                self.assertEqual(result, {"failures": [], "findings": []})
+
+    def test_validator_runner_still_rejects(self) -> None:
+        # Guards the harness: a runner that silently passed everything would
+        # make the test above vacuous.
+        result = _run_org_validator("governance-pr.yml", TEMPLATE)
+        self.assertTrue(result["failures"])
 
     def test_unmeasured_gates_are_not_claimed_not_applicable(self) -> None:
         body = compose_pr_body(self._facts(), TEMPLATE).body
-        gates = _org_section(body, "Gates")
+        gates = _section(body, "Gates")
         regression = "Regression test added that fails without this fix"
         self.assertIn(f"{regression} — {GATE_UNVERIFIED}", gates)
         self.assertNotIn("not this change", gates)
         self.assertNotIn(UNMEASURED, gates)
 
-    def test_rename_is_declared_for_pr_files(self) -> None:
+    def test_rename_declares_the_canonical_row_key_for_pr_files(self) -> None:
         body = compose_pr_body(self._facts(), TEMPLATE).body
         self.assertIn("`new/name.py` — ", body)
         self.assertIn("(renamed: `old/name.py -> new/name.py`)", body)
-        self.assertEqual(_org_undeclared(body, self.NAME_STATUS), [])
+        result = _run_org_validator("pr-files.yml", body, self.NAME_STATUS)
+        self.assertEqual(result["failures"], [])
+        # The strict matcher is what makes the declaration meaningful: the same
+        # body minus the row key must still fail.
+        bare = body.replace(" (renamed: `old/name.py -> new/name.py`)", "")
+        self.assertTrue(_run_org_validator("pr-files.yml", bare, self.NAME_STATUS)["failures"])
 
 
 if __name__ == "__main__":
