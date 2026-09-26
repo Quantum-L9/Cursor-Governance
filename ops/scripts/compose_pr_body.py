@@ -652,10 +652,11 @@ def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
         bullet = f"- `{path}` — {path_why(facts, path)}"
         if status[:1] in {"R", "C"} and len(parts) == 3:
             # pr-files.yml keys a rename/copy row as "old -> new" and matches
-            # declarations exactly, so a bullet naming only the new path left
-            # every rename "undeclared". Declare the row key it compares.
+            # declarations exactly. Declare that key and nothing else: a bare
+            # new path is not a row, so pr-files reports it as "declared but
+            # not in the diff" on every rename.
             verb = "renamed" if status.startswith("R") else "copied"
-            bullet += f" ({verb}: `{parts[1]} -> {path}`)"
+            bullet = f"- `{parts[1]} -> {path}` — {path_why(facts, path)} ({verb})"
         if status.startswith("A"):
             added.append(bullet)
         elif status.startswith("D"):

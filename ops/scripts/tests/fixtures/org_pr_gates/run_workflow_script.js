@@ -49,7 +49,16 @@ const summary = {
   write: async () => summary,
 };
 const core = { setFailed: (m) => failures.push(m), notice() {}, info() {}, summary };
-const github = { rest: { pulls: { update: async () => {} } } };
+let updatedBody = null;
+const github = {
+  rest: {
+    pulls: {
+      update: async ({ body: next }) => {
+        updatedBody = next;
+      },
+    },
+  },
+};
 const context = {
   payload: {
     pull_request: {
@@ -64,6 +73,6 @@ const context = {
 
 require(mod)(github, core, context, require)
   .then(() => {
-    process.stdout.write(JSON.stringify({ failures, findings }));
+    process.stdout.write(JSON.stringify({ failures, findings, updatedBody }));
   })
   .finally(() => fs.rmSync(scratch, { recursive: true, force: true }));

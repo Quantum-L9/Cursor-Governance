@@ -661,7 +661,8 @@ class OrgPrGateContractTests(unittest.TestCase):
             with self.subTest(template=label):
                 body = compose_pr_body(self._facts(), template).body
                 result = _run_org_validator("governance-pr.yml", body)
-                self.assertEqual(result, {"failures": [], "findings": []})
+                self.assertEqual(result["failures"], [])
+                self.assertEqual(result["findings"], [])
 
     def test_validator_runner_still_rejects(self) -> None:
         # Guards the harness: a runner that silently passed everything would
@@ -679,14 +680,19 @@ class OrgPrGateContractTests(unittest.TestCase):
 
     def test_rename_declares_the_canonical_row_key_for_pr_files(self) -> None:
         body = compose_pr_body(self._facts(), TEMPLATE).body
-        self.assertIn("`new/name.py` — ", body)
-        self.assertIn("(renamed: `old/name.py -> new/name.py`)", body)
+        intent = _section(body, "Changes by intent")
+        self.assertIn("- `old/name.py -> new/name.py` — ", intent)
+        # Only the row key: a bare endpoint is not a row, and pr-files would
+        # report it as declared but not in the diff.
+        self.assertNotIn("`new/name.py`", intent)
+        self.assertNotIn("`old/name.py`", intent)
         result = _run_org_validator("pr-files.yml", body, self.NAME_STATUS)
         self.assertEqual(result["failures"], [])
+        self.assertNotIn("Declared but not in the diff", result["updatedBody"])
         # The strict matcher is what makes the declaration meaningful: the same
-        # body minus the row key must still fail.
-        bare = body.replace(" (renamed: `old/name.py -> new/name.py`)", "")
-        self.assertTrue(_run_org_validator("pr-files.yml", bare, self.NAME_STATUS)["failures"])
+        # body declaring only the new path must still fail.
+        endpoint = body.replace("`old/name.py -> new/name.py`", "`new/name.py`")
+        self.assertTrue(_run_org_validator("pr-files.yml", endpoint, self.NAME_STATUS)["failures"])
 
 
 if __name__ == "__main__":
