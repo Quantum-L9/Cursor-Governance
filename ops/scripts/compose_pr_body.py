@@ -21,6 +21,16 @@ SCHEMA = "l9.pr_body_completion.v1"
 UNMEASURED = "not measured by open_pr_after_gate.sh — do not treat as verified"
 PROTECTED_STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
 NA = "n/a — not this change"
+#: Reason on an unchecked ``## Gates`` box. A gate is a claim about the change
+#: (a regression test exists, semgrep is clean) that make pr cannot measure, so
+#: "n/a — not this change" there was a confident negative nobody checked. The
+#: org PR gate (Quantum-L9/.github pr-gates.yml / governance-pr.yml) also needs
+#: a >=4-character word right after the separator, which "n/a — not ..." never
+#: had, so every composed body failed six Gate lines. "unverified" satisfies
+#: that rule and says what is actually known.
+GATE_UNVERIFIED = (
+    "unverified — make pr cannot measure this gate; reviewer ticks it or states why not"
+)
 FIX_PLACEHOLDER = (
     "<!-- What you changed to make the problem above go away. "
     "Note alternatives you rejected and why. -->"
@@ -418,6 +428,7 @@ def _annotate_unchecked_boxes(text: str) -> str:
         if (
             re.match(r"^- \[ \] ", line)
             and UNMEASURED not in line
+            and GATE_UNVERIFIED not in line
             and " — n/a" not in line
             and " — n/a —" not in line
         ):
@@ -511,7 +522,7 @@ def _check_box(text: str, label: str) -> str:
     return pattern.sub(r"- [x] \1", text, count=1)
 
 
-def _na_unchecked_in_section(text: str, heading: str, until: str | None) -> str:
+def _na_unchecked_in_section(text: str, heading: str, until: str | None, reason: str = NA) -> str:
     start = text.find(heading)
     if start < 0:
         return text
@@ -523,8 +534,8 @@ def _na_unchecked_in_section(text: str, heading: str, until: str | None) -> str:
     chunk = text[start:end]
     new_lines: list[str] = []
     for line in chunk.splitlines():
-        if re.match(r"^- \[ \] ", line) and " — n/a" not in line:
-            new_lines.append(f"{line} — {NA}")
+        if re.match(r"^- \[ \] ", line) and " — n/a" not in line and reason not in line:
+            new_lines.append(f"{line} — {reason}")
         else:
             new_lines.append(line)
     return text[:start] + "\n".join(new_lines) + text[end:]
@@ -639,6 +650,13 @@ def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
         status = parts[0] if parts else "M"
         path = parts[-1] if parts else line
         bullet = f"- `{path}` — {path_why(facts, path)}"
+        if status[:1] in {"R", "C"} and len(parts) == 3:
+            # pr-files.yml keys a rename/copy row as "old -> new" and matches
+            # declarations exactly. Declare that key and nothing else: a bare
+            # new path is not a row, so pr-files reports it as "declared but
+            # not in the diff" on every rename.
+            verb = "renamed" if status.startswith("R") else "copied"
+            bullet = f"- `{parts[1]} -> {path}` — {path_why(facts, path)} ({verb})"
         if status.startswith("A"):
             added.append(bullet)
         elif status.startswith("D"):
@@ -671,7 +689,7 @@ def _fill_gates(text: str, facts: MechanicalFacts) -> str:
             "- [x] No secrets, tokens, or customer data in code, tests, fixtures, or logs",
             1,
         )
-    return _na_unchecked_in_section(text, "## Gates", "## Reviewer focus")
+    return _na_unchecked_in_section(text, "## Gates", "## Reviewer focus", GATE_UNVERIFIED)
 
 
 def _fill_template(template: str, facts: MechanicalFacts) -> str:

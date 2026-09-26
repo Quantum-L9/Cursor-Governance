@@ -1,0 +1,50 @@
+name: Governance — PR
+
+on:
+  workflow_call:
+    inputs:
+      strict:
+        type: boolean
+        default: false   # ADVISORY BY DEFAULT — young infrastructure.
+                         # Callers opt in per repo with `with: {strict: true}`.
+                         # See docs/ADVISORY.md for the promotion ladder.
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gates:
+    if: github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const fail = [];
+            const sec = n => (body.match(new RegExp(`##\\s*${n}([\\s\\S]*?)(?=\\n##\\s|$)`,'i'))||[,''])[1];
+
+            const problem = sec('Problem').replace(/<!--[\s\S]*?-->/g,'').replace(/Closes #\d*/i,'').trim();
+            if (problem.length < 30) fail.push('**Problem** empty or boilerplate.');
+
+            const risk = [...sec('Risk').matchAll(/^\s*-\s*\[([ xX])\]/gm)].filter(m => m[1] !== ' ');
+            if (risk.length !== 1) fail.push(`**Risk**: check exactly one (found ${risk.length}).`);
+
+            if (!/```[\s\S]*?```/.test(sec('Evidence')) && !/actions\/runs\/\d+/.test(sec('Evidence')))
+              fail.push('**Evidence**: paste output or link a CI run.');
+
+            for (const line of sec('Gates').split('\n')) {
+              const m = line.match(/^\s*-\s*\[ \]\s*(.+)$/);
+              if (m && !/(n\/a|not applicable|—|--|:)\s*\S{4,}/i.test(m[1]))
+                fail.push(`**Gate** unchecked without reason: _${m[1].slice(0,60)}_`);
+            }
+
+            if (fail.length) {
+              core.summary.addHeading('Governance gates',2).addList(fail).write();
+              if (${{ inputs.strict }}) {
+                core.setFailed(`${fail.length} gate issue(s).`);
+              } else {
+                core.notice(`${fail.length} advisory gate finding(s) — not blocking. See job summary.`);
+              }
+            }

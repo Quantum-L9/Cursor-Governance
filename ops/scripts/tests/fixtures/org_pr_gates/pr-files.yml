@@ -1,0 +1,101 @@
+name: PR files touched
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-files-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  annotate:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-status "$BASE...$HEAD" > /tmp/changed.txt
+          git diff --shortstat "$BASE...$HEAD" > /tmp/shortstat.txt
+
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const START = '<!-- FILES-TOUCHED:START -->';
+            const END = '<!-- FILES-TOUCHED:END -->';
+            const SYM = { A: 'added', M: 'modified', D: 'deleted', R: 'renamed', C: 'copied', T: 'typechange' };
+            const GEN = /^(poetry\.lock|package-lock\.json|uv\.lock|.*\.snap|CHANGELOG\.md)$|(^|\/)(dist|__snapshots__)\//;
+
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+
+            const rows = fs.readFileSync('/tmp/changed.txt', 'utf8')
+              .split('\n').filter(Boolean)
+              .map(l => { const p = l.split('\t'); return { st: SYM[p[0][0]] || p[0], path: p.slice(1).join(' -> ') }; });
+            const shortstat = fs.readFileSync('/tmp/shortstat.txt', 'utf8').trim();
+
+            // paths the author declared under "## Changes by intent"
+            const intentSec = (body.match(/##\s*Changes by intent([\s\S]*?)(?=\n##\s|$)/i) || [,''])[1]
+              .replace(/<!--[\s\S]*?-->/g, '');
+            // Accept declared tokens that look like paths (contain "/" or ".")
+            // or that exactly match a changed path — the latter lets extensionless
+            // root files (e.g. Makefile, LICENSE, Dockerfile) be declared too.
+            const changedPaths = new Set(rows.map(r => r.path));
+            const declared = new Set([...intentSec.matchAll(/`([^`]+)`/g)]
+              .map(m => m[1].trim())
+              .filter(p => p.includes('/') || p.includes('.') || changedPaths.has(p)));
+
+            const undeclared = rows.filter(r => !declared.has(r.path) && !GEN.test(r.path));
+            const phantom = [...declared].filter(d => !rows.some(r => r.path === d) && !d.startsWith('path/to/'));
+
+            const group = {};
+            for (const r of rows) {
+              const dir = r.path.includes('/') ? r.path.split('/').slice(0, -1).join('/') : '(root)';
+              (group[dir] ||= []).push(r);
+            }
+
+            let out = `**${rows.length} file${rows.length === 1 ? '' : 's'}** — ${shortstat}\n`;
+            if (undeclared.length) out += `\n> [!WARNING]\n> ${undeclared.length} file(s) not declared under **Changes by intent**: ` +
+              undeclared.slice(0, 10).map(r => `\`${r.path}\``).join(', ') + (undeclared.length > 10 ? ', …' : '') + '\n';
+            if (phantom.length) out += `\n> [!NOTE]\n> Declared but not in the diff: ` +
+              phantom.map(p => `\`${p}\``).join(', ') + '\n';
+
+            const many = rows.length > 60;
+            if (many) out += `\n<details><summary>Expand file list</summary>\n`;
+            for (const dir of Object.keys(group).sort()) {
+              out += `\n\`${dir}/\`\n`;
+              for (const r of group[dir]) {
+                const name = r.path.split('/').pop();
+                const mark = declared.has(r.path) ? '' : (GEN.test(r.path) ? ' _(generated)_' : ' ⚠️');
+                out += r.st === 'deleted'
+                  ? `- ~~\`${name}\`~~ — deleted${mark}\n`
+                  : `- \`${name}\` — ${r.st}${mark}\n`;
+              }
+            }
+            if (many) out += `\n</details>\n`;
+
+            const block = `${START}\n${out}${END}`;
+            const next = body.includes(START) && body.includes(END)
+              ? body.replace(new RegExp(`${START}[\\s\\S]*?${END}`), block)
+              : `${body}\n\n## Files touched\n\n${block}\n`;
+
+            if (next !== body) {
+              await github.rest.pulls.update({ ...context.repo, pull_number: pr.number, body: next });
+            }
+
+            if (undeclared.length) {
+              core.summary.addHeading('Undeclared files', 2)
+                .addList(undeclared.map(r => `${r.path} (${r.st})`)).write();
+              core.setFailed(`${undeclared.length} file(s) changed but not declared under "Changes by intent".`);
+            }
