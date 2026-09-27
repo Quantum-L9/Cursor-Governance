@@ -239,6 +239,8 @@ def mechanical_answers(form: dict[str, Any], workspace: Path) -> dict[str, str]:
                 text=True,
             ).stdout.strip()
         except (OSError, subprocess.CalledProcessError):
+            # Best effort: outside a git checkout the field stays unanswered
+            # (it is optional on every form), and composition never fails on it.
             pass
     return out
 
