@@ -252,9 +252,10 @@ class OrgIssueParserContractTests(unittest.TestCase):
                 if name in severity_s1:
                     self.assertIn("sev:S1", triage["added"])
                     self.assertIn("priority:P0", triage["added"])
-                    consumer = _run_org_parser("governance-issue.yml", body)
-                    self.assertEqual(consumer["added"], ["priority:P0", "sev:S1"])
-                    self.assertEqual(consumer["failures"], [])
+                # Consumer repos run governance-issue.yml: same labels, never a red run.
+                consumer = _run_org_parser("governance-issue.yml", body)
+                self.assertEqual(consumer["added"], triage["added"])
+                self.assertEqual(consumer["failures"], [])
 
     def test_bug_and_feature_routing_fields_reach_the_parser(self) -> None:
         bug = compose_issue(

@@ -5,65 +5,65 @@
     {
       "file": "1-bug.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/1-bug.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "f8c40439a6e760d309a412a50a7e182aad38489b46c303c1a654546458172654"
     },
     {
       "file": "2-feature.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/2-feature.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "cc62f3f4b7bf2cd1dcdbdf62dea5b3b8359dabdde27598050d5ed20a1e3c972d"
     },
     {
       "file": "3-task.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/3-task.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "3eecfdd7974f1989f07c98965306235ee5793197c4a31a521aca5700e959a14a"
     },
     {
       "file": "4-incident.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/4-incident.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "a3f35e2d908e88082db9371b804eee93e9dcf86c40e06b7f3e487bdc6a90b160"
     },
     {
       "file": "ci-failure.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/ci-failure.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "0537914fce061a5cbbc294e2c499fd06f585db8e5e6b80205d073f3bd4920081"
     },
     {
       "file": "seed-ci-failure.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/seed-ci-failure.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "df28222553860c0ff3ba226416e495f5c6be2b22212b82a1c067c7afa59d289a"
     },
     {
       "file": "gov-violation.yml",
       "source": "Quantum-L9/.github:.github/ISSUE_TEMPLATE/gov-violation.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Org default issue form (Quantum-L9/.github PR #136 head at vendoring time).",
       "sha256": "a4bbae297fb982c968b0f7036ed98ad242eb9c5d2bef7e51c14da9855195733d"
     },
     {
       "file": "issue-triage.yml",
       "source": "Quantum-L9/.github:.github/workflows/issue-triage.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "Labels issues filed in Quantum-L9/.github from the rendered ### headings.",
       "sha256": "f8a373f0b0861f29f575cf90fa5773f5cc91ef58bd80a6bc37c181080669a1bd"
     },
     {
       "file": "governance-issue.yml",
       "source": "Quantum-L9/.github:.github/workflows/governance-issue.yml",
-      "ref": "0473e7ceab7cab09e1bc002bc73293e65ee00d9d",
+      "ref": "49a6055aafdf02c9e4f2bf2baf22840b8f1f9ce1",
       "why": "The reusable issue parser consumer repos call (Severity + secret scan).",
-      "sha256": "77f115def9a43a33003395689c44940b5f0566be8c2e25325312bccbc0c0455e"
+      "sha256": "df09831f307c82e27330486cb5b9cae54b1cace89ce66b455fdf12c8d43d37be"
     }
   ],
   "refresh": "When the org forms or parsers move: copy each file from that ref, update ref and sha256 here. The digest test fails until both agree."
