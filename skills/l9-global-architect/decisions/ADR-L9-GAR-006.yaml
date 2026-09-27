@@ -1,0 +1,166 @@
+adr:
+  id: ADR-L9-GAR-006
+  title: Validate-and-Repair hardening for reproducible package readiness and independent semantic-owner versioning
+  status: accepted
+  date: 2026-09-27
+  decision_scope: l9-global-architect v0.8.2 validation and handoff hardening
+  normative: false
+source_audit:
+  kernel_name: validate_repair_complete_align_and_harden
+  kernel_version: 1.0
+  source_filename: Validate & Repair(20260927-053052).md
+  source_sha256: 1f4fb6d981c31f8f778b148be00412124f86f0f43096b666b571925e1fbcd611
+  baseline_skill_sha256: 00f56dd87ee03afcfa7937c523841f5c34f8a47d38f5be64fd9a2c5122f96097
+  authorization: user_explicitly_requested_apply_kernel_and_deliver_v0_8_2
+  operating_mode: full_readiness
+baseline:
+  runtime_alignment_validator: PASS
+  product_architecture_decision_positive_fixture: PASS
+  structured_yaml_json_parse: PASS
+  shipped_files: 42
+  behavior_evals: 61
+root_findings:
+  - id: VR-001
+    severity: medium
+    confidence: confirmed
+    problem: package_release_version_was_coupled_to_independently_owned_semantic_artifact_versions
+    evidence:
+      - scripts/validate_runtime_alignment.py_required_nine_current_owner_versions_to_equal_one_EXPECTED_VERSION
+      - a_patch_release_that_changes_only_package_validation_would_force_unrelated_runtime_contract_version_churn
+    violated_principle: minimal_effective_change_and_source_of_truth_ownership
+    remediation: bind_release_identity_to_SKILL_and_MANIFEST_then_check_run_state_compatibility_without_forcing_unmodified_semantic_owners_to_bump
+  - id: VR-002
+    severity: medium
+    confidence: confirmed
+    problem: shipped_runtime_validator_did_not_reproduce_state_action_contract_and_evaluator_reference_integrity_claims
+    evidence:
+      - validator_checked_selected_cross_file_seams_but_not_transition_state_action_or_required_contract_resolution
+      - evaluator_ID_registration_was_not_checked_across_machine_readable_yaml
+    violated_principle: validation_must_cover_claimed_wiring
+    remediation: add_deterministic_state_action_contract_and_evaluator_reference_resolution_to_the_shipped_validator
+  - id: VR-003
+    severity: medium
+    confidence: confirmed
+    problem: manifest_optional_and_historical_artifact_references_were_not_checked_by_package_validation
+    risk: optional_or_provenance_paths_could_drift_while_core_load_order_remained_green
+    remediation: validate_optional_load_historical_artifacts_and_package_validator_paths
+  - id: VR-004
+    severity: medium
+    confidence: confirmed
+    problem: product_decision_package_readiness_proved_the_positive_fixture_but_negative_rejection_paths_were_not_reproducible_from_the_main_package_validator
+    risk: schema_or_validator_regression_could_accept_deprecated_or_semantically_unbound_decisions
+    remediation: meta_validate_the_schema_and_execute_positive_plus_deprecated_intervention_mismatch_missing_signal_and_unresolved_negative_cases
+  - id: VR-005
+    severity: low
+    confidence: confirmed
+    problem: final_state_hygiene_check_was_narrower_than_the_declared_readiness_standard
+    evidence:
+      - unfinished_marker_regex_had_a_terminal_escape_bug_and_could_report_PASS_without_matching_actual_markers
+      - unfinished_marker_scope_covered_only_TODO_FIXME_TBD
+      - package_validator_did_not_fail_on_cache_OS_temp_log_or_symlink_residue
+    remediation: add_scope_aware_unfinished_marker_script_stub_and_package_residue_checks_without_flagging_historical_or_vendored_source_text
+repair_decision:
+  - preserve_all_runtime_architecture_and_reasoning_semantics
+  - preserve_product_architecture_decision_schema_v3
+  - preserve_behavior_eval_suite_001_through_061
+  - preserve_reasoning_foursome_snapshots_byte_for_byte
+  - harden_existing_package_validator_in_place_instead_of_adding_a_parallel_validation_framework
+  - keep_semantic_owner_versions_independent_when_their_semantics_are_unchanged
+  - bump_only_the_skill_release_and_runtime_composition_manifest_to_v0_8_2
+rejected_alternatives:
+  - alternative: bump_every_semantic_owner_to_0_8_2
+    rejected_because: cosmetic_version_churn_would_hide_which_semantic_artifacts_actually_changed
+  - alternative: add_a_new_validation_subsystem
+    rejected_because: existing_package_validator_is_the_correct_owner_and_a_parallel_system_would_duplicate_responsibility
+  - alternative: import_validate_and_repair_kernel_as_runtime_law
+    rejected_because: kernel_is_an_external_repair_method_and_most_of_its_doctrine_is_already_owned_by_GAR_runtime_contracts
+  - alternative: scan_historical_ADRs_and_vendored_reasoning_sources_for_generic_marker_words
+    rejected_because: historical_and_source_material_may_legitimately_describe_stubs_TODOs_or_HACKs_without_constituting_current_incomplete_work
+validation_required:
+  - all_yaml_and_json_parse
+  - all_python_scripts_parse_and_no_required_stub_function_bodies_exist
+  - SKILL_and_MANIFEST_release_versions_equal_0_8_2
+  - run_state_compatibility_admits_0_8_2
+  - every_manifest_semantic_owner_load_order_optional_historical_and_validator_path_resolves
+  - every_state_transition_state_action_and_required_contract_reference_resolves
+  - every_explicit_EVAL_ID_in_machine_readable_yaml_is_registered
+  - product_architecture_decision_schema_meta_validates
+  - positive_product_decision_fixture_passes
+  - deprecated_disposition_negative_case_fails
+  - intervention_fidelity_negative_case_fails
+  - missing_signal_prediction_negative_case_fails
+  - accepted_material_unknown_negative_case_fails
+  - no_current_unfinished_work_markers_or_package_residue
+  - original_v0_8_1_runtime_alignment_properties_remain_green
+  - final_archive_reextracts_and_revalidates
+regression_boundary:
+  semantic_changes_allowed: false
+  preserved_artifacts:
+    - runtime/RUN_STATE.yaml
+    - runtime/STATE_MACHINE.yaml
+    - contracts/L9_ARCHITECTURE_PROFILE.yaml
+    - integrations/REASONING_FOURSOME_BINDING.yaml
+    - references/reasoning-foursome/**
+    - schemas/product-architecture-decision.schema.json
+    - evals/BEHAVIOR_CONFORMANCE.yaml
+future_repair_rule:
+  - Package release version and semantic-owner versions are distinct concerns.
+  - Validation claimed by release evidence should be reproducible from shipped validators whenever deterministic and in-scope.
+  - Add checks to the existing validation owner before creating a parallel validation system.
+  - Hygiene checks must distinguish current executable or normative artifacts from historical and vendored source evidence.
+traceability:
+  VR-001:
+    changed_artifacts:
+      - SKILL.md
+      - runtime/MANIFEST.yaml
+      - scripts/validate_runtime_alignment.py
+    closing_validation:
+      - release_identity_PASS
+      - runtime_compatibility_PASS
+      - unchanged_semantic_owner_versions_preserved
+  VR-002:
+    changed_artifacts:
+      - scripts/validate_runtime_alignment.py
+    closing_validation:
+      - state_action_contract_wiring_PASS
+      - evaluator_registration_PASS
+      - synthetic_unknown_action_is_rejected
+      - synthetic_unregistered_evaluator_is_rejected
+  VR-003:
+    changed_artifacts:
+      - runtime/MANIFEST.yaml
+      - scripts/validate_runtime_alignment.py
+    closing_validation:
+      - manifest_references_PASS
+      - synthetic_missing_semantic_owner_path_is_rejected
+  VR-004:
+    changed_artifacts:
+      - scripts/validate_runtime_alignment.py
+    closing_validation:
+      - product_decision_positive_negative_PASS
+      - schema_meta_validation_PASS
+  VR-005:
+    changed_artifacts:
+      - scripts/validate_runtime_alignment.py
+    closing_validation:
+      - final_state_hygiene_PASS
+      - synthetic_residue_is_rejected
+      - synthetic_unfinished_marker_is_rejected
+validation_evidence:
+  runtime_alignment_validator: PASS
+  product_architecture_decision_positive_fixture: PASS
+  product_architecture_decision_negative_paths: PASS
+  structured_yaml_json_parse: PASS
+  python_syntax_and_required_stub_scan: PASS
+  state_action_contract_reference_integrity: PASS
+  evaluator_registration_integrity: PASS
+  manifest_reference_integrity: PASS
+  final_state_hygiene: PASS
+  adversarial_negative_validator_suite: PASS
+  behavior_eval_count: 61
+  shipped_tree_file_count_prepackage: 43
+  final_archive_reextraction: PASS
+  packaged_tree_byte_identity: PASS
+  packaged_archive_root: l9-global-architect
+  packaged_archive_file_count: 43
+  packaged_archive_residue: NONE

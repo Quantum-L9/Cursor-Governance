@@ -1,6 +1,6 @@
 catalog:
   catalog_id: L9.GAR.REASON_CODES.001
-  version: 0.5.0
+  version: 0.8.1
   artifact_class: reason_code_catalog
   status: experimental
   semantic_owner: catalogs/REASON_CODES.yaml
@@ -16,12 +16,19 @@ reason_codes:
     category: execution
     severity: INFO
     recoverability: recoverable
-    meaning: Outcome accountability and realization policy were successfully derived for the current objective.
+    meaning: Outcome accountability and realization policy were successfully derived for the current
+      objective.
   - code: REALIZATION_MODE_UNRESOLVED
     category: planning
     severity: BLOCKER
     recoverability: recoverable
-    meaning: The explicit user objective cannot yet be deterministically classified into a realization mode without changing obligations.
+    meaning: The explicit user objective cannot yet be deterministically classified into a realization mode
+      without changing obligations.
+  - code: TARGET_BINDING_UNRESOLVED
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The exact requested target, material revision/version, or inspection/correction scope cannot yet be distinguished safely from available evidence.
   - code: MUTATION_AUTHORITY_UNRESOLVED
     category: authority
     severity: BLOCKER
@@ -36,17 +43,21 @@ reason_codes:
     category: runtime
     severity: BLOCKER
     recoverability: recoverable
-    meaning: A proposed terminal block lacks the required typed receipt, supporting evidence, or satisfied type legitimacy predicate.
+    meaning: A proposed terminal block lacks the required typed receipt, supporting evidence, or satisfied
+      type legitimacy predicate.
   - code: FALSE_BLOCKING
     category: convergence
     severity: FATAL
     recoverability: recoverable
-    meaning: A terminal block was claimed while a materially distinct remediation class or discriminating evidence path remained available under current authority and capability.
+    meaning: A terminal block was claimed while a materially distinct remediation class or discriminating
+      evidence path remained available under current authority and capability.
   - code: INTEGRATION_DEGRADED
     category: runtime
     severity: BLOCKER
     recoverability: conditionally_recoverable
-    meaning: A bound integrated runtime with transferred orchestration authority lost a required activation predicate; repair, explicit release, or a valid block is required and silent STANDALONE fallback is illegal.
+    meaning: A bound integrated runtime with transferred orchestration authority lost a required activation
+      predicate; repair, explicit release, or a valid block is required and silent STANDALONE fallback is
+      illegal.
   - code: AUTHORITY_CONFLICT
     category: authority
     severity: BLOCKER
@@ -131,7 +142,8 @@ reason_codes:
     category: architecture
     severity: BLOCKER
     recoverability: recoverable
-    meaning: Structural complexity lacks an evidenced responsibility over a materially simpler credible alternative.
+    meaning: Structural complexity lacks an evidenced responsibility over a materially simpler credible
+      alternative.
   - code: COMPLEXITY_JUSTIFICATION_UNKNOWN
     category: architecture
     severity: BLOCKER
@@ -141,7 +153,8 @@ reason_codes:
     category: architecture
     severity: BLOCKER
     recoverability: recoverable
-    meaning: Authoritative state responsibility mutation authority or lifecycle ownership is ambiguous or duplicated.
+    meaning: Authoritative state responsibility mutation authority or lifecycle ownership is ambiguous or
+      duplicated.
   - code: OWNERSHIP_UNRESOLVED
     category: architecture
     severity: BLOCKER
@@ -151,22 +164,26 @@ reason_codes:
     category: architecture
     severity: BLOCKER
     recoverability: recoverable
-    meaning: The selected architecture violates global coherence required invariants boundaries or failure semantics.
+    meaning: The selected architecture violates global coherence required invariants boundaries or failure
+      semantics.
   - code: REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED
     category: architecture
     severity: BLOCKER
     recoverability: recoverable
-    meaning: A proposed build, fix, or solution was advanced without recorded evidenced answers to the required architecture-direction, L9-constellation-alignment, and first-order questions.
+    meaning: A proposed build, fix, or solution was advanced without recorded evidenced answers to the
+      required architecture-direction, applicable L9-alignment, and intervention-fidelity questions.
   - code: CONSTELLATION_MISALIGNED
     category: architecture
     severity: BLOCKER
     recoverability: recoverable
-    meaning: The proposal creates a parallel owner, second SSOT, adapter-owned shared brain, or otherwise fails verified L9 constellation topology.
+    meaning: The proposal creates a parallel owner, second SSOT, adapter-owned shared brain, or otherwise
+      fails verified L9 constellation topology.
   - code: SCOPE_EXPANSION_UNJUSTIFIED
     category: planning
     severity: BLOCKER
     recoverability: recoverable
-    meaning: Proposed work expands beyond the smallest coherent scope without a forcing requirement or invariant.
+    meaning: Proposed work expands beyond the smallest coherent scope without a forcing requirement or
+      invariant.
   - code: PLAN_NOT_READY
     category: planning
     severity: BLOCKER
@@ -176,7 +193,8 @@ reason_codes:
     category: execution
     severity: BLOCKER
     recoverability: recoverable
-    meaning: A required mutation or artifact realization was intended or proposed but actual artifact state does not establish that it occurred.
+    meaning: A required mutation or artifact realization was intended or proposed but actual artifact state
+      does not establish that it occurred.
   - code: EXTERNAL_DEPENDENCY_BLOCK
     category: execution
     severity: BLOCKER
@@ -206,20 +224,41 @@ reason_codes:
     category: runtime
     severity: BLOCKER
     recoverability: terminal_candidate
-    meaning: Bounded recursive repair repeated the same material defect without new evidence or state change and no current capability can break the deadlock.
+    meaning: Bounded recursive repair repeated the same material defect without new evidence or state change
+      and no current capability can break the deadlock.
+  - code: INTERVENTION_SELECTION_UNBOUND
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: GAR reached a material architecture, plan, harvest, or build boundary without a current
+      First-Order intervention decision bound to sufficient solution-surface evidence.
+  - code: INTERVENTION_RECONSIDERATION_REQUIRED
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: New material evidence can change the selected intervention class; GAR must return the evidence to
+      First-Order and may not silently substitute a new intervention.
+  - code: SIGNAL_PROPAGATION_NOT_PROVEN
+    category: convergence
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A material reasoning episode requires Signal Leverage propagation or write-back proof, but meaning preservation, eligibility, convergence, or semantic-owner acceptance remains missing or unresolved.
 defect_classes:
   - class: EVIDENCE_DEFECT
     meaning: Evidence is missing stale contradictory fabricated or insufficient for a material premise.
   - class: SYSTEM_MODEL_DEFECT
-    meaning: The runtime representation of ownership dependencies state invariants lifecycle or failure behavior is materially wrong.
+    meaning: The runtime representation of ownership dependencies state invariants lifecycle or failure
+      behavior is materially wrong.
   - class: ARCHITECTURE_DEFECT
     meaning: The selected architectural approach is materially wrong despite the available system model.
   - class: PLAN_DEFECT
-    meaning: Architecture may be sound but the executable mutation plan is incomplete excessive unsafe or incoherent.
+    meaning: Architecture may be sound but the executable mutation plan is incomplete excessive unsafe or
+      incoherent.
   - class: IMPLEMENTATION_DEFECT
     meaning: The plan remains valid but the realized mutation does not implement it correctly.
   - class: VALIDATION_DEFECT
-    meaning: Implementation may be correct but available verification does not adequately prove required behavior.
+    meaning: Implementation may be correct but available verification does not adequately prove required
+      behavior.
   - class: AUTHORITY_DEFECT
     meaning: Required progress exceeds current authority.
   - class: CAPABILITY_DEFECT
@@ -228,13 +267,15 @@ taxonomy_invariants:
   - id: RC-001
     rule: Reason codes classify why a condition exists and MUST NOT independently define workflow routing.
   - id: RC-002
-    rule: Defect classes identify the earliest semantic layer believed invalid and runtime/STATE_MACHINE.yaml owns the resulting transition.
+    rule: Defect classes identify the earliest semantic layer believed invalid and runtime/STATE_MACHINE.yaml
+      owns the resulting transition.
   - id: RC-003
     rule: A reason code MUST have one stable meaning per major version.
   - id: RC-004
     rule: Aliasing multiple meanings behind one code is forbidden.
   - id: RC-005
-    rule: New reason codes require evidence that an existing code cannot represent the condition without semantic loss.
+    rule: New reason codes require evidence that an existing code cannot represent the condition without
+      semantic loss.
 anti_drift:
   duplicate_reason_definition_allowed: false
   routing_logic_allowed_here: false
