@@ -24,6 +24,10 @@ Stages are intake, implementation, validation, and convergence. Failure catalogs
 - Generated artifacts follow their authoritative source.
 - External side effects require observed capability plus explicit authority.
 
+## Invocation
+
+Explicit-only. The pack never auto-routes: its implement/repair/refactor description would otherwise capture ordinary coding prompts. Invoke it by name (`/l9-coding-agent`). The tier is owned by `skills/AUTONOMY_MANIFEST.yaml` in the installing repository, not by this pack.
+
 For operating details see [RUNBOOK.md](RUNBOOK.md). For package closure see [MANIFEST.md](MANIFEST.md). For release proof see [VALIDATION.md](VALIDATION.md).
 
 ## v1.3 readiness discipline

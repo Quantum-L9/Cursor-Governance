@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 repository install - 2026-09-28
+
+- Installed into `Quantum-L9/Cursor-Governance` at `skills/l9-coding-agent/` as the `explicit_only` routing tier, beside its sibling `l9-global-architect`.
+- Added `disable-model-invocation: true` to `SKILL.md` frontmatter, which the `explicit_only` tier requires. No other byte of the compiled 1.3.0 pack changed, and no runtime semantics changed.
+- Pack version stays 1.3.0: the install adapts invocation, not behavior.
+
 ## 1.3.0 - 2026-09-27
 
 - Applied the Validate & Repair v1.0 execution kernel recursively to the complete v1.2.0 pack.

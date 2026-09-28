@@ -66,7 +66,7 @@ The GAR sibling contract and L9 runtime binding remain byte-identical to v1.2.0.
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
-- Repository installation/wiring remains outside this request.
+- This release proof covers the pack as compiled. Its installation into `Quantum-L9/Cursor-Governance` is recorded in [CHANGELOG.md](CHANGELOG.md); that install adds exactly one frontmatter line (`disable-model-invocation: true`) and no runtime semantics.
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
 
 ## Verdict
