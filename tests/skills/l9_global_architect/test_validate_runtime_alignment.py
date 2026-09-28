@@ -62,12 +62,27 @@ def _drop_signal_kernel(root: Path) -> None:
     (root / "references" / "reasoning-foursome" / "04_SIGNAL_LEVERAGE_KERNEL.md").unlink()
 
 
+def _restore_stale_propagation_owner(root: Path) -> None:
+    kernel = root / "references" / "reasoning-foursome" / "01_FIRST_ORDER_THINKING_KERNEL.md"
+    text = kernel.read_text(encoding="utf-8")
+    fixed = "propagate through the mesh? -> Signal Leverage\n"
+    assert fixed in text
+    kernel.write_text(
+        text.replace(fixed, "propagate through the mesh? -> Leverage\n"), encoding="utf-8"
+    )
+
+
 @pytest.mark.parametrize(
     ("mutate", "needle"),
     [
         pytest.param(_bump_skill_version, "SKILL.md release version", id="version-mismatch"),
         pytest.param(_drop_profile, "L9_ARCHITECTURE_PROFILE.yaml", id="missing-profile"),
         pytest.param(_drop_signal_kernel, "04_SIGNAL_LEVERAGE_KERNEL.md", id="missing-signal"),
+        pytest.param(
+            _restore_stale_propagation_owner,
+            "propagation hand-off must resolve to Signal Leverage",
+            id="stale-propagation-owner",
+        ),
     ],
 )
 def test_validator_fails_closed_on_mutated_pack(tmp_path: Path, mutate, needle: str) -> None:

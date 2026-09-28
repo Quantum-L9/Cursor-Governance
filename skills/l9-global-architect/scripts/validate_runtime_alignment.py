@@ -372,6 +372,18 @@ def main() -> None:
     ):
         fail("Signal/Gate boundary clause missing")
 
+    # Realized-learning propagation belongs to Signal Leverage, not Leverage, in the
+    # First-Order snapshot's hand-off map (binding: evidence_bearing_propagation).
+    first_order_text = (
+        root / "references/reasoning-foursome/01_FIRST_ORDER_THINKING_KERNEL.md"
+    ).read_text(encoding="utf-8")
+    propagation = re.findall(
+        r"(?m)^- How should realized learning propagate through the mesh\? -> (.+?)\s*$",
+        first_order_text,
+    )
+    if propagation != ["Signal Leverage"]:
+        fail(f"First-Order propagation hand-off must resolve to Signal Leverage, got {propagation}")
+
     # Architecture kernel must retain explicit conditional contract/configuration and security lenses.
     lenses = architect.get("analysis_lenses", {})
     for lens in ("CONTRACT_AND_CONFIGURATION", "SECURITY"):

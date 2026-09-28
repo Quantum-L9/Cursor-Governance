@@ -184,6 +184,6 @@ It does NOT answer:
 - What else will change if we do it? -> Second-Order
 - What else changed because we did it? -> Second-Order
 - How much systemic leverage will that create? -> Leverage
-- How should realized learning propagate through the mesh? -> Leverage
+- How should realized learning propagate through the mesh? -> Signal Leverage
 
 First-Order supplies the intervention. It does not own the future consequence surface or leverage valuation.
