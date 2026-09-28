@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Validate lazy-bootstrap reachability and package classification for L9 Coding Agent."""
+
 from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -31,7 +33,9 @@ def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]).resolve()
     errors: list[str] = []
     manifest_doc = yaml.safe_load((root / "runtime/MANIFEST.yaml").read_text(encoding="utf-8"))
-    bootstrap_doc = yaml.safe_load((root / "runtime/BOOTSTRAP.yaml").read_text(encoding="utf-8"))["bootstrap"]
+    bootstrap_doc = yaml.safe_load((root / "runtime/BOOTSTRAP.yaml").read_text(encoding="utf-8"))[
+        "bootstrap"
+    ]
     skill = (root / "SKILL.md").read_text(encoding="utf-8")
 
     if "runtime/BOOTSTRAP.yaml" not in skill:
@@ -69,9 +73,13 @@ def main() -> int:
 
     eager = set(manifest_doc.get("bootstrap_load", []))
     if eager != {"runtime/BOOTSTRAP.yaml"}:
-        errors.append(f"bootstrap_load must contain only runtime/BOOTSTRAP.yaml, got {sorted(eager)}")
+        errors.append(
+            f"bootstrap_load must contain only runtime/BOOTSTRAP.yaml, got {sorted(eager)}"
+        )
 
-    manifest_runtime = flatten_groups(manifest_doc.get("load_groups", {})) | flatten_groups(manifest_doc.get("conditional_load_groups", {}))
+    manifest_runtime = flatten_groups(manifest_doc.get("load_groups", {})) | flatten_groups(
+        manifest_doc.get("conditional_load_groups", {})
+    )
     declared_routes = routed - {"runtime/BOOTSTRAP.yaml", "runtime/MANIFEST.yaml"}
     if manifest_runtime != declared_routes:
         for rel in sorted(manifest_runtime - declared_routes):
@@ -81,8 +89,13 @@ def main() -> int:
 
     package_only_prefixes = ("references/", "evals/", "agents/")
     package_only_exact = {
-        "README.md", "RUNBOOK.md", "MANIFEST.md", "VALIDATION.md", "CHANGELOG.md",
-        "expertise_model.yaml", "skill_intelligence_report.yaml",
+        "README.md",
+        "RUNBOOK.md",
+        "MANIFEST.md",
+        "VALIDATION.md",
+        "CHANGELOG.md",
+        "expertise_model.yaml",
+        "skill_intelligence_report.yaml",
     }
     first_stage = set(bootstrap_doc.get("stages", {}).get("intake", {}).get("artifacts", []))
     if any(x in package_only_exact or x.startswith(package_only_prefixes) for x in first_stage):
@@ -92,7 +105,9 @@ def main() -> int:
         for error in errors:
             print("FAIL:", error)
         return 1
-    print(f"PASS: lazy bootstrap closes {len(semantic)} semantic owners and classifies {len(actual)} packaged files")
+    print(
+        f"PASS: lazy bootstrap closes {len(semantic)} semantic owners and classifies {len(actual)} packaged files"
+    )
     return 0
 
 

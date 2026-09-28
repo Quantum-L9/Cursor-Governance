@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 """Validate minimum L9 Coding Agent execution-contract structure."""
+
 from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
 
 REQUIRED = {
-    "contract_id", "objective", "target", "in_scope", "out_of_scope",
-    "locked_invariants", "acceptance_criteria", "forbidden_actions",
-    "validation_obligations", "delivery_mode",
+    "contract_id",
+    "objective",
+    "target",
+    "in_scope",
+    "out_of_scope",
+    "locked_invariants",
+    "acceptance_criteria",
+    "forbidden_actions",
+    "validation_obligations",
+    "delivery_mode",
 }
+
 
 def load(path: Path):
     text = path.read_text(encoding="utf-8")
@@ -20,6 +30,7 @@ def load(path: Path):
     except Exception as exc:
         raise SystemExit(f"YAML input requires PyYAML: {exc}")
     return yaml.safe_load(text)
+
 
 def main() -> int:
     if len(sys.argv) != 2:
@@ -52,9 +63,12 @@ def main() -> int:
         return 1
     unknowns = data.get("unresolved_unknowns", [])
     if unknowns:
-        print("WARN: unresolved_unknowns present; runtime must classify materiality before mutation")
+        print(
+            "WARN: unresolved_unknowns present; runtime must classify materiality before mutation"
+        )
     print("PASS: execution contract minimum structure is valid")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
