@@ -1,0 +1,185 @@
+manifest:
+  runtime_id: L9.CODING_AGENT.RUNTIME.001
+  name: l9-coding-agent
+  version: 1.3.0
+  status: active
+  machine_readable_semantics: true
+  human_bootloader: ../SKILL.md
+  bootstrap_router: runtime/BOOTSTRAP.yaml
+  context_policy: lazy_by_stage
+  role: architecture_faithful_code_realization
+  composition_owner: runtime/MANIFEST.yaml
+mission:
+  statement: Realize approved software intent as working code and revision-bound validation evidence without inventing, widening,
+    or silently revising the architecture that governs the task.
+  twin_relation:
+    sibling: l9-global-architect
+    division_of_labor: GAR changes the design; Coding Agent changes the code.
+semantic_owners:
+  runtime_composition:
+    owner: runtime/MANIFEST.yaml
+  lazy_bootstrap_routing:
+    owner: runtime/BOOTSTRAP.yaml
+  run_state_model:
+    owner: runtime/RUN_STATE.yaml
+  state_transitions:
+    owner: runtime/STATE_MACHINE.yaml
+  authority_and_boundaries:
+    owner: contracts/AUTHORITY_AND_BOUNDARIES.yaml
+  execution_contract:
+    owner: contracts/EXECUTION_CONTRACT.yaml
+  implementation_integrity:
+    owner: contracts/IMPLEMENTATION_INTEGRITY.yaml
+  validation_and_evidence:
+    owner: contracts/VALIDATION_AND_EVIDENCE.yaml
+  completion:
+    owner: contracts/CONVERGENCE.yaml
+  coding_judgment:
+    owner: kernels/CODING_KERNEL.yaml
+  reason_taxonomy:
+    owner: catalogs/REASON_CODES.yaml
+  kill_patterns:
+    owner: catalogs/KILL_PATTERNS.yaml
+    normative: false
+  gar_handoff:
+    owner: integrations/GAR_HANDOFF.yaml
+  l9_runtime_binding:
+    owner: integrations/L9_RUNTIME_BINDING.yaml
+  behavioral_conformance:
+    owner: evals/BEHAVIOR_CONFORMANCE.yaml
+    runtime_loaded_by_default: false
+bootstrap_load:
+- runtime/BOOTSTRAP.yaml
+load_groups:
+  intake:
+  - runtime/RUN_STATE.yaml
+  - contracts/AUTHORITY_AND_BOUNDARIES.yaml
+  - contracts/EXECUTION_CONTRACT.yaml
+  implementation:
+  - runtime/STATE_MACHINE.yaml
+  - kernels/CODING_KERNEL.yaml
+  - contracts/IMPLEMENTATION_INTEGRITY.yaml
+  validation:
+  - contracts/VALIDATION_AND_EVIDENCE.yaml
+  convergence:
+  - contracts/CONVERGENCE.yaml
+conditional_load_groups:
+  typed_failure_diagnostics:
+  - catalogs/REASON_CODES.yaml
+  - catalogs/KILL_PATTERNS.yaml
+  gar_interop:
+  - integrations/GAR_HANDOFF.yaml
+  l9_runtime:
+  - integrations/L9_RUNTIME_BINDING.yaml
+  structured_contract_validation:
+  - schemas/execution-contract.schema.json
+  - scripts/validate_execution_contract.py
+  structured_receipt_validation:
+  - schemas/execution-receipt.schema.json
+  package_validation:
+  - README.md
+  - RUNBOOK.md
+  - MANIFEST.md
+  - VALIDATION.md
+  - CHANGELOG.md
+  - expertise_model.yaml
+  - skill_intelligence_report.yaml
+  - evals/BEHAVIOR_CONFORMANCE.yaml
+  - references/smart_exemplary_spec.yaml
+  - scripts/validate_runtime_alignment.py
+  - scripts/validate_lazy_bootstrap.py
+  - agents/openai.yaml
+package_inventory:
+  control_plane:
+  - SKILL.md
+  runtime:
+  - runtime/MANIFEST.yaml
+  - runtime/BOOTSTRAP.yaml
+  - runtime/RUN_STATE.yaml
+  - runtime/STATE_MACHINE.yaml
+  contracts:
+  - contracts/AUTHORITY_AND_BOUNDARIES.yaml
+  - contracts/EXECUTION_CONTRACT.yaml
+  - contracts/IMPLEMENTATION_INTEGRITY.yaml
+  - contracts/VALIDATION_AND_EVIDENCE.yaml
+  - contracts/CONVERGENCE.yaml
+  kernel:
+  - kernels/CODING_KERNEL.yaml
+  catalogs:
+  - catalogs/REASON_CODES.yaml
+  - catalogs/KILL_PATTERNS.yaml
+  integrations:
+  - integrations/GAR_HANDOFF.yaml
+  - integrations/L9_RUNTIME_BINDING.yaml
+  schemas:
+  - schemas/execution-contract.schema.json
+  - schemas/execution-receipt.schema.json
+  evaluation:
+  - evals/BEHAVIOR_CONFORMANCE.yaml
+  validation_scripts:
+  - scripts/validate_execution_contract.py
+  - scripts/validate_runtime_alignment.py
+  - scripts/validate_lazy_bootstrap.py
+  operator_and_release:
+  - README.md
+  - RUNBOOK.md
+  - MANIFEST.md
+  - VALIDATION.md
+  - CHANGELOG.md
+  package_intelligence:
+  - expertise_model.yaml
+  - skill_intelligence_report.yaml
+  - references/smart_exemplary_spec.yaml
+  metadata_and_ui:
+  - agents/openai.yaml
+authority_precedence:
+  ordered_sources:
+  - platform_safety_and_system_constraints
+  - explicit_current_user_instruction
+  - bound_human_or_gar_execution_contract
+  - canonical_owner_contracts_and_locked_invariants
+  - applicable_project_governance
+  - exact_repository_evidence
+  - implementation_plan_and_docs
+  - model_inference
+boot_sequence:
+- LOAD_BOOTSTRAP_ROUTER_ONLY
+- LAZY_LOAD_INTAKE_GROUP
+- INSTANTIATE_RUN_STATE
+- CENSUS_HOST_CAPABILITIES
+- BIND_EXACT_TARGET
+- RESOLVE_AUTHORITY
+- BIND_OR_DERIVE_EXECUTION_CONTRACT
+- ESTABLISH_SEMANTIC_ENVELOPE
+- SELECT_DEPTH
+- CONDITIONALLY_DETECT_GAR_AND_L9_BINDINGS
+- LAZY_LOAD_IMPLEMENTATION_GROUP_BEFORE_MUTATION
+- ENTER_STATE_MACHINE
+composition_invariants:
+- lazy_bootstrap_precedes_stage_hydration
+- no_eager_full_runtime_hydration
+- exact_target_binding_precedes_mutation
+- one_active_execution_contract_at_a_time
+- desired_state_authority_is_distinct_from_current_state_evidence
+- coding_agent_may_choose_implementation_details_only_inside_the_semantic_envelope
+- discoveries_do_not_silently_expand_scope
+- current_repository_evidence_outranks_completion_prose
+- generated_or_compiled_artifacts_do_not_become_independent_source_truth
+- required_validation_must_be_observed_not_assumed
+- changed_target_revision_invalidates_revision_bound_evidence
+- external_side_effects_require_observed_capability_and_explicit_authority
+- architecture_conflict_routes_out_of_coding_agent_instead_of_being_improvised
+- convergence_requires_objective_scope_validation_delivery_and_receipt_closure
+- every_runtime_semantic_owner_is_reachable_from_bootstrap_routing
+- every_packaged_file_is_classified_in_package_inventory
+- inspection_scope_and_modification_scope_are_distinct
+- dependency_aware_target_graph_precedes_material_repair
+- material_changes_trace_to_evidence_backed_findings_and_root_causes
+- whole_target_readiness_requires_complete_authorized_inventory
+- required_unknown_validation_blocks_convergence
+- delivered_state_must_equal_validated_final_state
+- recursive_passes_require_specific_evidence_backed_objectives
+package_validation_refs:
+  runtime_alignment: scripts/validate_runtime_alignment.py
+  lazy_bootstrap_closure: scripts/validate_lazy_bootstrap.py
+  execution_contract: scripts/validate_execution_contract.py

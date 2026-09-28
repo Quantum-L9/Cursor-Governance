@@ -1,0 +1,46 @@
+integration:
+  id: L9.CODING_AGENT.GAR_HANDOFF.001
+  version: 1.0.0
+purpose: Define sibling interoperability without making either skill a hidden subordinate of the other.
+relationship:
+  l9_global_architect:
+    owns:
+      - architecture_judgment
+      - architecture_revision
+      - invariant_and_owner_boundary_resolution
+      - architecture_level_acceptance_when_requested
+  l9_coding_agent:
+    owns:
+      - bounded_implementation_realization
+      - private_implementation_choice_inside_semantic_envelope
+      - repository_mutation_when_authorized
+      - implementation_validation_and_repair
+      - execution_receipts
+handoff_in:
+  accepts:
+    - locked_architecture
+    - dev_pack
+    - execution_contract
+    - exact_target_revision
+    - scope_and_non_goals
+    - acceptance_criteria
+    - forbidden_actions
+  law: supplied_GAR_contract_language_is_preserved_not_rewritten
+handoff_out:
+  to_gar_when:
+    - architecture_revision_required
+    - public_contract_semantics_must_change
+    - semantic_owner_is_ambiguous
+    - invariant_conflict_exists
+    - provider_or_substrate_choice_is_required
+    - scope_expansion_is_required
+  returns:
+    - exact_blocker
+    - current_revision
+    - completed_lawful_changes
+    - validation_evidence
+    - smallest_architecture_question_needed_to_resume
+independence:
+  rule: >-
+    Coding Agent can execute directly from sufficiently authoritative user-provided specifications without GAR being active.
+    GAR presence does not grant external-action authority and Coding Agent presence does not grant architecture authority.

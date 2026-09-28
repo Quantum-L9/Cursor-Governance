@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.coding-agent.execution-contract/v1",
+  "title": "L9 Coding Agent Execution Contract",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "contract_id",
+    "objective",
+    "target",
+    "in_scope",
+    "out_of_scope",
+    "locked_invariants",
+    "acceptance_criteria",
+    "forbidden_actions",
+    "validation_obligations",
+    "delivery_mode"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "repository_or_artifact"
+      ],
+      "properties": {
+        "repository_or_artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branch_or_worktree": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "authority_refs": {
+      "type": "array"
+    },
+    "in_scope": {
+      "type": "array"
+    },
+    "out_of_scope": {
+      "type": "array"
+    },
+    "locked_invariants": {
+      "type": "array"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1
+    },
+    "forbidden_actions": {
+      "type": "array"
+    },
+    "validation_obligations": {
+      "type": "array",
+      "minItems": 1
+    },
+    "delivery_mode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "implementation_discretion": {},
+    "external_action_permissions": {
+      "type": "array"
+    },
+    "unresolved_unknowns": {
+      "type": "array"
+    },
+    "inspection_scope": {
+      "type": "array"
+    },
+    "modification_scope": {
+      "type": "array"
+    },
+    "readiness_claim": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "baseline_expectations": {
+      "type": "array"
+    },
+    "preservation_obligations": {
+      "type": "array"
+    }
+  }
+}
