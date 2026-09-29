@@ -1,5 +1,0 @@
-# APPEND ONLY — do not replace the live file.
-# File: ops/autonomy/surface_profile.yaml
-# Under campaign_execution.campaigns:
-    level3-make-pr-single-path:
-      integration_branch: campaign/level3-make-pr-single-path

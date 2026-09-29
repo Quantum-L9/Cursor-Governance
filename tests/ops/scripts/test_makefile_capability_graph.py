@@ -175,3 +175,103 @@ def test_registered_targets_have_parseable_make_database_entries() -> None:
     assert result.returncode == 0, result.stderr
     for target in targets:
         assert re.search(rf"(?m)^{re.escape(target)}:", result.stdout), target
+
+
+# ---------------------------------------------------------------------------
+# Boundary: the local WIP subsystem was evicted (reports/wip-eviction/).
+# These assertions protect the architectural property, not a lifecycle.
+# ---------------------------------------------------------------------------
+
+_WIP_ENGINE_PATHS = (
+    "ops/scripts/wip_corpus.py",
+    "ops/config/wip-corpus.yaml",
+    "ops/config/wip-inventory.schema.yaml",
+    "ops/config/wip-prune-receipt.schema.yaml",
+    "ops/scripts/tests/test_wip_corpus.py",
+)
+_WIP_MAKE_TARGETS = {"wip-hygiene", "wip-inventory"}
+_FF_CORPUS_KEEP_FILES = (
+    "ops/scripts/lib/ssot_machine_local_keep.sh",
+    "skills/l9-repo-sync/scripts/ff.sh",
+    "skills/l9-repo-sync/scripts/ff_shelf.py",
+)
+_SCANNER_CONFIGS = (
+    ".pre-commit-config.yaml",
+    "pyproject.toml",
+    ".ruffignore",
+    "biome.json",
+    ".biomeignore",
+    ".semgrepignore",
+    ".gitleaks.toml",
+    "sonar-project.properties",
+    ".sonarcloud.properties",
+    ".cursorignore",
+    ".github/codeql/codeql-config.yml",
+    "ops/scripts/resolve_changed_files.sh",
+    "ops/scripts/run_pr_security.sh",
+)
+_WIP_PATH_TOKEN = re.compile(r"(?<![A-Za-z0-9_./-])WIP(?:/|\b)")
+_WIP_CI_TOKEN = re.compile(r"WIP/\*\*|\^WIP/|:!\*\*/WIP")
+_WIP_POLICY_TOKENS = (
+    "make wip-hygiene",
+    "wip_corpus.py",
+    "WIP/INVENTORY.yaml",
+    "WIP/_receipts",
+    "ssot_ff_corpus_skip_rel",
+)
+
+
+def _read(rel: str) -> str:
+    return (ROOT / rel).read_text(encoding="utf-8")
+
+
+def _frontmatter_globs(text: str) -> str:
+    if not text.startswith("---"):
+        return ""
+    end = text.find("\n---", 3)
+    head = text[3:end] if end != -1 else ""
+    match = re.search(r"^globs:\s*(.*)$", head, re.MULTILINE)
+    return match.group(1) if match else ""
+
+
+def test_cursor_governance_has_no_local_wip_subsystem() -> None:
+    tracked = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "--", "WIP"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    assert tracked == "", "WIP/ must not exist as a tracked top-level directory"
+
+    present = [rel for rel in _WIP_ENGINE_PATHS if (ROOT / rel).exists()]
+    assert not present, f"retired WIP engine files reappeared: {present}"
+
+    registered: set[str] = set()
+    for fragment in sorted(MAKE_DIR.glob("*.mk")):
+        registered.update(_assignment_targets(fragment))
+        registered.update(_rule_owners(fragment))
+    registered.update(_assignment_targets(MAKEFILE))
+    assert not (registered & _WIP_MAKE_TARGETS), "WIP Make targets must stay absent"
+
+    for rel in _FF_CORPUS_KEEP_FILES:
+        assert not _WIP_PATH_TOKEN.search(_read(rel)), f"{rel}: /ff must not special-case WIP"
+
+    for rel in _SCANNER_CONFIGS:
+        assert not _WIP_PATH_TOKEN.search(_read(rel)), f"{rel}: WIP scanner exemption reappeared"
+
+    for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        assert not _WIP_CI_TOKEN.search(workflow.read_text(encoding="utf-8")), (
+            f"{workflow.relative_to(ROOT)}: WIP CI paths-ignore reappeared"
+        )
+
+    for rule in sorted((ROOT / "rules").glob("*.mdc")):
+        text = rule.read_text(encoding="utf-8")
+        assert "WIP" not in _frontmatter_globs(text), f"{rule.name}: rule scoped to WIP/"
+        hits = [token for token in _WIP_POLICY_TOKENS if token in text]
+        assert not hits, f"{rule.name} prescribes retired WIP lifecycle: {hits}"
+
+    assert "<!-- WIP_SUBSYSTEM_RETIRED_V1 -->" in _read("AGENTS.md"), (
+        "AGENTS.md must carry the WIP retirement amendment"
+    )
+    assert "| `WIP/` |" not in _read("ARCHITECTURE.md"), "ARCHITECTURE.md lists WIP/ as a surface"
+    assert (ROOT / "reports" / "wip-eviction" / "eviction-receipt.json").is_file()

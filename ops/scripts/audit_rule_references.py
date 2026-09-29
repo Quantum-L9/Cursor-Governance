@@ -17,7 +17,6 @@ SKIP_DIR_NAMES = {
     "__pycache__",
     ".mypy_cache",
     ".ruff_cache",
-    "WIP",
 }
 
 # Historical stems retired or renamed by rules-corpus-cleanup-v1

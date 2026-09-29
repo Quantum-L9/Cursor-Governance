@@ -5,7 +5,7 @@ Not an L4 phase. L4 remains local-commit / no-mid-push / authorize-release,
 and ``authorize-release`` does not require this receipt
 (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). This module is the only
 velocity-path latch for applying tree kernels (Recursive Alignment +
-Validate & Repair). WIP/, docs/plans/, and
+Validate & Repair). docs/plans/ and
 environment/program-execution/campaigns/ are corpus surfaces owned by
 ``/ff`` (Improve then RA then Validate & Repair) — this hook must not
 L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
@@ -69,7 +69,6 @@ KERNELS: tuple[tuple[str, str], ...] = (
 PLAN_FIXTURE_PREFIX = "skills/l9-plan/fixtures/"
 #: Corpus kernels fire on /ff shelf, not at precommit or L4.
 CORPUS_SKIP_PREFIXES = (
-    "WIP/",
     "docs/plans/",
     "environment/program-execution/campaigns/",
 )
@@ -411,7 +410,7 @@ def _agent_required_plan(path: Path) -> str:
         "  Apply kernels/Improve.md, then kernels/Recursive Alignment.md, then\n"
         "  kernels/Validate & Repair.md, overwrite this path, write kernel_pass\n"
         "  (three blocks, ran_at in that order). Then re-run make precommit-repo.\n"
-        "docs/plans, WIP, and campaigns skip this latch (/ff owns them).\n"
+        "docs/plans and campaigns skip this latch (/ff owns them).\n"
         "=== END L9_AGENT_REQUIRED ===\n"
     )
 
@@ -528,7 +527,7 @@ def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
         return 0
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):
-        print("OK: kernel hook skipped (corpus-only changeset; /ff owns WIP/plans/campaigns)")
+        print("OK: kernel hook skipped (corpus-only changeset; /ff owns plans/campaigns)")
         return 0
     tree_fail = verify_tree(root, gov)
     if tree_fail:

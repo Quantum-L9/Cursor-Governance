@@ -55,7 +55,7 @@ READABLE_PREFIXES = (
     "rules/",
     "skills/",
 )
-DENIED_PARTS = {".git", ".venv", "__pycache__", "WIP", "ops/secrets", "ops/vendor"}
+DENIED_PARTS = {".git", ".venv", "__pycache__", "ops/secrets", "ops/vendor"}
 READABLE_SUFFIXES = {".json", ".md", ".mdc", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 
 
@@ -197,8 +197,8 @@ class GovernanceMcpService:
                 "name": "governance_read",
                 "description": (
                     "Read a bounded text range from a governance policy, rule, skill, command, "
-                    "adapter, or Program Execution file. Secret, vendor, Git, virtual-environment, "
-                    "and WIP paths are blocked."
+                    "adapter, or Program Execution file. Secret, vendor, Git, and "
+                    "virtual-environment paths are blocked."
                 ),
                 "inputSchema": {
                     "type": "object",

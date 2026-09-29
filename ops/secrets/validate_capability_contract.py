@@ -105,7 +105,7 @@ LLM_CODE_ROOTS = (
     "ops/secrets",
 )
 
-SKIP_PARTS = frozenset({".git", "node_modules", ".venv", "_archived", "WIP", "generated"})
+SKIP_PARTS = frozenset({".git", "node_modules", ".venv", "_archived", "generated"})
 
 
 @dataclass(frozen=True)

@@ -70,13 +70,13 @@ Only items with a cited exclude or ignore. No invented flakes.
 
 | Where | What | Why (cited) |
 |---|---|---|
-| `.pre-commit-config.yaml` `exclude` | `_archive(d)?/`, `WIP/`, `current_work/`, `C_GOV_FILES/`, `reports/`, root `workflows/` | Scratch / reference trees must not block or be reformatted (comment in that file; keep in sync with `ops/scripts/resolve_changed_files.sh` `SCRATCH_PREFIXES` and `ops/scripts/run_pr_security.sh` `EXCLUDE_PREFIXES`) |
+| `.pre-commit-config.yaml` `exclude` | `_archive(d)?/`, `current_work/`, `C_GOV_FILES/`, `reports/`, root `workflows/` | Scratch / reference trees must not block or be reformatted (comment in that file; keep in sync with `ops/scripts/resolve_changed_files.sh` `SCRATCH_PREFIXES` and `ops/scripts/run_pr_security.sh` `EXCLUDE_PREFIXES`) |
 | `.pre-commit-config.yaml` `check-yaml` `exclude` | `environment/generated/`, `environment/program-execution/core/` | Generated / sealed PE core YAML |
-| `pyproject.toml` `[tool.ruff] exclude` / `force-exclude` | archives, `WIP`, `C_GOV_FILES`, `.cursor-commands`, `.cursor`, `environment/generated/llm-rules`, `ops/generated`, `**/generated` | Same scratch + generated contract; `force-exclude` so pre-commit filename passes honor it |
+| `pyproject.toml` `[tool.ruff] exclude` / `force-exclude` | archives, `C_GOV_FILES`, `.cursor-commands`, `.cursor`, `environment/generated/llm-rules`, `ops/generated`, `**/generated` | Same scratch + generated contract; `force-exclude` so pre-commit filename passes honor it |
 | `pyproject.toml` `[tool.ruff.lint.per-file-ignores]` | `E501` on named skill script globs; `E402` on `subagent-generated-data/**` and `environment/agents/generated-data/**` | Intentional long evidence strings; sys.path bootstrap before imports (comments in `pyproject.toml`) |
-| `pyproject.toml` `[tool.mypy] exclude` and `[tool.pytest.ini_options] norecursedirs` | same scratch trees | Do not type-check or collect WIP / archived / vendored suites |
+| `pyproject.toml` `[tool.mypy] exclude` and `[tool.pytest.ini_options] norecursedirs` | same scratch trees | Do not type-check or collect archived / vendored suites |
 | `.github/workflows/l9-lint-test.yml` `lint` / `mypy` | `continue-on-error: true` | Advisory only; pre-existing mypy debt (`TODO.md`); does not gate merge |
-| Several workflows `paths-ignore: WIP/**` | WIP-only events skip lint/PE/CodeQL | Scratch corpus; mixed PRs still scan non-WIP paths |
+| `.github/workflows/codeql.yml` `pull_request` `paths-ignore` | docs-only PRs (`**/*.md`, `docs/**`, `**/*.mdc`) skip CodeQL | Saves CI on prose-only changes; every other workflow runs on every event |
 | `ops/scripts/sync_generated_artifacts.py` `GENERATED_PATH_PREFIXES` | generated manifests / llm-rules / skill registries | Overlap-gate exempt; merge driver `l9-generated` |
 | `AGENTS.md` §6 | `SEMGREP_APP_TOKEN` / `semgrep login`, `SONAR_TOKEN` | **Not required** for `make pr` |
 

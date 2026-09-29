@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""In-repo scratch hold ledger — park/restore non-WIP paths; never park WIP/.
+"""In-repo scratch hold ledger — park/restore scratch paths inside the workspace.
 
 Vault: <workspace>/.l9/scratch-hold/<hold_id>/
 Manifest: manifest.json with status open|restored.
 
-Sacred WIP (tracked backlog) must never enter the vault — reject park of WIP/**.
 Also imports legacy temp-dir cg-*-hold* / *untracked-hold* trees on restore --all
 when those dirs are owned by the current user.
 """
@@ -38,11 +37,6 @@ def _workspace(path: str | None) -> Path:
 
 def _hold_root(ws: Path) -> Path:
     return ws / ".l9" / "scratch-hold"
-
-
-def _is_wip_path(rel: str) -> bool:
-    norm = rel.replace("\\", "/").lstrip("./")
-    return norm == "WIP" or norm.startswith("WIP/")
 
 
 def _rel_to_ws(ws: Path, target: Path) -> str:
@@ -94,13 +88,6 @@ def cmd_park(ws: Path, paths: list[str]) -> int:
         if not p.is_absolute():
             p = ws / p
         rel = _rel_to_ws(ws, p)
-        if _is_wip_path(rel):
-            print(
-                f"ERROR: refuse to park sacred WIP path: {rel} "
-                "(WIP/ is tracked backlog — never relocate for make pr)",
-                file=sys.stderr,
-            )
-            return 2
         if not p.exists():
             print(f"ERROR: path not found: {p}", file=sys.stderr)
             return 2
@@ -197,25 +184,6 @@ def _mark_imported(candidate: Path) -> None:
         pass
 
 
-def _import_wip_layout(ws: Path, candidate: Path) -> bool:
-    wip_src = candidate / "WIP"
-    if not wip_src.is_dir():
-        return False
-    hold_id = f"legacy_{candidate.name}_{uuid.uuid4().hex[:6]}"
-    hold_dir = _hold_root(ws) / hold_id
-    tree = hold_dir / "tree" / "WIP"
-    tree.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(wip_src, tree, dirs_exist_ok=True)
-    paths = [
-        {"relpath": f"WIP/{child.name}", "held_at": f"tree/WIP/{child.name}"}
-        for child in sorted(tree.iterdir())
-    ]
-    _write_manifest(hold_dir, _new_manifest(hold_id, ws, paths, f"legacy_tmp:{candidate}"))
-    print(f"imported legacy hold: {candidate} -> {hold_id}")
-    _mark_imported(candidate)
-    return True
-
-
 def _collect_legacy_files(candidate: Path) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     for path in sorted(candidate.rglob("*")):
@@ -225,7 +193,7 @@ def _collect_legacy_files(candidate: Path) -> list[dict[str, str]]:
             rel = str(path.relative_to(candidate)).replace("\\", "/")
         except ValueError:
             continue
-        if not rel.startswith(("WIP/", "reports/", "ops/")):
+        if not rel.startswith(("reports/", "ops/")):
             continue
         entries.append({"relpath": rel, "src": str(path)})
     return entries
@@ -270,9 +238,6 @@ def _import_legacy_tmp(ws: Path) -> int:
                 print(f"skip (not owned): {candidate}", file=sys.stderr)
                 continue
             seen.add(candidate)
-            if _import_wip_layout(ws, candidate):
-                imported += 1
-                continue
             if _import_file_entries(ws, candidate, _collect_legacy_files(candidate)):
                 imported += 1
     return imported
@@ -362,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, parents=[parent])
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_park = sub.add_parser("park", help="Park non-WIP paths into the vault", parents=[parent])
+    p_park = sub.add_parser("park", help="Park scratch paths into the vault", parents=[parent])
     p_park.add_argument("paths", nargs="+")
 
     p_restore = sub.add_parser("restore", help="Restore open holds", parents=[parent])

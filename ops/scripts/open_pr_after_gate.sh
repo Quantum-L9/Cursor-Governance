@@ -37,7 +37,7 @@ if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
   export PATH="$GOV_ROOT/.venv/bin:$PATH"
 fi
 
-# Never-lose restore + soft dirty WARN (WIP/reports/.l9 scratch do not force cleanup).
+# Never-lose restore + soft dirty WARN (reports/.l9 scratch do not force cleanup).
 _scratch_hold_cli="$GOV_ROOT/ops/scripts/scratch_hold.py"
 _scratch_hold_restore() {
   if [[ -f "$_scratch_hold_cli" ]]; then
@@ -50,14 +50,14 @@ _scratch_hold_status() {
   fi
 }
 _meaningful_dirty() {
-  # Paths that should still WARN — exclude sacred/scratch prefixes.
+  # Paths that should still WARN — exclude scratch prefixes.
   git status --porcelain | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     path="${line:3}"
     path="${path#\"}"
     path="${path%\"}"
     case "$path" in
-      WIP|WIP/*|reports/*|current_work/*|C_GOV_FILES/*|.l9/*|.l9) ;;
+      reports/*|current_work/*|C_GOV_FILES/*|.l9/*|.l9) ;;
       *) printf '%s\n' "$line" ;;
     esac
   done
@@ -129,7 +129,7 @@ if [[ -n "$meaningful" ]]; then
   echo "WARN: working tree has non-scratch dirty paths — PR will only include committed changes on '$branch'"
   printf '%s\n' "$meaningful"
 elif [[ -n "$(git status --porcelain)" ]]; then
-  echo "OK: dirty tree is only WIP/reports/.l9 scratch — no cleanup needed for make pr"
+  echo "OK: dirty tree is only reports/.l9 scratch — no cleanup needed for make pr"
 fi
 
 # L4 local autonomy — no mid-execution push; require release receipt.

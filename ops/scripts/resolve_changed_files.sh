@@ -4,7 +4,7 @@
 #   explicit files win; else merge-base(base, HEAD) ∪ working-tree (staged/unstaged/untracked).
 # Fail-closed if no comparison ref and the working tree is clean (no false empty set).
 #
-# Scratch / reference trees (WIP/, archives, harvest dumps) are dropped from the
+# Scratch / reference trees (archives, harvest dumps) are dropped from the
 # default change set so they never block make pr or burn CI bandwidth. Explicit
 # path arguments still win unchanged (escape hatch for intentional scans).
 #
@@ -24,7 +24,7 @@ EXPLICIT=()
 # .pre-commit-config.yaml exclude.
 SCRATCH_PREFIXES=(
   _archived/ _archive/ archive/ archived/
-  WIP/ current_work/ C_GOV_FILES/
+  current_work/ C_GOV_FILES/
   .venv/ node_modules/ reports/ workflows/
 )
 
@@ -169,5 +169,5 @@ fi
 RESOLVED="$(printf '%s\n' "$RAW" | filter_scratch || true)"
 printf '%s\n' "$RESOLVED"
 echo "SOURCE:$SOURCE" >&2
-# Empty after scratch exclusions is success: only WIP/archive/etc. changed.
+# Empty after scratch exclusions is success: only archive/scratch trees changed.
 # Callers (pre-commit / security) treat an empty file list as nothing-in-scope.

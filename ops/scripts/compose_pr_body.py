@@ -51,7 +51,7 @@ GOV_PREFIXES = (
     ".github/",
     "environment/",
 )
-DOCS_PREFIXES = ("docs/", "docs/plans/", "WIP/")
+DOCS_PREFIXES = ("docs/", "docs/plans/")
 
 
 @dataclass
@@ -385,7 +385,7 @@ def infer_risk(facts: MechanicalFacts) -> str:
     if facts.deletion_markers:
         return RISK_LABELS[2]
     paths = _changed_paths(facts)
-    if paths and all(path.startswith("docs/") or path.startswith("WIP/") for path in paths):
+    if paths and all(path.startswith("docs/") for path in paths):
         return RISK_LABELS[0]
     return RISK_LABELS[1]
 

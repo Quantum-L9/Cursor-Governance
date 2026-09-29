@@ -83,7 +83,6 @@ EXCLUDED_SEGMENTS = frozenset(
     | {"tests", "_archived"}
 )
 DEFAULT_SKIP_PREFIXES = (
-    "WIP",
     "docs",
     "tests",
     "environment/generated",

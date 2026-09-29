@@ -22,13 +22,13 @@ up to `origin/main` **in place**, in parallel, when they are different
 gitdirs.
 `.venv`, env.local keep-list files (`.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json`), **corpus keep-list files**
-(`TODO.md`, `WIP/`, `docs/plans/`, `environment/program-execution/campaigns/`
+(`TODO.md`, `docs/plans/`, `environment/program-execution/campaigns/`
 — `ssot_is_ff_corpus_keep`), and unique untracked files
 stay. Unique local commits and other dirty tracked paths are parked first.
 Nothing unique is deleted.
 
 `/ff` ends when `ff.sh` prints `OK:` and parked files are back at their
-original paths. Unique WIP/plans stay in the tree. Hold copies stay as
+original paths. Unique plans stay in the tree. Hold copies stay as
 backup. Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
 `verify_worktree_clean.py`. No commit. No push. No PR.
 

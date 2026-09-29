@@ -81,10 +81,10 @@ EXEMPT = [
 NOT_EXEMPT = [
     "make push",
     "make pr",
-    "rm -rf WIP",
-    "mv WIP /tmp/cg-untracked-hold",
+    "rm -rf scratch",
+    "mv scratch /tmp/cg-untracked-hold",
     "echo 'git push origin main'",
-    "git push && rm -rf WIP",
+    "git push && rm -rf scratch",
     "rm -rf build && git status",
     "cat <<'EOF'\ngit push origin main\nEOF",
     "cd /tmp/repo",

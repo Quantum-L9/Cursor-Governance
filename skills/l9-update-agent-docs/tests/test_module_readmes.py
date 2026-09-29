@@ -186,8 +186,6 @@ def test_corpus_and_index_folders_get_type_index_readmes(tmp_path: Path):
     (tmp_path / "skills" / "demo" / "SKILL.md").write_text("# Demo\n", encoding="utf-8")
     (tmp_path / "skills" / "demo" / "references" / "note.md").write_text("# N\n", encoding="utf-8")
     (tmp_path / "skills" / "demo" / "references" / "other.md").write_text("# O\n", encoding="utf-8")
-    (tmp_path / "WIP" / "profiles").mkdir(parents=True)
-    (tmp_path / "WIP" / "profiles" / "x.md").write_text("# X\n", encoding="utf-8")
     (tmp_path / "foundation" / "security").mkdir(parents=True)
     written = set(gm.write_missing_module_readmes(tmp_path))
     assert "protocols/README.md" in written
@@ -208,7 +206,6 @@ def test_corpus_and_index_folders_get_type_index_readmes(tmp_path: Path):
     assert not (tmp_path / "prompts" / "README.md").exists()
     assert "deep/nested/schemas/README.md" not in written
     assert "skills/demo/references/README.md" not in written
-    assert "WIP/profiles/README.md" not in written
     assert "foundation/README.md" not in written
     assert "foundation/security/README.md" not in written
 

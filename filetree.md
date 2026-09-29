@@ -1066,7 +1066,6 @@ ops/
     verify-setup-alignment.sh
     verify_docker.sh
     verify_worktree_clean.py
-    wip_corpus.py
     wire_governance_workspace.sh
     workspace_clean.py
     workspace_wire.py

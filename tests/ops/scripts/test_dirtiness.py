@@ -13,7 +13,7 @@ import dirtiness  # noqa: E402
 
 def test_porcelain_path_decodes_git_octal_em_dash() -> None:
     line = (
-        '?? "WIP/8-29-26/Web SEO LLM Trio/L9 Website Improvement '
+        '?? "docs/plans/Web SEO LLM Trio/L9 Website Improvement '
         r'\342\200\224 Independent Validation Contract Pack.md"'
     )
     decoded = dirtiness.porcelain_path(line)
@@ -23,8 +23,8 @@ def test_porcelain_path_decodes_git_octal_em_dash() -> None:
 
 
 def test_porcelain_path_plain_ascii_unchanged() -> None:
-    line = "?? WIP/plain-file.md"
-    assert dirtiness.porcelain_path(line) == "WIP/plain-file.md"
+    line = "?? docs/plans/plain-file.md"
+    assert dirtiness.porcelain_path(line) == "docs/plans/plain-file.md"
 
 
 def test_porcelain_path_preserves_decoded_trailing_newline() -> None:

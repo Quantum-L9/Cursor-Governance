@@ -256,7 +256,7 @@ def test_bound_harvest_normalizes_into_same_obligations_and_closes(tmp_path: Pat
     write(root / "INVARIANTS.md", "# Invariants\n\nRepo docs receipt is evidence.\n")
     commit(root, "implementation and docs")
     write(
-        root / "WIP/9-3-26/repo-docs/harvest.json",
+        root / "scratch/9-3-26/repo-docs/harvest.json",
         json.dumps(bound_harvest(root, base), indent=2),
     )
     commit(root, "harvest evidence")

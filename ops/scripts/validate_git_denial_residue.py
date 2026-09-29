@@ -14,7 +14,7 @@ sentence that asserts a `git`/`gh` command IS denied, on a surface an agent
 treats as law. Text that marks the claim as retired, or that states the current
 model, is allowed — the point is truthfulness, not banning the words.
 
-Historical evidence (docs/plans, reports, releases, WIP) is out of scope, same as
+Historical evidence (docs/plans, reports, releases) is out of scope, same as
 the sibling gate `validate_legacy_doctrine_residue.py`.
 
 One denial of a git command IS performed, since CANONICAL_LAW §6.2.8 (2026-09-12):
@@ -47,7 +47,7 @@ AUTHORITY_DIRS = (
     "commands",
 )
 
-SKIP_DIR_PARTS = {"_archived", "archived", "reports", "WIP", "__pycache__", ".git"}
+SKIP_DIR_PARTS = {"_archived", "archived", "reports", "__pycache__", ".git"}
 
 SKIP_NAMES = {
     "validate_git_denial_residue.py",

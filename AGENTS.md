@@ -2015,3 +2015,37 @@ push-and-wait cycle. Cursor is unchanged by construction.
   fail-closed gate on every Bash call blocked the whole shell when a settings
   projection from a newer checkout named a hook the governance clone did not
   yet have; INV-1 fail-closed stays reserved for security and publication gates.
+
+<!-- WIP_SUBSYSTEM_RETIRED_V1 -->
+## Local WIP subsystem retired (2026-09-29) — supersedes §15 "WIP corpus on main" and every `WIP/` clause in L9_PIPELINE_AUDIT_V1, L9_SESSION_PIPELINE_AUDIT_V1, FF_SHELF_WIP_PLANS_V1, FF_CORPUS_KERNELS_V1, FF_SHELF_SCRIPT_V1, FF_SHELF_CORPUS_REMAINDER_V1 and the 2026-09-19 kernel-latch note
+
+Those paragraphs stay on disk (additive_only). Do not fold them; do not act
+on their `WIP/` sentences.
+
+- `WIP/` is gone from this repository. The two approved survivors were
+  extracted to `Quantum-L9/l9-wip` (`Quantum Animation/`, `World Model/`)
+  with verified content identity; everything else is intentionally not
+  migrated and is recoverable only from git history at the pre-eviction
+  revision named in `reports/wip-eviction/eviction-receipt.json`. That
+  receipt is evidence, not a lifecycle.
+- The WIP inventory / prune engine (`ops/scripts/wip_corpus.py`, the
+  `ops/config/wip-*` pack, `make wip-hygiene`, `make wip-inventory`,
+  `WIP/INVENTORY.yaml`, `WIP/_receipts/`) and rule
+  `15-work-tracking` are deleted. There is no compatibility shim.
+- `/ff` corpus keep-list is `TODO.md`, `docs/plans/`,
+  `environment/program-execution/campaigns/` (and `reports/repo-index`).
+  `ssot_ff_corpus_skip_rel` is deleted. `/ff` has no WIP knowledge.
+  Generic never-lose behaviour (park, hold, restore, `reset --keep`) is
+  unchanged.
+- "Sacred WIP" shell denials and the `scratch_hold.py` WIP refusal are
+  removed. The generic never-lose scratch denials (public-temp holds,
+  unproven forced cleans) remain.
+- No scanner, linter, pre-commit, CodeQL, sonar, gitleaks or workflow
+  `paths-ignore` exemption names `WIP/`. There is no WIP-only
+  early-success path in CI.
+- Corpus surfaces for the kernel latch and the pipeline audit are plans
+  and PE campaigns only. The pipeline audit does not crawl `l9-wip`;
+  Cursor-Governance does not own or manage `l9-wip`.
+- `TODO.md` remains the agent task queue. Leftover notes go to `TODO.md`
+  or `docs/plans/`, never to a recreated `WIP/`.
+- Guard: `tests/ops/scripts/test_makefile_capability_graph.py::test_cursor_governance_has_no_local_wip_subsystem`.

@@ -11,8 +11,6 @@ L9_TARGETS += \
 	clean \
 	workspace-clean \
 	clean-pyc \
-	wip-hygiene \
-	wip-inventory \
 	ff \
 	ff-clone \
 	ff-ssot
@@ -39,14 +37,6 @@ clean workspace-clean:
 clean-pyc:
 	CLEAN_PYC_MODE="$(CLEAN_PYC_MODE)" \
 		bash "$(CURDIR)/ops/scripts/clean_pyc.sh" "$(WS)"
-wip-hygiene:
-	$(PYTHON) ops/scripts/wip_corpus.py \
-		hygiene \
-		--root "$(CURDIR)"
-wip-inventory:
-	$(PYTHON) ops/scripts/wip_corpus.py \
-		inventory \
-		--root "$(CURDIR)"
 ff:
 	CURSOR_GOVERNANCE_DIR="$(CURDIR)" \
 		bash skills/l9-repo-sync/scripts/ff.sh

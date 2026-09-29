@@ -80,7 +80,6 @@ HEADING_VR_RE = re.compile(r"^##\s+Validate & Repair\s*$", re.MULTILINE)
 # Prefixes exempt from delta coverage check (corpus + generated artifacts).
 # Corpus kernels fire on /ff shelf, not at precommit.
 CORPUS_SKIP_PREFIXES: tuple[str, ...] = (
-    "WIP/",
     "docs/plans/",
     "environment/program-execution/campaigns/",
 )

@@ -35,7 +35,6 @@ paths-ignore:
   - "**/_archive/**"
   - "**/_archived/**"
   - "**/archived/**"
-  - "**/WIP/**"
   - "**/current_work/**"
   - "**/C_GOV_FILES/**"
   - "**/reports/**"

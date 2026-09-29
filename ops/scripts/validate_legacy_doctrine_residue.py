@@ -48,7 +48,7 @@ Surface classes for ratchet 2 (and the doctrine half of ratchet 3):
   unless ``--strict-memory-doctrine`` is passed. The knob only tightens: a
   surface moves from WARN to FAIL when its convergence lands, never back.
 
-HistoricalEvidence (reports, archives, WIP, tests) is out of scope. A mention
+HistoricalEvidence (reports, archives, tests) is out of scope. A mention
 that explicitly marks residue as forbidden / retired / historical / superseded
 is allowed on every class.
 """
@@ -112,7 +112,6 @@ SKIP_DIR_PARTS = {
     "_archived",
     "archived",
     "reports",
-    "WIP",
     "__pycache__",
     ".git",
     "tests",

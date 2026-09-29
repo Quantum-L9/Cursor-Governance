@@ -70,7 +70,6 @@ PRODUCTION_NAMES = frozenset({".mcp.json", ".env", "Makefile"})
 EXCLUDED_PREFIXES: tuple[str, ...] = (
     "tests/",
     "docs/",
-    "WIP/",
     "reports/",
     "learning/",
     "releases/",

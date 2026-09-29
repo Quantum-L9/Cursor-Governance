@@ -253,11 +253,11 @@ def test_changed_plan_without_receipt_is_skipped(stacked_repo: Path, tmp_path: P
 
 def test_corpus_only_skips_tree_latch(stacked_repo: Path, tmp_path: Path) -> None:
     gate = _gate()
-    wip = stacked_repo / "WIP" / "note.md"
-    wip.parent.mkdir(parents=True)
-    wip.write_text("leftover\n", encoding="utf-8")
+    plan = stacked_repo / "docs" / "plans" / "note.plan.md"
+    plan.parent.mkdir(parents=True, exist_ok=True)
+    plan.write_text("leftover\n", encoding="utf-8")
     changed = tmp_path / "changed.txt"
-    changed.write_text("WIP/note.md\n")
+    changed.write_text("docs/plans/note.plan.md\n")
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
 
 
@@ -405,13 +405,17 @@ def test_authorize_release_is_not_gated_by_the_kernel_receipt(
 def test_corpus_only_change_needs_no_kernel_receipt(stacked_repo: Path, tmp_path: Path) -> None:
     """The /ff corpus lifecycle must not require a tree receipt.
 
-    WIP/, docs/plans/ and PE campaigns are owned by /ff (Improve then RA then
+    docs/plans/ and PE campaigns are owned by /ff (Improve then RA then
     Validate & Repair). Requiring a stamp here would break the documented
     corpus publish flow.
     """
     gate = _gate()
     changed = tmp_path / "corpus.txt"
-    changed.write_text("docs/plans/some.plan.md\nWIP/notes.md\n", encoding="utf-8")
+    changed.write_text(
+        "docs/plans/some.plan.md\n"
+        "environment/program-execution/campaigns/c1/CAMPAIGN_SOURCE.yaml\n",
+        encoding="utf-8",
+    )
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
 
 
