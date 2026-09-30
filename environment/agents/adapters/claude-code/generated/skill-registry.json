@@ -1,5 +1,5 @@
 {
-  "generation_id": "1650594d0761062b061de35f84ad4546459568b96f223925d5e1bfd69c64556c",
+  "generation_id": "559a5bb3b8013af116f0a659e7147dcd8691abfb5901d07201109bda800d8399",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1153,7 +1153,7 @@
       "path": "skills/l9-git-work-preserve",
       "reason": "diagnose-first, but the pack acts on branches, worktrees, and stashes \u2014 prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.",
       "skill_md": "skills/l9-git-work-preserve/SKILL.md",
-      "skill_sha256": "5c3169141f45a18f3f6c75de3bea7f07a09fdb62cbfe8f5b5f95f8fe5ecc0b66",
+      "skill_sha256": "035d59ad05e8ec88f510b49644b3e70c50c175118127087fd2f50cd09a647d83",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1335,7 +1335,7 @@
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand multi-surface harvest (plans + PE campaigns) can emit new compiled plans or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "5e518ceddf526070413335e9c492540efa6d0e9880ae4bc1cb0b85968e4ee533",
+      "skill_sha256": "38acf97ec45c8b9f318bfaa8576b12ec367367d9197448dc8a73294c5ef349a2",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1491,7 +1491,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "11083fdbe46b78d338f10ad835360846a6bf39e62c4b15bade80d249b8bb8a85",
+      "skill_sha256": "f9ae8f8a9b24591e1c0d3fe2dc62967c22f4417370a01045c94a9f3d93875cd8",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1615,5 +1615,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "cc8fda273b1937b447a7b0650b470f292e3d8abdceda716fe56ced8cd813d81e",
-  "source_skill_corpus_sha256": "d1d2981ec0cb39269a7dc1b02b88937900817ae63018671e02d4cf850950f8d4"
+  "source_skill_corpus_sha256": "345aad8b85a37d4a06fa2ddee7c5c821f5e104ab9730ac4c93b8a60315cc9827"
 }
