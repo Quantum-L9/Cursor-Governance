@@ -189,7 +189,8 @@ GC="$GLOBAL_COMMANDS"
 
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
-# and the additional_context JSON envelope. Unbuilt-plan list is display-only.
+# and the additional_context JSON envelope. SessionStart does not read, rank,
+# or display plans.
 # Same order as resolve_runtime_reporter: this checkout, then live SSOT.
 resolve_shared_bootstrap() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
@@ -447,8 +448,8 @@ GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
 # Shared interpreter for runtime reporter / hydrate classifier / route locator.
-# SessionStart writes the Cursor bootstrap receipt every run, prints the full
-# hydrate packet, then lists the 5 most recent unbuilt plans (display-only).
+# SessionStart writes the Cursor bootstrap receipt every run and prints the
+# full hydrate packet. It does not read, rank, or display plans.
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
 
@@ -576,28 +577,6 @@ case "$HYDRATE_MD" in
 ${HYDRATE_MD}" ;;
 esac
 
-UNBUILT_MD="### Unbuilt plans
-- skipped"
-if [ "${L9_SESSIONSTART_UNBUILT_PLANS:-1}" != "0" ]; then
-  AUDIT_PLANS="$GC/skills/l9-pipeline-audit/scripts/audit_plans.py"
-  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py" ]; then
-    AUDIT_PLANS="$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py"
-  fi
-  if [ -f "$AUDIT_PLANS" ]; then
-    UNBUILT_MD="$("$AUDIT_PY_BIN" "$AUDIT_PLANS" \
-      --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-      --window-days 0 \
-      --limit 5 \
-      --format session-start \
-      --deadline-seconds 2 \
-      --budget-chars 2000 \
-      2>/dev/null || printf '### Unbuilt plans\n- unavailable')"
-  else
-    UNBUILT_MD="### Unbuilt plans
-- unavailable: audit_plans.py missing"
-  fi
-fi
-
 # Route locator: one receipt identity for this conversation, derived by the
 # Python owner from the sessionStart payload. beforeSubmitPrompt writes that
 # same locator on every prompt; rules/23-l9-skill-routing.mdc consumes it.
@@ -624,7 +603,6 @@ COMBINED="$(cat <<EOF
 ${TWO_CLONE_NOTE}
 ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
-${UNBUILT_MD}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${ROUTE_LOCATOR_MD}

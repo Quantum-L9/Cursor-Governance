@@ -2015,3 +2015,17 @@ push-and-wait cycle. Cursor is unchanged by construction.
   fail-closed gate on every Bash call blocked the whole shell when a settings
   projection from a newer checkout named a hook the governance clone did not
   yet have; INV-1 fail-closed stays reserved for security and publication gates.
+
+<!-- SESSIONSTART_NO_PLAN_LIST_V1 -->
+## SessionStart does not list plans (2026-09-30)
+
+Append-only. This supersedes only the "print `### Unbuilt plans`" sentences
+in `SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk.
+
+- SessionStart does not read, rank, or display plans. No `audit_plans.py`
+  call, no `### Unbuilt plans`, no `### Plan audit`. Harvest stays
+  `/l9-pipeline-audit`. Shelf stays `/l9-audit-plans`.
+- Tip activation (`ops/scripts/governance_activate_fresh.sh`) fetches
+  `origin/main` on the SSOT clone before the tip decision. The fetch updates
+  the tracking ref only. It does not checkout or reset. A failed fetch keeps
+  the `ls-remote` sha.

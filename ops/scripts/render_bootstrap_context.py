@@ -35,7 +35,7 @@ def main() -> int:
         return 0
 
     # additional_context is sectioned markdown (Governance / Runtime / hydrate /
-    # Unbuilt plans / Code-graph / Route locator). Do not split on " | " — wiring
+    # Code-graph / Route locator). Do not split on " | " — wiring
     # headers use pipes as field separators.
     print("context:")
     print(context.rstrip())

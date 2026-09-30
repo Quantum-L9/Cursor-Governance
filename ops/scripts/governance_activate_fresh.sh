@@ -461,6 +461,18 @@ fi
 
 LOCAL_SHA="$(local_head)"
 
+# Refresh origin/main before the tip decision. ls-remote already named the
+# authorized tip; this updates the local tracking ref so rev-parse origin/main
+# matches it without a later manual fetch. Ref-only: no checkout, no reset.
+# A failed fetch keeps the ls-remote sha (offline / unreachable origin).
+if git -C "$CLONE" fetch --quiet origin "$BRANCH" 2>/dev/null; then
+  _fetched="$(git -C "$CLONE" rev-parse "origin/${BRANCH}" 2>/dev/null || echo "")"
+  if [ -n "$_fetched" ]; then
+    REMOTE_SHA="$_fetched"
+  fi
+fi
+unset _fetched
+
 # Tip already good → wiring heal only if needed.
 # C1 tip authority is SHA equality against authorized REMOTE (already validated).
 # Origin URL string may be a fixture insteadOf/file path — heal it when tip matches.

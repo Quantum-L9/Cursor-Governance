@@ -64,8 +64,8 @@ make -C "$GC" start WS="$REPO"
 
 3. Present the **STATE_SYNC** block below from bootstrap context (do not invent checks the bootstrap did not run).
 4. Print the **full** `### memory hydrate` block (all facts + JSON fence). Do not summarize.
-5. Print `### Unbuilt plans` (5 most recent). Display-only.
-6. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
+5. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
+   Do not read, rank, or display plans. Plan harvest stays `/l9-pipeline-audit`.
 
 ---
 
@@ -91,7 +91,6 @@ second check grid. If a section is absent, say so.
 {### Runtime}
 {### Degraded}
 {### memory hydrate — full packet; do not truncate}
-{### Unbuilt plans — 5 most recent}
 
 ### Ready For
 → `/ynp` — next action
@@ -109,6 +108,7 @@ second check grid. If a section is absent, say so.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
 - `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
-- SessionStart prints the 5 most recent unbuilt root plans after hydrate. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- SessionStart does not read, rank, or display plans. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- Tip activation (`governance_activate_fresh.sh`) refreshes `origin/main` on the SSOT clone before the tip decision. That fetch does not checkout or reset.
 
 --- End Command ---
