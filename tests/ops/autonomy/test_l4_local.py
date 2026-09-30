@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 import open_pr_probe  # noqa: E402
 from l4_local import (  # noqa: E402
+    _hoist_workspace_flag,
     authorize_release,
     begin,
     breakglass_path,
@@ -571,6 +572,40 @@ def test_workspace_from_event_uses_workspace_roots_when_cwd_empty(
         "transcript_path": "unused",
     }
     assert workspace_from_event(event) == stacked_repo.resolve()
+
+
+def test_hoist_workspace_flag_accepts_either_position() -> None:
+    """`--workspace` is the checkout path in both positions."""
+    path = "/repo"
+    assert _hoist_workspace_flag(["status", "--workspace", path]) == [
+        "--workspace",
+        path,
+        "status",
+    ]
+    assert _hoist_workspace_flag(["--workspace", path, "status"]) == [
+        "--workspace",
+        path,
+        "status",
+    ]
+    assert _hoist_workspace_flag(
+        [
+            "record-kernels",
+            "--recursive-alignment",
+            "passed",
+            "--workspace",
+            path,
+            "--validate-repair",
+            "passed",
+        ]
+    ) == [
+        "--workspace",
+        path,
+        "record-kernels",
+        "--recursive-alignment",
+        "passed",
+        "--validate-repair",
+        "passed",
+    ]
 
 
 def test_cli_check_remote_exit_codes(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
