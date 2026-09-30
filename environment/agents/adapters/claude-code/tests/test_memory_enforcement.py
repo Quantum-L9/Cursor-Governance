@@ -27,8 +27,38 @@ MEM = CLAUDE_DIR / "memory"
 sys.path.insert(0, str(MEM))
 import memory_state as st  # noqa: E402
 
+# Inherited from a Cursor agent session. Deny cases model a Claude hook
+# process, so these must not leak in and take the Cursor allow path.
+_CURSOR_HOST_MARKERS = (
+    "CURSOR_AGENT",
+    "CURSOR_CONVERSATION_ID",
+    "CURSOR_EXTENSION_HOST_ROLE",
+)
+_CLAUDE_RUNTIME_MARKERS = (
+    "CLAUDECODE",
+    "CLAUDE_CODE_ENTRYPOINT",
+    "CLAUDE_CODE_SESSION_ID",
+    "CLAUDE_CODE_REMOTE",
+)
 
-def run_gate(event: dict, env: dict) -> tuple[str, int]:
+
+def run_gate(
+    event: dict,
+    env: dict,
+    *,
+    claude_runtime: bool = True,
+    cursor_host: bool = False,
+) -> tuple[str, int]:
+    env = {
+        key: value
+        for key, value in env.items()
+        if key not in _CURSOR_HOST_MARKERS and key not in _CLAUDE_RUNTIME_MARKERS
+    }
+    if cursor_host:
+        env["L9_GOVERNANCE_SURFACE"] = "claude-code"
+        env["CURSOR_EXTENSION_HOST_ROLE"] = "agent-exec"
+    elif claude_runtime:
+        env["CLAUDECODE"] = "1"
     proc = subprocess.run(
         [sys.executable, str(GATE)],
         input=json.dumps(event),
@@ -39,6 +69,30 @@ def run_gate(event: dict, env: dict) -> tuple[str, int]:
         check=False,
     )
     return proc.stdout, proc.returncode
+
+
+def _enter_claude_runtime(test: unittest.TestCase) -> None:
+    """Match in-process receipt identity to the subprocess the gate runs in.
+
+    A Cursor parent sets ``CURSOR_AGENT``. The gate allows that host before it
+    looks at receipts, so these cases drop the Cursor markers and pin a Claude
+    runtime for both the writer and the gate.
+    """
+    keys = (*_CURSOR_HOST_MARKERS, *_CLAUDE_RUNTIME_MARKERS)
+    test._saved_surface_env = {key: os.environ.get(key) for key in keys}
+    for key in _CURSOR_HOST_MARKERS:
+        os.environ.pop(key, None)
+    if not any(os.environ.get(key) for key in _CLAUDE_RUNTIME_MARKERS):
+        os.environ["CLAUDECODE"] = "1"
+
+
+def _leave_claude_runtime(test: unittest.TestCase) -> None:
+    saved = getattr(test, "_saved_surface_env", {})
+    for key, value in saved.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
 
 
 def is_deny(stdout: str) -> bool:
@@ -53,6 +107,7 @@ class MemoryGateTests(unittest.TestCase):
     def setUp(self) -> None:
         self.workspace = tempfile.mkdtemp()
         self.session = "test-session-abc"
+        _enter_claude_runtime(self)
         self.env = {**os.environ, "CLAUDE_PROJECT_DIR": self.workspace}
         # Route state into the temp workspace for in-process helpers too, and
         # restore the prior value in tearDown so tests do not leak across files.
@@ -65,6 +120,7 @@ class MemoryGateTests(unittest.TestCase):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
         else:
             os.environ["CLAUDE_PROJECT_DIR"] = self._prev_project_dir
+        _leave_claude_runtime(self)
 
     def _receipt_event(self) -> dict:
         return {"session_id": self.session}
@@ -78,6 +134,40 @@ class MemoryGateTests(unittest.TestCase):
             self._receipt_id(),
             {"namespaces": ["cursor-governance"], "session_id": self.session},
         )
+
+    def test_cursor_host_allows_without_claude_prefetch(self) -> None:
+        """A Cursor process must not wait on the Claude SessionStart prefetch."""
+        out, code = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "skills/x/SKILL.md"},
+                "session_id": self.session,
+            },
+            self.env,
+            cursor_host=True,
+        )
+        self.assertFalse(is_deny(out), out)
+        self.assertEqual(code, 0)
+
+    def test_projected_claude_surface_without_runtime_allows(self) -> None:
+        """L9_GOVERNANCE_SURFACE=claude-code is not a Claude process."""
+        env = {
+            key: value
+            for key, value in self.env.items()
+            if key not in _CURSOR_HOST_MARKERS and key not in _CLAUDE_RUNTIME_MARKERS
+        }
+        env["L9_GOVERNANCE_SURFACE"] = "claude-code"
+        out, code = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "skills/x/SKILL.md"},
+                "session_id": self.session,
+            },
+            env,
+            claude_runtime=False,
+        )
+        self.assertFalse(is_deny(out), out)
+        self.assertEqual(code, 0)
 
     def test_denies_governed_write_without_receipt(self) -> None:
         out, _ = run_gate(
@@ -480,6 +570,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
     def setUp(self) -> None:
         self.workspace = Path(tempfile.mkdtemp()).resolve()
         self.session = "real-uuid"
+        _enter_claude_runtime(self)
         self.env = {**os.environ, "CLAUDE_PROJECT_DIR": str(self.workspace)}
         self._prev = os.environ.get("CLAUDE_PROJECT_DIR")
         os.environ["CLAUDE_PROJECT_DIR"] = str(self.workspace)
@@ -491,6 +582,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         else:
             os.environ["CLAUDE_PROJECT_DIR"] = self._prev
         os.environ.pop("CURSOR_PROJECT_DIR", None)
+        _leave_claude_runtime(self)
 
     def _receipt_id(self) -> str:
         return st.resolve_receipt_id(event={"session_id": self.session})

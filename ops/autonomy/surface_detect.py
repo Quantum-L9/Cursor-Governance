@@ -8,9 +8,11 @@ Return values:
   cursor | claude-code | claude-code-remote | codex | gemini | manus | unknown
 
 Precedence:
-  1. ``CURSOR_AGENT`` overrides a projected Claude explicit surface
+  1. A Cursor host marker overrides a projected Claude explicit surface
      (``L9_GOVERNANCE_SURFACE=claude-code`` from ``.claude/settings.json``
-     loaded inside Cursor). Intentional non-Claude explicit ids still win.
+     loaded inside Cursor). Markers: ``CURSOR_AGENT``,
+     ``CURSOR_CONVERSATION_ID``, ``CURSOR_EXTENSION_HOST_ROLE``.
+     Intentional non-Claude explicit ids still win.
   2. Explicit ``L9_GOVERNANCE_SURFACE`` when it is a known id.
   3. Runtime markers break ties toward the adapter (Claude remote, Claude
      desktop/CLI, then Cursor).
@@ -37,16 +39,33 @@ KNOWN_SURFACES: Final[frozenset[str]] = frozenset(
 
 CLAUDE_GATE_SURFACES: Final[frozenset[str]] = frozenset({"claude-code", "claude-code-remote"})
 
+#: Host markers Cursor sets on an agent process. ``CURSOR_AGENT`` is the
+#: primary one; the other two remain when a hook child inherits the Cursor
+#: process environment but not ``CURSOR_AGENT``. Any one of them means this
+#: process is Cursor, including when a projected ``.claude/settings.json``
+#: has set ``L9_GOVERNANCE_SURFACE=claude-code``.
+CURSOR_HOST_MARKERS: Final[tuple[str, ...]] = (
+    "CURSOR_AGENT",
+    "CURSOR_CONVERSATION_ID",
+    "CURSOR_EXTENSION_HOST_ROLE",
+)
+
 ADAPTER_KERNEL_SURFACES: Final[frozenset[str]] = frozenset(
     {"claude-code", "claude-code-remote", "codex", "gemini", "manus"}
 )
+
+
+def cursor_host_present(env: Mapping[str, str] | None = None) -> bool:
+    """True when ``env`` carries a Cursor host marker."""
+    source = os.environ if env is None else env
+    return any((source.get(key) or "").strip() for key in CURSOR_HOST_MARKERS)
 
 
 def detect_surface(env: Mapping[str, str] | None = None) -> str:
     """Return the surface id for ``env`` (defaults to ``os.environ``)."""
     source = os.environ if env is None else env
     explicit = (source.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
-    if source.get("CURSOR_AGENT") and explicit in CLAUDE_GATE_SURFACES:
+    if cursor_host_present(source) and explicit in CLAUDE_GATE_SURFACES:
         return "cursor"
     if explicit in KNOWN_SURFACES:
         return explicit
@@ -61,10 +80,27 @@ def detect_surface(env: Mapping[str, str] | None = None) -> str:
     ):
         return "claude-code"
 
-    if source.get("CURSOR_AGENT"):
+    if cursor_host_present(source):
         return "cursor"
 
     return "unknown"
+
+
+def claude_runtime_present(env: Mapping[str, str] | None = None) -> bool:
+    """True for a live Claude process, not a projected surface string.
+
+    ``L9_GOVERNANCE_SURFACE=claude-code`` from ``.claude/settings.json`` is not
+    a runtime. Cursor loads that file, so the string alone must not arm a
+    Claude-only gate.
+    """
+    source = os.environ if env is None else env
+    if (source.get("CLAUDE_CODE_REMOTE") or "").strip().lower() == "true":
+        return True
+    return bool(
+        source.get("CLAUDECODE")
+        or source.get("CLAUDE_CODE_ENTRYPOINT")
+        or source.get("CLAUDE_CODE_SESSION_ID")
+    )
 
 
 def is_claude_gate_surface(env: Mapping[str, str] | None = None) -> bool:

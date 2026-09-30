@@ -121,6 +121,21 @@ def _governed_tool_names(contract: dict) -> set[str]:
 
 def main() -> int:
     # Deliberately NO ENFORCEMENT-off escape hatch.
+    # Cursor loads .claude/settings.json, which sets L9_GOVERNANCE_SURFACE to
+    # claude-code and registers this gate. That string is not a Claude process.
+    # Enforce only when a Claude runtime marker is present, and never when this
+    # process is Cursor. Otherwise a Cursor write waits on memory_prefetch.py,
+    # which Cursor SessionStart does not run.
+    try:
+        from surface_detect import claude_runtime_present, cursor_host_present
+    except ImportError:
+        claude_runtime_present = None
+        cursor_host_present = None
+    if cursor_host_present is None or claude_runtime_present is None:
+        return 0
+    if cursor_host_present() or not claude_runtime_present():
+        return 0
+
     try:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):

@@ -29,11 +29,11 @@ tests. Consumers must not maintain private marker lists.
 
 | Precedence | Condition | Result |
 |---:|---|---|
-| 1 | `CURSOR_AGENT` set and explicit `L9_GOVERNANCE_SURFACE` is `claude-code` or `claude-code-remote` | `cursor` |
+| 1 | A Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or `CURSOR_EXTENSION_HOST_ROLE`) is set and explicit `L9_GOVERNANCE_SURFACE` is `claude-code` or `claude-code-remote` | `cursor` |
 | 2 | explicit `L9_GOVERNANCE_SURFACE` is one of `cursor`, `claude-code`, `claude-code-remote`, `codex`, `gemini`, `manus` | explicit id |
 | 3 | `CLAUDE_CODE_REMOTE=true` | `claude-code-remote` |
 | 4 | `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` or `CLAUDE_CODE_SESSION_ID` | `claude-code` |
-| 5 | `CURSOR_AGENT` | `cursor` |
+| 5 | A Cursor host marker (`CURSOR_AGENT`, `CURSOR_CONVERSATION_ID`, or `CURSOR_EXTENSION_HOST_ROLE`) | `cursor` |
 | 6 | nothing matched | `unknown` |
 
 The precedence is intentionally not “explicit always wins.” The projected
@@ -81,12 +81,18 @@ The named gate table is narrower and must remain narrow:
 | Hook | Known non-Claude surface | `unknown` |
 |---|---|---|
 | `local_execution_gate_wrap.py` | skip | run |
-| `memory_gate.py` | skip | run |
+| `memory_gate.py` | skip | skip unless a Claude runtime marker is set |
 | `merge_gate_wrap.py` | run | run |
 | `session_debt_wrap.py` | run | run |
 
-`unknown` therefore fails toward enforcing for gates while failing toward
-non-injection for observers.
+`memory_gate.py` runs only when `claude_runtime_present` is true
+(`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_SESSION_ID`, or
+`CLAUDE_CODE_REMOTE=true`) and no Cursor host marker is set. A projected
+`L9_GOVERNANCE_SURFACE=claude-code` is not a runtime. Cursor loads that
+string from `.claude/settings.json` and does not run `memory_prefetch.py`.
+
+Other `unknown` gates still fail toward enforcing. Observers fail toward
+non-injection.
 
 `L9_SURFACE_GUARD=0` disables this entry guard for diagnostics and preserves the
 pre-guard behavior.
