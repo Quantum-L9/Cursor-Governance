@@ -115,6 +115,8 @@ ACTIVATE_ACTION="degraded"
 ACTIVATE_SHA="unknown"
 ACTIVATE_REMOTE_SHA="unknown"
 ACTIVATE_DETAIL="activator_missing"
+ACTIVATE_AHEAD="unknown"
+ACTIVATE_BEHIND="unknown"
 
 ACTIVATE_BIN="$(resolve_activator || true)"
 if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
@@ -125,9 +127,13 @@ if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
   STATUS_LINE="$(printf '%s\n' "$ACTIVATE_OUT" | grep '^STATUS ' | tail -n 1 || true)"
   if [ -n "$STATUS_LINE" ]; then
     ACTIVATE_ACTION="$(echo "$STATUS_LINE" | sed -n 's/.*action=\([^ ]*\).*/\1/p')"
-    ACTIVATE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_SHA="$(printf '%s\n' "$STATUS_LINE" | awk '{for(i=1;i<=NF;i++) if($i ~ /^sha=/){sub(/^sha=/,"",$i); print $i; exit}}')"
     ACTIVATE_REMOTE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*remote_sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_AHEAD="$(echo "$STATUS_LINE" | sed -n 's/.*ahead=\([^ ]*\).*/\1/p')"
+    ACTIVATE_BEHIND="$(echo "$STATUS_LINE" | sed -n 's/.*behind=\([^ ]*\).*/\1/p')"
     ACTIVATE_DETAIL="$(echo "$STATUS_LINE" | sed -n 's/.*detail=\(.*\)$/\1/p')"
+    [ -n "$ACTIVATE_AHEAD" ] || ACTIVATE_AHEAD="unknown"
+    [ -n "$ACTIVATE_BEHIND" ] || ACTIVATE_BEHIND="unknown"
   else
     ACTIVATE_DETAIL="no_status_line"
   fi
@@ -425,6 +431,10 @@ if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
     REMOTE_MATCH="behind_or_diverged"
   fi
 fi
+CATCH_UP_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
+if [ "$ACTIVATE_AHEAD" != "0" ] || [ "$ACTIVATE_BEHIND" != "0" ]; then
+  CATCH_UP_NOTE="$(printf '%s\n%s' "$CATCH_UP_NOTE" "- catch-up: /ff — not run; SessionStart does not pull this clone")"
+fi
 
 # Orchestrator: hydrate + code-graph as structured fields
 HYDRATE_MD="Graphiti disabled — no resume memory"
@@ -596,6 +606,7 @@ COMBINED="$(cat <<EOF
 - tip: ${GOV_HEAD} action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
 - ssot: ~/.cursor-governance
 - remote: origin/${GOVERNANCE_BRANCH} @ ${REMOTE_HEAD} (${REMOTE_MATCH})
+${CATCH_UP_NOTE}
 - wiring: ${WIRING_CHECK} | .cursor-commands → ${CC_TARGET}
 - self-link: ${SELF_LINK}
 - wire: ${WIRE_NOTE}

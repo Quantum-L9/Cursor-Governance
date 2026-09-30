@@ -2029,3 +2029,18 @@ in `SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk.
   `origin/main` on the SSOT clone before the tip decision. The fetch updates
   the tracking ref only. It does not checkout or reset. A failed fetch keeps
   the `ls-remote` sha.
+
+<!-- SESSIONSTART_SSOT_DIVERGENCE_REPORT_V1 -->
+## SessionStart reports SSOT divergence and does not pull (2026-09-30)
+
+Append-only. This supersedes only the fetch sentence in
+`SESSIONSTART_NO_PLAN_LIST_V1`. That paragraph stays on disk.
+
+- `governance_activate_fresh.sh` does not fetch, pull, reset, or swap an
+  existing SSOT clone. A pull from SessionStart collides with local commits
+  and a dirty tree.
+- The ceremony counts commits ahead and behind versus the `ls-remote` tip.
+  The count uses objects already in the clone, otherwise a GitHub compare
+  that does not update the clone. Unknown stays unknown.
+- The Governance banner prints `ssot divergence: ahead=N behind=M`. When
+  that is not `0`/`0`, it names `/ff` and does not run it.

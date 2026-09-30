@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ACTIVATE="$OPS_DIR/governance_activate_fresh.sh"
 [ -x "$ACTIVATE" ] || chmod +x "$ACTIVATE"
+# Counts come from local objects. Do not call GitHub compare from fixtures.
+export GOVERNANCE_ACTIVATE_SKIP_COMPARE=1
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/gov-activate.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
@@ -77,6 +79,8 @@ OUT="$(
 )"
 ACTION="$(status_field "$OUT" action)"
 [ "$ACTION" = "fresh" ] || [ "$ACTION" = "wire_only" ] || fail "T1 expected fresh/wire_only got $OUT"
+echo "$OUT" | grep -q 'ahead=0' || fail "T1 expected ahead=0 got $OUT"
+echo "$OUT" | grep -q 'behind=0' || fail "T1 expected behind=0 got $OUT"
 pass "at tip → fresh/wire_only"
 
 # ── T2: clean behind → ff ────────────────────────────────────────────────────
@@ -101,11 +105,36 @@ OUT="$(
 )"
 ACTION="$(status_field "$OUT" action)"
 NEW_HEAD="$(git -C "$CLONE1" rev-parse HEAD)"
-[ "$ACTION" = "ff" ] || [ "$ACTION" = "swapped" ] || fail "T2 expected ff/swapped got $OUT"
-[ "$NEW_HEAD" != "$OLD_HEAD" ] || fail "T2 HEAD did not move"
-pass "clean behind → ff or swap advanced tip"
+[ "$ACTION" = "report" ] || [ "$ACTION" = "wire_only" ] || fail "T2 expected report got $OUT"
+[ "$NEW_HEAD" = "$OLD_HEAD" ] || fail "T2 HEAD moved"
+echo "$OUT" | grep -q 'detail=catch_up_available' || fail "T2 missing catch-up option: $OUT"
+# The new tip is not in the clone. The ceremony must not fetch to count it.
+echo "$OUT" | grep -q 'behind=unknown' || fail "T2 fetched or counted without objects: $OUT"
+pass "clean behind → reported, clone not pulled"
+
+# Objects already local: count exactly, still do not move HEAD.
+git -C "$CLONE1" fetch -q origin main
+OUT="$(
+  HOME="$HOME1" \
+  GIT_CONFIG_GLOBAL="$GIT_CONFIG_GLOBAL" \
+  CURSOR_GOVERNANCE_DIR="$CLONE1" \
+  GOVERNANCE_GITHUB_REMOTE="$REMOTE_URL" \
+  GOVERNANCE_GITHUB_BRANCH=main \
+  GOVERNANCE_ACTIVATE_DEADLINE_SECS=30 \
+  GOVERNANCE_ACTIVATE_SKIP_COMPARE=1 \
+  bash "$ACTIVATE" 2>/dev/null | tail -n 1
+)"
+ACTION="$(status_field "$OUT" action)"
+STILL="$(git -C "$CLONE1" rev-parse HEAD)"
+[ "$ACTION" = "report" ] || [ "$ACTION" = "wire_only" ] || fail "T2b expected report got $OUT"
+[ "$STILL" = "$OLD_HEAD" ] || fail "T2b HEAD moved after count"
+echo "$OUT" | grep -q 'ahead=0' || fail "T2b expected ahead=0 got $OUT"
+echo "$OUT" | grep -q 'behind=1' || fail "T2b expected behind=1 got $OUT"
+pass "known tip → ahead/behind reported, clone not pulled"
 
 # ── T9: inherited remote overrides are ignored ───────────────────────────────
+# Test-owned catch-up. The ceremony left CLONE1 behind on purpose.
+git -C "$CLONE1" merge --ff-only -q origin/main
 OUT="$(
   HOME="$HOME1" \
   GIT_CONFIG_GLOBAL="$GIT_CONFIG_GLOBAL" \
@@ -173,12 +202,14 @@ OUT="$(
   bash "$ACTIVATE" 2>/dev/null | tail -n 1
 )"
 ACTION="$(status_field "$OUT" action)"
-# May be ff if dirty detection failed, or swapped
-if [ "$ACTION" = "swapped" ]; then
-  ls -d "$HOME4"/.cursor-governance.bak.* >/dev/null 2>&1 || fail "T4 no bak after swap"
-  pass "dirty behind → swapped with bak"
-elif [ "$ACTION" = "ff" ] || [ "$ACTION" = "fresh" ]; then
-  pass "dirty behind → tip healed (action=$ACTION)"
+# Existing dirty clone is reported. It is not swapped and not fast-forwarded.
+if [ "$ACTION" = "report" ] || [ "$ACTION" = "wire_only" ]; then
+  grep -q 'dirty' "$CLONE4/CANONICAL_LAW.md" || fail "T4 dirty bytes were replaced"
+  ls -d "$HOME4"/.cursor-governance.bak.* >/dev/null 2>&1 && fail "T4 swapped despite report"
+  echo "$OUT" | grep -q 'detail=catch_up_available' || fail "T4 missing catch-up option: $OUT"
+  pass "dirty behind → reported, clone left in place"
+elif [ "$ACTION" = "ff" ] || [ "$ACTION" = "swapped" ]; then
+  fail "T4 pulled an existing clone: $OUT"
 else
   fail "T4 unexpected $OUT"
 fi
@@ -213,15 +244,17 @@ OUT="$(
   bash "$ACTIVATE" 2>/dev/null | tail -n 1
 )"
 ACTION="$(status_field "$OUT" action)"
-[ "$ACTION" = "swapped" ] || fail "T7 expected swapped got $OUT"
-[ -f "$CLONE7/.venv/pyvenv.cfg" ] || fail "T7 .venv not carried"
-[ -f "$CLONE7/.env.local" ] || fail "T7 .env.local not carried"
-[ -f "$CLONE7/.claude/settings.local.json" ] || fail "T7 settings.local.json not carried"
+[ "$ACTION" = "report" ] || [ "$ACTION" = "wire_only" ] || fail "T7 expected report got $OUT"
+[ -f "$CLONE7/.venv/pyvenv.cfg" ] || fail "T7 .venv missing"
+[ -f "$CLONE7/.env.local" ] || fail "T7 .env.local missing"
+[ -f "$CLONE7/.claude/settings.local.json" ] || fail "T7 settings.local.json missing"
 AFTER_ENV="$(sha256sum "$CLONE7/.env.local" | awk '{print $1}')"
 AFTER_SET="$(sha256sum "$CLONE7/.claude/settings.local.json" | awk '{print $1}')"
 [ "$ENV_SUM" = "$AFTER_ENV" ] || fail "T7 .env.local bytes changed"
 [ "$SET_SUM" = "$AFTER_SET" ] || fail "T7 settings.local.json bytes changed"
-pass "swap carries .venv and env.local files"
+ls -d "$HOME7"/.cursor-governance.bak.* >/dev/null 2>&1 && fail "T7 swapped an existing clone"
+grep -q 'dirty-for-swap' "$CLONE7/CANONICAL_LAW.md" || fail "T7 dirty bytes were replaced"
+pass "diverged clone keeps .venv and env.local files"
 
 # ── T5: failed clone leaves live intact ──────────────────────────────────────
 HOME5="$TMP/h5"
