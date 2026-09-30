@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 
@@ -30,15 +32,12 @@ def test_park_missing_path_fails(tmp_path: Path) -> None:
     assert not (tmp_path / ".l9" / "scratch-hold").exists()
 
 
-def test_cli_park_outside_workspace_fails(tmp_path: Path) -> None:
-    outside = tmp_path.parent / f"{tmp_path.name}-outside.txt"
+def test_cli_park_outside_workspace_fails(tmp_path_factory: pytest.TempPathFactory) -> None:
+    workspace = tmp_path_factory.mktemp("ws")
+    outside = tmp_path_factory.mktemp("elsewhere") / "outside.txt"
     outside.write_text("x\n", encoding="utf-8")
-    try:
-        try:
-            rc = sh.main(["--workspace", str(tmp_path), "park", str(outside)])
-        except SystemExit as exc:
-            rc = 2 if exc.code else 0
-        assert rc == 2
-        assert outside.is_file()
-    finally:
-        outside.unlink(missing_ok=True)
+    with pytest.raises(SystemExit) as raised:
+        sh.main(["--workspace", str(workspace), "park", str(outside)])
+    assert "outside workspace" in str(raised.value)
+    assert outside.is_file()
+    assert not (workspace / ".l9" / "scratch-hold").exists()

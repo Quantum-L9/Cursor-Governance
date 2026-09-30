@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.7.0"
+version: "1.8.0"
 description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; --clone / --ssot for one target"
 auto_chain: ynp
 aliases:

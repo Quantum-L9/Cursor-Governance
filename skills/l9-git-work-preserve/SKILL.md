@@ -8,8 +8,8 @@ metadata:
   tags: [l9, git, worktree, stash, diagnose-first, preserve, prune, harvest, hygiene]
   owner: igor_beylin
   status: active
-  version: 1.3.0
-  updated: 2026-08-28
+  version: 1.4.0
+  updated: 2026-09-30
 disable-model-invocation: true
 ---
 

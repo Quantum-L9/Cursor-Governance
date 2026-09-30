@@ -9,8 +9,8 @@ metadata:
   tags: [l9, git, sync, fast-forward, ssot, cursor-governance]
   owner: igor_beylin
   status: active
-  version: 1.7.0
-  updated: 2026-09-14
+  version: 1.8.0
+  updated: 2026-09-30
 ---
 
 # Repo Sync (in-place fast-forward)

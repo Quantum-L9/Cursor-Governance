@@ -3,8 +3,8 @@ l9_schema: 1
 parent: l9-repo-sync
 tags: [sync, execute, fast-forward]
 status: active
-version: 1.7.0
-updated: 2026-09-14
+version: 1.8.0
+updated: 2026-09-30
 /L9_META -->
 
 # Execute (only this)

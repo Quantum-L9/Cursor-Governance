@@ -3,7 +3,7 @@ l9_schema: 1
 parent: l9-pipeline-audit
 tags: [pipeline-audit, surfaces]
 status: active
-version: 1.2.0
+version: 1.3.0
 /L9_META -->
 
 # Pipeline-audit surfaces

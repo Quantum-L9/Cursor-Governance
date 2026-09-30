@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pipeline-audit, plans, campaigns, harvest]
   owner: igor_beylin
   status: active
-  version: 1.3.0
-  updated: 2026-09-14
+  version: 1.4.0
+  updated: 2026-09-30
 ---
 
 # l9-pipeline-audit

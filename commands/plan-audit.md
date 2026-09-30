@@ -1,6 +1,6 @@
 ---
 name: plan-audit
-version: "1.4.0"
+version: "1.5.0"
 description: "Compatibility alias of /l9-pipeline-audit (plans + PE campaigns)"
 auto_chain: null
 ---
