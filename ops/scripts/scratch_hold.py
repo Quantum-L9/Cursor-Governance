@@ -181,7 +181,9 @@ def _mark_imported(candidate: Path) -> None:
     try:
         candidate.rename(candidate.with_name(candidate.name + IMPORTED_SUFFIX))
     except OSError:
-        pass
+        # Best-effort marker: an unrenamed legacy hold is re-imported next time,
+        # which is idempotent, so a failed rename must not abort the restore.
+        return
 
 
 def _collect_legacy_files(candidate: Path) -> list[dict[str, str]]:

@@ -870,6 +870,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
+    bearer_token = ""
     try:
         bearer_token = _load_token(args.auth_token_file)
     except ValueError as exc:
