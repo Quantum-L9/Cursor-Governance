@@ -115,6 +115,8 @@ ACTIVATE_ACTION="degraded"
 ACTIVATE_SHA="unknown"
 ACTIVATE_REMOTE_SHA="unknown"
 ACTIVATE_DETAIL="activator_missing"
+ACTIVATE_AHEAD="unknown"
+ACTIVATE_BEHIND="unknown"
 
 ACTIVATE_BIN="$(resolve_activator || true)"
 if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
@@ -125,9 +127,13 @@ if [ -n "${ACTIVATE_BIN:-}" ] && [ -x "$ACTIVATE_BIN" ]; then
   STATUS_LINE="$(printf '%s\n' "$ACTIVATE_OUT" | grep '^STATUS ' | tail -n 1 || true)"
   if [ -n "$STATUS_LINE" ]; then
     ACTIVATE_ACTION="$(echo "$STATUS_LINE" | sed -n 's/.*action=\([^ ]*\).*/\1/p')"
-    ACTIVATE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_SHA="$(printf '%s\n' "$STATUS_LINE" | awk '{for(i=1;i<=NF;i++) if($i ~ /^sha=/){sub(/^sha=/,"",$i); print $i; exit}}')"
     ACTIVATE_REMOTE_SHA="$(echo "$STATUS_LINE" | sed -n 's/.*remote_sha=\([^ ]*\).*/\1/p')"
+    ACTIVATE_AHEAD="$(echo "$STATUS_LINE" | sed -n 's/.*ahead=\([^ ]*\).*/\1/p')"
+    ACTIVATE_BEHIND="$(echo "$STATUS_LINE" | sed -n 's/.*behind=\([^ ]*\).*/\1/p')"
     ACTIVATE_DETAIL="$(echo "$STATUS_LINE" | sed -n 's/.*detail=\(.*\)$/\1/p')"
+    [ -n "$ACTIVATE_AHEAD" ] || ACTIVATE_AHEAD="unknown"
+    [ -n "$ACTIVATE_BEHIND" ] || ACTIVATE_BEHIND="unknown"
   else
     ACTIVATE_DETAIL="no_status_line"
   fi
@@ -189,7 +195,8 @@ GC="$GLOBAL_COMMANDS"
 
 # Generic hydration (uv, scratch_hold, checkers, capabilities, identity) lives
 # only in the shared bootstrap. Cursor keeps tip activation, wiring, hydrate,
-# and the additional_context JSON envelope. Unbuilt-plan list is display-only.
+# and the additional_context JSON envelope. SessionStart does not read, rank,
+# or display plans.
 # Same order as resolve_runtime_reporter: this checkout, then live SSOT.
 resolve_shared_bootstrap() {
   if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/bootstrap_agent_environment.sh" ]; then
@@ -424,6 +431,7 @@ if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
     REMOTE_MATCH="behind_or_diverged"
   fi
 fi
+DIVERGENCE_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
 
 # Orchestrator: hydrate + code-graph as structured fields
 HYDRATE_MD="Graphiti disabled — no resume memory"
@@ -447,8 +455,8 @@ GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
 # Shared interpreter for runtime reporter / hydrate classifier / route locator.
-# SessionStart writes the Cursor bootstrap receipt every run, prints the full
-# hydrate packet, then lists the 5 most recent unbuilt plans (display-only).
+# SessionStart writes the Cursor bootstrap receipt every run and prints the
+# full hydrate packet. It does not read, rank, or display plans.
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
 
@@ -576,28 +584,6 @@ case "$HYDRATE_MD" in
 ${HYDRATE_MD}" ;;
 esac
 
-UNBUILT_MD="### Unbuilt plans
-- skipped"
-if [ "${L9_SESSIONSTART_UNBUILT_PLANS:-1}" != "0" ]; then
-  AUDIT_PLANS="$GC/skills/l9-pipeline-audit/scripts/audit_plans.py"
-  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py" ]; then
-    AUDIT_PLANS="$CURSOR_PROJECT_DIR/skills/l9-pipeline-audit/scripts/audit_plans.py"
-  fi
-  if [ -f "$AUDIT_PLANS" ]; then
-    UNBUILT_MD="$("$AUDIT_PY_BIN" "$AUDIT_PLANS" \
-      --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
-      --window-days 0 \
-      --limit 5 \
-      --format session-start \
-      --deadline-seconds 2 \
-      --budget-chars 2000 \
-      2>/dev/null || printf '### Unbuilt plans\n- unavailable')"
-  else
-    UNBUILT_MD="### Unbuilt plans
-- unavailable: audit_plans.py missing"
-  fi
-fi
-
 # Route locator: one receipt identity for this conversation, derived by the
 # Python owner from the sessionStart payload. beforeSubmitPrompt writes that
 # same locator on every prompt; rules/23-l9-skill-routing.mdc consumes it.
@@ -617,6 +603,7 @@ COMBINED="$(cat <<EOF
 - tip: ${GOV_HEAD} action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
 - ssot: ~/.cursor-governance
 - remote: origin/${GOVERNANCE_BRANCH} @ ${REMOTE_HEAD} (${REMOTE_MATCH})
+${DIVERGENCE_NOTE}
 - wiring: ${WIRING_CHECK} | .cursor-commands → ${CC_TARGET}
 - self-link: ${SELF_LINK}
 - wire: ${WIRE_NOTE}
@@ -624,7 +611,6 @@ COMBINED="$(cat <<EOF
 ${TWO_CLONE_NOTE}
 ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
-${UNBUILT_MD}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${ROUTE_LOCATOR_MD}

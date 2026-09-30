@@ -2049,3 +2049,43 @@ on their `WIP/` sentences.
 - `TODO.md` remains the agent task queue. Leftover notes go to `TODO.md`
   or `docs/plans/`, never to a recreated `WIP/`.
 - Guard: `tests/ops/scripts/test_makefile_capability_graph.py::test_cursor_governance_has_no_local_wip_subsystem`.
+
+<!-- SESSIONSTART_NO_PLAN_LIST_V1 -->
+## SessionStart does not list plans (2026-09-30)
+
+Append-only. This supersedes only the "print `### Unbuilt plans`" sentences
+in `SESSIONSTART_RECEIPT_HYDRATE_UNBUILT_V1`. That paragraph stays on disk.
+
+- SessionStart does not read, rank, or display plans. No `audit_plans.py`
+  call, no `### Unbuilt plans`, no `### Plan audit`. Harvest stays
+  `/l9-pipeline-audit`. Shelf stays `/l9-audit-plans`.
+- Tip activation (`ops/scripts/governance_activate_fresh.sh`) fetches
+  `origin/main` on the SSOT clone before the tip decision. The fetch updates
+  the tracking ref only. It does not checkout or reset. A failed fetch keeps
+  the `ls-remote` sha.
+
+<!-- SESSIONSTART_SSOT_DIVERGENCE_REPORT_V1 -->
+## SessionStart reports SSOT divergence and does not pull (2026-09-30)
+
+Append-only. This supersedes only the fetch sentence in
+`SESSIONSTART_NO_PLAN_LIST_V1`. That paragraph stays on disk.
+
+- `governance_activate_fresh.sh` does not fetch, pull, reset, or swap an
+  existing SSOT clone. A pull from SessionStart collides with local commits
+  and a dirty tree.
+- The ceremony counts commits ahead and behind versus the `ls-remote` tip.
+  The count uses objects already in the clone, otherwise a GitHub compare
+  that does not update the clone. Unknown stays unknown.
+- The Governance banner prints `ssot divergence: ahead=N behind=M`. When
+  that is not `0`/`0`, it names `/ff` and does not run it.
+
+<!-- SESSIONSTART_NO_FF_V1 -->
+## SessionStart does not name /ff (2026-09-30)
+
+Append-only. This supersedes only the "`/ff`" sentence in
+`SESSIONSTART_SSOT_DIVERGENCE_REPORT_V1`. That paragraph stays on disk.
+
+- `/ff` is not part of the SessionStart ceremony. The banner does not name
+  it, and the ceremony does not offer a catch-up command.
+- Ahead/behind counts stay. `detail=diverged` when the clone is not at the
+  `ls-remote` tip. The clone is still not fetched, pulled, reset, or swapped.
