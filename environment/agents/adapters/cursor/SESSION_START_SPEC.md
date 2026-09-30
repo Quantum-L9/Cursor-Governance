@@ -9,7 +9,7 @@ may rely on. It does not define a second activation path (`AGENTS.md` §2, §20)
 
 | Section | Producer | Promise |
 |---|---|---|
-| `### Governance` | bootstrap hook | tip sha, activation action, commits ahead/behind versus GitHub `main`, wiring PASS/FAIL, backup arming. SessionStart does not fetch, pull, reset, or swap the SSOT clone. Catch-up is `/ff`, not run by this ceremony. |
+| `### Governance` | bootstrap hook | tip sha, activation action, commits ahead/behind versus GitHub `main`, wiring PASS/FAIL, backup arming. SessionStart does not fetch, pull, reset, or swap the SSOT clone, and it does not name a catch-up command. |
 | `### Runtime` | [`ops/scripts/session_start_runtime_report.py`](../../../../ops/scripts/session_start_runtime_report.py) | one line per component: `name: class — summary`; class is `ok`, `n/a`, `degraded`, or `failed`. Writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`) every run. No tunnel or Neo4j rows. |
 | `### Degraded` | same reporter | **only** this-session, this-surface, actionable faults; `- none` on a healthy day |
 | `### memory hydrate` | `compile_session_packet.py` via the memory orchestrator | **full** packet: all facts, continuation, JSON fence (not truncated) |

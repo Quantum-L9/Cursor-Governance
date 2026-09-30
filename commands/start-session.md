@@ -109,6 +109,6 @@ second check grid. If a section is absent, say so.
 - Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
 - `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
 - SessionStart does not read, rank, or display plans. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
-- Tip activation compares the SSOT clone to GitHub `main` and reports commits ahead and behind. It does not fetch, pull, reset, or swap that clone. Catch up with `/ff` when you choose to.
+- Tip activation compares the SSOT clone to GitHub `main` and reports commits ahead and behind. It does not fetch, pull, reset, or swap that clone, and it does not name a catch-up command.
 
 --- End Command ---

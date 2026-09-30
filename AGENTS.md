@@ -2044,3 +2044,14 @@ Append-only. This supersedes only the fetch sentence in
   that does not update the clone. Unknown stays unknown.
 - The Governance banner prints `ssot divergence: ahead=N behind=M`. When
   that is not `0`/`0`, it names `/ff` and does not run it.
+
+<!-- SESSIONSTART_NO_FF_V1 -->
+## SessionStart does not name /ff (2026-09-30)
+
+Append-only. This supersedes only the "`/ff`" sentence in
+`SESSIONSTART_SSOT_DIVERGENCE_REPORT_V1`. That paragraph stays on disk.
+
+- `/ff` is not part of the SessionStart ceremony. The banner does not name
+  it, and the ceremony does not offer a catch-up command.
+- Ahead/behind counts stay. `detail=diverged` when the clone is not at the
+  `ls-remote` tip. The clone is still not fetched, pulled, reset, or swapped.

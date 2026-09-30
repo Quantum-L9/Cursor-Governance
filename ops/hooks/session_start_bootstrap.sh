@@ -431,10 +431,7 @@ if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
     REMOTE_MATCH="behind_or_diverged"
   fi
 fi
-CATCH_UP_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
-if [ "$ACTIVATE_AHEAD" != "0" ] || [ "$ACTIVATE_BEHIND" != "0" ]; then
-  CATCH_UP_NOTE="$(printf '%s\n%s' "$CATCH_UP_NOTE" "- catch-up: /ff — not run; SessionStart does not pull this clone")"
-fi
+DIVERGENCE_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
 
 # Orchestrator: hydrate + code-graph as structured fields
 HYDRATE_MD="Graphiti disabled — no resume memory"
@@ -606,7 +603,7 @@ COMBINED="$(cat <<EOF
 - tip: ${GOV_HEAD} action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
 - ssot: ~/.cursor-governance
 - remote: origin/${GOVERNANCE_BRANCH} @ ${REMOTE_HEAD} (${REMOTE_MATCH})
-${CATCH_UP_NOTE}
+${DIVERGENCE_NOTE}
 - wiring: ${WIRING_CHECK} | .cursor-commands → ${CC_TARGET}
 - self-link: ${SELF_LINK}
 - wire: ${WIRE_NOTE}

@@ -5,7 +5,7 @@
 #   C1 tip authority — compare HEAD to the ls-remote tip; do not move HEAD
 #   C2 tip vs wiring split — Dropbox rewire does not require clone
 #   C3 existing clone is never fetched, pulled, reset, or swapped.
-#      Report commits ahead/behind. Catch-up is /ff, chosen by the caller.
+#      Report commits ahead/behind. Do not name or run a catch-up.
 #   C4 pre-swap backup_to_github when dirty/ahead
 #   C5 staging verify before mv; fail leaves live untouched
 #   C6 bak retention (newest 2; keep extra if unpushed)
@@ -321,8 +321,8 @@ prune_baks() {
 }
 
 do_ff() {
-  # Not called for an existing SSOT. SessionStart reports divergence.
-  # Catch-up is /ff. Kept so the historical SHA-first body stays inspectable.
+  # Not called for an existing SSOT. SessionStart only reports divergence.
+  # Kept so the historical SHA-first body stays inspectable.
   # Clean-tree catch-up only (caller already requires tree_clean + only_behind).
   # SHA-first. Never unshallow. Do not use an ff-only merge — that move is the
   # sessionStart graft source when history is shallow.
@@ -400,7 +400,7 @@ do_swap() {
     return 1
   fi
   # Carry .venv + gitignored env.local files off the bak before prune_baks
-  # can delete it. Same contract as /ff: machine-local keep, never printed.
+  # can delete it. Machine-local keep only (.venv and env files), never printed.
   if [ -n "$bak" ] && [ -d "$bak" ]; then
     ssot_carry_machine_local "$bak" "$CLONE"
   fi
@@ -569,14 +569,14 @@ if [ -n "$LOCAL_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
 fi
 
 # Existing clone is behind or diverged. Do not fetch, pull, reset, or swap.
-# Report the count and leave catch-up to /ff.
+# Report the count. Do not offer a catch-up command.
 if wiring_stale; then
   ACTION="wire_only"
 else
   ACTION="report"
 fi
 heal_wiring
-DETAIL="catch_up_available"
+DETAIL="diverged"
 write_receipt
 emit_status
 exit 0
