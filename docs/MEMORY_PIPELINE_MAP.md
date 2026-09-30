@@ -183,4 +183,4 @@ T3 full-chat ingest remains **forbidden** — redacted excerpts only.
 - `ops/memory/schemas/l9.agent_memory_write.v1.schema.json` (agent-lane write arguments; `ops/memory/AGENT_WRITE_CONTRACT.md`)
 - `ops/memory/schemas/l9.session_handoff.v1.schema.json`, `l9.governance_handoff.v1.schema.json` (post-publish handoffs; `ops/memory/HANDOFF_CONTRACT.md`)
 
-WIP packs under `WIP/World Model/` are design evidence only — not runtime SSOT.
+The World Model design pack (extracted to `Quantum-L9/l9-wip`, `World Model/`) is design evidence only — not runtime SSOT.

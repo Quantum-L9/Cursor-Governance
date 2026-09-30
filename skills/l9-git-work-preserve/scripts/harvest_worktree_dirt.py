@@ -102,7 +102,6 @@ def classify_path(
     *,
     repo: Path,
     baseline: str,
-    include_wip: bool,
     refuse_shared: bool,
 ) -> str:
     if is_skip_noise(rel):
@@ -113,8 +112,6 @@ def classify_path(
         return "refuse_foreign_shared"
     if path_on_baseline(repo, baseline, rel):
         return "already_on_baseline"
-    if rel == "WIP" or rel.startswith("WIP/"):
-        return "unique_wip" if include_wip else "skip_wip"
     if rel.startswith("docs/plans/"):
         return "unique_plans"
     return "unique_product"
@@ -124,7 +121,6 @@ def inspect_worktree(
     wt: Path,
     *,
     baseline: str,
-    include_wip: bool,
     extra_root_resolved: set[str],
 ) -> dict[str, Any]:
     branch = _run(wt, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
@@ -156,7 +152,6 @@ def inspect_worktree(
             rel,
             repo=wt,
             baseline=baseline,
-            include_wip=include_wip,
             refuse_shared=refuse_shared,
         )
         paths.append({"status": status, "path": rel, "class": klass})
@@ -178,7 +173,6 @@ def harvest_plan(
     *,
     baseline: str,
     extra_roots: list[Path],
-    include_wip: bool,
     same_remote_only: bool,
 ) -> dict[str, Any]:
     origin = remote_url(repo)
@@ -193,7 +187,6 @@ def harvest_plan(
             inspect_worktree(
                 wt,
                 baseline=baseline,
-                include_wip=include_wip,
                 extra_root_resolved=extra_resolved,
             )
         )
@@ -218,7 +211,6 @@ def harvest_plan(
         "mode": "harvest",
         "repo": str(repo.resolve()),
         "baseline": baseline,
-        "include_wip": include_wip,
         "worktrees": worktrees,
         "harvestable": harvestable,
         "skipped": skipped,
@@ -247,8 +239,6 @@ def main() -> int:
         default=[],
         help="Directory of sibling worktrees (repeatable)",
     )
-    parser.add_argument("--include-wip", action="store_true", default=True)
-    parser.add_argument("--exclude-wip", action="store_true", help="Do not harvest WIP/")
     parser.add_argument(
         "--allow-other-remotes",
         action="store_true",
@@ -266,7 +256,6 @@ def main() -> int:
         repo,
         baseline=args.baseline,
         extra_roots=extras,
-        include_wip=not args.exclude_wip,
         same_remote_only=not args.allow_other_remotes,
     )
     print(json.dumps(data, indent=2, sort_keys=True))

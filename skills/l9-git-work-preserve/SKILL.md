@@ -74,8 +74,8 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
    how much work is unpushed.
 2a. **Triage (RO)** — `scripts/triage_preserved_refs.py` when `/ff` preserve refs
    have piled up (see `/ff` handoff above).
-3. **Harvest classify (RO)** — when leftover worktree dirt / WIP is in scope:
-   `scripts/harvest_worktree_dirt.py --repo <path> --include-wip --json`.
+3. **Harvest classify (RO)** — when leftover worktree dirt is in scope:
+   `scripts/harvest_worktree_dirt.py --repo <path> --json`.
 4. **Plan** — harvest/extract and/or prune-propose with rollback (reflog SHA in receipt).
 5. **Execute** — harvest or extract first (fresh `origin/main` worktree). Extract leftover refs with `scripts/extract_path_union.py` (path-union through the allowlist; never mixed-branch cherry-pick).
 6. **Publish** — scoped pathspecs, then the governed publish path. Do not prune yet.
@@ -90,7 +90,6 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 - Broad `git add -A` / checkout thrash on dirty shared clone
 - Deleting a worktree that still has unique dirty paths
 - Applying a stale (behind-`main`) worktree dirty tree wholesale
-- Copying `WIP/` through `/tmp`
 - Scooping foreign dirt on a shared primary `main` checkout
 - Mixed-branch cherry-pick of a leftover ref that deletes or overwrites a baseline path
 
@@ -141,5 +140,5 @@ that are not checked out elsewhere, and primes `$HOME/.l9/primed/<dest>`.
 Ambiguous paths block apply. Secrets and machine-local files are never shipped.
 
 `make clean` ships **this** workspace. `harvest` scans **sibling worktrees**
-for misplaced unique dirt (including `WIP/`). `repo_hygiene.py` only deletes
+for misplaced unique dirt. `repo_hygiene.py` only deletes
 landed residue at sessionEnd — it is not harvest.

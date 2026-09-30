@@ -9,7 +9,7 @@ equals an open-PR blob at the same path (casefold for ``docs/plans/built`` vs
 that leftover worktree's HEAD (duplicate dirt dropped; unique committed bytes
 kept).
 
-Receipts land in ``.l9/hygiene/``, not ``WIP/_receipts/``.
+Receipts land in ``.l9/hygiene/``.
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ ZERO_DIGEST = "0" * 64
 RAN_AT_SENTINEL = "1970-01-01T00:00:00Z"
 
 SCHEMA = "l9.git_work_preserve.receipt/v1"
-SKIP_PREFIXES = ("WIP/Legal Defense/",)
 SSOT = Path.home() / ".cursor-governance"
 
 
@@ -104,11 +103,6 @@ def path_key(rel: str) -> str:
     return norm
 
 
-def skip_path(rel: str) -> bool:
-    norm = rel.replace("\\", "/")
-    return any(norm.startswith(prefix) for prefix in SKIP_PREFIXES)
-
-
 def head_has_path(repo: Path, rel: str) -> bool:
     return _run_bytes(repo, "cat-file", "-e", f"HEAD:{rel}").returncode == 0
 
@@ -141,7 +135,7 @@ def build_blob_index(git: repo_hygiene.Git, heads: list[str], baseline: str) -> 
             head = alt
         changed = git.out("diff", "--name-only", "--diff-filter=ACMR", f"{baseline}...{head}")
         for rel in changed.splitlines():
-            if not rel or skip_path(rel):
+            if not rel:
                 continue
             digest = sha256_blob(git.root, head, rel)
             if not digest:
@@ -184,7 +178,7 @@ def classify_worktree(
         if not line:
             continue
         status, rel = porcelain_path(line)
-        if not rel or skip_path(rel):
+        if not rel:
             continue
         hashes = blob_index.get(path_key(rel))
         if not hashes:

@@ -289,9 +289,8 @@ class StdoutMachineContractTests(BootstrapFixture):
         defaults to ``<gov>/docs/plans`` for a consumer workspace, so the
         store is pinned to the workspace through the library's own stamp
         (ops/scripts/lib/cursor_plans_store.sh reads
-        ``~/.cursor/l9-plans-store`` first), the workspace gets its own WIP
-        root, and the snapshot comparison below proves the checkout is
-        untouched.
+        ``~/.cursor/l9-plans-store`` first), and the snapshot comparison
+        below proves the checkout is untouched.
         """
         home = Path(self._tmp.name) / "home"
         home.mkdir()
@@ -304,7 +303,6 @@ class StdoutMachineContractTests(BootstrapFixture):
             "  - id: t1\n    content: done\n    status: completed\n---\n\n# stay\n",
             encoding="utf-8",
         )
-        (self.workspace / "WIP").mkdir()
         (home / ".cursor").mkdir()
         (home / ".cursor" / "l9-plans-store").write_text(f"{plans_store}\n", encoding="utf-8")
         before = tree_state(REPO)
@@ -320,7 +318,7 @@ class StdoutMachineContractTests(BootstrapFixture):
             before,
             after,
             "the Cursor SessionStart hook wrote into the checked-out repository; the "
-            "plan store, WIP root and every reconciler target must resolve to the temp tree",
+            "plan store and every reconciler target must resolve to the temp tree",
         )
         # The plan store the hook wired for this workspace is the temp one.
         wired = self.workspace / ".cursor" / "plans"

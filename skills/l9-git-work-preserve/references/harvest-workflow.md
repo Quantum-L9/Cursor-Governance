@@ -25,7 +25,6 @@ worktrees and the next action is “roll unique value into one branch.”
 python3 scripts/harvest_worktree_dirt.py \
   --repo "$(pwd)" \
   --baseline origin/main \
-  --include-wip \
   --json
 ```
 
@@ -41,7 +40,6 @@ python3 scripts/harvest_worktree_dirt.py \
 | `already_on_baseline` | Path exists at `--baseline` | No |
 | `already_in_open_pr` | Same path on an open PR (optional `gh` pass) | No — leave to that PR |
 | `refuse_foreign_shared` | Dirty primary `main` checkout (rule 49) | No scoop |
-| `unique_wip` | Under `WIP/` and not on baseline | Yes (default `--include-wip`) |
 | `unique_plans` | Untracked `docs/plans/` not on baseline | Yes |
 | `unique_product` | Other unique dirty / untracked | Yes, one theme per PR |
 
@@ -55,8 +53,7 @@ baseline.
 1. Diagnosis receipt from the classifier (unique paths + classes).
 2. Fresh worktree from fetched `origin/main` via
    `ops/scripts/agent_worktree_start.sh`. Do not mutate the dirty shared clone.
-3. Copy or patch **only** `unique_*` pathspecs. Keep WIP in-repo; never route
-   `WIP/` through `/tmp` (sacred-WIP isolation).
+3. Copy or patch **only** `unique_*` pathspecs.
 4. `additive_only` root files: append only. A rewrite needs
    `ALLOW-ROOT-DELETION: <path> — <reason>` in the commit message.
 5. Do not replay stale `AGENTS.md` / `CLAUDE.md` / law hunks that delete later
@@ -101,7 +98,6 @@ spent+clean residue at sessionEnd.
 ## Forbidden
 
 - Scoop the dirty shared primary clone
-- Copy WIP through public temp
 - Apply a stale worktree’s dirty tree as the source of truth
 - Mix unrelated `unique_product` themes into one PR
 - Delete the source worktree after harvest
