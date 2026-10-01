@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Classify plans, WIP, and PE campaigns with the same component verdicts."""
+"""Classify plans and PE campaigns with the same component verdicts."""
 
 from __future__ import annotations
 
@@ -32,7 +32,6 @@ from audit_plans import (  # noqa: E402
 )
 
 SPENT_CAMPAIGN = frozenset({"complete", "completed", "cancelled", "spent", "converged"})
-STALE_WIP = frozenset({"possible-landed", "landed", "pruned"})
 README_QUEUE_RE = re.compile(r"(?m)^\d+\.\s+`([^`]+)`")
 LIVE_QUEUE = (
     "pe_loop_compiled_8-28-26",
@@ -55,7 +54,8 @@ def resolve_gov_root(workspace: Path, explicit: str | None) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
     home_gov = Path.home() / ".cursor-governance"
-    if (workspace / "docs" / "plans").is_dir() and (workspace / "WIP").is_dir():
+    campaigns = workspace / "environment" / "program-execution" / "campaigns"
+    if (workspace / "docs" / "plans").is_dir() and campaigns.is_dir():
         return workspace
     if home_gov.is_dir():
         return home_gov
@@ -73,16 +73,14 @@ def resolve_tracked_plans_dir(workspace: Path) -> Path:
     return resolve_plans_dir(workspace, None)
 
 
-def _archive_lock_target(plans_dir: Path, wip_root: Path, workspace: Path, gov_root: Path) -> Path:
+def _archive_lock_target(plans_dir: Path, workspace: Path, gov_root: Path) -> Path:
     """Lock the clone that archive will write, preferring $GC when falling back."""
     gov = gov_root.resolve()
-    for path in (plans_dir, wip_root):
-        try:
-            path.resolve().relative_to(gov)
-            return gov
-        except ValueError:
-            continue
-    return workspace.resolve()
+    try:
+        plans_dir.resolve().relative_to(gov)
+        return gov
+    except ValueError:
+        return workspace.resolve()
 
 
 def _repo_write_lock_dir(ws: Path) -> Path:
@@ -161,44 +159,6 @@ def scan_plans(plans_dir: Path, workspace: Path, window_days: float) -> list[dic
     return rows
 
 
-def scan_wip(wip_root: Path) -> list[dict[str, Any]]:
-    inventory = _load_yaml(wip_root / "INVENTORY.yaml")
-    entries = inventory.get("entries") or []
-    rows: list[dict[str, Any]] = []
-    for item in entries:
-        if not isinstance(item, dict):
-            continue
-        rel = str(item.get("path") or "")
-        if not rel.startswith("WIP/") or "Legal Defense" in rel:
-            continue
-        status = str(item.get("status") or "active").lower()
-        stale = status in STALE_WIP
-        harvestable = status == "possible-landed"
-        pending = status == "active"
-        flags: list[str] = []
-        if pending or harvestable:
-            flags.append("live_invariant")
-        if stale:
-            flags.append("stale_wiring")
-        if harvestable:
-            flags.append("harvestable")
-        rows.append(
-            {
-                "surface": "wip",
-                "path": str(wip_root.parent / rel)
-                if wip_root.name == "WIP"
-                else str(wip_root / Path(rel).name),
-                "name": Path(rel).name,
-                "rel": rel,
-                "flags": flags,
-                "harvestable": harvestable,
-                "pending": pending,
-                "status": status,
-            }
-        )
-    return rows
-
-
 def scan_campaigns(campaigns_root: Path) -> list[dict[str, Any]]:
     if not campaigns_root.is_dir():
         return []
@@ -259,10 +219,6 @@ def _is_compiled_plan(path: str) -> bool:
 
 
 def _eligible_next(row: dict[str, Any]) -> bool:
-    if row.get("surface") == "wip":
-        if str(row.get("status") or "") == "landed":
-            return False
-        return bool(row.get("harvestable") or row.get("pending"))
     return bool(row.get("pending") or row.get("harvestable"))
 
 
@@ -279,10 +235,6 @@ def _plan_rank_key(row: dict[str, Any], queue: list[str]) -> tuple[int, int]:
         except ValueError:
             queue_i = 10_000
     return (compiled, queue_i)
-
-
-def _wip_rank_key(row: dict[str, Any]) -> tuple[int, str]:
-    return (0 if row.get("harvestable") else 1, str(row.get("name") or ""))
 
 
 def _campaign_rank_key(row: dict[str, Any]) -> tuple[int, str]:
@@ -314,7 +266,7 @@ def _readme_plan_row(plans_dir: Path, name: str) -> dict[str, Any] | None:
 def rank_next(findings: list[dict[str, Any]], plans_dir: Path) -> list[dict[str, Any]]:
     """Family execute order: one slot per surface, then fill. Cap 3."""
     queue = _readme_queue(plans_dir)
-    buckets: dict[str, list[dict[str, Any]]] = {"plans": [], "wip": [], "campaigns": []}
+    buckets: dict[str, list[dict[str, Any]]] = {"plans": [], "campaigns": []}
     for row in findings:
         if not _eligible_next(row):
             continue
@@ -333,7 +285,6 @@ def rank_next(findings: list[dict[str, Any]], plans_dir: Path) -> list[dict[str,
             buckets["plans"].append(extra)
             by_stem[name] = extra
     buckets["plans"].sort(key=lambda row: _plan_rank_key(row, queue))
-    buckets["wip"].sort(key=_wip_rank_key)
     buckets["campaigns"].sort(key=_campaign_rank_key)
 
     ranked: list[dict[str, Any]] = []
@@ -350,52 +301,21 @@ def rank_next(findings: list[dict[str, Any]], plans_dir: Path) -> list[dict[str,
             item["execute"] = "/gmp"
         elif surface == "campaigns":
             item["execute"] = "/gmp"
-        elif surface == "wip":
-            item["execute"] = "harvest or /gmp"
         else:
             item["execute"] = "Build or /gmp"
         ranked.append(item)
         return True
 
-    for surface in ("plans", "wip", "campaigns"):
+    for surface in ("plans", "campaigns"):
         for row in buckets[surface]:
             if _take(row):
                 break
-    for surface in ("plans", "wip", "campaigns"):
+    for surface in ("plans", "campaigns"):
         for row in buckets[surface]:
             if len(ranked) >= 3:
                 return ranked[:3]
             _take(row)
     return ranked[:3]
-
-
-def archive_landed_wip(wip_root: Path, rows: list[dict[str, Any]], cap: int = 8) -> list[str]:
-    """Move inventory-landed WIP only. possible-landed stays for harvest."""
-    moved: list[str] = []
-    if not wip_root.is_dir():
-        return moved
-    dest_root = wip_root / "_archived"
-    for row in rows:
-        if len(moved) >= cap:
-            break
-        if row.get("surface") != "wip" or str(row.get("status") or "") != "landed":
-            continue
-        rel = str(row.get("rel") or "")
-        if not rel.startswith("WIP/") or "Legal Defense" in rel:
-            continue
-        src = wip_root.parent / rel
-        if not src.is_file():
-            continue
-        dest = dest_root / Path(rel).relative_to("WIP")
-        if dest.exists():
-            continue
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            shutil.move(str(src), str(dest))
-            moved.append(f"{src.name} → WIP/_archived/")
-        except OSError:
-            continue
-    return moved
 
 
 def _built_shelf(plans_dir: Path) -> Path:
@@ -500,27 +420,22 @@ def run(
         alt = gov_root / "docs" / "plans"
         if alt.is_dir():
             plans_dir = alt
-    wip_root = workspace / "WIP"
-    if not wip_root.is_dir():
-        wip_root = gov_root / "WIP"
     campaigns_root = workspace / "environment" / "program-execution" / "campaigns"
     if not campaigns_root.is_dir():
         campaigns_root = gov_root / "environment" / "program-execution" / "campaigns"
     findings = [
         *scan_plans(plans_dir, workspace, window_days),
-        *scan_wip(wip_root),
         *scan_campaigns(campaigns_root),
     ]
     archived: list[str] = []
     if archive and _tracked_store(plans_dir, workspace, gov_root):
-        lock_target = _archive_lock_target(plans_dir, wip_root, workspace, gov_root)
+        lock_target = _archive_lock_target(plans_dir, workspace, gov_root)
         lock_dir = _try_hold_write_lock(lock_target)
         if lock_dir is None:
             archived = []
         else:
             try:
                 archived = archive_spent_plans(plans_dir)
-                archived.extend(archive_landed_wip(wip_root, findings))
             finally:
                 _release_write_lock(lock_dir)
     next_three = rank_next(findings, plans_dir)
@@ -537,7 +452,6 @@ def run(
         "archived": archived,
         "counts": {
             "plans": sum(1 for row in findings if row["surface"] == "plans"),
-            "wip": sum(1 for row in findings if row["surface"] == "wip"),
             "campaigns": sum(1 for row in findings if row["surface"] == "campaigns"),
             "pending": len(pending),
             "harvestable": len(harvestable),
@@ -552,7 +466,7 @@ def format_session_start(payload: dict[str, Any], budget: int) -> str:
     ok = "tracked docs/plans" if payload.get("plans_store_ok") else "UNTRACKED store"
     lines = [
         f"- store: {ok}; `{Path(store).as_posix()}`",
-        f"- pending: plans={counts.get('plans', 0)} wip={counts.get('wip', 0)} "
+        f"- pending: plans={counts.get('plans', 0)} "
         f"campaigns={counts.get('campaigns', 0)} "
         f"harvestable={counts.get('harvestable', 0)}",
     ]
@@ -577,7 +491,7 @@ def format_markdown(payload: dict[str, Any]) -> str:
     counts = payload.get("counts") or {}
     lines = [
         f"- pipeline audit: plans={counts.get('plans', 0)} "
-        f"wip={counts.get('wip', 0)} campaigns={counts.get('campaigns', 0)} "
+        f"campaigns={counts.get('campaigns', 0)} "
         f"harvestable={counts.get('harvestable', 0)}"
     ]
     harvestable = payload.get("harvestable") or []

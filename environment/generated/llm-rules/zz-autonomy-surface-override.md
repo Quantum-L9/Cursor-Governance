@@ -77,11 +77,11 @@ AND `L9_AUTONOMY_ENABLED=true`:
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.
 
-## Scratch hold / sacred WIP (never-lose)
+## Scratch hold (never-lose)
 
-- Never park `WIP/**` under `/tmp` or `.l9/scratch-hold/` to clean `make pr`.
-- Shell gate denies WIP→/tmp moves, `rm -rf WIP`, `/tmp/cg-*-hold*` creation.
-- Non-WIP park/restore: `ops/scripts/scratch_hold.py` (vault `.l9/scratch-hold/`).
+- Never park scratch under `/tmp` to clean `make pr`.
+- Shell gate denies `/tmp/cg-*-hold*` creation and unproven forced cleans.
+- Park/restore: `ops/scripts/scratch_hold.py` (vault `.l9/scratch-hold/`).
 - `make pr` / sessionStart restore-all; open holds fail-closed via `status`.
 
 <!-- generated-from: ops/autonomy/surface_profile.yaml; do-not-edit -->

@@ -41,7 +41,6 @@ POPULATION_PREFIXES = (
 
 SKIP_PARTS = {
     "_archived",
-    "WIP",
     "__pycache__",
     "generated",
     ".git",

@@ -48,11 +48,11 @@ WORKTREE_DIRT_GLOB = "refs/l9/preserved/worktree-dirt/*"
 MAX_NOVEL_PATHS = 200
 DEFAULT_QUIET_SECONDS = 120
 DEFAULT_BASELINE = "origin/main"
-SECRET_PREFIXES = ("WIP/Legal Defense/",)
+# Credential-shaped names are never shelved, wherever they sit in the tree.
 SECRET_GLOBS = (
-    "WIP/*oauth*.json",
-    "WIP/*credentials*.json",
-    "WIP/*client_secret*.json",
+    "*oauth*.json",
+    "*credentials*.json",
+    "*client_secret*.json",
 )
 LEAVE_CLASSES = frozenset({"skip_noise", "wiring_noise", "secret"})
 LANDED_CLASSES = frozenset({"already_on_baseline", "already_on_open_pr", "generated"})
@@ -86,8 +86,6 @@ def _sha256_file(path: Path) -> str | None:
 
 def is_secret_path(rel: str) -> bool:
     norm = rel.replace("\\", "/")
-    if any(norm == p.rstrip("/") or norm.startswith(p) for p in SECRET_PREFIXES):
-        return True
     return any(fnmatch.fnmatch(norm, pat) for pat in SECRET_GLOBS)
 
 

@@ -149,10 +149,9 @@ if [ -n "$_SSOT_KEEP_LIB" ]; then
   # shellcheck source=../../../ops/scripts/lib/ssot_machine_local_keep.sh
   . "$_SSOT_KEEP_LIB"
 else
-  ssot_ff_corpus_skip_rel() { return 1; }
   ssot_is_ff_corpus_keep() {
     case "${1#./}" in
-      TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index) return 0 ;;
+      TODO.md|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index) return 0 ;;
     esac
     return 1
   }
@@ -198,7 +197,7 @@ unset _keep_rel _keep_f
 UNTRACKED_BEFORE="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"
 
 echo "ff: clone=$CLONE branch=$BRANCH_BEFORE push=0 hard_reset=0 stash_u=0"
-echo "ff: keeping .venv, env.local, corpus (TODO.md WIP/ docs/plans/ PE campaigns), and untracked; other dirty tracked get preserve refs"
+echo "ff: keeping .venv, env.local, corpus (TODO.md docs/plans/ PE campaigns), and untracked; other dirty tracked get preserve refs"
 
 # A bare `fetch origin main` can leave origin/main stale (FETCH_HEAD only)
 # on some CI git/refspec layouts; then behind=0 and colliding untracked

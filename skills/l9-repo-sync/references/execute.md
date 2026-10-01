@@ -3,8 +3,8 @@ l9_schema: 1
 parent: l9-repo-sync
 tags: [sync, execute, fast-forward]
 status: active
-version: 1.7.0
-updated: 2026-09-14
+version: 1.8.0
+updated: 2026-09-30
 /L9_META -->
 
 # Execute (only this)
@@ -14,9 +14,9 @@ updated: 2026-09-14
 and `/ff --ssot` are one target each (other repos). Unique work is parked
 first. Nothing unique is deleted. Keep-list: `.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json`. **Corpus keep-list** (worktree
-bytes survive catch-up): `TODO.md`, `WIP/`, `docs/plans/`,
+bytes survive catch-up): `TODO.md`, `docs/plans/`,
 `environment/program-execution/campaigns/` (`ssot_is_ff_corpus_keep`).
-Never `git stash push` corpus. Leave unique WIP/plans in the tree.
+Never `git stash push` corpus. Leave unique plans in the tree.
 Do not run `ff_shelf.py`. Do not run `run_ff_post_shelf.sh`.
 
 The only mutate path is the wrapper:
@@ -74,7 +74,7 @@ branch, parked files back at their original paths, `.venv` still at
 `<clone>/.venv` when it existed before, env.local keep-list still present,
 unique untracked still present or held, no new `~/.cursor-governance.bak.*`.
 
-`/ff` is finished. Unique WIP/plans stay in the tree. Hold copies stay as
+`/ff` is finished. Unique plans stay in the tree. Hold copies stay as
 backup. Do not run `ff_shelf.py`. Do not run `run_ff_post_shelf.sh`.
 Do not run `verify_worktree_clean.py`. No commit. No push. No PR.
 

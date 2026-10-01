@@ -27,7 +27,7 @@ First-match adapter for this repository. PlasticOS / Odoo inventory steps do **n
 Skip Odoo / PlasticOS module inventory. Optional bind (do not invent packages):
 
 - Top-level dirs: `ls` the repo root.
-- Workflow count: files under `.github/workflows/` (not `WIP/**`).
+- Workflow count: files under `.github/workflows/`.
 - Hook count: hooks in `.pre-commit-config.yaml`.
 
 ## Step 7 for this repo

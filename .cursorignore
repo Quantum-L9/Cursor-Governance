@@ -2,6 +2,3 @@
 # JSON and Markdown are regenerated from rules/*.mdc; keep them out of agent context.
 rules/RULES-MANIFEST.json
 rules/RULES-MANIFEST.md
-
-# Private case files — never in agent context.
-WIP/Legal Defense/

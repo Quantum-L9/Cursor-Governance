@@ -679,11 +679,6 @@ class TestGateWiring:
         reason = command_violates_worktree_isolation(f"{GIT} clean -fd", root=stacked_repo)
         assert reason is not None and "notes-uncommitted.txt" in reason
 
-    def test_wip_stays_absolutely_protected(self, stacked_repo: Path) -> None:
-        """Sacred WIP is not delegated — it is denied whatever the guardrail says."""
-        reason = command_violates_worktree_isolation(f"{GIT} clean -fd WIP/", root=stacked_repo)
-        assert reason is not None and "WIP" in reason
-
 
 def test_carved_out_paths_are_never_classified_generated() -> None:
     """A hand-authored SSOT must not read as disposable, whatever the prefixes say."""

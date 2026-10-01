@@ -1,4 +1,0 @@
-# APPEND ONLY — do not replace the live file.
-# File: environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml
-# Under campaign_ids:
-  - level3-make-pr-single-path

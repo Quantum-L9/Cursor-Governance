@@ -3,8 +3,8 @@
 
 Absent or stale packets do not fail Converge and do not hold merge. Same-head
 ``mutation_eligible`` work units do: they enter remediation first and set
-``hold_merge``. Generators (``_emit*.py``) are never loaded. Legal Defense and
-secret globs are skipped.
+``hold_merge``. Generators (``_emit*.py``) are never loaded. Secret-shaped
+paths are skipped.
 """
 
 from __future__ import annotations
@@ -18,18 +18,10 @@ from typing import Any
 SCHEMA_PREFIX = "l9.pr-audit.remediation-handoff"
 BIND_SCHEMA = "l9.pr-audit.bind.v1"
 HANDOFF_NAME = "remediation-handoff.json"
-SKIP_PARTS = frozenset({"Legal Defense", "legal-defense"})
 SECRET_GLOBS = ("*secret*", "*credential*", "*.pem", "*.key")
 
 
 def _is_skipped(path: Path, root: Path) -> bool:
-    try:
-        rel = path.resolve().relative_to(root.resolve()).as_posix()
-    except ValueError:
-        rel = path.as_posix()
-    parts = set(rel.split("/"))
-    if parts & SKIP_PARTS:
-        return True
     name = path.name.lower()
     return any(
         name.endswith(suffix.removeprefix("*")) if suffix.startswith("*.") else False
@@ -40,7 +32,7 @@ def _is_skipped(path: Path, root: Path) -> bool:
 
 def discover_handoffs(root: Path) -> list[Path]:
     found: list[Path] = []
-    for base in (root / "WIP", root / ".l9" / "pr"):
+    for base in (root / ".l9" / "pr",):
         if not base.is_dir():
             continue
         for path in base.rglob(HANDOFF_NAME):

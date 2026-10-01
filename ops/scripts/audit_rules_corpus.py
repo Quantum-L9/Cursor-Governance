@@ -27,7 +27,7 @@ ENFORCER_SET: tuple[str, ...] = (
     "ops/scripts/validate_rules_manifest.py",
 )
 
-SKIP_PARTS = {"_archived", "WIP", "__pycache__", "node_modules", ".git"}
+SKIP_PARTS = {"_archived", "__pycache__", "node_modules", ".git"}
 
 SCHEMA = "l9.rules-corpus-audit/v2"
 

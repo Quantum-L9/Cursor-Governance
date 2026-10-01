@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-Owns ``TODO.md``, ``WIP/``, ``docs/plans/``, and
+Owns ``TODO.md``, ``docs/plans/``, and
 ``environment/program-execution/campaigns/``. Writes
 ``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
 (no process substitution, no ``/tmp`` files-from). Appends an existing
@@ -25,11 +25,9 @@ from pathlib import Path
 LIST_REL = ".l9/ff-shelf-untracked.txt"
 SHELF_EXACT = ("TODO.md",)
 SHELF_PREFIXES = (
-    "WIP/",
     "docs/plans/",
     "environment/program-execution/campaigns/",
 )
-SKIP_PREFIXES = ("WIP/Legal Defense/",)
 SECRET_NAME_RE = re.compile(r"(oauth|credentials|client_secret)", re.I)
 SHA_FIELD_RE = re.compile(r'(body_sha256:\s*["\']?)([^"\'\s]+)(["\']?)')
 ZERO_DIGEST = "0" * 64
@@ -62,8 +60,6 @@ def run(
 
 def is_shelf_path(rel: str) -> bool:
     norm = rel.replace("\\", "/").lstrip("./")
-    if any(norm.startswith(prefix) for prefix in SKIP_PREFIXES):
-        return False
     if SECRET_NAME_RE.search(Path(norm).name):
         return False
     if norm in SHELF_EXACT:

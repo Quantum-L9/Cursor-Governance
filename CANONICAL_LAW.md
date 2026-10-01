@@ -1198,3 +1198,14 @@ runs `pr-preflight`, then `ops/scripts/run_pr_gate.sh`, and publishes with
 `ops/scripts/open_pr_after_gate.sh` only when `OPEN_PR=1`. The sole
 gate-only diagnosis is `OPEN_PR=0 make pr` (or `OPEN_PR=0 l9 pr`).
 `make precommit-repo` remains the remediation-local verification leaf.
+
+## 6.2.11 Corpus exemption no longer names `WIP/` (2026-09-29) — amends §6.2.9 item 6
+
+The local `WIP/` corpus was evicted from this repository on 2026-09-29
+(`reports/wip-eviction/eviction-receipt.json`; survivors live in
+`Quantum-L9/l9-wip`, the remainder only in git history). The corpus
+exemption in §6.2.9 item 6 now reads: `/ff`-owned `docs/plans/` and PE
+campaign changesets never require a tree receipt. No rule, gate, scanner or
+CI surface may reintroduce `WIP/` as a Cursor-Governance corpus. The
+Diagnose First pointers into `WIP/` earlier in this document were already
+retired by the 2026-08-14 correction and stay historical.

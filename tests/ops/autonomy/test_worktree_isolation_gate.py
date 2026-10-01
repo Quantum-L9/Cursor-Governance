@@ -95,28 +95,16 @@ def test_evaluate_shell_still_hits_isolation_for_non_git(
     """Non-git destroyers of foreign work stay denied at the gate."""
     _clear_iso(monkeypatch)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    reason = evaluate("Bash", {"command": "rm -rf WIP"}, root=stacked_repo)
+    reason = evaluate(
+        "Bash", {"command": "mkdir -p /tmp/cg-untracked-hold-final"}, root=stacked_repo
+    )
     assert reason is not None
-    assert "WIP" in reason
+    assert "never-lose" in reason
 
 
 def test_isolation_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("L9_WORKTREE_ISOLATION", "0")
     assert command_violates_worktree_isolation(_GR + " HEAD") is None
-
-
-def test_denies_wip_tmp_park(monkeypatch: pytest.MonkeyPatch) -> None:
-    _clear_iso(monkeypatch)
-    monkeypatch.delenv("L9_WORKTREE_ISOLATION", raising=False)
-    reason = command_violates_worktree_isolation("mv WIP /tmp/cg-untracked-hold-final")
-    assert reason is not None
-    assert "WIP" in reason or "sacred" in reason.lower()
-
-
-def test_denies_rm_rf_wip(monkeypatch: pytest.MonkeyPatch) -> None:
-    _clear_iso(monkeypatch)
-    monkeypatch.delenv("L9_WORKTREE_ISOLATION", raising=False)
-    assert command_violates_worktree_isolation("rm -rf WIP") is not None
 
 
 def test_denies_tmp_hold_mkdir(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -153,14 +141,3 @@ def test_allows_worktree_list_and_remove(monkeypatch: pytest.MonkeyPatch) -> Non
     _clear_iso(monkeypatch)
     assert command_violates_worktree_isolation("git worktree list") is None
     assert command_violates_worktree_isolation("git worktree remove /tmp/wt") is None
-
-
-def test_denies_scratch_hold_park_wip(monkeypatch: pytest.MonkeyPatch) -> None:
-    _clear_iso(monkeypatch)
-    monkeypatch.delenv("L9_WORKTREE_ISOLATION", raising=False)
-    assert (
-        command_violates_worktree_isolation(
-            "python3 ops/scripts/scratch_hold.py park WIP/README.md"
-        )
-        is not None
-    )

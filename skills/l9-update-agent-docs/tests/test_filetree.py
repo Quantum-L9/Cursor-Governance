@@ -22,12 +22,10 @@ df = load("doc_filetree", SCRIPTS / "doc_filetree.py")
 gm = load("generate_module_readmes", SCRIPTS / "generate_module_readmes.py")
 
 
-def test_write_filetree_lists_modules_and_skips_wip(tmp_path: Path):
+def test_write_filetree_lists_modules(tmp_path: Path):
     (tmp_path / "pkg" / "sub").mkdir(parents=True)
     (tmp_path / "pkg" / "mod.py").write_text("def top():\n    return 1\n", encoding="utf-8")
     (tmp_path / "pkg" / "sub" / "inner.py").write_text("class Inner:\n    pass\n", encoding="utf-8")
-    (tmp_path / "WIP" / "scratch").mkdir(parents=True)
-    (tmp_path / "WIP" / "scratch" / "x.py").write_text("x = 1\n", encoding="utf-8")
     (tmp_path / "README.md").write_text("# Repo\n", encoding="utf-8")
     inventory, written, admission = df.write_filetree(tmp_path)
     assert written is True
@@ -39,7 +37,6 @@ def test_write_filetree_lists_modules_and_skips_wip(tmp_path: Path):
     # `submodule` was a hierarchy relation, never a renderer identity; a
     # nested single-module directory is a module like any other.
     assert {row.kind for row in inventory.modules if row.path == "pkg/sub"} == {"module"}
-    assert "WIP" not in text
     parsed = df.parse_inventory(text)
     assert [row.path for row in parsed.modules] == paths
     assert "README.md" in parsed.root_files

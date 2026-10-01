@@ -137,7 +137,7 @@ PR_BASE=origin/main make precommit-repo
 Rules:
 
 1. Local verify **is** `make precommit-repo`.
-2. Cited/planned paths get a real check even when `pyproject` / ruff excludes them (WIP/CQ case).
+2. Cited/planned paths get a real check even when `pyproject` / ruff excludes them.
 3. Re-run after any verify-fix. Do not commit on a partial green.
 4. **Never** `git commit --no-verify` / `--no-gpg-sign`.
 5. Native-ext import fail is `ENVIRONMENT`, not a lock-pin or source edit. Do not use `uv python find --system`.

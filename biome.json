@@ -20,7 +20,6 @@
       "!!**/.git",
       "!!**/.ruff_cache",
       "!**/.l9",
-      "!**/WIP",
       "!**/reports",
       "!**/ops/generated",
       "!**/generated",

@@ -65,7 +65,7 @@ for itself.
 ## Not in scope
 
 Publish path (`make pr` only) stays `48-make-pr-remediation` and
-`88-l4-local-autonomy`. Foreign-work scoops and sacred WIP stay
+`88-l4-local-autonomy`. Foreign-work scoops stay
 `49-shared-worktree-isolation`. This rule governs destruction, not workflow: a
 guardrail ALLOW is never permission to publish a different way.
 

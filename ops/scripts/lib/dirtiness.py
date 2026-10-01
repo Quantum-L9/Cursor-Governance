@@ -14,10 +14,9 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-# Sacred / scratch trees: git-visible, never gate-blocking. Keep in sync with
+# Scratch trees: git-visible, never gate-blocking. Keep in sync with
 # .pre-commit-config.yaml `exclude` and ops/scripts/resolve_changed_files.sh.
 SCRATCH_PREFIXES = (
-    "WIP/",
     "current_work/",
     "C_GOV_FILES/",
     "reports/",

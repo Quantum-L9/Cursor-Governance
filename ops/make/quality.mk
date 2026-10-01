@@ -143,4 +143,4 @@ skills-check:
 hygiene:
 	$(PYTHON) tools/check_repo_hygiene.py
 hygiene-fix:
-	@echo "See WIP/housekeeping-pack/RUNBOOK.md Section 4"
+	@echo "See ops/scripts/REPO_HYGIENE.md"

@@ -2,7 +2,6 @@
 description: KERNEL pack / PE overlay landings use a new branch from origin/main without asking. Do not mix unrelated WIP.
 paths:
 - '**/*.plan.md'
-- WIP/**
 - environment/program-execution/**
 - AGENTS.md
 ---

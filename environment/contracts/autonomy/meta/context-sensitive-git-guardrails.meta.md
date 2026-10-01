@@ -40,5 +40,5 @@ subcommand denials (which blocked operations that destroyed nothing).
 - Publish-path enforcement — `make pr` remains the only route to GitHub
   (`l4-local-autonomy`, `rules/48-make-pr-remediation.mdc`)
 - Merge authorization — `ops/autonomy/merge_gate.py`
-- Foreign-work scoop and sacred-WIP rules — `worktree_isolation_gate`
+- Foreign-work scoop and never-lose scratch rules — `worktree_isolation_gate`
 - Agent self-authorization of a destructive operation

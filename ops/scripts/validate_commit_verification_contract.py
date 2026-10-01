@@ -52,7 +52,6 @@ _SKIP_PARTS = {
     "_archived",
     "archived",
     "reports",
-    "WIP",
     "learning",
     "Dags-Harvest",
     "releases",

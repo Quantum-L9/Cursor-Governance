@@ -47,7 +47,6 @@ Verified on disk 2026-08-21 against the repository root (not recalled from [`REA
 | `learning/` | Curated lessons / failures. Resume SSOT is Graphiti, not this tree. |
 | `docs/plans/` | Machine-global Cursor plans store (via `~/.cursor/plans`). |
 | `kernels/` | Recursive Alignment / Validate & Repair and related kernels. Cite by path; do not land KERNEL packs on an unrelated dirty branch. |
-| `WIP/` | Dated scratch corpus on `main`. Pre-commit and CI `paths-ignore` treat it as non-gating. |
 
 Root agent-doc surface (this change): `CANONICAL_LAW.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`, `ORG_INVARIANTS.yaml`, this file, [`INVARIANTS.md`](INVARIANTS.md).
 
@@ -102,7 +101,7 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 ### Verified exclusions (do not treat as silent skips)
 
 - `l9-lint-test.yml` `lint` / `mypy` step: `continue-on-error: true` (advisory; see that file’s comment and `TODO.md` mypy debt).
-- Several PR workflows `paths-ignore: WIP/**`. CodeQL PRs also ignore `**/*.md`, `docs/**`, `**/*.mdc`.
+- CodeQL PRs ignore `**/*.md`, `docs/**`, `**/*.mdc`.
 - Pre-commit global `exclude` and ruff/mypy excludes: see [`INVARIANTS.md`](INVARIANTS.md) false positives.
 
 Hook count at write time: **15** hooks in `.pre-commit-config.yaml` (5 `pre-commit-hooks` + 8 local + 2 ruff). Recount from that file on refresh.

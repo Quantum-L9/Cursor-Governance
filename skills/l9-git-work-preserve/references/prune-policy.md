@@ -37,7 +37,7 @@ Script: `scripts/prune_open_pr_copies.py`. Report-only default. `--apply` unlink
 **untracked** files whose sha256 equals an open-PR blob at the same path
 (casefold `docs/plans/built` vs `BUILT`). ` M` overlays that match a PR blob are
 restored to that leftover worktree’s HEAD. **Never** `unlink` when `HEAD:path`
-exists. Receipts: `.l9/hygiene/`, not `WIP/_receipts/`.
+exists. Receipts: `.l9/hygiene/`.
 
 ## `archive_ref`
 

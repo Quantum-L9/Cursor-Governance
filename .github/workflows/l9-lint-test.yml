@@ -14,15 +14,11 @@ on:
   # No pull_request paths filter, deliberately. "Lint and Type Check" and "Test
   # Suite" are required contexts in the main-protection ruleset, and a filtered-out
   # workflow never reports its contexts at all — the PR sits BLOCKED forever with no
-  # failing check to fix (PR #136 was stuck exactly this way). The WIP-only CI saving
-  # is kept by the per-job `scope` step below, which skips the expensive steps while
-  # the job itself still runs and reports the required context.
+  # failing check to fix (PR #136 was stuck exactly this way).
   pull_request:
   push:
     branches:
       - main
-    paths-ignore:
-      - "WIP/**"
   workflow_dispatch:
 
 # ── Consumer config ─────────────────────────────────────────────────────────
@@ -43,9 +39,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides once whether this event touches anything outside WIP/. Consumer jobs
-  # below still run and report their required contexts either way; they just skip
-  # their expensive steps when the answer is no.
+  # Resolves the PR file list once so the Test Suite can scope pytest to the
+  # changed files (--profile local) without re-calling the API. Consumer jobs
+  # below always run their steps and report their required contexts.
   scope:
     name: Scope
     runs-on: ubuntu-latest
@@ -54,11 +50,10 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      run: ${{ steps.decide.outputs.run }}
       files: ${{ steps.decide.outputs.files }}
       files_unusable: ${{ steps.decide.outputs.files_unusable }}
     steps:
-      - name: Any change outside WIP/?
+      - name: Resolve PR file list
         id: decide
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -68,47 +63,34 @@ jobs:
         run: |
           set -euo pipefail
           # files = added + modified + renamed vs PR base (gh filename list).
-          # WIP/** dropped. Empty when run=false. GitHub job-output size is 1MB;
-          # if the list is unusable or oversized, fail open to --profile ci
-          # (do not skip tests). Test Suite must not re-call gh api.
+          # GitHub job-output size is 1MB; if the list is unusable or oversized,
+          # fail open to --profile ci (do not skip tests). Test Suite must not
+          # re-call gh api.
           if [ "${EVENT_NAME}" != "pull_request" ]; then
-            echo "run=true" >> "${GITHUB_OUTPUT}"
             echo "files=" >> "${GITHUB_OUTPUT}"
             echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
-          # The API file list needs no checkout, so a WIP-only PR never even clones.
           # Fail open: if the file list is unavailable, run the full suite rather
           # than skip work on an unverified assumption about the diff.
           if ! files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
               --paginate --jq '.[].filename')"; then
-            echo "run=true" >> "${GITHUB_OUTPUT}"
             echo "files=" >> "${GITHUB_OUTPUT}"
             echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
             echo "::warning::could not list PR files — fail open to --profile ci"
             exit 0
           fi
-          filtered="$(printf '%s\n' "${files}" | grep -vE '^WIP/' || true)"
-          if ! printf '%s\n' "${filtered}" | grep -qvE '^$'; then
-            echo "run=false" >> "${GITHUB_OUTPUT}"
-            echo "files=" >> "${GITHUB_OUTPUT}"
-            echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
-            echo "::notice::WIP-only diff — lint/test steps skipped, contexts still report."
-            exit 0
-          fi
-          bytes="$(printf '%s\n' "${filtered}" | wc -c | tr -d ' ')"
+          bytes="$(printf '%s\n' "${files}" | wc -c | tr -d ' ')"
           if [ "${bytes}" -gt 800000 ]; then
-            echo "run=true" >> "${GITHUB_OUTPUT}"
             echo "files=" >> "${GITHUB_OUTPUT}"
             echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
             echo "::warning::scope.outputs.files exceeds GitHub output size — fail open to --profile ci"
             exit 0
           fi
-          echo "run=true" >> "${GITHUB_OUTPUT}"
           echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
           {
             echo "files<<L9_FILES_EOF"
-            printf '%s\n' "${filtered}"
+            printf '%s\n' "${files}"
             echo "L9_FILES_EOF"
           } >> "${GITHUB_OUTPUT}"
 
@@ -121,7 +103,6 @@ jobs:
       contents: read
     steps:
       - name: Checkout immutable event revision
-        if: needs.scope.outputs.run == 'true'
         env:
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
@@ -135,12 +116,10 @@ jobs:
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
       - name: Set up Python
-        if: needs.scope.outputs.run == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install lint tools
-        if: needs.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           # Single locked toolchain — ruff/mypy (and their type stubs) are exact-pinned
@@ -155,13 +134,10 @@ jobs:
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: ruff check
-        if: needs.scope.outputs.run == 'true'
         run: uv run --frozen --no-build ruff check . --output-format=github
       - name: ruff format --check
-        if: needs.scope.outputs.run == 'true'
         run: uv run --frozen --no-build ruff format --check .
       - name: mypy
-        if: needs.scope.outputs.run == 'true'
         # Advisory only (2026-07-28): 328 pre-existing type errors across 15 files
         # (see TODO.md "mypy debt") predate this step ever going green — ruff was
         # failing first and always short-circuited the job before mypy ran, so this
@@ -176,7 +152,6 @@ jobs:
             --show-error-codes --pretty \
             --ignore-missing-imports
       - name: uv lock --check (lockfile drift guard)
-        if: needs.scope.outputs.run == 'true'
         # Independent, second check of the same invariant ops/scripts/backup_to_github.sh
         # now enforces before every automated commit — catches uv.lock drift introduced
         # through any path (not just that script), on every push to main.
@@ -188,7 +163,6 @@ jobs:
             echo "::notice::no uv.lock present, skipping lockfile drift check"
           fi
       - name: Conflict-marker scan (repo-wide fast-detection tripwire)
-        if: needs.scope.outputs.run == 'true'
         # ops/scripts/backup_to_github.sh and ops/scripts/governance_sync.sh push
         # directly to main with no PR/branch-protection gate, so this job cannot
         # block a bad commit before it lands — it's a fast-detection tripwire that
@@ -197,10 +171,10 @@ jobs:
         run: |
           set -euo pipefail
           # Scratch/reference trees are git-tracked but must not trip this
-          # scan on mixed PRs (paths-ignore only skips WIP-only events).
+          # scan on mixed PRs.
           if git grep -n -I -E '^(<<<<<<<|=======$|>>>>>>>)' -- . \
               ':!**/_archived/**' ':!**/_archive/**' ':!**/archive/**' ':!**/archived/**' \
-              ':!**/WIP/**' ':!**/current_work/**' ':!**/C_GOV_FILES/**' ':!**/reports/**'; then
+              ':!**/current_work/**' ':!**/C_GOV_FILES/**' ':!**/reports/**'; then
             echo "::error::Conflict markers found in tracked files (see above)."
             exit 1
           fi
@@ -215,7 +189,6 @@ jobs:
       contents: read
     steps:
       - name: Checkout immutable event revision
-        if: needs.scope.outputs.run == 'true'
         env:
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
@@ -229,12 +202,10 @@ jobs:
           git checkout --detach FETCH_HEAD
           git remote set-url origin "https://github.com/${REPOSITORY}.git"
       - name: Set up Python
-        if: needs.scope.outputs.run == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install test tools
-        if: needs.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           # [tool.uv] package = false — this repo is not an installable package, so
@@ -248,7 +219,6 @@ jobs:
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
       - name: pytest with coverage
-        if: needs.scope.outputs.run == 'true'
         env:
           TESTING: "true"
           EVENT_NAME: ${{ github.event_name }}

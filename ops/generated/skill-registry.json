@@ -1,5 +1,5 @@
 {
-  "generation_id": "d60b86d0fc437ad6502edbe3c8a36bfbd76331b7d3dcef343bdb78ee5fe1772b",
+  "generation_id": "e04d9a54183feda3356841b66c3cb13b1bd282b15f11df90437964c65676ad23",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -480,7 +480,7 @@
           "stale plans",
           "audit .cursor/plans",
           "which plans are unbuilt",
-          "harvest WIP campaigns",
+          "harvest campaigns",
           "audit program-execution campaigns",
           "harvestable components"
         ],
@@ -1166,7 +1166,7 @@
       "path": "skills/l9-git-work-preserve",
       "reason": "diagnose-first, but the pack acts on branches, worktrees, and stashes \u2014 prune-execute deletes refs under L9_GIT_PRUNE_AUTHORIZED and stash-drop under L9_GIT_STASH_DROP_AUTHORIZED. Destruction of unique work is the exact blast radius rules/54-context-sensitive-git-guardrails.mdc governs, so selection stays a human act. Triaged 2026-09-06; previously carried the orphan auto-register default.",
       "skill_md": "skills/l9-git-work-preserve/SKILL.md",
-      "skill_sha256": "19100e31ce57721e3e4f5ce55c10c4869e7578582ac3e48700d3d5b071d572d5",
+      "skill_sha256": "035d59ad05e8ec88f510b49644b3e70c50c175118127087fd2f50cd09a647d83",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1341,14 +1341,14 @@
     },
     {
       "composition_role": "general",
-      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack.",
+      "description": "audit plans and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
-      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
+      "reason": "on-demand multi-surface harvest (plans + PE campaigns) can emit new compiled plans or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "2da723de49038a2d69ce40f41a213b89ea980d29e8f7b53a85e11cceeeb9f1af",
+      "skill_sha256": "38acf97ec45c8b9f318bfaa8576b12ec367367d9197448dc8a73294c5ef349a2",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1504,7 +1504,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "04a6088f608406573644ea319875889bbf661823ff640ba6ae064beff21f1735",
+      "skill_sha256": "f9ae8f8a9b24591e1c0d3fe2dc62967c22f4417370a01045c94a9f3d93875cd8",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1627,6 +1627,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "e7a00138cc65219aec08d77f9036a9a2aa914552763708c881ec7aec1761532f",
-  "source_skill_corpus_sha256": "83dae08504654af6d1d82f5f191cc8b251ee45c2f09f4288f1c50b964a8ab870"
+  "source_manifest_sha256": "1573018f6ddeb3e41e5d5ec61322f5027351ba74f2be57e0dd198a416d107ece",
+  "source_skill_corpus_sha256": "4a0954cd17dfc94ab9747ef206f603b54f8a8b51b93b2965327e4d7768e7e46a"
 }

@@ -135,22 +135,22 @@ def test_sp02_baseline_blob_not_parked(repo: Path) -> None:
 
 
 def test_sp03_secrets_left_and_never_indexed(repo: Path) -> None:
-    secret_dir = repo / "WIP" / "Legal Defense"
+    secret_dir = repo / "notes" / "vendor"
     secret_dir.mkdir(parents=True)
-    (secret_dir / "x").write_text("sensitive", encoding="utf-8")
-    (repo / "WIP").mkdir(exist_ok=True)
-    cred = repo / "WIP" / "bot-credentials.json"
+    oauth = secret_dir / "gmail-oauth.json"
+    oauth.write_text("{}", encoding="utf-8")
+    cred = repo / "bot-credentials.json"
     cred.write_text("{}", encoding="utf-8")
     (repo / "keep.md").write_text("novel", encoding="utf-8")
 
     result = apply(repo)
     st = result["status"]
-    assert "WIP/Legal Defense/x" in st["left_in_tree"]
-    assert "WIP/bot-credentials.json" in st["left_in_tree"]
-    assert (secret_dir / "x").is_file()
+    assert "notes/vendor/gmail-oauth.json" in st["left_in_tree"]
+    assert "bot-credentials.json" in st["left_in_tree"]
+    assert oauth.is_file()
     assert cred.is_file()
-    assert not dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "WIP/Legal Defense/x")
-    assert not dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "WIP/bot-credentials.json")
+    assert not dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "notes/vendor/gmail-oauth.json")
+    assert not dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "bot-credentials.json")
 
 
 def test_sp04_second_apply_no_new_commit(repo: Path) -> None:

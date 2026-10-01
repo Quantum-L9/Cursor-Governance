@@ -11,7 +11,7 @@ primary clone, wiping untracked fix files mid-session.
 
 Destructive-effect classification (which forced clean is safe, which is not)
 belongs to ``git_guardrails`` — this module keeps the incident-specific rules
-(foreign-work scoops, sacred WIP) and delegates the rest.
+(foreign-work scoops, never-lose scratch holds) and delegates the rest.
 
 Brain lives under ops/ per CANONICAL_LAW §2.1. Invoked from
 ``local_execution_gate.py`` (Cursor beforeShellExecution + Claude PreToolUse).
@@ -124,14 +124,8 @@ def _working_tree_dirty(root: Path | None) -> bool:
     return bool(proc.stdout.strip())
 
 
-# Sacred WIP / never-lose: deny parking WIP under public temp or destructive cleans.
+# Never-lose scratch: forced cleans answer the guardrail; public-temp holds are denied.
 _TMP_PUBLIC = bytes((0x2F, 0x74, 0x6D, 0x70, 0x2F)).decode("ascii")
-_MV_CP_WIP_TMP = re.compile(
-    rf"(?:\b(?:mv|cp|rsync)\b.*\bWIP\b.*{_TMP_PUBLIC})|(?:\b(?:mv|cp|rsync)\b.*{_TMP_PUBLIC}.*\bWIP\b)",
-    re.I | re.DOTALL,
-)
-_RM_RF_WIP = re.compile(r"\brm\s+-[a-z]*[rf][a-z]*\b[^\n]*\bWIP\b", re.I)
-_GIT_CLEAN_WIP = re.compile(r"\bgit\s+clean\b[^\n]*\bWIP\b", re.I)
 _GIT_CLEAN_FORCE = re.compile(r"\bgit\s+clean\b(?:\s+-\S+)*\s+-(?:f|fd|fdx|df|dfx)\b", re.I)
 _TMP_HOLD_CREATE = re.compile(
     r"(?:\bmkdir\b|\bmktemp\b)\s+\S*(?:cg-\S*hold|untracked-hold)|"
@@ -139,7 +133,6 @@ _TMP_HOLD_CREATE = re.compile(
     + r"(?:cg-\S*hold|\S*untracked-hold)",
     re.I,
 )
-_SCRATCH_HOLD_PARK_WIP = re.compile(r"scratch_hold\.py\s+park\b[^\n]*\bWIP\b", re.I)
 
 
 def _is_wired_worktree_wrapper(command: str) -> bool:
@@ -231,23 +224,7 @@ def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
     return None
 
 
-def _deny_sacred_wip(command: str, *, root: Path | None = None) -> str | None:
-    if _MV_CP_WIP_TMP.search(command):
-        return (
-            "sacred-WIP isolation: moving/copying WIP to/from public temp denied "
-            "(2026-08-12 incomplete restore lost backlog). Keep WIP in-repo; "
-            "use ops/scripts/scratch_hold.py only for non-WIP paths."
-        )
-    if _RM_RF_WIP.search(command):
-        return (
-            "sacred-WIP isolation: rm -rf of WIP denied. WIP/ is tracked sacred "
-            "backlog — never delete to clean make pr."
-        )
-    if _GIT_CLEAN_WIP.search(command) or (_GIT_CLEAN_FORCE.search(command) and "WIP" in command):
-        return (
-            "sacred-WIP isolation: clean targeting WIP denied. Do not scoop "
-            "sacred backlog for a clean worktree."
-        )
+def _deny_never_lose_scratch(command: str, *, root: Path | None = None) -> str | None:
     if _GIT_CLEAN_FORCE.search(command) and not _authorized("L9_GIT_CLEAN_AUTHORIZED"):
         # Rule 49 used to deny every forced clean by flag alone. Under the
         # context-sensitive guardrail contract the target set decides: a clean
@@ -259,12 +236,8 @@ def _deny_sacred_wip(command: str, *, root: Path | None = None) -> str | None:
     if _TMP_HOLD_CREATE.search(command):
         return (
             "never-lose scratch: creating public-temp cg-*-hold* or *untracked-hold* "
-            "denied. Park non-WIP via ops/scripts/scratch_hold.py "
-            "(.l9/scratch-hold/); never park WIP."
-        )
-    if _SCRATCH_HOLD_PARK_WIP.search(command):
-        return (
-            "sacred-WIP isolation: scratch_hold.py park of WIP denied — vault is for non-WIP only."
+            "denied. Park scratch via ops/scripts/scratch_hold.py "
+            "(.l9/scratch-hold/)."
         )
     return None
 
@@ -292,10 +265,11 @@ def command_violates_worktree_isolation(command: str, *, root: Path | None = Non
         return None
     dirty = _working_tree_dirty(root)
     sanitized = strip_heredoc_bodies(command)
-    # Sacred-WIP patterns span whole pipelines (mv/cp/rm/mkdir … WIP) and match
-    # the sanitized full text; git-subcommand patterns match per git segment so
-    # message text in unrelated segments can never trip them. The diff-pipe
-    # scoop loop is inherently cross-segment and keeps the full-text check.
+    # Never-lose scratch patterns (forced clean, public-temp hold creation) span
+    # whole pipelines and match the sanitized full text; git-subcommand patterns
+    # match per git segment so message text in unrelated segments can never trip
+    # them. The diff-pipe scoop loop is inherently cross-segment and keeps the
+    # full-text check.
     for segment in _git_command_segments(command):
         reason = _deny_shared_git(segment, dirty=dirty)
         if reason:
@@ -312,4 +286,4 @@ def command_violates_worktree_isolation(command: str, *, root: Path | None = Non
             "denied — that scoops parallel agents dirty files. Stage an explicit "
             "allowlist of paths you authored, or set L9_GIT_BROAD_ADD_AUTHORIZED=<reason>."
         )
-    return _deny_sacred_wip(sanitized, root=root)
+    return _deny_never_lose_scratch(sanitized, root=root)

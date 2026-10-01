@@ -50,9 +50,7 @@ if h03:
     errs.append(f"H-03 space paths still tracked ({len(h03)}): {', '.join(h03[:8])}")
 
 other_spaces = [
-    t
-    for t in tracked
-    if " " in t and not is_h03(t) and not t.startswith("WIP/") and not t.startswith("current_work/")
+    t for t in tracked if " " in t and not is_h03(t) and not t.startswith("current_work/")
 ]
 if other_spaces:
     preview = ", ".join(other_spaces[:6])
@@ -67,21 +65,12 @@ if pathlib.Path(".env.template").exists() and pathlib.Path(".env.example").exist
     errs.append("both .env.example and .env.template exist - keep .env.example only")
 
 if pathlib.Path("current_work").is_dir():
-    msg = "current_work/ is retired - use WIP/ (human) or TODO.md (agent)"
+    msg = "current_work/ is retired - use TODO.md (agent task queue)"
     # Local commits stay possible until the human migrates; CI stays fail-closed.
     if os.environ.get("GITHUB_ACTIONS"):
         errs.append(msg)
     else:
         warns.append(msg)
-
-ci = pathlib.Path(".cursorignore")
-if pathlib.Path("WIP").is_dir():
-    if not ci.exists():
-        errs.append("WIP/ exists but .cursorignore is missing")
-    elif not re.search(r"^WIP/Legal Defense/?$", ci.read_text(encoding="utf-8"), re.M):
-        errs.append("WIP/Legal Defense/ must stay listed in .cursorignore")
-    elif re.search(r"^WIP/?$", ci.read_text(encoding="utf-8"), re.M):
-        errs.append("do not blanket-ignore WIP/ — it is a dated tracked corpus")
 
 if not pathlib.Path("TODO.md").exists():
     warns.append("TODO.md missing - it is the agent task queue")
@@ -109,9 +98,8 @@ for cfg in (".mcp.json", ".cursor/mcp.json"):
         print(f"  {cfg} -> {', '.join(sorted(servers)) or 'none'}")
 
 # Scratch contents are never secret-scanned. current_work/ is retired
-# (directory must stay absent); its old content skip transfers to WIP/.
+# (directory must stay absent).
 skip = (
-    "WIP/",
     "current_work/",
     "-pack/",
     ".example",
@@ -140,6 +128,6 @@ if errs:
     print(f"\nFAIL ({len(errs)})")
     for e in errs:
         print(f"  - {e}")
-    print("\nSee WIP/housekeeping-pack/RUNBOOK.md Section 4")
+    print("\nSee ops/scripts/REPO_HYGIENE.md")
     sys.exit(1)
 print("PASS")
