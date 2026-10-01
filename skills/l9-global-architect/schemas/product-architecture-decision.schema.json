@@ -1,40 +1,253 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "l9.gar.product-architecture-decision/v1",
+  "$id": "l9.gar.product-architecture-decision/v3",
   "title": "GAR Product Architecture Decision",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "status", "idea_execute", "architecture", "plan_obligations", "validation_obligations", "currentness"],
+  "required": [
+    "schema",
+    "status",
+    "idea_execute",
+    "reasoning",
+    "architecture",
+    "plan_obligations",
+    "validation_obligations",
+    "currentness"
+  ],
   "properties": {
-    "schema": {"const": "l9.gar.product-architecture-decision/v1"},
-    "status": {"enum": ["ACCEPTED", "BLOCKED", "INVALIDATED"]},
+    "schema": {
+      "const": "l9.gar.product-architecture-decision/v3"
+    },
+    "status": {
+      "enum": [
+        "ACCEPTED",
+        "BLOCKED",
+        "INVALIDATED"
+      ]
+    },
     "idea_execute": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["envelope_digest", "graph_digest", "graph_unit_ids", "lifecycle_run_id", "authority_refs"],
+      "required": [
+        "envelope_digest",
+        "graph_digest",
+        "graph_unit_ids",
+        "lifecycle_run_id",
+        "authority_refs"
+      ],
       "properties": {
-        "envelope_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "graph_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "graph_unit_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-        "lifecycle_run_id": {"type": "string", "minLength": 1},
-        "authority_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        "envelope_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "graph_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "graph_unit_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "lifecycle_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "architecture": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["topology", "selected", "rejected_alternatives", "owner_dispositions", "constraints", "material_unknowns"],
+      "required": [
+        "topology",
+        "selected",
+        "intervention_class",
+        "rejected_alternatives",
+        "owner_dispositions",
+        "constraints",
+        "material_unknowns"
+      ],
       "properties": {
-        "topology": {"enum": ["NEW_PRODUCT_REPOSITORY", "EXISTING_SYSTEM_CAMPAIGN"]},
-        "selected": {"type": "string", "minLength": 1},
-        "rejected_alternatives": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "owner_dispositions": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["capability", "disposition"], "properties": {"capability": {"type": "string", "minLength": 1}, "disposition": {"enum": ["CONSUME_UPSTREAM", "ADAPT_UPSTREAM", "HARVEST_THEN_DECIDE", "OWN_LOCALLY", "DEFER_OUTSIDE_SLICE", "BLOCKED_UNKNOWN"]}}}},
-        "constraints": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "material_unknowns": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        "topology": {
+          "enum": [
+            "NEW_PRODUCT_REPOSITORY",
+            "EXISTING_SYSTEM_CAMPAIGN"
+          ]
+        },
+        "selected": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rejected_alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "owner_dispositions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capability",
+              "disposition"
+            ],
+            "properties": {
+              "capability": {
+                "type": "string",
+                "minLength": 1
+              },
+              "disposition": {
+                "enum": [
+                  "CONSUME_UPSTREAM",
+                  "ADAPT_UPSTREAM",
+                  "VENDOR_UPSTREAM",
+                  "TRANSPLANT_UPSTREAM",
+                  "HARVEST_SEMANTICS",
+                  "OWN_LOCALLY",
+                  "NO_ACTION",
+                  "DEFER_OUTSIDE_SLICE",
+                  "BLOCKED_UNKNOWN"
+                ]
+              }
+            }
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "material_unknowns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "intervention_class": {
+          "enum": [
+            "USE_EXISTING",
+            "CONFIGURE_EXISTING",
+            "CALL_TOOL",
+            "CONSUME_PACKAGE",
+            "CONSUME_API",
+            "CONSUME_SDK",
+            "ADAPT_UPSTREAM",
+            "VENDOR_IMPLEMENTATION",
+            "TRANSPLANT_CODE",
+            "HARVEST_SEMANTICS",
+            "BUILD_NEW",
+            "NO_ACTION"
+          ]
+        }
       }
     },
-    "plan_obligations": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "validation_obligations": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "currentness": {"type": "object", "additionalProperties": false, "required": ["input_digests"], "properties": {"input_digests": {"type": "array", "minItems": 2, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}}}
+    "plan_obligations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "validation_obligations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "currentness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_digests"
+      ],
+      "properties": {
+        "input_digests": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "reasoning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first_order_decision_ref",
+        "solution_surface_census_ref",
+        "intervention_class",
+        "second_order_before_ref",
+        "signal_prediction_propagation_ref",
+        "predicted_leverage_ref"
+      ],
+      "properties": {
+        "first_order_decision_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "solution_surface_census_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intervention_class": {
+          "enum": [
+            "USE_EXISTING",
+            "CONFIGURE_EXISTING",
+            "CALL_TOOL",
+            "CONSUME_PACKAGE",
+            "CONSUME_API",
+            "CONSUME_SDK",
+            "ADAPT_UPSTREAM",
+            "VENDOR_IMPLEMENTATION",
+            "TRANSPLANT_CODE",
+            "HARVEST_SEMANTICS",
+            "BUILD_NEW",
+            "NO_ACTION"
+          ]
+        },
+        "second_order_before_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "signal_prediction_propagation_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "predicted_leverage_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    }
   }
 }

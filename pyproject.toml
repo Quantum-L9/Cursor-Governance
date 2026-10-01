@@ -122,6 +122,10 @@ select = ["E", "F", "I", "UP"]
 # text as literal strings; wrapping them corrupts the emitted artifact. Same
 # rationale as the skill packs above — F/I/UP stay on.
 "skills/l9-pr-audit/scripts/**" = ["E501"]
+# GAR pack validators carry pack-owned failure/evidence messages as literal
+# strings; the pack is vendored from its release, so wrapping them would fork
+# it. Same rationale as the skill packs above — F/I/UP stay on.
+"skills/l9-global-architect/scripts/**" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.
