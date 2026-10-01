@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.coding-agent.execution-receipt/v1",
+  "title": "L9 Coding Agent Execution Receipt",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "terminal_state",
+    "objective_status",
+    "target",
+    "changed_surfaces",
+    "validation",
+    "delivery_status",
+    "validated_state",
+    "delivered_state"
+  ],
+  "properties": {
+    "terminal_state": {
+      "enum": [
+        "CONVERGED",
+        "BLOCKED",
+        "ESCALATE_ARCHITECTURE",
+        "FAILED"
+      ]
+    },
+    "objective_status": {
+      "type": "string"
+    },
+    "target": {
+      "type": "object"
+    },
+    "changed_surfaces": {
+      "type": "array"
+    },
+    "validation": {
+      "type": "array"
+    },
+    "acceptance_matrix": {
+      "type": "array"
+    },
+    "external_actions": {
+      "type": "array"
+    },
+    "residual_blockers_or_risks": {
+      "type": "array"
+    },
+    "delivery_status": {
+      "type": "string"
+    },
+    "inspection_scope": {
+      "type": "array"
+    },
+    "modification_scope": {
+      "type": "array"
+    },
+    "baseline_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "finding_traceability": {
+      "type": "array"
+    },
+    "regression_assessment": {
+      "type": "array"
+    },
+    "hygiene_status": {},
+    "validated_state": {
+      "type": "object"
+    },
+    "delivered_state": {
+      "type": "object"
+    },
+    "convergence_basis": {
+      "type": "array"
+    }
+  }
+}

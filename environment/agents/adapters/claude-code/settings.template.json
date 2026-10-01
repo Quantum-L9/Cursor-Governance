@@ -327,6 +327,7 @@
     "l9-claude-coding-contract-compiler": "user-invocable-only",
     "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
+    "l9-coding-agent": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
     "l9-e2e-blocker-resolution": "user-invocable-only",
     "l9-end-session": "user-invocable-only",
