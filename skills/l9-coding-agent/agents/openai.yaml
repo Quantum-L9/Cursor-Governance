@@ -1,0 +1,4 @@
+interface:
+  display_name: L9 Coding Agent
+  short_description: Architecture-faithful coding, root-cause repair, validation, traceability, and evidence with lazy context
+    loading.

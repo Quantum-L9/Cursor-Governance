@@ -1,0 +1,63 @@
+contract:
+  id: L9.CODING_AGENT.EXECUTION_CONTRACT.001
+  version: 1.1.0
+purpose: Normalize user, GAR, dev-pack, issue, PR-repair, or implementation-plan instructions into one bounded execution contract.
+required_fields:
+- contract_id
+- objective
+- target
+- authority_refs
+- in_scope
+- out_of_scope
+- locked_invariants
+- acceptance_criteria
+- forbidden_actions
+- validation_obligations
+- delivery_mode
+fields:
+  contract_id: unique_identity_never_silently_reused
+  objective: concrete_outcome_to_realize
+  target:
+    repository_or_artifact: exact_identity
+    base_revision: exact_when_material
+    branch_or_worktree: exact_when_material
+  authority_refs: exact_user_design_gar_contract_owner_contracts_or_dev_pack_refs
+  in_scope: explicit_mutation_surfaces
+  out_of_scope: explicit_exclusions_and_not_now
+  locked_invariants: architecture_and_domain_rules_that_may_not_be_reinterpreted
+  acceptance_criteria: observable_completion_conditions
+  forbidden_actions: prohibited_mutations_or_side_effects
+  validation_obligations: tests_checks_builds_or_behavioral_proofs_required
+  delivery_mode: in_place_patch_commit_pr_bundle_or_other_explicit_surface
+  implementation_discretion: optional_explicit_expansion_or_restriction_of_default_detail_sovereignty
+  external_action_permissions: optional_push_pr_issue_merge_deploy_permissions
+  unresolved_unknowns: material_unknowns_remaining_after_binding
+  inspection_scope: optional_explicit_or_derived_authorized_read_surface_needed_for_safe_execution
+  modification_scope: optional_explicit_mutation_boundary_must_not_exceed_in_scope_authority
+  readiness_claim: optional_bounded_change_or_whole_target_readiness_or_commit_readiness_or_package_delivery
+  baseline_expectations: optional_checks_or_observations_needed_to_separate_regression_from_preexisting_state
+  preservation_obligations: optional_existing_capabilities_local_changes_or_compatibility_that_must_not_regress
+normalization_rules:
+- preserve_explicit_contract_language_verbatim_when_supplied
+- derive_only_operational_fields_that_are_mechanically_implied
+- never_convert_architectural_ambiguity_into_an_implementation_default
+- similarly_named_targets_are_not_substitutable
+- discoveries_are_recorded_without_automatically_entering_scope
+- derive_inspection_scope_and_modification_scope_separately_when_not_explicit
+- inspection_scope_may_exceed_modification_scope_only_for_dependency_understanding_and_validation
+- whole_target_readiness_claim_requires_complete_authorized_inventory
+- preserve_unrelated_local_or_user_changes
+readiness_gate:
+  ready_when:
+  - exact_target_is_bound_or_exactness_is_not_material
+  - authority_is_resolved
+  - semantic_envelope_is_complete_enough_for_mutation
+  - unresolved_unknowns_contains_no_material_architecture_or_scope_question
+  - required_host_capabilities_for_the_requested_delivery_exist_or_delivery_can_degrade_lawfully
+  - inspection_and_modification_boundaries_are_resolved
+  - whole_target_readiness_has_complete_inventory_or_is_not_claimed
+  otherwise:
+    architecture_or_authority_unknown: ESCALATE_ARCHITECTURE
+    target_or_tooling_unavailable: BLOCKED
+    ordinary_nonmaterial_detail: resolve_inside_implementation_detail_sovereignty
+schema_ref: ../schemas/execution-contract.schema.json
