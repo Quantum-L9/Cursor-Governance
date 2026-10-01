@@ -283,7 +283,10 @@ write_receipt() {
     printf '  "interrupted_by": "%s",\n' "$(json_token "$INTERRUPTED_BY")"
     printf '  "overall": "%s"\n' "$(json_token "$state")"
     printf '}\n'
-  } > "$RECEIPT" 2>/dev/null || return 0
+  } > "$RECEIPT.tmp.$$" 2>/dev/null || { rm -f "$RECEIPT.tmp.$$"; return 0; }
+  # Renamed into place: an installer can now outlive its SessionStart hook, so
+  # a reader must never see a half-written receipt.
+  mv -f "$RECEIPT.tmp.$$" "$RECEIPT" 2>/dev/null || { rm -f "$RECEIPT.tmp.$$"; return 0; }
   RECEIPT_WRITTEN=1
 }
 
