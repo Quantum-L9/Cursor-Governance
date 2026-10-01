@@ -90,7 +90,9 @@ def _manus_grants(governance: Path) -> dict[str, object]:
         organization="quantum-l9",
         workspace=str(registry.get("workspace_group", "igor-workspace")),
     )
-    return {"grants": {"manus": principal}}
+    from ops.memory.materialize_agent_authority import signed_door_grant
+
+    return {"grants": {"manus": signed_door_grant(principal)}}
 
 
 def materialize(governance: Path, output_directory: Path, authority: object) -> None:

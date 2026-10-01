@@ -1209,3 +1209,25 @@ campaign changesets never require a tree receipt. No rule, gate, scanner or
 CI surface may reintroduce `WIP/` as a Cursor-Governance corpus. The
 Diagnose First pointers into `WIP/` earlier in this document were already
 retired by the 2026-08-14 correction and stay historical.
+
+<!-- MEMORY_RELEASE_250_V1 -->
+## 8.7 Memory release 2.5.0 (2026-10-01) — supersedes the 2.4.0 pin in §8.5
+
+Append-only. §8.5 stays the historical 2.4.0 pin. This section is the live
+release identity. The signed-agent door in §8.5 is unchanged.
+
+1. **Bound head.** `ops/config/memory-binding.json` `source.ref` and
+   `release_evidence.memory_sha` are
+   `78b304a3948214fa4b17bf97ed0529c5b0c22673`. Annotated tag `v2.5.0`, tag
+   object `57238f755cc729b36d61b944405a3547157a3362`. Package
+   `l9-graphite-memory==2.5.0`.
+2. **Wheel.** `ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl`,
+   sha256
+   `794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a`,
+   produced by `uv build --wheel`. PyPI publication of that wheel is still
+   pending. The binding digest is this uv-built wheel, not a later
+   `python -m build` upload.
+3. **Lock.** `pyproject.toml` / `uv.lock` pin `l9-graphite-memory==2.5.0`
+   to that wheel path. Do not float `@main`.
+4. **Contract.** `memory-control-plane/v1` is unchanged. Only the release
+   identity moves.

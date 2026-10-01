@@ -74,6 +74,17 @@ def test_a_secret_carrying_another_identitys_key_is_refused() -> None:
         )
 
 
+def test_grants_are_claims_the_signed_door_accepts() -> None:
+    from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+    grant = maa.agent_grants(ROOT, "claude-code-mobile")["grants"]["claude-code-mobile"]
+    AgentDoorGrant.model_validate(grant)
+    assert "tenant_id" not in grant
+    assert "organization_id" not in grant
+    assert "workspace_id" not in grant
+    assert "agent_id" not in grant
+
+
 def test_grants_come_from_the_registry_and_include_l9_ci_core(tmp_path: Path) -> None:
     directory = _private_dir(tmp_path)
     maa.materialize(ROOT, directory, _authority("claude-code-mobile"), "claude-code-mobile")

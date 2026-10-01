@@ -87,6 +87,23 @@ def scoped_tokens(raw: object, agent_id: str) -> dict[str, object]:
     return {"agents_door_secret": door, "agent_signing_keys": {agent_id: key}}
 
 
+def signed_door_grant(principal: dict[str, object]) -> dict[str, object]:
+    """Keep only claims ``AgentDoorGrant`` accepts.
+
+    Release 2.5.0 types ``L9_MEMORY_AGENT_GRANTS_JSON`` with ``extra="forbid"``.
+    Tenant, organization, workspace, and agent id are not grant claims: the
+    door reads the first three from settings and the agent id from the signed
+    assertion. Passing the full principal raises ``AuthenticationError`` before
+    the stdio server can serve ``memory.write_agent``.
+    """
+    from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+    allowed = set(AgentDoorGrant.model_fields)
+    grant = {key: value for key, value in principal.items() if key in allowed}
+    AgentDoorGrant.model_validate(grant)
+    return grant
+
+
 def agent_grants(governance: Path, agent_id: str) -> dict[str, object]:
     """The agent's grants, rendered from the canonical registry (never the secret)."""
     registry_path = governance / "environment" / "agents" / "agent_registry.yaml"
@@ -115,7 +132,7 @@ def agent_grants(governance: Path, agent_id: str) -> dict[str, object]:
         organization="quantum-l9",
         workspace=str(registry.get("workspace_group", "igor-workspace")),
     )
-    return {"grants": {agent_id: principal}}
+    return {"grants": {agent_id: signed_door_grant(principal)}}
 
 
 def materialize(governance: Path, output_directory: Path, authority: object, agent_id: str) -> None:

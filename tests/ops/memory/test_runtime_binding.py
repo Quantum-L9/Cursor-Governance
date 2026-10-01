@@ -1004,7 +1004,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
     For a candidate SHA pin, source.ref == release_evidence.memory_sha (40-hex).
     For a release tag pin, source.ref is vX.Y.Z and memory_sha is the peeled commit.
     A moved tag fails the proof instead of silently rebinding.
-    Live target: ADR-0031 candidate feac2a60… (package 2.4.0) pending PyPI tag.
+    Live target: package 2.5.0 at 78b304a3…, uv-built wheel pending PyPI.
     """
     manifest = rb.BindingManifest.load()
     raw = json.loads(rb.DEFAULT_MANIFEST_PATH.read_text(encoding="utf-8"))
@@ -1021,7 +1021,7 @@ def test_the_binding_names_the_release_tag_and_the_commit_it_resolves_to() -> No
         assert evidence["memory_tag"] == ref
     assert evidence["package_version"] == raw["expected_package_version"]
     assert evidence["artifact_sha256"] == (
-        "0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989"
+        "794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a"
     )
 
 
