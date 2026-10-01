@@ -55,7 +55,7 @@ READABLE_PREFIXES = (
     "rules/",
     "skills/",
 )
-DENIED_PARTS = {".git", ".venv", "__pycache__", "WIP", "ops/secrets", "ops/vendor"}
+DENIED_PARTS = {".git", ".venv", "__pycache__", "ops/secrets", "ops/vendor"}
 READABLE_SUFFIXES = {".json", ".md", ".mdc", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 
 
@@ -197,8 +197,8 @@ class GovernanceMcpService:
                 "name": "governance_read",
                 "description": (
                     "Read a bounded text range from a governance policy, rule, skill, command, "
-                    "adapter, or Program Execution file. Secret, vendor, Git, virtual-environment, "
-                    "and WIP paths are blocked."
+                    "adapter, or Program Execution file. Secret, vendor, Git, and "
+                    "virtual-environment paths are blocked."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -870,6 +870,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
+    bearer_token = ""
     try:
         bearer_token = _load_token(args.auth_token_file)
     except ValueError as exc:

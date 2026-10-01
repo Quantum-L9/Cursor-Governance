@@ -88,25 +88,17 @@ __pycache__/
 .claude/commands/
 .claude/commands
 
-# ── WIP/ is a dated tracked corpus on main (hygiene via ops/scripts/wip_corpus.py)
-# Do NOT add a blanket `WIP/` gitignore — the tree stays commit-eligible.
-# Agents may inventory, file loose drops, and high-evidence prune (rule 15).
-# Scanners already exclude WIP/ via tool configs, not git.
-# Only credential-shaped filenames under WIP are denylisted (2026-07-21: a
-# session-end sync hook nearly staged a live Google OAuth client secret from
-# WIP/google_oauth_*.json — caught before origin). Keep these patterns.
-WIP/*oauth*.json
-WIP/*credentials*.json
-WIP/*client_secret*.json
-
 # ── reports/ is local evidence only — never commit or track ─────────────────
 # GMP receipts, audits, validation dumps. Pre-commit already excludes reports/;
 # git must too so agents cannot stage them. Historical blobs may remain in git
 # history; the working tree must stay untracked going forward.
 # Exception: reports/repo-index/ is the /index output and is tracked.
+# Exception: reports/wip-eviction/ holds the revision-bound WIP eviction receipt.
 reports/*
 !reports/repo-index/
 !reports/repo-index/**
+!reports/wip-eviction/
+!reports/wip-eviction/**
 
 # ── Bounded-autonomy durable state (per-consumer-workspace, never committed) ──
 # environment/claude-code/autonomy/ writes campaign state, leases, and locks
@@ -123,7 +115,7 @@ reports/*
 # action. It is fetched from the commit under test, so it MUST be tracked;
 # an untracked local copy does not exist in CI.
 !.l9/ci.json
-# .l9/scratch-hold/ — non-WIP park vault (covered by .l9/* above; never park WIP/)
+# .l9/scratch-hold/ — park vault (covered by .l9/* above)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3
 .l9/subagent-generated-data/*.sqlite3-shm
@@ -134,16 +126,6 @@ environment/agents/generated-data/.runtime/
 ops/ui-operator/receipts/*.local.*
 ops/ui-operator/receipts/local/
 .l9-ui-profiles/
-
-# ── WIP Legal Defense: never track, never push (private case files) ──
-# Local archive lives outside this clone in a private git repo with no remote.
-# Do not re-add negation exceptions for logs/ or transcripts/.
-WIP/Legal Defense/
-WIP/Legal Defense/**
-
-# Claude Code mobile-environment snapshots — local only, not the plan of record
-WIP/claude-code-mobile-environment/
-WIP/claude-code-mobile-environment/**
 
 # Installed live pack is a local copy of the private skill. Keep it out of
 # skills/ (orphan heal would register case identifiers into public manifests).

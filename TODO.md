@@ -886,7 +886,7 @@ findings were deliberately left open:
 
 Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`
 
-- [ ] Review `WIP/9-2-26/cursor-remediation/TECH_DEBT.md` (+ `tech_debt.json`) — environment/loader/bootstrap debt ledger from both 2026-09-02 experience packs; TODO.md stays a pointer, findings live there.
+- [ ] Review the 2026-09-02 cursor-remediation `TECH_DEBT.md` (+ `tech_debt.json`) — environment/loader/bootstrap debt ledger from both 2026-09-02 experience packs; TODO.md stays a pointer, findings live there. The pack was under `WIP/9-2-26/` and is now git-history only (`reports/wip-eviction/eviction-receipt.json`, source revision `a29657e`).
 
 ## SessionStart secrets-plane simplify leftovers (2026-09-07)
 

@@ -1007,19 +1007,20 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         (clone / "tracked.txt").write_text("t\n", encoding="utf-8")
         git(clone, "add", "tracked.txt")
         git(clone, "commit", "-m", "base")
-        (clone / "WIP").mkdir()
-        (clone / "WIP" / "note.md").write_text("wip leftover\n", encoding="utf-8")
+        campaigns = clone / "environment" / "program-execution" / "campaigns"
+        campaigns.mkdir(parents=True)
+        (campaigns / "note.md").write_text("campaign leftover\n", encoding="utf-8")
         (clone / "docs" / "plans").mkdir(parents=True)
         (clone / "docs" / "plans" / "left.md").write_text("plan leftover\n", encoding="utf-8")
         (clone / "TODO.md").write_text("queue leftover\n", encoding="utf-8")
-        (clone / "WIP" / "tracked.md").write_text("tracked-v1\n", encoding="utf-8")
-        git(clone, "add", "WIP/tracked.md")
-        git(clone, "commit", "-m", "track wip")
-        (clone / "WIP" / "tracked.md").write_text("tracked-dirty\n", encoding="utf-8")
-        (clone / "WIP" / "gone.md").write_text("will-delete\n", encoding="utf-8")
-        git(clone, "add", "WIP/gone.md")
+        (clone / "docs" / "plans" / "tracked.md").write_text("tracked-v1\n", encoding="utf-8")
+        git(clone, "add", "docs/plans/tracked.md")
+        git(clone, "commit", "-m", "track plan")
+        (clone / "docs" / "plans" / "tracked.md").write_text("tracked-dirty\n", encoding="utf-8")
+        (clone / "docs" / "plans" / "gone.md").write_text("will-delete\n", encoding="utf-8")
+        git(clone, "add", "docs/plans/gone.md")
         git(clone, "commit", "-m", "track gone")
-        (clone / "WIP" / "gone.md").unlink()
+        (clone / "docs" / "plans" / "gone.md").unlink()
         (clone / "root-queue.md").write_text("not corpus leftover\n", encoding="utf-8")
         shelf = Path(tmp) / "shelf"
         proc = run(
@@ -1046,15 +1047,16 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
         if not list_path.is_file():
             return _fail("list file was not written")
         listed = list_path.read_text(encoding="utf-8").splitlines()
-        if "WIP/note.md" not in listed or "docs/plans/left.md" not in listed:
+        campaign_note = "environment/program-execution/campaigns/note.md"
+        if campaign_note not in listed or "docs/plans/left.md" not in listed:
             return _fail(f"missing leftover paths: {listed}")
         if "TODO.md" not in listed:
             return _fail(f"root task-queue file must be shelved, listed={listed}")
-        if "WIP/tracked.md" not in listed:
+        if "docs/plans/tracked.md" not in listed:
             return _fail(f"dirty-tracked corpus must be shelved, listed={listed}")
-        if "WIP/gone.md" in listed:
+        if "docs/plans/gone.md" in listed:
             return _fail(f"deleted corpus must not be an rsync source, listed={listed}")
-        if "WIP/gone.md" not in data.get("deleted", []):
+        if "docs/plans/gone.md" not in data.get("deleted", []):
             return _fail(f"deleted corpus must be recorded, deleted={data.get('deleted')}")
         if "untracked corpus" in " ".join(data.get("commit") or []):
             return _fail(f"commit message still says untracked: {data.get('commit')}")

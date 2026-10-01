@@ -1,6 +1,6 @@
 # Quantum-L9 Cursor-Governance
 
-> Canonical governance SSOT for Quantum-L9 coding agents, skills, rules, program execution, and runtime wiring. Read authoritative live sources before implementation. Do not treat WIP, archived, generated, or legacy mirrors as governing sources unless explicitly requested.
+> Canonical governance SSOT for Quantum-L9 coding agents, skills, rules, program execution, and runtime wiring. Read authoritative live sources before implementation. Do not treat archived, generated, or legacy mirrors as governing sources unless explicitly requested.
 
 ## Authority
 
@@ -24,9 +24,9 @@
 1. Treat current `main` as the live GitHub SSOT unless the request names another ref.
 2. Resolve authority before using matching text from multiple locations.
 3. Prefer canonical source files over generated projections, adapter copies, mirrors, reports, and historical notes.
-4. Ignore `WIP/`, `C_GOV_FILES/`, `profiles/`, `skills/_archived/`, and any `_archive`, `_archived`, `archive`, or `archived` directory unless the user explicitly asks for historical or superseded material.
+4. Ignore `C_GOV_FILES/`, `profiles/`, `skills/_archived/`, and any `_archive`, `_archived`, `archive`, or `archived` directory unless the user explicitly asks for historical or superseded material.
 5. For a skill, read its live `skills/<skill>/SKILL.md` before describing or invoking it.
-6. For Program Execution, use live `environment/program-execution/` sources. Do not treat WIP overlays as runtime authority.
+6. For Program Execution, use live `environment/program-execution/` sources.
 7. Dependent adapters may translate or narrow capability but never outrank the shared implementation owner.
 8. When uncertain whether a source is canonical, report the ambiguity rather than inventing precedence.
 

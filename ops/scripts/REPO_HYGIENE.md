@@ -79,7 +79,7 @@ landed copies (`origin/main` or an open-PR blob at the same path) and
 generated deltas are restored or removed and are **not** parked. Novel
 unique bytes are parked on one rolling `refs/heads/l9/dirt-shelf`, then
 restored/removed only after `git cat-file` proves the path on that tip.
-Secrets / `WIP/Legal Defense/` stay on disk. Absorbed dirt-shelf (and
+Secrets stay on disk. Absorbed dirt-shelf (and
 leftover `refs/l9/preserved/worktree-dirt/*`) tips are deleted **after**
 the tip SHA is written to the dirt-close receipt. Sibling dirty worktrees
 stay untouched. Do not call this from `sessionEnd`. Do not call `/ff` or

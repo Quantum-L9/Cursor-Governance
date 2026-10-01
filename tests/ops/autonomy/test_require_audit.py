@@ -57,7 +57,7 @@ def test_missing_handoff_does_not_hold(tmp_path: Path) -> None:
 
 
 def test_same_head_eligible_units_hold_merge(tmp_path: Path) -> None:
-    path = tmp_path / "WIP" / "topic" / "remediation-handoff.json"
+    path = tmp_path / ".l9" / "pr" / "topic" / "remediation-handoff.json"
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(_handoff()), encoding="utf-8")
     receipt = require_audit.bind(
@@ -70,7 +70,7 @@ def test_same_head_eligible_units_hold_merge(tmp_path: Path) -> None:
 
 
 def test_stale_heads_do_not_hold(tmp_path: Path) -> None:
-    path = tmp_path / "WIP" / "topic" / "remediation-handoff.json"
+    path = tmp_path / ".l9" / "pr" / "topic" / "remediation-handoff.json"
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(_handoff(head=HEAD_A)), encoding="utf-8")
     receipt = require_audit.bind(
@@ -82,12 +82,13 @@ def test_stale_heads_do_not_hold(tmp_path: Path) -> None:
     assert receipt["reason"] == "stale_heads"
 
 
-def test_legal_defense_is_skipped(tmp_path: Path) -> None:
-    path = tmp_path / "WIP" / "Legal Defense" / "remediation-handoff.json"
+def test_secret_shaped_handoff_paths_are_skipped(tmp_path: Path) -> None:
+    path = tmp_path / ".l9" / "pr" / "topic" / "remediation-handoff.json"
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(_handoff()), encoding="utf-8")
-    receipt = require_audit.bind(repo=REPO_SLUG, fleet=_fleet({1: HEAD_A}), root=tmp_path)
-    assert receipt["reason"] == "no_handoff"
+    assert require_audit._is_skipped(tmp_path / ".l9" / "pr" / "bot-credential.json", tmp_path)
+    assert require_audit._is_skipped(tmp_path / ".l9" / "pr" / "deploy.pem", tmp_path)
+    assert not require_audit._is_skipped(path, tmp_path)
 
 
 def test_normalize_audit_findings_only_eligible_for_this_pr() -> None:

@@ -145,7 +145,7 @@ def _intent_tokens(intent: str) -> list[str]:
     return out[:12]
 
 
-_RG_SKIP_DIR_NAMES = {".venv", "node_modules", ".git", "__pycache__", "WIP"}
+_RG_SKIP_DIR_NAMES = {".venv", "node_modules", ".git", "__pycache__"}
 
 
 def _rg_python(pattern: str, root: Path) -> list[tuple[str, int, str]]:
@@ -195,8 +195,6 @@ def _rg(pattern: str, root: Path) -> list[tuple[str, int, str]]:
         "!**/.git/**",
         "--glob",
         "!**/__pycache__/**",
-        "--glob",
-        "!**/WIP/**",
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     hits: list[tuple[str, int, str]] = []

@@ -47,13 +47,13 @@ def fixture_repo(tmp_path: Path) -> Path:
     (repo / "rules").mkdir(parents=True)
     (repo / "ops" / "config").mkdir(parents=True)
     (repo / "ops" / "scripts").mkdir(parents=True)
-    (repo / "WIP").mkdir()
+    (repo / "reports").mkdir()
 
     # The classifier resolves "generated" through the real implementation, so the
     # fixture only needs the files those helpers read.
     (repo / "rules" / "RULES-MANIFEST.yaml").write_text("rules: []\n", encoding="utf-8")
     (repo / "rules" / "authored.mdc").write_text("# authored\n", encoding="utf-8")
-    (repo / "WIP" / "notes.md").write_text("scratch\n", encoding="utf-8")
+    (repo / "reports" / "notes.md").write_text("scratch\n", encoding="utf-8")
     (repo / "ops" / "config" / "root-file-protection.json").write_text(
         json.dumps({"protected_files": [{"path": "AGENTS.md", "tier": "canonical"}]}),
         encoding="utf-8",
@@ -96,7 +96,7 @@ class TestDirtinessClassification:
 
     def test_scratch_dirt_is_tolerated(self, fixture_repo: Path, tmp_path: Path) -> None:
         before = snapshot(fixture_repo, tmp_path / "before.txt")
-        (fixture_repo / "WIP" / "new.md").write_text("scratch\n", encoding="utf-8")
+        (fixture_repo / "reports" / "new.md").write_text("scratch\n", encoding="utf-8")
 
         result = classify(fixture_repo, before)
 
@@ -183,7 +183,7 @@ class TestWriterAttribution:
         self, fixture_repo: Path, tmp_path: Path
     ) -> None:
         before = snapshot(fixture_repo, tmp_path / "before.txt")
-        (fixture_repo / "WIP" / "appeared.md").write_text("new\n", encoding="utf-8")
+        (fixture_repo / "reports" / "appeared.md").write_text("new\n", encoding="utf-8")
         log = tmp_path / "precommit.log"
         log.write_text("- hook id: symlinks-check\n", encoding="utf-8")
 
@@ -192,7 +192,7 @@ class TestWriterAttribution:
         assert result.returncode == 0, result.stderr
         assert receipt["untracked_only"] is True
         assert "cannot have produced" in result.stdout
-        assert [entry["path"] for entry in receipt["changed"]] == ["WIP/appeared.md"]
+        assert [entry["path"] for entry in receipt["changed"]] == ["reports/appeared.md"]
 
     def test_tracked_change_is_reported_with_its_classification(
         self, fixture_repo: Path, tmp_path: Path

@@ -51,20 +51,6 @@ def inventory_donor(donor: Path) -> dict[str, Any]:
     return _run_harvest_script("inventory_source.py", str(donor))
 
 
-def emit_wip(concern: str, invariants: list[dict[str, str]], dest: Path) -> None:
-    dest.mkdir(parents=True, exist_ok=True)
-    lines = [
-        f"# Harvested {concern} invariants",
-        "",
-        "Emitted by l9-pipeline-audit via l9-intelligence-harvest.",
-        "Execute via /gmp. Do not run `make campaign`.",
-        "",
-    ]
-    for item in invariants:
-        lines.append(f"- {item.get('text')}")
-    (dest / "HARVEST.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def emit_campaign_intent(concern: str, invariants: list[dict[str, str]], dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -89,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--concern", default="compiled")
     parser.add_argument(
         "--emit-dest",
-        choices=("plan", "wip", "campaign"),
+        choices=("plan", "campaign"),
         default="plan",
     )
     parser.add_argument("--emit-path", default=None, type=Path)
@@ -135,8 +121,6 @@ def main(argv: list[str] | None = None) -> int:
                 donors=[path.name for path in args.donors],
                 dest=args.emit_path,
             )
-        elif args.emit_dest == "wip":
-            emit_wip(concern, invariants, args.emit_path)
         else:
             emit_campaign_intent(concern, invariants, args.emit_path)
     print(f"wrote {args.out} dest={args.emit_dest}")

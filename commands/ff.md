@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.7.0"
+version: "1.8.0"
 description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; --clone / --ssot for one target"
 auto_chain: ynp
 aliases:
@@ -61,7 +61,7 @@ bash skills/l9-repo-sync/scripts/ff.sh --ssot
 tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
 2. **Stop when `ff.sh` prints `OK:` and files are back at their original
-   paths.** Unique `TODO.md` / `WIP/` / `docs/plans/` / PE campaigns stay
+   paths.** Unique `TODO.md` / `docs/plans/` / PE campaigns stay
    in the tree. Hold copies stay as backup. No commit. No push. No PR.
    Do not run `ff_shelf.py`, `run_ff_post_shelf.sh`, or
    `verify_worktree_clean.py`. Do not invent a “shelf but no PR” mode.

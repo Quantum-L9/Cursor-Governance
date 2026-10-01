@@ -89,7 +89,6 @@ exclude = [
     "**/archived",
     "current_work/harvested",
     "C_GOV_FILES",
-    "WIP",
     "docs/plans",
     "**/.cursor-commands",
     "**/.cursor",
@@ -152,7 +151,6 @@ exclude = [
     "archived",
     "current_work/harvested",
     "C_GOV_FILES",
-    "WIP",
     "\\.cursor-commands",
     "\\.cursor",
 ]
@@ -164,9 +162,6 @@ exclude = [
 # ops/scripts/run_python_test_suites.py — NOT here. norecursedirs mirrors
 # [tool.ruff] exclude so archived reference code and vendored governance symlinks
 # are never collected.
-# WIP is scratch/reference content (harvested packages, drafts, extraction
-# snapshots) — it carries its own vendored test suites with dependencies
-# (e.g. zep-cloud) this repo does not install; never collect it as CI tests.
 [tool.pytest.ini_options]
 testpaths = ["."]
 norecursedirs = [
@@ -176,7 +171,6 @@ norecursedirs = [
     "archived",
     "current_work",
     "C_GOV_FILES",
-    "WIP",
     ".cursor-commands",
     ".cursor",
     ".claude",
@@ -244,7 +238,7 @@ build-backend = "setuptools.build_meta"
 
 # Cursor Pyright / basedpyright. This clone's `.cursor-commands` symlink points at
 # the full ~/.cursor-governance tree; without include/exclude the language server
-# enumerates that second clone plus WIP/ and hangs ("workspace source files …
+# enumerates that second clone and hangs ("workspace source files …
 # longer than 10 seconds"). Keep this list aligned with [tool.ruff] / [tool.mypy].
 [tool.pyright]
 pythonVersion = "3.12"
@@ -265,7 +259,6 @@ exclude = [
     "**/_archived",
     "**/_archive",
     "**/generated",
-    "WIP",
     "current_work",
     "C_GOV_FILES",
     ".cursor-commands",

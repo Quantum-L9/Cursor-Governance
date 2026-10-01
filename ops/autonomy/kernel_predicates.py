@@ -80,7 +80,6 @@ HEADING_VR_RE = re.compile(r"^##\s+Validate & Repair\s*$", re.MULTILINE)
 # Prefixes exempt from delta coverage check (corpus + generated artifacts).
 # Corpus kernels fire on /ff shelf, not at precommit.
 CORPUS_SKIP_PREFIXES: tuple[str, ...] = (
-    "WIP/",
     "docs/plans/",
     "environment/program-execution/campaigns/",
 )
@@ -780,7 +779,6 @@ TEST_DIRECTORY_MAPPINGS: dict[str, list[str]] = {
 
 # Seed ID prefixes
 SEED_VR_COVERAGE = "SEED-VR-coverage"
-SEED_RA_REVIEW = "SEED-RA-review"
 
 # Allowed seed disposition statuses (agent can only dispose, not delete)
 ALLOWED_SEED_DISPOSITIONS = frozenset(

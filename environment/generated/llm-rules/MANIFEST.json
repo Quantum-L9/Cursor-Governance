@@ -103,15 +103,6 @@
     },
     {
       "alias": null,
-      "class": "skipped_agent_requested",
-      "output": null,
-      "output_sha256": null,
-      "source": "rules/15-work-tracking.mdc",
-      "source_sha256": "79c9306f7061019a8acacb6d58a367ec416d12da909a0fef49a573a86b41dbf3",
-      "stem": "15-work-tracking"
-    },
-    {
-      "alias": null,
       "class": "paths",
       "output": "20-lang-python.md",
       "output_sha256": "fc7f7da2ee1ed404c5544d0b35285ea6a7ad99a46634c2f4b73e5dbe5013b82f",
@@ -204,9 +195,9 @@
       "alias": null,
       "class": "paths",
       "output": "46-kernel-pack-new-branch.md",
-      "output_sha256": "47bbe086da0b3e9bf6cf090274dfd76b5c7cda9dd637a0107714859d1385be3b",
+      "output_sha256": "e99663fbc4c01ef5d80346e1ee810697e61cfe21f7eb4a9012aede5569042752",
       "source": "rules/46-kernel-pack-new-branch.mdc",
-      "source_sha256": "76c8cba8c93adcbe9ca8575a351a41438c5986c766a0db33d3468192e51155bf",
+      "source_sha256": "a56bd2ccf98027d08928780c039187f6059e0111fb4a336a2b5c0af8364a6823",
       "stem": "46-kernel-pack-new-branch"
     },
     {
@@ -276,18 +267,18 @@
       "alias": null,
       "class": "always",
       "output": "54-context-sensitive-git-guardrails.md",
-      "output_sha256": "901f540e0d1babf8c043d84c62de45977ef6dc30332cebe0803a375d5cda474a",
+      "output_sha256": "fe383251a898c068e44d1074211aaed3cdf9ab5285028fbbb3d985f0a8ab907b",
       "source": "rules/54-context-sensitive-git-guardrails.mdc",
-      "source_sha256": "22327366534e888c7598f5b39f085fd99272d6f745e1ce201bd0c95b3e234dfb",
+      "source_sha256": "62a85fb76752ec3d2bee9411f28f62976e7567eca48b91cca7cbfbf201cecdf0",
       "stem": "54-context-sensitive-git-guardrails"
     },
     {
       "alias": null,
       "class": "always",
       "output": "55-ff-only-ssot-sync.md",
-      "output_sha256": "cb32f03a513801748b644e87365a3b8260b61c76e06ae1586618937f54b605e2",
+      "output_sha256": "a520d04fd5294c4c2a0032a3ab5cf2996d0b793bed6843f137e81cd60727c12e",
       "source": "rules/55-ff-only-ssot-sync.mdc",
-      "source_sha256": "d5a856c58a92f190b209b6e767b5c3c62c03b0f22000dd8bb2916069070f8491",
+      "source_sha256": "efb05a908c0e01e5178793daae1f0012f97d67372f53b9224090fa2dbd498c74",
       "stem": "55-ff-only-ssot-sync"
     },
     {
@@ -627,9 +618,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "0c069cd62fb609d8c2cad7d6c48f0d4fb50501f59439489e9f6f8b3c6889c727",
+      "output_sha256": "f7ca887852507c482a4295bcef80bfa621a1d00e4d2deb7e245c44dafa2fdd5d",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "aa78e7d3a7abb5dbc1dc1b3dd85e7d40cd37a431fec6cc75330f67893196a361",
+      "source_sha256": "41ff7c190b29443d8c321683ac735616c4c3259a9b96e6358c9d5fe76915ca64",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -638,8 +629,8 @@
   "summary": {
     "denied": 1,
     "projected": 53,
-    "skipped_agent_requested": 16,
-    "source_mdc": 69
+    "skipped_agent_requested": 15,
+    "source_mdc": 68
   },
-  "tree_sha256": "ad89ea3952c47d10016ab0120f86060b4e2896b55cdd7f58958de5fd00b4a898"
+  "tree_sha256": "1f422b5203c7c3bc0afa09886cc0c8ee2e148a48c03191a8d52566d249361a82"
 }

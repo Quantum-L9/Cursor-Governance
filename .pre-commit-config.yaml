@@ -4,7 +4,7 @@
 # ops/scripts/run_pr_security.sh EXCLUDE_PREFIXES.
 # `workflows/` is anchored to the repo ROOT only (^workflows/) so the generic
 # scratch exclusion never swallows .github/workflows/** (P1-10).
-exclude: '(^|/)(_?archive(d)?/|WIP/|current_work/|C_GOV_FILES/|reports/)|^workflows/'
+exclude: '(^|/)(_?archive(d)?/|current_work/|C_GOV_FILES/|reports/)|^workflows/'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

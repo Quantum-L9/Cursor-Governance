@@ -266,13 +266,14 @@ def test_deltas_cover_diff_catches_invented_paths(workspace: Path) -> None:
 
 
 def test_deltas_cover_diff_exempts_corpus_paths(workspace: Path) -> None:
-    """Corpus paths (WIP/, docs/plans/) are exempt from coverage check."""
+    """Corpus paths (docs/plans/, PE campaigns) are exempt from coverage check."""
     preds = _preds()
     deltas = [{"path": "touched.py", "kernel": "recursive_alignment", "note": "n"}]
-    changed = ["touched.py", "WIP/notes.md", "docs/plans/my.plan.md"]
+    campaign = "environment/program-execution/campaigns/c1/CAMPAIGN_SOURCE.yaml"
+    changed = ["touched.py", campaign, "docs/plans/my.plan.md"]
     errors = preds.deltas_cover_diff(deltas, changed)
-    # WIP and docs/plans should not trigger errors
-    assert not any("WIP/" in err for err in errors)
+    # campaigns and docs/plans should not trigger errors
+    assert not any("campaigns/" in err for err in errors)
     assert not any("docs/plans/" in err for err in errors)
 
 
@@ -698,7 +699,7 @@ def test_seed_findings_skips_exempt_paths() -> None:
     """seed_findings skips corpus and generated paths."""
     preds = _preds()
     changed = [
-        "WIP/notes.py",
+        "environment/program-execution/campaigns/c1/notes.py",
         "docs/plans/my.plan.md",
         "ops/generated/skill-registry.json",
     ]

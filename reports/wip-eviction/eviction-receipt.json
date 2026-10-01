@@ -1,0 +1,55 @@
+{
+  "schema": "l9.cursor-governance.wip-eviction/v1",
+  "status": "EVICTED",
+  "evicted_at": "2026-09-29",
+  "source_repository": "Quantum-L9/Cursor-Governance",
+  "source_revision": "a29657e8bafe07761a7cf6501864ffa77cdb9c56",
+  "destination_repository": "Quantum-L9/l9-wip",
+  "destination_revision": "8112a1bd2256f0fe4a502e2dfafb6d80dbb07260",
+  "destination_revision_note": "l9-wip main at eviction time. The two survivor extractions were open, mergeable PRs against it (not yet merged); the operator waived the merged-PR entry condition on 2026-09-29 and accepted verified content identity on the PR head branches as the gate. Each survivor's destination_revision below is the verified head commit.",
+  "evicted_tree": "WIP/",
+  "source_file_count": 767,
+  "survivors": [
+    {
+      "source": "WIP/Quantum Animation/",
+      "destination": "Quantum Animation/",
+      "verification": "PASS",
+      "verification_method": "git blob SHA and path identity, 33 of 33 files",
+      "file_count": 33,
+      "destination_branch": "extract/quantum-animation",
+      "destination_pull_request": "Quantum-L9/l9-wip#16",
+      "destination_revision": "77958b68285f353c36f8f1fd8c78cceeb51639f8"
+    },
+    {
+      "source": "WIP/World Model/",
+      "destination": "World Model/",
+      "verification": "PASS",
+      "verification_method": "git blob SHA and path identity, 1 of 1 files",
+      "file_count": 1,
+      "destination_branch": "extract/world-model",
+      "destination_pull_request": "Quantum-L9/l9-wip#17",
+      "destination_revision": "4c74614644db8eda6811a5c31f5b89fdb7e2b57e"
+    }
+  ],
+  "dropped_remainder": {
+    "disposition": "INTENTIONALLY_NOT_MIGRATED",
+    "file_count": 733,
+    "recovery": "git-history",
+    "source_revision": "a29657e8bafe07761a7cf6501864ffa77cdb9c56"
+  },
+  "retired_engine": [
+    "ops/scripts/wip_corpus.py",
+    "ops/config/wip-corpus.yaml",
+    "ops/config/wip-inventory.schema.yaml",
+    "ops/config/wip-prune-receipt.schema.yaml",
+    "ops/scripts/tests/test_wip_corpus.py",
+    "rules/15-work-tracking.mdc"
+  ],
+  "retired_make_targets": ["wip-hygiene", "wip-inventory"],
+  "wip_lifecycle_retired": true,
+  "wip_ff_special_handling_retired": true,
+  "wip_ci_exemptions_retired": true,
+  "wip_scanner_exemptions_retired": true,
+  "wip_runtime_dependencies_remaining": 0,
+  "boundary_regression_test": "tests/ops/scripts/test_makefile_capability_graph.py::test_cursor_governance_has_no_local_wip_subsystem"
+}

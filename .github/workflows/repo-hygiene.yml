@@ -58,22 +58,10 @@ jobs:
       - name: current_work/ stays retired
         run: |
           if [ -d current_work ]; then
-            echo "::error::current_work/ is retired. Use WIP/ (human) or TODO.md (agent)."
+            echo "::error::current_work/ is retired. Use TODO.md (agent task queue)."
             exit 1
           fi
           echo "ok: current_work/ absent"
-
-      - name: WIP Legal Defense stays cursorignored
-        run: |
-          if [ -d WIP ] && ! grep -qE '^WIP/Legal Defense/?$' .cursorignore 2>/dev/null; then
-            echo "::error::WIP/Legal Defense/ must stay listed in .cursorignore"
-            exit 1
-          fi
-          if grep -qE '^WIP/?$' .cursorignore 2>/dev/null; then
-            echo "::error::do not blanket-ignore WIP/ — it is a dated tracked corpus"
-            exit 1
-          fi
-          echo "ok: WIP corpus visible; Legal Defense ignored"
 
       - name: Full hygiene check
         run: |

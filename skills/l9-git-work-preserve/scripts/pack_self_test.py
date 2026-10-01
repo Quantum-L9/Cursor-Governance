@@ -513,8 +513,8 @@ def check_harvest(repo: Path, tmp: Path, errors: list[str]) -> None:
     extra.mkdir()
     wt = extra / "unique"
     _git(repo, "worktree", "add", str(wt), "main")
-    (wt / "WIP").mkdir()
-    (wt / "WIP" / "note.md").write_text("wip leftover\n", encoding="utf-8")
+    (wt / "notes").mkdir()
+    (wt / "notes" / "note.md").write_text("leftover\n", encoding="utf-8")
     skill = wt / ".claude" / "skills" / "l9-fake"
     skill.mkdir(parents=True)
     (skill / "SKILL.md").write_text("wiring\n", encoding="utf-8")
@@ -529,7 +529,6 @@ def check_harvest(repo: Path, tmp: Path, errors: list[str]) -> None:
             "main",
             "--extra-root",
             str(extra),
-            "--include-wip",
             "--json",
         ]
     )
@@ -538,10 +537,11 @@ def check_harvest(repo: Path, tmp: Path, errors: list[str]) -> None:
         return
     plan = json.loads(harvest.stdout)
     by_class = {row["class"] for row in plan.get("harvestable", [])}
-    if "unique_wip" not in by_class:
-        errors.append("expected unique_wip in harvestable")
     if "unique_product" not in by_class:
         errors.append("expected unique_product in harvestable")
+    harvest_paths = {row["path"] for row in plan.get("harvestable", [])}
+    if "notes/note.md" not in harvest_paths:
+        errors.append("leftover note must be ordinary unique dirt")
     skipped_classes = {row["class"] for row in plan.get("skipped", [])}
     if "wiring_noise" not in skipped_classes:
         errors.append("expected wiring_noise skipped")

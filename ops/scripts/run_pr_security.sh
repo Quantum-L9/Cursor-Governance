@@ -79,7 +79,7 @@ fi
 
 EXCLUDE_PREFIXES=(
   _archived/ _archive/ archive/ archived/
-  WIP/ current_work/ C_GOV_FILES/
+  current_work/ C_GOV_FILES/
   .venv/ node_modules/ reports/ workflows/
 )
 
@@ -184,7 +184,7 @@ _cleanup() {
   # false on the early "nothing in scope" exit (neither temp dir is created
   # yet), so without this the trap returned 1 and turned `exit 0` -- printed as
   # "RESULT: PASS" -- into a gate failure for any change set that filters to
-  # empty (a WIP-only or docs-only PR).
+  # empty (a scratch-only or docs-only PR).
   return 0
 }
 trap _cleanup EXIT

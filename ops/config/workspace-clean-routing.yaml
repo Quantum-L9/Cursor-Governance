@@ -38,7 +38,6 @@ destinations:
       - ".cursor/rules/claude-code-deepseek.mdc"
       - "skills/l9-claude-code-deepseek/**"
       - "skills/l9-git-work-preserve/**"
-      - "WIP/deepseek-claude-pack/**"
       - "ops/scripts/workspace_clean.py"
       - "ops/scripts/run_workspace_clean.sh"
       - "ops/scripts/test_workspace_clean.py"
