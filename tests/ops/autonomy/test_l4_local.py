@@ -587,6 +587,18 @@ def test_hoist_workspace_flag_accepts_either_position() -> None:
         path,
         "status",
     ]
+    assert _hoist_workspace_flag(["--help", "status", "--workspace", path]) == [
+        "--help",
+        "--workspace",
+        path,
+        "status",
+    ]
+    assert _hoist_workspace_flag(["--dry-run", "authorize-release", "--workspace", path]) == [
+        "--dry-run",
+        "--workspace",
+        path,
+        "authorize-release",
+    ]
     assert _hoist_workspace_flag(
         [
             "record-kernels",

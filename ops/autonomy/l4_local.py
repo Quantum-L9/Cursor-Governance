@@ -1064,7 +1064,7 @@ def _hoist_workspace_flag(argv: list[str]) -> list[str]:
         index += 1
     if not hoisted:
         return list(argv)
-    return [*hoisted, argv[sub_at], *kept]
+    return [*before, *hoisted, argv[sub_at], *kept]
 
 
 def main(argv: list[str] | None = None) -> int:
