@@ -1,0 +1,121 @@
+name: 🔴 CI failure
+description: A CI run is red and it is not explained by a code bug in the change under test.
+title: "ci: "
+labels: ["type:bug", "area:ci", "needs:triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the pipeline itself is the problem — a kernel, a runner, a pin,
+        a required-check collision. A code bug that happens to fail tests is a **Bug**.
+        A red governance seed or auto-seed PR is **Seed CI failure**.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What went red, and what it blocks (a merge, a release, every PR in the repo).
+    validations:
+      required: true
+
+  - type: input
+    id: workflow-run-url
+    attributes:
+      label: Workflow run URL
+      description: Full URL of the failed GitHub Actions run.
+      placeholder: "https://github.com/Quantum-L9/example/actions/runs/XXXXXXXXX"
+    validations:
+      required: true
+
+  - type: input
+    id: failed-job
+    attributes:
+      label: Failed job
+      placeholder: "Analyze (central Core)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-workflow
+    attributes:
+      label: Affected workflow
+      description: Which workflow owns the failing job. Current v2 entries first; v1 kernels are legacy wrappers.
+      options:
+        - analyze-semgrep (l9-analysis.yml — v2 central Core)
+        - l9-lint-test.yml (Python hygiene, consumer template)
+        - l9-lint-test-node.yml (Node/TS hygiene, consumer template)
+        - org governance caller (governance-pr / pr-files / PR gates)
+        - v1 kernel (pr-pipeline, release-publish, nightly, pre-commit-ci, trio-governance, security, scorecard, sbom)
+        - repo-local workflow
+    validations:
+      required: true
+
+  - type: dropdown
+    id: trigger
+    attributes:
+      label: Triggered by
+      options:
+        - Pull request
+        - Push to main
+        - Scheduled (cron)
+        - Workflow dispatch
+        - Tag push
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The error section from the failed step, verbatim.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick exactly one.
+      options:
+        - S4 — noisy, does not block anything
+        - S3 — blocks one PR, workaround exists
+        - S2 — blocks every PR in a repo, or a release
+        - S1 — blocks the org, or a security gate is not enforcing
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      options:
+        - Every run on this commit
+        - Intermittent — passed on re-run
+        - Also red on the base branch
+        - Narrowed to a commit (Last known good version below)
+    validations:
+      required: true
+
+  - type: input
+    id: regression
+    attributes:
+      label: Last known good version
+      description: Last green SHA of this workflow, if known. It becomes the bisect range.
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The run that proves it is fixed.
+      placeholder: "the same job is green on a re-run of the PR that failed"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: The PR or issue this failure blocks.
+      placeholder: "blocks #34"
