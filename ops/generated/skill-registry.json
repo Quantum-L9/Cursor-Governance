@@ -1,5 +1,5 @@
 {
-  "generation_id": "30b2c3e158aab23b48ecb90e6f65496e92333f5d2a0df4843cbd6c7cb984a2f2",
+  "generation_id": "d60b86d0fc437ad6502edbe3c8a36bfbd76331b7d3dcef343bdb78ee5fe1772b",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1172,14 +1172,14 @@
     },
     {
       "composition_role": "general",
-      "description": "principal architect-engineer runtime (GAR) with outcome accountability \u2014 machine-readable contracts, state machine, evaluators, and convergence law for repository, archive, module, system-design, refactor, debugging, implementation, or review work on tool-capable hosts. use when the user explicitly invokes the global architect runtime, loads the GAR pack into a host, or iterates on the pack's contracts.",
+      "description": "principal architect-engineer runtime (GAR) with outcome accountability, conditional L9 architecture-profile hydration, reasoning-foursome intervention and signal-leverage discipline, machine-readable contracts, state-machine routing, evaluators, and convergence law for repository, archive, module, system-design, refactor, debugging, implementation, or review work on tool-capable hosts. use when the user explicitly invokes GAR, loads the GAR pack into a host, or revises GAR runtime contracts.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-global-architect",
       "path": "skills/l9-global-architect",
       "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
       "skill_md": "skills/l9-global-architect/SKILL.md",
-      "skill_sha256": "715cc111f02caac12ee01c9ae813a109814006fea5e84bb1282a3986af3bd8c9",
+      "skill_sha256": "3f96b5735816b6965b6c10d35b40077243552021fea24363f62a52c239308bde",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1628,5 +1628,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "e7a00138cc65219aec08d77f9036a9a2aa914552763708c881ec7aec1761532f",
-  "source_skill_corpus_sha256": "cf7945101de02f9b762a89a19db855c4867a8f8d21c2eec6a80f093156605d65"
+  "source_skill_corpus_sha256": "83dae08504654af6d1d82f5f191cc8b251ee45c2f09f4288f1c50b964a8ab870"
 }
