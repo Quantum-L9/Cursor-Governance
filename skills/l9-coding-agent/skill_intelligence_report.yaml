@@ -1,0 +1,225 @@
+skill_intelligence_report:
+  skill: l9-coding-agent
+  version: 1.3.0
+  compiler: l9-skill-compiler@3.8.0
+  compiler_source_revision: a29657e8bafe07761a7cf6501864ffa77cdb9c56
+  activation_model:
+    strong_signals:
+    - execute_approved_implementation
+    - repair_named_repo_or_pr
+    - apply_dev_pack_or_execution_contract
+    - refactor_inside_locked_boundaries
+    - implement_and_validate
+    weak_signals:
+    - code_question_with_possible_mutation_intent
+    reject_signals:
+    - architecture_selection
+    - audit_only
+    - research_or_explanation_only
+    - unbounded_merge_or_deploy_request
+    - design_ranking_without_mutation
+    false_positive_risks:
+    - generic_code_explanation
+    - architecture_request_that_mentions_code
+    specificity_score: 5
+    false_positive_risk_score: 1
+    measurement_basis:
+    - frontmatter_capability_trigger_reject_audit
+    - behavior_cases_CA-E21_through_CA-E28
+    - near_miss_routes_checked_against_reject_signals
+  authority_model:
+    order:
+    - platform_and_system_constraints
+    - explicit_current_user_instruction
+    - bound_human_or_gar_execution_contract
+    - canonical_owner_contracts_and_invariants
+    - exact_repository_evidence_for_current_state
+    conflict_handling: higher_semantic_authority_defines_desired_state_exact_repo_evidence_defines_current_state_material_conflict_blocks_or_escalates
+    staleness_handling: target_or_owner_revision_change_invalidates_only_affected_cached_understanding_and_revision_bound_evidence
+    unknown_handling: material_semantic_unknown_fails_closed_private_semantically_equivalent_detail_is_resolved_locally
+  expert_heuristics:
+  - condition: multiple_private_implementations_preserve_same_contract
+    judgment: coding_agent_owns_choice
+    action: use_repository_idiom_then_simplest_testable_option
+  - condition: fix_requires_public_contract_owner_invariant_provider_or_scope_change
+    judgment: semantic_envelope_crossed
+    action: stop_and_escalate_exact_architecture_question
+  - condition: observable_failure_has_multiple_symptoms
+    judgment: symptom_patch_risks_repeat_failure
+    action: build_target_graph_trace_to_root_cause_and_batch_repairs_by_cause
+  - condition: whole_target_readiness_is_requested
+    judgment: partial_inventory_cannot_prove_whole_target_readiness
+    action: inventory_complete_authorized_target_or_return_bounded_unknown_status
+  - condition: target_or_delivery_identity_changes_after_validation
+    judgment: evidence_is_stale_for_handoff
+    action: refresh_identity_rerun_material_validation_and_verify_delivered_equals_validated
+  - condition: unrelated_local_change_or_defect_is_discovered
+    judgment: discovery_is_not_scope_and_user_work_must_be_preserved
+    action: record_and_preserve_unless_causally_required_or_acceptance_blocking
+  - condition: required_validation_is_failed_unknown_or_green_only_by_weakening_gate
+    judgment: readiness_not_proven
+    action: repair_obtain_evidence_or_block_never_manufacture_green
+  doctrine:
+  - broad_implementation_autonomy_inside_locked_semantics
+  - zero_architecture_authority_outside_locked_semantics
+  - smallest_complete_change
+  - evidence_over_prose
+  - discovery_is_not_scope
+  - source_ownership_for_generated_artifacts
+  - lazy_context_by_material_concern
+  - root_cause_before_patch
+  - finding_change_validation_traceability
+  - validated_state_equals_delivered_state
+  invariants:
+  - exact_target_binding
+  - one_active_execution_contract
+  - no_silent_architecture_change
+  - no_scope_laundering
+  - no_dependency_smuggling
+  - no_gate_weakening
+  - revision_bound_validation
+  - package_intelligence_not_runtime_authority
+  adapter_map:
+    core_default: bounded_architecture_faithful_implementation
+    adapters:
+    - name: gar_handoff
+      load_when:
+      - current_gar_contract_is_bound
+      changes:
+      - authority_binding
+      - architecture_escalation_target
+    - name: pr_repair
+      load_when:
+      - target_is_existing_pull_request_or_revision_bound_patch
+      changes:
+      - target_binding
+      - validation_staleness_rules
+      - delivery_shape
+    - name: greenfield_or_module_build
+      load_when:
+      - target_surface_does_not_exist_and_architecture_is_locked
+      changes:
+      - baseline_expectations
+      - artifact_planning
+  failure_modes:
+  - mode: architecture_by_accident
+    prevention_rule: semantic_envelope_gate_before_mutation
+  - mode: cowardly_escalation
+    prevention_rule: implementation_detail_sovereignty_inside_envelope
+  - mode: scope_laundering
+    prevention_rule: causal_scope_test_and_discovery_not_scope
+  - mode: validation_theater
+    prevention_rule: observed_revision_bound_evidence_required
+  - mode: endless_repair_loop
+    prevention_rule: stagnation_guard_after_two_materially_distinct_repairs_without_new_evidence
+  leverage_points:
+  - item: semantic_envelope
+    future_action_acceleration: 5
+    output_quality_gain: 5
+    drift_reduction: 5
+    reuse_across_tasks: 5
+    implementation_simplicity: 4
+    total: 24
+  - item: lazy_stage_hydration
+    future_action_acceleration: 5
+    output_quality_gain: 4
+    drift_reduction: 5
+    reuse_across_tasks: 5
+    implementation_simplicity: 5
+    total: 24
+  - item: target_graph_root_cause_repair
+    future_action_acceleration: 5
+    output_quality_gain: 5
+    drift_reduction: 5
+    reuse_across_tasks: 5
+    implementation_simplicity: 3
+    total: 23
+  - item: finding_change_validation_traceability
+    future_action_acceleration: 4
+    output_quality_gain: 5
+    drift_reduction: 5
+    reuse_across_tasks: 5
+    implementation_simplicity: 4
+    total: 23
+  - item: validated_delivery_identity
+    future_action_acceleration: 4
+    output_quality_gain: 5
+    drift_reduction: 5
+    reuse_across_tasks: 5
+    implementation_simplicity: 5
+    total: 24
+  evidence_hierarchy:
+    desired_state:
+    - platform_system_constraints
+    - current_user_instruction
+    - bound_execution_contract
+    - owner_contracts_and_invariants
+    current_state:
+    - exact_repository_revision
+    - observed_runtime_and_tool_output
+    completion:
+    - required_validation_observations
+    - delivery_receipt
+    never_authoritative:
+    - completion_prose
+    - stale_test_output
+    - package_intelligence_for_runtime_semantics
+  self_improvement_hook:
+    capture_only_when_user_reports_bad_run_or_requests_iteration: true
+    capture:
+    - missed_or_false_activation
+    - unnecessary_or_missed_architecture_escalation
+    - repeated_symptom_patch_without_root_cause
+    - validation_or_handoff_gap_requiring_manual_rework
+    promotion_rule: observations_propose_skill_changes_but_do_not_self_promote_policy
+  exemplary_gate_results:
+    activation_precision:
+      status: PASS
+      evidence:
+      - SKILL.md frontmatter
+      - CA-E21..CA-E28
+    adapter_architecture:
+      status: PASS
+      evidence:
+      - three conditional adapters with changed decision rules
+    evidence_hierarchy:
+      status: PASS
+      evidence:
+      - authority contract
+      - validation contract
+      - report evidence_hierarchy
+    doctrine_extraction:
+      status: PASS
+      evidence:
+      - expertise_model.yaml
+      - SKILL.md hard laws
+    expert_heuristics:
+      status: PASS
+      evidence:
+      - seven condition_judgment_action rules including target-graph/root-cause and handoff fidelity
+    failure_modes:
+      status: PASS
+      evidence:
+      - five named modes with prevention rules
+    leverage_model:
+      status: PASS
+      evidence:
+      - five scored leverage points all >=23/25 in v1.3.0
+    self_improvement_hook:
+      status: PASS
+      evidence:
+      - observed-failure-only capture rule
+    compiler_enforcement_gates:
+      status: PASS
+      evidence:
+      - v3.8.0 validate_skill_pack
+      - validate_exemplary_skill
+      - runtime_alignment
+      - lazy_bootstrap
+      - Validate & Repair kernel v1.0 recursive full-readiness pass
+      - 40 behavior conformance cases
+    skill_intelligence_report:
+      status: PASS
+      evidence:
+      - this artifact plus deterministic validator
+  tier_decision: exemplary
