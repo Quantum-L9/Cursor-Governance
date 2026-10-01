@@ -1137,18 +1137,20 @@ def _hold_install_lock(gov: Path) -> int:
     return fd
 
 
-def _release_install_lock(fd: int) -> None:
+def _unlock_install_lock(fd: int) -> None:
     import fcntl
-    import os
 
     try:
         fcntl.flock(fd, fcntl.LOCK_UN)
     except OSError:
         pass
-    try:
-        os.close(fd)
-    except OSError:
-        pass
+
+
+def _release_install_lock(fd: int) -> None:
+    import os
+
+    _unlock_install_lock(fd)
+    os.close(fd)
 
 
 def test_a_venv_being_installed_is_not_probed_or_healed(tmp_path: Path, monkeypatch) -> None:
@@ -1183,8 +1185,10 @@ def test_a_venv_whose_install_finishes_is_probed_after_the_wait(
     monkeypatch.setattr(rb, "_REPO_ROOT", tmp_path / "not-a-checkout")
     gov, env = _drifted_governance_env(tmp_path)
     env.version = EXPECTED_VERSION
+    import os
+
     fd = _hold_install_lock(gov)
-    timer = threading.Timer(0.3, _release_install_lock, args=(fd,))
+    timer = threading.Timer(0.3, _unlock_install_lock, args=(fd,))
     timer.start()
     try:
         binding = rb.resolve_runtime_binding(
@@ -1196,4 +1200,4 @@ def test_a_venv_whose_install_finishes_is_probed_after_the_wait(
     finally:
         timer.cancel()
         timer.join(timeout=2)
-        _release_install_lock(fd)
+        os.close(fd)

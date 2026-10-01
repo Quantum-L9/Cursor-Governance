@@ -54,16 +54,17 @@ def _hold_exclusive(root: Path) -> int:
     return fd
 
 
-def _release(fd: int) -> None:
-    """Unlock and close. Safe to call twice: the timer and a finally may both run."""
+def _unlock(fd: int) -> None:
+    """Drop the lock only. The test that opened the fd closes it."""
     try:
         fcntl.flock(fd, fcntl.LOCK_UN)
     except OSError:
         pass
-    try:
-        os.close(fd)
-    except OSError:
-        pass
+
+
+def _release(fd: int) -> None:
+    _unlock(fd)
+    os.close(fd)
 
 
 # --- reader: ops/memory/venv_ready.py --------------------------------------
@@ -101,7 +102,7 @@ def test_an_unwritable_root_does_not_block_the_reader(tmp_path: Path) -> None:
 def test_reader_waits_for_the_writer_then_proceeds(tmp_path: Path) -> None:
     root = _gov(tmp_path)
     fd = _hold_exclusive(root)
-    timer = threading.Timer(0.5, _release, args=(fd,))
+    timer = threading.Timer(0.5, _unlock, args=(fd,))
     timer.start()
     try:
         started = time.monotonic()
@@ -111,7 +112,7 @@ def test_reader_waits_for_the_writer_then_proceeds(tmp_path: Path) -> None:
     finally:
         timer.cancel()
         timer.join(timeout=2)
-        _release(fd)
+        os.close(fd)
 
 
 def test_reader_gives_up_with_a_named_reason(tmp_path: Path) -> None:
@@ -161,7 +162,7 @@ def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
 
     def _finish() -> None:
         marker.unlink(missing_ok=True)
-        _release(fd)
+        _unlock(fd)
 
     timer = threading.Timer(0.5, _finish)
     timer.start()
@@ -173,7 +174,7 @@ def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
         timer.cancel()
         timer.join(timeout=2)
         marker.unlink(missing_ok=True)
-        _release(fd)
+        os.close(fd)
 
 
 def test_an_unbounded_wait_budget_is_refused(monkeypatch) -> None:
@@ -240,7 +241,7 @@ def test_client_spawns_once_the_install_completes(
     root = _gov(tmp_path)
     fake_cli.reply("hydrate", 0, hydration_payload("r1"))
     fd = _hold_exclusive(root)
-    timer = threading.Timer(0.3, _release, args=(fd,))
+    timer = threading.Timer(0.3, _unlock, args=(fd,))
     timer.start()
     try:
         outcome = MemoryControlPlaneClient(_venv_bound(bound, root), runner=fake_cli.run).hydrate(
@@ -250,7 +251,7 @@ def test_client_spawns_once_the_install_completes(
     finally:
         timer.cancel()
         timer.join(timeout=2)
-        _release(fd)
+        os.close(fd)
 
 
 def test_a_runtime_that_cannot_import_itself_is_an_environment_fault(
