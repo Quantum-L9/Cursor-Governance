@@ -1,0 +1,107 @@
+workflow:
+  id: L9.CODING_AGENT.STATE_MACHINE.001
+  version: 1.1.0
+initial_state: INTAKE
+terminal_states:
+- CONVERGED
+- BLOCKED
+- ESCALATE_ARCHITECTURE
+- FAILED
+depth_profiles:
+  RAPID:
+    select_when: narrow_low_risk_change_with_clear_contract_and_local_validation
+    minimum:
+    - bind
+    - bounded_census
+    - baseline_or_explicit_unknown
+    - finding
+    - fix
+    - mutate
+    - targeted_validate
+    - reconcile
+    - receipt
+  STANDARD:
+    select_when: default_bounded_multi_file_or_behavioral_change
+    minimum:
+    - bind
+    - baseline
+    - dependency_target_graph
+    - finding_matrix
+    - fix_map
+    - mutate
+    - layered_validate
+    - regression_guard
+    - reconcile
+    - receipt
+  DEEP:
+    select_when: concurrency_persistence_security_cross_module_or_public_surface_sensitive_implementation
+    note: DEEP expands implementation evidence, not architectural authority
+states:
+  INTAKE:
+    next: BIND_TARGET
+  BIND_TARGET:
+    success: RESOLVE_AUTHORITY
+    failure: BLOCKED
+  RESOLVE_AUTHORITY:
+    success: BIND_CONTRACT
+    authority_conflict: ESCALATE_ARCHITECTURE
+  BIND_CONTRACT:
+    success: ESTABLISH_ENVELOPE
+    architecture_unknown: ESCALATE_ARCHITECTURE
+    target_or_tool_unknown: BLOCKED
+  ESTABLISH_ENVELOPE:
+    success: CENSUS
+    boundary_conflict: ESCALATE_ARCHITECTURE
+  CENSUS:
+    success: BASELINE
+    whole_target_inventory_incomplete: BLOCKED
+    material_blocker_outside_authority: BLOCKED
+  BASELINE:
+    success: FINDINGS
+    confounding_corruption: BLOCKED
+    unavailable_but_nonconfounding: FINDINGS
+  FINDINGS:
+    success: FIX_MAP
+    intended_behavior_unknown: BLOCKED
+    architecture_contradiction: ESCALATE_ARCHITECTURE
+  FIX_MAP:
+    success: READY
+    scope_expansion_required: ESCALATE_ARCHITECTURE
+    unsafe_or_fake_only_fix: BLOCKED
+  READY:
+    success: IMPLEMENT
+  IMPLEMENT:
+    success: VALIDATE
+    architecture_boundary_crossed: ESCALATE_ARCHITECTURE
+    environment_blocked: BLOCKED
+    fatal_execution_error: FAILED
+  VALIDATE:
+    all_required_pass: DELIVER
+    implementation_defect: REPAIR
+    revision_drift: CENSUS
+    architecture_contradiction: ESCALATE_ARCHITECTURE
+    validation_unavailable: BLOCKED
+  REPAIR:
+    success: VALIDATE
+    stagnation_guard_triggered: BLOCKED
+    architecture_boundary_crossed: ESCALATE_ARCHITECTURE
+  DELIVER:
+    success: CONVERGENCE_CHECK
+    requested_external_action_unavailable_or_unauthorized: BLOCKED
+  CONVERGENCE_CHECK:
+    converged: CONVERGED
+    architecture_issue: ESCALATE_ARCHITECTURE
+    other_blocker: BLOCKED
+transition_rules:
+- one_active_execution_contract_only
+- every_mutation_occurs_after_semantic_envelope_established
+- target_revision_change_invalidates_revision_bound_evidence
+- repair_never_weakens_required_validation_without_authority
+- escalation_preserves_completed_lawful_work_and_exact_blocker
+- blocked_is_preferable_to_fabricated_completion
+- inspection_may_expand_for_understanding_but_modification_never_exceeds_authorized_scope
+- material_repair_requires_evidence_backed_finding_and_root_cause_or_explicit_required_gap
+- whole_target_readiness_requires_complete_authorized_inventory
+- required_validation_unknown_is_not_a_pass
+- final_delivery_must_match_the_exact_validated_state
+- another_recursive_pass_requires_a_specific_evidence_backed_objective
