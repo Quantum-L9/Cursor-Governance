@@ -1,0 +1,326 @@
+integration:
+  integration_id: L9.GAR.REASONING_FOURSOME_BINDING.001
+  version: 0.8.1
+  artifact_class: reasoning_overlay_binding
+  status: experimental
+  semantic_owner: integrations/REASONING_FOURSOME_BINDING.yaml
+purpose:
+  assertion: Bind GAR beneath the L9 Reasoning Foursome so First-Order owns governing cause and intervention
+    selection, Second-Order owns consequence modeling, Leverage owns systemic value and compounding, Signal
+    Leverage owns evidence-bearing propagation and safe write-back semantics, and GAR owns architecture
+    realization of the bound intervention without semantic collision.
+architecture_profile_input:
+  profile_ref: contracts/L9_ARCHITECTURE_PROFILE.yaml
+  state_ref: $.architecture_profile
+  role: hard_architecture_constraint_input_when_applicable
+  laws:
+    - profile_applicability_is_resolved_from_explicit_scope_or_current_target_evidence
+    - profile_role_semantics_do_not_prove_current_inventory
+    - active_profile_invariants_are_feasibility_constraints_not_intervention_rankings
+    - profile_applicability_does_not_activate_integrated_runtime_execution
+  first_order_consumes_when_applicable:
+    - active_invariant_ids
+    - hydrated_role_semantics
+    - current_evidence_bound_role_bindings
+  first_order_must_not:
+    - infer_current_capability_availability_from_profile
+    - treat_profile_as_intervention_selector
+  second_order_consumes_when_applicable:
+    - active_profile_constraints_relevant_to_consequence_modeling
+  leverage_consumes_when_applicable:
+    - profile_compliance_as_hard_feasibility_constraint
+  signal_leverage_consumes_when_applicable:
+    - active_profile_constraints_relevant_to_signal_eligibility_and_hard_boundaries
+  gar_consumes_when_applicable:
+    - profile_invariants
+    - role_semantics
+    - canonical_flows
+    - current_evidence_bound_role_bindings
+  profile_does_not_own:
+    - intervention_selection
+    - consequence_model
+    - leverage_score
+    - signal_propagation_topology_selection
+    - signal_write_back_authority
+    - current_inventory
+    - gar_workflow_routing
+
+source_overlay:
+  contract_id: L9.REASONING_FOURSOME.BINDING.001
+  contract_ref: references/reasoning-foursome/05_REASONING_FOURSOME_BINDING_CONTRACT.yaml
+  architecture_ref: references/reasoning-foursome/00_REASONING_FOURSOME_ARCHITECTURE.md
+  first_order_ref: references/reasoning-foursome/01_FIRST_ORDER_THINKING_KERNEL.md
+  second_order_ref: references/reasoning-foursome/02_SECOND_ORDER_CONSEQUENCE_LENS.md
+  leverage_ref: references/reasoning-foursome/03_LEVERAGE_KERNEL.md
+  signal_leverage_ref: references/reasoning-foursome/04_SIGNAL_LEVERAGE_KERNEL.md
+  ownership_ref: references/reasoning-foursome/06_INVARIANT_OWNERSHIP_MATRIX.md
+  validation_ref: references/reasoning-foursome/07_VALIDATION_GATES.md
+  provenance_ref: references/reasoning-foursome/08_SOURCE_PROVENANCE.md
+  gar_may_redefine: false
+  rule: The pinned files are local evidence-bearing source snapshots of external semantic owners, not
+    GAR-owned replacements.
+  vendored_snapshot_is_semantic_owner: false
+semantic_ownership:
+  first_order:
+    owns:
+      - locked_objective_preservation
+      - governing_cause
+      - authoritative_owner_of_cause
+      - intervention_selection
+      - work_expected_to_become_unnecessary
+    gar_role:
+      - produce_solution_surface_evidence
+      - consume_decision
+      - verify_intervention_fidelity
+      - return_falsifying_evidence
+    gar_must_not:
+      - select_intervention_class
+      - silently_replace_intervention
+      - convert_architecture_preference_into_first_order_truth
+  second_order:
+    owns:
+      - predicted_consequence_surface
+      - observed_consequence_surface
+      - prediction_observation_comparison
+      - consequence_forecast_error
+    gar_role:
+      - supply_architecture_and_execution_evidence
+      - consume_consequence_receipts
+    gar_must_not:
+      - invent_consequence_paths_as_leverage_facts
+      - replace_second_order_with_architecture_opinion
+  leverage:
+    owns:
+      - predicted_leverage
+      - realized_leverage
+      - compounded_leverage
+      - leverage_rank
+      - leverage_score
+      - leverage_fingerprint
+      - mesh_value_evaluation
+      - eligible_shared_gain_identification
+      - systemic_leverage_learning
+    gar_role:
+      - supply_solution_surface_and_architecture_drag_evidence
+      - consume_leverage_receipts
+    gar_must_not:
+      - score_systemic_leverage
+      - route_or_promote_signals_as_if_value_implied_propagation
+      - silently_override_first_order_from_local_architecture_preference
+  signal_leverage:
+    owns:
+      - signal_meaning_preservation
+      - evidence_bearing_propagation
+      - signal_topology_semantics
+      - branching_fan_out_bypass_and_lateral_propagation_path_semantics
+      - reconvergence_semantics
+      - eligibility_bound_delivery
+      - evidence_bound_write_back
+      - signal_loop_convergence
+      - propagation_receipts
+      - signal_drag_evidence
+    gar_role:
+      - supply_source_evidence_and_current_architecture_boundaries
+      - consume_signal_propagation_and_writeback_receipts
+      - expose_architecture_constraints_that_bound_eligibility_or_routing
+    gar_must_not:
+      - choose_signal_topology_as_a_substitute_for_signal_leverage
+      - treat_duplicate_transmission_as_leverage
+      - promote_returned_signal_into_semantic_authority
+      - equate_connectivity_with_systemic_value
+  gar:
+    owns:
+      - solution_surface_evidence_production
+      - architectural_judgment_within_bound_intervention
+      - intervention_fidelity_evaluation
+      - architecture_realization
+      - gar_workflow_routing
+      - gar_convergence
+    does_not_own:
+      - governing_cause
+      - intervention_selection
+      - consequence_model
+      - leverage_scoring
+      - signal_propagation_path_semantics
+      - signal_write_back_semantics
+transport_boundary_disambiguation:
+  purpose: Prevent Signal Leverage propagation semantics from colliding with canonical L9 Gate routing ownership.
+  signal_kernel_term_mapping:
+    routing_means: semantic_selection_of_eligible_consumers_and_propagation_path_properties
+    routing_does_not_mean: concrete_inter_node_route_selection_admission_routability_or_transport_execution
+  canonical_gate_owner_ref: contracts/L9_ARCHITECTURE_PROFILE.yaml#L9AP-004
+  rules:
+    - signal_leverage_may_define_required_semantic_recipients_eligibility_fanout_reconvergence_and_path_constraints
+    - Constellation_Gate_owns_concrete_inter_node_route_selection_admission_routability_and_routing_seam_trust
+    - Gate_SDK_owns_transport_contract_and_client_integration_not_signal_semantics
+    - GAR_must_not_use_signal_topology_language_to_bypass_Gate_or_create_private_routing_tables
+    - transport_delivery_receipt_does_not_substitute_for_signal_meaning_preservation_or_semantic_owner_acceptance
+
+intervention_classes:
+  - USE_EXISTING
+  - CONFIGURE_EXISTING
+  - CALL_TOOL
+  - CONSUME_PACKAGE
+  - CONSUME_API
+  - CONSUME_SDK
+  - ADAPT_UPSTREAM
+  - VENDOR_IMPLEMENTATION
+  - TRANSPLANT_CODE
+  - HARVEST_SEMANTICS
+  - BUILD_NEW
+  - NO_ACTION
+solution_surface_census:
+  state_ref: $.system_model.solution_surface
+  classes:
+    - beneficiary_existing_capabilities
+    - constellation_capabilities
+    - upstream_public_tools
+    - upstream_packages
+    - upstream_apis
+    - upstream_sdks
+    - upstream_clis
+    - upstream_services
+    - vendorable_implementations
+    - transplantable_code
+    - semantic_only_donor_value
+    - unresolved_capability_unknowns
+  discovery_order:
+    - beneficiary_existing_capabilities
+    - constellation_capabilities
+    - upstream_public_tools
+    - upstream_packages
+    - upstream_apis
+    - upstream_sdks
+    - upstream_clis
+    - upstream_services
+    - vendorable_implementations
+    - transplantable_code
+    - semantic_only_donor_value
+    - irreducible_gap
+  laws:
+    - discovery_order_is_not_preference_ranking
+    - public_availability_is_not_suitability
+    - existing_capability_is_evidence_not_automatic_selection
+    - search_depth_is_proportional_to_materiality
+    - stop_when_no_unresolved_material_unknown_can_plausibly_change_intervention_class
+    - harvest_and_build_are_candidate_classes_not_defaults
+  sufficient_when_all:
+    - credible_material_intervention_classes_have_evidence
+    - material_unknowns_that_can_reverse_intervention_selection_are_resolved_or_bounded
+    - current_evidence_refs_are_recorded
+pre_architecture_handoff:
+  first_order_receipt:
+    state_ref: $.reasoning.first_order
+    required_fields:
+      - decision_ref
+      - status
+      - intervention_class
+      - solution_surface_census_ref
+      - evidence_refs
+      - work_expected_to_become_unnecessary_ref
+      - residual_work_ref
+    accepted_status: BOUND
+    intervention_class_domain_ref: '#intervention_classes'
+  second_order_before_receipt:
+    state_ref: $.reasoning.second_order.before_ref
+    required_when: reasoning_materiality in [MATERIAL, HIGH]
+    not_material_requires_explicit_record: true
+  signal_prediction_propagation_receipt:
+    state_ref: $.reasoning.signal_leverage.prediction_propagation_ref
+    required_when: reasoning_materiality in [MATERIAL, HIGH]
+    not_material_requires_explicit_record: true
+    validates:
+      - required_meaning_preserved
+      - eligible_consumers_or_explicit_exclusions_recorded
+      - topology_is_earned
+      - loop_controls_present_when_cyclic
+  predicted_leverage_receipt:
+    state_ref: $.reasoning.leverage.predicted_ref
+    required_when: reasoning_materiality in [MATERIAL, HIGH]
+    not_material_requires_explicit_record: true
+  ready_when_all:
+    - l9_architecture_profile_constraints_ready_or_explicitly_not_applicable
+    - solution_surface_census_sufficient
+    - first_order_intervention_bound
+    - second_order_before_complete_or_explicitly_not_material
+    - signal_prediction_propagation_complete_or_explicitly_not_material
+    - predicted_leverage_complete_or_explicitly_not_material
+    - no_open_systemic_leverage_challenge
+intervention_fidelity:
+  property_id: GAR_INTERVENTION_FIDELITY
+  state_ref: $.architecture.intervention_fidelity
+  satisfied_when_all:
+    - applicable_l9_architecture_profile_is_satisfied_or_not_applicable
+    - bound_first_order_decision_is_current
+    - architecture_realizes_same_intervention_class
+    - architecture_does_not_recreate_work_the_intervention_was_selected_to_eliminate
+    - no_unresolved_evidence_materially_favors_another_intervention_class
+  on_unbound:
+    reason_code: INTERVENTION_SELECTION_UNBOUND
+    route: MODEL
+  on_material_challenge:
+    reason_code: INTERVENTION_RECONSIDERATION_REQUIRED
+    route: MODEL
+    handoff_to: first_order
+  laws:
+    - gar_may_challenge_but_not_replace_first_order_selection
+    - new_material_evidence_invalidates_intervention_fidelity_until_first_order_reselects_or_reaffirms
+    - harvest_or_build_cannot_begin_without_matching_bound_intervention_class
+post_execution_handoff:
+  applies_when: reasoning_overlay_applicable_and_execution_or_material_intervention_occurred
+  second_order_after_ref: $.reasoning.second_order.after_ref
+  prediction_observation_delta_ref: $.reasoning.second_order.prediction_observation_delta_ref
+  signal_observation_propagation_ref: $.reasoning.signal_leverage.observation_propagation_ref
+  realized_leverage_ref: $.reasoning.leverage.realized_ref
+  validated_shared_gain_refs: $.reasoning.leverage.validated_shared_gain_refs
+  signal_writeback_ref: $.reasoning.signal_leverage.writeback_ref
+  propagated_learning_refs: $.reasoning.signal_leverage.propagated_learning_refs
+  unresolved_propagation_gap_refs: $.reasoning.signal_leverage.unresolved_propagation_gap_refs
+  closed_when_all:
+    - observed_consequence_surface_recorded_or_explicitly_not_material
+    - prediction_observation_comparison_recorded_or_explicitly_not_material
+    - signal_observation_propagation_recorded_or_explicitly_not_material
+    - realized_leverage_recorded_or_explicitly_not_material
+    - validated_shared_gain_disposition_recorded
+    - signal_writeback_disposition_recorded
+    - required_signal_episode_converged_or_explicitly_not_material
+  laws:
+    - predicted_and_observed_consequences_remain_distinct
+    - predicted_and_realized_leverage_remain_distinct
+    - leverage_value_does_not_define_signal_propagation_topology
+    - propagation_does_not_prove_leverage_value
+    - returned_signal_does_not_become_semantic_authority_without_owner_acceptance
+    - successful_execution_does_not_imply_realized_leverage_or_successful_writeback
+    - realized_learning_is_reusable_only_when_signal_leverage_closes_governed_propagation
+routing_guards:
+  - guard: HARVEST_SEMANTICS
+    requires: bound_first_order_intervention_class == HARVEST_SEMANTICS
+  - guard: BUILD_NEW
+    requires: bound_first_order_intervention_class == BUILD_NEW
+  - guard: any_intervention_class_change
+    requires: first_order_reselection_or_reaffirmation
+anti_drift:
+  - do_not_turn_solution_surface_census_into_fixed_reuse_ranking
+  - do_not_turn_gar_into_first_order_reasoner
+  - do_not_turn_intelligence_harvest_into_general_intervention_selector
+  - do_not_treat_upstream_maintenance_as_automatic_fit
+  - do_not_require_exhaustive_search_after_material_alternatives_are_discriminated
+  - do_not_treat_l9_architecture_profile_as_live_constellation_inventory
+  - do_not_allow_profile_constraints_to_rank_or_select_interventions
+  - do_not_collapse_signal_leverage_back_into_leverage
+  - do_not_treat_more_edges_or_broadcast_as_more_leverage
+  - do_not_promote_writeback_without_semantic_owner_acceptance
+applicability:
+  required_when_any:
+    - build_fix_or_solution_is_proposed
+    - architectural_choice_is_required
+    - realization_mode in [MUTATION, ARTIFACT] and intervention_choice_is_material
+    - user_requests_intervention_or_architecture_decision
+  not_applicable_when_all:
+    - task_is_pure_observation_extraction_or_factual_analysis
+    - no_intervention_or_architecture_choice_is_required
+  materiality_rule: Choose the shallowest reasoning depth that can discriminate intervention classes.
+    NOT_MATERIAL must be explicit; it is not a shortcut around First-Order when intervention selection is
+    material.
+  rapid_rule: RAPID may compress evidence collection and receipts but may not bypass intervention binding when
+    the overlay is applicable.

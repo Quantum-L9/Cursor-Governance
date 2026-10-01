@@ -1,0 +1,33 @@
+{
+  "fixture_id": "GAR-FIXTURE-UPSTREAM-CAPABILITY-VS-HARVEST-001",
+  "purpose": "Regression fixture for excellent wrong work: a donor has rich architectural intelligence and a maintained public implementation surface that can satisfy the beneficiary with less duplicated ownership.",
+  "beneficiary": {
+    "objective": "Add a reusable layout capability to an existing website compiler without duplicating ownership.",
+    "current_gap": "Capability not currently exposed by beneficiary."
+  },
+  "donor": {
+    "has_rich_design_invariants": true,
+    "has_maintained_public_implementation": true,
+    "has_public_consumption_surface": [
+      "package",
+      "public API or custom element equivalent"
+    ],
+    "has_documented_usage": true
+  },
+  "trap": [
+    "begin semantic harvest immediately",
+    "design local implementation before checking public consumption surface",
+    "treat donor as intelligence source only"
+  ],
+  "required_behavior": [
+    "record maintained public implementation in solution-surface census",
+    "bind First-Order intervention before harvest or build",
+    "run Second-Order and predicted Leverage when material",
+    "architect only the selected intervention"
+  ],
+  "forbidden_behavior": [
+    "HARVEST_SEMANTICS without matching First-Order decision",
+    "BUILD_NEW without matching First-Order decision",
+    "silent substitution after new evidence"
+  ]
+}

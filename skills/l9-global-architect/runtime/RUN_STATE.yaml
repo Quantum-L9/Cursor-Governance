@@ -1,6 +1,6 @@
 run_state_model:
   model_id: L9.GAR.RUN_STATE.001
-  version: 0.5.0
+  version: 0.8.1
   artifact_class: runtime_state_template
   status: experimental
   semantic_owner: runtime/RUN_STATE.yaml
@@ -23,24 +23,37 @@ template_semantics:
     fields and transition invariants remain applicable.
 runtime_compatibility:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
-  requires: ">=0.5.0 <0.6.0"
+  requires: ">=0.8.1 <0.9.0"
 instance_template:
   run:
-    run_id: null
-    created_at: null
-    updated_at: null
+    run_id:
+    created_at:
+    updated_at:
     current_state: INTAKE
-    terminal_state: null
-    depth_profile: null
+    terminal_state:
+    depth_profile:
     integration_mode: STANDALONE
+  target:
+    status: UNBOUND
+    requested_refs: []
+    bound_refs: []
+    artifact_types: []
+    revision_or_version_refs: []
+    inspection_scope: []
+    correction_scope: []
+    excluded_scope: []
+    inaccessible_scope: []
+    ambiguity_refs: []
+    evidence_refs: []
+    observed_at:
   objective:
-    raw_user_intent_ref: null
-    requested_outcome: null
-    requested: null
-    task_kind: null
-    realization_mode: null
-    realization_mode_source: null
-    validation_required: null
+    raw_user_intent_ref:
+    requested_outcome:
+    requested:
+    task_kind:
+    realization_mode:
+    realization_mode_source:
+    validation_required:
     derivation_rule_ids: []
     explicit_constraints: []
     acceptance_conditions: []
@@ -74,12 +87,26 @@ instance_template:
     binding_state: UNBOUND
     repository_markers_observed: []
     active_runtime_binding_observed: false
-    compatible_runtime_version: null
+    compatible_runtime_version:
     orchestration_authority_transferred: false
     execution_path_available: false
     activation_evidence_refs: []
     degradation_evidence_refs: []
     authority_release_evidence_refs: []
+  architecture_profile:
+    profile_ref: contracts/L9_ARCHITECTURE_PROFILE.yaml
+    load_status: LOADED
+    applicability: UNKNOWN
+    applicability_evidence_refs: []
+    active_invariant_ids: []
+    role_bindings: []
+    current_inventory_evidence_refs: []
+    currentness_unknowns: []
+    evaluation_ref:
+    status: NOT_EVALUATED
+    violation_refs: []
+    hydrated_role_ids: []
+    canonical_flow_refs: []
   epistemic:
     verified_facts: []
     inferences: []
@@ -88,7 +115,7 @@ instance_template:
     material_assumptions: []
   evidence:
     refs: []
-    latest_observation_at: null
+    latest_observation_at:
     stale_refs: []
     invalidated_refs: []
   system_model:
@@ -98,64 +125,93 @@ instance_template:
     authoritative_state: []
     boundaries: []
     dependencies: []
+    contracts: []
+    configuration_authority: []
+    security_boundaries: []
+    observability_semantics: []
+    validation_ownership: []
     invariants: []
     lifecycle_semantics: []
     failure_semantics: []
     temporal_semantics: []
     scale_constraints: []
     operability_constraints: []
+    solution_surface:
+      status: absent
+      census_sufficient: false
+      beneficiary_existing_capabilities: []
+      constellation_capabilities: []
+      upstream_public_tools: []
+      upstream_packages: []
+      upstream_apis: []
+      upstream_sdks: []
+      upstream_clis: []
+      upstream_services: []
+      vendorable_implementations: []
+      transplantable_code: []
+      semantic_only_donor_value: []
+      unresolved_capability_unknowns: []
+      evidence_refs: []
+      observed_at:
   architecture:
     status: absent
     candidate_refs: []
     rejected_candidate_refs: []
-    selected_candidate_ref: null
-    decision_summary: null
+    selected_candidate_ref:
+    decision_summary:
     integrity_evaluation_refs: []
     unresolved_architecture_defects: []
     required_questions:
       direction:
         answered: false
-        verdict: null
+        verdict:
         evidence_refs: []
       constellation_alignment:
         answered: false
-        verdict: null
+        verdict:
         evidence_refs: []
-      first_order:
+      intervention_fidelity:
         answered: false
-        verdict: null
+        verdict:
         evidence_refs: []
+    intervention_fidelity:
+      status: NOT_EVALUATED
+      bound_first_order_decision_ref:
+      bound_intervention_class:
+      architecture_intervention_class:
+      challenge_refs: []
+      evidence_refs: []
   plan:
     status: absent
-    plan_ref: null
-    readiness_level: null
-    readiness_evaluation_ref: null
+    plan_ref:
+    readiness_level:
+    readiness_evaluation_ref:
     scope: []
     mutations: []
     invariants_to_preserve: []
     validation_obligations: []
     attack_findings: []
   execution:
-    required: null
-    authorized: null
+    required:
+    authorized:
     attempted: false
     mutation_receipts: []
     changed_artifacts: []
     deleted_artifacts: []
     execution_failures: []
   delivery:
-    required: null
+    required:
     mode: NONE
-    derivation_rule_id: null
+    derivation_rule_id:
     completed: false
     artifact_refs: []
-    receipt_ref: null
-    observed_at: null
+    receipt_ref:
+    observed_at:
   policy_compliance:
     outcome_policy:
-      decision_ref: null
-      decision: null
-      matched_rule_id: null
+      decision_ref:
+      decision:
+      matched_rule_id:
       required_obligations: []
       satisfied_obligations: []
       unresolved_obligations: []
@@ -167,8 +223,8 @@ instance_template:
     all_required_obligations_evaluated: false
     evidence_refs: []
     validation_results: []
-    architectural_review_result: null
-    behavioral_review_result: null
+    architectural_review_result:
+    behavioral_review_result:
     blocking_evaluation_refs: []
     unresolved_failures: []
   defects:
@@ -176,29 +232,107 @@ instance_template:
     resolved: []
   block:
     candidate: false
-    receipt: null
+    receipt:
   progress:
     cycle_number: 0
     state_visit_counts: {}
-    last_material_progress_at: null
-    last_material_progress_kind: null
+    last_material_progress_at:
+    last_material_progress_kind:
     repeated_defect_fingerprints: {}
-    progress_fingerprint: null
+    progress_fingerprint:
   convergence:
     evaluated: false
-    evaluation_ref: null
+    evaluation_ref:
     status: NOT_EVALUATED
     blocking_properties: []
     residual_risks: []
-    receipt: null
+    receipt:
   events: []
+  reasoning:
+    overlay_binding_ref: integrations/REASONING_FOURSOME_BINDING.yaml
+    overlay_status: UNBOUND
+    applicable:
+    materiality: UNRESOLVED
+    first_order:
+      decision_ref:
+      status: UNBOUND
+      intervention_class:
+      solution_surface_census_ref:
+      work_expected_to_become_unnecessary_ref:
+      residual_work_ref:
+      evidence_refs: []
+      challenge_refs: []
+    second_order:
+      before_ref:
+      before_disposition: UNRESOLVED
+      after_ref:
+      after_disposition: UNRESOLVED
+      prediction_observation_delta_ref:
+    signal_leverage:
+      prediction_propagation_ref:
+      prediction_propagation_disposition: UNRESOLVED
+      observation_propagation_ref:
+      observation_propagation_disposition: UNRESOLVED
+      writeback_ref:
+      writeback_disposition: UNRESOLVED
+      topology_observed:
+      propagated_learning_refs: []
+      unresolved_propagation_gap_refs: []
+      signal_drag_refs: []
+      required_episode_converged: false
+    leverage:
+      predicted_ref:
+      predicted_disposition: UNRESOLVED
+      realized_ref:
+      realized_disposition: UNRESOLVED
+      validated_shared_gain_refs: []
+      validated_shared_gain_disposition: UNRESOLVED
+    open_systemic_leverage_challenge: false
+    pre_architecture_ready: false
+    post_execution_closed: false
 state_enums:
+  target_binding_state: [UNBOUND, BOUND, AMBIGUOUS, UNAVAILABLE]
   capability_state: [available, unavailable, unknown]
   integration_binding_state: [UNBOUND, DISCOVERED, BOUND, ACTIVE, ACTIVE_DEGRADED, RELEASED]
   realization_mode: [MUTATION, ARTIFACT, ANALYSIS, DECISION, UNKNOWN]
   delivery_mode: [IN_PLACE_WORKSPACE, RETURNED_FILES, RETURNED_ARCHIVE, PERSISTED_REPOSITORY, NONE]
   artifact_status: [absent, partial, candidate, accepted, invalidated]
   convergence_status: [NOT_EVALUATED, NOT_CONVERGED, CONVERGED, BLOCKED, ABORTED]
+  architecture_profile_applicability: [APPLICABLE, NOT_APPLICABLE, UNKNOWN]
+  architecture_profile_status: [NOT_EVALUATED, SATISFIED, VIOLATED, UNKNOWN, NOT_APPLICABLE]
+  reasoning_overlay_status:
+    - UNBOUND
+    - BOUND
+    - ACTIVE
+    - DEGRADED
+  reasoning_materiality:
+    - UNRESOLVED
+    - NOT_MATERIAL
+    - MATERIAL
+    - HIGH
+  reasoning_disposition:
+    - UNRESOLVED
+    - NOT_MATERIAL
+    - BOUND
+    - INVALIDATED
+  signal_topology:
+    - ONE_WAY
+    - BIDIRECTIONAL
+    - CLOSED_LOOP
+    - MESH
+  intervention_class:
+    - USE_EXISTING
+    - CONFIGURE_EXISTING
+    - CALL_TOOL
+    - CONSUME_PACKAGE
+    - CONSUME_API
+    - CONSUME_SDK
+    - ADAPT_UPSTREAM
+    - VENDOR_IMPLEMENTATION
+    - TRANSPLANT_CODE
+    - HARVEST_SEMANTICS
+    - BUILD_NEW
+    - NO_ACTION
 event_model:
   append_only: true
   required_fields: [event_id, occurred_at, event_type, state, summary]
@@ -245,6 +379,24 @@ event_model:
     - RUN_BLOCKED
     - RUN_CONVERGED
     - RUN_ABORTED
+    - L9_ARCHITECTURE_PROFILE_APPLICABILITY_RESOLVED
+    - L9_ARCHITECTURE_PROFILE_HYDRATED
+    - L9_ARCHITECTURE_PROFILE_EVALUATED
+    - L9_ROLE_BINDING_OBSERVED
+    - SOLUTION_SURFACE_CENSUS_UPDATED
+    - FIRST_ORDER_DECISION_BOUND
+    - FIRST_ORDER_DECISION_INVALIDATED
+    - SECOND_ORDER_PREDICTION_BOUND
+    - PREDICTED_LEVERAGE_BOUND
+    - INTERVENTION_CHALLENGE_RECORDED
+    - SECOND_ORDER_OBSERVATION_BOUND
+    - REALIZED_LEVERAGE_BOUND
+    - SIGNAL_PREDICTION_PROPAGATION_BOUND
+    - SIGNAL_OBSERVATION_PROPAGATION_BOUND
+    - SIGNAL_WRITEBACK_RECORDED
+    - SIGNAL_PROPAGATION_GAP_RECORDED
+    - VALIDATED_SHARED_GAIN_RECORDED
+    - LEARNING_WRITEBACK_RECORDED
 transition_invariants:
   - id: RS-001
     assertion: current_state changes only through a legal transition declared by runtime/STATE_MACHINE.yaml
@@ -259,7 +411,8 @@ transition_invariants:
   - id: RS-006
     assertion: plan readiness is invalidated when architecture or a material plan premise changes
   - id: RS-007
-    assertion: convergence is invalidated by any new blocking defect invalidated evidence post-evaluation mutation or delivery regression
+    assertion: convergence is invalidated by any new blocking defect invalidated evidence post-evaluation
+      mutation or delivery regression
   - id: RS-008
     assertion: mutation_receipts record observed mutations not intended mutations
   - id: RS-009
@@ -271,13 +424,58 @@ transition_invariants:
   - id: RS-012
     assertion: private chain-of-thought MUST NOT be required or stored as runtime evidence
   - id: RS-013
-    assertion: once integration.orchestration_authority_transferred is true, integration_mode MUST NOT return to STANDALONE without explicit release or revocation evidence recorded in authority_release_evidence_refs
+    assertion: once integration.orchestration_authority_transferred is true, integration_mode MUST NOT return
+      to STANDALONE without explicit release or revocation evidence recorded in
+      authority_release_evidence_refs
   - id: RS-014
-    assertion: objective-derived realization validation and delivery obligations may be narrowed only by new explicit user instruction, never by runtime re-derivation
+    assertion: objective-derived realization validation and delivery obligations may be narrowed only by new
+      explicit user instruction, never by runtime re-derivation
   - id: RS-015
-    assertion: a block receipt MUST NOT satisfy VALID_BLOCK_RECEIPT unless its type legitimacy predicate is SATISFIED on current-run evidence
+    assertion: a block receipt MUST NOT satisfy VALID_BLOCK_RECEIPT unless its type legitimacy predicate is
+      SATISFIED on current-run evidence
   - id: RS-016
-    assertion: selected architecture and promoted plans MUST NOT be accepted while any architecture.required_questions field remains unanswered
+    assertion: selected architecture and promoted plans MUST NOT be accepted while any
+      architecture.required_questions field remains unanswered
+  - id: RS-017
+    assertion: architecture and promoted plans MUST be invalidated when the bound First-Order decision is
+      invalidated or materially challenged
+  - id: RS-018
+    assertion: GAR MUST NOT populate or change reasoning.first_order.intervention_class without a referenced
+      First-Order decision receipt
+  - id: RS-019
+    assertion: GAR MUST NOT resolve INTERVENTION_RECONSIDERATION_REQUIRED by silently substituting another
+      intervention class
+  - id: RS-020
+    assertion: predicted and observed Second-Order evidence MUST remain distinct and predicted and realized
+      Leverage evidence MUST remain distinct
+  - id: RS-021
+    assertion: HARVEST_SEMANTICS and BUILD_NEW execution paths require a current matching bound First-Order
+      intervention class
+  - id: RS-022
+    assertion: convergence requiring post-execution reasoning closure MUST NOT pass while
+      reasoning.post_execution_closed is false
+  - id: RS-023
+    assertion: architecture_profile applicability MUST be resolved from explicit scope or current target evidence and MUST NOT be inferred from profile presence alone
+  - id: RS-024
+    assertion: architecture_profile role semantics MUST NOT populate current inventory, version, registration, routability, or capability claims without current evidence refs
+  - id: RS-025
+    assertion: when architecture_profile.applicability is APPLICABLE, First-Order binding and GAR architecture promotion MUST consume the active profile invariants as hard feasibility constraints
+  - id: RS-026
+    assertion: architecture_profile applicability MUST NOT activate integrations/L9_RUNTIME_BINDING.yaml or transfer orchestration authority
+  - id: RS-027
+    assertion: Leverage value MUST NOT be treated as proof that required signal propagation or write-back occurred.
+  - id: RS-028
+    assertion: Signal Leverage receipts MUST preserve evidence provenance context authority and uncertainty required by downstream consumers.
+  - id: RS-029
+    assertion: Consequential signal write-back MUST remain pending until the semantic owner accepts or rejects the promoted change.
+  - id: RS-030
+    assertion: Cyclic or mesh signal episodes MUST expose bounded convergence controls and MUST NOT remain open at terminal convergence.
+  - id: RS-031
+    assertion: Whole-target claims or mutation MUST NOT occur unless $.target.status == BOUND and the bound target is supported by direct evidence.
+  - id: RS-032
+    assertion: Inspection scope and correction scope MUST remain distinct; authorization to inspect does not imply authorization to mutate.
+  - id: RS-033
+    assertion: A similarly named repository, file, branch, package, archive, or workspace MUST NOT satisfy target binding without evidence that it is the requested target.
 material_progress:
   accepted_kinds:
     - new_discriminating_evidence
@@ -293,6 +491,14 @@ material_progress:
     - authority_resolved
     - capability_state_resolved
     - integration_state_resolved
+    - l9_architecture_profile_applicability_resolved
+    - l9_architecture_profile_role_binding_strengthened
+    - l9_architecture_profile_compliance_restored
+    - solution_surface_census_strengthened
+    - first_order_intervention_bound_or_reaffirmed
+    - intervention_fidelity_restored
+    - reasoning_overlay_receipt_bound
+    - realized_leverage_learning_recorded
   non_progress:
     - repeat_same_reasoning_without_new_input
     - rerun_same_validation_without_state_change
@@ -326,6 +532,16 @@ decision_record:
     - counterevidence_refs
     - unresolved_unknowns
     - compact_rationale
+    - first_order_decision_ref
+    - intervention_class
+    - solution_surface_census_ref
+    - intervention_fidelity_result
+    - second_order_receipt_refs
+    - leverage_receipt_refs
+    - architecture_profile_ref
+    - architecture_profile_applicability
+    - architecture_profile_evaluation_ref
+    - l9_role_binding_refs
   must_not_require:
     - private_chain_of_thought
     - token_level_reasoning_trace
@@ -340,6 +556,10 @@ convergence_receipt_model:
     - remaining_material_unknowns
     - delivery_status
     - residual_risks
+    - reasoning_overlay_status
+    - intervention_fidelity_status
+    - post_execution_reasoning_status
+    - architecture_profile_status
   conditional_fields:
     blocked_reason:
       required_when:
@@ -349,3 +569,8 @@ anti_drift:
   - state_records_evidence_and_decisions_but_does_not_redefine_contracts
   - host_adapters_MUST_NOT_maintain_independent_shadow_run_state
   - persisted_and_in_memory_representations_MUST_preserve_equivalent_semantics
+  - run_state_MUST_store_reasoning_receipts_and_projections_without_becoming_the_semantic_owner
+  - solution_surface_census_MUST_record_evidence_not_select_the_intervention
+  - architecture_profile_MUST_constrain_L9_architecture_without_becoming_live_asset_inventory
+  - role_hydration_MUST_preserve_current_evidence_requirements
+  - architecture_profile_applicability_MUST_remain_distinct_from_integrated_runtime_activation
