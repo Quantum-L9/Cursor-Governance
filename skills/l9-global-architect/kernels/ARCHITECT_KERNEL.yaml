@@ -1,46 +1,68 @@
 kernel:
   kernel_id: L9.GLOBAL_ARCHITECT.KERNEL.001
-  version: 0.5.0
+  version: 0.8.1
   semantic_owner: kernels/ARCHITECT_KERNEL.yaml
   function: architectural_judgment
 objective:
-  select_and_realize: >
-    Select the smallest coherent architecture that satisfies the objective and
-    applicable normative contracts while preserving clear ownership bounded
-    failure adequate operability and justified complexity.
+  select_and_realize: >-
+    Architect and realize the smallest coherent architecture that faithfully implements the current bound First-Order
+    intervention, satisfies applicable normative contracts and the conditional L9 Architecture Profile when in scope,
+    and preserves clear ownership, bounded failure, adequate operability, and justified complexity. Produce solution-surface evidence but do not select or silently replace
+    the intervention class.
 normative_constraints:
   refs:
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-002
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-003
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-004
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-005
+    - contracts/L9_ARCHITECTURE_PROFILE.yaml
     - contracts/EPISTEMIC_DISCIPLINE.yaml
     - contracts/OUTCOME_OWNERSHIP.yaml
-  rule: >
-    This kernel applies and evaluates referenced law. It does not restate or
-    become an alternate owner of those normative semantics.
+    - integrations/REASONING_FOURSOME_BINDING.yaml
+  rule: >-
+    This kernel applies and evaluates GAR architectural law and the reasoning-foursome handoff binding. It does not
+    become an alternate owner of First-Order selection, Second-Order consequences, Leverage value semantics, or Signal Leverage propagation/write-back semantics.
 decision_semantics:
   method:
-    - eliminate_invalid_candidates
-    - answer_required_architecture_questions
+    - verify_exact_target_binding_and_authorized_scope
+    - resolve_conditional_l9_architecture_profile_applicability
+    - hydrate_stable_l9_role_semantics_without_inventing_current_inventory
+    - bind_current_l9_role_instances_only_from_current_evidence
+    - construct_bounded_solution_surface_census
+    - validate_reasoning_overlay_binding
+    - activate_and_close_all_material_analysis_lenses
+    - eliminate_invalid_architecture_candidates_within_bound_intervention
+    - answer_required_architecture_questions_and_intervention_fidelity
     - falsify_surviving_candidates
     - compare_surviving_candidates
-    - simplify_selected_candidate
+    - simplify_selected_candidate_within_bound_intervention
     - verify_repository_fit
+    - return_material_intervention_challenges_to_first_order
     - compile_execution_plan_when_required
     - adversarially_attack_plan_when_required
     - emit_depth_appropriate_plan_readiness_evidence
   blockers_are_scored: false
   invalid_candidate_if_any:
+    - target_binding_unresolved_or_ambiguous
+    - correction_scope_exceeds_authorized_scope
     - violates_higher_authority
     - violates_required_invariant
     - creates_unresolved_duplicate_authority
     - depends_on_material_unknown_without_bound
     - violates_contract_AI-001
     - violates_contract_AI-004
+    - violates_contract_AI-005
+    - applicable_l9_profile_violation
+    - current_l9_inventory_claim_inferred_only_from_profile
     - required_architecture_questions_unanswered
     - has_unbounded_material_failure_mode
     - cannot_define_success_evidence
+    - bound_first_order_intervention_missing
+    - architecture_silently_substitutes_intervention_class
+    - unresolved_material_intervention_challenge
+    - material_analysis_lens_obligation_unresolved
+    - material_security_or_contract_configuration_finding_unbounded
   lexicographic_priority:
     - correctness
     - invariant_preservation
@@ -55,6 +77,23 @@ decision_semantics:
     - implementation_convenience
     - aesthetic_preference
 analysis_lenses:
+  L9_PROFILE:
+    activate_when_any:
+      - explicit_user_scope_is_L9_architecture
+      - verified_target_is_L9_governed
+      - proposal_claims_L9_alignment
+    obligations:
+      - resolve_profile_applicability
+      - hydrate_active_profile_invariants
+      - hydrate_canonical_role_semantics
+      - bind_observed_current_roles_to_exact_evidence
+      - separate_stable_law_from_current_inventory
+      - evaluate_applicable_profile_compliance
+      - pass_profile_constraints_to_first_order_without_ranking_interventions
+    forbidden:
+      - infer_repo_version_capability_registration_or_routability_from_profile
+      - activate_integrated_runtime_because_profile_applies
+      - duplicate_profile_law_inside_architect_kernel
   OWNERSHIP:
     activate_when_any:
       - state_exists
@@ -81,6 +120,38 @@ analysis_lenses:
       - mutation_direction
       - public_contract
       - coupling_delta
+  CONTRACT_AND_CONFIGURATION:
+    activate_when_any:
+      - public_interface_changes
+      - message_or_event_contract_changes
+      - persisted_schema_changes
+      - shared_contract_type_changes
+      - configuration_precedence_changes
+      - generated_or_mirrored_configuration_exists
+    obligations:
+      - canonical_contract_owner
+      - producer_consumer_field_semantics
+      - version_and_compatibility_policy
+      - validation_and_unknown_field_behavior
+      - configuration_source_of_truth
+      - deterministic_precedence_and_environment_resolution
+      - generated_or_mirrored_artifact_subordination
+  SECURITY:
+    activate_when_any:
+      - trust_boundary_changes
+      - authentication_or_authorization_changes
+      - untrusted_input_reaches_execution_or_queries
+      - secrets_or_sensitive_data_are_material
+      - dynamic_execution_or_deserialization_is_material
+      - privilege_boundary_changes
+    obligations:
+      - trust_boundary_and_threat_surface
+      - authentication_owner
+      - authorization_owner
+      - least_privilege
+      - untrusted_input_validation_and_safe_execution
+      - secret_and_sensitive_data_handling
+      - audit_attribution_when_required
   STATE:
     activate_when_any:
       - persisted_state
@@ -166,11 +237,14 @@ analysis_lenses:
     activate_when:
       - always
     obligations:
+      - bounded_solution_surface_census
       - existing_mechanism_search
       - deletion_candidate
       - consolidation_candidate
-      - simpler_candidate
+      - simpler_architecture_within_bound_intervention
       - new_abstraction_responsibility
+      - intervention_fidelity_check
+      - material_intervention_challenge_detection
 candidate_protocol:
   minimum_candidates:
     RAPID: 1
@@ -190,8 +264,12 @@ candidate_protocol:
     - migration_cost
     - reversibility
     - scale_fit
+    - intervention_fidelity
+    - applicable_l9_profile_fit
   anti_pattern:
     forced_option_theater: forbidden
+  scope_rule: Architecture candidates MUST remain within the current bound intervention class. Evidence
+    favoring a different intervention class is a First-Order challenge, not a GAR candidate switch.
 complexity_analysis:
   normative_rule_ref: contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
   additions_requiring_evaluation:
@@ -224,8 +302,15 @@ full_plan_promotion_gate:
     - dependency_direction_is_understood
     - material_unknowns_are_resolved_or_bounded
     - material_failure_behavior_is_acceptable
+    - all_activated_architecture_lens_obligations_are_evaluated
+    - material_security_and_contract_configuration_findings_are_resolved_or_bounded
     - required_complexity_is_earned
-    - simpler_credible_candidate_is_not_superior
+    - l9_architecture_profile_constraints_ready_or_explicitly_not_applicable
+    - applicable_l9_architecture_profile_is_satisfied
+    - solution_surface_census_is_sufficient
+    - bound_first_order_intervention_is_current
+    - intervention_fidelity_is_satisfied
+    - simpler_credible_architecture_within_bound_intervention_is_not_superior
     - required_architecture_questions_answered
     - verification_can_discriminate_success_from_failure
     - blast_radius_is_understood
@@ -243,11 +328,15 @@ adversarial_plan_attack:
     - identify_duplicate_authority
     - identify_unmodeled_failure
     - identify_temporal_assumption
-    - identify_simpler_solution
+    - identify_simpler_architecture_within_bound_intervention
+    - detect_material_intervention_class_challenge
     - identify_scope_leak
     - identify_test_that_could_pass_while_requirement_fails
     - identify_irreversible_commitment
     - identify_future_maintenance_burden
+    - detect_l9_profile_violation_or_role_collapse_when_applicable
+    - detect_profile_used_as_live_inventory
+    - detect_premature_shared_abstraction_without_independent_semantic_evidence
   terminate_when:
     - no_blocking_defect_found
     - full_plan_promotion_gate_passes
@@ -265,6 +354,13 @@ output_contract:
     - counterevidence_refs
     - plan_readiness_evidence
     - typed_defects
+    - solution_surface_findings
+    - intervention_fidelity_result
+    - intervention_challenge_evidence
+    - target_binding_and_authorized_scope
+    - l9_architecture_profile_applicability
+    - l9_architecture_profile_evaluation
+    - current_evidence_bound_l9_role_bindings
   does_not_emit:
     - workflow_route
     - terminal_state
@@ -279,3 +375,56 @@ semantic_boundary:
     - architectural_law
     - completion_law
     - workflow_routing
+    - governing_cause
+    - intervention_selection
+    - second_order_consequence_model
+    - leverage_scoring
+    - l9_architecture_profile_semantics
+    - current_constellation_inventory
+solution_surface_census:
+  state_ref: $.system_model.solution_surface
+  classes:
+    - beneficiary_existing_capabilities
+    - constellation_capabilities
+    - upstream_public_tools
+    - upstream_packages
+    - upstream_apis
+    - upstream_sdks
+    - upstream_clis
+    - upstream_services
+    - vendorable_implementations
+    - transplantable_code
+    - semantic_only_donor_value
+    - unresolved_capability_unknowns
+  discovery_order:
+    - beneficiary_existing_capabilities
+    - constellation_capabilities
+    - upstream_public_tools
+    - upstream_packages
+    - upstream_apis
+    - upstream_sdks
+    - upstream_clis
+    - upstream_services
+    - vendorable_implementations
+    - transplantable_code
+    - semantic_only_donor_value
+    - irreducible_gap
+  laws:
+    - discovery_order_is_not_preference_ranking
+    - public_availability_is_not_suitability
+    - existing_capability_is_evidence_not_automatic_selection
+    - search_depth_is_proportional_to_materiality
+    - stop_when_no_unresolved_material_unknown_can_plausibly_change_intervention_class
+    - harvest_and_build_are_candidate_classes_not_defaults
+  sufficient_when_all:
+    - credible_material_intervention_classes_have_evidence
+    - material_unknowns_that_can_reverse_intervention_selection_are_resolved_or_bounded
+    - current_evidence_refs_are_recorded
+    - constellation_capability_claims_are_current_evidence_not_profile_hydration
+  purpose: Produce discriminating evidence for First-Order intervention selection without GAR ranking or
+    selecting intervention classes.
+  anti_pattern:
+    fixed_reuse_ladder_as_selection_policy: forbidden
+    harvest_before_intervention_selection: forbidden
+    build_before_intervention_selection: forbidden
+    exhaustive_procurement_ritual: forbidden

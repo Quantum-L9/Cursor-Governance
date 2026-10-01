@@ -1,0 +1,42 @@
+{
+  "fixture_id": "L9.GAR.FIXTURE.L9_PROFILE_HYDRATION.001",
+  "target_scope": {
+    "explicit_l9": true,
+    "target_kind": "candidate_l9_node",
+    "current_revision": "observed-revision-A"
+  },
+  "stable_profile_expectations": [
+    "one semantic authority per concern",
+    "provider mechanics stay subordinate to semantic contracts",
+    "inter-node transport uses Gate_SDK and TransportPacket through Constellation.Gate",
+    "supporting planes retain distinct role semantics",
+    "participation currentness requires coherent current evidence"
+  ],
+  "current_evidence": {
+    "verified": [
+      "target declares node capability contract",
+      "target revision is observed-revision-A"
+    ],
+    "unknown": [
+      "current Gate registration",
+      "current routability",
+      "current advertised capability set",
+      "current deployed version"
+    ]
+  },
+  "must_not_infer_from_profile": [
+    "repository existence",
+    "deployed version",
+    "Gate registration",
+    "routability",
+    "runtime health",
+    "capability availability"
+  ],
+  "expected_behavior": [
+    "profile APPLICABLE",
+    "stable role semantics hydrated",
+    "unknown current facts remain unknown",
+    "profile constraints available before First-Order selection",
+    "runtime integration remains independently evaluated"
+  ]
+}

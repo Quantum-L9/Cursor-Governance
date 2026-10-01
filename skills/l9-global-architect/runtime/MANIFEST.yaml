@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
   name: l9-global-architect
-  version: 0.5.0
+  version: 0.8.2
   status: experimental
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md
@@ -17,6 +17,9 @@ semantic_owners:
     owner: runtime/STATE_MACHINE.yaml
   run_state_model:
     owner: runtime/RUN_STATE.yaml
+  target_binding_state:
+    owner: runtime/RUN_STATE.yaml
+    projection: $.target
   evaluator_semantics:
     owner: runtime/EVALUATOR_REGISTRY.yaml
   architectural_judgment:
@@ -47,95 +50,131 @@ semantic_owners:
   adoption_decision:
     owner: decisions/ADR-L9-GAR-001.yaml
     normative: false
+  reasoning_foursome_binding:
+    owner: integrations/REASONING_FOURSOME_BINDING.yaml
+  l9_architecture_profile:
+    owner: contracts/L9_ARCHITECTURE_PROFILE.yaml
 load_order:
-  - catalogs/REASON_CODES.yaml
-  - runtime/EVALUATOR_REGISTRY.yaml
-  - contracts/EPISTEMIC_DISCIPLINE.yaml
-  - contracts/ARCHITECTURAL_INTEGRITY.yaml
-  - contracts/OBJECTIVE_DERIVATION.yaml
-  - contracts/OUTCOME_OWNERSHIP.yaml
-  - contracts/CONVERGENCE.yaml
-  - kernels/ARCHITECT_KERNEL.yaml
-  - catalogs/KILL_PATTERNS.yaml
-  - runtime/RUN_STATE.yaml
-  - integrations/L9_RUNTIME_BINDING.yaml
-  - runtime/STATE_MACHINE.yaml
+- catalogs/REASON_CODES.yaml
+- runtime/EVALUATOR_REGISTRY.yaml
+- contracts/EPISTEMIC_DISCIPLINE.yaml
+- contracts/L9_ARCHITECTURE_PROFILE.yaml
+- integrations/REASONING_FOURSOME_BINDING.yaml
+- contracts/ARCHITECTURAL_INTEGRITY.yaml
+- contracts/OBJECTIVE_DERIVATION.yaml
+- contracts/OUTCOME_OWNERSHIP.yaml
+- contracts/CONVERGENCE.yaml
+- kernels/ARCHITECT_KERNEL.yaml
+- catalogs/KILL_PATTERNS.yaml
+- runtime/RUN_STATE.yaml
+- integrations/L9_RUNTIME_BINDING.yaml
+- runtime/STATE_MACHINE.yaml
 optional_load:
   governance_generation:
     when:
-      - canonical_registry_or_projection_binding_work_requested
+    - canonical_registry_or_projection_binding_work_requested
     artifacts:
-      - bindings/GOVERNANCE_GENERATION.yaml
+    - bindings/GOVERNANCE_GENERATION.yaml
   behavioral_conformance:
     when:
-      - eval_or_promotion_work_requested
+    - eval_or_promotion_work_requested
     artifacts:
-      - evals/BEHAVIOR_CONFORMANCE.yaml
+    - evals/BEHAVIOR_CONFORMANCE.yaml
 authority_precedence:
   ordered_sources:
-    - platform_safety_and_system_constraints
-    - explicit_current_user_instruction
-    - verified_repository_authority
-    - applicable_project_governance
-    - runtime_contracts
-    - model_inference
+  - platform_safety_and_system_constraints
+  - explicit_current_user_instruction
+  - verified_repository_authority
+  - applicable_project_governance
+  - runtime_contracts
+  - model_inference
   unresolved_conflict_disposition_ref: catalogs/REASON_CODES.yaml#AUTHORITY_CONFLICT
 boot_sequence:
-  law: >
-    Run state exists before any step reads or writes it. Every state_target
-    below is a field of the GAR_RUN_STATE instance created by
-    INSTANTIATE_RUN_STATE; no step may execute before its inputs exist.
+  law: 'Run state exists before any step reads or writes it. Every state_target below is a field of the GAR_RUN_STATE instance
+    created by INSTANTIATE_RUN_STATE; no step may execute before its inputs exist.
+
+    '
   steps:
   - step: LOAD_RUNTIME
     consumes:
-      - load_order
-      - semantic_owners
+    - load_order
+    - semantic_owners
     outputs:
-      - required_runtime_loaded
+    - required_runtime_loaded
   - step: INSTANTIATE_RUN_STATE
     template_ref: runtime/RUN_STATE.yaml
     initial_state: INTAKE
     outputs:
-      - GAR_RUN_STATE
+    - GAR_RUN_STATE
   - step: SEED_RAW_OBJECTIVE
     truth_source: current_explicit_user_turn
     state_targets:
-      - $.objective.raw_user_intent_ref
-      - $.objective.requested_outcome
+    - $.objective.raw_user_intent_ref
+    - $.objective.requested_outcome
   - step: CENSUS_HOST
     state_target: $.capabilities
     truth_source: current_session_observation
     capability_classes:
-      - inspect
-      - mutate
-      - validate
-      - deliver
-      - external_side_effect
+    - inspect
+    - mutate
+    - validate
+    - deliver
+    - external_side_effect
   - step: RESOLVE_AUTHORITY
     truth_source: authority_precedence.ordered_sources
     state_target: $.authority
+  - step: BIND_TARGET
+    truth_source: current_explicit_user_turn_plus_current_session_observation
+    state_target: $.target
+    required_outputs:
+    - exact_target_identity_or_typed_unknown
+    - artifact_type
+    - revision_or_version_when_material
+    - inspection_scope
+    - correction_scope
+    - excluded_and_inaccessible_scope
+    rule: A similarly named repository, file, branch, archive, package, or workspace MUST NOT be substituted for the requested target.
   - step: DERIVE_OBJECTIVE
     derivation_ref: contracts/OBJECTIVE_DERIVATION.yaml
     consumes:
-      - $.objective.raw_user_intent_ref
-      - $.objective.requested_outcome
+    - $.objective.raw_user_intent_ref
+    - $.objective.requested_outcome
     state_targets:
-      - $.objective.requested
-      - $.objective.realization_mode
-      - $.objective.realization_mode_source
-      - $.objective.validation_required
-      - $.objective.acceptance_conditions
-      - $.delivery.required
-      - $.delivery.mode
+    - $.objective.requested
+    - $.objective.realization_mode
+    - $.objective.realization_mode_source
+    - $.objective.validation_required
+    - $.objective.acceptance_conditions
+    - $.delivery.required
+    - $.delivery.mode
   - step: DETECT_INTEGRATION_MODE
     binding_ref: integrations/L9_RUNTIME_BINDING.yaml
     state_targets:
-      - $.integration
-      - $.run.integration_mode
+    - $.integration
+    - $.run.integration_mode
     default: STANDALONE
   - step: SELECT_DEPTH
     selection_ref: runtime/STATE_MACHINE.yaml#depth_profiles
     state_target: $.run.depth_profile
+  - step: LOAD_L9_ARCHITECTURE_PROFILE
+    profile_ref: contracts/L9_ARCHITECTURE_PROFILE.yaml
+    state_targets:
+    - $.architecture_profile.profile_ref
+    - $.architecture_profile.load_status
+    outputs:
+    - l9_architecture_profile_loaded
+    note: Applicability is resolved from explicit scope or current target evidence during investigation/modeling; loading the profile does not prove applicability or activate integrated runtime execution.
+  - step: BIND_REASONING_FOURSOME_OVERLAY
+    binding_ref: integrations/REASONING_FOURSOME_BINDING.yaml
+    consumes:
+    - $.objective.requested
+    - $.objective.realization_mode
+    - $.architecture_profile.profile_ref
+    state_targets:
+    - $.reasoning.overlay_binding_ref
+    - $.reasoning.overlay_status
+    outputs:
+    - reasoning_overlay_binding_loaded
   - step: ENTER_RUNTIME
     standalone_state_machine_ref: runtime/STATE_MACHINE.yaml
     integrated_binding_ref: integrations/L9_RUNTIME_BINDING.yaml
@@ -152,12 +191,44 @@ runtime_projection:
   generated_human_docs_authoritative: false
 governance_generation_ref: bindings/GOVERNANCE_GENERATION.yaml
 conformance_ref: evals/BEHAVIOR_CONFORMANCE.yaml
+package_validation_refs:
+  runtime_alignment: scripts/validate_runtime_alignment.py
+  product_architecture_decision: scripts/validate_product_architecture_decision.py
+  rule: >-
+    Package validators verify shipped cross-file wiring, schema integrity, decision-artifact behavior,
+    final-state hygiene, and reproducible package readiness; they do not become runtime semantic owners.
 composition_invariants:
-  - run_state_is_instantiated_before_any_boot_step_reads_or_writes_it
-  - objective_facts_are_derived_before_any_policy_consumes_them
-  - every_required_semantic_owner_path_resolves
-  - every_required_load_order_path_resolves
-  - optional_artifacts_are_not_loaded_without_trigger
-  - bootloader_does_not_become_semantic_owner
-  - integration_binding_does_not_activate_from_repository_presence_alone
-  - manifest_does_not_redefine_owned_contract_semantics
+- run_state_is_instantiated_before_any_boot_step_reads_or_writes_it
+- exact_target_binding_precedes_whole_target_claims_or_mutation
+- inspection_scope_and_correction_scope_remain_distinct
+- objective_facts_are_derived_before_any_policy_consumes_them
+- every_required_semantic_owner_path_resolves
+- every_required_load_order_path_resolves
+- optional_artifacts_are_not_loaded_without_trigger
+- bootloader_does_not_become_semantic_owner
+- integration_binding_does_not_activate_from_repository_presence_alone
+- manifest_does_not_redefine_owned_contract_semantics
+- reasoning_foursome_binding_is_loaded_before_architectural_judgment
+- gar_does_not_own_governing_cause_or_intervention_selection
+- harvest_and_build_are_inaccessible_without_matching_bound_first_order_intervention
+- material_intervention_challenges_return_to_first_order_instead_of_silent_substitution
+- predicted_and_realized_reasoning_evidence_remain_distinct
+- signal_leverage_propagation_and_writeback_are_first_class_reasoning_receipts
+- leverage_value_and_signal_propagation_remain_distinct_semantic_owners
+- l9_architecture_profile_is_loaded_before_reasoning_foursome_binding_and_architectural_judgment
+- l9_architecture_profile_does_not_claim_current_inventory_or_runtime_state
+- l9_profile_applicability_is_distinct_from_l9_runtime_binding_activation
+- applicable_l9_profile_constraints_are_available_to_first_order_before_intervention_selection
+- package_validation_is_reproducible_and_does_not_require_unrelated_semantic_owner_version_churn
+historical_artifacts:
+  normative: false
+  runtime_loaded_by_default: false
+  purpose: Preserve architectural decision history and version deltas without creating shadow runtime law.
+  artifacts:
+  - decisions/ADR-L9-GAR-001.yaml
+  - decisions/ADR-L9-GAR-002.yaml
+  - decisions/ADR-L9-GAR-003.yaml
+  - decisions/ADR-L9-GAR-004.yaml
+  - decisions/ADR-L9-GAR-005.yaml
+  - decisions/ADR-L9-GAR-006.yaml
+  - ../CHANGELOG.md

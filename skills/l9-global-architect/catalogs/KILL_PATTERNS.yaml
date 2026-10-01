@@ -1,6 +1,6 @@
 catalog:
   catalog_id: L9.ARCHITECTURE.KILL_PATTERNS.001
-  version: 0.1.0
+  version: 0.8.0
   normative: false
   semantic_owner: catalogs/KILL_PATTERNS.yaml
 usage:
@@ -286,20 +286,174 @@ patterns:
       - collapse_invalid_variants
       - promote_true_policy_to_canonical_owner
   - id: KP-017
-    name: unanswered_required_architecture_questions
+    name: unanswered_architecture_or_intervention_fidelity
     category: architecture
     default_severity: critical
     signals:
       - proposed_build_fix_or_solution_without_direction_answer
       - constellation_alignment_asserted_without_cited_owner
-      - first_order_claim_without_existing_mechanism_search
-      - RAPID_used_to_skip_the_architecture_question_triad
+      - intervention_fidelity_asserted_without_bound_first_order_decision
+      - silent_intervention_class_substitution
+      - RAPID_used_to_skip_required_architecture_questions_or_reasoning_overlay
     defect_when:
-      - any_required_architecture_question_is_unanswered_or_silently_yes
+      - any_required_architecture_question_or_intervention_fidelity_check_is_unanswered_or_silently_yes
     counterevidence:
-      - all_three_questions_recorded_with_bound_evidence
-      - not_applicable_answers_state_why_no_proposal_or_why_not_l9
+      - required_direction_and_alignment_questions_recorded_with_bound_evidence
+      - current_first_order_decision_bound
+      - intervention_fidelity_satisfied
+      - not_applicable_answers_record_why_the_overlay_or_question_does_not_apply
     preferred_response:
-      - answer_the_triad_before_promotion
+      - bind_or_refresh_reasoning_overlay_before_promotion
       - reject_parallel_constellation_owners
-      - select_the_first_order_move
+      - return_material_intervention_challenge_to_first_order
+  - id: KP-018
+    name: excellent_wrong_work
+    category: architecture
+    default_severity: critical
+    signals:
+      - semantic_harvest_begins_before_solution_surface_census
+      - local_build_is_designed_before_maintained_public_capability_is_checked
+      - agent_optimizes_inside_harvest_or_build_before_first_order_intervention_is_bound
+      - duplicate_implementation_is_planned_while_upstream_capability_may_already_satisfy_objective
+    defect_when:
+      - high_quality_work_is_being_performed_inside_an_unproven_intervention_class
+    counterevidence:
+      - current_first_order_decision_explicitly_selects_the_intervention_class
+      - solution_surface_census_is_sufficient
+      - second_order_and_leverage_challenges_are_closed_or_not_material
+    preferred_response:
+      - stop_downstream_work
+      - complete_solution_surface_census
+      - return_to_first_order_intervention_selection
+      - resume_only_after_intervention_is_bound
+
+  - id: KP-019
+    name: l9_profile_as_live_inventory
+    category: epistemic_architecture
+    default_severity: critical
+    signals:
+      - role_catalog_used_to_assert_current_repo_or_node_exists
+      - profile_name_used_as_proof_of_current_owner_version_registration_or_routability
+      - remembered_constellation_shape_substitutes_for_current_evidence
+    defect_when:
+      - stable_architecture_law_is_used_as_live_inventory_or_runtime_state
+    counterevidence:
+      - exact_current_repository_or_contract_evidence
+      - current_revision_or_runtime_receipt_when_material
+    preferred_response:
+      - retain_profile_as_architecture_law
+      - mark_current_fact_unknown
+      - acquire_current_evidence_before_binding_role_instance
+  - id: KP-020
+    name: supporting_plane_role_collapse
+    category: ownership
+    default_severity: critical
+    signals:
+      - memory_used_as_state_or_truth
+      - evidence_used_as_memory_or_domain_truth
+      - context_used_as_durable_world_model
+      - research_used_as_formal_reasoning_or_decision_authority
+      - communication_or_skill_layer_absorbs_runtime_policy
+    defect_when:
+      - distinct_l9_supporting_planes_share_or_substitute_semantic_authority_without_explicit_higher_order_owner
+    counterevidence:
+      - aggregation_preserves_source_authority_and_provenance
+      - combined_component_has_one_explicit_semantic_contract_without_shadow_ownership
+    preferred_response:
+      - restore_owner_native_boundaries
+      - make_degradation_explicit
+      - keep_aggregation_subordinate_to_source_authority
+  - id: KP-021
+    name: participation_truth_collapse
+    category: runtime_truth
+    default_severity: critical
+    signals:
+      - implemented_treated_as_advertised
+      - registered_treated_as_routable_or_current
+      - health_treated_as_readiness
+      - fixture_or_direct_HTTP_success_treated_as_live_Gate_interoperability
+      - prior_admission_reused_after_material_revision_drift
+    defect_when:
+      - distinct_capability_or_participation_dimensions_are_collapsed_without_current_coherent_evidence
+    counterevidence:
+      - exact_revision_evidence_closes_each_required_dimension
+      - contract_explicitly_collapses_dimensions_with_equivalent_proof
+    preferred_response:
+      - separate_participation_dimensions
+      - requalify_current_revision
+      - obtain_owner_native_registration_routability_and_currentness_evidence
+  - id: KP-022
+    name: participation_control_plane_in_runtime_data_path
+    category: boundary
+    default_severity: high
+    signals:
+      - reconciler_or_birth_factory_on_steady_state_request_path
+      - topology_compiler_routes_live_domain_calls
+      - qualification_component_becomes_general_orchestrator
+    defect_when:
+      - lifecycle_or_participation_control_plane_is_required for ordinary admitted capability execution
+    counterevidence:
+      - explicit_runtime_responsibility_is_the_components_canonical_mission
+      - operation_is_reconciliation_or_qualification_not_steady_state_domain_execution
+    preferred_response:
+      - remove_control_plane_from_data_path
+      - route_steady_state_calls_through_Gate_and_owner_native_node_contract
+      - keep_reconciliation_event_driven_or_bounded_to_participation_lifecycle
+  - id: KP-023
+    name: signal_connectivity_theater
+    category: leverage
+    default_severity: high
+    signals:
+      - more_edges_or_broadcast_recipients_claimed_as_more_leverage
+      - duplicate_transmission_counted_as_nonredundant_value
+      - mesh_topology_added_without_earned_consumer_value
+    defect_when:
+      - propagation_complexity_exists_without_meaningful_signal_leverage
+    counterevidence:
+      - each_branch_adds_or_preserves_nonredundant_value
+      - simpler_topology_would_lose_required_evidence_learning_or_resilience
+    preferred_response:
+      - collapse_unearned_edges
+      - bind_topology_to_eligible_consumers_and_value
+  - id: KP-024
+    name: signal_authority_laundering
+    category: ownership
+    default_severity: critical
+    signals:
+      - returned_evidence_directly_rewrites_policy_or_architecture_truth
+      - propagation_receipt_treated_as_semantic_owner_acceptance
+    defect_when:
+      - signal_movement_silently_becomes_authority_promotion
+    counterevidence:
+      - semantic_owner_explicitly_accepts_versioned_writeback
+    preferred_response:
+      - restore_owner_acceptance_boundary
+      - keep_signal_as_challenge_or_candidate_until_promoted
+  - id: KP-025
+    name: runaway_signal_loop
+    category: convergence
+    default_severity: critical
+    signals:
+      - callback_event_or_learning_loop_retriggers_without_novelty
+      - no_idempotency_generation_threshold_cooling_or_terminal_receipt
+    defect_when:
+      - bounded_signal_episode_has_no_effective_convergence_control
+    counterevidence:
+      - observed_convergence_under_declared_loop_controls
+    preferred_response:
+      - add_domain_appropriate_convergence_controls
+      - block_terminal_convergence_until_episode_closes
+  - id: KP-026
+    name: trapped_shared_gain
+    category: leverage
+    default_severity: high
+    signals:
+      - validated_shared_gain_has_eligible_consumers_but_no_governed_path
+      - reusable_learning_is_stored_but_never_reaches_future_consumers
+    defect_when:
+      - compounding_value_is_identified_but_signal_leverage_cannot_close_propagation_or_record_the_gap
+    counterevidence:
+      - governed_propagation_receipt_or_explicit_unavailable_path_receipt_exists
+    preferred_response:
+      - route_via_signal_leverage
+      - record_unresolved_propagation_gap_when_delivery_is_not_currently_possible

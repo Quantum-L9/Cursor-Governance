@@ -1,0 +1,80 @@
+adr:
+  id: ADR-L9-GAR-004
+  title: Promote Signal Leverage to a first-class reasoning primitive and evolve GAR from Triad to Foursome binding
+  status: accepted
+  date: 2026-09-26
+  decision_scope: l9-global-architect reasoning overlay
+  normative: false
+problem:
+  observed_defect:
+    - The v0.7 GAR binding treated Leverage as owner of broad leverage propagation and mesh semantics.
+    - The canonical L9 leverage law separately defined Signal Leverage as the concern that moves evidence-bearing observations so useful learning can safely influence future behavior.
+    - Leaving Signal Leverage as a subsection or implicit Leverage responsibility collapses systemic-value judgment with propagation mechanics, write-back authority, convergence controls, and meaning preservation.
+  consequence:
+    - GAR could prove valuable learning without proving that the learning reached eligible consumers.
+    - A propagation path could be mistaken for leverage merely because it was connected, circular, or high fan-out.
+    - Returned evidence could be promoted without a distinct semantic-owner acceptance boundary.
+decision:
+  architecture: reasoning_foursome
+  semantic_owners:
+    first_order: governing_cause_and_intervention_selection
+    second_order: predicted_and_observed_consequence_surfaces
+    leverage: systemic_value_rank_score_fingerprint_compounding_and_eligible_shared_gain_identification
+    signal_leverage: meaning_preserving_propagation_topology_branching_reconvergence_safe_writeback_and_loop_convergence
+    gar: architecture_realization_and_runtime_governance_only
+  canonical_material_flow:
+    - first_order_intervention
+    - second_order_before
+    - signal_prediction_propagation
+    - predicted_leverage
+    - gar_architecture_and_execution
+    - second_order_after
+    - signal_observation_propagation
+    - realized_leverage
+    - signal_writeback
+    - stronger_future_baseline
+  topology_law:
+    - one_way_is_valid
+    - bidirectional_requires_nonredundant_return_value
+    - closed_loop_requires_changed_future_state_and_convergence_controls
+    - mesh_requires_earned_fanout_reconvergence_and_signal_drag_visibility
+    - connectivity_never_proves_leverage_value
+  writeback_law:
+    - observation_is_not_promotion
+    - challenge_is_not_promotion
+    - recommendation_is_not_promotion
+    - propagation_receipt_is_not_semantic_owner_acceptance
+    - durable_promotion_requires_authoritative_owner_acceptance
+implementation:
+  replace:
+    - integrations/REASONING_TRIAD_BINDING.yaml
+    - references/reasoning-triad/
+  with:
+    - integrations/REASONING_FOURSOME_BINDING.yaml
+    - references/reasoning-foursome/
+  runtime_changes:
+    - bind_signal_prediction_propagation_before_predicted_leverage_when_material
+    - bind_signal_observation_propagation_before_realized_leverage_when_material
+    - bind_signal_writeback_after_realized_leverage_when_material
+    - block_convergence_on_unclosed_required_signal_episode
+  compatibility:
+    historical_ADR_002_remains_non_normative_and_describes_v0_6_Triad_binding
+rejected_alternatives:
+  - alternative: leave_signal_leverage_inside_leverage_kernel
+    rejected_because: collapses_value_with_propagation_and_breaks_single_semantic_owner_per_concern
+  - alternative: put_signal_leverage_in_L9_architecture_profile
+    rejected_because: profile_is_architecture_law_not_reasoning_or_runtime_signal_owner
+  - alternative: make_GAR_route_and_promote_signals
+    rejected_because: GAR_would_absorb_reasoning_semantics_and_authority_promotion
+validation:
+  required:
+    - every_current_binding_ref_resolves_to_REASONING_FOURSOME_BINDING
+    - no_runtime_semantic_owner_remains_named_reasoning_triad_binding
+    - signal_kernel_snapshot_is_byte_identical_to_foursome_source
+    - material_pre_and_post_execution_paths_include_signal_receipts
+    - convergence_blocks_unresolved_signal_writeback_or_loop_convergence
+    - behavior_suite_blocks_signal_owner_collision_connectivity_theater_authority_laundering_and_trapped_gain
+future_repair_rule:
+  - Do not collapse Signal Leverage back into Leverage merely to reduce file count.
+  - Do not add new signal topology unless nonredundant value and convergence can be evidenced.
+  - Do not treat signal propagation as proof of systemic leverage.

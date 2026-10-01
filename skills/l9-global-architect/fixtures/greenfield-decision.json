@@ -1,27 +1,53 @@
 {
-  "schema": "l9.gar.product-architecture-decision/v1",
+  "schema": "l9.gar.product-architecture-decision/v3",
   "status": "ACCEPTED",
   "idea_execute": {
     "envelope_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "graph_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "graph_unit_ids": ["unit-ER-001"],
+    "graph_unit_ids": [
+      "unit-ER-001"
+    ],
     "lifecycle_run_id": "fixture-run",
-    "authority_refs": ["IdeaOS/decision.json"]
+    "authority_refs": [
+      "IdeaOS/decision.json"
+    ]
   },
   "architecture": {
     "topology": "NEW_PRODUCT_REPOSITORY",
     "selected": "Python package with explicit local-only delivery boundary",
-    "rejected_alternatives": ["Remote birth during execution"],
-    "owner_dispositions": [{"capability": "product code", "disposition": "OWN_LOCALLY"}],
-    "constraints": ["No remote publication from Program Execution"],
-    "material_unknowns": []
+    "rejected_alternatives": [
+      "Remote birth during execution"
+    ],
+    "owner_dispositions": [
+      {
+        "capability": "product code",
+        "disposition": "OWN_LOCALLY"
+      }
+    ],
+    "constraints": [
+      "No remote publication from Program Execution"
+    ],
+    "material_unknowns": [],
+    "intervention_class": "BUILD_NEW"
   },
-  "plan_obligations": ["Bind this decision digest"],
-  "validation_obligations": ["Prove clean source tree"],
+  "plan_obligations": [
+    "Bind this decision digest"
+  ],
+  "validation_obligations": [
+    "Prove clean source tree"
+  ],
   "currentness": {
     "input_digests": [
       "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     ]
+  },
+  "reasoning": {
+    "first_order_decision_ref": "reasoning/first-order/fixture-run.yaml",
+    "solution_surface_census_ref": "reasoning/solution-surface/fixture-run.yaml",
+    "intervention_class": "BUILD_NEW",
+    "second_order_before_ref": "reasoning/second-order/before-fixture-run.yaml",
+    "signal_prediction_propagation_ref": "reasoning/signal-leverage/prediction-fixture-run.yaml",
+    "predicted_leverage_ref": "reasoning/leverage/predicted-fixture-run.yaml"
   }
 }
