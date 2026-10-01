@@ -1,0 +1,27 @@
+integration:
+  id: L9.CODING_AGENT.L9_BINDING.001
+  version: 1.0.0
+modes:
+  STANDALONE:
+    default: true
+    rule: execute from current user and project authority without assuming L9 runtime integration
+  L9_PROFILE_AWARE:
+    activate_when:
+      - explicit_l9_scope
+      - current_target_evidence_proves_l9_profile_applicability
+    rules:
+      - consume_current_l9_architecture_profile_or_hydration_when_available
+      - do_not_infer_live_node_inventory_or_versions_from_static_profile
+      - preserve_one_semantic_authority_per_concern
+      - reuse_existing_capability_before_creating_duplicate_mechanism
+      - keep_provider_specific_mechanics_behind_owner_defined_ports_when_applicable
+      - respect_gate_and_transport_ownership_declared_by_current_authority
+      - memory_context_evidence_state_and_authority_remain_distinct_concerns
+  GAR_BOUND:
+    activate_when:
+      - a_current_locked_gar_execution_contract_is_explicitly_bound
+    rules:
+      - gar_contract_defines_architectural_semantic_envelope
+      - coding_agent_may_not_rewrite_the_contract_to_fit_implementation
+      - architecture_conflict_returns_to_gar
+activation_law: repository_name_or_skill_presence_alone_does_not_activate_a_mode

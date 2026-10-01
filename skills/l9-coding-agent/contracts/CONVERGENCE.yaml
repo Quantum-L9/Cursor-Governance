@@ -1,0 +1,64 @@
+contract:
+  id: L9.CODING_AGENT.CONVERGENCE.001
+  version: 1.1.0
+terminal_states:
+  CONVERGED:
+    requires:
+    - objective_satisfied
+    - mutations_within_authorized_semantic_envelope
+    - acceptance_criteria_evaluated
+    - no_unresolved_architecture_or_authority_conflict
+    - requested_delivery_completed
+    - execution_receipt_emitted
+    - all_current_mandatory_validation_obligations_are_Passed_or_NotApplicable
+    - no_required_validation_is_Failed_or_Unknown
+    - whole_target_readiness_claim_has_complete_authorized_inventory
+    - zero_unresolved_Critical_or_High_in_scope_findings
+    - zero_new_regressions
+    - no_material_unresolved_contract_ownership_or_wiring_ambiguity
+    - final_state_hygiene_satisfied
+    - delivered_state_matches_exact_validated_state
+    - no_additional_high_value_evidence_backed_pass_objective_remains
+  BLOCKED:
+    use_when:
+    - required_target_or_tool_capability_unavailable
+    - required_validation_cannot_be_completed
+    - external_dependency_or_environment_prevents_progress
+    - same_root_cause_stagnation_guard_triggered
+    - whole_target_inventory_cannot_be_completed_for_requested_readiness_claim
+    - intended_behavior_remains_unknown_for_required_repair
+    - required_validation_is_unknown
+  ESCALATE_ARCHITECTURE:
+    use_when:
+    - architecture_revision_required
+    - owner_or_public_contract_change_required
+    - invariant_waiver_required
+    - provider_or_substrate_choice_required
+    - material_authority_conflict_exists
+    - scope_expansion_is_required_for_success
+  FAILED:
+    use_when:
+    - irreversible_or_uncontained_execution_error_prevents_safe_continuation
+    - package_or_runtime_integrity_is_broken
+receipt:
+  must_report:
+  - terminal_state
+  - objective_status
+  - target_and_revision
+  - changed_surfaces
+  - validation_observations
+  - acceptance_matrix
+  - external_actions_and_receipts
+  - residual_blockers_or_risks
+  - architecture_escalation_if_any
+  - delivery_status
+  - inspection_and_modification_scope
+  - finding_change_validation_traceability
+  - baseline_status
+  - regression_assessment
+  - hygiene_status
+  - validated_state_identity
+  - delivered_state_identity
+  - convergence_basis
+law: Partial useful work may be preserved in BLOCKED or ESCALATE_ARCHITECTURE, but it must never be described as CONVERGED.
+  Pass count, repeated identical output, or prose does not prove convergence.

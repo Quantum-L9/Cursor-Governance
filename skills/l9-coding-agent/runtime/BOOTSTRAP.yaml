@@ -1,0 +1,117 @@
+bootstrap:
+  id: L9.CODING_AGENT.BOOTSTRAP.001
+  version: 1.3.0
+  purpose: Preserve agent context by loading only the semantic owners required for the current execution stage while keeping
+    every critical runtime concern reachable, explicit, and fail-closed.
+  policy:
+    default: lazy_by_stage
+    eager_full_hydration: forbidden
+    reread_unchanged_stage_artifacts: avoid
+    package_quality_artifacts_in_normal_execution: forbidden
+    carry_forward: resolved_state_digests_decisions_findings_target_graph_and_evidence_refs_not_full_prior_files
+    reload_when:
+    - target_revision_changes
+    - authority_changes
+    - execution_contract_changes
+    - stage_specific_rule_is_uncertain
+    - semantic_owner_version_or_digest_changes
+  first_read:
+  - runtime/BOOTSTRAP.yaml
+  registry:
+    manifest: runtime/MANIFEST.yaml
+    rule: Consult the manifest for semantic ownership, package composition, versioning, or completeness checks. Do not use
+      the manifest as an instruction to hydrate every runtime artifact.
+  stages:
+    intake:
+      load_when:
+      - skill_activated_for_mutating_code_work
+      - new_target_or_contract_is_bound
+      artifacts:
+      - runtime/RUN_STATE.yaml
+      - contracts/AUTHORITY_AND_BOUNDARIES.yaml
+      - contracts/EXECUTION_CONTRACT.yaml
+      unload_policy: retain_normalized_run_state_and_bound_contract_facts
+    implementation:
+      load_when:
+      - execution_contract_is_ready
+      - before_first_mutation
+      artifacts:
+      - runtime/STATE_MACHINE.yaml
+      - kernels/CODING_KERNEL.yaml
+      - contracts/IMPLEMENTATION_INTEGRITY.yaml
+      unload_policy: retain_active_state_invariants_and_material_implementation_decisions
+    validation:
+      load_when:
+      - implementation_or_repair_reaches_validation
+      - acceptance_evidence_is_being_evaluated
+      artifacts:
+      - contracts/VALIDATION_AND_EVIDENCE.yaml
+      unload_policy: retain_validation_observations_and_revision_binding
+    convergence:
+      load_when:
+      - delivery_or_terminal_state_is_being_evaluated
+      artifacts:
+      - contracts/CONVERGENCE.yaml
+      unload_policy: retain_terminal_state_and_execution_receipt
+  conditional:
+    typed_failure_diagnostics:
+      load_when:
+      - failure_requires_typed_classification
+      - block_or_escalation_reason_is_uncertain
+      - repeated_repair_or_scope_drift_is_detected
+      artifacts:
+      - catalogs/REASON_CODES.yaml
+      - catalogs/KILL_PATTERNS.yaml
+    gar_interop:
+      load_when:
+      - current_input_is_a_gar_execution_contract
+      - architecture_escalation_is_required
+      - gar_review_or_handoff_is_requested
+      artifacts:
+      - integrations/GAR_HANDOFF.yaml
+    l9_runtime:
+      load_when:
+      - active_l9_runtime_binding_is_observed
+      - gate_transport_or_l9_runtime_authority_is_material
+      artifacts:
+      - integrations/L9_RUNTIME_BINDING.yaml
+    structured_contract_validation:
+      load_when:
+      - execution_contract_is_external_structured_data
+      - deterministic_contract_validation_is_requested_or_needed
+      artifacts:
+      - schemas/execution-contract.schema.json
+      - scripts/validate_execution_contract.py
+    structured_receipt_validation:
+      load_when:
+      - machine_readable_execution_receipt_is_emitted_or_validated
+      artifacts:
+      - schemas/execution-receipt.schema.json
+    package_validation:
+      load_when:
+      - skill_pack_is_being_validated_updated_promoted_or_packaged
+      artifacts:
+      - README.md
+      - RUNBOOK.md
+      - MANIFEST.md
+      - VALIDATION.md
+      - CHANGELOG.md
+      - expertise_model.yaml
+      - skill_intelligence_report.yaml
+      - evals/BEHAVIOR_CONFORMANCE.yaml
+      - references/smart_exemplary_spec.yaml
+      - scripts/validate_runtime_alignment.py
+      - scripts/validate_lazy_bootstrap.py
+      - agents/openai.yaml
+  context_guards:
+  - do_not_load_package_validation_material_during_ordinary_repository_execution
+  - do_not_load_gar_or_l9_integrations_without_their_activation_signal
+  - do_not_load_failure_catalogs_until_failure_classification_is_material
+  - do_not_reload_semantic_owners_that_are_unchanged_and_already_resolved_for_the_current_stage
+  - if_a_later_stage_needs_a_prior_rule_load_only_that_owner_not_the_entire_prior_stage
+  - references_are_routing_targets_not_automatic_context
+  - inspection_scope_may_be_broader_than_modification_scope_but_never_grants_mutation_authority
+  - whole_target_readiness_requires_complete_authorized_inventory_or_explicit_bounded_unknown
+  closure_law: Every runtime semantic owner declared by runtime/MANIFEST.yaml must be reachable through one stage or conditional
+    route here. Every packaged file must be classified by the manifest. Unreachable critical owners or unclassified files
+    fail package validation.
