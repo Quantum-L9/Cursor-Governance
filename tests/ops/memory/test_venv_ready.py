@@ -8,6 +8,7 @@ force-reinstalling ``l9_graphite_memory``, and the runtime died with
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import fcntl
 import os
@@ -48,23 +49,24 @@ def _gov(tmp_path: Path) -> Path:
     return root
 
 
-def _hold_exclusive(root: Path) -> int:
+@contextlib.contextmanager
+def _held_exclusive(root: Path):
+    """Hold the install lock and always close the descriptor."""
     fd = os.open(root / vr.LOCK_REL, os.O_RDWR | os.O_CREAT, 0o600)
-    fcntl.flock(fd, fcntl.LOCK_EX)
-    return fd
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield fd
+    finally:
+        os.close(fd)
 
 
 def _unlock(fd: int) -> None:
-    """Drop the lock only. The test that opened the fd closes it."""
+    """Drop the lock only. ``_held_exclusive`` closes the descriptor."""
     try:
         fcntl.flock(fd, fcntl.LOCK_UN)
     except OSError:
-        pass
-
-
-def _release(fd: int) -> None:
-    _unlock(fd)
-    os.close(fd)
+        # The context manager already closed the descriptor.
+        return
 
 
 # --- reader: ops/memory/venv_ready.py --------------------------------------
@@ -101,43 +103,36 @@ def test_an_unwritable_root_does_not_block_the_reader(tmp_path: Path) -> None:
 
 def test_reader_waits_for_the_writer_then_proceeds(tmp_path: Path) -> None:
     root = _gov(tmp_path)
-    fd = _hold_exclusive(root)
-    timer = threading.Timer(0.5, _unlock, args=(fd,))
-    timer.start()
-    try:
-        started = time.monotonic()
-        with vr.venv_ready(root, timeout=10) as ready:
-            assert ready.ready, ready.reason
-        assert time.monotonic() - started >= 0.4
-    finally:
-        timer.cancel()
-        timer.join(timeout=2)
-        os.close(fd)
+    with _held_exclusive(root) as fd:
+        timer = threading.Timer(0.5, _unlock, args=(fd,))
+        timer.start()
+        try:
+            started = time.monotonic()
+            with vr.venv_ready(root, timeout=10) as ready:
+                assert ready.ready, ready.reason
+            assert time.monotonic() - started >= 0.4
+        finally:
+            timer.cancel()
+            timer.join(timeout=2)
 
 
 def test_reader_gives_up_with_a_named_reason(tmp_path: Path) -> None:
     root = _gov(tmp_path)
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         with vr.venv_ready(root, timeout=0.3) as ready:
             assert not ready.ready
             assert "install still in progress" in ready.reason
-    finally:
-        _release(fd)
 
 
 def test_the_wait_is_bounded_per_process_not_per_call(tmp_path: Path) -> None:
     """A hook making several memory calls must not multiply the wait."""
     root = _gov(tmp_path)
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         started = time.monotonic()
         for _ in range(4):
             with vr.venv_ready(root, timeout=0.5) as ready:
                 assert not ready.ready
         assert time.monotonic() - started < 1.5
-    finally:
-        _release(fd)
 
 
 def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
@@ -149,32 +144,28 @@ def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
     root = _gov(tmp_path)
     marker = root / vr.IN_PROGRESS_REL
     marker.write_text("111 2026-09-25T00:00:00Z\n", encoding="utf-8")
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         with vr.venv_ready(root, timeout=0.2) as ready:
             assert not ready.ready
-    finally:
         marker.unlink()
-        _release(fd)
     time.sleep(0.3)
     marker.write_text("222 2026-09-25T00:00:01Z\n", encoding="utf-8")
-    fd = _hold_exclusive(root)
 
     def _finish() -> None:
         marker.unlink(missing_ok=True)
         _unlock(fd)
 
-    timer = threading.Timer(0.5, _finish)
-    timer.start()
-    try:
-        with vr.venv_ready(root, timeout=5) as ready:
-            assert ready.ready, ready.reason
-            assert ready.waited_s >= 0.4
-    finally:
-        timer.cancel()
-        timer.join(timeout=2)
-        marker.unlink(missing_ok=True)
-        os.close(fd)
+    with _held_exclusive(root) as fd:
+        timer = threading.Timer(0.5, _finish)
+        timer.start()
+        try:
+            with vr.venv_ready(root, timeout=5) as ready:
+                assert ready.ready, ready.reason
+                assert ready.waited_s >= 0.4
+        finally:
+            timer.cancel()
+            timer.join(timeout=2)
+            marker.unlink(missing_ok=True)
 
 
 def test_an_unbounded_wait_budget_is_refused(monkeypatch) -> None:
@@ -222,13 +213,10 @@ def test_client_does_not_spawn_into_an_installing_venv(
     monkeypatch.setenv(vr.ENV_WAIT, "0.2")
     root = _gov(tmp_path)
     fake_cli.reply("hydrate", 0, hydration_payload("r1"))
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         outcome = MemoryControlPlaneClient(_venv_bound(bound, root), runner=fake_cli.run).hydrate(
             "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
         )
-    finally:
-        _release(fd)
     assert outcome.status is OutcomeStatus.BINDING_FAILED
     assert outcome.integration_receipt["fault_class"] == FAULT_ENVIRONMENT
     assert "install still in progress" in (outcome.error or "")
@@ -240,18 +228,19 @@ def test_client_spawns_once_the_install_completes(
 ) -> None:
     root = _gov(tmp_path)
     fake_cli.reply("hydrate", 0, hydration_payload("r1"))
-    fd = _hold_exclusive(root)
-    timer = threading.Timer(0.3, _unlock, args=(fd,))
-    timer.start()
-    try:
-        outcome = MemoryControlPlaneClient(_venv_bound(bound, root), runner=fake_cli.run).hydrate(
-            "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
-        )
-        assert outcome.status is OutcomeStatus.OK
-    finally:
-        timer.cancel()
-        timer.join(timeout=2)
-        os.close(fd)
+    with _held_exclusive(root) as fd:
+        timer = threading.Timer(0.3, _unlock, args=(fd,))
+        timer.start()
+        try:
+            outcome = MemoryControlPlaneClient(
+                _venv_bound(bound, root), runner=fake_cli.run
+            ).hydrate(
+                "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+            )
+            assert outcome.status is OutcomeStatus.OK
+        finally:
+            timer.cancel()
+            timer.join(timeout=2)
 
 
 def test_a_runtime_that_cannot_import_itself_is_an_environment_fault(
@@ -426,8 +415,7 @@ def test_an_unverifiable_venv_keeps_the_marker(tmp_path: Path) -> None:
 def test_a_held_lock_times_out_with_exit_75_and_a_reason(tmp_path: Path) -> None:
     root, env = _writer_root(tmp_path)
     (root / ".l9").mkdir()
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         done = subprocess.run(
             ["bash", str(ENSURE), str(root)],
             env={**env, "L9_UV_ENV_LOCK_WAIT_S": "1"},
@@ -435,8 +423,6 @@ def test_a_held_lock_times_out_with_exit_75_and_a_reason(tmp_path: Path) -> None
             text=True,
             timeout=60,
         )
-    finally:
-        _release(fd)
     assert done.returncode == 75
     assert "still held after 1s" in done.stderr
     assert done.stdout == ""
@@ -460,8 +446,7 @@ def test_check_during_a_live_install_says_in_progress(tmp_path: Path) -> None:
     root, env = _writer_root(tmp_path)
     (root / ".l9").mkdir()
     (root / ".l9" / "uv-environment.installing").write_text("1 now\n", encoding="utf-8")
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         check = subprocess.run(
             ["bash", str(ENSURE), str(root), "check"],
             env=env,
@@ -469,8 +454,6 @@ def test_check_during_a_live_install_says_in_progress(tmp_path: Path) -> None:
             text=True,
             timeout=60,
         )
-    finally:
-        _release(fd)
     assert check.returncode == 1
     assert "install in progress" in check.stderr
     assert "synchronization required" in check.stderr  # still classified DEGRADED
@@ -531,8 +514,7 @@ def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> 
     """
     root, env = _writer_root(tmp_path)
     (root / ".l9").mkdir()
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         caller = subprocess.Popen(
             ["bash", str(ENSURE), str(root)],
             env={**env, "L9_UV_ENV_LOCK_WAIT_S": "30"},
@@ -543,8 +525,6 @@ def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> 
         time.sleep(0.5)
         os.killpg(caller.pid, signal.SIGKILL)
         caller.wait(timeout=10)
-    finally:
-        _release(fd)
     time.sleep(1.5)
     assert not (tmp_path / "lock-held-during-sync").exists(), "an orphan ran uv sync"
     assert not (root / ".venv" / ".l9-uv-fingerprint").exists()
@@ -574,12 +554,9 @@ def test_shell_reader_is_ready_without_a_lock_and_writes_nothing(tmp_path: Path)
 @needs_util_linux
 def test_shell_reader_waits_then_reports_an_install_in_progress(tmp_path: Path) -> None:
     root = _gov(tmp_path)
-    fd = _hold_exclusive(root)
-    try:
+    with _held_exclusive(root):
         started = time.monotonic()
         held = _shell_wait(root, "1")
-    finally:
-        _release(fd)
     assert held.returncode == 1
     assert time.monotonic() - started >= 0.9
     assert "still in progress" in held.stderr
