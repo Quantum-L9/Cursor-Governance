@@ -1,0 +1,93 @@
+name: ✨ Feature
+description: Propose a capability that does not exist yet.
+title: "feat: "
+labels: ["type:feature", "needs:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The pain first, the proposal second — the same order as the PR template
+        (Problem → Fix → Risk → Done when). Priority is derived at triage; there
+        is no priority field to fill in.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The pain, not the solution. Who is blocked, and on what?
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do today
+      description: Current workaround and its cost.
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should exist. Include the interface if you know it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Which component should own this?
+      description: Prevents governance from absorbing CI concerns.
+      options:
+        - this repo (org governance / community health)
+        - l9-ci-sdk or l9-ci-core (test, lint, build execution)
+        - l9-ci-debt-resolver (CI failure diagnosis or remediation)
+        - l9-ci-debt-intelligence (CI debt measurement)
+        - unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Options you rejected and why.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Pick exactly one. XL means a design doc comes before implementation.
+      options:
+        - S — under a day
+        - M — a few days, one repo
+        - L — multi-repo or migration
+        - XL — needs a design doc first
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking change?
+      description: Would existing callers or consumers have to change? Yes is labelled breaking.
+      options:
+        - No — additive
+        - Yes — consumers must change something
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Acceptance criteria — what a reviewer checks to close this.
+      placeholder: "- a consumer can call X with Y and gets Z\n- documented in README"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: Issues or PRs this blocks, is blocked by, or supersedes.
+      placeholder: "blocked by #12, blocks #34"
