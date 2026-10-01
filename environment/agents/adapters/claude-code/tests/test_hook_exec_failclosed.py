@@ -92,6 +92,8 @@ class HookExecFailClosedTests(unittest.TestCase):
         # not skip before the launcher can fail closed.
         for key in (
             "CURSOR_AGENT",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_EXTENSION_HOST_ROLE",
             "CLAUDECODE",
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
@@ -193,6 +195,8 @@ class HookExecFailClosedTests(unittest.TestCase):
             # launcher execs still read the variable.
             for key in (
                 "CURSOR_AGENT",
+                "CURSOR_CONVERSATION_ID",
+                "CURSOR_EXTENSION_HOST_ROLE",
                 "L9_GOVERNANCE_SURFACE",
                 "L9_GOVERNANCE_DIR",
                 "CLAUDE_CODE_ENTRYPOINT",
@@ -219,6 +223,8 @@ class HookExecFailClosedTests(unittest.TestCase):
         env["HOME"] = str(self.home)
         for key in (
             "CURSOR_AGENT",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_EXTENSION_HOST_ROLE",
             "CLAUDECODE",
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
@@ -671,6 +677,8 @@ class GovernanceDirIsNotRedirectableTests(unittest.TestCase):
         env["L9_HOOK_SKIP_LOG"] = str(self.home / ".l9" / "claude" / "hook-skips.log")
         for key in (
             "CURSOR_AGENT",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_EXTENSION_HOST_ROLE",
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
             "CLAUDE_CODE_REMOTE",

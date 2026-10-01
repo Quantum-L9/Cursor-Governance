@@ -43,6 +43,8 @@ def _run(hook_class: str, hook_name: str, env: dict[str, str]) -> subprocess.Com
         if k
         not in {
             "CURSOR_AGENT",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_EXTENSION_HOST_ROLE",
             "CLAUDECODE",
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
@@ -51,6 +53,7 @@ def _run(hook_class: str, hook_name: str, env: dict[str, str]) -> subprocess.Com
             "L9_SURFACE_GUARD",
             "L9_GOVERNANCE_DIR",
         }
+        and not k.startswith("CURSOR_")
     }
     cleaned["HOME"] = _home_for_this_checkout()
     cleaned.update(env)
@@ -121,13 +124,17 @@ def test_claude_gate_still_invoked() -> None:
 
 
 def test_kill_switch_disables_guard() -> None:
+    # The shell guard is off, so this is not the launcher skip line. The gate
+    # itself still allows a Cursor host: Cursor must not wait on a Claude
+    # prefetch. L9_SURFACE_GUARD=0 does not turn that allow back into a deny.
     proc = _run(
         "gate",
         GATE,
         {"CURSOR_AGENT": "1", "L9_SURFACE_GUARD": "0"},
     )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
     assert "skipped" not in proc.stderr.lower()
-    assert _denied(proc), proc.stdout + proc.stderr
+    assert not _denied(proc)
 
 
 def test_unknown_observer_skips_but_unknown_gate_enforces() -> None:
@@ -137,5 +144,9 @@ def test_unknown_observer_skips_but_unknown_gate_enforces() -> None:
     assert observer.stdout.strip() == ""
 
     gate = _run("gate", GATE, {})
-    assert "skipped" not in gate.stderr.lower()
-    assert _denied(gate), gate.stdout + gate.stderr
+    # memory_gate enforces only on a Claude runtime. An unknown surface is
+    # not one, so the launcher skips it instead of denying.
+    assert gate.returncode == 0, gate.stderr + gate.stdout
+    assert "skipped" in gate.stderr.lower()
+    assert "claude-runtime only" in gate.stderr.lower()
+    assert not _denied(gate)

@@ -2,9 +2,10 @@
 # Activate GitHub-tip governance at $HOME/.cursor-governance for sessionStart.
 #
 # Contracts (CANONICAL_LAW / plan fresh_governance_activate):
-#   C1 tip authority — HEAD == remote tip after success
+#   C1 tip authority — compare HEAD to the ls-remote tip; do not move HEAD
 #   C2 tip vs wiring split — Dropbox rewire does not require clone
-#   C3 ff-first when clean+behind; else shallow clone + atomic swap
+#   C3 existing clone is never fetched, pulled, reset, or swapped.
+#      Report commits ahead/behind. Do not name or run a catch-up.
 #   C4 pre-swap backup_to_github when dirty/ahead
 #   C5 staging verify before mv; fail leaves live untouched
 #   C6 bak retention (newest 2; keep extra if unpushed)
@@ -50,13 +51,95 @@ DETAIL="init"
 REMOTE_SHA=""
 LOCAL_SHA=""
 BAK_UNPUSHED=0
+SSOT_AHEAD="unknown"
+SSOT_BEHIND="unknown"
+
+# Count commits on HEAD that are not on the remote tip (ahead) and commits on
+# the remote tip that are not on HEAD (behind). Never fetches. When the remote
+# tip object is not in this clone, ask GitHub for the count. A failed count
+# stays "unknown" and still does not update the clone.
+count_divergence() {
+  SSOT_AHEAD="unknown"
+  SSOT_BEHIND="unknown"
+  [ -n "${LOCAL_SHA:-}" ] && [ -n "${REMOTE_SHA:-}" ] || return 0
+  if [ ! -d "$CLONE/.git" ] && [ ! -f "$CLONE/.git" ]; then
+    return 0
+  fi
+  if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+    SSOT_AHEAD=0
+    SSOT_BEHIND=0
+    return 0
+  fi
+  if git -C "$CLONE" cat-file -e "${REMOTE_SHA}^{commit}" 2>/dev/null; then
+    local counts left right
+    counts="$(git -C "$CLONE" rev-list --left-right --count "${LOCAL_SHA}...${REMOTE_SHA}" 2>/dev/null || true)"
+    left="${counts%%[[:space:]]*}"
+    right="${counts##*[[:space:]]}"
+    case "$left" in
+      ''|*[!0-9]*) ;;
+      *)
+        case "$right" in
+          ''|*[!0-9]*) ;;
+          *)
+            SSOT_AHEAD="$left"
+            SSOT_BEHIND="$right"
+            return 0
+            ;;
+        esac
+        ;;
+    esac
+  fi
+  if [ "${GOVERNANCE_ACTIVATE_SKIP_COMPARE:-}" = "1" ]; then
+    return 0
+  fi
+  command -v gh >/dev/null 2>&1 || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  local line
+  line="$(
+    LOCAL_SHA="$LOCAL_SHA" REMOTE_SHA="$REMOTE_SHA" python3 -c '
+import os, subprocess, sys
+remote_sha = os.environ.get("REMOTE_SHA", "")
+local_sha = os.environ.get("LOCAL_SHA", "")
+if not remote_sha or not local_sha:
+    sys.exit(0)
+try:
+    proc = subprocess.run(
+        [
+            "gh", "api",
+            "repos/Quantum-L9/Cursor-Governance/compare/%s...%s" % (remote_sha, local_sha),
+            "--jq", "[.ahead_by, .behind_by] | @tsv",
+        ],
+        capture_output=True, text=True, timeout=5,
+    )
+except Exception:
+    sys.exit(0)
+if proc.returncode != 0:
+    sys.exit(0)
+parts = proc.stdout.strip().split()
+if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+    print(parts[0], parts[1])
+'
+  )" || true
+  local ahead behind
+  ahead="${line%%[[:space:]]*}"
+  behind="${line##*[[:space:]]}"
+  case "$ahead" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+  case "$behind" in
+    ''|*[!0-9]*) return 0 ;;
+  esac
+  SSOT_AHEAD="$ahead"
+  SSOT_BEHIND="$behind"
+}
 
 emit_status() {
+  count_divergence
   local sha="${LOCAL_SHA:-unknown}"
   local detail="$DETAIL"
   [ "$BAK_UNPUSHED" = "1" ] && detail="${detail};bak_unpushed"
   # Machine-parseable last line for sessionStart bootstrap.
-  echo "STATUS action=${ACTION} sha=${sha} remote_sha=${REMOTE_SHA:-unknown} detail=${detail}"
+  echo "STATUS action=${ACTION} sha=${sha} remote_sha=${REMOTE_SHA:-unknown} ahead=${SSOT_AHEAD} behind=${SSOT_BEHIND} detail=${detail}"
 }
 
 write_receipt() {
@@ -238,6 +321,8 @@ prune_baks() {
 }
 
 do_ff() {
+  # Not called for an existing SSOT. SessionStart only reports divergence.
+  # Kept so the historical SHA-first body stays inspectable.
   # Clean-tree catch-up only (caller already requires tree_clean + only_behind).
   # SHA-first. Never unshallow. Do not use an ff-only merge — that move is the
   # sessionStart graft source when history is shallow.
@@ -262,6 +347,7 @@ do_ff() {
 }
 
 do_swap() {
+  # Not called for an existing SSOT. A swap moves the live clone aside.
   if deadline_exceeded; then
     DETAIL="deadline_before_clone"
     return 1
@@ -314,7 +400,7 @@ do_swap() {
     return 1
   fi
   # Carry .venv + gitignored env.local files off the bak before prune_baks
-  # can delete it. Same contract as /ff: machine-local keep, never printed.
+  # can delete it. Machine-local keep only (.venv and env files), never printed.
   if [ -n "$bak" ] && [ -d "$bak" ]; then
     ssot_carry_machine_local "$bak" "$CLONE"
   fi
@@ -482,34 +568,15 @@ if [ -n "$LOCAL_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
   exit 0
 fi
 
-# Clean + only behind + correct remote → ff
-if remote_url_ok && tree_clean && only_behind "$LOCAL_SHA"; then
-  if do_ff; then
-    heal_wiring
-    ACTION="ff"
-    DETAIL="ff_only"
-    write_receipt
-    emit_status
-    exit 0
-  fi
-  DETAIL="ff_failed"
+# Existing clone is behind or diverged. Do not fetch, pull, reset, or swap.
+# Report the count. Do not offer a catch-up command.
+if wiring_stale; then
+  ACTION="wire_only"
+else
+  ACTION="report"
 fi
-
-# Otherwise swap
-if do_swap; then
-  heal_wiring
-  ACTION="swapped"
-  DETAIL="${DETAIL:-shallow_clone_swap}"
-  # Normalize detail when tip matched
-  [ "$LOCAL_SHA" = "$REMOTE_SHA" ] && DETAIL="shallow_clone_swap"
-  write_receipt
-  emit_status
-  exit 0
-fi
-
-ACTION="degraded"
-LOCAL_SHA="$(local_head)"
 heal_wiring
+DETAIL="diverged"
 write_receipt
 emit_status
 exit 0

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from ops.autonomy.surface_detect import (
+    claude_runtime_present,
     detect_surface,
     is_claude_gate_surface,
     kernel_latch_surface,
@@ -21,11 +22,25 @@ MATRIX = [
     ({"L9_GOVERNANCE_SURFACE": "cursor", "CLAUDECODE": "1"}, "cursor"),
     ({"L9_GOVERNANCE_SURFACE": "claude-code", "CURSOR_AGENT": "1"}, "cursor"),
     ({"L9_GOVERNANCE_SURFACE": "claude-code-remote", "CURSOR_AGENT": "1"}, "cursor"),
+    (
+        {"L9_GOVERNANCE_SURFACE": "claude-code", "CURSOR_CONVERSATION_ID": "conv"},
+        "cursor",
+    ),
+    (
+        {
+            "L9_GOVERNANCE_SURFACE": "claude-code",
+            "CURSOR_EXTENSION_HOST_ROLE": "agent-exec",
+        },
+        "cursor",
+    ),
+    ({"L9_GOVERNANCE_SURFACE": "codex", "CURSOR_CONVERSATION_ID": "conv"}, "codex"),
     ({"CLAUDE_CODE_REMOTE": "true"}, "claude-code-remote"),
     ({"CLAUDECODE": "1"}, "claude-code"),
     ({"CLAUDE_CODE_ENTRYPOINT": "cli"}, "claude-code"),
     ({"CLAUDE_CODE_SESSION_ID": "abc"}, "claude-code"),
     ({"CURSOR_AGENT": "1"}, "cursor"),
+    ({"CURSOR_CONVERSATION_ID": "conv"}, "cursor"),
+    ({"CURSOR_EXTENSION_HOST_ROLE": "agent-exec"}, "cursor"),
     ({"L9_GOVERNANCE_SURFACE": "codex"}, "codex"),
     ({"L9_GOVERNANCE_SURFACE": "gemini"}, "gemini"),
     ({"L9_GOVERNANCE_SURFACE": "manus"}, "manus"),
@@ -37,7 +52,8 @@ def _shell_detect(env: dict[str, str]) -> str:
     lines = [
         "set -euo pipefail",
         f'source "{SH_LIB}"',
-        "unset CURSOR_AGENT CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SESSION_ID || true",
+        "unset CURSOR_AGENT CURSOR_CONVERSATION_ID CURSOR_EXTENSION_HOST_ROLE || true",
+        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SESSION_ID || true",
         "unset CLAUDE_CODE_REMOTE L9_GOVERNANCE_SURFACE || true",
     ]
     for k, v in env.items():
@@ -50,6 +66,8 @@ def _shell_detect(env: dict[str, str]) -> str:
         if k
         not in {
             "CURSOR_AGENT",
+            "CURSOR_CONVERSATION_ID",
+            "CURSOR_EXTENSION_HOST_ROLE",
             "CLAUDECODE",
             "CLAUDE_CODE_ENTRYPOINT",
             "CLAUDE_CODE_SESSION_ID",
@@ -83,6 +101,9 @@ def test_claude_gate_and_kernel_helpers() -> None:
     assert is_claude_gate_surface({"CLAUDECODE": "1"}) is True
     assert is_claude_gate_surface({"CURSOR_AGENT": "1"}) is False
     assert is_claude_gate_surface({}) is False  # unknown → not a Claude gate surface
+    assert claude_runtime_present({"CLAUDECODE": "1"}) is True
+    assert claude_runtime_present({"L9_GOVERNANCE_SURFACE": "claude-code"}) is False
+    assert claude_runtime_present({"CURSOR_EXTENSION_HOST_ROLE": "agent-exec"}) is False
     assert kernel_latch_surface({"CLAUDECODE": "1"}) is True
     assert kernel_latch_surface({"CLAUDE_CODE_REMOTE": "true"}) is True
     assert kernel_latch_surface({"L9_GOVERNANCE_SURFACE": "codex"}) is True
