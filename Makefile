@@ -86,6 +86,7 @@ L9_CONSUMER_SAFE_TARGETS := \
 	start \
 	pr \
 	pr-security \
+	issue \
 	improve \
 	wiring-check \
 	claude-projection \

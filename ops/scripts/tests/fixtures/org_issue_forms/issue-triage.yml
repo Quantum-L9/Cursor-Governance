@@ -1,0 +1,115 @@
+name: Issue triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const add = new Set();
+            const notes = [];
+
+            // A form field renders as `### <label>`. Labels are escaped: the
+            // feature form's `Breaking change?` would otherwise be a quantifier.
+            const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const field = (...names) => {
+              for (const name of names) {
+                const re = new RegExp(`###\\s*${esc(name)}\\s*\\n+([\\s\\S]*?)(?=\\n###\\s|$)`, 'i');
+                const m = body.match(re);
+                const v = m ? m[1].replace(/_No response_/gi, '').trim() : '';
+                if (v) return v;
+              }
+              return '';
+            };
+
+            // severity -> priority, single source of truth
+            const sev = field('Severity');
+            const map = { S1: 'P0', S2: 'P1', S3: 'P2', S4: 'P3' };
+            const key = (sev.match(/\bS[1-4]\b/) || [])[0];
+            const drop = [];
+            if (key) {
+              add.add(`sev:${key}`); add.add(`priority:${map[key]}`);
+              // A re-set severity moves the labels instead of stacking them.
+              for (const { name } of issue.labels || []) {
+                if (/^(sev|priority):/.test(name) && !add.has(name)) drop.push(name);
+              }
+            }
+
+            // route by declared environment (bug form dropdown)
+            const env = field('Environment');
+            if (/^prod/i.test(env)) add.add('env:prod');
+            if (/^ci\b/i.test(env)) add.add('area:ci');
+
+            // a stated last-known-good implies a bisectable regression
+            if (field('Last known good version')) add.add('regression');
+
+            // scope from the feature and task forms
+            const scope = (field('Scope').match(/^(XL|L|M|S)\b/) || [])[0];
+            if (scope) add.add(`scope:${scope}`);
+            if (scope === 'XL') notes.push('Scope is **XL** — open a design doc before implementation work starts.');
+
+            if (/^(Yes|yes)/.test(field('Breaking change?'))) add.add('breaking');
+
+            // quality signals, not gatekeeping
+            // `Error output` / `Signal` are the pre-2026-09 labels of Evidence;
+            // issues filed before then still parse when edited.
+            // Forms render Evidence inside a ```shell fence, so the fence itself
+            // proves nothing — judge what is inside it.
+            const evidence = field('Evidence', 'Error output', 'Signal')
+              .split('\n').filter(l => !l.trim().startsWith('```')).join('\n').trim();
+            if (evidence && !/https?:\/\/|\w{40,}|Traceback|Error|error|FAIL|exit code/.test(evidence))
+              notes.push('The **Evidence** field has no traceback, log lines, or run URL. Paste raw output — it is the fastest path to a fix.');
+
+            const version = field('Version / commit');
+            if (/^(latest|main|master|newest)$/i.test(version))
+              notes.push('Please replace "' + version + '" in **Version / commit** with a release tag or full SHA, so this can be bisected.');
+
+            const repro = field('Reproduction');
+            if (repro && repro.split('\n').filter(l => l.trim()).length < 2)
+              notes.push('**Reproduction** looks incomplete. Steps from a clean checkout let a maintainer confirm this without a round trip.');
+
+            // secret scan on the visible body — cheap, high value
+            const SECRETS = [
+              [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/, 'GitHub token'],
+              [/\bAKIA[0-9A-Z]{16}\b/, 'AWS access key id'],
+              [/\bsk-[A-Za-z0-9]{20,}\b/, 'API secret key'],
+              [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'private key'],
+              [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./, 'JWT'],
+            ];
+            const hits = SECRETS.filter(([re]) => re.test(body)).map(([, n]) => n);
+            if (hits.length) {
+              add.add('security:possible-leak');
+              notes.push(`> [!CAUTION]\n> This issue may contain a **${hits.join(', ')}**. Edit it out now and **rotate the credential** — issue edit history is public.`);
+            }
+
+            for (const name of drop) {
+              await github.rest.issues.removeLabel({ ...context.repo, issue_number: issue.number, name });
+            }
+            if (add.size) {
+              await github.rest.issues.addLabels({ ...context.repo, issue_number: issue.number, labels: [...add] });
+            }
+
+            if (notes.length && context.payload.action === 'opened') {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: issue.number,
+                body: `Thanks for the report. A few things that will speed this up:\n\n` +
+                      notes.map(n => n.startsWith('>') ? n : `- ${n}`).join('\n') +
+                      `\n\nSee the [worked example](https://github.com/Quantum-L9/.github/blob/main/docs/issue-templates/EXAMPLE.md) for the standard.`,
+              });
+            }
+
+            if (hits.length) core.setFailed('Possible credential in issue body: ' + hits.join(', '));
