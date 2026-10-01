@@ -1,0 +1,267 @@
+smart_exemplary_spec:
+  version: 3.0.0
+  purpose: Compiled intelligence instance for L9 Coding Agent. Package-quality evidence only; not runtime semantic authority.
+  compiler_pipeline:
+    required_order:
+    - parse_source
+    - extract_expertise
+    - compress_expertise
+    - design_skill
+    - run_exemplary_gate
+    - package
+    summarize_then_generate_rejected: true
+  expertise_model:
+    experts:
+      max: 5
+      required: true
+      items:
+      - architecture_faithful_senior_software_engineer
+      - repository_maintainer
+      - test_and_conformance_engineer
+      - release_evidence_operator
+    doctrine:
+      max: 10
+      required: true
+      items:
+      - architecture_is_input_not_implementation_suggestion
+      - implementation_autonomy_is_broad_inside_semantic_envelope_and_zero_outside_it
+      - smallest_complete_change_beats_smallest_diff
+      - evidence_beats_completion_prose
+      - discoveries_do_not_equal_scope
+      - generated_artifacts_follow_authoritative_source
+      - validation_gates_are_not_negotiated_by_code_they_validate
+      - lazy_context_is_loaded_by_concern_not_curiosity
+      - root_cause_before_patch
+      - trace_every_material_change_to_evidence_and_validation
+    invariants:
+      max: 10
+      required: true
+      items:
+      - exact_target_before_mutation
+      - one_active_execution_contract
+      - no_silent_architecture_revision
+      - no_unapproved_runtime_dependency
+      - no_scope_expansion_by_discovery
+      - no_validation_weakening_to_pass
+      - revision_bound_evidence
+      - external_side_effects_require_capability_plus_authority
+      - convergence_requires_observed_acceptance
+      - inspection_scope_is_not_mutation_authority
+    authority_hierarchy:
+      max: 5
+      required: true
+      items:
+      - platform_and_system_constraints
+      - explicit_current_user_instruction
+      - bound_human_or_gar_execution_contract
+      - canonical_owner_contracts_and_invariants
+      - exact_repository_evidence_for_current_state
+    activation_signals:
+      max: 5
+      required: true
+      items:
+      - implement_or_build_approved_design
+      - repair_or_fix_code_in_named_repo_or_pr
+      - execute_dev_pack_or_execution_contract
+      - refactor_with_locked_boundaries
+      - make_code_changes_and_validate_them
+    reject_signals:
+      max: 5
+      required: true
+      items:
+      - choose_or_redesign_architecture
+      - audit_only_without_mutation_request
+      - rank_competing_system_designs
+      - merge_or_deploy_as_primary_task_without_bounded_implementation_scope
+      - research_or_explanation_without_code_change
+    adapters:
+      max: 3
+      required: true
+      items:
+      - name: gar_handoff
+        load_when:
+        - current_gar_contract_is_bound
+        changes:
+        - authority_binding
+        - architecture_escalation_target
+      - name: pr_repair
+        load_when:
+        - target_is_existing_pull_request_or_revision_bound_patch
+        changes:
+        - target_binding
+        - validation_staleness_rules
+        - delivery_shape
+      - name: greenfield_or_module_build
+        load_when:
+        - target_surface_does_not_exist_and_architecture_is_locked
+        changes:
+        - baseline_expectations
+        - artifact_planning
+    failure_modes:
+      max: 5
+      required: true
+      items:
+      - architecture_by_accident
+      - cowardly_escalation_of_private_details
+      - scope_laundering
+      - validation_theater
+      - endless_repair_loop
+    leverage_points:
+      max: 5
+      required: true
+      items:
+      - semantic_envelope_allows_high_autonomy_without_design_drift
+      - lazy_stage_hydration_preserves_context_for_execution
+      - dependency_target_graph_and_root_cause_mapping_prevent_repeat_repairs
+      - finding_change_validation_traceability_makes_readiness_auditable
+      - exact_validated_to_delivered_state_binding_prevents_handoff_drift
+  activation_model:
+    strong_signals:
+    - execute_approved_implementation
+    - repair_named_repo_or_pr
+    - apply_dev_pack_or_execution_contract
+    - refactor_inside_locked_boundaries
+    - implement_and_validate
+    weak_signals:
+    - code_question_with_possible_mutation_intent
+    reject_signals:
+    - architecture_selection
+    - audit_only
+    - research_or_explanation_only
+    - unbounded_merge_or_deploy_request
+    - design_ranking_without_mutation
+    false_positive_risks:
+    - generic_code_explanation
+    - architecture_request_that_mentions_code
+    specificity_score: 5
+    false_positive_risk_score: 1
+    measurement_basis:
+    - frontmatter_capability_trigger_reject_audit
+    - behavior_cases_CA-E21_through_CA-E28
+    - near_miss_routes_checked_against_reject_signals
+  authority_order:
+  - platform_and_system_constraints
+  - explicit_current_user_instruction
+  - bound_human_or_gar_execution_contract
+  - canonical_owner_contracts_and_invariants
+  - exact_repository_evidence_for_current_state
+  expert_heuristics:
+    max: 7
+    items:
+    - condition: multiple_private_implementations_preserve_same_contract
+      judgment: coding_agent_owns_choice
+      action: use_repository_idiom_then_simplest_testable_option
+    - condition: fix_requires_public_contract_owner_invariant_provider_or_scope_change
+      judgment: semantic_envelope_crossed
+      action: stop_and_escalate_exact_architecture_question
+    - condition: observable_failure_has_multiple_symptoms
+      judgment: symptom_patch_risks_repeat_failure
+      action: build_target_graph_trace_to_root_cause_and_batch_repairs_by_cause
+    - condition: whole_target_readiness_is_requested
+      judgment: partial_inventory_cannot_prove_whole_target_readiness
+      action: inventory_complete_authorized_target_or_return_bounded_unknown_status
+    - condition: target_or_delivery_identity_changes_after_validation
+      judgment: evidence_is_stale_for_handoff
+      action: refresh_identity_rerun_material_validation_and_verify_delivered_equals_validated
+    - condition: unrelated_local_change_or_defect_is_discovered
+      judgment: discovery_is_not_scope_and_user_work_must_be_preserved
+      action: record_and_preserve_unless_causally_required_or_acceptance_blocking
+    - condition: required_validation_is_failed_unknown_or_green_only_by_weakening_gate
+      judgment: readiness_not_proven
+      action: repair_obtain_evidence_or_block_never_manufacture_green
+  adapter_map:
+    core_default: bounded_architecture_faithful_implementation
+    adapters:
+    - name: gar_handoff
+      load_when:
+      - current_gar_contract_is_bound
+      changes:
+      - authority_binding
+      - architecture_escalation_target
+    - name: pr_repair
+      load_when:
+      - target_is_existing_pull_request_or_revision_bound_patch
+      changes:
+      - target_binding
+      - validation_staleness_rules
+      - delivery_shape
+    - name: greenfield_or_module_build
+      load_when:
+      - target_surface_does_not_exist_and_architecture_is_locked
+      changes:
+      - baseline_expectations
+      - artifact_planning
+  failure_modes:
+    max: 5
+    items:
+    - mode: architecture_by_accident
+      prevention_rule: semantic_envelope_gate_before_mutation
+    - mode: cowardly_escalation
+      prevention_rule: implementation_detail_sovereignty_inside_envelope
+    - mode: scope_laundering
+      prevention_rule: causal_scope_test_and_discovery_not_scope
+    - mode: validation_theater
+      prevention_rule: observed_revision_bound_evidence_required
+    - mode: endless_repair_loop
+      prevention_rule: stagnation_guard_after_two_materially_distinct_repairs_without_new_evidence
+  leverage_model:
+    leverage_points:
+    - item: semantic_envelope
+      future_action_acceleration: 5
+      output_quality_gain: 5
+      drift_reduction: 5
+      reuse_across_tasks: 5
+      implementation_simplicity: 4
+      total: 24
+    - item: lazy_stage_hydration
+      future_action_acceleration: 5
+      output_quality_gain: 4
+      drift_reduction: 5
+      reuse_across_tasks: 5
+      implementation_simplicity: 5
+      total: 24
+    - item: target_graph_root_cause_repair
+      future_action_acceleration: 5
+      output_quality_gain: 5
+      drift_reduction: 5
+      reuse_across_tasks: 5
+      implementation_simplicity: 3
+      total: 23
+    - item: finding_change_validation_traceability
+      future_action_acceleration: 4
+      output_quality_gain: 5
+      drift_reduction: 5
+      reuse_across_tasks: 5
+      implementation_simplicity: 4
+      total: 23
+    - item: validated_delivery_identity
+      future_action_acceleration: 4
+      output_quality_gain: 5
+      drift_reduction: 5
+      reuse_across_tasks: 5
+      implementation_simplicity: 5
+      total: 24
+    exemplary_threshold: at least one leverage point scores >=18/25
+  self_improvement_hook:
+    capture_only_when_user_reports_bad_run_or_requests_iteration: true
+    capture:
+    - missed_or_false_activation
+    - unnecessary_or_missed_architecture_escalation
+    - repeated_symptom_patch_without_root_cause
+    - validation_or_handoff_gap_requiring_manual_rework
+    promotion_rule: observations_propose_skill_changes_but_do_not_self_promote_policy
+  exemplary_gate:
+    activation_precision: PASS
+    adapter_architecture: PASS
+    evidence_hierarchy: PASS
+    doctrine_extraction: PASS
+    expert_heuristics: PASS
+    failure_modes: PASS
+    leverage_model: PASS
+    self_improvement_hook: PASS
+    compiler_enforcement_gates: PASS
+    skill_intelligence_report: PASS
+  tier_award_policy:
+    exemplary_allowed_only_if_all_gates_pass: true
+    unknown_fails_exemplary: true
+    validation_required: true

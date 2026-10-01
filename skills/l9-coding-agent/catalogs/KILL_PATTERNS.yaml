@@ -1,0 +1,50 @@
+catalog:
+  id: L9.CODING_AGENT.KILL_PATTERNS.001
+  version: 1.1.0
+  normative: false
+patterns:
+- id: KP-CA-001
+  name: Architecture by accident
+  signal: implementation_changes_owner_public_contract_or_topology_without_explicit_authority
+- id: KP-CA-002
+  name: Scope laundering
+  signal: unrelated_cleanup_or_followup_work_is_described_as_required_for_the_task_without_causal_proof
+- id: KP-CA-003
+  name: Dependency smuggling
+  signal: new_runtime_library_service_or_provider_is_added_as_an_implementation_detail
+- id: KP-CA-004
+  name: Generated truth fork
+  signal: compiled_or_generated_projection_is_hand_edited_instead_of_its_authoritative_source
+- id: KP-CA-005
+  name: Green-by-weakening
+  signal: tests_baselines_types_security_or_conformance_are_relaxed_to_make_changes_pass
+- id: KP-CA-006
+  name: Completion prose
+  signal: agent_claims_done_without_revision_bound_validation_evidence
+- id: KP-CA-007
+  name: Stale evidence
+  signal: validation_or_review_is_reused_after_target_head_changes
+- id: KP-CA-008
+  name: Repair treadmill
+  signal: same_root_cause_is_retried_without_new_evidence_or_narrower_diagnosis
+- id: KP-CA-009
+  name: Cowardly escalation
+  signal: ordinary_private_implementation_detail_is_escalated_despite_remaining_inside_the_semantic_envelope
+- id: KP-CA-010
+  name: Heroic improvisation
+  signal: architecture_or_authority_gap_is_filled_by_model_preference_instead_of_being_escalated
+- id: KP-CA-011
+  name: Symptom hiding
+  signal: patch_silences_visible_failure_without_addressing_earliest_supported_root_cause
+- id: KP-CA-012
+  name: Partial-to-whole laundering
+  signal: bounded_or_incomplete_inspection_is_presented_as_whole_target_readiness
+- id: KP-CA-013
+  name: Thin-file aesthetic deletion
+  signal: adapter_wrapper_reexport_or_boundary_file_is_removed_only_because_it_is_small_or_looks_redundant
+- id: KP-CA-014
+  name: Handoff drift
+  signal: delivered_patch_archive_branch_or_pr_revision_differs_from_the_state_that_was_validated
+- id: KP-CA-015
+  name: Ceremonial recursion
+  signal: additional_passes_run_without_a_specific_evidence_backed_objective_or_measurable_contribution
