@@ -1016,9 +1016,61 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+_SUBCOMMANDS = frozenset(
+    {
+        "begin",
+        "record-kernels",
+        "authorize-release",
+        "extend-release",
+        "status",
+        "check-remote",
+    }
+)
+
+
+def _hoist_workspace_flag(argv: list[str]) -> list[str]:
+    """Let `--workspace` follow the subcommand.
+
+    The flag stays a top-level option and still names the checkout path.
+    Callers that already place it first are unchanged. Argparse only sees
+    parent options before the subcommand, so a trailing flag is moved there.
+    """
+    try:
+        sub_at = next(i for i, tok in enumerate(argv) if tok in _SUBCOMMANDS)
+    except StopIteration:
+        return list(argv)
+    before = argv[:sub_at]
+    if any(tok == "--workspace" or tok.startswith("--workspace=") for tok in before):
+        return list(argv)
+    hoisted: list[str] = []
+    kept: list[str] = []
+    rest = argv[sub_at + 1 :]
+    index = 0
+    while index < len(rest):
+        tok = rest[index]
+        if tok == "--workspace":
+            hoisted.append(tok)
+            if index + 1 < len(rest):
+                hoisted.append(rest[index + 1])
+                index += 2
+            else:
+                index += 1
+            continue
+        if tok.startswith("--workspace="):
+            hoisted.append(tok)
+            index += 1
+            continue
+        kept.append(tok)
+        index += 1
+    if not hoisted:
+        return list(argv)
+    return [*before, *hoisted, argv[sub_at], *kept]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(_hoist_workspace_flag(raw))
     try:
         return int(args.func(args))
     except Exception as exc:  # noqa: BLE001 — CLI surface
