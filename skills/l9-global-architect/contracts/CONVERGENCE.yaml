@@ -1,12 +1,12 @@
 metadata:
   contract_id: L9.GAR.CONVERGENCE.001
-  version: 0.4.0
+  version: 0.8.1
   kind: evidence
   status: review
   title: GAR Convergence Evidence Contract
-  summary: >
-    Define the positive, fail-closed evidence required to establish that the
-    requested outcome is complete and delivered without false completion.
+  summary: >-
+    Define positive fail-closed evidence that the requested outcome is complete, delivered, and closed against applicable
+    reasoning-foursome intervention fidelity, signal-propagation, and post-execution learning obligations.
   owner: l9-global-architect
   domain: completion
   tags:
@@ -62,12 +62,19 @@ normative_clauses:
     subject: requested_delivery
     action: be_observed_in_required_delivery_mode
     object: operator_outcome
+  - clause_id: CV-N006
+    effect: require
+    subject: reasoning_overlay_closure
+    action: be_satisfied_when_applicable
+    object: intervention_fidelity_and_post_execution_learning
 dependencies:
   requires_contracts:
     - L9.GAR.EPISTEMIC_DISCIPLINE.001
     - L9.GAR.ARCHITECTURAL_INTEGRITY.001
     - L9.GAR.OBJECTIVE_DERIVATION.001
     - L9.GAR.OUTCOME_OWNERSHIP.001
+    - L9.GAR.REASONING_FOURSOME_BINDING.001
+    - L9.GAR.L9_ARCHITECTURE_PROFILE.001
   conflicts_with: []
 enforcement:
   class: mixed
@@ -79,7 +86,7 @@ enforcement:
     - terminal_success
 evidence_obligations:
   - property_id: GAR_RUN_CONVERGENCE
-    evidence_contract_ref: null
+    evidence_contract_ref:
     proof: >
       Every objective-derived and always-required convergence property has a
       nonblocking evaluation result, all required verification obligations were
@@ -99,18 +106,18 @@ provenance:
     - decisions/ADR-L9-GAR-001.yaml
 integrity:
   canonical_serialization: deterministic_yaml_normalization_v1
-  content_digest: null
+  content_digest:
 lifecycle:
   introduced_at: 2026-08-26
   supersedes: []
-  deprecated_by: null
+  deprecated_by:
   change_policy: semantic_versioning
 property:
   property_id: GAR_RUN_CONVERGENCE
-  statement: >
-    The requested GAR outcome, required realization, architectural integrity,
-    epistemic obligations, validation, failure closure, scope, and delivery are
-    all satisfied by current discriminating evidence.
+  statement: >-
+    The requested GAR outcome, required realization, architectural integrity, epistemic obligations, validation,
+    failure closure, scope, delivery, and applicable reasoning-overlay closure are all satisfied by current discriminating
+    evidence.
   evidence_type: proof_receipt
   blocking: true
 observation:
@@ -126,7 +133,7 @@ binding:
   artifact_hash_required: false
 freshness:
   policy: current_execution_only
-  max_age: null
+  max_age:
 result:
   valid_states:
     - pass
@@ -184,6 +191,12 @@ applicability_model:
       expected: true
       enables:
         - CV-011-REQUESTED-DELIVERY-COMPLETED
+    - id: APP-REASONING-OVERLAY
+      source_state_ref: $.reasoning.applicable
+      operator: equals
+      expected: true
+      enables:
+        - CV-014-REASONING-OVERLAY-CLOSED
   laws:
     - applicability_inputs_are_required_and_must_not_be_inferred_from_missing_execution
     - capability_state_never_changes_whether_an_objective_derived_requirement_exists
@@ -293,6 +306,39 @@ convergence_gate:
       applicability: always
       evidence_ref: $.verification.blocking_evaluation_refs
       failure_reason_code: COMPLETION_NOT_PROVEN
+    - id: CV-014-REASONING-OVERLAY-CLOSED
+      property: reasoning_overlay_closed
+      evaluator: EVAL-HYBRID
+      applicability_ref: APP-REASONING-OVERLAY
+      evidence_ref: $.reasoning
+      contract_ref: integrations/REASONING_FOURSOME_BINDING.yaml
+      satisfied_when:
+        - $.reasoning.first_order.status == BOUND
+        - $.architecture.intervention_fidelity.status == SATISFIED
+        - required_pre_execution_second_order_and_predicted_leverage_receipts_are_bound_or_explicitly_not_material
+        - required_post_execution_second_order_and_realized_leverage_receipts_are_bound_or_explicitly_not_material
+        - $.reasoning.signal_leverage.prediction_propagation_disposition != UNRESOLVED
+        - $.reasoning.signal_leverage.observation_propagation_disposition != UNRESOLVED
+        - $.reasoning.leverage.validated_shared_gain_disposition != UNRESOLVED
+        - $.reasoning.signal_leverage.writeback_disposition != UNRESOLVED
+        - $.reasoning.signal_leverage.required_episode_converged == true or $.reasoning.materiality == NOT_MATERIAL
+      failure_reason_code: COMPLETION_NOT_PROVEN
+      semantics: This property checks closure receipts only. It does not recalculate First-Order,
+        Second-Order, or Leverage semantics.
+    - id: CV-015-TARGET-BINDING-CURRENT
+      property: exact_target_and_scope_bound
+      evaluator: EVAL-DETERMINISTIC-PREDICATE
+      applicability: always
+      evidence_ref: $.target
+      satisfied_when:
+        - $.target.status == BOUND
+        - $.target.bound_refs is not empty
+        - $.target.artifact_types is not empty
+        - $.target.inspection_scope is explicit
+        - $.target.correction_scope is explicit
+        - $.target.ambiguity_refs is empty
+      failure_reason_code: TARGET_BINDING_UNRESOLVED
+      semantics: Completion claims are valid only for the exact bound target and declared scopes; similarly named artifacts or uninspected areas cannot inherit compliance.
 false_completion_checks:
   - id: FC-001
     detect: objective_requires_MUTATION_but_observed_mutation_is_absent
@@ -321,6 +367,9 @@ false_completion_checks:
   - id: FC-009
     detect: blocking_evaluation_result_present
     reason_code: COMPLETION_NOT_PROVEN
+  - id: FC-010
+    detect: target_identity_or_scope_unbound_ambiguous_or_substituted
+    reason_code: TARGET_BINDING_UNRESOLVED
 nonconvergence_output:
   required_fields:
     - defect_class

@@ -1,14 +1,15 @@
 integration:
   integration_id: L9.GAR.L9_COGNITIVE_RUNTIME_BINDING.001
-  version: 0.4.0
+  version: 0.8.0
   artifact_class: runtime_integration_binding
   status: experimental
   semantic_owner: integrations/L9_RUNTIME_BINDING.yaml
 purpose:
-  assertion: >
-    Bind GAR cognition into an actively observed compatible l9-cognitive-runtime
-    without duplicating intent compilation kernel planning universal execution
-    contracts execution graphs validation handoff or adapter rendering.
+  assertion: >-
+    Bind GAR cognition and the external Reasoning Foursome overlay into an actively observed compatible l9-cognitive-runtime
+    without duplicating intent compilation, First-Order intervention selection, Second-Order consequence modeling,
+    Leverage evaluation, Signal Leverage propagation/write-back, kernel planning, execution contracts, execution graphs, validation handoff, or adapter
+    rendering.
 external_runtime:
   name: l9-cognitive-runtime
   repository_markers:
@@ -60,6 +61,8 @@ integration_activation:
       authority reversal.
   repository_presence_alone_activates: false
   laws:
+    - l9_architecture_profile_applicability_is_not_runtime_binding_activation
+    - profile_role_semantics_do_not_prove_runtime_presence_compatibility_or_authority
     - existence_is_not_activation
     - source_code_being_inspected_cannot_assume_orchestration_authority
     - orchestration_transfer_must_be_current_run_evidence
@@ -75,11 +78,14 @@ binding_lifecycle:
     BOUND:
       meaning: Active runtime binding observed and compatible; authority not yet transferred.
     ACTIVE:
-      meaning: All activation predicates satisfied and orchestration authority transferred; integration_mode is L9_INTEGRATED.
+      meaning: All activation predicates satisfied and orchestration authority transferred; integration_mode
+        is L9_INTEGRATED.
     ACTIVE_DEGRADED:
-      meaning: Authority remains transferred but a required activation predicate (for example execution_path_available) is now false or unknown.
+      meaning: Authority remains transferred but a required activation predicate (for example
+        execution_path_available) is now false or unknown.
     RELEASED:
-      meaning: Transferred authority explicitly released or revoked with recorded evidence; STANDALONE may resume.
+      meaning: Transferred authority explicitly released or revoked with recorded evidence; STANDALONE may
+        resume.
   legal_transitions:
     - UNBOUND -> DISCOVERED
     - DISCOVERED -> BOUND
@@ -155,6 +161,18 @@ ownership_matrix:
   adapter_rendering:
     owner: l9-cognitive-runtime_when_integrated
     gar_may_redefine: false
+  governing_cause_and_intervention_selection:
+    owner: L9 Reasoning Foursome First-Order
+    gar_may_redefine: false
+  consequence_modeling:
+    owner: L9 Reasoning Foursome Second-Order
+    gar_may_redefine: false
+  systemic_leverage_evaluation:
+    owner: L9 Reasoning Foursome Leverage
+    gar_may_redefine: false
+  signal_leverage_propagation_and_writeback:
+    owner: L9 Reasoning Foursome Signal Leverage
+    gar_may_redefine: false
 integrated_mode:
   activation_precondition: integration_activation == satisfied
   outer_orchestration:
@@ -193,8 +211,10 @@ pipeline_bindings:
     gar:
       activate:
         - contracts/EPISTEMIC_DISCIPLINE.yaml
+        - contracts/L9_ARCHITECTURE_PROFILE.yaml
         - contracts/ARCHITECTURAL_INTEGRITY.yaml
         - contracts/OUTCOME_OWNERSHIP.yaml
+        - integrations/REASONING_FOURSOME_BINDING.yaml
   P2_TASK_ROUTING:
     gar:
       contribute:
@@ -212,6 +232,8 @@ pipeline_bindings:
         - GAR_SYSTEM_MODEL
         - GAR_ARCHITECTURE_DECISION
         - GAR_ARCHITECTURE_INTEGRITY_RESULT
+        - GAR_SOLUTION_SURFACE_CENSUS
+        - GAR_INTERVENTION_FIDELITY_RESULT
   P4_ALIGNMENT_AND_STUB_GATE:
     gar:
       contribute:
@@ -228,9 +250,11 @@ pipeline_bindings:
   P6_LEVERAGE_COMPRESSION:
     gar:
       contribute:
-        - simpler_credible_candidate_check
+        - solution_surface_evidence
+        - simpler_architecture_within_bound_intervention_check
         - unnecessary_complexity_elimination
         - scope_compression
+        - intervention_challenge_evidence
   P7_FLAWLESS_VICTORY:
     gar:
       activate:
@@ -333,19 +357,41 @@ forbidden_duplication:
   - integration_local_defect_router
 integration_invariants:
   - id: L9B-001
-    rule: GAR owns architectural cognition while an actively bound l9-cognitive-runtime owns outer compiler/runtime mechanics.
+    rule: GAR owns architectural cognition while an actively bound l9-cognitive-runtime owns outer
+      compiler/runtime mechanics.
   - id: L9B-002
     rule: Neither layer may silently absorb the other's semantic authority.
   - id: L9B-003
-    rule: Integrated mode preserves GAR architectural law and outcome accountability even when outer orchestration differs.
+    rule: Integrated mode preserves GAR architectural law and outcome accountability even when outer
+      orchestration differs.
   - id: L9B-004
-    rule: Adapter-specific limitations may constrain execution but MUST NOT weaken architectural integrity or falsify completion.
+    rule: Adapter-specific limitations may constrain execution but MUST NOT weaken architectural integrity or
+      falsify completion.
   - id: L9B-005
-    rule: If integration cannot preserve a GAR blocker selected transition or delivery obligation integration fails closed - to STANDALONE before orchestration authority transfer, and to ACTIVE_DEGRADED with repair, explicit release, or BLOCKED after transfer.
+    rule: If integration cannot preserve a GAR blocker selected transition or delivery obligation integration
+      fails closed - to STANDALONE before orchestration authority transfer, and to ACTIVE_DEGRADED with
+      repair, explicit release, or BLOCKED after transfer.
   - id: L9B-006
-    rule: Transferred orchestration authority is hysteretic - it returns to GAR only through explicit release or revocation evidence, never through malfunction of the new authority.
+    rule: Transferred orchestration authority is hysteretic - it returns to GAR only through explicit release
+      or revocation evidence, never through malfunction of the new authority.
 anti_drift:
   external_runtime_paths_are_discovery_markers_not_activation_proof: true
   copied_compiler_logic_allowed: false
   copied_adapter_brain_allowed: false
   copied_defect_routing_allowed: false
+reasoning_foursome_projection:
+  semantic_owner: integrations/REASONING_FOURSOME_BINDING.yaml
+  outer_runtime_may_orchestrate: true
+  outer_runtime_may_redefine_semantics: false
+  required_projection_fields:
+    - first_order_decision_ref
+    - intervention_class
+    - second_order_before_ref
+    - signal_prediction_propagation_ref
+    - predicted_leverage_ref
+    - second_order_after_ref
+    - signal_observation_propagation_ref
+    - realized_leverage_ref
+    - signal_writeback_ref
+  law: Integrated orchestration may schedule the reasoning foursome and GAR but may not merge First-Order, Second-Order, Leverage, Signal Leverage, or GAR semantic ownership or
+    treat GAR architecture selection as intervention selection.
