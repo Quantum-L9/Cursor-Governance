@@ -1,0 +1,95 @@
+name: 🐛 Bug
+description: Something behaves incorrectly and you can show it.
+title: "bug: "
+labels: ["type:bug", "needs:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Symptom first, theory last — the same order as the PR template
+        (Problem → Evidence → Severity → Done when). A red CI run goes to
+        **CI failure**; a vulnerability goes to a private security advisory.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The symptom you observed, in one or two sentences. Not your theory.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Traceback, failing assertion, log line, or run URL. Redact secrets.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Steps from a clean checkout. Best effort is fine.
+      render: shell
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where you saw it. Production reports are labelled env:prod.
+      options:
+        - Production
+        - Staging
+        - CI
+        - Local
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Release tag or full SHA — not "main" or "latest".
+
+  - type: input
+    id: regression
+    attributes:
+      label: Last known good version
+      description: If set, this becomes a bisect range and is labelled regression. Blank if unknown.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick exactly one. Triage derives priority from it; inflated severity is ignored.
+      options:
+        - S4 — cosmetic
+        - S3 — degraded, workaround exists
+        - S2 — major function broken, no workaround
+        - S1 — production down, data loss, or security exposure
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The observable result that closes this issue. The fix PR's Evidence should show exactly this.
+      placeholder: "the reproduction above exits 0 and the report total matches the ledger"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: Issues or PRs this blocks, is blocked by, or came from.
+      placeholder: "blocked by #12, blocks #34, from PR #56"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Suspected cause, workaround in use and why it is unsafe. Theories go here, last.
