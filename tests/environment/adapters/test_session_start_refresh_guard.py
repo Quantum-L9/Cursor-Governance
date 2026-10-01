@@ -89,9 +89,31 @@ def test_bootstrap_generation_is_bounded_by_the_remaining_hook_budget() -> None:
     # Never a bare `timeout` call — run_with_timeout is the portable wrapper.
     assert not re.search(r'(?<!run_with_)timeout "\$_gen_cap"', text)
     assert 'run_with_timeout() { shift; "$@"; }' not in text
-    assert text.index("NOT GENERATED — run_with_timeout.sh missing") < text.index(
-        'bash "$BOOTSTRAP_INSTALLER"'
-    )
+    bounded = text.index('run_with_timeout "$_gen_cap"')
+    assert text.index("NOT GENERATED — run_with_timeout.sh missing") < bounded
+    assert text.index('bash "$BOOTSTRAP_INSTALLER"', bounded) > bounded
+
+
+def test_bootstrap_installer_is_detached_not_killed_at_the_deadline() -> None:
+    """The installer finishes even when the hook budget does not cover it.
+
+    A deadline kill left capabilities / memory UNKNOWN until a manual
+    `make claude-install`, and could tear a venv install in half. With setsid
+    the installer runs in its own session, holds none of the hook's pipes, and
+    the hook waits only as long as the clamped budget allows. The bounded
+    run_with_timeout launch stays as the fallback when setsid is missing.
+    """
+    text = body()
+    detached = text.index('setsid --wait flock -n -E 75 "$HOME/.l9/claude/bootstrap.lock"')
+    assert detached < text.index('run_with_timeout "$_gen_cap"')
+    launch = text[detached : text.index("_gen_pid=$!", detached)]
+    assert 'env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID"' in launch
+    # The log is opened INSIDE the lock: a refused ceremony must not truncate it.
+    assert 'exec >"$L9_BOOTSTRAP_LOG_PATH" 2>&1 </dev/null' in launch
+    assert "</dev/null >/dev/null 2>&1 &" in launch
+    assert "repo_write_lock_acquire" in launch
+    assert "installer still running after" in text
+    assert "NOT killed" in text
 
 
 def test_the_reader_reads_the_receipt_this_ceremony_generated() -> None:
