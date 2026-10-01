@@ -45,6 +45,22 @@ if [[ -z "${PY:-}" || ! -x "$PY" ]]; then
   exit 1
 fi
 
+# The MCP server is started in parallel with the SessionStart hook that may be
+# installing this .venv. Wait for the install before binding (which imports the
+# package) and before exec; a half-installed venv is refused by name rather
+# than crashing on import. Lazy imports after a LATER reinstall are not covered:
+# the server is long-lived and holds no lock across its lifetime.
+if [[ -f "$GOV/ops/scripts/lib/venv_ready.sh" ]]; then
+  # shellcheck source=/dev/null
+  . "$GOV/ops/scripts/lib/venv_ready.sh"
+  _ready_rc=0
+  venv_ready_wait "$GOV" || _ready_rc=$?
+  if [[ "$_ready_rc" -eq 2 ]]; then
+    echo "run_memory_mcp: refuse to launch on a half-installed governance venv" >&2
+    exit 1
+  fi
+fi
+
 # shellcheck source=/dev/null
 . "$BIND"
 bind_l9_memory_interpreter "$PY" "$GOV"

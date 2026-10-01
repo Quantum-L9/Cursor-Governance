@@ -543,4 +543,13 @@ PY="$GOV_DIR/.venv/bin/python3"
 [ -x "$PY" ] || PY="$GOV_DIR/.venv/bin/python"
 [ -x "$PY" ] || cannot_run "locked interpreter missing under $GOV_DIR/.venv"
 
+# Hooks start in parallel with the SessionStart hook that may be installing
+# this very .venv; wait for it rather than import a half-replaced package.
+# Not a gate: a hook still runs after the bounded wait and decides for itself.
+if [ -f "$GOV_DIR/ops/scripts/lib/venv_ready.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$GOV_DIR/ops/scripts/lib/venv_ready.sh"
+  venv_ready_wait "$GOV_DIR" || true
+fi
+
 exec "$PY" "$HOOK_PATH"
