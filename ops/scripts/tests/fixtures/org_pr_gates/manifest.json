@@ -1,0 +1,21 @@
+{
+  "schema": "l9.org_pr_gate_fixtures.v1",
+  "purpose": "Byte-exact copies of the Quantum-L9/.github PR-body validators that judge bodies make pr composes. Tests run these files; they never re-implement them.",
+  "fixtures": [
+    {
+      "file": "governance-pr.yml",
+      "source": "Quantum-L9/.github:.github/workflows/governance-pr.yml",
+      "ref": "3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08",
+      "why": "The SHA consumer repos pin in templates/governance-caller.yml; the validator their PRs actually run.",
+      "sha256": "a26b5848dae7f8d8c627bc27e1462bb8ee63722b9d5089153b71afea06e8bc6e"
+    },
+    {
+      "file": "pr-files.yml",
+      "source": "Quantum-L9/.github:.github/workflows/pr-files.yml",
+      "ref": "77587b7421b2e7cfad391e5036f531d8b5833e2b",
+      "why": "Runs only in Quantum-L9/.github (not called by consumers); main at vendoring time.",
+      "sha256": "b329a53e30ec39af124842e91cace74e2ce985400bb89d4adf9f69fb80a9b7d5"
+    }
+  ],
+  "refresh": "When the consumer caller pin or the validator moves: copy the file from that ref, update ref and sha256 here. The digest test fails until both agree."
+}

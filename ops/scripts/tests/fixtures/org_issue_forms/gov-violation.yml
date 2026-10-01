@@ -1,0 +1,114 @@
+name: ⚖️ Governance violation
+description: A repository, workflow, or agent breaks CANONICAL_LAW.md.
+title: "governance: "
+labels: ["type:bug", "area:governance", "needs:triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a detected violation of
+        [CANONICAL_LAW.md](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md).
+        Evidence first, as in the PR template. This form is public: conduct reports
+        go through CODE_OF_CONDUCT.md, and vulnerabilities through a private advisory.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What rule is broken, where, and what it lets through.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: violation-type
+    attributes:
+      label: Violation type
+      options:
+        - Wiring or symlink drift (adapter / repository wiring)
+        - Anti-pattern present
+        - Governance gate not enforcing
+        - Publication outside make pr (push, PR, or merge path)
+        - Action or kernel ref not pinned to a full SHA
+        - Credential or secret handling
+        - Memory layer misuse
+        - Other — describe in Problem
+    validations:
+      required: true
+
+  - type: dropdown
+    id: canonical-law-section
+    attributes:
+      label: CANONICAL_LAW.md section violated
+      description: Section titles as of CANONICAL_LAW.md §1–§14. Later dated sections amend these numbers.
+      options:
+        - "§1 — Single Source of Truth"
+        - "§2 — IDE Adapter Model"
+        - "§3 — User-Level Configuration"
+        - "§4 — Naming Conventions"
+        - "§5 — GitHub SSOT"
+        - "§6 — Repository Wiring (incl. §6.1 / §6.2 autonomy)"
+        - "§7 — Anti-Patterns"
+        - "§8 — Memory Layer"
+        - "§9 — Intelligence & Signal Mining"
+        - "§10 — Governance Enforcement"
+        - "§11 — Diagnose-First Execution"
+        - "§12 — Mandatory Pre-PR Local Gate (make pr)"
+        - "§13 — Integration Branch & Local Runtime"
+        - "§14 — GitHub PAT Authority"
+        - "Unsure — named in Problem"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Command output, diff, or log that demonstrates the violation.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: affected-repos
+    attributes:
+      label: Affected repositories
+      description: owner/name, comma-separated.
+      placeholder: "Quantum-L9/example-repo, Quantum-L9/.github"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick exactly one.
+      options:
+        - S4 — documentation only
+        - S3 — drift detected, not exploited
+        - S2 — a CI gate is not enforcing policy
+        - S1 — active governance bypass or security impact
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The check that proves the rule is enforced again, not just this instance fixed.
+      placeholder: "the gate fails a PR that repeats the violation"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: The PR, run, or issue where this surfaced.
+      placeholder: "from PR #56"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Proposed fix, if you have one.
