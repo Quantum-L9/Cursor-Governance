@@ -234,9 +234,7 @@ def test_client_spawns_once_the_install_completes(
         try:
             outcome = MemoryControlPlaneClient(
                 _venv_bound(bound, root), runner=fake_cli.run
-            ).hydrate(
-                "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
-            )
+            ).hydrate("t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",))
             assert outcome.status is OutcomeStatus.OK
         finally:
             timer.cancel()
