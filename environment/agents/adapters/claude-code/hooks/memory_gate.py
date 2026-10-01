@@ -129,9 +129,6 @@ def main() -> int:
     try:
         from surface_detect import claude_runtime_present, cursor_host_present
     except ImportError:
-        claude_runtime_present = None
-        cursor_host_present = None
-    if cursor_host_present is None or claude_runtime_present is None:
         return 0
     if cursor_host_present() or not claude_runtime_present():
         return 0
