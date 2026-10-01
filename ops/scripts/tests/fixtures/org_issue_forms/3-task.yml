@@ -1,0 +1,65 @@
+name: 🔧 Task
+description: Known work with a known solution — chore, refactor, infra, docs.
+title: "chore: "
+labels: ["type:task", "needs:triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Why first, then the work — the same order as the PR template
+        (Problem → Fix → Done when). A task with no stated cost of inaction
+        is a candidate for closing.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Why this work exists. What degrades if it is never done?
+    validations:
+      required: true
+
+  - type: textarea
+    id: work
+    attributes:
+      label: Work
+      description: The steps, one per line. Name the files or systems each one touches.
+      placeholder: "- [ ] bump X in pyproject.toml and re-lock\n- [ ] drop the shim in ops/compat.py"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options: [chore, refactor, infra / IaC, governance, docs, dependency bump]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Pick exactly one.
+      options:
+        - S — under a day
+        - M — a few days, one repo
+        - L — multi-repo or migration
+        - XL — needs a design doc first
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The check that proves the work is finished, not "the steps are done".
+      placeholder: "make pr is green and the old path returns 404"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: Issues or PRs this blocks or is blocked by.
+      placeholder: "blocked by #12, blocks #34"

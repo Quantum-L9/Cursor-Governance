@@ -1,0 +1,59 @@
+name: Governance — Issue
+
+on:
+  workflow_call:
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const body = context.payload.issue.body || '';
+            const add = new Set();
+            // Same field grammar and severity map as this repo's issue-triage.yml
+            // (ops/test-issue-forms.js holds the two in step).
+            const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const f = n => ((body.match(new RegExp(`###\\s*${esc(n)}\\s*\\n+([\\s\\S]*?)(?=\\n###\\s|$)`,'i'))||[,''])[1]||'').replace(/_No response_/gi,'').trim();
+
+            const key = (f('Severity').match(/\bS[1-4]\b/)||[])[0];
+            const PRIORITY = { S1: 'P0', S2: 'P1', S3: 'P2', S4: 'P3' };
+            const drop = [];
+            if (key) {
+              add.add(`sev:${key}`); add.add('priority:' + PRIORITY[key]);
+              // A re-set severity moves the labels instead of stacking them.
+              for (const { name } of context.payload.issue.labels || []) {
+                if (/^(sev|priority):/.test(name) && !add.has(name)) drop.push(name);
+              }
+            }
+
+            // The routing fields the org forms render (same rules as issue-triage.yml).
+            const env = f('Environment');
+            if (/^prod/i.test(env)) add.add('env:prod');
+            if (/^ci\b/i.test(env)) add.add('area:ci');
+            if (f('Last known good version')) add.add('regression');
+            const scope = (f('Scope').match(/^(XL|L|M|S)\b/)||[])[0];
+            if (scope) add.add(`scope:${scope}`);
+            if (/^yes/i.test(f('Breaking change?'))) add.add('breaking');
+
+            const SECRETS = [
+              [/\bgh[pousr]_[A-Za-z0-9]{20,}\b/,'GitHub token'],
+              [/\bAKIA[0-9A-Z]{16}\b/,'AWS key id'],
+              [/\bsk-[A-Za-z0-9]{20,}\b/,'API secret'],
+              [/-----BEGIN [A-Z ]*PRIVATE KEY-----/,'private key'],
+              [/\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\./,'JWT'],
+            ];
+            const hits = SECRETS.filter(([re]) => re.test(body)).map(([,n]) => n);
+            if (hits.length) {
+              add.add('security:possible-leak');
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.payload.issue.number,
+                body: `> [!CAUTION]\n> Possible **${hits.join(', ')}** in this issue. Edit it out and **rotate the credential** — edit history is public.` });
+            }
+            for (const name of drop) await github.rest.issues.removeLabel({ ...context.repo, issue_number: context.payload.issue.number, name });
+            if (add.size) await github.rest.issues.addLabels({ ...context.repo, issue_number: context.payload.issue.number, labels: [...add] });
+            // ADVISORY: label + comment, never fail. Rotation is the remedy, not a red X.
+            if (hits.length) core.warning('Possible credential: ' + hits.join(', '));
