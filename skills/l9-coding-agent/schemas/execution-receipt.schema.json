@@ -10,7 +10,9 @@
     "target",
     "changed_surfaces",
     "validation",
-    "delivery_status"
+    "delivery_status",
+    "validated_state",
+    "delivered_state"
   ],
   "properties": {
     "terminal_state": {
@@ -64,8 +66,12 @@
       "type": "array"
     },
     "hygiene_status": {},
-    "validated_state": {},
-    "delivered_state": {},
+    "validated_state": {
+      "type": "object"
+    },
+    "delivered_state": {
+      "type": "object"
+    },
     "convergence_basis": {
       "type": "array"
     }

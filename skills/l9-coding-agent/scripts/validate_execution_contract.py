@@ -18,7 +18,18 @@ REQUIRED = {
     "forbidden_actions",
     "validation_obligations",
     "delivery_mode",
+    "authority_refs",
 }
+
+LIST_FIELDS = (
+    "authority_refs",
+    "in_scope",
+    "out_of_scope",
+    "locked_invariants",
+    "acceptance_criteria",
+    "forbidden_actions",
+    "validation_obligations",
+)
 
 
 def load(path: Path):
@@ -47,10 +58,15 @@ def main() -> int:
     if not isinstance(data.get("target"), dict) or not data["target"].get("repository_or_artifact"):
         print("FAIL: target.repository_or_artifact is required")
         return 1
-    if not data.get("acceptance_criteria"):
+    for name in LIST_FIELDS:
+        value = data.get(name)
+        if not isinstance(value, list):
+            print(f"FAIL: {name} must be an array")
+            return 1
+    if not data["acceptance_criteria"]:
         print("FAIL: acceptance_criteria must not be empty")
         return 1
-    if not data.get("validation_obligations"):
+    if not data["validation_obligations"]:
         print("FAIL: validation_obligations must not be empty")
         return 1
     inspection = data.get("inspection_scope")

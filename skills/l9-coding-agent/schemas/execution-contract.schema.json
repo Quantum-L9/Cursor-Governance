@@ -14,7 +14,8 @@
     "acceptance_criteria",
     "forbidden_actions",
     "validation_obligations",
-    "delivery_mode"
+    "delivery_mode",
+    "authority_refs"
   ],
   "properties": {
     "contract_id": {
