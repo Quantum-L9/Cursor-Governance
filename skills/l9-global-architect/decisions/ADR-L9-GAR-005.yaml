@@ -1,0 +1,88 @@
+adr:
+  id: ADR-L9-GAR-005
+  title: Recursive Alignment hardening for exact target binding, Signal/Gate boundary clarity, and conditional security-contract analysis
+  status: accepted
+  date: 2026-09-27
+  decision_scope: l9-global-architect v0.8.1 alignment hardening
+  normative: false
+source_audit:
+  kernel_name: recursive_architecture_alignment_auditor
+  kernel_version: 1.0
+  source_filename: Recursive Alignment(20260927-050021).md
+  source_sha256: ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  baseline_skill_sha256: 01743ea6ef3565b4c98d0455fc42507b21f124be1d619d57c17c50808f053e1f
+  authorization: user_explicitly_requested_apply_kernel_and_deliver_v0_8_1
+root_findings:
+  - id: RA-001
+    severity: high
+    confidence: confirmed
+    problem: exact_target_identity_and_scope_were_implicit
+    evidence:
+      - runtime/RUN_STATE.yaml_had_no_target_binding_record
+      - INTAKE_did_not_gate_on_exact_target_identity
+    risk: similarly_named_or_stale_artifacts_could_receive_whole_target_claims_or_mutation
+  - id: RA-002
+    severity: high
+    confidence: confirmed
+    problem: signal_routing_vocabulary_could_collide_with_Gate_route_selection_ownership
+    evidence:
+      - signal_kernel_uses_routing_for_semantic_propagation
+      - L9AP_004_assigns_concrete_routing_admission_and_routability_to_Constellation_Gate
+    risk: semantic_propagation_policy_could_be_misread_as_transport_or_route_selection_authority
+  - id: RA-003
+    severity: medium
+    confidence: confirmed
+    problem: security_was_a_depth_trigger_and_assumption_dimension_but_not_an_explicit_architecture_lens
+    risk: security_boundary_analysis_could_be_underbuilt_or_inconsistent
+  - id: RA-004
+    severity: medium
+    confidence: confirmed
+    problem: shared_contract_and_configuration_authority_were_not_first_class_system_model_dimensions
+    risk: generated_or_mirrored_state_and_compatibility_semantics_could_be_under_modeled
+  - id: RA-005
+    severity: low
+    confidence: confirmed
+    problem: stale_reason_code_wording_after_first_order_ownership_surgery
+    evidence:
+      - REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED_still_named_retired_first_order_question
+decision:
+  - bind_exact_target_identity_and_scopes_before_whole_target_claims_or_mutation
+  - distinguish_inspection_scope_from_correction_scope
+  - preserve_Signal_Leverage_as_owner_of_semantic_propagation_topology_while_preserving_Gate_and_Gate_SDK_transport_ownership
+  - add_conditional_security_and_contract_configuration_architecture_lenses_without_turning_them_into_always_on_checklists
+  - require_every_activated_material_architecture_lens_to_close_before_STANDARD_or_DEEP_plan_promotion
+  - keep_recursive_alignment_kernel_external_as_audit_input_not_a_new_runtime_semantic_owner
+rejected_alternatives:
+  - alternative: import_the_entire_recursive_alignment_kernel_as_runtime_law
+    rejected_because: would_duplicate_existing_GAR_contracts_and_create_second_ownership_surface
+  - alternative: move_signal_routing_out_of_Signal_Leverage
+    rejected_because: would_erase_first_class_propagation_semantics_instead_of_disambiguating_transport_ownership
+  - alternative: make_security_and_schema_checks_unconditional
+    rejected_because: would_add_checklist_weight_to_irrelevant_tasks_and_violate_depth_proportionality
+  - alternative: add_a_second_target_contract_file
+    rejected_because: target_binding_is_runtime_state_and_workflow_ownership_not_a_new_semantic_domain
+validation_required:
+  - all_yaml_and_json_parse
+  - every_manifest_owner_and_load_order_path_resolves
+  - target_binding_exists_in_run_state_manifest_and_state_machine_gate
+  - signal_gate_disambiguation_is_present_and_no_private_route_owner_is_created
+  - behavior_eval_ids_are_contiguous_through_GAR_EVAL_061_and_promotion_gate_requires_all
+  - product_architecture_decision_positive_and_negative_validation_still_passes
+  - no_new_TODO_FIXME_TBD_or_stub_artifacts
+future_repair_rule:
+  - Never infer target identity from recency or name similarity.
+  - Never let inspection scope imply mutation scope.
+  - Preserve the distinction between semantic signal propagation and concrete Gate routing.
+  - Add conditional architecture lenses only when they represent a stable missing concern rather than audit_checklist_duplication.
+
+validation_evidence:
+  structured_yaml_json_parse: PASS
+  json_schema_meta_validation: PASS
+  runtime_alignment_validator: PASS
+  product_architecture_decision_positive_fixture: PASS
+  deprecated_HARVEST_THEN_DECIDE_negative_fixture: PASS
+  state_action_transition_reference_integrity: PASS
+  placeholder_scan: PASS
+  stale_first_order_wording_scan: PASS
+  behavior_eval_count: 61
+  note: Final archive re-extraction validation is performed after packaging and reported with the delivered artifact.

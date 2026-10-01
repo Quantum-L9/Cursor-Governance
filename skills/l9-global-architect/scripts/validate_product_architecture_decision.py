@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate GAR's graph-bound Product Architecture Decision."""
+"""Validate GAR's graph-bound Product Architecture Decision with v0.8 reasoning-foursome intervention and signal discipline."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schemas" / "product-architecture-decision.schema.json"
+DEPRECATED_DISPOSITIONS = {"HARVEST_THEN_DECIDE"}
 
 
 class DecisionError(ValueError):
@@ -35,6 +36,7 @@ def validate(
 ) -> dict[str, Any]:
     if not isinstance(decision, dict):
         raise DecisionError("GAR_DECISION_INVALID: decision must be an object")
+
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     errors = sorted(
         jsonschema.Draft202012Validator(schema).iter_errors(decision), key=lambda e: list(e.path)
@@ -44,13 +46,43 @@ def validate(
             f"{'.'.join(str(p) for p in err.path) or '<root>'}: {err.message}" for err in errors
         )
         raise DecisionError(f"GAR_DECISION_INVALID: {rendered}")
+
     if decision["status"] == "ACCEPTED" and decision["architecture"]["material_unknowns"]:
         raise DecisionError(
             "GAR_DECISION_UNRESOLVED: ACCEPTED decision cannot carry material_unknowns"
         )
-    if envelope is not None:
-        if decision["idea_execute"]["envelope_digest"] != digest(envelope):
-            raise DecisionError("GAR_DECISION_STALE: envelope digest does not match")
+
+    dispositions = {item["disposition"] for item in decision["architecture"]["owner_dispositions"]}
+    deprecated = dispositions & DEPRECATED_DISPOSITIONS
+    if deprecated:
+        raise DecisionError(f"GAR_DECISION_DEPRECATED_DISPOSITION: {sorted(deprecated)}")
+
+    reasoning_class = decision["reasoning"]["intervention_class"]
+    architecture_class = decision["architecture"]["intervention_class"]
+    if reasoning_class != architecture_class:
+        raise DecisionError(
+            "GAR_DECISION_INTERVENTION_FIDELITY: architecture intervention_class must match bound First-Order projection"
+        )
+
+    if (
+        reasoning_class in {"HARVEST_SEMANTICS", "BUILD_NEW"}
+        and not decision["reasoning"]["solution_surface_census_ref"]
+    ):
+        raise DecisionError(
+            "GAR_DECISION_INTERVENTION_UNBOUND: harvest/build requires a solution-surface census reference"
+        )
+
+    second_before = decision["reasoning"]["second_order_before_ref"]
+    predicted_leverage = decision["reasoning"]["predicted_leverage_ref"]
+    signal_prediction = decision["reasoning"]["signal_prediction_propagation_ref"]
+    if (second_before is not None or predicted_leverage is not None) and signal_prediction is None:
+        raise DecisionError(
+            "GAR_DECISION_SIGNAL_UNBOUND: material pre-architecture reasoning requires a Signal Leverage prediction-propagation reference"
+        )
+
+    if envelope is not None and decision["idea_execute"]["envelope_digest"] != digest(envelope):
+        raise DecisionError("GAR_DECISION_STALE: envelope digest does not match")
+
     if graph is not None:
         if decision["idea_execute"]["graph_digest"] != digest(graph):
             raise DecisionError("GAR_DECISION_STALE: graph digest does not match")
@@ -61,8 +93,9 @@ def validate(
         if not covered <= graph_units:
             raise DecisionError(
                 "GAR_DECISION_COVERAGE: decision cites unknown graph units "
-                f"{sorted(covered - graph_units)}"
+                + str(sorted(covered - graph_units))
             )
+
     return decision
 
 
