@@ -90,7 +90,8 @@ def main() -> int:
             print("FAIL:", error)
         return 1
     print(
-        f"PASS: {manifest['name']} {manifest['version']} runtime alignment; {len(cases)} behavior cases; lazy bootstrap closed"
+        f"PASS: {manifest['name']} {manifest['version']} runtime alignment; "
+        + f"{len(cases)} behavior cases; lazy bootstrap closed"
     )
     return 0
 

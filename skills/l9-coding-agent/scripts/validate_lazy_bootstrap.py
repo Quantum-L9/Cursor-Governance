@@ -106,7 +106,8 @@ def main() -> int:
             print("FAIL:", error)
         return 1
     print(
-        f"PASS: lazy bootstrap closes {len(semantic)} semantic owners and classifies {len(actual)} packaged files"
+        "PASS: lazy bootstrap closes "
+        + f"{len(semantic)} semantic owners and classifies {len(actual)} packaged files"
     )
     return 0
 
