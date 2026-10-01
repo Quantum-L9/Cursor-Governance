@@ -489,7 +489,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'ui-operator'", specifier = ">=1.34,<2" },
     { name = "cryptography", specifier = ">=42,<51" },
     { name = "jsonschema", specifier = ">=4.22,<5" },
-    { name = "l9-graphite-memory", path = "ops/vendor/wheels/l9_graphite_memory-2.4.0-py3-none-any.whl" },
+    { name = "l9-graphite-memory", path = "ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl" },
     { name = "langgraph", specifier = ">=0.2" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==2.3.0" },
@@ -759,14 +759,14 @@ wheels = [
 
 [[package]]
 name = "l9-graphite-memory"
-version = "2.4.0"
-source = { path = "ops/vendor/wheels/l9_graphite_memory-2.4.0-py3-none-any.whl" }
+version = "2.5.0"
+source = { path = "ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
 wheels = [
-    { filename = "l9_graphite_memory-2.4.0-py3-none-any.whl", hash = "sha256:0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989" },
+    { filename = "l9_graphite_memory-2.5.0-py3-none-any.whl", hash = "sha256:794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a" },
 ]
 
 [package.metadata]
