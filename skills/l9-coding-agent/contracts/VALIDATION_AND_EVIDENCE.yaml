@@ -1,0 +1,102 @@
+contract:
+  id: L9.CODING_AGENT.VALIDATION_EVIDENCE.001
+  version: 1.1.0
+core_law: Observed repository evidence outranks implementation completion prose.
+validation_order:
+- contract_specific_acceptance_checks
+- owner_native_conformance_or_tests
+- build_or_compile
+- type_check
+- lint_and_format_checks
+- security_or_policy_checks_when_applicable
+- targeted_regression_checks
+- broader_regression_suite_when_required_by_scope_or_governance
+baseline_policy:
+  before_mutation:
+  - observe_relevant_target_revision
+  - inspect_relevant_existing_checks_when_practical
+  - record_material_preexisting_failures_that_would_confound_final_validation
+  rule: A pre-existing failure is not evidence that the new change is correct. A newly introduced failure is not excused by
+    unrelated baseline noise.
+evidence_requirements:
+- exact_target_identity_and_revision
+- changed_files_or_artifacts
+- objective_to_change_mapping
+- acceptance_criteria_matrix
+- commands_or_checks_actually_run
+- observed_results
+- unresolved_failures_or_unknowns
+- delivery_receipt
+- final_revision_or_artifact_digests_when_available
+- inspection_and_modification_scope
+- dependency_and_responsibility_map
+- finding_to_change_to_validation_traceability
+- baseline_results_or_unknowns
+- final_hygiene_result
+- validated_state_identity
+- delivered_state_identity
+prohibitions:
+- infer_pass_from_command_intent
+- claim_unrun_tests_passed
+- treat_executor_prose_as_validation
+- silently_ignore_failed_required_check
+- hide_partial_delivery
+- claim_external_side_effect_without_observed_receipt
+- treat_partial_inspection_as_whole_target_readiness
+- treat_unknown_required_validation_as_pass
+- deliver_state_that_differs_from_validated_state
+- classify_thinness_alone_as_defect
+failure_loop:
+  rule: Classify failure before repair. Implementation defects return to implementation. Architecture or authority conflicts
+    leave Coding Agent.
+  stagnation_guard: If the same root cause recurs after two materially distinct repair attempts without new evidence or narrowed
+    diagnosis, stop and emit BLOCKED rather than looping.
+execution_receipt_ref: ../schemas/execution-receipt.schema.json
+result_states:
+  Passed: check completed successfully against the exact reported state
+  Failed: check completed and observed failure
+  Skipped: check intentionally not run for a legitimate stated reason
+  NotApplicable: check does not apply
+  Unknown: check unavailable, stale, incomplete, inaccessible, or inconclusive
+inspection_and_inventory:
+  bounded_change: inventory the dependency-aware solution surface required to execute and validate safely
+  whole_target_readiness: inventory every authorized artifact or explicitly classify inaccessible/excluded areas; incomplete
+    coverage forbids whole-target readiness claims
+target_graph_requirements:
+- entrypoints_and_exports
+- callers_and_consumers
+- schemas_contracts_and_configuration
+- generators_and_derived_outputs
+- tests_and_validation
+- documentation_and_manifests_when_behaviorally_material
+finding_traceability:
+  finding_fields:
+  - stable_id
+  - artifact_or_symbol
+  - type
+  - severity
+  - confidence
+  - direct_evidence
+  - violated_contract_or_expected_behavior
+  - root_cause_or_hypothesis
+  - required_remediation
+  - owner
+  - dependent_validation
+  - status
+  change_rule: every material change maps to one or more confirmed findings, required gaps, or required alignment updates
+  validation_rule: every material finding maps to observed validation or an explicit Blocked/Unknown result
+validation_selection:
+- run_the_narrowest_check_capable_of_disproving_the_repair_first
+- expand_validation_along_affected_dependency_paths
+- run_all_applicable_mandatory_checks_before_final_readiness
+- record_why_each_selected_check_is_relevant
+final_state_guard:
+  validated_state: bind validation to exact revision, tree, artifact digest, or equivalent state identity when available
+  delivered_state: verify delivery resolves to the same validated state
+  mismatch: HANDOFF_STATE_MISMATCH_and_not_converged
+final_hygiene:
+- no_accidental_secrets
+- no_debug_or_temporary_residue
+- no_cache_or_build_residue_in_delivery
+- no_unrelated_generated_churn
+- documentation_and_manifests_match_final_artifact_set
