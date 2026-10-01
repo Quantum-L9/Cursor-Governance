@@ -1,4 +1,5 @@
 L9_TARGETS += \
+	issue \
 	l4-status \
 	l4-begin \
 	l4-record-kernels \
@@ -132,3 +133,27 @@ pr-full-corpus: venv
 	$(PYTHON) ops/scripts/validate_git_denial_residue.py
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
 	$(PYTHON) ops/scripts/audit_rules_corpus.py
+
+# ---------------------------------------------------------------------------
+# issue — file an issue from an org issue form. The sibling of `make pr`'s
+# PR-body composer: ops/scripts/compose_issue_body.py renders the same
+# `### <label>` body GitHub renders for the web form, so org triage labels an
+# agent-filed issue exactly like a hand-filed one. Without CREATE=1 it prints
+# the body and writes .l9/issue/issue-body-completion.json (missing required
+# fields exit 2). CREATE=1 files it over REST and writes .l9/issue/issue-receipt.json.
+#
+#   make issue FORM=bug TITLE="totals drift" ANSWERS=answers.json [CREATE=1] [ISSUE_REPO=owner/name]
+#   l9 issue FORM=governance TITLE="..." ANSWERS=answers.json CREATE=1
+# ---------------------------------------------------------------------------
+issue:
+	@if [ -z "$(FORM)" ] || [ -z "$(TITLE)" ]; then \
+		echo "usage: make issue FORM=<bug|feature|task|incident|ci|seed-ci|governance> TITLE=... [ANSWERS=file.json] [CREATE=1] [ISSUE_REPO=owner/name]" >&2; \
+		exit 2; \
+	fi
+	"$(PYTHON)" ops/scripts/compose_issue_body.py \
+		--workspace "$(WS)" \
+		--form "$(FORM)" \
+		--title "$(TITLE)" \
+		$(if $(ANSWERS),--answers "$(ANSWERS)") \
+		$(if $(ISSUE_REPO),--repo "$(ISSUE_REPO)") \
+		$(if $(filter 1,$(CREATE)),--create)
