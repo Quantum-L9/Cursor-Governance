@@ -1,0 +1,598 @@
+profile:
+  profile_id: L9.GAR.L9_ARCHITECTURE_PROFILE.001
+  version: 0.8.1
+  artifact_class: conditional_architecture_profile
+  status: experimental
+  semantic_owner: contracts/L9_ARCHITECTURE_PROFILE.yaml
+  title: L9 Architecture Profile
+
+purpose:
+  assertion: >
+    Provide GAR and the Reasoning Foursome with a compact, stable, L9-specific architecture constitution and
+    role vocabulary so L9 architectural judgment is hydrated without repeated prose explanation, while
+    preserving live evidence requirements for current repositories, versions, capabilities, topology,
+    registration, and runtime state.
+
+semantic_boundary:
+  owns:
+    - stable_l9_architecture_invariants
+    - stable_l9_role_semantics
+    - stable_l9_cross_boundary_vocabulary
+    - conditional_l9_architecture_constraints
+  does_not_own:
+    - current_repository_inventory
+    - current_repository_versions
+    - current_capability_inventory
+    - current_provider_availability
+    - current_gate_registration_or_routability
+    - current_topology_instances
+    - intervention_selection
+    - consequence_modeling
+    - leverage_scoring
+    - signal_propagation_topology_or_writeback_semantics
+    - gar_workflow_routing
+    - domain_semantics
+  laws:
+    - profile_semantics_do_not_prove_current_instances
+    - role_names_do_not_prove_current_owners
+    - currentness_claims_require_current_evidence
+    - applicability_does_not_activate_L9_RUNTIME_BINDING
+
+applicability:
+  state_domain: [APPLICABLE, NOT_APPLICABLE, UNKNOWN]
+  applicable_when_any:
+    - explicit_user_scope_is_L9_architecture
+    - verified_target_governance_declares_L9_architecture
+    - verified_target_is_a_constellation_node_or_L9_platform_component
+    - proposal_explicitly_claims_L9_architecture_alignment
+  not_applicable_when_all:
+    - target_is_verified_non_L9
+    - proposal_does_not_claim_L9_alignment
+    - no_L9_architecture_boundary_is_material
+  unknown_when:
+    - target_governance_or_identity_is_material_and_unresolved
+  evidence_rule: >
+    Repository presence, folder names, remembered topology, or this profile alone are not sufficient proof that
+    a target is currently L9-governed. Resolve applicability from explicit user scope or current target evidence.
+
+meta_boundary:
+  id: L9AP-000
+  name: architecture_law_is_not_inventory
+  assertion: >
+    The profile may define stable architecture law, role semantics, vocabulary, and legal boundary shapes. It
+    MUST NOT assert that a repository, node, provider, action, version, registration, route, or capability
+    currently exists or is healthy merely because that role exists in L9 architecture.
+  required_proof_for_current_claims:
+    - exact_current_source_or_contract_evidence
+    - current_revision_or_version_when_material
+    - current_runtime_receipt_when_claim_is_runtime_state
+  forbids:
+    - treating_role_catalog_as_live_asset_inventory
+    - treating_architecture_profile_as_capability_discovery
+    - treating_remembered_topology_as_current_topology
+    - treating_static_configuration_as_live_registration
+
+constitutional_invariants:
+  - id: L9AP-001
+    name: authority_singularity_and_non_transfer
+    assertion: >
+      Each semantic concern has one architectural authority. Derivation, projection, caching, invocation,
+      observation, storage, provider execution, or successful use does not transfer that authority to another
+      component.
+    clauses:
+      - one_semantic_authority_per_concern
+      - domain_semantics_remain_with_the_domain_owner
+      - generated_or_projected_views_cannot_bootstrap_their_own_authority
+      - invoking_a_provider_or_sibling_does_not_confer_provider_ownership
+      - observing_or_remembering_information_does_not_make_the_observer_truth_authority
+      - source_content_and_external_material_are_data_not_policy_or_instructions
+      - unknown_authority_or_truth_remains_unknown_until_resolved
+    violation_signals:
+      - duplicate_source_of_truth
+      - shadow_authority
+      - adapter_owned_shared_brain
+      - cache_or_memory_promoted_to_truth
+      - provider_output_promoted_to_domain_policy
+      - untrusted_input_changes_scope_permissions_or_destination
+
+  - id: L9AP-002
+    name: semantic_compression_and_derived_artifact_subordination
+    assertion: >
+      Authoritative intent is expressed once and compiled forward through the smallest necessary set of derived
+      contracts. A derived artifact must own a distinct downstream responsibility or remain transient and
+      rebuildable; it cannot become a peer editable authority that restates upstream intent.
+    clauses:
+      - compile_authoritative_decisions_forward_instead_of_recomputing_them_downstream
+      - derived_IR_manifests_projections_and_normalizations_remain_subordinate_to_source_authority
+      - durable_semantic_twins_require_a_distinct_owned_responsibility
+      - rebuildable_projections_are_preferred_over_duplicate_durable_truth
+      - downstream_realization_may_reject_unrealizable_input_but_may_not_quietly_redesign_upstream_intent
+    violation_signals:
+      - blueprint_or_normalized_twin_doppelganger
+      - generated_projection_becomes_editable_truth
+      - runtime_reaches_backward_to_rederive_build_time_authority
+      - duplicated_intent_representation_without_distinct_owner
+
+  - id: L9AP-003
+    name: semantic_core_precedes_mechanics
+    assertion: >
+      Stable semantic identity and contracts precede backend syntax, transport, provider APIs, optimization,
+      persistence, and framework mechanics. Adapters and providers may translate or optimize mechanics but may
+      not redefine the meaning they implement.
+    clauses:
+      - semantic_identity_precedes_backend_syntax
+      - providers_backends_and_adapters_are_replaceable_behind_explicit_contracts
+      - optimization_may_change_execution_mechanics_but_not_semantics
+      - provider_specific_types_do_not_leak_into_provider_neutral_semantic_contracts_without_explicit_reason
+      - local_and_node_surfaces_share_one_semantic_core_when_both_exist
+      - transport_or_host_shells_add_no_duplicate_domain_policy
+      - provider_degradation_is_explicit_and_fallback_requires_policy_authority
+    violation_signals:
+      - provider_becomes_semantic_authority
+      - adapter_contains_business_strategy_or_shared_intelligence
+      - transport_shell_duplicates_core_policy
+      - backend_syntax_becomes_domain_contract
+      - optimization_changes_semantic_result_contract
+
+  - id: L9AP-004
+    name: canonical_transport_and_boundary_integrity
+    assertion: >
+      L9 inter-node cooperation crosses the canonical Gate boundary. Transport, routing, admission, and domain
+      semantics remain separate owners; architectural adjacency, shared storage, or code availability never
+      authorizes direct peer coupling.
+    clauses:
+      - inter_node_requests_use_Gate_SDK_and_TransportPacket_through_Constellation_Gate
+      - direct_node_to_node_HTTP_peer_URLs_and_repo_import_dispatch_are_forbidden
+      - alternate_transport_envelopes_do_not_replace_TransportPacket_at_node_boundaries
+      - Gate_owns_routing_admission_routability_and_routing_seam_trust_not_domain_semantics
+      - Gate_SDK_owns_transport_contract_and_client_integration_not_route_selection_or_domain_actions
+      - signal_leverage_may_constrain_eligible_semantic_recipients_and_propagation_path_properties_but_must_not_own_concrete_Gate_route_selection_admission_or_routability
+      - shared_storage_is_not_a_substitute_for_owner_native_contracts
+      - retries_and_recovery_must_not_duplicate_effectful_domain_actions
+    violation_signals:
+      - direct_peer_dispatch
+      - local_routing_registry
+      - node_owned_transport_envelope
+      - shared_database_used_as_cross_node_API
+      - Gate_absorbs_workflow_memory_context_or_domain_logic
+
+  - id: L9AP-005
+    name: supporting_planes_are_orthogonal_and_subordinate
+    assertion: >
+      Infrastructure and cognition planes retain narrow, non-overlapping meanings. Aggregation is allowed only
+      when source authority and provenance remain intact; one supporting plane may not silently substitute for
+      another when degraded or unavailable.
+    role_law_ref: '#canonical_roles'
+    clauses:
+      - ingest_transforms
+      - state_persists_revisioned_work_state
+      - evidence_proves_source_lineage_and_exact_provenance
+      - memory_remembers_scoped_retrievable_knowledge_and_context
+      - context_compiles_the_smallest_sufficient_authorized_bundle
+      - research_acquires_external_evidence
+      - formal_reasoning_derives_from_admitted_facts_and_laws
+      - communication_transports_channel_intent_and_receipts
+      - skills_supply_bounded_cognition_unless_explicitly_granted_more_by_the_owner
+      - agent_profiles_specialize_one_shared_agent_runtime_instead_of_forking_runtime_architecture
+    degradation_laws:
+      - unavailable_memory_is_not_empty_truth
+      - unavailable_evidence_leaves_proof_dependent_claims_unsupported
+      - unavailable_state_is_not_substituted_from_memory
+      - insufficient_context_is_explicit_not_filled_by_invention
+      - observation_availability_is_not_truth
+    violation_signals:
+      - context_becomes_second_memory_or_world_model
+      - memory_becomes_policy_truth_or_identity_authority
+      - evidence_becomes_generic_document_store_or_memory
+      - state_becomes_transcript_dump
+      - research_becomes_formal_reasoning_or_decision_authority
+      - communication_becomes_agent_runtime_or_policy
+      - agent_profile_grants_unadmitted_capabilities
+
+  - id: L9AP-006
+    name: capability_and_participation_truth_are_evidence_compiled
+    assertion: >
+      L9 capability and participation state is multi-dimensional and current only when all required evidence
+      edges agree on the same relevant revision. Presence, health, configuration, implementation, or prior
+      admission cannot be collapsed into current usable capability.
+    clauses:
+      - implemented_runtime_allowed_advertised_owned_registered_routable_and_current_are_distinct_dimensions
+      - born_valid_participation_ready_registered_routable_admitted_and_current_are_distinct_states
+      - capability_advertisement_requires_implementation_ownership_transport_and_admission_evidence_to_agree
+      - qualification_artifacts_bind_to_one_exact_source_revision_unless_contractually_external_and_stable
+      - source_provider_policy_contract_topology_or_registry_drift_invalidates_revision_bound_currentness
+      - process_health_is_not_sufficient_for_constellation_readiness
+      - static_config_README_handler_presence_direct_HTTP_success_and_fixture_tests_are_not_live_admission_proof
+      - Reconciler_qualifies_and_maintains_participation_but_does_not_become_the_steady_state_runtime_path
+      - Gate_makes_an_admitted_participant_usable_and_routable
+    canonical_participation_flow_ref: '#canonical_flows.participation_lifecycle'
+    violation_signals:
+      - mixed_revision_admission_evidence
+      - handler_auto_advertised_as_public_capability
+      - registered_treated_as_current_after_drift
+      - fixture_validation_claimed_as_live_interoperability
+      - Reconciler_inserted_into_normal_runtime_dispatch
+
+  - id: L9AP-007
+    name: assurance_and_learning_are_independent_evidence_bound_and_gated
+    assertion: >
+      Material implementation and optimization must be evaluated by evidence that is sufficiently independent
+      from the mechanism being judged, bound to the exact evaluated state, and incapable of silently granting
+      authority. Learning may propose future policy changes only through explicit versioned promotion.
+    clauses:
+      - generated_or_optimized_implementation_does_not_define_its_own_expected_behavior_when_material
+      - validation_receipts_are_evidence_not_merge_deploy_mutation_or_policy_authority
+      - material_evidence_binds_to_exact_source_revision_artifact_or_context_identity
+      - major_validation_gates_require_at_least_one_negative_control_or_equivalent_rejection_proof
+      - contradictions_and_failed_or_repair_heavy_outcomes_remain_visible_evidence
+      - raw_outcomes_historical_success_and_memory_do_not_silently_mutate_active_policy
+      - learning_promotion_is_outcomes_to_candidate_to_eval_and_regression_to_explicit_activation
+      - parameter_tuning_may_change_declared_parameters_within_policy_but_not_silently_change_semantic_structure
+      - corrections_supersede_historical_evidence_instead_of_rewriting_history_where_replay_matters
+    canonical_learning_flow_ref: '#canonical_flows.learning_promotion'
+    violation_signals:
+      - implementation_marks_its_own_homework
+      - pass_only_validator_never_shown_to_reject
+      - successful_execution_treated_as_authorization
+      - raw_signal_directly_mutates_policy
+      - calibration_or_optimizer_changes_semantics_without_new_semantic_version
+
+  - id: L9AP-008
+    name: reuse_abstraction_and_evolution_are_evidence_earned
+    assertion: >
+      Shared abstractions, reusable components, SDKs, factories, and compatibility layers are promoted only when
+      a stable responsibility is proven beyond one local example. Migration preserves semantics, evidence, and
+      authoritative ownership rather than accidental structure, and repair targets the earliest owning layer.
+    clauses:
+      - similar_code_shape_does_not_prove_shared_semantics
+      - shared_structure_is_extracted_only_when_independent_consumers_or_real_nodes_need_the_same_invariant_for_the_same_reason
+      - newly_synthesized_behavior_stays_local_until_reuse_is_proven_and_reviewed
+      - one_consumer_does_not_justify_a_new_generic_SDK_or_platform_abstraction_without_other_forcing_evidence
+      - legacy_and_donor_artifacts_are_evidence_not_authority
+      - obsolete_layers_are_deleted_when_responsibility_moves_and_no_compatibility_obligation_remains
+      - migration_preserves_semantics_provenance_and_validation_not_incidental_file_topology
+      - recursive_repair_mutates_the_smallest_surface_that_owns_the_defect_and_preserves_known_good_work
+      - architecture_stops_moving_when_coherent_and_new_change_has_no_material_evidence
+    violation_signals:
+      - premature_platformization
+      - one_off_behavior_promoted_to_shared_primitive
+      - factory_or_codegen_absorbs_domain_semantics
+      - compatibility_layer_without_current_consumer_obligation
+      - broad_rebuild_for_local_defect
+      - legacy_structure_preserved_after_semantic_owner_moved
+
+semantic_collision_map:
+  L9AP-001:
+    builds_on:
+      - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-002
+      - contracts/EPISTEMIC_DISCIPLINE.yaml
+    owns_only_l9_delta:
+      - authority_non_transfer_across_L9_derivation_projection_invocation_memory_provider_and_observation_boundaries
+    must_not_redefine:
+      - generic_ownership_coherence
+      - generic_evidence_truth_classification
+  L9AP-002:
+    builds_on:
+      - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
+    owns_only_l9_delta:
+      - compile_forward_semantic_subordination_of_L9_derived_artifacts
+      - no_peer_editable_semantic_twins_without_distinct_L9_responsibility
+    must_not_redefine:
+      - generic_complexity_scoring_or_simplicity_judgment
+  L9AP-003:
+    builds_on:
+      - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-002
+      - kernels/ARCHITECT_KERNEL.yaml#analysis_lenses.BOUNDARY
+    owns_only_l9_delta:
+      - semantic_core_vs_provider_transport_host_mechanics_boundary
+      - local_and_node_surface_semantic_equivalence
+    must_not_redefine:
+      - generic_boundary_analysis
+  L9AP-004:
+    builds_on: []
+    owns_only_l9_delta:
+      - canonical_L9_Gate_SDK_TransportPacket_inter_node_boundary
+      - Gate_vs_transport_SDK_responsibility_split
+    must_not_redefine:
+      - provider_domain_semantics
+      - workflow_orchestration
+  L9AP-005:
+    builds_on: []
+    owns_only_l9_delta:
+      - orthogonal_L9_supporting_plane_role_semantics_and_degradation_boundaries
+    must_not_redefine:
+      - current_owner_instances
+      - runtime_capability_availability
+  L9AP-006:
+    builds_on:
+      - contracts/EPISTEMIC_DISCIPLINE.yaml
+    owns_only_l9_delta:
+      - L9_capability_and_participation_dimension_model
+      - exact_revision_participation_currentness_and_control_plane_boundary
+    must_not_redefine:
+      - generic_fact_inference_unknown_dispute_semantics
+  L9AP-007:
+    builds_on:
+      - contracts/EPISTEMIC_DISCIPLINE.yaml
+      - integrations/REASONING_FOURSOME_BINDING.yaml#semantic_ownership.second_order
+      - integrations/REASONING_FOURSOME_BINDING.yaml#semantic_ownership.leverage
+      - integrations/REASONING_FOURSOME_BINDING.yaml#semantic_ownership.signal_leverage
+    owns_only_l9_delta:
+      - independent_assurance_boundary_for_material_L9_realizations
+      - versioned_gated_policy_promotion_from_L9_outcome_evidence
+    must_not_redefine:
+      - consequence_modeling
+      - leverage_scoring
+      - signal_writeback_semantics
+      - generic_evidence_truth_semantics
+  L9AP-008:
+    builds_on:
+      - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
+      - integrations/REASONING_FOURSOME_BINDING.yaml#semantic_ownership.first_order
+    owns_only_l9_delta:
+      - evidence_earned_promotion_of_L9_shared_abstractions_SDKs_factories_and_compatibility_layers
+      - L9_semantic_evolution_preservation_and_owner_local_repair_boundary
+    must_not_redefine:
+      - intervention_selection
+      - generic_simplicity_judgment
+
+canonical_vocabulary:
+  WorkItem: Universal durable unit of work; not a transcript.
+  Observation: Observed event, state, or input; availability does not imply truth.
+  Objective: Desired outcome owned by the applicable agent, workflow, or operator authority.
+  State: Revisioned scoped WorkItem state.
+  ContextNeed: Bounded request for information required by a decision.
+  ContextBundle: Smallest sufficient authorized context snapshot with provenance and bounded hydration.
+  Decision: Output of the applicable decision authority; infrastructure does not manufacture decision authority.
+  ActionIntent: Proposed bounded action before policy or autonomy evaluation.
+  CapabilityRequest: Request for a declared capability through the canonical transport boundary.
+  Receipt: Evidence of an attempted or completed action; receipt existence does not imply authorization or success.
+  TransportPacket: Canonical inter-node transport envelope owned by the transport SDK boundary.
+  AgentProfile: Declarative specialization of the shared agent runtime; not a separate runtime architecture.
+  RepositoryModelPacket: Revision-bound repository semantic projection; not repository truth by itself.
+  TopologyPacket: Validated topology projection; not permission to invent or mutate topology.
+
+role_catalog_semantics:
+  assertion: >
+    Canonical role entries define stable architectural responsibilities and familiar L9 labels. A canonical_name is a semantic label for the role family, not proof that a repository or deployed instance with that name currently exists, owns the concern, is compatible, or is available.
+  current_instance_binding_requires:
+    - current_target_or_constellation_evidence
+    - exact_revision_or_version_when_material
+    - owner_native_runtime_evidence_when_claim_is_registration_routability_health_or_availability
+  forbids:
+    - role_label_as_inventory_fact
+    - canonical_name_as_current_owner_proof
+    - profile_role_as_runtime_capability_receipt
+
+canonical_roles:
+  gate:
+    canonical_name: Constellation.Gate
+    mission: Route admitted capability requests and enforce routing-seam admission, routability, and trust policy.
+    owns: [registry, capability_routing, admission, routability, routing_seam_policy]
+    must_not_own: [domain_semantics, workflow_state, memory, context_compilation, deployment, provider_implementation]
+  transport_sdk:
+    canonical_name: Gate_SDK
+    mission: Own the canonical transport contract and node/client integration surface.
+    owns: [TransportPacket, transport_client_semantics, signing_and_transport_config, node_transport_integration]
+    must_not_own: [routing_decisions, registry_truth, domain_action_semantics, node_lifecycle_admission]
+  chassis:
+    canonical_name: Chassis
+    mission: Supply reusable node runtime plumbing without absorbing domain meaning.
+    owns: [app_factory, lifecycle_hooks, handler_registry, middleware, auth_plumbing, error_mapping, health_readiness_substrate, transport_sdk_integration]
+    must_not_own: [domain_logic, domain_policy, capability_semantics]
+  repository_birth:
+    canonical_name: l9-repo-template
+    mission: Create governed repository structure and birth provenance.
+    owns: [birth_structure, birth_payload, birth_provenance]
+    must_not_own: [constellation_admission, live_routability, domain_semantics]
+  metadata_projection:
+    canonical_name: l9-meta-injector
+    mission: Project revision-bound repository semantic metadata from authoritative repository sources.
+    owns: [repository_model_projection]
+    must_not_own: [missing_semantic_authority, topology_semantics, admission]
+  topology_compiler:
+    canonical_name: l9-constellation-topology
+    mission: Compile and validate topology semantics from admitted topology inputs.
+    owns: [topology_semantics, topology_proof]
+    must_not_own: [domain_semantics, Gate_routing, repository_birth, participation_reconciliation]
+  node_reconciler:
+    canonical_name: l9-node-reconciler
+    mission: Qualify a born node into a legitimate current participant and reconcile participation drift.
+    owns: [identity_resolution, provider_applicability, participation_qualification, admission_fingerprint, registration_orchestration, routability_verification, drift_detection]
+    must_not_own: [node_birth, provider_semantics, transport_definition, chassis_runtime, topology_semantics, Gate_routing, deployment, credentials, git_or_PR_lifecycle]
+  ingest:
+    canonical_name: l9-ingest
+    mission: Transform raw or source material into explicit admitted structured representations.
+    owns: [source_parsing, transformation, normalization_for_downstream_consumers, ingest_receipts]
+    must_not_own: [universal_write_API, domain_truth, memory_truth, context_policy]
+  state:
+    canonical_name: l9-state
+    mission: Persist revisioned scoped durable WorkItem state behind replaceable persistence ports.
+    owns: [WorkItem_revisions, state_transition_persistence, scoped_state_retrieval]
+    must_not_own: [transcript_dumping, semantic_memory, policy_authority, storage_vendor_as_architecture]
+  evidence:
+    canonical_name: l9-evidence
+    mission: Prove source, revision, lineage, provenance, and rebuildable derivation.
+    owns: [source_provenance, exact_revision_evidence, lineage, evidence_references, rebuildable_projections]
+    must_not_own: [memory, domain_truth, mixed_revision_authority]
+  memory:
+    canonical_name: l9-memory
+    mission: Preserve and retrieve bounded durable knowledge or context without becoming truth or policy authority.
+    owns: [scoped_memory_retrieval, memory_publication_contracts, bounded_hydration_support, degraded_semantics]
+    must_not_own: [policy, identity, automatic_truth_promotion, unbounded_rehydration, transcript_as_default_memory]
+  context:
+    canonical_name: l9-context
+    mission: Compile the smallest sufficient authorized ContextBundle for a declared ContextNeed.
+    owns: [context_planning, source_selection_within_authority, bounded_hydration, provenance_preserving_bundle]
+    must_not_own: [durable_context_database, world_model, generic_memory_store, invented_facts]
+  research:
+    canonical_name: l9-research
+    mission: Acquire and synthesize external evidence under a declared research strategy.
+    owns: [research_strategy_execution, source_acquisition, research_evidence_packaging, provider_adapter_invocation]
+    must_not_own: [truth_authority, formal_deduction, agent_objective, WorkItem_lifecycle, memory_admission, domain_mutation]
+  formal_reasoning:
+    canonical_name: l9-formal-reasoning
+    mission: Derive deterministic inspectable conclusions from admitted facts and laws through a replaceable reasoner adapter.
+    owns: [formal_constraint_semantics, deductive_reasoning_semantics, solver_adapter_contract, explanation_and_conflict_receipts]
+    must_not_own: [external_research, memory_truth, agent_decision_authority, workflow_orchestration, domain_mutation]
+  semantic_engine:
+    canonical_name: semantic_capability_node
+    mission: Own one bounded domain or semantic capability and its declared actions.
+    owns: [domain_semantics, owned_action_contracts, semantic_correctness]
+    must_not_own: [Gate_routing, generic_transport, unrelated_domain_semantics, generic_platform_memory_or_state]
+  provider_adapter:
+    canonical_name: provider_adapter
+    mission: Translate a stable semantic contract to one provider, backend, runtime, or tool implementation.
+    owns: [translation_mechanics, provider_call_mechanics, provider_error_normalization]
+    must_not_own: [semantic_policy, domain_truth, shared_intelligence, intervention_selection]
+  communication_plane:
+    canonical_name: l9-agent-communication-plane
+    mission: Provide channel-independent communication capabilities and normalized delivery or inbound receipts.
+    owns: [channel_abstraction, channel_adapters, delivery_receipt_normalization, channel_capability_exposure]
+    must_not_own: [research, ingest, agent_policy, memory_truth, cognitive_runtime]
+  agent_runtime:
+    canonical_name: L9-AgentOS
+    mission: Provide one shared agent runtime and semantic decision/action loop for many manifested agents.
+    owns: [shared_agent_runtime_semantics, profile_loading, agent_level_decision_action_lifecycle, canonical_capability_calls]
+    must_not_own: [Gate_routing, domain_node_semantics, memory_truth, evidence_truth, provider_specific_channels, named_agent_runtime_forks]
+  agent_profile:
+    canonical_name: AgentProfile
+    mission: Declaratively specialize the shared agent runtime without creating a new runtime architecture.
+    owns: [agent_specialization, allowed_profile_preferences, bounded_capability_preferences]
+    must_not_own: [canonical_transport_vocabulary, unadmitted_capability_grants, secrets_as_truth, duplicate_runtime_code]
+  skill_cognition:
+    canonical_name: scoped_skill_or_cognition_module
+    mission: Supply bounded expert judgment when deterministic policy or core semantics are insufficient.
+    owns: [advisory_cognition_within_declared_trigger]
+    must_not_own: [semantic_inputs, active_policy, durable_state, sealed_artifacts, persistence, direct_mutation_without_owner_validation]
+  documentation_compiler:
+    canonical_name: l9-doc-compiler
+    mission: Compile current documentation from declared authoritative repository sources through one semantic core.
+    owns: [documentation_compilation_semantics, generated_human_ownership_rules, documentation_drift_detection, reproducible_rendering]
+    must_not_own: [repository_architecture, Git_or_PR_lifecycle, source_code_authority, topology, memory, AgentProfile_semantics]
+
+canonical_flows:
+  inter_node_request:
+    shape: caller_or_AgentOS -> Gate_SDK -> Constellation.Gate -> admitted_capability_node -> Gate_SDK -> Constellation.Gate -> caller
+    forbids: [direct_peer_dispatch, local_peer_routing_table, alternate_boundary_envelope]
+  context_compilation:
+    shape: ContextNeed -> l9-context -> Gate -> State_and_Evidence_and_Memory_as_authorized -> ContextBundle
+    laws: [each_source_owner_retains_semantics, provenance_preserved, boundedness_explicit, insufficiency_explicit]
+  participation_lifecycle:
+    states: [BORN, IDENTIFIED, TRANSPORT_READY, META_COMPLIANT, TOPOLOGY_PROVEN, PARTICIPATION_READY, ADMISSION_READY, REGISTERED, ROUTABLE, ADMITTED, CURRENT]
+    drift_cycle: [DRIFT_DETECTED, RECONCILE, CURRENT_AGAIN]
+    laws: [birth_is_not_admission, registration_is_not_routability, admitted_is_not_current_after_drift, exact_revision_coherence]
+  birth_to_current:
+    shape: repository_birth -> RepositoryModelPacket -> TopologyPacket -> participation_reconciliation -> Gate_registration -> routability_verification -> CURRENT
+    laws: [each_stage_consumes_owner_native_evidence, no_mixed_revision_admission_claim]
+  agent_manifestation:
+    formula: L9-AgentOS + AgentProfile = Agent_Manifestation
+    laws: [one_shared_runtime, many_profiles, profile_does_not_grant_capability, profile_does_not_redefine_platform_vocabulary]
+  research_to_reasoning:
+    shape: ResearchNeed -> research_acquisition -> source_backed_ResearchEvidence -> fact_admission -> formal_reasoning
+    laws: [research_acquires, reasoning_derives, provider_output_not_truth_by_itself, memory_context_not_automatic_fact]
+  learning_promotion:
+    shape: observed_outcomes -> evidence_aggregation -> policy_hypothesis -> versioned_candidate -> eval_and_regression -> explicit_activation -> active_policy
+    forbids: [raw_outcome_to_active_policy, silent_self_training, success_only_learning]
+  local_and_node_surface:
+    shape: one_semantic_core -> local_CLI_or_SDK + optional_thin_Gate_facing_node_shell
+    laws: [same_semantics, transport_shell_no_duplicate_policy, local_use_does_not_create_node_authority]
+
+profile_evaluation:
+  evaluator: EVAL-HYBRID
+  evaluator_ref: runtime/EVALUATOR_REGISTRY.yaml#EVAL-HYBRID
+  state_ref: $.architecture_profile
+  required_output:
+    - applicability
+    - applicability_evidence_refs
+    - active_invariant_ids
+    - role_bindings
+    - current_inventory_evidence_refs
+    - currentness_unknowns
+    - evaluation_ref
+    - status
+  status_domain: [NOT_EVALUATED, SATISFIED, VIOLATED, UNKNOWN, NOT_APPLICABLE]
+  satisfied_when_any:
+    - applicability == NOT_APPLICABLE
+    - applicability == APPLICABLE and status == SATISFIED
+  blocking_when_any:
+    - applicability_UNKNOWN_and_L9_alignment_material
+    - applicability == APPLICABLE and status in [VIOLATED, UNKNOWN]
+  evidence_rule: >
+    Evaluate profile compliance from loaded profile constraints plus current evidence-bound role instances. Stable role semantics may satisfy architecture-shape premises but cannot satisfy any premise about current ownership, revision, registration, routability, health, or capability availability.
+
+foursome_binding:
+  first_order:
+    consumes_when_applicable:
+      - active_profile_invariants_as_hard_feasibility_constraints
+      - hydrated_role_semantics
+      - current_evidence_bound_role_bindings
+    profile_must_not:
+      - select_intervention
+      - rank_interventions
+      - assert_current_capability_availability
+  second_order:
+    consumes_when_applicable:
+      - architecture_profile_constraints_for_consequence_modeling
+    profile_must_not:
+      - own_consequence_predictions
+  leverage:
+    consumes_when_applicable:
+      - profile_compliance_as_hard_constraint
+    profile_must_not:
+      - assign_leverage_score
+  signal_leverage:
+    consumes_when_applicable:
+      - profile_boundaries_relevant_to_signal_eligibility_propagation_path_constraints_and_writeback
+    profile_must_not:
+      - choose_signal_topology
+      - claim_signal_delivery_or_writeback_occurred
+      - promote_returned_evidence_into_semantic_authority
+  gar:
+    consumes_when_applicable:
+      - invariant_set
+      - role_semantics
+      - canonical_flows
+      - verified_current_role_bindings
+    owns:
+      - profile_applicability_evidence_collection
+      - current_role_binding_evidence
+      - architecture_compliance_evaluation
+    must_not:
+      - rewrite_profile_law_in_architect_kernel
+      - use_profile_as_live_inventory
+
+anti_drift:
+  - do_not_copy_first_order_second_order_leverage_or_signal_leverage_semantics_into_profile
+  - do_not_turn_role_catalog_into_asset_inventory
+  - do_not_encode_repo_versions_registration_or_provider_availability_as_profile_law
+  - do_not_promote_domain_specific_website_mortgage_Astro_or_math_rules_into_constitution
+  - do_not_duplicate_GAR_epistemic_or_convergence_law_when_profile_specific_boundary_law_is_sufficient
+  - do_not_add_new_top_level_invariant_when_existing_invariant_can_absorb_the_rule_without_semantic_loss
+
+harvest_provenance:
+  source_families:
+    - source: L9_REASONING_FOURSOME_PACK_v1.0.0
+      admitted_for: semantic_owner_collision_avoidance_and_signal_leverage_boundary_only
+    - source: l9_node_architecture_rehydration_pack_v1.0.0
+      admitted_for: role_semantics_transport_participation_context_and_agent_runtime_doctrine
+    - source: l9_research_and_docs_node_devpacks_v1.0.0
+      admitted_for: evidence_boundary_generated_projection_local_core_remote_shell_and_untrusted_input_doctrine
+    - source: l9-einesium-v1.0.0
+      admitted_for: semantic_core_provider_neutrality_independent_validation_and_thin_node_shell_doctrine
+    - source: MortgageOS_Node_Dev_Pack_v1.0.0
+      admitted_for: domain_semantics_adapter_boundary_replayability_parameter_vs_structure_and_abstraction_promotion_doctrine
+    - source: website-bot-2.0-prebuild-dev-pack-v1.0.0
+      admitted_for: derived_authority_provider_neutrality_independent_conformance_scoped_cognition_learning_promotion_and_reuse_admission_doctrine
+    - source: website_bot_session_rehydration_handoff_v1.0.0
+      admitted_for: evidence_earned_reuse_surgical_repair_and_delta_preservation_doctrine
+    - source: Astro_7.3.5_agent_skill_snapshot
+      admitted_for: execution_context_awareness_compiled_manifest_pattern_and_test_independence_signal_only
+  explicitly_rejected_as_constitution:
+    - mortgage_economics_scoring_and_product_rules
+    - Website_Bot_SEO_visual_layout_and_primitive_policy
+    - Astro_specific_execution_context_paths_virtual_module_names_and_test_commands
+    - MongoDB_as_architecture
+    - Einesium_math_formula_or_backend_specifics
+    - specific_channel_provider_brands
+    - current_repo_status_versions_or_capability_sets
