@@ -1,0 +1,89 @@
+run_state:
+  schema: l9.coding-agent.run-state/v1.1
+  run:
+    run_id: null
+    current_state: INTAKE
+    terminal_state: null
+    depth_profile: null
+    integration_mode: STANDALONE
+  target:
+    status: UNBOUND
+    repository_or_artifact: null
+    base_revision: null
+    working_revision: null
+    branch_or_worktree: null
+    in_scope: []
+    out_of_scope: []
+    inaccessible_scope: []
+    evidence_refs: []
+    inspection_scope: []
+    modification_scope: []
+    inventory_complete: false
+    inventory_unknowns: []
+    dependency_and_responsibility_map_refs: []
+  authority:
+    resolved: false
+    sources: []
+    conflicts: []
+  capabilities:
+    census_complete: false
+    inspect: unknown
+    mutate: unknown
+    validate: unknown
+    deliver: unknown
+    external_side_effect: unknown
+  contract:
+    status: UNBOUND
+    contract_id: null
+    objective: null
+    authority_refs: []
+    locked_invariants: []
+    acceptance_criteria: []
+    forbidden_actions: []
+    validation_obligations: []
+    delivery_mode: null
+    implementation_discretion: null
+    external_action_permissions: []
+    unresolved_unknowns: []
+  semantic_envelope:
+    established: false
+    boundary_refs: []
+  baseline:
+    observed: false
+    revision: null
+    preexisting_failures: []
+    status: UNOBSERVED
+    checks: []
+    unknowns: []
+  execution:
+    attempted: false
+    changed_surfaces: []
+    discovered_obligations: []
+    repair_attempts: []
+    architecture_escalation_refs: []
+    finding_matrix: []
+    fix_map: []
+    traceability: []
+    pass_history: []
+    preserved_unrelated_changes: []
+  validation:
+    attempted: false
+    results: []
+    required_failures: []
+    stale_due_to_revision_change: false
+    mandatory_unknowns: []
+    regressions: []
+    hygiene_results: []
+    validated_state_ref: null
+  delivery:
+    required: true
+    completed: false
+    mode: null
+    artifact_or_pr_refs: []
+    external_action_receipts: []
+    delivered_state_ref: null
+  convergence:
+    evaluated: false
+    status: null
+    blockers: []
+    receipt_ref: null
