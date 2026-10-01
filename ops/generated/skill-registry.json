@@ -1,5 +1,5 @@
 {
-  "generation_id": "dc02c7e8ff84f5caee41464b2b88c4b870f3003aad9fc0692f03bb7f38ab3ecd",
+  "generation_id": "e04d9a54183feda3356841b66c3cb13b1bd282b15f11df90437964c65676ad23",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1055,6 +1055,19 @@
     },
     {
       "composition_role": "general",
+      "description": "implement, repair, refactor, and validate bounded software changes against approved architecture, contracts, invariants, acceptance criteria, and exact target revisions. use when the user wants code changed and proven with revision-bound evidence. do not use for architecture invention, audit-only review, research-only tasks, or unauthorized merge/deploy decisions.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-coding-agent",
+      "path": "skills/l9-coding-agent",
+      "reason": "GAR realization sibling that mutates code inside a locked semantic envelope; its broad implement/repair/refactor description would hijack ordinary coding routing if auto-invoked; slash or explicit invoke only; disable-model-invocation",
+      "skill_md": "skills/l9-coding-agent/SKILL.md",
+      "skill_sha256": "a8a425bf716920bb1f16304e8eb66d6f1dbfec55febcf5a0b996ce0004fa4bcc",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -1614,6 +1627,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "cc8fda273b1937b447a7b0650b470f292e3d8abdceda716fe56ced8cd813d81e",
-  "source_skill_corpus_sha256": "25ac8c1e57b20975e1f9e24e3e4eede0366879196562123434c9b35e37048c3a"
+  "source_manifest_sha256": "1573018f6ddeb3e41e5d5ec61322f5027351ba74f2be57e0dd198a416d107ece",
+  "source_skill_corpus_sha256": "4a0954cd17dfc94ab9747ef206f603b54f8a8b51b93b2965327e4d7768e7e46a"
 }
