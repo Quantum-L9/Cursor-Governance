@@ -1,5 +1,5 @@
 {
-  "canonical_skill_count": 58,
+  "canonical_skill_count": 59,
   "canonical_skills": [
     "l9-api-smoke-testing",
     "l9-architecture-decision-records",
@@ -16,6 +16,7 @@
     "l9-code-analysis",
     "l9-code-graph-rag-mcp",
     "l9-code-maintenance",
+    "l9-coding-agent",
     "l9-component-verification",
     "l9-context7-docs",
     "l9-dag-authoring",
@@ -76,6 +77,7 @@
     "l9-code-analysis": "model_allowed",
     "l9-code-graph-rag-mcp": "model_allowed",
     "l9-code-maintenance": "explicit_only",
+    "l9-coding-agent": "explicit_only",
     "l9-component-verification": "model_allowed",
     "l9-context7-docs": "model_allowed",
     "l9-dag-authoring": "explicit_only",
@@ -244,6 +246,7 @@
     "l9-claude-coding-contract-compiler": "user-invocable-only",
     "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
+    "l9-coding-agent": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
     "l9-e2e-blocker-resolution": "user-invocable-only",
     "l9-end-session": "user-invocable-only",
@@ -276,6 +279,7 @@
     "l9-claude-coding-contract-compiler": "user-invocable-only",
     "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
+    "l9-coding-agent": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
     "l9-e2e-blocker-resolution": "user-invocable-only",
     "l9-end-session": "user-invocable-only",
