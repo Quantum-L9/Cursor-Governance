@@ -37,6 +37,9 @@ class ManusMemoryAuthorityTests(unittest.TestCase):
             self.assertEqual(set(tokens["agent_signing_keys"]), {"manus"})
             self.assertEqual(set(grants), {"grants"})
             self.assertEqual(set(grants["grants"]), {"manus"})
+            from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+            AgentDoorGrant.model_validate(grants["grants"]["manus"])
             self.assertEqual((output / "agent_tokens.local.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual((output / "agent_grants.json").stat().st_mode & 0o777, 0o600)
 

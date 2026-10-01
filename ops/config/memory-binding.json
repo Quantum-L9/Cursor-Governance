@@ -1,10 +1,10 @@
 {
   "schema_version": "1.0.0",
-  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). ADR-0031 pins release 2.4.0 (signed-agent door + memory.write_agent / memory.write_governed).",
+  "description": "Cursor-Governance binding to the canonical memory control plane (l9-graphiti-memory). Release 2.5.0 (tag v2.5.0; signed-agent door + memory.write_agent / memory.write_governed).",
   "distribution": "l9-graphite-memory",
   "import_package": "l9_graphite_memory",
   "console_script": "l9-memory",
-  "expected_package_version": "2.4.0",
+  "expected_package_version": "2.5.0",
   "expected_contract_version": "memory-control-plane/v1",
   "required_cli_operations": [
     "resolve",
@@ -33,8 +33,8 @@
   "source": {
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
-    "ref": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
-    "ref_note": "v2.4.0 candidate commit e3a79626aaaf3e9503d15eaa061a46dbb9b201ab (feat/memory-front-door-signed-agent). Pin is full SHA until a PyPI release tag is cut."
+    "ref": "78b304a3948214fa4b17bf97ed0529c5b0c22673",
+    "ref_note": "v2.5.0 tag peels to 78b304a3948214fa4b17bf97ed0529c5b0c22673. Pin is the full commit SHA. PyPI upload of this release is still pending; the binding uses the uv build --wheel digest."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -65,20 +65,20 @@
   },
   "release_evidence": {
     "description": "Exact-head proof of the binding (audit P1-01/P2-02). The wheel is built from source.ref with uv build --wheel under the fixed SOURCE_DATE_EPOCH below and is byte-reproducible (the digest reproduced from a fresh clone of the same commit). .github/workflows/memory-cross-repo.yml rebuilds it from the same ref, refuses a digest mismatch, installs the wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
-    "memory_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
-    "memory_tag": "candidate-2.4.0",
-    "memory_tag_object_sha": "e3a79626aaaf3e9503d15eaa061a46dbb9b201ab",
-    "package_version": "2.4.0",
-    "artifact": "l9_graphite_memory-2.4.0-py3-none-any.whl",
-    "artifact_sha256": "0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989",
+    "memory_sha": "78b304a3948214fa4b17bf97ed0529c5b0c22673",
+    "memory_tag": "v2.5.0",
+    "memory_tag_object_sha": "57238f755cc729b36d61b944405a3547157a3362",
+    "package_version": "2.5.0",
+    "artifact": "l9_graphite_memory-2.5.0-py3-none-any.whl",
+    "artifact_sha256": "794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a",
     "build": "uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
     "source_date_epoch": 1784592000,
     "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
     "proof_workflow": ".github/workflows/memory-cross-repo.yml",
     "proved_at": "2026-09-13",
-    "rebound_at": "2026-09-13 (ADR-0031 signed-agent door + write_agent/write_governed; candidate SHA pending PyPI)",
+    "rebound_at": "2026-09-13 (ADR-0031 signed-agent door + write_agent/write_governed; candidate SHA pending PyPI); 2026-10-01 (pin v2.5.0 / 78b304a3948214fa4b17bf97ed0529c5b0c22673; uv build --wheel digest, PyPI upload still pending)",
     "operator_gated": [
-      "uv.lock sources candidate wheel ops/vendor/wheels/l9_graphite_memory-2.4.0-py3-none-any.whl (sha256 0be114d1fa25f7c1778d735d7e2adb5c8459c3a2065df775689c9b2fe4736989) built from e3a79626aaaf3e9503d15eaa061a46dbb9b201ab. Drop tool.uv.sources after PyPI publish of 2.4.0."
+      "uv.lock sources vendored wheel ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl (sha256 794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a) built with uv build --wheel from 78b304a3948214fa4b17bf97ed0529c5b0c22673 (tag v2.5.0). Drop tool.uv.sources after PyPI publish of 2.5.0. The PyPI workflow uses python -m build, so its uploaded digest can differ; this pin is the uv build digest."
     ],
     "installed_record_digest": null,
     "artifact_provenance_note": "In-place artifact proof needs a PEP 610 archive hash, which pip/uv record for index and URL installs but NOT for the local-file install the proof workflow performs. So the workflow proves the artifact instead, and more strongly: it rebuilds the wheel from source.ref and refuses any sha256 other than artifact_sha256 before installing. The binding reports 'compatible' there and says why. L9_MEMORY_REQUIRE_EXACT_ARTIFACT=1 remains for environments whose installer records provenance.",
