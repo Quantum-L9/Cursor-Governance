@@ -1,0 +1,155 @@
+adr:
+  id: ADR-L9-GAR-003
+  title: Add a conditional L9 architecture profile for invariant-rich hydration without live-inventory hallucination
+  status: accepted_for_v0_7
+  date: 2026-09-26
+  decision_class: architectural_hydration_and_constraint_binding
+  scope: l9_global_architect_runtime
+  normative: false
+  downstream_compilation:
+    intended: true
+    target: l9_compliant_adr
+    note: >
+      Preserve this decision as historical evidence for downstream ADR compilation. Current runtime law remains in the machine-readable owners declared by runtime/MANIFEST.yaml.
+
+context:
+  problem: >
+    GAR repeatedly needed external prose hydration to reason fluently about L9 boundaries, roles, transport, participation, supporting planes, and evolution doctrine. A large donor invariant pack contained valuable architecture intelligence but mixed stable law, domain-specific guidance, and facts that can become stale. Loading all donor rules directly would create duplicate semantic ownership, excessive constitutional surface, and false confidence about current constellation inventory.
+  failure_modes_to_prevent:
+    - repeated_user_explanation_of_stable_l9_architecture
+    - domain_specific_invariants_promoted_to_global_l9_law
+    - architecture_role_catalog_used_as_live_asset_inventory
+    - profile_applicability_mistaken_for_runtime_integration_activation
+    - supporting_planes_collapsed_into_one_generic_context_or_state_system
+    - participation_health_or_implementation_mistaken_for_current_routable_capability
+    - premature_shared_abstractions_promoted_from_single_local_examples
+  cardinal_distinction: >
+    GAR should permanently know stable L9 architectural law and role semantics, while current repository instances, versions, capabilities, topology, registration, routability, and health remain evidence-bound facts that must be refreshed when material.
+
+decision:
+  add_contract: contracts/L9_ARCHITECTURE_PROFILE.yaml
+  profile_shape:
+    meta_boundary: L9AP-000_architecture_law_is_not_inventory
+    constitutional_invariant_count: 8
+    hydration_layers:
+      - stable_invariants
+      - semantic_collision_map
+      - canonical_vocabulary
+      - canonical_role_semantics
+      - canonical_flows
+    current_facts_excluded:
+      - repository_inventory
+      - versions
+      - capability_availability
+      - provider_availability
+      - Gate_registration
+      - routability
+      - live_topology_instances
+      - runtime_health
+  placement:
+    load_before: integrations/REASONING_TRIAD_BINDING.yaml
+    first_order_use: hard_feasibility_constraints_and_role_semantics_before_intervention_selection
+    gar_use: architecture_compliance_and_current_role_binding
+    not_a_reasoning_kernel: true
+    not_an_inventory: true
+    does_not_activate_runtime_integration: true
+
+constitutional_invariants:
+  - L9AP-001_authority_singularity_and_non_transfer
+  - L9AP-002_semantic_compression_and_derived_artifact_subordination
+  - L9AP-003_semantic_core_precedes_mechanics
+  - L9AP-004_canonical_transport_and_boundary_integrity
+  - L9AP-005_supporting_planes_are_orthogonal_and_subordinate
+  - L9AP-006_capability_and_participation_truth_are_evidence_compiled
+  - L9AP-007_assurance_and_learning_are_independent_evidence_bound_and_gated
+  - L9AP-008_reuse_abstraction_and_evolution_are_evidence_earned
+
+harvest_method:
+  pipeline:
+    - donor_evidence
+    - candidate_invariant
+    - semantic_owner_test
+    - collision_and_overlap_test
+    - cross_domain_universality_test
+    - contradiction_test
+    - hardening_and_compression
+    - admit_or_reject
+  admitted_source_families:
+    - L9_reasoning_triad_for_owner_collision_avoidance
+    - L9_node_architecture_rehydration_for_roles_transport_participation_and_agent_runtime
+    - L9_research_and_doc_compiler_for_evidence_projection_and_local_core_remote_shell_boundaries
+    - L9_einesium_for_semantic_core_provider_neutrality_independent_validation_and_thin_node_shell
+    - MortgageOS_for_domain_adapter_replayability_and_evidence_earned_abstraction
+    - Website_Bot_2_for_independent_conformance_scoped_cognition_learning_and_reuse_admission
+    - Website_Bot_session_for_surgical_repair_and_delta_preservation
+    - Astro_agent_guidance_for_compiled_state_and_test_independence_signal_only
+  rejected_as_constitution:
+    - mortgage_product_scoring_and_economics
+    - Website_Bot_SEO_visual_layout_primitive_and_Mongo_rules
+    - Astro_specific_paths_virtual_modules_and_test_commands
+    - Einesium_math_backend_specifics
+    - named_channel_provider_products
+    - current_repo_status_versions_and_capability_sets
+  compression_result: >
+    Donor material was not copied as an invariant catalog. Overlapping laws were folded into eight semantic owners, each mapped to the generic GAR or Triad concerns it builds on and restricted to an explicit L9-specific delta. Rich hydration was moved into role semantics, vocabulary, and canonical flows so additional context did not increase constitutional fragmentation.
+
+validation:
+  blocking_behavior_range: GAR-EVAL-042_through_GAR-EVAL-051
+  proves:
+    - explicit_l9_scope_hydrates_profile_without_repeated_prose
+    - non_l9_targets_do_not_inherit_l9_constitution
+    - profile_never_proves_current_inventory
+    - profile_applicability_does_not_activate_integrated_runtime
+    - supporting_planes_do_not_silently_substitute_for_each_other
+    - participation_dimensions_remain_distinct_and_revision_bound
+    - participation_control_plane_stays_out_of_runtime_data_path
+    - providers_do_not_redefine_semantic_contracts
+    - reuse_and_platform_abstractions_are_evidence_earned
+    - learning_does_not_silently_rewrite_active_policy
+
+repair_guide:
+  if_gar_forgets_stable_l9_architecture:
+    inspect_in_order:
+      - contracts/L9_ARCHITECTURE_PROFILE.yaml
+      - runtime/MANIFEST.yaml#load_order
+      - integrations/REASONING_TRIAD_BINDING.yaml#architecture_profile_input
+      - kernels/ARCHITECT_KERNEL.yaml#L9_PROFILE
+  if_profile_starts_hallucinating_current_constellation:
+    inspect_in_order:
+      - contracts/L9_ARCHITECTURE_PROFILE.yaml#L9AP-000
+      - runtime/RUN_STATE.yaml#architecture_profile
+      - evals/BEHAVIOR_CONFORMANCE.yaml#GAR-EVAL-044
+  if_l9_scope_activates_integrated_runtime_without_transfer:
+    inspect_in_order:
+      - integrations/L9_RUNTIME_BINDING.yaml#integration_activation
+      - runtime/STATE_MACHINE.yaml
+      - evals/BEHAVIOR_CONFORMANCE.yaml#GAR-EVAL-045
+  if_profile_bloats_again:
+    repair_principle: >
+      Prefer strengthening an existing invariant or enriching role semantics and canonical flows. Add a new top-level invariant only when no existing semantic owner can absorb the law without loss.
+
+consequences:
+  positive:
+    - GAR_has_persistent_L9_architectural_fluency
+    - repeated_hydration_cost_is_reduced
+    - fewer_stronger_invariants_replace_large_domain_tainted_catalogs
+    - current_fact_hallucination_is_explicitly_blocked
+    - First_Order_receives_L9_constraints_before_selecting_an_intervention
+    - GAR_can_reason_about_roles_without_claiming_live_instances
+  risks:
+    - stable_role_semantics_can_eventually_change_and_require_profile_versioning
+    - profile_growth_can_recreate_a_shadow_architecture_brain
+    - users_may_confuse_hydrated_roles_with_verified_current_topology
+  controls:
+    - semantic_versioning
+    - ADR_and_changelog_history
+    - profile_as_law_not_inventory_boundary
+    - behavior_evals
+    - current_evidence_binding_for_material_instance_claims
+
+anti_drift:
+  - this_adr_is_historical_non_normative_evidence
+  - profile_is_not_asset_inventory_or_capability_registry
+  - profile_must_not_copy_triad_semantic_ownership
+  - profile_must_not_copy_generic_GAR_epistemic_or_convergence_law_without_L9_specific_need
+  - domain_specific_donor_rules_remain_rejected_unless_future_cross_domain_evidence_earns_promotion

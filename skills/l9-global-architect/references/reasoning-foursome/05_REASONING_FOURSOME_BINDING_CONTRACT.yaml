@@ -1,0 +1,215 @@
+contract:
+  id: L9.REASONING_FOURSOME.BINDING.001
+  version: 1.0.0
+  status: converged_baseline
+  purpose: >-
+    Bind First-Order Thinking, Second-Order Consequence Reasoning, Leverage,
+    and Signal Leverage into one non-competing architecture with explicit
+    semantic ownership, evidence handoffs, propagation semantics, and write-back.
+
+components:
+  first_order:
+    artifact: 01_FIRST_ORDER_THINKING_KERNEL.md
+    owns:
+      - locked_objective_preservation
+      - governing_cause
+      - authoritative_owner_of_cause
+      - intervention_selection
+      - work_expected_to_become_unnecessary
+    must_not_own:
+      - broad_consequence_propagation
+      - systemic_leverage_value
+      - signal_routing
+      - signal_write_back
+
+  second_order:
+    artifact: 02_SECOND_ORDER_CONSEQUENCE_LENS.md
+    owns:
+      - predicted_consequence_surface
+      - observed_consequence_surface
+      - prediction_observation_comparison
+      - consequence_forecast_error
+    must_not_own:
+      - intervention_selection
+      - systemic_leverage_value
+      - signal_topology
+      - durable_write_back_authority
+
+  leverage:
+    artifact: 03_LEVERAGE_KERNEL.md
+    normative_law: references/L9_LEVERAGE_LAW_AND_RANKING_INVARIANTS_v1.0.md
+    owns:
+      - available_leverage
+      - predicted_leverage
+      - realized_leverage
+      - compounded_leverage
+      - leverage_rank
+      - leverage_score
+      - leverage_fingerprint
+      - mesh_value_evaluation
+      - eligible_shared_gain_identification
+    must_not_own:
+      - intervention_selection
+      - invented_consequence_paths
+      - signal_routing_mechanics
+      - signal_loop_convergence
+
+  signal_leverage:
+    artifact: 04_SIGNAL_LEVERAGE_KERNEL.md
+    normative_law: references/L9_LEVERAGE_LAW_AND_RANKING_INVARIANTS_v1.0.md
+    owns:
+      - signal_meaning_preservation
+      - evidence_bearing_propagation
+      - signal_topology_semantics
+      - branching_and_fan_out
+      - bypass_and_lateral_routing
+      - reconvergence_semantics
+      - eligibility_bound_delivery
+      - evidence_bound_write_back
+      - signal_loop_convergence
+      - propagation_receipts
+      - signal_drag_evidence
+    must_not_own:
+      - governing_cause
+      - intervention_selection
+      - consequence_invention
+      - systemic_leverage_score
+      - leverage_rank
+      - semantic_authority_promotion_without_owner_acceptance
+
+architecture:
+  statement: >-
+    First-Order selects. Second-Order predicts and observes. Leverage evaluates
+    systemic value and compounding. Signal Leverage governs how evidence and
+    validated learning move among the reasoning components and wider constellation.
+  signal_plane_is_cross_cutting: true
+  no_global_lap_required: true
+
+handoffs:
+  - from: first_order
+    to: second_order
+    payload:
+      - objective
+      - governing_cause
+      - authoritative_owner
+      - decisive_intervention
+      - work_expected_to_become_unnecessary
+      - assumptions
+      - unknowns
+
+  - from: second_order
+    phase: before_execution
+    to: signal_leverage
+    payload:
+      - predicted_consequence_paths
+      - predicted_system_state_changes
+      - reversibility_and_path_dependence
+      - uncertainty
+      - evidence_refs
+    rule: preserve_and_route_to_leverage
+
+  - from: signal_leverage
+    phase: before_execution
+    to: leverage
+    payload:
+      - meaning_preserved_prediction_evidence
+      - topology_evidence_refs
+      - signal_drag_prediction
+
+  - from: leverage
+    phase: before_execution
+    to: first_order
+    condition: systemic_leverage_challenge
+    payload:
+      - challenge_evidence
+      - negative_leverage_or_drag
+      - missing_leverage_evidence
+    rule: first_order_reselects_or_reaffirms
+
+  - from: second_order
+    phase: after_execution
+    to: signal_leverage
+    payload:
+      - direct_observed_result
+      - observed_consequence_paths
+      - causal_attribution
+      - prediction_observation_delta
+      - forecast_error_learning
+    rule: preserve_and_route_to_leverage
+
+  - from: signal_leverage
+    phase: after_execution
+    to: leverage
+    payload:
+      - meaning_preserved_observation_evidence
+      - observed_topology_receipts
+      - signal_drag_observed
+
+  - from: leverage
+    phase: after_execution
+    to: signal_leverage
+    payload:
+      - validated_shared_gains
+      - eligible_consumer_classes
+      - durable_learning_candidates
+      - stronger_future_baseline_candidates
+      - mesh_value_changes
+    rule: propagate_without_stealing_authority
+
+  - from: signal_leverage
+    phase: write_back
+    to:
+      - first_order
+      - second_order
+      - leverage
+      - eligible_l9_consumers
+    payload:
+      - propagated_learning_refs
+      - write_back_receipts
+      - changed_future_behavior_refs
+      - unresolved_propagation_gaps
+
+invariants:
+  - id: FOUR-001
+    statement: exactly_one_semantic_owner_per_concern
+  - id: FOUR-002
+    statement: first_order_selects_intervention
+  - id: FOUR-003
+    statement: second_order_owns_consequence_surfaces
+  - id: FOUR-004
+    statement: leverage_owns_systemic_value_rank_score_and_compounding
+  - id: FOUR-005
+    statement: signal_leverage_owns_evidence_bearing_propagation_and_write_back_semantics
+  - id: FOUR-006
+    statement: propagation_does_not_prove_value
+  - id: FOUR-007
+    statement: leverage_value_does_not_define_routing_mechanics
+  - id: FOUR-008
+    statement: signal_write_back_cannot_override_semantic_authority
+  - id: FOUR-009
+    statement: bidirectional_closed_loop_and_mesh_topologies_require_nonredundant_value
+  - id: FOUR-010
+    statement: bounded_signal_episodes_require_convergence_controls
+  - id: FOUR-011
+    statement: predicted_and_observed_state_remain_distinct
+  - id: FOUR-012
+    statement: predicted_and_realized_leverage_remain_distinct
+  - id: FOUR-013
+    statement: realized_learning_updates_future_reasoning_when_relevant
+  - id: FOUR-014
+    statement: no_new_reasoning_primitive_without_non_overlapping_semantic_value
+
+execution_loop:
+  - lock_objective
+  - run_first_order
+  - run_second_order_prediction
+  - route_prediction_evidence_via_signal_leverage
+  - run_predicted_leverage_assessment
+  - execute_outside_reasoning_foursome
+  - run_second_order_observation
+  - compare_prediction_to_observation
+  - route_observation_evidence_via_signal_leverage
+  - run_realized_leverage_assessment
+  - identify_validated_shared_gains
+  - propagate_write_back_via_signal_leverage
+  - begin_next_pass_from_stronger_baseline

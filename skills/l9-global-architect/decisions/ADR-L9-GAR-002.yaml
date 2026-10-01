@@ -1,0 +1,241 @@
+adr:
+  id: ADR-L9-GAR-002
+  title: Bind GAR to external intervention reasoning before architectural realization
+  status: accepted_for_v0_6
+  date: 2026-09-26
+  decision_class: architectural_correction
+  scope: l9_global_architect_runtime
+  normative: false
+  downstream_compilation:
+    intended: true
+    target: l9_compliant_adr
+    note: >
+      This record preserves the problem, decision, evidence, and repair map for a
+      downstream agent to compile into the repository's canonical ADR format. It
+      does not replace machine-readable runtime owners.
+
+context:
+  problem: >
+    GAR could perform high-quality architectural work inside the wrong intervention
+    class. Existing simplicity checks, upstream-mechanism search, and architecture
+    integrity questions occurred after GAR had already implicitly accepted a class
+    such as semantic harvest or local build. This allowed excellent wrong work:
+    detailed design and implementation planning that should have been made
+    unnecessary by a better upstream intervention.
+  canonical_failure_pattern:
+    - donor_or_problem_observed
+    - harvest_or_build_class_implicitly_selected
+    - gar_optimizes_inside_selected_class
+    - maintained_tool_package_api_sdk_or_existing_owner_discovered_late
+    - prior_architecture_work_becomes_unnecessary
+  root_cause: >
+    Intervention selection lacked a single external semantic owner ahead of GAR.
+    GAR's own first-order-like question could validate simplicity only within an
+    already selected class, while l9-intelligence-harvest was correctly too narrow
+    to choose a different intervention after invocation.
+  non_root_causes:
+    - l9_intelligence_harvest_being_too_narrow
+    - absence_of_generic_simplicity_language_in_gar
+    - absence_of_any_upstream_reuse_vocabulary
+  forcing_observation: >
+    The runtime already contained useful local mechanisms, including existing
+    mechanism search, unearned-complexity gates, recursive defect routing, and a
+    product architecture disposition vocabulary. The missing layer was ownership
+    and routing discipline before architectural realization, not another general
+    reasoning engine.
+
+constitutional_inputs:
+  reasoning_triad:
+    first_order_owns:
+      - locked_objective
+      - governing_cause
+      - authoritative_owner
+      - decisive_intervention
+      - work_expected_to_become_unnecessary
+    second_order_owns:
+      - predicted_consequences
+      - observed_consequences
+      - prediction_observation_delta
+    leverage_owns:
+      - predicted_leverage
+      - realized_leverage
+      - systemic_drag
+      - compounding_learning
+  governing_law: >
+    Intervention selection must precede implementation-method optimization. GAR may
+    discover evidence and architect a selected intervention, but it must not silently
+    own or substitute the intervention class.
+
+decision:
+  summary: >
+    Bind GAR beneath the Reasoning Triad. Make GAR collect a bounded solution-surface
+    census before material intervention binding, consume an externally owned
+    First-Order decision, require applicable Second-Order-before and predicted
+    Leverage receipts, architect only the bound intervention, return contradictory
+    evidence to First-Order, and close Second-Order-after plus realized Leverage
+    before convergence when material.
+  ownership:
+    reasoning_triad_binding_owner: integrations/REASONING_TRIAD_BINDING.yaml
+    gar_architectural_judgment_owner: kernels/ARCHITECT_KERNEL.yaml
+    gar_architectural_integrity_owner: contracts/ARCHITECTURAL_INTEGRITY.yaml
+    gar_routing_owner: runtime/STATE_MACHINE.yaml
+    gar_run_state_owner: runtime/RUN_STATE.yaml
+    completion_owner: contracts/CONVERGENCE.yaml
+  required_behavior:
+    - solution_surface_evidence_precedes_material_intervention_binding
+    - first_order_selects_intervention_class
+    - second_order_models_material_pre_execution_consequences
+    - leverage_evaluates_predicted_net_systemic_gain_and_drag
+    - gar_architecture_must_be_faithful_to_bound_intervention
+    - harvest_and_build_require_matching_bound_intervention
+    - materially_better_intervention_evidence_returns_to_first_order
+    - gar_must_not_silently_substitute_intervention_classes
+    - second_order_after_and_realized_leverage_close_before_material_convergence
+  intervention_vocabulary:
+    - USE_EXISTING
+    - CONFIGURE_EXISTING
+    - CALL_TOOL
+    - CONSUME_PACKAGE
+    - CONSUME_API
+    - CONSUME_SDK
+    - ADAPT_UPSTREAM
+    - VENDOR_IMPLEMENTATION
+    - TRANSPLANT_CODE
+    - HARVEST_SEMANTICS
+    - BUILD_NEW
+    - NO_ACTION
+  explicit_non_law: >
+    This decision does not create a fixed reuse-first ladder. Reuse, adaptation,
+    vendoring, transplant, harvest, build, and no-action remain competing
+    interventions whose suitability is determined by First-Order with consequence
+    and leverage evidence.
+
+implementation_map:
+  integrations/REASONING_TRIAD_BINDING.yaml:
+    purpose: >
+      Bind external semantic owners and define receipts, applicability, fidelity,
+      handback, and post-execution learning semantics without absorbing their law.
+  runtime/RUN_STATE.yaml:
+    purpose: >
+      Record solution-surface evidence, triad receipt references, intervention
+      fidelity, post-execution observations, and learning writeback references.
+  runtime/STATE_MACHINE.yaml:
+    purpose: >
+      Gate material architecture and execution on the applicable reasoning receipts;
+      support compact RAPID census; reopen earlier reasoning when intervention
+      evidence changes.
+  contracts/ARCHITECTURAL_INTEGRITY.yaml:
+    purpose: >
+      Replace independent First-Order ownership with intervention-fidelity checks.
+  kernels/ARCHITECT_KERNEL.yaml:
+    purpose: >
+      Preserve existing-mechanism discovery as evidence production and implementation
+      simplification, not intervention selection authority.
+  contracts/CONVERGENCE.yaml:
+    purpose: >
+      Require applicable post-execution consequence and realized-leverage closure
+      rather than equating successful execution with a high-leverage decision.
+  catalogs/REASON_CODES.yaml:
+    purpose: >
+      Distinguish unbound intervention selection from evidence requiring First-Order
+      reconsideration without creating a parallel decision taxonomy.
+  schemas/product-architecture-decision.schema.json:
+    purpose: >
+      Replace harvest-before-decide semantics with a v2 projection of the already
+      selected intervention and its evidence/currentness.
+  evals/BEHAVIOR_CONFORMANCE.yaml:
+    purpose: >
+      Make wrong-intervention excellence, silent substitution, reuse dogma, and
+      realized-leverage failure observable blocking regressions.
+
+breaking_changes:
+  - product_architecture_decision_schema_moved_from_v1_to_v2
+  - HARVEST_THEN_DECIDE_is_no_longer_a_valid_decision_disposition
+  - material_architecture_work_requires_bound_intervention_reasoning_when_applicable
+  - execution_success_alone_no_longer_proves_realized_leverage
+
+alternatives_rejected:
+  - id: ALT-GAR-006-001
+    alternative: strengthen_existing_first_order_question_inside_gar
+    reason: >
+      This would preserve duplicate semantic ownership and still allow GAR to select
+      the intervention it later judges.
+  - id: ALT-GAR-006-002
+    alternative: expand_l9_intelligence_harvest_into_general_intervention_router
+    reason: >
+      Harvest is intentionally a semantic-mining capability. Expanding it would move
+      the duplicated brain downstream and corrupt a clean boundary.
+  - id: ALT-GAR-006-003
+    alternative: hard_code_reuse_before_build_ladder
+    reason: >
+      Existing upstream capability can be unstable, licensing-incompatible, too
+      coupled, or more expensive than a tiny local implementation. Reuse is evidence,
+      not a constitutional winner.
+  - id: ALT-GAR-006-004
+    alternative: embed_first_order_second_order_and_leverage_semantics_inside_gar
+    reason: >
+      This violates one semantic owner per concern and prevents the reasoning kernels
+      from strengthening other L9 participants independently.
+
+validation:
+  required_regressions:
+    - direct_consumable_upstream_capability_is_surfaced_before_harvest_or_build
+    - semantic_only_donor_can_still_legitimately_route_to_harvest
+    - upstream_capability_with_unacceptable_consequences_can_be_rejected
+    - gar_returns_material_intervention_challenge_instead_of_silent_substitution
+    - existing_local_owner_blocks_duplicate_brain
+    - build_new_requires_evidence_that_simpler_classes_are_insufficient
+    - successful_execution_with_failed_work_elimination_records_low_realized_leverage
+    - excellent_wrong_work_is_a_blocking_failure
+  canonical_behavioral_range: GAR-EVAL-032_through_GAR-EVAL-041
+  negative_schema_check: HARVEST_THEN_DECIDE_must_fail_product_decision_v2_validation
+
+repair_guide:
+  if_excellent_wrong_work_recurs:
+    inspect_in_order:
+      - integrations/REASONING_TRIAD_BINDING.yaml
+      - runtime/RUN_STATE.yaml#solution_surface
+      - runtime/STATE_MACHINE.yaml#pre_architecture_gates
+      - evals/BEHAVIOR_CONFORMANCE.yaml#GAR-EVAL-041
+  if_reuse_becomes_dogma:
+    inspect_in_order:
+      - reasoning_triad_second_order_before_receipt
+      - predicted_leverage_receipt
+      - counterexample_evals_where_upstream_is_rejected
+  if_gar_silently_switches_intervention:
+    inspect_in_order:
+      - intervention_fidelity_state
+      - INTERVENTION_RECONSIDERATION_REQUIRED_reason_code
+      - state_machine_reopen_route
+  if_success_bypasses_learning_closure:
+    inspect_in_order:
+      - contracts/CONVERGENCE.yaml
+      - second_order_after_receipt
+      - realized_leverage_receipt
+  repair_principle: >
+    Repair the earliest invalid ownership or routing layer. Do not compensate by
+    adding more instructions to downstream harvest, architecture, plan, or execution
+    stages.
+
+consequences:
+  positive:
+    - prevents_high_quality_work_on_unproven_intervention_classes
+    - eliminates_large_categories_of_unnecessary_build_and_harvest_work
+    - preserves_narrow_specialized_capabilities
+    - makes_intervention_changes_explicit_and_auditable
+    - converts_execution_outcomes_into_future_reasoning_evidence
+  negative:
+    - material_decisions_require_additional_reasoning_receipts
+    - solution_surface_discovery_can_add_cost_if_not_bounded_by_materiality
+    - v1_product_decision_producers_require_migration
+  accepted_cost_controls:
+    - RAPID_mode_uses_compact_solution_surface_census
+    - pure_observation_tasks_can_mark_reasoning_overlay_not_material
+    - census_stops_when_evidence_is_sufficient_to_discriminate_material_candidates
+
+anti_drift:
+  - this_adr_is_historical_non_normative_evidence
+  - machine_readable_runtime_owners_govern_current_behavior
+  - future_repair_must_not_copy_triad_semantics_into_gar
+  - future_repair_must_not_turn_reuse_into_an_unconditional_preference
+  - future_repair_must_not_broaden_intelligence_harvest_to_hide_pre_route_failures
