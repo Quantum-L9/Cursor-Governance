@@ -1,0 +1,94 @@
+name: 🌱 Seed CI failure
+description: A governance seed or auto-seed PR is red — ticket, not a chat.
+title: "ci(seed): "
+labels: ["type:bug", "area:ci", "needs:triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when an org seed / auto-seed PR is red (Biome, labels, Semgrep
+        install, lockfile cache, required-check collision). For a code bug that
+        happens to fail tests, use **Bug**. For a kernel failure on a feature PR,
+        use **CI failure**.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Which seed step is red, and what it blocks for the consumer.
+    validations:
+      required: true
+
+  - type: input
+    id: repository
+    attributes:
+      label: Repository
+      description: owner/name of the consumer that received the seed
+      placeholder: Quantum-L9/example-repo
+    validations:
+      required: true
+
+  - type: input
+    id: sha
+    attributes:
+      label: SHA
+      description: Commit SHA of the failing seed head
+      placeholder: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    validations:
+      required: true
+
+  - type: input
+    id: check_url
+    attributes:
+      label: Failing check URL
+      description: Full Actions run or check-run URL
+      placeholder: "https://github.com/Quantum-L9/example-repo/actions/runs/XXXXXXXXX"
+    validations:
+      required: true
+
+  - type: input
+    id: check_name
+    attributes:
+      label: Failing check name
+      placeholder: "L9 Analysis / Biome (format + lint) — SDK-owned / Node Test Suite"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The error section from the failed step, verbatim.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Pick exactly one.
+      options:
+        - S4 — noisy, the seed PR can merge anyway
+        - S3 — this consumer's seed PR is blocked
+        - S2 — every seed PR of this repo class is blocked
+        - S1 — seeding is broken org-wide
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: The run that proves it is fixed.
+      placeholder: "the seed PR for Quantum-L9/example-repo is green without a local override"
+    validations:
+      required: true
+
+  - type: input
+    id: related
+    attributes:
+      label: Related
+      description: The seed PR, and any issue this blocks.
+      placeholder: "Quantum-L9/example-repo#3"
