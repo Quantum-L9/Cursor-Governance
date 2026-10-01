@@ -1141,8 +1141,14 @@ def _release_install_lock(fd: int) -> None:
     import fcntl
     import os
 
-    fcntl.flock(fd, fcntl.LOCK_UN)
-    os.close(fd)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    except OSError:
+        pass
+    try:
+        os.close(fd)
+    except OSError:
+        pass
 
 
 def test_a_venv_being_installed_is_not_probed_or_healed(tmp_path: Path, monkeypatch) -> None:
@@ -1178,10 +1184,16 @@ def test_a_venv_whose_install_finishes_is_probed_after_the_wait(
     gov, env = _drifted_governance_env(tmp_path)
     env.version = EXPECTED_VERSION
     fd = _hold_install_lock(gov)
-    threading.Timer(0.3, _release_install_lock, args=(fd,)).start()
-    binding = rb.resolve_runtime_binding(
-        env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
-        runner=env.run,
-        heal=lambda root, **_kw: pytest.fail("a healthy venv must not be healed"),
-    )
-    assert binding.ok, binding.reasons
+    timer = threading.Timer(0.3, _release_install_lock, args=(fd,))
+    timer.start()
+    try:
+        binding = rb.resolve_runtime_binding(
+            env={"HOME": str(tmp_path / "nohome"), rb.ENV_GOVERNANCE_DIR: str(gov)},
+            runner=env.run,
+            heal=lambda root, **_kw: pytest.fail("a healthy venv must not be healed"),
+        )
+        assert binding.ok, binding.reasons
+    finally:
+        timer.cancel()
+        timer.join(timeout=2)
+        _release_install_lock(fd)

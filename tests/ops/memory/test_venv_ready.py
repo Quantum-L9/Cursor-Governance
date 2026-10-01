@@ -55,8 +55,15 @@ def _hold_exclusive(root: Path) -> int:
 
 
 def _release(fd: int) -> None:
-    fcntl.flock(fd, fcntl.LOCK_UN)
-    os.close(fd)
+    """Unlock and close. Safe to call twice: the timer and a finally may both run."""
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    except OSError:
+        pass
+    try:
+        os.close(fd)
+    except OSError:
+        pass
 
 
 # --- reader: ops/memory/venv_ready.py --------------------------------------
@@ -94,11 +101,17 @@ def test_an_unwritable_root_does_not_block_the_reader(tmp_path: Path) -> None:
 def test_reader_waits_for_the_writer_then_proceeds(tmp_path: Path) -> None:
     root = _gov(tmp_path)
     fd = _hold_exclusive(root)
-    threading.Timer(0.5, _release, args=(fd,)).start()
-    started = time.monotonic()
-    with vr.venv_ready(root, timeout=10) as ready:
-        assert ready.ready, ready.reason
-    assert time.monotonic() - started >= 0.4
+    timer = threading.Timer(0.5, _release, args=(fd,))
+    timer.start()
+    try:
+        started = time.monotonic()
+        with vr.venv_ready(root, timeout=10) as ready:
+            assert ready.ready, ready.reason
+        assert time.monotonic() - started >= 0.4
+    finally:
+        timer.cancel()
+        timer.join(timeout=2)
+        _release(fd)
 
 
 def test_reader_gives_up_with_a_named_reason(tmp_path: Path) -> None:
@@ -147,13 +160,20 @@ def test_a_give_up_does_not_poison_the_next_install(tmp_path: Path) -> None:
     fd = _hold_exclusive(root)
 
     def _finish() -> None:
-        marker.unlink()
+        marker.unlink(missing_ok=True)
         _release(fd)
 
-    threading.Timer(0.5, _finish).start()
-    with vr.venv_ready(root, timeout=5) as ready:
-        assert ready.ready, ready.reason
-        assert ready.waited_s >= 0.4
+    timer = threading.Timer(0.5, _finish)
+    timer.start()
+    try:
+        with vr.venv_ready(root, timeout=5) as ready:
+            assert ready.ready, ready.reason
+            assert ready.waited_s >= 0.4
+    finally:
+        timer.cancel()
+        timer.join(timeout=2)
+        marker.unlink(missing_ok=True)
+        _release(fd)
 
 
 def test_an_unbounded_wait_budget_is_refused(monkeypatch) -> None:
@@ -220,11 +240,17 @@ def test_client_spawns_once_the_install_completes(
     root = _gov(tmp_path)
     fake_cli.reply("hydrate", 0, hydration_payload("r1"))
     fd = _hold_exclusive(root)
-    threading.Timer(0.3, _release, args=(fd,)).start()
-    outcome = MemoryControlPlaneClient(_venv_bound(bound, root), runner=fake_cli.run).hydrate(
-        "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
-    )
-    assert outcome.status is OutcomeStatus.OK
+    timer = threading.Timer(0.3, _release, args=(fd,))
+    timer.start()
+    try:
+        outcome = MemoryControlPlaneClient(_venv_bound(bound, root), runner=fake_cli.run).hydrate(
+            "t", workspace=WS, write_namespace_hint="ns", read_namespace_hints=("ns",)
+        )
+        assert outcome.status is OutcomeStatus.OK
+    finally:
+        timer.cancel()
+        timer.join(timeout=2)
+        _release(fd)
 
 
 def test_a_runtime_that_cannot_import_itself_is_an_environment_fault(
@@ -505,17 +531,19 @@ def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> 
     root, env = _writer_root(tmp_path)
     (root / ".l9").mkdir()
     fd = _hold_exclusive(root)
-    caller = subprocess.Popen(
-        ["bash", str(ENSURE), str(root)],
-        env={**env, "L9_UV_ENV_LOCK_WAIT_S": "30"},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    time.sleep(0.5)
-    os.killpg(caller.pid, signal.SIGKILL)
-    caller.wait(timeout=10)
-    _release(fd)
+    try:
+        caller = subprocess.Popen(
+            ["bash", str(ENSURE), str(root)],
+            env={**env, "L9_UV_ENV_LOCK_WAIT_S": "30"},
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        time.sleep(0.5)
+        os.killpg(caller.pid, signal.SIGKILL)
+        caller.wait(timeout=10)
+    finally:
+        _release(fd)
     time.sleep(1.5)
     assert not (tmp_path / "lock-held-during-sync").exists(), "an orphan ran uv sync"
     assert not (root / ".venv" / ".l9-uv-fingerprint").exists()

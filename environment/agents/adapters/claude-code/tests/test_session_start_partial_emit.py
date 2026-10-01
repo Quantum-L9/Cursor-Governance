@@ -660,7 +660,7 @@ class ReceiptGenerationTest(unittest.TestCase):
                     "bash",
                     "-c",
                     '. "$1"; L9_REPO_WRITE_LOCK_LABEL=make-pr-gate repo_write_lock_acquire "$2" 0'
-                    " && echo held && sleep 30",
+                    + " && echo held && sleep 30",
                     "_",
                     str(lib),
                     os.path.realpath(tmp),
