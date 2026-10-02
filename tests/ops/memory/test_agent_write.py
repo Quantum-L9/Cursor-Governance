@@ -14,7 +14,7 @@ def _build(**extra: object) -> dict:
         "namespace": "cursor-governance",
         "memory_class": "lesson",
         "content": "  Stop hooks gate on usable_receipt,\tnot fresh_receipt  ",
-        "agent_id": "claude-code-desktop",
+        "agent_id": "claude-code",
         "tags": ["hooks"],
         **extra,
     }
@@ -25,7 +25,7 @@ def test_build_maps_aliases_collapses_whitespace_and_stamps_agent_and_key() -> N
     payload = _build()
     assert payload["memory_class"] == "insight"
     assert payload["content"] == "Stop hooks gate on usable_receipt, not fresh_receipt"
-    assert payload["tags"] == ["agent:claude-code-desktop", "hooks"]
+    assert payload["tags"] == ["agent:claude-code", "hooks"]
     assert payload["idempotency_key"].startswith("agent:cursor-governance:")
 
 
@@ -84,13 +84,17 @@ def test_the_cli_prints_tool_and_arguments(
             "--tag",
             "claude-settings",
             "--agent-id",
-            "claude-code-desktop",
+            "claude-code",
         ]
     )
     assert code == 0
     out = json.loads(capsys.readouterr().out)
     assert out["tool"] == aw.WRITE_TOOL
-    assert out["arguments"]["tags"] == ["agent:claude-code-desktop", "claude-settings"]
+    assert out["arguments"]["tags"] == [
+        "agent:claude-code",
+        "surface:claude-code-desktop",
+        "claude-settings",
+    ]
 
 
 def test_the_cli_refuses_loudly(capsys: pytest.CaptureFixture[str], tmp_path) -> None:
@@ -144,8 +148,53 @@ def test_the_cli_refuses_an_agent_id_that_is_not_this_process(
             "--tag",
             "identity",
             "--agent-id",
-            "claude-code-mobile",
+            "cursor",
         ]
     )
     assert code == 1
     assert "identity drift" in capsys.readouterr().err
+
+
+def test_build_stamps_the_surface_beside_the_actor() -> None:
+    payload = _build(surface_id="claude-code-mobile", tags=["hooks", "surface:cursor-ide"])
+    assert payload["tags"] == ["agent:claude-code", "surface:claude-code-mobile", "hooks"]
+
+
+def test_a_historical_actor_alias_is_never_a_new_author() -> None:
+    with pytest.raises(aw.AgentWriteError, match="historical ActorIdentity alias"):
+        _build(agent_id="claude-code-desktop")
+
+
+def test_a_surface_tag_is_not_a_topic() -> None:
+    with pytest.raises(aw.AgentWriteError, match="topic tag"):
+        _build(surface_id="claude-code-cli", tags=[])
+
+
+def test_tags_carry_at_most_one_surface() -> None:
+    payload = _build(surface_id="claude-code-cli")
+    payload["tags"] = [*payload["tags"], "surface:claude-code-ide"]
+    with pytest.raises(aw.AgentWriteError, match="at most one surface"):
+        aw.validate(payload)
+
+
+def test_the_cli_refuses_a_surface_chosen_by_the_caller(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _desktop(monkeypatch)
+    code = aw.main(
+        [
+            "build",
+            "--namespace",
+            "cursor-governance",
+            "--class",
+            "decision",
+            "--content",
+            "A surface chosen by the caller is drift",
+            "--tag",
+            "identity",
+            "--tag",
+            "surface:claude-code-mobile",
+        ]
+    )
+    assert code == 1
+    assert "surface drift" in capsys.readouterr().err

@@ -41,37 +41,24 @@ peers:
       required: true
       capture_readiness_required: true
 
-  claude-code-desktop:
-    agent_ref: claude-code-desktop
+  claude-code:
+    agent_ref: claude-code
     execution:
       required: true
       bindings:
-        - surface: claude-desktop
+        - surface: claude-code-desktop
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
-        - surface: claude-cli
+        - surface: claude-code-cli
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
-        - surface: claude-ide
+        - surface: claude-code-ide
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
-    autonomy:
-      required: true
-      provider_id: root-autonomy-control-plane
-    subagents:
-      enabled: false
-    results:
-      readiness_required: false
-    generated_data:
-      required: true
-      capture_readiness_required: false
-
-  claude-code-mobile:
-    agent_ref: claude-code-mobile
-    execution:
-      required: true
-      bindings:
-        - surface: claude-mobile
+        - surface: claude-code-web
+          provider_ref: claude-code-direct
+          execution_profile_ref: worker-default
+        - surface: claude-code-mobile
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
     autonomy:

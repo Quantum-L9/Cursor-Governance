@@ -44,14 +44,14 @@ class ExecutablePeerContractTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASS", report["errors"])
         self.assertEqual(
             set(report["executable_peers"]),
-            {"cursor", "claude-code-desktop", "claude-code-mobile"},
+            {"cursor", "claude-code"},
         )
 
     def test_bindings_schema_only_passes(self) -> None:
         module = _load()
         report = module.validate_bindings_schema(REPO_ROOT)
         self.assertEqual(report["status"], "PASS", report["errors"])
-        self.assertEqual(report["peer_count"], 6)
+        self.assertEqual(report["peer_count"], 5)
 
     def test_e1_missing_bindings_fails_closed(self) -> None:
         module = _load()
