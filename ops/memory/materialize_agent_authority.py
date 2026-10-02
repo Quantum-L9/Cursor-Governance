@@ -182,8 +182,8 @@ def export_authority(secret_map: Path, agent_ids: list[str], output: Path) -> No
 def add_missing_keys(secret_map: Path, agent_ids: list[str]) -> list[str]:
     """Give each named identity a signing key in the local map if it has none.
 
-    For the operator adding a new identity on a workstation (e.g.
-    claude-code-desktop after the one "claude-code" identity was split, or manus).
+    For the operator adding a new identity on a workstation (e.g. the
+    canonical claude-code actor, or manus).
     Hosted containers need no operator step: see ``provision_local``. Existing keys are never
     replaced, the file stays 0600, and no value is printed. Returns the ids added.
     """
@@ -210,14 +210,19 @@ LOCAL_DIR = Path.home() / ".config" / "l9-memory"
 
 
 def hosted_identities() -> list[str]:
-    """The identities a hosted (cloud) Claude Code container can run as.
+    """The ActorIdentities a hosted (cloud) Claude Code container can run as.
 
-    Derived from the one resolver's REMOTE_ENTRYPOINTS, never listed here, so a
-    new hosted surface is provisioned the moment the resolver knows it.
+    The actor the one resolver derives for each hosted entrypoint it admits
+    (REMOTE_ENTRYPOINTS), never listed here and never a SurfaceIdentity.
     """
-    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS  # noqa: PLC0415
+    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS, resolve_agent_id  # noqa: PLC0415
 
-    return sorted(set(REMOTE_ENTRYPOINTS.values()))
+    return sorted(
+        {
+            resolve_agent_id({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": entry})
+            for entry in REMOTE_ENTRYPOINTS
+        }
+    )
 
 
 def _replace_private_json(path: Path, payload: dict[str, Any]) -> None:

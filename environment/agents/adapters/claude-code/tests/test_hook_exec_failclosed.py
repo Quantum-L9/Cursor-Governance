@@ -413,8 +413,8 @@ class ProgramBoundAuthorizationTests(unittest.TestCase):
             self.workspace,
             self.contract,
             attempt_number=1,
-            agent_ref="claude-code-desktop",
-            surface="claude-cli",
+            agent_ref="claude-code",
+            surface="claude-code-cli",
         )["autonomy_authority"]
         self.gate_log = self.root / "gate-stdin.bin"
         self.gate = self.root / "stub_gate.py"

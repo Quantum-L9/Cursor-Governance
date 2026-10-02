@@ -3128,20 +3128,19 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # Surfaces here must exist in the topology SSOT
     # (environment/agents/PEER_RUNTIME_BINDINGS.yaml); a default that names a
     # surface the SSOT does not declare can never resolve a provider.
-    # Claude Code is two peers, DERIVED from host markers — Claude Code Desktop
-    # (the operator's machine) and Claude Code Mobile (cloud) — never one
-    # "claude-code". An unrecognised cloud entrypoint has no peer and fails
-    # below rather than being labelled as either.
-    remote = os.environ.get("CLAUDE_CODE_REMOTE", "").strip().lower() == "true"
-    entry = os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").strip().lower()
-    claude_here = (
-        (("claude-code-mobile", "claude-mobile") if entry == "remote_mobile" else None)
-        if remote
-        else ("claude-code-desktop", "claude-cli")
-    )
+    # Claude Code is ONE peer (ActorIdentity claude-code) with several
+    # execution surfaces; the surface is derived by the one resolver
+    # (ops/memory/agent_identity.py) from the remaining host markers. An
+    # unrecognised cloud entrypoint has no surface and fails below rather than
+    # being labelled as any of them.
+    identity = _agent_identity_module()
+    claude_actor = identity.CLAUDE_ACTOR
+    claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}
+    claude_surface = identity.resolve_surface_id({**claude_env, "CLAUDECODE": "1"})
+    claude_here = (claude_actor, claude_surface) if claude_surface else None
     aliases = {
-        "claude-cli": ("claude-code-desktop", "claude-cli"),
-        "claude-mobile": ("claude-code-mobile", "claude-mobile"),
+        "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
+        "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
         "codex": ("codex", "codex-cloud"),
@@ -3150,13 +3149,29 @@ def _peer_identity() -> tuple[str, str, str | None]:
     }
     if claude_here is not None:
         aliases["claude-code"] = claude_here
-    identity = aliases.get(governance_surface)
-    if identity is None:
+    binding = aliases.get(governance_surface)
+    if binding is None:
         raise CampaignError(
             "Peer Execution requires a canonical runtime binding. Set L9_PE_AGENT_REF and "
             "L9_PE_SURFACE, or run from a recognized L9_GOVERNANCE_SURFACE."
         )
-    return identity[0], identity[1], provider_ref
+    return binding[0], binding[1], provider_ref
+
+
+def _agent_identity_module():
+    """ops/memory/agent_identity.py by FILE LOCATION (the one identity resolver)."""
+    path = GOV_ROOT / "ops" / "memory" / "agent_identity.py"
+    module_name = "l9_agent_identity"
+    cached = sys.modules.get(module_name)
+    if cached is not None and Path(getattr(cached, "__file__", "")).resolve() == path.resolve():
+        return cached
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise CampaignError(f"cannot load agent identity resolver {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _peer_imports():

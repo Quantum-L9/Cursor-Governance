@@ -84,9 +84,14 @@ def main(argv: list[str] | None = None) -> int:
     if str(_ROOT) not in sys.path:
         sys.path.insert(0, str(_ROOT))
     from ops.memory.agent_assertion import ENV_HUMAN_DOOR_SECRET, env_from_local_secret_map
+    from ops.memory.agent_identity import resolve_agent_id, unresolved_reason
 
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--agent-id", default=os.environ.get("L9_MEMORY_AGENT_ID", "cursor"))
+    ap.add_argument(
+        "--agent-id",
+        default=None,
+        help="default: this process's DERIVED actor (ops/memory/agent_identity.py)",
+    )
     ap.add_argument(
         "--format",
         choices=("shell", "json"),
@@ -107,6 +112,14 @@ def main(argv: list[str] | None = None) -> int:
         help="registry-rendered grants map (environment/agents/tools/render_principals.py)",
     )
     args = ap.parse_args(argv)
+    if args.agent_id is None:
+        args.agent_id = resolve_agent_id()
+        if not args.agent_id:
+            print(
+                f"refusing to mint an agent assertion: no memory identity ({unresolved_reason()})",
+                file=sys.stderr,
+            )
+            return 2
     if args.agent_id == HUMAN_PRINCIPAL:
         print("refusing to export human private entrance into agent env", file=sys.stderr)
         return 2
