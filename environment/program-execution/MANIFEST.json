@@ -1551,7 +1551,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "dad550b845af94314293b77a178f5c4b411a78a0e1237dfcd4775b918af0e466"
+      "sha256": "c8c55f3e606df5546cd5b0fdf7ad5004ad5073eebe290b32ba27c48ea659343d"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "c6c8d3de9168bad50fe96318b644e6eac72f92059fd7d6492728abbec8f527f6"
+      "sha256": "33c92c41c1064b8f6477222912e5c5569b80e2d89a7f9b36142abd030cf6b246"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2203,7 +2203,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "4c7b27d65dc188f57528e70cee6352ad12b7868822788d46bff70fca89d38029"
+      "sha256": "ca642b27d633db3d683d13bf2448bd6b215d6dee3d18676cce620d44a75cc2d5"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2291,7 +2291,7 @@
     },
     {
       "path": "tests/hardening/test_autonomy_enforcement_e2e.py",
-      "sha256": "1bd6a5eee28a7239e4856e0b84ea375491d761587583635c2f869f2613320c49"
+      "sha256": "f094a41c8fdde42286773894c26f3276513f2b91e1730f42f485e5a475603ed9"
     },
     {
       "path": "tests/hardening/test_concurrent_worktree_isolation.py",
