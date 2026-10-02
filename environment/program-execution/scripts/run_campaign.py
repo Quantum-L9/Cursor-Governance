@@ -3140,7 +3140,6 @@ def _peer_identity() -> tuple[str, str, str | None]:
     claude_here = (claude_actor, claude_surface) if claude_surface else None
     aliases = {
         "claude-cli": (claude_actor, identity.CLAUDE_CLI_SURFACE),
-        "claude-web": (claude_actor, identity.CLAUDE_WEB_SURFACE),
         "claude-mobile": (claude_actor, identity.CLAUDE_MOBILE_SURFACE),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),

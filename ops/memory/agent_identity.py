@@ -78,17 +78,10 @@ CURSOR_SURFACE: Final = "cursor-ide"
 CLAUDE_DESKTOP_SURFACE: Final = "claude-code-desktop"
 CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
 CLAUDE_IDE_SURFACE: Final = "claude-code-ide"
-CLAUDE_WEB_SURFACE: Final = "claude-code-web"
 CLAUDE_MOBILE_SURFACE: Final = "claude-code-mobile"
 #: Every Claude Code SurfaceIdentity with a local execution binding.
 CLAUDE_SURFACES: Final = frozenset(
-    {
-        CLAUDE_DESKTOP_SURFACE,
-        CLAUDE_CLI_SURFACE,
-        CLAUDE_IDE_SURFACE,
-        CLAUDE_WEB_SURFACE,
-        CLAUDE_MOBILE_SURFACE,
-    }
+    {CLAUDE_DESKTOP_SURFACE, CLAUDE_CLI_SURFACE, CLAUDE_IDE_SURFACE, CLAUDE_MOBILE_SURFACE}
 )
 #: CLAUDE_CODE_ENTRYPOINT values of a local process and the surface each is.
 LOCAL_ENTRYPOINTS: Final = {"cli": CLAUDE_CLI_SURFACE}

@@ -71,7 +71,7 @@ CASES: list[tuple[str, Any]] = [
     ("desktop historical alias", _ok(tags=["agent:claude-code-desktop", "hooks"])),
     ("mobile historical alias", _ok(tags=["agent:claude-code-mobile", "hooks"])),
     ("duplicate tags", _ok(tags=["agent:claude-code", "hooks", "hooks"])),
-    ("actor and surface", _ok(tags=["agent:claude-code", "surface:claude-code-web", "hooks"])),
+    ("actor and surface", _ok(tags=["agent:claude-code", "surface:claude-code-desktop", "hooks"])),
     ("surface is not a topic", _ok(tags=["agent:claude-code", "surface:claude-code-cli"])),
     (
         "two surfaces",

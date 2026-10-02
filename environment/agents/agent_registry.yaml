@@ -44,7 +44,7 @@ workspace_group: igor-workspace
 # ---------------------------------------------------------------------------
 identity_authority:
   repository: Quantum-L9/.github
-  revision: 43600db3ee43f17fd30d2df589ff6bc0eb8b19d2
+  revision: 3eaa094be0b1ec74944e832887aa1752c818fc11
   actor_registry:
     artifact_id: l9.actor-registry/global@1
     path: semantics/actor_registry.yaml
@@ -140,7 +140,7 @@ agents:
     # configured; the surface is a separate SurfaceIdentity. Grants are
     # per-agent: a namespace absent here is unwritable through the agent lane
     # (Tier 2).
-    surfaces: [claude-code-desktop, claude-code-cli, claude-code-ide, claude-code-web, claude-code-mobile]
+    surfaces: [claude-code-desktop, claude-code-cli, claude-code-ide, claude-code-mobile]
     assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
     adapter: claude-code             # environment/agents/adapters/claude-code/
     status: active

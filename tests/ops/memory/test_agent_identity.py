@@ -107,7 +107,6 @@ def test_exactly_the_two_host_actors_are_derived() -> None:
         "claude-code-desktop",
         "claude-code-cli",
         "claude-code-ide",
-        "claude-code-web",
         "claude-code-mobile",
     } == ai.CLAUDE_SURFACES
 
@@ -253,10 +252,10 @@ def test_a_peer_without_a_local_active_actor_fails(tmp_path: Path) -> None:
 
 
 def test_a_peer_surface_missing_upstream_fails() -> None:
-    bodies = _upstream(surfaces=[s for s in _peer_surfaces() if s != "claude-code-web"])
+    bodies = _upstream(surfaces=[s for s in _peer_surfaces() if s != "claude-code-ide"])
     errors = _authority_errors(_pinned_to(bodies), bodies)
     assert any(
-        e.startswith("[R9]") and "'claude-code-web'" in e and "upstream" in e for e in errors
+        e.startswith("[R9]") and "'claude-code-ide'" in e and "upstream" in e for e in errors
     ), errors
 
 
