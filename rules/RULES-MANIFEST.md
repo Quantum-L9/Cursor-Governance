@@ -1,17 +1,17 @@
 # Cursor governance rules manifest
 
-Generated: `2026-09-29T23:08:02Z`. Source: `rules/*.mdc`.
+Generated: `2026-10-03T12:31:40Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **68** |
-| `alwaysApply: true` | **35** |
+| Total MDC files | **69** |
+| `alwaysApply: true` | **36** |
 | `alwaysApply: false` | **33** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **67** |
-| Derived compatibility IDs | **1** |
+| Derived compatibility IDs | **2** |
 | Deprecated rules | **0** |
 
 ## Rule index
@@ -54,6 +54,7 @@ Generated: `2026-09-29T23:08:02Z`. Source: `rules/*.mdc`.
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
 | `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 96 | `974e7ffaf232` |
 | `63-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | general | auto_attached | 42 | `369e0ab6d90f` |
+| `64-canonical-identity-authority.mdc` | `l9.rule.64.canonical.identity.authority` | global | general | always | 85 | `ad0c026c2322` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | agent_requested | 43 | `888c5c4b9057` |
 | `69-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | general | agent_requested | 49 | `2bc076e7c46c` |
 | `70-tool-efficiency.mdc` | `l9.rule.70.tool.efficiency` | global | governance | agent_requested | 190 | `80a4344c4649` |
