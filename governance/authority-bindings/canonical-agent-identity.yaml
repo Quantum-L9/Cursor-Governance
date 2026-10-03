@@ -1,0 +1,144 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/authority-bindings/canonical-agent-identity.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-10-03
+schema: l9.cursor-governance.identity-binding/v1
+artifact_id: l9.cursor-governance/identity-binding@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cursor_governance_downstream_identity_binding
+  authority_class: local_canonical_binding
+purpose: >
+  Bind canonical ActorIdentity and SurfaceIdentity coordinates projected from
+  Quantum-L9/.github into the Cursor-Governance operating plane. This binding
+  governs downstream identity resolution while preserving canonical identity
+  ownership in Quantum-L9/.github.
+upstream:
+  owner: Quantum-L9/.github
+  actor_registry:
+    artifact_ref: l9.actor-registry/global@1
+    path: semantics/actor_registry.yaml
+    required: true
+  surface_registry:
+    artifact_ref: l9.surface-registry/global@1
+    path: semantics/surface_registry.yaml
+    required: true
+  projection_profile:
+    artifact_ref: l9.projection/cursor-governance-identity@1
+    catalog_ref: l9.projection-profile-catalog/global@1
+    path: semantics/projection_profiles.yaml
+    required: true
+generated_projection:
+  artifact_ref: l9.projection/cursor-governance-identity@1
+  schema: l9.projection.cursor-governance-identity/v1
+  path: generated/governance/canonical_identity.yaml
+  receipt:
+    schema: l9.projection-receipt/v1
+    path: generated/governance/canonical_identity.receipt.yaml
+  authority:
+    canonical: false
+    authority_class: derived
+  generation:
+    deterministic: true
+    manual_edit: forbidden
+    regenerate_instead_of_patch: true
+    source_revision_required: true
+    source_digests_required: true
+    projection_profile_digest_required: true
+    output_digest_required: true
+    receipt_required: true
+    provenance_required: true
+governing_binding:
+  enabled: true
+  failure_mode: fail_closed
+  governs:
+    - canonical_actor_identity_resolution
+    - canonical_surface_identity_resolution
+    - agent_registry_identity_references
+    - runtime_identity_rendering_input
+    - adapter_identity_resolution
+    - agent_instruction_identity_resolution
+  does_not_govern:
+    - credentials
+    - bearer_tokens
+    - signing_keys
+    - memory_permissions
+    - roles
+    - namespace_grants
+    - adapter_selection
+    - provider_selection
+    - actor_surface_assignment
+    - execution_authority
+    - runtime_evidence
+    - governance_profile_selection
+  local_identity_definition: forbidden
+  local_alias_definition: forbidden
+  local_canonical_override: forbidden
+  local_identity_fallback: forbidden
+operating_plane:
+  registry:
+    path: environment/agents/agent_registry.yaml
+    schema: l9.cursor-governance.agent-bindings/v2
+  rules:
+    actor_identity_must_be_reference: true
+    surface_identity_must_be_reference: true
+    actor_surface_assignment_is_local_operating_state: true
+    canonical_actor_properties_must_not_be_redeclared: true
+    canonical_surface_properties_must_not_be_redeclared: true
+  actor_reference:
+    prefix: "l9.actor-registry/global@1#"
+  surface_reference:
+    prefix: "l9.surface-registry/global@1#"
+resolution:
+  actor:
+    source: generated/governance/canonical_identity.yaml
+    collection: actors
+    alias_collection: actor_aliases
+    unknown_behavior: reject
+    ambiguous_behavior: reject
+    retired_behavior: reject_for_active_binding
+  surface:
+    source: generated/governance/canonical_identity.yaml
+    collection: surfaces
+    alias_collection: surface_aliases
+    unknown_behavior: reject
+    ambiguous_behavior: reject
+    retired_behavior: reject_for_active_binding
+runtime_rendering:
+  derive_agent_id_from_actor_ref: true
+  derive_source_from_actor_ref: true
+  preserve_actor_ref_in_rendered_evidence: true
+  preserve_surface_refs_in_rendered_evidence: true
+  preserve_projection_source_revision: true
+  preserve_projection_digest: true
+failure_policy:
+  projection_missing: reject
+  receipt_missing: reject
+  output_digest_mismatch: reject
+  profile_digest_missing: reject
+  source_digest_missing: reject
+  source_revision_missing: reject
+  unresolved_actor_ref: reject
+  unresolved_surface_ref: reject
+  canonical_identity_redeclared_locally: reject
+  stale_projection: reject
+forbidden:
+  - hand_authored_actor_registry
+  - hand_authored_surface_registry
+  - local_actor_alias_catalog
+  - local_surface_alias_catalog
+  - infer_actor_identity_from_adapter_name
+  - infer_actor_identity_from_environment_variable
+  - infer_actor_identity_from_model_name
+  - infer_surface_identity_from_directory_name
+  - infer_surface_identity_from_runtime_name
+  - redefine_actor_status
+  - redefine_surface_status
+  - redefine_actor_kind
+  - treat_generated_projection_as_global_canonical_authority
