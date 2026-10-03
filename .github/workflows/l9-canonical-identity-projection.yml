@@ -1,0 +1,186 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: .github/workflows/l9-canonical-identity-projection.yml
+#   layer: operations
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-10-03
+name: L9 Canonical Identity Projection
+on:
+  pull_request:
+    paths:
+      - "environment/agents/agent_registry.yaml"
+      - "governance/authority-bindings/canonical-agent-identity.yaml"
+      - "generated/governance/canonical_identity.yaml"
+      - "generated/governance/canonical_identity.receipt.yaml"
+      - "tools/authority/project_canonical_identity.py"
+      - "tools/assurance/check_canonical_identity_projection.py"
+      - "rules/64-canonical-identity-authority.mdc"
+      - ".github/workflows/l9-canonical-identity-projection.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "environment/agents/agent_registry.yaml"
+      - "governance/authority-bindings/canonical-agent-identity.yaml"
+      - "generated/governance/canonical_identity.yaml"
+      - "generated/governance/canonical_identity.receipt.yaml"
+      - "tools/authority/project_canonical_identity.py"
+      - "tools/assurance/check_canonical_identity_projection.py"
+  repository_dispatch:
+    types:
+      - l9-semantic-authority-updated
+  workflow_dispatch:
+    inputs:
+      authority_ref:
+        description: Quantum-L9/.github revision to project
+        required: true
+        default: main
+  schedule:
+    - cron: "29 */6 * * *"
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: l9-canonical-identity-projection
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@v4
+        with:
+          path: governance
+          fetch-depth: 0
+      - name: Checkout canonical Semantic Foundation
+        uses: actions/checkout@v4
+        with:
+          repository: Quantum-L9/.github
+          ref: main
+          path: org-authority
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML dependency
+        run: python -m pip install "pyyaml>=6.0,<7"
+      - name: Verify projection matches canonical authority
+        working-directory: governance
+        run: |
+          python tools/authority/project_canonical_identity.py \
+            --authority-root ../org-authority \
+            --check
+      - name: Verify downstream governing binding
+        working-directory: governance
+        run: |
+          python tools/assurance/check_canonical_identity_projection.py
+  refresh:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@v4
+        with:
+          path: governance
+          fetch-depth: 0
+      - name: Resolve authority revision
+        id: authority
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            printf 'ref=%s\n' "${{ inputs.authority_ref }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ github.event.client_payload.authority_ref }}" ]]; then
+            printf 'ref=%s\n' \
+              "${{ github.event.client_payload.authority_ref }}" \
+              >> "$GITHUB_OUTPUT"
+          else
+            printf 'ref=main\n' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checkout canonical Semantic Foundation
+        uses: actions/checkout@v4
+        with:
+          repository: Quantum-L9/.github
+          ref: ${{ steps.authority.outputs.ref }}
+          path: org-authority
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML dependency
+        run: python -m pip install "pyyaml>=6.0,<7"
+      - name: Generate canonical identity projection
+        working-directory: governance
+        run: |
+          python tools/authority/project_canonical_identity.py \
+            --authority-root ../org-authority
+      - name: Verify generated governing projection
+        working-directory: governance
+        run: |
+          python tools/assurance/check_canonical_identity_projection.py
+      - name: Detect projection change
+        id: diff
+        working-directory: governance
+        shell: bash
+        run: |
+          if git diff --quiet -- \
+            generated/governance/canonical_identity.yaml \
+            generated/governance/canonical_identity.receipt.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Commit generated projection
+        if: steps.diff.outputs.changed == 'true'
+        id: branch
+        working-directory: governance
+        shell: bash
+        run: |
+          authority_sha="$(git -C ../org-authority rev-parse HEAD)"
+          branch="automation/canonical-identity-${authority_sha:0:12}"
+          git config user.name "quantum-l9-automation"
+          git config \
+            user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add \
+            generated/governance/canonical_identity.yaml \
+            generated/governance/canonical_identity.receipt.yaml
+          git commit \
+            -m "chore(governance): project canonical agent identity"
+          git push --force-with-lease origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "authority_sha=$authority_sha" >> "$GITHUB_OUTPUT"
+      - name: Open projection pull request
+        if: steps.diff.outputs.changed == 'true'
+        working-directory: governance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.branch }}
+          AUTHORITY_SHA: ${{ steps.branch.outputs.authority_sha }}
+        shell: bash
+        run: |
+          existing="$(
+            gh pr list \
+              --head "$BRANCH" \
+              --base main \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          if [[ -n "$existing" ]]; then
+            exit 0
+          fi
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(governance): project canonical agent identity" \
+            --body "Machine-generated canonical identity projection from Quantum-L9/.github@$AUTHORITY_SHA. Do not manually edit the generated projection or receipt."
