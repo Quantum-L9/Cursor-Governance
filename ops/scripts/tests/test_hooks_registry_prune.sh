@@ -168,3 +168,20 @@ sub = [e["command"] for e in hooks["subagentStart"]]
 assert sub == ["./hooks/lifecycle-subagent-start.sh subagent_start"], sub
 PY
 echo "PASS: per-event retirements still collapse live-but-superseded entries"
+
+# --- cannot-evaluate is never silence ---
+# The wiring check treats "exit 0 and no output" as healthy, so every path
+# where --check cannot answer must exit non-zero AND say something.
+cp "$HOOKS_JSON" "$TMP/good.json"
+printf 'not json at all\n' > "$HOOKS_JSON"
+if run_check > "$TMP/check-corrupt.txt"; then
+  fail "--check passed on a corrupt hooks.json"
+fi
+[ -s "$TMP/check-corrupt.txt" ] || fail "--check was silent on a corrupt hooks.json"
+cp "$TMP/good.json" "$HOOKS_JSON"
+
+rm -f "$HOOKS_JSON"
+run_check > "$TMP/check-absent.txt" || fail "--check errored on an absent hooks.json"
+[ ! -s "$TMP/check-absent.txt" ] || fail "--check reported findings with no hooks.json"
+cp "$TMP/good.json" "$HOOKS_JSON"
+echo "PASS: --check distinguishes corrupt from absent and is never silently clean"
