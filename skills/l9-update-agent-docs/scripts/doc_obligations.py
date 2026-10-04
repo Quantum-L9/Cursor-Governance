@@ -7,7 +7,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from doc_policy import LLM_SURFACE_ID, OBLIGATION_SCHEMA, schema_errors, selector_paths
+from doc_policy import (
+    LLM_SURFACE_ID,
+    OBLIGATION_SCHEMA,
+    resolve_selectors,
+    schema_errors,
+    selector_paths,
+)
 from generate_module_readmes import discover_module_paths, load_config, spec_for_path
 
 OBLIGATION_ID = "l9.repo-docs.obligation.v1"
@@ -94,7 +100,7 @@ def _generic_targets(
     *,
     llm_enabled: bool,
 ) -> list[dict[str, Any]]:
-    paths = selector_paths(root, spec["selectors"])
+    paths = selector_paths(root, resolve_selectors(root, spec))
     if paths:
         kind = "external" if spec["create_policy"] == "external_only" else "file"
         return [{"kind": kind, "path": path, "selector": path, "present": True} for path in paths]
@@ -228,6 +234,7 @@ def build_obligations(
     semantic_required: list[str],
     module_capability: dict[str, Any],
     owned_admissions: dict[str, str] | None = None,
+    target_admissions: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Compile obligations. ``owned_admissions`` maps a skill-owned surface
     (llm_txt, filetree) to the owned-write admission observed this run:
@@ -236,12 +243,16 @@ def build_obligations(
     freshness evidence so validation can close it. Every other admission keeps
     strict refresh validation."""
     owned_admissions = dict(owned_admissions or {})
+    target_admissions = dict(target_admissions or {})
+    _ = run_mutations
     impacted = set(impact.get("impacted_surfaces", []))
     for surface, spec in policy["surfaces"].items():
-        if spec["requirement"] == "required" and not selector_paths(root, spec["selectors"]):
+        if spec["requirement"] == "required" and not selector_paths(
+            root, resolve_selectors(root, spec)
+        ):
             impacted.add(surface)
     obligations: list[dict[str, Any]] = []
-    touched_paths = set(impact.get("all_changed_files", [])) | set(run_mutations)
+    _ = run_mutations
     for surface in sorted(impacted):
         spec = policy["surfaces"][surface]
         rules, source_changes = source_changes_for_surface(policy, impact, surface)
@@ -352,8 +363,14 @@ def build_obligations(
                 )
             if semantic:
                 required_validation.append("semantic_qualification")
-            touched = bool(target.get("path") and target["path"] in touched_paths)
-            admission = owned_admissions.get(surface) if applicable and not semantic else None
+            path_admission = target_admissions.get(str(target.get("path") or ""))
+            admission = (
+                path_admission
+                if path_admission is not None
+                else owned_admissions.get(surface)
+                if applicable and not semantic
+                else None
+            )
             qualification: dict[str, Any]
             if not applicable:
                 lifecycle = {
@@ -386,11 +403,18 @@ def build_obligations(
                     "harvest_request_id": None,
                     "concept_ids": [],
                 }
-            elif admission == "unchanged":
+            elif admission in {"create", "refresh", "unchanged"}:
+                if admission == "create":
+                    action_type = "CREATE"
                 evidence.append(_admission_evidence(admission, "target_freshness"))
+                reason = (
+                    "owner render is byte-identical to the target at this revision"
+                    if admission == "unchanged"
+                    else f"owned-write admission {admission}"
+                )
                 lifecycle = {
                     "status": "SATISFIED",
-                    "reason": "owner render is byte-identical to the target at this revision",
+                    "reason": reason,
                     "terminal": False,
                 }
                 qualification = {
@@ -412,20 +436,6 @@ def build_obligations(
                     "status": "AWAITING",
                     "semantic_owner": policy["semantic_harvest"]["owner"],
                     "harvest_target": policy["semantic_harvest"]["destinations"].get(surface),
-                    "harvest_request_id": None,
-                    "concept_ids": [],
-                }
-            elif touched:
-                lifecycle = {
-                    "status": "SATISFIED",
-                    "reason": "owner target changed in the evaluated change set",
-                    "terminal": False,
-                }
-                qualification = {
-                    "kind": "deterministic",
-                    "status": "QUALIFIED",
-                    "semantic_owner": None,
-                    "harvest_target": None,
                     "harvest_request_id": None,
                     "concept_ids": [],
                 }
@@ -517,7 +527,7 @@ def apply_semantic_resolutions(
     changed_files: list[str],
     run_mutations: list[str],
 ) -> list[dict[str, Any]]:
-    touched = set(changed_files) | set(run_mutations)
+    _ = (changed_files, run_mutations)
     by_surface = semantic.get("concepts_by_surface", {})
     request_id = (semantic.get("request") or {}).get("request_id")
     for obligation in obligations:
@@ -574,14 +584,7 @@ def apply_semantic_resolutions(
             obligation["required_action"]["type"] = "RECONCILE"
         elif obligation["required_action"]["type"] != "CREATE":
             obligation["required_action"]["type"] = "REFRESH"
-        target = obligation["target"]["path"]
-        if target and target in touched:
-            obligation["lifecycle"] = {
-                "status": "SATISFIED",
-                "reason": "semantically qualified owner target changed in the evaluated change set",
-                "terminal": False,
-            }
-        elif obligation["required_action"]["type"] == "HANDOFF":
+        if obligation["required_action"]["type"] == "HANDOFF":
             obligation["lifecycle"] = {
                 "status": "HANDOFF_REQUIRED",
                 "reason": "Harvest qualified a specialist-owner handoff",
@@ -622,22 +625,26 @@ def validate_and_close_obligations(
                     "owner render is byte-identical to the target",
                     identity_ids,
                 )
-            elif target and target in touched:
-                target_ev = next(
-                    (row["id"] for row in obligation["evidence"] if row["type"] == "target"), None
-                )
-                existing["target_freshness"] = _validation_result(
-                    "target_freshness",
-                    "PASS",
-                    "target changed in the evaluated change set",
-                    [target_ev] if target_ev else [],
-                )
             else:
-                existing["target_freshness"] = _validation_result(
-                    "target_freshness",
-                    "UNKNOWN",
-                    "target was not changed in the evaluated change set",
-                )
+                harvest_ids = [
+                    row["id"] for row in obligation["evidence"] if row["type"] == "harvest"
+                ]
+                if (
+                    obligation["qualification"]["status"] == "QUALIFIED"
+                    and harvest_ids
+                ):
+                    existing["target_freshness"] = _validation_result(
+                        "target_freshness",
+                        "PASS",
+                        "admitted Harvest resolution",
+                        harvest_ids,
+                    )
+                else:
+                    existing["target_freshness"] = _validation_result(
+                        "target_freshness",
+                        "UNKNOWN",
+                        "no owned-write admission or admitted Harvest resolution",
+                    )
         if "semantic_qualification" in obligation["validation"]["required"]:
             qualified = obligation["qualification"]["status"] == "QUALIFIED"
             harvest_ids = [row["id"] for row in obligation["evidence"] if row["type"] == "harvest"]

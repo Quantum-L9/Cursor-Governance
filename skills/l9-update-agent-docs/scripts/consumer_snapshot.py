@@ -105,7 +105,17 @@ def _literal_surface_paths(root: Path, policy: dict[str, Any]) -> dict[str, list
     result: dict[str, list[str]] = {}
     for surface, spec in policy["surfaces"].items():
         paths: list[str] = []
-        for selector in spec["selectors"]:
+        selectors = list(spec["selectors"])
+        if spec.get("selector_mode") == "first_present":
+            chosen: list[str] = []
+            for selector in selectors:
+                if any(char in selector for char in "*?["):
+                    continue
+                if (root / selector).is_file():
+                    chosen = [selector]
+                    break
+            selectors = chosen
+        for selector in selectors:
             if any(char in selector for char in "*?["):
                 paths.extend(
                     sorted(

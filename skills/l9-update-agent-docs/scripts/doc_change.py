@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from doc_policy import git, selector_paths
+from doc_policy import git, resolve_selectors, selector_paths
 from source_facts import source_language, source_patterns
 
 PACK = Path(__file__).resolve().parents[1]
@@ -47,6 +47,54 @@ def automatic_changed_scope(
     return [], None, None
 
 
+def _strip_managed_blocks(text: str, policy: dict[str, Any]) -> str:
+    stripped = text
+    for item in policy.get("managed_regions", {}).get("blocks", []):
+        pattern = re.compile(
+            re.escape(item["start"]) + r".*?" + re.escape(item["end"]),
+            re.DOTALL,
+        )
+        stripped = pattern.sub(item["start"] + item["end"], stripped)
+    return stripped
+
+
+def managed_region_only_edit(before: str, after: str, policy: dict[str, Any]) -> bool:
+    """True when the only byte change sits inside a managed region."""
+    if before == after:
+        return False
+    return _strip_managed_blocks(before, policy) == _strip_managed_blocks(after, policy)
+
+
+def classify_impact_files(
+    root: Path,
+    base: str | None,
+    changed: list[str],
+    policy: dict[str, Any],
+) -> list[str]:
+    """Drop managed-region-only edits from impact matching.
+
+    Those edits remain on the managed-region check. They do not match
+    ``authority_change`` or any other impact rule.
+    """
+    if not base:
+        return list(changed)
+    impact_files: list[str] = []
+    for rel in changed:
+        path = root / rel
+        if not path.is_file():
+            impact_files.append(rel)
+            continue
+        before = git(root, "show", f"{base}:{rel}")
+        if before.returncode != 0:
+            impact_files.append(rel)
+            continue
+        after = path.read_text(encoding="utf-8")
+        if managed_region_only_edit(before.stdout, after, policy):
+            continue
+        impact_files.append(rel)
+    return impact_files
+
+
 def impact_analysis(policy: dict[str, Any], changed: list[str]) -> dict[str, Any]:
     impacted: set[str] = set()
     matched: dict[str, list[str]] = {}
@@ -80,7 +128,7 @@ def semantic_harvest_required(
         if not matched.intersection(rules):
             continue
         spec = policy["surfaces"][surface]
-        if root is not None and not selector_paths(root, spec["selectors"]):
+        if root is not None and not selector_paths(root, resolve_selectors(root, spec)):
             conditional_absent = (
                 spec["requirement"] == "conditional" and spec["create_policy"] == "never"
             )

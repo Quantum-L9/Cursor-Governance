@@ -260,7 +260,7 @@ def test_bound_harvest_normalizes_into_same_obligations_and_closes(tmp_path: Pat
         json.dumps(bound_harvest(root, base), indent=2),
     )
     commit(root, "harvest evidence")
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     semantic = [
         row for row in receipt["obligations"] if row["surface"] in {"architecture", "invariants"}
     ]
@@ -284,11 +284,14 @@ def test_audit_fills_missing_readmes_outside_the_change_set(tmp_path: Path):
     base = commit(root, "base with two modules and no readmes")
     write(root / "skills/demo/x.py", "def x():\n    return 2\n")
     commit(root, "touch only one module")
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     assert (root / "skills/demo/README.md").is_file()
-    assert (root / "environment/agents/lifecycle/README.md").is_file()
-    assert "environment/agents/lifecycle/README.md" in receipt["changes"]["run_mutations"]
+    assert not (root / "environment/agents/lifecycle/README.md").exists()
+    assert "environment/agents/lifecycle/README.md" not in receipt["changes"]["run_mutations"]
     assert receipt["final_status"] == "PASS"
+    full = rd.audit_repository(root, changed_since=base, full_module_readmes=True)
+    assert (root / "environment/agents/lifecycle/README.md").is_file()
+    assert "environment/agents/lifecycle/README.md" in full["changes"]["run_mutations"]
 
 
 def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
@@ -301,7 +304,7 @@ def test_receipt_carries_the_readme_reconciliation_histogram(tmp_path: Path):
     base = commit(root, "base")
     write(root / "skills/demo/x.py", "def x():\n    return 2\n")
     commit(root, "code")
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     planned = receipt["capabilities"]["module_readmes"]["planned"]
     assert set(planned) == {
         "create",
@@ -342,7 +345,7 @@ def test_module_change_resolves_exact_generator_target_and_lifecycle(tmp_path: P
     base = commit(root, "base")
     write(root / "skills/demo/x.py", "def x():\n    return 2\n")
     commit(root, "code")
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     modules = [row for row in receipt["obligations"] if row["surface"] == "module_readmes"]
     paths = {row["target"]["path"] for row in modules}
     assert (root / "skills/README.md").is_file()
@@ -383,7 +386,7 @@ def test_default_llm_projection_is_created_and_closed(tmp_path: Path):
     base = commit(root, "base")
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
     commit(root)
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     llm = next(row for row in receipt["obligations"] if row["surface"] == "llm_txt")
     assert (root / "llm.txt").is_file()
     assert (root / "filetree.md").is_file()
@@ -588,13 +591,13 @@ def test_current_owned_targets_close_without_a_rewrite(tmp_path: Path):
     base = commit(root, "base")
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
     commit(root)
-    first = rd.audit_repository(root, changed_since=base)
+    first = rd.audit_repository(root, changed_since=base, write_llm=True)
     assert first["llm_txt"]["admission"] == "create"
     assert first["filetree"]["written"] is True
     commit(root, "projections")
     write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged again.\n")
     commit(root)
-    receipt = rd.audit_repository(root, changed_since=base)
+    receipt = rd.audit_repository(root, changed_since=base, write_llm=True)
     # The v3 LLM manifest carries every indexed source digest, so an
     # architecture byte change requires a projection refresh.
     assert receipt["llm_txt"]["admission"] == "refresh"
@@ -731,7 +734,11 @@ def test_dirty_managed_region_fails_closed(tmp_path: Path):
     root.mkdir()
     init(root)
     stack(root)
-    marker = "<!-- BEGIN L9 FORMATTER OWNERSHIP -->\nowned\n<!-- END L9 FORMATTER OWNERSHIP -->"
+    marker = (
+        "<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->\n"
+        "owned\n"
+        "<!-- END L9 FORMATTER OWNERSHIP -->"
+    )
     write(root / "README.md", (root / "README.md").read_text() + marker + "\n")
     commit(root)
     write(root / "README.md", (root / "README.md").read_text().replace("owned", "changed"))
@@ -764,3 +771,133 @@ def test_receipt_outside_root_reports_the_rejection_and_still_emits(
     assert not outside.exists()
     assert str(outside) in captured.err
     assert json.loads(captured.out)["schema"] == rd.RECEIPT_ID
+
+
+def test_donor_headings_are_diagnostic_until_the_adapter_adopts_them(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(root / "README.md", "# Repo\n\nNo donor headings.\n")
+    write(root / "CLAUDE.md", "# Load\n\nNo authority heading.\n")
+    write(root / "AGENTS.md", "# Agents\n")
+    commit(root, "base")
+    diagnostic = rd.audit_repository(root)
+    assert diagnostic["final_status"] != "FAIL" or not any(
+        item["code"] == "pointer_validation" for item in diagnostic["structural_failures"]
+    )
+    assert not any(
+        item["code"] == "pointer_validation" for item in diagnostic["structural_failures"]
+    )
+    pointer = next(
+        item for item in diagnostic["validators_executed"] if item["name"] == "pointer_headings"
+    )
+    assert pointer["status"] == "FAIL"
+    write(
+        root / "adapter.md",
+        "<!-- L9_DOCS\nadopt_donor_heading_template: true\n-->\n",
+    )
+    adopted = rd.audit_repository(root, adapter="adapter.md")
+    assert any(item["code"] == "pointer_validation" for item in adopted["structural_failures"])
+
+
+def test_formatter_only_edit_does_not_open_authority_or_writes(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    marker = (
+        "<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->\n"
+        "biome\n"
+        "<!-- END L9 FORMATTER OWNERSHIP -->\n"
+    )
+    write(root / "AGENTS.md", "# Agents\n\n" + marker)
+    write(root / "CLAUDE.md", (root / "CLAUDE.md").read_text(encoding="utf-8") + "\n" + marker)
+    base = commit(root, "base")
+    agents = (root / "AGENTS.md").read_text(encoding="utf-8").replace("biome", "ruff")
+    claude = (root / "CLAUDE.md").read_text(encoding="utf-8").replace("biome", "ruff")
+    write(root / "AGENTS.md", agents)
+    write(root / "CLAUDE.md", claude)
+    commit(root, "formatter rows")
+    receipt = rd.audit_repository(root, changed_since=base)
+    assert "authority_change" not in receipt["impact"]["matched_rules"]
+    assert not (root / "filetree.md").exists()
+    assert not (root / "llm.txt").exists()
+    assert receipt["llm_txt"]["written"] is False
+    assert not any(row["surface"] == "claude" for row in receipt["obligations"])
+
+
+def test_docs_architecture_is_assessed_when_root_index_is_absent(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root, architecture=False)
+    write(root / "docs/architecture.md", "# Architecture\n\nIndex.\n")
+    base = commit(root, "base")
+    write(root / ".github/workflows/ci.yml", "name: CI\n")
+    commit(root, "workflow")
+    receipt = rd.audit_repository(root, changed_since=base)
+    architecture = next(row for row in receipt["obligations"] if row["surface"] == "architecture")
+    assert architecture["target"]["path"] == "docs/architecture.md"
+    assert not (root / "ARCHITECTURE.md").exists()
+
+
+def test_write_llm_flag_gates_the_projection_write(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    stack(root)
+    base = commit(root, "base")
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nChanged.\n")
+    commit(root, "architecture")
+    quiet = rd.audit_repository(root, changed_since=base)
+    assert quiet["llm_txt"]["written"] is False
+    assert not (root / "llm.txt").exists()
+    written = rd.audit_repository(root, changed_since=base, write_llm=True)
+    assert written["llm_txt"]["written"] is True
+    assert (root / "llm.txt").is_file()
+
+
+def test_mutating_run_authors_missing_core_files(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    write(root / "README.md", "# Repo\n")
+    write(root / "pkg/mod.py", "VALUE = 1\n")
+    base = commit(root, "base")
+    dry = rd.audit_repository(
+        root,
+        changed_since=base,
+        write_filetree=False,
+        write_module_readmes=False,
+        write_llm=False,
+    )
+    for name in ("AGENTS.md", "CLAUDE.md", "INVARIANTS.md", "llm.txt"):
+        assert not (root / name).exists(), name
+    assert dry["changes"]["run_mutations"] == []
+
+    authored = rd.audit_repository(root, changed_since=base, write_llm=True)
+    agents = (root / "AGENTS.md").read_text(encoding="utf-8")
+    claude = (root / "CLAUDE.md").read_text(encoding="utf-8")
+    invariants = (root / "INVARIANTS.md").read_text(encoding="utf-8")
+    assert "operating instructions" in agents
+    assert "https://github.com/Quantum-L9/.github" in agents
+    assert "Do not copy that tree" in agents
+    assert "## Authority chain" in claude
+    assert "CANONICAL_LAW.md" in claude and "AGENTS.md" in claude
+    assert "doctrine" not in claude.lower() or "does not carry doctrine" in claude
+    assert "Enforcing sources" in invariants
+    assert "ORG_INVARIANTS.yaml" in invariants
+    assert "L9-ORG-" not in invariants
+    assert (root / "llm.txt").is_file()
+    assert "<!-- l9-llm-txt: generated-projection -->" in (root / "llm.txt").read_text(
+        encoding="utf-8"
+    )
+    rows = {row["surface"]: row for row in authored["obligations"]}
+    for surface in ("agents", "claude", "invariants", "llm_txt"):
+        assert rows[surface]["required_action"]["type"] == "CREATE"
+        assert rows[surface]["lifecycle"]["status"] == "CLOSED"
+    handwritten = "# Keep the operating file\n"
+    write(root / "AGENTS.md", handwritten)
+    again = rd.audit_repository(root, changed_since=base, write_llm=True)
+    assert (root / "AGENTS.md").read_text(encoding="utf-8") == handwritten
+    assert again["changes"]["run_mutations"].count("AGENTS.md") == 0

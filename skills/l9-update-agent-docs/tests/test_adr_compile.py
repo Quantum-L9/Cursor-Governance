@@ -226,7 +226,7 @@ def test_repo_docs_receipt_carries_catalog_and_handoffs_only_active_defects(tmp_
     write(adr, valid_adr(1))
     commit(root, "valid adr")
 
-    passing = audit_repository(root, changed_since=base)
+    passing = audit_repository(root, changed_since=base, write_llm=True)
 
     assert passing["final_status"] == "PASS"
     assert passing["adr_catalog"]["status"] == "PASS"

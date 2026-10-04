@@ -8,8 +8,8 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 4.0.0
-  updated: 2026-09-23
+  version: 4.2.0
+  updated: 2026-10-04
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
 
@@ -269,7 +269,7 @@ If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a 
 | `l9-update-agent-docs` / owner-native root index | Surgical pointer/index refresh permitted by topology. |
 | operational contract / `repository-native` execution owner | Apply only the bounded repair justified by assessment, subject to the resolved mutation guard and repository-native validation. |
 | `l9-update-agent-docs` / `filetree.md` | Required. Create if absent. Refresh only when the live file already carries `<!-- l9-filetree: generated-from-tree -->`. An unowned `filetree.md` is preserved; diagnosis still walks the live tree. |
-| `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. Do not limit the reconciliation to the current change set; the optional `changed=` filter is manual CLI scope only and suppresses retirement, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=3 kind=… -->`, with older markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. The receipt carries the evidence-coverage profile for every reconciled README. Optional sequencer: `readme-pipeline-v1`. |
+| `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. A default run reconciles only the module targets the classified delta opened. `--full-module-readmes` reconciles the authorized corpus and is the run that may retire a generator-owned README, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=3 kind=… -->`, with older markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. The receipt carries the evidence-coverage profile for every reconciled README. Optional sequencer: `readme-pipeline-v1`. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
 | `llm.txt` projection | Default enabled. Create if absent. Refresh only when the live file already carries `<!-- l9-llm-txt: generated-projection -->`. If `llm.txt` is missing and `llms.txt` exists, rename (preserve bytes). If both exist, delete leftover `llms.txt`. Never overwrite an unowned `llm.txt`. `--write-llm` does not authorize that overwrite. Projection, never authority. |
 
@@ -279,15 +279,15 @@ For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protec
 
 ### 7. Root-document write rules
 
-- `CLAUDE.md`: load pointer only. Create only when topology permits `create_if_absent`. No doctrine, CI table, or registry dump.
-- `AGENTS.md`: surgical additive operating-instruction update only. Never fold to a pointer.
+- `CLAUDE.md`: load pointer only. Create when absent. No doctrine, CI table, or registry dump.
+- `AGENTS.md`: create a minimal operating file when absent. An existing file stays surgical and additive. Never fold an existing file to a pointer. Never overwrite an unowned file.
 - root `README.md`: pointer/index correction only. Never generate from the module README generator.
 - Root agent documents: validate only explicit local Markdown links, local heading anchors, and the optional `L9_AGENT_CONTRACT` YAML block. The block may name Make targets, repository files, value-free environment variable names, and authority files. Never infer requirements from prose or execute a named command.
 - Root Python fences: syntax-check only `python` fences in files named by `references/pointer-heading-map.yaml`, using `scripts/doc_policy.py::python_fence_validate_root`. Parse without executing snippets; do not scan arbitrary Markdown or duplicate the repository security scanner.
 - `ARCHITECTURE.md`: surgical architecture-index refresh only when present; never create when topology says `never`. Validate explicit local links and the optional `L9_ARCHITECTURE_COMPONENTS` YAML manifest, whose component paths must exist. Emit typed architecture-delta candidates from changed Make, Python, and workflow facts for Harvest qualification; never author architectural prose automatically.
 - `INVARIANTS.md`: invariant/enforcement index. Create only when topology permits. Point to enforcing sources; do not copy organization-law bodies.
 - `filetree.md`: required inventory. Create if absent; refresh only a marker-owned generated file. Projection, never authority.
-- `llm.txt`: default-enabled LLM discovery manifest. Create if absent; refresh only a marker-owned generated file. Its `L9_DOC_MANIFEST` block binds every listed document path, authority class, owner, availability, source SHA-256, and the immutable consumer-snapshot digest. Published URLs are emitted only when a configured base URL and an explicit publication marker coexist; otherwise paths remain repository-local. Retire leftover `llms.txt` once `llm.txt` exists (rename first when the canonical name is still missing). Do not treat as doctrine.
+- `llm.txt`: default-enabled LLM discovery manifest. `--write-llm` creates it when absent, including when the classified delta did not open the surface. Refresh only a marker-owned generated file. Its `L9_DOC_MANIFEST` block binds every listed document path, authority class, owner, availability, source SHA-256, and the immutable consumer-snapshot digest. Published URLs are emitted only when a configured base URL and an explicit publication marker coexist; otherwise paths remain repository-local. Retire leftover `llms.txt` once `llm.txt` exists (rename first when the canonical name is still missing). Do not treat as doctrine.
 - Owned-write rule for every skill-handled file: missing → create when policy allows; generator marker present and stale → refresh; any other existing file → preserve. Do not infer overwrite from staleness, validation noise, or `--write-llm`.
 - Each admission is receipt evidence, not silence: `create` / `refresh` satisfy the obligation through the run mutation; `unchanged` (render byte-identical to the target) closes it with `target_freshness: PASS`; `preserve` (unowned target left in place) is the terminal `PRESERVED` lifecycle with the admission recorded as evidence. A `skipped` admission (no-write mode, or a blocked write) keeps the obligation open. A filesystem error during retirement or an owned write is a `BLOCKED` receipt state and structural failure, never a crash.
 - `CANONICAL_LAW.md`: never mutate through this skill.
@@ -295,6 +295,20 @@ For `Makefile` and `pyproject.toml`, always resolve `ops/config/root-file-protec
 Required pointer headings remain governed by `references/pointer-heading-map.yaml` and `c-required-section-validation`.
 
 If ownership or source-of-truth is in doubt, read `kernels/Recursive Alignment.md`. If a confirmed defect needs repair, read `kernels/Validate & Repair.md`. Cite those kernels by path; do not wrap or compress them into this skill.
+
+### Admission
+
+Donor headings in `references/pointer-heading-map.yaml` are diagnostics. They become a receipt-level structural failure only when an adapter directive sets `adopt_donor_heading_template: true`. `CANONICAL_LAW.md` stays external.
+
+Classify the delta before impact and closure. The managed-region token is the marker the generator writes: `<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->`. A managed-region-only edit is a managed-region failure and does not match `authority_change`. `target_freshness` passes from an owned-write admission (`unchanged`, `refresh`, `create`, `preserve`) or an admitted Harvest resolution. Path membership in the diff is not that admission.
+
+When root `ARCHITECTURE.md` is absent, assess `docs/architecture.md`. `create_policy` stays `never`.
+
+A default run mutates module READMEs only for `CREATE` or `REFRESH` obligations opened by that classified delta. Full-corpus README reconciliation is `--full-module-readmes`. `--write-llm` creates absent `llm.txt` even when the delta did not open that surface, and still refuses an unowned file.
+
+A mutating run (filetree writes enabled, module README writes enabled, or `--write-llm`) compiles absent `AGENTS.md`, `CLAUDE.md`, and `INVARIANTS.md` from `scripts/doc_root.py`. A dry run (`--no-write-filetree --no-write-module-readmes`, without `--write-llm`) writes none of them. An existing file without the root-doc marker is preserved.
+
+Organization semantic foundation and community health are bound to [Quantum-L9/.github](https://github.com/Quantum-L9/.github). Cite that repository. Do not copy its tree into the consumer.
 
 ### 8. Validate owner action and close obligations
 
