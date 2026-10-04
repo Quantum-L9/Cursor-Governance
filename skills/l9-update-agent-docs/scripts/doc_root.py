@@ -143,8 +143,15 @@ _COMPILERS = (
 def compile_missing_root_docs(
     root: Path,
     policy: dict[str, Any],
+    *,
+    refresh_owned: bool = False,
 ) -> tuple[list[str], dict[str, str]]:
-    """Create absent core files. Return mutation paths and create admissions."""
+    """Create absent core files. Optionally refresh files this skill already marked.
+
+    An existing file without ``ROOT_MARKER`` is left untouched. That keeps a
+    repository's own operating text in place. ``refresh_owned`` updates a
+    file this compiler wrote when its evidence has changed.
+    """
     mutations: list[str] = []
     admissions: dict[str, str] = {}
     surfaces = policy.get("surfaces", {})
@@ -154,9 +161,16 @@ def compile_missing_root_docs(
             continue
         path = root / filename
         if path.is_file():
-            continue
+            if not refresh_owned:
+                continue
+            try:
+                existing = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if ROOT_MARKER not in existing:
+                continue
         _wrote, admission = apply_owned_write(path, render(root, policy), ROOT_MARKER)
-        if admission == "create":
+        if admission in {"create", "refresh"}:
             mutations.append(filename)
             admissions[filename] = admission
     return mutations, admissions

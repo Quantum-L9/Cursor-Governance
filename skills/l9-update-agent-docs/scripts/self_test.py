@@ -54,6 +54,7 @@ def main() -> int:
         "--write-llm",
         "--full-module-readmes",
         "doc_root.py",
+        "--full",
     ]
     for token in required_tokens:
         if token not in text:

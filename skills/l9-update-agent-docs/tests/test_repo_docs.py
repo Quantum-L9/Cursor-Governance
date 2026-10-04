@@ -901,3 +901,41 @@ def test_mutating_run_authors_missing_core_files(tmp_path: Path):
     again = rd.audit_repository(root, changed_since=base, write_llm=True)
     assert (root / "AGENTS.md").read_text(encoding="utf-8") == handwritten
     assert again["changes"]["run_mutations"].count("AGENTS.md") == 0
+
+
+def test_full_recompiles_every_generator_and_stale_module_readme(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    init(root)
+    module_pipeline(root)
+    write(root / "README.md", "# Product index\n")
+    write(root / "skills/demo/x.py", "def x():\n    return 1\n")
+    write(root / "skills/demo/README.md", "# Old\n\nStale purpose.\n")
+    base = commit(root, "stale readme")
+    held = rd.audit_repository(
+        root,
+        changed_since=base,
+        write_filetree=False,
+        write_module_readmes=False,
+        write_llm=False,
+    )
+    assert held["changes"]["run_mutations"] == []
+    stale = (root / "skills/demo/README.md").read_text(encoding="utf-8")
+    assert stale == "# Old\n\nStale purpose.\n"
+    assert (root / "README.md").read_text(encoding="utf-8") == "# Product index\n"
+
+    full = rd.audit_repository(root, changed_since=base, full=True)
+    demo = (root / "skills/demo/README.md").read_text(encoding="utf-8")
+    assert "l9-readme: generated-by=l9-update-agent-docs" in demo
+    assert "Stale purpose" not in demo
+    assert (root / "README.md").read_text(encoding="utf-8") == "# Product index\n"
+    for name in ("AGENTS.md", "CLAUDE.md", "INVARIANTS.md", "llm.txt", "filetree.md"):
+        assert (root / name).is_file(), name
+    assert "https://github.com/Quantum-L9/.github" in (root / "AGENTS.md").read_text(
+        encoding="utf-8"
+    )
+    assert "def x" in demo or "x" in demo
+    rows = {row["surface"]: row for row in full["obligations"]}
+    for surface in ("agents", "claude", "invariants", "llm_txt", "filetree"):
+        assert rows[surface]["lifecycle"]["status"] == "CLOSED"
+    assert full["final_status"] == "PASS"

@@ -396,7 +396,13 @@ def audit_repository(
     write_module_readmes: bool = True,
     write_filetree: bool = True,
     full_module_readmes: bool = False,
+    full: bool = False,
 ) -> dict[str, Any]:
+    if full:
+        write_llm = True
+        write_module_readmes = True
+        write_filetree = True
+        full_module_readmes = True
     root = root.resolve()
     structural: list[dict[str, str]] = []
     try:
@@ -442,7 +448,9 @@ def audit_repository(
     root_mutations: list[str] = []
     root_admissions: dict[str, str] = {}
     if writes_authorized:
-        root_mutations, root_admissions = compile_missing_root_docs(root, policy)
+        root_mutations, root_admissions = compile_missing_root_docs(
+            root, policy, refresh_owned=full
+        )
     pointer = pointer_validate_root(root)
     python_fences = python_fence_validate_root(root)
     if pointer["status"] == "FAIL" and donor_heading_template_adopted(directives):
@@ -481,9 +489,10 @@ def audit_repository(
     path_admissions: dict[str, str] = dict(root_admissions)
     try:
         filetree_opened = FILETREE_SURFACE_ID in set(impact.get("impacted_surfaces", []))
-        filetree, inventory, run_mutations = build_filetree_state(
-            root, write=write_filetree and filetree_opened
+        filetree, inventory, filetree_mutations = build_filetree_state(
+            root, write=write_filetree and (filetree_opened or full)
         )
+        run_mutations.extend(filetree_mutations)
     except ValueError as exc:
         # The render is invalid: a defect in this skill, so FAIL.
         filetree = _failed_filetree_state("FAIL", str(exc))
@@ -507,6 +516,7 @@ def audit_repository(
                 root,
                 inventory=inventory,
                 changed=None if full_module_readmes else module_changes,
+                force=full,
             )
             module_readme_plan = readme_plan.counts()
             module_readme_quality = list(readme_plan.quality)
@@ -553,7 +563,7 @@ def audit_repository(
         llm_base_url_value,
         write_llm,
         snapshot,
-        active=llm_opened or (write_llm and llm_missing),
+        active=full or llm_opened or (write_llm and llm_missing),
     )
     run_mutations.extend(llm_mutations)
     if write_filetree and PROJECTION_FILENAME in run_mutations and filetree["status"] not in {
@@ -593,7 +603,7 @@ def audit_repository(
         ("CLAUDE.md", "claude"),
         ("INVARIANTS.md", "invariants"),
     ):
-        if root_admissions.get(filename) == "create":
+        if root_admissions.get(filename) in {"create", "refresh"}:
             generated_surfaces.add(surface)
     impact["impacted_surfaces"] = sorted(generated_surfaces)
     impact_internal["impacted_surfaces"] = sorted(generated_surfaces)
@@ -764,6 +774,17 @@ def main() -> int:
         help="Compile module README obligations without writing README files.",
     )
     parser.add_argument(
+        "--full",
+        action="store_true",
+        help=(
+            "Generate every file this compiler can write for the repository: "
+            "AGENTS.md, CLAUDE.md, and INVARIANTS.md when absent or already "
+            "marked by this skill; filetree.md; llm.txt; and the full module "
+            "README corpus, refreshing every authorized README to the current "
+            "marker. Root README.md is not a module README and is left as written."
+        ),
+    )
+    parser.add_argument(
         "--full-module-readmes",
         action="store_true",
         help="Reconcile the whole README inventory. Default writes only opened obligations.",
@@ -790,9 +811,10 @@ def main() -> int:
             harvest_path=args.harvest,
             source_head_sha=args.source_head_sha,
             tested_revision_sha=args.tested_revision_sha,
-            write_module_readmes=not args.no_write_module_readmes,
-            write_filetree=not args.no_write_filetree,
-            full_module_readmes=args.full_module_readmes,
+            write_module_readmes=args.full or not args.no_write_module_readmes,
+            write_filetree=args.full or not args.no_write_filetree,
+            full_module_readmes=args.full or args.full_module_readmes,
+            full=args.full,
         )
     except RuntimeError as exc:
         print(json.dumps({"schema": RECEIPT_ID, "final_status": "FAIL", "error": str(exc)}))
