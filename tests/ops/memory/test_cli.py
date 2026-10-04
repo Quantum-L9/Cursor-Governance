@@ -88,9 +88,7 @@ def test_write_maps_legacy_kinds_and_stamps_the_agent_tag(
     assert code == cli.EXIT_OK
     argv, cwd, _ = fake_cli.calls[-1]
     assert argv[argv.index("--kind") + 1] == "procedural"
-    assert "error" not in cli.KIND_ALIASES, (
-        "error aliased a class it could not be distinguished from"
-    )
+    assert not hasattr(cli, "KIND_ALIASES")
     assert "agent:cursor" in argv
     assert argv[argv.index("--group-id") + 1] == "cursor-governance"
     assert cwd == str(ROOT), "the CLI runs at the repository root"
@@ -128,33 +126,16 @@ def test_pickup_context_writes_an_episodic_record_tagged_as_a_continuation(
 
 
 def test_every_write_alias_reaches_a_class_the_bound_release_accepts(bound) -> None:
-    """KIND_ALIASES must land on memory's vocabulary in ONE hop.
+    """``--kind`` is the bound vocabulary, resolved once, with no local table."""
 
-    This assertion used to accept ``_LEGACY_KIND_MAP`` keys as targets too, and
-    that permissiveness is what let two defects sit in the table:
-    ``error`` -> ``lesson`` and ``session_summary`` -> ``session_summary``.
-    Neither is a MemoryClass. They resolved only because resolution is single
-    pass (``KIND_ALIASES.get(kind, kind)``) and the *package* carried a second
-    table that finished the job — so ``error`` and ``lesson`` both arrived at
-    ``procedural`` and became indistinguishable. Targets are canonical only.
-    """
+    from l9_graphite_memory.contracts.class_vocabulary import (  # noqa: PLC0415
+        resolve_memory_class,
+    )
 
-    from l9_graphite_memory.contracts import MemoryClass  # noqa: PLC0415
-
-    canonical = {item.value for item in MemoryClass}
-    for kind, target in cli.KIND_ALIASES.items():
-        assert target in canonical, (
-            f"--kind {kind} maps to {target!r}, which is not a MemoryClass. "
-            f"Single-pass resolution sends it downstream verbatim; do not rely "
-            f"on a second table to finish it. Canonical: {sorted(canonical)}"
-        )
-        assert target not in cli.KIND_ALIASES, (
-            f"--kind {kind} points at {target!r}, which is itself an alias."
-        )
-        assert kind not in canonical, (
-            f"{kind!r} is a canonical MemoryClass; aliasing it makes "
-            f"--kind {kind} mean something other than itself."
-        )
+    assert not hasattr(cli, "KIND_ALIASES")
+    for kind in ("lesson", "note", "pickup_context", "session_summary", "decision"):
+        assert cli.resolve_write_kind(kind) == resolve_memory_class(kind).value
+    assert cli.resolve_write_kind("lesson") == "procedural"
 
 
 def test_search_with_no_hits_completes(monkeypatch, bound, fake_cli: FakeMemoryCli, capsys) -> None:

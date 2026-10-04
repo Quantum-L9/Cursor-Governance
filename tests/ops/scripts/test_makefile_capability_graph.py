@@ -12,9 +12,13 @@ from __future__ import annotations
 import collections
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "ops" / "scripts"))
+from make_database import make_database  # noqa: E402
+
 MAKEFILE = ROOT / "Makefile"
 MAKE_DIR = ROOT / "ops" / "make"
 
@@ -165,13 +169,7 @@ def test_registered_targets_have_parseable_make_database_entries() -> None:
     targets = _assignment_targets(MAKEFILE)
     for fragment in (ROOT / path for path in _make_fragments()):
         targets.extend(_assignment_targets(fragment))
-    result = subprocess.run(
-        ["make", "--no-print-directory", "-rRpn"],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    result = make_database(ROOT)
     assert result.returncode == 0, result.stderr
     for target in targets:
         assert re.search(rf"(?m)^{re.escape(target)}:", result.stdout), target

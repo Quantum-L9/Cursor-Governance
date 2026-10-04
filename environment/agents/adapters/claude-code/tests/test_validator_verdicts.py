@@ -86,13 +86,14 @@ class ValidatorVerdictTests(unittest.TestCase):
         # The recipe lives in whichever ops/make fragment owns it, so read the
         # composed Make database rather than one file's bytes. -n with the
         # default goal prints the database without running any recipe.
-        result = subprocess.run(
-            ["make", "--no-print-directory", "-rRpn"],
-            cwd=REPO,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        import sys
+
+        scripts = str(REPO / "ops" / "scripts")
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        from make_database import make_database
+
+        result = make_database(REPO)
         self.assertEqual(result.returncode, 0, result.stderr)
         rule = re.search(r"(?ms)^claude-env:.*?(?=\n\n|\Z)", result.stdout)
         self.assertIsNotNone(rule, "claude-env is not a composed Make capability")

@@ -347,7 +347,11 @@ def locate_clone_for_namespace(
     try:
         start = raw_start.resolve()
     except _RESOLVE_ERRORS:
-        start = raw_start
+        # An unreadable start is "no clone located". Searching Path.home()
+        # from here finds whatever checkout the host happens to have.
+        return None
+    if not start.is_dir():
+        return None
     try:
         if slug in repository_matches(registry, start):
             return start

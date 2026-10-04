@@ -64,6 +64,7 @@ CASES: list[tuple[str, Any]] = [
     ("alias class", _ok(memory_class="lesson")),
     ("procedural class", _ok(memory_class="procedural")),
     ("preference class", _ok(memory_class="preference")),
+    ("identity class", _ok(memory_class="identity")),
     ("no agent tag", _ok(tags=["hooks", "memory"])),
     ("two agent tags", _ok(tags=["agent:cursor", "agent:claude-code-desktop"])),
     ("only agent tag", _ok(tags=["agent:claude-code-desktop"])),
@@ -90,7 +91,13 @@ def test_the_schema_is_valid_draft_2020_12() -> None:
 def test_schema_fields_and_limits_match_the_code() -> None:
     assert set(SCHEMA["properties"]) == set(aw.KEYS)
     assert SCHEMA["required"] == list(aw.REQUIRED)
-    assert SCHEMA["properties"]["memory_class"]["enum"] == list(aw.CLASSES)
+    names = list(aw.writable_class_names())
+    assert SCHEMA["properties"]["memory_class"]["enum"] == names
+    contract = (
+        Path(__file__).resolve().parents[3] / "ops/memory/AGENT_WRITE_CONTRACT.md"
+    ).read_text(encoding="utf-8")
+    assert all(f"`{name}`" in contract for name in names)
+    assert "`identity`" in contract
     content = SCHEMA["properties"]["content"]
     assert (content["minLength"], content["maxLength"]) == (aw.MIN_CONTENT, aw.MAX_CONTENT)
     assert SCHEMA["properties"]["namespace"]["not"]["enum"] == list(aw.FORBIDDEN_NAMESPACES)

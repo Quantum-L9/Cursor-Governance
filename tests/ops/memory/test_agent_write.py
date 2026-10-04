@@ -23,7 +23,7 @@ def _build(**extra: object) -> dict:
 
 def test_build_maps_aliases_collapses_whitespace_and_stamps_agent_and_key() -> None:
     payload = _build()
-    assert payload["memory_class"] == "insight"
+    assert payload["memory_class"] == "procedural"
     assert payload["content"] == "Stop hooks gate on usable_receipt, not fresh_receipt"
     assert payload["tags"] == ["agent:claude-code-desktop", "hooks"]
     assert payload["idempotency_key"].startswith("agent:cursor-governance:")
@@ -45,8 +45,7 @@ def test_the_tool_follows_the_task_signature() -> None:
     ("extra", "message"),
     [
         ({"namespace": "default"}, "never a write target"),
-        ({"memory_class": "procedural"}, "not on the memory_write_agent allowlist"),
-        ({"memory_class": "meta"}, "hook lane"),
+        ({"memory_class": "identity"}, "does not accept memory_class"),
         ({"tags": []}, "at least one topic"),
         ({"content": "WORK: fixed things and more things"}, "preamble"),
     ],
@@ -125,6 +124,7 @@ def test_the_module_does_no_memory_io() -> None:
         "pathlib",
         "typing",
         "ops.memory.agent_identity",  # pure resolver, no I/O
+        "l9_graphite_memory.contracts.class_vocabulary",  # class table, not a client
     }, sorted(imported)
 
 

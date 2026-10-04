@@ -42,21 +42,34 @@ SCHEMA_ID = "l9.agent_memory_write.v1"
 WRITE_TOOL = "mcp__l9-graphite-memory__memory_write_agent"
 GOVERNED_TOOL = "mcp__l9-graphite-memory__memory_write_governed"
 
-#: The agent-lane classes this contract admits, in canonical (not alias) form.
-#: ``write_governed`` has no alias table in the 2.4.0 package, so a canonical
-#: class is the only form valid on both tools. ``preference``/``identity`` need
-#: a consent object memory admission checks; ``meta`` is the continuation
-#: record's class (hook lane); ``procedural`` is not on the write_agent allowlist.
-CLASSES = ("decision", "insight", "observation", "constraint", "episodic", "semantic")
-#: Legacy words the builder maps; the payload itself always carries the class.
-ALIASES = {"lesson": "insight", "note": "observation", "rule": "decision"}
-REFUSED_CLASSES = {
-    "procedural": "not on the memory_write_agent allowlist; use insight",
-    "preference": "needs a consent object memory admission checks; not an agent-lane fact",
-    "identity": "needs a consent object memory admission checks; not an agent-lane fact",
-    "meta": "the continuation record's class (hook lane); use episodic",
-    "error": "not a memory class; use insight",
-}
+
+def _vocabulary() -> tuple[Any, Any, Any]:
+    """The bound package's class table. A missing package fails closed.
+
+    This module keeps no ``CLASSES`` / ``ALIASES`` / ``REFUSED_CLASSES``.
+    ``lesson`` resolves to ``procedural`` because that is what
+    ``l9-graphite-memory`` says, and the agent lane accepts every class
+    except ``identity``.
+    """
+    try:
+        from l9_graphite_memory.contracts.class_vocabulary import (  # noqa: PLC0415
+            AGENT_WRITABLE_CLASSES,
+            agent_writable_class,
+            resolve_memory_class,
+        )
+    except ImportError as exc:
+        raise AgentWriteError(
+            "bound l9-graphite-memory class vocabulary is not importable; "
+            "refusing a private class table"
+        ) from exc
+    return resolve_memory_class, agent_writable_class, AGENT_WRITABLE_CLASSES
+
+
+def writable_class_names() -> tuple[str, ...]:
+    """Canonical agent-lane classes, sorted, from the bound package."""
+    _, _, allowed = _vocabulary()
+    return tuple(sorted(member.value for member in allowed))
+
 
 #: Never write targets: shared, default or ambiguous namespaces.
 FORBIDDEN_NAMESPACES = ("main", "master", "default", "test", "l9-workspace")
@@ -160,13 +173,22 @@ def validate(payload: Any) -> dict[str, Any]:
         raise AgentWriteError("content looks like it carries a credential; never write secrets")
 
     memory_class = payload["memory_class"]
-    if memory_class not in CLASSES:
-        hint = REFUSED_CLASSES.get(str(memory_class)) or (
-            f"alias of {ALIASES[memory_class]}; write the canonical class"
-            if memory_class in ALIASES
-            else f"one of {', '.join(CLASSES)}"
+    resolve, writable, _allowed = _vocabulary()
+    if not isinstance(memory_class, str) or not memory_class:
+        raise AgentWriteError("memory_class must be a canonical agent-lane class")
+    try:
+        resolved = resolve(memory_class)
+    except ValueError as exc:
+        raise AgentWriteError(str(exc)) from exc
+    if memory_class != resolved.value:
+        raise AgentWriteError(
+            f"memory_class {memory_class!r} is an alias of {resolved.value}; "
+            "write the canonical class"
         )
-        raise AgentWriteError(f"memory_class {memory_class!r} refused: {hint}")
+    try:
+        writable(memory_class)
+    except ValueError as exc:
+        raise AgentWriteError(str(exc)) from exc
 
     tags = payload["tags"]
     if not isinstance(tags, list) or not MIN_TAGS <= len(tags) <= MAX_TAGS:
@@ -237,7 +259,11 @@ def build(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Build a contract-conforming payload (aliases mapped, agent tag and key added)."""
-    memory_class = ALIASES.get(memory_class, memory_class)
+    _, writable, _allowed = _vocabulary()
+    try:
+        memory_class = writable(memory_class).value
+    except ValueError as exc:
+        raise AgentWriteError(str(exc)) from exc
     content = " ".join(str(content).split())
     all_tags = [f"agent:{agent_id}", *[t for t in tags if t != f"agent:{agent_id}"]]
     payload: dict[str, Any] = {
@@ -272,7 +298,12 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     b = sub.add_parser("build", help="build a conforming payload and print tool + arguments")
     b.add_argument("--namespace", required=True, help="from `ops.memory.cli resolve`")
-    b.add_argument("--class", dest="memory_class", required=True, help=", ".join(CLASSES))
+    b.add_argument(
+        "--class",
+        dest="memory_class",
+        required=True,
+        help="canonical class, or a spelling the bound vocabulary resolves",
+    )
     b.add_argument("--content", required=True, help="one atomic fact, one line")
     b.add_argument("--tag", action="append", default=[], help="topic tag (repeatable)")
     b.add_argument(
@@ -324,8 +355,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 __all__ = [
-    "ALIASES",
-    "CLASSES",
     "FORBIDDEN_NAMESPACES",
     "GOVERNED_TOOL",
     "KEYS",
@@ -338,6 +367,7 @@ __all__ = [
     "main",
     "tool_for",
     "validate",
+    "writable_class_names",
 ]
 
 if __name__ == "__main__":

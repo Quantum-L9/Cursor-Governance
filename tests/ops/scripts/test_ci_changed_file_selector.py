@@ -22,6 +22,7 @@ from select_pr_pytest_paths import (  # noqa: E402
     REGISTRY_PATH,
     infer_test_path,
     select_pr_pytest_paths,
+    tests_naming_path as naming_path,
 )
 
 WORKFLOW = ROOT / ".github" / "workflows" / "l9-lint-test.yml"
@@ -103,6 +104,23 @@ def test_changed_or_new_skill_self_test_selects_skill_contracts() -> None:
     ):
         selected = select_pr_pytest_paths(changed)
         assert _suite_intersects(by_id["skill-contracts"], selected, changed, selector)
+
+
+def test_directory_path_does_not_select_basename_only_mentions(tmp_path: Path) -> None:
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "test_full.py").write_text('assert "ops/scripts/run_pr_gate.sh"\n', encoding="utf-8")
+    (tests / "test_base.py").write_text('assert "run_pr_gate.sh"\n', encoding="utf-8")
+    selected = naming_path("ops/scripts/run_pr_gate.sh", repo_root=tmp_path)
+    assert selected == ["tests/test_full.py"]
+
+
+def test_selected_skill_test_does_not_run_skill_self_tests() -> None:
+    suites = validate_registry(_load_json(REGISTRY_PATH))
+    by_id = {suite["id"]: suite for suite in suites}
+    changed = ["ops/scripts/run_pr_gate.sh"]
+    selected = ["skills/l9-update-agent-docs/tests/test_consumer_contracts.py"]
+    assert not _suite_intersects(by_id["skill-contracts"], selected, changed, selector)
 
 
 def test_markdown_only_file_list_is_empty_mapped_set() -> None:

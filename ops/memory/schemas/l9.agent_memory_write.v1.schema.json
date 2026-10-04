@@ -51,14 +51,17 @@
     },
     "memory_class": {
       "enum": [
-        "decision",
-        "insight",
-        "observation",
         "constraint",
+        "decision",
         "episodic",
+        "insight",
+        "meta",
+        "observation",
+        "preference",
+        "procedural",
         "semantic"
       ],
-      "description": "Canonical agent-lane class. Legacy words are mapped by the builder (lesson->insight, note->observation, rule->decision) and never appear in the payload, because memory_write_governed has no alias table. procedural, preference, identity and meta are not agent-lane facts."
+      "description": "Canonical agent-lane class from the bound l9-graphite-memory vocabulary (every MemoryClass except identity). The builder resolves spellings (lesson->procedural, note->observation) and the payload carries the canonical class."
     },
     "tags": {
       "type": "array",
