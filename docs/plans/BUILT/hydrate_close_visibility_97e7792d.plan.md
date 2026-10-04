@@ -188,7 +188,7 @@ flowchart TD
 - `docs/decisions/ADR-0028-session-hydrate-close-visibility.md` — create (memory ADR series).
 - `docs/MEMORY_PIPELINE_MAP.md` — update (open latch, always receipt, hook fallback write, `/end-session` write-primary, cite ADR-0028).
 - `AGENTS.md` — update, append-only named fragment. No `ALLOW-ROOT-DELETION`.
-- `docs/decisions/ADR-0006-single-memory-front-door-graphiti.md` / `ADR-0007-cloud-graphiti-https-reachability.md` — optional one-line Related pointer only; do not rewrite Decision bodies.
+- `docs/decisions/ADR-0006-single-memory-front-door-graphiti.md` / `ADR-0039-cloud-graphiti-https-reachability.md` — optional one-line Related pointer only; do not rewrite Decision bodies.
 - `CANONICAL_LAW.md` — N/A (map + ADR + skills own this loop).
 - `CLAUDE.md` / `README.md` — N/A unless a pointer sentence is already stale.
 - Generated formatter block — do not hand-edit.

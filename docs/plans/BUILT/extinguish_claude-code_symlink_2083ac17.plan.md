@@ -217,7 +217,7 @@ Second command MUST return empty (all Path joins retargeted).
 
 1. `git rm environment/claude-code`
 2. Rewrite [`WIP/claude code environment/SYMLINK_EXTINGUISHMENT.md`](WIP/claude%20code%20environment/SYMLINK_EXTINGUISHMENT.md) to past tense (“extinguished &lt;date&gt;; pack sole home is adapters/claude-code”) or delete the note.
-3. Update [`ADAPTER_CONTRACT.md`](environment/agents/adapters/ADAPTER_CONTRACT.md) and [`docs/decisions/ADR-0007-cloud-graphiti-https-reachability.md`](docs/decisions/ADR-0007-cloud-graphiti-https-reachability.md) extinguishment sentences to past tense.
+3. Update [`ADAPTER_CONTRACT.md`](environment/agents/adapters/ADAPTER_CONTRACT.md) and [`docs/decisions/ADR-0039-cloud-graphiti-https-reachability.md`](docs/decisions/ADR-0039-cloud-graphiti-https-reachability.md) extinguishment sentences to past tense.
 
 ---
 

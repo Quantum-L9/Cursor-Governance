@@ -74,6 +74,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: adr-identity
+        name: ADR numbers are unique and the decisions index matches
+        entry: python3 ops/scripts/validate_adr_identity.py
+        language: system
+        pass_filenames: false
+
       - id: max-velocity
         name: Committed execution profiles stay at maximum_velocity
         entry: python3 ops/scripts/validate_max_velocity.py

@@ -105,7 +105,7 @@ def test_gmp_phase0_no_longer_cites_episode_names(residue) -> None:
         "docs/decisions/ADR-0004-hook-memory-client-contract-pin.md",
         "docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md",
         "docs/decisions/ADR-0006-single-memory-front-door-graphiti.md",
-        "docs/decisions/ADR-0007-cloud-graphiti-https-reachability.md",
+        "docs/decisions/ADR-0039-cloud-graphiti-https-reachability.md",
         "docs/decisions/ADR-0028-session-hydrate-close-visibility.md",
         "docs/decisions/ADR-0029-surface-hook-divergence.md",
         "docs/decisions/ADR-0030-memory-control-plane-single-front-door.md",

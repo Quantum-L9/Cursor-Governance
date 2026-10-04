@@ -552,7 +552,7 @@ def test_manual_rule_semantics_are_not_used_for_resolution(repo: Path) -> None:
 
 
 def test_census_digest_ignores_volatile_provenance() -> None:
-    """ADR-0011: the census digest is semantic content, not run provenance.
+    """ADR-0044: the census digest is semantic content, not run provenance.
 
     ``workspace_dirty`` flips as soon as the census writes itself, so folding it
     into ``integrity_digest`` made two consecutive runs over an unchanged rule

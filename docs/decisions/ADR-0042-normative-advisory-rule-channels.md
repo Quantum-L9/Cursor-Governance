@@ -1,4 +1,4 @@
-# ADR-0009: Normative and advisory content are separate channels in rule projections
+# ADR-0042: Normative and advisory content are separate channels in rule projections
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -112,7 +112,7 @@ Rules also become easier to read because agents can immediately distinguish what
 
 ## Related
 
-- ADR-0007
-- ADR-0008
-- ADR-0011
+- ADR-0040
+- ADR-0041
+- ADR-0044
 - `canonical.schema.governance_contract.v1`

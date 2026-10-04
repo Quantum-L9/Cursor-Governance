@@ -1,4 +1,4 @@
-# ADR-0023: Multi-agent main-bound execution — Git isolates writers, memory does not
+# ADR-0048: Multi-agent main-bound execution — Git isolates writers, memory does not
 
 ## Status
 

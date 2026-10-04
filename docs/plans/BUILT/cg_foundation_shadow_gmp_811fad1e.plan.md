@@ -137,7 +137,7 @@ Copy `WIP/CG/<rel>` → `<rel>` for every row. All CREATE unless noted MERGE.
 - `canonical.schema.rule_activation_binding.v1.yaml`
 - `canonical.schema.cursor_rules_manifest.v3.yaml` (schema only; writer stays v2)
 
-**ADRs (8)** → `docs/decisions/` specified slugs `ADR-0007-contracts-own-rule-semantics.md` … `ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md`
+**ADRs (8)** → `docs/decisions/` specified slugs `ADR-0040-contracts-own-rule-semantics.md` … `ADR-0047-rules-strangler-migration-and-doctrine-ratchet.md`
 
 **Doctrine (5)** → `ops/contracts/`: `extract_doctrine.py`, `cluster_doctrine.py`, `detect_hidden_doctrine.py`, `build_doctrine_census.py`, `validate_doctrine_ratchet.py`
 

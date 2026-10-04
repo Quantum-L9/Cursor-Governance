@@ -1,4 +1,4 @@
-# ADR-0032: Universal campaign ingress and typed architecture admission
+# ADR-0049: Universal campaign ingress and typed architecture admission
 
 ## Status
 

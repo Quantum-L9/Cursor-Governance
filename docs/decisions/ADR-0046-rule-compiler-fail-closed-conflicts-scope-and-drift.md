@@ -1,4 +1,4 @@
-# ADR-0013: Rule compilation fails closed on unresolved authority, conflict, scope widening, unsupported activation, context overflow, and projection drift
+# ADR-0046: Rule compilation fails closed on unresolved authority, conflict, scope widening, unsupported activation, context overflow, and projection drift
 
 **Status:** Accepted  
 **Date:** 2026-08-14
@@ -180,6 +180,6 @@ A broken contract relationship fails before an agent can consume contradictory g
 ## Related
 
 - ADR-0002
-- ADR-0007 through ADR-0012
+- ADR-0040 through ADR-0045
 - `canonical.schema.contract_registry.v1`
 - `canonical.schema.contract_projection_binding.v1`
