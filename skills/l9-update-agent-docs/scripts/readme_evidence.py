@@ -424,6 +424,71 @@ def _resolve_purpose(
     return None, None
 
 
+def _prose_list(names: tuple[str, ...] | list[str], limit: int = 4) -> str:
+    """A grammatical list, capped so the sentence stays readable."""
+    shown = [name for name in names if name][:limit]
+    extra = len(names) - len(shown)
+    if not shown:
+        return ""
+    if len(shown) == 1:
+        body = shown[0]
+    elif len(shown) == 2:
+        body = f"{shown[0]} and {shown[1]}"
+    else:
+        body = ", ".join(shown[:-1]) + f", and {shown[-1]}"
+    if extra > 0:
+        body += f", and {extra} more"
+    return body
+
+
+def _public_names(modules: tuple[ModuleDoc, ...]) -> list[str]:
+    """Entry files first, then the rest, so the sentence names the public surface."""
+    ordered = sorted(
+        modules,
+        key=lambda module: (
+            0 if Path(module.file).stem in {"index", "__init__"} else 1,
+            module.file,
+        ),
+    )
+    names: list[str] = []
+    for module in ordered:
+        names.extend(item.name for item in module.classes)
+        names.extend(item.name for item in module.functions)
+        if not module.classes and not module.functions:
+            names.extend(module.exports)
+    return list(dict.fromkeys(names))
+
+
+def _compose_surface_purpose(
+    target: ReadmeTarget,
+    modules: tuple[ModuleDoc, ...],
+    children: tuple[str, ...],
+    contents: tuple[str, ...],
+) -> str:
+    """Human sentence from names this compile already extracted.
+
+    Used only when no authored purpose exists. It does not copy a child
+    docstring, and it does not claim a directory is for something the
+    extracted names do not show.
+    """
+    title = target.title.strip() or target.path
+    names = _public_names(modules)
+    if names:
+        listed = _prose_list(names, 6)
+        if len(modules) > 1:
+            files = _prose_list(tuple(module.file for module in modules))
+            return f"{title} brings together {files}. Its public surface includes {listed}."
+        return f"{title} provides {listed}."
+    if modules:
+        return f"{title} is made up of {_prose_list(tuple(module.file for module in modules))}."
+    if contents:
+        return f"{title} collects {_prose_list(contents)} for readers of this repository."
+    if children:
+        return f"{title} is the index for {_prose_list(children, 6)}."
+    kind = target.kind.replace("_", " ")
+    return f"{title} is a {kind} in this repository."
+
+
 def _load_json_object(path: Path) -> dict | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -646,6 +711,13 @@ def compile_readme_model(
         children = _child_directories(module_dir, target.path)
 
     purpose, purpose_evidence = _resolve_purpose(module_dir, target, modules, contract)
+    if purpose is None:
+        purpose = _compose_surface_purpose(target, modules, children, contents)
+        purpose_evidence = EvidenceRef(
+            source=target.path,
+            kind="surface_prose",
+            detail="composed from extracted public names, files, or child directories",
+        )
     if purpose_evidence is not None:
         evidence.append(purpose_evidence)
 

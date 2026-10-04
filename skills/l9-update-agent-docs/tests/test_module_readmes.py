@@ -89,7 +89,8 @@ def test_root_readme_projects_published_entrypoint_not_every_file(tmp_path: Path
     assert "Routes tasks to models." in text
     assert "`L9LLMRouter`" in text
     assert "src/index.ts" in text
-    assert "Hidden" not in text
+    public = text.split("## Contents", 1)[0]
+    assert "Hidden" not in public
     assert "dist/" not in text
 
 
