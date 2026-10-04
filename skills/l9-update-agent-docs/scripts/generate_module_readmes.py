@@ -10,8 +10,9 @@ The pipeline is qualify -> model -> render -> validate -> reconcile ->
 apply. Reconciliation compares the authorized desired corpus against the
 generator-owned corpus on disk, so a README this generator wrote for a
 target it no longer authorizes is retired rather than left behind.
-Handwritten files are preserved at every stage. Never writes the
-repository-root README.md. Does not call an LLM or the donor repo.
+Handwritten files are preserved unless ``force`` is set. The repository-root
+README.md is an index target and is compiled with the same rules as every
+other README. Does not call an LLM or the donor repo.
 """
 
 from __future__ import annotations
@@ -97,7 +98,8 @@ __all__ = [
 
 CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
 ROOT_README = Path("README.md")
-FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
+ROOT_TARGET_PATH = "."
+FORBIDDEN_RELATIVE_PATHS = {"", ".."}
 #: Overlay keys configuration is allowed to supply. `path` and the target
 #: kind are structural and are never taken from configuration.
 SUPPORTED_OVERLAY_FIELDS = frozenset(
@@ -374,7 +376,11 @@ def resolve_under_root(repo_root: Path, rel: str) -> Path | None:
         dest.relative_to(root)
     except ValueError:
         return None
-    return None if dest == root else dest
+    # `.` is the repository index. Every other path that resolves to the
+    # root is a traversal and is refused.
+    if dest == root and raw.as_posix() not in {".", "./"}:
+        return None
+    return dest
 
 
 def is_root_readme(repo_root: Path, dest: Path) -> bool:
@@ -516,6 +522,13 @@ TITLE_CASING = {
 }
 
 
+def readme_relpath(target_path: str) -> str:
+    """Repository path of the README for a target. Root is ``README.md``."""
+    if target_path in {"", ROOT_TARGET_PATH}:
+        return ROOT_README.as_posix()
+    return f"{target_path}/README.md"
+
+
 def _humanize(posix: str) -> str:
     words = Path(posix).name.replace("_", " ").replace("-", " ").split()
     return " ".join(TITLE_CASING.get(word.lower(), word.title()) for word in words)
@@ -652,6 +665,16 @@ def build_readme_targets(
                 ),
             )
         )
+    targets.append(
+        ReadmeTarget(
+            path=ROOT_TARGET_PATH,
+            kind="index",
+            title=_humanize(repo_root.name) or "Repository",
+            evidence=(
+                EvidenceRef(source="filetree.md", kind="inventory", detail="repository index"),
+            ),
+        )
+    )
     return targets
 
 
@@ -854,9 +877,7 @@ def plan_module_readmes(
         if module_dir is None or not module_dir.is_dir():
             continue
         dest = module_dir / "README.md"
-        if is_root_readme(repo_root, dest):
-            continue
-        rel_dest = f"{target.path}/README.md"
+        rel_dest = readme_relpath(target.path)
         expected.add(rel_dest)
         ownership = classify_readme(dest)
         future = (
@@ -963,7 +984,7 @@ def apply_module_readme_plan(
         if item.action not in MUTATING_ACTIONS:
             continue
         dest = resolve_under_root(repo_root, item.path)
-        if dest is None or is_root_readme(repo_root, dest):
+        if dest is None:
             continue
         if item.action == "retire":
             if dest.is_file():
@@ -1275,10 +1296,6 @@ def main(argv: list[str] | None = None) -> int:
             skipped += 1
             continue
         dest = module_dir / "README.md"
-        if is_root_readme(repo_root, dest):
-            print(f"skip {name}: refuses to write root README.md")
-            skipped += 1
-            continue
         if not module_dir.exists():
             print(f"skip {name}: path missing ({rel})")
             skipped += 1

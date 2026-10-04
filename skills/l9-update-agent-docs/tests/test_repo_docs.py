@@ -928,7 +928,10 @@ def test_full_recompiles_every_generator_and_stale_module_readme(tmp_path: Path)
     demo = (root / "skills/demo/README.md").read_text(encoding="utf-8")
     assert "l9-readme: generated-by=l9-update-agent-docs" in demo
     assert "Stale purpose" not in demo
-    assert (root / "README.md").read_text(encoding="utf-8") == "# Product index\n"
+    root_readme = (root / "README.md").read_text(encoding="utf-8")
+    assert "l9-readme: generated-by=l9-update-agent-docs" in root_readme
+    assert "Product index" not in root_readme
+    assert "skills/" in root_readme
     for name in ("AGENTS.md", "CLAUDE.md", "INVARIANTS.md", "llm.txt", "filetree.md"):
         assert (root / name).is_file(), name
     assert "https://github.com/Quantum-L9/.github" in (root / "AGENTS.md").read_text(

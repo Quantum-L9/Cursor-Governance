@@ -47,28 +47,37 @@ def actions(plan) -> dict[str, str]:
 
 def test_create_for_an_authorized_target_without_a_readme(tmp_path: Path):
     write(tmp_path / "pkg" / "mod.py", "x = 1\n")
-    assert actions(gm.plan_module_readmes(tmp_path)) == {"pkg/README.md": "create"}
+    assert actions(gm.plan_module_readmes(tmp_path)) == {
+        "README.md": "create",
+        "pkg/README.md": "create",
+    }
 
 
 def test_unchanged_when_owned_bytes_are_already_current(tmp_path: Path):
     write(tmp_path / "pkg" / "mod.py", "x = 1\n")
     gm.write_missing_module_readmes(tmp_path)
-    assert actions(gm.plan_module_readmes(tmp_path)) == {"pkg/README.md": "unchanged"}
+    assert actions(gm.plan_module_readmes(tmp_path)) == {
+        "README.md": "unchanged",
+        "pkg/README.md": "unchanged",
+    }
 
 
 def test_refresh_when_owned_bytes_are_stale(tmp_path: Path):
     write(tmp_path / "pkg" / "mod.py", "x = 1\n")
     gm.write_missing_module_readmes(tmp_path)
     write(tmp_path / "pkg" / "README.md", "# Drifted\n\n" + rr.marker_for("module") + "\n")
-    assert actions(gm.plan_module_readmes(tmp_path)) == {"pkg/README.md": "refresh"}
+    assert actions(gm.plan_module_readmes(tmp_path)) == {
+        "README.md": "unchanged",
+        "pkg/README.md": "refresh",
+    }
 
 
 def test_preserve_a_handwritten_readme(tmp_path: Path):
     write(tmp_path / "pkg" / "mod.py", "x = 1\n")
     write(tmp_path / "pkg" / "README.md", "# Mine\n\nHand-authored notes.\n")
     plan = gm.plan_module_readmes(tmp_path)
-    assert actions(plan) == {"pkg/README.md": "preserve"}
-    assert plan.mutations == ()
+    assert actions(plan) == {"README.md": "create", "pkg/README.md": "preserve"}
+    assert [item.path for item in plan.mutations] == ["README.md"]
     gm.apply_module_readme_plan(tmp_path, plan)
     assert (tmp_path / "pkg" / "README.md").read_text(encoding="utf-8").startswith("# Mine")
 
@@ -184,7 +193,7 @@ def test_an_explicit_opt_out_outranks_an_ownership_marker(tmp_path: Path):
     body = "---\nauto_generated: false\n---\n# Mine\n\n" + rr.marker_for("module") + "\n"
     write(tmp_path / "pkg" / "README.md", body)
     plan = gm.plan_module_readmes(tmp_path)
-    assert actions(plan) == {"pkg/README.md": "preserve"}
+    assert actions(plan) == {"README.md": "create", "pkg/README.md": "preserve"}
     gm.apply_module_readme_plan(tmp_path, plan)
     assert (tmp_path / "pkg" / "README.md").read_text(encoding="utf-8") == body
 
@@ -204,13 +213,15 @@ def test_legacy_shape_without_a_marker_is_never_deleted(tmp_path: Path):
     assert ambiguous.is_file()
 
 
-def test_root_readme_is_never_planned(tmp_path: Path):
+def test_root_readme_is_planned_with_the_other_readmes(tmp_path: Path):
     write(tmp_path / "mod.py", "x = 1\n")
     write(tmp_path / "README.md", "# Root\n\n" + rr.marker_for("module") + "\n")
-    plan = gm.plan_module_readmes(tmp_path)
-    assert "README.md" not in actions(plan)
+    plan = gm.plan_module_readmes(tmp_path, force=True)
+    assert actions(plan)["README.md"] == "refresh"
     gm.apply_module_readme_plan(tmp_path, plan)
-    assert (tmp_path / "README.md").is_file()
+    text = (tmp_path / "README.md").read_text(encoding="utf-8")
+    assert rr.marker_for("index") in text
+    assert rr.marker_for("module") not in text
 
 
 # --- T-P-008: a real dry run ---
@@ -220,7 +231,7 @@ def test_dry_run_reports_every_mutation_and_writes_nothing(tmp_path: Path):
     write(tmp_path / "pkg" / "mod.py", "x = 1\n")
     write(tmp_path / "pkg" / "fixtures" / "README.md", "# F\n\n" + rr.marker_for("module") + "\n")
     planned = gm.write_missing_module_readmes(tmp_path, write=False)
-    assert sorted(planned) == ["pkg/README.md", "pkg/fixtures/README.md"]
+    assert sorted(planned) == ["README.md", "pkg/README.md", "pkg/fixtures/README.md"]
     assert not (tmp_path / "pkg" / "README.md").exists()
     assert (tmp_path / "pkg" / "fixtures" / "README.md").is_file()
 

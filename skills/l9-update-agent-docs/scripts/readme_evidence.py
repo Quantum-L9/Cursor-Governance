@@ -321,10 +321,15 @@ def _child_directories(module_dir: Path, rel: str) -> tuple[str, ...]:
     """
     prefixes = skip_prefixes()
     try:
+        prefix = "" if rel in {"", "."} else rel
         children = [
             child.name
             for child in module_dir.iterdir()
-            if child.is_dir() and not is_excluded_path(f"{rel}/{child.name}", prefixes)
+            if child.is_dir()
+            and not is_excluded_path(
+                f"{prefix}/{child.name}" if prefix else child.name,
+                prefixes,
+            )
         ]
     except OSError:
         return ()

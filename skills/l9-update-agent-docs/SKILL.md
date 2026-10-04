@@ -306,7 +306,7 @@ When root `ARCHITECTURE.md` is absent, assess `docs/architecture.md`. `create_po
 
 A default run mutates module READMEs only for `CREATE` or `REFRESH` obligations opened by that classified delta. Full-corpus README reconciliation is `--full-module-readmes`. `--write-llm` creates absent `llm.txt` even when the delta did not open that surface, and still refuses an unowned file.
 
-`--full` is the complete compile. It turns on every generator this skill owns for the target repository: absent or marker-owned `AGENTS.md`, `CLAUDE.md`, and `INVARIANTS.md`; `filetree.md`; `llm.txt`; and the whole module README corpus. Every authorized module README is recompiled and stamped with the current `l9-readme` marker, including a README that was previously handwritten. Root `README.md` is not a module README and is left as written. An existing `AGENTS.md`, `CLAUDE.md`, or `INVARIANTS.md` without this skill's root-doc marker is preserved.
+`--full` is the complete compile. It turns on every generator this skill owns for the target repository: absent or marker-owned `AGENTS.md`, `CLAUDE.md`, and `INVARIANTS.md`; `filetree.md`; `llm.txt`; and every README the inventory authorizes, including the repository-root `README.md`. Every one of those READMEs is recompiled from the target repository and stamped with the current `l9-readme` marker, including a README that was previously handwritten. An existing `AGENTS.md`, `CLAUDE.md`, or `INVARIANTS.md` without this skill's root-doc marker is preserved.
 
 A mutating run (filetree writes enabled, module README writes enabled, or `--write-llm`) compiles absent `AGENTS.md`, `CLAUDE.md`, and `INVARIANTS.md` from `scripts/doc_root.py`. A dry run (`--no-write-filetree --no-write-module-readmes`, without `--write-llm`) writes none of them. An existing file without the root-doc marker is preserved.
 
@@ -368,7 +368,7 @@ Do not introduce a generic plugin system merely to avoid adding a static registr
 - Executing code from fenced Markdown or expanding root Python-fence validation beyond the declared pointer-document topology
 - Authoring ADRs or API contracts here
 - Adding LLM-authored or donor-repo README generation
-- Overwriting a handwritten module README, an unowned skill-handled file, or the repository-root README.md
+- Overwriting a handwritten module README or the repository-root README.md except through `--full`, which recompiles every authorized README, including `README.md`, onto the current marker
 - Leaving `llms.txt` in place after `llm.txt` exists
 - Skipping source files because an ancestor directory is named `.l9` (skip only paths relative to the scanned module or repo root)
 - Hand-editing generated module README content instead of using its owner. A wrong generated README is a compiler defect: repair the compiler or its evidence and regenerate.

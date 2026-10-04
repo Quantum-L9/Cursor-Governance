@@ -779,9 +779,9 @@ def main() -> int:
         help=(
             "Generate every file this compiler can write for the repository: "
             "AGENTS.md, CLAUDE.md, and INVARIANTS.md when absent or already "
-            "marked by this skill; filetree.md; llm.txt; and the full module "
-            "README corpus, refreshing every authorized README to the current "
-            "marker. Root README.md is not a module README and is left as written."
+            "marked by this skill; filetree.md; llm.txt; and every authorized "
+            "README, including the repository-root README.md, refreshed onto "
+            "the current marker."
         ),
     )
     parser.add_argument(
