@@ -11,6 +11,7 @@ import yaml
 from consumer_snapshot import snapshot_document
 from doc_owned_write import Admission, apply_owned_write
 from doc_policy import LLM_SURFACE_ID, repo_slug, resolve_under_root
+from doc_root import repository_description
 
 PROJECTION_FILENAME = "llm.txt"
 LEGACY_FILENAME = "llms.txt"
@@ -109,10 +110,14 @@ def render_llm_txt(
 ) -> str:
     title = repo_slug(root)
     manifest = llm_manifest(root, policy, snapshot, base_url)
+    description = repository_description(root)
+    quote = f"> LLM-facing documentation manifest for {title}. Projection only; not authority."
+    if description:
+        quote += f"\n>\n> {description}"
     lines = [
         f"# {title}",
         "",
-        f"> LLM-facing documentation manifest for {title}. Projection only; not authority.",
+        quote,
         "",
         LLM_MARKER,
         "",

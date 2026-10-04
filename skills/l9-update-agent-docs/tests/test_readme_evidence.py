@@ -117,6 +117,40 @@ def test_skill_responsibilities_come_from_a_named_section(tmp_path: Path):
 # --- T-M-004: no evidence, no claim ---
 
 
+def test_jsdoc_is_the_purpose_and_the_symbol_summary(tmp_path: Path):
+    write(
+        tmp_path / "types" / "types.ts",
+        "/** Core public contracts for the router. */\n"
+        "export enum Provider { OPENROUTER = 'openrouter' }\n\n"
+        "/**\n * Rank a complexity value.\n */\n"
+        "export function complexityRank(value: string): number { return 1 }\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("types"))
+    assert model.purpose == "Core public contracts for the router."
+    summaries = {
+        item.name: item.summary
+        for item in (*model.modules[0].classes, *model.modules[0].functions)
+    }
+    assert summaries["Provider"] == "Core public contracts for the router."
+    assert summaries["complexityRank"] == "Rank a complexity value."
+
+
+def test_compiler_output_is_not_a_module(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "index.ts").write_text("export class Router {}\n", encoding="utf-8")
+    (tmp_path / "dist").mkdir()
+    (tmp_path / "dist" / "index.js").write_text("export class Router {}\n", encoding="utf-8")
+    (tmp_path / "tsconfig.json").write_text(
+        '{"compilerOptions":{"outDir":"./dist","rootDir":"./src"}}\n',
+        encoding="utf-8",
+    )
+    import doc_filetree as df
+
+    found = [row.path for row in df.walk_inventory(tmp_path).modules]
+    assert "src" in found
+    assert "dist" not in found
+
+
 def test_public_symbols_become_the_purpose_sentence(tmp_path: Path):
     write(
         tmp_path / "budget" / "index.ts",

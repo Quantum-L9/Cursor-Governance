@@ -473,12 +473,23 @@ def _compose_surface_purpose(
     """
     title = target.title.strip() or target.path
     names = _public_names(modules)
+    if len(modules) == 1:
+        summaries = [
+            item.summary for item in (*modules[0].classes, *modules[0].functions) if item.summary
+        ]
+        if summaries:
+            sentence = summaries[0].strip()
+            return sentence if sentence[-1] in ".!?" else f"{sentence}."
+    if names and len(modules) > 1:
+        files = _prose_list(tuple(module.file for module in modules))
+        sentence = f"{title} brings together {files}."
+        noted = next(((module.file, module.purpose) for module in modules if module.purpose), None)
+        if noted is not None:
+            prose = noted[1] if noted[1].rstrip()[-1] in ".!?" else f"{noted[1]}."
+            sentence += f" {noted[0]}: {prose}"
+        return sentence
     if names:
-        listed = _prose_list(names, 6)
-        if len(modules) > 1:
-            files = _prose_list(tuple(module.file for module in modules))
-            return f"{title} brings together {files}. Its public surface includes {listed}."
-        return f"{title} provides {listed}."
+        return f"{title} provides {_prose_list(names, 6)}."
     if modules:
         return f"{title} is made up of {_prose_list(tuple(module.file for module in modules))}."
     if contents:

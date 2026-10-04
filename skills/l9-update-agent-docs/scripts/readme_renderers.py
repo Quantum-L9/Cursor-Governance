@@ -315,6 +315,18 @@ def render_skill_readme(model: ReadmeModel) -> str:
     )
 
 
+def _needs_interface_index(modules: Sequence[ModuleDoc]) -> bool:
+    """The complete index exists for the tail the summary could not show."""
+    return any(
+        len(module.classes) + len(module.functions) > MAX_INTERFACES_PER_MODULE
+        for module in modules
+    )
+
+
+def _needs_module_index(modules: Sequence[ModuleDoc]) -> bool:
+    return len(modules) > MAX_MODULES_RENDERED
+
+
 def render_module_readme(model: ReadmeModel) -> str:
     """A single-module directory: its own public surface, nothing more."""
     interfaces = ""
@@ -333,7 +345,12 @@ def render_module_readme(model: ReadmeModel) -> str:
             _section("Dependencies", _dependencies_block(model.dependencies)),
             _section("Integrates with", _relationships_block(_renderable_relationships(model))),
             _section("Source coverage", _source_coverage_block(model)),
-            _section("Complete interface index", _detail_interface_block(model.modules)),
+            _section(
+                "Complete interface index",
+                _detail_interface_block(model.modules)
+                if _needs_interface_index(model.modules)
+                else "",
+            ),
             marker_for(model.target.kind),
         ]
     )
@@ -347,12 +364,20 @@ def render_subsystem_readme(model: ReadmeModel) -> str:
             _section("Purpose", model.purpose),
             _section("Description", model.description),
             _section("Modules", _modules_block(model.modules)),
-            _section("Complete module index", _detail_module_block(model.modules)),
+            _section(
+                "Complete module index",
+                _detail_module_block(model.modules) if _needs_module_index(model.modules) else "",
+            ),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
             _section("Dependencies", _dependencies_block(model.dependencies)),
             _section("Integrates with", _relationships_block(_renderable_relationships(model))),
             _section("Source coverage", _source_coverage_block(model)),
-            _section("Complete interface index", _detail_interface_block(model.modules)),
+            _section(
+                "Complete interface index",
+                _detail_interface_block(model.modules)
+                if _needs_interface_index(model.modules)
+                else "",
+            ),
             marker_for(model.target.kind),
         ]
     )
@@ -413,6 +438,12 @@ def render_index_readme(model: ReadmeModel) -> str:
                 _section("Entrypoints", _shell_block(model.shell_entrypoints)),
                 _section("Integrates with", _relationships_block(_renderable_relationships(model))),
                 _section("Source coverage", _source_coverage_block(model)),
+                _section(
+                    "Complete interface index",
+                    _detail_interface_block(model.modules)
+                    if _needs_interface_index(model.modules)
+                    else "",
+                ),
                 marker_for(model.target.kind),
             ]
         )

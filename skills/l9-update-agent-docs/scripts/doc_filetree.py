@@ -9,6 +9,7 @@ call an LLM or the donor repo.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -254,9 +255,29 @@ def is_corpus_dir(root: Path, rel: str, path: Path) -> bool:
     return name in CORPUS_DIR_NAMES and depth <= 1
 
 
+def declared_output_prefixes(root: Path) -> list[str]:
+    """Compiler output directories named by the repository, not by a path list.
+
+    ``tsconfig.json`` ``compilerOptions.outDir`` is build output. Treating it
+    as a source module compiles the emitted JavaScript beside the sources
+    that produced it.
+    """
+    path = root / "tsconfig.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return []
+    options = data.get("compilerOptions") if isinstance(data, dict) else None
+    out = options.get("outDir") if isinstance(options, dict) else None
+    if not isinstance(out, str) or not out.strip():
+        return []
+    normalized = out.strip().strip("./").strip("/")
+    return [normalized] if normalized else []
+
+
 def walk_inventory(root: Path, extra_skip: list[str] | None = None) -> FiletreeInventory:
     root = root.resolve()
-    prefixes = skip_prefixes(extra_skip)
+    prefixes = skip_prefixes([*(extra_skip or []), *declared_output_prefixes(root)])
     inventory = FiletreeInventory()
     inventory.root_files = sorted(
         child.name for child in root.iterdir() if child.is_file() and not child.name.startswith(".")

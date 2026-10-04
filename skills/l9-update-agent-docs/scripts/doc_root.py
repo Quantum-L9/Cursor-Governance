@@ -7,6 +7,7 @@ document is not a template, and this module does not fold one into a pointer.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -57,17 +58,31 @@ def _workflows(root: Path) -> list[str]:
     )
 
 
+def repository_description(root: Path) -> str | None:
+    """The package's own description, when the manifest states one."""
+    path = root / "package.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    description = data.get("description") if isinstance(data, dict) else None
+    if not isinstance(description, str) or not description.strip():
+        return None
+    return " ".join(description.split())
+
+
 def render_agents(root: Path, policy: dict[str, Any]) -> str:
     url = _org_url(policy)
     observed = _existing(root)
     surface_lines = [f"- `{rel}`" for rel in observed] or ["- _none yet_"]
     skills = "- `skills/` is present.\n" if (root / "skills").is_dir() else ""
+    description = repository_description(root)
+    repository = f"## Repository\n\n{description}\n\n" if description else ""
     return (
         "# AGENTS.md — operating instructions\n\n"
         "## Mission\n\n"
         "This file is the operating-instruction source for this repository. "
-        "A lower document does not override it.\n\n"
-        "## Authority\n\n"
+        "A lower document does not override it.\n\n" + repository + "## Authority\n\n"
         "1. `CANONICAL_LAW.md`, when this repository contains it.\n"
         "2. This file.\n"
         "3. Task procedures under `skills/`, when this repository contains them.\n\n"
@@ -107,11 +122,7 @@ def render_claude(root: Path, policy: dict[str, Any]) -> str:
 
 def render_invariants(root: Path, policy: dict[str, Any]) -> str:
     url = _org_url(policy)
-    lines = [
-        f"- `{rel}` — {role}."
-        for rel, role in _ENFORCING
-        if (root / rel).is_file()
-    ]
+    lines = [f"- `{rel}` — {role}." for rel, role in _ENFORCING if (root / rel).is_file()]
     lines.extend(f"- `{rel}` — workflow enforcement." for rel in _workflows(root))
     body = (
         "\n".join(lines)
