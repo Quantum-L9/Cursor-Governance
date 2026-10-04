@@ -14,7 +14,7 @@ keeps the compiler core extractable without carrying consumer policy.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 __all__ = [
     "MUTATING_ACTIONS",
@@ -183,6 +183,8 @@ class ReadmeModel:
     contents: tuple[str, ...] = ()
     shell_entrypoints: tuple[str, ...] = ()
     dependencies: DependencyDoc = field(default_factory=DependencyDoc)
+    #: Skill contract version, when the target is a skill pack that states one.
+    version: str | None = None
     authority_links: tuple[str, ...] = ()
     evidence: tuple[EvidenceRef, ...] = ()
     source_facts: tuple[SourceFact, ...] = ()
@@ -231,7 +233,7 @@ class ReadmePlan:
 
     items: tuple[ReadmePlanItem, ...] = ()
     findings: tuple[QualityFinding, ...] = ()
-    quality: tuple[dict[str, int | str], ...] = ()
+    quality: tuple[dict[str, Any], ...] = ()
 
     @property
     def mutations(self) -> tuple[ReadmePlanItem, ...]:

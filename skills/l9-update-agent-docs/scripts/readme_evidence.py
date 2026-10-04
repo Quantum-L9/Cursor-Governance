@@ -277,6 +277,61 @@ def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]
     return frozenset(names)
 
 
+def _normalize_import(spec: str) -> str:
+    """Package name a dependency list should show.
+
+    JavaScript specifiers carry a path (`openai/resources`, `@scope/pkg/sub`).
+    The list names the package. Python specifiers stay dotted so the
+    standard-library test can still see the top module.
+    """
+    if spec.startswith("@"):
+        parts = [part for part in spec.split("/") if part]
+        return "/".join(parts[:2]) if len(parts) >= 2 else spec
+    if "/" in spec:
+        return spec.split("/", 1)[0]
+    return spec
+
+
+def _resolve_relative_import(source_path: str, spec: str) -> str | None:
+    """Resolve a relative specifier to a repository path without a suffix."""
+    parts: list[str] = []
+    for part in (Path(source_path).parent / spec).as_posix().split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+            continue
+        parts.append(part)
+    if not parts:
+        return None
+    suffixes = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".sh")
+    name = parts[-1]
+    for suffix in suffixes:
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+    parts[-1] = name
+    return "/".join(parts)
+
+
+def _dependency_inputs(source_facts: tuple[SourceFact, ...]) -> tuple[list[str], set[str]]:
+    """Imports for classification, with relative specifiers resolved to paths."""
+    imports: list[str] = []
+    relative: set[str] = set()
+    for fact in source_facts:
+        relative.update(fact.relative_imports)
+        for item in fact.imports:
+            if item.startswith("."):
+                resolved = _resolve_relative_import(fact.path, item)
+                if resolved:
+                    relative.add(resolved)
+                continue
+            imports.append(_normalize_import(item))
+    return imports, relative
+
+
 def classify_dependencies(
     imports: list[str],
     internal_names: frozenset[str],
@@ -614,10 +669,7 @@ def compile_readme_model(
     if target.kind in {"module", "subsystem", "skill"}:
         source_facts, extraction_issues = compile_source_evidence(repo_root, target.path)
         modules = tuple(fact.module for fact in source_facts)
-        imports = [
-            item for fact in source_facts if fact.language == "python" for item in fact.imports
-        ]
-        relative = {item for fact in source_facts for item in fact.relative_imports}
+        imports, relative = _dependency_inputs(source_facts)
         dependencies = classify_dependencies(imports, internal_names, relative)
         if source_facts:
             evidence.append(
@@ -697,10 +749,7 @@ def compile_readme_model(
                     detail=f"{len(source_facts)} published or direct source file(s)",
                 )
             )
-        imports = [
-            item for fact in source_facts if fact.language == "python" for item in fact.imports
-        ]
-        relative = {item for fact in source_facts for item in fact.relative_imports}
+        imports, relative = _dependency_inputs(source_facts)
         dependencies = classify_dependencies(imports, internal_names, relative)
         shell_entrypoints = tuple(
             sorted({entrypoint for fact in source_facts for entrypoint in fact.entrypoints})
@@ -746,6 +795,7 @@ def compile_readme_model(
         contents=contents,
         shell_entrypoints=shell_entrypoints,
         dependencies=dependencies,
+        version=contract.version if contract is not None else None,
         authority_links=tuple(authority_links),
         evidence=tuple(evidence),
         source_facts=source_facts,

@@ -15,6 +15,7 @@ directory it does not describe.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from readme_evidence import (
     CORPUS_TYPE_LABELS,
@@ -159,7 +160,8 @@ def _section(heading: str, body: str | None) -> str:
 
 def _header(model: ReadmeModel) -> str:
     target = model.target
-    return f"# {target.title}\n\n**Path:** `{target.path}` | **Kind:** {target.kind}"
+    version = f" | **Version:** `{model.version}`" if model.version else ""
+    return f"# {target.title}\n\n**Path:** `{target.path}` | **Kind:** {target.kind}{version}"
 
 
 def _interface_lines(module: ModuleDoc) -> list[str]:
@@ -184,6 +186,8 @@ def _modules_block(modules: Sequence[ModuleDoc]) -> str:
     blocks: list[str] = []
     for module in modules[:MAX_MODULES_RENDERED]:
         parts = [f"### `{module.file}`"]
+        if module.name and module.name != Path(module.file).stem:
+            parts[0] = f"### `{module.file}` (`{module.name}`)"
         if module.purpose:
             parts.append(module.purpose)
         lines = _interface_lines(module)
@@ -226,7 +230,10 @@ def _relationships_block(relationships: Sequence[RelationshipDoc]) -> str:
     }
     grouped: dict[str, list[str]] = {}
     for relationship in relationships:
-        grouped.setdefault(relationship.kind, []).append(relationship.target)
+        label = relationship.target
+        if relationship.detail:
+            label = f"{label} [{relationship.detail}]"
+        grouped.setdefault(relationship.kind, []).append(f"{label} ({relationship.source})")
     lines: list[str] = []
     for kind in sorted(grouped):
         values = ", ".join(f"`{value}`" for value in sorted(set(grouped[kind])))
@@ -251,11 +258,16 @@ def _source_coverage_block(model: ReadmeModel) -> str:
         )
     issue_count = len(model.extraction_issues)
     issue_note = f"; {issue_count} extraction issue(s) recorded" if issue_count else ""
-    return (
-        f"**Status:** {model.completeness}; **Files:** "
-        f"{model.extracted_source_count}/{model.eligible_source_count} extracted; "
-        f"**Public symbols:** {model.rendered_symbol_count}{issue_note}."
-    )
+    lines = [
+        (
+            f"**Status:** {model.completeness}; **Files:** "
+            f"{model.extracted_source_count}/{model.eligible_source_count} extracted; "
+            f"**Public symbols:** {model.rendered_symbol_count}{issue_note}."
+        )
+    ]
+    for issue in model.extraction_issues:
+        lines.append(f"- `{issue.path}` ({issue.language}): {issue.detail}")
+    return "\n".join(lines)
 
 
 def _detail_interface_block(modules: Sequence[ModuleDoc]) -> str:
@@ -300,6 +312,9 @@ def render_skill_readme(model: ReadmeModel) -> str:
         "`SKILL.md` in this directory is the authoritative operating contract. "
         "This README is a navigation projection of it and never outranks it."
     )
+    if model.authority_links:
+        links = "\n".join(f"- [`{link}`]({link})" for link in model.authority_links)
+        authority = f"{authority}\n\n{links}"
     return _join(
         [
             _header(model),

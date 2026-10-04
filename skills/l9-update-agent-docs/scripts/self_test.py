@@ -55,6 +55,7 @@ def main() -> int:
         "--full-module-readmes",
         "doc_root.py",
         "--full",
+        "signal-utilization law",
     ]
     for token in required_tokens:
         if token not in text:

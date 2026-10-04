@@ -8,7 +8,7 @@ metadata:
   tags: [l9, docs, obligations, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 4.3.0
+  version: 4.4.0
   updated: 2026-10-04
   when_to_use: compile documentation obligations after repository changes, assess supported operational contract surfaces, refresh governed documentation through its canonical owner, or prove closure with a machine receipt
 ---
@@ -272,6 +272,10 @@ If the analyzer cannot be resolved, the obligation is `BLOCKED`. Do not guess a 
 | `l9-update-agent-docs` / module READMEs | After `filetree.md`, reconcile the whole authorized corpus via `scripts/generate_module_readmes.py` (qualify → model → render → validate → reconcile). Kinds are renderer identities: a directory with its own `SKILL.md` is `skill`; one with two or more direct source files is `subsystem`; one with fewer is `module`; a document/config folder with files is `corpus`; a parent of two or more qualifying children is `index`. Index qualification runs deepest-first so nested parents reach the fixed point. Recognition is structural and repo-agnostic; never add a path allowlist. Excluded at any depth, whole subtree: `fixtures` / `generated` / `handoff` / `deliverables` / `receipts` / `drafts` / `assets` / `tests` / `_archived`, plus skill-pack sidecars (`SKILL.md` ancestor except `scripts/`) and the skip prefixes. Matching is on whole path segments — `generated-data` is a real directory. Empty directories earn nothing. A default run reconciles only the module targets the classified delta opened. `--full-module-readmes` reconciles the authorized corpus and is the run that may retire a generator-owned README, because a partial view cannot judge staleness. Ownership marker: `<!-- l9-readme: generated-by=l9-update-agent-docs version=3 kind=… -->`, with older markers still recognized so an older corpus migrates. A generator-owned README at a no-longer-authorized target is retired. `auto_generated: false` front matter outranks any marker; that and any unmarked shape is handwritten and is never overwritten without `--force`. `--full` passes that force and recompiles every authorized module README onto the current marker. A marker recording a format version this compiler does not understand is a conflict, never a rewrite. The receipt carries the evidence-coverage profile for every reconciled README. Optional sequencer: `readme-pipeline-v1`. |
 | specialist/external owner | Handoff or use that owner's canonical capability. Do not absorb its implementation here. |
 | `llm.txt` projection | Default enabled. Create if absent. Refresh only when the live file already carries `<!-- l9-llm-txt: generated-projection -->`. If `llm.txt` is missing and `llms.txt` exists, rename (preserve bytes). If both exist, delete leftover `llms.txt`. Never overwrite an unowned `llm.txt`. `--write-llm` does not authorize that overwrite. Projection, never authority. |
+
+## Signal-utilization law
+
+The signal-utilization law: every field this skill extracts has a named downstream consumer: a README renderer, `doc_root.py`, `doc_llm.py`, or the repo-docs receipt. `tests/test_signal_ledger.py` is the gate. A field that only a validator reads is not utilized. Do not add an extractor output without a consumer.
 
 `filetree.md` is required and skill-owned, and is the sole automatic README membership authority. README compilation reads that inventory and is executable without a consumer-root generator, YAML map, or donor repo. Optional overlay: `config/subsystems/readme_config.yaml` — it may supply `title`, `tier`, `description`, `purpose` and `skip` for a target the inventory already authorizes, and cannot create one. Optional sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`). A source parse failure stays `partial` with a named extraction issue; do not hide it or replace it with invented prose.
 

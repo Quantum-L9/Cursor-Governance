@@ -683,6 +683,86 @@ def build_readme_targets(
 # --------------------------------------------------------------------------
 
 
+def compile_repository_readmes(
+    repo_root: Path,
+    *,
+    config: dict[str, Any] | None = None,
+    inventory: FiletreeInventory | None = None,
+) -> list[tuple[ReadmeModel, str]]:
+    """Compile every authorized README once. Pure: writes nothing."""
+    repo_root = repo_root.resolve()
+    config = config if config is not None else load_config(repo_root)
+    source = resolve_inventory(repo_root, config, inventory=inventory)
+    targets = build_readme_targets(repo_root, config, inventory=source)
+    internal_paths = sorted(
+        {row.path for row in source.modules}
+        | {
+            child.name
+            for child in repo_root.iterdir()
+            if child.is_dir() and not child.name.startswith(".")
+        }
+    )
+    return compile_readme_outputs(repo_root, targets, internal_paths=internal_paths)
+
+
+def _quality_entry(
+    model: ReadmeModel,
+    findings: tuple[QualityFinding, ...],
+) -> dict[str, Any]:
+    """Receipt row. Every extracted field this row reads is a downstream consumer."""
+    rel = readme_relpath(model.target.path)
+    sources = {rel, model.target.path}
+    return {
+        "path": model.target.path,
+        "completeness": model.completeness,
+        "eligible_source_count": model.eligible_source_count,
+        "extracted_source_count": model.extracted_source_count,
+        "extraction_issue_count": len(model.extraction_issues),
+        "relationship_count": len(model.relationships),
+        "evidence": [
+            {"source": ref.source, "kind": ref.kind, "detail": ref.detail} for ref in model.evidence
+        ],
+        "warnings": [
+            {"rule_id": finding.rule_id, "message": finding.message}
+            for finding in findings
+            if finding.severity == "WARN" and finding.source in sources
+        ],
+        "extracted": {
+            "imports": sorted({item for fact in model.source_facts for item in fact.imports}),
+            "relative_imports": sorted(
+                {item for fact in model.source_facts for item in fact.relative_imports}
+            ),
+            "entrypoints": sorted(
+                {item for fact in model.source_facts for item in fact.entrypoints}
+            ),
+            "languages": sorted({fact.language for fact in model.source_facts}),
+            "source_paths": [fact.path for fact in model.source_facts],
+            "modules": [fact.module.file for fact in model.source_facts],
+            "relationships": [
+                {
+                    "kind": relation.kind,
+                    "target": relation.target,
+                    "source": relation.source,
+                    "detail": relation.detail,
+                }
+                for fact in model.source_facts
+                for relation in fact.relationships
+            ],
+            "issues": [
+                {"path": issue.path, "language": issue.language, "detail": issue.detail}
+                for issue in model.extraction_issues
+            ],
+            "configured_purpose": model.target.configured_purpose,
+            "configured_description": model.target.configured_description,
+            "tier": model.target.tier,
+            "target_evidence": [
+                {"source": ref.source, "kind": ref.kind, "detail": ref.detail}
+                for ref in model.target.evidence
+            ],
+        },
+    }
+
+
 def compile_readme_outputs(
     repo_root: Path,
     targets: list[ReadmeTarget],
@@ -842,6 +922,7 @@ def plan_module_readmes(
     changed: list[str] | None = None,
     force: bool = False,
     retire: bool = True,
+    compiled: list[tuple[ReadmeModel, str]] | None = None,
 ) -> ReadmePlan:
     """Reconcile the authorized desired corpus against what is on disk.
 
@@ -860,15 +941,12 @@ def plan_module_readmes(
         ]
     # First-party names come from the whole inventory plus the repository's
     # own top-level directories, never from the suppressed target list.
-    internal_paths = sorted(
-        {row.path for row in source.modules}
-        | {
-            child.name
-            for child in repo_root.iterdir()
-            if child.is_dir() and not child.name.startswith(".")
-        }
-    )
-    outputs = compile_readme_outputs(repo_root, targets, internal_paths=internal_paths)
+    if compiled is None:
+        outputs = compile_repository_readmes(repo_root, config=config, inventory=source)
+    else:
+        outputs = list(compiled)
+    wanted = {target.path for target in targets}
+    outputs = [pair for pair in outputs if pair[0].target.path in wanted]
     findings: list[QualityFinding] = list(
         validate_readme_models(
             repo_root,
@@ -974,17 +1052,7 @@ def plan_module_readmes(
             )
 
     items.sort(key=lambda item: (item.path, item.action))
-    quality = tuple(
-        {
-            "path": model.target.path,
-            "completeness": model.completeness,
-            "eligible_source_count": model.eligible_source_count,
-            "extracted_source_count": model.extracted_source_count,
-            "extraction_issue_count": len(model.extraction_issues),
-            "relationship_count": len(model.relationships),
-        }
-        for model, _rendered in outputs
-    )
+    quality = tuple(_quality_entry(model, tuple(findings)) for model, _rendered in outputs)
     return ReadmePlan(items=tuple(items), findings=tuple(findings), quality=quality)
 
 

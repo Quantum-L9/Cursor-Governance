@@ -207,7 +207,8 @@
         "adapter_directive_block": {"type": "string"},
         "default_enabled": {"const": true},
         "surface_order": {"type": "array", "items": {"type": "string"}},
-        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"}
+        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"},
+        "compiled_readme_entries": {"type": "boolean"}
       }
     }
   },

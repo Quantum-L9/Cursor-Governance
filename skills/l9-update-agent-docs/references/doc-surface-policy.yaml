@@ -343,3 +343,4 @@ llm_txt:
   default_enabled: true
   surface_order: [readme_root, filetree, architecture, invariants, agents, claude, api_reference, adrs]
   manifest_schema: l9.repo-docs.llm-manifest.v1
+  compiled_readme_entries: true

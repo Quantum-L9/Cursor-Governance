@@ -629,10 +629,7 @@ def validate_and_close_obligations(
                 harvest_ids = [
                     row["id"] for row in obligation["evidence"] if row["type"] == "harvest"
                 ]
-                if (
-                    obligation["qualification"]["status"] == "QUALIFIED"
-                    and harvest_ids
-                ):
+                if obligation["qualification"]["status"] == "QUALIFIED" and harvest_ids:
                     existing["target_freshness"] = _validation_result(
                         "target_freshness",
                         "PASS",

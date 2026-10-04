@@ -128,8 +128,7 @@ def test_jsdoc_is_the_purpose_and_the_symbol_summary(tmp_path: Path):
     model = ev.compile_readme_model(tmp_path, target("types"))
     assert model.purpose == "Core public contracts for the router."
     summaries = {
-        item.name: item.summary
-        for item in (*model.modules[0].classes, *model.modules[0].functions)
+        item.name: item.summary for item in (*model.modules[0].classes, *model.modules[0].functions)
     }
     assert summaries["Provider"] == "Core public contracts for the router."
     assert summaries["complexityRank"] == "Rank a complexity value."

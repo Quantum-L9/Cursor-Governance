@@ -33,7 +33,9 @@ EXTRACTOR_LANGUAGES = frozenset(
 _JS_EXPORT_RE = re.compile(
     r"^[ \t]*export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?"
     r"(function|class|const|let|var|interface|enum|type)\s+"
-    r"([A-Za-z_$][\w$]*)",
+    r"([A-Za-z_$][\w$]*)"
+    r"(?:\s*<[^>\n]*>)?"
+    r"(\s*\([^)\n]*\))?",
     re.MULTILINE,
 )
 _JS_CLASS_KINDS = frozenset({"class", "interface", "enum", "type"})
@@ -356,11 +358,13 @@ def _extract_javascript(path: Path, text: str, rel: str, language: str) -> Sourc
     first_doc: str | None = None
     for match in _JS_EXPORT_RE.finditer(text):
         kind, name = match.group(1), match.group(2)
+        params = match.group(3)
         doc = _jsdoc_before(text, match.start())
         if first_doc is None and doc is not None:
             first_doc = doc
         exports.append(name)
-        symbol = InterfaceDoc(name=name, summary=doc)
+        signature = f"{name}{params.strip()}" if kind == "function" and params else None
+        symbol = InterfaceDoc(name=name, signature=signature, summary=doc)
         if kind in _JS_CLASS_KINDS:
             classes.append(symbol)
         else:

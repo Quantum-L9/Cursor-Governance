@@ -33,6 +33,7 @@ from doc_llm import (
     llm_enabled,
     render_llm_txt,
     retire_legacy_llms_txt,
+    snapshot_with_compiled_readmes,
     validate_llm_txt,
     write_llm_txt,
 )
@@ -65,7 +66,11 @@ from doc_policy import (
 )
 from doc_root import compile_missing_root_docs
 from doc_surface_analysis import assess_surface_obligations
-from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
+from generate_module_readmes import (
+    apply_module_readme_plan,
+    compile_repository_readmes,
+    plan_module_readmes,
+)
 from root_contracts import architecture_delta, assess_architecture_index, assess_root_agent_contract
 
 RECEIPT_ID = "l9.repo-docs.receipt.v4"
@@ -253,6 +258,7 @@ def build_llm_state(
     snapshot: dict[str, Any],
     *,
     active: bool = True,
+    readme_models: tuple[Any, ...] = (),
 ) -> tuple[dict[str, Any], list[str]]:
     enabled, enabled_reason = llm_enabled(root, policy, directives)
     base_url, base_source = llm_base_url(directives, base_url_value)
@@ -282,7 +288,8 @@ def build_llm_state(
         return state, mutations
     if not enabled:
         return state, mutations
-    rendered = render_llm_txt(root, policy, base_url, snapshot)
+    snapshot = snapshot_with_compiled_readmes(root, snapshot, readme_models)
+    rendered = render_llm_txt(root, policy, base_url, snapshot, readme_models)
     render_findings = validate_llm_txt(rendered, root=root, snapshot=snapshot)
     if LLM_MARKER not in rendered:
         render_findings.append(f"{PROJECTION_FILENAME} render missing generator marker")
@@ -447,10 +454,8 @@ def audit_repository(
     writes_authorized = write_filetree or write_module_readmes or write_llm
     root_mutations: list[str] = []
     root_admissions: dict[str, str] = {}
-    if writes_authorized:
-        root_mutations, root_admissions = compile_missing_root_docs(
-            root, policy, refresh_owned=full
-        )
+    readme_models: tuple[Any, ...] = ()
+    compiled_readmes: list[Any] | None = None
     pointer = pointer_validate_root(root)
     python_fences = python_fence_validate_root(root)
     if pointer["status"] == "FAIL" and donor_heading_template_adopted(directives):
@@ -485,7 +490,7 @@ def audit_repository(
     # Not a second obligation ledger: DocumentationObligation remains the
     # only durable work unit.
     module_readme_plan: dict[str, int] | None = None
-    module_readme_quality: list[dict[str, int | str]] | None = None
+    module_readme_quality: list[dict[str, Any]] | None = None
     path_admissions: dict[str, str] = dict(root_admissions)
     try:
         filetree_opened = FILETREE_SURFACE_ID in set(impact.get("impacted_surfaces", []))
@@ -504,6 +509,21 @@ def audit_repository(
         filetree = _failed_filetree_state("BLOCKED", detail)
         inventory = FiletreeInventory()
         structural.append(_structural_failure("filetree", "BLOCKED", detail))
+    if writes_authorized and filetree["status"] not in {"FAIL", "BLOCKED"}:
+        try:
+            compiled_readmes = compile_repository_readmes(root, inventory=inventory)
+        except OSError as exc:
+            structural.append(
+                _structural_failure("module_readmes", "BLOCKED", f"README compile failed: {exc}")
+            )
+        else:
+            readme_models = tuple(model for model, _rendered in compiled_readmes)
+    if writes_authorized:
+        root_mutations, root_admissions = compile_missing_root_docs(
+            root, policy, refresh_owned=full, readme_models=readme_models
+        )
+        run_mutations.extend(root_mutations)
+        path_admissions.update(root_admissions)
     module_opened = "module_readmes" in set(impact.get("impacted_surfaces", []))
     if (
         write_module_readmes
@@ -517,6 +537,7 @@ def audit_repository(
                 inventory=inventory,
                 changed=None if full_module_readmes else module_changes,
                 force=full,
+                compiled=compiled_readmes,
             )
             module_readme_plan = readme_plan.counts()
             module_readme_quality = list(readme_plan.quality)
@@ -564,12 +585,18 @@ def audit_repository(
         write_llm,
         snapshot,
         active=full or llm_opened or (write_llm and llm_missing),
+        readme_models=readme_models,
     )
     run_mutations.extend(llm_mutations)
-    if write_filetree and PROJECTION_FILENAME in run_mutations and filetree["status"] not in {
-        "FAIL",
-        "BLOCKED",
-    }:
+    if (
+        write_filetree
+        and PROJECTION_FILENAME in run_mutations
+        and filetree["status"]
+        not in {
+            "FAIL",
+            "BLOCKED",
+        }
+    ):
         # filetree names root files. llm.txt is written after the first
         # inventory, so refresh once or the next audit treats the new name
         # as a filetree change.

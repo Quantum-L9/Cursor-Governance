@@ -256,7 +256,33 @@
                   "eligible_source_count": {"type": "integer", "minimum": 0},
                   "extracted_source_count": {"type": "integer", "minimum": 0},
                   "extraction_issue_count": {"type": "integer", "minimum": 0},
-                  "relationship_count": {"type": "integer", "minimum": 0}
+                  "relationship_count": {"type": "integer", "minimum": 0},
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["source", "kind"],
+                      "properties": {
+                        "source": {"type": "string"},
+                        "kind": {"type": "string"},
+                        "detail": {"type": ["string", "null"]}
+                      }
+                    }
+                  },
+                  "warnings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["rule_id", "message"],
+                      "properties": {
+                        "rule_id": {"type": "string"},
+                        "message": {"type": "string"}
+                      }
+                    }
+                  },
+                  "extracted": {"type": "object"}
                 }
               }
             }
