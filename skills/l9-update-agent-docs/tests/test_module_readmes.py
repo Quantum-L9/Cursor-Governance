@@ -62,6 +62,35 @@ def test_writes_root_readme_as_repository_index(tmp_path: Path):
     text = (tmp_path / "README.md").read_text(encoding="utf-8")
     assert rr.marker_for("index") in text
     assert "**Path:** `.`" in text
+    assert "`Rootish`" in text
+
+
+def test_root_readme_projects_published_entrypoint_not_every_file(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "index.ts").write_text(
+        "export class L9LLMRouter {\n  route() { return 1 }\n}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "other.ts").write_text(
+        "export class Hidden {}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        '{"name":"@quantum-l9/llm-router","description":"Routes tasks to models.",'
+        '"exports":{".":{"import":"./dist/index.js"}}}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "tsconfig.json").write_text(
+        '{"compilerOptions":{"outDir":"./dist","rootDir":"./src"}}\n',
+        encoding="utf-8",
+    )
+    gm.write_missing_module_readmes(tmp_path)
+    text = (tmp_path / "README.md").read_text(encoding="utf-8")
+    assert "Routes tasks to models." in text
+    assert "`L9LLMRouter`" in text
+    assert "src/index.ts" in text
+    assert "Hidden" not in text
+    assert "dist/" not in text
 
 
 def test_skips_handwritten_readme(tmp_path: Path):

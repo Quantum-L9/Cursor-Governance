@@ -701,11 +701,28 @@ def compile_readme_outputs(
         repo_root,
         internal_paths if internal_paths is not None else [target.path for target in targets],
     )
-    outputs: list[tuple[ReadmeModel, str]] = []
+    compiled: dict[str, ReadmeModel] = {}
     for target in targets:
-        model = compile_readme_model(repo_root, target, internal_names=internal_names)
-        outputs.append((model, render_readme(model)))
-    return outputs
+        if target.kind == "index":
+            continue
+        compiled[target.path] = compile_readme_model(
+            repo_root, target, internal_names=internal_names
+        )
+    for target in targets:
+        if target.kind != "index":
+            continue
+        descendants = tuple(
+            model
+            for path, model in compiled.items()
+            if target.path in {"", "."} or path.startswith(target.path + "/")
+        )
+        compiled[target.path] = compile_readme_model(
+            repo_root,
+            target,
+            internal_names=internal_names,
+            child_models=descendants,
+        )
+    return [(compiled[target.path], render_readme(compiled[target.path])) for target in targets]
 
 
 def _model_from_facts(target: ReadmeTarget, facts: ModuleFacts) -> ReadmeModel:

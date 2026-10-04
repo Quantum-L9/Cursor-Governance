@@ -387,9 +387,35 @@ def _type_label(name: str) -> str | None:
     return CORPUS_TYPE_LABELS.get(suffix)
 
 
+def _index_contents(model: ReadmeModel) -> str:
+    notes = dict(model.child_notes)
+    return "\n".join(
+        f"- [`{name}/`]({name}/)" + (f" — {notes[name]}" if name in notes else "")
+        for name in model.children
+    )
+
+
 def render_index_readme(model: ReadmeModel) -> str:
-    """A structural parent. No invented purpose; the children are the point."""
-    children = "\n".join(f"- [`{name}/`]({name}/)" for name in model.children)
+    """Repository or parent index.
+
+    When source facts exist, the public interface is those facts. A file
+    listing is the fallback for a directory that has no extracted source.
+    """
+    children = _index_contents(model)
+    if model.modules:
+        return _join(
+            [
+                _header(model),
+                _section("Purpose", model.purpose),
+                _section("Description", model.description),
+                _section("Public interface", _modules_block(model.modules)),
+                _section("Contents", children),
+                _section("Entrypoints", _shell_block(model.shell_entrypoints)),
+                _section("Integrates with", _relationships_block(_renderable_relationships(model))),
+                _section("Source coverage", _source_coverage_block(model)),
+                marker_for(model.target.kind),
+            ]
+        )
     files = "\n".join(
         f"- `{name}`" + (f" — {label}" if (label := _type_label(name)) else "")
         for name in model.contents[:MAX_CONTENTS]

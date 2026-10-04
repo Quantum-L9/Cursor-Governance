@@ -15,6 +15,7 @@ import json
 import re
 import sys
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -423,11 +424,98 @@ def _resolve_purpose(
     return None, None
 
 
+def _load_json_object(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _compiler_dirs(directory: Path) -> tuple[str | None, str | None]:
+    """``outDir`` and ``rootDir`` from a local tsconfig, when both are strings."""
+    data = _load_json_object(directory / "tsconfig.json")
+    options = data.get("compilerOptions") if data else None
+    if not isinstance(options, dict):
+        return None, None
+
+    def _norm(value: object) -> str | None:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        return value.strip().strip("./").strip("/") or None
+
+    return _norm(options.get("outDir")), _norm(options.get("rootDir"))
+
+
+def _published_specs(package: dict) -> list[str]:
+    """Import paths the package declares, `.` first, then `main` if distinct."""
+    specs: list[str] = []
+    exports = package.get("exports")
+    if isinstance(exports, str):
+        specs.append(exports)
+    elif isinstance(exports, dict):
+        keys = list(exports)
+        if "." in keys:
+            keys.remove(".")
+            keys.insert(0, ".")
+        for key in keys:
+            spec = exports[key]
+            chosen: str | None = None
+            if isinstance(spec, str):
+                chosen = spec
+            elif isinstance(spec, dict):
+                for field_name in ("import", "require", "default", "browser", "types"):
+                    value = spec.get(field_name)
+                    if isinstance(value, str):
+                        chosen = value
+                        break
+            if chosen and chosen not in specs:
+                specs.append(chosen)
+    main = package.get("main")
+    if isinstance(main, str) and main not in specs:
+        specs.append(main)
+    return specs
+
+
+def _resolve_published(
+    spec: str,
+    fact_paths: set[str],
+    out_dir: str | None,
+    root_dir: str | None,
+) -> str | None:
+    """Map one published path onto an extracted source file, or return None."""
+    rel = spec.lstrip("./")
+    source_suffixes = (".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs", ".py")
+    preferred: list[str] = []
+    if out_dir and root_dir and (rel == out_dir or rel.startswith(out_dir + "/")):
+        suffix = rel[len(out_dir) :].lstrip("/")
+        mapped = f"{root_dir}/{suffix}" if suffix else root_dir
+        preferred.append(mapped)
+        mapped_path = Path(mapped)
+        preferred.extend(mapped_path.with_suffix(ext).as_posix() for ext in source_suffixes)
+    fallback = [rel, *(Path(rel).with_suffix(ext).as_posix() for ext in source_suffixes)]
+    for candidate in (*preferred, *fallback):
+        if candidate in fact_paths:
+            return candidate
+    return None
+
+
+def _direct_child_name(parent: str, child: str) -> str | None:
+    if parent in {"", "."}:
+        return None if "/" in child or child in {"", "."} else child
+    prefix = parent + "/"
+    if not child.startswith(prefix):
+        return None
+    rest = child[len(prefix) :]
+    return None if not rest or "/" in rest else rest
+
+
 def compile_readme_model(
     repo_root: Path,
     target: ReadmeTarget,
     *,
     internal_names: frozenset[str] = frozenset(),
+    child_models: tuple[ReadmeModel, ...] = (),
 ) -> ReadmeModel:
     """Compile deterministic evidence for one authorized target."""
     module_dir = repo_root / target.path
@@ -483,6 +571,7 @@ def compile_readme_model(
     contents: tuple[str, ...] = ()
     file_types: tuple[tuple[str, int], ...] = ()
     children: tuple[str, ...] = ()
+    child_notes: tuple[tuple[str, str], ...] = ()
     if target.kind == "corpus" and module_dir.is_dir():
         names = corpus_files(module_dir)
         contents = tuple(names)
@@ -492,6 +581,9 @@ def compile_readme_model(
         )
     elif target.kind == "index" and module_dir.is_dir():
         children = _child_directories(module_dir, target.path)
+        out_dir, root_dir = _compiler_dirs(module_dir)
+        if out_dir and "/" not in out_dir:
+            children = tuple(name for name in children if name != out_dir)
         # An index may also hold direct files. They are listed rather than
         # dropped: being a parent does not make a manifest beside it invisible.
         names = corpus_files(module_dir)
@@ -502,6 +594,54 @@ def compile_readme_model(
                 source=target.path, kind="source_tree", detail=f"{len(children)} child(ren)"
             )
         )
+        direct_facts, direct_issues = compile_source_evidence(repo_root, target.path)
+        by_path = {fact.path: fact for fact in direct_facts}
+        for child in child_models:
+            for fact in child.source_facts:
+                by_path.setdefault(fact.path, fact)
+        package = _load_json_object(module_dir / "package.json")
+        selected_paths: list[str] = []
+        if package:
+            for spec in _published_specs(package):
+                match = _resolve_published(spec, set(by_path), out_dir, root_dir)
+                if match and match not in selected_paths:
+                    selected_paths.append(match)
+        if not selected_paths:
+            selected_paths = [fact.path for fact in direct_facts]
+        source_facts = tuple(by_path[path] for path in selected_paths)
+        modules = tuple(replace(fact.module, file=fact.path) for fact in source_facts)
+        extraction_issues = tuple(
+            issue for issue in direct_issues if issue.path in set(selected_paths)
+        )
+        if source_facts:
+            evidence.append(
+                EvidenceRef(
+                    source=target.path,
+                    kind="source_facts",
+                    detail=f"{len(source_facts)} published or direct source file(s)",
+                )
+            )
+        imports = [
+            item for fact in source_facts if fact.language == "python" for item in fact.imports
+        ]
+        relative = {item for fact in source_facts for item in fact.relative_imports}
+        dependencies = classify_dependencies(imports, internal_names, relative)
+        shell_entrypoints = tuple(
+            sorted({entrypoint for fact in source_facts for entrypoint in fact.entrypoints})
+        )
+        relationships = tuple(
+            sorted(
+                {relation for fact in source_facts for relation in fact.relationships},
+                key=lambda item: (item.kind, item.target, item.source, item.detail or ""),
+            )
+        )
+        eligible_source_count = len(selected_paths)
+        notes: list[tuple[str, str]] = []
+        for child in child_models:
+            name = _direct_child_name(target.path, child.target.path)
+            if name and child.purpose:
+                notes.append((name, child.purpose))
+        child_notes = tuple(notes)
     elif target.kind == "skill" and module_dir.is_dir():
         children = _child_directories(module_dir, target.path)
 
@@ -518,6 +658,7 @@ def compile_readme_model(
         responsibilities=responsibilities,
         modules=modules,
         children=children,
+        child_notes=child_notes,
         file_types=file_types,
         contents=contents,
         shell_entrypoints=shell_entrypoints,

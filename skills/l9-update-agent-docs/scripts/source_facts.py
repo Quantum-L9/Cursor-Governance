@@ -128,13 +128,22 @@ def _summary(text: str | None, limit: int = 260) -> str | None:
     )
     if boundary > 0:
         return cleaned[: boundary + 1]
-    cut = cleaned.rfind(" ", 0, limit)
-    return (cleaned[:cut] if cut > 0 else cleaned[:limit]).rstrip(" ,;:-–—…")
+    return None
 
 
 def _leading_comment(text: str) -> str | None:
-    match = _COMMENT_RE.search(text[:1200])
-    return _summary(match.group(1)) if match else None
+    """File-level comment block only. A comment after code is not a purpose."""
+    lines: list[str] = []
+    for line in text.splitlines():
+        if not line.strip():
+            if lines:
+                break
+            continue
+        match = _COMMENT_RE.match(line)
+        if match is None:
+            break
+        lines.append(match.group(1))
+    return _summary(" ".join(lines)) if lines else None
 
 
 def _shell_environment_names(text: str) -> list[str]:

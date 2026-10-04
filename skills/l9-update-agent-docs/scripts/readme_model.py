@@ -177,6 +177,8 @@ class ReadmeModel:
     responsibilities: tuple[str, ...] = ()
     modules: tuple[ModuleDoc, ...] = ()
     children: tuple[str, ...] = ()
+    #: Direct child directory name paired with that child's compiled purpose.
+    child_notes: tuple[tuple[str, str], ...] = ()
     file_types: tuple[tuple[str, int], ...] = ()
     contents: tuple[str, ...] = ()
     shell_entrypoints: tuple[str, ...] = ()
