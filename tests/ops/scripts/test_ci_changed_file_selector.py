@@ -22,6 +22,8 @@ from select_pr_pytest_paths import (  # noqa: E402
     REGISTRY_PATH,
     infer_test_path,
     select_pr_pytest_paths,
+)
+from select_pr_pytest_paths import (
     tests_naming_path as naming_path,
 )
 
