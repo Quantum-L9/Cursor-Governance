@@ -86,6 +86,8 @@ SECRET_RE = r"(ghp_|gho_|ghs_|github_pat_|xox[bap]-|sk-[A-Za-z0-9]{20}|AKIA[0-9A
 
 TAG_RE = r"^[a-z0-9][a-z0-9_.:/-]{0,79}$"
 AGENT_TAG_RE = r"^agent:[a-z0-9][a-z0-9-]{1,40}$"
+#: SurfaceIdentity of the writing process, stamped beside the actor tag.
+SURFACE_TAG_RE = r"^surface:[a-z0-9][a-z0-9-]{1,40}$"
 MIN_TAGS, MAX_TAGS = 2, 12
 IDEMPOTENCY_RE = r"^[A-Za-z0-9._:/#@-]{8,200}$"
 MAX_TEXT_FIELD = 300
@@ -208,6 +210,13 @@ def validate(payload: Any) -> dict[str, Any]:
             "agent:claude-code is the retired single identity and names no surface; "
             "the builder stamps the derived identity (claude-code-desktop / claude-code-mobile)"
         )
+    if not [t for t in tags if not t.startswith(("agent:", "surface:"))]:
+        raise AgentWriteError("tags must carry at least one topic tag besides agent:/surface:")
+    if len([t for t in tags if t.startswith("surface:")]) > 1:
+        raise AgentWriteError("tags carry at most one surface:<id> tag")
+    for tag in tags:
+        if tag.startswith("surface:") and not re.search(SURFACE_TAG_RE, tag):
+            raise AgentWriteError(f"tag {tag!r} is not a surface:<id> tag")
 
     key = payload["idempotency_key"]
     if not isinstance(key, str) or not re.search(IDEMPOTENCY_RE, key):
@@ -251,6 +260,7 @@ def build(
     memory_class: str,
     content: str,
     agent_id: str,
+    surface_id: str = "",
     tags: list[str] | tuple[str, ...] = (),
     source_id: str | None = None,
     task_signature: str | None = None,
@@ -258,14 +268,16 @@ def build(
     idempotency_key: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Build a contract-conforming payload (aliases mapped, agent tag and key added)."""
+    """Build a contract-conforming payload (aliases mapped, agent/surface tags and key added)."""
     _, writable, _allowed = _vocabulary()
     try:
         memory_class = writable(memory_class).value
     except ValueError as exc:
         raise AgentWriteError(str(exc)) from exc
     content = " ".join(str(content).split())
-    all_tags = [f"agent:{agent_id}", *[t for t in tags if t != f"agent:{agent_id}"]]
+    stamped = [f"agent:{agent_id}", *([f"surface:{surface_id}"] if surface_id else [])]
+    topics = [t for t in tags if t != f"agent:{agent_id}" and not t.startswith("surface:")]
+    all_tags = [*stamped, *topics]
     payload: dict[str, Any] = {
         "namespace": namespace,
         "content": content,

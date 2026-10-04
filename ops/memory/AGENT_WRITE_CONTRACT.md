@@ -36,7 +36,7 @@ conform.
 | `namespace` | **Required.** The repository namespace: the write hint from `python -m ops.memory.cli resolve`. It must be a lowercase slug. It must never be `main`, `master`, `default`, `test`, or the shared `l9-workspace`. |
 | `content` | **Required.** One fact on one line, 12–600 characters. No `SESSION:` / `WORK:`-style preamble, no prose summary, never a credential. |
 | `memory_class` | **Required.** A canonical class from the bound package's agent-lane allowlist (every class except `identity`), in canonical form. |
-| `tags` | **Required.** 2–12 unique lowercase tags. Exactly one is `agent:<id>` (`claude-code`, `cursor`, …); at least one is a topic tag. |
+| `tags` | **Required.** 2–12 unique lowercase tags. Exactly one is `agent:<id>` (`claude-code`, `cursor`, …); at least one is a topic tag. The builder also stamps at most one `surface:<id>` — the derived SurfaceIdentity (`claude-code-desktop`, `cursor-ide`, …), never chosen by the caller. |
 | `idempotency_key` | **Required.** The builder's default is `agent:<namespace>:<sha256(class, normalized content)[:16]>`, so the same fact written twice is one record, not two. |
 | `source_id` | Evidence: a PR, commit, ADR or file path. |
 | `subject`, `predicate`, `object` | An assertion triple, all three given together or none. |
