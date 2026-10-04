@@ -308,6 +308,17 @@ def _writer_root(tmp_path: Path, *, sync_sleep: float = 0.0) -> tuple[Path, dict
         "#!/usr/bin/env bash\nset -euo pipefail\n"
         'if [ "${1:-}" = "--version" ]; then echo "uv 9.9.9-fixture"; exit 0; fi\n'
         'if [ "${1:-}" = "sync" ]; then\n'
+        # Real uv lists its flags; the script feature-probes for
+        # --managed-python rather than assuming the floor pin carries it.
+        '  case " $* " in\n'
+        '    *" --help "*)\n'
+        '      if [ -z "${UV_TEST_NO_MANAGED_FLAG:-}" ]; then\n'
+        '        echo "      --managed-python  Require use of uv-managed Python"\n'
+        "      fi\n"
+        "      exit 0\n"
+        "      ;;\n"
+        "  esac\n"
+        '  printf \'%s\\n\' "$*" >> "$UV_TEST_ARGV"\n'
         f"  sleep {sync_sleep}\n"
         '  if flock -n "$UV_TEST_ROOT/.l9/uv-environment.lock" true; then echo free; '
         'else echo held; fi > "$UV_TEST_PROBE"\n'
@@ -318,6 +329,9 @@ def _writer_root(tmp_path: Path, *, sync_sleep: float = 0.0) -> tuple[Path, dict
         # UV_TEST_BROKEN_IMPORT: the venv carries a half-installed memory package.
         '\'case "$*" in *"import l9_graphite_memory"*) '
         '[ -n "${UV_TEST_BROKEN_IMPORT:-}" ] && exit 1;; esac\' '
+        # UV_TEST_FAKE_MACHINE: the venv was built for another architecture.
+        '\'case "$*" in *"platform.machine"*) '
+        '[ -n "${UV_TEST_FAKE_MACHINE:-}" ] && { echo "$UV_TEST_FAKE_MACHINE"; exit 0; };; esac\' '
         "'exec python3 \"$@\"' "
         '> "$UV_TEST_ROOT/.venv/bin/python3"\n'
         '  chmod +x "$UV_TEST_ROOT/.venv/bin/python3"\n'
@@ -330,8 +344,19 @@ def _writer_root(tmp_path: Path, *, sync_sleep: float = 0.0) -> tuple[Path, dict
         "PATH": f"{binary}:{os.environ.get('PATH', '')}",
         "UV_TEST_ROOT": str(root),
         "UV_TEST_PROBE": str(probe),
+        "UV_TEST_ARGV": str(tmp_path / "uv-argv"),
     }
+    env.pop("GITHUB_ACTIONS", None)
+    env.pop("CI", None)
     return root, env
+
+
+def _sync_argv(tmp_path: Path) -> list[str]:
+    """Every `uv sync` argument list the script issued, newest last."""
+    recorded = tmp_path / "uv-argv"
+    if not recorded.is_file():
+        return []
+    return [line for line in recorded.read_text(encoding="utf-8").splitlines() if line]
 
 
 needs_util_linux = pytest.mark.skipif(
@@ -567,3 +592,107 @@ def test_shell_reader_refuses_an_interrupted_install(tmp_path: Path) -> None:
     broken = _shell_wait(root, "0")
     assert broken.returncode == 2
     assert "interrupted" in broken.stderr
+
+
+# --- writer: the interpreter the locked environment is built for ------------
+#
+# uv resolves an interpreter before it resolves wheels, and it prefers an
+# already-active environment. On this fleet that is an x86_64 conda base, so a
+# fresh worktree on Apple silicon got a Rosetta .venv; uv.lock has no x86_64
+# macOS cryptography wheel, so the wheels-only sync failed with "no binary
+# distribution" and the whole worktree had no usable environment. `make venv`
+# ran `uv sync` WITHOUT --no-build and papered over the same mismatch by
+# compiling the sdist, which is why it looked like a lockfile defect.
+
+
+def test_the_local_sync_requests_a_host_native_interpreter(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert done.returncode == 0, done.stderr
+    argv = _sync_argv(tmp_path)
+    assert argv, "uv sync must have run"
+    assert "--managed-python" in argv[-1], argv
+    assert "--no-build" in argv[-1], "wheels-only is unchanged"
+
+
+def test_ci_keeps_its_provisioned_interpreter(tmp_path: Path) -> None:
+    """Workflows provision Python with actions/setup-python; uv must use it."""
+    for marker in ("GITHUB_ACTIONS", "CI"):
+        root, env = _writer_root(tmp_path / marker)
+        env[marker] = "true"
+        done = subprocess.run(
+            ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+        )
+        assert done.returncode == 0, done.stderr
+        argv = _sync_argv(tmp_path / marker)
+        assert argv, marker
+        assert "--managed-python" not in argv[-1], marker
+
+
+def test_a_uv_without_the_flag_is_not_given_it(tmp_path: Path) -> None:
+    """Floor pin is uv >= 0.8.0; the flag is probed, never assumed."""
+    root, env = _writer_root(tmp_path)
+    env["UV_TEST_NO_MANAGED_FLAG"] = "1"
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert done.returncode == 0, done.stderr
+    argv = _sync_argv(tmp_path)
+    assert argv and "--managed-python" not in argv[-1], argv
+
+
+def test_a_foreign_architecture_venv_is_resynchronized(tmp_path: Path) -> None:
+    """An emulated .venv is not this host's environment, however complete."""
+    root, env = _writer_root(tmp_path)
+    first = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert first.returncode == 0, first.stderr
+    assert (root / ".venv" / ".l9-uv-fingerprint").is_file()
+
+    foreign = {**env, "UV_TEST_FAKE_MACHINE": "sparc64"}
+    check = subprocess.run(
+        ["bash", str(ENSURE), str(root), "check"],
+        env=foreign,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert check.returncode == 1
+    assert "on a" in check.stderr and "host; re-synchronizing" in check.stderr
+    assert "sparc64" in check.stderr
+
+    before = len(_sync_argv(tmp_path))
+    again = subprocess.run(
+        ["bash", str(ENSURE), str(root)],
+        env=foreign,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert again.returncode == 0, again.stderr
+    assert len(_sync_argv(tmp_path)) == before + 1, "the mismatch must force a real sync"
+
+
+def test_a_matching_architecture_venv_stays_cached(tmp_path: Path) -> None:
+    """The guard must not re-sync a healthy environment on every call."""
+    root, env = _writer_root(tmp_path)
+    assert (
+        subprocess.run(
+            ["bash", str(ENSURE), str(root)], env=env, capture_output=True, timeout=120
+        ).returncode
+        == 0
+    )
+    before = len(_sync_argv(tmp_path))
+    again = subprocess.run(
+        ["bash", str(ENSURE), str(root), "check"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert again.returncode == 0, again.stderr
+    assert "cached locked environment" in again.stderr
+    assert len(_sync_argv(tmp_path)) == before, "no sync for a healthy environment"

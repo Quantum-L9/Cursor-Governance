@@ -9,11 +9,13 @@ L9_TARGETS += \
 # ---------------------------------------------------------------------------
 gov-python:
 	@bash "$(CURDIR)/ops/scripts/ensure_gov_python.sh" "$(CURDIR)"
+# One local sync owner. A raw `uv sync` here was a second door with different
+# rules: no --no-build, no environment lock, no in-progress marker, no
+# host-architecture guard and no import verification. `venv` is also the one
+# goal exempt from the gov-python auto-prereq, so that weaker door was the one
+# a broken environment reached for. The script seals the memory artifact itself.
 venv:
-	uv sync --locked --extra dev
-	PYTHONPATH="$(CURDIR)" $(PYTHON) \
-		-m ops.memory.seal_artifact_provenance \
-		--root "$(CURDIR)"
+	bash "$(CURDIR)/ops/scripts/ensure_uv_environment.sh" "$(CURDIR)"
 start:
 	@cd "$(WS)" && \
 		CURSOR_PROJECT_DIR="$(WS)" \
