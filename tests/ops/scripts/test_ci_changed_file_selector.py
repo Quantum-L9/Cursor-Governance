@@ -23,9 +23,7 @@ from select_pr_pytest_paths import (  # noqa: E402
     infer_test_path,
     select_pr_pytest_paths,
 )
-from select_pr_pytest_paths import (
-    tests_naming_path as naming_path,
-)
+from select_pr_pytest_paths import tests_naming_path as naming_path  # noqa: E402
 
 WORKFLOW = ROOT / ".github" / "workflows" / "l9-lint-test.yml"
 RULE_48 = ROOT / "rules" / "48-make-pr-remediation.mdc"
