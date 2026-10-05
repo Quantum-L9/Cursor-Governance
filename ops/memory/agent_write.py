@@ -36,7 +36,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ops.memory.agent_identity import RETIRED, resolve_agent_id
+from ops.memory.agent_identity import (
+    HISTORICAL_ACTOR_ALIASES,
+    resolve_agent_id,
+    resolve_surface_id,
+)
 
 SCHEMA_ID = "l9.agent_memory_write.v1"
 WRITE_TOOL = "mcp__l9-graphite-memory__memory_write_agent"
@@ -86,7 +90,7 @@ SECRET_RE = r"(ghp_|gho_|ghs_|github_pat_|xox[bap]-|sk-[A-Za-z0-9]{20}|AKIA[0-9A
 
 TAG_RE = r"^[a-z0-9][a-z0-9_.:/-]{0,79}$"
 AGENT_TAG_RE = r"^agent:[a-z0-9][a-z0-9-]{1,40}$"
-#: SurfaceIdentity of the writing process, stamped beside the actor tag.
+#: SurfaceIdentity of the writing process, stamped beside the ActorIdentity tag.
 SURFACE_TAG_RE = r"^surface:[a-z0-9][a-z0-9-]{1,40}$"
 MIN_TAGS, MAX_TAGS = 2, 12
 IDEMPOTENCY_RE = r"^[A-Za-z0-9._:/#@-]{8,200}$"
@@ -205,10 +209,11 @@ def validate(payload: Any) -> dict[str, Any]:
     agent_tags = [t for t in tags if re.search(AGENT_TAG_RE, t)]
     if len(agent_tags) != 1:
         raise AgentWriteError("tags must carry exactly one agent:<id> tag")
-    if agent_tags[0].removeprefix("agent:") in RETIRED:
+    author = agent_tags[0].removeprefix("agent:")
+    if author in HISTORICAL_ACTOR_ALIASES:
         raise AgentWriteError(
-            "agent:claude-code is the retired single identity and names no surface; "
-            "the builder stamps the derived identity (claude-code-desktop / claude-code-mobile)"
+            f"agent:{author} is a historical ActorIdentity alias, readable but never a new "
+            f"author; the builder stamps agent:{HISTORICAL_ACTOR_ALIASES[author]}"
         )
     if not [t for t in tags if not t.startswith(("agent:", "surface:"))]:
         raise AgentWriteError("tags must carry at least one topic tag besides agent:/surface:")
@@ -343,11 +348,19 @@ def main(argv: list[str] | None = None) -> int:
                 raise AgentWriteError(
                     "no memory identity for this process (ops/memory/agent_identity.py)"
                 )
+            surface = resolve_surface_id()
+            chosen = [t for t in args.tag if t.startswith("surface:")]
+            if chosen and chosen != [f"surface:{surface}"]:
+                raise AgentWriteError(
+                    f"surface drift: {chosen!r} but this process is surface "
+                    f"{surface or 'unknown'!r}; the surface is derived, never chosen"
+                )
             payload = build(
                 namespace=args.namespace,
                 memory_class=args.memory_class,
                 content=args.content,
                 agent_id=args.agent_id,
+                surface_id=surface,
                 tags=args.tag,
                 source_id=args.source_id,
                 task_signature=args.task_signature,

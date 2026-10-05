@@ -34,6 +34,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from ops.memory.agent_identity import canonical_actor_id
 from ops.memory.control_plane_client import (
     MemoryControlPlaneClient,
     OperationOutcome,
@@ -134,8 +135,11 @@ def _is_applicable_prefetch_receipt(data: Any, *, writer_agent: str, chat_id: st
     # Positive identification: a prefetch receipt records what happened.
     if str(data.get("status") or "") not in _PREFETCH_RECEIPT_STATUSES:
         return False
-    receipt_agent = str(data.get("agent_id") or "").strip()
-    if receipt_agent and receipt_agent != writer_agent:
+    # A receipt stamped with a historical actor alias (claude-code-desktop /
+    # claude-code-mobile) still belongs to its canonical actor: read
+    # compatibility only, nothing is re-stamped.
+    receipt_agent = canonical_actor_id(str(data.get("agent_id") or ""))
+    if receipt_agent and receipt_agent != canonical_actor_id(writer_agent):
         return False
     # Chat is constrained only when this process can name one; the operator CLI
     # usually cannot, and inventing a chat id would reject every valid receipt.
