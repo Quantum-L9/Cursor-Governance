@@ -568,6 +568,13 @@ def _scope_expanding_files(
         out = _git_out(root, "diff", "--name-only", f"{rev}..HEAD")
         if out is not None:
             outgoing = [line.strip() for line in out.splitlines() if line.strip()]
+            base_ref = _git_out(root, "rev-parse", "--verify", f"{remote_name}/main")
+            if base_ref:
+                branch_diff = _git_out(root, "diff", "--name-only", f"{base_ref}...HEAD")
+                branch_files = {
+                    line.strip() for line in (branch_diff or "").splitlines() if line.strip()
+                }
+                outgoing = [f for f in outgoing if f in branch_files]
             new_files = [f for f in outgoing if f not in pr_files and not is_generated_path(f)]
             return new_files
     return None
