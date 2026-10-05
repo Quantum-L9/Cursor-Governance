@@ -114,7 +114,7 @@ the provider client. ADR-0028 fixed close visibility on that same client.
 - `CANONICAL_LAW.md` §8 "Memory Layer (Graphiti-Native)" interface rows, via
   §8.2 (2026-09-06).
 - (2026-09-07) ADR-0004 in full (the stdlib hook client it pinned no longer
-  exists); ADR-0007 in full (cloud reachability of the provider is legacy
+  exists); ADR-0039 in full (cloud reachability of the provider is legacy
   operator infrastructure, not a model-surface transport); ADR-0002's
   transport assumptions and its `phase_lock` precondition on repository
   writes (the hydration gate stands; memory phase-lock is a governed-write

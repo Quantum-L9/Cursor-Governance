@@ -90,7 +90,7 @@ Install Prompt 1 at exact canonical paths, then run Prompt 2 so the new architec
 8. Do **not** run `python3 ops/contracts/build_rules.py build`.
 9. Do **not** pass `--bootstrap-baseline`, `--tighten-baseline`, or `--check-baseline`.
 10. Makefile: append-only. CI and `.pre-commit-config.yaml`: unchanged.
-11. ADR files use the **specified slugs** even though numbers collide with existing `docs/decisions/ADR-0007-*.md` … `ADR-0014-*.md`. Do not renumber. Report the collision.
+11. ADR files use the **specified slugs** at ADR-0040 through ADR-0047. The earlier collision with `docs/decisions/ADR-0007-*.md` … `ADR-0014-*.md` was cleared by that renumber.
 12. New root **directory** `contracts/` is allowed (root-file-protection registers root *files*, not this tree). Only root-file edit is append-only [`Makefile`](Makefile).
 
 ## Architecture (after install)

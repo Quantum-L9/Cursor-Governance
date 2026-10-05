@@ -164,7 +164,7 @@ Claude Code gold-standard pack: `environment/agents/adapters/claude-code/`.
 `environment/claude-code/` does **not** exist. The pack has **no** `autonomy/`
 subdirectory. Cloud Web/Mobile memory uses HTTPS Graphiti
 (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
-see ADR-0006 + ADR-0007.
+see ADR-0006 + ADR-0039.
 
 **Cursor** scoped-commits locally without asking (pathspecs; rule 49).
 Ask-first applies to push / `make pr` only.
