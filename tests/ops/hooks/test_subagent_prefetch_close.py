@@ -11,6 +11,7 @@ START = ROOT / "ops" / "hooks" / "lifecycle-subagent-start.sh"
 STOP = ROOT / "ops" / "hooks" / "lifecycle-subagent-stop.sh"
 TEMPLATE = ROOT / "ops" / "hooks" / "hooks.json.template"
 SETUP = ROOT / "ops" / "scripts" / "setup_workspace_symlinks.sh"
+RECONCILE = ROOT / "ops" / "scripts" / "reconcile_hooks_registry.py"
 
 
 def test_subagent_start_runs_prefetch_after_parent_gate() -> None:
@@ -76,6 +77,9 @@ def test_stop_timeout_covers_session_end_budget() -> None:
     assert stop["timeout"] == 45
     start = data["hooks"]["subagentStart"][0]
     assert start["timeout"] == 30
-    setup = SETUP.read_text(encoding="utf-8")
-    assert '"timeout": 45' in setup
-    assert '"timeout": 30' in setup
+    # The registry writer stamps the same budgets. It is reconcile_hooks_registry.py,
+    # which setup_workspace_symlinks.sh delegates to.
+    reconcile = RECONCILE.read_text(encoding="utf-8")
+    assert '"timeout": 45' in reconcile
+    assert '"timeout": 30' in reconcile
+    assert "reconcile_hooks_registry.py" in SETUP.read_text(encoding="utf-8")
