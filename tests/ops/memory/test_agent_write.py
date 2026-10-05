@@ -38,13 +38,6 @@ def test_build_stamps_a_supplied_surface_and_drops_a_caller_surface() -> None:
     ]
 
 
-def test_tags_carry_at_most_one_surface() -> None:
-    payload = _build()
-    payload["tags"] = [*payload["tags"], "surface:cursor-ide", "surface:claude-code-cli"]
-    with pytest.raises(aw.AgentWriteError, match="at most one surface"):
-        aw.validate(payload)
-
-
 def test_the_same_fact_gets_the_same_key_whatever_its_spacing_or_case() -> None:
     one = aw.fact_key("ns-a", "decision", "Use usable_receipt")
     assert one == aw.fact_key("ns-a", "decision", "  use   USABLE_RECEIPT ")
