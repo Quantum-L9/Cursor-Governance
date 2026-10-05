@@ -352,10 +352,7 @@ def test_scope_expanding_push_of_an_open_pr_is_denied(
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
-    monkeypatch.setattr(
-        open_pr_probe, "open_pr_files", lambda root, branch, remote="origin": {"existing.py"}
-    )
-    # mock _git_out so diff shows an unexpected new file
+    # mock _scope_expanding_files so diff shows an unexpected new file
     monkeypatch.setattr(
         "first_publication_gate._scope_expanding_files",
         lambda root, branch, remote: ["new_unrelated_module.py"],

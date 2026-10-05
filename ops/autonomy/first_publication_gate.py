@@ -27,8 +27,10 @@ expiring publish-path receipt (``ops/autonomy/breakglass_receipt.py``).
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -500,18 +502,52 @@ def _git_out(root: Path, *args: str) -> str | None:
     return proc.stdout.strip()
 
 
+def _gh_out(args: list[str], cwd: Path) -> str | None:
+    if shutil.which("gh") is None:
+        return None
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["gh", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
+def _open_pr_files(root: Path, branch: str) -> set[str] | None:
+    if not branch or branch == "HEAD":
+        return None
+    out = _gh_out(["pr", "view", branch, "--json", "files"], cwd=root)
+    if out:
+        try:
+            data = json.loads(out)
+            return {
+                str(item.get("path"))
+                for item in data.get("files", [])
+                if isinstance(item, dict) and item.get("path")
+            }
+        except Exception:
+            pass
+    return None
+
+
 def _scope_expanding_files(
     root: Path | None, branch: str | None, remote: str | None
 ) -> list[str] | None:
     """Return non-generated files touched by outgoing commits not in the PR, or None."""
     try:
         from l4_local import current_branch
-        from open_pr_probe import open_pr_files
         from sync_generated_artifacts import is_generated_path
     except ImportError:  # pragma: no cover - package import
         try:
             from ops.autonomy.l4_local import current_branch
-            from ops.autonomy.open_pr_probe import open_pr_files
             from ops.scripts.sync_generated_artifacts import is_generated_path
         except ImportError:
             return None
@@ -521,7 +557,7 @@ def _scope_expanding_files(
     target = branch if branch and branch != "HEAD" else current_branch(root)
     if not target or target == "HEAD":
         return None
-    pr_files = open_pr_files(root, target, remote=remote or "origin")
+    pr_files = _open_pr_files(root, target)
     if pr_files is None:
         return None
     remote_name = remote or "origin"
