@@ -1,32 +1,55 @@
 #!/usr/bin/env python3
-"""L9 governed harness for the Claude Agent SDK.
+"""Thin Claude Agent SDK harness for Cursor-Governance.
 
-Loads committed project governance (CLAUDE.md, .claude/settings.json, .mcp.json)
-via setting_sources=["project"], routes hook events through l9_hook_exec.sh,
-hard-denies SSOT mutations in-process, and emits a schema-validated JSON report.
+Governance is consumed, never authored here. ``setting_sources=["project"]``
+makes the SDK load ``CLAUDE.md``, ``.claude/settings.json`` (permissions and
+hooks) and ``.mcp.json`` exactly as Claude Code does. This module owns only
+SDK runtime mechanics: working directory, permission-mode selection, budget
+and turn bounds, structured report output, file checkpointing, MCP status
+introspection, and SDK lifecycle/error handling.
+
+It deliberately passes no ``allowed_tools``, ``disallowed_tools``, ``hooks``,
+``agents``, ``can_use_tool`` or ``mcp_servers``: those belong to the project
+settings, and a second copy here would be a shadow policy
+(``validate_agent_sdk_env.py`` rejects one).
 
 Spec: environment/agents/adapters/claude-agent-sdk/README.md
-Config SSOT: environment/agents/adapters/claude-agent-sdk/config.yaml
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
 import os
-import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 HERE = Path(__file__).resolve().parent
 REPO = Path(os.environ.get("L9_REPO", HERE.parents[3]))
-GOV_HOME = Path(os.environ.get("L9_GOV_HOME", Path.home() / ".cursor-governance"))
-CONFIG_PATH = HERE / "config.yaml"
-AUDIT_LOG = REPO / "telemetry" / "agent_sdk_audit.jsonl"
+
+SETTING_SOURCES = ("project",)
+PROJECT_GOVERNANCE = ("CLAUDE.md", ".claude/settings.json", ".mcp.json")
+PERMISSION_MODES = ("default", "acceptEdits", "plan")
+DEFAULT_MODE = "default"
+DEFAULT_MAX_TURNS = 40
+DEFAULT_MAX_BUDGET_USD = 2.0
+# reports/* is gitignored: a run never dirties the checkout.
+DEFAULT_REPORT = Path("reports") / "agent_sdk" / "latest.json"
+# A server still settling after this long is reported as pending, not guessed.
+MCP_SETTLE_SECONDS = 30.0
+MCP_UNAVAILABLE = ("failed", "needs-auth")
+# claude_agent_sdk.ResultMessage fields copied into the report.
+RESULT_FIELDS = (
+    "subtype",
+    "is_error",
+    "num_turns",
+    "total_cost_usd",
+    "session_id",
+    "permission_denials",
+    "structured_output",
+)
 
 REPORT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -52,222 +75,138 @@ REPORT_SCHEMA: dict[str, Any] = {
 }
 
 
-def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
-    with path.open() as f:
-        return yaml.safe_load(f)
+def missing_governance(repo: Path = REPO) -> list[str]:
+    """Project governance inputs the SDK must load but cannot find."""
+    return [rel for rel in PROJECT_GOVERNANCE if not (repo / rel).is_file()]
 
 
-# ---- Governance primitives (pure; unit-tested without the SDK) --------------
-def is_protected(path: str, cfg: dict[str, Any], repo: Path = REPO) -> bool:
-    if not path:
-        return False
-    try:
-        rel = os.path.relpath(path, repo)
-    except ValueError:
-        rel = path
-    rel = rel.replace(os.sep, "/")
-    if rel.startswith(".."):
-        return True  # outside repo is always protected
-    if Path(rel).name in set(cfg["protected_files"]):
-        return True
-    return any(rel.startswith(p) for p in cfg["protected_prefixes"])
-
-
-def deny(input_data: dict[str, Any], reason: str) -> dict[str, Any]:
-    return {
-        "systemMessage": f"[L9] blocked: {reason}",
-        "hookSpecificOutput": {
-            "hookEventName": input_data.get("hook_event_name", "PreToolUse"),
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
-        },
-    }
-
-
-def map_launcher_result(
-    returncode: int, stdout: str, stderr: str, hook_class: str, input_data: dict[str, Any],
-    veto_code: int, script: str,
+def option_kwargs(
+    mode: str = DEFAULT_MODE,
+    budget: float = DEFAULT_MAX_BUDGET_USD,
+    turns: int = DEFAULT_MAX_TURNS,
+    repo: Path = REPO,
 ) -> dict[str, Any]:
-    if returncode == veto_code and hook_class == "governor":
-        return deny(input_data, stderr.strip() or f"{script} vetoed")
-    if stdout.strip() and input_data.get("hook_event_name") == "PostToolUse":
-        return {
-            "hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": stdout.strip()[:4000],
-            }
-        }
-    return {}
-
-
-def audit_record(input_data: dict[str, Any], tool_use_id: str | None) -> dict[str, Any]:
+    """The complete ClaudeAgentOptions payload — runtime mechanics only."""
+    if mode not in PERMISSION_MODES:
+        raise ValueError(f"permission mode {mode!r} not in {PERMISSION_MODES}")
+    if budget <= 0 or turns <= 0:
+        raise ValueError("budget and turns must be positive")
     return {
-        "ts": time.time(),
-        "event": input_data.get("hook_event_name"),
-        "tool": input_data.get("tool_name"),
-        "tool_use_id": tool_use_id,
-        "agent": input_data.get("agent_type"),
-        "session": input_data.get("session_id"),
+        "cwd": repo,
+        "setting_sources": list(SETTING_SOURCES),
+        "system_prompt": {"type": "preset", "preset": "claude_code"},
+        "permission_mode": mode,
+        "output_format": {"type": "json_schema", "schema": REPORT_SCHEMA},
+        "max_turns": turns,
+        "max_budget_usd": budget,
+        "enable_file_checkpointing": True,
     }
 
 
-def write_audit(record: dict[str, Any], log: Path = AUDIT_LOG) -> None:
-    log.parent.mkdir(parents=True, exist_ok=True)
-    with log.open("a") as f:
-        f.write(json.dumps(record) + "\n")
-
-
-# ---- SDK wiring --------------------------------------------------------------
-def build_hooks(cfg: dict[str, Any]):
-    from claude_agent_sdk import HookMatcher
-
-    launcher = GOV_HOME / cfg["hook_launcher"]
-    veto = int(cfg.get("governor_veto_exit_code", 2))
-
-    async def invariant_guard(input_data, tool_use_id, context):
-        path = (input_data.get("tool_input") or {}).get("file_path", "")
-        if is_protected(path, cfg):
-            return deny(input_data, f"{path} is governance SSOT; change via PR with CODEOWNERS review")
-        return {}
-
-    def l9_dispatch(hook_class: str, script: str):
-        async def _hook(input_data, tool_use_id, context):
-            if not launcher.exists():
-                return {}  # same no-op fallback as committed .claude/settings.json
-
-            def run():
-                return subprocess.run(
-                    ["bash", str(launcher), "--class", hook_class, script],
-                    input=json.dumps(input_data), text=True, capture_output=True,
-                    timeout=15, cwd=REPO,
-                )
-
-            try:
-                r = await asyncio.to_thread(run)
-            except subprocess.TimeoutExpired:
-                return {}
-            return map_launcher_result(r.returncode, r.stdout, r.stderr, hook_class, input_data, veto, script)
-
-        return _hook
-
-    async def audit_logger(input_data, tool_use_id, context):
-        rec = audit_record(input_data, tool_use_id)
-        asyncio.get_running_loop().run_in_executor(None, write_audit, rec)
-        return {"async_": True, "asyncTimeout": 5000}
-
-    return {
-        "PreToolUse": [
-            HookMatcher(matcher="Write|Edit|MultiEdit", hooks=[invariant_guard]),
-            HookMatcher(matcher="Bash|Write|Edit|MultiEdit",
-                        hooks=[l9_dispatch("governor", "root_file_advisory_wrap.py")]),
-            HookMatcher(hooks=[audit_logger]),
-        ],
-        "PostToolUse": [
-            HookMatcher(matcher="Write|Edit|MultiEdit",
-                        hooks=[l9_dispatch("observer", "bootstrap_capability_preflight.sh")]),
-            HookMatcher(hooks=[audit_logger]),
-        ],
-        "SubagentStop": [HookMatcher(hooks=[audit_logger])],
-        "Stop": [HookMatcher(hooks=[audit_logger])],
-    }
-
-
-def build_agents():
-    from claude_agent_sdk import AgentDefinition
-
-    return {
-        "l9-auditor": AgentDefinition(
-            description="Read-only invariant and drift auditor. Use for any audit/gap-analysis task.",
-            prompt=("You are the L9 auditor. Compare ORG_INVARIANTS.yaml, INVARIANTS.md and "
-                    "CANONICAL_LAW.md against the live tree. Report drift as a table. Never edit files."),
-            tools=["Read", "Grep", "Glob"],
-            model="sonnet",
-        ),
-        "l9-remediator": AgentDefinition(
-            description="Applies minimal, reversible fixes for findings the auditor produced.",
-            prompt=("You are the L9 remediator. Apply the smallest reversible change per finding, "
-                    "run `make lint` and `pytest -q` after each, and stop on first failure."),
-            tools=["Read", "Grep", "Glob", "Edit", "Write", "Bash"],
-        ),
-    }
-
-
-def build_options(cfg: dict[str, Any], mode: str, budget: float, turns: int):
+def build_options(kwargs: dict[str, Any]) -> Any:
     from claude_agent_sdk import ClaudeAgentOptions
 
     return ClaudeAgentOptions(
-        cwd=REPO,
-        setting_sources=list(cfg["setting_sources"]),
-        system_prompt={
-            "type": "preset", "preset": "claude_code",
-            "append": ("Governance SSOT is CANONICAL_LAW.md. Advisory-first: propose before "
-                       "mutating anything outside the task scope."),
-        },
-        permission_mode=mode,
-        allowed_tools=list(cfg["allowed_tools"]),
-        disallowed_tools=[d["rule"] for d in cfg["disallowed_tools"]],
-        agents=build_agents(),
-        hooks=build_hooks(cfg),
-        output_format={"type": "json_schema", "schema": REPORT_SCHEMA},
-        max_turns=turns,
-        max_budget_usd=budget,
-        enable_file_checkpointing=True,
-        env={"CLAUDE_AGENT_SDK_CLIENT_APP": "l9-agent-sdk/0.1"},
-        stderr=lambda line: print(f"[cli] {line}", file=sys.stderr, end=""),
+        **kwargs, stderr=lambda line: print(f"[cli] {line}", file=sys.stderr, end="")
     )
 
 
-async def run(task: str, opts, report_path: Path) -> int:
-    from claude_agent_sdk import (AssistantMessage, ClaudeSDKClient, ResultMessage,
-                                  TextBlock, ToolUseBlock)
+def summarize_mcp(status: Any) -> list[dict[str, Any]]:
+    """Name/status/scope/error per server. ``config`` is dropped: it can carry env."""
+    rows = status.get("mcpServers", []) if isinstance(status, dict) else []
+    keep = ("name", "status", "scope", "error")
+    return [{k: row[k] for k in keep if k in row} for row in rows if isinstance(row, dict)]
 
+
+def report_document(result: Any, mcp: list[dict[str, Any]]) -> dict[str, Any]:
+    """The JSON report written for one run: ResultMessage fields plus MCP status."""
+    return {**{name: getattr(result, name) for name in RESULT_FIELDS}, "mcp_servers": mcp}
+
+
+async def settled_mcp_status(client: Any, timeout: float = MCP_SETTLE_SECONDS) -> list[dict]:
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while True:
+        rows = summarize_mcp(await client.get_mcp_status())
+        pending = any(row.get("status") == "pending" for row in rows)
+        if not pending or loop.time() >= deadline:
+            return rows
+        await asyncio.sleep(1.0)
+
+
+async def probe_mcp(opts: Any) -> int:
+    """Connect without a prompt and report the project MCP servers the SDK loaded."""
+    from claude_agent_sdk import ClaudeSDKClient
+
+    async with ClaudeSDKClient(options=opts) as client:
+        rows = await settled_mcp_status(client)
+    print(json.dumps({"mcp_servers": rows}, indent=2))
+    return 1 if any(row.get("status") in MCP_UNAVAILABLE for row in rows) else 0
+
+
+async def run(task: str, opts: Any, report_path: Path) -> int:
+    from claude_agent_sdk import AssistantMessage, ClaudeSDKClient, ResultMessage, TextBlock
+
+    result = None
     async with ClaudeSDKClient(options=opts) as client:
         await client.query(task)
         async for msg in client.receive_response():
             if isinstance(msg, AssistantMessage):
-                for b in msg.content:
-                    if isinstance(b, TextBlock):
-                        print(b.text)
-                    elif isinstance(b, ToolUseBlock):
-                        print(f"  -> {b.name} {json.dumps(b.input)[:160]}")
+                for block in msg.content:
+                    if isinstance(block, TextBlock):
+                        print(block.text)
             elif isinstance(msg, ResultMessage):
-                cost = msg.total_cost_usd or 0.0
-                print(f"\n[result] {msg.subtype} turns={msg.num_turns} cost=${cost:.4f} session={msg.session_id}")
-                if msg.subtype != "success":
-                    print(f"[result] terminal_reason={getattr(msg, 'terminal_reason', None)!r}")
-                    return 1
-                payload = getattr(msg, "structured_output", None) or msg.result
-                report_path.parent.mkdir(parents=True, exist_ok=True)
-                report_path.write_text(payload if isinstance(payload, str) else json.dumps(payload, indent=2))
-                print(f"[report] {report_path}")
-    return 0
+                result = msg
+        mcp = await settled_mcp_status(client)
+    if result is None:
+        print("[result] no ResultMessage received", file=sys.stderr)
+        return 1
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report_document(result, mcp), indent=2) + "\n")
+    cost = result.total_cost_usd or 0.0
+    print(f"[result] {result.subtype} turns={result.num_turns} cost=${cost:.4f}")
+    print(f"[report] {report_path}")
+    return 0 if result.subtype == "success" and result.structured_output else 1
 
 
 def main(argv: list[str] | None = None) -> int:
-    cfg = load_config()
-    ap = argparse.ArgumentParser(description="L9 governed Claude Agent SDK harness")
-    ap.add_argument("task", nargs="?", default=os.environ.get(
-        "L9_TASK", "Use l9-auditor to audit ORG_INVARIANTS.yaml against the repo and report drift."))
-    ap.add_argument("--mode", default=cfg["permission_mode_default"], choices=["default", "acceptEdits", "plan"])
-    ap.add_argument("--budget", type=float, default=float(cfg["max_budget_usd"]))
-    ap.add_argument("--turns", type=int, default=int(cfg["max_turns"]))
-    ap.add_argument("--report", type=Path, default=REPO / "reports/agent_sdk/latest.json")
+    ap = argparse.ArgumentParser(description="Thin Claude Agent SDK harness (project governance)")
+    ap.add_argument("task", nargs="?", help="prompt to run; omit with --mcp-status")
+    ap.add_argument("--mode", default=DEFAULT_MODE, choices=PERMISSION_MODES)
+    ap.add_argument("--budget", type=float, default=DEFAULT_MAX_BUDGET_USD)
+    ap.add_argument("--turns", type=int, default=DEFAULT_MAX_TURNS)
+    ap.add_argument("--report", type=Path, default=REPO / DEFAULT_REPORT)
+    ap.add_argument(
+        "--mcp-status", action="store_true", help="report loaded project MCP servers and exit"
+    )
     a = ap.parse_args(argv)
-    if not (REPO / "CLAUDE.md").exists():
-        print(f"CLAUDE.md not found at {REPO}; set L9_REPO", file=sys.stderr)
+    if not a.mcp_status and not a.task:
+        ap.error("task is required unless --mcp-status is given")
+    missing = missing_governance(REPO)
+    if missing:
+        print(f"project governance missing under {REPO}: {missing}; set L9_REPO", file=sys.stderr)
         return 2
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    try:
+        from claude_agent_sdk import ClaudeSDKError, ResultError
+    except ImportError:
+        print(
+            "claude-agent-sdk not in this environment: uv sync --locked --extra agent-sdk",
+            file=sys.stderr,
+        )
+        return 2
+    if not a.mcp_status and not os.environ.get("ANTHROPIC_API_KEY"):
         print("ANTHROPIC_API_KEY not set", file=sys.stderr)
         return 2
+    opts = build_options(option_kwargs(a.mode, a.budget, a.turns))
     try:
-        from claude_agent_sdk import ResultError
-    except ImportError:
-        print("claude-agent-sdk not installed: uv add claude-agent-sdk", file=sys.stderr)
-        return 2
-    try:
-        return asyncio.run(run(a.task, build_options(cfg, a.mode, a.budget, a.turns), a.report))
+        if a.mcp_status:
+            return asyncio.run(probe_mcp(opts))
+        return asyncio.run(run(a.task, opts, a.report))
     except ResultError as e:
-        print(f"[fatal] {e.subtype} {getattr(e, 'terminal_reason', None)} {e.result or e.errors}", file=sys.stderr)
+        print(f"[fatal] {e.subtype} {e.terminal_reason} {e.result or e.errors}", file=sys.stderr)
+        return 1
+    except ClaudeSDKError as e:
+        print(f"[fatal] {type(e).__name__}: {e}", file=sys.stderr)
         return 1
 
 
