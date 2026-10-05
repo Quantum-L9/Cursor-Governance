@@ -445,7 +445,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
       "pre_tool_hook_required": true,
       "task_transport": "claude-code-task"
     },
-    "peer_ref": "claude-code-desktop",
+    "peer_ref": "claude-code",
     "protocol_version": "1.0.0",
     "provider_ref": "claude-code-direct",
     "supports_agent_identity": true,
@@ -455,7 +455,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "supports_independent_review": true,
     "supports_lease_propagation": true,
     "supports_typed_artifacts": true,
-    "surface": "claude-cli",
+    "surface": "claude-code-cli",
     "tool_mediation_mode": "mandatory"
   },
   "adapters/cursor.json": {

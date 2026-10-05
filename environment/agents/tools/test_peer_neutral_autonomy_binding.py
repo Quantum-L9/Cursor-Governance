@@ -28,8 +28,7 @@ class PeerNeutralAutonomyBindingTests(unittest.TestCase):
             set(model.peers),
             {
                 "cursor",
-                "claude-code-desktop",
-                "claude-code-mobile",
+                "claude-code",
                 "codex",
                 "gemini",
                 "manus",
@@ -57,7 +56,7 @@ class PeerNeutralAutonomyBindingTests(unittest.TestCase):
         model = module.ExecutablePeerModel(ROOT)
         self.assertEqual(
             set(model.required_peers()),
-            {"cursor", "claude-code-desktop", "claude-code-mobile"},
+            {"cursor", "claude-code"},
         )
         for name in ("codex", "gemini", "manus"):
             self.assertFalse(model.peers[name]["execution"]["required"])

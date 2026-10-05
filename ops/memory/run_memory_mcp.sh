@@ -72,8 +72,8 @@ fi
 
 # --- Signed agent door (ADR-0031): every memory names its author ------------
 export L9_GOVERNANCE_DIR="$GOV"
-# The identity is DERIVED from host markers by the one resolver (cursor,
-# claude-code-desktop, claude-code-mobile) — never configured, so it cannot drift.
+# The actor is DERIVED from host markers by the one resolver (cursor,
+# claude-code) — never configured, so it cannot drift.
 if ! _agent_id="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory.agent_identity)" \
   || [[ -z "$_agent_id" ]]; then
   echo "run_memory_mcp: no agent identity for this surface (ops/memory/agent_identity.py) — refuse to launch: a memory must name the agent that wrote it" >&2
