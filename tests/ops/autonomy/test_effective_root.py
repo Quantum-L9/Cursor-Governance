@@ -80,7 +80,7 @@ def test_cd_later_in_command_is_ignored(main_repo: Path, linked_worktree: Path) 
     assert effective_root(command, main_repo) == main_repo
 
 
-def test_relative_cd_is_ignored(main_repo: Path) -> None:
+def test_relative_cd_to_a_missing_directory_is_ignored(main_repo: Path) -> None:
     assert effective_root("cd subdir && git push", main_repo) == main_repo
 
 
@@ -178,7 +178,7 @@ def test_make_ws_env_prefix_redirects(main_repo: Path, tmp_path: Path) -> None:
     assert effective_root(command, main_repo) == other.resolve()
 
 
-def test_make_without_ws_keeps_root(main_repo: Path) -> None:
+def test_make_directory_naming_the_root_keeps_root(main_repo: Path) -> None:
     assert effective_root(f'make -C "{main_repo}" pr', main_repo) == main_repo
 
 
@@ -341,3 +341,196 @@ def test_guardrail_precheck_survives_a_container_root_that_is_no_repository(
     assert verdict(f"cd {clone} && git checkout feature") is None
     denied = verdict("git checkout feature")
     assert denied is not None and "I017" in denied
+
+
+# --- A second CLONE of the same repository ----------------------------------
+#
+# The same-repository test was `--git-common-dir` equality, which relates
+# worktrees of one clone and nothing else. Two clones share no git directory,
+# so this fleet's ordinary shape -- the SSOT at `~/.cursor-governance` plus a
+# consumer checkout of the same repository elsewhere -- read as "unrelated".
+# `cd ~/.cursor-governance && make pr` was therefore judged against the
+# session's checkout: the wrong branch and the wrong L4 receipt, which is the
+# failure this function exists to prevent, one clone further out.
+#
+# Clones are related by the remote they publish to. Authorization is unchanged:
+# the receipt must still exist at the resolved root and bind its head SHA,
+# which `test_publish_into_a_second_clone_without_a_receipt_is_denied` proves.
+
+CANONICAL_SSH = "git@github.com:Quantum-L9/Cursor-Governance.git"
+CANONICAL_HTTPS = "https://github.com/Quantum-L9/Cursor-Governance"
+
+
+@pytest.fixture
+def second_clone(main_repo: Path, tmp_path: Path) -> Path:
+    """Another clone of `main_repo`, sharing an origin spelled differently."""
+    clone = tmp_path / "clone2"
+    subprocess.run(
+        ["git", "clone", "--quiet", str(main_repo), str(clone)],
+        check=True,
+        capture_output=True,
+    )
+    git(clone, "config", "user.email", "t@example.com")
+    git(clone, "config", "user.name", "t")
+    git(main_repo, "remote", "add", "origin", CANONICAL_SSH)
+    git(clone, "remote", "set-url", "origin", CANONICAL_HTTPS)
+    return clone
+
+
+def test_cd_into_a_second_clone_of_the_same_repository_redirects(
+    main_repo: Path, second_clone: Path
+) -> None:
+    command = f'cd "{second_clone}" && PR_REMEDIATE=0 make pr'
+    assert effective_root(command, main_repo) == second_clone.resolve()
+
+
+def test_second_clone_match_survives_scp_and_https_spellings(
+    main_repo: Path, second_clone: Path
+) -> None:
+    """One repository, four spellings; normalization must relate them all."""
+    for spelling in (
+        CANONICAL_SSH,
+        CANONICAL_HTTPS,
+        "https://github.com/Quantum-L9/Cursor-Governance.git",
+        "ssh://git@github.com/Quantum-L9/Cursor-Governance.git",
+    ):
+        git(second_clone, "remote", "set-url", "origin", spelling)
+        assert effective_root(f'cd "{second_clone}" && make pr', main_repo) == (
+            second_clone.resolve()
+        ), spelling
+
+
+def test_cd_into_a_clone_with_a_different_origin_does_not_redirect(
+    main_repo: Path, second_clone: Path
+) -> None:
+    """Shared history is not shared identity: a fork must not redirect."""
+    git(second_clone, "remote", "set-url", "origin", "git@github.com:someone/fork.git")
+    assert effective_root(f'cd "{second_clone}" && make pr', main_repo) == main_repo
+
+
+def test_cd_into_a_clone_is_refused_when_the_root_has_no_origin(
+    main_repo: Path, tmp_path: Path
+) -> None:
+    """With no identity to compare, the gate must not infer a relationship."""
+    clone = tmp_path / "anon"
+    subprocess.run(
+        ["git", "clone", "--quiet", str(main_repo), str(clone)],
+        check=True,
+        capture_output=True,
+    )
+    assert effective_root(f'cd "{clone}" && make pr', main_repo) == main_repo
+
+
+def test_relative_cd_into_a_sibling_worktree_redirects(
+    main_repo: Path, linked_worktree: Path
+) -> None:
+    """`cd ../wt` is how an agent moves between sibling checkouts."""
+    relative = Path("..") / linked_worktree.name
+    assert effective_root(f"cd {relative} && make pr", main_repo) == linked_worktree.resolve()
+
+
+# --- `make -C` names the tree Make will act on ------------------------------
+#
+# This repository's Makefile defaults `WS ?= $(CURDIR)`, so `-C <dir>` selects
+# the acted-on tree exactly as `WS=` does. The resolver only read `WS=`, so
+# `make -C ~/.cursor-governance pr` was judged against the session's checkout.
+
+
+def test_make_directory_redirects_to_another_repo(main_repo: Path, tmp_path: Path) -> None:
+    other = make_repo(tmp_path / "other")
+    command = f'PR_REMEDIATE=0 make -C "{other}" pr'
+    assert effective_root(command, main_repo) == other.resolve()
+
+
+def test_make_directory_accepts_every_spelling(main_repo: Path, tmp_path: Path) -> None:
+    other = make_repo(tmp_path / "other")
+    for command in (
+        f'make -C "{other}" pr',
+        f"make -C{other} pr",
+        f'make --directory "{other}" pr',
+        f'make --directory="{other}" pr',
+        f'PR_REMEDIATE=0 make -C "{other}" pr',
+    ):
+        assert effective_root(command, main_repo) == other.resolve(), command
+
+
+def test_make_directory_expands_a_leading_tilde(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shell expands `~` before make sees it, so the gate must too."""
+    home = tmp_path / "home"
+    home.mkdir()
+    other = make_repo(home / "gov")
+    monkeypatch.setenv("HOME", str(home))
+    assert effective_root("make -C ~/gov pr", main_repo) == other.resolve()
+
+
+def test_make_directory_does_not_expand_env(
+    main_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other = make_repo(tmp_path / "other")
+    monkeypatch.setenv("GOV", str(other))
+    assert effective_root("make -C $GOV pr", main_repo) == main_repo
+
+
+def test_make_directory_wins_over_a_leading_cd(
+    main_repo: Path, linked_worktree: Path, tmp_path: Path
+) -> None:
+    """Make acts on `-C`, whatever the shell's cwd is."""
+    other = make_repo(tmp_path / "other")
+    command = f'cd "{linked_worktree}" && make -C "{other}" pr'
+    assert effective_root(command, main_repo) == other.resolve()
+
+
+def test_ws_still_wins_over_make_directory(main_repo: Path, tmp_path: Path) -> None:
+    """Makefile precedence: `WS ?= $(CURDIR)`, so an explicit WS= overrides -C."""
+    other = make_repo(tmp_path / "other")
+    directed = make_repo(tmp_path / "directed")
+    command = f'make -C "{directed}" pr WS="{other}"'
+    assert effective_root(command, main_repo) == other.resolve()
+
+
+def test_a_bare_directory_is_not_reachable_by_make_directory(
+    main_repo: Path, tmp_path: Path
+) -> None:
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert effective_root(f'make -C "{plain}" pr', main_repo) == main_repo
+
+
+# --- Resolution is not authorization ----------------------------------------
+
+
+def test_publish_into_a_second_clone_without_a_receipt_is_denied(
+    main_repo: Path, second_clone: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Redirecting the gate must not import the session's release receipt.
+
+    The session checkout holds a valid L4 release; the clone the command
+    actually publishes from holds none, so the publication must be denied.
+    """
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    git(main_repo, "checkout", "-q", "-b", "feat/session")
+    begin(main_repo, contract_id="session")
+    authorize_release(main_repo)
+
+    event = {
+        "command": f'cd "{second_clone}" && PR_REMEDIATE=0 make pr',
+        "cwd": str(main_repo),
+        "workspace_roots": [str(main_repo)],
+    }
+    permission, message = cursor_shell_verdict(json.dumps(event))
+    assert permission == "deny", "the clone holds no release receipt"
+    assert message
+
+    allowed, _ = cursor_shell_verdict(
+        json.dumps(
+            {
+                "command": "PR_REMEDIATE=0 make pr",
+                "cwd": str(main_repo),
+                "workspace_roots": [str(main_repo)],
+            }
+        )
+    )
+    assert allowed == "allow", "the authorized session checkout still publishes"

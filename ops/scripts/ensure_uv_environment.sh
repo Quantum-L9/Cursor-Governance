@@ -39,6 +39,25 @@ fi
 # a python3 shim (no python alias) passes the guard and must seal with it too.
 VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
 
+# The architecture the host can actually run wheels for. `uname -m` alone is not
+# that answer: under Rosetta it reports the emulated architecture, and the venv
+# this script builds would inherit the emulation. hw.optional.arm64 is the
+# hardware, so an x86_64 shell on Apple silicon still resolves to arm64.
+_host_native_machine() {
+  if [ "$(uname -s)" = "Darwin" ] \
+     && [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" = "1" ]; then
+    printf '%s\n' arm64
+  else
+    uname -m
+  fi
+}
+HOST_MACHINE="$(_host_native_machine)"
+
+_venv_machine() {
+  [ -x "$VENV_PYTHON" ] || return 1
+  "$VENV_PYTHON" -I -c 'import platform; print(platform.machine())' 2>/dev/null
+}
+
 # The interpreter whose identity the fingerprint records: the venv's own, never
 # the caller's `python3`. Callers inside the venv (pytest, the gate's reader
 # wave) resolve `python3` to .venv/bin (3.12 here) while callers outside it
@@ -56,7 +75,8 @@ _fingerprint_python() {
 }
 
 fingerprint() {
-  "$(_fingerprint_python)" - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" <<'PY'
+  "$(_fingerprint_python)" - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" \
+    "$HOST_MACHINE" <<'PY'
 import hashlib
 import platform
 import sys
@@ -64,6 +84,7 @@ from pathlib import Path
 
 root = Path(sys.argv[1])
 uv_version = sys.argv[2]
+host_machine = sys.argv[3]
 h = hashlib.sha256()
 for name in ("pyproject.toml", "uv.lock"):
     path = root / name
@@ -76,6 +97,7 @@ for value in (
     platform.python_implementation(),
     platform.system(),
     platform.machine(),
+    host_machine,
     uv_version,
 ):
     h.update(value.encode())
@@ -176,6 +198,23 @@ if [ -e "$IN_PROGRESS" ]; then
   rm -f "$STATE_FILE"
 fi
 
+# An environment built for another architecture is not this host's environment,
+# however complete it looks. uv resolves an interpreter before it resolves
+# wheels, and it prefers an active virtual environment -- an activated x86_64
+# conda base on Apple silicon -- over its own host-native build. The venv that
+# follows has no arm64 wheel for cryptography, so the wheels-only sync below
+# fails while `uv sync` without --no-build silently compiles the sdist instead
+# and hands back a Rosetta environment. Detect the mismatch and re-synchronize.
+_arch_mismatch=""
+if [ -x "$VENV_PYTHON" ]; then
+  _venv_machine_value="$(_venv_machine || true)"
+  if [ -n "$_venv_machine_value" ] && [ "$_venv_machine_value" != "$HOST_MACHINE" ]; then
+    _arch_mismatch="$_venv_machine_value"
+    echo "UV: .venv interpreter is $_venv_machine_value on a $HOST_MACHINE host; re-synchronizing" >&2
+    rm -f "$STATE_FILE"
+  fi
+fi
+
 expected="$(fingerprint)"
 current=""
 [ -f "$STATE_FILE" ] && current="$(cat "$STATE_FILE")"
@@ -217,6 +256,27 @@ if [ "$MODE" = "check" ]; then
 fi
 
 _begin_mutation
+
+# uv reuses the project environment it finds, so a mismatched .venv would keep
+# its emulated interpreter no matter which one uv is told to prefer. Named
+# explicitly, never a glob or an expansion that could be empty (rule 54).
+if [ -n "$_arch_mismatch" ] && [ -n "$GOV_ROOT" ] && [ -d "$GOV_ROOT/.venv" ]; then
+  rm -rf "$GOV_ROOT/.venv"
+fi
+
+# Local machines must get a host-native interpreter explicitly. uv's default
+# preference accepts whichever environment is active, which on this fleet is an
+# x86_64 conda base; --managed-python selects uv's own host-native build.
+# Probed rather than assumed, like the flock/setsid probe above: the floor pin
+# is uv >= 0.8.0 and the flag must not become a hard requirement of that floor.
+# CI is excluded by design -- every workflow provisions its interpreter with
+# actions/setup-python, and uv must sync against that one.
+_managed_python_flag=""
+if [ -z "${GITHUB_ACTIONS:-}" ] && [ -z "${CI:-}" ] \
+   && uv sync --help 2>/dev/null | grep -q -- '--managed-python'; then
+  _managed_python_flag="--managed-python"
+fi
+
 _sync_rc=0
 (
   cd "$GOV_ROOT"
@@ -228,7 +288,8 @@ _sync_rc=0
   # on every machine that bootstraps this governance environment. Every package
   # in uv.lock resolves to a wheel, so this costs nothing today and fails loudly
   # rather than silently building if that ever stops being true.
-  uv sync --locked --no-build --extra dev >&2
+  # shellcheck disable=SC2086 # empty flag must expand to no argument at all
+  uv sync --locked --no-build $_managed_python_flag --extra dev >&2
 ) || _sync_rc=$?
 if [ "$_sync_rc" -ne 0 ]; then
   # A refused sync (offline, lock mismatch) usually never touched the old

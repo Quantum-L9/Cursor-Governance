@@ -68,9 +68,26 @@ def record_with_evidence(
 
 @pytest.fixture(autouse=True)
 def adapter_kernel_surface(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Existing latch tests prove Claude Code / adapter behavior."""
+    """Existing latch tests prove Claude Code / adapter behavior.
+
+    Every Cursor host marker is scrubbed, not only ``CURSOR_AGENT``: Cursor
+    also exports ``CURSOR_CONVERSATION_ID`` and ``CURSOR_EXTENSION_HOST_ROLE``,
+    and ``surface_detect`` treats any one of them as this surface. Clearing
+    just the first left the tests that assert unmarked CI skips the latch
+    passing in CI and in a plain terminal while failing from inside a Cursor
+    session -- the one surface an agent runs them from. The canonical tuple is
+    imported so a new marker cannot reopen the gap.
+    """
+    import sys
+
+    autonomy = str(ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from surface_detect import CURSOR_HOST_MARKERS
+
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    for marker in CURSOR_HOST_MARKERS:
+        monkeypatch.delenv(marker, raising=False)
     monkeypatch.delenv("CLAUDECODE", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_ENTRYPOINT", raising=False)

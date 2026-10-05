@@ -275,3 +275,40 @@ def test_cursor_governance_has_no_local_wip_subsystem() -> None:
     )
     assert "| `WIP/` |" not in _read("ARCHITECTURE.md"), "ARCHITECTURE.md lists WIP/ as a surface"
     assert (ROOT / "reports" / "wip-eviction" / "eviction-receipt.json").is_file()
+
+
+def test_one_owner_synchronizes_the_locked_environment() -> None:
+    """`venv` must delegate, not keep a second `uv sync` with weaker rules.
+
+    `ensure_uv_environment.sh` is the writer side of the venv readiness
+    contract: wheels-only (`--no-build`), serialized behind an environment
+    lock, marked in-progress until the result imports, and guarded against an
+    interpreter built for another architecture. A raw `uv sync` in this recipe
+    had none of that, and `venv` is the one capability exempt from the
+    `gov-python` auto-prereq, so the weaker door was the one a broken
+    environment reached for: it compiled a cryptography sdist for an x86_64
+    conda interpreter on an arm64 host instead of failing.
+    """
+    core = _read("ops/make/core.mk")
+    recipe: list[str] = []
+    in_recipe = False
+    for line in core.splitlines():
+        if line.startswith("venv:"):
+            in_recipe = True
+            continue
+        if not in_recipe:
+            continue
+        if line.startswith("\t"):
+            recipe.append(line.strip())
+            continue
+        break
+
+    assert recipe, "ops/make/core.mk must still own a venv recipe"
+    body = "\n".join(recipe)
+    assert "ensure_uv_environment.sh" in body, body
+    assert not re.search(r"^\s*uv\s+sync\b", body, re.MULTILINE), (
+        "a second uv sync here bypasses --no-build, the lock and the arch guard"
+    )
+    assert "seal_artifact_provenance" not in body, (
+        "the sync owner already seals the memory artifact"
+    )

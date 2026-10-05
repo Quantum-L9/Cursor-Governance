@@ -2089,3 +2089,42 @@ Append-only. This supersedes only the "`/ff`" sentence in
   it, and the ceremony does not offer a catch-up command.
 - Ahead/behind counts stay. `detail=diverged` when the clone is not at the
   `ls-remote` tip. The clone is still not fetched, pulled, reset, or swapped.
+
+<!-- LOCAL_VENV_INTERPRETER_AND_COMMAND_ROOT_V1 -->
+## One local sync owner; the gate judges the tree the command runs in (2026-10-04)
+
+Append-only. This supersedes only the `make venv` → `uv sync --locked --extra dev`
+spelling in §5 and the "`cd` into an unrelated repository still does not redirect"
+sentence's implied scope in §4's publish path. Those paragraphs stay on disk. Do
+not fold them. Toolchain pins in §6 are unchanged; `uv.lock` is unchanged.
+
+- **`ops/scripts/ensure_uv_environment.sh` is the only local sync owner.**
+  `make venv` delegates to it. A raw `uv sync` in the Make recipe was a second
+  door without `--no-build`, without the environment lock, without the
+  in-progress marker and without import verification — and `venv` is the one
+  capability exempt from the `gov-python` auto-prereq, so a broken environment
+  reached for the weaker door.
+- **The interpreter is host-native, explicitly.** Outside CI the sync passes
+  `--managed-python` (feature-probed, because the floor pin is uv >= 0.8.0).
+  uv otherwise prefers an already-active environment: an activated x86_64
+  conda base on Apple silicon produced a Rosetta `.venv`, `uv.lock` has no
+  x86_64 macOS `cryptography` wheel, and the wheels-only sync failed with
+  "no binary distribution". That is an interpreter fault, not a lock fault —
+  do not regenerate `uv.lock` for it. `make venv` previously hid it by
+  compiling the sdist.
+- **A `.venv` built for another architecture is re-synchronized**, not reported
+  as cached. The host's architecture is `hw.optional.arm64` on Darwin, not
+  `uname -m`, which reports the emulated architecture under Rosetta.
+- **CI is excluded by design.** Every workflow provisions its interpreter with
+  `actions/setup-python`, and `uv sync` must bind that one.
+- **`effective_root` resolves the checkout the command actually runs in.**
+  A second *clone* of the same repository (the SSOT at `~/.cursor-governance`
+  beside a consumer checkout) is related by its normalized `origin` remote, not
+  by a shared git directory; a relative `cd ../sibling` resolves against the
+  reported root; and `make -C <dir>` / `--directory=<dir>` names the acted-on
+  tree exactly as `WS=` does (`WS ?= $(CURDIR)`). `WS=` still wins over `-C`.
+- **Resolution is not authorization.** A fork with a different `origin`, a
+  non-repository directory, and an unrelated repository still do not redirect,
+  and the L4 release receipt must still exist at the resolved root and bind its
+  head SHA. Publishing from a second clone that holds no receipt is denied even
+  when the session's checkout holds a valid one.
