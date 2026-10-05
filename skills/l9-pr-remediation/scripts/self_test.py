@@ -238,20 +238,16 @@ def test_no_second_plane() -> None:
 
 
 def test_verbs_and_publish() -> None:
-    _need(SKILL, "L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo", "SKILL.md")
-    _need(SKILL, "publish: git push", "SKILL.md")
-    _need(SKILL, "do not run `make pr`", "SKILL.md")
-    _need(SKILL, "must not invoke `make pr`", "SKILL.md")
-    _need(SKILL, "Do not run `OPEN_PR=0 make pr`", "SKILL.md")
-    _need(SKILL, "PR_REMEDIATE=0 make pr", "SKILL.md")
-    _need(REFS["run-contract.md"], "L9_REMEDIATOR=1", "run-contract.md")
-    _need(REFS["run-contract.md"], 'publish: "git push"', "run-contract.md")
-    _need(REFS["fix-engine.md"], "Makefile:precommit-repo", "fix-engine.md")
-    _forbid(REFS["fix-engine.md"], "Makefile:OPEN_PR=0 make pr", "fix-engine.md")
-    _need(REFS["merge-advise.md"], "already-open PR branch is `git push`", "merge-advise.md")
+    _need(SKILL, "make precommit-repo", "SKILL.md")
+    _need(SKILL, "PR_STACK=auto PR_REMEDIATE=0 make pr", "SKILL.md")
+    _need(SKILL, "Bare `git push` to existing PR branches", "SKILL.md")
+    _need(SKILL, "Once a PR exists", "SKILL.md")
+    _need(REFS["run-contract.md"], "PR_STACK=auto PR_REMEDIATE=0 make pr", "run-contract.md")
+    _need(REFS["fix-engine.md"], "make precommit-repo", "fix-engine.md")
+    _need(REFS["merge-advise.md"], "PR_STACK=auto PR_REMEDIATE=0 make pr", "merge-advise.md")
     _need(
         REFS["signal-ingestion.md"],
-        "`make precommit-repo` verify, `git push` publish",
+        "`make precommit-repo` verify, `PR_STACK=auto make pr` publish",
         "signal-ingestion.md",
     )
     _need(SKILL, "require_precommit_all_files: false", "SKILL.md")

@@ -8,24 +8,22 @@ expertise_model:
     - release and branch-protection engineer (required-check identity, stack safety)
     - code-review triage engineer (CI logs, review threads, code-review agents, Sonar/CodeQL/Semgrep)
     - bounded-delegation orchestrator (assignments, result documents, fail-closed acceptance)
-    - governed-publish operator (precommit-repo verify, git push of an open PR, no ceremony)
+    - governed-publish operator (precommit-repo verify, stacked child PR via make pr, bare git push forbidden)
   doctrine:
     - plan the fleet once with the deterministic owner; re-plan only when a head moves
     - launch the largest safe wave in one message and keep the main agent working
     - same-head audit-eligible units hold merge and remediate first; independent non-overlapping PRs still launch together
     - mutating subagents prefetch via host subagentStart before the write gate and close via host subagentStop
-    - the board is computed from required-check identity, never judged from a red check
-    - ownership answers "may I patch this file"; it never decides what happens to the PR
-    - one plan, one commit, one publish per PR; cycles only for signals that did not exist
+    - the board is computed from required-check identity (ownership answers 'may I patch this file' and never decides PR board)
+    - one plan, one stacked child PR publish via make pr; bare git push forbidden (ADR-0051)
     - a lane completes with an accepted result document, never with a sentence
     - CI waits are polled by the remediator until open_prs=0; watchers never waive that duty
-    - above-paygrade work becomes a GitHub issue plus the issue skill, never a question
-    - SonarCloud findings are resolved fully when present and never block merge
+    - SonarCloud resolves fully and never blocks merge; above-paygrade work becomes an issue
     - merge through the stack-safe executor as soon as merge_now is non-empty, oldest first, parents before children
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - Converge invocation is merge authorization for every open PR in the target repo
-    - remediator verify is `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`; publish is `git push` of the already-open PR branch; `make pr` / `OPEN_PR=0 make pr` are never invoked
+    - remediator verify is `make precommit-repo`; publish is stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`; direct bare `git push` is forbidden (ADR-0051)
     - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
     - a red check outside the required set never holds the merge train

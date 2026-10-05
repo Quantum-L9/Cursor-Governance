@@ -133,6 +133,9 @@ def test_gate_denies_mid_execution_remote_mutation(
     monkeypatch.setattr(
         open_pr_probe, "open_pr_for_branch", lambda root, branch, remote="origin": True
     )
+    push = evaluate("Bash", {"command": "git push -u origin HEAD"}, root=stacked_repo)
+    assert push is not None and "ADR-0051" in push and "L4" not in push.split(".")[0]
+    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops-breakglass")
     assert evaluate("Bash", {"command": "git push -u origin HEAD"}, root=stacked_repo) is None
 
 

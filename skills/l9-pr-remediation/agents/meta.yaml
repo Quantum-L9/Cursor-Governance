@@ -3,5 +3,5 @@
 # Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
 interface:
   display_name: "L9 PR Remediation"
-  short_description: "Diagnose or converge PRs: one fleet plan (pr_fleet.py), one subagent wave per safe set, precommit-repo then git push, SonarCloud resolved fully but never merge-blocking, then a stack-safe merge train on pr_board.py verdicts."
+  short_description: "Diagnose or converge PRs: one fleet plan (pr_fleet.py), one subagent wave per safe set, precommit-repo then stacked make pr, SonarCloud resolved fully but never merge-blocking, then a stack-safe merge train on pr_board.py verdicts."
   brand_color: "#1F6FEB"

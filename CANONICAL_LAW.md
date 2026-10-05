@@ -1231,3 +1231,23 @@ release identity. The signed-agent door in §8.5 is unchanged.
    to that wheel path. Do not float `@main`.
 4. **Contract.** `memory-control-plane/v1` is unchanged. Only the release
    identity moves.
+
+<!-- UNIVERSAL_PUBLICATION_AND_IMMUTABLE_PR_REMEDIATION_V1 -->
+## 6.2.10 Universal publication gate and immutable PR remediation (2026-10-04) — supersedes §6.2.8 item 2
+
+Append-only. §6.2.8 item 2's carve-out ("Allowed: git push of a branch that already
+has an open PR — the remediator path") is superseded by this amendment and ADR-0051.
+
+1. **Universal publication requirement:** Every publication—first feature publication,
+   campaign output, or remediation of an existing PR—must execute through the
+   sanctioned `PR_STACK=auto PR_REMEDIATE=0 make pr` gate (`open_pr_after_gate.sh`).
+2. **Immutable PRs:** Once a pull request exists, direct in-place bare `git push`
+   to that PR branch is strictly forbidden. Any remediation, follow-up, or conflict
+   resolution must be published as a new stacked child PR via `make pr` (or supersede
+   the prior PR).
+3. **No bare pushes:** `ops/autonomy/first_publication_gate.py` denies any direct
+   bare `git push`, including on branches with open PRs. Breakglass remains
+   `L9_LOCAL_PUSH_AUTHORIZED=<reason>`.
+4. **Merge-train stack safety:** Stacking remediations ensures full local gate
+   verification, eliminates in-flight CI cancellation storms, and avoids the \(O(N^2)\)
+   branch-updating cascades required by strict branch protection rulesets.

@@ -1093,10 +1093,10 @@ def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
     bypass = _verification_bypass_from_payload(raw)
     if bypass:
         return "deny", bypass
+    publication = _first_publication_from_payload(raw)
+    if publication:
+        return "deny", publication
     if payload_is_git_or_gh(raw):
-        publication = _first_publication_from_payload(raw)
-        if publication:
-            return "deny", publication
         return "allow", None
     try:
         event = json.loads(raw)

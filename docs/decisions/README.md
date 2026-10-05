@@ -59,6 +59,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0048 | Accepted (supersedes the repository-write role of the phase-lock in ADR-0002 and ADR-0006 §1; the single-front-door decision itself stands) | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
 | ADR-0049 | Accepted | Universal campaign ingress and typed architecture admission | `docs/decisions/ADR-0049-universal-campaign-ingress-and-architecture-admission.md`<br>`environment/contracts/execution/adr/ADR-0049-universal-campaign-ingress-and-architecture-admission.md` |
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
+| ADR-0051 | Accepted | Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement | `docs/decisions/ADR-0051-immutable-pr-remediation-via-stacked-publish.md` |
 
 <!-- END L9 ADR INDEX -->
 

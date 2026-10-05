@@ -182,13 +182,13 @@ PR_BASE=origin/main make precommit-repo
 │  4. Fix any new failures from 2-3                        │
 │  5. Re-run 2-3 until green                               │
 │  6. git add <planned files only>; git commit (hooks ON)  │
-│  7. remediator sanctioned publish (ONE) — git push       │
+│  7. stacked remediation publish — PR_STACK=auto make pr  │
 │                                                          │
 │  ❌ NEVER: edit before the plan is complete              │
 │  ❌ NEVER: commit after each fix                         │
 │  ❌ NEVER: publish to see what CI says                   │
 │  ❌ NEVER: git commit --no-verify                        │
-│  ❌ NEVER: make pr / OPEN_PR=0 make pr (ceremony)            │
+│  ❌ NEVER: bare git push to open PR branch (ADR-0051)     │
 │  ❌ NEVER: git add -u / -A or git reset --hard           │
 │  ❌ NEVER: merge this PR because it is now green         │
 └─────────────────────────────────────────────────────────┘

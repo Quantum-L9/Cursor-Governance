@@ -2090,6 +2090,7 @@ Append-only. This supersedes only the "`/ff`" sentence in
 - Ahead/behind counts stay. `detail=diverged` when the clone is not at the
   `ls-remote` tip. The clone is still not fetched, pulled, reset, or swapped.
 
+<<<<<<< HEAD
 <!-- LOCAL_VENV_INTERPRETER_AND_COMMAND_ROOT_V1 -->
 ## One local sync owner; the gate judges the tree the command runs in (2026-10-04)
 
@@ -2128,3 +2129,23 @@ not fold them. Toolchain pins in §6 are unchanged; `uv.lock` is unchanged.
   and the L4 release receipt must still exist at the resolved root and bind its
   head SHA. Publishing from a second clone that holds no receipt is denied even
   when the session's checkout holds a valid one.
+
+<!-- IMMUTABLE_PR_STACKED_REMEDIATION_V1 -->
+## Immutable PR remediation via stacked publish (2026-10-04) — supersedes `L9_PR_REMEDIATE_SPEED_V1` and §4.0 item 3
+
+Append-only. ADR-0051, CANONICAL_LAW §6.2.10. Where `L9_PR_REMEDIATE_SPEED_V1`
+or earlier text allowed `git push` of an already-open PR branch without `make pr`,
+this amendment is current.
+
+- **Universal `make pr` publish:** Every publication—whether an initial feature PR,
+  a campaign deliverable, or a PR remediation—must execute through the sanctioned
+  capability `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` to an
+  open PR branch is strictly forbidden.
+- **Immutable PRs:** Once a pull request exists, the only way to fix it is with
+  another pull request published as a new stacked child PR (or superseding PR)
+  via `make pr` — never an in-place commit pushed to the existing PR branch.
+- **Merge trains over sibling fan-out:** Because strict rulesets require branches
+  to be up-to-date with `main` before merging (`strict_required_status_checks_policy: true`),
+  remediations must stack linearly on their parent heads. Child PRs merge bottom-up
+  via `stack_safe_merge.py`, eliminating the \(O(N^2)\) branch-updating cascade and
+  cross-PR conflicts on overlapping files.

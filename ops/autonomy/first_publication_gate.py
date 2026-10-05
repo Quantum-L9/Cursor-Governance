@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-"""Publication plane: a *first* publication happens only through ``make pr``.
+"""Publication plane: all publications happen only through ``make pr``.
 
 CANONICAL_LAW §6.2.4 removed name-based gating of ``git``/``gh``: a command is
 judged by its effect, never by its spelling. This plane is the effect-based
-answer to audit finding R1, and §6.2.8 is its doctrine. It asks one question of
-a ``git push`` or ``gh pr create``:
+answer to audit finding R1, and §6.2.8 / §6.2.10 (ADR-0051) is its doctrine.
 
-    does this command publish a branch that has no open pull request?
-
-* **Yes → denied.** That is a first publication, and the only route that runs
-  the checkers, the overlap gate, the main-bound gate and the L4 receipt check
-  before it reaches GitHub is ``PR_REMEDIATE=0 make pr``
-  (``ops/scripts/open_pr_after_gate.sh``). A raw push there skips all of it.
-* **No (an open PR exists) → allowed.** Advancing an already-open PR is the
-  remediator path (rule 48: ``make precommit-repo`` then ``git push``), and it
-  stays a plain git command.
-* **Cannot tell → denied.** No ``gh``, no network, no GitHub remote, unreadable
-  branch: the collision and review state of the push is undeterminable, so it
-  fails closed — the same rule the overlap gate applies (E6). ``make pr`` is
-  always available as the sanctioned alternative.
+1. **A first publication** (branch has no open pull request) outside `make pr`
+   is denied: the only route that runs the checkers, overlap gate, main-bound
+   gate and L4 release check before it reaches GitHub is ``PR_REMEDIATE=0 make pr``.
+2. **Remediation of an open pull request** (branch already has an open PR) via
+   bare `git push` is also denied (ADR-0051): once a PR exists, the only sanctioned
+   way to fix it is by publishing a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`
+   to preserve stack ancestry and avoid merge-train conflicts and in-flight CI churn.
+3. **Cannot tell → denied.** No ``gh``, no network, no GitHub remote, unreadable
+   branch: the collision and review state of the push is undeterminable, so it
+   fails closed — the same rule the overlap gate applies (E6). ``make pr`` is
+   always available as the sanctioned alternative.
 
 Everything else git does is untouched: read-only git, commits, fetches,
-deletes, dry runs, and pushes that are not publications never reach the probe
+deletes, dry runs, and commands that are not publications never reach the probe
 and never earn a denial here. Destructive effect stays with ``git_guardrails``.
 
 Human/ops breakglass: ``L9_LOCAL_PUSH_AUTHORIZED=<reason>`` or a scoped
@@ -415,15 +412,18 @@ def publication_forms(command: str, root: Path | None = None) -> list[dict[str, 
     return found
 
 
-def _deny(what: str, detail: str) -> str:
+def _deny(what: str, detail: str, *, is_first: bool = True) -> str:
+    kind_text = f"would be a FIRST publication ({detail})" if is_first else f"is denied ({detail})"
     return (
-        f"Publication plane: `{what}` would be a FIRST publication ({detail}). "
-        "First publication goes through `PR_REMEDIATE=0 make pr`, which runs the "
-        "checkers, the overlap and main-bound gates and the L4 release check before "
-        "it pushes and opens the PR (ops/scripts/open_pr_after_gate.sh). A push that "
-        "advances a branch with an OPEN pull request stays allowed (remediation). "
+        f"Publication plane: `{what}` {kind_text}. "
+        "All publications (initial PRs and remediations) must go through "
+        "`PR_REMEDIATE=0 make pr`, which runs the checkers, the overlap and main-bound "
+        "gates, and the L4 release check before it pushes and opens the PR "
+        "(ops/scripts/open_pr_after_gate.sh). Direct bare `git push` to open PR branches "
+        "is forbidden (ADR-0051). Once a PR exists, remediation must be published as a new "
+        "stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`. "
         f"Human/ops breakglass: {PUSH_BREAKGLASS_ENV}=<reason> or a scoped receipt via "
-        "ops/autonomy/breakglass_receipt.py (CANONICAL_LAW §6.2.8)."
+        "ops/autonomy/breakglass_receipt.py (CANONICAL_LAW §6.2.8, §6.2.10)."
     )
 
 
@@ -518,19 +518,22 @@ def first_publication_verdict(command: str, *, root: Path | None) -> str | None:
         return None
     if breakglass_reason():
         return None
+    open_pr_forms: list[dict[str, Any]] = []
     for form in forms:
         if form["form"] == "gh pr create":
-            return _deny("gh pr create", "it opens a pull request outside make pr")
+            return _deny("gh pr create", "it opens a pull request outside make pr", is_first=True)
         if form.get("undeterminable"):
-            return _deny("git <alias>", f"its effect is undeterminable: {form['undeterminable']}")
+            detail = f"its effect is undeterminable: {form['undeterminable']}"
+            return _deny("git <alias>", detail, is_first=True)
         if form.get("whole_repo"):
             what = form["form"] if form["form"] != "git push" else f"git push {form['whole_repo']}"
-            return _deny(what, "it publishes every ref at once")
+            return _deny(what, "it publishes every ref at once", is_first=True)
         push_root, selected = _bind_root(form, root)
         if selected and push_root is None:
             return _deny(
                 "git push",
                 "the repository named by --git-dir/--work-tree/-C/GIT_DIR could not be resolved",
+                is_first=True,
             )
         try:
             answer = _open_pr(push_root, form.get("branch"), form.get("remote"))
@@ -539,12 +542,23 @@ def first_publication_verdict(command: str, *, root: Path | None) -> str | None:
             detail = f"open-PR state undeterminable: {type(exc).__name__}: {exc}"
         else:
             detail = "open-PR state undeterminable (gh/network/remote unavailable)"
-        if answer is True:
-            continue
         branch = form.get("branch") or "the current branch"
         if answer is False:
-            detail = f"no open pull request for {branch!r}"
-        return _deny("git push", detail)
+            return _deny("git push", f"no open pull request for {branch!r}", is_first=True)
+        elif answer is None:
+            return _deny("git push", detail, is_first=True)
+        else:
+            open_pr_forms.append({"branch": branch})
+
+    if open_pr_forms:
+        branch = open_pr_forms[0]["branch"]
+        detail = (
+            f"an open pull request already exists for {branch!r}, but in-place bare "
+            "`git push` is forbidden (ADR-0051). Remediations must be published as a "
+            "new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`"
+        )
+        return _deny("git push", detail, is_first=False)
+    return None
     return None
 
 
