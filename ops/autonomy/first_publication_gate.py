@@ -35,8 +35,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 _HERE = Path(__file__).resolve().parent
-if str(_HERE) not in sys.path:
-    sys.path.insert(0, str(_HERE))
+_ROOT = _HERE.parent.parent
+for _path in (str(_HERE), str(_ROOT / "ops" / "scripts"), str(_ROOT)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 from command_parse import (  # noqa: E402
     segment_head,
@@ -416,14 +418,14 @@ def _deny(what: str, detail: str, *, is_first: bool = True) -> str:
     kind_text = f"would be a FIRST publication ({detail})" if is_first else f"is denied ({detail})"
     return (
         f"Publication plane: `{what}` {kind_text}. "
-        "All publications (initial PRs and remediations) must go through "
-        "`PR_REMEDIATE=0 make pr`, which runs the checkers, the overlap and main-bound "
-        "gates, and the L4 release check before it pushes and opens the PR "
-        "(ops/scripts/open_pr_after_gate.sh). Direct bare `git push` to open PR branches "
-        "is forbidden (ADR-0051). Once a PR exists, remediation must be published as a new "
-        "stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`. "
-        f"Human/ops breakglass: {PUSH_BREAKGLASS_ENV}=<reason> or a scoped receipt via "
-        "ops/autonomy/breakglass_receipt.py (CANONICAL_LAW §6.2.8, §6.2.10)."
+        "First publication goes through `PR_REMEDIATE=0 make pr`, which runs the "
+        "checkers, the overlap and main-bound gates and the L4 release check before "
+        "it pushes and opens the PR (ops/scripts/open_pr_after_gate.sh). Direct bare `git push` "
+        "advancing an open PR is allowed only for in-scope surgical fixes to files already "
+        "modified or created by the PR; touching new files outside the PR's existing scope "
+        "must be published as a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr` "
+        f"(ADR-0051). Human/ops breakglass: {PUSH_BREAKGLASS_ENV}=<reason> or a scoped receipt "
+        "via ops/autonomy/breakglass_receipt.py (CANONICAL_LAW §6.2.8, §6.2.10)."
     )
 
 
@@ -482,6 +484,59 @@ def _resolve_push_root(push: dict[str, Any], root: Path | None) -> Path | None:
     return _bind_root(push, root)[0]
 
 
+def _git_out(root: Path, *args: str) -> str | None:
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["git", "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
+
+
+def _scope_expanding_files(
+    root: Path | None, branch: str | None, remote: str | None
+) -> list[str] | None:
+    """Return non-generated files touched by outgoing commits not in the PR, or None."""
+    try:
+        from l4_local import current_branch
+        from open_pr_probe import open_pr_files
+        from sync_generated_artifacts import is_generated_path
+    except ImportError:  # pragma: no cover - package import
+        try:
+            from ops.autonomy.l4_local import current_branch
+            from ops.autonomy.open_pr_probe import open_pr_files
+            from ops.scripts.sync_generated_artifacts import is_generated_path
+        except ImportError:
+            return None
+
+    if root is None:
+        return None
+    target = branch if branch and branch != "HEAD" else current_branch(root)
+    if not target or target == "HEAD":
+        return None
+    pr_files = open_pr_files(root, target, remote=remote or "origin")
+    if pr_files is None:
+        return None
+    remote_name = remote or "origin"
+    rev = _git_out(root, "rev-parse", "--verify", f"{remote_name}/{target}")
+    if not rev:
+        rev = _git_out(root, "rev-parse", "--verify", "@{u}")
+    if rev:
+        out = _git_out(root, "diff", "--name-only", f"{rev}..HEAD")
+        if out is not None:
+            outgoing = [line.strip() for line in out.splitlines() if line.strip()]
+            new_files = [f for f in outgoing if f not in pr_files and not is_generated_path(f)]
+            return new_files
+    return None
+
+
 def _open_pr(root: Path | None, branch: str | None, remote: str | None) -> bool | None:
     try:
         from l4_local import current_branch
@@ -518,7 +573,6 @@ def first_publication_verdict(command: str, *, root: Path | None) -> str | None:
         return None
     if breakglass_reason():
         return None
-    open_pr_forms: list[dict[str, Any]] = []
     for form in forms:
         if form["form"] == "gh pr create":
             return _deny("gh pr create", "it opens a pull request outside make pr", is_first=True)
@@ -543,22 +597,21 @@ def first_publication_verdict(command: str, *, root: Path | None) -> str | None:
         else:
             detail = "open-PR state undeterminable (gh/network/remote unavailable)"
         branch = form.get("branch") or "the current branch"
+        if answer is True:
+            expanded = _scope_expanding_files(push_root, form.get("branch"), form.get("remote"))
+            if expanded:
+                detail = (
+                    f"push touches files outside {branch!r}'s existing PR scope: "
+                    f"{sorted(expanded)}. Touching files not created or modified by the "
+                    "original PR must be published as a new stacked PR via "
+                    "`PR_STACK=auto PR_REMEDIATE=0 make pr` to prevent conflicts with "
+                    "newer open PRs (ADR-0051)."
+                )
+                return _deny("git push", detail, is_first=False)
+            continue
         if answer is False:
             return _deny("git push", f"no open pull request for {branch!r}", is_first=True)
-        elif answer is None:
-            return _deny("git push", detail, is_first=True)
-        else:
-            open_pr_forms.append({"branch": branch})
-
-    if open_pr_forms:
-        branch = open_pr_forms[0]["branch"]
-        detail = (
-            f"an open pull request already exists for {branch!r}, but in-place bare "
-            "`git push` is forbidden (ADR-0051). Remediations must be published as a "
-            "new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`"
-        )
-        return _deny("git push", detail, is_first=False)
-    return None
+        return _deny("git push", detail, is_first=True)
     return None
 
 

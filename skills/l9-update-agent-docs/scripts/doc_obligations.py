@@ -252,7 +252,6 @@ def build_obligations(
         ):
             impacted.add(surface)
     obligations: list[dict[str, Any]] = []
-    _ = run_mutations
     for surface in sorted(impacted):
         spec = policy["surfaces"][surface]
         rules, source_changes = source_changes_for_surface(policy, impact, surface)

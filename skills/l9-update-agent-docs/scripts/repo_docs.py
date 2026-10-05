@@ -519,11 +519,16 @@ def audit_repository(
         else:
             readme_models = tuple(model for model, _rendered in compiled_readmes)
     if writes_authorized:
-        root_mutations, root_admissions = compile_missing_root_docs(
-            root, policy, refresh_owned=full, readme_models=readme_models
-        )
-        run_mutations.extend(root_mutations)
-        path_admissions.update(root_admissions)
+        try:
+            root_mutations, root_admissions = compile_missing_root_docs(
+                root, policy, refresh_owned=full, readme_models=readme_models
+            )
+            run_mutations.extend(root_mutations)
+            path_admissions.update(root_admissions)
+        except OSError as exc:
+            structural.append(
+                _structural_failure("root_contracts", "BLOCKED", f"root doc compile failed: {exc}")
+            )
     module_opened = "module_readmes" in set(impact.get("impacted_surfaces", []))
     if (
         write_module_readmes

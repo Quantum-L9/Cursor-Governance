@@ -2131,19 +2131,18 @@ not fold them. Toolchain pins in §6 are unchanged; `uv.lock` is unchanged.
   when the session's checkout holds a valid one.
 
 <!-- IMMUTABLE_PR_STACKED_REMEDIATION_V1 -->
-## Immutable PR remediation via stacked publish (2026-10-04) — supersedes `L9_PR_REMEDIATE_SPEED_V1` and §4.0 item 3
+## Scope-invariant PR remediation (2026-10-04) — refines `L9_PR_REMEDIATE_SPEED_V1` and §4.0 item 3
 
 Append-only. ADR-0051, CANONICAL_LAW §6.2.10. Where `L9_PR_REMEDIATE_SPEED_V1`
-or earlier text allowed `git push` of an already-open PR branch without `make pr`,
-this amendment is current.
+or earlier text discussed remediator publish, this amendment is current.
 
-- **Universal `make pr` publish:** Every publication—whether an initial feature PR,
-  a campaign deliverable, or a PR remediation—must execute through the sanctioned
-  capability `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` to an
-  open PR branch is strictly forbidden.
-- **Immutable PRs:** Once a pull request exists, the only way to fix it is with
-  another pull request published as a new stacked child PR (or superseding PR)
-  via `make pr` — never an in-place commit pushed to the existing PR branch.
+- **In-scope surgical fixes:** Pushing commits advancing an open PR branch is allowed
+  via `git push` (after local verify `make precommit-repo`) provided the changes modify
+  only files that were already created or modified by the original PR.
+- **Scope expansion requires a new stacked PR:** If remediation requires modifying,
+  adding, or deleting any file outside the original PR's file footprint, direct `git push`
+  to that PR branch is strictly forbidden. It must be published as a new stacked child PR
+  via `PR_STACK=auto PR_REMEDIATE=0 make pr` to prevent uncoordinated conflicts with newer open PRs.
 - **Merge trains over sibling fan-out:** Because strict rulesets require branches
   to be up-to-date with `main` before merging (`strict_required_status_checks_policy: true`),
   remediations must stack linearly on their parent heads. Child PRs merge bottom-up

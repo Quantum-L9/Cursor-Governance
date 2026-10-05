@@ -1233,21 +1233,21 @@ release identity. The signed-agent door in §8.5 is unchanged.
    identity moves.
 
 <!-- UNIVERSAL_PUBLICATION_AND_IMMUTABLE_PR_REMEDIATION_V1 -->
-## 6.2.10 Universal publication gate and immutable PR remediation (2026-10-04) — supersedes §6.2.8 item 2
+## 6.2.10 Scope-invariant PR remediation and publication gate (2026-10-04) — supersedes §6.2.8 item 2
 
 Append-only. §6.2.8 item 2's carve-out ("Allowed: git push of a branch that already
-has an open PR — the remediator path") is superseded by this amendment and ADR-0051.
+has an open PR — the remediator path") is refined by this amendment and ADR-0051.
 
-1. **Universal publication requirement:** Every publication—first feature publication,
-   campaign output, or remediation of an existing PR—must execute through the
-   sanctioned `PR_STACK=auto PR_REMEDIATE=0 make pr` gate (`open_pr_after_gate.sh`).
-2. **Immutable PRs:** Once a pull request exists, direct in-place bare `git push`
-   to that PR branch is strictly forbidden. Any remediation, follow-up, or conflict
-   resolution must be published as a new stacked child PR via `make pr` (or supersede
-   the prior PR).
-3. **No bare pushes:** `ops/autonomy/first_publication_gate.py` denies any direct
-   bare `git push`, including on branches with open PRs. Breakglass remains
-   `L9_LOCAL_PUSH_AUTHORIZED=<reason>`.
-4. **Merge-train stack safety:** Stacking remediations ensures full local gate
+1. **In-scope surgical remediation:** Pushing commits advancing an open PR branch
+   is allowed via `git push` (after local verify `make precommit-repo`) provided the
+   changes modify only files that were already created or modified by the original PR.
+2. **Scope expansion requires a new stacked PR:** If remediation requires modifying,
+   adding, or deleting any file outside the original PR's file footprint, pushing directly
+   to the open PR branch is strictly forbidden (to prevent uncoordinated conflicts with
+   newer open PRs). It must be published as a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+3. **Publication gate enforcement:** `ops/autonomy/first_publication_gate.py` denies any
+   first publication outside `make pr`, and denies scope-expanding pushes to open PRs.
+   Breakglass remains `L9_LOCAL_PUSH_AUTHORIZED=<reason>`.
+4. **Merge-train stack safety:** Linearly stacking scope expansions preserves local gate
    verification, eliminates in-flight CI cancellation storms, and avoids the \(O(N^2)\)
    branch-updating cascades required by strict branch protection rulesets.

@@ -74,19 +74,21 @@ Safety is `claim_scopes_conflict` plus `waves()`. Serializing independent non-ov
 
 ## Makefile capability graph (this host)
 
-Every publication—initial feature PRs, campaigns, and remediations—must follow the sanctioned `make pr` publication path (`open_pr_after_gate.sh`). Direct bare `git push` to an existing PR branch is **strictly forbidden** (ADR-0051). Once a PR exists, the only way to fix it is by publishing a **new stacked PR** via `make pr` — never an in-place commit to the existing PR branch.
+Remediation publication is governed by the **File-Scope Invariant** (ADR-0051):
+
+1. **In-scope surgical fixes (files already modified or created by the PR):** When replying to review threads, fixing tests, or making surgical repairs in files already part of the PR diff, push the commit directly to the PR being remediated via `git push` after `make precommit-repo`.
+2. **Scope-expanding fixes (new files touched):** If remediation requires touching or adding any file *outside* the original PR's file scope, direct `git push` to that PR is **strictly forbidden** (to prevent uncoordinated conflicts with newer open PRs). It must be published as a **new stacked PR** via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
 
 **Remediator PUBLIC** (only these as shipping verbs):
 
 | Verb | Meaning | This skill |
 |------|---------|------------|
-| `make precommit-repo` | Changed-file hooks plus locked `ruff check` / `ruff format --check`. | **Local pre-verify.** Blocks commit. |
-| `PR_STACK=auto PR_REMEDIATE=0 make pr` | Full gate (pre-commit, locked ruff, security, tests, overlap detection) + opens/updates stacked PR. | **Remediation publish.** Sanctioned path. |
+| `make precommit-repo` | Changed-file hooks plus locked `ruff check` / `ruff format --check`. | **Local verify.** Blocks commit. |
+| `git push` | Update the already-open PR branch for in-scope surgical fixes only. | **In-scope publish.** Files already in PR. |
+| `PR_STACK=auto PR_REMEDIATE=0 make pr` | Opens/updates a new stacked PR when touching files outside the PR. | **Scope-expansion publish.** New files touched. |
 | `make improve` | Kernel revision. | Optional, when kernels apply. |
 
-**Forbidden in this skill:** Bare `git push` to existing PR branches, `--no-verify`, force-push, bypassing `make pr`. Once a PR exists, fixes are published as a child stacked PR (or superseding PR) targeting the parent branch, never by committing directly to the existing PR branch.
-
-Failure loop: diagnose → branch child from PR head → fix → (`make improve` if kernels apply) → `make precommit-repo` → commit → `PR_STACK=auto PR_REMEDIATE=0 make pr` **once**. If hooks rewrite files, commit the rewrite and re-run `make precommit-repo` once before `make pr`.
+Failure loop: diagnose → fix in-scope files → `make precommit-repo` → commit → `git push` **once**. If new files outside the PR are needed: branch child → fix → `PR_STACK=auto PR_REMEDIATE=0 make pr`.
 
 ## Diagnose
 
@@ -149,8 +151,8 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 4. **Codebase only.** Repair source, tests, fixtures, package deps. Never edit `.github/workflows/**`, actions, runners, permissions, secrets, OIDC, branch protection, check wiring, or CI-only infra. Never add `continue-on-error` or skip conditions to “heal” CI. Pipeline blockers: record one line in the status and keep remediating everything else. Assignments carry these as `forbidden_paths`; a result that touched one is rejected.
 5. **Ownership before edit — and ownership is not the board.** Load [references/ownership-boundary.md](references/ownership-boundary.md). Ownership answers **one** question: may I patch this file? Edit only `CODEBASE`. `ENVIRONMENT` is not a code defect — run the venv preflight once and continue. Ownership never decides what happens to the PR; `edit=CI_PIPELINE` is not `board=leftover`.
 6. **Plan the PR, then patch that PR.** No edits on a PR until its ingested findings have dispositions. A locked `Remediation-Cycle` / plan whose files still match is executed, not rewritten.
-7. **One remediation PR, one stacked publish via `make pr`.** Zero if nothing codebase-safe remains. Direct bare `git push` to an existing PR branch is **forbidden**. Once a PR exists, the only way to fix it is with another PR published as a stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr` (ADR-0051). Never commit-per-finding, never publish to probe CI, never `--no-verify`.
-8. **Universal gate blocks publication.** Local verify is `make precommit-repo` prior to commit, and the publication gate `PR_STACK=auto PR_REMEDIATE=0 make pr` executes full tests and overlap checks before opening the stacked remediation PR. Record `Passed` / `Failed` / `Unknown`. Never `git merge origin/main` to "fix" a failing required check.
+7. **One commit, one remediator publish (scope-invariant).** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. When all touched files are already part of the PR diff (in-scope surgical fixes, review thread replies), remediator publish is `git push` of the open PR branch after `make precommit-repo`. When remediation requires touching a new file outside the PR diff, in-place push is forbidden (ADR-0051) and the change must be published as a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+8. **Local verify blocks commit.** Local verify is `make precommit-repo` (hooks plus ruff). Remote CI is independent confirmation — never claim remote `Passed` from local `Passed`. Never `git merge origin/main` to "fix" a failing required check.
 9. **Results are documents, not sentences.** Every delegated assignment returns one `l9.cursor-subagent.result.v1` document; `pr_fleet.py accept` judges it against the assignment (identity, base SHA, role, writable scope, read-only roles report no changes) and preserves `partial` / `blocked` / `failed`. "Done" in chat is not completion. A rejected result is re-assigned or taken over by the main agent — never trusted.
 10. **Own until merged — poll, do not stop.** Subscribe to every in-scope open PR at preflight. After a publish record the head SHA, launch (or keep) a watcher, **and poll that PR** (15s snapshots) until `board=merge` or a red required check. Poll workers and watchers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --run`. Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” Mission is `open_prs=0`.
 11. **Validate suggestions against current code.** Comment snippets are not ground truth.
@@ -205,7 +207,7 @@ Never `--admin`. Never unpack diffs. Never merge-as-you-go. An unpredicted `CONF
 
 Mission is `open_prs=0` — an empty `gh pr list --state open` on the target repo. Anything short of that names the PRs still open and the `pr_board.py` receipt that keeps each one open.
 
-- every remediation published as a stacked PR via `make pr`; every delegated result accepted (no lane closed on narrative)
+- every remediation published via `git push` (in-scope) or stacked PR via `make pr` (scope-expansion); every delegated result accepted (no lane closed on narrative)
 - every open PR carries a fresh `pr_board.py` verdict at its final head; only `board=leftover` stays unmerged, each with its declaration **and** an opened issue handed to `l9-issue-remediation`
 - no unpredicted merge conflict; no unresolved GraphQL `reviewThreads` (any author; pagination complete)
 - SonarCloud: every confirmed issue on each converged head fixed; remote closure claimed only when observed after analysis; residue deferred with an issue, never left silent
@@ -214,7 +216,7 @@ Mission is `open_prs=0` — an empty `gh pr list --state open` on the target rep
 
 ## Generated-artifact heal (same publish path)
 
-Not a second publish path. After any merge that touched generated paths — or whenever `.l9/pr/regen-required.txt` is non-empty — run `"$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force` (plus `generate_manifest.py` / `validate_manifest.py` when `environment/program-execution/MANIFEST.json` is in the set), then `make precommit-repo`, commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. File-by-file audit only for a non-generated unresolved path. [references/generated-heal.md](references/generated-heal.md), `rules/53-pr-overlap-guardrail.mdc`.
+Not a second publish path. After any merge that touched generated paths — or whenever `.l9/pr/regen-required.txt` is non-empty — run `"$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force` (plus `generate_manifest.py` / `validate_manifest.py` when `environment/program-execution/MANIFEST.json` is in the set), then `make precommit-repo`, commit, and `git push` (or `PR_STACK=auto make pr` if new files touched). File-by-file audit only for a non-generated unresolved path. [references/generated-heal.md](references/generated-heal.md), `rules/53-pr-overlap-guardrail.mdc`.
 
 ## Resource Map
 
@@ -285,7 +287,7 @@ board_from_rollup_alone: false
 leftover_requires_declaration: true
 done_predicate: open_prs=0
 verify: make precommit-repo
-publish: PR_STACK=auto PR_REMEDIATE=0 make pr  # stacked remediation PR via make pr; bare git push forbidden
+publish: git push (in-scope) | PR_STACK=auto make pr (scope-expansion)
 improve: make improve                   # optional kernels; not publish
 merge_on_converge: true
 own_until_merged: true

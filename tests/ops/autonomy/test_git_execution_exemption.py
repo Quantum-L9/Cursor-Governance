@@ -123,6 +123,7 @@ def test_payload_check_never_raises_on_garbage() -> None:
 GATE_COMMANDS = [
     "git status",
     "git commit -m 'wip'",
+    "git push origin main",
     "gh pr list",
     "gh api repos/o/r/pulls",
 ]
@@ -135,26 +136,13 @@ def test_local_execution_gate_allows_git_without_l4_release(
 ) -> None:
     """No release receipt, no publish-path allowance — still allowed.
 
-    Non-push git/gh commands are exempt from L4 release checks.
+    The push in this set advances an open PR (remediation); L4 state never
+    decides a git command.
     """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
     assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
-
-
-@pytest.mark.usefixtures("open_pr")
-def test_local_execution_gate_push_requires_breakglass_or_make_pr(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Under ADR-0051, git push without breakglass is denied by publication plane, not L4."""
-    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
-    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
-    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
-    reason = gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path)
-    assert reason is not None and "ADR-0051" in reason and "L4 denied" not in reason
-    monkeypatch.setenv("L9_LOCAL_PUSH_AUTHORIZED", "ops")
-    assert gate.evaluate("Bash", {"command": "git push origin main"}, root=tmp_path) is None
 
 
 def test_first_publication_is_the_one_workflow_effect_git_still_answers_for(

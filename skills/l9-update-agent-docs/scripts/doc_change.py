@@ -88,7 +88,11 @@ def classify_impact_files(
         if before.returncode != 0:
             impact_files.append(rel)
             continue
-        after = path.read_text(encoding="utf-8")
+        try:
+            after = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            impact_files.append(rel)
+            continue
         if managed_region_only_edit(before.stdout, after, policy):
             continue
         impact_files.append(rel)

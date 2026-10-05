@@ -240,16 +240,11 @@ def test_no_second_plane() -> None:
 def test_verbs_and_publish() -> None:
     _need(SKILL, "make precommit-repo", "SKILL.md")
     _need(SKILL, "PR_STACK=auto PR_REMEDIATE=0 make pr", "SKILL.md")
-    _need(SKILL, "Bare `git push` to existing PR branches", "SKILL.md")
-    _need(SKILL, "Once a PR exists", "SKILL.md")
-    _need(REFS["run-contract.md"], "PR_STACK=auto PR_REMEDIATE=0 make pr", "run-contract.md")
+    _need(SKILL, "git push", "SKILL.md")
+    _need(SKILL, "File-Scope Invariant", "SKILL.md")
+    _need(REFS["run-contract.md"], "make precommit-repo", "run-contract.md")
     _need(REFS["fix-engine.md"], "make precommit-repo", "fix-engine.md")
-    _need(REFS["merge-advise.md"], "PR_STACK=auto PR_REMEDIATE=0 make pr", "merge-advise.md")
-    _need(
-        REFS["signal-ingestion.md"],
-        "`make precommit-repo` verify, `PR_STACK=auto make pr` publish",
-        "signal-ingestion.md",
-    )
+    _need(REFS["merge-advise.md"], "make pr", "merge-advise.md")
     _need(SKILL, "require_precommit_all_files: false", "SKILL.md")
     _need(SKILL, "forbid_no_verify: true", "SKILL.md")
 

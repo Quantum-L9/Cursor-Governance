@@ -37,6 +37,7 @@ def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
             check=False,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=30,
         )
     except subprocess.TimeoutExpired:

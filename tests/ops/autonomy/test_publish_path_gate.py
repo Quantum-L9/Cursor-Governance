@@ -329,20 +329,41 @@ REMEDIATOR_GIT_COMMANDS = [
 
 
 @pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
-def test_remediator_git_push_of_an_open_pr_is_denied(
+def test_remediator_git_push_of_an_open_pr_is_not_denied(
     command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """ADR-0051: advancing an OPEN PR with bare git push is denied; must use make pr."""
+    """F-14 Allow + remediator velocity: advancing an OPEN PR is not a deny.
+
+    Bare ``git push``, a pipe, and ``make precommit-repo && git push`` must
+    share one verdict, and L4 does not gate the remediation push. Classifiers
+    still name the raw publish.
+    """
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
-    reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
-    if "gh pr edit" in command:
-        assert reason is None  # editing an existing PR publishes nothing
-    else:
-        assert reason is not None
-        assert "ADR-0051" in reason
-        assert "make pr" in reason
+    assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None
+    assert gate.publish_path_workflow_deny(command) is None
+
+
+def test_scope_expanding_push_of_an_open_pr_is_denied(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR-0051: touching new files outside the PR's scope requires make pr."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
+    _open_pr(monkeypatch, True)
+    monkeypatch.setattr(
+        open_pr_probe, "open_pr_files", lambda root, branch, remote="origin": {"existing.py"}
+    )
+    # mock _git_out so diff shows an unexpected new file
+    monkeypatch.setattr(
+        "first_publication_gate._scope_expanding_files",
+        lambda root, branch, remote: ["new_unrelated_module.py"],
+    )
+    reason = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=stacked_repo)
+    assert reason is not None
+    assert "ADR-0051" in reason
+    assert "new_unrelated_module.py" in reason
 
 
 @pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
@@ -371,18 +392,18 @@ def test_piped_git_push_matches_bare_verdict(
         piped = gate.evaluate(
             "Bash", {"command": "git push origin HEAD | tail -1"}, root=stacked_repo
         )
-        assert bare is not None
+        assert (bare is None) is answer
         assert piped == bare
 
 
-def test_cursor_shell_denies_remediator_bare_git_push(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_cursor_shell_allows_remediator_git_push(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Cursor beforeShellExecution denies bare git push even when a PR is open (ADR-0051)."""
+    """Cursor beforeShellExecution allows in-scope bare git push when a PR is open."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
-    monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: stacked_repo)
     monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
     monkeypatch.setattr(gate, "command_requires_human", lambda command, root=None: None)
     monkeypatch.setattr(
@@ -409,8 +430,7 @@ def test_cursor_shell_denies_remediator_bare_git_push(
     monkeypatch.setattr(sys, "stdout", captured)
     assert gate.main_cursor_shell() == 0
     payload = json.loads("".join(captured.parts))
-    assert payload["permission"] == "deny"
-    assert "ADR-0051" in payload["user_message"]
+    assert payload["permission"] == "allow"
 
 
 def test_cursor_shell_denies_a_first_publication_push(
@@ -513,11 +533,12 @@ def test_multi_ref_push_of_only_open_prs_stays_remediation(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _open_pr_by_branch(monkeypatch, {"feat-open", "feat-open-2"})
-    reason = gate.evaluate(
-        "Bash", {"command": "git push origin feat-open feat-open-2"}, root=stacked_repo
+    assert (
+        gate.evaluate(
+            "Bash", {"command": "git push origin feat-open feat-open-2"}, root=stacked_repo
+        )
+        is None
     )
-    assert reason is not None
-    assert "ADR-0051" in reason
 
 
 def test_refspec_destination_is_the_branch_that_is_probed(
@@ -531,12 +552,10 @@ def test_refspec_destination_is_the_branch_that_is_probed(
 
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setattr(open_pr_probe, "open_pr_for_branch", probe)
-    reason = gate.evaluate(
-        "Bash", {"command": "git push origin HEAD:refs/heads/new"}, root=stacked_repo
+    assert (
+        gate.evaluate("Bash", {"command": "git push origin HEAD:refs/heads/new"}, root=stacked_repo)
+        is None
     )
-    assert reason is not None
-    assert "ADR-0051" in reason
-    assert "'new'" in reason
     assert probed == ["new"]
 
 
@@ -650,7 +669,7 @@ def test_repository_selector_binds_the_probe_to_the_targeted_repository(
 def test_same_repository_push_of_an_open_pr_stays_allowed_with_or_without_selector(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """F2 negative 4 / P1: advancing an open PR of the same repository is denied under ADR-0051."""
+    """F2 negative 4 / P1: advancing an open PR of the same repository is remediation."""
     for command in (
         "git push origin feat/l4-stack",
         "git push",
@@ -661,8 +680,8 @@ def test_same_repository_push_of_an_open_pr_stays_allowed_with_or_without_select
     ):
         probed: list[tuple[Path, str]] = []
         _open_pr_by_root(monkeypatch, stacked_repo, probed)
-        reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
-        assert reason is not None and "ADR-0051" in reason, command
+        assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None, command
+        assert probed == [(stacked_repo.resolve(), "feat/l4-stack")], command
         assert probed == [(stacked_repo.resolve(), "feat/l4-stack")], command
 
 
@@ -731,11 +750,12 @@ def test_alias_mediated_push_of_an_open_pr_stays_remediation(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _open_pr_by_branch(monkeypatch, {"feat/l4-stack"})
-    reason = gate.evaluate(
-        "Bash", {"command": "git -c alias.p=push p origin feat/l4-stack"}, root=stacked_repo
+    assert (
+        gate.evaluate(
+            "Bash", {"command": "git -c alias.p=push p origin feat/l4-stack"}, root=stacked_repo
+        )
+        is None
     )
-    assert reason is not None
-    assert "ADR-0051" in reason
 
 
 @pytest.mark.parametrize(

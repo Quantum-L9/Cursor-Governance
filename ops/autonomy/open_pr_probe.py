@@ -119,4 +119,49 @@ def open_pr_for_branch(root: Path, branch: str, *, remote: str = "origin") -> bo
     return _graphql_open_pr(root, branch)
 
 
-__all__ = ["PROBE_TIMEOUT_S", "open_pr_for_branch", "repo_slug"]
+def open_pr_files(root: Path, branch: str, *, remote: str = "origin") -> set[str] | None:
+    """Return the set of file paths in the open PR for `branch`, or None if undeterminable."""
+    if not branch or branch == "HEAD":
+        return None
+    slug = repo_slug(root, remote)
+    if slug is not None:
+        owner = slug.split("/", 1)[0]
+        out = _gh(
+            ["api", f"repos/{slug}/pulls?head={owner}:{branch}&state=open&per_page=1"],
+            cwd=root,
+        )
+        if out:
+            try:
+                data = json.loads(out)
+                if isinstance(data, list) and data and isinstance(data[0], dict):
+                    num = data[0].get("number")
+                    if num:
+                        files_out = _gh(
+                            ["api", f"repos/{slug}/pulls/{num}/files?per_page=100"],
+                            cwd=root,
+                        )
+                        if files_out:
+                            files_data = json.loads(files_out)
+                            if isinstance(files_data, list):
+                                return {
+                                    str(item.get("filename"))
+                                    for item in files_data
+                                    if isinstance(item, dict) and item.get("filename")
+                                }
+            except Exception:
+                pass
+    out = _gh(["pr", "view", branch, "--json", "files"], cwd=root)
+    if out:
+        try:
+            data = json.loads(out)
+            return {
+                str(item.get("path"))
+                for item in data.get("files", [])
+                if isinstance(item, dict) and item.get("path")
+            }
+        except Exception:
+            pass
+    return None
+
+
+__all__ = ["PROBE_TIMEOUT_S", "open_pr_for_branch", "open_pr_files", "repo_slug"]

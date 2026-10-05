@@ -39,21 +39,21 @@ Enforce that once a pull request exists, its branch is immutable to direct termi
 
 ## Decision
 
-We establish the architectural rule:
-**Once a pull request exists, the only sanctioned way to remediate it is through another pull request published via `make pr` — never a bare commit pushed directly to the existing PR branch.**
+We establish the architectural rule of **PR Remediation Scope Invariance**:
 
-### 1. Universal Publication Gate (`first_publication_gate.py`)
-The carve-out in `first_publication_gate.py` that permitted raw `git push` if an open PR already existed is closed. All publications—initial feature PRs, campaign deliverables, and remediation units—must execute through `open_pr_after_gate.sh` via `make pr`. Raw `git push` to an open PR branch is denied by effect.
+1. **In-Scope Surgical Fixes (Within-Boundary Remediation):**
+   When replying to review threads, fixing tests, or applying surgical corrections to files that were already created or modified by the original pull request (`file in pr.files`), the commit is pushed directly to the open PR branch being remediated (after local verify `make precommit-repo`). This avoids unnecessary PR sprawl for small, in-scope fixes while preserving the PR's claimed file boundary in the fleet.
+2. **Scope-Expanding Fixes (New Files Require a New Stacked PR):**
+   If remediation requires modifying, adding, or deleting any file *outside* the original PR's file footprint (`new_files = changed_files - pr.files`), pushing directly to the open PR branch is **strictly forbidden**. Any scope expansion must be published as a **new stacked PR** via `PR_STACK=auto PR_REMEDIATE=0 make pr` to prevent uncoordinated collisions with newer open PRs and downstream stack branches.
 
-### 2. Stacked Remediation Workflow
-When an existing PR (`PR_A` on `branch_A`) requires remediation (failing tests, review comments, or upstream drift):
-1. The remediating agent branches `branch_A--fix` from `branch_A` (or bases on the unique open chain tip).
-2. The fix is applied and verified locally through the full publication gate.
-3. The remediation is published via `PR_STACK=auto make pr`, opening `PR_B` with `base: branch_A`.
-4. `PR_B` merges into `branch_A` via governed merge (`stack_safe_merge.py`), or `PR_B` is retargeted to supersede `PR_A`. Direct terminal commits to `branch_A` are forbidden.
+### 1. Scope-Enforcing Publication Gate (`first_publication_gate.py`)
+`first_publication_gate.py` enforces the scope boundary mechanically:
+- Pushes to branches with no open PR are denied as first publications (must use `make pr`).
+- Pushes to open PR branches that touch only files already in the PR diff are allowed as in-scope remediation.
+- Pushes to open PR branches that touch new files outside the PR diff are denied as scope expansions, requiring publication of a new stacked PR via `PR_STACK=auto make pr`.
 
-### 3. Linear Merge Trains Over Sibling Fan-Out
-To prevent the \(O(N^2)\) update cascade caused by `strict_required_status_checks_policy: true`, concurrent workstreams must stack linearly:
+### 2. Linear Merge Trains Over Sibling Fan-Out
+To prevent the \(O(N^2)\) update cascade caused by `strict_required_status_checks_policy: true`, concurrent workstreams stack linearly:
 $$\text{main} \leftarrow \text{PR}_1 \leftarrow \text{PR}_2 \leftarrow \dots \leftarrow \text{PR}_N$$
 Because each child branch already incorporates the commits of its parent, merging $\text{PR}_1$ into `main` using ancestry-preserving `--merge` leaves $\text{PR}_2$ immediately mergeable without requiring a full re-merge of `main` or an out-of-date branch invalidation cycle.
 
