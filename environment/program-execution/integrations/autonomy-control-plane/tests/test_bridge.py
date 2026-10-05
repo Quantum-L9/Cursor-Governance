@@ -173,8 +173,8 @@ def _execution_request_payload() -> dict[str, object]:
         "timeout_budget": {"dispatch_seconds": 1800, "poll_seconds": 30},
         "requested_capabilities": list(delegated),
         "telemetry_context": {"task_id": "TASK-1"},
-        "agent_ref": "claude-code-desktop",
-        "surface": "claude-cli",
+        "agent_ref": "claude-code",
+        "surface": "claude-code-cli",
         "provider_ref": "claude-code-direct",
         "execution_profile_ref": "worker-default",
     }
@@ -433,14 +433,14 @@ class ProgramBoundRootAuthorityTests(unittest.TestCase):
                 workspace,
                 contract,
                 attempt_number=1,
-                agent_ref="claude-code-desktop",
-                surface="claude-cli",
+                agent_ref="claude-code",
+                surface="claude-code-cli",
             )
             self.assertEqual(
                 grant["peer_binding"],
                 {
-                    "agent_ref": "claude-code-desktop",
-                    "surface": "claude-cli",
+                    "agent_ref": "claude-code",
+                    "surface": "claude-code-cli",
                     "provider_ref": "claude-code-direct",
                     "execution_profile_ref": "worker-default",
                     "autonomy_provider_ref": "root-autonomy-control-plane",
@@ -461,8 +461,8 @@ class ProgramBoundRootAuthorityTests(unittest.TestCase):
                 connection.close()
             self.assertIsNotNone(session)
             self.assertEqual(session["status"], "PASS")
-            self.assertEqual(session["peer_ref"], "claude-code-desktop")
-            self.assertEqual(session["surface"], "claude-cli")
+            self.assertEqual(session["peer_ref"], "claude-code")
+            self.assertEqual(session["surface"], "claude-code-cli")
             # The live orchestrator authorizes a tool only against the session
             # the lease itself was issued under.
             metadata = json.loads(lease["metadata_json"])
@@ -556,8 +556,8 @@ class ProgramBoundRootAuthorityTests(unittest.TestCase):
                 workspace,
                 contract,
                 attempt_number=1,
-                agent_ref="claude-code-desktop",
-                surface="claude-cli",
+                agent_ref="claude-code",
+                surface="claude-code-cli",
             )
             self.assertNotIn("git.commit_local", grant["authorized"])
             self.assertNotIn("git.commit_local", grant["autonomy_authority"]["capabilities"])
