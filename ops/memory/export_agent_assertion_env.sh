@@ -10,7 +10,7 @@
 # the whole map). NEVER exports L9_MEMORY_HUMAN_DOOR_SECRET.
 # Safe to `source`: missing maps return without exiting the caller.
 set -uo pipefail
-AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
+AGENT_ID="${L9_MEMORY_AGENT_ID:-}"
 SECRET_MAP="${L9_MEMORY_SECRET_MAP:-$HOME/.config/l9-memory/agent_tokens.local.json}"
 GRANTS_MAP="${L9_MEMORY_GRANTS_MAP:-$HOME/.config/l9-memory/agent_grants.json}"
 GOV_ROOT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
@@ -30,6 +30,15 @@ _done() {
 }
 if [[ ! -f "$SECRET_MAP" || ! -f "$GRANTS_MAP" ]]; then
   echo "assertion env skipped: secret/grants map missing (memory-blind OK)" >&2
+  _done 0
+fi
+# No fallback author: an unset L9_MEMORY_AGENT_ID is derived from host
+# evidence, and with none no assertion is minted.
+if [[ -z "$AGENT_ID" ]]; then
+  AGENT_ID="$(PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$GOV_ROOT" "$PY" -m ops.memory.agent_identity 2>/dev/null || true)"
+fi
+if [[ -z "$AGENT_ID" ]]; then
+  echo "assertion env skipped: no memory identity (set L9_MEMORY_AGENT_ID or run under a host)" >&2
   _done 0
 fi
 # The helper refuses a terminal stdout and writes secrets to a 0600 file.
