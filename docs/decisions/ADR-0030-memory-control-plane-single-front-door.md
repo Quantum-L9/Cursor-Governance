@@ -25,6 +25,16 @@ ADR-0005 (one agent memory, product graphs out of band) and ADR-0006 (one front
 door) named the goal; they were written when the only front door available was
 the provider client. ADR-0028 fixed close visibility on that same client.
 
+## Options Considered
+
+1. **Keep the Graphiti provider client as the front door.** Session hooks,
+   bootstraps, and adapters keep calling `graphiti_memory_client.py`, which
+   holds the provider URL and bearer. Rejected: two authorities over one
+   store, and a credential on every surface.
+2. **Make `MemoryService` the sole authority and cross this repository only
+   through `ops/memory`.** Graphiti stays a projection. Chosen: one admission
+   path, no provider transport on a model surface.
+
 ## Decision
 
 1. **Authority.** `MemoryService` in `l9-graphite-memory` (contract
@@ -114,7 +124,7 @@ the provider client. ADR-0028 fixed close visibility on that same client.
 - `CANONICAL_LAW.md` §8 "Memory Layer (Graphiti-Native)" interface rows, via
   §8.2 (2026-09-06).
 - (2026-09-07) ADR-0004 in full (the stdlib hook client it pinned no longer
-  exists); ADR-0007 in full (cloud reachability of the provider is legacy
+  exists); ADR-0051 in full (cloud reachability of the provider is legacy
   operator infrastructure, not a model-surface transport); ADR-0002's
   transport assumptions and its `phase_lock` precondition on repository
   writes (the hydration gate stands; memory phase-lock is a governed-write

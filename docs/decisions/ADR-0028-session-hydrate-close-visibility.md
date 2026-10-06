@@ -132,7 +132,7 @@ We choose **Option A**. Invariants:
 - ADR-0004 — hook memory client contract pin
 - ADR-0005 — one agent episodic memory; domain graphs out of band
 - ADR-0006 — single memory front door (Graphiti)
-- ADR-0007 — cloud Graphiti HTTPS reachability
+- ADR-0051 — cloud Graphiti HTTPS reachability
 - `docs/MEMORY_PIPELINE_MAP.md`
 - `skills/l9-graphiti-memory/SKILL.md`
 - `skills/l9-end-session/SKILL.md`
