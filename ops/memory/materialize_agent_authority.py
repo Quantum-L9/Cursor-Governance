@@ -115,11 +115,19 @@ def agent_grants(governance: Path, agent_id: str) -> dict[str, object]:
     if not isinstance(agents, dict) or not isinstance(roles, dict):
         raise AuthorityMaterializationError("agent registry is missing agents or roles")
     agent = agents.get(agent_id)
-    if not isinstance(agent, dict) or agent.get("status") != "active":
+    active = isinstance(agent, dict) and (
+        agent.get("status") == "active" or agent.get("binding_status") == "active"
+    )
+    if not active:
         raise AuthorityMaterializationError(f"an active {agent_id} registry entry is required")
+    assert isinstance(agent, dict)
     role_definition = roles.get(agent.get("role"))
     if not isinstance(role_definition, dict):
         raise AuthorityMaterializationError(f"{agent_id} role definition is required")
+    if "agent_id" not in agent:
+        agent = dict(agent)
+        ref = str(agent.get("actor_ref") or "")
+        agent["agent_id"] = ref.rsplit("#", 1)[-1] if "#" in ref else agent_id
 
     if str(governance) not in sys.path:
         sys.path.insert(0, str(governance))
@@ -210,14 +218,19 @@ LOCAL_DIR = Path.home() / ".config" / "l9-memory"
 
 
 def hosted_identities() -> list[str]:
-    """The identities a hosted (cloud) Claude Code container can run as.
+    """The actors a hosted Claude Code container can run as.
 
-    Derived from the one resolver's REMOTE_ENTRYPOINTS, never listed here, so a
-    new hosted surface is provisioned the moment the resolver knows it.
+    The actor the resolver derives for each admitted hosted entrypoint, never
+    a surface name such as ``claude-code-mobile``.
     """
-    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS  # noqa: PLC0415
+    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS, resolve_agent_id  # noqa: PLC0415
 
-    return sorted(set(REMOTE_ENTRYPOINTS.values()))
+    return sorted(
+        {
+            resolve_agent_id({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": entry})
+            for entry in REMOTE_ENTRYPOINTS
+        }
+    )
 
 
 def _replace_private_json(path: Path, payload: dict[str, Any]) -> None:

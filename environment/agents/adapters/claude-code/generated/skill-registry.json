@@ -1,5 +1,5 @@
 {
-  "generation_id": "6ad602b97bf67456d4f39066e427d9028d84c256ba40f5bf288b9d48b7f7eab8",
+  "generation_id": "9c5582ab0e46dc80a1539a9c975e0750255d064f8c3d1eb8139688c7b5395289",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1231,7 +1231,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "76c9fe3f936c56b36ae1b81f9d3fff97ccb7f1cd3b53a105df08d8fd03dcb6b4",
+      "skill_sha256": "6ec8c99ec467499609d0f1ee6c3a6151f4eb987cdc1b2c5b3dc90a9ea14928b3",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1426,7 +1426,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "acae724eb7a381a2edcdf80fa65fab19f9a07a65a21722882641065f7328981c",
+      "skill_sha256": "ccdafbe8bf86aa9b19afb2a415ba232304b325e040039fc0f88753b76461a8fe",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1471,14 +1471,14 @@
     },
     {
       "composition_role": "general",
-      "description": "package a verified local PE/PEC source commit into the current l9-repo-template factory payload and a digest-bound birth contract. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
+      "description": "route an explicit repository-birth handoff for a verified local PE/PEC source commit to the factory-owned packager in Quantum-L9/l9-repo-template. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-repo-birth",
       "path": "skills/l9-repo-birth",
-      "reason": "packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
+      "reason": "control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "7b15f2836cef3a68121042c237882025b5dab6dbf5521997c967c3ff4fa72719",
+      "skill_sha256": "4b33dafa7abd9b51a47e85dd469614c89dea6646e52488986598e798e1537f5a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1627,6 +1627,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "1573018f6ddeb3e41e5d5ec61322f5027351ba74f2be57e0dd198a416d107ece",
-  "source_skill_corpus_sha256": "531c91ecd866e06adf1a7e7ab1ecbf5cde74cca4ddf006726afad9104fa968bd"
+  "source_manifest_sha256": "2ede40a2fe6ea13923dc1a9d350f8dae6b03f67ae87fe4176afd4eb11d1d9c5f",
+  "source_skill_corpus_sha256": "8abeced1dcb241bf4a4f9ef0eb4093aa3a526874f0fc982b41cee314189fc43a"
 }

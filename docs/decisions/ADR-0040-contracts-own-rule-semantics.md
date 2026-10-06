@@ -1,7 +1,12 @@
 # ADR-0040: Contracts own rule semantics; Cursor rules are activation and projection surfaces
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

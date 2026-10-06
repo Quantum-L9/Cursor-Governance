@@ -79,7 +79,7 @@ Normalize each hit to the unified finding list with `source: semgrep`, its
 ## Gate Discovery (FIRST — before CI log ingestion)
 
 When a Makefile exists, skip reconstructing a local suite from workflow YAML.
-Record remediator verify (`make precommit-repo`) and publish (`PR_STACK=auto PR_REMEDIATE=0 make pr`). Bare `git push` is forbidden (ADR-0051). Continue to CI log ingestion only for already-red checks.
+Record remediator verify (`make precommit-repo`) and publish (`PR_STACK=auto PR_REMEDIATE=0 make pr`). Bare `git push` is forbidden (ADR-0052). Continue to CI log ingestion only for already-red checks.
 
 ### Step 0: Parse workflow YAML (fallback only — no Makefile)
 
@@ -127,7 +127,7 @@ Also check `package.json` scripts for additional gates:
 cat package.json | grep -A1 '"scripts"'
 ```
 
-**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `PR_STACK=auto PR_REMEDIATE=0 make pr` is publish. Bare `git push` is forbidden (ADR-0051). See [remediation-plan.md](remediation-plan.md).
+**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `PR_STACK=auto PR_REMEDIATE=0 make pr` is publish. Bare `git push` is forbidden (ADR-0052). See [remediation-plan.md](remediation-plan.md).
 
 ```bash
 test -f Makefile && grep -E '^(precommit-repo|improve):' Makefile

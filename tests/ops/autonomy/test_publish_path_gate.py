@@ -348,7 +348,7 @@ def test_remediator_git_push_of_an_open_pr_is_not_denied(
 def test_scope_expanding_push_of_an_open_pr_is_denied(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """ADR-0051: touching new files outside the PR's scope requires make pr."""
+    """ADR-0052: touching new files outside the PR's scope requires make pr."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
@@ -359,7 +359,7 @@ def test_scope_expanding_push_of_an_open_pr_is_denied(
     )
     reason = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=stacked_repo)
     assert reason is not None
-    assert "ADR-0051" in reason
+    assert "ADR-0052" in reason
     assert "new_unrelated_module.py" in reason
 
 

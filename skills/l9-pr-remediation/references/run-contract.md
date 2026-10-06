@@ -22,7 +22,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 
 | Id | Check | Fail |
 |----|-------|------|
-| `P_cmd` | Cache remediator pre-verify=`make precommit-repo` and remediator publish=`PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked remediation PR). Bare `git push` to an existing PR is strictly forbidden (ADR-0051). | Bypassing `make pr` with bare `git push` is a skill defect. |
+| `P_cmd` | Cache remediator pre-verify=`make precommit-repo` and remediator publish=`PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked remediation PR). Bare `git push` to an existing PR is strictly forbidden (ADR-0052). | Bypassing `make pr` with bare `git push` is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
 | `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` then `scripts/require_audit.py --fleet .l9/pr/fleet.json` then `pr_fleet.py plan --board --audit-bind .l9/pr/audit-bind.json` — inventory, `hold_merge`, waves, `merge_now`, fingerprint; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. When `hold_merge` is true, skip `--kind merge` until same-head eligible units publish. Absent/stale audit → no hold. Independent remediations still launch together. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
 | `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
@@ -52,7 +52,7 @@ This host (Cursor-Governance / Makefile capability graph):
 
 Forbidden during Converge (this skill):
 
-- Bare `git push` to an existing open PR branch (strictly forbidden; ADR-0051)
+- Bare `git push` to an existing open PR branch (strictly forbidden; ADR-0052)
 - In-place mutation of an open PR branch
 - `make pr-full` / all-files pre-commit
 - `git add -u` / `git add -A`

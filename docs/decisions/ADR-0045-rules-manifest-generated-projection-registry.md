@@ -1,7 +1,12 @@
 # ADR-0045: RULES-MANIFEST.yaml is the generated rule projection registry
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

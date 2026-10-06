@@ -45,7 +45,7 @@ gate_registry:
 
 Validation:
 - [ ] `verify` is `make precommit-repo` and remediator `publish` is `PR_STACK=auto PR_REMEDIATE=0 make pr`
-- [ ] Bare `git push` to an existing open PR branch is forbidden (ADR-0051)
+- [ ] Bare `git push` to an existing open PR branch is forbidden (ADR-0052)
 - [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
 - [ ] Workflow `run:` leftover is empty when `precommit-repo` exists
 

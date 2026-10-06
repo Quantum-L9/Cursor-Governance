@@ -164,7 +164,7 @@ Claude Code gold-standard pack: `environment/agents/adapters/claude-code/`.
 `environment/claude-code/` does **not** exist. The pack has **no** `autonomy/`
 subdirectory. Cloud Web/Mobile memory uses HTTPS Graphiti
 (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
-see ADR-0006 + ADR-0039.
+see ADR-0006 + ADR-0051.
 
 **Cursor** scoped-commits locally without asking (pathspecs; rule 49).
 Ask-first applies to push / `make pr` only.
@@ -2133,7 +2133,7 @@ not fold them. Toolchain pins in §6 are unchanged; `uv.lock` is unchanged.
 <!-- IMMUTABLE_PR_STACKED_REMEDIATION_V1 -->
 ## Scope-invariant PR remediation (2026-10-04) — refines `L9_PR_REMEDIATE_SPEED_V1` and §4.0 item 3
 
-Append-only. ADR-0051, CANONICAL_LAW §6.2.10. Where `L9_PR_REMEDIATE_SPEED_V1`
+Append-only. ADR-0052, CANONICAL_LAW §6.2.10. Where `L9_PR_REMEDIATE_SPEED_V1`
 or earlier text discussed remediator publish, this amendment is current.
 
 - **In-scope surgical fixes:** Pushing commits advancing an open PR branch is allowed

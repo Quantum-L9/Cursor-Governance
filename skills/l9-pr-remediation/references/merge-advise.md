@@ -87,5 +87,5 @@ Remediation publish is `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git 
 - Merge before FIRST_MERGE_GATE
 - Squash/rebase a head that is the base of another open PR
 - `gh pr update-branch` after squash-merging a parent
-- Bare `git push` to an existing PR branch (remediation is published as a stacked PR via `make pr` — ADR-0051)
+- Bare `git push` to an existing PR branch (remediation is published as a stacked PR via `make pr` — ADR-0052)
 - Publish from the default branch (`make pr` refuses `main`/`master`)

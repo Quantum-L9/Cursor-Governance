@@ -25,6 +25,7 @@ FILENAME = re.compile(r"^ADR-(?P<number>\d{3,})-(?P<slug>.+)\.md$")
 H1 = re.compile(r"^#\s+ADR-(?P<number>\d+):\s+(?P<title>\S.*?)\s*$", re.MULTILINE)
 H2 = re.compile(r"^##\s+(?P<heading>.+?)\s*#*\s*$", re.MULTILINE)
 BOLD_STATUS = re.compile(r"^\s*-?\s*\*\*Status:\*\*\s*(.+?)\s*$", re.MULTILINE)
+LIST_STATUS = re.compile(r"^\s*\*\s+Status:\s*(.+?)\s*$", re.MULTILINE)
 INDEX_BEGIN = "<!-- BEGIN L9 ADR INDEX (generated — do not edit) -->"
 INDEX_END = "<!-- END L9 ADR INDEX -->"
 POINTER_MARK = "Org catalog pointer only."
@@ -64,6 +65,9 @@ def _status(text: str, *, pointer: bool) -> str:
     bold = BOLD_STATUS.search(text)
     if bold:
         return " ".join(bold.group(1).split())
+    listed = LIST_STATUS.search(text)
+    if listed:
+        return " ".join(listed.group(1).split())
     return "Unknown"
 
 
@@ -72,14 +76,14 @@ def _load(root: Path, path: Path) -> Record | None:
     if match is None:
         return None
     text = path.read_text(encoding="utf-8")
-    number = match.group("number")
+    number = f"{int(match.group('number')):04d}"
     rel = path.relative_to(root).as_posix()
     heading = H1.search(text)
     findings: list[str] = []
     title = ""
     if heading is None:
         findings.append(f"{rel}: missing '# ADR-{number}: …' heading")
-    elif heading.group("number") != number:
+    elif int(heading.group("number")) != int(number):
         findings.append(
             f"{rel}: heading ADR-{heading.group('number')} does not match filename ADR-{number}"
         )
@@ -119,6 +123,10 @@ def identity_findings(records: list[Record]) -> list[str]:
     for record in records:
         grouped.setdefault(record.number, []).append(record)
     for number, rows in sorted(grouped.items(), key=lambda item: int(item[0])):
+        bodies = [row for row in rows if not row.pointer]
+        if len(bodies) > 1:
+            paths = ", ".join(row.path for row in bodies)
+            findings.append(f"ADR-{number} has more than one full body: {paths}")
         slugs = {row.slug for row in rows}
         if len(slugs) <= 1:
             continue

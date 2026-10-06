@@ -132,4 +132,4 @@ The plan MUST include ALL findings from the census. Do NOT plan to fix one findi
 1. Fix all blocking findings.
 2. Fix all actionable findings (including validated code-review agent items).
 3. Run `make precommit-repo`. Do not run `OPEN_PR=0 make pr`. Do not run every pre-commit hook or every workflow `run:`.
-4. Commit once. Remediator publish once via `PR_STACK=auto PR_REMEDIATE=0 make pr` as a stacked remediation child PR (ADR-0051). Bare `git push` to an open PR branch is forbidden. Remote CI is confirmation, not a second planning loop.
+4. Commit once. Remediator publish once via `PR_STACK=auto PR_REMEDIATE=0 make pr` as a stacked remediation child PR (ADR-0052). Bare `git push` to an open PR branch is forbidden. Remote CI is confirmation, not a second planning loop.

@@ -3,7 +3,7 @@ name: Hydrate close visibility
 overview: "Harden Graphiti hydrate/close visibility: ADR-0028 first, then always-record close outcomes, loud SessionStart DEGRADED, write-primary /end-session repair, RepoManifest bootstrap. Build stacks on PR 418."
 todos:
   - id: todo-00-adr
-    content: Write docs/decisions/ADR-0028-session-hydrate-close-visibility.md (memory series after ADR-0039); Proposed then Accepted in this PR
+    content: Write docs/decisions/ADR-0028-session-hydrate-close-visibility.md (memory series after ADR-0051); Proposed then Accepted in this PR
     status: completed
   - id: todo-01-receipt-latch
     content: Always-write close receipts + shared resolve_session_id + opened/last_opened latches
@@ -77,7 +77,7 @@ Continue the dedicated memory series. Do **not** reuse ADR-0008 (already occupie
 | Status on merge of this PR | `Accepted` |
 | Supersedes | none |
 | Extends | ADR-0003 (hook vs interactive **roles**), ADR-0006 (single Graphiti front door) |
-| Related | ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0039 (cloud HTTPS); `docs/MEMORY_PIPELINE_MAP.md`; `skills/l9-graphiti-memory`; `skills/l9-end-session` |
+| Related | ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0051 (cloud HTTPS); `docs/MEMORY_PIPELINE_MAP.md`; `skills/l9-graphiti-memory`; `skills/l9-end-session` |
 
 **Does not supersede** ADR-0005 (one store) or ADR-0006 (one front door). This ADR answers a different question: how close failure becomes **loud** and how repair is **written**.
 
@@ -155,7 +155,7 @@ flowchart TD
 
 ## Success criteria (falsifiable)
 
-- [`docs/decisions/ADR-0028-session-hydrate-close-visibility.md`](docs/decisions/ADR-0028-session-hydrate-close-visibility.md) exists with Status, Date, Context, Options Considered (A–F), Decision, Consequences, Related (ADR-0002 through ADR-0006, and ADR-0039). Does not claim to supersede ADR-0005 or ADR-0006.
+- [`docs/decisions/ADR-0028-session-hydrate-close-visibility.md`](docs/decisions/ADR-0028-session-hydrate-close-visibility.md) exists with Status, Date, Context, Options Considered (A–F), Decision, Consequences, Related (ADR-0002 through ADR-0006, and ADR-0051). Does not claim to supersede ADR-0005 or ADR-0006.
 - Unit test: prior `opens/old.json` + missing close receipt → `degraded=true` and additional_context **starts with** `DEGRADED` and contains `REPAIR: /end-session`.
 - Unit test: receipt `write_count=0` → same.
 - Unit test: `closed_enqueue_failed` + `phase_a=true` + `write_count>0` → **not** close-gap DEGRADED.

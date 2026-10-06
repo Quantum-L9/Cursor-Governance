@@ -1,7 +1,12 @@
 # ADR-0041: Rule Activation Binding is the canonical intermediate representation between contracts and platform rules
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

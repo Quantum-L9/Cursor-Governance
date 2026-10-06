@@ -151,9 +151,9 @@ def _identity_module() -> Any:
 def writer_identity(env: dict[str, str] | None = None) -> str:
     """This process's memory identity, DERIVED from host markers ("" when none).
 
-    cursor / claude-code-desktop / claude-code-mobile (ops/memory/agent_identity.py).
-    A configured L9_MEMORY_AGENT_ID never overrides the markers on those
-    surfaces, so the author recorded is always the surface that ran.
+    cursor / claude-code (ops/memory/agent_identity.py). A configured
+    L9_MEMORY_AGENT_ID never overrides the markers on those hosts, so the
+    author recorded is always the actor that ran.
     """
     return _identity_module().resolve_agent_id(os.environ if env is None else env)
 
@@ -165,8 +165,8 @@ def unresolved_identity_reason() -> str:
 def bind_identity_env() -> str:
     """Stamp the DERIVED identity and USER_ID into this process's env; "" when none.
 
-    Both are overwritten, never defaulted: a stale or projected value (the
-    retired single "claude-code") must not survive into a record. With no
+    Both are overwritten, never defaulted: a stale or projected value (a
+    historical "claude-code-desktop" actor alias) must not survive into a record. With no
     derivable identity nothing is stamped and the caller refuses to write.
     """
     module = _identity_module()

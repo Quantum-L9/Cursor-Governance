@@ -91,7 +91,7 @@ Cursor-only SSH tunnel to the provider on loopback, and a retired L9 HTTP tool
 plane. All three were provider transports held by model surfaces. They are
 retired: the provider client is a tombstone (`ops/graphiti/graphiti_memory_client.py`,
 exit 2), the env plane was deleted at C11, the HTTPS exposure is legacy
-operator infrastructure of the provider deployment (ADR-0039 superseded), and
+operator infrastructure of the provider deployment (ADR-0051 superseded), and
 `environment/agents/tools/validate_agents.py` fails an adapter env that still
 sets a provider URL or bearer. `agent_registry.yaml`'s `memory.*` fields are
 identity only.

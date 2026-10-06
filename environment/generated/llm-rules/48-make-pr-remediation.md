@@ -29,7 +29,7 @@ adapters as the first `make pr` writers step, before pytest.
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): merge **is** authorized for **all open PRs** in
-   the target repo. Remediation follows the File-Scope Invariant (ADR-0051):
+   the target repo. Remediation follows the File-Scope Invariant (ADR-0052):
    - In-scope surgical fixes (files already created/modified by the PR):
      verify via `make precommit-repo`, commit pathspecs, push to open PR branch.
    - Scope-expanding fixes (requiring a new file to be touched): publish

@@ -146,8 +146,8 @@ class Harness:
             self.workspace,
             self.contract,
             attempt_number=1,
-            agent_ref="claude-code-desktop",
-            surface="claude-cli",
+            agent_ref="claude-code",
+            surface="claude-code-cli",
         )
         self.authority = self.grant["autonomy_authority"]
         self.gate_log = root / "gate-stdin.bin"
@@ -245,8 +245,8 @@ class Harness:
             timeout_budget={"dispatch_seconds": 60, "poll_seconds": 5},
             requested_capabilities=tuple(self.contract["requested_actions"]),
             telemetry_context={"task_id": TASK_ID},
-            agent_ref="claude-code-desktop",
-            surface="claude-cli",
+            agent_ref="claude-code",
+            surface="claude-code-cli",
             provider_ref="claude-code-direct",
             execution_profile_ref="claude-code-autonomous",
             autonomy_authority=dict(self.authority),

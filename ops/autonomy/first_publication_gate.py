@@ -3,13 +3,13 @@
 
 CANONICAL_LAW §6.2.4 removed name-based gating of ``git``/``gh``: a command is
 judged by its effect, never by its spelling. This plane is the effect-based
-answer to audit finding R1, and §6.2.8 / §6.2.10 (ADR-0051) is its doctrine.
+answer to audit finding R1, and §6.2.8 / §6.2.10 (ADR-0052) is its doctrine.
 
 1. **A first publication** (branch has no open pull request) outside `make pr`
    is denied: the only route that runs the checkers, overlap gate, main-bound
    gate and L4 release check before it reaches GitHub is ``PR_REMEDIATE=0 make pr``.
 2. **Remediation of an open pull request** (branch already has an open PR) via
-   bare `git push` is also denied (ADR-0051): once a PR exists, the only sanctioned
+   bare `git push` is also denied (ADR-0052): once a PR exists, the only sanctioned
    way to fix it is by publishing a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`
    to preserve stack ancestry and avoid merge-train conflicts and in-flight CI churn.
 3. **Cannot tell → denied.** No ``gh``, no network, no GitHub remote, unreadable
@@ -426,7 +426,7 @@ def _deny(what: str, detail: str, *, is_first: bool = True) -> str:
         "advancing an open PR is allowed only for in-scope surgical fixes to files already "
         "modified or created by the PR; touching new files outside the PR's existing scope "
         "must be published as a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr` "
-        f"(ADR-0051). Human/ops breakglass: {PUSH_BREAKGLASS_ENV}=<reason> or a scoped receipt "
+        f"(ADR-0052). Human/ops breakglass: {PUSH_BREAKGLASS_ENV}=<reason> or a scoped receipt "
         "via ops/autonomy/breakglass_receipt.py (CANONICAL_LAW §6.2.8, §6.2.10)."
     )
 
@@ -648,7 +648,7 @@ def first_publication_verdict(command: str, *, root: Path | None) -> str | None:
                     f"{sorted(expanded)}. Touching files not created or modified by the "
                     "original PR must be published as a new stacked PR via "
                     "`PR_STACK=auto PR_REMEDIATE=0 make pr` to prevent conflicts with "
-                    "newer open PRs (ADR-0051)."
+                    "newer open PRs (ADR-0052)."
                 )
                 return _deny("git push", detail, is_first=False)
             continue

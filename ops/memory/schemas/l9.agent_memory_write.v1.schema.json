@@ -78,12 +78,43 @@
       },
       "minContains": 1,
       "maxContains": 1,
-      "description": "Exactly one agent:<id> tag naming the DERIVED identity of the writing process (cursor, claude-code-desktop, claude-code-mobile, …; never the retired agent:claude-code — ops/memory/agent_identity.py) plus at least one lowercase topic tag.",
+      "description": "Exactly one agent:<id> tag naming the DERIVED ActorIdentity of the writing process (cursor, claude-code, …; never a historical actor alias such as agent:claude-code-desktop or agent:claude-code-mobile — ops/memory/agent_identity.py) plus at least one lowercase topic tag. The builder also stamps at most one surface:<id> tag naming the DERIVED SurfaceIdentity (claude-code-desktop, cursor-ide, …) when one resolves.",
       "not": {
         "contains": {
-          "const": "agent:claude-code"
+          "enum": [
+            "agent:claude-code-desktop",
+            "agent:claude-code-mobile"
+          ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "string",
+            "pattern": "^surface:"
+          },
+          "minContains": 0,
+          "maxContains": 1
+        },
+        {
+          "items": {
+            "if": {
+              "pattern": "^surface:"
+            },
+            "then": {
+              "pattern": "^surface:[a-z0-9][a-z0-9-]{1,40}$"
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "string",
+            "not": {
+              "pattern": "^(agent|surface):"
+            }
+          }
+        }
+      ]
     },
     "idempotency_key": {
       "type": "string",
@@ -177,7 +208,8 @@
       "content": "Stop hooks gate on usable_receipt, not fresh_receipt, so degraded sessions still close",
       "memory_class": "decision",
       "tags": [
-        "agent:claude-code-mobile",
+        "agent:claude-code",
+        "surface:claude-code-desktop",
         "hooks"
       ],
       "idempotency_key": "agent:cursor-governance:788405ad0434f6de",

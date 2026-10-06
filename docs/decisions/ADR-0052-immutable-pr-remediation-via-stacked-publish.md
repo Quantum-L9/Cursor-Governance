@@ -1,4 +1,4 @@
-# ADR-0051: Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement
+# ADR-0052: Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement
 
 ## Status
 

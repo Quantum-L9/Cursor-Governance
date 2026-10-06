@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "cc7d54422a94c70301a42a839cc12277a256f5878cdfc0a979a2db583e482f56",
+      "output_sha256": "c94fe074d5a5654a193da973d1e46d7945dadb5b05ba14186612192f4abfb1fc",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "85b8cd56a3f1c022f62131e74212c3496818e87511b527111a2a9f7c56a64b00",
+      "source_sha256": "1870e2c14faedd2eb90d7ed915055e8fd2704fcf40fcf250e92ecd4889a9a45a",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -325,6 +325,15 @@
       "source": "rules/63-env-no-hardcode.mdc",
       "source_sha256": "369e0ab6d90f769d8a3a3595bab13131c2bc62aa8ceaba861cf9e050d6602f8c",
       "stem": "63-env-no-hardcode"
+    },
+    {
+      "alias": null,
+      "class": "always",
+      "output": "64-canonical-identity-authority.md",
+      "output_sha256": "d234fe22b37dcdfd7b6b987ef8062f6dd89e2ead8ca865cd67e913cb0419ecd6",
+      "source": "rules/64-canonical-identity-authority.mdc",
+      "source_sha256": "ad0c026c23221ace986d0315f3c5d0781eceb1d0a47fe40f5952f88709841823",
+      "stem": "64-canonical-identity-authority"
     },
     {
       "alias": null,
@@ -501,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "01b6e257a514d0de74b55b80aae98bc2ba0f5d1c31ec9525d38741d68d5d1fe7",
+      "output_sha256": "8231fac9ae05afe5cb3af4ac93e9be432e9c589fd6830b4db60c6bc04f650c22",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "2ceeeeb34498e44daf73300b310f7d9da9a164e4390aa075474409ed8b9632de",
+      "source_sha256": "ba13447e82692c0563d814d8b419c959a474435d310036c69dbd47e1b7feb4d6",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -628,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 53,
+    "projected": 54,
     "skipped_agent_requested": 15,
-    "source_mdc": 68
+    "source_mdc": 69
   },
-  "tree_sha256": "da3695288ca888557c765bb0dfd0f6d5cadddda9ed8f9be9ba50010eb77cdbdb"
+  "tree_sha256": "6adca62dc4a7e5f381bc76f51e11aaebdf1dad4b6bb807c07f9fae2d63bd4c4d"
 }

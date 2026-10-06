@@ -12,7 +12,7 @@ updated: 2026-08-28
 
 # Generated-artifact heal
 
-Same remediator publish path as source fixes: `make precommit-repo`, commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden across all surfaces (ADR-0051). Not a second protocol.
+Same remediator publish path as source fixes: `make precommit-repo`, commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden across all surfaces (ADR-0052). Not a second protocol.
 
 Never `git merge origin/main` to "fix" a failing required check. After the oldest ready PR merges, remaining heads may catch up only to heal generated companions, then regen. Do not file-audit generated paths.
 

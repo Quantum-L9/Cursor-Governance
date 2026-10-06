@@ -69,7 +69,7 @@ skill_intelligence_report:
     - launch the largest safe wave in one message and keep the main agent working
     - the board is computed from required-check identity, never judged from a red check
     - ownership answers "may I patch this file"; it never decides what happens to the PR
-    - one plan, one stacked child PR publish via make pr; bare git push forbidden (ADR-0051)
+    - one plan, one stacked child PR publish via make pr; bare git push forbidden (ADR-0052)
     - a lane completes with an accepted result document, never with a sentence
     - CI waits are polled by the remediator until open_prs=0; watchers never waive that duty
     - above-paygrade work becomes a GitHub issue plus the issue skill, never a question
@@ -78,7 +78,7 @@ skill_intelligence_report:
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - Converge invocation is merge authorization for every open PR in the target repo
-    - verify is make precommit-repo; publish is stacked child PR via PR_STACK=auto PR_REMEDIATE=0 make pr; direct bare git push is forbidden (ADR-0051)
+    - verify is make precommit-repo; publish is stacked child PR via PR_STACK=auto PR_REMEDIATE=0 make pr; direct bare git push is forbidden (ADR-0052)
     - two mutation lanes never share a branch or a non-generated path
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
     - a red check outside the required set never holds the merge train

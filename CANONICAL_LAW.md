@@ -1236,7 +1236,7 @@ release identity. The signed-agent door in §8.5 is unchanged.
 ## 6.2.10 Scope-invariant PR remediation and publication gate (2026-10-04) — supersedes §6.2.8 item 2
 
 Append-only. §6.2.8 item 2's carve-out ("Allowed: git push of a branch that already
-has an open PR — the remediator path") is refined by this amendment and ADR-0051.
+has an open PR — the remediator path") is refined by this amendment and ADR-0052.
 
 1. **In-scope surgical remediation:** Pushing commits advancing an open PR branch
    is allowed via `git push` (after local verify `make precommit-repo`) provided the

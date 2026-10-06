@@ -74,7 +74,7 @@ Safety is `claim_scopes_conflict` plus `waves()`. Serializing independent non-ov
 
 ## Makefile capability graph (this host)
 
-Remediation publication is governed by the **File-Scope Invariant** (ADR-0051):
+Remediation publication is governed by the **File-Scope Invariant** (ADR-0052):
 
 1. **In-scope surgical fixes (files already modified or created by the PR):** When replying to review threads, fixing tests, or making surgical repairs in files already part of the PR diff, push the commit directly to the PR being remediated via `git push` after `make precommit-repo`.
 2. **Scope-expanding fixes (new files touched):** If remediation requires touching or adding any file *outside* the original PR's file scope, direct `git push` to that PR is **strictly forbidden** (to prevent uncoordinated conflicts with newer open PRs). It must be published as a **new stacked PR** via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
@@ -151,7 +151,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 4. **Codebase only.** Repair source, tests, fixtures, package deps. Never edit `.github/workflows/**`, actions, runners, permissions, secrets, OIDC, branch protection, check wiring, or CI-only infra. Never add `continue-on-error` or skip conditions to “heal” CI. Pipeline blockers: record one line in the status and keep remediating everything else. Assignments carry these as `forbidden_paths`; a result that touched one is rejected.
 5. **Ownership before edit — and ownership is not the board.** Load [references/ownership-boundary.md](references/ownership-boundary.md). Ownership answers **one** question: may I patch this file? Edit only `CODEBASE`. `ENVIRONMENT` is not a code defect — run the venv preflight once and continue. Ownership never decides what happens to the PR; `edit=CI_PIPELINE` is not `board=leftover`.
 6. **Plan the PR, then patch that PR.** No edits on a PR until its ingested findings have dispositions. A locked `Remediation-Cycle` / plan whose files still match is executed, not rewritten.
-7. **One commit, one remediator publish (scope-invariant).** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. When all touched files are already part of the PR diff (in-scope surgical fixes, review thread replies), remediator publish is `git push` of the open PR branch after `make precommit-repo`. When remediation requires touching a new file outside the PR diff, in-place push is forbidden (ADR-0051) and the change must be published as a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+7. **One commit, one remediator publish (scope-invariant).** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. When all touched files are already part of the PR diff (in-scope surgical fixes, review thread replies), remediator publish is `git push` of the open PR branch after `make precommit-repo`. When remediation requires touching a new file outside the PR diff, in-place push is forbidden (ADR-0052) and the change must be published as a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
 8. **Local verify blocks commit.** Local verify is `make precommit-repo` (hooks plus ruff). Remote CI is independent confirmation — never claim remote `Passed` from local `Passed`. Never `git merge origin/main` to "fix" a failing required check.
 9. **Results are documents, not sentences.** Every delegated assignment returns one `l9.cursor-subagent.result.v1` document; `pr_fleet.py accept` judges it against the assignment (identity, base SHA, role, writable scope, read-only roles report no changes) and preserves `partial` / `blocked` / `failed`. "Done" in chat is not completion. A rejected result is re-assigned or taken over by the main agent — never trusted.
 10. **Own until merged — poll, do not stop.** Subscribe to every in-scope open PR at preflight. After a publish record the head SHA, launch (or keep) a watcher, **and poll that PR** (15s snapshots) until `board=merge` or a red required check. Poll workers and watchers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --run`. Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” Mission is `open_prs=0`.
@@ -341,7 +341,7 @@ edit_axis_owner: scripts/protocol.py
 ### Converge
 - `pr_fleet.py plan` fails (`FAIL:`) → no wave; fix the telemetry (REST route, repo slug) — never plan by hand
 - Native-ext / cryptography import fail → `ENVIRONMENT`; run venv preflight once; do not edit source; do not unpin lock pins; do not use `uv python find --system`
-- Remediator bare `git push` is forbidden → publish strictly via `PR_STACK=auto PR_REMEDIATE=0 make pr` (ADR-0051)
+- Remediator bare `git push` is forbidden → publish strictly via `PR_STACK=auto PR_REMEDIATE=0 make pr` (ADR-0052)
 - `git add -u` / `reset --hard` denied → stage explicit paths only
 - Result document rejected (`pr_fleet.py accept`) → the lane did not complete; re-assign with the reason or take the PR into the main lane
 - Head SHA moved under a lane → its document is `blocked`; re-plan the fleet (fingerprint) and re-assign

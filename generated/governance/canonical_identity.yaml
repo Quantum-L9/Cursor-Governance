@@ -1,0 +1,40 @@
+# MACHINE GENERATED.
+# DO NOT HAND EDIT.
+#
+# Generate with:
+#
+# python tools/authority/project_canonical_identity.py \
+#   --authority-root /path/to/Quantum-L9/.github
+#
+# This bootstrap placeholder intentionally fails assurance until the first
+# canonical projection is generated.
+schema: l9.projection.cursor-governance-identity/v1
+artifact_id: l9.projection/cursor-governance-identity@1
+canonical: false
+authority:
+  authority_class: derived
+  canonical_owner: Quantum-L9/.github
+  consumer: Quantum-L9/Cursor-Governance
+projection:
+  profile_ref: l9.projection/cursor-governance-identity@1
+  profile_digest: UNGENERATED
+  source_repository: Quantum-L9/.github
+  source_revision: UNGENERATED
+  sources:
+    actor_registry:
+      artifact_ref: l9.actor-registry/global@1
+      digest: UNGENERATED
+    surface_registry:
+      artifact_ref: l9.surface-registry/global@1
+      digest: UNGENERATED
+identity_dimensions:
+  actor:
+    artifact_ref: l9.actor-registry/global@1
+    source_schema: l9.actor-registry/v1
+  surface:
+    artifact_ref: l9.surface-registry/global@1
+    source_schema: l9.surface-registry/v1
+actors: []
+actor_aliases: []
+surfaces: []
+surface_aliases: []

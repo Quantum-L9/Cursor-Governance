@@ -15,7 +15,7 @@ todos:
     content: Commit additive_only rewrites with ALLOW-ROOT-DELETION for Makefile, .pre-commit-config.yaml, conftest.py, CANONICAL_LAW live SSOT cells; append AGENTS extinguishment note
     status: completed
   - id: delete-symlink-prove
-    content: Residual allowlist grep PASS → git rm environment/claude-code → close WIP note/ADR-0039 → prove with exact make/pytest/pr-check commands
+    content: Residual allowlist grep PASS → git rm environment/claude-code → close WIP note/ADR-0051 → prove with exact make/pytest/pr-check commands
     status: completed
 isProject: false
 ---
@@ -131,7 +131,7 @@ MUST retarget Path fixtures:
 | `validate_skill_activation.py` forbid list | Detects Cursor loading Claude hooks at **either** historical or current path |
 | `ops/skill_routing/__init__.py` + CANONICAL_LAW anti-pattern rows | Forbid examples naming the old placement; append adapters-path forbid for shared-brain ownership if missing |
 | `reports/**` | Historical evidence |
-| ADR bodies (0001–0006) | Historical decision text; only ADR-0039 extinguishment sentence updates |
+| ADR bodies (0001–0006) | Historical decision text; only ADR-0051 extinguishment sentence updates |
 
 ### Already correct (skip)
 

@@ -126,7 +126,7 @@ ls Makefile Makefile.am 2>/dev/null
 # remediator verbs: precommit-repo (verify), PR_STACK=auto make pr (publish)
 ```
 
-Prefer: `precommit-repo` (pre-verify), then `PR_STACK=auto PR_REMEDIATE=0 make pr` (publish). `improve` is optional kernels, not verify. Bare `git push` is forbidden (ADR-0051).
+Prefer: `precommit-repo` (pre-verify), then `PR_STACK=auto PR_REMEDIATE=0 make pr` (publish). `improve` is optional kernels, not verify. Bare `git push` is forbidden (ADR-0052).
 
 ### Run (blocking)
 
@@ -161,7 +161,7 @@ PR_STACK=auto PR_REMEDIATE=0 make pr
 
 - Exactly one new commit on the remediation child branch.
 - Exactly one remediator publish (`PR_STACK=auto PR_REMEDIATE=0 make pr`).
-- Bare `git push` to an open PR branch is forbidden (ADR-0051).
+- Bare `git push` to an open PR branch is forbidden (ADR-0052).
 - Never `git add -u` / `-A`.
 - Commit message lists finding ids; trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
 - **Forbidden:** commit-per-finding, publish-to-probe-CI, bare `git push`, "wip" then fixup.

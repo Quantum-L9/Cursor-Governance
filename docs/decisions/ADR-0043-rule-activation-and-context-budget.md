@@ -1,7 +1,12 @@
 # ADR-0043: Rule activation is explicit, faithfully representable, and context-budgeted
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

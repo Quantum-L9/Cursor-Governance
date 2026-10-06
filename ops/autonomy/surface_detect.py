@@ -98,6 +98,17 @@ def detect_surface(env: Mapping[str, str] | None = None) -> str:
     return "unknown"
 
 
+def detect_surface_id(env: Mapping[str, str] | None = None) -> str:
+    """The fine SurfaceIdentity (``cursor-ide``, ``claude-code-cli``, …); "" when unknown.
+
+    Not the governance-profile domain :func:`detect_surface` returns. The one
+    evidence table is ``ops/memory/agent_identity.py``.
+    """
+    from ops.memory.agent_identity import resolve_surface_id  # noqa: PLC0415
+
+    return resolve_surface_id(env)
+
+
 def claude_runtime_present(env: Mapping[str, str] | None = None) -> bool:
     """True for a live Claude process, not a projected surface string.
 

@@ -188,7 +188,7 @@ PR_BASE=origin/main make precommit-repo
 │  ❌ NEVER: commit after each fix                         │
 │  ❌ NEVER: publish to see what CI says                   │
 │  ❌ NEVER: git commit --no-verify                        │
-│  ❌ NEVER: bare git push to open PR branch (ADR-0051)     │
+│  ❌ NEVER: bare git push to open PR branch (ADR-0052)     │
 │  ❌ NEVER: git add -u / -A or git reset --hard           │
 │  ❌ NEVER: merge this PR because it is now green         │
 └─────────────────────────────────────────────────────────┘
