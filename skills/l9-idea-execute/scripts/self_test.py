@@ -198,6 +198,11 @@ def main() -> int:
     validate_graph(birth_graph, birth_requested)
     stages = find_unit(birth_graph, "NEW_PRODUCT_REPOSITORY")["orchestration"]["stages"]
     assert [stage["id"] for stage in stages][-2:] == ["birth_handoff", "birth"]
+    birth_handoff, birth = stages[-2:]
+    assert birth_handoff["owner"] == birth["owner"] == "l9-repo-template"
+    assert birth_handoff["control_surface"] == "l9-repo-birth"
+    assert birth_handoff["activation"] == "explicit_graph_request"
+    assert birth["activation"] == "separately_authorized"
     greenfield_receipt = receipt_for(e, g)
     validate_receipt(greenfield_receipt, g, e)
     false_stage_owner = copy.deepcopy(greenfield_receipt)

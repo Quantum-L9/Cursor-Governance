@@ -213,8 +213,7 @@ automatic outbound birth transition.
 
 The optional lifecycle stage join in the Idea Execution Receipt records owner,
 state, and evidence references for each declared Graph stage. It is lineage
-only; it does not duplicate GAR, Plan, campaign, PE, birth-skill, or factory
-state machines.
+only; it does not duplicate GAR, Plan, campaign, PE, or factory state machines.
 
 Prefer SHA-256 semantic digests for machine artifacts and revision/path bindings for moving repository contracts.
 

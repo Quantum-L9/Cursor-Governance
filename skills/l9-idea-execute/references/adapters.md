@@ -68,9 +68,12 @@ Do not use for Website-Bot-generated sites, existing-repository modifications, o
 Idea Execute is the cross-owner orchestrator for this Graph only. It resolves
 GAR, `l9-plan`, and `l9-pe-campaign-activate` as a cohort, then observes their
 ordered native outputs. GAR does not invoke Plan; Plan does not invoke campaign
-activation; PEC does not invoke birth. `l9-repo-birth` is an explicit-only
-optional handoff after a verified PE receipt, and `l9-repo-template` owns
-factory validation and birth state.
+activation; PEC does not invoke birth. `l9-repo-birth` is the explicit-only
+control surface for an optional handoff after a verified PE receipt.
+`l9-repo-template` implements both birth stages: packaging
+(`scripts/birth-runner/package_birth_handoff.py`, `l9.repo-birth-contract/v1`)
+and the separately authorized remote birth (`make birth`), and owns factory
+validation and birth state.
 
 ## 4. Website-Bot
 
