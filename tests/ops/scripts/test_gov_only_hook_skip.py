@@ -40,10 +40,12 @@ GOV_ONLY_HOOK = "gh-package-deps-preflight"
 #: hook id -> the governance-tree script its `entry:` resolves against.
 #: `max-velocity` is the harder case: no `files:` guard and
 #: `pass_filenames: false`, so it fires on every consumer `make pr` rather than
-#: only on a matching path.
+#: only on a matching path. `adr-identity` is the same shape (no `files:` guard,
+#: `pass_filenames: false`) and checks governance ADR conventions only.
 GOV_ONLY_HOOKS = {
     "gh-package-deps-preflight": "ops/scripts/validate_gh_package_deps.py",
     "max-velocity": "ops/scripts/validate_max_velocity.py",
+    "adr-identity": "ops/scripts/validate_adr_identity.py",
 }
 
 #: A hook whose entry is NOT a governance-tree path. It must keep running in a
