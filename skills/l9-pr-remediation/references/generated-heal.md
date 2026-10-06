@@ -12,7 +12,7 @@ updated: 2026-08-28
 
 # Generated-artifact heal
 
-Same remediator publish path as source fixes: `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`, commit, `git push`. Not a second protocol.
+Same remediator publish path as source fixes: `make precommit-repo`, commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden across all surfaces (ADR-0052). Not a second protocol.
 
 Never `git merge origin/main` to "fix" a failing required check. After the oldest ready PR merges, remaining heads may catch up only to heal generated companions, then regen. Do not file-audit generated paths.
 
@@ -38,8 +38,8 @@ When `environment/program-execution/MANIFEST.json` is in the set:
 "$PWD/.venv/bin/python" environment/program-execution/scripts/validate_manifest.py
 ```
 
-`validate_manifest.py` must print `"status": "PASS"`. Then `PR_BASE=origin/main make precommit-repo`, one commit, `git push` the already-open PR branch.
+`validate_manifest.py` must print `"status": "PASS"`. Then `PR_BASE=origin/main make precommit-repo`, one commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
 
 ## Fail closed
 
-A non-generated unresolved path is a real conflict. Diagnose that file. Still publish via `make precommit-repo` plus `git push`. Do not run `make pr`.
+A non-generated unresolved path is a real conflict. Diagnose that file. Still publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden.

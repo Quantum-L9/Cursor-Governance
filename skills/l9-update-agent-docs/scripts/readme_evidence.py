@@ -15,6 +15,7 @@ import json
 import re
 import sys
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import yaml
@@ -276,6 +277,61 @@ def repository_module_names(repo_root: Path, paths: list[str]) -> frozenset[str]
     return frozenset(names)
 
 
+def _normalize_import(spec: str) -> str:
+    """Package name a dependency list should show.
+
+    JavaScript specifiers carry a path (`openai/resources`, `@scope/pkg/sub`).
+    The list names the package. Python specifiers stay dotted so the
+    standard-library test can still see the top module.
+    """
+    if spec.startswith("@"):
+        parts = [part for part in spec.split("/") if part]
+        return "/".join(parts[:2]) if len(parts) >= 2 else spec
+    if "/" in spec:
+        return spec.split("/", 1)[0]
+    return spec
+
+
+def _resolve_relative_import(source_path: str, spec: str) -> str | None:
+    """Resolve a relative specifier to a repository path without a suffix."""
+    parts: list[str] = []
+    for part in (Path(source_path).parent / spec).as_posix().split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+            continue
+        parts.append(part)
+    if not parts:
+        return None
+    suffixes = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".sh")
+    name = parts[-1]
+    for suffix in suffixes:
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+    parts[-1] = name
+    return "/".join(parts)
+
+
+def _dependency_inputs(source_facts: tuple[SourceFact, ...]) -> tuple[list[str], set[str]]:
+    """Imports for classification, with relative specifiers resolved to paths."""
+    imports: list[str] = []
+    relative: set[str] = set()
+    for fact in source_facts:
+        relative.update(fact.relative_imports)
+        for item in fact.imports:
+            if item.startswith("."):
+                resolved = _resolve_relative_import(fact.path, item)
+                if resolved:
+                    relative.add(resolved)
+                continue
+            imports.append(_normalize_import(item))
+    return imports, relative
+
+
 def classify_dependencies(
     imports: list[str],
     internal_names: frozenset[str],
@@ -321,10 +377,15 @@ def _child_directories(module_dir: Path, rel: str) -> tuple[str, ...]:
     """
     prefixes = skip_prefixes()
     try:
+        prefix = "" if rel in {"", "."} else rel
         children = [
             child.name
             for child in module_dir.iterdir()
-            if child.is_dir() and not is_excluded_path(f"{rel}/{child.name}", prefixes)
+            if child.is_dir()
+            and not is_excluded_path(
+                f"{prefix}/{child.name}" if prefix else child.name,
+                prefixes,
+            )
         ]
     except OSError:
         return ()
@@ -418,11 +479,174 @@ def _resolve_purpose(
     return None, None
 
 
+def _prose_list(names: tuple[str, ...] | list[str], limit: int = 4) -> str:
+    """A grammatical list, capped so the sentence stays readable."""
+    shown = [name for name in names if name][:limit]
+    extra = len(names) - len(shown)
+    if not shown:
+        return ""
+    if len(shown) == 1:
+        body = shown[0]
+    elif len(shown) == 2:
+        body = f"{shown[0]} and {shown[1]}"
+    else:
+        body = ", ".join(shown[:-1]) + f", and {shown[-1]}"
+    if extra > 0:
+        body += f", and {extra} more"
+    return body
+
+
+def _public_names(modules: tuple[ModuleDoc, ...]) -> list[str]:
+    """Entry files first, then the rest, so the sentence names the public surface."""
+    ordered = sorted(
+        modules,
+        key=lambda module: (
+            0 if Path(module.file).stem in {"index", "__init__"} else 1,
+            module.file,
+        ),
+    )
+    names: list[str] = []
+    for module in ordered:
+        names.extend(item.name for item in module.classes)
+        names.extend(item.name for item in module.functions)
+        if not module.classes and not module.functions:
+            names.extend(module.exports)
+    return list(dict.fromkeys(names))
+
+
+def _compose_surface_purpose(
+    target: ReadmeTarget,
+    modules: tuple[ModuleDoc, ...],
+    children: tuple[str, ...],
+    contents: tuple[str, ...],
+) -> str:
+    """Human sentence from names this compile already extracted.
+
+    Used only when no authored purpose exists. It does not copy a child
+    docstring, and it does not claim a directory is for something the
+    extracted names do not show.
+    """
+    title = target.title.strip() or target.path
+    names = _public_names(modules)
+    if len(modules) == 1:
+        summaries = [
+            item.summary for item in (*modules[0].classes, *modules[0].functions) if item.summary
+        ]
+        if summaries:
+            sentence = summaries[0].strip()
+            return sentence if sentence[-1] in ".!?" else f"{sentence}."
+    if names and len(modules) > 1:
+        files = _prose_list(tuple(module.file for module in modules))
+        sentence = f"{title} brings together {files}."
+        noted = next(((module.file, module.purpose) for module in modules if module.purpose), None)
+        if noted is not None:
+            prose = noted[1] if noted[1].rstrip()[-1] in ".!?" else f"{noted[1]}."
+            sentence += f" {noted[0]}: {prose}"
+        return sentence
+    if names:
+        return f"{title} provides {_prose_list(names, 6)}."
+    if modules:
+        return f"{title} is made up of {_prose_list(tuple(module.file for module in modules))}."
+    if contents:
+        return f"{title} collects {_prose_list(contents)} for readers of this repository."
+    if children:
+        return f"{title} is the index for {_prose_list(children, 6)}."
+    kind = target.kind.replace("_", " ")
+    return f"{title} is a {kind} in this repository."
+
+
+def _load_json_object(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _compiler_dirs(directory: Path) -> tuple[str | None, str | None]:
+    """``outDir`` and ``rootDir`` from a local tsconfig, when both are strings."""
+    data = _load_json_object(directory / "tsconfig.json")
+    options = data.get("compilerOptions") if data else None
+    if not isinstance(options, dict):
+        return None, None
+
+    def _norm(value: object) -> str | None:
+        if not isinstance(value, str) or not value.strip():
+            return None
+        return value.strip().strip("./").strip("/") or None
+
+    return _norm(options.get("outDir")), _norm(options.get("rootDir"))
+
+
+def _published_specs(package: dict) -> list[str]:
+    """Import paths the package declares, `.` first, then `main` if distinct."""
+    specs: list[str] = []
+    exports = package.get("exports")
+    if isinstance(exports, str):
+        specs.append(exports)
+    elif isinstance(exports, dict):
+        keys = list(exports)
+        if "." in keys:
+            keys.remove(".")
+            keys.insert(0, ".")
+        for key in keys:
+            spec = exports[key]
+            chosen: str | None = None
+            if isinstance(spec, str):
+                chosen = spec
+            elif isinstance(spec, dict):
+                for field_name in ("import", "require", "default", "browser", "types"):
+                    value = spec.get(field_name)
+                    if isinstance(value, str):
+                        chosen = value
+                        break
+            if chosen and chosen not in specs:
+                specs.append(chosen)
+    main = package.get("main")
+    if isinstance(main, str) and main not in specs:
+        specs.append(main)
+    return specs
+
+
+def _resolve_published(
+    spec: str,
+    fact_paths: set[str],
+    out_dir: str | None,
+    root_dir: str | None,
+) -> str | None:
+    """Map one published path onto an extracted source file, or return None."""
+    rel = spec.lstrip("./")
+    source_suffixes = (".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs", ".py")
+    preferred: list[str] = []
+    if out_dir and root_dir and (rel == out_dir or rel.startswith(out_dir + "/")):
+        suffix = rel[len(out_dir) :].lstrip("/")
+        mapped = f"{root_dir}/{suffix}" if suffix else root_dir
+        preferred.append(mapped)
+        mapped_path = Path(mapped)
+        preferred.extend(mapped_path.with_suffix(ext).as_posix() for ext in source_suffixes)
+    fallback = [rel, *(Path(rel).with_suffix(ext).as_posix() for ext in source_suffixes)]
+    for candidate in (*preferred, *fallback):
+        if candidate in fact_paths:
+            return candidate
+    return None
+
+
+def _direct_child_name(parent: str, child: str) -> str | None:
+    if parent in {"", "."}:
+        return None if "/" in child or child in {"", "."} else child
+    prefix = parent + "/"
+    if not child.startswith(prefix):
+        return None
+    rest = child[len(prefix) :]
+    return None if not rest or "/" in rest else rest
+
+
 def compile_readme_model(
     repo_root: Path,
     target: ReadmeTarget,
     *,
     internal_names: frozenset[str] = frozenset(),
+    child_models: tuple[ReadmeModel, ...] = (),
 ) -> ReadmeModel:
     """Compile deterministic evidence for one authorized target."""
     module_dir = repo_root / target.path
@@ -445,10 +669,7 @@ def compile_readme_model(
     if target.kind in {"module", "subsystem", "skill"}:
         source_facts, extraction_issues = compile_source_evidence(repo_root, target.path)
         modules = tuple(fact.module for fact in source_facts)
-        imports = [
-            item for fact in source_facts if fact.language == "python" for item in fact.imports
-        ]
-        relative = {item for fact in source_facts for item in fact.relative_imports}
+        imports, relative = _dependency_inputs(source_facts)
         dependencies = classify_dependencies(imports, internal_names, relative)
         if source_facts:
             evidence.append(
@@ -478,6 +699,7 @@ def compile_readme_model(
     contents: tuple[str, ...] = ()
     file_types: tuple[tuple[str, int], ...] = ()
     children: tuple[str, ...] = ()
+    child_notes: tuple[tuple[str, str], ...] = ()
     if target.kind == "corpus" and module_dir.is_dir():
         names = corpus_files(module_dir)
         contents = tuple(names)
@@ -487,6 +709,9 @@ def compile_readme_model(
         )
     elif target.kind == "index" and module_dir.is_dir():
         children = _child_directories(module_dir, target.path)
+        out_dir, root_dir = _compiler_dirs(module_dir)
+        if out_dir and "/" not in out_dir:
+            children = tuple(name for name in children if name != out_dir)
         # An index may also hold direct files. They are listed rather than
         # dropped: being a parent does not make a manifest beside it invisible.
         names = corpus_files(module_dir)
@@ -497,10 +722,62 @@ def compile_readme_model(
                 source=target.path, kind="source_tree", detail=f"{len(children)} child(ren)"
             )
         )
+        direct_facts, direct_issues = compile_source_evidence(repo_root, target.path)
+        by_path = {fact.path: fact for fact in direct_facts}
+        for child in child_models:
+            for fact in child.source_facts:
+                by_path.setdefault(fact.path, fact)
+        package = _load_json_object(module_dir / "package.json")
+        selected_paths: list[str] = []
+        if package:
+            for spec in _published_specs(package):
+                match = _resolve_published(spec, set(by_path), out_dir, root_dir)
+                if match and match not in selected_paths:
+                    selected_paths.append(match)
+        if not selected_paths:
+            selected_paths = [fact.path for fact in direct_facts]
+        source_facts = tuple(by_path[path] for path in selected_paths)
+        modules = tuple(replace(fact.module, file=fact.path) for fact in source_facts)
+        extraction_issues = tuple(
+            issue for issue in direct_issues if issue.path in set(selected_paths)
+        )
+        if source_facts:
+            evidence.append(
+                EvidenceRef(
+                    source=target.path,
+                    kind="source_facts",
+                    detail=f"{len(source_facts)} published or direct source file(s)",
+                )
+            )
+        imports, relative = _dependency_inputs(source_facts)
+        dependencies = classify_dependencies(imports, internal_names, relative)
+        shell_entrypoints = tuple(
+            sorted({entrypoint for fact in source_facts for entrypoint in fact.entrypoints})
+        )
+        relationships = tuple(
+            sorted(
+                {relation for fact in source_facts for relation in fact.relationships},
+                key=lambda item: (item.kind, item.target, item.source, item.detail or ""),
+            )
+        )
+        eligible_source_count = len(selected_paths)
+        notes: list[tuple[str, str]] = []
+        for child in child_models:
+            name = _direct_child_name(target.path, child.target.path)
+            if name and child.purpose:
+                notes.append((name, child.purpose))
+        child_notes = tuple(notes)
     elif target.kind == "skill" and module_dir.is_dir():
         children = _child_directories(module_dir, target.path)
 
     purpose, purpose_evidence = _resolve_purpose(module_dir, target, modules, contract)
+    if purpose is None:
+        purpose = _compose_surface_purpose(target, modules, children, contents)
+        purpose_evidence = EvidenceRef(
+            source=target.path,
+            kind="surface_prose",
+            detail="composed from extracted public names, files, or child directories",
+        )
     if purpose_evidence is not None:
         evidence.append(purpose_evidence)
 
@@ -513,10 +790,12 @@ def compile_readme_model(
         responsibilities=responsibilities,
         modules=modules,
         children=children,
+        child_notes=child_notes,
         file_types=file_types,
         contents=contents,
         shell_entrypoints=shell_entrypoints,
         dependencies=dependencies,
+        version=contract.version if contract is not None else None,
         authority_links=tuple(authority_links),
         evidence=tuple(evidence),
         source_facts=source_facts,

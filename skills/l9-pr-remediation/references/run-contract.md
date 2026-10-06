@@ -22,7 +22,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 
 | Id | Check | Fail |
 |----|-------|------|
-| `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `OPEN_PR=0 make pr` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `OPEN_PR=0 make pr` as this skill's publish/verify is a skill defect. |
+| `P_cmd` | Cache remediator pre-verify=`make precommit-repo` and remediator publish=`PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked remediation PR). Bare `git push` to an existing PR is strictly forbidden (ADR-0052). | Bypassing `make pr` with bare `git push` is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
 | `P_fleet` | `"$GOV_PY" ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` then `scripts/require_audit.py --fleet .l9/pr/fleet.json` then `pr_fleet.py plan --board --audit-bind .l9/pr/audit-bind.json` — inventory, `hold_merge`, waves, `merge_now`, fingerprint; receipt `.l9/pr/fleet.json` | Non-generated overlap is serialized by the planner, never by hand. When `hold_merge` is true, skip `--kind merge` until same-head eligible units publish. Absent/stale audit → no hold. Independent remediations still launch together. `FAIL:` from the planner → no wave; fix the telemetry. Re-plan only when the fingerprint changes. |
 | `P_stack` | Read `stack_edges` / `merge_order` from the receipt (parents before children) | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
@@ -41,9 +41,9 @@ Resume discovery when: unexpected failure, scope change, new dependency, environ
 
 This host (Cursor-Governance / Makefile capability graph):
 
-- verify: `L9_REMEDIATOR=1 PR_STACK= PR_BASE=origin/main make precommit-repo`
+- verify: `make precommit-repo` (pre-commit local verify before staging)
 - kernels (optional): `make improve`
-- publish: `git push` of the already-open PR branch
+- publish: `PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked child remediation PR)
 - fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
 - board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
@@ -52,22 +52,16 @@ This host (Cursor-Governance / Makefile capability graph):
 
 Forbidden during Converge (this skill):
 
-- `make pr` / `OPEN_PR=0 make pr` / `PR_REMEDIATE=0 make pr` (ceremony — do not run)
-- `make pr-full` / pytest / peer-execution conformance
-- L4 `begin` / `record-kernels` / `authorize-release` as a publish ritual
+- Bare `git push` to an existing open PR branch (strictly forbidden; ADR-0052)
+- In-place mutation of an open PR branch
+- `make pr-full` / all-files pre-commit
 - `git add -u` / `git add -A`
 - `git reset --hard`
-- `make precommit` / `pre-commit run --all-files` / `pre-commit install` as the public gate
-- `make pr-preflight` as a shipping command
-- `OPEN_PR=0 make pr && make pr` as a second full gate on an unchanged tree
+- `--no-verify`
 
-Campaign / feature work that is **not** this skill still must not treat raw `git push` as its publish path when `make pr` exists. Remediator `git push` of an already-open PR is this skill's publish.
+All remediation must be published via `PR_STACK=auto PR_REMEDIATE=0 make pr` as a new stacked PR. Once a PR exists, the only way to fix it is with another PR — not another commit to the same existing PR.
 
 Poll workers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --run`. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge. The remediator must poll remediating and waiting PRs until `open_prs=0`.
-
-In Cursor-Governance `git push` is not denied (CANONICAL_LAW §6.2.4). That is why remediator publish can be `git push`. Do not switch to `make pr` when a push fails — fix the denial.
-
-If no PR number exists: same verify, `git push` the branch, then `gh pr create` only to obtain a number.
 
 Brace tokens in this file (`{owner}`, `{path}`, `{native}`) are templates. An action is executable only after those values are substituted from observed `gh`, Makefile, or `file` / `platform.machine()` output in this run.
 
@@ -158,7 +152,7 @@ A companion miss is a plan-gate failure, not a remote-CI discovery.
 run_contract:
   command_surface:
     verify: "make precommit-repo"
-    publish: "git push"
+    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"
     board: "ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json"
     merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run"

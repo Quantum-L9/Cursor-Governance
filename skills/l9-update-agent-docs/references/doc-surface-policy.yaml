@@ -18,7 +18,7 @@ source_evidence:
 managed_regions:
   blocks:
     - id: l9_formatter_ownership
-      start: '<!-- BEGIN L9 FORMATTER OWNERSHIP -->'
+      start: '<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->'
       end: '<!-- END L9 FORMATTER OWNERSHIP -->'
   line_tokens:
     - id: program_execution_adapter
@@ -43,9 +43,9 @@ surfaces:
     authority_class: operating_ssot
     requirement: required
     selectors: [AGENTS.md]
-    create_policy: existing_only
+    create_policy: create_if_absent
     refresh_policy: surgical_additive
-    generator: null
+    generator: skill:scripts/doc_root.py
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md]
     prohibited_mutations: [fold_to_pointer, wholesale_rewrite, duplicate_canonical_law]
     llm_include: true
@@ -60,7 +60,7 @@ surfaces:
     selectors: [CLAUDE.md]
     create_policy: create_if_absent
     refresh_policy: pointer_only
-    generator: null
+    generator: skill:scripts/doc_root.py
     evidence_sources: [AGENTS.md, CANONICAL_LAW.md, INVARIANTS.md, ARCHITECTURE.md]
     prohibited_mutations: [own_doctrine, ci_table_dump, registry_dump, managed_region_change]
     llm_include: true
@@ -84,7 +84,8 @@ surfaces:
     role: architecture map
     authority_class: index
     requirement: conditional
-    selectors: [ARCHITECTURE.md]
+    selectors: [ARCHITECTURE.md, docs/architecture.md]
+    selector_mode: first_present
     create_policy: never
     refresh_policy: surgical
     generator: null
@@ -102,7 +103,7 @@ surfaces:
     selectors: [INVARIANTS.md]
     create_policy: create_if_absent
     refresh_policy: surgical
-    generator: null
+    generator: skill:scripts/doc_root.py
     evidence_sources: [AGENTS.md, ORG_INVARIANTS.yaml, .github/workflows, .pre-commit-config.yaml]
     prohibited_mutations: [copy_org_invariant_bodies, guessed_counts, managed_region_change]
     llm_include: true
@@ -237,7 +238,7 @@ surfaces:
     create_policy: external_only
     refresh_policy: external_only
     generator: external
-    evidence_sources: [organization_community_health, sync_ci]
+    evidence_sources: ['https://github.com/Quantum-L9/.github', organization_community_health, sync_ci]
     prohibited_mutations: [edit_by_this_skill, duplicate_org_defaults]
     llm_include: false
   adrs:
@@ -290,7 +291,7 @@ impact_rules:
   public_api_change:
     patterns: ['**/api/**', '**/routes/**', '**/schemas/**', '**/models/**', 'openapi.*', '**/*.proto']
     exclude_patterns: ['tests/**', '**/tests/**']
-    surfaces: [api_reference, openapi_contract]
+    surfaces: [api_reference, openapi_contract, llm_txt]
   module_implementation_change:
     patterns: ['**/*.py', '**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.xml', '**/*.sh', '**/*.tf', Dockerfile, '**/Dockerfile']
     exclude_patterns: ['tests/**', '**/tests/**', 'docs/**', '**/__pycache__/**']
@@ -328,6 +329,12 @@ capabilities:
     partial_repair_route: l9-update-agent-docs
     polyglot_extension_owner: skill:scripts/generate_module_readmes.py
 
+external_bindings:
+  org_profile:
+    repository: Quantum-L9/.github
+    url: https://github.com/Quantum-L9/.github
+    copy_policy: cite_only
+
 llm_txt:
   owner: l9-update-agent-docs
   spec_version: v3
@@ -336,3 +343,4 @@ llm_txt:
   default_enabled: true
   surface_order: [readme_root, filetree, architecture, invariants, agents, claude, api_reference, adrs]
   manifest_schema: l9.repo-docs.llm-manifest.v1
+  compiled_readme_entries: true

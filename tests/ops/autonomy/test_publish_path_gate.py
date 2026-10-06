@@ -345,6 +345,24 @@ def test_remediator_git_push_of_an_open_pr_is_not_denied(
     assert gate.publish_path_workflow_deny(command) is None
 
 
+def test_scope_expanding_push_of_an_open_pr_is_denied(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR-0052: touching new files outside the PR's scope requires make pr."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
+    _open_pr(monkeypatch, True)
+    # mock _scope_expanding_files so diff shows an unexpected new file
+    monkeypatch.setattr(
+        "first_publication_gate._scope_expanding_files",
+        lambda root, branch, remote: ["new_unrelated_module.py"],
+    )
+    reason = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=stacked_repo)
+    assert reason is not None
+    assert "ADR-0052" in reason
+    assert "new_unrelated_module.py" in reason
+
+
 @pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
 def test_the_same_forms_are_denied_when_no_pr_is_open(
     command: str, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
@@ -376,13 +394,13 @@ def test_piped_git_push_matches_bare_verdict(
 
 
 def test_cursor_shell_allows_remediator_git_push(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Cursor beforeShellExecution is the live remediator deny surface."""
+    """Cursor beforeShellExecution allows in-scope bare git push when a PR is open."""
     monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
     monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
     _open_pr(monkeypatch, True)
-    monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: stacked_repo)
     monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
     monkeypatch.setattr(gate, "command_requires_human", lambda command, root=None: None)
     monkeypatch.setattr(
@@ -408,7 +426,8 @@ def test_cursor_shell_allows_remediator_git_push(
     monkeypatch.setattr(sys, "stdin", _Stdin())
     monkeypatch.setattr(sys, "stdout", captured)
     assert gate.main_cursor_shell() == 0
-    assert json.loads("".join(captured.parts))["permission"] == "allow"
+    payload = json.loads("".join(captured.parts))
+    assert payload["permission"] == "allow"
 
 
 def test_cursor_shell_denies_a_first_publication_push(
@@ -659,6 +678,7 @@ def test_same_repository_push_of_an_open_pr_stays_allowed_with_or_without_select
         probed: list[tuple[Path, str]] = []
         _open_pr_by_root(monkeypatch, stacked_repo, probed)
         assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None, command
+        assert probed == [(stacked_repo.resolve(), "feat/l4-stack")], command
         assert probed == [(stacked_repo.resolve(), "feat/l4-stack")], command
 
 

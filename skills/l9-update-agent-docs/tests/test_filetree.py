@@ -111,7 +111,7 @@ def test_missing_readme_diagnosis_uses_filetree_inventory(tmp_path: Path):
     inventory, _written, _admission = df.write_filetree(tmp_path)
     assert any(row.path == "pkg" and row.readme == "missing" for row in inventory.modules)
     written = gm.write_missing_module_readmes(tmp_path, inventory=inventory)
-    assert written == ["pkg/README.md"]
+    assert written == ["README.md", "pkg/README.md"]
     refreshed, _written, _admission = df.write_filetree(tmp_path)
     assert any(row.path == "pkg" and row.readme == "present" for row in refreshed.modules)
 

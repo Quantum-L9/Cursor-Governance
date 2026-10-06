@@ -104,7 +104,8 @@ def test_api_projection_mutation_creates_llm_obligation(tmp_path: Path) -> None:
     root.mkdir()
     init(root)
     base = commit(root, "base")
-    audit_repository(root, changed_since=base)
+    write(root / "ARCHITECTURE.md", "# Architecture\n\nIndexed.\n")
+    audit_repository(root, changed_since=base, write_llm=True)
     projections = commit(root, "projections")
     write(
         root / "openapi.yaml",
@@ -112,7 +113,7 @@ def test_api_projection_mutation_creates_llm_obligation(tmp_path: Path) -> None:
         "        '200': {description: healthy}\n",
     )
     commit(root, "api")
-    receipt = audit_repository(root, changed_since=projections)
+    receipt = audit_repository(root, changed_since=projections, write_llm=True)
     surfaces = {row["surface"] for row in receipt["obligations"]}
     assert "api_reference" in surfaces
     assert "llm_txt" in surfaces

@@ -48,6 +48,14 @@ def main() -> int:
         "Skipped",
         "Unknown",
         "NotApplicable",
+        "https://github.com/Quantum-L9/.github",
+        "adopt_donor_heading_template",
+        "docs/architecture.md",
+        "--write-llm",
+        "--full-module-readmes",
+        "doc_root.py",
+        "--full",
+        "signal-utilization law",
     ]
     for token in required_tokens:
         if token not in text:
@@ -56,6 +64,17 @@ def main() -> int:
         policy = yaml.safe_load(POLICY.read_text(encoding="utf-8"))
         if policy.get("owner") != "l9-update-agent-docs":
             errors.append("policy owner drift")
+        binding = policy.get("external_bindings", {}).get("org_profile", {})
+        if binding.get("url") != "https://github.com/Quantum-L9/.github":
+            errors.append("org profile binding drift")
+        if binding.get("copy_policy") != "cite_only":
+            errors.append("org profile copy policy drift")
+        for surface in ("agents", "claude", "invariants"):
+            spec = policy.get("surfaces", {}).get(surface, {})
+            if spec.get("create_policy") != "create_if_absent":
+                errors.append(f"{surface} must be created when absent")
+            if spec.get("generator") != "skill:scripts/doc_root.py":
+                errors.append(f"{surface} generator drift")
         if policy.get("schema") != "l9.repo-docs.surface-policy.v3":
             errors.append("policy schema drift")
         if policy.get("semantic_harvest", {}).get("owner") != "l9-intelligence-harvest":

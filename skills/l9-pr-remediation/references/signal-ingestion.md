@@ -79,7 +79,7 @@ Normalize each hit to the unified finding list with `source: semgrep`, its
 ## Gate Discovery (FIRST — before CI log ingestion)
 
 When a Makefile exists, skip reconstructing a local suite from workflow YAML.
-Record remediator `make precommit-repo` / `git push`. Do not run ceremony `OPEN_PR=0 make pr` / `make pr`. Continue to CI log ingestion only for already-red checks.
+Record remediator verify (`make precommit-repo`) and publish (`PR_STACK=auto PR_REMEDIATE=0 make pr`). Bare `git push` is forbidden (ADR-0052). Continue to CI log ingestion only for already-red checks.
 
 ### Step 0: Parse workflow YAML (fallback only — no Makefile)
 
@@ -127,7 +127,7 @@ Also check `package.json` scripts for additional gates:
 cat package.json | grep -A1 '"scripts"'
 ```
 
-**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `git push` is publish. Ceremony `OPEN_PR=0 make pr` / `make pr` must not be invoked. See [remediation-plan.md](remediation-plan.md).
+**Remediator verbs (required)** — `make precommit-repo` is the local-verify surface, `PR_STACK=auto PR_REMEDIATE=0 make pr` is publish. Bare `git push` is forbidden (ADR-0052). See [remediation-plan.md](remediation-plan.md).
 
 ```bash
 test -f Makefile && grep -E '^(precommit-repo|improve):' Makefile
@@ -165,7 +165,7 @@ Same file+line collapses in `ingest_signals.py`. CI message wins; review text st
 ## Ingestion Completeness Check
 
 After ingestion, verify:
-- [ ] Remediator verbs recorded when a Makefile exists (`make precommit-repo` verify, `git push` publish)
+- [ ] Remediator verbs recorded when a Makefile exists (`make precommit-repo` verify, `PR_STACK=auto make pr` publish)
 - [ ] Workflow `run:` leftover recorded only when no Makefile exists
 - [ ] Cited/planned-path hook ids recorded (not all-files as the gate)
 - [ ] Semgrep hits ingested when that check is failing (`source: semgrep`)

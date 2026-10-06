@@ -1,5 +1,5 @@
 {
-  "generation_id": "38ca5f500f028ef94ae44d31a298c93cb5155d74ef64e010f3ad7f5ad42913e0",
+  "generation_id": "9c5582ab0e46dc80a1539a9c975e0750255d064f8c3d1eb8139688c7b5395289",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1419,14 +1419,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then start stack-safe merge trains. do not wait for every PR to be green. do not run make pr. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, publish all remediations as stacked PRs via make pr without bare git push, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then start stack-safe merge trains. do not wait for every PR to be green. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "354be2c14a5949833eb536daeb1101321bda8c45f0300fe1c1e6c973faf2fa0d",
+      "skill_sha256": "ccdafbe8bf86aa9b19afb2a415ba232304b325e040039fc0f88753b76461a8fe",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1595,7 +1595,7 @@
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "skill_md": "skills/l9-update-agent-docs/SKILL.md",
-      "skill_sha256": "1a54381218fe5c4f14ac5f6fc9e3dd5c399ed8c381ed51df3966048693d4a7ad",
+      "skill_sha256": "879d437a651d177abb458150decfd211ad9f131b8e6ed2f367327b9c2561399c",
       "user_invocable": true,
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
@@ -1628,5 +1628,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "2ede40a2fe6ea13923dc1a9d350f8dae6b03f67ae87fe4176afd4eb11d1d9c5f",
-  "source_skill_corpus_sha256": "a204d7c9c284bd19862262457207a662d244a4a5df8c3bda90fed1f004a3485a"
+  "source_skill_corpus_sha256": "8abeced1dcb241bf4a4f9ef0eb4093aa3a526874f0fc982b41cee314189fc43a"
 }

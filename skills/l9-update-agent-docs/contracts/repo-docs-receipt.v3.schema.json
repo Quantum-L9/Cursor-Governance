@@ -204,7 +204,10 @@
                   "eligible_source_count": {"type": "integer", "minimum": 0},
                   "extracted_source_count": {"type": "integer", "minimum": 0},
                   "extraction_issue_count": {"type": "integer", "minimum": 0},
-                  "relationship_count": {"type": "integer", "minimum": 0}
+                  "relationship_count": {"type": "integer", "minimum": 0},
+                  "evidence": {"type": "array"},
+                  "warnings": {"type": "array"},
+                  "extracted": {"type": "object"}
                 }
               }
             }

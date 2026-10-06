@@ -63,9 +63,7 @@ git fetch origin
 git rebase --onto origin/main <old-parent-tip> <child-branch>
 ```
 
-Then remediator-publish the child with `git push` of the already-open PR
-branch. Do not run `make pr`. Campaign / feature work that is not this
-skill still uses `PR_REMEDIATE=0 make pr` and must never raw `git push`.
+Then publish the child with `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` is forbidden across all surfaces.
 
 ## Local merge when GitHub merge is infra-blocked
 
@@ -77,10 +75,7 @@ there — `make pr` refuses `main`/`master`.
 # stay on a feature branch; do not publish from main
 ```
 
-Remediator publish is `git push` of the already-open PR branch. Do not
-run `make pr`. Campaign / feature work that is not this skill: if
-Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw
-`git push` on that ceremony path.
+Remediation publish is `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` is forbidden.
 
 ## Forbidden
 
@@ -92,5 +87,5 @@ Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw
 - Merge before FIRST_MERGE_GATE
 - Squash/rebase a head that is the base of another open PR
 - `gh pr update-branch` after squash-merging a parent
-- Raw `git push` as a *first* publish (opening a PR is `make pr` for campaign / feature work; the remediator's publish of an already-open PR branch is `git push`)
+- Bare `git push` to an existing PR branch (remediation is published as a stacked PR via `make pr` — ADR-0052)
 - Publish from the default branch (`make pr` refuses `main`/`master`)

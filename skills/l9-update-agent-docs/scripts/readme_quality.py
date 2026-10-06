@@ -46,6 +46,7 @@ PURPOSE_EVIDENCE_KINDS = frozenset(
         "module_docstring",
         "package_docstring",
         "manifest_description",
+        "surface_prose",
     }
 )
 

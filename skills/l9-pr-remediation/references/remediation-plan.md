@@ -96,7 +96,7 @@ remediation_plan:
 
   commit_policy:
     commits: 1
-    publish: "git push"   # already-open PR branch
+    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"   # stacked remediation PR via make pr
     no_verify: false
 ```
 
@@ -123,10 +123,10 @@ Discover, then run. Local verify **is** `make precommit-repo`. Do not run `OPEN_
 
 ```bash
 ls Makefile Makefile.am 2>/dev/null
-# remediator verbs: precommit-repo (verify), git push (publish)
+# remediator verbs: precommit-repo (verify), PR_STACK=auto make pr (publish)
 ```
 
-Prefer: `precommit-repo` (verify), then `git push` (publish). `improve` is optional kernels, not verify. Do not run `make pr` or `OPEN_PR=0 make pr`.
+Prefer: `precommit-repo` (pre-verify), then `PR_STACK=auto PR_REMEDIATE=0 make pr` (publish). `improve` is optional kernels, not verify. Bare `git push` is forbidden (ADR-0052).
 
 ### Run (blocking)
 
@@ -148,23 +148,23 @@ Rules:
 
 Fall back to the workflow `run:` list in [fix-engine.md](fix-engine.md). Record that fallback on the plan.
 
-## 4. One commit, one remediator publish
+## 4. One commit, one stacked remediation publish via make pr
 
 After `verify.all_green: true` and every `fix` cluster is `done`:
 
 ```text
 git add <planned files only>
 git commit -m "fix(pr-remediation): resolve {count} findings"
-# remediator sanctioned publish — already-open PR branch:
-git push
+# remediator sanctioned publish — stacked child PR via make pr:
+PR_STACK=auto PR_REMEDIATE=0 make pr
 ```
 
-- Exactly one new commit on the branch for this remediation.
-- Exactly one remediator publish (`git push` of the already-open PR branch).
-- Do not run `make pr` or `OPEN_PR=0 make pr`. Campaign / feature work that is not this skill still must not treat raw `git push` as its publish path when `make pr` exists.
+- Exactly one new commit on the remediation child branch.
+- Exactly one remediator publish (`PR_STACK=auto PR_REMEDIATE=0 make pr`).
+- Bare `git push` to an open PR branch is forbidden (ADR-0052).
 - Never `git add -u` / `-A`.
 - Commit message lists finding ids; trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
-- **Forbidden:** commit-per-finding, publish-to-probe-CI, "wip" then fixup.
+- **Forbidden:** commit-per-finding, publish-to-probe-CI, bare `git push`, "wip" then fixup.
 
 If a hook auto-modifies files on commit, amend only when the user-rule amend conditions are met; that amendment is still the same single commit.
 

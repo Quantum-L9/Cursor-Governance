@@ -80,6 +80,7 @@ GENERATED_PATH_PREFIXES = (
     # membership here is what gives it the l9-generated merge driver, the PR
     # overlap exemption, and the gate's WARN-not-FAIL dirtiness class.
     "environment/program-execution/MANIFEST.json",
+    "docs/decisions/README.md",
 )
 
 

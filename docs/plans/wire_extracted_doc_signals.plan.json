@@ -1,0 +1,408 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Wire every extracted signal in l9-update-agent-docs into a compiled document",
+  "objective": "Every fact l9-update-agent-docs extracts (source facts, interface summaries and signatures, imports, relationships, skill contract fields, manifest and tsconfig fields, surface-analyzer parses, evidence references, quality findings) reaches at least one compiled output (a README, AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, filetree.md, or the receipt), and a ratchet test fails when a new extracted field has no downstream consumer.",
+  "success_criteria": [
+    "skills/l9-update-agent-docs/tests/test_signal_ledger.py PASSes with an empty unwired allowlist: every field of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, SkillContract, and every surface-analyzer output key is read by a renderer, root-doc compiler, llm.txt compiler, or receipt writer",
+    "A TypeScript module README renders a Dependencies section whose External list names its package imports (for example openai, zod) and whose Internal list names sibling modules, instead of only raw import strings",
+    "A TypeScript exported function renders its parameter list on the interface line, the same way a Python function already does",
+    "A skill README renders the SKILL.md metadata.version and links every model.authority_links entry",
+    "AGENTS.md compiled from a repository with package.json scripts lists those scripts as commands, and lists each compiled README path with its compiled purpose",
+    "INVARIANTS.md lists each workflow's name and job ids from the workflow parse, not only the file path",
+    "llm.txt lists every compiled README with its path, purpose, and sha256 in the L9_DOC_MANIFEST block",
+    "The receipt records, per README, the evidence references and every WARN quality finding",
+    "repo_docs.py compiles README models once per run and hands the same models to doc_root.py and doc_llm.py",
+    ".venv/bin/python -m pytest skills/l9-update-agent-docs/tests -q PASSes and .venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py PASSes"
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-update-agent-docs/scripts (readme_evidence.py, source_facts.py, readme_renderers.py, readme_model.py, generate_module_readmes.py, doc_root.py, doc_llm.py, repo_docs.py, surface_analyzers/workflow.py)",
+      "skills/l9-update-agent-docs/references/doc-surface-policy.yaml (llm.txt surface entries for compiled READMEs)",
+      "skills/l9-update-agent-docs/tests (new test_signal_ledger.py plus targeted assertions)",
+      "skills/l9-update-agent-docs/SKILL.md (signal-utilization law, version 4.4.0)"
+    ],
+    "out": [
+      "New extractor languages or a new parser dependency",
+      "LLM-authored prose of any kind",
+      "Running --full against /Users/macm2/LLM-Router-META-INJECTOR-TEST (user runs it)",
+      "ADR reconciliation and the agent/cursor/adr-number-realign branch",
+      "Overwriting an unowned AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, or filetree.md",
+      "Copying Quantum-L9/.github content (cite-only stays)",
+      "CLAUDE.md growing beyond a pointer (policy pointer_only; no registry dump)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind workspace /Users/macm2/Cursor-Governance/Cursor-Governance on branch feat/l9-repo-docs-full at 948049b7; skill tree clean (only unrelated docs/plans and template edits dirty)",
+      "pass_criteria": "git status shows no dirty path under skills/l9-update-agent-docs",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "baseline .venv/bin/python -m pytest skills/l9-update-agent-docs/tests -q",
+      "pass_criteria": "223 passed",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "inventory extracted fields and their readers with rg over skills/l9-update-agent-docs/scripts",
+      "pass_criteria": "drop list recorded: JS/TS imports never reach classify_dependencies (readme_evidence.py filters language == python); TS signatures never captured; SkillContract.version and ReadmeModel.authority_links never rendered; ReadmeModel.evidence used only by the validator; workflow job ids parsed then discarded; package.json scripts never read; doc_root.py and doc_llm.py never see compiled README models; WARN findings not itemized per README",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "hook catalog for code in scope is .pre-commit-config.yaml; Python formatter is ruff",
+      "pass_criteria": "catalog named",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add the signal ledger ratchet: test_signal_ledger.py enumerates dataclass fields of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, the SkillContract slots, and surface-analyzer output keys, and asserts each is read by a consumer module (renderers, doc_root, doc_llm, receipt writer). Start with an explicit UNWIRED allowlist naming today's drops; each later wiring task deletes its entries; final state is an empty allowlist",
+      "files": [
+        "skills/l9-update-agent-docs/tests/test_signal_ledger.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 1,
+      "shared_root_cause": "extracted fields can be added without any consumer, and nothing fails"
+    },
+    {
+      "id": "T2",
+      "task": "Compile README models once in repo_docs.audit_repository before root docs and llm.txt, and pass the compiled (model, rendered) outputs into compile_missing_root_docs and render_llm_txt",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/repo_docs.py",
+        "skills/l9-update-agent-docs/scripts/generate_module_readmes.py",
+        "skills/l9-update-agent-docs/scripts/doc_root.py",
+        "skills/l9-update-agent-docs/scripts/doc_llm.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "audit_repository order: compile_missing_root_docs call, plan_module_readmes call, write_llm_txt call",
+      "leverage_rank": 2,
+      "shared_root_cause": "root docs and llm.txt run before and apart from the README compile, so they cannot see its facts"
+    },
+    {
+      "id": "T3",
+      "task": "Feed JS/TS imports into classify_dependencies in both compile_readme_model branches; resolve local relative imports to the sibling module path so Internal names a real target",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/readme_evidence.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "imports = [item for fact in source_facts if fact.language == \"python\" ...] (two sites)",
+      "leverage_rank": 3,
+      "shared_root_cause": "dependency classification was written for Python only"
+    },
+    {
+      "id": "T4",
+      "task": "Capture the exported function parameter list in _extract_javascript and store it in InterfaceDoc.signature",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/source_facts.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "_JS_EXPORT_RE and _extract_javascript",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T5",
+      "task": "Render SkillContract.version in the skill README header and render model.authority_links as links in the Authority section; carry version onto ReadmeModel",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/readme_model.py",
+        "skills/l9-update-agent-docs/scripts/readme_evidence.py",
+        "skills/l9-update-agent-docs/scripts/readme_renderers.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "render_skill_readme authority block; compile_readme_model ReadmeModel(...)",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T6",
+      "task": "AGENTS.md compiles a Commands section from package.json scripts and pyproject project.scripts (reuse surface_analyzers/python_project.py parse) and a Module map from the compiled README models (path link plus compiled purpose); INVARIANTS.md lists workflow name and job ids from the workflow parse",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/doc_root.py",
+        "skills/l9-update-agent-docs/scripts/surface_analyzers/workflow.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "render_agents, render_invariants, workflow.analyze known_jobs",
+      "leverage_rank": 4,
+      "shared_root_cause": "root documents list file paths while the parses that describe those files are discarded"
+    },
+    {
+      "id": "T7",
+      "task": "llm.txt manifest gains one entry per compiled README (path, purpose, sha256, owner l9-update-agent-docs, authority_class projection) under the existing L9_DOC_MANIFEST schema; add the policy hook in doc-surface-policy.yaml",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/doc_llm.py",
+        "skills/l9-update-agent-docs/references/doc-surface-policy.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "llm_manifest entries loop; llm surface_order",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T8",
+      "task": "Receipt module_readme_quality entries carry each README's evidence references and every WARN finding (rule_id, message), not only counts",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/generate_module_readmes.py",
+        "skills/l9-update-agent-docs/scripts/repo_docs.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "quality summary dict (extraction_issue_count, relationship_count)",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T9",
+      "task": "Targeted tests for T3-T8, empty the ledger allowlist, add the signal-utilization law to SKILL.md (every extracted field has a named consumer; ledger is the gate), bump version to 4.4.0, add self_test token",
+      "files": [
+        "skills/l9-update-agent-docs/tests/test_signal_ledger.py",
+        "skills/l9-update-agent-docs/tests/test_readme_evidence.py",
+        "skills/l9-update-agent-docs/tests/test_repo_docs.py",
+        "skills/l9-update-agent-docs/SKILL.md",
+        "skills/l9-update-agent-docs/scripts/self_test.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8"
+      ],
+      "operation": "Replace",
+      "anchor": "SKILL.md README compilation MODEL/RENDER stages and Forbidden list",
+      "leverage_rank": 8
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T6",
+    "T9"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Ledger exists and names every current drop in its allowlist",
+      "unlocks": "each wiring TODO has a failing-to-passing proof"
+    },
+    {
+      "id": "M2",
+      "outcome": "One README compile per run feeds root docs and llm.txt",
+      "unlocks": "AGENTS.md module map and llm.txt README entries"
+    },
+    {
+      "id": "M3",
+      "outcome": "Allowlist empty, full suite green, SKILL.md 4.4.0",
+      "unlocks": "user runs --full on the target repo"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "test_signal_ledger.py PASS with the allowlist; deleting any allowlist entry makes it FAIL",
+      "no_go_action": "fix the ledger before wiring anything"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "test_repo_docs.py proves AGENTS.md and llm.txt contain a compiled README purpose from the same run",
+      "no_go_action": "revert the reorder and re-plan T2"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "pytest skills/l9-update-agent-docs/tests PASS, self_test PASS, ledger allowlist literally empty",
+      "no_go_action": "block publish"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "skills/l9-update-agent-docs/SKILL.md",
+      "action": "update",
+      "todo_ids": [
+        "T9"
+      ]
+    },
+    {
+      "surface": "skills/l9-update-agent-docs/references/doc-surface-policy.yaml",
+      "action": "update",
+      "todo_ids": [
+        "T7"
+      ]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "This repository's AGENTS.md is additive-only and unowned by the compiler; only target repos with a marker-owned AGENTS.md are affected"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No governance law change; the signal-utilization rule lives in the skill"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Can the ledger pass while a field is only read by the validator and never rendered or receipted?",
+      "Does feeding TS imports into classify_dependencies misclassify relative paths as external packages?",
+      "Does a Commands section in AGENTS.md turn the operating file into a registry dump the policy forbids?",
+      "Does listing every README in llm.txt change its sha256 on every unrelated README edit and churn refresh admissions?",
+      "Does compiling models before root docs break the dry-run guarantee of writing nothing?"
+    ],
+    "assumed_false_ifs": [
+      "A consumer that only reads a field inside a quality check counts as utilization",
+      "package.json scripts are always safe to print (they can embed secrets in env assignments)"
+    ],
+    "blast_radius": "Every repository that runs l9-update-agent-docs --full gets rewritten AGENTS.md (marker-owned only), INVARIANTS.md, llm.txt, and READMEs; a wrong wire propagates to all of them on the next run",
+    "rollback": "Revert the branch commits on feat/l9-repo-docs-full; target repos regenerate from the previous compiler with the same --full command"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T6",
+      "T7",
+      "T4",
+      "T5",
+      "T8",
+      "T9"
+    ],
+    "shared_causes": [
+      "No consumer contract: a field can be extracted with nothing downstream reading it",
+      "Root docs and llm.txt compile before and apart from the README models"
+    ],
+    "deletions_or_consolidations": [
+      "doc_root.repository_description and readme_evidence manifest description reading collapse into one manifest reader",
+      "Python-only dependency filter is deleted in favor of one language-neutral classification"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Ledger counts a validator-only read as utilization",
+      "mitigation": "Ledger scans only renderer, root-doc, llm, and receipt modules, not readme_quality.py"
+    },
+    {
+      "risk": "Script bodies in package.json leak secrets into AGENTS.md",
+      "mitigation": "Render script names only, never the command string"
+    },
+    {
+      "risk": "Reordering compile breaks dry run",
+      "mitigation": "Models are pure; writes stay behind the existing write flags; dry-run test in test_repo_docs.py must still assert no file changes"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest skills/l9-update-agent-docs/tests -q",
+      "pass_criteria": "all pass, including test_signal_ledger.py with an empty allowlist",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": ".venv/bin/ruff check skills/l9-update-agent-docs && .venv/bin/ruff format --check skills/l9-update-agent-docs",
+      "pass_criteria": "clean",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": ".pre-commit-config.yaml via PR_STACK=auto PR_REMEDIATE=0 make pr",
+      "pass_criteria": "gate PASS and PR URL printed",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "cursor-build",
+    "stop_reason": "plan validated; implementation waits for Build"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-update-agent-docs/scripts/",
+      "skills/l9-update-agent-docs/tests/",
+      "skills/l9-update-agent-docs/references/doc-surface-policy.yaml",
+      "skills/l9-update-agent-docs/SKILL.md"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "docs/decisions/",
+      "skills/l9-global-architect 2/",
+      "/Users/macm2/LLM-Router-META-INJECTOR-TEST"
+    ],
+    "preserved_contracts": [
+      "unowned root docs, llm.txt, and filetree.md are never overwritten",
+      "dry run writes nothing",
+      "Quantum-L9/.github is cite-only",
+      "no LLM-authored prose; every sentence traces to an extracted fact"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest skills/l9-update-agent-docs/tests -q",
+      ".venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "ledger ratchet",
+    "single compile pass",
+    "TS dependencies and signatures",
+    "skill version and authority links",
+    "AGENTS commands and module map",
+    "INVARIANTS workflow jobs",
+    "llm.txt README entries",
+    "receipt evidence and warnings"
+  ],
+  "estimate": "1 Build session"
+}

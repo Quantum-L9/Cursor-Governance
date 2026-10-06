@@ -55,11 +55,43 @@ def test_write_missing_creates_module_and_submodule_readmes(tmp_path: Path):
     assert gm.write_missing_module_readmes(tmp_path) == []
 
 
-def test_never_writes_root_readme(tmp_path: Path):
+def test_writes_root_readme_as_repository_index(tmp_path: Path):
     (tmp_path / "ok.py").write_text("class Rootish:\n    pass\n", encoding="utf-8")
     written = gm.write_missing_module_readmes(tmp_path)
-    assert "README.md" not in written
-    assert not (tmp_path / "README.md").exists()
+    assert "README.md" in written
+    text = (tmp_path / "README.md").read_text(encoding="utf-8")
+    assert rr.marker_for("index") in text
+    assert "**Path:** `.`" in text
+    assert "`Rootish`" in text
+
+
+def test_root_readme_projects_published_entrypoint_not_every_file(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "index.ts").write_text(
+        "export class L9LLMRouter {\n  route() { return 1 }\n}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "src" / "other.ts").write_text(
+        "export class Hidden {}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "package.json").write_text(
+        '{"name":"@quantum-l9/llm-router","description":"Routes tasks to models.",'
+        '"exports":{".":{"import":"./dist/index.js"}}}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "tsconfig.json").write_text(
+        '{"compilerOptions":{"outDir":"./dist","rootDir":"./src"}}\n',
+        encoding="utf-8",
+    )
+    gm.write_missing_module_readmes(tmp_path)
+    text = (tmp_path / "README.md").read_text(encoding="utf-8")
+    assert "Routes tasks to models." in text
+    assert "`L9LLMRouter`" in text
+    assert "src/index.ts" in text
+    public = text.split("## Contents", 1)[0]
+    assert "Hidden" not in public
+    assert "dist/" not in text
 
 
 def test_skips_handwritten_readme(tmp_path: Path):
@@ -67,7 +99,7 @@ def test_skips_handwritten_readme(tmp_path: Path):
     pkg.mkdir()
     (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
     (pkg / "README.md").write_text("---\nauto_generated: false\n---\n# Hand\n", encoding="utf-8")
-    assert gm.write_missing_module_readmes(tmp_path) == []
+    assert gm.write_missing_module_readmes(tmp_path) == ["README.md"]
     assert (pkg / "README.md").read_text(encoding="utf-8").startswith("---")
 
 
@@ -76,7 +108,7 @@ def test_regenerate_preserves_unowned_readme_without_marker(tmp_path: Path):
     pkg.mkdir()
     (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
     (pkg / "README.md").write_text("# Human notes\n", encoding="utf-8")
-    assert gm.write_missing_module_readmes(tmp_path, regenerate=True) == []
+    assert gm.write_missing_module_readmes(tmp_path, regenerate=True) == ["README.md"]
     assert (pkg / "README.md").read_text(encoding="utf-8") == "# Human notes\n"
 
 
@@ -117,7 +149,7 @@ def test_legacy_generated_readme_migrates_to_the_current_marker(tmp_path: Path):
     (pkg / "README.md").write_text(LEGACY_GENERATED, encoding="utf-8")
     # Reconciliation refreshes a stale generator-owned README unconditionally.
     # A corpus that only converges behind a flag never converges.
-    assert gm.write_missing_module_readmes(tmp_path) == ["pkg/README.md"]
+    assert gm.write_missing_module_readmes(tmp_path) == ["README.md", "pkg/README.md"]
     text = (pkg / "README.md").read_text(encoding="utf-8")
     assert rr.marker_for("module") in text
     assert gm.GENERATED_MARKER not in text
@@ -132,7 +164,7 @@ def test_regenerate_keeps_legacy_opt_out_handwritten(tmp_path: Path):
     (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
     body = "---\nauto_generated: false\n---\n" + LEGACY_GENERATED
     (pkg / "README.md").write_text(body, encoding="utf-8")
-    assert gm.write_missing_module_readmes(tmp_path, regenerate=True) == []
+    assert gm.write_missing_module_readmes(tmp_path, regenerate=True) == ["README.md"]
     assert (pkg / "README.md").read_text(encoding="utf-8") == body
 
 
@@ -154,7 +186,7 @@ def test_cli_dry_run_reports_the_plan_and_writes_nothing(tmp_path: Path, capsys)
     (tmp_path / "pkg" / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
     assert gm.main(["--root", str(tmp_path), "--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert "create=1" in out
+    assert "create=2" in out
     assert not (tmp_path / "pkg" / "README.md").exists()
 
 

@@ -1,5 +1,5 @@
 ---
-description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge and publishes via precommit-repo plus git push
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge; all remediations publish as stacked PRs via make pr without bare git push
 ---
 
 # make pr → green merge-ready; /l9-pr-remediation → merge
@@ -29,16 +29,17 @@ adapters as the first `make pr` writers step, before pytest.
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): merge **is** authorized for **all open PRs** in
-   the target repo. Remediator publish is **not** `make pr`. Local verify
-   is `make precommit-repo` (hooks plus ruff). Publish is `git push` of the
-   already-open PR branch. Do not run the publication ceremony, pytest, or
-   conformance. Write the receipt, converge each PR, then merge
-   bottom-up:
+   the target repo. Remediation follows the File-Scope Invariant (ADR-0052):
+   - In-scope surgical fixes (files already created/modified by the PR):
+     verify via `make precommit-repo`, commit pathspecs, push to open PR branch.
+   - Scope-expanding fixes (requiring a new file to be touched): publish
+     as a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+   Write the receipt, converge each PR, then merge bottom-up:
 
 ```bash
 python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open \
   --reason "l9-pr-remediation invoked"
-gh pr merge <n> --repo <owner/name> --squash --delete-branch
+python3 ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run
 ```
 
 `ops/autonomy/merge_gate.py` allows ordinary `gh pr merge` after that

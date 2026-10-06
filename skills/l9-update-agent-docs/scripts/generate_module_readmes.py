@@ -10,8 +10,9 @@ The pipeline is qualify -> model -> render -> validate -> reconcile ->
 apply. Reconciliation compares the authorized desired corpus against the
 generator-owned corpus on disk, so a README this generator wrote for a
 target it no longer authorizes is retired rather than left behind.
-Handwritten files are preserved at every stage. Never writes the
-repository-root README.md. Does not call an LLM or the donor repo.
+Handwritten files are preserved unless ``force`` is set. The repository-root
+README.md is an index target and is compiled with the same rules as every
+other README. Does not call an LLM or the donor repo.
 """
 
 from __future__ import annotations
@@ -97,7 +98,8 @@ __all__ = [
 
 CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
 ROOT_README = Path("README.md")
-FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
+ROOT_TARGET_PATH = "."
+FORBIDDEN_RELATIVE_PATHS = {"", ".."}
 #: Overlay keys configuration is allowed to supply. `path` and the target
 #: kind are structural and are never taken from configuration.
 SUPPORTED_OVERLAY_FIELDS = frozenset(
@@ -374,7 +376,11 @@ def resolve_under_root(repo_root: Path, rel: str) -> Path | None:
         dest.relative_to(root)
     except ValueError:
         return None
-    return None if dest == root else dest
+    # `.` is the repository index. Every other path that resolves to the
+    # root is a traversal and is refused.
+    if dest == root and raw.as_posix() not in {".", "./"}:
+        return None
+    return dest
 
 
 def is_root_readme(repo_root: Path, dest: Path) -> bool:
@@ -516,6 +522,13 @@ TITLE_CASING = {
 }
 
 
+def readme_relpath(target_path: str) -> str:
+    """Repository path of the README for a target. Root is ``README.md``."""
+    if target_path in {"", ROOT_TARGET_PATH}:
+        return ROOT_README.as_posix()
+    return f"{target_path}/README.md"
+
+
 def _humanize(posix: str) -> str:
     words = Path(posix).name.replace("_", " ").replace("-", " ").split()
     return " ".join(TITLE_CASING.get(word.lower(), word.title()) for word in words)
@@ -652,12 +665,102 @@ def build_readme_targets(
                 ),
             )
         )
+    targets.append(
+        ReadmeTarget(
+            path=ROOT_TARGET_PATH,
+            kind="index",
+            title=_humanize(repo_root.name) or "Repository",
+            evidence=(
+                EvidenceRef(source="filetree.md", kind="inventory", detail="repository index"),
+            ),
+        )
+    )
     return targets
 
 
 # --------------------------------------------------------------------------
 # Modelling and rendering
 # --------------------------------------------------------------------------
+
+
+def compile_repository_readmes(
+    repo_root: Path,
+    *,
+    config: dict[str, Any] | None = None,
+    inventory: FiletreeInventory | None = None,
+) -> list[tuple[ReadmeModel, str]]:
+    """Compile every authorized README once. Pure: writes nothing."""
+    repo_root = repo_root.resolve()
+    config = config if config is not None else load_config(repo_root)
+    source = resolve_inventory(repo_root, config, inventory=inventory)
+    targets = build_readme_targets(repo_root, config, inventory=source)
+    internal_paths = sorted(
+        {row.path for row in source.modules}
+        | {
+            child.name
+            for child in repo_root.iterdir()
+            if child.is_dir() and not child.name.startswith(".")
+        }
+    )
+    return compile_readme_outputs(repo_root, targets, internal_paths=internal_paths)
+
+
+def _quality_entry(
+    model: ReadmeModel,
+    findings: tuple[QualityFinding, ...],
+) -> dict[str, Any]:
+    """Receipt row. Every extracted field this row reads is a downstream consumer."""
+    rel = readme_relpath(model.target.path)
+    sources = {rel, model.target.path}
+    return {
+        "path": model.target.path,
+        "completeness": model.completeness,
+        "eligible_source_count": model.eligible_source_count,
+        "extracted_source_count": model.extracted_source_count,
+        "extraction_issue_count": len(model.extraction_issues),
+        "relationship_count": len(model.relationships),
+        "evidence": [
+            {"source": ref.source, "kind": ref.kind, "detail": ref.detail} for ref in model.evidence
+        ],
+        "warnings": [
+            {"rule_id": finding.rule_id, "message": finding.message}
+            for finding in findings
+            if finding.severity == "WARN" and finding.source in sources
+        ],
+        "extracted": {
+            "imports": sorted({item for fact in model.source_facts for item in fact.imports}),
+            "relative_imports": sorted(
+                {item for fact in model.source_facts for item in fact.relative_imports}
+            ),
+            "entrypoints": sorted(
+                {item for fact in model.source_facts for item in fact.entrypoints}
+            ),
+            "languages": sorted({fact.language for fact in model.source_facts}),
+            "source_paths": [fact.path for fact in model.source_facts],
+            "modules": [fact.module.file for fact in model.source_facts],
+            "relationships": [
+                {
+                    "kind": relation.kind,
+                    "target": relation.target,
+                    "source": relation.source,
+                    "detail": relation.detail,
+                }
+                for fact in model.source_facts
+                for relation in fact.relationships
+            ],
+            "issues": [
+                {"path": issue.path, "language": issue.language, "detail": issue.detail}
+                for issue in model.extraction_issues
+            ],
+            "configured_purpose": model.target.configured_purpose,
+            "configured_description": model.target.configured_description,
+            "tier": model.target.tier,
+            "target_evidence": [
+                {"source": ref.source, "kind": ref.kind, "detail": ref.detail}
+                for ref in model.target.evidence
+            ],
+        },
+    }
 
 
 def compile_readme_outputs(
@@ -678,11 +781,28 @@ def compile_readme_outputs(
         repo_root,
         internal_paths if internal_paths is not None else [target.path for target in targets],
     )
-    outputs: list[tuple[ReadmeModel, str]] = []
+    compiled: dict[str, ReadmeModel] = {}
     for target in targets:
-        model = compile_readme_model(repo_root, target, internal_names=internal_names)
-        outputs.append((model, render_readme(model)))
-    return outputs
+        if target.kind == "index":
+            continue
+        compiled[target.path] = compile_readme_model(
+            repo_root, target, internal_names=internal_names
+        )
+    for target in targets:
+        if target.kind != "index":
+            continue
+        descendants = tuple(
+            model
+            for path, model in compiled.items()
+            if target.path in {"", "."} or path.startswith(target.path + "/")
+        )
+        compiled[target.path] = compile_readme_model(
+            repo_root,
+            target,
+            internal_names=internal_names,
+            child_models=descendants,
+        )
+    return [(compiled[target.path], render_readme(compiled[target.path])) for target in targets]
 
 
 def _model_from_facts(target: ReadmeTarget, facts: ModuleFacts) -> ReadmeModel:
@@ -802,6 +922,7 @@ def plan_module_readmes(
     changed: list[str] | None = None,
     force: bool = False,
     retire: bool = True,
+    compiled: list[tuple[ReadmeModel, str]] | None = None,
 ) -> ReadmePlan:
     """Reconcile the authorized desired corpus against what is on disk.
 
@@ -820,15 +941,12 @@ def plan_module_readmes(
         ]
     # First-party names come from the whole inventory plus the repository's
     # own top-level directories, never from the suppressed target list.
-    internal_paths = sorted(
-        {row.path for row in source.modules}
-        | {
-            child.name
-            for child in repo_root.iterdir()
-            if child.is_dir() and not child.name.startswith(".")
-        }
-    )
-    outputs = compile_readme_outputs(repo_root, targets, internal_paths=internal_paths)
+    if compiled is None:
+        outputs = compile_repository_readmes(repo_root, config=config, inventory=source)
+    else:
+        outputs = list(compiled)
+    wanted = {target.path for target in targets}
+    outputs = [pair for pair in outputs if pair[0].target.path in wanted]
     findings: list[QualityFinding] = list(
         validate_readme_models(
             repo_root,
@@ -854,9 +972,7 @@ def plan_module_readmes(
         if module_dir is None or not module_dir.is_dir():
             continue
         dest = module_dir / "README.md"
-        if is_root_readme(repo_root, dest):
-            continue
-        rel_dest = f"{target.path}/README.md"
+        rel_dest = readme_relpath(target.path)
         expected.add(rel_dest)
         ownership = classify_readme(dest)
         future = (
@@ -936,17 +1052,7 @@ def plan_module_readmes(
             )
 
     items.sort(key=lambda item: (item.path, item.action))
-    quality = tuple(
-        {
-            "path": model.target.path,
-            "completeness": model.completeness,
-            "eligible_source_count": model.eligible_source_count,
-            "extracted_source_count": model.extracted_source_count,
-            "extraction_issue_count": len(model.extraction_issues),
-            "relationship_count": len(model.relationships),
-        }
-        for model, _rendered in outputs
-    )
+    quality = tuple(_quality_entry(model, tuple(findings)) for model, _rendered in outputs)
     return ReadmePlan(items=tuple(items), findings=tuple(findings), quality=quality)
 
 
@@ -963,7 +1069,7 @@ def apply_module_readme_plan(
         if item.action not in MUTATING_ACTIONS:
             continue
         dest = resolve_under_root(repo_root, item.path)
-        if dest is None or is_root_readme(repo_root, dest):
+        if dest is None:
             continue
         if item.action == "retire":
             if dest.is_file():
@@ -1275,10 +1381,6 @@ def main(argv: list[str] | None = None) -> int:
             skipped += 1
             continue
         dest = module_dir / "README.md"
-        if is_root_readme(repo_root, dest):
-            print(f"skip {name}: refuses to write root README.md")
-            skipped += 1
-            continue
         if not module_dir.exists():
             print(f"skip {name}: path missing ({rel})")
             skipped += 1

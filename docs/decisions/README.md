@@ -61,6 +61,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0049 | Accepted | Universal campaign ingress and typed architecture admission | `docs/decisions/ADR-0049-universal-campaign-ingress-and-architecture-admission.md`<br>`environment/contracts/execution/adr/ADR-0049-universal-campaign-ingress-and-architecture-admission.md` |
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
 | ADR-0051 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0051-cloud-graphiti-https-reachability.md` |
+| ADR-0052 | Accepted | Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement | `docs/decisions/ADR-0052-immutable-pr-remediation-via-stacked-publish.md` |
 
 <!-- END L9 ADR INDEX -->
 

@@ -60,10 +60,11 @@ def test_empty_sections_are_not_rendered(tmp_path: Path):
         "_No public module-level functions._",
         "_No `__all__` exports._",
         "_No imports parsed._",
-        "## Purpose",
         "## Dependencies",
     ):
         assert absent not in text, absent
+    assert "## Purpose" in text
+    assert "bare is made up of mod.py." in text
     assert "**Path:** `bare`" in text
     assert rr.marker_for("module") in text
 

@@ -37,6 +37,7 @@ def git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
             check=False,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=30,
         )
     except subprocess.TimeoutExpired:
@@ -276,6 +277,23 @@ def python_fence_validate_root(root: Path) -> dict[str, Any]:
     return {"status": "FAIL" if findings else "PASS", "findings": findings, "files": rows}
 
 
+def donor_heading_template_adopted(directives: dict[str, Any]) -> bool:
+    """Donor heading checks are structural only when an adapter opts in."""
+    return directives.get("adopt_donor_heading_template") is True
+
+
+def resolve_selectors(root: Path, spec: dict[str, Any]) -> list[str]:
+    """Return selectors to assess. ``first_present`` keeps the first hit."""
+    selectors = list(spec.get("selectors") or [])
+    if spec.get("selector_mode") != "first_present":
+        return selectors
+    for selector in selectors:
+        found = selector_paths(root, [selector])
+        if found:
+            return found
+    return []
+
+
 def selector_paths(root: Path, selectors: list[str]) -> list[str]:
     found: set[str] = set()
     listed: list[str] | None = None
@@ -317,7 +335,7 @@ def discover_surfaces(
 ) -> list[dict[str, Any]]:
     rows = []
     for name, spec in policy["surfaces"].items():
-        paths = selector_paths(root, spec["selectors"])
+        paths = selector_paths(root, resolve_selectors(root, spec))
         rows.append(
             {
                 "id": name,

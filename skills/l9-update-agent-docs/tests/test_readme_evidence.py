@@ -58,8 +58,14 @@ def test_multi_module_directory_never_borrows_a_child_purpose(tmp_path: Path):
     write(tmp_path / "scripts" / "harvest.py", '"""Normalize Harvest IR into packets."""\n')
     write(tmp_path / "scripts" / "repo_docs.py", '"""Repository documentation compiler."""\n')
     model = ev.compile_readme_model(tmp_path, target("scripts", "subsystem"))
-    assert model.purpose is None
-    # The per-module purposes survive; only the directory-level claim is refused.
+    assert model.purpose is not None
+    assert "harvest.py" in model.purpose
+    assert "repo_docs.py" in model.purpose
+    assert model.purpose not in {
+        "Normalize Harvest IR into packets.",
+        "Repository documentation compiler.",
+    }
+    # The per-module purposes survive; the directory sentence does not copy one.
     assert {module.purpose for module in model.modules} == {
         "Normalize Harvest IR into packets.",
         "Repository documentation compiler.",
@@ -111,18 +117,62 @@ def test_skill_responsibilities_come_from_a_named_section(tmp_path: Path):
 # --- T-M-004: no evidence, no claim ---
 
 
-def test_unsupported_purpose_is_absent_not_invented(tmp_path: Path):
+def test_jsdoc_is_the_purpose_and_the_symbol_summary(tmp_path: Path):
+    write(
+        tmp_path / "types" / "types.ts",
+        "/** Core public contracts for the router. */\n"
+        "export enum Provider { OPENROUTER = 'openrouter' }\n\n"
+        "/**\n * Rank a complexity value.\n */\n"
+        "export function complexityRank(value: string): number { return 1 }\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("types"))
+    assert model.purpose == "Core public contracts for the router."
+    summaries = {
+        item.name: item.summary for item in (*model.modules[0].classes, *model.modules[0].functions)
+    }
+    assert summaries["Provider"] == "Core public contracts for the router."
+    assert summaries["complexityRank"] == "Rank a complexity value."
+
+
+def test_compiler_output_is_not_a_module(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "index.ts").write_text("export class Router {}\n", encoding="utf-8")
+    (tmp_path / "dist").mkdir()
+    (tmp_path / "dist" / "index.js").write_text("export class Router {}\n", encoding="utf-8")
+    (tmp_path / "tsconfig.json").write_text(
+        '{"compilerOptions":{"outDir":"./dist","rootDir":"./src"}}\n',
+        encoding="utf-8",
+    )
+    import doc_filetree as df
+
+    found = [row.path for row in df.walk_inventory(tmp_path).modules]
+    assert "src" in found
+    assert "dist" not in found
+
+
+def test_public_symbols_become_the_purpose_sentence(tmp_path: Path):
+    write(
+        tmp_path / "budget" / "index.ts",
+        "export class BudgetTracker {}\nexport function evaluateBudgetAdmission() {}\n",
+    )
+    model = ev.compile_readme_model(tmp_path, target("budget"))
+    assert model.purpose == "budget provides BudgetTracker and evaluateBudgetAdmission."
+    assert "## Purpose" not in (model.purpose or "")
+
+
+def test_a_module_without_a_docstring_still_has_human_purpose(tmp_path: Path):
     write(tmp_path / "quiet" / "mod.py", "x = 1\n")
     model = ev.compile_readme_model(tmp_path, target("quiet"))
-    assert model.purpose is None
+    assert model.purpose == "quiet is made up of mod.py."
     assert model.description is None
+    assert any(ref.kind == "surface_prose" for ref in model.evidence)
 
 
-def test_corpus_purpose_is_absent_without_configuration(tmp_path: Path):
+def test_corpus_purpose_names_the_files_it_collects(tmp_path: Path):
     write(tmp_path / "protocols" / "a.md", "# A\n")
     write(tmp_path / "protocols" / "b.md", "# B\n")
     model = ev.compile_readme_model(tmp_path, target("protocols", "corpus"))
-    assert model.purpose is None
+    assert model.purpose == "protocols collects a.md and b.md for readers of this repository."
     assert model.contents == ("a.md", "b.md")
     assert model.file_types == (("Markdown", 2),)
 

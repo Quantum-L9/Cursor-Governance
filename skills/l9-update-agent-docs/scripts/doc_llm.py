@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,7 @@ import yaml
 from consumer_snapshot import snapshot_document
 from doc_owned_write import Admission, apply_owned_write
 from doc_policy import LLM_SURFACE_ID, repo_slug, resolve_under_root
+from doc_root import repository_description
 
 PROJECTION_FILENAME = "llm.txt"
 LEGACY_FILENAME = "llms.txt"
@@ -79,11 +82,87 @@ def _manifest_entry(
     }
 
 
+def _readme_relpath(path: str) -> str:
+    return "README.md" if path in {"", "."} else f"{path}/README.md"
+
+
+def _seal_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Recompute the snapshot digest the way consumer_snapshot seals it."""
+    identity = {key: item for key, item in snapshot.items() if key != "changed_files"}
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    snapshot["digest"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return snapshot
+
+
+def snapshot_with_compiled_readmes(
+    root: Path,
+    snapshot: dict[str, Any],
+    readme_models: tuple[Any, ...],
+) -> dict[str, Any]:
+    """Copy the snapshot and observe each compiled README so its digest can be cited."""
+    if not readme_models:
+        return snapshot
+    observed = dict(snapshot.get("documents") or {})
+    added = False
+    for model in readme_models:
+        rel = _readme_relpath(model.target.path)
+        if rel in observed:
+            continue
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            continue
+        observed[rel] = {
+            "path": rel,
+            "digest": hashlib.sha256(raw).hexdigest(),
+            "headings": [],
+            "links": [],
+        }
+        added = True
+    if not added:
+        return snapshot
+    sealed = dict(snapshot)
+    sealed["documents"] = observed
+    return _seal_snapshot(sealed)
+
+
+def _readme_manifest_entries(
+    snapshot: dict[str, Any],
+    readme_models: tuple[Any, ...],
+    base_url: str | None,
+) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    published = bool(snapshot.get("publication_markers")) and base_url is not None
+    for model in readme_models:
+        rel = _readme_relpath(model.target.path)
+        document = snapshot_document(snapshot, rel)
+        if document is None:
+            continue
+        href = urljoin(base_url, rel) if published and base_url else rel
+        entry = {
+            "id": "readme:" + rel.replace("/", ":"),
+            "path": rel,
+            "href": href,
+            "role": "compiled module documentation",
+            "owner": "l9-update-agent-docs",
+            "authority_class": "projection",
+            "sha256": str(document["digest"]),
+            "availability": "published" if published else "repository_local",
+            "purpose": model.purpose or "",
+        }
+        entries.append(entry)
+    return entries
+
+
 def llm_manifest(
     root: Path,
     policy: dict[str, Any],
     snapshot: dict[str, Any],
     base_url: str | None,
+    readme_models: tuple[Any, ...] = (),
 ) -> dict[str, Any]:
     entries = [
         entry
@@ -91,6 +170,8 @@ def llm_manifest(
         if policy["surfaces"][surface].get("llm_include")
         if (entry := _manifest_entry(root, policy, snapshot, surface, base_url)) is not None
     ]
+    if policy.get(LLM_SURFACE_ID, {}).get("compiled_readme_entries"):
+        entries.extend(_readme_manifest_entries(snapshot, readme_models, base_url))
     return {
         "schema": policy[LLM_SURFACE_ID]["manifest_schema"],
         "snapshot_digest": snapshot["digest"],
@@ -106,13 +187,18 @@ def render_llm_txt(
     policy: dict[str, Any],
     base_url: str | None,
     snapshot: dict[str, Any],
+    readme_models: tuple[Any, ...] = (),
 ) -> str:
     title = repo_slug(root)
-    manifest = llm_manifest(root, policy, snapshot, base_url)
+    manifest = llm_manifest(root, policy, snapshot, base_url, readme_models)
+    description = repository_description(root)
+    quote = f"> LLM-facing documentation manifest for {title}. Projection only; not authority."
+    if description:
+        quote += f"\n>\n> {description}"
     lines = [
         f"# {title}",
         "",
-        f"> LLM-facing documentation manifest for {title}. Projection only; not authority.",
+        quote,
         "",
         LLM_MARKER,
         "",

@@ -129,7 +129,10 @@ def test_config_cannot_invent_a_target(tmp_path: Path):
     }
     assert gm.discover_module_paths(tmp_path, config) == ["pkg"]
     assert gm.unauthorized_config_paths(tmp_path, config) == ["ghost/path"]
-    assert gm.write_missing_module_readmes(tmp_path, config=config) == ["pkg/README.md"]
+    assert gm.write_missing_module_readmes(tmp_path, config=config) == [
+        "README.md",
+        "pkg/README.md",
+    ]
     assert not (tmp_path / "ghost").exists()
 
 
@@ -140,7 +143,7 @@ def test_config_can_suppress_an_authorized_target(tmp_path: Path):
         "subsystems": {"pkg": {"path": "pkg", "title": "Pkg", "skip": True}},
     }
     assert gm.discover_module_paths(tmp_path, config) == []
-    assert gm.write_missing_module_readmes(tmp_path, config=config) == []
+    assert gm.write_missing_module_readmes(tmp_path, config=config) == ["README.md"]
     assert not (tmp_path / "pkg" / "README.md").exists()
 
 
@@ -264,4 +267,4 @@ def test_empty_directory_gets_no_readme(tmp_path: Path):
     found = kinds(tmp_path)
     assert "prompts" not in found
     assert "foundation/security" not in found
-    assert gm.write_missing_module_readmes(tmp_path) == []
+    assert gm.write_missing_module_readmes(tmp_path) == ["README.md"]

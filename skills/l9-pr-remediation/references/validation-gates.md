@@ -20,7 +20,7 @@ Prevent protocol violations with lightweight **inline** proofs at each step (log
 
 ```text
 P_cmd ──→ [GATE A] ──→ ingest/classify ──→ [GATE B] ──→ fix ──→ [GATE C]
-  ──→ make precommit-repo ──→ [GATE D] ──→ commit + git push ──→ [GATE E]
+  ──→ make precommit-repo ──→ [GATE D] ──→ commit + make pr ──→ [GATE E]
   ──→ replies ──→ [GATE F] ──→ next PR + MERGE_NOW (remediator polls)
 ```
 
@@ -38,14 +38,14 @@ gate_registry:
   makefile: true
   public:
     verify: "make precommit-repo"
-    publish: "git push"
+    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"   # optional
   leftover_workflow_run: []   # only when makefile precommit-repo is absent
 ```
 
 Validation:
-- [ ] `verify` is `make precommit-repo` and remediator `publish` is `git push`
-- [ ] Ceremony `OPEN_PR=0 make pr` / `PR_REMEDIATE=0 make pr` are named only as do-not-run
+- [ ] `verify` is `make precommit-repo` and remediator `publish` is `PR_STACK=auto PR_REMEDIATE=0 make pr`
+- [ ] Bare `git push` to an existing open PR branch is forbidden (ADR-0052)
 - [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
 - [ ] Workflow `run:` leftover is empty when `precommit-repo` exists
 
@@ -134,7 +134,7 @@ Validation:
 
 ## Gate E: Single Commit, Single Publish
 
-**After commit + remediator `git push`**
+**After commit + stacked publish via `make pr`**
 
 Required artifact:
 ```yaml
@@ -143,7 +143,7 @@ push_record:
   commit_message: "fix(pr-remediation): resolve {count} findings"
   files_in_commit: {integer}
   publish_count_this_cycle: 1
-  publish_command: "git push"
+  publish_command: "PR_STACK=auto PR_REMEDIATE=0 make pr"
   branch: "{branch_name}"
   published_at: "{ISO timestamp}"
 ```
@@ -153,7 +153,7 @@ Validation:
 - [ ] `commit_sha` is a valid 40-char hex string
 - [ ] Commit message follows `fix(pr-remediation): resolve {count} findings` plus `Remediation-Cycle:` trailer
 - [ ] `git log --oneline HEAD~1..HEAD` returns exactly 1 line
-- [ ] Publish was remediator `git push` of the already-open PR branch, not `make pr`
+- [ ] Publish was stacked remediation `PR_STACK=auto PR_REMEDIATE=0 make pr`, bare `git push` forbidden
 
 **STOP if:** Publish failed → check auth, remote, branch protection. Ask user if needed.
 

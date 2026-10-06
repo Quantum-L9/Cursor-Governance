@@ -1,161 +1,139 @@
 ---
-name: "<plan_title>"
-overview: "<overview>"
+name: Wire every extracted signal in l9-update-agent-docs into a compiled document
+overview: "Every fact l9-update-agent-docs extracts (source facts, interface summaries and signatures, imports, relationships, skill contract fields, manifest and tsconfig fields, surface-analyzer parses, evidence references, quality findings) reaches at least one compiled output (a README, AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, filetree.md, or the receipt), and a ratchet test fails when a new extr..."
 todos:
-  # Repeat this mapping once per DAG node. Roots use depends_on: [].
-  - id: <todo_id>
-    content: "<todo_content>"
-    status: pending
-    phase: <phase>
-    depends_on: [<depends_on_todo_id>]
-    side_effect_ref: <side_effect_id>
-    evidence_property_refs: [<success_property_id>]
+  - id: T1
+    content: "Add the signal ledger ratchet: test_signal_ledger.py enumerates dataclass fields of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, the SkillContract slots, and surface-analyzer output keys, and asserts each is read by a consumer module (renderers, doc_root, doc_llm, receipt writer). Start with an explicit UNWIRED allowlist naming today's drops; each later wiring task deletes its entries; final state is an empty allowlist"
+    status: completed
+    phase: execute
+    depends_on: []
+  - id: T2
+    content: "Compile README models once in repo_docs.audit_repository before root docs and llm.txt, and pass the compiled (model, rendered) outputs into compile_missing_root_docs and render_llm_txt"
+    status: completed
+    phase: execute
+    depends_on: [T1]
+  - id: T3
+    content: "Feed JS/TS imports into classify_dependencies in both compile_readme_model branches; resolve local relative imports to the sibling module path so Internal names a real target"
+    status: completed
+    phase: execute
+    depends_on: [T1]
+  - id: T4
+    content: "Capture the exported function parameter list in _extract_javascript and store it in InterfaceDoc.signature"
+    status: completed
+    phase: execute
+    depends_on: [T1]
+  - id: T5
+    content: "Render SkillContract.version in the skill README header and render model.authority_links as links in the Authority section; carry version onto ReadmeModel"
+    status: completed
+    phase: execute
+    depends_on: [T1]
+  - id: T6
+    content: "AGENTS.md compiles a Commands section from package.json scripts and pyproject project.scripts (reuse surface_analyzers/python_project.py parse) and a Module map from the compiled README models (path link plus compiled purpose); INVARIANTS.md lists workflow name and job ids from the workflow parse"
+    status: completed
+    phase: execute
+    depends_on: [T2]
+  - id: T7
+    content: "llm.txt manifest gains one entry per compiled README (path, purpose, sha256, owner l9-update-agent-docs, authority_class projection) under the existing L9_DOC_MANIFEST schema; add the policy hook in doc-surface-policy.yaml"
+    status: completed
+    phase: execute
+    depends_on: [T2]
+  - id: T8
+    content: "Receipt module_readme_quality entries carry each README's evidence references and every WARN finding (rule_id, message), not only counts"
+    status: completed
+    phase: execute
+    depends_on: [T1]
+  - id: T9
+    content: "Targeted tests for T3-T8, empty the ledger allowlist, add the signal-utilization law to SKILL.md (every extracted field has a named consumer; ledger is the gate), bump version to 4.4.0, add self_test token"
+    status: completed
+    phase: execute
+    depends_on: [T3, T4, T5, T6, T7, T8]
 isProject: false
-kernel_pass:
-  bound_path: ""
-  improve:
-    kernel: kernels/Improve.md
-    ran_at: ""
-    body_sha256:
-    deltas: []
-  recursive_alignment:
-    kernel: kernels/Recursive Alignment.md
-    ran_at: ""
-    body_sha256:
-    deltas: []
-  validate_repair:
-    kernel: kernels/Validate & Repair.md
-    ran_at: ""
-    body_sha256:
-    deltas: []
+kind: simple
+execute_via: cursor-build
+status: current
 ---
 
-# PLAN: <plan_title>
+# PLAN: Wire every extracted signal in l9-update-agent-docs into a compiled document
+
+> **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
+> **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
+> **Execute:** Press **Build**. Stack on the unique open-PR tip if any open PR exists. After todos: `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do not run `make campaign`.
+> **Suggested filename:** `wire-every-extracted-signal-in-l9-update-agent-docs-into-a-compiled-document_f06c1c24.plan.md`
+
+## Objective (from PLAN_DOCUMENT)
+
+Every fact l9-update-agent-docs extracts (source facts, interface summaries and signatures, imports, relationships, skill contract fields, manifest and tsconfig fields, surface-analyzer parses, evidence references, quality findings) reaches at least one compiled output (a README, AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, filetree.md, or the receipt), and a ratchet test fails when a new extracted field has no downstream consumer.
+
+### Success properties (seed — complete evidence_type/proof in template sections)
+
+| id | property | evidence_type | proof | blocking |
+|----|----------|---------------|-------|----------|
+| SP-01 | skills/l9-update-agent-docs/tests/test_signal_ledger.py PASSes with an empty unwired allowlist: every field of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, SkillContract, and every surface-analyzer output key is read by a renderer, root-doc compiler, llm.txt compiler, or receipt writer | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-02 | A TypeScript module README renders a Dependencies section whose External list names its package imports (for example openai, zod) and whose Internal list names sibling modules, instead of only raw import strings | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-03 | A TypeScript exported function renders its parameter list on the interface line, the same way a Python function already does | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-04 | A skill README renders the SKILL.md metadata.version and links every model.authority_links entry | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-05 | AGENTS.md compiled from a repository with package.json scripts lists those scripts as commands, and lists each compiled README path with its compiled purpose | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-06 | INVARIANTS.md lists each workflow's name and job ids from the workflow parse, not only the file path | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-07 | llm.txt lists every compiled README with its path, purpose, and sha256 in the L9_DOC_MANIFEST block | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-08 | The receipt records, per README, the evidence references and every WARN quality finding | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-09 | repo_docs.py compiles README models once per run and hands the same models to doc_root.py and doc_llm.py | quality_gate | observe .pre-commit-config.yaml catalog | true |
+| SP-10 | .venv/bin/python -m pytest skills/l9-update-agent-docs/tests -q PASSes and .venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py PASSes | quality_gate | observe .pre-commit-config.yaml catalog | true |
+
+## Scope (from PLAN_DOCUMENT)
+
+**In:** skills/l9-update-agent-docs/scripts (readme_evidence.py, source_facts.py, readme_renderers.py, readme_model.py, generate_module_readmes.py, doc_root.py, doc_llm.py, repo_docs.py, surface_analyzers/workflow.py), skills/l9-update-agent-docs/references/doc-surface-policy.yaml (llm.txt surface entries for compiled READMEs), skills/l9-update-agent-docs/tests (new test_signal_ledger.py plus targeted assertions), skills/l9-update-agent-docs/SKILL.md (signal-utilization law, version 4.4.0)
+
+**Out:**
+- New extractor languages or a new parser dependency
+- LLM-authored prose of any kind
+- Running --full against /Users/macm2/LLM-Router-META-INJECTOR-TEST (user runs it)
+- ADR reconciliation and the agent/cursor/adr-number-realign branch
+- Overwriting an unowned AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, or filetree.md
+- Copying Quantum-L9/.github content (cite-only stays)
+- CLAUDE.md growing beyond a pointer (policy pointer_only; no registry dump)
+
+## Critical path (seed)
+
+T1 → T2 → T6 → T9
+
+## Stress (seed from PLAN_DOCUMENT)
+
+- Blast radius: Every repository that runs l9-update-agent-docs --full gets rewritten AGENTS.md (marker-owned only), INVARIANTS.md, llm.txt, and READMEs; a wrong wire propagates to all of them on the next run
+- Rollback: Revert the branch commits on feat/l9-repo-docs-full; target repos regenerate from the previous compiler with the same --full command
+
+## Convergence (seed)
+
+- status: partial
+- next_skill: Build then stacked make pr
+- stop_reason: plan validated; implementation waits for Build
+- execute_via: cursor-build
+
+---
+
+## Template body (complete every required section before status=executable)
+
+# PLAN: Wire every extracted signal in l9-update-agent-docs into a compiled document
 
 > **First-class SSOT (git):** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` · metadata sidecar `*.meta.md` · registered in `environment/contracts/execution/MANIFEST.yaml`. Skill path is a symlink; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only.
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill → `executable` only when law holds)
 > **Parameters:** every `<parameter>` is an instance slot. Backtick tokens are the closed vocabulary for that field. Replace each parameter before status becomes `executable`. Leave no sample instance in a delivered plan.
-> **Execute:** when status is `executable`, run through **[@environment/program-execution](environment/program-execution/)** with autonomy as the subordinate orchestration plane — **[@autonomy](commands/autonomy.md)** / `l9-bounded-autonomy` under a Program lease. Do **not** free-form mutate from this markdown alone.
-> **Cursor todos:** frontmatter `todos` project to PE Task Cards + Phase-0 autonomy actions. Body is the binding contract.
+> **Execute:** when status is `executable`, press **Build**, stack on the unique open-PR tip if any open PR exists (`PR_STACK=auto`; never `origin/main`), then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do **not** run `make campaign`, admit a Program Lock, or free-form mutate from this markdown alone.
+> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract.
 > **Rename to:** `<snake_case_name>_<8hex>.plan.md` before execute.
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
-## Execute via @environment/program-execution + autonomy (required)
+## Execute via Cursor Build
 
-**Authority order (fail-closed — see `environment/agents/PEER_EXECUTION.md`):**
+Press **Build**. Plan on the current workspace. Execute on the unique open-PR chain tip.
 
-```text
-this .plan.md  (intent / envelope / DAG / success properties)
-        │ project
-        ▼
-@environment/program-execution   HOW work executes (authoritative)
-  Blueprint → Program Lock → Controller admit/claim/render/verify/handoff
-        │ lease (narrow-never-widen)
-        ▼
-root autonomy/  +  @autonomy (/autonomy → l9-bounded-autonomy)
-  MAY the leased agent act?  (packet, lanes, PR poll) — owns_program_state: false
-        │
-        ▼
-Peer Execution Core -> thin provider
-  provider_ref: <provider_ref>
-```
-
-Program leases are authoritative. Autonomy leases are subordinate and **must not outlive** the Program lease (`COMPATIBILITY.yaml` / autonomy-control-plane bridge). Never invent a second scheduler; never widen Blueprint ceilings via the campaign packet.
-
-### Pipeline steps
-
-Live execution is one command. Do not hand-run pec, L4, or inner compile
-scripts from this template.
-
-```bash
-make -C "<governance_root>" campaign INTENT=<intent_ref>
-```
-
-`run_campaign.py` projects the plan into Blueprint artifacts under
-`<program_runtime_root>`, admits the lock, executes every task, stacks
-PRs, and closes into `<completed_campaign_root>`. Never mutate sealed
-`environment/program-execution/core/` templates in place.
-
-| Plan section | Runner-owned Blueprint / Controller artifact |
-|--------------|-------------------------------------|
-| metadata / objective | `PROGRAM.yaml` / program identity |
-| immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
-| execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
-| execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
-| capability_preflight | Controller reconcile + gate probes before claim |
-| property_evidence_matrix | Task Card `validation` / evidence catalog refs |
-| rollback | Task Card `rollback` + recovery receipts |
-| convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
-
-If the runner exits nonzero, stop and report. Do not continue with
-`pec.py bootstrap`, `claim`, `record-attempt`, or a second scheduler.
-
-### Adapter routing (from `<routing_policy_ref>`)
-
-| Work class | provider_ref |
-|------------|----------------|
-| interactive local repair | `<provider_ref>` |
-| repository implementation | `<provider_ref>` |
-| verification | `<provider_ref>` |
-| remote PR/merge actions | `<provider_ref>` |
-
-### Campaign authorization packet (fill at execute — subordinate to Program Lock)
-
-```yaml
-packet_id: <packet_id>
-authority: <authority>
-profile: <profile>
-authority_profile: <authority_profile>
-autonomous_merge: false
-plan_ref: <plan_path>
-plan_id: plan.<domain>.<slug>.v1
-schema_ref: canonical.schema.plan_document.v1
-program_execution:
-  root: environment/program-execution
-  program_id: <program_id>
-  program_lock_digest: <program_lock_digest>
-  blueprint_ref: <blueprint_ref>
-  runtime_ref: <runtime_ref>
-  provider_ref: <provider_ref>
-  execution_profile_ref: <execution_profile_ref>
-  autonomy_provider_id: <autonomy_provider_id>
-declared_prs: [<pull_request>]
-declared_branches: [<branch>]
-allowed_inside_packet:
-  - execute_rendered_contract_only
-  - execute_plan_todos_inside_envelope
-  - remediate_until_green
-  - commit_scoped_on_declared_branch
-  - push_non_force_declared_branch
-  - inspect_ci_and_comments
-forbidden_inside_packet:
-  - widen_blueprint_or_task_card_ceiling
-  - mutate_without_program_lease
-  - outlive_program_lease
-  - merge_outside_l4_plan_build_stack
-  - force_push
-  - admin_merge
-  - expand_scope
-  - commit_secrets
-  - weaken_tests_for_green
-  - direct_graphiti_task_claim
-created_by: "<created_by>"
-```
-
-### Phase-0 action table ↔ PE Task Cards
-
-Derive one row per frontmatter todo and one optional `poll` row when a remote poll is in scope. Columns are the projection; values are parameters.
-
-| id | pe_task_id | wave | depends_on | mutation | lock_keys | isolation_key | autonomy_action_id | kind | adapter_hint |
-|----|------------|------|------------|----------|-----------|---------------|--------------------|------|--------------|
-| `<todo_id>` | `<pe_task_id>` | `<wave>` | `[<depends_on_todo_id>]` | `<mutation>` | `<lock_keys>` | `<isolation_key>` | `<autonomy_action_id>` | `<kind>` | `<provider_ref>` |
-| `<poll_id>` | — | `<wave>` | `[<depends_on_todo_id>]` | `<mutation>` | `<lock_keys>` | `<isolation_key>` | `<autonomy_action_id>` | `poll` | `<provider_ref>` |
-
-`kind` ∈ `work` | `poll`. Omit the poll row when no poll is in scope.
-
-**Spawn rules:** PE `claim`/`render` first for mutation rows; then @autonomy Protocol A (ready `work` Tasks in one message) / B (`poll` + `run_in_background: true`) / C (join) / D (PICKUP). Autonomy must not bypass wave order or Program Lock drift checks (`program_lock_stale_or_invalid` → stop).
-
-**Stop / do not execute when:** plan status ≠ `executable`; PE Blueprint not accepted / Controller not bootstrapped; Program Lock drift; capability preflight blocked; DAG cyclic; envelope or Task Card ceiling incomplete; blocking unknowns remain; autonomy revoke / lease expired.
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique chain tip (`PR_STACK=auto`). Use `agent_worktree_start.sh` when this checkout is not already that tip. Sibling open-PR chains fail closed.
+- If the board is empty: `origin/main` is allowed.
+- Do not run `make campaign`.
+- Do not admit a Program Lock or Controller lease.
+- Do not write `Lock: origin/main = <sha>`.
+- Do not open a new worktree from tip as a **planning** requirement.
+- After Build todos complete: scoped-commit (pathspecs), `l4_local.py authorize-release`, then `PR_STACK=auto PR_REMEDIATE=0 make pr`. Do not skip `make pr`.
+- The finish reply **must** display the opened PR URL as proof. Without that URL the Build is incomplete.
 
 ## Metadata
 
@@ -179,7 +157,7 @@ Derive one row per frontmatter todo and one optional `poll` row when a remote po
 | plan_class | `<plan_class>` — `bounded_execution_contract` \| `migration_plan` \| `retirement_plan` \| `remediation_plan` \| `deployment_plan` \| `refactor_plan` \| `integration_plan` \| `recovery_plan` \| `custom` |
 | redesign_allowed | `<redesign_allowed>` |
 | follow_on_schema_evolution_separate | `<follow_on_schema_evolution_separate>` |
-| framing_notes | Execute via @environment/program-execution + subordinate @autonomy; no redesign unless plan_class requires it |
+| framing_notes | Execute via Cursor Build; stacked make pr if any open PR exists; no redesign unless plan_class requires it |
 
 ## Immutable baseline
 
@@ -476,8 +454,8 @@ Convergence requires all blocking evidence + gates (PLAN-SCHEMA-015).
 | Field | Value |
 |-------|-------|
 | next_convergence_gate | `<next_convergence_gate>` |
-| minimum_safe_next_action | When law holds and status=`executable`, attach [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md); project→Lock→claim→render→autonomy lanes — do not free-form execute |
-| execute_via | `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease → PE adapter |
+| minimum_safe_next_action | When law holds and status=`executable`, press **Build**, stack if any open PR exists (`PR_STACK=auto`), then `make pr` and display the PR URL — do not free-form execute |
+| execute_via | Cursor Build; stacked PR if any open PR exists; display PR URL |
 | broader_work_requires_separate_contract | `<broader_work_requires_separate_contract>` |
 
 ---
@@ -550,22 +528,12 @@ stress_and_disconfirm:
 out_of_scope: []
 convergence_contract_ref: <convergence_contract_ref>
 execute_via:
-  pipeline: environment/program-execution
-  mention_program: "@environment/program-execution"
-  controller: environment/program-execution/core/program-execution-controller-template
-  blueprint: environment/program-execution/core/program-execution-blueprint-template
-  autonomy_provider: <autonomy_provider_id>
-  autonomy_integration: environment/program-execution/integrations/autonomy-control-plane
-  adapter_default: <provider_ref>
-  command_ref: commands/autonomy.md
-  slash: /autonomy
-  skill: l9-bounded-autonomy
-  mention_autonomy: "@autonomy"
+  pipeline: cursor-build
+  mention_program: "Cursor Build"
+  command_ref: PR_STACK=auto make pr
   authority_order:
     - plan_document
-    - program_lock_and_controller
-    - autonomy_packet_subordinate
-    - pe_adapter_worker
+    - cursor_build
 todos:
   - id: <todo_id>
     content: <todo_content>

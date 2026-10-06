@@ -4,7 +4,7 @@
   "title": "L9 Repository Documentation Surface Policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "version", "owner", "source_evidence", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llm_txt"],
+    "required": ["schema", "version", "owner", "source_evidence", "managed_regions", "surfaces", "impact_rules", "semantic_harvest", "capabilities", "llm_txt", "external_bindings"],
   "properties": {
     "schema": {"const": "l9.repo-docs.surface-policy.v3"},
     "version": {"const": 3},
@@ -70,6 +70,7 @@
           "evidence_sources": {"type": "array", "items": {"type": "string"}},
           "prohibited_mutations": {"type": "array", "items": {"type": "string"}},
           "llm_include": {"type": "boolean"},
+          "selector_mode": {"enum": ["all", "first_present"]},
           "projection_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
           "kind": {"type": "string", "minLength": 1},
           "ownership": {
@@ -178,6 +179,23 @@
         }
       }
     },
+    "external_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["org_profile"],
+      "properties": {
+        "org_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "url", "copy_policy"],
+          "properties": {
+            "repository": {"const": "Quantum-L9/.github"},
+            "url": {"const": "https://github.com/Quantum-L9/.github"},
+            "copy_policy": {"const": "cite_only"}
+          }
+        }
+      }
+    },
     "llm_txt": {
       "type": "object",
       "additionalProperties": false,
@@ -189,7 +207,8 @@
         "adapter_directive_block": {"type": "string"},
         "default_enabled": {"const": true},
         "surface_order": {"type": "array", "items": {"type": "string"}},
-        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"}
+        "manifest_schema": {"const": "l9.repo-docs.llm-manifest.v1"},
+        "compiled_readme_entries": {"type": "boolean"}
       }
     }
   },

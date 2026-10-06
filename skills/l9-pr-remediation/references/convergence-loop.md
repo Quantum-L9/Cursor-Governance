@@ -34,7 +34,7 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 │              REMEDIATION CYCLE                            │
 │                                                          │
 │  census → plan (GATE) → fix ALL → make precommit-repo    │
-│  commit (ONE) → git push (ONE)                           │
+│  commit (ONE) → make pr (stacked child PR)               │
 │                                                          │
 └──────────────────────┬───────────────────────────────────┘
                        │
@@ -65,7 +65,7 @@ If CI is already red on a source file this PR owns:
 
 1. Fetch the failure logs: `gh run view {RUN_ID} --log-failed`
 2. Identify the **delta** — what's different between local ruff/hooks and CI.
-3. If fixable locally in **source** → fix, re-run `make precommit-repo`, one more `git push` (counts as the exceptional next cycle if already published).
+3. If fixable locally in **source** → fix on child branch, re-run `make precommit-repo`, commit, and publish stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr` (ADR-0052). Bare `git push` to open PR branch is forbidden.
 4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE` on the **edit** axis. Note it. **Do not** edit workflows to skip or weaken the failing job. That classification says you may not patch the file; it does not park the PR.
 5. If unfixable → defer with reason "CI environment delta" **and** declare it to the board: `pr_board.py --unfixable-check "{required check name}"`. Only then is that PR `leftover`. An undeclared pipeline note leaves the PR on the train. Required checks **in progress** are `board=wait`, not a finish — keep polling.
 

@@ -47,37 +47,60 @@ def _uses_values(value: Any) -> list[str]:
     return found
 
 
+def _assessment(
+    status: str,
+    findings: list[dict[str, Any]],
+    blockers: list[str],
+    *,
+    name: str | None = None,
+    jobs: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "findings": findings,
+        "blockers": blockers,
+        "name": name,
+        "jobs": list(jobs or ()),
+    }
+
+
+def _workflow_identity(data: dict[str, Any], target: Path) -> tuple[str, list[str]]:
+    raw_name = data.get("name")
+    name = raw_name.strip() if isinstance(raw_name, str) and raw_name.strip() else target.stem
+    jobs = data.get("jobs")
+    job_ids = sorted(jobs) if isinstance(jobs, dict) else []
+    return name, job_ids
+
+
 def analyze(root: Path, target: Path) -> dict[str, Any]:
     if not target.is_file():
-        return {
-            "status": "BLOCKED",
-            "findings": [],
-            "blockers": [f"workflow target is missing: {target}"],
-        }
+        return _assessment(
+            "BLOCKED",
+            [],
+            [f"workflow target is missing: {target}"],
+        )
     try:
         text = target.read_text(encoding="utf-8")
         data = yaml.safe_load(text)
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
-        return {"status": "BLOCKED", "findings": [], "blockers": [f"workflow is unreadable: {exc}"]}
+        return _assessment("BLOCKED", [], [f"workflow is unreadable: {exc}"])
     if not isinstance(data, dict):
-        return {
-            "status": "BLOCKED",
-            "findings": [],
-            "blockers": ["workflow root must be a mapping"],
-        }
+        return _assessment("BLOCKED", [], ["workflow root must be a mapping"])
+    workflow_name, job_ids = _workflow_identity(data, target)
 
     findings: list[dict[str, Any]] = []
     jobs = data.get("jobs")
     if jobs is None:
         # A repository may carry a dispatch/template file under workflows.
         # This narrow analyzer owns job-reference consistency only.
-        return {"status": "PASS", "findings": [], "blockers": []}
+        return _assessment("PASS", [], [], name=workflow_name, jobs=[])
     if not isinstance(jobs, dict):
-        return {
-            "status": "BLOCKED",
-            "findings": [],
-            "blockers": ["workflow jobs mapping is absent or unreadable"],
-        }
+        return _assessment(
+            "BLOCKED",
+            [],
+            ["workflow jobs mapping is absent or unreadable"],
+            name=workflow_name,
+        )
     known_jobs = set(jobs)
     for job_id, job in jobs.items():
         if not isinstance(job, dict):
@@ -115,8 +138,10 @@ def analyze(root: Path, target: Path) -> dict[str, Any]:
                     line=_workflow_lines(text, uses),
                 )
             )
-    return {
-        "status": "NEEDS_IMPROVEMENT" if findings else "PASS",
-        "findings": findings,
-        "blockers": [],
-    }
+    return _assessment(
+        "NEEDS_IMPROVEMENT" if findings else "PASS",
+        findings,
+        [],
+        name=workflow_name,
+        jobs=job_ids,
+    )

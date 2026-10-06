@@ -2128,3 +2128,22 @@ not fold them. Toolchain pins in §6 are unchanged; `uv.lock` is unchanged.
   and the L4 release receipt must still exist at the resolved root and bind its
   head SHA. Publishing from a second clone that holds no receipt is denied even
   when the session's checkout holds a valid one.
+
+<!-- IMMUTABLE_PR_STACKED_REMEDIATION_V1 -->
+## Scope-invariant PR remediation (2026-10-04) — refines `L9_PR_REMEDIATE_SPEED_V1` and §4.0 item 3
+
+Append-only. ADR-0052, CANONICAL_LAW §6.2.10. Where `L9_PR_REMEDIATE_SPEED_V1`
+or earlier text discussed remediator publish, this amendment is current.
+
+- **In-scope surgical fixes:** Pushing commits advancing an open PR branch is allowed
+  via `git push` (after local verify `make precommit-repo`) provided the changes modify
+  only files that were already created or modified by the original PR.
+- **Scope expansion requires a new stacked PR:** If remediation requires modifying,
+  adding, or deleting any file outside the original PR's file footprint, direct `git push`
+  to that PR branch is strictly forbidden. It must be published as a new stacked child PR
+  via `PR_STACK=auto PR_REMEDIATE=0 make pr` to prevent uncoordinated conflicts with newer open PRs.
+- **Merge trains over sibling fan-out:** Because strict rulesets require branches
+  to be up-to-date with `main` before merging (`strict_required_status_checks_policy: true`),
+  remediations must stack linearly on their parent heads. Child PRs merge bottom-up
+  via `stack_safe_merge.py`, eliminating the \(O(N^2)\) branch-updating cascade and
+  cross-PR conflicts on overlapping files.

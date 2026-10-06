@@ -31,9 +31,14 @@ EXTRACTOR_LANGUAGES = frozenset(
 )
 
 _JS_EXPORT_RE = re.compile(
-    r"^\s*export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)",
+    r"^[ \t]*export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?"
+    r"(function|class|const|let|var|interface|enum|type)\s+"
+    r"([A-Za-z_$][\w$]*)"
+    r"(?:\s*<[^>\n]*>)?"
+    r"(\s*\([^)\n]*\))?",
     re.MULTILINE,
 )
+_JS_CLASS_KINDS = frozenset({"class", "interface", "enum", "type"})
 _JS_IMPORT_RE = re.compile(r"\b(?:import|export)\b[\s\S]*?\bfrom\s+[\"']([^\"']+)[\"']")
 _JS_REQUIRE_RE = re.compile(r"\brequire\(\s*[\"']([^\"']+)[\"']\s*\)")
 _JS_ENV_RE = re.compile(r"\bprocess\.env\.([A-Za-z_][A-Za-z0-9_]*)")
@@ -128,13 +133,22 @@ def _summary(text: str | None, limit: int = 260) -> str | None:
     )
     if boundary > 0:
         return cleaned[: boundary + 1]
-    cut = cleaned.rfind(" ", 0, limit)
-    return (cleaned[:cut] if cut > 0 else cleaned[:limit]).rstrip(" ,;:-–—…")
+    return None
 
 
 def _leading_comment(text: str) -> str | None:
-    match = _COMMENT_RE.search(text[:1200])
-    return _summary(match.group(1)) if match else None
+    """File-level comment block only. A comment after code is not a purpose."""
+    lines: list[str] = []
+    for line in text.splitlines():
+        if not line.strip():
+            if lines:
+                break
+            continue
+        match = _COMMENT_RE.match(line)
+        if match is None:
+            break
+        lines.append(match.group(1))
+    return _summary(" ".join(lines)) if lines else None
 
 
 def _shell_environment_names(text: str) -> list[str]:
@@ -313,24 +327,67 @@ def _import_relation(raw: str, source: str) -> RelationshipDoc:
     )
 
 
+def _jsdoc_text(raw: str) -> str | None:
+    """First prose sentence of a block comment, dropping tag lines."""
+    lines: list[str] = []
+    for line in raw.splitlines():
+        cleaned = re.sub(r"^\s*\*\s?", "", line).strip()
+        if cleaned.startswith("@"):
+            break
+        if cleaned:
+            lines.append(cleaned)
+    return _summary(" ".join(lines)) if lines else None
+
+
+def _jsdoc_before(text: str, start: int) -> str | None:
+    """Block comment that ends immediately before an export, if there is one."""
+    head = text[:start].rstrip()
+    if not head.endswith("*/"):
+        return None
+    close = len(head) - 2
+    open_at = head.rfind("/**", 0, close)
+    if open_at < 0 or head[close + 2 :].strip():
+        return None
+    return _jsdoc_text(head[open_at + 3 : close])
+
+
 def _extract_javascript(path: Path, text: str, rel: str, language: str) -> SourceFact:
-    exports = sorted(set(_JS_EXPORT_RE.findall(text)))
+    classes: list[InterfaceDoc] = []
+    functions: list[InterfaceDoc] = []
+    exports: list[str] = []
+    first_doc: str | None = None
+    for match in _JS_EXPORT_RE.finditer(text):
+        kind, name = match.group(1), match.group(2)
+        params = match.group(3)
+        doc = _jsdoc_before(text, match.start())
+        if first_doc is None and doc is not None:
+            first_doc = doc
+        exports.append(name)
+        signature = f"{name}{params.strip()}" if kind == "function" and params else None
+        symbol = InterfaceDoc(name=name, signature=signature, summary=doc)
+        if kind in _JS_CLASS_KINDS:
+            classes.append(symbol)
+        else:
+            functions.append(symbol)
     imports = sorted(set((*_JS_IMPORT_RE.findall(text), *_JS_REQUIRE_RE.findall(text))))
-    functions = tuple(InterfaceDoc(name=name) for name in exports)
     relationships = [_import_relation(value, rel) for value in imports]
     relationships.extend(
         RelationshipDoc(kind="configures", target=value, source=rel)
         for value in sorted(set(_JS_ENV_RE.findall(text)))
     )
+    purpose = _leading_comment(text)
+    if purpose is None and text.lstrip().startswith("/**"):
+        purpose = first_doc
     return SourceFact(
         path=rel,
         language=language,
         module=ModuleDoc(
             file=path.name,
             name=path.stem,
-            purpose=_leading_comment(text),
-            functions=functions,
-            exports=tuple(exports),
+            purpose=purpose,
+            classes=tuple(classes),
+            functions=tuple(functions),
+            exports=tuple(sorted(set(exports))),
             language=language,
         ),
         imports=tuple(imports),

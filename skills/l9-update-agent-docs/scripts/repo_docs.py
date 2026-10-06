@@ -18,6 +18,7 @@ from consumer_snapshot import build_consumer_snapshot
 from doc_change import (
     automatic_changed_scope,
     changed_files_since,
+    classify_impact_files,
     impact_analysis,
     probe_module_readme_capability,
     semantic_harvest_required,
@@ -32,6 +33,7 @@ from doc_llm import (
     llm_enabled,
     render_llm_txt,
     retire_legacy_llms_txt,
+    snapshot_with_compiled_readmes,
     validate_llm_txt,
     write_llm_txt,
 )
@@ -43,12 +45,14 @@ from doc_obligations import (
     summarize_obligations,
     validate_and_close_obligations,
 )
+from doc_owned_write import admit_owned_write
 from doc_policy import (
     LEGACY_RECEIPT_V3_SCHEMA,
     LLM_SURFACE_ID,
     RECEIPT_SCHEMA,
     adapter_directives,
     discover_surfaces,
+    donor_heading_template_adopted,
     git,
     load_json,
     load_policy,
@@ -60,8 +64,13 @@ from doc_policy import (
     schema_errors,
     validate_policy,
 )
+from doc_root import compile_missing_root_docs
 from doc_surface_analysis import assess_surface_obligations
-from generate_module_readmes import apply_module_readme_plan, plan_module_readmes
+from generate_module_readmes import (
+    apply_module_readme_plan,
+    compile_repository_readmes,
+    plan_module_readmes,
+)
 from root_contracts import architecture_delta, assess_architecture_index, assess_root_agent_contract
 
 RECEIPT_ID = "l9.repo-docs.receipt.v4"
@@ -247,6 +256,9 @@ def build_llm_state(
     base_url_value: str | None,
     write_llm: bool,
     snapshot: dict[str, Any],
+    *,
+    active: bool = True,
+    readme_models: tuple[Any, ...] = (),
 ) -> tuple[dict[str, Any], list[str]]:
     enabled, enabled_reason = llm_enabled(root, policy, directives)
     base_url, base_source = llm_base_url(directives, base_url_value)
@@ -261,6 +273,8 @@ def build_llm_state(
         "admission": "skipped",
         "findings": [],
     }
+    if not active:
+        return state, mutations
     # A disabled projection never creates llm.txt, so the leftover name is
     # dropped only once the canonical file already exists (no rename).
     try:
@@ -274,7 +288,8 @@ def build_llm_state(
         return state, mutations
     if not enabled:
         return state, mutations
-    rendered = render_llm_txt(root, policy, base_url, snapshot)
+    snapshot = snapshot_with_compiled_readmes(root, snapshot, readme_models)
+    rendered = render_llm_txt(root, policy, base_url, snapshot, readme_models)
     render_findings = validate_llm_txt(rendered, root=root, snapshot=snapshot)
     if LLM_MARKER not in rendered:
         render_findings.append(f"{PROJECTION_FILENAME} render missing generator marker")
@@ -289,7 +304,11 @@ def build_llm_state(
     if render_findings:
         state.update(status="FAIL", admission="skipped", findings=render_findings)
         return state, mutations
-    _ = write_llm  # never authorizes overwrite of an unowned file
+    existing = target.read_text(encoding="utf-8") if target.is_file() else None
+    preview = admit_owned_write(existing, rendered, LLM_MARKER)
+    if preview in {"create", "refresh"} and not write_llm:
+        state.update(status="PASS", admission="skipped", written=False, findings=[])
+        return state, mutations
     try:
         written, admission = write_llm_txt(root, rendered)
     except ValueError as exc:
@@ -326,9 +345,13 @@ def root_contract_validation(root: Path, snapshot: dict[str, Any]) -> dict[str, 
                 for item in assess_root_agent_contract(root, target, snapshot).get("findings", [])
             )
     target = root / "ARCHITECTURE.md"
+    label = "ARCHITECTURE.md"
+    if not target.is_file():
+        target = root / "docs/architecture.md"
+        label = "docs/architecture.md"
     if target.is_file():
         findings.extend(
-            f"ARCHITECTURE.md: {item['rule_id']}: {item['observed_state']}"
+            f"{label}: {item['rule_id']}: {item['observed_state']}"
             for item in assess_architecture_index(root, target, snapshot).get("findings", [])
         )
     return {"status": "FAIL" if findings else "PASS", "findings": findings}
@@ -379,7 +402,14 @@ def audit_repository(
     tested_revision_sha: str | None = None,
     write_module_readmes: bool = True,
     write_filetree: bool = True,
+    full_module_readmes: bool = False,
+    full: bool = False,
 ) -> dict[str, Any]:
+    if full:
+        write_llm = True
+        write_module_readmes = True
+        write_filetree = True
+        full_module_readmes = True
     root = root.resolve()
     structural: list[dict[str, str]] = []
     try:
@@ -414,15 +444,21 @@ def audit_repository(
         tested_revision_sha=tested_revision_sha,
         dirty_scope=dirty_scope,
     )
-    impact = impact_analysis(policy, changed_files)
+    impact_files = classify_impact_files(root, base_ref, changed_files, policy)
+    impact = impact_analysis(policy, impact_files)
     snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
     adr_catalog = compile_adr_catalog(root, changed_files=changed_files)
     root_contracts = root_contract_validation(root, snapshot)
     impact_internal = dict(impact)
     impact_internal["all_changed_files"] = changed_files
+    writes_authorized = write_filetree or write_module_readmes or write_llm
+    root_mutations: list[str] = []
+    root_admissions: dict[str, str] = {}
+    readme_models: tuple[Any, ...] = ()
+    compiled_readmes: list[Any] | None = None
     pointer = pointer_validate_root(root)
     python_fences = python_fence_validate_root(root)
-    if pointer["status"] == "FAIL":
+    if pointer["status"] == "FAIL" and donor_heading_template_adopted(directives):
         structural.append(
             _structural_failure("pointer_validation", "FAIL", "; ".join(pointer["findings"]))
         )
@@ -449,14 +485,19 @@ def audit_repository(
         )
     module_changes = impact.get("matched_rules", {}).get("module_implementation_change", [])
     module_cap = probe_module_readme_capability(root, policy, module_changes)
-    run_mutations: list[str] = []
+    run_mutations: list[str] = list(root_mutations)
     # Diagnostic evidence attached to the existing module_readmes capability.
     # Not a second obligation ledger: DocumentationObligation remains the
     # only durable work unit.
     module_readme_plan: dict[str, int] | None = None
-    module_readme_quality: list[dict[str, int | str]] | None = None
+    module_readme_quality: list[dict[str, Any]] | None = None
+    path_admissions: dict[str, str] = dict(root_admissions)
     try:
-        filetree, inventory, run_mutations = build_filetree_state(root, write=write_filetree)
+        filetree_opened = FILETREE_SURFACE_ID in set(impact.get("impacted_surfaces", []))
+        filetree, inventory, filetree_mutations = build_filetree_state(
+            root, write=write_filetree and (filetree_opened or full)
+        )
+        run_mutations.extend(filetree_mutations)
     except ValueError as exc:
         # The render is invalid: a defect in this skill, so FAIL.
         filetree = _failed_filetree_state("FAIL", str(exc))
@@ -468,13 +509,41 @@ def audit_repository(
         filetree = _failed_filetree_state("BLOCKED", detail)
         inventory = FiletreeInventory()
         structural.append(_structural_failure("filetree", "BLOCKED", detail))
+    if writes_authorized and filetree["status"] not in {"FAIL", "BLOCKED"}:
+        try:
+            compiled_readmes = compile_repository_readmes(root, inventory=inventory)
+        except OSError as exc:
+            structural.append(
+                _structural_failure("module_readmes", "BLOCKED", f"README compile failed: {exc}")
+            )
+        else:
+            readme_models = tuple(model for model, _rendered in compiled_readmes)
+    if writes_authorized:
+        try:
+            root_mutations, root_admissions = compile_missing_root_docs(
+                root, policy, refresh_owned=full, readme_models=readme_models
+            )
+            run_mutations.extend(root_mutations)
+            path_admissions.update(root_admissions)
+        except OSError as exc:
+            structural.append(
+                _structural_failure("root_contracts", "BLOCKED", f"root doc compile failed: {exc}")
+            )
+    module_opened = "module_readmes" in set(impact.get("impacted_surfaces", []))
     if (
         write_module_readmes
+        and (full_module_readmes or module_opened)
         and module_cap["status"] == "AVAILABLE"
         and filetree["status"] not in {"FAIL", "BLOCKED"}
     ):
         try:
-            readme_plan = plan_module_readmes(root, inventory=inventory)
+            readme_plan = plan_module_readmes(
+                root,
+                inventory=inventory,
+                changed=None if full_module_readmes else module_changes,
+                force=full,
+                compiled=compiled_readmes,
+            )
             module_readme_plan = readme_plan.counts()
             module_readme_quality = list(readme_plan.quality)
             if readme_plan.errors:
@@ -495,6 +564,9 @@ def audit_repository(
                 )
             else:
                 run_mutations.extend(apply_module_readme_plan(root, readme_plan))
+                for item in readme_plan.items:
+                    if item.action in {"create", "refresh", "unchanged", "preserve"}:
+                        path_admissions[item.path] = item.action
             refreshed, _, later_mutations = build_filetree_state(root, write=write_filetree)
         except OSError as exc:
             # The filesystem refused the owned write: environment, so BLOCKED.
@@ -508,10 +580,43 @@ def audit_repository(
     # its digest-backed manifest is validated against the post-generation
     # consumer state rather than the pre-write snapshot.
     snapshot = build_consumer_snapshot(root, policy, revision, changed_files=changed_files)
+    llm_opened = LLM_SURFACE_ID in set(impact.get("impacted_surfaces", []))
+    llm_missing = not (root / PROJECTION_FILENAME).is_file()
     llm, llm_mutations = build_llm_state(
-        root, policy, directives, llm_base_url_value, write_llm, snapshot
+        root,
+        policy,
+        directives,
+        llm_base_url_value,
+        write_llm,
+        snapshot,
+        active=full or llm_opened or (write_llm and llm_missing),
+        readme_models=readme_models,
     )
     run_mutations.extend(llm_mutations)
+    if (
+        write_filetree
+        and PROJECTION_FILENAME in run_mutations
+        and filetree["status"]
+        not in {
+            "FAIL",
+            "BLOCKED",
+        }
+    ):
+        # filetree names root files. llm.txt is written after the first
+        # inventory, so refresh once or the next audit treats the new name
+        # as a filetree change.
+        try:
+            refreshed, _, later_mutations = build_filetree_state(root, write=True)
+        except ValueError as exc:
+            filetree = _failed_filetree_state("FAIL", str(exc))
+            structural.append(_structural_failure("filetree", "FAIL", str(exc)))
+        except OSError as exc:
+            detail = f"filetree.md owned write failed: {exc}"
+            filetree = _failed_filetree_state("BLOCKED", detail)
+            structural.append(_structural_failure("filetree", "BLOCKED", detail))
+        else:
+            filetree = refreshed
+            run_mutations.extend(later_mutations)
     if llm["status"] == "BLOCKED":
         structural.append(
             _structural_failure(LLM_SURFACE_ID, "BLOCKED", "; ".join(llm["findings"]))
@@ -525,6 +630,13 @@ def audit_repository(
         generated_surfaces.add(LLM_SURFACE_ID)
     if "filetree.md" in run_mutations:
         generated_surfaces.add(FILETREE_SURFACE_ID)
+    for filename, surface in (
+        ("AGENTS.md", "agents"),
+        ("CLAUDE.md", "claude"),
+        ("INVARIANTS.md", "invariants"),
+    ):
+        if root_admissions.get(filename) in {"create", "refresh"}:
+            generated_surfaces.add(surface)
     impact["impacted_surfaces"] = sorted(generated_surfaces)
     impact_internal["impacted_surfaces"] = sorted(generated_surfaces)
     semantic_required = semantic_harvest_required(policy, impact, root)
@@ -542,6 +654,7 @@ def audit_repository(
         semantic_required=semantic_required,
         module_capability=module_cap,
         owned_admissions=owned_admissions,
+        target_admissions=path_admissions,
     )
     semantic_state, semantic_compiled = semantic_harvest_state(
         root, policy, impact, changed_files, harvest_path
@@ -690,10 +803,23 @@ def main() -> int:
     parser.add_argument(
         "--no-write-module-readmes",
         action="store_true",
+        help="Compile module README obligations without writing README files.",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
         help=(
-            "Compile module README obligations without creating missing files. "
-            "Default writes every inventory gap, not only the change set."
+            "Generate every file this compiler can write for the repository: "
+            "AGENTS.md, CLAUDE.md, and INVARIANTS.md when absent or already "
+            "marked by this skill; filetree.md; llm.txt; and every authorized "
+            "README, including the repository-root README.md, refreshed onto "
+            "the current marker."
         ),
+    )
+    parser.add_argument(
+        "--full-module-readmes",
+        action="store_true",
+        help="Reconcile the whole README inventory. Default writes only opened obligations.",
     )
     parser.add_argument(
         "--no-write-filetree",
@@ -717,8 +843,10 @@ def main() -> int:
             harvest_path=args.harvest,
             source_head_sha=args.source_head_sha,
             tested_revision_sha=args.tested_revision_sha,
-            write_module_readmes=not args.no_write_module_readmes,
-            write_filetree=not args.no_write_filetree,
+            write_module_readmes=args.full or not args.no_write_module_readmes,
+            write_filetree=args.full or not args.no_write_filetree,
+            full_module_readmes=args.full or args.full_module_readmes,
+            full=args.full,
         )
     except RuntimeError as exc:
         print(json.dumps({"schema": RECEIPT_ID, "final_status": "FAIL", "error": str(exc)}))

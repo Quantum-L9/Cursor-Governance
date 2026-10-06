@@ -15,6 +15,7 @@ directory it does not describe.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
 from readme_evidence import (
     CORPUS_TYPE_LABELS,
@@ -159,7 +160,8 @@ def _section(heading: str, body: str | None) -> str:
 
 def _header(model: ReadmeModel) -> str:
     target = model.target
-    return f"# {target.title}\n\n**Path:** `{target.path}` | **Kind:** {target.kind}"
+    version = f" | **Version:** `{model.version}`" if model.version else ""
+    return f"# {target.title}\n\n**Path:** `{target.path}` | **Kind:** {target.kind}{version}"
 
 
 def _interface_lines(module: ModuleDoc) -> list[str]:
@@ -184,6 +186,8 @@ def _modules_block(modules: Sequence[ModuleDoc]) -> str:
     blocks: list[str] = []
     for module in modules[:MAX_MODULES_RENDERED]:
         parts = [f"### `{module.file}`"]
+        if module.name and module.name != Path(module.file).stem:
+            parts[0] = f"### `{module.file}` (`{module.name}`)"
         if module.purpose:
             parts.append(module.purpose)
         lines = _interface_lines(module)
@@ -226,7 +230,10 @@ def _relationships_block(relationships: Sequence[RelationshipDoc]) -> str:
     }
     grouped: dict[str, list[str]] = {}
     for relationship in relationships:
-        grouped.setdefault(relationship.kind, []).append(relationship.target)
+        label = relationship.target
+        if relationship.detail:
+            label = f"{label} [{relationship.detail}]"
+        grouped.setdefault(relationship.kind, []).append(f"{label} ({relationship.source})")
     lines: list[str] = []
     for kind in sorted(grouped):
         values = ", ".join(f"`{value}`" for value in sorted(set(grouped[kind])))
@@ -251,11 +258,16 @@ def _source_coverage_block(model: ReadmeModel) -> str:
         )
     issue_count = len(model.extraction_issues)
     issue_note = f"; {issue_count} extraction issue(s) recorded" if issue_count else ""
-    return (
-        f"**Status:** {model.completeness}; **Files:** "
-        f"{model.extracted_source_count}/{model.eligible_source_count} extracted; "
-        f"**Public symbols:** {model.rendered_symbol_count}{issue_note}."
-    )
+    lines = [
+        (
+            f"**Status:** {model.completeness}; **Files:** "
+            f"{model.extracted_source_count}/{model.eligible_source_count} extracted; "
+            f"**Public symbols:** {model.rendered_symbol_count}{issue_note}."
+        )
+    ]
+    for issue in model.extraction_issues:
+        lines.append(f"- `{issue.path}` ({issue.language}): {issue.detail}")
+    return "\n".join(lines)
 
 
 def _detail_interface_block(modules: Sequence[ModuleDoc]) -> str:
@@ -300,6 +312,9 @@ def render_skill_readme(model: ReadmeModel) -> str:
         "`SKILL.md` in this directory is the authoritative operating contract. "
         "This README is a navigation projection of it and never outranks it."
     )
+    if model.authority_links:
+        links = "\n".join(f"- [`{link}`]({link})" for link in model.authority_links)
+        authority = f"{authority}\n\n{links}"
     return _join(
         [
             _header(model),
@@ -313,6 +328,18 @@ def render_skill_readme(model: ReadmeModel) -> str:
             marker_for(model.target.kind),
         ]
     )
+
+
+def _needs_interface_index(modules: Sequence[ModuleDoc]) -> bool:
+    """The complete index exists for the tail the summary could not show."""
+    return any(
+        len(module.classes) + len(module.functions) > MAX_INTERFACES_PER_MODULE
+        for module in modules
+    )
+
+
+def _needs_module_index(modules: Sequence[ModuleDoc]) -> bool:
+    return len(modules) > MAX_MODULES_RENDERED
 
 
 def render_module_readme(model: ReadmeModel) -> str:
@@ -333,7 +360,12 @@ def render_module_readme(model: ReadmeModel) -> str:
             _section("Dependencies", _dependencies_block(model.dependencies)),
             _section("Integrates with", _relationships_block(_renderable_relationships(model))),
             _section("Source coverage", _source_coverage_block(model)),
-            _section("Complete interface index", _detail_interface_block(model.modules)),
+            _section(
+                "Complete interface index",
+                _detail_interface_block(model.modules)
+                if _needs_interface_index(model.modules)
+                else "",
+            ),
             marker_for(model.target.kind),
         ]
     )
@@ -347,12 +379,20 @@ def render_subsystem_readme(model: ReadmeModel) -> str:
             _section("Purpose", model.purpose),
             _section("Description", model.description),
             _section("Modules", _modules_block(model.modules)),
-            _section("Complete module index", _detail_module_block(model.modules)),
+            _section(
+                "Complete module index",
+                _detail_module_block(model.modules) if _needs_module_index(model.modules) else "",
+            ),
             _section("Entrypoints", _shell_block(model.shell_entrypoints)),
             _section("Dependencies", _dependencies_block(model.dependencies)),
             _section("Integrates with", _relationships_block(_renderable_relationships(model))),
             _section("Source coverage", _source_coverage_block(model)),
-            _section("Complete interface index", _detail_interface_block(model.modules)),
+            _section(
+                "Complete interface index",
+                _detail_interface_block(model.modules)
+                if _needs_interface_index(model.modules)
+                else "",
+            ),
             marker_for(model.target.kind),
         ]
     )
@@ -387,9 +427,41 @@ def _type_label(name: str) -> str | None:
     return CORPUS_TYPE_LABELS.get(suffix)
 
 
+def _index_contents(model: ReadmeModel) -> str:
+    notes = dict(model.child_notes)
+    return "\n".join(
+        f"- [`{name}/`]({name}/)" + (f" — {notes[name]}" if name in notes else "")
+        for name in model.children
+    )
+
+
 def render_index_readme(model: ReadmeModel) -> str:
-    """A structural parent. No invented purpose; the children are the point."""
-    children = "\n".join(f"- [`{name}/`]({name}/)" for name in model.children)
+    """Repository or parent index.
+
+    When source facts exist, the public interface is those facts. A file
+    listing is the fallback for a directory that has no extracted source.
+    """
+    children = _index_contents(model)
+    if model.modules:
+        return _join(
+            [
+                _header(model),
+                _section("Purpose", model.purpose),
+                _section("Description", model.description),
+                _section("Public interface", _modules_block(model.modules)),
+                _section("Contents", children),
+                _section("Entrypoints", _shell_block(model.shell_entrypoints)),
+                _section("Integrates with", _relationships_block(_renderable_relationships(model))),
+                _section("Source coverage", _source_coverage_block(model)),
+                _section(
+                    "Complete interface index",
+                    _detail_interface_block(model.modules)
+                    if _needs_interface_index(model.modules)
+                    else "",
+                ),
+                marker_for(model.target.kind),
+            ]
+        )
     files = "\n".join(
         f"- `{name}`" + (f" — {label}" if (label := _type_label(name)) else "")
         for name in model.contents[:MAX_CONTENTS]

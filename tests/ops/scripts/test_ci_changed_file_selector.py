@@ -52,18 +52,20 @@ def test_runner_help_names_local_and_pull_request() -> None:
 
 
 def test_standing_remediate_zero_string_gone_from_live_surfaces() -> None:
-    """One-finish teachers name ceremony publish; remediator publish is not it.
+    """Ceremony publish stays ``PR_REMEDIATE=0 make pr``.
 
-    Rule 48 and surface_profile.yaml teach ``PR_REMEDIATE=0 make pr``.
-    Remediator SKILL.md still verifies with ``make precommit-repo`` and
-    publishes with ``git push``.
+    Rule 48 and surface_profile.yaml teach that ceremony. Remediator
+    SKILL.md verifies with ``make precommit-repo``. An in-scope fix
+    publishes with ``git push``. A fix that touches a file outside the
+    PR publishes a stacked child with ``PR_STACK=auto PR_REMEDIATE=0 make pr``
+    (ADR-0052).
     """
     assert "PR_REMEDIATE=0 make pr" in RULE_48.read_text(encoding="utf-8")
     assert "PR_REMEDIATE=0 make pr" in SURFACE.read_text(encoding="utf-8")
     skill = REMEDIATOR_SKILL.read_text(encoding="utf-8")
     assert "make precommit-repo" in skill
     assert "git push" in skill
-    assert "do not run `make pr`" in skill
+    assert "PR_STACK=auto PR_REMEDIATE=0 make pr" in skill
 
 
 def test_foo_py_maps_to_named_test_not_dot(tmp_path: Path) -> None:
