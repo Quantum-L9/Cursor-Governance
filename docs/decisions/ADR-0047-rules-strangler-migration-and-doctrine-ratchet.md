@@ -1,7 +1,12 @@
 # ADR-0047: Existing Cursor rules migrate through a strangler lifecycle with a monotonic hidden-doctrine ratchet
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 
