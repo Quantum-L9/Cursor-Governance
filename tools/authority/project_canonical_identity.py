@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import argparse
 import hashlib
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
 import yaml
+
 ACTOR_ARTIFACT = "l9.actor-registry/global@1"
 SURFACE_ARTIFACT = "l9.surface-registry/global@1"
 PROFILE_CATALOG_ARTIFACT = "l9.projection-profile-catalog/global@1"

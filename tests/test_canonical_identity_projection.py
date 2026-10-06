@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Any
+
 import pytest
+
 from tools.authority.project_canonical_identity import (
     ACTOR_ARTIFACT,
     ACTOR_PREFIX,
@@ -11,6 +14,8 @@ from tools.authority.project_canonical_identity import (
     _requested_identities,
     project,
 )
+
+
 def bindings() -> dict[str, Any]:
     return {
         "schema": "l9.cursor-governance.agent-bindings/v2",

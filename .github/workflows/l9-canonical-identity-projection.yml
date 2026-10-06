@@ -52,19 +52,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Cursor-Governance
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           path: governance
           fetch-depth: 0
       - name: Checkout canonical Semantic Foundation
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
           ref: main
           path: org-authority
           fetch-depth: 1
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       - name: Install YAML dependency
@@ -87,32 +87,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Cursor-Governance
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           path: governance
           fetch-depth: 0
       - name: Resolve authority revision
         id: authority
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_AUTHORITY_REF: ${{ inputs.authority_ref }}
+          PAYLOAD_AUTHORITY_REF: ${{ github.event.client_payload.authority_ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            printf 'ref=%s\n' "${{ inputs.authority_ref }}" >> "$GITHUB_OUTPUT"
-          elif [[ -n "${{ github.event.client_payload.authority_ref }}" ]]; then
-            printf 'ref=%s\n' \
-              "${{ github.event.client_payload.authority_ref }}" \
-              >> "$GITHUB_OUTPUT"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            printf 'ref=%s\n' "$INPUT_AUTHORITY_REF" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$PAYLOAD_AUTHORITY_REF" ]]; then
+            printf 'ref=%s\n' "$PAYLOAD_AUTHORITY_REF" >> "$GITHUB_OUTPUT"
           else
             printf 'ref=main\n' >> "$GITHUB_OUTPUT"
           fi
       - name: Checkout canonical Semantic Foundation
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
           ref: ${{ steps.authority.outputs.ref }}
           path: org-authority
           fetch-depth: 1
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       - name: Install YAML dependency

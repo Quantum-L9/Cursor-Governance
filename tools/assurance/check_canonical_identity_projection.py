@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import hashlib
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
 import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 BINDING_PATH = (
     ROOT

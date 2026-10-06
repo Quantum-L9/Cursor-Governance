@@ -106,7 +106,6 @@ agents:
     user_id: cursor_agent
     principal_id: cursor-memory-client
     token_env: L9_MEMORY_TOKEN__CURSOR
-    legacy_token_env: GRAPHITI_MCP_TOKEN
     role: orchestrator
     assigned_groups:
       - "*"
@@ -121,7 +120,6 @@ agents:
     user_id: claude_code_agent
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
-    legacy_token_env: L9_MEMORY_CLIENT_TOKEN
     role: implementer
     assigned_groups:
       - cursor-governance
@@ -184,10 +182,8 @@ rendering:
     active_binding_requires_current_surfaces: true
     canonical_projection_receipt_must_verify: true
 memory:
-  url_env: L9_MEMORY_HTTP_URL
-  production_url: https://memory.quantumaipartners.com
-  mcp_path: /mcp
-  auth_scheme: bearer
+  control_plane: l9-graphite-memory
+  transport: stdio
   identity_env:
     user_id: USER_ID
     agent_id: L9_MEMORY_AGENT_ID
