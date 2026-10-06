@@ -158,7 +158,17 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # exists only in the governance tree, so there is nothing for it to check in a
 # consumer. It stays enforced on the governance configuration, which is the
 # authority the invariant is about (INVARIANTS.md; rules/07-max-velocity-research.mdc).
-_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity"
+#
+# `adr-identity` (#688) has the same shape as `max-velocity`: no `files:` guard,
+# `pass_filenames: false`, so it fires on every consumer `make pr` and dies as
+#   can't open file '<consumer>/ops/scripts/validate_adr_identity.py'
+# Observed on Quantum-L9/.github. What it checks is this repository's ADR
+# convention — `# ADR-NNNN:` headings and the generated `docs/decisions/README.md`
+# index. A consumer owns its own ADR convention: run by hand against
+# Quantum-L9/.github it rejects that repository's accepted ADR-012..014 headings
+# and demands an index that repository does not have, so there is nothing for it
+# to check there. It stays enforced on the governance configuration.
+_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity,adr-identity"
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
