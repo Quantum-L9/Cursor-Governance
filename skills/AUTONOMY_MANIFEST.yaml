@@ -145,7 +145,7 @@ tiers:
   - skill: l9-idea-execute
     reason: routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
   - skill: l9-repo-birth
-    reason: packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
+    reason: control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
