@@ -26,7 +26,12 @@ def _load(name: str) -> ModuleType:
 
 @pytest.fixture
 def claude(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    autonomy = str(REPO_ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from surface_detect import scrub_cursor_host_markers
+
+    scrub_cursor_host_markers(monkeypatch.delenv)
     monkeypatch.delenv("L9_CI_PARITY", raising=False)
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
 
@@ -68,31 +73,13 @@ def test_push_target(command: str, expected: str | None, tmp_path: Path) -> None
     )
 
 
-def test_gate_blocks_with_findings_on_stderr(
+def test_push_hook_does_not_scan(
     claude: None,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     gate = _load("ci_parity_push_gate")
-    monkeypatch.setattr(gate, "RUNNER", _stub_runner(tmp_path, 2, "BLOCK a.py:3: [error] rule — m"))
-    rc = _run_main(
-        gate,
-        {"tool_name": "Bash", "tool_input": {"command": "git push"}, "cwd": str(tmp_path)},
-        monkeypatch,
-    )
-    err = capsys.readouterr().err
-    assert rc == 2 and "BLOCK a.py:3" in err and "L9_CI_PARITY=0" in err
-
-
-def test_gate_allows_a_clean_push_silently(
-    claude: None,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    gate = _load("ci_parity_push_gate")
-    monkeypatch.setattr(gate, "RUNNER", _stub_runner(tmp_path, 0, "clean"))
     rc = _run_main(
         gate,
         {"tool_name": "Bash", "tool_input": {"command": "git push"}, "cwd": str(tmp_path)},
@@ -100,13 +87,13 @@ def test_gate_allows_a_clean_push_silently(
     )
     captured = capsys.readouterr()
     assert rc == 0 and captured.err == "" and captured.out == ""
+    assert "--gate" not in (HOOKS / "ci_parity_push_gate.py").read_text()
 
 
 def test_gate_ignores_non_push_commands(
     claude: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gate = _load("ci_parity_push_gate")
-    monkeypatch.setattr(gate, "RUNNER", _stub_runner(tmp_path, 2, "would block"))
     rc = _run_main(
         gate,
         {"tool_name": "Bash", "tool_input": {"command": "git commit -m x"}, "cwd": str(tmp_path)},
@@ -124,7 +111,6 @@ def test_gate_is_silent_on_cursor_and_with_the_kill_switch(
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     gate = _load("ci_parity_push_gate")
-    monkeypatch.setattr(gate, "RUNNER", _stub_runner(tmp_path, 2, "would block"))
     rc = _run_main(
         gate,
         {"tool_name": "Bash", "tool_input": {"command": "git push"}, "cwd": str(tmp_path)},
@@ -216,35 +202,11 @@ def test_absent_push_gate_fails_open_through_the_real_launcher(tmp_path: Path) -
     assert proc.returncode == 0, proc.stderr
 
 
-def _gate_fn() -> str:
+def test_make_pr_does_not_start_ci_parity() -> None:
     text = (REPO_ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text()
-    start = text.index("_gate_ci_parity_enabled() {")
-    end = text.index("\n}\n", start) + 3
-    return text[start:end]
-
-
-@pytest.mark.parametrize(
-    "env, expected",
-    [
-        ({"L9_GOVERNANCE_SURFACE": "claude-code"}, "yes"),
-        ({"CURSOR_AGENT": "1"}, "no"),
-        ({"L9_GOVERNANCE_SURFACE": "claude-code", "L9_CI_PARITY": "0"}, "no"),
-    ],
-)
-def test_make_pr_wave_runs_ci_parity_only_on_claude(env: dict, expected: str) -> None:
-    script = f"GOV_ROOT={REPO_ROOT}\n{_gate_fn()}\n_gate_ci_parity_enabled && echo yes || echo no\n"
-    base = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
-    out = subprocess.run(
-        ["bash", "-c", script], env={**base, **env}, capture_output=True, text=True, check=True
-    )
-    assert out.stdout.strip() == expected
-
-
-def test_wave_start_is_guarded() -> None:
-    text = (REPO_ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text()
-    assert (
-        "if _gate_ci_parity_enabled; then\n  _wave_start ci-parity _gate_run_ci_parity\nfi" in text
-    )
+    assert "_gate_ci_parity_enabled" not in text
+    assert "_gate_run_ci_parity" not in text
+    assert "_wave_start ci-parity" not in text
 
 
 def test_deps_hook_self_heals_and_fingerprints_package_lock_json() -> None:

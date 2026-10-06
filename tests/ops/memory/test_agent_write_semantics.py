@@ -203,11 +203,13 @@ def test_write_agent_rejects_namespace_outside_grant(
     assert _status(receipt) != ADMITTED
 
 
-def test_write_agent_rejects_unsupported_memory_class(
+def test_write_agent_admits_procedural_and_refuses_identity(
     app: MCPToolApplication, principal: MemoryPrincipal
 ) -> None:
-    with pytest.raises(ValueError, match="does not allow memory_class"):
-        _write_agent(app, principal, content="A fact.", memory_class="procedural")
+    receipt = _write_agent(app, principal, content="A procedural fact.", memory_class="procedural")
+    assert _status(receipt) == ADMITTED
+    with pytest.raises(ValueError, match="does not accept memory_class"):
+        _write_agent(app, principal, content="An identity fact.", memory_class="identity")
 
 
 @pytest.mark.parametrize("content", ["", "x" * 64_001], ids=["empty", "over-bound"])

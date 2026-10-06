@@ -415,7 +415,11 @@ def _suite_intersects(
     if selector.is_dot_owned(suite):
         return True
     owned = [str(root) for root in (suite.get("owned_paths") or [])]
-    candidates = [*selected, *changed]
+    # A command_sequence suite (skill self-tests) runs when a changed file is
+    # under its owned paths. A pytest file selected because it mentions a path
+    # is not that file: one skills test in the selected set used to turn on
+    # every skill self-test.
+    candidates = list(changed) if suite.get("kind") == "command_sequence" else [*selected, *changed]
     return any(
         selector.path_under(item, root) or item == root or selector.path_under(root, item)
         for item in candidates
