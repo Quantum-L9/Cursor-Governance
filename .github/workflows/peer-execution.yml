@@ -60,8 +60,11 @@ jobs:
           # fully green (same toolchain as `make venv`).
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
           uv sync --locked --no-build --extra dev
+      # The composed gate (ops/make/adapters.mk): canonical identity projection
+      # assurance, then agent-bindings/v2 validation against that projection.
+      # `uv sync` above created the locked .venv the Makefile's $(PYTHON) uses.
       - name: Agent registry validator (make agents-env)
-        run: uv run --frozen --no-build python environment/agents/tools/validate_agents.py
+        run: make agents-env
       - name: Program Execution adapter layer
         run: |
           set -euo pipefail
