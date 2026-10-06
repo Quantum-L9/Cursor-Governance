@@ -15,8 +15,8 @@ import memory_state as st  # noqa: E402
 from errors import MemoryWriteDenied  # noqa: E402
 
 CLAUDE = {
-    "agent_id": "claude-code-desktop",
-    "user_id": "claude_code_desktop_agent",
+    "agent_id": "claude-code",
+    "user_id": "claude_code_agent",
     "namespace": "cursor-governance",
 }
 
@@ -26,21 +26,21 @@ class ValidateMemoryWriter(unittest.TestCase):
         st.validate_memory_writer(dict(CLAUDE))
 
     def test_missing_namespace_denies_write(self) -> None:
-        ident = {"agent_id": "claude-code-desktop", "user_id": "claude_code_desktop_agent"}
+        ident = {"agent_id": "claude-code", "user_id": "claude_code_agent"}
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
     def test_missing_agent_id_denies_write(self) -> None:
         ident = {
             "agent_id": "",
-            "user_id": "claude_code_desktop_agent",
+            "user_id": "claude_code_agent",
             "namespace": "cursor-governance",
         }
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
     def test_missing_user_id_denies_write(self) -> None:
-        ident = {"agent_id": "claude-code-desktop", "user_id": "", "namespace": "cursor-governance"}
+        ident = {"agent_id": "claude-code", "user_id": "", "namespace": "cursor-governance"}
         with self.assertRaises(MemoryWriteDenied):
             st.validate_memory_writer(ident)
 
@@ -80,9 +80,7 @@ class ResolveWriterIdentity(unittest.TestCase):
         desktop = {**configured, "CLAUDECODE": "1"}
         with unittest.mock.patch.dict("os.environ", desktop, clear=True):
             ident = st.resolve_writer_identity(require_explicit=True)
-        self.assertEqual(
-            ident, {"agent_id": "claude-code-desktop", "user_id": "claude_code_desktop_agent"}
-        )
+        self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
         mobile = {
             **desktop,
             "CLAUDE_CODE_REMOTE": "true",
@@ -90,9 +88,7 @@ class ResolveWriterIdentity(unittest.TestCase):
         }
         with unittest.mock.patch.dict("os.environ", mobile, clear=True):
             ident = st.resolve_writer_identity(require_explicit=True)
-        self.assertEqual(
-            ident, {"agent_id": "claude-code-mobile", "user_id": "claude_code_mobile_agent"}
-        )
+        self.assertEqual(ident, {"agent_id": "claude-code", "user_id": "claude_code_agent"})
 
     def test_the_retired_single_identity_is_denied(self) -> None:
         with unittest.mock.patch.dict(

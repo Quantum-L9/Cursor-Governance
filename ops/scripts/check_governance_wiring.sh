@@ -412,6 +412,40 @@ for lifecycle_cmd in lifecycle-subagent-start.sh lifecycle-subagent-stop.sh; do
   fi
 done
 
+# Every check above asks whether a *required* hook is present. None asks
+# whether an entry the reconcile left behind can still execute, so a command
+# whose script was deleted passed as PASS while exiting 127 on every call --
+# and the one that carried failClosed refused every Write and StrReplace in
+# every workspace on the machine for five weeks. Liveness is answered by the
+# reconcile's own module so the check cannot drift from what it enforces.
+# This is registry health, not the sessionEnd hook the class above tracks.
+CURRENT_FAIL_CLASS=wiring
+REGISTRY_CHECK="$SCRIPT_DIR/reconcile_hooks_registry.py"
+if [ -f "$HOOKS_JSON" ] && [ ! -f "$REGISTRY_CHECK" ]; then
+  # A check that cannot evaluate must not report PASS -- that inversion is the
+  # whole reason this block exists, so it must not be reintroduced here.
+  fail "reconcile_hooks_registry.py missing: cannot verify registered hooks can run"
+elif [ -f "$HOOKS_JSON" ]; then
+  DEAD_HOOKS=""
+  REGISTRY_RC=0
+  DEAD_HOOKS="$(python3 "$REGISTRY_CHECK" --check \
+    --hooks-json "$HOOKS_JSON" --hooks-dir "$HOME/.cursor/hooks")" || REGISTRY_RC=$?
+  # Only an explicit clean result passes. Exit 1 with no output is a crashed
+  # interpreter, not an empty finding list, and must not read as healthy.
+  if [ "$REGISTRY_RC" -eq 0 ] && [ -z "$DEAD_HOOKS" ]; then
+    pass "every registered ./hooks/ command resolves to an installed script"
+  elif [ "$REGISTRY_RC" -ne 1 ] || [ -z "$DEAD_HOOKS" ]; then
+    fail "hook registry check failed to run (exit $REGISTRY_RC): $REGISTRY_CHECK"
+  else
+    while IFS= read -r dead_hook; do
+      [ -n "$dead_hook" ] || continue
+      fail "registered hook cannot run: $dead_hook — run setup_workspace_symlinks.sh"
+    done <<EOF
+$DEAD_HOOKS
+EOF
+  fi
+fi
+
 CURRENT_FAIL_CLASS=graphiti
 echo ""
 echo "=== Memory control plane (GLOBAL-001, realignment C11) ==="

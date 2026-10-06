@@ -10,30 +10,10 @@ from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-BINDING_PATH = (
-    ROOT
-    / "governance"
-    / "authority-bindings"
-    / "canonical-agent-identity.yaml"
-)
-AGENT_REGISTRY_PATH = (
-    ROOT
-    / "environment"
-    / "agents"
-    / "agent_registry.yaml"
-)
-PROJECTION_PATH = (
-    ROOT
-    / "generated"
-    / "governance"
-    / "canonical_identity.yaml"
-)
-RECEIPT_PATH = (
-    ROOT
-    / "generated"
-    / "governance"
-    / "canonical_identity.receipt.yaml"
-)
+BINDING_PATH = ROOT / "governance" / "authority-bindings" / "canonical-agent-identity.yaml"
+AGENT_REGISTRY_PATH = ROOT / "environment" / "agents" / "agent_registry.yaml"
+PROJECTION_PATH = ROOT / "generated" / "governance" / "canonical_identity.yaml"
+RECEIPT_PATH = ROOT / "generated" / "governance" / "canonical_identity.receipt.yaml"
 ACTOR_PREFIX = "l9.actor-registry/global@1#"
 SURFACE_PREFIX = "l9.surface-registry/global@1#"
 FORBIDDEN_AGENT_FIELDS = {
@@ -45,6 +25,8 @@ FORBIDDEN_AGENT_FIELDS = {
     "surface_status",
     "aliases",
 }
+
+
 def main() -> int:
     failures: list[str] = []
     for path in (
@@ -70,11 +52,10 @@ def main() -> int:
     if failures:
         return _report(failures)
     agents = _mapping(registry.get("agents"))
-    print(
-        "canonical identity projection governance: PASS "
-        f"({len(agents)} operating bindings)"
-    )
+    print(f"canonical identity projection governance: PASS ({len(agents)} operating bindings)")
     return 0
+
+
 def _validate_binding(
     binding: Mapping[str, Any],
     failures: list[str],
@@ -91,6 +72,8 @@ def _validate_binding(
         failures.append("identity governing binding must be enabled")
     if governing.get("failure_mode") != "fail_closed":
         failures.append("identity governing binding must fail closed")
+
+
 def _validate_projection(
     binding: Mapping[str, Any],
     projection: Mapping[str, Any],
@@ -110,9 +93,7 @@ def _validate_projection(
         failures.append("identity projection canonical owner must be Quantum-L9/.github")
     metadata = _mapping(projection.get("projection"))
     upstream = _mapping(binding.get("upstream"))
-    expected_profile = _mapping(upstream.get("projection_profile")).get(
-        "artifact_ref"
-    )
+    expected_profile = _mapping(upstream.get("projection_profile")).get("artifact_ref")
     if metadata.get("profile_ref") != expected_profile:
         failures.append("identity projection profile disagrees with binding")
     profile_digest = metadata.get("profile_digest")
@@ -132,6 +113,8 @@ def _validate_projection(
         failures.append("actor registry source digest is invalid")
     if not _sha256_value(surface_source.get("digest")):
         failures.append("surface registry source digest is invalid")
+
+
 def _validate_receipt(
     binding: Mapping[str, Any],
     projection: Mapping[str, Any],
@@ -157,14 +140,11 @@ def _validate_receipt(
     if receipt_projection.get("sources") != projected.get("sources"):
         failures.append("receipt source coordinates disagree with projection")
     output = _mapping(receipt.get("output"))
-    actual_digest = (
-        "sha256:"
-        + hashlib.sha256(PROJECTION_PATH.read_bytes()).hexdigest()
-    )
+    actual_digest = "sha256:" + hashlib.sha256(PROJECTION_PATH.read_bytes()).hexdigest()
     if output.get("digest") != actual_digest:
-        failures.append(
-            "identity projection output digest does not match receipt"
-        )
+        failures.append("identity projection output digest does not match receipt")
+
+
 def _validate_agent_registry(
     registry: Mapping[str, Any],
     projection: Mapping[str, Any],
@@ -190,8 +170,7 @@ def _validate_agent_registry(
         forbidden = FORBIDDEN_AGENT_FIELDS.intersection(agent)
         if forbidden:
             failures.append(
-                f"agents.{binding_id} redeclares canonical identity fields: "
-                f"{sorted(forbidden)}"
+                f"agents.{binding_id} redeclares canonical identity fields: {sorted(forbidden)}"
             )
         actor_ref = agent.get("actor_ref")
         if not isinstance(actor_ref, str) or not actor_ref.startswith(ACTOR_PREFIX):
@@ -199,73 +178,51 @@ def _validate_agent_registry(
                 f"agents.{binding_id}.actor_ref must reference canonical actor registry"
             )
             continue
-        actor_id = actor_ref[len(ACTOR_PREFIX):]
+        actor_id = actor_ref[len(ACTOR_PREFIX) :]
         actor = actors.get(actor_id)
         if actor is None:
-            failures.append(
-                f"agents.{binding_id} references unresolved actor {actor_id}"
-            )
-        elif (
-            agent.get("binding_status") == "active"
-            and actor.get("status") != "current"
-        ):
-            failures.append(
-                f"active binding {binding_id} references non-current actor {actor_id}"
-            )
+            failures.append(f"agents.{binding_id} references unresolved actor {actor_id}")
+        elif agent.get("binding_status") == "active" and actor.get("status") != "current":
+            failures.append(f"active binding {binding_id} references non-current actor {actor_id}")
         surface_refs = agent.get("surface_refs")
         if not isinstance(surface_refs, list) or not surface_refs:
-            failures.append(
-                f"agents.{binding_id}.surface_refs must be a non-empty list"
-            )
+            failures.append(f"agents.{binding_id}.surface_refs must be a non-empty list")
         else:
             for surface_ref in surface_refs:
-                if (
-                    not isinstance(surface_ref, str)
-                    or not surface_ref.startswith(SURFACE_PREFIX)
-                ):
+                if not isinstance(surface_ref, str) or not surface_ref.startswith(SURFACE_PREFIX):
                     failures.append(
-                        f"agents.{binding_id} has invalid surface reference "
-                        f"{surface_ref}"
+                        f"agents.{binding_id} has invalid surface reference {surface_ref}"
                     )
                     continue
-                surface_id = surface_ref[len(SURFACE_PREFIX):]
+                surface_id = surface_ref[len(SURFACE_PREFIX) :]
                 surface = surfaces.get(surface_id)
                 if surface is None:
                     failures.append(
-                        f"agents.{binding_id} references unresolved surface "
-                        f"{surface_id}"
+                        f"agents.{binding_id} references unresolved surface {surface_id}"
                     )
-                elif (
-                    agent.get("binding_status") == "active"
-                    and surface.get("status") != "current"
-                ):
+                elif agent.get("binding_status") == "active" and surface.get("status") != "current":
                     failures.append(
-                        f"active binding {binding_id} references non-current "
-                        f"surface {surface_id}"
+                        f"active binding {binding_id} references non-current surface {surface_id}"
                     )
         role = agent.get("role")
         if role not in roles:
-            failures.append(
-                f"agents.{binding_id} references unknown local role {role}"
-            )
+            failures.append(f"agents.{binding_id} references unknown local role {role}")
         principal = agent.get("principal_id")
         if not isinstance(principal, str) or not principal:
-            failures.append(
-                f"agents.{binding_id}.principal_id must be non-empty"
-            )
+            failures.append(f"agents.{binding_id}.principal_id must be non-empty")
         elif principal in seen_principals:
             failures.append(f"duplicate principal_id: {principal}")
         else:
             seen_principals.add(principal)
         user_id = agent.get("user_id")
         if not isinstance(user_id, str) or not user_id:
-            failures.append(
-                f"agents.{binding_id}.user_id must be non-empty"
-            )
+            failures.append(f"agents.{binding_id}.user_id must be non-empty")
         elif user_id in seen_users:
             failures.append(f"duplicate user_id: {user_id}")
         else:
             seen_users.add(user_id)
+
+
 def _index(
     raw: Any,
     kind: str,
@@ -286,6 +243,8 @@ def _index(
             continue
         result[item_id] = mapped
     return result
+
+
 def _load_yaml(
     path: Path,
     failures: list[str],
@@ -299,8 +258,12 @@ def _load_yaml(
         failures.append(f"{path} must contain a mapping")
         return {}
     return value
+
+
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
 def _git_sha(value: Any) -> bool:
     if not isinstance(value, str) or len(value) != 40:
         return False
@@ -309,6 +272,8 @@ def _git_sha(value: Any) -> bool:
     except ValueError:
         return False
     return True
+
+
 def _sha256_value(value: Any) -> bool:
     if not isinstance(value, str):
         return False
@@ -322,6 +287,8 @@ def _sha256_value(value: Any) -> bool:
     except ValueError:
         return False
     return True
+
+
 def _report(failures: list[str]) -> int:
     for failure in failures:
         print(
@@ -329,5 +296,7 @@ def _report(failures: list[str]) -> int:
             file=sys.stderr,
         )
     return 1
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

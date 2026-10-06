@@ -22,8 +22,12 @@ RECEIPT_SCHEMA = "l9.projection-receipt/v1"
 ACTOR_PREFIX = f"{ACTOR_ARTIFACT}#"
 SURFACE_PREFIX = f"{SURFACE_ARTIFACT}#"
 GENERATOR_ID = "cursor-governance.canonical-identity-projector/v1"
+
+
 class ProjectionError(RuntimeError):
     pass
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--authority-root", type=Path, required=True)
@@ -45,6 +49,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-revision")
     parser.add_argument("--check", action="store_true")
     return parser.parse_args()
+
+
 def main() -> int:
     args = parse_args()
     authority_root = args.authority_root.resolve()
@@ -103,6 +109,8 @@ def main() -> int:
     print(args.output)
     print(args.receipt)
     return 0
+
+
 def project(
     *,
     actor_registry: Mapping[str, Any],
@@ -172,6 +180,8 @@ def project(
         "surfaces": surfaces,
         "surface_aliases": surface_aliases,
     }
+
+
 def build_receipt(
     *,
     projection: Mapping[str, Any],
@@ -199,6 +209,8 @@ def build_receipt(
             "deterministic": True,
         },
     }
+
+
 def _requested_identities(
     bindings: Mapping[str, Any],
 ) -> tuple[set[str], set[str]]:
@@ -215,18 +227,14 @@ def _requested_identities(
         actor_ids.add(_ref_fragment(actor_ref, ACTOR_PREFIX, "actor"))
         refs = agent.get("surface_refs")
         if not isinstance(refs, list) or not refs:
-            raise ProjectionError(
-                f"agents.{binding_id}.surface_refs must be a non-empty list"
-            )
+            raise ProjectionError(f"agents.{binding_id}.surface_refs must be a non-empty list")
         for surface_ref in refs:
             if not isinstance(surface_ref, str):
-                raise ProjectionError(
-                    f"agents.{binding_id}.surface_refs entries must be strings"
-                )
-            surface_ids.add(
-                _ref_fragment(surface_ref, SURFACE_PREFIX, "surface")
-            )
+                raise ProjectionError(f"agents.{binding_id}.surface_refs entries must be strings")
+            surface_ids.add(_ref_fragment(surface_ref, SURFACE_PREFIX, "surface"))
     return actor_ids, surface_ids
+
+
 def _select_entries(
     *,
     collection: Any,
@@ -244,13 +252,10 @@ def _select_entries(
         by_id[item_id] = item
     missing = requested - set(by_id)
     if missing:
-        raise ProjectionError(
-            f"unresolved canonical {kind} identities: {sorted(missing)}"
-        )
-    return [
-        dict(by_id[item_id])
-        for item_id in sorted(requested)
-    ]
+        raise ProjectionError(f"unresolved canonical {kind} identities: {sorted(missing)}")
+    return [dict(by_id[item_id]) for item_id in sorted(requested)]
+
+
 def _select_aliases(
     collection: Any,
     canonical_ids: set[str],
@@ -267,6 +272,8 @@ def _select_aliases(
             selected.append(dict(alias))
     selected.sort(key=lambda item: str(item.get("alias", "")))
     return selected
+
+
 def _projection_profile(
     catalog: Mapping[str, Any],
     profile_ref: str,
@@ -285,10 +292,10 @@ def _projection_profile(
         )
     profile = matches[0]
     if profile.get("consumer") != "Cursor-Governance":
-        raise ProjectionError(
-            f"{profile_ref} must declare consumer Cursor-Governance"
-        )
+        raise ProjectionError(f"{profile_ref} must declare consumer Cursor-Governance")
     return profile
+
+
 def _require_artifact(
     document: Mapping[str, Any],
     expected: str,
@@ -296,20 +303,21 @@ def _require_artifact(
 ) -> None:
     if document.get("artifact_id") != expected:
         raise ProjectionError(
-            f"{path}: expected artifact {expected}, "
-            f"got {document.get('artifact_id')}"
+            f"{path}: expected artifact {expected}, got {document.get('artifact_id')}"
         )
     if document.get("canonical") is not True:
         raise ProjectionError(f"{path}: canonical source must declare canonical=true")
+
+
 def _ref_fragment(value: str, prefix: str, kind: str) -> str:
     if not value.startswith(prefix):
-        raise ProjectionError(
-            f"{kind} ref must use canonical prefix {prefix}: {value}"
-        )
-    fragment = value[len(prefix):]
+        raise ProjectionError(f"{kind} ref must use canonical prefix {prefix}: {value}")
+    fragment = value[len(prefix) :]
     if not fragment:
         raise ProjectionError(f"{kind} ref has empty coordinate: {value}")
     return fragment
+
+
 def _git_revision(root: Path) -> str:
     git = shutil.which("git")
     if git is None:
@@ -322,35 +330,45 @@ def _git_revision(root: Path) -> str:
         timeout=10,
     )
     if result.returncode != 0:
-        raise ProjectionError(
-            f"unable to resolve authority revision: {result.stderr.strip()}"
-        )
+        raise ProjectionError(f"unable to resolve authority revision: {result.stderr.strip()}")
     revision = result.stdout.strip()
     if len(revision) != 40:
         raise ProjectionError(f"unexpected git revision: {revision}")
     return revision
+
+
 def _read_required(path: Path) -> bytes:
     try:
         return path.read_bytes()
     except FileNotFoundError as exc:
         raise ProjectionError(f"required file is missing: {path}") from exc
+
+
 def _yaml_mapping(raw: bytes, path: Path) -> Mapping[str, Any]:
     try:
         value = yaml.safe_load(raw)
     except yaml.YAMLError as exc:
         raise ProjectionError(f"invalid YAML in {path}: {exc}") from exc
     return _mapping(value, str(path))
+
+
 def _mapping(value: Any, label: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise ProjectionError(f"{label} must be a mapping")
     return value
+
+
 def _required_string(value: Mapping[str, Any], key: str) -> str:
     resolved = value.get(key)
     if not isinstance(resolved, str) or not resolved:
         raise ProjectionError(f"{key} must be a non-empty string")
     return resolved
+
+
 def _digest(raw: bytes) -> str:
     return f"sha256:{hashlib.sha256(raw).hexdigest()}"
+
+
 def _object_digest(value: Mapping[str, Any]) -> str:
     raw = yaml.safe_dump(
         dict(value),
@@ -358,6 +376,8 @@ def _object_digest(value: Mapping[str, Any]) -> str:
         allow_unicode=True,
     ).encode("utf-8")
     return _digest(raw)
+
+
 def _dump_yaml(value: Mapping[str, Any]) -> bytes:
     return yaml.safe_dump(
         dict(value),
@@ -365,8 +385,12 @@ def _dump_yaml(value: Mapping[str, Any]) -> bytes:
         allow_unicode=True,
         width=100,
     ).encode("utf-8")
+
+
 def _write(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

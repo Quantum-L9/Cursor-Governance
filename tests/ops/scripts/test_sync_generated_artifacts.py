@@ -328,15 +328,21 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
 
 
 def makefile_has_target(repo: Path, name: str) -> bool:
-    """Read Make's composed database rather than assuming root recipe ownership."""
+    """Read Make's composed database rather than assuming root recipe ownership.
+
+    The goal is a declared, gov-python-free target rather than an injected
+    probe: ``--eval`` is GNU Make 4.x, and macOS ``/usr/bin/make`` is 3.81,
+    which rejects the option outright and prints usage. Every target then read
+    as absent, so these assertions could only pass where make is 4.x --
+    and Homebrew gmake is explicitly not required here. ``-p`` prints the
+    composed database whatever the goal is, and ``-n`` keeps it a dry run.
+    """
     result = subprocess.run(
         [
             "make",
             "--no-print-directory",
             "-rRpn",
-            "--eval",
-            "__l9_make_database_probe: ; @:",
-            "__l9_make_database_probe",
+            "help",
         ],
         cwd=repo,
         text=True,

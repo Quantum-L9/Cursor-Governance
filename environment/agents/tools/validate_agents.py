@@ -6,8 +6,8 @@
 #   layer: tool
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.4.0
-#   updated: 2026-09-13
+#   version: 1.5.0
+#   updated: 2026-10-01
 """N-agent registry and adapter validator (peer of validate_claude_env.py).
 
 Checks:
@@ -22,6 +22,13 @@ Checks:
   R5  role exists in the roles catalog; status in {active, planned, retired}
   R6  writing roles (non-observer) declare non-empty assigned_groups;
       reviewer never assigned "*"
+  R7  identity_authority pins Quantum-L9/.github at a full commit SHA with the
+      exact actor / surface registry artifact ids, paths and sha256 digests;
+      both files are fetched at that SHA and must match their digests
+  R8  every active agent is a canonical actor in the pinned actor registry
+  R9  PEER_RUNTIME_BINDINGS.yaml: every peer is an active agent with
+      agent_ref == key; every execution surface is a canonical surface in the
+      pinned surface registry and is listed in that agent's surfaces
   A1  every active agent's adapter directory exists (adapters/<adapter>/)
       unless adapter is cursor/claude-code/none (pre-existing or human private entrance)
   A2  adapter env examples agree with the registry (USER_ID,
@@ -41,9 +48,12 @@ Usage: validate_agents.py [--root environment/agents]
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
+import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 try:
@@ -78,6 +88,18 @@ BOOTSTRAP_GLOBS = (
     "gemini-block.md",
     "bootstrap.template.md",
 )
+
+IDENTITY_REPOSITORY = "Quantum-L9/.github"
+IDENTITY_ARTIFACTS = {
+    "actor_registry": ("l9.actor-registry/global@1", "semantics/actor_registry.yaml"),
+    "surface_registry": ("l9.surface-registry/global@1", "semantics/surface_registry.yaml"),
+}
+FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+RAW_URL = "https://raw.githubusercontent.com/{repository}/{revision}/{path}"
+FETCH_TIMEOUT_SECONDS = 20
+
+Fetch = Callable[[str, str, str], bytes]
 
 errors: list[str] = []
 
@@ -169,6 +191,139 @@ def check_agents(reg: dict) -> None:
     seen: dict[str, str] = {}
     for key, agent in agents.items():
         check_one_agent(key, agent, roles, seen)
+
+
+def fetch_pinned(repository: str, revision: str, path: str) -> bytes:
+    """The exact file at an immutable commit; raises on any transport failure."""
+    url = RAW_URL.format(repository=repository, revision=revision, path=path)
+    with urllib.request.urlopen(url, timeout=FETCH_TIMEOUT_SECONDS) as resp:  # noqa: S310 - fixed https URL
+        return resp.read()
+
+
+def _check_authority_shape(authority: object) -> bool:
+    if not isinstance(authority, dict):
+        err("R7", "identity_authority missing or not a mapping")
+        return False
+    ok = True
+    if authority.get("repository") != IDENTITY_REPOSITORY:
+        err("R7", f"identity_authority.repository must be {IDENTITY_REPOSITORY}")
+        ok = False
+    if not FULL_SHA.match(str(authority.get("revision") or "")):
+        err("R7", "identity_authority.revision must be a full 40-character commit SHA")
+        ok = False
+    for name, (artifact_id, path) in IDENTITY_ARTIFACTS.items():
+        pin = authority.get(name)
+        if not isinstance(pin, dict):
+            err("R7", f"identity_authority.{name} missing")
+            ok = False
+            continue
+        if pin.get("artifact_id") != artifact_id:
+            err("R7", f"identity_authority.{name}.artifact_id must be {artifact_id}")
+            ok = False
+        if pin.get("path") != path:
+            err("R7", f"identity_authority.{name}.path must be {path}")
+            ok = False
+        if not SHA256.match(str(pin.get("sha256") or "")):
+            err("R7", f"identity_authority.{name}.sha256 must be a lowercase 64-hex digest")
+            ok = False
+    return ok
+
+
+def load_identity_authority(reg: dict, fetch: Fetch = fetch_pinned) -> dict[str, dict]:
+    """R7: the pinned upstream registries, digest-verified; {} on any failure."""
+    authority = reg.get("identity_authority")
+    if not _check_authority_shape(authority):
+        return {}
+    assert isinstance(authority, dict)
+    loaded: dict[str, dict] = {}
+    for name, (artifact_id, path) in IDENTITY_ARTIFACTS.items():
+        pin = authority[name]
+        try:
+            body = fetch(authority["repository"], authority["revision"], path)
+        except Exception as exc:  # noqa: BLE001 - any transport failure fails closed
+            err("R7", f"cannot fetch pinned {path} at {authority['revision']}: {exc}")
+            continue
+        digest = hashlib.sha256(body).hexdigest()
+        if digest != pin["sha256"]:
+            err("R7", f"{path} sha256 {digest} != pinned {pin['sha256']}")
+            continue
+        try:
+            doc = yaml.safe_load(body.decode("utf-8"))
+        except (UnicodeDecodeError, yaml.YAMLError) as exc:
+            err("R7", f"pinned {path} does not parse: {exc}")
+            continue
+        if not isinstance(doc, dict) or doc.get("artifact_id") != artifact_id:
+            err("R7", f"pinned {path} is not {artifact_id}")
+            continue
+        loaded[name] = doc
+    return loaded if len(loaded) == len(IDENTITY_ARTIFACTS) else {}
+
+
+def _canonical_ids(doc: dict, key: str) -> set[str]:
+    return {
+        str(row.get("id"))
+        for row in doc.get(key) or []
+        if isinstance(row, dict) and row.get("id") and row.get("status", "current") == "current"
+    }
+
+
+def _active_agents(reg: dict) -> dict[str, dict]:
+    return {
+        key: agent
+        for key, agent in (reg.get("agents") or {}).items()
+        if isinstance(agent, dict) and agent.get("status", "active") == "active"
+    }
+
+
+def check_actor_foreign_keys(reg: dict, upstream: dict[str, dict]) -> None:
+    """R8: every active local actor is a canonical upstream actor."""
+    actors = _canonical_ids(upstream["actor_registry"], "actors")
+    for key in _active_agents(reg):
+        if key not in actors:
+            err("R8", f"agents.{key}: active actor is not a canonical upstream ActorIdentity")
+
+
+def check_peer_foreign_keys(reg: dict, upstream: dict[str, dict], root: Path) -> None:
+    """R9: peer topology keys into active actors and upstream surfaces."""
+    path = root / "PEER_RUNTIME_BINDINGS.yaml"
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
+        err("R9", f"cannot load {path.name}: {exc}")
+        return
+    peers = doc.get("peers") if isinstance(doc, dict) else None
+    if not isinstance(peers, dict):
+        err("R9", f"{path.name}: peers missing")
+        return
+    surfaces = _canonical_ids(upstream["surface_registry"], "surfaces")
+    active = _active_agents(reg)
+    for key, peer in peers.items():
+        if not isinstance(peer, dict):
+            err("R9", f"peers.{key} is not a mapping")
+            continue
+        agent = active.get(key)
+        if agent is None:
+            err("R9", f"peers.{key}: not an active agent_registry actor")
+        if peer.get("agent_ref") != key:
+            err("R9", f"peers.{key}.agent_ref '{peer.get('agent_ref')}' != key")
+        local = set((agent or {}).get("surfaces") or [])
+        for binding in (peer.get("execution") or {}).get("bindings") or []:
+            surface = binding.get("surface") if isinstance(binding, dict) else None
+            if surface not in surfaces:
+                err(
+                    "R9",
+                    f"peers.{key}: surface '{surface}' is not a canonical upstream SurfaceIdentity",
+                )
+            if agent is not None and surface not in local:
+                err("R9", f"peers.{key}: surface '{surface}' not in agents.{key}.surfaces")
+
+
+def check_identity_authority(reg: dict, root: Path, fetch: Fetch = fetch_pinned) -> None:
+    upstream = load_identity_authority(reg, fetch)
+    if not upstream:
+        return
+    check_actor_foreign_keys(reg, upstream)
+    check_peer_foreign_keys(reg, upstream, root)
 
 
 def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> None:
@@ -339,6 +494,7 @@ def main() -> int:
     reg = check_registry(root)
     if reg:
         check_agents(reg)
+        check_identity_authority(reg, root)
         check_adapters(reg, root)
     check_secrets(root)
 

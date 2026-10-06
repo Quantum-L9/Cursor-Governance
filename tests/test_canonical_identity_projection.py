@@ -35,6 +35,8 @@ def bindings() -> dict[str, Any]:
             },
         },
     }
+
+
 def actor_registry() -> dict[str, Any]:
     return {
         "schema": "l9.actor-registry/v1",
@@ -62,6 +64,8 @@ def actor_registry() -> dict[str, Any]:
             },
         ],
     }
+
+
 def surface_registry() -> dict[str, Any]:
     return {
         "schema": "l9.surface-registry/v1",
@@ -92,6 +96,8 @@ def surface_registry() -> dict[str, Any]:
             },
         ],
     }
+
+
 def test_binding_requests_canonical_coordinates_only() -> None:
     actors, surfaces = _requested_identities(bindings())
     assert actors == {
@@ -103,6 +109,8 @@ def test_binding_requests_canonical_coordinates_only() -> None:
         "claude-code-cli",
         "claude-code-web",
     }
+
+
 def test_projection_contains_only_requested_canonical_identities() -> None:
     actors, surfaces = _requested_identities(bindings())
     result = project(
@@ -117,21 +125,17 @@ def test_projection_contains_only_requested_canonical_identities() -> None:
     )
     assert result["canonical"] is False
     assert result["authority"]["authority_class"] == "derived"
-    assert {
-        item["id"]
-        for item in result["actors"]
-    } == {
+    assert {item["id"] for item in result["actors"]} == {
         "cursor",
         "claude-code",
     }
-    assert {
-        item["id"]
-        for item in result["surfaces"]
-    } == {
+    assert {item["id"] for item in result["surfaces"]} == {
         "cursor-ide",
         "claude-code-cli",
         "claude-code-web",
     }
+
+
 def test_projection_preserves_relevant_aliases() -> None:
     actors, surfaces = _requested_identities(bindings())
     result = project(
@@ -158,11 +162,11 @@ def test_projection_preserves_relevant_aliases() -> None:
             "alias_kind": "historical_surface_alias",
         }
     ]
+
+
 def test_unknown_actor_fails_closed() -> None:
     document = bindings()
-    document["agents"]["cursor"]["actor_ref"] = (
-        f"{ACTOR_PREFIX}not-a-real-actor"
-    )
+    document["agents"]["cursor"]["actor_ref"] = f"{ACTOR_PREFIX}not-a-real-actor"
     actors, surfaces = _requested_identities(document)
     with pytest.raises(
         ProjectionError,
@@ -178,11 +182,11 @@ def test_unknown_actor_fails_closed() -> None:
             surface_digest="sha256:" + ("2" * 64),
             profile_digest="sha256:" + ("3" * 64),
         )
+
+
 def test_alias_cannot_be_used_as_canonical_surface_ref() -> None:
     document = bindings()
-    document["agents"]["claude-code"]["surface_refs"] = [
-        f"{SURFACE_PREFIX}claude-cli"
-    ]
+    document["agents"]["claude-code"]["surface_refs"] = [f"{SURFACE_PREFIX}claude-cli"]
     actors, surfaces = _requested_identities(document)
     with pytest.raises(
         ProjectionError,
@@ -198,5 +202,7 @@ def test_alias_cannot_be_used_as_canonical_surface_ref() -> None:
             surface_digest="sha256:" + ("2" * 64),
             profile_digest="sha256:" + ("3" * 64),
         )
+
+
 def test_projection_profile_coordinate_is_stable() -> None:
     assert PROFILE_REF == "l9.projection/cursor-governance-identity@1"

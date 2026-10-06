@@ -126,8 +126,8 @@ def test_a_pasted_derived_identity_without_host_markers_is_not_launched(tmp_path
     gov = _stub_gov(tmp_path)
     launched = _executable(tmp_path / "proven-python")
     door = {k: v for k, v in DOOR.items() if k not in DESKTOP}
-    env = {"STUB_FALLBACK": str(launched), **door, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}
+    env = {"STUB_FALLBACK": str(launched), **door, "L9_MEMORY_AGENT_ID": "claude-code"}
     result = _run(gov, env, args=["-m", "x"])
     assert result.returncode == 1
     assert "LAUNCH" not in result.stdout
-    assert "not a registered memory identity" in result.stderr
+    assert "derived from host markers, never configured" in result.stderr

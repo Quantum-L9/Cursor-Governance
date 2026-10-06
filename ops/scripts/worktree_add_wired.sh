@@ -53,6 +53,6 @@ bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
 # ensure_gov_python.sh (sys.prefix != this path). Consumer repos without
 # pyproject.toml + uv.lock are skipped.
 if [ -f "$path/pyproject.toml" ] && [ -f "$path/uv.lock" ]; then
-  echo "--- make venv (uv sync --locked --extra dev) ---"
+  echo "--- locked venv (ops/scripts/ensure_uv_environment.sh) ---"
   bash "$SCRIPT_DIR/ensure_gov_python.sh" "$path"
 fi

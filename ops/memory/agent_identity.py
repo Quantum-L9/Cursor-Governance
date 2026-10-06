@@ -67,8 +67,17 @@ ADAPTER_IDENTITIES: Final = frozenset(
 ALL_IDENTITIES: Final = DERIVED_IDENTITIES | ADAPTER_IDENTITIES
 #: Retired surface authors. They name a surface of ``claude-code``, not an agent.
 RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
+#: Read-compatibility fold for receipts and tags stamped before the surface/actor split.
+#: A new write still refuses these names; see ``agent_write``.
+HISTORICAL_ACTOR_ALIASES: Final = {name: CLAUDE_ACTOR for name in sorted(RETIRED)}
+CURSOR_SURFACE: Final = "cursor-ide"
+CLAUDE_DESKTOP_SURFACE: Final = "claude-code-desktop"
+CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
+CLAUDE_MOBILE_SURFACE: Final = "claude-code-mobile"
+LOCAL_ENTRYPOINTS: Final = {"cli": CLAUDE_CLI_SURFACE}
+REMOTE_SURFACE_BY_ENTRYPOINT: Final = {"remote_mobile": CLAUDE_MOBILE_SURFACE}
 #: CLAUDE_CODE_ENTRYPOINT values of a cloud session this resolver admits.
-REMOTE_ENTRYPOINTS: Final = frozenset({"remote_mobile"})
+REMOTE_ENTRYPOINTS: Final = frozenset(REMOTE_SURFACE_BY_ENTRYPOINT)
 
 
 def _flag(env: Mapping[str, str], name: str) -> str:
@@ -94,6 +103,16 @@ def _claude_identity(env: Mapping[str, str]) -> str:
     return CLAUDE_ACTOR
 
 
+def canonical_actor_id(value: str | None) -> str:
+    """Fold a retired surface-author tag to ``claude-code`` for receipt comparison.
+
+    Call only on a value known to be an actor id. The same strings are surface
+    names and must not be folded there.
+    """
+    actor = (value or "").strip()
+    return HISTORICAL_ACTOR_ALIASES.get(actor, actor)
+
+
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
     """The writing agent's identity, derived from host markers; "" when unknown."""
     source = os.environ if env is None else env
@@ -103,6 +122,19 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
         return _claude_identity(source)
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     return explicit if explicit in ADAPTER_IDENTITIES else ""
+
+
+def resolve_surface_id(env: Mapping[str, str] | None = None) -> str:
+    """The surface of this process, derived from host markers; "" when unknown."""
+    source = os.environ if env is None else env
+    if _is_cursor(source):
+        return CURSOR_SURFACE
+    if not _is_claude(source):
+        return ""
+    entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower()
+    if _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true":
+        return REMOTE_SURFACE_BY_ENTRYPOINT.get(entry, "")
+    return LOCAL_ENTRYPOINTS.get(entry, CLAUDE_DESKTOP_SURFACE)
 
 
 def static_drift(env: Mapping[str, str] | None = None) -> str:

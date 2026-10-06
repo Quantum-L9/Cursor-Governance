@@ -224,6 +224,62 @@ def command_make_workspace(command: str, root: Path) -> Path | None:
     return None
 
 
+def _make_directory_raw(segment: str) -> str | None:
+    """The directory a `make` segment names with ``-C`` / ``--directory``.
+
+    A token scan for the same reason `make_goals` is one: alternation under
+    repetition is the shape that backtracks exponentially, and this runs on
+    every shell command an agent issues.
+    """
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
+        index += 1
+    if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
+        return None
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"-C", "--directory"}:
+            if index + 1 < len(tokens):
+                return tokens[index + 1].strip("\"'")
+            return None
+        if token.startswith("--directory="):
+            return token.split("=", 1)[1].strip("\"'")
+        if token.startswith("-C") and len(token) > 2:
+            return token[2:].strip("\"'")
+        index += 1
+    return None
+
+
+def command_make_directory(command: str, root: Path) -> Path | None:
+    """Work tree named by `make -C <dir>`, if valid.
+
+    Make runs with that directory as ``CURDIR``, and this repository's Makefile
+    defaults ``WS ?= $(CURDIR)``, so ``-C`` names the tree the goal acts on as
+    explicitly as ``WS=`` does -- and, like ``WS=``, it may name another
+    repository. Resolving it is what makes the gate judge the tree Make will
+    actually touch; authorization is unchanged, because the L4 receipt must
+    still exist at the resolved root and bind its head SHA.
+    """
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        for text in (segment, *wrapper_subcommands(segment)):
+            raw = _make_directory_raw(text)
+            if raw is None:
+                continue
+            if raw.startswith("~"):
+                # The shell expands this before make sees it; a tilde is always
+                # $HOME, unlike $VAR, whose value this gate cannot know.
+                try:
+                    raw = str(Path(raw).expanduser())
+                except RuntimeError:
+                    continue
+            resolved = _resolve_named_workspace(raw, root)
+            if resolved is not None:
+                return resolved
+    return None
+
+
 def _make_gate_only(segment: str) -> bool:
     """True when a Make invocation deliberately suppresses publication."""
     return any(token == "OPEN_PR=0" for token in segment.split())
@@ -911,6 +967,70 @@ def _common_dir(cwd: Path) -> Path | None:
         return None
 
 
+def _origin_identity(cwd: Path) -> str | None:
+    """Normalized `origin` remote, identical across clones of one repository.
+
+    Two clones share no git directory, so `--git-common-dir` cannot relate them
+    -- the remote they both publish to can. This fleet keeps the SSOT at
+    `~/.cursor-governance` and consumer checkouts elsewhere, so `cd` between
+    them is ordinary, and judging the second against the first's receipt was a
+    gate that could never authorize the tree the command actually ran in.
+
+    Normalized because one repository is spelled several ways:
+    `git@host:owner/name.git`, `https://host/owner/name`, `ssh://host/owner/name`.
+    """
+    url = _git_out(cwd, "config", "--get", "remote.origin.url")
+    if not url:
+        return None
+    text = url.strip()
+    for prefix in ("ssh://", "git://", "https://", "http://"):
+        if text.startswith(prefix):
+            text = text[len(prefix) :]
+            break
+    text = text.rsplit("@", 1)[-1]
+    text = text.replace(":", "/")
+    if text.endswith(".git"):
+        text = text[: -len(".git")]
+    return text.strip("/").lower() or None
+
+
+def _cd_target(command: str, root: Path) -> Path | None:
+    """Directory a leading `cd` moves the shell into, or None."""
+    match = _LEADING_CD.match(command)
+    if not match:
+        return None
+    raw = match.group("path").strip("\"'")
+    try:
+        candidate = Path(os.path.expandvars(raw)).expanduser()
+    except (OSError, ValueError):
+        return None
+    if not candidate.is_absolute():
+        # A reported root is absolute, so a relative cd is relative to it.
+        # Treating one as unresolvable judged `cd ../sibling && make pr`
+        # against the session's checkout instead of the sibling's.
+        candidate = root / candidate
+    try:
+        candidate = candidate.resolve()
+    except OSError:
+        return None
+    return candidate if candidate.is_dir() else None
+
+
+def _same_repository(root: Path, candidate: Path) -> bool:
+    """Whether `candidate` is a work tree of the repository at `root`."""
+    candidate_common = _common_dir(candidate)
+    if candidate_common is None:
+        return False
+    root_common = _common_dir(root)
+    if root_common is None:
+        # Container root: accept any real work tree, reject a plain directory.
+        return True
+    if root_common == candidate_common:
+        return True
+    identity = _origin_identity(root)
+    return identity is not None and identity == _origin_identity(candidate)
+
+
 def effective_root(command: str, root: Path) -> Path:
     """The checkout the command will actually run in.
 
@@ -937,33 +1057,27 @@ def effective_root(command: str, root: Path) -> Path:
     accepted. Authorization is unchanged: the receipt must still exist at the
     resolved root and bind the head SHA. When the root *is* a repository the
     same-repository rule still applies, so this is not a way to reach an
-    unrelated checkout from a real one.
+    unrelated checkout from a real one. A second *clone* of the same repository
+    is related by its `origin` remote rather than by a shared git directory,
+    and is accepted on that evidence (`_origin_identity`).
     """
     named = command_make_workspace(command, root)
     if named is not None:
         return named
 
-    match = _LEADING_CD.match(command)
-    if not match:
-        return root
-    raw = match.group("path").strip("\"'")
-    try:
-        candidate = Path(os.path.expandvars(raw)).expanduser()
-    except (OSError, ValueError):
-        return root
-    if not candidate.is_absolute() or not candidate.is_dir():
-        return root
+    base = root
+    target = _cd_target(command, root)
+    if target is not None and _same_repository(root, target):
+        toplevel = _git_out(target, "rev-parse", "--show-toplevel")
+        if toplevel:
+            base = Path(toplevel)
 
-    root_common = _common_dir(root)
-    if root_common is None:
-        # Container root: accept any real work tree, reject a plain directory.
-        if _common_dir(candidate) is None:
-            return root
-    elif root_common != _common_dir(candidate):
-        return root
-
-    toplevel = _git_out(candidate, "rev-parse", "--show-toplevel")
-    return Path(toplevel) if toplevel else root
+    # After the cd, because a relative `-C` is relative to the shell's cwd,
+    # which the cd has already changed.
+    directed = command_make_directory(command, base)
+    if directed is not None:
+        return directed
+    return base
 
 
 def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
