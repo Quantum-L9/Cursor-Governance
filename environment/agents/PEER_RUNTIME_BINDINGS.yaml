@@ -46,13 +46,10 @@ peers:
     execution:
       required: true
       bindings:
-        - surface: claude-code-desktop
-          provider_ref: claude-code-direct
-          execution_profile_ref: worker-default
         - surface: claude-code-cli
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
-        - surface: claude-code-ide
+        - surface: claude-code-web
           provider_ref: claude-code-direct
           execution_profile_ref: worker-default
         - surface: claude-code-mobile

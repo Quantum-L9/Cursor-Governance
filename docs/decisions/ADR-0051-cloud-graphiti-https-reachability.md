@@ -1,4 +1,4 @@
-# ADR-0039: Cloud Graphiti HTTPS reachability
+# ADR-0051: Cloud Graphiti HTTPS reachability
 
 ## Status
 

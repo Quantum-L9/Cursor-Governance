@@ -328,6 +328,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "64-canonical-identity-authority.md",
+      "output_sha256": "d234fe22b37dcdfd7b6b987ef8062f6dd89e2ead8ca865cd67e913cb0419ecd6",
+      "source": "rules/64-canonical-identity-authority.mdc",
+      "source_sha256": "ad0c026c23221ace986d0315f3c5d0781eceb1d0a47fe40f5952f88709841823",
+      "stem": "64-canonical-identity-authority"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "65-observability-performance.md",
       "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
@@ -628,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 53,
+    "projected": 54,
     "skipped_agent_requested": 15,
-    "source_mdc": 68
+    "source_mdc": 69
   },
-  "tree_sha256": "2c8716411d7b5de3a0a098830038459a84d44db9ffcac33e1d28c830d1ac4aa5"
+  "tree_sha256": "26a193906efdabe0f5a43db8d3b3bdbb5c79f094eb7704eda9ef6d901a0d46cb"
 }

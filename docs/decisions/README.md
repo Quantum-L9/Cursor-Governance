@@ -47,7 +47,8 @@ may share a number only when the filename slug is the same decision.
 | ADR-0035 | Accepted | `recorded_after` is a search selector that skips the relevance drop | `docs/decisions/ADR-0035-recorded-after-search-selector.md` |
 | ADR-0036 | Accepted | Core Owns the Makefile Compiler Runtime | `docs/decisions/ADR-0036-core-owns-makefile-compiler-runtime.md` |
 | ADR-0037 | Accepted | Direct agent memory records represent independently governable knowledge | `docs/decisions/ADR-0037-direct-agent-memory-record-granularity.md` |
-| ADR-0039 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0039-cloud-graphiti-https-reachability.md` |
+| ADR-0038 | Proposed | Canonical identity is projected from Quantum-L9/.github and governed by a local binding | `docs/decisions/ADR-0038-canonical-identity-projection-and-governing-binding.md` |
+| ADR-0039 | Proposed | The agent registry holds operating-plane bindings only | `docs/decisions/ADR-0039-agent-registry-is-operating-plane-bindings-only.md` |
 | ADR-0040 | Accepted | Contracts own rule semantics; Cursor rules are activation and projection surfaces | `docs/decisions/ADR-0040-contracts-own-rule-semantics.md` |
 | ADR-0041 | Accepted | Rule Activation Binding is the canonical intermediate representation between contracts and platform rules | `docs/decisions/ADR-0041-rule-activation-binding-intermediate-representation.md` |
 | ADR-0042 | Accepted | Normative and advisory content are separate channels in rule projections | `docs/decisions/ADR-0042-normative-advisory-rule-channels.md` |
@@ -59,6 +60,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0048 | Accepted | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
 | ADR-0049 | Accepted | Universal campaign ingress and typed architecture admission | `docs/decisions/ADR-0049-universal-campaign-ingress-and-architecture-admission.md`<br>`environment/contracts/execution/adr/ADR-0049-universal-campaign-ingress-and-architecture-admission.md` |
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
+| ADR-0051 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0051-cloud-graphiti-https-reachability.md` |
 
 <!-- END L9 ADR INDEX -->
 
