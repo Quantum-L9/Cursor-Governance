@@ -2090,7 +2090,6 @@ Append-only. This supersedes only the "`/ff`" sentence in
 - Ahead/behind counts stay. `detail=diverged` when the clone is not at the
   `ls-remote` tip. The clone is still not fetched, pulled, reset, or swapped.
 
-<<<<<<< HEAD
 <!-- LOCAL_VENV_INTERPRETER_AND_COMMAND_ROOT_V1 -->
 ## One local sync owner; the gate judges the tree the command runs in (2026-10-04)
 
