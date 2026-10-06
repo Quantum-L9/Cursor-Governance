@@ -186,9 +186,9 @@
       "alias": null,
       "class": "always",
       "output": "45-pre-action-verification.md",
-      "output_sha256": "de0c35936ddbed97b3df6289ebdf247e60ce369301e03d428bf6c81c8b7713de",
+      "output_sha256": "f52ff9bad043148444d594da4dcccdce58dd1894327bd8f0a786332f05b54fa1",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "2d4e738329b08948b8c03c4e4b68dfa2ba1c8ef3838c52fcd14a2a750f8cf96b",
+      "source_sha256": "84c1397899175d8dd96706b0e401943c84e2b79a170b888941c1ad3bdf4f4820",
       "stem": "45-pre-action-verification"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "6adca62dc4a7e5f381bc76f51e11aaebdf1dad4b6bb807c07f9fae2d63bd4c4d"
+  "tree_sha256": "57256e5a82664dd386a2f067dae2ba1ce36cad35b9893eae1072e19ca7dabef9"
 }
