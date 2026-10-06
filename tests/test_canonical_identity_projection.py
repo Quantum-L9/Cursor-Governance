@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -461,23 +460,22 @@ def test_peer_surfaces_resolve_through_surface_refs(tmp_path: Path) -> None:
 
 
 def test_agents_env_gate_composes_assurance_before_validation() -> None:
-    """The composed gate: projection assurance runs first, validator second,
-    one Make target. A placeholder projection fails the first step, so it can
-    never produce a green `make agents-env`."""
+    """Structural proof of the composed gate in ops/make/adapters.mk: the
+    agents-env recipe runs projection assurance first and the bindings validator
+    second, as exactly two $(PYTHON) commands of one target. A placeholder
+    projection fails the first command, so it can never produce a green
+    `make agents-env`. No live Make graph is invoked here; the real target is
+    exercised once by the acceptance proof outside the unit-test run."""
     recipe = ADAPTERS_MK.read_text(encoding="utf-8")
-    target = recipe.index("\nagents-env:\n")
-    body = recipe[target:].split("\n", 1)[1].split("\nide-profile:", 1)[0]
-    assurance = body.index("tools/assurance/check_canonical_identity_projection.py")
-    validation = body.index("environment/agents/tools/validate_agents.py")
-    assert assurance < validation
-    dry_run = subprocess.run(
-        ["make", "-n", "agents-env"],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert dry_run.returncode == 0, dry_run.stderr
-    assert dry_run.stdout.index("check_canonical_identity_projection.py") < dry_run.stdout.index(
-        "validate_agents.py"
-    )
+    target = recipe.index("\nagents-env:\n") + 1  # skip the newline before the target line
+    body = recipe[target:].split("\n", 1)[1]  # recipe lines after "agents-env:"
+    commands = []
+    for line in body.splitlines():
+        if not line.startswith("\t"):
+            break
+        commands.append(line.strip())
+    assert commands == [
+        "$(PYTHON) tools/assurance/check_canonical_identity_projection.py",
+        "$(PYTHON) environment/agents/tools/validate_agents.py",
+    ]
+    assert recipe.count("\nagents-env:") == 1
