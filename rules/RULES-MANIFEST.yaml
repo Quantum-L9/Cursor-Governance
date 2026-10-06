@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-03T12:31:40Z'
+generated_utc: '2026-10-06T20:34:58Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:dab8539285f4a294d65e0f7472bffb6c709206bf7e73f75cbf95dfda15994979
+source_tree_digest: sha256:1f19d60fa1b48abf13c122c1d1d166f8a75640ed5880ad3a8b918ff2b1d85c3d
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -1342,8 +1342,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 244
-  content_digest: sha256:2d61de831bedb04e78bf5ee3bb46b16808688deb22094a5d1715d7b35dfc7bb3
+  line_count: 241
+  content_digest: sha256:ba13447e82692c0563d814d8b419c959a474435d310036c69dbd47e1b7feb4d6
   authority: canonical_global
   context_cost: moderate
   deprecated: false
