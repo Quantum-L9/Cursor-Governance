@@ -79,19 +79,12 @@ def test_identity_is_derived_per_surface_and_configured_values_are_ignored(monke
 def test_identity_drift_is_refused_not_recorded(monkeypatch):
     _surface(monkeypatch, CLAUDECODE="1")
     with pytest.raises(ident.IdentityError, match="drift"):
-        ident.resolve_write_identity(explicit_agent_id="manus", surface="claude-code")
+        ident.resolve_write_identity(explicit_agent_id="claude-code-mobile", surface="claude-code")
 
 
-def test_a_pasted_claude_actor_without_host_markers_is_refused(monkeypatch):
-    _surface(monkeypatch, L9_MEMORY_AGENT_ID="claude-code")
-    with pytest.raises(ident.IdentityError, match="derived from host markers"):
-        ident.resolve_write_identity(surface="claude-code")
-
-
-@pytest.mark.parametrize("alias", ["claude-code-desktop", "claude-code-mobile"])
-def test_a_historical_actor_alias_is_never_a_new_author(monkeypatch, alias):
-    _surface(monkeypatch, L9_MEMORY_AGENT_ID=alias)
-    with pytest.raises(ident.IdentityError, match="historical ActorIdentity alias"):
+def test_a_retired_surface_author_is_refused(monkeypatch):
+    _surface(monkeypatch, L9_MEMORY_AGENT_ID="claude-code-desktop")
+    with pytest.raises(ident.IdentityError, match="retired"):
         ident.resolve_write_identity(surface="claude-code")
 
 

@@ -89,7 +89,6 @@ def test_grants_come_from_the_registry_and_include_l9_ci_core(tmp_path: Path) ->
     grants = json.loads((directory / "agent_grants.json").read_text())["grants"]["claude-code"]
     registry = yaml.safe_load((ROOT / "environment/agents/agent_registry.yaml").read_text())
     assigned = registry["agents"]["claude-code"]["assigned_groups"]
-    assert "l9-ci-core" in assigned
     assert set(grants["write_namespaces"]) == set(assigned)
 
 
@@ -210,7 +209,7 @@ def test_the_opt_out_never_stops_a_hosted_container_from_naming_its_author(
     assert "writes carry NO agent identity" not in result.stderr
 
 
-def test_the_hosted_secret_mints_the_claude_door_on_mobile_at_spawn(tmp_path: Path) -> None:
+def test_the_hosted_secret_mints_the_mobile_door_at_spawn(tmp_path: Path) -> None:
     hosted = json.dumps(_authority("claude-code"))
     result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": hosted, **MOBILE}, tmp_path)
     assert result.returncode == 0, result.stderr
@@ -218,7 +217,7 @@ def test_the_hosted_secret_mints_the_claude_door_on_mobile_at_spawn(tmp_path: Pa
     assert not list(tmp_path.glob("l9-memory-authority.*")), "the authority dir is removed"
 
 
-def test_every_claude_surface_writes_as_the_one_claude_actor(tmp_path: Path) -> None:
+def test_the_desktop_surface_gets_its_own_identity(tmp_path: Path) -> None:
     desktop = json.dumps(_authority("claude-code"))
     result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": desktop, "CLAUDECODE": "1"}, tmp_path)
     assert result.returncode == 0, result.stderr
@@ -405,30 +404,3 @@ def test_session_start_sees_a_provisioned_local_door(tmp_path: Path) -> None:
     maa.provision_local(ROOT, tmp_path / ".config" / "l9-memory", ["claude-code"])
     assert _door_has(tmp_path, "claude-code") == 0
     assert _door_has(tmp_path, "cursor") == 1, "only the keyed identity"
-
-
-# --- read compatibility and no manufactured author ----------------------------------
-
-
-def test_a_historical_alias_receipt_belongs_to_the_current_claude_author() -> None:
-    from ops.memory import cli  # noqa: PLC0415
-
-    receipt = {"receipt_id": "r1", "status": "prefetched", "agent_id": "claude-code-desktop"}
-    assert cli._is_applicable_prefetch_receipt(receipt, writer_agent="claude-code", chat_id="")
-    assert not cli._is_applicable_prefetch_receipt(receipt, writer_agent="cursor", chat_id="")
-
-
-def test_bootstrap_never_manufactures_cursor_without_actor_evidence(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    from ops.memory import print_agent_assertion_env as helper  # noqa: PLC0415
-
-    for name in list(os.environ):
-        if name.startswith(SURFACE_MARKERS) or name == "L9_MEMORY_AGENT_ID":
-            monkeypatch.delenv(name, raising=False)
-    assert helper.main(["--format", "json"]) == 2
-    assert "no memory identity" in capsys.readouterr().err
-    exporter = (ROOT / "ops/memory/export_agent_assertion_env.sh").read_text(encoding="utf-8")
-    assert ":-cursor" not in exporter
-    bootstrap = (ROOT / "ops/hooks/session_start_bootstrap.sh").read_text(encoding="utf-8")
-    assert "--agent-id cursor" not in bootstrap

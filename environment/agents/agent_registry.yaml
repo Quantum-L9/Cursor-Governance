@@ -5,289 +5,194 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 2.3.0
-#   updated: 2026-10-01
+#   version: 2.0.0
+#   updated: 2026-10-03
 #
-# AGENT REGISTRY — the single source of truth for WHO writes memory (identity
-# plane only). Executable topology (which Program adapters / autonomy /
-# subagents / results / generated-data planes a peer requires) lives solely in
-# PEER_RUNTIME_BINDINGS.yaml. Do NOT add execution: blocks here — validators
-# fail closed if they reappear (rule E15).
+# OPERATING-PLANE AGENT BINDINGS.
 #
-# Peer of ops/graphiti/group_registry.yaml (which answers WHAT repo memory
-# is about). Together they complete the identity matrix:
-#   group_id  = repo namespace  -> SHARED across all agents (group_registry.yaml)
-#   agent     = writing identity -> DISTINCT per agent (this file)
+# Canonical ActorIdentity and SurfaceIdentity are NOT defined here.
+# They are referenced from the machine-generated canonical identity projection:
 #
-# Rules (enforced by validate_agents.py):
-#   * agent_id unique, kebab-case, immutable once shipped
-#   * user_id unique, snake_case, "<agent_id with _>_agent"
-#   * source == agent_id
-#   * principal_id == "<agent_id>-memory-client"
-#   * signing_key_env == "L9_MEMORY_AGENT_SIGNING_KEY__<AGENT upper snake>"
-#     (legacy token_env retained as alias for older adapters)
-#   * role must exist in the roles catalog below
-#   * NO secrets in this file. Shared agents door secret, per-agent signing
-#     keys, and the human door secret live only in gitignored local maps /
-#     OS secret stores (ADR-0031).
-
-schema_version: 2
-workspace_group: igor-workspace
-
-# ---------------------------------------------------------------------------
-# Upstream identity authority — the ONE pin. ActorIdentity and SurfaceIdentity
-# names are owned by Quantum-L9/.github; this registry owns only local
-# authorization (roles, grants, principals, key envs, adapters, status).
-# validate_agents.py R7-R9 verify the pinned artifacts by digest and
-# foreign-key active actors and peer surfaces against them. Runtime identity
-# resolution (ops/memory/agent_identity.py) stays offline.
-# ---------------------------------------------------------------------------
+#   generated/governance/canonical_identity.yaml
+#
+# Canonical authority:
+#
+#   Quantum-L9/.github/semantics/actor_registry.yaml
+#   Quantum-L9/.github/semantics/surface_registry.yaml
+#
+# This file owns operating-plane bindings only:
+#
+#   actor -> surfaces
+#   actor -> role
+#   actor -> memory principal
+#   actor -> adapter
+#   actor -> assigned groups
+#   actor -> credential environment coordinates
+#
+# Do not add agent_id, source, surfaces, actor status, actor kind, surface status,
+# or local aliases. Those are resolved from canonical references.
+schema: l9.cursor-governance.agent-bindings/v2
+artifact_id: l9.cursor-governance/agent-bindings@2
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cursor_governance_operating_plane_agent_bindings
+  authority_class: local_canonical
 identity_authority:
-  repository: Quantum-L9/.github
-  revision: 3eaa094be0b1ec74944e832887aa1752c818fc11
-  actor_registry:
-    artifact_id: l9.actor-registry/global@1
-    path: semantics/actor_registry.yaml
-    sha256: 34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f
-  surface_registry:
-    artifact_id: l9.surface-registry/global@1
-    path: semantics/surface_registry.yaml
-    sha256: d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988
-
-# ---------------------------------------------------------------------------
-# Role catalog — hard grants are namespace globs applied by
-# tools/render_principals.py when emitting the memory server's auth_tokens.json.
-# The work-claim protocol (docs/WORK_CLAIM_PROTOCOL.md) is the soft layer that
-# prevents two agents doing the same task inside a namespace they both hold.
-# ---------------------------------------------------------------------------
+  binding_ref: l9.cursor-governance/identity-binding@1
+  projection_ref: l9.projection/cursor-governance-identity@1
+  projection_path: generated/governance/canonical_identity.yaml
+  actor_registry_ref: l9.actor-registry/global@1
+  surface_registry_ref: l9.surface-registry/global@1
+  rules:
+    actor_identity_is_reference_only: true
+    surface_identity_is_reference_only: true
+    actor_surface_assignment_is_local: true
+    actor_id_is_derived_from_actor_ref: true
+    memory_source_is_derived_from_actor_ref: true
+workspace_group: igor-workspace
 roles:
   orchestrator:
     description: >
       Human-directed lead session. Full read/write across the workspace,
-      may promote memories, arbitrates stale or conflicting task claims.
-    read_namespaces: ["*"]
-    write_namespaces: ["*"]
-    promote_namespaces: ["*"]
+      may promote memories, and arbitrates stale or conflicting task claims.
+    read_namespaces:
+      - "*"
+    write_namespaces:
+      - "*"
+    promote_namespaces:
+      - "*"
     is_admin: false
   implementer:
     description: >
-      Writes code and memories only in repos it is assigned. Cannot promote.
-      Must claim tasks before starting work.
-    read_namespaces: ["*"]
-    write_namespaces: []          # filled per-agent from assigned_groups
+      Writes code and memories only in repositories it is assigned.
+      Cannot promote. Must claim tasks before starting work.
+    read_namespaces:
+      - "*"
+    write_namespaces: []
     promote_namespaces: []
     is_admin: false
   researcher-builder:
     description: >
-      Research, analysis, multi-repo build work. Writes to assigned repos
-      plus the shared workspace namespace. Cannot promote.
-    read_namespaces: ["*"]
-    write_namespaces: []          # filled per-agent from assigned_groups
+      Research, analysis, and multi-repository build work. Writes to assigned
+      repositories plus authorized shared workspace namespaces. Cannot promote.
+    read_namespaces:
+      - "*"
+    write_namespaces: []
     promote_namespaces: []
     is_admin: false
   reviewer:
     description: >
-      CI / PR review bots. May write only review episodes into the
-      "<group>.reviews" sub-namespace of assigned repos.
-    read_namespaces: ["*"]
-    write_namespaces: []          # rendered as "<group>.reviews" per assignment
-    promote_namespaces: []
-    is_admin: false
-  observer:
-    description: Read-only. Dashboards, analytics, retrieval-only assistants.
-    read_namespaces: ["*"]
+      CI and PR review agents. May write review evidence only into authorized
+      review namespaces derived from assigned groups.
+    read_namespaces:
+      - "*"
     write_namespaces: []
     promote_namespaces: []
     is_admin: false
-  human-operator:
+  observer:
     description: >
-      Private human entrance only (ADR-0031). Full admin/promote. Never
-      issued to an agent surface.
-    read_namespaces: ["*"]
-    write_namespaces: ["*"]
-    promote_namespaces: ["*"]
-    is_admin: true
-
-# ---------------------------------------------------------------------------
-# Agents — one entry per writing identity. Adding an agent = add an entry
-# here AND a peer entry in PEER_RUNTIME_BINDINGS.yaml, run the renderers,
-# issue a token. Nothing else is hand-edited.
-# ---------------------------------------------------------------------------
+      Retrieval-only operating identity. No write or promotion authority.
+    read_namespaces:
+      - "*"
+    write_namespaces: []
+    promote_namespaces: []
+    is_admin: false
 agents:
   cursor:
-    agent_id: cursor
-    user_id: cursor_agent            # matches ops/graphiti/config-docker-neo4j.yaml ${USER_ID:cursor_agent}
-    source: cursor
+    actor_ref: l9.actor-registry/global@1#cursor
+    surface_refs:
+      - l9.surface-registry/global@1#cursor-ide
+    user_id: cursor_agent
     principal_id: cursor-memory-client
     token_env: L9_MEMORY_TOKEN__CURSOR
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CURSOR
     role: orchestrator
-    surfaces: [cursor-ide]
-    assigned_groups: ["*"]
-    adapter: cursor                  # existing .cursor-commands activation, unchanged
-    status: active
-
+    assigned_groups:
+      - "*"
+    adapter: cursor
+    binding_status: active
   claude-code:
-    agent_id: claude-code
+    actor_ref: l9.actor-registry/global@1#claude-code
+    surface_refs:
+      - l9.surface-registry/global@1#claude-code-cli
+      - l9.surface-registry/global@1#claude-code-web
+      - l9.surface-registry/global@1#claude-code-mobile
     user_id: claude_code_agent
-    source: claude-code
     principal_id: claude-code-memory-client
     token_env: L9_MEMORY_TOKEN__CLAUDE_CODE
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CLAUDE_CODE
     role: implementer
-    # One ActorIdentity across every Claude Code surface. The actor is DERIVED
-    # at write time by ops/memory/agent_identity.py from host markers, never
-    # configured; the surface is a separate SurfaceIdentity. Grants are
-    # per-agent: a namespace absent here is unwritable through the agent lane
-    # (Tier 2).
-    surfaces: [claude-code-desktop, claude-code-cli, claude-code-ide, claude-code-mobile]
-    assigned_groups: [constellation-gate, cursor-governance, l9-ci-core, l9-graphiti-memory, l9-node-template]
-    adapter: claude-code             # environment/agents/adapters/claude-code/
-    status: active
-
+    assigned_groups:
+      - cursor-governance
+      - l9-graphiti-memory
+      - l9-node-template
+    adapter: claude-code
+    binding_status: active
   manus:
-    agent_id: manus
+    actor_ref: l9.actor-registry/global@1#manus
+    surface_refs:
+      - l9.surface-registry/global@1#manus-cloud
     user_id: manus_agent
-    source: manus
     principal_id: manus-memory-client
     token_env: L9_MEMORY_TOKEN__MANUS
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__MANUS
     role: researcher-builder
-    surfaces: [manus-cloud]
-    assigned_groups: [cursor-governance, l9-graphiti-memory, cognitive-engine-graphs, igorbot]
+    assigned_groups:
+      - cursor-governance
+      - l9-graphiti-memory
+      - cognitive-engine-graphs
+      - igorbot
     adapter: manus
-    status: active
-
+    binding_status: active
   codex:
-    agent_id: codex
+    actor_ref: l9.actor-registry/global@1#codex
+    surface_refs:
+      - l9.surface-registry/global@1#codex-cloud
+      - l9.surface-registry/global@1#codex-cli
     user_id: codex_agent
-    source: codex
     principal_id: codex-memory-client
     token_env: L9_MEMORY_TOKEN__CODEX
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__CODEX
     role: implementer
-    surfaces: [codex-cloud, codex-cli]
-    assigned_groups: [l9-node-template]
+    assigned_groups:
+      - l9-node-template
     adapter: codex
-    status: active
-
+    binding_status: active
   gemini:
-    agent_id: gemini
+    actor_ref: l9.actor-registry/global@1#gemini
+    surface_refs:
+      - l9.surface-registry/global@1#gemini-cli
     user_id: gemini_agent
-    source: gemini
     principal_id: gemini-memory-client
     token_env: L9_MEMORY_TOKEN__GEMINI
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__GEMINI
     role: reviewer
-    surfaces: [gemini-cli]
-    assigned_groups: [cursor-governance, l9-graphiti-memory]
+    assigned_groups:
+      - cursor-governance
+      - l9-graphiti-memory
     adapter: gemini
-    status: active
-
-  perplexity:
-    agent_id: perplexity
-    user_id: perplexity_agent
-    source: perplexity
-    principal_id: perplexity-memory-client
-    token_env: L9_MEMORY_TOKEN__PERPLEXITY
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__PERPLEXITY
-    # Perplexity (assistant).
-    # Reserved identity, not yet wired: no adapter, observer role (read only,
-    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=perplexity,
-    # gets a writing role + assigned_groups, and moves to status: active.
-    role: observer
-    surfaces: [perplexity]
-    assigned_groups: []
-    adapter: none
-    status: planned
-
-  perplexity-computer:
-    agent_id: perplexity-computer
-    user_id: perplexity_computer_agent
-    source: perplexity-computer
-    principal_id: perplexity-computer-memory-client
-    token_env: L9_MEMORY_TOKEN__PERPLEXITY_COMPUTER
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__PERPLEXITY_COMPUTER
-    # Perplexity Computer (computer-use agent).
-    # Reserved identity, not yet wired: no adapter, observer role (read only,
-    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=perplexity-computer,
-    # gets a writing role + assigned_groups, and moves to status: active.
-    role: observer
-    surfaces: [perplexity-computer]
-    assigned_groups: []
-    adapter: none
-    status: planned
-
-  l-cto:
-    agent_id: l-cto
-    user_id: l_cto_agent
-    source: l-cto
-    principal_id: l-cto-memory-client
-    token_env: L9_MEMORY_TOKEN__L_CTO
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__L_CTO
-    # L CTO: strategic technical-decision agent.
-    # Reserved identity, not yet wired: no adapter, observer role (read only,
-    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=l-cto,
-    # gets a writing role + assigned_groups, and moves to status: active.
-    role: observer
-    surfaces: [l-cto]
-    assigned_groups: []
-    adapter: none
-    status: planned
-
-  igorbot:
-    agent_id: igorbot
-    user_id: igorbot_agent
-    source: igorbot
-    principal_id: igorbot-memory-client
-    token_env: L9_MEMORY_TOKEN__IGORBOT
-    signing_key_env: L9_MEMORY_AGENT_SIGNING_KEY__IGORBOT
-    # IgorBot.
-    # Reserved identity, not yet wired: no adapter, observer role (read only,
-    # no write grants). When its adapter lands it sets L9_MEMORY_AGENT_ID=igorbot,
-    # gets a writing role + assigned_groups, and moves to status: active.
-    role: observer
-    surfaces: [igorbot]
-    assigned_groups: []
-    adapter: none
-    status: planned
-
-  human:
-    agent_id: human
-    user_id: human_agent
-    source: human
-    principal_id: human-memory-client
-    token_env: L9_MEMORY_TOKEN__HUMAN
-    signing_key_env: L9_MEMORY_HUMAN_DOOR_SECRET
-    role: human-operator
-    surfaces: [operator-local]
-    assigned_groups: ["*"]
-    adapter: none
-    status: active
-    private_entrance: true
-
-# ---------------------------------------------------------------------------
-# Shared memory contract (realignment stage C9 / ADR-0031). Memory is the canonical
-# l9-graphite-memory control plane (MemoryService, memory-control-plane/v1),
-# bound per checkout by ops/config/memory-binding.json and reached through
-# ops/memory over stdio. No surface holds a provider URL or a memory bearer:
-# the runtime resolves its own credentials (memory ADR-016); per-agent
-# principals are memory's concern, expressed to it through the identity
-# environment below. Graphiti survives only as memory's optional projection.
-# ---------------------------------------------------------------------------
+    binding_status: active
+rendering:
+  agent_id:
+    derive_from: actor_ref_fragment
+  source:
+    derive_from: actor_ref_fragment
+  surfaces:
+    derive_from: surface_ref_fragments
+  requirements:
+    actor_ref_must_resolve: true
+    surface_refs_must_resolve: true
+    active_binding_requires_current_actor: true
+    active_binding_requires_current_surfaces: true
+    canonical_projection_receipt_must_verify: true
 memory:
   control_plane: l9-graphite-memory
-  contract: memory-control-plane/v1
-  binding: ops/config/memory-binding.json
   transport: stdio
-  auth_scheme: shared-door-plus-signed-assertion  # ADR-0031
-  agents_door_secret_env: L9_MEMORY_AGENTS_DOOR_SECRET
-  human_door_secret_env: L9_MEMORY_HUMAN_DOOR_SECRET
-  agent_assertion_env: L9_MEMORY_AGENT_ASSERTION
-  agent_signing_keys_json_env: L9_MEMORY_AGENT_SIGNING_KEYS_JSON
-  agent_grants_json_env: L9_MEMORY_AGENT_GRANTS_JSON
-  interpreter_env: L9_MEMORY_INTERPRETER
   identity_env:
     user_id: USER_ID
     agent_id: L9_MEMORY_AGENT_ID
     source: L9_MEMORY_SOURCE
+forbidden_local_identity_fields:
+  - agent_id
+  - source
+  - surfaces
+  - actor_kind
+  - actor_status
+  - surface_status
+  - aliases

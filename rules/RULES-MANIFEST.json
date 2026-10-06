@@ -1,16 +1,16 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-10-06T20:06:00Z",
+  "generated_utc": "2026-10-06T20:34:58Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:2bcea671a0ab629f1c1fb1b57fa38786fb669751f26e262f0f4c08c5eeeb679c",
+  "source_tree_digest": "sha256:1f19d60fa1b48abf13c122c1d1d166f8a75640ed5880ad3a8b918ff2b1d85c3d",
   "summary": {
-    "total_mdc_files": 68,
-    "always_apply_true": 35,
+    "total_mdc_files": 69,
+    "always_apply_true": 36,
     "always_apply_false": 33,
     "no_boolean_always_apply": 0,
     "explicit_rule_ids": 67,
-    "derived_rule_ids": 1,
+    "derived_rule_ids": 2,
     "deprecated_rules": 0
   },
   "rules": [
@@ -945,6 +945,30 @@
       "removal_plan": null,
       "extends": null,
       "classification_source": "explicit"
+    },
+    {
+      "file": "64-canonical-identity-authority.mdc",
+      "id": "l9.rule.64.canonical.identity.authority",
+      "id_source": "derived",
+      "version": null,
+      "description": "Canonical ActorIdentity and SurfaceIdentity projection authority",
+      "scope": "global",
+      "domain": "general",
+      "activation": "always",
+      "activation_source": "derived",
+      "always_apply": true,
+      "globs": null,
+      "first_heading": "Canonical Identity Authority",
+      "has_yaml_frontmatter": true,
+      "line_count": 85,
+      "content_digest": "sha256:ad0c026c23221ace986d0315f3c5d0781eceb1d0a47fe40f5952f88709841823",
+      "authority": "compatibility",
+      "context_cost": "moderate",
+      "deprecated": false,
+      "replacement": null,
+      "removal_plan": null,
+      "extends": null,
+      "classification_source": "mixed_or_derived"
     },
     {
       "file": "65-observability-performance.mdc",
