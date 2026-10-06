@@ -1,7 +1,12 @@
 # ADR-0042: Normative and advisory content are separate channels in rule projections
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

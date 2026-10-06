@@ -60,7 +60,7 @@ def test_identity_cursor_stamp(monkeypatch):
 
 def test_identity_is_derived_per_surface_and_configured_values_are_ignored(monkeypatch):
     _surface(monkeypatch, CLAUDECODE="1", L9_MEMORY_AGENT_ID="claude-code")
-    assert ident.resolve_write_identity(surface="claude-code")["agent_id"] == "claude-code-desktop"
+    assert ident.resolve_write_identity(surface="claude-code")["agent_id"] == "claude-code"
     _surface(
         monkeypatch,
         CLAUDECODE="1",
@@ -70,8 +70,8 @@ def test_identity_is_derived_per_surface_and_configured_values_are_ignored(monke
     )
     got = ident.resolve_write_identity(surface="claude-code")
     assert got == {
-        "agent_id": "claude-code-mobile",
-        "user_id": "claude_code_mobile_agent",
+        "agent_id": "claude-code",
+        "user_id": "claude_code_agent",
         "surface": "claude-code",
     }
 
@@ -82,8 +82,8 @@ def test_identity_drift_is_refused_not_recorded(monkeypatch):
         ident.resolve_write_identity(explicit_agent_id="claude-code-mobile", surface="claude-code")
 
 
-def test_the_retired_single_identity_names_no_surface(monkeypatch):
-    _surface(monkeypatch, L9_MEMORY_AGENT_ID="claude-code")
+def test_a_retired_surface_author_is_refused(monkeypatch):
+    _surface(monkeypatch, L9_MEMORY_AGENT_ID="claude-code-desktop")
     with pytest.raises(ident.IdentityError, match="retired"):
         ident.resolve_write_identity(surface="claude-code")
 

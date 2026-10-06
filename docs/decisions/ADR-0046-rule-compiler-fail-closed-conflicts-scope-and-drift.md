@@ -1,7 +1,12 @@
 # ADR-0046: Rule compilation fails closed on unresolved authority, conflict, scope widening, unsupported activation, context overflow, and projection drift
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

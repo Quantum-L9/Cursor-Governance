@@ -328,6 +328,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "64-canonical-identity-authority.md",
+      "output_sha256": "d234fe22b37dcdfd7b6b987ef8062f6dd89e2ead8ca865cd67e913cb0419ecd6",
+      "source": "rules/64-canonical-identity-authority.mdc",
+      "source_sha256": "ad0c026c23221ace986d0315f3c5d0781eceb1d0a47fe40f5952f88709841823",
+      "stem": "64-canonical-identity-authority"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "65-observability-performance.md",
       "output_sha256": "3e3ac769dd2b4fa4acc9040ec5d187dbf81ef4fbdc0a143b5769ae89ecf1f37e",
@@ -501,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "01b6e257a514d0de74b55b80aae98bc2ba0f5d1c31ec9525d38741d68d5d1fe7",
+      "output_sha256": "8231fac9ae05afe5cb3af4ac93e9be432e9c589fd6830b4db60c6bc04f650c22",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "2ceeeeb34498e44daf73300b310f7d9da9a164e4390aa075474409ed8b9632de",
+      "source_sha256": "ba13447e82692c0563d814d8b419c959a474435d310036c69dbd47e1b7feb4d6",
       "stem": "87-cursor-memory-kernel"
     },
     {
@@ -628,9 +637,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 53,
+    "projected": 54,
     "skipped_agent_requested": 15,
-    "source_mdc": 68
+    "source_mdc": 69
   },
-  "tree_sha256": "a684ccccd604cd2a330a9f73600a95746c2ac03713481a4cc33d6186a18b17e2"
+  "tree_sha256": "26a193906efdabe0f5a43db8d3b3bdbb5c79f094eb7704eda9ef6d901a0d46cb"
 }

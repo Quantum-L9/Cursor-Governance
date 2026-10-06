@@ -56,6 +56,36 @@ def test_different_slugs_with_one_number_fail(tmp_path: Path) -> None:
     assert any("ADR-0007 names more than one decision" in item for item in findings)
 
 
+def test_list_status_line_is_indexed(tmp_path: Path) -> None:
+    module = _load()
+    _write(
+        tmp_path / "environment/contracts/execution/adr/ADR-0024-mission.md",
+        "# ADR-0024: Mission parent\n\n* Status: Accepted\n* Date: 2026-08-28\n",
+    )
+    records = module.collect(tmp_path)
+    assert records[0].status == "Accepted"
+
+
+def test_same_slug_two_full_bodies_fail(tmp_path: Path) -> None:
+    module = _load()
+    body = "# ADR-0017: Peer core\n\n## Status\n\nAccepted\n"
+    _write(tmp_path / "docs/decisions/ADR-0017-peer.md", body)
+    _write(tmp_path / "environment/contracts/execution/adr/ADR-0017-peer.md", body)
+    findings = module.identity_findings(module.collect(tmp_path))
+    assert any("ADR-0017 has more than one full body" in item for item in findings)
+
+
+def test_number_width_groups_as_one_decision(tmp_path: Path) -> None:
+    module = _load()
+    _write(tmp_path / "docs/decisions/ADR-024-alpha.md", _adr(24, "alpha", "Alpha"))
+    _write(
+        tmp_path / "docs/decisions/ADR-0024-beta.md",
+        _adr(24, "beta", "Beta"),
+    )
+    findings = module.identity_findings(module.collect(tmp_path))
+    assert any("ADR-0024 names more than one decision" in item for item in findings)
+
+
 def test_bold_status_line_is_indexed(tmp_path: Path) -> None:
     module = _load()
     _write(

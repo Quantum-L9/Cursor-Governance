@@ -1,4 +1,4 @@
-# ADR-0039: Cloud Graphiti HTTPS reachability
+# ADR-0051: Cloud Graphiti HTTPS reachability
 
 ## Status
 
@@ -13,6 +13,16 @@ Accepted
 ADR-0006 retired the L9 HTTP memory side door (`L9_MEMORY_HTTP_*` /
 `memory_client`) and required Cursor Graphiti as the sole episodic front door.
 Claude Code Web/Mobile sandboxes cannot use the SSH tunnel to `127.0.0.1:8100`.
+
+## Options Considered
+
+1. **Keep the SSH tunnel as the only Graphiti path.** Cloud sandboxes cannot
+   reach `127.0.0.1:8100`. Rejected.
+2. **Revive the HTTP memory side door** (`L9_MEMORY_HTTP_*` / `memory_client`).
+   Rejected: ADR-0006 retired that door.
+3. **Put HTTPS in front of the same Graphiti MCP process.** Caddy on C1
+   forwards `https://memory.quantumaipartners.com/graphiti/*` to
+   `127.0.0.1:8100`, and cloud surfaces set `GRAPHITI_MCP_URL`. **Chosen.**
 
 ## Decision
 

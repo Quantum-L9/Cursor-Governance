@@ -177,8 +177,8 @@ def _peer_test_env(tmp: Path) -> dict[str, str]:
     return {
         "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
         "L9_GOVERNANCE_SURFACE": "claude-code",
-        "L9_PE_AGENT_REF": "claude-code-desktop",
-        "L9_PE_SURFACE": "claude-cli",
+        "L9_PE_AGENT_REF": "claude-code",
+        "L9_PE_SURFACE": "claude-code-cli",
         # A real Claude host launches its hooks on the governance locked
         # interpreter (`l9_hook_exec.sh`). The fake has no launcher, so it is
         # told which interpreter can import the root autonomy runtime — the one

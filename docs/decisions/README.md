@@ -33,10 +33,10 @@ may share a number only when the filename slug is the same decision.
 | ADR-0021 | Accepted | Decompose Claude Code from Thick Gold Standard to Thin Provider | `docs/decisions/ADR-0021-decompose-claude-code-thick-adapter.md`<br>`environment/contracts/execution/adr/ADR-0021-decompose-claude-code-thick-adapter.md` |
 | ADR-0022 | Accepted | Thin-Adapter Conformance Is Merge-Blocking | `docs/decisions/ADR-0022-thin-adapter-conformance-is-merge-blocking.md`<br>`environment/contracts/execution/adr/ADR-0022-thin-adapter-conformance-is-merge-blocking.md` |
 | ADR-0023 | Accepted | Task Readiness, Ordering, and Blocking Semantics | `docs/decisions/ADR-0023-task-readiness-ordering-and-blocking-semantics.md`<br>`environment/contracts/execution/adr/ADR-0023-task-readiness-ordering-and-blocking-semantics.md` |
-| ADR-0024 | Unknown | Mission Is Durable Parent Intent; the Program Controller Remains Runtime Authority | `docs/decisions/ADR-0024-mission-parent-intent-and-controller-boundary.md`<br>`environment/contracts/execution/adr/ADR-0024-mission-parent-intent-and-controller-boundary.md` |
-| ADR-0025 | Unknown | Mission Revision Is Immutable; Mission Lifecycle Is a Separate State Domain | `docs/decisions/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md`<br>`environment/contracts/execution/adr/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md` |
-| ADR-0026 | Unknown | Mission Program Binding Is Exact-State and Must Not Create Circular Blueprint Identity | `docs/decisions/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md`<br>`environment/contracts/execution/adr/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md` |
-| ADR-0027 | Unknown | Mission Acceptance Is Separate from Program Acceptance | `docs/decisions/ADR-0027-mission-acceptance-separate-from-program-acceptance.md`<br>`environment/contracts/execution/adr/ADR-0027-mission-acceptance-separate-from-program-acceptance.md` |
+| ADR-0024 | Accepted | Mission Is Durable Parent Intent; the Program Controller Remains Runtime Authority | `docs/decisions/ADR-0024-mission-parent-intent-and-controller-boundary.md`<br>`environment/contracts/execution/adr/ADR-0024-mission-parent-intent-and-controller-boundary.md` |
+| ADR-0025 | Accepted | Mission Revision Is Immutable; Mission Lifecycle Is a Separate State Domain | `docs/decisions/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md`<br>`environment/contracts/execution/adr/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md` |
+| ADR-0026 | Accepted | Mission Program Binding Is Exact-State and Must Not Create Circular Blueprint Identity | `docs/decisions/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md`<br>`environment/contracts/execution/adr/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md` |
+| ADR-0027 | Accepted | Mission Acceptance Is Separate from Program Acceptance | `docs/decisions/ADR-0027-mission-acceptance-separate-from-program-acceptance.md`<br>`environment/contracts/execution/adr/ADR-0027-mission-acceptance-separate-from-program-acceptance.md` |
 | ADR-0028 | Accepted | Session hydrate/close visibility and write-primary repair | `docs/decisions/ADR-0028-session-hydrate-close-visibility.md` |
 | ADR-0029 | Accepted | Surface-hook divergence (shared brain upstream) | `docs/decisions/ADR-0029-surface-hook-divergence.md` |
 | ADR-0030 | Accepted | The memory control plane is the single front door | `docs/decisions/ADR-0030-memory-control-plane-single-front-door.md` |
@@ -47,7 +47,8 @@ may share a number only when the filename slug is the same decision.
 | ADR-0035 | Accepted | `recorded_after` is a search selector that skips the relevance drop | `docs/decisions/ADR-0035-recorded-after-search-selector.md` |
 | ADR-0036 | Accepted | Core Owns the Makefile Compiler Runtime | `docs/decisions/ADR-0036-core-owns-makefile-compiler-runtime.md` |
 | ADR-0037 | Accepted | Direct agent memory records represent independently governable knowledge | `docs/decisions/ADR-0037-direct-agent-memory-record-granularity.md` |
-| ADR-0039 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0039-cloud-graphiti-https-reachability.md` |
+| ADR-0038 | Proposed | Canonical identity is projected from Quantum-L9/.github and governed by a local binding | `docs/decisions/ADR-0038-canonical-identity-projection-and-governing-binding.md` |
+| ADR-0039 | Proposed | The agent registry holds operating-plane bindings only | `docs/decisions/ADR-0039-agent-registry-is-operating-plane-bindings-only.md` |
 | ADR-0040 | Accepted | Contracts own rule semantics; Cursor rules are activation and projection surfaces | `docs/decisions/ADR-0040-contracts-own-rule-semantics.md` |
 | ADR-0041 | Accepted | Rule Activation Binding is the canonical intermediate representation between contracts and platform rules | `docs/decisions/ADR-0041-rule-activation-binding-intermediate-representation.md` |
 | ADR-0042 | Accepted | Normative and advisory content are separate channels in rule projections | `docs/decisions/ADR-0042-normative-advisory-rule-channels.md` |
@@ -56,9 +57,10 @@ may share a number only when the filename slug is the same decision.
 | ADR-0045 | Accepted | RULES-MANIFEST.yaml is the generated rule projection registry | `docs/decisions/ADR-0045-rules-manifest-generated-projection-registry.md` |
 | ADR-0046 | Accepted | Rule compilation fails closed on unresolved authority, conflict, scope widening, unsupported activation, context overflow, and projection drift | `docs/decisions/ADR-0046-rule-compiler-fail-closed-conflicts-scope-and-drift.md` |
 | ADR-0047 | Accepted | Existing Cursor rules migrate through a strangler lifecycle with a monotonic hidden-doctrine ratchet | `docs/decisions/ADR-0047-rules-strangler-migration-and-doctrine-ratchet.md` |
-| ADR-0048 | Accepted (supersedes the repository-write role of the phase-lock in ADR-0002 and ADR-0006 §1; the single-front-door decision itself stands) | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
+| ADR-0048 | Accepted | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
 | ADR-0049 | Accepted | Universal campaign ingress and typed architecture admission | `docs/decisions/ADR-0049-universal-campaign-ingress-and-architecture-admission.md`<br>`environment/contracts/execution/adr/ADR-0049-universal-campaign-ingress-and-architecture-admission.md` |
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
+| ADR-0051 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0051-cloud-graphiti-https-reachability.md` |
 
 <!-- END L9 ADR INDEX -->
 

@@ -350,116 +350,13 @@ install_session_end_governance_hook() {
     link_or_update "$workspace_open_link" "$workspace_open_src" "~/.cursor/hooks/workspace-open-plugin-loader.py"
   fi
 
-  python3 - "$hooks_json" "$template" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-hooks_json = Path(sys.argv[1])
-template = Path(sys.argv[2])
-bootstrap_cmd = "./hooks/session-start-bootstrap.sh"
-data = json.loads(template.read_text())
-if hooks_json.exists():
-    try:
-        existing = json.loads(hooks_json.read_text())
-    except json.JSONDecodeError:
-        existing = {"version": 1, "hooks": {}}
-    if existing.get("version") != 1:
-        existing = {"version": 1, "hooks": existing.get("hooks", {})}
-    merged_hooks = existing.setdefault("hooks", {})
-    for event, entries in data.get("hooks", {}).items():
-        merged = merged_hooks.setdefault(event, [])
-        known = {e.get("command") for e in merged if isinstance(e, dict)}
-        for entry in entries:
-            cmd = entry.get("command") if isinstance(entry, dict) else None
-            if cmd and cmd not in known:
-                merged.append(entry)
-                known.add(cmd)
-    data = existing
-
-# sessionStart: bootstrap first; retire orchestrator-only entry
-hooks = data.setdefault("hooks", {})
-ss = hooks.setdefault("sessionStart", [])
-ss = [e for e in ss if e.get("command") != "./hooks/session-start-memory-orchestrator.sh"]
-bootstrap_entry = {"command": bootstrap_cmd, "timeout": 60}
-# Match by substring, not exact equality: collapses stray env-var-prefixed
-# variants too (e.g. "GOVERNANCE_SYNC_PUSH=0 ./hooks/session-start-bootstrap.sh"),
-# which otherwise survive every reconcile as a second sessionStart entry and
-# double the cost of everything the bootstrap script does (including uv sync).
-ss = [bootstrap_entry] + [
-    e for e in ss if "session-start-bootstrap.sh" not in (e.get("command") or "")
-]
-hooks["sessionStart"] = ss
-
-# sessionEnd: dirt-close + auto-hygiene scooped other chats on a shared
-# clone. Merge only appends, so a stale hooks.json keeps the retired
-# command until this strip removes it. The installed script is a no-op
-# if a leftover entry survives one reconcile.
-retired_session_end = {
-    "./hooks/session-end-repo-hygiene.sh",
-}
-ends = hooks.setdefault("sessionEnd", [])
-ends = [
-    e
-    for e in ends
-    if isinstance(e, dict)
-    and "session-end-repo-hygiene.sh" not in (e.get("command") or "")
-    and (e.get("command") or "") not in retired_session_end
-]
-hooks["sessionEnd"] = ends
-
-# beforeShellExecution: one combined gate. Drop the three predecessors so
-# a merge that only appended would otherwise run four processes.
-retired_bse = {
-    "./hooks/graphiti-gate-shell.sh",
-    "./hooks/l4-local-execution-gate-shell.sh",
-    "./hooks/plan-kernel-execute-gate.sh",
-}
-combined_bse = "./hooks/before-shell-execution-gate.sh"
-bse = hooks.setdefault("beforeShellExecution", [])
-bse = [
-    e
-    for e in bse
-    if isinstance(e, dict) and (e.get("command") or "") not in retired_bse
-]
-combined_entry = {"command": combined_bse, "timeout": 10}
-bse = [combined_entry] + [
-    e for e in bse if combined_bse not in (e.get("command") or "")
-]
-hooks["beforeShellExecution"] = bse
-
-# subagentStart: one lifecycle command. The start script already runs
-# graphiti_gate_runner; a second graphiti-gate-subagent.sh plus a no-arg
-# alias of the same script was a triple fire that still fail-closed.
-retired_start = {
-    "./hooks/graphiti-gate-subagent.sh",
-    "./hooks/lifecycle-subagent-start.sh",
-}
-canonical_start = "./hooks/lifecycle-subagent-start.sh subagent_start"
-starts = hooks.setdefault("subagentStart", [])
-starts = [
-    e
-    for e in starts
-    if isinstance(e, dict) and (e.get("command") or "") not in retired_start
-]
-start_entry = {"command": canonical_start, "timeout": 30, "failClosed": True}
-starts = [start_entry] + [
-    e for e in starts if canonical_start not in (e.get("command") or "")
-]
-hooks["subagentStart"] = starts
-
-canonical_stop = "./hooks/lifecycle-subagent-stop.sh"
-stops = [e for e in hooks.setdefault("subagentStop", []) if isinstance(e, dict)]
-stop_entry = {"command": canonical_stop, "timeout": 45, "failClosed": True}
-stops = [stop_entry] + [e for e in stops if canonical_stop not in (e.get("command") or "")]
-hooks["subagentStop"] = stops
-
-data = {"version": 1, "hooks": hooks}
-
-hooks_json.parent.mkdir(parents=True, exist_ok=True)
-hooks_json.write_text(json.dumps(data, indent=2) + "\n")
-print(f"OK: governance hooks registered in {hooks_json}")
-PY
+  # Registry reconcile (hooks.json + the ~/.cursor/hooks link farm) is owned by
+  # reconcile_hooks_registry.py so that check_governance_wiring.sh --machine can
+  # ask the same script whether a registered command can still run.
+  python3 "$SCRIPT_DIR/reconcile_hooks_registry.py" \
+    --hooks-json "$hooks_json" \
+    --template "$template" \
+    --hooks-dir "$HOME/.cursor/hooks"
 }
 
 install_session_end_governance_hook

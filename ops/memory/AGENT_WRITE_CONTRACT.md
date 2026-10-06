@@ -79,7 +79,7 @@ the builder closed.
   `settings.template.json` under the names Claude Code actually emits
   (`memory_write_agent`, …). The ordinary write runs with no popup.
 
-## Signed agent identity: every memory names its author and its surface
+## Signed agent identity: every memory names its author
 
 A memory must name the agent that wrote it, and the operator must be able to
 hold each surface accountable for what it wrote. The identity is therefore
@@ -88,21 +88,33 @@ It is never configured, so it cannot drift from where the code actually ran.
 `ops/memory/agent_identity.py` is the one resolver, used by both memory lanes
 and by the MCP launcher:
 
-| Identity | Surface | Derived from |
+Two dimensions, never mixed. The **ActorIdentity** is the author and the
+join key. The **SurfaceIdentity** says where that actor ran. Both names come
+from the upstream registries pinned in `environment/agents/agent_registry.yaml`
+(`identity_authority`).
+
+| ActorIdentity | SurfaceIdentity | Derived from |
 |---|---|---|
-| `cursor` | Cursor | `CURSOR_AGENT` |
-| `claude-code-desktop` | Claude Code Desktop, on your machine | Claude Code markers, `CLAUDE_CODE_REMOTE` unset |
-| `claude-code-mobile` | Claude Code Mobile, a cloud session | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
-| `manus` | Manus | the `L9_MEMORY_AGENT_ID` its adapter sets and enforces (`adapters/manus`) |
-| `codex`, `gemini` | Codex, Gemini | the `L9_MEMORY_AGENT_ID` their adapters set |
-| `perplexity` | Perplexity | reserved, not yet wired (planned, read-only) |
-| `perplexity-computer` | Perplexity Computer | reserved, not yet wired (planned, read-only) |
-| `l-cto` | L CTO | reserved, not yet wired (planned, read-only) |
-| `igorbot` | IgorBot | reserved, not yet wired (planned, read-only) |
+| `cursor` | `cursor-ide` | `CURSOR_AGENT` |
+| `claude-code` | `claude-code-cli` | Claude Code markers, `CLAUDE_CODE_REMOTE` unset, `CLAUDE_CODE_ENTRYPOINT=cli` |
+| `claude-code` | `claude-code-desktop` | Claude Code markers, `CLAUDE_CODE_REMOTE` unset, no more specific entrypoint |
+| `claude-code` | `claude-code-ide` | an execution surface of the same actor (no separate marker yet) |
+| `claude-code` | `claude-code-mobile` | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
+| `manus` | `manus-cloud` | the `L9_MEMORY_AGENT_ID` its adapter sets and enforces (`adapters/manus`) |
+| `codex`, `gemini` | `codex-cloud`, `gemini-cli` | the `L9_MEMORY_AGENT_ID` their adapters set |
+| `perplexity` | — | reserved, not yet wired (planned, never a runtime writer) |
+| `perplexity-computer` | — | reserved, not yet wired (planned, never a runtime writer) |
+| `l-cto` | — | reserved, not yet wired (planned, never a runtime writer) |
+| `igorbot` | — | reserved, not yet wired (planned, never a runtime writer) |
+
+`claude-code-desktop` and `claude-code-mobile` are also **historical
+ActorIdentity aliases** of `claude-code`. Stored memories and receipts that
+carry them stay readable and are never rewritten, but a new write never uses
+them as its author (`agent:claude-code-desktop` is refused).
 
 Agents without host markers are identified only by the `L9_MEMORY_AGENT_ID`
-their own adapter sets, and only when it names a registered identity. Any other
-value is refused. The resolver's set and `environment/agents/agent_registry.yaml`
+their own adapter sets, and only when it names an active adapter identity. Any
+other value is refused. The resolver's set and `environment/agents/agent_registry.yaml`
 are held equal by `tests/ops/memory/test_agent_identity.py`. A reserved identity
 becomes writable when its adapter lands and its registry entry gains a writing
 role, `assigned_groups` and `status: active`.
@@ -110,13 +122,14 @@ role, `assigned_groups` and `status: active`.
 - **Configured values are ignored.** On these surfaces a configured
   `L9_MEMORY_AGENT_ID` or `USER_ID` is ignored, and SessionStart reports it as
   drift. `USER_ID` is always derived from the identity, for example
-  `claude_code_mobile_agent`. Only agents without host markers of their own
+  `claude_code_agent`. Only agents without host markers of their own
   (manus, codex, gemini, an operator shell) are identified by
   `L9_MEMORY_AGENT_ID`, which their adapters set.
-- **No guessing.** A Claude Code cloud session with an unrecognized entrypoint,
-  and the retired single `claude-code` identity, have **no** identity. Every
-  writer refuses to write and says why, rather than recording an author that
-  did not run.
+- **No guessing.** A Claude Code cloud session with an unrecognized entrypoint
+  is still the `claude-code` actor, but its surface is unknown; the resolver
+  never guesses a surface. A process with no host markers and no admitted
+  adapter identity has **no** actor, and every writer refuses to write and
+  says why, rather than recording an author that did not run.
 - **Drift is refused.** When a caller names an identity that disagrees with the
   running surface (an explicit `agent_id`, or the builder's `--agent-id`), the
   write is refused as drift.
@@ -130,7 +143,7 @@ role, `assigned_groups` and `status: active`.
   5. mints the signed assertion.
 
   The server's principal is that identity, for example
-  `claude-code-mobile-memory-client`. Without a door the server refuses to
+  `claude-code-memory-client`. Without a door the server refuses to
   start. `L9_MEMORY_ALLOW_LOCAL_OPERATOR=1` is the announced operator opt-out.
 - **SessionStart prints** `memory identity: <id> (derived from host markers)`,
   or `NONE` with the reason.
@@ -155,7 +168,7 @@ exactly as valid as one minted anywhere else.
    never replaced. SessionStart reports `signed-agent door: PROVISIONED`.
 2. **Claude Code Desktop (workstation): once.** Existing keys are kept and no
    values are printed:
-   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code-desktop`
+   `python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id claude-code`
 3. **Cursor:** its SessionStart mints the `cursor` door from the same local
    maps (`ops/hooks/session_start_bootstrap.sh`).
 4. **Environment settings:** delete any `L9_MEMORY_AGENT_ID`, `USER_ID`,

@@ -1,7 +1,12 @@
 # ADR-0044: Cursor .mdc files are deterministic generated projections with clause-level provenance
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 

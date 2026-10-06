@@ -128,3 +128,23 @@ def test_non_truthy_ci_markers_do_not_skip_the_kernel_latch() -> None:
     for value in ("true", "TRUE", "1", "yes", " true "):
         assert kernel_latch_surface({"GITHUB_ACTIONS": value}) is False, value
         assert kernel_latch_surface({"CI": value}) is False, value
+
+
+def test_detect_surface_keeps_its_governance_profile_domain() -> None:
+    """detect_surface() never returns a fine SurfaceIdentity (claude-code-desktop, …)."""
+    for env in ({"CLAUDECODE": "1"}, {"CLAUDE_CODE_ENTRYPOINT": "cli"}, {"CURSOR_AGENT": "1"}):
+        assert detect_surface(env) in {"cursor", "claude-code", "claude-code-remote"}
+    assert detect_surface({"CLAUDE_CODE_REMOTE": "true"}) == "claude-code-remote"
+
+
+def test_detect_surface_id_delegates_to_the_one_identity_resolver(monkeypatch) -> None:
+    from ops.autonomy import surface_detect  # noqa: PLC0415
+    from ops.memory import agent_identity  # noqa: PLC0415
+
+    for env in ({"CURSOR_AGENT": "1"}, {"CLAUDECODE": "1"}, {"CLAUDE_CODE_ENTRYPOINT": "cli"}, {}):
+        assert surface_detect.detect_surface_id(env) == agent_identity.resolve_surface_id(env)
+    monkeypatch.setattr(agent_identity, "resolve_surface_id", lambda env=None: "sentinel")
+    assert surface_detect.detect_surface_id({"CLAUDECODE": "1"}) == "sentinel"
+    source = (ROOT / "ops" / "autonomy" / "surface_detect.py").read_text(encoding="utf-8")
+    for fine in ("claude-code-desktop", "claude-code-cli", "claude-code-mobile", "remote_mobile"):
+        assert f'"{fine}"' not in source, f"surface_detect.py keeps its own marker table: {fine}"

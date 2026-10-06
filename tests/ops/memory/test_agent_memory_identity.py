@@ -33,9 +33,7 @@ DOOR_VARS = (
 def _authority(*agents: str) -> dict:
     return {
         "agents_door_secret": secrets.token_hex(24),
-        "agent_signing_keys": {
-            a: secrets.token_hex(24) for a in agents or ("claude-code-desktop",)
-        },
+        "agent_signing_keys": {a: secrets.token_hex(24) for a in agents or ("claude-code",)},
     }
 
 
@@ -50,7 +48,7 @@ def _private_dir(tmp_path: Path) -> Path:
 
 
 def test_scoping_refuses_the_human_door_peers_and_short_or_reused_keys() -> None:
-    agent = "claude-code-desktop"
+    agent = "claude-code"
     good = _authority(agent)
     assert maa.scoped_tokens(good, agent) == good
     with pytest.raises(maa.AuthorityMaterializationError, match="human memory door"):
@@ -69,15 +67,13 @@ def test_scoping_refuses_the_human_door_peers_and_short_or_reused_keys() -> None
 
 def test_a_secret_carrying_another_identitys_key_is_refused() -> None:
     with pytest.raises(maa.AuthorityMaterializationError, match="no key beyond"):
-        maa.scoped_tokens(
-            _authority("claude-code-mobile", "claude-code-desktop"), "claude-code-mobile"
-        )
+        maa.scoped_tokens(_authority("claude-code", "cursor"), "claude-code")
 
 
 def test_grants_are_claims_the_signed_door_accepts() -> None:
     from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
 
-    grant = maa.agent_grants(ROOT, "claude-code-mobile")["grants"]["claude-code-mobile"]
+    grant = maa.agent_grants(ROOT, "claude-code")["grants"]["claude-code"]
     AgentDoorGrant.model_validate(grant)
     assert "tenant_id" not in grant
     assert "organization_id" not in grant
@@ -87,15 +83,12 @@ def test_grants_are_claims_the_signed_door_accepts() -> None:
 
 def test_grants_come_from_the_registry_and_include_l9_ci_core(tmp_path: Path) -> None:
     directory = _private_dir(tmp_path)
-    maa.materialize(ROOT, directory, _authority("claude-code-mobile"), "claude-code-mobile")
+    maa.materialize(ROOT, directory, _authority("claude-code"), "claude-code")
     for name in ("agent_tokens.local.json", "agent_grants.json"):
         assert stat.S_IMODE((directory / name).stat().st_mode) == 0o600
-    grants = json.loads((directory / "agent_grants.json").read_text())["grants"][
-        "claude-code-mobile"
-    ]
+    grants = json.loads((directory / "agent_grants.json").read_text())["grants"]["claude-code"]
     registry = yaml.safe_load((ROOT / "environment/agents/agent_registry.yaml").read_text())
-    assigned = registry["agents"]["claude-code-mobile"]["assigned_groups"]
-    assert "l9-ci-core" in assigned
+    assigned = registry["agents"]["claude-code"]["assigned_groups"]
     assert set(grants["write_namespaces"]) == set(assigned)
 
 
@@ -104,29 +97,29 @@ def test_a_non_private_directory_is_refused(tmp_path: Path) -> None:
     directory.mkdir()
     directory.chmod(0o755)
     with pytest.raises(maa.AuthorityMaterializationError, match="0700"):
-        maa.materialize(ROOT, directory, _authority(), "claude-code-desktop")
+        maa.materialize(ROOT, directory, _authority(), "claude-code")
 
 
 def test_export_scopes_a_full_local_map_to_one_agent(tmp_path: Path) -> None:
     full = {
         "agents_door_secret": secrets.token_hex(24),
         "agent_signing_keys": {
-            "claude-code-mobile": secrets.token_hex(24),
-            "claude-code-desktop": secrets.token_hex(24),
+            "claude-code": secrets.token_hex(24),
+            "cursor": secrets.token_hex(24),
             "manus": secrets.token_hex(24),
         },
         "human_door_secret": secrets.token_hex(24),
     }
     source = tmp_path / "agent_tokens.local.json"
     source.write_text(json.dumps(full))
-    output = tmp_path / "claude-code-mobile-authority.json"
-    maa.export_authority(source, ["claude-code-mobile"], output)
+    output = tmp_path / "claude-code-authority.json"
+    maa.export_authority(source, ["claude-code"], output)
     exported = json.loads(output.read_text())
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
     assert set(exported) == {"agents_door_secret", "agent_signing_keys"}
-    assert set(exported["agent_signing_keys"]) == {"claude-code-mobile"}
+    assert set(exported["agent_signing_keys"]) == {"claude-code"}
     with pytest.raises(maa.AuthorityMaterializationError, match="no key beyond"):
-        maa.export_authority(source, ["claude-code-mobile", "manus"], tmp_path / "bad.json")
+        maa.export_authority(source, ["claude-code", "manus"], tmp_path / "bad.json")
 
 
 # --- launcher -------------------------------------------------------------------
@@ -181,16 +174,16 @@ def test_a_hosted_container_mints_its_own_door_at_spawn(tmp_path: Path) -> None:
     """No pasted secret: the hosted launcher provisions ~/.config/l9-memory itself."""
     result = _launch(MOBILE, tmp_path)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines() == [f"claude-code-mobile {' '.join(DOOR_VARS)}"], (
+    assert result.stdout.splitlines() == [f"claude-code {' '.join(DOOR_VARS)}"], (
         "stdout is the MCP channel: only the server may write to it"
     )
-    assert "hosted memory authority for claude-code-mobile" in result.stderr
+    assert "hosted memory authority for claude-code" in result.stderr
     local = tmp_path / ".config" / "l9-memory"
     assert stat.S_IMODE(local.stat().st_mode) == 0o700
     for name in ("agent_tokens.local.json", "agent_grants.json"):
         assert stat.S_IMODE((local / name).stat().st_mode) == 0o600
     key = json.loads((local / "agent_tokens.local.json").read_text())["agent_signing_keys"]
-    assert key["claude-code-mobile"] not in result.stdout + result.stderr, "values never printed"
+    assert key["claude-code"] not in result.stdout + result.stderr, "values never printed"
     # The next spawn reuses the same authority.
     again = _launch(MOBILE, tmp_path)
     assert again.returncode == 0, again.stderr
@@ -212,23 +205,23 @@ def test_the_opt_out_never_stops_a_hosted_container_from_naming_its_author(
     """The opt-out allows running WITHOUT a door; it never prefers the anonymous one."""
     result = _launch({"L9_MEMORY_ALLOW_LOCAL_OPERATOR": "1", **MOBILE}, tmp_path)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split() == ["claude-code-mobile", *DOOR_VARS]
+    assert result.stdout.split() == ["claude-code", *DOOR_VARS]
     assert "writes carry NO agent identity" not in result.stderr
 
 
 def test_the_hosted_secret_mints_the_mobile_door_at_spawn(tmp_path: Path) -> None:
-    hosted = json.dumps(_authority("claude-code-mobile"))
+    hosted = json.dumps(_authority("claude-code"))
     result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": hosted, **MOBILE}, tmp_path)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split() == ["claude-code-mobile", *DOOR_VARS]
+    assert result.stdout.split() == ["claude-code", *DOOR_VARS]
     assert not list(tmp_path.glob("l9-memory-authority.*")), "the authority dir is removed"
 
 
 def test_the_desktop_surface_gets_its_own_identity(tmp_path: Path) -> None:
-    desktop = json.dumps(_authority("claude-code-desktop"))
+    desktop = json.dumps(_authority("claude-code"))
     result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": desktop, "CLAUDECODE": "1"}, tmp_path)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.split()[0] == "claude-code-desktop"
+    assert result.stdout.split()[0] == "claude-code"
 
 
 def test_cursor_is_its_own_identity_even_with_the_claude_marker(tmp_path: Path) -> None:
@@ -238,11 +231,11 @@ def test_cursor_is_its_own_identity_even_with_the_claude_marker(tmp_path: Path) 
     assert result.stdout.split()[0] == "cursor"
 
 
-def test_a_secret_for_another_surface_is_refused(tmp_path: Path) -> None:
-    desktop_only = json.dumps(_authority("claude-code-desktop"))
-    result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": desktop_only, **MOBILE}, tmp_path)
+def test_a_secret_for_another_actor_is_refused(tmp_path: Path) -> None:
+    cursor_only = json.dumps(_authority("cursor"))
+    result = _launch({"L9_MEMORY_AGENT_AUTHORITY_JSON": cursor_only, **MOBILE}, tmp_path)
     assert result.returncode == 1
-    assert "not a valid claude-code-mobile authority" in result.stderr
+    assert "not a valid claude-code authority" in result.stderr
 
 
 def test_new_identities_get_keys_without_replacing_existing_ones(tmp_path: Path) -> None:
@@ -256,38 +249,35 @@ def test_new_identities_get_keys_without_replacing_existing_ones(tmp_path: Path)
             }
         )
     )
-    added = maa.add_missing_keys(source, ["cursor", "claude-code-desktop", "claude-code-mobile"])
+    added = maa.add_missing_keys(source, ["cursor", "claude-code", "manus"])
     keys = json.loads(source.read_text())["agent_signing_keys"]
-    assert added == ["claude-code-desktop", "claude-code-mobile"]
+    assert added == ["claude-code", "manus"]
     assert keys["cursor"] == existing
     assert stat.S_IMODE(source.stat().st_mode) == 0o600
-    assert maa.add_missing_keys(source, ["claude-code-desktop"]) == []
+    assert maa.add_missing_keys(source, ["claude-code"]) == []
 
 
 # --- hosted provisioning ------------------------------------------------------------
 
 
 def test_the_hosted_identities_come_from_the_resolver() -> None:
-    from ops.memory.agent_identity import REMOTE_ENTRYPOINTS
-
-    assert maa.hosted_identities() == sorted(set(REMOTE_ENTRYPOINTS.values()))
-    assert maa.hosted_identities() == ["claude-code-mobile"]
+    assert maa.hosted_identities() == ["claude-code"]
 
 
 def test_provisioning_creates_private_maps_with_registry_grants(tmp_path: Path) -> None:
     local = tmp_path / "l9-memory"
-    assert maa.provision_local(ROOT, local, ["claude-code-mobile"]) == ["claude-code-mobile"]
+    assert maa.provision_local(ROOT, local, ["claude-code"]) == ["claude-code"]
     assert stat.S_IMODE(local.stat().st_mode) == 0o700
     tokens = json.loads((local / "agent_tokens.local.json").read_text())
     assert set(tokens) == {"agents_door_secret", "agent_signing_keys"}, "never a human door"
-    assert set(tokens["agent_signing_keys"]) == {"claude-code-mobile"}
-    door, key = tokens["agents_door_secret"], tokens["agent_signing_keys"]["claude-code-mobile"]
+    assert set(tokens["agent_signing_keys"]) == {"claude-code"}
+    door, key = tokens["agents_door_secret"], tokens["agent_signing_keys"]["claude-code"]
     assert len(door) >= maa.MIN_SECRET and len(key) >= maa.MIN_SECRET and door != key
     grants = json.loads((local / "agent_grants.json").read_text())["grants"]
-    assert grants == maa.agent_grants(ROOT, "claude-code-mobile")["grants"]
+    assert grants == maa.agent_grants(ROOT, "claude-code")["grants"]
     # What the launcher's exporter would hand the server passes the same scoping
     # rules as a pasted authority.
-    assert maa.scoped_tokens(tokens, "claude-code-mobile") == tokens
+    assert maa.scoped_tokens(tokens, "claude-code") == tokens
 
 
 def test_provisioning_is_additive_and_idempotent(tmp_path: Path) -> None:
@@ -295,20 +285,17 @@ def test_provisioning_is_additive_and_idempotent(tmp_path: Path) -> None:
     local.mkdir(mode=0o700)
     existing = {
         "agents_door_secret": secrets.token_hex(24),
-        "agent_signing_keys": {"claude-code-desktop": secrets.token_hex(24)},
+        "agent_signing_keys": {"cursor": secrets.token_hex(24)},
     }
     (local / "agent_tokens.local.json").write_text(json.dumps(existing))
     (local / "agent_grants.json").write_text(json.dumps({"grants": {"other": {"x": 1}}}))
-    assert maa.provision_local(ROOT, local, ["claude-code-mobile"]) == ["claude-code-mobile"]
+    assert maa.provision_local(ROOT, local, ["claude-code"]) == ["claude-code"]
     tokens = json.loads((local / "agent_tokens.local.json").read_text())
     assert tokens["agents_door_secret"] == existing["agents_door_secret"]
-    assert (
-        tokens["agent_signing_keys"]["claude-code-desktop"]
-        == existing["agent_signing_keys"]["claude-code-desktop"]
-    )
+    assert tokens["agent_signing_keys"]["cursor"] == existing["agent_signing_keys"]["cursor"]
     grants = json.loads((local / "agent_grants.json").read_text())["grants"]
-    assert set(grants) == {"other", "claude-code-mobile"}
-    assert maa.provision_local(ROOT, local, ["claude-code-mobile"]) == []
+    assert set(grants) == {"other", "claude-code"}
+    assert maa.provision_local(ROOT, local, ["claude-code"]) == []
     assert json.loads((local / "agent_tokens.local.json").read_text()) == tokens
 
 
@@ -317,7 +304,7 @@ def test_provisioning_refuses_a_directory_that_is_not_private(tmp_path: Path) ->
     local.mkdir()
     local.chmod(0o755)
     with pytest.raises(maa.AuthorityMaterializationError, match="0700"):
-        maa.provision_local(ROOT, local, ["claude-code-mobile"])
+        maa.provision_local(ROOT, local, ["claude-code"])
     assert not (local / "agent_tokens.local.json").exists(), "nothing written"
 
 
@@ -413,7 +400,7 @@ def _door_has(home: Path, agent: str) -> int:
 
 
 def test_session_start_sees_a_provisioned_local_door(tmp_path: Path) -> None:
-    assert _door_has(tmp_path, "claude-code-mobile") == 1, "nothing provisioned"
-    maa.provision_local(ROOT, tmp_path / ".config" / "l9-memory", ["claude-code-mobile"])
-    assert _door_has(tmp_path, "claude-code-mobile") == 0
-    assert _door_has(tmp_path, "claude-code-desktop") == 1, "only the keyed identity"
+    assert _door_has(tmp_path, "claude-code") == 1, "nothing provisioned"
+    maa.provision_local(ROOT, tmp_path / ".config" / "l9-memory", ["claude-code"])
+    assert _door_has(tmp_path, "claude-code") == 0
+    assert _door_has(tmp_path, "cursor") == 1, "only the keyed identity"
