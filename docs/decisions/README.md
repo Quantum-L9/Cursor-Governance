@@ -56,7 +56,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0045 | Accepted | RULES-MANIFEST.yaml is the generated rule projection registry | `docs/decisions/ADR-0045-rules-manifest-generated-projection-registry.md` |
 | ADR-0046 | Accepted | Rule compilation fails closed on unresolved authority, conflict, scope widening, unsupported activation, context overflow, and projection drift | `docs/decisions/ADR-0046-rule-compiler-fail-closed-conflicts-scope-and-drift.md` |
 | ADR-0047 | Accepted | Existing Cursor rules migrate through a strangler lifecycle with a monotonic hidden-doctrine ratchet | `docs/decisions/ADR-0047-rules-strangler-migration-and-doctrine-ratchet.md` |
-| ADR-0048 | Accepted (supersedes the repository-write role of the phase-lock in ADR-0002 and ADR-0006 §1; the single-front-door decision itself stands) | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
+| ADR-0048 | Accepted | Multi-agent main-bound execution — Git isolates writers, memory does not | `docs/decisions/ADR-0048-multi-agent-main-bound-execution.md` |
 | ADR-0049 | Accepted | Universal campaign ingress and typed architecture admission | `docs/decisions/ADR-0049-universal-campaign-ingress-and-architecture-admission.md`<br>`environment/contracts/execution/adr/ADR-0049-universal-campaign-ingress-and-architecture-admission.md` |
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
 
