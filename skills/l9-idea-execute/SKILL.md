@@ -39,7 +39,7 @@ Load [references/contracts.md](references/contracts.md) and [references/architec
 
 1. Explicit user outcome and named constraints.
 2. Validated IdeaOS decision / pack (source authority + supersession).
-3. Live downstream owner contracts (Website-Bot, GAR, `l9-plan`, PE, `l9-repo-birth`, and `l9-repo-template`).
+3. Live downstream owner contracts (Website-Bot, GAR, `l9-plan`, PE, and `l9-repo-template`; `l9-repo-birth` is only the explicit-only control surface for the factory's birth handoff).
 4. This skill's envelope, graph, and adapter references.
 5. `Unknown` — stop with an explicit failure state; do not guess an owner.
 
@@ -229,6 +229,10 @@ PE/PEC completion is a valid terminal realization result. Do **not** invoke
 `execution_characteristics.birth_handoff_requested: true` is authorized by
 IdeaOS, then validate source commit/tree, all upstream receipts, and current
 factory capability evidence before invoking the explicit-only birth skill.
+Both birth stages are implemented by `l9-repo-template`: `birth_handoff` by its
+packager (`scripts/birth-runner/package_birth_handoff.py`), reached through the
+`l9-repo-birth` control surface, and `birth` by its `make birth` front door.
+Authorization for `birth_handoff` never authorizes `birth`.
 
 ### 8. Observe authoritative terminal state
 
