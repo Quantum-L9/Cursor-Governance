@@ -6,15 +6,13 @@ therefore derived at write time from markers the host itself sets on the
 running process — never read from a hard-coded setting that can drift from
 where the code is actually running:
 
-    cursor               Cursor                  CURSOR_AGENT is set
-    claude-code-desktop  Claude Code Desktop     Claude Code markers, CLAUDE_CODE_REMOTE unset
-                         (runs on the operator's machine)
-    claude-code-mobile   Claude Code Mobile      CLAUDE_CODE_REMOTE=true and
-                         (cloud session)         CLAUDE_CODE_ENTRYPOINT=remote_mobile
+    cursor        Cursor        CURSOR_AGENT is set
+    claude-code   Claude Code   Claude Code markers. Desktop, CLI, and mobile
+                                are surfaces of this one actor, not authors.
 
 On a Cursor or Claude Code surface a static ``L9_MEMORY_AGENT_ID`` is IGNORED:
-the host's own markers are the only evidence, so a pasted or projected value
-(the retired single ``claude-code`` identity, say) can never mislabel a write.
+the host's own markers are the only evidence, so a pasted surface author
+(``claude-code-desktop`` or ``claude-code-mobile``) can never mislabel a write.
 :func:`static_drift` names such a value so SessionStart can report it.
 
 Agents with no host markers of their own are identified by the
@@ -29,12 +27,12 @@ and only when it names a registered identity — see ADAPTER_IDENTITIES:
     l-cto                L CTO                      reserved — not yet wired
     igorbot              IgorBot                    reserved — not yet wired
 
-Any other value is not an identity. ``tests/ops/memory/test_agent_identity.py``
-holds this set equal to ``environment/agents/agent_registry.yaml`` (no drift).
+Any other value is not an identity.
 
-No guessing: a Claude Code cloud session whose entrypoint is not recognised,
-and the retired ``claude-code`` value, resolve to NO identity (""), and every
-memory writer refuses to write rather than record an inaccurate author.
+No guessing: a Claude Code cloud session whose entrypoint is not recognised
+resolves to NO identity (""), and every memory writer refuses to write rather
+than record an inaccurate author. ``claude-code-desktop`` and
+``claude-code-mobile`` are retired surface authors, not registry agents.
 
 Pure: reads the mapping it is given, no I/O. ``python -m ops.memory.agent_identity``
 prints the identity for the current process (exit 1 and a reason when none).
@@ -48,11 +46,10 @@ from collections.abc import Mapping
 from typing import Final
 
 CURSOR: Final = "cursor"
-CLAUDE_DESKTOP: Final = "claude-code-desktop"
-CLAUDE_MOBILE: Final = "claude-code-mobile"
+CLAUDE_ACTOR: Final = "claude-code"
 #: Every identity this resolver derives from host markers.
-DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_DESKTOP, CLAUDE_MOBILE})
-CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_DESKTOP, CLAUDE_MOBILE})
+DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_ACTOR})
+CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_ACTOR})
 #: Identities set by an agent's own adapter (no host markers to derive from).
 ADAPTER_IDENTITIES: Final = frozenset(
     {
@@ -68,10 +65,10 @@ ADAPTER_IDENTITIES: Final = frozenset(
 )
 #: Every memory identity there is; equal to the registry's agents.
 ALL_IDENTITIES: Final = DERIVED_IDENTITIES | ADAPTER_IDENTITIES
-#: The retired single identity: never an author (it named no surface).
-RETIRED: Final = frozenset({"claude-code"})
-#: CLAUDE_CODE_ENTRYPOINT values of a cloud session and the identity each is.
-REMOTE_ENTRYPOINTS: Final = {"remote_mobile": CLAUDE_MOBILE}
+#: Retired surface authors. They name a surface of ``claude-code``, not an agent.
+RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
+#: CLAUDE_CODE_ENTRYPOINT values of a cloud session this resolver admits.
+REMOTE_ENTRYPOINTS: Final = frozenset({"remote_mobile"})
 
 
 def _flag(env: Mapping[str, str], name: str) -> str:
@@ -92,8 +89,9 @@ def _is_claude(env: Mapping[str, str]) -> bool:
 
 def _claude_identity(env: Mapping[str, str]) -> str:
     if _flag(env, "CLAUDE_CODE_REMOTE").lower() == "true":
-        return REMOTE_ENTRYPOINTS.get(_flag(env, "CLAUDE_CODE_ENTRYPOINT").lower(), "")
-    return CLAUDE_DESKTOP
+        if _flag(env, "CLAUDE_CODE_ENTRYPOINT").lower() not in REMOTE_ENTRYPOINTS:
+            return ""
+    return CLAUDE_ACTOR
 
 
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
@@ -129,7 +127,10 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
         )
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     if explicit in RETIRED:
-        return f"L9_MEMORY_AGENT_ID={explicit} is the retired single identity; it names no surface"
+        return (
+            f"L9_MEMORY_AGENT_ID={explicit} is a retired surface author; "
+            f"the actor is {CLAUDE_ACTOR}"
+        )
     if explicit:
         known = ", ".join(sorted(ALL_IDENTITIES))
         return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity (known: {known})"

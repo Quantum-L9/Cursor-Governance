@@ -19,16 +19,17 @@ def resolve_write_identity(
     """agent_id / user_id for a memory write — DERIVED, never configured (no drift).
 
     ``ops/memory/agent_identity.py`` is the one source: on a Cursor or Claude
-    Code surface the identity comes from the host's own markers (cursor,
-    claude-code-desktop, claude-code-mobile). An explicit id that disagrees
-    with the surface that is actually running is refused as drift rather than
-    recorded. Only a process with no host markers (manus, codex, gemini, an
-    operator shell) is identified by its explicit id / L9_MEMORY_AGENT_ID. The
-    retired single ``claude-code`` names no surface and is refused. ``user_id``
-    is always derived from ``agent_id``; ``explicit_user_id`` is ignored.
+    Code surface the identity comes from the host's own markers (``cursor``
+    or ``claude-code``). Desktop and mobile are surfaces, not authors. An
+    explicit id that disagrees with the running process is refused as drift.
+    Only a process with no host markers (manus, codex, gemini, an operator
+    shell) is identified by its explicit id. A pasted ``cursor`` or
+    ``claude-code``, and the retired surface authors, are refused.
+    ``user_id`` is always derived from ``agent_id``.
     """
     del explicit_user_id  # derived from agent_id; a configured value could drift
     from ops.memory.agent_identity import (  # noqa: PLC0415
+        DERIVED_IDENTITIES,
         RETIRED,
         resolve_agent_id,
         unresolved_reason,
@@ -46,7 +47,7 @@ def resolve_write_identity(
         agent_id = derived
     else:
         agent_id = explicit or os.environ.get("L9_MEMORY_AGENT_ID", "").strip()
-        if not agent_id or agent_id in RETIRED:
+        if not agent_id or agent_id in RETIRED or agent_id in DERIVED_IDENTITIES:
             raise IdentityError(f"memory write denied: no memory identity ({unresolved_reason()})")
     if surface == "claude-code" and agent_id == "cursor":
         raise IdentityError(
