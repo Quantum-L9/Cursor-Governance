@@ -158,6 +158,8 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
             f"memory identity (known: {', '.join(sorted(REMOTE_ENTRYPOINTS))})"
         )
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+    if explicit in DERIVED_IDENTITIES:
+        return f"L9_MEMORY_AGENT_ID={explicit} is derived from host markers, never configured"
     if explicit in RETIRED:
         return (
             f"L9_MEMORY_AGENT_ID={explicit} is a retired surface author; "

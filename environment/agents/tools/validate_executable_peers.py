@@ -114,6 +114,24 @@ def _check_peer_identity(model: ExecutablePeerModel, errors: list[str]) -> None:
             errors.append(f"[E6] {key}: required execution needs at least one binding")
 
 
+def _agent_surfaces(agent: dict) -> set[str]:
+    """Surface ids a binding may name.
+
+    ADR-0039 stores ``surface_refs`` and derives ``surfaces`` from the fragment
+    after ``#``. A registry that still lists ``surfaces`` keeps that list.
+    """
+    raw = agent.get("surfaces")
+    if isinstance(raw, list) and raw:
+        return {str(item) for item in raw}
+    surfaces: set[str] = set()
+    for ref in agent.get("surface_refs") or []:
+        text = str(ref)
+        fragment = text.rsplit("#", 1)[-1] if "#" in text else text
+        if fragment:
+            surfaces.add(fragment)
+    return surfaces
+
+
 def _check_bindings(model: ExecutablePeerModel, errors: list[str]) -> None:
     profiles = model.profile_registry.get("profiles") or {}
     for key, peer in model.peers.items():
@@ -130,7 +148,7 @@ def _check_bindings(model: ExecutablePeerModel, errors: list[str]) -> None:
             if identity in seen:
                 errors.append(f"[E15] {key}: duplicate binding {identity}")
             seen.add(identity)
-            if surface not in (agent.get("surfaces") or []):
+            if surface not in _agent_surfaces(agent):
                 errors.append(f"[E7] {key}: unknown surface '{surface}'")
             entries = model.entries_for(provider_ref)
             if len(entries) != 1:
