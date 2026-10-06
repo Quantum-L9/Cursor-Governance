@@ -1,31 +1,21 @@
-# MACHINE GENERATED.
-# DO NOT HAND EDIT.
-#
-# Generate with:
-#
-# python tools/authority/project_canonical_identity.py \
-#   --authority-root /path/to/Quantum-L9/.github
-#
-# This bootstrap placeholder intentionally fails assurance until the first
-# canonical projection is generated.
 schema: l9.projection-receipt/v1
 projection:
   artifact_ref: l9.projection/cursor-governance-identity@1
   profile_ref: l9.projection/cursor-governance-identity@1
-  profile_digest: UNGENERATED
+  profile_digest: sha256:0eb691b922a71e5d2ee335b42f28dcd7ec457f8f4a90b542dff3e361d4a8bb6a
   source_repository: Quantum-L9/.github
-  source_revision: UNGENERATED
+  source_revision: 14a93a94a3adaa15b506ee88c12e8b82a121c140
   sources:
     actor_registry:
       artifact_ref: l9.actor-registry/global@1
-      digest: UNGENERATED
+      digest: sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f
     surface_registry:
       artifact_ref: l9.surface-registry/global@1
-      digest: UNGENERATED
+      digest: sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988
 output:
   path: generated/governance/canonical_identity.yaml
   schema: l9.projection.cursor-governance-identity/v1
-  digest: UNGENERATED
+  digest: sha256:cdbb814d5d21a176afc60a492603f4675811b71cf346d441c894bf39ca609df1
 generator:
   id: cursor-governance.canonical-identity-projector/v1
   deterministic: true
