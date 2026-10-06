@@ -33,13 +33,10 @@ generic_routes:
         produces: verified_pec_source
       - id: birth_handoff
         owner: l9-repo-template
-        implementation: scripts/birth-runner/package_birth_handoff.py
-        control_surface: l9-repo-birth
         activation: explicit_graph_request
         produces: factory_birth_payload_and_contract
       - id: birth
         owner: l9-repo-template
-        implementation: make birth
         activation: separately_authorized
         produces: repository_birth_state
   bounded_existing_repo:
