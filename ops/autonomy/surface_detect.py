@@ -23,7 +23,7 @@ Precedence:
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Final
 
 KNOWN_SURFACES: Final[frozenset[str]] = frozenset(
@@ -59,6 +59,18 @@ def cursor_host_present(env: Mapping[str, str] | None = None) -> bool:
     """True when ``env`` carries a Cursor host marker."""
     source = os.environ if env is None else env
     return any((source.get(key) or "").strip() for key in CURSOR_HOST_MARKERS)
+
+
+def scrub_cursor_host_markers(delete: Callable[..., object]) -> None:
+    """Remove every Cursor host marker via ``delete(name, raising=False)``.
+
+    ``detect_surface`` treats any one marker as Cursor, including when a test
+    has set ``L9_GOVERNANCE_SURFACE=claude-code``. Deleting only
+    ``CURSOR_AGENT`` leaves ``CURSOR_CONVERSATION_ID`` and the surface stays
+    Cursor inside a Cursor session.
+    """
+    for marker in CURSOR_HOST_MARKERS:
+        delete(marker, raising=False)
 
 
 def detect_surface(env: Mapping[str, str] | None = None) -> str:

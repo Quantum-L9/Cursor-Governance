@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-09-29T23:08:02Z",
+  "generated_utc": "2026-10-06T20:06:00Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:70238f1117db633bf765a25248057c238aa4e5e733d967b914d491908b9b003a",
+  "source_tree_digest": "sha256:2bcea671a0ab629f1c1fb1b57fa38786fb669751f26e262f0f4c08c5eeeb679c",
   "summary": {
     "total_mdc_files": 68,
     "always_apply_true": 35,
@@ -1451,8 +1451,8 @@
       "globs": null,
       "first_heading": "Cursor Memory Kernel Enforcement",
       "has_yaml_frontmatter": true,
-      "line_count": 244,
-      "content_digest": "sha256:2d61de831bedb04e78bf5ee3bb46b16808688deb22094a5d1715d7b35dfc7bb3",
+      "line_count": 241,
+      "content_digest": "sha256:ba13447e82692c0563d814d8b419c959a474435d310036c69dbd47e1b7feb4d6",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

@@ -305,8 +305,10 @@ def tests_naming_path(
     failure ratchet keys SWALLOW_BASELINE on 'ops/scripts/run_pr_gate.sh', and
     a change to that script is exactly what it exists to catch.
 
-    Full-path matches always count. Basename-only matches skip generic names
-    (`Makefile`, `hooks.json`, …) so a popular stem cannot union the catalog.
+    Full-path matches always count. Basename-only matches also count when the
+    basename is not generic, including a path that already names its
+    directory. Generic names (`Makefile`, `hooks.json`, …) never match by
+    basename.
     Documentation markdown is excluded (same as before).
     """
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +14,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import pytest  # noqa: E402
 from generate_commands_manifest import build_manifest  # noqa: E402
+from make_database import makefile_has_target  # noqa: E402
 from sync_generated_artifacts import (  # noqa: E402
     assert_no_live_deprecated_skills,
     disk_skill_names,
@@ -325,33 +325,6 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
     assert registry["generator"] == "ops/scripts/build_claude_skill_registry.py"
     assert registry["regenerate"] == "make claude-skill-registry"
     assert makefile_has_target(repo, "claude-skill-registry")
-
-
-def makefile_has_target(repo: Path, name: str) -> bool:
-    """Read Make's composed database rather than assuming root recipe ownership.
-
-    The goal is a declared, gov-python-free target rather than an injected
-    probe: ``--eval`` is GNU Make 4.x, and macOS ``/usr/bin/make`` is 3.81,
-    which rejects the option outright and prints usage. Every target then read
-    as absent, so these assertions could only pass where make is 4.x --
-    and Homebrew gmake is explicitly not required here. ``-p`` prints the
-    composed database whatever the goal is, and ``-n`` keeps it a dry run.
-    """
-    result = subprocess.run(
-        [
-            "make",
-            "--no-print-directory",
-            "-rRpn",
-            "help",
-        ],
-        cwd=repo,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    return (
-        result.returncode == 0 and re.search(rf"(?m)^{re.escape(name)}:", result.stdout) is not None
-    )
 
 
 def test_sync_pe_templates_tolerates_a_missing_template(tmp_path: Path) -> None:

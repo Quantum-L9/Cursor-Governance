@@ -62,31 +62,24 @@ _COMPLETED = frozenset({OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.N
 # writes an ``episodic`` record carrying that tag; ``session_continuation`` as a
 # class exists only on the governed-candidate path (session_contracts.py).
 CONTINUATION_TAG = "session_continuation"
-# Resolution is SINGLE PASS (``KIND_ALIASES.get(kind, kind)``), so every value
-# here must already be a canonical ``MemoryClass``. An alias pointing at another
-# alias is a latent bug: it only resolved because the package happened to carry
-# a second table, and it silently lands in whatever that table says. Two entries
-# were exactly that and are fixed here —
-#   ``error`` -> ``lesson``           chained, and collided with ``lesson``
-#                                     (both ended at ``procedural``, so an error
-#                                     and a lesson were indistinguishable).
-#                                     Removed; callers say ``lesson`` directly,
-#                                     which is the class they were already
-#                                     getting.
-#   ``session_summary`` -> itself     not a MemoryClass; it only worked because
-#                                     the package CLI maps it to ``episodic``.
-#                                     Stated explicitly instead.
-# ``test_every_write_alias_reaches_a_class_the_bound_release_accepts`` in
-# ``tests/ops/memory/test_cli.py`` fails if a value stops being a real
-# MemoryClass or starts pointing at another alias.
-KIND_ALIASES = {
-    "pickup_context": "episodic",
-    "session_summary": "episodic",
-    "note": "observation",
-    "lesson": "procedural",
-    "pattern": "insight",
-    "rule": "decision",
-}
+
+
+def resolve_write_kind(kind: str) -> str:
+    """Resolve ``--kind`` through the bound package. No local alias table.
+
+    A missing package fails closed. ``lesson`` is ``procedural`` because that
+    is the package's spelling, not a second map kept here.
+    """
+    try:
+        from l9_graphite_memory.contracts.class_vocabulary import (  # noqa: PLC0415
+            resolve_memory_class,
+        )
+    except ImportError as exc:
+        raise SystemExit("bound l9-graphite-memory class vocabulary is not importable") from exc
+    try:
+        return resolve_memory_class(kind).value
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _workspace(raw: str | None) -> str:
@@ -344,7 +337,7 @@ def cmd_write(args: argparse.Namespace) -> int:
         args.content,
         workspace=_run_at(context),
         namespace=namespace,
-        memory_class=KIND_ALIASES.get(args.kind, args.kind),
+        memory_class=resolve_write_kind(args.kind),
         tags=tuple(tags),
         idempotency_key=args.idempotency_key,
         source=args.source,
@@ -363,7 +356,7 @@ def cmd_write(args: argparse.Namespace) -> int:
             {
                 "status": document.get("status"),
                 "ok": document.get("ok"),
-                "kind": KIND_ALIASES.get(args.kind, args.kind),
+                "kind": resolve_write_kind(args.kind),
                 "dry_run": bool(args.dry_run),
             },
         )

@@ -35,7 +35,7 @@ conform.
 |---|---|
 | `namespace` | **Required.** The repository namespace: the write hint from `python -m ops.memory.cli resolve`. It must be a lowercase slug. It must never be `main`, `master`, `default`, `test`, or the shared `l9-workspace`. |
 | `content` | **Required.** One fact on one line, 12–600 characters. No `SESSION:` / `WORK:`-style preamble, no prose summary, never a credential. |
-| `memory_class` | **Required.** One of `decision`, `insight`, `observation`, `constraint`, `episodic`, `semantic`, in canonical form. |
+| `memory_class` | **Required.** A canonical class from the bound package's agent-lane allowlist (every class except `identity`), in canonical form. |
 | `tags` | **Required.** 2–12 unique lowercase tags. Exactly one is `agent:<id>` (`claude-code`, `cursor`, …); at least one is a topic tag. The builder also stamps at most one `surface:<id>` — the derived SurfaceIdentity (`claude-code-desktop`, `cursor-ide`, …), never chosen by the caller. |
 | `idempotency_key` | **Required.** The builder's default is `agent:<namespace>:<sha256(class, normalized content)[:16]>`, so the same fact written twice is one record, not two. |
 | `source_id` | Evidence: a PR, commit, ADR or file path. |
@@ -49,15 +49,19 @@ conform.
 No other field is allowed. In particular, `consent` and `source_trust` are not
 agent-set.
 
-### Classes: why canonical only
+### Classes: the bound vocabulary
 
-- `memory_write_governed` has no alias table in the 2.4.0 package, so
-  `memory_class: "lesson"` fails there. The builder therefore maps legacy words
-  (`lesson`→`insight`, `note`→`observation`, `rule`→`decision`), and the
-  payload always carries the canonical class, which is valid on both tools.
-- `procedural` is not on the `memory_write_agent` allowlist.
-- `preference` and `identity` need a consent object that memory admission checks.
-- `meta` is the class of the continuation record, which the hook lane writes.
+The builder and the operator CLI call `resolve_memory_class` /
+`agent_writable_class` on the bound `l9-graphite-memory`. They keep no
+`CLASSES`, `ALIASES`, or `REFUSED_CLASSES` table. A missing package fails
+the builder closed.
+
+- `lesson` resolves to `procedural`. `note` resolves to `observation`.
+  `pickup_context` and `session_summary` resolve to `episodic`.
+- The payload always carries the canonical class.
+- The agent lane accepts every class except `identity`: `constraint`,
+  `decision`, `episodic`, `insight`, `meta`, `observation`, `preference`,
+  `procedural`, `semantic`. `identity` is refused with the package's message.
 
 ## Boundaries (CANONICAL_LAW §8.6, ADR-0033, INV-03b)
 

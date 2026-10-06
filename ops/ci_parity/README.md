@@ -31,7 +31,7 @@ Paid-tier Semgrep runs through `ops/secrets/capability_exec.py` (entry
 |---|---|---|---|---|
 | Edit | PostToolUse Edit/Write (`ci_parity_posttool.py`) | fast: ruff, shellcheck, actionlint, zizmor, yamllint, biome | the edited file, in the workspace | no — findings on the edited lines go back to the agent |
 | Commit | PostToolUse Bash when HEAD moved | every applicable lane | background, `~/.cache/l9-ci-parity/<repo>/clone` at the commit | no — writes receipts |
-| Push | PreToolUse `git push` (`ci_parity_push_gate.py`) and the `make pr` wave | reuses receipts; runs what is missing | snapshot clone | yes: NEW finding, changed line, blocking severity |
+| Publish | `make pr` and the push hook do not scan | CI runs CodeQL and whole-tree Semgrep | GitHub | CI |
 | After push | PostToolUse on `git push` | SonarCloud read | API | no |
 
 A lane applies only when the change touches a file it globs. `osv-scanner`
@@ -65,8 +65,8 @@ security wave already runs that exact pin when dependency files change.
 | `745a1b06` (#659 before its fix) | 3 new high alerts: `py/clear-text-logging-sensitive-data` at `ops/secrets/infisical_cli_login.py:73`, `ops/secrets/session_start_secrets.py:228`, `ops/scripts/session_start_runtime_report.py:933` | `blocking=3`, the same rule at the same three lines, nothing else |
 | `29c767df` (#659 fixed) | CodeQL green | `blocking=0`, exit 0 |
 
-Both runs: 4 CPU container, ~2.5 min wall-clock (CodeQL dominates). The
-commit-time background run is what keeps that off the push path.
+Both runs: 4 CPU container, ~2.5 min wall-clock (CodeQL dominates). That scan
+stays on CI. `make pr` does not start it, and the push hook does not wait on it.
 
 ## Concurrency without collision
 
@@ -85,7 +85,7 @@ commit-time background run is what keeps that off the push path.
 ```bash
 python3 ops/ci_parity/install.py --check      # 10/10 OK at pinned versions
 python3 ops/ci_parity/run.py --status         # receipts + in-flight run
-python3 ops/ci_parity/run.py --gate HEAD      # what the push gate would say
+python3 ops/ci_parity/run.py --gate HEAD      # manual scan; publish does not run this
 python3 ops/ci_parity/sonar_status.py --auto  # SonarCloud for this branch's PR
 L9_CI_PARITY=0                                # session kill switch
 ```

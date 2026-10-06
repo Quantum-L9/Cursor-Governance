@@ -66,6 +66,17 @@ def record_with_evidence(
     return gate.record(repo, gov=ROOT)
 
 
+def _scrub_cursor_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    autonomy = str(ROOT / "ops" / "autonomy")
+    if autonomy not in sys.path:
+        sys.path.insert(0, autonomy)
+    from surface_detect import scrub_cursor_host_markers
+
+    scrub_cursor_host_markers(monkeypatch.delenv)
+
+
 @pytest.fixture(autouse=True)
 def adapter_kernel_surface(monkeypatch: pytest.MonkeyPatch) -> None:
     """Existing latch tests prove Claude Code / adapter behavior.
@@ -76,22 +87,25 @@ def adapter_kernel_surface(monkeypatch: pytest.MonkeyPatch) -> None:
     just the first left the tests that assert unmarked CI skips the latch
     passing in CI and in a plain terminal while failing from inside a Cursor
     session -- the one surface an agent runs them from. The canonical tuple is
-    imported so a new marker cannot reopen the gap.
+    imported so a new marker cannot reopen the gap. The scrub is
+    ``surface_detect.scrub_cursor_host_markers``, shared with the CI-parity
+    fixture, so this file does not keep a private copy of the tuple.
     """
-    import sys
-
-    autonomy = str(ROOT / "ops" / "autonomy")
-    if autonomy not in sys.path:
-        sys.path.insert(0, autonomy)
-    from surface_detect import CURSOR_HOST_MARKERS
-
     monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
-    for marker in CURSOR_HOST_MARKERS:
-        monkeypatch.delenv(marker, raising=False)
+    _scrub_cursor_host(monkeypatch)
     monkeypatch.delenv("CLAUDECODE", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_ENTRYPOINT", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+
+
+def test_agent_required_text_names_the_publication_selector() -> None:
+    gate = _gate()
+    text = gate._agent_required_tree(ROOT, ROOT)
+    assert "select_pr_pytest_paths.py" in text
+    assert "directory suite" in text
+    assert "Do not run pytest" in text
+    assert "union" in text
 
 
 def test_precommit_fails_before_receipt(stacked_repo: Path) -> None:
@@ -299,7 +313,7 @@ def test_cursor_surface_requires_tree_latch(
 
 def test_ci_unknown_skips_tree_latch(stacked_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    _scrub_cursor_host(monkeypatch)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     gate = _gate()
     assert gate.precommit(stacked_repo, ROOT, None) == 0
@@ -309,7 +323,7 @@ def test_bare_local_surface_requires_tree_latch(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    _scrub_cursor_host(monkeypatch)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("CI", raising=False)
     gate = _gate()
@@ -360,7 +374,7 @@ def test_ci_unknown_skips_tree_latch_without_receipt(
     stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    _scrub_cursor_host(monkeypatch)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     gate = _gate()
     code = stacked_repo / "ops" / "foo.py"
