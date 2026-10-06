@@ -23,7 +23,7 @@ alwaysApply: true
 
 **Updated: 2026-09-13** — ADR-0031 / CANONICAL_LAW §8.5: ordinary / cold model writes use MCP `memory.write_agent` (no `phase_lock`). Conflict-sensitive writes remain `memory.phase_lock` → `memory.write_governed`. Agent HTTP is sealed.
 
-**Updated: 2026-09-24** — Agent memory write contract `l9.agent_memory_write.v1` (`ops/memory/AGENT_WRITE_CONTRACT.md`, schema `ops/memory/schemas/l9.agent_memory_write.v1.schema.json`): a model-authored fact is never freehand. Build its arguments with `python -m ops.memory.agent_write build` (one atomic one-line fact, canonical class `decision|insight|observation|constraint|episodic|semantic`, exactly one `agent:<id>` tag plus a topic tag, content-derived `idempotency_key`) and pass them unchanged to `memory_write_agent` (or `memory_write_governed` with `task_signature`). The agent keeps this contract itself; nothing sits in front of the tool, and `MemoryService` still decides grants and admission. Canonical classes only: `write_governed` has no alias table in 2.4.0, so `lesson` fails there.
+**Updated: 2026-09-24** — Agent memory write contract `l9.agent_memory_write.v1` (`ops/memory/AGENT_WRITE_CONTRACT.md`, schema `ops/memory/schemas/l9.agent_memory_write.v1.schema.json`): a model-authored fact is never freehand. Build its arguments with `python -m ops.memory.agent_write build` (one atomic one-line fact, any class except `identity`, exactly one `agent:<id>` tag plus a topic tag, content-derived `idempotency_key`) and pass them unchanged to `memory_write_agent` (or `memory_write_governed` with `task_signature`). The agent keeps this contract itself; nothing sits in front of the tool, and `MemoryService` still decides grants and admission. The agent lane accepts every class except `identity`. `lesson` is an operator-CLI spelling of `procedural`, not a seventh class and not a refusal.
 
 **Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). The agent lane is direct: `memory.write_agent` is the ordinary write and is not gated by any Cursor-Governance receipt, phase, session close or PR step; `phase_lock` → `write_governed` is optional. The hook lane (`SessionStart` / `sessionEnd` / prefetch / PR publish / PE-SGD ingest) is `MemoryControlPlaneClient(surface=…)` bounded by `ops/config/memory-hook-envelopes.json` and stamped `principal.type=hook`. "Sole front door through `ops/memory`" above describes the hook lane and the operator CLI, not a toll booth on agent writes. `graphiti_memory_client.py` is deleted at C15; local Phase B distill / promotion is gone — sessionEnd calls `l9-memory distill`.
 
@@ -65,13 +65,13 @@ Interactive write (model-initiated, MCP `l9-graphite-memory`), arguments built b
 ```text
 # ordinary / cold (ADR-0031)
 memory.write_agent     {namespace: <memcli resolve write hint>, content: "<one terse fact>",
-                        memory_class: insight|decision|observation|constraint|episodic|semantic,
+                        memory_class: <any class except identity>,
                         tags: ["agent:cursor", "<topic>"], idempotency_key: "agent:<ns>:<digest>"}
 
 # conflict-sensitive
 memory.phase_lock      {namespace: <memcli resolve write hint>, task_signature: <task>}
 memory.write_governed  {namespace, content: "<one terse fact>", task_signature,
-                        memory_class: insight|decision|…, tags: ["agent:cursor", "<topic>"],
+                        memory_class: <any class except identity>, tags: ["agent:cursor", "<topic>"],
                         idempotency_key: "agent:<ns>:<digest>"}
 ```
 
