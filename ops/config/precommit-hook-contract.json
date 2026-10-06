@@ -36,6 +36,10 @@
       "mode": "read_only",
       "note": "validate_legacy_doctrine_residue.py — greps only"
     },
+    "adr-identity": {
+      "mode": "read_only",
+      "note": "validate_adr_identity.py — one number per decision; docs/decisions/README.md must match the files"
+    },
     "max-velocity": {
       "mode": "read_only",
       "note": "validate_max_velocity.py — reads committed profiles only"

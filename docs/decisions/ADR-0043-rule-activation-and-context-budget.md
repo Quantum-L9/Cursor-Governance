@@ -1,7 +1,12 @@
-# ADR-0010: Rule activation is explicit, faithfully representable, and context-budgeted
+# ADR-0043: Rule activation is explicit, faithfully representable, and context-budgeted
 
-**Status:** Accepted  
-**Date:** 2026-08-14
+## Status
+
+Accepted
+
+## Date
+
+2026-08-14
 
 ## Context
 
@@ -124,7 +129,7 @@ No specific target count is mandated. The desired state is the smallest set cons
 
 ## Related
 
-- ADR-0008
-- ADR-0011
-- ADR-0012
+- ADR-0041
+- ADR-0044
+- ADR-0045
 - `rules/RULES-MANIFEST.yaml`

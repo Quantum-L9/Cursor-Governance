@@ -1,9 +1,11 @@
-# ADR-0023: Multi-agent main-bound execution — Git isolates writers, memory does not
+# ADR-0048: Multi-agent main-bound execution — Git isolates writers, memory does not
 
 ## Status
 
-Accepted (supersedes the repository-write role of the phase-lock in ADR-0002 and
-ADR-0006 §1; the single-front-door decision itself stands)
+Accepted
+
+Supersedes the repository-write role of the phase-lock in ADR-0002 and
+ADR-0006 §1; the single-front-door decision itself stands.
 
 ## Date
 
@@ -36,6 +38,18 @@ Three failures follow from that design:
 Meanwhile the properties that do prevent agents from corrupting each other —
 dedicated worktrees, per-task branches, textual merge analysis, PR serialization
 — were partly conventional rather than mechanical.
+
+## Options Considered
+
+1. **Keep the phase-lock as the repository mutex.** A Graphiti conflict then
+   blocks unrelated source edits. Rejected: a knowledge store must not revoke
+   another agent's authority to edit files it does not share.
+2. **Keep `--force` as the escape from that mutex.** Rejected: the safety
+   property becomes agent-defeatable, and the real collision (sibling writes
+   on `main`) stays unguarded.
+3. **Separate shared knowledge from repository isolation.** Memory records what
+   an agent should believe. Git worktrees, a fetched `origin/main`, and
+   `make pr` decide what it may write and publish. **Chosen.**
 
 ## Decision
 
