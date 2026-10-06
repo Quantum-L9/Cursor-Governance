@@ -58,6 +58,12 @@ ui-operator = [
     "playwright==1.63.0",
     "boto3>=1.34,<2",
 ]
+# Claude Agent SDK adapter (environment/agents/adapters/claude-agent-sdk) — NOT
+# required for make pr. Optional because each platform wheel bundles the Claude
+# Code CLI (~100 MB). Install: uv sync --locked --extra dev --extra agent-sdk
+agent-sdk = [
+    "claude-agent-sdk==0.2.163",
+]
 
 # Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable
 # package — pyproject.toml exists only to pin the dependency/interpreter contract.

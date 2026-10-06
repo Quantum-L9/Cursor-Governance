@@ -1,5 +1,5 @@
 {
-  "generation_id": "e04d9a54183feda3356841b66c3cb13b1bd282b15f11df90437964c65676ad23",
+  "generation_id": "38ca5f500f028ef94ae44d31a298c93cb5155d74ef64e010f3ad7f5ad42913e0",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1231,7 +1231,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "76c9fe3f936c56b36ae1b81f9d3fff97ccb7f1cd3b53a105df08d8fd03dcb6b4",
+      "skill_sha256": "6ec8c99ec467499609d0f1ee6c3a6151f4eb987cdc1b2c5b3dc90a9ea14928b3",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1471,14 +1471,14 @@
     },
     {
       "composition_role": "general",
-      "description": "package a verified local PE/PEC source commit into the current l9-repo-template factory payload and a digest-bound birth contract. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
+      "description": "route an explicit repository-birth handoff for a verified local PE/PEC source commit to the factory-owned packager in Quantum-L9/l9-repo-template. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-repo-birth",
       "path": "skills/l9-repo-birth",
-      "reason": "packages an exact verified PE/PEC source commit for the factory; it is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
+      "reason": "control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "7b15f2836cef3a68121042c237882025b5dab6dbf5521997c967c3ff4fa72719",
+      "skill_sha256": "4b33dafa7abd9b51a47e85dd469614c89dea6646e52488986598e798e1537f5a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1627,6 +1627,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "1573018f6ddeb3e41e5d5ec61322f5027351ba74f2be57e0dd198a416d107ece",
-  "source_skill_corpus_sha256": "4a0954cd17dfc94ab9747ef206f603b54f8a8b51b93b2965327e4d7768e7e46a"
+  "source_manifest_sha256": "2ede40a2fe6ea13923dc1a9d350f8dae6b03f67ae87fe4176afd4eb11d1d9c5f",
+  "source_skill_corpus_sha256": "a204d7c9c284bd19862262457207a662d244a4a5df8c3bda90fed1f004a3485a"
 }
