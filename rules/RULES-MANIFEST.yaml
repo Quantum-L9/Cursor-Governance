@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-06T20:49:26Z'
+generated_utc: '2026-10-06T21:15:01Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:608a76ba3507793c30a7d36c0cfc33bd046027d9196d549351a9ef48f3f8c00d
+source_tree_digest: sha256:aa823e511aa095000d73485666fc9c34ff19c50f3cf91dd05cb7ce6c5e891a79
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -474,8 +474,8 @@ rules:
 - file: 45-pre-action-verification.mdc
   id: l9.rule.pre-action-verification
   id_source: explicit
-  version: 1.0.0
-  description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
+  version: 1.1.0
+  description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure; validators fail closed.'
   scope: global
   domain: general
   activation: always
@@ -484,8 +484,8 @@ rules:
   globs: null
   first_heading: Pre-Action Verification
   has_yaml_frontmatter: true
-  line_count: 87
-  content_digest: sha256:2d4e738329b08948b8c03c4e4b68dfa2ba1c8ef3838c52fcd14a2a750f8cf96b
+  line_count: 111
+  content_digest: sha256:84c1397899175d8dd96706b0e401943c84e2b79a170b888941c1ad3bdf4f4820
   authority: canonical_global
   context_cost: moderate
   deprecated: false

@@ -1,5 +1,5 @@
 ---
-description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure.'
+description: 'Verification gates around any action: verify before acting, evidence before claiming success, stop on failure; validators fail closed.'
 ---
 
 <!-- L9_META
@@ -67,6 +67,30 @@ Then:
 3. **Check recorded lessons** for a known solution before improvising.
 4. If the root cause is unclear after one diagnostic pass, **report and ask** rather than iterating
    blindly.
+
+## Validator construction — fail closed
+
+Downstream projection of `Quantum-L9/.github` `l9.contract/validation-and-correctness@1`
+(Semantic Foundation v3.9.0, `640fb4c`) through `l9.projection/cursor-governance-operating-plane@1`.
+The contract owns these semantics; this rule only delivers them. They bind any validator,
+conformance check, verification gate, or equivalent mechanism built or evaluated under this plane.
+
+- **PASS only when** every applicable required criterion is identified, actually evaluated, and
+  satisfied, and the coverage is explicit and evidence-bound. Some checks passing is not evidence
+  that the validation contract passed.
+- **These preclude PASS** when they affect an applicable required criterion: missing, unavailable,
+  unreadable, or malformed required input; unresolved required semantics; a required check not
+  executed; a tool, file, read, or parse failure that prevents a required check; inability to
+  establish that required coverage is complete. Never skip them silently, default them to success,
+  or let the checks that did run turn the result green.
+- **Empty discovery** proves an empty applicable set only when the governing contract, schema, or
+  authoritative scope establishes both that empty is valid and that discovery was complete.
+  Otherwise the result stays unresolved, not PASS.
+- **Partial coverage** is never reported as complete. When complete required coverage cannot be
+  established, state the limitation and do not claim PASS.
+- **Validation is observational.** It must not repair the candidate, relax, substitute, or
+  reinterpret governing criteria to obtain success, let the candidate define its own correctness,
+  or coerce Unknown or unresolved state into success. Repair and validation are separate operations.
 
 ## Anti-patterns
 
