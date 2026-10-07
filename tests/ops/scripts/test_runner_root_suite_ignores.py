@@ -92,10 +92,15 @@ def test_root_suite_ignores_are_withheld_whatever_kind_owns_them() -> None:
 def test_the_registry_withholds_the_controller_tests_from_root_pytest() -> None:
     selector = _load_selector()
     suites = validate_registry(_load_json(REGISTRY_PATH))
-    roots = _non_dot_roots(suites, selector)
-    assert CONTROLLER_TESTS in roots
-    scoped = [CONTROLLER_TESTS, f"{CONTROLLER_TESTS}/test_approval.py", "tests/test_x.py"]
-    assert _root_suite_paths(scoped, roots, selector) == ["tests/test_x.py"]
+    # Program Execution is an eviction target withheld through root conftest
+    # collect_ignore, so the selector drops it before the runner sees it.
+    assert any(
+        selector.path_under(CONTROLLER_TESTS, root) for root in selector.root_collect_ignores()
+    )
+    changed = [f"{CONTROLLER_TESTS}/test_approval.py", "tests/test_x.py"]
+    assert not [
+        p for p in selector.select_pr_pytest_paths(changed) if p.startswith(CONTROLLER_TESTS)
+    ]
     # Program Execution is an eviction target: withheld from root pytest and
     # owned by no suite, so no generic topology executes it.
     owners = [s["id"] for s in suites if CONTROLLER_TESTS in s.get("owned_paths", [])]

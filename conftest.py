@@ -61,6 +61,11 @@ collect_ignore = [
     "environment/program-execution/integrations",
     "environment/program-execution/conformance",
     "environment/program-execution/tests",
+    # Program Execution is an eviction target (CANONICAL_LAW
+    # PUBLISH_ASSURANCE_DECOUPLING_V1): the generic root suite collects none of
+    # its tests. Remove with the eviction slice.
+    "environment/program-execution",
+    "tests/environment/program_execution",
     # Local runtime / nested worktrees — never root-suite collection targets.
     ".l9",
     # Skill self-check scripts share basename `self_test.py` and collide under
