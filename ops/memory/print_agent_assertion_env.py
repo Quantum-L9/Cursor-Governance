@@ -96,9 +96,9 @@ def build_runtime_identity_assertion(
     """Resolve this process and build a sealed ``l9.identity-assertion/v1``.
 
     Actor and surface refs come from ``agent_registry.yaml``. Digests come from
-    the canonical identity projection and its receipt. An unresolved actor, or
-    a resolved surface that the binding does not list, refuses rather than
-    guessing.
+    the canonical identity projection and its receipt. An unresolved actor
+    refuses rather than guessing. A surface the binding does not list stays
+    ``unknown`` and does not refuse the actor.
     """
 
     if str(_ROOT) not in sys.path:
