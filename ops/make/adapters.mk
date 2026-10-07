@@ -119,10 +119,8 @@ claude-deepseek-verify:
 # ---------------------------------------------------------------------------
 # Shared agent / IDE surfaces
 # ---------------------------------------------------------------------------
-# One gate, two owners (ADR-0038 / ADR-0039): projection + receipt + provenance
-# assurance first, then operating-plane binding validation against that
-# verified projection. CI (peer-execution.yml) calls this target, never the
-# scripts directly.
+# Canonical identity projection assurance, then agent-bindings validation
+# (ADR-0038 / ADR-0039).
 agents-env:
 	$(PYTHON) tools/assurance/check_canonical_identity_projection.py
 	$(PYTHON) environment/agents/tools/validate_agents.py
