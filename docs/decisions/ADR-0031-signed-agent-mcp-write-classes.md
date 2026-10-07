@@ -87,6 +87,11 @@ Memory must verify the assertion, recompute the digest, check the HMAC with the 
 
 `L9_MEMORY_IDENTITY_ASSERTION_HMAC` is HMAC-SHA256 of the ASCII digest under the same per-agent signing key used by the signed-agent door.
 
+## Options Considered
+
+1. Overload `L9_MEMORY_AGENT_ASSERTION` with the identity assertion. Rejected: that token is authentication, and its wire format stays `agent_id.exp.nonce.hexsig`.
+2. Let memory re-resolve Cursor and Claude markers itself. Rejected: memory verifies the supplied assertion and does not inspect runtime markers or Cursor-Governance's registry.
+
 ## Supersedes
 
 - Per-agent HTTPS bearer uniqueness as the agent identity door.

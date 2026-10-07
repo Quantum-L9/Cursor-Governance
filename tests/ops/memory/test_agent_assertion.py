@@ -216,8 +216,11 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
 
 
 def test_print_helper_skip_message_names_no_path(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     missing = tmp_path / "absent.json"
     assert (
         helper.main(
