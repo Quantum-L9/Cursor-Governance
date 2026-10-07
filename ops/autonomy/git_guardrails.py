@@ -258,15 +258,9 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 
 #: Paths the sync script regenerates but this gate must NOT call disposable.
 #: ``skills/AUTONOMY_MANIFEST.yaml`` is the hand-authored routing SSOT (rule 53
-#: keeps it off the generated merge driver for the same reason).
-#: ``docs/decisions/README.md`` is listed there for the merge driver and overlap
-#: exemption, but its writer is validate_adr_identity.py, not the sync script, so
-#: no gate-run regeneration proves it disposable. Regenerable is not the same as
-#: disposable.
-DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
-    "skills/AUTONOMY_MANIFEST.yaml",
-    "docs/decisions/README.md",
-)
+#: keeps it off the generated merge driver for the same reason). Regenerable is
+#: not the same as disposable.
+DELIBERATELY_NOT_GENERATED: tuple[str, ...] = ("skills/AUTONOMY_MANIFEST.yaml",)
 
 #: Machine-local, never-tracked agent state.
 EPHEMERAL_PREFIXES: tuple[str, ...] = (".l9/", ".cursor/plans/", ".cursor/governance/")

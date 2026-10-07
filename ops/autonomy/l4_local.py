@@ -539,12 +539,12 @@ def _allow_from_receipt(
             return False, f"L4 receipt binds a tree digest this workspace cannot re-derive: {exc}"
         if live == bound:
             return True, "L4 release_authorized (receipt matches worktree content)"
-        if pr_open_for_branch(root, branch):
-            return True, "L4 remediation push on open PR"
+        # An open PR is not authorization for a changed tree: a repair spends
+        # the receipt (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1 item 4).
         return False, (
             f"L4 receipt stale: authorized tree {bound[:12]}, this worktree is "
-            f"{live[:12]} and no PR is open for this branch. Re-run "
-            "authorize-release (or extend-release after a governed push-recovery merge)."
+            f"{live[:12]}. Re-run authorize-release (or extend-release after a "
+            "governed push-recovery merge)."
         )
     pinned = str(receipt.get("head_sha") or "").strip()
     head = current_head(root)
@@ -555,12 +555,9 @@ def _allow_from_receipt(
             "L4 receipt binds neither a tree digest nor a head_sha, so it cannot be shown "
             "to authorize this tree — re-run: python3 ops/autonomy/l4_local.py authorize-release"
         )
-    if pr_open_for_branch(root, branch):
-        return True, "L4 remediation push on open PR"
     return False, (
-        f"L4 receipt stale: authorized {pinned[:12]}, HEAD is {head[:12] or 'unreadable'} "
-        "and no PR is open for this branch. Re-run authorize-release "
-        "(or extend-release after a governed push-recovery merge)."
+        f"L4 receipt stale: authorized {pinned[:12]}, HEAD is {head[:12] or 'unreadable'}. "
+        "Re-run authorize-release (or extend-release after a governed push-recovery merge)."
     )
 
 

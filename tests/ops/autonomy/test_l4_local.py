@@ -282,18 +282,26 @@ def test_an_authored_repair_after_release_requires_reauthorization(
     assert release_allows_remote(stacked_repo)[0] is True
 
 
-def test_remediation_of_an_open_pr_still_allows_after_head_moves(
+def test_an_open_pr_never_authorizes_a_repaired_tree(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """AC-11: an open PR is not authorization for a tree nobody authorized."""
     monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
     monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
     monkeypatch.setattr("l4_local.pr_open_for_branch", lambda root, branch=None: True)
     begin(stacked_repo, contract_id="r2-open")
-    authorize_release(stacked_repo)
+    tree_a = authorize_release(stacked_repo)["tree_digest"]
+    assert release_allows_remote(stacked_repo)[0] is True
+    (stacked_repo / "repair.py").write_text("print('repaired')\n", encoding="utf-8")
     _move_head(stacked_repo)
     allowed, reason = release_allows_remote(stacked_repo)
-    assert allowed is True
-    assert "remediation" in reason
+    assert allowed is False
+    assert "stale" in reason
+    assert "Re-run authorize-release" in reason
+    assert "remediation" not in reason
+    tree_b = authorize_release(stacked_repo)["tree_digest"]
+    assert tree_b != tree_a
+    assert release_allows_remote(stacked_repo)[0] is True
 
 
 def test_phase_file_alone_never_authorizes(

@@ -119,24 +119,6 @@
       "reason": "Not a pytest test: executable wiring fixture proof owned by the skill-contracts suite and ignored by root pytest to avoid basename collisions."
     }
   ],
-  "eviction_containment_ignores": [
-    {
-      "path": "environment/program-execution/peer_execution/autonomy",
-      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). Root pytest refuses to collect this subtree so it can neither shadow the root autonomy/ package nor be executed by the generic suite; no suite owns or runs it. Remove with the eviction slice."
-    },
-    {
-      "path": "environment/program-execution/core/program-execution-controller-template/scripts/tests",
-      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). Its fresh-process controller suite is no longer part of generic test topology; root pytest refuses to collect it. Remove with the eviction slice."
-    },
-    {
-      "path": "environment/program-execution",
-      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). The generic root suite neither executes nor owns any test under this tree; the narrower ignores beside it are kept until the eviction slice removes the tree. Remove with the eviction slice."
-    },
-    {
-      "path": "tests/environment/program_execution",
-      "reason": "Program Execution manifest-contract tests: they execute the eviction target's own generator, so the generic root suite does not collect them. Remove with the eviction slice."
-    }
-  ],
   "suites": [
     {
       "id": "repo-root",

@@ -151,23 +151,12 @@ class NonPythonChangeTests(unittest.TestCase):
         """The machine must find what a careful reader would find by hand."""
 
         repo_root = Path(__file__).resolve().parents[3]
-        contract = json.loads(
-            (repo_root / "ops" / "config" / "python-contract.json").read_text(encoding="utf-8")
-        )
-        # The generic gate never executes an eviction target's tests, so a
-        # careful reader would not expect them either.
-        contained = [entry["path"] for entry in contract.get("eviction_containment_ignores", [])]
         expected = {
-            rel
+            path.relative_to(repo_root).as_posix()
             for path in repo_root.rglob("test_*.py")
             if ".venv" not in path.parts
             and "fixtures" not in path.parts
             and self.CHANGED_SHELL in path.read_text(encoding="utf-8", errors="ignore")
-            and not any(
-                (rel := path.relative_to(repo_root).as_posix()) == root
-                or rel.startswith(root.rstrip("/") + "/")
-                for root in contained
-            )
         }
         selected = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
         self.assertTrue(expected)

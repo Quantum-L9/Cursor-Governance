@@ -101,18 +101,6 @@ def _shell_owners(registry: Path) -> dict[str, list[str]]:
     return owners
 
 
-def _eviction_containment_ignores(registry: Path) -> list[str]:
-    """Paths the root suite refuses to collect because they belong to an eviction target."""
-    raw = _load_contract(registry).get("eviction_containment_ignores") or []
-    if not isinstance(raw, list):
-        return []
-    return [
-        str(item["path"]).strip()
-        for item in raw
-        if isinstance(item, dict) and str(item.get("path") or "").strip()
-    ]
-
-
 def _velocity_exclude(registry: Path) -> frozenset[str]:
     raw = _local_pr_check(registry).get("velocity_exclude") or []
     if not isinstance(raw, list):
@@ -230,24 +218,20 @@ def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
     )
 
 
-def _drop_unrunnable(
-    selected: list[str], suites: list[dict], extra_ignores: list[str] | None = None
-) -> tuple[list[str], list[str]]:
+def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str], list[str]]:
     """Split off targets no pytest suite can actually collect.
 
-    A path the root conftest excludes belongs to a non-pytest loader or to an
-    eviction target the generic suite does not execute.
+    A path the root conftest excludes belongs to a non-pytest loader (the
+    Program Execution adapter layer runs under `make program-execution-conformance`).
     Handing it to the repo-root suite as an explicit argument overrides that
     exclusion and fails on import, so it is not a valid scoped publication-gate target unless a
     non-root suite owns it.
 
     Both spellings of the exclusion count. A path ignored via pyproject
     `addopts` is as unrunnable as one in the conftest's `collect_ignore`, and an
-    explicit argument overrides `--ignore` just as readily. So does a declared
-    `eviction_containment_ignores` path: the generic suite must not execute an
-    eviction target's tests, however a change happens to name them.
+    explicit argument overrides `--ignore` just as readily.
     """
-    ignores = root_collect_ignores() + root_addopts_ignores() + list(extra_ignores or [])
+    ignores = root_collect_ignores() + root_addopts_ignores()
     keep: list[str] = []
     dropped: list[str] = []
     for path in selected:
@@ -431,9 +415,7 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
         for item in selected
         if item in directories or not any(path_under(item, root) for root in directories)
     ]
-    selected, unrunnable = _drop_unrunnable(
-        selected, suites, _eviction_containment_ignores(registry)
-    )
+    selected, unrunnable = _drop_unrunnable(selected, suites)
     if exclude:
         selected = [item for item in selected if item not in exclude]
     if missing:

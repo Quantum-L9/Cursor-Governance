@@ -53,7 +53,6 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | No hardcoded `/Users` / `/home` paths | `.pre-commit-config.yaml` hook `no-hardcoded-paths` → `ops/scripts/validate_governance_no_hardcoded_paths.sh` |
 | No Dropbox SSOT / L9_MEMORY_HTTP residue | pre-commit `legacy-doctrine-residue` → `ops/scripts/validate_legacy_doctrine_residue.py` |
 | Lint / format / tests | `.github/workflows/l9-lint-test.yml`; local `make pr` |
-| Peer Execution / adapter conformance | `.github/workflows/peer-execution.yml` |
 | Supply chain | `.github/workflows/supply-chain.yml` |
 | CodeQL | `.github/workflows/codeql.yml` (reusable: `codeql-reusable.yml`) |
 | Repo hygiene | `.github/workflows/repo-hygiene.yml`; pre-commit `repo-hygiene` |
@@ -61,7 +60,7 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | Maximum-velocity execution profile | pre-commit `max-velocity` → `ops/scripts/validate_max_velocity.py`; `tests/ops/scripts/test_validate_max_velocity.py` |
 | `/ff` overwrite-untracked high-velocity | `skills/l9-repo-sync/scripts/validate_pack_structure.py`; `skills/l9-repo-sync/scripts/self_test.py` `ignored_colliding` |
 
-Workflow file count at write time: **14** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
+Workflow file count at write time: **13** under `.github/workflows/`. Recount from that directory on refresh. Blocking vs janitor split: [`ARCHITECTURE.md`](ARCHITECTURE.md) CI/CD architecture.
 
 ## False positives
 
