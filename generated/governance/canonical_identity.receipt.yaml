@@ -4,7 +4,7 @@ projection:
   profile_ref: l9.projection/cursor-governance-identity@1
   profile_digest: sha256:0eb691b922a71e5d2ee335b42f28dcd7ec457f8f4a90b542dff3e361d4a8bb6a
   source_repository: Quantum-L9/.github
-  source_revision: 14a93a94a3adaa15b506ee88c12e8b82a121c140
+  source_revision: 07b0df96fc3008d55a96f804923e2177ff312295
   sources:
     actor_registry:
       artifact_ref: l9.actor-registry/global@1
@@ -15,7 +15,7 @@ projection:
 output:
   path: generated/governance/canonical_identity.yaml
   schema: l9.projection.cursor-governance-identity/v1
-  digest: sha256:cdbb814d5d21a176afc60a492603f4675811b71cf346d441c894bf39ca609df1
+  digest: sha256:489195262a26195a649170c63145f6ad317a99eb082bf360444164ad3ef5a667
 generator:
   id: cursor-governance.canonical-identity-projector/v1
   deterministic: true
