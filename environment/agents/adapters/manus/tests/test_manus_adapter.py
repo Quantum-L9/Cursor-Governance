@@ -22,6 +22,22 @@ class ManusAdapterContractTests(unittest.TestCase):
     def test_pack_passes_its_structural_validator(self) -> None:
         self.assertEqual(validator.validate(REPOSITORY), [])
 
+    def test_a_non_canonical_actor_ref_is_rejected(self) -> None:
+        """Only the exact canonical coordinate names Manus (rule 64)."""
+        real = validator._load_yaml
+
+        def malformed(path: Path) -> dict:
+            data = real(path)
+            if path.name == "agent_registry.yaml":
+                data["agents"]["manus"]["actor_ref"] = "anything#manus"
+            return data
+
+        from unittest import mock
+
+        with mock.patch.object(validator, "_load_yaml", malformed):
+            errors = validator.validate(REPOSITORY)
+        self.assertIn("environment L9_MEMORY_AGENT_ID='manus', expected None", errors)
+
     def test_bootstrap_states_the_repository_authority_order(self) -> None:
         bootstrap = (ADAPTER / "session_bootstrap.md").read_text(encoding="utf-8")
         self.assertEqual(validator.authority_order_errors(bootstrap), [])

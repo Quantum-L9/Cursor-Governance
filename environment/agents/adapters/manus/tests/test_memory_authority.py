@@ -58,6 +58,7 @@ class ManusMemoryAuthorityTests(unittest.TestCase):
             for manus in (
                 {},
                 {"actor_ref": "l9.actor-registry/global@1#cursor"},
+                {"actor_ref": "anything#manus"},
             ):
                 entry = registry["agents"]["manus"] | manus
                 document = {"agents": {"manus": entry}, "roles": registry["roles"]}
