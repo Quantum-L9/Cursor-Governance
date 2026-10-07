@@ -26,4 +26,3 @@ sync-generated:
 		--root "$(CURDIR)" \
 		--force \
 		--check
-
