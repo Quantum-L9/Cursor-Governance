@@ -278,11 +278,18 @@ class Validator:
         return self.projection
 
     # ----------------------------------------------------------- bindings
+    def agents_mapping(self) -> dict[str, Any]:
+        """The bindings catalog, or {} when R1 already rejected its shape.
+
+        Every per-binding pass goes through here so a non-mapping ``agents``
+        value yields the aggregated R1 failure, never a traceback.
+        """
+        agents = self.registry.get("agents")
+        return agents if isinstance(agents, dict) else {}
+
     def check_agents(self) -> None:
         roles = self.registry.get("roles") or {}
-        agents = self.registry.get("agents") or {}
-        if not isinstance(agents, dict):
-            return
+        agents = self.agents_mapping()
         seen: dict[str, dict[str, str]] = {}
         for key, agent in agents.items():
             self.check_one_agent(str(key), agent, roles, seen)
@@ -431,7 +438,7 @@ class Validator:
     def active_bindings(self) -> dict[str, dict]:
         return {
             str(key): agent
-            for key, agent in (self.registry.get("agents") or {}).items()
+            for key, agent in self.agents_mapping().items()
             if isinstance(agent, dict) and self._is_active(agent)
         }
 
@@ -598,7 +605,7 @@ class Validator:
             self.check_env_example_text(envf.name, envf.read_text(encoding="utf-8"), agent)
 
     def check_adapters(self) -> None:
-        for key, agent in (self.registry.get("agents") or {}).items():
+        for key, agent in self.agents_mapping().items():
             self.check_one_adapter(str(key), agent)
 
     # ------------------------------------------------------------- secrets
@@ -693,7 +700,7 @@ def main() -> int:
         for e in errors:
             sys.stderr.write(f"  {e}\n")
         return 1
-    n = len(validator.registry.get("agents") or {})
+    n = len(validator.agents_mapping())
     sys.stderr.write(
         f"PASS — agent-bindings/v2 valid, {n} binding(s) resolved against "
         f"{projection_path.name}, adapters consistent, no committed secrets\n"

@@ -321,6 +321,19 @@ def test_registry_schema_must_be_agent_bindings_v2(tmp_path: Path) -> None:
     assert any(error.startswith("[R1]") and "agent-bindings/v2" in error for error in errors)
 
 
+def test_non_mapping_agents_catalog_fails_r1_without_traceback(tmp_path: Path) -> None:
+    registry = v2_registry()
+    registry["agents"] = ["bad"]
+    validator = Validator(tmp_path, tmp_path / "canonical_identity.yaml")
+    validator.adopt_registry(registry)
+    validator.adopt_projection(real_projection())
+    validator.check_agents()
+    validator.check_peer_bindings({"peers": {"cursor": {"agent_ref": "cursor"}}})
+    validator.check_adapters()
+    assert any(error.startswith("[R1]") and "'agents'" in error for error in validator.errors)
+    assert validator.agents_mapping() == {}
+
+
 def test_local_agent_id_is_rejected(tmp_path: Path) -> None:
     registry = v2_registry()
     registry["agents"]["cursor"]["agent_id"] = "cursor"
