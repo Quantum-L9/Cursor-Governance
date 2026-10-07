@@ -1,16 +1,21 @@
 ---
 name: l9-plan
-description: create a machine-validated pe+autonomy execution plan or specification that runs through program-execution and make campaign. use when the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy. do not use for ordinary cursor plan mode or build-button plans (use l9-plan-simple).
+description: "deprecated — do not activate. Program Execution planning is retired and has no live owner. Ordinary plans stay with l9-plan-simple, which does not absorb this pack."
+disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
+  tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy, deprecated]
   owner: igor_beylin
-  status: active
+  status: deprecated
   version: 4.1.0
-  updated: 2026-08-21
+  updated: 2026-10-07
 ---
+
+# l9-plan (retired)
+
+Do not activate. This pack is archived. `/l9-plan`, Program Lock, and `make campaign` have no live owner. `l9-plan-simple` remains ordinary planning and does not inherit this pack.
 
 # Execution Planning
 

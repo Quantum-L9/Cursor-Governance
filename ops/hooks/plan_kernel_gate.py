@@ -38,7 +38,7 @@ def repo_root() -> Path:
 
 
 def _load_checker():
-    scripts = repo_root() / "skills" / "l9-plan" / "scripts"
+    scripts = repo_root() / "skills" / "_archived" / "l9-plan" / "scripts"
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
     import validate_plan_kernel_receipt as checker
@@ -261,7 +261,7 @@ def handle_execute_gate(event: dict[str, Any]) -> int:
 def _self_test() -> int:
     checker = _load_checker()
     root = repo_root()
-    fixtures = root / "skills" / "l9-plan" / "fixtures"
+    fixtures = root / "skills" / "_archived" / "l9-plan" / "fixtures"
     errors: list[str] = []
     passing = fixtures / "plan_kernel_pass.plan.md"
     if checker.check_plan(passing):

@@ -25,8 +25,8 @@ DOMAIN_ACTIONS = {
     "build": "skills/l9-plan-simple/references/plan-workflow-simple.md",
     "gmp_start": "workflows/gmp_executor.py",
     "gmp_finalize": "workflows/gmp_executor.py",
-    "kernel_receipt": "skills/l9-plan/scripts/validate_plan_kernel_receipt.py",
-    "validate_plan": "skills/l9-plan/scripts/validate_plan_document.py",
+    "kernel_receipt": "skills/_archived/l9-plan/scripts/validate_plan_kernel_receipt.py",
+    "validate_plan": "skills/_archived/l9-plan/scripts/validate_plan_document.py",
     "generate_section_receipt": ("skills/l9-plan-simple/scripts/generate_plan_section_receipt.py"),
     "validate_section_receipt": ("skills/l9-plan-simple/scripts/validate_plan_section_receipt.py"),
     "regenerate_section_receipt": (

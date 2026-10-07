@@ -35,8 +35,6 @@ tiers:
     use_when: planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed
   - skill: l9-gmp-protocol
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
-  - skill: l9-plan
-    use_when: the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -105,11 +103,7 @@ tiers:
   - skill: l9-issue-remediation
     reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
-    reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
-  - skill: l9-pe-campaign-activate
-    reason: Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.
-  - skill: l9-pe-nuggets
-    reason: PLAN-window nugget extraction only; make campaign is the front door
+    reason: parallel Tasks and background PR-poll under an explicit authorization packet — high blast radius, explicit only
   - skill: l9-cli-optimization
     reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
   - skill: l9-e2e-blocker-resolution
@@ -129,9 +123,9 @@ tiers:
   - skill: l9-claude-coding-contract-compiler
     reason: compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad "coding contract" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation
   - skill: l9-intelligence-harvest
-    reason: donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation
+    reason: donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; the harvest family stays explicit; disable-model-invocation
   - skill: l9-pipeline-audit
-    reason: on-demand multi-surface harvest (plans + PE campaigns) can emit new compiled plans or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation
+    reason: on-demand plans harvest can emit a compiled plan; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; Program Execution campaigns are not a live audit surface; disable-model-invocation
   - skill: l9-audit-plans
     reason: plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation
   - skill: l9-pr-audit
@@ -143,7 +137,7 @@ tiers:
   - skill: l9-global-architect
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation
   - skill: l9-idea-execute
-    reason: routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation
+    reason: routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation
   - skill: l9-repo-birth
     reason: control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
   do_not_migrate_to_skills:
@@ -175,6 +169,12 @@ tiers:
     reason: superseded by skills/l9-wire-into-repo/ for generic repository wiring; specialized governance operations belong to their narrower owners (skills/l9-governance-symlinks/ for workspace binding) — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-wire-skill-into-repo/
     reason: superseded by skills/l9-wire-into-repo/; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-plan/
+    reason: Program Execution planning retired with no live successor; ordinary planning stays skills/l9-plan-simple/ and does not absorb this pack — archived out of live skills/ discovery, never auto-invoke or reconcile
+  - item: skills/_archived/l9-pe-campaign-activate/
+    reason: Program Execution campaign front door retired with no replacement; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-pe-nuggets/
+    reason: Program Execution nugget extraction retired with the campaign front door; archived out of live skills/ discovery — never auto-invoke or reconcile
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:
@@ -206,7 +206,6 @@ claude_routing:
   - l9-recursive-optimization
   - l9-structured-reasoning
   - l9-gmp-protocol
-  - l9-plan
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -402,39 +401,7 @@ claude_routing:
     - /l9-plan
     supporting:
     - l9-structured-reasoning
-    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user''s press). Campaign / PE / Program Lock planning is the campaign_plan route below — one manifest-owned doctrine, no static rule table (VSP-P1-002).
-
-      explicit_only + hint_allowed — the route recommends Read/attach (source: explicit_hint); it is never model-invocation authority. l9-plan-simple stays explicit_only so the Claude Code projection is unchanged by the Cursor plane (Claude Code Preservation Contract CC-006, V-CC-001). Promoting the tier is a separate change set — PR #512 owns it.
-
-      '
-  - id: campaign_plan
-    primary: l9-plan
-    signal_weight: 8
-    priority: 1
-    positive_signals:
-    - pe campaign
-    - campaign plan
-    - plan a campaign
-    - plan the campaign
-    - prepare a campaign
-    - prepare the campaign
-    - program lock
-    - pe+autonomy
-    - pe autonomy plan
-    - program-execution plan
-    - program execution plan
-    - /l9-plan
-    - campaign spec
-    - for the campaign
-    - for a campaign
-    negative_signals:
-    - make campaign
-    - campaign INTENT
-    - activate the campaign
-    - activate a campaign
-    supporting:
-    - l9-structured-reasoning
-    note: 'PE+autonomy planning that runs through program-execution. Live activation (make campaign INTENT=) stays pe_campaign_activate; this route plans, it never activates.
+    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.
 
       '
   - id: gmp_protocol
@@ -733,59 +700,6 @@ claude_routing:
     - kubernetes deploy
     supporting:
     - l9-structured-reasoning
-  - id: pe_campaign_activate
-    primary: l9-pe-campaign-activate
-    signal_weight: 8
-    hint_allowed: true
-    required_any:
-    - make campaign
-    - campaign INTENT
-    - activate a campaign
-    - activate the campaign
-    - activate campaign
-    - pe campaign
-    - /l9-pe-campaign-activate
-    - compile campaign source
-    positive_signals:
-    - make campaign
-    - make campaign INTENT
-    - activate a campaign
-    - run a pe campaign
-    - campaign INTENT
-    - take this brief through completed
-    - /l9-pe-campaign-activate
-    - compile campaign source
-    negative_signals:
-    - bounded autonomy
-    - background pr poll
-    - /autonomy
-    - campaign authorization
-    supporting:
-    - l9-structured-reasoning
-    - l9-pe-nuggets
-    note: 'model_allowed — Read and follow. Invoking this skill authorizes make campaign INTENT= for the named seed. Publication and merge remain a separate governed release transition.
-
-      '
-  - id: pe_nuggets
-    primary: l9-pe-nuggets
-    signal_weight: 7
-    hint_allowed: true
-    required_any:
-    - extract_nuggets
-    - nuggets.json
-    - plan window
-    - PLAN window
-    - /l9-pe-nuggets
-    positive_signals:
-    - extract nuggets
-    - primed nuggets
-    - plan_status seal
-    - stack-proof nuggets
-    negative_signals:
-    - make campaign
-    - activate a campaign
-    supporting:
-    - l9-pe-campaign-activate
   - id: ui_operator
     primary: l9-ui-operator
     signal_weight: 8

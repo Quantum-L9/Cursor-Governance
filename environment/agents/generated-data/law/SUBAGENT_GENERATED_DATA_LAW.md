@@ -1305,7 +1305,7 @@ This section records the boundary as it is implemented. It adds no new machinery
 | Subagent final result (Cursor) | `subagentStop` → `lifecycle/compose_stop.py` → `results/gateway.accept_and_ingest` → `ingest_accepted_result` | active |
 | Partial/failed subagent (Cursor) | `result_bridge.compile_incomplete_result` → `ACCEPTED_INCOMPLETE` → ingress; never promoted | active |
 | Recon output | enters only as a `ReconReport` result document; no recon-file scanner exists | by design |
-| Program Execution outcome | `make campaign` → `outcome_publisher.publish` → `ingest_packet` | active |
+| Program Execution outcome | no live ingress | retired |
 | Child transcript | not read; raw chat is never written to memory (cursor-subagents README) | by design |
 | Claude Code subagents | no SubagentStop registration and no start-time dispatch receipt | not wired |
 

@@ -26,7 +26,7 @@ It also implements a small, **Manus-native stdio MCP lane** for operations that 
 | Autonomy and L4 | `ops/autonomy/surface_profile.yaml` | Exact `manus` surface ID plus the existing shared gates. |
 | Memory agent lane | Package-owned `l9-graphite-memory` | A separate signed stdio Custom MCP connector starts the pinned package server directly for ordinary reads and writes. |
 | Memory lifecycle | `ops/memory/hydration.py` and `ops/graphiti/hydration/close_session.py` | A bearer-protected MCP bridge invokes canonical hydrate and close under bounded `manus-session-*` envelopes. |
-| Program Execution | `environment/program-execution/` | Existing `manus-cloud` provider remains explicitly dormant. |
+| Execution topology | `environment/agents/PEER_RUNTIME_BINDINGS.yaml` | Existing `manus-cloud` provider remains explicitly dormant. |
 
 ## Current capability
 
@@ -120,7 +120,6 @@ make manus-mcp-test
 make memory-egress-check
 make agents-env
 make agents-runtime-bindings-validate
-make program-execution-adapters
 python -m unittest environment/agents/adapters/manus/tests/test_manus_adapter.py
 python -m unittest environment/agents/adapters/manus/tests/test_infisical_mcp_server.py
 ```

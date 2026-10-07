@@ -37,7 +37,7 @@ def test_setup_installs_the_prefetch_hook() -> None:
 
 def test_both_planning_skills_require_prefetch_before_emit() -> None:
     for rel in (
-        "skills/l9-plan/SKILL.md",
+        "skills/_archived/l9-plan/SKILL.md",
         "skills/l9-plan-simple/SKILL.md",
     ):
         text = (ROOT / rel).read_text(encoding="utf-8")

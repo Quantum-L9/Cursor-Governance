@@ -1290,3 +1290,22 @@ the surviving L4/publication path. Historical text remains on disk.
 7. **Single ceremony remains.** `make pr` remains the one sanctioned
    publication ceremony. No replacement kernel gate, assurance runner, parallel
    validator framework, or second publication path is introduced.
+
+<!-- PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 -->
+
+## Program Execution eviction reachability (2026-10-07)
+
+This section supersedes the earlier executable-plan and Peer Execution
+authority rows where they assign live authority to `l9-plan`,
+`make peer-execution-conformance`, the PE Controller, or Program Execution.
+
+Program Execution is no longer a live planning, execution, validation,
+autonomy, or publication authority.
+
+`l9-plan-simple` remains the ordinary planning owner but does not inherit
+Program Execution semantics.
+
+Root autonomy remains the surviving provider-neutral autonomy authority.
+
+PE-owned artifacts may remain physically present only as an inert
+eviction target until their separate physical-removal slice.

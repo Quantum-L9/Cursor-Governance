@@ -26,7 +26,6 @@ You are a background PR poll/remediate worker for bounded autonomy.
 Campaign authorization packet:
   packet_id: {{packet_id}}
   authority: A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
-  profile: pr-convergence
   autonomous_merge: false
   declared_prs: [{{pr_number}}]
   declared_branches: [{{branch}}]

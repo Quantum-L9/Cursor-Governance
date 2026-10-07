@@ -1,6 +1,6 @@
 # Protocol B — PR-poll subagent while main continues
 
-**Centerpiece.** Waiting on CI **releases compute** but preserves locks (`waiting_external_*` in pr-convergence). Cursor maps that to a background poll Task; the main agent continues other work.
+**Centerpiece.** Waiting on CI **releases compute** but preserves the declared lock. Cursor maps that to a background poll Task; the main agent continues other work.
 
 ## When to spawn
 

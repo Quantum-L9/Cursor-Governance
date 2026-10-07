@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Shelf leftover corpus after /ff: untracked and dirty-tracked.
 
-Owns ``TODO.md``, ``docs/plans/``, and
-``environment/program-execution/campaigns/``. Writes
+Owns ``TODO.md`` and ``docs/plans/``. Writes
 ``$CLONE/.l9/ff-shelf-untracked.txt`` then ``rsync --files-from`` that path
 (no process substitution, no ``/tmp`` files-from). Appends an existing
 same-author ``feat/ff-shelf-*`` worktree, or cuts one stamp when none is open.
@@ -24,10 +23,7 @@ from pathlib import Path
 
 LIST_REL = ".l9/ff-shelf-untracked.txt"
 SHELF_EXACT = ("TODO.md",)
-SHELF_PREFIXES = (
-    "docs/plans/",
-    "environment/program-execution/campaigns/",
-)
+SHELF_PREFIXES = ("docs/plans/",)
 SECRET_NAME_RE = re.compile(r"(oauth|credentials|client_secret)", re.I)
 SHA_FIELD_RE = re.compile(r'(body_sha256:\s*["\']?)([^"\'\s]+)(["\']?)')
 ZERO_DIGEST = "0" * 64

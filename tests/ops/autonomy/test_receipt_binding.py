@@ -23,7 +23,7 @@ from ops.autonomy import receipt_binding  # noqa: E402
 
 def _load_plan_validator():
     """Import the skill pack's validator the way the pack is invoked."""
-    script = REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py"
+    script = REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py"
     sys.path.insert(0, str(script.parent))
     try:
         spec = importlib.util.spec_from_file_location("_plan_kernel_receipt", script)
@@ -166,7 +166,7 @@ def test_callers_prefer_in_repo_receipt_binding() -> None:
 
 
 def test_skill_pack_loads_binding_by_file_location() -> None:
-    src = (REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py").read_text(
+    src = (REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py").read_text(
         encoding="utf-8"
     )
     assert "spec_from_file_location" in src

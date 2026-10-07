@@ -16,21 +16,10 @@ generic_routes:
     orchestration: idea_execute_greenfield_v1
     cohort:
       - l9-global-architect
-      - l9-plan
-      - l9-pe-campaign-activate
     stages:
       - id: architecture
         owner: l9-global-architect
         produces: product_architecture_decision
-      - id: planning
-        owner: l9-plan
-        produces: validated_execution_plan
-      - id: campaign
-        owner: l9-pe-campaign-activate
-        produces: validated_campaign_source_v2
-      - id: realization
-        owner: program-execution
-        produces: verified_pec_source
       - id: birth_handoff
         owner: l9-repo-template
         activation: explicit_graph_request
@@ -44,7 +33,8 @@ generic_routes:
     adapter: l9-plan-simple
     topology: EXISTING_REPO_CHANGE
   existing_system_campaign:
-    owner: Cursor-Governance/Program-Execution
-    adapter: program-execution
+    owner: none
+    adapter: none
     topology: EXISTING_SYSTEM_CAMPAIGN
+    result: EXECUTION_TOPOLOGY_UNSUPPORTED
 unbound_policy: FAIL_CLOSED

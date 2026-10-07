@@ -35,7 +35,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 **Fail-closed** remote gates (do not weaken): `ops/autonomy/merge_gate.py` and
 `ops/autonomy/local_execution_gate.py` (L4 no mid-execution push).
 
-## Profile parallelism flags → Cursor
+## Parallelism flags → Cursor
 
 | Profile flag | Cursor SOP mechanism |
 |---|---|
@@ -51,5 +51,6 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 ## Dual-surface rule
 
 - **Claude Code surface:** use the root `autonomy/` runtime through
-  `autonomy/adapters/claude_code/`; provider-specific code does not own a scheduler.
+  `autonomy/adapters/claude_code/`. Provider-specific code does not own a scheduler.
+  Claude multi-lane scheduling is unavailable from this skill.
 - **Cursor surface:** this skill + `/autonomy` + agent-requested rule — Task/background poll SOP only; no second Python scheduler.

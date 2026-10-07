@@ -159,9 +159,8 @@ provider_ref: claude-code-direct
 execution_profile_ref: worker-default
 ```
 
-`agent_ref` belongs to the peer entry, not the provider descriptor. Program
-Execution resolves the binding, applies the execution profile, and invokes the
-provider through `environment/program-execution/peer_execution/`.
+`agent_ref` belongs to the peer entry, not the provider descriptor.
+`provider_ref` and `execution_profile_ref` remain registry-declared identifiers.
 
 Provider-specific Program modules are thin. Shared lifecycle, permissions,
 context, budgets, transports, telemetry, receipts, and admitted-dispatch
@@ -169,20 +168,14 @@ concurrency live upstream.
 
 ## Autonomy
 
-Root `autonomy/` is the canonical authorization/control plane and never owns
-Program state. Shared bounded-concurrency mechanics live at
-`environment/program-execution/peer_execution/autonomy/`, not under a provider adapter.
+Root `autonomy/` is the canonical authorization/control plane. Shared
+bounded-concurrency mechanics are not assigned to a Program Execution path.
 
 ## Validation
 
 ```bash
 make agents-env
 make agents-runtime-bindings-validate
-make program-execution-adapters
-make program-execution-conformance
-make peer-execution-validate
-make peer-execution-probe
-make peer-execution-conformance
 ```
 
 Thin-provider violations are merge-blocking.

@@ -26,7 +26,7 @@ updated: 2026-09-02
 ## Delivered plan — both modes
 
 - [ ] PLAN_DOCUMENT emitted
-- [ ] `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>` PASS
+- [ ] `python3 ../../_archived/l9-plan/scripts/validate_plan_document.py <plan.json>` PASS
 - [ ] `l9-global-architect` ran upstream (receipt `gar_upstream.invoked: true`)
 - [ ] `python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py <plan>.section-receipt.json` PASS
 - [ ] Receipt `handoff_mode` matches the frontmatter `execute_via`

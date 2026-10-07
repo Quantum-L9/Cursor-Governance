@@ -293,12 +293,12 @@ Press Build on the current checkout.
             if not old_dup or "superseded" not in old_dup.get("flags", []):
                 errors.append("older dup slug should be superseded")
             noex = by_name.get("no_execute_ffffffff.plan.md")
-            if not noex or "missing_execute_section" not in noex.get("flags", []):
-                errors.append("missing_execute_section flag missing")
+            if not noex or "missing_execute_section" in noex.get("flags", []):
+                errors.append("a missing PE execute heading must not define plan completeness")
             if not noex or "in_progress" not in noex.get("flags", []):
                 errors.append("in_progress flag missing")
-            if not noex or "harvestable" not in noex.get("flags", []):
-                errors.append("harvestable flag missing on mixed PE-kind plan")
+            if noex and "harvestable" in noex.get("flags", []):
+                errors.append("a missing PE execute heading must not make a plan harvestable")
             compiled = by_name.get("compiled_live_cafef00d.plan.md")
             if not compiled:
                 errors.append("compiled: true plan with pending todos must stay unbuilt")
@@ -308,8 +308,8 @@ Press Build on the current checkout.
             elif "missing_execute_section" in simple.get("flags", []):
                 errors.append("simple-kind plan must not get missing_execute_section")
             recent = by_name.get("recent_unbuilt_aaaaaaaa.plan.md")
-            if not recent or "kernel_unfired" not in recent.get("flags", []):
-                errors.append("kernel_unfired flag missing on unhardened unbuilt plan")
+            if recent and "kernel_unfired" in recent.get("flags", []):
+                errors.append("retired plan-kernel checker must not define plan readiness")
 
         missing = run_audit(Path(tmp) / "nope", workspace, "--format", "markdown")
         if missing.returncode != 0 or "no plans dir" not in missing.stdout:

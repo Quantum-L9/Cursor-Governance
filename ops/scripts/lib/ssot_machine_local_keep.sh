@@ -8,7 +8,7 @@
 ssot_is_ff_corpus_keep() {
   local rel="${1#./}"
   case "$rel" in
-    TODO.md|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index)
+    TODO.md|docs/plans/*|reports/repo-index/*|reports/repo-index)
       return 0
       ;;
   esac

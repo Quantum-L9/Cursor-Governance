@@ -198,12 +198,11 @@ Receipt units must exactly match Graph units by `unit_id`, `owner`, and `adapter
 ## 7. Scoped greenfield orchestration
 
 For `NEW_PRODUCT_REPOSITORY`, Idea Execute is the pipeline orchestrator and
-the Graph carries `idea_execute_greenfield_v1`. It resolves GAR, `l9-plan`, and
-`l9-pe-campaign-activate` together as a graph-local cohort while preserving
-their native ordered artifacts:
+the Graph carries `idea_execute_greenfield_v1`. It resolves GAR. Program
+Execution is not a cohort member.
 
 ```text
-GAR Decision -> Plan -> campaign-source.v2 -> PE/PEC receipt
+GAR Decision
 ```
 
 No owner invokes the next owner. A completion receipt is observed by Idea

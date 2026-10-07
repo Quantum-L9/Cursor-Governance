@@ -187,9 +187,6 @@ def main() -> int:
     assert greenfield["adapter"] == "l9-idea-execute"
     assert [stage["id"] for stage in greenfield["orchestration"]["stages"]] == [
         "architecture",
-        "planning",
-        "campaign",
-        "realization",
     ]
     assert not greenfield["orchestration"]["birth_handoff_requested"]
     birth_requested = copy.deepcopy(e)
@@ -227,6 +224,7 @@ def main() -> int:
     validate_graph(g, e)
     u = find_unit(g, "EXISTING_REPO_CHANGE")
     assert u["adapter"] == "l9-plan-simple"
+    existing_unit = u
     current = caps("l9-plan-simple", u["id"])
     assert check_unit(u, current)["status"] == "COMPATIBLE"
     checks.append("igorbot_existing_repo_to_plan_simple=PASS")
@@ -242,14 +240,20 @@ def main() -> int:
     )
     g = route_envelope(validate_envelope(e), registry)
     validate_graph(g, e)
-    u = find_unit(g, "EXISTING_SYSTEM_CAMPAIGN")
-    gap = caps("program-execution", u["id"], single=True, multi=False)
-    unknown = caps("program-execution", u["id"], single=True, multi=None)
+    assert g["status"] == "BLOCKED"
+    assert [b["code"] for b in g["blockers"]] == [
+        "EXECUTION_TOPOLOGY_UNSUPPORTED",
+        "EXECUTION_TOPOLOGY_UNSUPPORTED",
+    ]
+    assert all(unit.get("topology") != "EXISTING_SYSTEM_CAMPAIGN" for unit in g["units"])
+    u = existing_unit
+    gap = caps("l9-plan-simple", u["id"], single=False, multi=False)
+    unknown = caps("l9-plan-simple", u["id"], single=None, multi=None)
     assert check_unit(u, gap)["status"] == "EXECUTOR_CAPABILITY_GAP"
     assert check_unit(u, unknown)["status"] == "ADAPTER_CAPABILITY_UNKNOWN"
     checks.append("adapter_gap_vs_unknown=PASS")
 
-    stale = caps("program-execution", u["id"], single=True, multi=False, revision="old-sha")
+    stale = caps("l9-plan-simple", u["id"], single=False, multi=False, revision="old-sha")
     expect_contract_error(
         lambda: check_unit(u, gap, supplied_caps=stale),
         "ADAPTER_SNAPSHOT_STALE",
@@ -459,7 +463,7 @@ def main() -> int:
     checks.append("closed_world_adapter_reuse=PASS")
 
     current = caps("l9-plan-simple", g["units"][0]["id"])
-    wrong_adapter = caps("program-execution", g["units"][0]["id"])
+    wrong_adapter = caps("not-the-unit-adapter", g["units"][0]["id"])
     report = preflight(
         e,
         graph=g,

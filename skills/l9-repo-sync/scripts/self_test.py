@@ -1048,7 +1048,9 @@ def test_ff_shelf_list_and_rsync_argv() -> int:
             return _fail("list file was not written")
         listed = list_path.read_text(encoding="utf-8").splitlines()
         campaign_note = "environment/program-execution/campaigns/note.md"
-        if campaign_note not in listed or "docs/plans/left.md" not in listed:
+        if campaign_note in listed:
+            return _fail(f"PE campaigns are not corpus keep-list: {listed}")
+        if "docs/plans/left.md" not in listed:
             return _fail(f"missing leftover paths: {listed}")
         if "TODO.md" not in listed:
             return _fail(f"root task-queue file must be shelved, listed={listed}")

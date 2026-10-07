@@ -1,6 +1,6 @@
 ---
 name: l9-pipeline-audit
-description: "audit plans and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack."
+description: "audit plans and harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack. Program Execution campaigns are not a live audit surface."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -18,18 +18,16 @@ metadata:
 Sole live-queue + harvest orchestrator. Slash `/l9-pipeline-audit` (alias
 `/plan-audit`) is the explicit invoke. SessionStart does **not** read, scan,
 analyze, archive, or emit this pack. Run `scripts/audit_pipeline.py` from the
-slash only (plans hop `.cursor/plans` → `~/.cursor/plans`, plus PE
-campaigns). `--archive-spent` is opt-in on that CLI. Plans and campaigns
-share NEXT 1–3 (one slot per surface first).
+slash only (plans hop `.cursor/plans` → `~/.cursor/plans`). Program Execution
+campaigns are not scanned. `--archive-spent` is opt-in on that CLI.
 
 ## Skills this workflow calls
 
 | Step | Owner | Must not substitute |
 |---|---|---|
 | Plans live-queue | this pack `scripts/audit_plans.py` | a second plans scanner |
-| Campaigns | `environment/program-execution/campaigns/*/CAMPAIGN_SOURCE.yaml` | `make campaign` |
 | Harvest | `l9-intelligence-harvest` bind + inventory + qualify + validate | `l9-harvest-pipeline`, inventing `l9-intelligence-harvest` |
-| Emit | this pack `scripts/run_intelligence_harvest.py` | PE Controller / Program Lock |
+| Emit | this pack `scripts/run_intelligence_harvest.py` | a Program Execution controller |
 | Execute packet | `/gmp` (`l9-gmp-protocol`) | `make campaign` |
 
 `l9-global-architect` stays STANDALONE if invoked. Repository presence does not

@@ -1,17 +1,21 @@
 ---
 name: l9-pe-nuggets
-description: extract primed campaign nuggets.json and seal plan_status after stack-proof. use when the PLAN window runs, make campaign needs nuggets, or extract_nuggets.py is invoked. do not use as a campaign front door (use l9-pe-campaign-activate / make campaign).
+description: "deprecated — do not activate. Program Execution nugget extraction is retired and has no live owner."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, program-execution, campaign, plan-window, nuggets]
+  tags: [l9, program-execution, campaign, plan-window, nuggets, deprecated]
   owner: igor_beylin
-  status: active
+  status: deprecated
   version: 1.0.0
-  updated: 2026-08-17
+  updated: 2026-10-07
 ---
+
+# l9-pe-nuggets (retired)
+
+Do not activate. This pack is archived. It is not a campaign front door, and the campaign front door it served is retired.
 
 # PE Nuggets
 

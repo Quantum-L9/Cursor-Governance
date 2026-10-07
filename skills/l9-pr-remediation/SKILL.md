@@ -216,7 +216,7 @@ Mission is `open_prs=0` — an empty `gh pr list --state open` on the target rep
 
 ## Generated-artifact heal (same publish path)
 
-Not a second publish path. After any merge that touched generated paths — or whenever `.l9/pr/regen-required.txt` is non-empty — run `"$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force` (plus `generate_manifest.py` / `validate_manifest.py` when `environment/program-execution/MANIFEST.json` is in the set), then `make precommit-repo`, commit, and `git push` (or `PR_STACK=auto make pr` if new files touched). File-by-file audit only for a non-generated unresolved path. [references/generated-heal.md](references/generated-heal.md), `rules/53-pr-overlap-guardrail.mdc`.
+Not a second publish path. After any merge that touched generated paths — or whenever `.l9/pr/regen-required.txt` is non-empty — run `"$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force`, then `make precommit-repo`, commit, and `git push` (or `PR_STACK=auto make pr` if new files touched). Do not generate or validate a Program Execution manifest. File-by-file audit only for a non-generated unresolved path. [references/generated-heal.md](references/generated-heal.md), `rules/53-pr-overlap-guardrail.mdc`.
 
 ## Resource Map
 

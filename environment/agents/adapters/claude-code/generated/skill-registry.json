@@ -1,5 +1,5 @@
 {
-  "generation_id": "f0fe6b4ae0b4043cbf96bb98b45892f964e36ce8e4479e1ccfc0db76ff0953e6",
+  "generation_id": "0abdb3d6e5fd93d02c100dfbb9f44b824c53fd574c9b85d1d370ff13fcedca49",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -12,7 +12,6 @@
       "l9-recursive-optimization",
       "l9-structured-reasoning",
       "l9-gmp-protocol",
-      "l9-plan",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -184,7 +183,7 @@
           "pe autonomy",
           "/l9-plan"
         ],
-        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple (planning-only; Build is the user's press). Campaign / PE / Program Lock planning is the campaign_plan route below \u2014 one manifest-owned doctrine, no static rule table (VSP-P1-002).\nexplicit_only + hint_allowed \u2014 the route recommends Read/attach (source: explicit_hint); it is never model-invocation authority. l9-plan-simple stays explicit_only so the Claude Code projection is unchanged by the Cursor plane (Claude Code Preservation Contract CC-006, V-CC-001). Promoting the tier is a separate change set \u2014 PR #512 owns it.\n",
+        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.\n",
         "positive_signals": [
           "create an execution plan",
           "write a plan first",
@@ -218,39 +217,6 @@
           "decompose requirements",
           "scope is unclear"
         ],
-        "signal_weight": 8,
-        "supporting": [
-          "l9-structured-reasoning"
-        ]
-      },
-      {
-        "id": "campaign_plan",
-        "negative_signals": [
-          "make campaign",
-          "campaign INTENT",
-          "activate the campaign",
-          "activate a campaign"
-        ],
-        "note": "PE+autonomy planning that runs through program-execution. Live activation (make campaign INTENT=) stays pe_campaign_activate; this route plans, it never activates.\n",
-        "positive_signals": [
-          "pe campaign",
-          "campaign plan",
-          "plan a campaign",
-          "plan the campaign",
-          "prepare a campaign",
-          "prepare the campaign",
-          "program lock",
-          "pe+autonomy",
-          "pe autonomy plan",
-          "program-execution plan",
-          "program execution plan",
-          "/l9-plan",
-          "campaign spec",
-          "for the campaign",
-          "for a campaign"
-        ],
-        "primary": "l9-plan",
-        "priority": 1,
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -637,69 +603,6 @@
       },
       {
         "hint_allowed": true,
-        "id": "pe_campaign_activate",
-        "negative_signals": [
-          "bounded autonomy",
-          "background pr poll",
-          "/autonomy",
-          "campaign authorization"
-        ],
-        "note": "model_allowed \u2014 Read and follow. Invoking this skill authorizes make campaign INTENT= for the named seed. Publication and merge remain a separate governed release transition.\n",
-        "positive_signals": [
-          "make campaign",
-          "make campaign INTENT",
-          "activate a campaign",
-          "run a pe campaign",
-          "campaign INTENT",
-          "take this brief through completed",
-          "/l9-pe-campaign-activate",
-          "compile campaign source"
-        ],
-        "primary": "l9-pe-campaign-activate",
-        "required_any": [
-          "make campaign",
-          "campaign INTENT",
-          "activate a campaign",
-          "activate the campaign",
-          "activate campaign",
-          "pe campaign",
-          "/l9-pe-campaign-activate",
-          "compile campaign source"
-        ],
-        "signal_weight": 8,
-        "supporting": [
-          "l9-structured-reasoning",
-          "l9-pe-nuggets"
-        ]
-      },
-      {
-        "hint_allowed": true,
-        "id": "pe_nuggets",
-        "negative_signals": [
-          "make campaign",
-          "activate a campaign"
-        ],
-        "positive_signals": [
-          "extract nuggets",
-          "primed nuggets",
-          "plan_status seal",
-          "stack-proof nuggets"
-        ],
-        "primary": "l9-pe-nuggets",
-        "required_any": [
-          "extract_nuggets",
-          "nuggets.json",
-          "plan window",
-          "PLAN window",
-          "/l9-pe-nuggets"
-        ],
-        "signal_weight": 7,
-        "supporting": [
-          "l9-pe-campaign-activate"
-        ]
-      },
-      {
-        "hint_allowed": true,
         "id": "ui_operator",
         "note": "explicit_only + hint_allowed \u2014 Read/attach only; human approve required for console.py --mode run. Recommendation grants no mutation authority.\n",
         "positive_signals": [
@@ -938,14 +841,14 @@
     },
     {
       "composition_role": "general",
-      "description": "bounded autonomy campaign SOP for Cursor \u2014 parallel non-dependent Tasks, background PR-poll subagents while main continues, campaign authorization packet, join/merge-gate without autonomous merge. use when user runs /autonomy, needs PR convergence while continuing other work, or fans out independent lanes under ADR-0001 / pr-convergence budgets.",
+      "description": "bounded autonomy campaign SOP for Cursor \u2014 parallel non-dependent Tasks, background PR-poll subagents while main continues, campaign authorization packet, join/merge-gate without autonomous merge. use when user runs /autonomy, needs PR convergence while continuing other work, or fans out independent lanes under ADR-0001 and root autonomy.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-bounded-autonomy",
       "path": "skills/l9-bounded-autonomy",
-      "reason": "campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet \u2014 high blast radius, explicit only",
+      "reason": "parallel Tasks and background PR-poll under an explicit authorization packet \u2014 high blast radius, explicit only",
       "skill_md": "skills/l9-bounded-autonomy/SKILL.md",
-      "skill_sha256": "489ce2c922271b56b40e3c8cd4a1470a924f24851ee711baf27c022f5a73761e",
+      "skill_sha256": "3964ace56c72499c8ffaf50624c978698e5ba0aa2675898c40f2064a3fa33d1a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1224,14 +1127,14 @@
     },
     {
       "composition_role": "general",
-      "description": "route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, bounded existing-repo change, or program-execution campaign. do not use for raw idea refinement or when ideaos has not decided outcomes.",
+      "description": "route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, or bounded existing-repo change. campaign-shaped work whose only topology was program execution is EXECUTION_TOPOLOGY_UNSUPPORTED. do not use for raw idea refinement or when ideaos has not decided outcomes.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-idea-execute",
       "path": "skills/l9-idea-execute",
-      "reason": "routes validated IdeaOS decisions into a scoped GAR/Plan/Campaign/PE graph, Website-Bot, plan-simple, or Program Execution; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
+      "reason": "routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "6ec8c99ec467499609d0f1ee6c3a6151f4eb987cdc1b2c5b3dc90a9ea14928b3",
+      "skill_sha256": "f99421f1ed0887dc336faf7eca3c4a51206b50959abe62a9ae9517097ad3c4de",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1255,7 +1158,7 @@
       "invocation": "explicit_only",
       "name": "l9-intelligence-harvest",
       "path": "skills/l9-intelligence-harvest",
-      "reason": "donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation",
+      "reason": "donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; the harvest family stays explicit; disable-model-invocation",
       "skill_md": "skills/l9-intelligence-harvest/SKILL.md",
       "skill_sha256": "2001905be14417b6cc882d7343117cdda82f3a7554cf0da95e5549997796dd44",
       "user_invocable": true,
@@ -1315,40 +1218,14 @@
     },
     {
       "composition_role": "general",
-      "description": "Run the only live Program Execution campaign front door, `make campaign INTENT=`, from a complete direct campaign-source.v2, architecture intent, activate seed, plan, or brief through verified local commits. Use when the user asks to author from the canonical campaign template, activate a campaign, run a PE campaign, compile campaign source, emit campaign seeds, or take a brief through Program Execution. Do not call PEC, inner compile/accept scripts, PR publication, or merge as substitutes.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-pe-campaign-activate",
-      "path": "skills/l9-pe-campaign-activate",
-      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.",
-      "skill_md": "skills/l9-pe-campaign-activate/SKILL.md",
-      "skill_sha256": "621321f754e6066011549ed9c15b33ab1d6192fa774f887c853cdeb2a0a3c3cd",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "extract primed campaign nuggets.json and seal plan_status after stack-proof. use when the PLAN window runs, make campaign needs nuggets, or extract_nuggets.py is invoked. do not use as a campaign front door (use l9-pe-campaign-activate / make campaign).",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-pe-nuggets",
-      "path": "skills/l9-pe-nuggets",
-      "reason": "PLAN-window nugget extraction only; make campaign is the front door",
-      "skill_md": "skills/l9-pe-nuggets/SKILL.md",
-      "skill_sha256": "ab0757c785ee13ef83bf9c8401eff528566bce84c4904f5af86491b38349121b",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "audit plans and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack.",
+      "description": "audit plans and harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs. SessionStart does not run this pack. Program Execution campaigns are not a live audit surface.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
-      "reason": "on-demand multi-surface harvest (plans + PE campaigns) can emit new compiled plans or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; disable-model-invocation",
+      "reason": "on-demand plans harvest can emit a compiled plan; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; Program Execution campaigns are not a live audit surface; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "38acf97ec45c8b9f318bfaa8576b12ec367367d9197448dc8a73294c5ef349a2",
+      "skill_sha256": "8bef7d6c9ab1fd257392f0140f6f442eda82548640b8b5e786aa3f0afb9d327f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1366,19 +1243,6 @@
       "when_to_use": ""
     },
     {
-      "composition_role": "primary",
-      "description": "create a machine-validated pe+autonomy execution plan or specification that runs through program-execution and make campaign. use when the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy. do not use for ordinary cursor plan mode or build-button plans (use l9-plan-simple).",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-plan",
-      "path": "skills/l9-plan",
-      "reason": "",
-      "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "6b0f5c377a6a45eb188cbfaa0b78b9cdd374135e40f1240b4f698496e2b48220",
-      "user_invocable": true,
-      "when_to_use": "the user asks for /l9-plan, make campaign, a Program Lock, a campaign plan, or a PE+autonomy plan/spec that runs through program-execution; ordinary plans belong to l9-plan-simple"
-    },
-    {
       "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
       "disable_model_invocation": false,
@@ -1387,7 +1251,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "1c13b6953d98dd244dcdbc36b904fae102e6178261fc3dbd2c58f7791e6b8c1d",
+      "skill_sha256": "c3c5e567d0dcff79aa09c71271c9b230a6b139793d0e65de4f6c691dee5789e8",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1426,7 +1290,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "ccdafbe8bf86aa9b19afb2a415ba232304b325e040039fc0f88753b76461a8fe",
+      "skill_sha256": "df2e6991fa60be821e28bef76b8c71430d0772e4a7d02e9cf742f215c254fe8e",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1504,7 +1368,7 @@
       "path": "skills/l9-repo-sync",
       "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
       "skill_md": "skills/l9-repo-sync/SKILL.md",
-      "skill_sha256": "f9ae8f8a9b24591e1c0d3fe2dc62967c22f4417370a01045c94a9f3d93875cd8",
+      "skill_sha256": "608dc41f3411264a1e190faee7b44fc26a14f2ac427b92a18ee101f84b1bb991",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1627,6 +1491,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "2ede40a2fe6ea13923dc1a9d350f8dae6b03f67ae87fe4176afd4eb11d1d9c5f",
-  "source_skill_corpus_sha256": "f7649ebf483547c14fc519ada96e8c2756a8f680be1677a193de3164d7841e21"
+  "source_manifest_sha256": "746f0934892a659a8819c91675c4bdbc0acf56a5e4c2848c18911c1eaaccd2eb",
+  "source_skill_corpus_sha256": "3ee26cd06f0023374dd91ebc63d6aa34b70647d916ac77768002c9bf90fa9b13"
 }

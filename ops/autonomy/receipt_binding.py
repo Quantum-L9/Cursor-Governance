@@ -17,7 +17,7 @@ Planes served:
 
 * ``ops/autonomy/l4_local.py`` — the L4 release receipt's ``tree_digest``,
   via :func:`tree_digest`.
-* ``skills/l9-plan/scripts/validate_plan_kernel_receipt.py`` — a plan's
+* ``skills/_archived/l9-plan/scripts/validate_plan_kernel_receipt.py`` — a plan's
   ``kernel_pass.*.body_sha256``, via :func:`canonical_sha256`. That pack is
   copied into consumer repos, so it prefers this module and keeps a local
   fallback; ``tests/ops/autonomy/test_receipt_binding.py`` pins the two to

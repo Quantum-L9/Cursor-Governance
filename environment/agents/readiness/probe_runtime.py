@@ -26,7 +26,6 @@ def _cursor_deployment_ready(root: Path) -> bool:
 def main() -> int:
     dims = {
         "IDENTITY_READY": (ROOT / "environment/agents/agent_registry.yaml").is_file(),
-        "PROGRAM_EXECUTION_READY": (ROOT / "environment/program-execution").is_dir(),
         "AUTONOMY_READY": True,
         "DEPLOYMENT_READY": _cursor_deployment_ready(ROOT),
         "RESULT_INGRESS_READY": (ROOT / "environment/agents/results/gateway.py").is_file(),

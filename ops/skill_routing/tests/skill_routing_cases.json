@@ -112,13 +112,11 @@
     },
     {
       "prompt": "Prepare a PE campaign plan with a program lock for this brief",
-      "expected_primary": "l9-plan",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
-      "expected_source": "route",
+      "expected_primary": null,
       "forbidden": [
-        "l9-plan-simple"
+        "l9-plan",
+        "l9-plan-simple",
+        "l9-pe-campaign-activate"
       ]
     },
     {
@@ -198,11 +196,12 @@
     },
     {
       "prompt": "Run make campaign INTENT=brief.md and take this brief through completed",
-      "expected_primary": "l9-pe-campaign-activate",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
-      "expected_source": "explicit_hint"
+      "expected_primary": null,
+      "forbidden": [
+        "l9-pe-campaign-activate",
+        "l9-plan",
+        "l9-plan-simple"
+      ]
     },
     {
       "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",

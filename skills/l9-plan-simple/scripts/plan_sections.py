@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Required simple-plan sections — derived from owners, not a third list.
 
-JSON keys come from ``skills/l9-plan/schemas/plan-document.schema.json``.
+JSON keys come from ``skills/_archived/l9-plan/schemas/plan-document.schema.json``.
 Markdown headings come from the canonical executable-plan template with the
 Cursor Build execute swap declared by ``plan-workflow-simple.md``.
 """
@@ -15,7 +15,7 @@ from typing import Any
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parents[1]
-PLAN_SCHEMA_REL = "skills/l9-plan/schemas/plan-document.schema.json"
+PLAN_SCHEMA_REL = "skills/_archived/l9-plan/schemas/plan-document.schema.json"
 TEMPLATE_REL = (
     "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
 )

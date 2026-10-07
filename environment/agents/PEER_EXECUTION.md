@@ -64,22 +64,9 @@ contract. The provider capability receipt remains TTL-fresh and digest-bound.
 
 ## Peer Execution Core
 
-Canonical path: `environment/program-execution/peer_execution/`.
-
-It owns once for every peer/provider:
-
-- lifecycle and capability-receipt mechanics;
-- canonical execution request/result contracts;
-- context manifest construction;
-- permission profiles;
-- inference and timeout budgets;
-- shared subprocess/transport mechanics;
-- telemetry/evidence normalization;
-- canonical attempt/verification receipt construction;
-- provider-neutral cancellation/status lifecycle.
-
-Shared admitted-dispatch bounded concurrency lives at
-`environment/program-execution/peer_execution/autonomy/` and is subordinate to Program admission.
+`environment/program-execution/peer_execution/` is not the canonical runtime.
+Root `autonomy/` is the surviving provider-neutral autonomy authority.
+Execution topology stays in `environment/agents/PEER_RUNTIME_BINDINGS.yaml`.
 
 ## Thin provider law
 
@@ -106,11 +93,11 @@ Binding law:
 | Gemini | gemini-cli | gemini-review | reviewer-default | no |
 | Manus | manus-cloud | manus-cloud | worker-read-only | no |
 
-The legacy Claude bounded provider is retired. Bounded execution is a shared
-Peer Execution Core concern and is not modeled as a provider identity.
+The legacy Claude bounded provider is retired. Bounded execution is not a
+provider identity. Claude multi-lane scheduling is unavailable.
 
 ## Validation
 
-`make peer-execution-conformance` composes identity, topology schema,
-provider/adapter conformance, thin-provider law, Program Execution conformance,
-and live binding readiness.
+Identity and topology stay with `environment/agents/PEER_RUNTIME_BINDINGS.yaml`
+and `environment/agents/tools/validate_executable_peers.py`. There is no live
+`make peer-execution-*` or `make program-execution-*` instruction.

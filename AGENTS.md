@@ -2171,3 +2171,25 @@ Program Execution as part of L4 or `make pr`.
 6. Program Execution is an eviction target. PE-owned files may remain until
    their eviction slice, but surviving capabilities may not invoke or require
    them.
+
+<!-- PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 -->
+
+## Program Execution eviction reachability (2026-10-07)
+
+This section supersedes earlier still-live operating text only where that
+text positively routes through Program Execution.
+
+- `l9-plan`, `l9-pe-campaign-activate`, and `l9-pe-nuggets` are retired from
+  live skill discovery and routing.
+- There is no live `make campaign` / Program Lock execution route.
+- `l9-plan-simple` remains ordinary planning and does not absorb retired
+  PE semantics.
+- `l9-pipeline-audit` no longer treats Program Execution campaigns as a
+  live audit surface.
+- `/ff` no longer special-cases `environment/program-execution/campaigns/`.
+- Generic generated-artifact remediation does not generate or validate
+  the PE MANIFEST.
+- Surviving agent, autonomy, L4, publication, readiness, and adapter
+  surfaces must not require `environment/program-execution/`.
+- Negative containment may continue to reference the PE tree until
+  physical eviction.

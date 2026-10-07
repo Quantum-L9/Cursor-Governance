@@ -1,12 +1,12 @@
 ---
 name: l9-idea-execute
-description: route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, bounded existing-repo change, or program-execution campaign. do not use for raw idea refinement or when ideaos has not decided outcomes.
+description: route a validated ideaos decision into the shortest governed execution owner. use when idea-to-execution work needs a new product repo, website-bot build, or bounded existing-repo change. campaign-shaped work whose only topology was program execution is EXECUTION_TOPOLOGY_UNSUPPORTED. do not use for raw idea refinement or when ideaos has not decided outcomes.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, ideaos, execution, routing, gar, plan, website-bot, program-execution, birth]
+  tags: [l9, ideaos, execution, routing, gar, plan, website-bot, birth]
   owner: igor_beylin
   status: active
   version: 1.2.0
@@ -39,7 +39,7 @@ Load [references/contracts.md](references/contracts.md) and [references/architec
 
 1. Explicit user outcome and named constraints.
 2. Validated IdeaOS decision / pack (source authority + supersession).
-3. Live downstream owner contracts (Website-Bot, GAR, `l9-plan`, PE, and `l9-repo-template`; `l9-repo-birth` is only the explicit-only control surface for the factory's birth handoff).
+3. Live downstream owner contracts (Website-Bot, GAR, `l9-plan-simple`, and `l9-repo-template`; `l9-repo-birth` is only the explicit-only control surface for the factory's birth handoff). Program Execution is not an execution owner.
 4. This skill's envelope, graph, and adapter references.
 5. `Unknown` — stop with an explicit failure state; do not guess an owner.
 
@@ -218,14 +218,10 @@ Do not widen authority because another unit in the graph has stronger permission
 
 ### Greenfield orchestration profile
 
-For a `NEW_PRODUCT_REPOSITORY` Graph, resolve GAR, `l9-plan`, and
-`l9-pe-campaign-activate` as a cohort at graph activation. Their native work
-remains ordered: GAR Decision -> Plan -> campaign-source.v2 -> PE/PEC receipt.
-The cohort exists only for that selected Graph and does not change direct use of
-any member skill.
+For a `NEW_PRODUCT_REPOSITORY` Graph, resolve GAR at graph activation.
+Program Execution planning and campaign activation are not part of the cohort.
 
-PE/PEC completion is a valid terminal realization result. Do **not** invoke
-`l9-repo-birth` automatically. Add birth stages only when
+Do **not** invoke `l9-repo-birth` automatically. Add birth stages only when
 `execution_characteristics.birth_handoff_requested: true` is authorized by
 IdeaOS, then validate source commit/tree, all upstream receipts, and current
 factory capability evidence before invoking the explicit-only birth skill.
@@ -317,13 +313,9 @@ Compile a rich `domain_spec.source.yaml` projection from IdeaOS truth. Never han
 
 Let Website-Bot own normalization, pipeline planning, build stages, provisioning, publication, deployment, and its downstream SEO handoff.
 
-### Program Execution
+### Coordinated campaign-shaped work
 
-Program Execution is an **evolving adapter**. Always inspect its live current contract before use.
-
-Current baseline as of 2026-09-02: the sole live front door is `make campaign INTENT=<brief.md|activate.yaml>` and the structured activation compiler is single-target. Multi-repository campaigns must therefore fail `EXECUTOR_CAPABILITY_GAP` on that baseline rather than being forced through one target.
-
-Read [references/program-execution-adapter.md](references/program-execution-adapter.md) before every PE-shaped handoff. Treat that file as a baseline/discovery guide, not permanent PE law.
+Campaign-shaped coordinated work whose only demonstrated execution topology was Program Execution fails `EXECUTION_TOPOLOGY_UNSUPPORTED`. Do not hand it to `l9-plan`, `l9-pe-campaign-activate`, `make campaign`, or a Program Execution script.
 
 ### Plan Simple
 
@@ -404,6 +396,5 @@ These scripts validate and route declared execution semantics. They do not repla
 - [references/contracts.md](references/contracts.md): Envelope, Graph, adapter capability snapshot, and Receipt contracts.
 - [references/artifact-reconciliation.md](references/artifact-reconciliation.md): lineage currentness, preflight dispositions, and earliest-invalid-layer law.
 - [references/adapters.md](references/adapters.md): scoped greenfield chain, Website-Bot, Plan Simple, and Program Execution adapter behavior.
-- [references/program-execution-adapter.md](references/program-execution-adapter.md): moving PE discovery seam and current baseline.
 - [references/examples.md](references/examples.md): regression examples and expected routing outcomes.
 - [references/capability-registry.yaml](references/capability-registry.yaml): minimal demonstrated-owner registry; expand only for real consumers.

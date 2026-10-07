@@ -5,7 +5,7 @@ description: >-
   background PR-poll subagents while main continues, campaign authorization
   packet, join/merge-gate without autonomous merge. use when user runs
   /autonomy, needs PR convergence while continuing other work, or fans out
-  independent lanes under ADR-0001 / pr-convergence budgets.
+  independent lanes under ADR-0001 and root autonomy.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -25,7 +25,7 @@ metadata:
 
 ## Purpose
 
-Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent work and deploy background PR-poll subagents while the main agent continues — without autonomous merge.
+Map ADR-0001 onto Cursor through root autonomy: fan out non-dependent work and deploy background PR-poll subagents while the main agent continues — without autonomous merge. Program Execution is not a runtime owner.
 
 ## Core Contract
 
@@ -35,7 +35,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 | Merge | Campaign/make pr: no. `/l9-pr-remediation` Converge: yes (ordinary squash) |
 | PR wait | MUST spawn background poll; main continues |
 | Authority | Campaign authorization **packet** (never “envelope”) |
-| Claude runtime | Untouched; bridge to `autonomy/cli.py` on Claude surface |
+| Claude runtime | Root gate only. Multi-lane scheduling is unavailable from this skill. |
 
 ## MUST
 
@@ -57,7 +57,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
    Publication validation is deterministic and fail-closed. Recursive Alignment
    and Validate & Repair are explicit capabilities outside the publication gate.
    If a repair changes tree content, re-authorize before publishing.
-   Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
+   Do **not** remediate. Do **not** merge. This skill does not open a Program Execution campaign.
 5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
 6. Do **not** merge from `/autonomy` or the campaign path. Merge only after
    `/l9-pr-remediation` writes `ops/autonomy/authorize_merge.py --all-open`
@@ -76,7 +76,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 
 1. User instructions
 2. Campaign authorization packet + Phase-0 graph
-3. ADR-0001 + `pr-convergence.json` (via doctrine-map)
+3. ADR-0001 + [references/doctrine-map.md](references/doctrine-map.md)
 4. This SKILL.md and references
 5. Supporting skills (`l9-pr-remediation`, optional others per skill-routing)
 
