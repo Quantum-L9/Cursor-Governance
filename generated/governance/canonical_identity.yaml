@@ -1,13 +1,3 @@
-# MACHINE GENERATED.
-# DO NOT HAND EDIT.
-#
-# Generate with:
-#
-# python tools/authority/project_canonical_identity.py \
-#   --authority-root /path/to/Quantum-L9/.github
-#
-# This bootstrap placeholder intentionally fails assurance until the first
-# canonical projection is generated.
 schema: l9.projection.cursor-governance-identity/v1
 artifact_id: l9.projection/cursor-governance-identity@1
 canonical: false
@@ -17,16 +7,16 @@ authority:
   consumer: Quantum-L9/Cursor-Governance
 projection:
   profile_ref: l9.projection/cursor-governance-identity@1
-  profile_digest: UNGENERATED
+  profile_digest: sha256:0eb691b922a71e5d2ee335b42f28dcd7ec457f8f4a90b542dff3e361d4a8bb6a
   source_repository: Quantum-L9/.github
-  source_revision: UNGENERATED
+  source_revision: c1d87abe00e31a2b06bda607afe54ea16bfadd77
   sources:
     actor_registry:
       artifact_ref: l9.actor-registry/global@1
-      digest: UNGENERATED
+      digest: sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f
     surface_registry:
       artifact_ref: l9.surface-registry/global@1
-      digest: UNGENERATED
+      digest: sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988
 identity_dimensions:
   actor:
     artifact_ref: l9.actor-registry/global@1
@@ -34,7 +24,74 @@ identity_dimensions:
   surface:
     artifact_ref: l9.surface-registry/global@1
     source_schema: l9.surface-registry/v1
-actors: []
-actor_aliases: []
-surfaces: []
-surface_aliases: []
+actors:
+- id: claude-code
+  kind: agent
+  status: current
+  description: The one logical Claude Code actor. Desktop, CLI, IDE, web, and mobile are SurfaceIdentity
+    distinctions recorded in surface_registry.yaml, never separate actors.
+- id: codex
+  kind: agent
+  status: current
+  description: The Codex agent actor.
+- id: cursor
+  kind: agent
+  status: current
+  description: The Cursor agent actor.
+- id: gemini
+  kind: agent
+  status: current
+  description: The Gemini agent actor.
+- id: manus
+  kind: agent
+  status: current
+  description: The Manus agent actor.
+actor_aliases:
+- alias: claude-code-desktop
+  canonical: claude-code
+  alias_kind: historical_actor_alias
+  note: Historical actor value emitted by operating-plane identity derivation. When interpreted as an
+    ActorIdentity value it canonicalizes to claude-code. The same string is a canonical SurfaceIdentity
+    in surface_registry.yaml; equal strings do not imply equal identity kinds.
+- alias: claude-code-mobile
+  canonical: claude-code
+  alias_kind: historical_actor_alias
+  note: Historical actor value emitted by operating-plane identity derivation. When interpreted as an
+    ActorIdentity value it canonicalizes to claude-code. The same string is a canonical SurfaceIdentity
+    in surface_registry.yaml; equal strings do not imply equal identity kinds.
+surfaces:
+- id: claude-code-cli
+  status: current
+  description: The Claude Code terminal command-line surface.
+- id: claude-code-mobile
+  status: current
+  description: The Claude Code mobile surface. The same string is a historical ActorIdentity alias in
+    actor_registry.yaml; equal strings do not imply equal identity kinds.
+- id: claude-code-web
+  status: current
+  description: The Claude Code hosted web surface.
+- id: codex-cli
+  status: current
+  description: The Codex command-line surface.
+- id: codex-cloud
+  status: current
+  description: The Codex hosted cloud surface.
+- id: cursor-ide
+  status: current
+  description: The Cursor IDE interaction surface.
+- id: gemini-cli
+  status: current
+  description: The Gemini command-line surface.
+- id: manus-cloud
+  status: current
+  description: The Manus hosted cloud surface.
+surface_aliases:
+- alias: claude-cli
+  canonical: claude-code-cli
+  alias_kind: historical_surface_alias
+- alias: claude-mobile
+  canonical: claude-code-mobile
+  alias_kind: historical_surface_alias
+- alias: claude-web
+  canonical: claude-code-web
+  alias_kind: historical_surface_alias
