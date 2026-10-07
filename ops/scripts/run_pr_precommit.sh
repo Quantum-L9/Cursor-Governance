@@ -5,9 +5,9 @@
 # catalog is INTERNAL `make precommit` (nightly / make pr-full).
 #
 # PR_PRECOMMIT_STAGE:
-#   unset     — standalone make precommit-repo: kernel, writers, dirty-stop, readers
-#   writers   — kernel + writer hooks + locked ruff --fix/format + dirty-stop
-#   readers   — read-only hooks only (no kernel, no ruff)
+#   unset     — standalone make precommit-repo: writers, dirty-stop, readers
+#   writers   — writer hooks + locked ruff --fix/format + dirty-stop
+#   readers   — read-only hooks only (no ruff)
 # Each hook id runs at most once per invocation. Complementary SKIP lists.
 set -euo pipefail
 
@@ -37,7 +37,7 @@ source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 
 # Standalone make precommit-repo has no PR_CHANGED_FILE. Bind the unique chain
-# tip before resolve_changed_files so kernel_gate does not see parent-stack
+# tip before resolve_changed_files so the hooks do not see parent-stack
 # fixtures. The gate already resolved and passes PR_CHANGED_FILE — skip.
 # Remediator local verify must not rewrite PR_BASE onto a sibling stack tip.
 _REMEDIATOR="$(printf '%s' "${L9_REMEDIATOR:-}" | tr '[:upper:]' '[:lower:]')"
@@ -174,19 +174,6 @@ if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
 fi
 
-_run_kernel() {
-  local _kernel_py="$GOV_ROOT/.venv/bin/python"
-  if [[ ! -x "$_kernel_py" ]]; then
-    _kernel_py="$(command -v python3)"
-  fi
-  if [[ -f "$GOV_ROOT/ops/autonomy/kernel_gate.py" ]]; then
-    echo "--- kernel hook (before pre-commit / ruff) ---"
-    "$_kernel_py" "$GOV_ROOT/ops/autonomy/kernel_gate.py" precommit \
-      --workspace "$WS" --gov-root "$GOV_ROOT" --changed-file "$tmp" || return $?
-  fi
-  return 0
-}
-
 _run_hooks() {
   local skip="$1" rc=0
   # System hooks in .pre-commit-config.yaml call `python3`. On a governance
@@ -274,8 +261,7 @@ if [[ "$STAGE" == "readers" ]]; then
   exit 0
 fi
 
-# writers or unset (standalone): kernel first, never from the reader invocation.
-_run_kernel || exit $?
+# writers or unset (standalone): run deterministic writer hooks before readers.
 
 echo "--- pre-commit writers (once) ---"
 _run_hooks "$_WRITER_SKIP" && pc_rc=0 || pc_rc=$?
@@ -294,9 +280,9 @@ fi
 
 if [[ "$STAGE" == "writers" ]]; then
   if [[ "${PR_PRECOMMIT_DEFER_DIRTY_STOP:-0}" == "1" ]]; then
-    echo "OK: precommit writers clean (kernel + writers + locked ruff; dirty-stop deferred)"
+    echo "OK: precommit writers clean (writers + locked ruff; dirty-stop deferred)"
   else
-    echo "OK: precommit writers clean (kernel + writers + locked ruff, no tracked dirt)"
+    echo "OK: precommit writers clean (writers + locked ruff, no tracked dirt)"
   fi
   exit 0
 fi

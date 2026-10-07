@@ -271,8 +271,7 @@ _push_with_bounded_recover() {
           "environment/generated/llm-rules/" \
           "rules/RULES-MANIFEST.json" "rules/RULES-MANIFEST.md" "rules/RULES-MANIFEST.yaml" \
           "ops/generated/skill-registry.json" \
-          "environment/agents/adapters/claude-code/generated/" \
-          "environment/program-execution/MANIFEST.json" 2>/dev/null || true
+          "environment/agents/adapters/claude-code/generated/" 2>/dev/null || true
         git diff --cached --quiet || \
           git commit --no-edit -m "chore(generated): heal artifacts after push-recovery merge" || return 1
       fi
@@ -394,26 +393,7 @@ _compose_title_and_body() {
   if [[ -z "$title" ]]; then
     title="$branch"
   fi
-  campaign_copy=""
   campaign_body=""
-  _campaign_copy_py="$GOV_ROOT/environment/program-execution/scripts/campaign_pr_copy.py"
-  if [[ -f "$_campaign_copy_py" ]]; then
-    campaign_copy="$(
-      python3 "$_campaign_copy_py" \
-        --pr-base "$PR_BASE" \
-        --branch "$branch" \
-        ${CAMPAIGN_ID:+--campaign-id "$CAMPAIGN_ID"} \
-        --activate \
-        --json 2>/dev/null || true
-    )"
-    if [[ -n "$campaign_copy" ]]; then
-      campaign_title="$(printf '%s' "$campaign_copy" | python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])' 2>/dev/null || true)"
-      campaign_body="$(printf '%s' "$campaign_copy" | python3 -c 'import json,sys; print(json.load(sys.stdin)["body"])' 2>/dev/null || true)"
-      if [[ -n "$campaign_title" ]]; then
-        title="$campaign_title"
-      fi
-    fi
-  fi
   template_file=""
   _root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
   _gov_python="${GOV_ROOT}/.venv/bin/python"

@@ -4,7 +4,7 @@
   "local_pr_check": {
     "never_pass_repo_root_dot": true,
     "selector": "ops/scripts/select_pr_pytest_paths.py",
-    "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'. shell_owners and velocity_exclude apply only on this local selector.",
+    "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'. shell_owners apply only on this local selector.",
     "generic_basenames": [
       "l9_hook_exec.sh",
       "session_start_claude_governance.sh",
@@ -31,11 +31,7 @@
         "ops/scripts/tests/test_claude_projection.py",
         "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py"
       ]
-    },
-    "velocity_exclude": [
-      "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
-      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_import_graph.py"
-    ]
+    }
   },
   "skill_self_test_roots": [
     "skills/l9-audit-plans",
@@ -123,6 +119,24 @@
       "reason": "Not a pytest test: executable wiring fixture proof owned by the skill-contracts suite and ignored by root pytest to avoid basename collisions."
     }
   ],
+  "eviction_containment_ignores": [
+    {
+      "path": "environment/program-execution/peer_execution/autonomy",
+      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). Root pytest refuses to collect this subtree so it can neither shadow the root autonomy/ package nor be executed by the generic suite; no suite owns or runs it. Remove with the eviction slice."
+    },
+    {
+      "path": "environment/program-execution/core/program-execution-controller-template/scripts/tests",
+      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). Its fresh-process controller suite is no longer part of generic test topology; root pytest refuses to collect it. Remove with the eviction slice."
+    },
+    {
+      "path": "environment/program-execution",
+      "reason": "Program Execution is an eviction target (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1). The generic root suite neither executes nor owns any test under this tree; the narrower ignores beside it are kept until the eviction slice removes the tree. Remove with the eviction slice."
+    },
+    {
+      "path": "tests/environment/program_execution",
+      "reason": "Program Execution manifest-contract tests: they execute the eviction target's own generator, so the generic root suite does not collect them. Remove with the eviction slice."
+    }
+  ],
   "suites": [
     {
       "id": "repo-root",
@@ -143,7 +157,9 @@
             ".",
             "--ignore=environment/program-execution/peer_execution/autonomy",
             "--ignore=environment/agents/generated-data/tests",
-            "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests"
+            "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
+            "--ignore=environment/program-execution",
+            "--ignore=tests/environment/program_execution"
           ]
         },
         "ci": {
@@ -152,6 +168,8 @@
             "--ignore=environment/program-execution/peer_execution/autonomy",
             "--ignore=environment/agents/generated-data/tests",
             "--ignore=environment/program-execution/core/program-execution-controller-template/scripts/tests",
+            "--ignore=environment/program-execution",
+            "--ignore=tests/environment/program_execution",
             "-n",
             "auto",
             "--dist",
@@ -166,7 +184,7 @@
           ]
         }
       },
-      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. xdist runs '--dist loadgroup', not the default 'load' scheduler: only loadgroup honors pytest.mark.xdist_group, and the root suite carries files that MUST share one worker (the live_repo_tree group, which points real governance writers at this checkout and then asserts the checkout is unchanged). Under 'load' those marks are silently inert and the group's tests scatter across workers, which is the transient race they exist to prevent. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
+      "rationale": "Root discovery over the repository with root autonomy/ on PYTHONPATH. PE paths remain explicitly ignored only as temporary containment for the eviction target; the generic suite does not execute or own them. environment/agents/generated-data/tests remains separately owned. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. xdist runs '--dist loadgroup', not the default 'load' scheduler: only loadgroup honors pytest.mark.xdist_group, and the root suite carries files that MUST share one worker (the live_repo_tree group, which points real governance writers at this checkout and then asserts the checkout is unchanged). Under 'load' those marks are silently inert and the group's tests scatter across workers, which is the transient race they exist to prevent. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
     },
     {
       "id": "skill-contracts",
@@ -209,44 +227,6 @@
       "rationale": "Skill-local executable evidence is a first-class suite rather than an incidental pytest side effect. The canonical Python contract remains the registry: skill_self_test_roots declares which live skill packs own self-tests, while run_skill_self_tests.py discovers every skills/*/scripts/*self_test.py, fails closed when a new test appears under an unregistered skill root, and executes each discovered script in a fresh Python process from its own skill root. Owning skills/ ensures a changed or newly-added skill self-test selects this suite before it can become invisible."
     },
     {
-      "id": "claude-code-autonomy",
-      "kind": "pytest",
-      "working_directory": "environment/program-execution/peer_execution",
-      "owned_paths": [
-        "environment/program-execution/peer_execution/autonomy/tests"
-      ],
-      "env": {
-        "TESTING": "true",
-        "PYTHONPATH": "${REPO_ROOT}/environment/program-execution/peer_execution"
-      },
-      "append_user_pytest_args": true,
-      "allow_exit_5": true,
-      "profiles": {
-        "local": {
-          "argv": [
-            "autonomy/tests",
-            "--import-mode=importlib",
-            "-o",
-            "addopts="
-          ]
-        },
-        "ci": {
-          "argv": [
-            "autonomy/tests",
-            "--import-mode=importlib",
-            "-o",
-            "addopts=",
-            "-n",
-            "auto",
-            "--timeout=300",
-            "--tb=short",
-            "-v"
-          ]
-        }
-      },
-      "rationale": "Root autonomy/ (W7 control plane) and environment/program-execution/peer_execution/autonomy/ (Claude Code bounded-concurrency runtime) share the top-level package name, so this suite runs with cwd and PYTHONPATH=environment/program-execution/peer_execution to bind the correct package. '-o addopts=' clears root pytest settings so the root active-suite ignores cannot reintroduce package shadowing here. CI profile keeps xdist and the 300s timeout with no root coverage arguments. peer_execution/autonomy is also ignored by repo-root to avoid double collection."
-    },
-    {
       "id": "subagent-generated-data-wave3",
       "kind": "command",
       "working_directory": ".",
@@ -271,66 +251,6 @@
         }
       },
       "rationale": "The Wave 3 generated-data suite is globally ignored by root pytest and driven by its own unittest orchestrator (run_wave3_tests.py), which shells out to `python -m unittest discover` over the conformance/routing/negative/golden directories. Run as an opaque command in both profiles: no pytest arguments are appended and any nonzero result fails the whole runner."
-    },
-    {
-      "id": "program-execution-controller",
-      "kind": "command_sequence",
-      "working_directory": "environment/program-execution/core/program-execution-controller-template",
-      "owned_paths": [
-        "environment/program-execution/core/program-execution-controller-template/scripts/tests",
-        "environment/program-execution/core/program-execution-controller-template/scripts/validate_controller.py",
-        "environment/program-execution/core/program-execution-controller-template/scripts/run_negative_tests.py"
-      ],
-      "env": {
-        "PYTHONDONTWRITEBYTECODE": "1"
-      },
-      "append_user_pytest_args": false,
-      "allow_exit_5": false,
-      "profiles": {
-        "local": {
-          "argv": [
-            [
-              "${PYTHON}",
-              "scripts/validate_controller.py",
-              ".",
-              "--mode",
-              "template"
-            ],
-            [
-              "bash",
-              "-c",
-              "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
-              "${PYTHON}"
-            ],
-            [
-              "${PYTHON}",
-              "scripts/run_negative_tests.py"
-            ]
-          ]
-        },
-        "ci": {
-          "argv": [
-            [
-              "${PYTHON}",
-              "scripts/validate_controller.py",
-              ".",
-              "--mode",
-              "template"
-            ],
-            [
-              "bash",
-              "-c",
-              "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
-              "${PYTHON}"
-            ],
-            [
-              "${PYTHON}",
-              "scripts/run_negative_tests.py"
-            ]
-          ]
-        }
-      },
-      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status. PYTHONDONTWRITEBYTECODE=1 is required because validate_controller.py rejects any __pycache__/.pyc under the template as 'compiled Python debris'; without it the per-file test step would leave bytecode that the negative-test step's controller validation then fails on (matches the subsystem's own PYTHONDONTWRITEBYTECODE=1 Makefile convention). The middle command runs one fresh process per matching test file concurrently rather than `unittest discover` in a single process: VALIDATION.md prescribes exactly that per-file isolation (fixtures abandon or fail Git worktrees). xargs exits non-zero if any file fails. Concurrency is $PES_CONTROLLER_JOBS, else the online CPU count."
     }
   ]
 }

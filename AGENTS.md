@@ -2147,3 +2147,27 @@ or earlier text discussed remediator publish, this amendment is current.
   remediations must stack linearly on their parent heads. Child PRs merge bottom-up
   via `stack_safe_merge.py`, eliminating the \(O(N^2)\) branch-updating cascade and
   cross-PR conflicts on overlapping files.
+
+<!-- PUBLISH_ASSURANCE_DECOUPLING_V1 -->
+## L4 / publication assurance correction (2026-10-06)
+
+Append-only. This section supersedes earlier active instructions that require
+Recursive Alignment, Validate & Repair, `record-kernels`, `kernel_gate.py`, or
+Program Execution as part of L4 or `make pr`.
+
+1. L4 owns local-execution phase and exact-tree release authorization only.
+   Finished work is `begin` when needed → `authorize-release` → `make pr`.
+2. Recursive Alignment and Validate & Repair remain explicit audit/repair
+   capabilities. They are not publication prerequisites and are never invoked
+   by `make pr`.
+3. `make pr` may perform its existing deterministic preparation writers before
+   validation. The validation phase itself is observational and fail-closed.
+   Failed or unresolved validation stops publication; it does not self-repair.
+4. Any authored repair that changes tree content requires fresh
+   `authorize-release`.
+5. The provider-neutral autonomy runtime is root `autonomy/`. Surviving
+   autonomy, L4, and publication tooling must not depend on
+   `environment/program-execution/` or its `peer_execution` runtime.
+6. Program Execution is an eviction target. PE-owned files may remain until
+   their eviction slice, but surviving capabilities may not invoke or require
+   them.

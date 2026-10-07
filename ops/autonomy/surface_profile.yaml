@@ -103,8 +103,8 @@ surface_capabilities:
           or the specific route) instead of gating on this command.
     scope: >-
       This key names which GitHub TRANSPORT is sanctioned. It says nothing about the
-      publication path — `make pr` remains the sanctioned route (see campaign_execution
-      and l4_local_autonomy) — and it confers no merge authority.
+      publication path — `make pr` remains the sanctioned route (see
+      l4_local_autonomy) — and it confers no merge authority.
 
 claude_execution_profiles:
   policy: ops/autonomy/claude-execution-profiles.json
@@ -131,25 +131,6 @@ l4_local_autonomy:
     - commit_locally_through_program_or_contract # no remote
     - authorize_release
     - push_and_open_pr_via_make_pr # remediates=1; checkers in Makefile
-  kernel_hook:
-    owner: ops/autonomy/kernel_gate.py
-    fires: first_step_of_precommit_repo
-    skip_unless_adapter_surface: false
-    note: >-
-      Not an L4 phase; authorize-release does not require this receipt
-      (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). Fail-closed as the first
-      writers step of make pr, before any other hook or test, so checkers
-      run once on the post-kernel tree. Every local surface latches,
-      including a bare shell. Unmarked CI skips (receipt is gitignored).
-      docs/plans/ and environment/program-execution/campaigns/ are
-      /ff corpus surfaces (Improve then Recursive Alignment then
-      Validate & Repair); this hook skips those prefixes and skips
-      the tree latch when the whole changeset is corpus-only.
-  required_kernels:
-    - path: kernels/Recursive Alignment.md
-      id: recursive_alignment
-    - path: kernels/Validate & Repair.md
-      id: validate_repair
   pr_template: .github/pull_request_template.md
   post_push:
     required_command: make pr
@@ -196,50 +177,11 @@ pr_stacking:
     second_pat: forbidden
   phases:
     executing: deny_remote
-    kernels_recorded: deny_remote
     release_authorized: allow_scoped_push_and_pr
 
-# Program Execution campaigns — one integration branch each; PRs land there.
-# SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
-campaign_execution:
-  # Campaign execution is permanently local-commit-only: prepare, execute,
-  # validate, verify, local commits, STOP. Publication is never a campaign
-  # stage; it is root `make pr` (remediates=1), and merge is /l9-pr-remediation.
-  # L9_PE_RELEASE_AUTHORIZED survives as a diagnostic compatibility name only
-  # and cannot widen Program Execution authority.
-  local_commit_only: true
-  completion_boundary: execute
-  push: forbidden
-  pull_request: forbidden
-  require_make_pr: false # publication left the campaign path entirely
-  pr_remediate: 1
-  merge: forbidden # merge authority belongs to /l9-pr-remediation
-  open_pr_against_main: forbidden
-  mix_with_other_feature_branches: forbidden
-  one_integration_branch_per_campaign: true
-  pr_base: campaign_integration_branch
-  single_feature_branch_off_main_per_program: true
-  exclusive_worktree_lease_per_agent: true
-  campaigns:
-    bounded-replanning-v1:
-      integration_branch: campaign/bounded-replanning-v1
-    cc-pe-intent-compiler-v1:
-      integration_branch: campaign/cc-pe-intent-compiler-v1
-    l9-devpack-program-execution-hardening:
-      integration_branch: campaign/l9-devpack-program-execution-hardening
-    l9-ecosystem-fix-plan:
-      integration_branch: campaign/l9-ecosystem-fix-plan
-    pe-router-capability-safety-v4:
-      integration_branch: campaign/pe-router-capability-safety-v4
-    eie-inference-isolation-v1:
-      integration_branch: campaign/eie-inference-isolation-v1
-
-      lifecycle: in_progress
-      launched_by: make campaign
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy
-  - CANONICAL_LAW.campaign_execution_pr_no_merge
   - ADR-0001
   - settings.allow_deny + ops.merge_gate + ops.local_execution_gate
   - AGENTS.md
@@ -276,8 +218,6 @@ session_start_block: |
   `make precommit-repo` then `make pr`. Receipt skip already prevents a
   second pytest on an unchanged tree. Combined `beforeShellExecution` is
   Cursor-only; Claude uses PreToolUse (`local_execution_gate_wrap.py`).
-  Tree kernels fire on Cursor and adapters (`kernel_gate.py`) as the
-  first writers step of `make pr`, before pytest. CI / unknown skip.
 
   When `L9_AUTONOMY_ENABLED=true` (default on adapter surfaces):
 
@@ -295,10 +235,7 @@ session_start_block: |
     Registry: `environment/contracts/autonomy/MANIFEST.yaml`.
     - After the program/contract finishes locally on **every** surface:
     `python3 ops/autonomy/l4_local.py begin` (if not begun) →
-    `authorize-release` → `PR_REMEDIATE=0 make pr` / `l9 pr`. Tree kernels
-    (`kernels/Recursive Alignment.md`) are not an L4 phase. They fire as
-    the first step of `make pr` (`ops/autonomy/kernel_gate.py`) on Cursor
-    and adapter surfaces so hooks and tests run once. CI / unknown skip.
+    `authorize-release` → `PR_REMEDIATE=0 make pr` / `l9 pr`.
   - **Campaign first publish is `make pr`.** That is a path rule for opening
     a PR, not a remediator deny. `/l9-pr-remediation` publishes an
     already-open PR with `make precommit-repo` then `git push` (and other
@@ -327,10 +264,6 @@ session_start_block: |
     converge each PR, then
     `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run`
     oldest first. Force-push and `--admin` stay denied.
-  - Program Execution campaigns: one integration branch per campaign
-    (`campaign/<campaign_id>`). Set `PR_BASE` to that branch. Do **not**
-    open campaign PRs against `main`. Do **not** mix campaign commits onto
-    unrelated feature branches.
   - Mid-execution `make pr` and the MCP write tools are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized. git and
     gh are never denied by L4 state (CANONICAL_LAW §6.2.4); they answer by
@@ -395,7 +328,7 @@ llm_rules_override: |
      by L4 local autonomy (below), not by per-action chat pacing.
   2. Completing reversible work MUST proceed L4-local: stacked-branch commits
      with **no mid-execution push** → finish program/contract →
-     `l4_local.py authorize-release` → `make pr` (kernel hook first, then
+     `l4_local.py authorize-release` → `make pr` (deterministic preparation,
      checkers once, then push + PR; remediates=1). Campaign/make-pr end
      state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
      Invoking `/l9-pr-remediation` then remediates **and merges** all open
@@ -421,17 +354,15 @@ llm_rules_override: |
      `ops/config/commit-verification-contract.json`). Repair what the hook
      reported; breakglass `L9_VERIFY_BYPASS_AUTHORIZED=<reason>` is human/ops
      only.
-  4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
-     campaign PRs against `main`. Do not mix with other feature branches.
-  5. Cursor surface (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST scoped-commit locally
+  4. Cursor surface (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST scoped-commit locally
      after each authored chunk (pathspecs; rule 49).
      Unique dirty files you authored are a rule failure. Do not ask.
-     After finished work: apply RA + Validate & Repair, write
-     `.l9/autonomy/kernel-apply.md`, `kernel_gate.py record --report` it,
-     `authorize-release`, then `PR_REMEDIATE=0 make pr` / `l9 pr`. Do not run
-     `make precommit-repo` then `make pr`. Tree kernels fire on Cursor and
-     adapters before pytest. L4 remote gate still blocks mid-execution push.
-  6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
+     After finished work: authorize-release, then `make pr` / `l9 pr`.
+     Validation failures stop publication and are repaired outside the validator;
+     any authored repair that changes the tree requires fresh authorization.
+     Do not run `make precommit-repo` then `make pr`. L4 remote gate still
+     blocks mid-execution push.
+  5. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
   ## L4 Local Autonomy (all surfaces; default ON)
 
@@ -444,8 +375,6 @@ llm_rules_override: |
   - Enforcement: `ops/autonomy/local_execution_gate.py` +
     `worktree_isolation_gate.py` (Claude PreToolUse + Cursor beforeShellExecution).
   - CLI: `python3 ops/autonomy/l4_local.py {begin|authorize-release|status}`.
-    Kernels: `python3 ops/autonomy/kernel_gate.py {record|precommit}`
-    (tree latch on Cursor and adapter `make pr`; CI / unknown skip).
   - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`;
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
@@ -453,8 +382,7 @@ llm_rules_override: |
   - Post-push (all surfaces after L4 release): `PR_REMEDIATE=0 make pr` /
     `l9 pr` to a green merge-ready PR. Merge only after `/l9-pr-remediation`
     writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
-    mergeable. Force-push / admin-merge stay forbidden. Tree kernels fire
-    on Cursor and adapters before pytest; CI / unknown skip.
+    mergeable. Force-push / admin-merge stay forbidden.
   - Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
     choose to stack and a PR is already open for the workstream, the next PR
     bases on the open PR's head (bottom-up merge order). Rebase and conflict

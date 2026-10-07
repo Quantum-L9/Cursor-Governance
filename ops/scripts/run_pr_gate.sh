@@ -127,12 +127,8 @@ _GATE_CODE_FILES=(
   "ops/scripts/pr_overlap_check.py"
   "ops/scripts/pr_gate_failure.py"
   "ops/config/python-contract.json"
-  "ops/autonomy/kernel_gate.py"
-  # Decides the kernel verdict as of the evidence latch, so a change here can
-  # flip PASS to FAIL exactly like kernel_gate.py itself.
-  "ops/autonomy/kernel_predicates.py"
-  # Owns the digest those predicates compare, so a change to the binding can
-  # flip the same verdict one level down.
+  # Owns the exact-tree digest used by L4 release authorization and gate-authored
+  # writer-extension re-binding.
   "ops/autonomy/receipt_binding.py"
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
@@ -160,20 +156,6 @@ _gate_code_digest() {
   fi
   cat "${present[@]}" 2>/dev/null | cksum | awk '{print $1}'
 }
-# The kernel latch's receipt is gate-relevant state that lives OUTSIDE the
-# worktree hash: `.l9/` is gitignored, so neither `git ls-files` nor
-# `--others --exclude-standard` can see it. Without this term the one sequence
-# the kernel gate itself prescribes was structurally impossible: the gate fails
-# with "apply the two kernels, record, and re-run the same command", recording
-# changes nothing the digest observes, and the STOP-LOOPING latch then refuses
-# the re-run against an unchanged state — an unclearable gate, which teaches
-# bypassing rather than finishing. Same class of state as `_gate_code_digest`,
-# and folded in at the same seam.
-_gate_kernel_digest() {
-  local receipt="$WS/.l9/autonomy/kernel-receipt.json"
-  [[ -f "$receipt" ]] && cat "$receipt" 2>/dev/null
-  return 0
-}
 _gate_state_digest() {
   local tracked others list paths content
   tracked="$(mktemp)"
@@ -200,7 +182,6 @@ _gate_state_digest() {
       xargs -0 -r git hash-object <"$tracked" 2>/dev/null
       xargs -0 -r git hash-object <"$others" 2>/dev/null
       _gate_code_digest
-      _gate_kernel_digest
     } | cksum | awk '{print $1}'
   )"
   rm -f "$tracked" "$others" "$list"
@@ -576,7 +557,7 @@ fi
 echo "OK: skip doctrine residue / contract surface / git-denial (make pr-full owns corpus)"
 
 _generated_sources_changed() {
-  grep -Eq '^(rules/|skills/|commands/|environment/agents/|environment/program-execution/|ops/generated/)' "$changed_file"
+  grep -Eq '^(rules/|skills/|commands/|environment/agents/|ops/generated/)' "$changed_file"
 }
 
 _projection_sources_changed() {
@@ -596,15 +577,13 @@ _gate_run_sync() {
   # Serialized writer: never run this in the parallel reader wave. The heal
   # writes generated files; a reader hook's wall-clock window would then
   # report "files were modified by this hook" (check-yaml) as Error 1.
-  # --pe-manifest reaches environment/program-execution/MANIFEST.json.
   if ! _generated_sources_changed; then
     echo "OK: skip generated heal (generated sources unchanged)"
     return 0
   fi
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
-    --changed-file "$changed_file" \
-    --pe-manifest
+    --changed-file "$changed_file"
 }
 
 _gate_run_projection_heal() {
@@ -649,13 +628,6 @@ _t_writers="$(_now_ms)"
 PR_PRECOMMIT_DEFER_DIRTY_STOP=1 _gate_run_precommit writers && precommit_rc=0 || precommit_rc=$?
 
 if [[ "$precommit_rc" -ne 0 ]]; then
-  # The kernel latch fails before any hook runs, and the apply that follows
-  # commits more files. Replaying read-only hooks here is a second pass on a
-  # tree that is about to change. The instructions were already printed.
-  if grep -q 'L9_AGENT_REQUIRED' "$precommit_log"; then
-    echo "FAIL: kernel receipt missing — commit the audit edits, record, then make pr once."
-    exit 1
-  fi
   if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
     bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" "$precommit_log" || true
   fi

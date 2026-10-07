@@ -14,8 +14,8 @@ declared suites in order under two profiles:
 Guarantees:
   * repository root is resolved from this script's location, never the caller's cwd
   * working directories and owned paths are confined under the repository root
-  * PYTHONPATH collisions between the root autonomy/ package and the Claude Code
-    environment/program-execution/peer_execution/autonomy/ package are isolated per suite
+  * each suite runs with its own declared env and working directory, so package
+    PYTHONPATH collisions are isolated per suite
   * pytest, opaque command, and fresh-process command_sequence suites are supported
   * user pytest arguments are appended only to suites that explicitly permit it
   * exit status is propagated exactly; the first nonzero suite result is preserved

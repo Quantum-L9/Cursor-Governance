@@ -15,8 +15,6 @@ and their failure text.
 
 Planes served:
 
-* ``ops/autonomy/kernel_predicates.py`` — the tree-kernel apply report's
-  ``report_sha256``, via :func:`sha256_file`.
 * ``ops/autonomy/l4_local.py`` — the L4 release receipt's ``tree_digest``,
   via :func:`tree_digest`.
 * ``skills/l9-plan/scripts/validate_plan_kernel_receipt.py`` — a plan's
@@ -62,15 +60,6 @@ def sha256_bytes(data: bytes) -> str:
 
 def sha256_text(text: str) -> str:
     return sha256_bytes(text.encode("utf-8"))
-
-
-def sha256_file(path: Path) -> str:
-    """Digest a file's exact bytes.
-
-    No canonicalization: the apply report is attested as written, so a
-    whitespace edit after recording is a real mismatch and must read as one.
-    """
-    return sha256_bytes(Path(path).read_bytes())
 
 
 @cache
@@ -139,7 +128,7 @@ def _blob_digest(path: Path, *, git_mode: str, index_object: str | None) -> str:
         return index_object or ""
     if git_mode == "120000":
         return sha256_bytes(os.fsencode(os.readlink(path)))
-    return sha256_file(path)
+    return sha256_bytes(path.read_bytes())
 
 
 def tree_digest(root: Path) -> str:

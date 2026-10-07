@@ -770,19 +770,6 @@ if GOV=$(resolve_governance_dir); then
     say "autonomy profile: loader unavailable; continue under base governance"
   fi
 
-  # --- Bounded-autonomy campaign context (fail-open; read-only probe) ------
-  AUTONOMY_BOOTSTRAP="$GOV/environment/program-execution/peer_execution/autonomy/bootstrap.py"
-  if [ -f "$AUTONOMY_BOOTSTRAP" ] && command -v "$PY" >/dev/null 2>&1; then
-    AUTONOMY_CONTEXT=$(_l9_bounded 2 "$PY" "$AUTONOMY_BOOTSTRAP" --workspace "$WORKSPACE" 2>/dev/null)
-    if [ $? = 125 ]; then
-      say "bounded autonomy: DEFERRED — hook budget exhausted; continue under base governance"
-    elif [ -n "$AUTONOMY_CONTEXT" ]; then
-      say "--- bounded autonomy ---" "$AUTONOMY_CONTEXT"
-    fi
-  else
-    say "bounded autonomy: runtime unavailable; continue under base governance"
-  fi
-
   # --- Claude execution profile (surface personality; fail-open) -----------
   # Claude is the unleashed surface, Cursor is the constrained one. Resolve which
   # applies from the runtime — CLAUDE_CODE_REMOTE=true is the cloud discriminator

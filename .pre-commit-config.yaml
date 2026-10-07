@@ -94,16 +94,14 @@ repos:
         files: '(^|/)(package\.json|package-lock\.json)$'
 
       # Inert on the make pr path: run_pr_precommit.sh SKIPs this hook by name,
-      # and this repo has no git commit hook, so nothing here executes during
-      # ordinary work. The heal that matters runs in run_pr_gate.sh, which calls
-      # the same script with --pe-manifest and classifies the churn as generated
-      # (WARN + stage) rather than letting it block the gate. Kept so a manual
-      # `pre-commit run` still reproduces the gate's sync.
+      # and this repo has no git commit hook. Generic generated healing is owned
+      # by run_pr_gate.sh. Kept so a manual `pre-commit run` still reproduces
+      # the gate's sync.
       - id: sync-generated-artifacts
         name: Sync generated manifests, registries, and overrides
-        entry: python3 ops/scripts/sync_generated_artifacts.py --force --pe-manifest
+        entry: python3 ops/scripts/sync_generated_artifacts.py --force
         language: system
-        files: ^(rules/|skills/|commands/|environment/agents/adapters/claude-code/|environment/program-execution/)
+        files: ^(rules/|skills/|commands/|environment/agents/adapters/claude-code/)
         pass_filenames: false
 
       - id: rules-check

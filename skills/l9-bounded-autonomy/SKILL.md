@@ -53,7 +53,11 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
    remediator → `l9-pr-remediation`, executor/test → `l9-test`,
    documentation/evidence_writer → `l9-documentation`,
    reviewer/verifier → `l9-verifier-reviewer`.
-4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`. Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
+4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → `ops/autonomy/l4_local.py authorize-release` → `make pr`.
+   Publication validation is deterministic and fail-closed. Recursive Alignment
+   and Validate & Repair are explicit capabilities outside the publication gate.
+   If a repair changes tree content, re-authorize before publishing.
+   Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
 5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
 6. Do **not** merge from `/autonomy` or the campaign path. Merge only after
    `/l9-pr-remediation` writes `ops/autonomy/authorize_merge.py --all-open`
@@ -66,7 +70,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 - Mid-execution `git push` / `gh pr create` / `make pr` before L4 `release_authorized`.
 - Main and poll both pushing the same PR branch.
 - Silent waiver of **push/merge** outside the packet. Local commit is standing.
-- Rewrite `environment/program-execution/peer_execution/autonomy/*.py` or settings allow/deny as part of this skill’s job.
+- Fork the root `autonomy/` runtime beneath a provider adapter or create a second scheduler.
 
 ## Authority Order
 
@@ -89,7 +93,7 @@ Packet → Phase-0 → validate locks/budgets
 
 ## Resource Map
 
-- [environment/contracts/autonomy/MANIFEST.yaml](../../environment/contracts/autonomy/MANIFEST.yaml) — first-class autonomy family registry (subordinate to PE)
+- [environment/contracts/autonomy/MANIFEST.yaml](../../environment/contracts/autonomy/MANIFEST.yaml) — first-class autonomy family registry
 - [references/doctrine-map.md](references/doctrine-map.md)
 - [references/campaign-authorization-packet.md](references/campaign-authorization-packet.md)
 - [references/parallel-nondependent.md](references/parallel-nondependent.md)

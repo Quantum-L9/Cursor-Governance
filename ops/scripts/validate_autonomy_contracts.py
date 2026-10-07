@@ -14,13 +14,12 @@ REQUIRED_ARTIFACT_IDS = frozenset(
         "root-autonomy-control-plane",
         "autonomy-surface-profile",
         "l4-local-autonomy",
-        "peer-execution-bounded-autonomy-runtime",
     }
 )
 
 
 LEGACY_CLAUDE_AUTONOMY = "environment/agents/adapters/claude-code/autonomy"
-SHARED_PEER_AUTONOMY = "environment/program-execution/peer_execution/autonomy/"
+ROOT_AUTONOMY = "autonomy/"
 
 
 def _exists(root: Path, rel: str) -> bool:
@@ -31,7 +30,7 @@ def _exists(root: Path, rel: str) -> bool:
 def _provider_autonomy_residue_errors(root: Path) -> list[str]:
     """Fail closed on any provider adapter autonomy/ tree, including __pycache__ residue."""
     errors: list[str] = []
-    hint = f"delete leftover including __pycache__; runtime is {SHARED_PEER_AUTONOMY.rstrip('/')}"
+    hint = f"delete leftover including __pycache__; root autonomy runtime is {ROOT_AUTONOMY}"
     adapters = root / "environment/agents/adapters"
     if adapters.is_dir():
         for hit in adapters.glob("*/autonomy"):
@@ -90,9 +89,6 @@ def validate(root: Path) -> list[str]:
         if aid == "root-autonomy-control-plane":
             if entry.get("owns_program_state") is not False:
                 errors.append("root-autonomy-control-plane must not own Program state")
-            provider = str(entry.get("provider_manifest") or "")
-            if not provider or not (root / provider).is_file():
-                errors.append(f"{aid}: provider_manifest missing: {provider}")
         if aid == "autonomy-surface-profile" and canon != "ops/autonomy/surface_profile.yaml":
             errors.append(f"{aid}: canonical_path must be ops/autonomy/surface_profile.yaml")
         if aid == "l4-local-autonomy":
@@ -100,11 +96,6 @@ def validate(root: Path) -> list[str]:
                 rel = str(entry.get(key) or "")
                 if not rel or not (root / rel).is_file():
                     errors.append(f"{aid}: missing {key} path: {rel}")
-        if aid == "peer-execution-bounded-autonomy-runtime":
-            if canon != SHARED_PEER_AUTONOMY:
-                errors.append(f"{aid}: canonical_path must be Peer Execution owned")
-            if entry.get("owns_program_state") is not False:
-                errors.append(f"{aid}: owns_program_state must be false")
     missing_ids = sorted(REQUIRED_ARTIFACT_IDS - seen)
     if missing_ids:
         errors.append(f"MANIFEST missing required artifact_ids: {missing_ids}")

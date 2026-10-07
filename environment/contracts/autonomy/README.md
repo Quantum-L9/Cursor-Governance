@@ -1,18 +1,18 @@
 # Autonomy contracts
 
-First-class registry for the L9 autonomy family. Program Execution remains the
-controller; autonomy and Peer Execution concurrency are subordinate.
+First-class registry for the L9 autonomy family. `autonomy/` owns the
+provider-neutral authorization and bounded-concurrency runtime. Provider
+adapters remain thin consumers.
 
 | Concern | Canonical path | Authority |
 |---|---|---|
 | Authorization/control plane | `autonomy/` | owns no Program state |
 | Surface doctrine | `ops/autonomy/surface_profile.yaml` | shared surface policy |
 | L4 local gate | `ops/autonomy/l4_local.py` + gates | local execution/merge gate |
-| Bounded concurrency runtime | `environment/program-execution/peer_execution/autonomy/` | shared execution mechanics only |
+| Bounded concurrency runtime | `autonomy/` | provider-neutral admitted execution mechanics |
 
-No provider adapter owns an autonomy or scheduler runtime. The former Claude
-bounded scheduler has been promoted upstream into shared Peer Execution
-infrastructure and no longer receives an adapter exemption.
+No provider adapter owns an autonomy or scheduler runtime. Cursor and Claude
+Code bind through adapters to the root `autonomy/` implementation.
 
 SessionStart already injects `ops/autonomy/surface_profile.yaml`
 `session_start_block` (this registry's surface-doctrine artifact). That block

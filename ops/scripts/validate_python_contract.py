@@ -255,11 +255,45 @@ def _paths_related(a: str, b: str) -> bool:
     return a_norm.startswith(b_norm + "/") or b_norm.startswith(a_norm + "/")
 
 
-def check_ignore_ownership(suites: list[dict[str, Any]]) -> None:
-    """Check 3: every separately ignored active suite has exactly one registry owner."""
+def _containment_ignores(registry: dict[str, Any]) -> set[str]:
+    """Root ignores that contain an eviction target rather than mark an active suite.
+
+    Each entry needs a non-empty reason. Such a path is deliberately unowned:
+    no suite executes it, and the root suite only refuses to collect it until
+    the eviction slice deletes it.
+    """
+    entries = registry.get("eviction_containment_ignores", [])
+    if not isinstance(entries, list):
+        msg = "eviction_containment_ignores must be a list"
+        raise ContractError(msg)
+    paths: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or "path" not in entry or "reason" not in entry:
+            msg = "each eviction_containment_ignore needs a path and a reason"
+            raise ContractError(msg)
+        if not isinstance(entry["reason"], str) or not entry["reason"].strip():
+            msg = f"eviction_containment_ignore {entry['path']} has an empty reason"
+            raise ContractError(msg)
+        paths.add(entry["path"])
+    return paths
+
+
+def check_ignore_ownership(
+    suites: list[dict[str, Any]], containment: set[str] | None = None
+) -> None:
+    """Check 3: every separately ignored active suite has exactly one registry owner.
+
+    A declared eviction-containment ignore is the one exception, and it is the
+    inverse rule: it must have no owner, because no suite may execute it.
+    """
+    containment = containment or set()
     ignores = _root_ignore_paths(suites)
     if not ignores:
         msg = "no active-suite ignores declared on any pytest suite"
+        raise ContractError(msg)
+    stale = sorted(containment - set(ignores))
+    if stale:
+        msg = f"eviction_containment_ignores not ignored by any pytest suite: {stale}"
         raise ContractError(msg)
     for ignore in dict.fromkeys(ignores):
         # The ignoring root suite owns "." (whole tree); exclude that self-claim so
@@ -270,6 +304,11 @@ def check_ignore_ownership(suites: list[dict[str, Any]]) -> None:
             if suite["owned_paths"] != ["."]
             and any(_paths_related(ignore, owned) for owned in suite["owned_paths"])
         ]
+        if ignore in containment:
+            if owners:
+                msg = f"eviction containment ignore {ignore!r} is owned by {owners}; expected none"
+                raise ContractError(msg)
+            continue
         if len(owners) != 1:
             msg = f"ignored active suite {ignore!r} has {len(owners)} owners (expected 1): {owners}"
             raise ContractError(msg)
@@ -472,7 +511,10 @@ def run_all(root: Path) -> list[tuple[str, bool, str]]:
 
     results.append(("registry structure + confinement", True, ""))
     results.append(("unique/ordered suite ids", True, ""))
-    record("ignore -> single owner mapping", lambda: check_ignore_ownership(suites))
+    record(
+        "ignore -> single owner mapping",
+        lambda: check_ignore_ownership(suites, _containment_ignores(registry)),
+    )
     record("owned paths exist", lambda: check_owned_paths_exist(suites, root))
     record("non-test exclusions have reasons", lambda: check_non_test_exclusions(registry, root))
     record("wrapper delegates, no topology", lambda: check_wrapper(root))
