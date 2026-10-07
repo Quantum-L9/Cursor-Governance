@@ -266,6 +266,10 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 #: ~500 files across the mutable PE tree, so a local regeneration is real work a
 #: destructive clean must not eat. Regenerable is not the same as disposable.
 DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
+    # Listed by the sync script for the merge driver and overlap exemption, but
+    # written by validate_adr_identity.py, so no gate-run regeneration proves
+    # it disposable.
+    "docs/decisions/README.md",
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/MANIFEST.json",
 )
