@@ -40,10 +40,12 @@ prints the identity for the current process (exit 1 and a reason when none).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import sys
 from collections.abc import Mapping
-from typing import Final
+from typing import Any, Final
 
 CURSOR: Final = "cursor"
 CLAUDE_ACTOR: Final = "claude-code"
@@ -78,6 +80,16 @@ LOCAL_ENTRYPOINTS: Final = {"cli": CLAUDE_CLI_SURFACE}
 REMOTE_SURFACE_BY_ENTRYPOINT: Final = {"remote_mobile": CLAUDE_MOBILE_SURFACE}
 #: CLAUDE_CODE_ENTRYPOINT values of a cloud session this resolver admits.
 REMOTE_ENTRYPOINTS: Final = frozenset(REMOTE_SURFACE_BY_ENTRYPOINT)
+#: Local resolver identity. Cursor-Governance produces the assertion; memory verifies it.
+RUNTIME_RESOLVER_REF: Final = "l9.cursor-governance/resolver/runtime-agent-identity@1"
+ACTOR_REGISTRY_PREFIX: Final = "l9.actor-registry/global@1#"
+SURFACE_REGISTRY_PREFIX: Final = "l9.surface-registry/global@1#"
+UNKNOWN_IDENTITY: Final = "unknown"
+MEMORY_PRODUCT_REF: Final = "l9-graphiti-memory:product/l9-graphite-memory"
+
+
+class IdentityResolutionError(ValueError):
+    """Actor or surface identity could not be taken from the binding without guessing."""
 
 
 def _flag(env: Mapping[str, str], name: str) -> str:
@@ -169,6 +181,71 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
         known = ", ".join(sorted(ALL_IDENTITIES))
         return f"L9_MEMORY_AGENT_ID={explicit} is not a registered memory identity (known: {known})"
     return "no host markers (CURSOR_AGENT / Claude Code) and no L9_MEMORY_AGENT_ID"
+
+
+def normalized_runtime_evidence(env: Mapping[str, str] | None = None) -> dict[str, Any]:
+    """Facts that drive actor/surface resolution, with secrets and session ids removed.
+
+    ``CLAUDE_CODE_SESSION_ID`` contributes only as a presence boolean. Adapter
+    ``L9_MEMORY_AGENT_ID`` is included only when host markers did not already
+    decide the actor.
+    """
+
+    source = os.environ if env is None else env
+    cursor_present = _is_cursor(source)
+    claude_present = _is_claude(source)
+    explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+    adapter_id = ""
+    if not cursor_present and not claude_present and explicit in ADAPTER_IDENTITIES:
+        adapter_id = explicit
+    return {
+        "CURSOR_AGENT_present": cursor_present,
+        "claude_markers_present": claude_present,
+        "CLAUDE_CODE_REMOTE": _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true",
+        "CLAUDE_CODE_ENTRYPOINT": _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower(),
+        "CLAUDE_CODE_SESSION_ID_present": bool(_flag(source, "CLAUDE_CODE_SESSION_ID")),
+        "L9_MEMORY_AGENT_ID": adapter_id,
+    }
+
+
+def runtime_evidence_digest(evidence: Mapping[str, Any]) -> str:
+    """SHA-256 of the normalized evidence object. Same canonical JSON as the assertion digest."""
+
+    payload = json.dumps(evidence, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def actor_ref_from_binding(actor_id: str, binding: Mapping[str, Any]) -> str:
+    """The binding's ``actor_ref``. The fragment must already be the resolved actor id."""
+
+    ref = binding.get("actor_ref")
+    if not isinstance(ref, str) or not ref.startswith(ACTOR_REGISTRY_PREFIX):
+        raise IdentityResolutionError(f"binding for {actor_id} has no canonical actor_ref")
+    fragment = ref[len(ACTOR_REGISTRY_PREFIX) :]
+    if not fragment or fragment != actor_id:
+        raise IdentityResolutionError(
+            f"binding actor_ref {ref} does not name resolved actor {actor_id}"
+        )
+    return ref
+
+
+def surface_ref_from_binding(surface_id: str, binding: Mapping[str, Any]) -> str:
+    """A bound canonical surface ref, or ``unknown`` when none is bound.
+
+    An empty surface id is unknown. A local surface id that is not one of this
+    actor's ``surface_refs`` is also unknown: another bound surface is not a
+    guess, and an unbound coordinate is not emitted.
+    """
+
+    if not surface_id:
+        return UNKNOWN_IDENTITY
+    candidate = f"{SURFACE_REGISTRY_PREFIX}{surface_id}"
+    refs = binding.get("surface_refs")
+    if isinstance(refs, list) and candidate in refs:
+        return candidate
+    # A local surface id that this actor does not bind is not evidence of a
+    # canonical surface. Do not substitute another bound surface.
+    return UNKNOWN_IDENTITY
 
 
 def user_id_for(agent_id: str) -> str:

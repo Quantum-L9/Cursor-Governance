@@ -912,3 +912,193 @@ def test_task_isolation_and_refinement_supersession_against_the_real_runtime(
     assert retried["replay_payload_matched"] is True, retried
     assert not any("drift" in w for w in retried.get("warnings", []))
     assert load_close_receipt(project, "lost-close")["status"] == "closed_canonically"
+
+
+_HANDOFF_SCRIPT = r"""
+import json, os, sys
+from pathlib import Path
+from uuid import UUID
+
+cfg = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+os.environ.update(cfg["env"])
+os.environ.pop("L9_MEMORY_HUMAN_DOOR_SECRET", None)
+
+from l9_graphite_memory.config import MemorySettings
+from l9_graphite_memory.contracts import CloseRequest, HydrationRequest, MemorySearchRequest
+from l9_graphite_memory.errors import AuthenticationError
+from l9_graphite_memory.mcp_tools import MCPToolApplication
+from l9_graphite_memory.runtime import build_runtime
+from l9_graphite_memory.server import _agent_door_principal
+from l9_graphite_memory.version import MEMORY_SCHEMA_VERSION
+
+settings = MemorySettings()
+try:
+    principal = _agent_door_principal(settings)
+except AuthenticationError as exc:
+    print(json.dumps({"ok": False, "error": str(exc), "wrote": False}))
+    raise SystemExit(0)
+if principal is None:
+    print(json.dumps({"ok": False, "error": "door returned no principal", "wrote": False}))
+    raise SystemExit(0)
+if cfg["expect"] == "reject":
+    print(json.dumps({"ok": False, "error": "mismatch was accepted", "wrote": False}))
+    raise SystemExit(2)
+
+runtime = build_runtime()
+try:
+    app = MCPToolApplication(runtime.service)
+    namespace = cfg["namespace"]
+    content = cfg["content"]
+    receipt = app.call(
+        principal,
+        "memory.write_agent",
+        {
+            "namespace": namespace,
+            "content": content,
+            "memory_class": "observation",
+            "idempotency_key": cfg["idempotency_key"],
+        },
+    )
+    record = runtime.service.get(principal, UUID(str(receipt.record_id)))
+    closed = runtime.service.close(
+        principal,
+        CloseRequest(namespace=namespace, summary=content, idempotency_key=cfg["close_key"]),
+    )
+    close_record = runtime.service.get(principal, closed.record_id)
+    hydration = runtime.service.hydrate(
+        principal, HydrationRequest(task=content, namespaces=(namespace,))
+    )
+    search = runtime.service.search(
+        principal, MemorySearchRequest(query=content, namespaces=(namespace,), limit=5)
+    )
+    print(json.dumps({
+        "ok": True,
+        "wrote": True,
+        "agent_id": principal.agent_id,
+        "source_agent_id": None if record is None else record.provenance.source_agent_id,
+        "close_source_agent_id": None if close_record is None else close_record.provenance.source_agent_id,
+        "schema_version": None if record is None else record.schema_version,
+        "memory_schema_version": MEMORY_SCHEMA_VERSION,
+        "hydrate_status": hydration.status.value,
+        "search_ids": [str(hit.record.record_id) for hit in search.hits],
+        "record_id": str(receipt.record_id),
+    }))
+finally:
+    runtime.close()
+"""
+
+
+def _git_head(path: Path) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    return result.stdout.strip()
+
+
+def _door_env(assertion: dict, *, agent_id: str, signing_key: str) -> dict[str, str]:
+    from ops.memory.agent_assertion import identity_assertion_hmac, mint_assertion
+
+    digest = str(assertion["assertion_digest"])
+    return {
+        "L9_MEMORY_AGENTS_DOOR_SECRET": "cross-repo-door-secret",
+        "L9_MEMORY_AGENT_ID": agent_id,
+        "L9_MEMORY_AGENT_ASSERTION": mint_assertion(agent_id, signing_key),
+        "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": json.dumps({agent_id: signing_key}),
+        "L9_MEMORY_AGENT_GRANTS_JSON": json.dumps(
+            {
+                agent_id: {
+                    "roles": ["orchestrator"],
+                    "read_namespaces": ["identity-handoff"],
+                    "write_namespaces": ["identity-handoff"],
+                }
+            }
+        ),
+        "L9_MEMORY_IDENTITY_ASSERTION_JSON": json.dumps(assertion),
+        "L9_MEMORY_IDENTITY_ASSERTION_HMAC": identity_assertion_hmac(digest, signing_key),
+    }
+
+
+def _run_handoff(interpreter: str, payload: dict, data_dir: Path) -> dict:
+    payload_path = data_dir.parent / "handoff.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+    env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(data_dir.parent),
+        "L9_MEMORY_DATA_DIR": str(data_dir),
+        "L9_MEMORY_STATE_DIR": str(data_dir.parent / "state"),
+        "L9_MEMORY_JSON_LOGS": "0",
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+    script = data_dir.parent / "handoff.py"
+    script.write_text(_HANDOFF_SCRIPT, encoding="utf-8")
+    result = subprocess.run(
+        [interpreter, str(script), str(payload_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_canonical_actor_identity_handoff(runtime, tmp_path: Path) -> None:
+    """Cursor evidence becomes the persisted canonical actor, and a mismatch writes nothing."""
+
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+
+    client, _env = runtime
+    checkout = Path(os.environ[ENV_DEV_CHECKOUT]).expanduser().resolve()
+    assert client.binding.runtime_mode == "development_checkout"
+    assert str(checkout) in str(client.binding.module_path)
+    cursor_assertion = build_runtime_identity_assertion({"CURSOR_AGENT": "1"})
+    fragment = cursor_assertion["resolved_dimensions"]["actor_identity"].rsplit("#", 1)[-1]
+    assert fragment == "cursor"
+    key = "cross-repo-cursor-signing-key"
+    data = tmp_path / "data"
+    data.mkdir()
+    accepted = _run_handoff(
+        client.binding.interpreter,
+        {
+            "expect": "accept",
+            "namespace": "identity-handoff",
+            "content": "canonical actor handoff proof",
+            "idempotency_key": "identity-handoff-write",
+            "close_key": "identity-handoff-close",
+            "env": _door_env(cursor_assertion, agent_id="cursor", signing_key=key),
+        },
+        data,
+    )
+    assert accepted["ok"] is True
+    assert accepted["agent_id"] == fragment
+    assert accepted["source_agent_id"] == fragment
+    assert accepted["close_source_agent_id"] == fragment
+    assert accepted["schema_version"] == "2.2.0"
+    assert accepted["memory_schema_version"] == "2.2.0"
+    assert accepted["hydrate_status"] in {"complete", "partial"}
+    assert accepted["record_id"] in accepted["search_ids"]
+
+    claude_assertion = build_runtime_identity_assertion(
+        {"CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "cli"}
+    )
+    rejected = _run_handoff(
+        client.binding.interpreter,
+        {
+            "expect": "reject",
+            "namespace": "identity-handoff",
+            "content": "must not persist",
+            "idempotency_key": "identity-handoff-mismatch",
+            "close_key": "identity-handoff-mismatch-close",
+            "env": _door_env(claude_assertion, agent_id="cursor", signing_key=key),
+        },
+        tmp_path / "mismatch-data",
+    )
+    assert rejected["wrote"] is False
+    assert "authenticated agent_id" in rejected["error"]
+    assert _git_head(ROOT)
+    assert _git_head(checkout)
