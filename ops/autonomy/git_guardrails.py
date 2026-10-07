@@ -260,7 +260,9 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 #: ``skills/AUTONOMY_MANIFEST.yaml`` is the hand-authored routing SSOT (rule 53
 #: keeps it off the generated merge driver for the same reason). Regenerable is
 #: not the same as disposable.
-DELIBERATELY_NOT_GENERATED: tuple[str, ...] = ("skills/AUTONOMY_MANIFEST.yaml",)
+DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
+    "skills/AUTONOMY_MANIFEST.yaml",
+)
 
 #: Machine-local, never-tracked agent state.
 EPHEMERAL_PREFIXES: tuple[str, ...] = (".l9/", ".cursor/plans/", ".cursor/governance/")
