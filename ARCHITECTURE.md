@@ -72,7 +72,7 @@ PR_REMEDIATE=0 make pr  sole path to GitHub (gate + open_pr_after_gate.sh)
 
 There is no git commit hook. Do not run `pre-commit install`. Live hook list and toolchain pins stay in `AGENTS.md` §4–6 and [`.pre-commit-config.yaml`](.pre-commit-config.yaml).
 
-### Workflow map (14 files under `.github/workflows/`)
+### Workflow map (13 files under `.github/workflows/`)
 
 Index only. Job tables and pin versions live in the workflow files and `AGENTS.md`.
 
@@ -82,7 +82,6 @@ Index only. Job tables and pin versions live in the workflow files and `AGENTS.m
 - `governance-self-check.yml` — job `governance-self-check`
 - `root-file-protection.yml` — job `append-only`
 - `validate-org-policy.yml` — job `validate-org-policy`
-- `peer-execution.yml` — job `peer-execution`
 - `repo-hygiene.yml` — job `repo-hygiene`
 - `governance.yml` — jobs `pr`, `issue`
 - `supply-chain.yml` — jobs `license-compliance`, `dependency-review`, `cyclonedx-sbom`
