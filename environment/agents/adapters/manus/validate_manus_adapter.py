@@ -12,6 +12,8 @@ from typing import Any
 import yaml
 
 ADAPTER_RELATIVE = Path("environment/agents/adapters/manus")
+#: Canonical actor registry coordinate prefix (rule 64).
+ACTOR_REF_PREFIX = "l9.actor-registry/global@1#"
 REQUIRED_ENV = {
     "L9_GOVERNANCE_REPO": "Quantum-L9/Cursor-Governance",
     "L9_GOVERNANCE_SURFACE": "manus",
@@ -146,10 +148,16 @@ def validate(repo_root: Path) -> list[str]:
         return ["agent registry has no manus entry"]
 
     env = _load_env(adapter / "environment.env.example")
+    # Canonical actor identity is the actor_ref fragment (rule 64); the
+    # operating registry no longer carries agent_id / source.
+    actor_ref = str(manus.get("actor_ref") or "")
+    actor_id = (
+        actor_ref.removeprefix(ACTOR_REF_PREFIX) if actor_ref.startswith(ACTOR_REF_PREFIX) else None
+    )
     expected_from_registry = {
         "USER_ID": manus.get("user_id"),
-        "L9_MEMORY_AGENT_ID": manus.get("agent_id"),
-        "L9_MEMORY_SOURCE": manus.get("source"),
+        "L9_MEMORY_AGENT_ID": actor_id,
+        "L9_MEMORY_SOURCE": actor_id,
         "L9_AGENT_ROLE": manus.get("role"),
     }
     for key, expected in {**REQUIRED_ENV, **expected_from_registry}.items():
