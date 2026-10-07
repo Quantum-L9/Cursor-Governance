@@ -60,7 +60,7 @@ jobs:
       - name: Heal generated artifacts
         run: |
           set -euo pipefail
-          uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force --pe-manifest
+          uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force
 
       - name: Check For Changes
         id: diff
@@ -87,11 +87,11 @@ jobs:
             ```bash
             uv run --frozen --no-build ruff check . --fix
             uv run --frozen --no-build ruff format .
-            uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force --pe-manifest
+            uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force
             ```
 
             on `main`, using the ruff version pinned in `uv.lock`.
-            Generated heal is the full snapshot (`--force --pe-manifest`).
+            Generated heal is the full snapshot (`--force`).
 
             **Review required:** confirm the diff is purely mechanical
             before merging. This is CI automation, not an agent `make pr`

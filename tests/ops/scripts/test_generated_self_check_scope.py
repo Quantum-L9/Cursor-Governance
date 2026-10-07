@@ -53,3 +53,16 @@ def test_workflow_splits_pr_from_main_snapshot() -> None:
     assert "--force --check" in body
     assert "--pe-manifest" not in body
     assert "environment/program-execution/MANIFEST.json" not in body
+
+
+def test_no_workflow_passes_the_removed_pe_manifest_flag() -> None:
+    """argparse rejects unknown flags, so any caller left behind fails on main."""
+    callers = [
+        path.relative_to(ROOT).as_posix()
+        for path in sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+        if any(
+            "sync_generated_artifacts.py" in line and "--pe-manifest" in line
+            for line in path.read_text(encoding="utf-8").splitlines()
+        )
+    ]
+    assert callers == [], callers
