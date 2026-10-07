@@ -43,6 +43,30 @@ class ManusMemoryAuthorityTests(unittest.TestCase):
             self.assertEqual((output / "agent_tokens.local.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual((output / "agent_grants.json").stat().st_mode & 0o777, 0o600)
 
+    def test_refuses_a_registry_entry_without_a_canonical_actor_ref(self) -> None:
+        """Identity is never inferred from the adapter name (rule 64)."""
+        registry = {
+            "agents": {"manus": {"binding_status": "active", "role": "researcher-builder"}},
+            "roles": {"researcher-builder": {}},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            governance = Path(temporary)
+            agents = governance / "environment" / "agents"
+            agents.mkdir(parents=True)
+            import yaml
+
+            for manus in (
+                {},
+                {"actor_ref": "l9.actor-registry/global@1#cursor"},
+            ):
+                entry = registry["agents"]["manus"] | manus
+                document = {"agents": {"manus": entry}, "roles": registry["roles"]}
+                (agents / "agent_registry.yaml").write_text(
+                    yaml.safe_dump(document), encoding="utf-8"
+                )
+                with self.assertRaisesRegex(authority.AuthorityMaterializationError, "actor_ref"):
+                    authority._manus_grants(governance)
+
     def test_refuses_human_or_peer_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "authority"
