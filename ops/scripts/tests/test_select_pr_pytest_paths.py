@@ -151,12 +151,20 @@ class NonPythonChangeTests(unittest.TestCase):
         """The machine must find what a careful reader would find by hand."""
 
         repo_root = Path(__file__).resolve().parents[3]
+        # Root pytest never collects what conftest / addopts ignore, so a
+        # careful reader would not expect those either.
+        ignored = root_collect_ignores() + root_addopts_ignores()
         expected = {
-            path.relative_to(repo_root).as_posix()
+            rel
             for path in repo_root.rglob("test_*.py")
             if ".venv" not in path.parts
             and "fixtures" not in path.parts
             and self.CHANGED_SHELL in path.read_text(encoding="utf-8", errors="ignore")
+            and not any(
+                (rel := path.relative_to(repo_root).as_posix()) == root
+                or rel.startswith(root.rstrip("/") + "/")
+                for root in ignored
+            )
         }
         selected = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
         self.assertTrue(expected)
