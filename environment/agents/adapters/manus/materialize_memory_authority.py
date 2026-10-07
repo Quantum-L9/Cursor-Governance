@@ -73,8 +73,24 @@ def _manus_grants(governance: Path) -> dict[str, object]:
     if not isinstance(agents, dict) or not isinstance(roles, dict):
         raise AuthorityMaterializationError("agent registry is missing agents or roles")
     manus = agents.get("manus")
-    if not isinstance(manus, dict) or manus.get("status") != "active":
+    # Same adaptation as ops/memory/materialize_agent_authority.py: the
+    # operating registry records binding_status and actor_ref (rule 64).
+    active = isinstance(manus, dict) and (
+        manus.get("status") == "active" or manus.get("binding_status") == "active"
+    )
+    if not active:
         raise AuthorityMaterializationError("active Manus registry entry is required")
+    assert isinstance(manus, dict)
+    if "agent_id" not in manus:
+        # Identity comes from the canonical actor_ref only; never infer it from
+        # the adapter name (rule 64). A missing or foreign ref fails closed.
+        ref = str(manus.get("actor_ref") or "")
+        actor_id = ref.rsplit("#", 1)[-1] if "#" in ref else ""
+        if actor_id != "manus":
+            raise AuthorityMaterializationError(
+                "Manus registry entry must carry actor_ref naming the manus actor"
+            )
+        manus = dict(manus, agent_id=actor_id)
     role = manus.get("role")
     role_definition = roles.get(role)
     if not isinstance(role_definition, dict):

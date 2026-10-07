@@ -261,6 +261,10 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 #: keeps it off the generated merge driver for the same reason). Regenerable is
 #: not the same as disposable.
 DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
+    # Listed by the sync script for the merge driver and overlap exemption, but
+    # written by validate_adr_identity.py, so no gate-run regeneration proves
+    # it disposable.
+    "docs/decisions/README.md",
     "skills/AUTONOMY_MANIFEST.yaml",
 )
 
