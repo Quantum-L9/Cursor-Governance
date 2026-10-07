@@ -151,9 +151,15 @@ def test_no_duplicate_planner_schema_validator_or_renderer() -> None:
     PLAN_DOCUMENT schema, plan validator, projection renderer, or planner skill.
     """
     assert not (ROOT / "skills" / "l9-plan-embedded").exists()
-    _sole_owner("plan-document.schema.json", "skills/_archived/l9-plan/schemas/plan-document.schema.json")
-    _sole_owner("validate_plan_document.py", "skills/_archived/l9-plan/scripts/validate_plan_document.py")
-    _sole_owner("render_plan_pe_autonomy.py", "skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py")
+    _sole_owner(
+        "plan-document.schema.json", "skills/_archived/l9-plan/schemas/plan-document.schema.json"
+    )
+    _sole_owner(
+        "validate_plan_document.py", "skills/_archived/l9-plan/scripts/validate_plan_document.py"
+    )
+    _sole_owner(
+        "render_plan_pe_autonomy.py", "skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py"
+    )
     # The executable-plan template stays a symlink to the first-class SSOT.
     forked = [
         p.relative_to(ROOT).as_posix()
