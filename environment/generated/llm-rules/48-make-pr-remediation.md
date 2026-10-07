@@ -9,8 +9,8 @@ Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
 Surface Profile `campaign_execution` / `l4_local_autonomy.post_push`).
 Remediates defaults to 1 after the PR opens. `PR_REMEDIATE=0` is
 opt-out for campaign and L4 authorize-release publish. Do not run
-`make precommit-repo` then `make pr`. Tree kernels fire on Cursor and
-adapters as the first `make pr` writers step, before pytest.
+`make precommit-repo` then `make pr`. `make pr` runs deterministic
+preparation before an observational validation wave; it runs no kernel.
 
 **All surfaces** MUST:
 

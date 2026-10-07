@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-06T21:15:01Z'
+generated_utc: '2026-10-07T16:40:48Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:aa823e511aa095000d73485666fc9c34ff19c50f3cf91dd05cb7ce6c5e891a79
+source_tree_digest: sha256:1bca3d3461323f2ce621b09d40f19b51b60f8a4066f7f7e040f32a7cc5fd57ca
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -543,7 +543,7 @@ rules:
 - file: 48-make-pr-remediation.mdc
   id: l9.rule.48.make.pr.remediation
   id_source: explicit
-  version: 1.7.0
+  version: 1.7.1
   description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge; all remediations publish as stacked PRs via make pr without bare git push
   scope: global
   domain: general
@@ -554,7 +554,7 @@ rules:
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
   line_count: 158
-  content_digest: sha256:1870e2c14faedd2eb90d7ed915055e8fd2704fcf40fcf250e92ecd4889a9a45a
+  content_digest: sha256:8cf42ff60ce6bc25cd85e63b72f02954c612153574b976837ea7b3c572d17a6c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1354,8 +1354,8 @@ rules:
 - file: 88-l4-local-autonomy.mdc
   id: l9.rule.l4.local-autonomy
   id_source: explicit
-  version: 1.0.0
-  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on Cursor and adapter make pr before pytest, not as L4.
+  version: 1.1.0
+  description: L4 local autonomy - stacked local commits, exact-tree release authorization, then the single make pr publication ceremony.
   scope: global
   domain: git
   activation: always
@@ -1364,10 +1364,10 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 97
-  content_digest: sha256:8faa1ff8d5bed09ad535f7fd3c6f08db2f2f0063bba2055f72e5c6ac63488013
+  line_count: 80
+  content_digest: sha256:dfd1db9fe56ea7a63ace98066631ffa5860b72ab6acd0d0d82e43b3df0644225
   authority: canonical_global
-  context_cost: moderate
+  context_cost: minimal
   deprecated: false
   replacement: null
   removal_plan: null
@@ -1596,7 +1596,7 @@ rules:
 - file: 99-no-auto-commit.mdc
   id: l9.rule.git.mutation-gate
   id_source: explicit
-  version: 2.2.0
+  version: 2.2.1
   description: Commit authored pathspecs before you stop. Push stays ask-first. Filename is historical.
   scope: global
   domain: git
@@ -1607,7 +1607,7 @@ rules:
   first_heading: Local commit is standing (always on)
   has_yaml_frontmatter: true
   line_count: 66
-  content_digest: sha256:324bb7be214cd95cbf36ca30b91e3e901644d87cbdca045de93ffb34d9718024
+  content_digest: sha256:25471f02cfacd721c8d3ddb1c668e653e115d2405e3a0c41d7412053d5660448
   authority: canonical_global
   context_cost: minimal
   deprecated: false
