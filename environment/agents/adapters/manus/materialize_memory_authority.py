@@ -19,6 +19,9 @@ from typing import Any
 
 import yaml
 
+#: Canonical actor coordinate (rule 64); only this exact reference names Manus.
+MANUS_ACTOR_REF = "l9.actor-registry/global@1#manus"
+
 
 class AuthorityMaterializationError(ValueError):
     """Raised when connector-provided authority is not scoped to Manus."""
@@ -84,13 +87,11 @@ def _manus_grants(governance: Path) -> dict[str, object]:
     if "agent_id" not in manus:
         # Identity comes from the canonical actor_ref only; never infer it from
         # the adapter name (rule 64). A missing or foreign ref fails closed.
-        ref = str(manus.get("actor_ref") or "")
-        actor_id = ref.rsplit("#", 1)[-1] if "#" in ref else ""
-        if actor_id != "manus":
+        if str(manus.get("actor_ref") or "") != MANUS_ACTOR_REF:
             raise AuthorityMaterializationError(
-                "Manus registry entry must carry actor_ref naming the manus actor"
+                f"Manus registry entry must carry actor_ref {MANUS_ACTOR_REF}"
             )
-        manus = dict(manus, agent_id=actor_id)
+        manus = dict(manus, agent_id="manus")
     role = manus.get("role")
     role_definition = roles.get(role)
     if not isinstance(role_definition, dict):
