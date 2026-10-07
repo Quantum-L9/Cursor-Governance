@@ -1,0 +1,142 @@
+# Peer-execution conformance — proves the whole peer topology is coherent
+# (Universal Agent Peer Execution Plan, section 17). Runs the agent-registry
+# validator, the Program Execution adapter-layer validators + conformance +
+# probe, and the cross-registry peer-execution conformance + probe. Every
+# executable peer must either pass conformance or be declared non-executable;
+# silent partial coverage fails the gate.
+#
+# Conventions mirror l9-lint-test.yml: immutable event-revision checkout,
+# SHA-pinned external actions, least-privilege permissions.
+name: Peer Execution Conformance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: peer-execution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  peer-execution:
+    name: Peer Execution Conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable event revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin \
+            "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=1 origin "${REVISION}"
+          git checkout --detach FETCH_HEAD
+          git remote set-url origin "https://github.com/${REPOSITORY}.git"
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install validators (locked, wheels-only)
+        run: |
+          set -euo pipefail
+          # pyyaml + jsonschema are base project deps in uv.lock; the dev extra
+          # adds pytest, which the target-deployment-factory conformance test
+          # shells out to as a subprocess. Sync both so run_conformance.py is
+          # fully green (same toolchain as `make venv`).
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+      - name: Agent registry validator (make agents-env)
+        run: uv run --frozen --no-build python environment/agents/tools/validate_agents.py
+      - name: Program Execution adapter layer
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/validate_execution_adapters.py
+      - name: Program Execution conformance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/run_conformance.py
+      - name: Program Execution probe
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/probe_execution_adapters.py
+      # There is deliberately no "Program Execution manifest integrity" step
+      # here. environment/program-execution/MANIFEST.json is enforced once, in
+      # governance-self-check.yml, which regenerates it (--pe-manifest) and
+      # fails on drift like every other generated artifact. validate_manifest.py
+      # also runs under `make program-execution-conformance`; the
+      # generator/validator contract is pinned by
+      # tests/environment/program_execution/test_manifest_contract.py.
+      - name: Executable peer contract (E1-E15, cross-registry)
+        run: |
+          uv run --frozen --no-build python \
+            environment/agents/tools/validate_executable_peers.py
+      - name: Executable peer readiness probe (binding-level)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/probe_executable_peers.py
+      - name: Program Execution core pair + campaign compile
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python \
+            environment/program-execution/core/scripts/validate_pair.py \
+            environment/program-execution/core --mode template
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/conformance/test_campaign_source_schema.py
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/scripts/tests/test_compile_campaign_source.py
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+      - name: Program Execution thin providers
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/validate_thin_providers.py
+      # PE hardening suite. Previously collected by nothing: root pytest ignores
+      # environment/program-execution/tests (conftest.py collect_ignore) and
+      # run_conformance.py globs `tests/test_*.py` non-recursively, so the
+      # `tests/hardening/` subdirectory was orphaned. This step is the only
+      # thing that runs it.
+      #
+      # Deliberately NOT path-scoped to environment/program-execution/** or
+      # autonomy/**: this workflow gates every pull request, and the
+      # real-campaign E2E crosses into
+      # environment/agents/generated-data/**, so a narrower selector would
+      # silently drop coverage the suite exists to provide.
+      - name: Program Execution hardening suite (real-campaign E2E)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python -m pytest \
+            environment/program-execution/tests/hardening -q
