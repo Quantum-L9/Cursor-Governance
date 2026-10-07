@@ -31,7 +31,7 @@ def _summary(**overrides: object) -> dict:
         "additions": 40,
         "deletions": 2,
         "files": [
-            {"path": "ops/autonomy/kernel_gate.py", "status": "modified"},
+            {"path": "ops/autonomy/l4_local.py", "status": "modified"},
             {"path": "AGENTS.md", "status": "modified"},
             {"path": "ops/hooks/pr_publish_memory_write.py", "status": "added"},
         ],
@@ -48,7 +48,7 @@ def test_fact_is_one_pickup_handoff_with_evidence() -> None:
     assert "head=fix/cursor-execution-velocity" in fact
     assert "sha=deadbeefcafe" in fact
     assert "files=3 +40/-2" in fact
-    assert "paths: ops/autonomy/kernel_gate.py AGENTS.md" in fact
+    assert "paths: ops/autonomy/l4_local.py AGENTS.md" in fact
 
 
 def test_remediation_enabled_may_describe_the_sanctioned_continuation() -> None:
@@ -297,7 +297,7 @@ def test_stale_summary_from_a_previous_pr_is_discarded(
     assert "#543" in fact and "#542" not in fact
     assert receipt["idempotency_key"] == f"pr-publish:{CURRENT['repo']}#543@{CURRENT['head_sha']}"
     # PR A's file list must not travel with PR B either.
-    assert "ops/autonomy/kernel_gate.py" not in fact
+    assert "ops/autonomy/l4_local.py" not in fact
 
 
 def test_stale_summary_from_another_repository_is_discarded(
@@ -333,7 +333,7 @@ def test_matching_summary_is_used_and_marked_verified(
     assert receipt["summary_identity"]["usable"] is True
     assert receipt["summary_identity"]["verified"] is True
     # The matching summary's evidence IS used.
-    assert "paths: ops/autonomy/kernel_gate.py" in fact
+    assert "paths: ops/autonomy/l4_local.py" in fact
 
 
 def test_missing_summary_falls_back_to_current_identity(
@@ -366,7 +366,7 @@ def test_non_numeric_changed_files_does_not_raise(
     )
     receipt, fact = _publish(tmp_path, monkeypatch, odd)
     assert receipt["status"] == "OK"
-    assert "paths: ops/autonomy/kernel_gate.py" in fact
+    assert "paths: ops/autonomy/l4_local.py" in fact
 
 
 @pytest.mark.parametrize("value", ["many", None, "", {"n": 1}, [1], True])

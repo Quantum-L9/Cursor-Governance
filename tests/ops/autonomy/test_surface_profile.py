@@ -19,15 +19,19 @@ def test_profile_block_has_doctrine() -> None:
     assert "Autonomy Velocity Doctrine" in block
     assert "l9-pr-remediation" in block
     assert "L4 local autonomy" in block
-    # The block must still tell an agent where tree kernels fire. It named
-    # "Recursive Alignment" until #347 moved kernels out of L4 and into the
-    # first step of `make precommit-repo`; the assertion kept pinning the old
-    # wording and has been red on main since. Pin the CURRENT contract — the
-    # owner and the entry point — rather than a kernel title the doctrine no
-    # longer has any reason to spell out.
-    assert "kernel_gate.py" in block
-    assert "precommit-repo" in block
+    # The finish path is authorize-release then the single make pr ceremony.
+    # L4 neither runs nor requires audit/repair kernels, and no Program
+    # Execution path participates (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1).
+    assert "authorize-release" in block
+    assert "make pr" in block
     assert "l9 pr" in block
+    for retired in (
+        "kernel_gate.py",
+        "Recursive Alignment",
+        "Validate & Repair",
+        "environment/program-execution",
+    ):
+        assert retired not in block, retired
     assert "One finish, all surfaces" in block
     assert "Cursor does not take this step" not in block
     assert "**STOP**" not in block

@@ -184,6 +184,31 @@ class ValidatorTests(unittest.TestCase):
             with self.assertRaises(validator.ContractError):
                 validator.check_ignore_ownership(suites)
 
+    def test_eviction_containment_ignore_must_be_unowned(self) -> None:
+        # A declared containment ignore inverts the rule: zero owners passes,
+        # an owner fails, and a declaration no suite ignores is stale.
+        reg = valid_registry()
+        reg["suites"][1]["owned_paths"] = ["child/other"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_repo(root, registry=reg)
+            (root / "child" / "other").mkdir(parents=True, exist_ok=True)
+            suites = validator.check_structure(validator.load_registry(root), root)
+            validator.check_ignore_ownership(suites, {"child/tests"})
+            with self.assertRaises(validator.ContractError):
+                validator.check_ignore_ownership(suites, {"child/tests", "never/ignored"})
+        with tempfile.TemporaryDirectory() as tmp:
+            root = build_repo(Path(tmp))
+            suites = validator.check_structure(validator.load_registry(root), root)
+            with self.assertRaises(validator.ContractError):
+                validator.check_ignore_ownership(suites, {"child/tests"})
+
+    def test_eviction_containment_ignore_needs_a_reason(self) -> None:
+        reg = valid_registry()
+        reg["eviction_containment_ignores"] = [{"path": "child/tests", "reason": " "}]
+        with self.assertRaises(validator.ContractError):
+            validator._containment_ignores(reg)
+
     def test_owned_path_must_exist(self) -> None:
         reg = valid_registry()
         reg["suites"][1]["owned_paths"] = ["child/missing"]

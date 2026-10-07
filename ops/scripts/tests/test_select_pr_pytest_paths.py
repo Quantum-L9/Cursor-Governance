@@ -114,10 +114,13 @@ class UncollectableTargetTests(unittest.TestCase):
             msg=f"emitted an uncollectable peer_execution target: {selected}",
         )
 
-    def test_owned_autonomy_suite_is_still_routed(self) -> None:
-        """The drop must not swallow a nested path a non-root suite owns."""
+    def test_eviction_target_autonomy_change_is_not_routed_to_generic_pytest(self) -> None:
+        """Program Execution is an eviction target; no generic suite runs its tests."""
         selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
-        self.assertIn(f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py", selected)
+        self.assertFalse(
+            [item for item in selected if item.startswith(self.PEER_CORE)],
+            msg=f"routed an eviction-target test into the generic gate: {selected}",
+        )
 
     def test_root_conftest_change_is_not_a_collect_target(self) -> None:
         selected = select_pr_pytest_paths(["conftest.py"])
@@ -148,12 +151,23 @@ class NonPythonChangeTests(unittest.TestCase):
         """The machine must find what a careful reader would find by hand."""
 
         repo_root = Path(__file__).resolve().parents[3]
+        contract = json.loads(
+            (repo_root / "ops" / "config" / "python-contract.json").read_text(encoding="utf-8")
+        )
+        # The generic gate never executes an eviction target's tests, so a
+        # careful reader would not expect them either.
+        contained = [entry["path"] for entry in contract.get("eviction_containment_ignores", [])]
         expected = {
-            path.relative_to(repo_root).as_posix()
+            rel
             for path in repo_root.rglob("test_*.py")
             if ".venv" not in path.parts
             and "fixtures" not in path.parts
             and self.CHANGED_SHELL in path.read_text(encoding="utf-8", errors="ignore")
+            and not any(
+                (rel := path.relative_to(repo_root).as_posix()) == root
+                or rel.startswith(root.rstrip("/") + "/")
+                for root in contained
+            )
         }
         selected = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
         self.assertTrue(expected)
@@ -237,16 +251,14 @@ class FixtureAndCampaignScopeTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.COMPILER_SRC])
         self.assertNotIn(self.CAMPAIGN_TEST, selected)
 
-    def test_campaign_input_keeps_named_campaign_tests(self) -> None:
-        selected = select_pr_pytest_paths([self.CAMPAIGN_SRC])
-        self.assertIn(self.CAMPAIGN_TEST, selected)
-
-    def test_compiler_set_does_not_contain_campaign_named_tests(self) -> None:
-        compiler = set(select_pr_pytest_paths([self.COMPILER_SRC]))
-        campaign = set(select_pr_pytest_paths([self.CAMPAIGN_SRC]))
-        self.assertTrue(campaign - compiler, (compiler, campaign))
-        self.assertNotIn(self.CAMPAIGN_TEST, compiler)
-        self.assertIn(self.CAMPAIGN_TEST, campaign)
+    def test_eviction_target_sources_select_no_eviction_target_tests(self) -> None:
+        """Program Execution is an eviction target; the generic gate runs none of its tests."""
+        for source in (self.CAMPAIGN_SRC, self.COMPILER_SRC):
+            selected = select_pr_pytest_paths([source])
+            self.assertFalse(
+                [item for item in selected if item.startswith("environment/program-execution/")],
+                msg=f"{source} routed eviction-target tests into the generic gate: {selected}",
+            )
 
 
 class AddoptsIgnoreTests(unittest.TestCase):
