@@ -178,6 +178,33 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
     assert receipt["phase"] == "release_authorized"
 
 
+def test_improve_migrates_a_retired_kernels_recorded_phase(tmp_path: Path) -> None:
+    """A workspace left in the retired phase must still finish the two-step flow."""
+    repo = _init_repo(tmp_path, feature=True)
+    env = {
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "IMPROVE_RECORD": "0",
+        "L9_AUTONOMY_STATE_DIR": "",
+    }
+    assert _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env).returncode == 0
+    state_file = repo / ".l9" / "autonomy" / "l4-local-phase.json"
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    state["phase"] = "kernels_recorded"
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+
+    migrate = _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env)
+    assert migrate.returncode == 0, migrate.stderr
+    assert "retired phase 'kernels_recorded' migrated" in migrate.stdout
+    assert json.loads(state_file.read_text(encoding="utf-8"))["phase"] == "executing"
+    rec = _run(
+        ["bash", str(SCRIPTS / "run_improve.sh")],
+        cwd=repo,
+        env={**env, "IMPROVE_RECORD": "1"},
+    )
+    assert rec.returncode == 0, rec.stderr
+
+
 def test_gate_receipt_invalidates_on_tracked_deletion_leaving_bytes(tmp_path: Path) -> None:
     """git rm --cached leaves the bytes; the PASS receipt must not reuse.
 

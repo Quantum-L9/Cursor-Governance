@@ -62,6 +62,12 @@ if [[ -z "$phase" ]]; then
   phase="executing"
 elif [[ "$phase" = "release_authorized" ]]; then
   echo "OK: L4 already release_authorized — no begin."
+elif [[ "$phase" != "executing" ]]; then
+  # A phase this L4 no longer has (the retired kernels_recorded) cannot be
+  # authorized; begin again so the documented two-step flow still completes.
+  echo "--- make improve: l4-begin (retired phase '${phase}' migrated) ---"
+  _l4 begin ${CONTRACT_ID:+--contract-id "$CONTRACT_ID"} ${PR_BASE:+--base "$PR_BASE"}
+  phase="executing"
 fi
 
 cat <<EOF
