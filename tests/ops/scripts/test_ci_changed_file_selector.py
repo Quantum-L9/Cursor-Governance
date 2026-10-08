@@ -45,6 +45,40 @@ def test_workflow_scope_exports_files_and_test_suite_does_not_recall_gh() -> Non
     assert sum(line.count("run_python_test_suites.py") for line in active) == 1
 
 
+def test_test_suite_environment_is_owned_by_ensure_gov_python() -> None:
+    """The Test Suite venv is materialized by the repository's own owner, once.
+
+    Regression (PR #696 CI): a raw ``uv sync`` built ``.venv`` without the
+    readiness state ``ensure_uv_environment.sh`` owns (``.l9-uv-fingerprint``,
+    the memory artifact seal). The first repository test to reach
+    ``run_pr_gate.sh`` → ``ensure_gov_python.sh`` then re-entered sync + seal
+    under live xdist workers and ``.venv/bin/python3`` vanished mid-run. The
+    wrapper must run before pytest, and nothing else may sync that venv.
+    """
+    text = WORKFLOW.read_text(encoding="utf-8")
+    test_block = text.split("name: Test Suite", 1)[1]
+    active = [line for line in test_block.splitlines() if not line.lstrip().startswith("#")]
+    active_text = "\n".join(active)
+    assert 'bash ops/scripts/ensure_gov_python.sh "$PWD"' in active_text
+    assert "uv sync" not in active_text, "one environment owner: no raw uv sync in Test Suite"
+    assert active_text.index("ensure_gov_python.sh") < active_text.index(
+        "run_python_test_suites.py"
+    ), "the environment must be complete before pytest-xdist starts"
+    assert sum(line.count("run_python_test_suites.py") for line in active) == 1
+    # `uv run --frozen` re-syncs the venv and reinstalls the pip-sealed memory
+    # wheel from the lock's path source, erasing the PEP 610 seal the owner
+    # just wrote; the first gate call under xdist would then force-reinstall
+    # it again. The runner is invoked with the verified locked interpreter,
+    # exactly as run_pr_gate.sh does locally.
+    assert "uv run" not in active_text, "no uv run in Test Suite: it undoes the memory seal"
+    assert ".venv/bin/python ops/scripts/run_python_test_suites.py" in active_text
+    # Changed-file / local-vs-ci selection is untouched by the environment change.
+    assert "--changed-file" in active_text
+    assert "profile=local" in active_text
+    assert "profile=ci" in active_text
+    assert 'gh api "repos/' not in active_text
+
+
 def test_runner_help_names_local_and_pull_request() -> None:
     help_text = (SCRIPTS / "run_python_test_suites.py").read_text(encoding="utf-8")
     assert "changed-file selector for local make pr and pull_request CI" in help_text
