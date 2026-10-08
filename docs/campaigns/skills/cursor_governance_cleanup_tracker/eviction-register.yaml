@@ -1,0 +1,172 @@
+tracker:
+  repository: Quantum-L9/Cursor-Governance
+  observed_revision: 3384e7546a9aee002d9e99df868ffcd70e74f786
+  mode: advisory
+  mutation_authorized: false
+
+items:
+  - id: IDEA-001
+    subject: skills/l9-idea-execute
+    disposition: EVICT
+    destination: Quantum-L9/IdeaOS
+    rationale: idea lifecycle ownership
+
+  - id: IDEA-002
+    subject: skills/_archived/l9-idea-foundry
+    disposition: EVICT
+    destination: Quantum-L9/IdeaOS
+    rationale: archived idea-domain capability belongs with IdeaOS history/harvest corpus
+
+  - id: PE-001
+    subject: environment/program-execution/**
+    disposition: EVICT
+    destination: Quantum-L9/l9-campaign-execution
+    destination_exists: false
+    rationale: campaign/program execution is a distinct domain owner
+
+  - id: PE-002
+    subject: skills/l9-pe-campaign-activate
+    disposition: EVICT
+    destination: Quantum-L9/l9-campaign-execution
+
+  - id: PE-003
+    subject: skills/l9-pe-nuggets
+    disposition: EVICT
+    destination: Quantum-L9/l9-campaign-execution
+
+  - id: PLAN-001
+    subject: current skills/l9-plan
+    disposition: EVICT
+    destination: Quantum-L9/l9-campaign-execution
+    rationale: current implementation carries PE/campaign semantics
+
+  - id: PLAN-002
+    subject: skills/l9-plan-simple capability
+    disposition: REFRESH
+    result: canonical skills/l9-plan
+    rationale: restore ordinary planning as the single Cursor-Governance plan capability
+    notes:
+      - remove the simple distinction
+      - restore only needed archived/original planning behavior
+      - remove PE coupling
+      - eliminate compatibility routing that exists only because two plan identities coexist
+
+  - id: DAG-001
+    subject: workflows/**
+    disposition: ARCHIVE_DISABLE
+    destination: repository-local historical archive
+    rationale: old DAG/workflow attempts are not current runtime authority
+    closure_requirements:
+      - no active imports
+      - no active registry entries
+      - no command routing
+      - no bootstrap/session initialization
+      - no active tests requiring runtime support
+      - no capability/autonomy advertisement
+      - no hidden plan dependency
+      - no CI requirement for DAG runtime
+    preservation_rule: preserve for possible future harvest/resurrection, but dormant means unreachable
+
+  - id: GAR-001
+    subject: skills/l9-global-architect
+    disposition: REFRESH
+    result: supersede repository GAR v0.8.2 with current GAR v1.6.1
+    rationale: replacement/supersession, not incremental reconciliation
+    activation:
+      cursor_enabled: true
+      force_run_every_prompt: false
+      routing: model-invocable
+      hydration: lazy
+      rule: keep lightweight entry/routing surface available; hydrate only required concern frontier
+    current_repo_state:
+      observed_version: 0.8.2
+      observed_autonomy_tier: explicit_only
+    target_state:
+      version: 1.6.1
+      autonomy_tier: auto_invoke_or_equivalent_available
+      note: enabled means selectable by Cursor routing, not permanently executing architecture analysis
+
+  - id: GAR-002
+    subject: l9-authority-resolver
+    disposition: KEEP
+    role: GAR companion capability
+    activation: lazy_on_demand
+    rationale: newest GAR requires l9.authority.resolve before material authority-dependent reasoning
+
+  - id: GAR-003
+    subject: l9-work-state-router
+    disposition: KEEP
+    role: downstream continuity/routing companion
+    activation: lazy_on_demand
+    rationale: preserves campaign continuity and routes next capability without turning GAR into campaign state machinery
+
+  - id: GAR-004
+    subject: evidence.review capability / evidence-review-engine
+    disposition: VERIFY
+    rationale: GAR v1.6.1 declares evidence.review as a required capability, but this runtime did not expose a top-level installed evidence-review-engine skill
+    action: confirm canonical implementation/location before executing GAR replacement
+
+  - id: GAR-005
+    subject: skills/l9-coding-agent
+    disposition: KEEP
+    role: implementation sibling
+    activation: explicit_only
+    rationale: code mutation sibling is useful but should not become an always-auto-invoked consequence of GAR availability
+
+  - id: PRA-001
+    subject: skills/l9-pr-audit
+    disposition: REFRESH
+    rationale: keep one PR audit owner and align it to current authority/evidence/freeze/remediation conventions
+    anti_goal: do not create a second PR audit skill
+
+  - id: CI-001
+    subject:
+      - skills/l9-ci-ops
+      - skills/l9-setting-up-ci
+    disposition: CONSOLIDATE
+    result: skills/l9-ci
+    activation: lazy_by_concern
+    intended_routes:
+      - setup
+      - status
+      - diagnose_fix
+      - gates
+      - policy
+      - smoke_testing
+    note: root CI skill should remain small and load only requested concern material
+
+  - id: CI-002
+    subject: skills/l9-api-smoke-testing
+    disposition: REVIEW
+    candidate: fold into lazy-loaded l9-ci smoke-testing concern
+    rule: confirm it is CI-owned rather than a generally reusable API verification skill before folding
+
+  - id: CI-003
+    subject:
+      - skills/l9-pipeline-audit
+      - skills/l9-pipeline-orchestrator
+      - skills/l9-kubernetes-deploying
+      - skills/l9-setting-up-terraform
+    disposition: REVIEW
+    rationale: adjacency to CI does not prove CI ownership
+
+  - id: PORT-001
+    subject: all active L9 skills retained, moved, or newly created by this cleanup
+    disposition: REFRESH
+    result: OpenAI-compatible skill packaging baseline
+    requirements:
+      - every skill keeps SKILL.md as the canonical entrypoint
+      - every skill adds agents/openai.yaml for OpenAI/ChatGPT UI metadata
+      - existing platform-specific metadata such as agents/meta.yaml is preserved when still consumed by that platform
+      - OpenAI SKILL.md frontmatter is limited to name and description; platform-specific routing metadata moves to its owning sidecar or registry
+      - supporting scripts, references, and assets remain lazy-loaded rather than copied into SKILL.md
+      - validate the exact final skill package before declaring OpenAI compatibility
+    scope:
+      - Cursor-Governance surviving skills
+      - skills moved to Quantum-L9/IdeaOS
+      - skills moved to Quantum-L9/l9-campaign-execution
+      - consolidated or renamed skills such as l9-plan and l9-ci
+    anti_goals:
+      - do not replace Cursor or Claude metadata merely to add OpenAI support
+      - do not duplicate semantic authority into agents/openai.yaml
+      - do not force all platform metadata into one universal sidecar
