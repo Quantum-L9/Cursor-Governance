@@ -95,7 +95,9 @@ for name in \
   L9_MEMORY_AGENTS_DOOR_SECRET \
   L9_MEMORY_AGENT_ASSERTION \
   L9_MEMORY_AGENT_SIGNING_KEYS_JSON \
-  L9_MEMORY_AGENT_GRANTS_JSON; do
+  L9_MEMORY_AGENT_GRANTS_JSON \
+  L9_MEMORY_IDENTITY_ASSERTION_JSON \
+  L9_MEMORY_IDENTITY_ASSERTION_HMAC; do
   [ -n "${!name:-}" ] || missing+=("$name")
 done
 if [ "${#missing[@]}" -ne 0 ]; then

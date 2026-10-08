@@ -63,6 +63,35 @@ ordinary episodic facts without a hook handoff.
   `phase_lock` → `write_governed` only when consistency against concurrent
   writers matters.
 
+## Canonical identity assertion (2026-10-07)
+
+The signed-agent credential and canonical identity evidence are different objects.
+
+| Transport | What it proves | What it grants |
+|---|---|---|
+| `L9_MEMORY_AGENT_ASSERTION` (`agent_id.exp.nonce.hexsig`) | possession of the per-agent signing key | nothing by itself; the grant map supplies roles and namespaces |
+| `L9_MEMORY_IDENTITY_ASSERTION_JSON` + `L9_MEMORY_IDENTITY_ASSERTION_HMAC` | `l9.identity-assertion/v1` ActorIdentity resolution | nothing |
+
+Cursor-Governance produces the identity assertion. `ops/memory/print_agent_assertion_env.py` resolves the actor with the existing `agent_identity` resolver, reads `actor_ref` and `surface_refs` from `environment/agents/agent_registry.yaml`, and reads projection digests from `generated/governance/canonical_identity.yaml` and its receipt. It does not guess an actor or a surface. When actor identity resolves and surface evidence does not, `surface_identity` is `unknown` and `result` stays `resolved`, because SurfaceIdentity is non-material for this memory product. A resolved surface that is not in that actor's `surface_refs` is not minted.
+
+Memory must verify the assertion, recompute the digest, check the HMAC with the authenticated agent's key, and require the actor-registry fragment to equal that `agent_id`. The identity assertion does not authorize namespaces.
+
+### Local assertion digest
+
+`.github` requires `assertion_digest` and does not define a global canonicalization algorithm. This repository and `l9-graphiti-memory` share one interop implementation rule. It is not global L9 semantic law:
+
+1. copy the assertion object;
+2. remove `assertion_digest`;
+3. render UTF-8 JSON with `sort_keys=True`, `separators=(",", ":")`, and `ensure_ascii=False`;
+4. SHA-256 that text and prefix `sha256:`.
+
+`L9_MEMORY_IDENTITY_ASSERTION_HMAC` is HMAC-SHA256 of the ASCII digest under the same per-agent signing key used by the signed-agent door.
+
+## Options Considered
+
+1. Overload `L9_MEMORY_AGENT_ASSERTION` with the identity assertion. Rejected: that token is authentication, and its wire format stays `agent_id.exp.nonce.hexsig`.
+2. Let memory re-resolve Cursor and Claude markers itself. Rejected: memory verifies the supplied assertion and does not inspect runtime markers or Cursor-Governance's registry.
+
 ## Supersedes
 
 - Per-agent HTTPS bearer uniqueness as the agent identity door.

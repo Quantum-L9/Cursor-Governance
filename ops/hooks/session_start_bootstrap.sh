@@ -621,7 +621,12 @@ EOF
 # Must run BEFORE exit — dead code after exit 0 never executes. Env is merged into
 # the sessionStart JSON `env` block so Cursor/Claude surfaces receive it.
 ASSERTION_ENV_JSON="{}"
-if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" ]]; then
+# A canonical launch is incomplete until the signed-agent token AND both
+# identity-assertion transport values are present. The helper resolves the
+# actor; this shell does not synthesize one.
+if [[ -z "${L9_MEMORY_AGENT_ASSERTION:-}" \
+   || -z "${L9_MEMORY_IDENTITY_ASSERTION_JSON:-}" \
+   || -z "${L9_MEMORY_IDENTITY_ASSERTION_HMAC:-}" ]]; then
   _assert_py="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/memory/print_agent_assertion_env.py"
   if [[ -f "$_assert_py" ]]; then
     # The helper derives the actor (ops/memory/agent_identity.py); with no
