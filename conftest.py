@@ -25,32 +25,21 @@ from pathlib import Path
 import pytest
 
 # Tests drive the real installer, SessionStart hook and ensure_gov_python.sh
-# against this checkout while xdist workers execute from its .venv. While the
-# controller's pid is in this file, ensure_uv_environment.sh only verifies this
-# checkout's environment: no test can lock, mark, seal or re-sync it. A file,
-# because those tests scrub their child environments.
-_UV_PROTECTED = Path(__file__).resolve().parent / ".l9" / "uv-environment.protected"
-
-
-def _uv_protection_holder_alive() -> bool:
-    try:
-        holder = int(_UV_PROTECTED.read_text(encoding="utf-8").split()[0])
-        os.kill(holder, 0)
-    except (OSError, ValueError, IndexError):
-        return False
-    return True
+# against this checkout while xdist workers execute from its .venv. While any
+# controller registered here is alive, ensure_uv_environment.sh only verifies
+# this checkout's environment: no test can lock, mark, seal or re-sync it. One
+# file per controller pid, so overlapping or nested sessions each hold their own
+# registration and one exiting never lifts another's protection. Files, because
+# those tests scrub their child environments.
+_UV_PROTECTED = Path(__file__).resolve().parent / ".l9" / "uv-environment.protected.d"
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    if hasattr(config, "workerinput"):  # xdist worker: the controller owns it
-        return
-    # A session nested inside another (a test running pytest on this checkout)
-    # leaves the outer holder in place, so its exit cannot lift the protection.
-    if _uv_protection_holder_alive():
+    if hasattr(config, "workerinput"):  # xdist worker: the controller registers
         return
     try:
-        _UV_PROTECTED.parent.mkdir(parents=True, exist_ok=True)
-        _UV_PROTECTED.write_text(f"{os.getpid()}\n", encoding="utf-8")
+        _UV_PROTECTED.mkdir(parents=True, exist_ok=True)
+        (_UV_PROTECTED / str(os.getpid())).touch()
     except OSError:
         # Best-effort: a read-only checkout cannot be protected, and failing
         # the whole session over it would be worse than running unprotected.
@@ -61,8 +50,7 @@ def pytest_unconfigure(config: pytest.Config) -> None:
     if hasattr(config, "workerinput"):
         return
     try:
-        if _UV_PROTECTED.read_text(encoding="utf-8").strip() == str(os.getpid()):
-            _UV_PROTECTED.unlink()
+        (_UV_PROTECTED / str(os.getpid())).unlink()
     except OSError:
         # Already gone, or never written: nothing to release. A file left
         # behind is harmless once this pid exits; the script ignores dead holders.

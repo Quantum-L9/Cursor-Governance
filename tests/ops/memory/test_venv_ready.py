@@ -742,12 +742,13 @@ def test_a_second_apply_on_unchanged_inputs_does_not_resync(tmp_path: Path) -> N
 # reaching `apply` on the .venv the other xdist workers were executing from.
 # Lock + marker made memory readers refuse the venv; a sync that asked for a
 # different interpreter rebuilt it out from under them. The root conftest now
-# writes the controller pid into .l9/uv-environment.protected for the session.
+# registers each controller pid under .l9/uv-environment.protected.d/.
 
 
 def _protect(root: Path, pid: int) -> None:
-    (root / ".l9").mkdir(parents=True, exist_ok=True)
-    (root / ".l9" / "uv-environment.protected").write_text(f"{pid}\n", encoding="utf-8")
+    registry = root / ".l9" / "uv-environment.protected.d"
+    registry.mkdir(parents=True, exist_ok=True)
+    (registry / str(pid)).touch()
 
 
 def _dead_pid() -> int:
@@ -757,9 +758,29 @@ def _dead_pid() -> int:
 
 
 def test_the_running_session_protects_this_checkout() -> None:
-    marker = ROOT / ".l9" / "uv-environment.protected"
-    assert marker.is_file(), "root conftest did not protect the checkout under test"
-    os.kill(int(marker.read_text(encoding="utf-8").split()[0]), 0)  # holder is alive
+    registry = ROOT / ".l9" / "uv-environment.protected.d"
+    live = []
+    for entry in registry.iterdir() if registry.is_dir() else ():
+        try:
+            os.kill(int(entry.name), 0)
+        except (OSError, ValueError):
+            continue
+        live.append(entry.name)
+    assert live, "root conftest did not register this session's controller"
+
+
+@needs_util_linux
+def test_one_live_session_keeps_the_root_protected_after_another_ends(tmp_path: Path) -> None:
+    """Codex P2 on #702: overlapping controllers must not lift each other's protection."""
+    root, env = _writer_root(tmp_path)
+    _protect(root, _dead_pid())  # the session that already finished
+    _protect(root, os.getpid())  # the one still running
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 1, done.stderr
+    assert "protected by a running test session" in done.stderr
+    assert _sync_argv(tmp_path) == []
 
 
 @needs_util_linux

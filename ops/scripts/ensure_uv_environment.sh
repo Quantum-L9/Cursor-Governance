@@ -34,23 +34,29 @@ if [ ! -f "$GOV_ROOT/pyproject.toml" ] || [ ! -f "$GOV_ROOT/uv.lock" ]; then
   exit 2
 fi
 
-# A protected root is verified, never mutated. A running test session writes
-# $PROTECTED (its pid) into the checkout it executes from: tests drive the real
-# installer, SessionStart hook and ensure_gov_python.sh against that checkout
-# (directly, or through a temp HOME whose .cursor-governance links to it), and
-# each of them reached `apply` on the .venv the other xdist workers were running
-# from. The cached path still took the lock and wrote $IN_PROGRESS, so memory
-# readers refused the venv (`L9_MEMORY_INTERPRETER unbound`); a sync that asked
-# for a different interpreter rebuilt it, and workers died on a missing
-# .venv/bin/python3. A file, not an environment variable: those tests scrub
-# their child environments. A stale file (holder no longer alive) is ignored.
-PROTECTED="$GOV_ROOT/.l9/uv-environment.protected"
-if [ "$MODE" != "check" ] && [ -f "$PROTECTED" ]; then
-  _holder="$(head -n 1 "$PROTECTED" 2>/dev/null | tr -cd '0-9')"
-  if [ -n "$_holder" ] && kill -0 "$_holder" 2>/dev/null; then
-    echo "UV: $GOV_ROOT is protected by a running test session (pid $_holder); verifying without mutation" >&2
-    MODE=check
-  fi
+# A protected root is verified, never mutated. Each running test session
+# registers its controller pid as a file in $PROTECTED inside the checkout it
+# executes from: tests drive the real installer, SessionStart hook and
+# ensure_gov_python.sh against that checkout (directly, or through a temp HOME
+# whose .cursor-governance links to it), and each of them reached `apply` on the
+# .venv the other xdist workers were running from. The cached path still took
+# the lock and wrote $IN_PROGRESS, so memory readers refused the venv
+# (`L9_MEMORY_INTERPRETER unbound`); a sync that asked for a different
+# interpreter rebuilt it, and workers died on a missing .venv/bin/python3.
+# Files, not an environment variable: those tests scrub their child
+# environments. One per session, so overlapping sessions never lift each
+# other's protection; a registration whose pid is no longer alive is ignored.
+PROTECTED="$GOV_ROOT/.l9/uv-environment.protected.d"
+if [ "$MODE" != "check" ] && [ -d "$PROTECTED" ]; then
+  for _entry in "$PROTECTED"/*; do
+    _holder="${_entry##*/}"
+    case "$_holder" in ''|*[!0-9]*) continue ;; esac
+    if kill -0 "$_holder" 2>/dev/null; then
+      echo "UV: $GOV_ROOT is protected by a running test session (pid $_holder); verifying without mutation" >&2
+      MODE=check
+      break
+    fi
+  done
 fi
 
 # One interpreter predicate for the whole script: the cached-environment guard,
