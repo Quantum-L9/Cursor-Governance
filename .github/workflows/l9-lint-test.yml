@@ -213,11 +213,21 @@ jobs:
           # project + dev deps via the lockfile (same as `make venv`). pytest-xdist
           # and pytest-timeout are now exact-pinned in the dev extra and uv.lock, so
           # there is no floating fallback install — the locked sync provides them. The uv
-          # bootstrap is version-pinned and wheels-only; `uv sync` uses --no-build and every
+          # bootstrap is version-pinned and wheels-only; the sync uses --no-build and every
           # `uv run` uses --frozen --no-build (SonarCloud S8541/S8544). `python -m pip`
           # targets the setup-python interpreter this job runs on.
           command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
-          uv sync --locked --no-build --extra dev
+          # One owner of the Test Suite environment: ensure_gov_python.sh ->
+          # ensure_uv_environment.sh runs the locked sync AND writes the readiness
+          # state the repository's own gates read (.venv/.l9-uv-fingerprint, the
+          # memory artifact seal, the import verification). A raw sync here built
+          # the venv but left that state absent, so the first repository test to
+          # reach run_pr_gate.sh -> ensure_gov_python.sh re-entered sync + seal
+          # (force-reinstall of the memory wheel) under live xdist workers:
+          # .venv/bin/python3 vanished mid-run, L9_MEMORY_INTERPRETER unbound, and
+          # unrelated parallel tests failed together. In CI the wrapper keeps the
+          # actions/setup-python interpreter (no --managed-python).
+          bash ops/scripts/ensure_gov_python.sh "$PWD"
       - name: pytest with coverage
         env:
           TESTING: "true"
@@ -235,6 +245,17 @@ jobs:
           # (does not re-list PR files). Deleted paths missing on this depth-1 HEAD are
           # skipped. Empty mapped set → runner PASS (skip pytest).
           # push to main / workflow_dispatch, or files_unusable: --profile ci.
+          #
+          # Invoked with the locked interpreter the install step verified, not
+          # `uv run`: `uv run --frozen` re-syncs the project environment first,
+          # and it treats the memory wheel the seal just pip-installed from its
+          # hashed URL as not matching the lock's path source, so it reinstalls
+          # that wheel and erases the PEP 610 seal (verified: "Uninstalled 1
+          # package / Installed 1 package", seal check flips to missing). The
+          # first repository test to reach run_pr_gate.sh -> ensure_gov_python.sh
+          # would then re-seal with `pip install --force-reinstall` under live
+          # xdist workers. The local gate (run_pr_gate.sh) already invokes the
+          # runner with .venv/bin/python; CI now does the same.
           set -euo pipefail
           profile=ci
           changed_args=()
@@ -249,4 +270,4 @@ jobs:
             profile=local
             changed_args=(--changed-file "${keep}")
           fi
-          uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile "${profile}" "${changed_args[@]}"
+          .venv/bin/python ops/scripts/run_python_test_suites.py --profile "${profile}" "${changed_args[@]}"

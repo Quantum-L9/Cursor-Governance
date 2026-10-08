@@ -239,6 +239,41 @@ def test_unprobeable_interpreter_is_reported_not_raised(
     assert "seal: cannot inspect the locked interpreter" in capsys.readouterr().err
 
 
+def test_an_already_sealed_interpreter_is_not_reinstalled(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``already_sealed`` true → rc 0, no ``_ensure_pip``, no force-reinstall.
+
+    Second half of the CI venv race proof (PR #696): a cached fingerprint
+    keeps ``uv sync`` from re-running, but ``ensure_uv_environment.sh`` still
+    calls the seal on the cached path. If that seal reinstalled the memory
+    wheel anyway, ``.venv`` would still be mutated under live xdist workers.
+    The short circuit must spawn nothing beyond the provenance read.
+    """
+    interpreter = ROOT / ".venv" / "bin" / "python"
+    if not interpreter.is_file():
+        pytest.skip("worktree venv not materialized")
+    monkeypatch.setattr(seal, "already_sealed", lambda *_a: True)
+
+    def forbidden_ensure_pip(_python: Path) -> subprocess.CompletedProcess[str]:
+        raise AssertionError("_ensure_pip must not run for an already-sealed interpreter")
+
+    monkeypatch.setattr(seal, "_ensure_pip", forbidden_ensure_pip)
+    spawned: list[list[str]] = []
+
+    def run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        spawned.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(seal.subprocess, "run", run)
+    rc = seal.seal(root=ROOT, interpreter=interpreter)
+    err = capsys.readouterr().err
+    assert rc == 0, err
+    assert "seal: already exact" in err
+    assert spawned == [], spawned
+    assert not any("--force-reinstall" in cmd for cmd in spawned)
+
+
 # --- ensure_uv_environment.sh seals with the interpreter its guard checks ----
 
 ENSURE = ROOT / "ops" / "scripts" / "ensure_uv_environment.sh"
