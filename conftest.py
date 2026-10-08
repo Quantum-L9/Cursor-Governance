@@ -18,10 +18,51 @@ tests use repo-root-compatible imports and remain in the default suite.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
 import pytest
+
+# Tests drive the real installer, SessionStart hook and ensure_gov_python.sh
+# against this checkout while xdist workers execute from its .venv. While the
+# controller's pid is in this file, ensure_uv_environment.sh only verifies this
+# checkout's environment: no test can lock, mark, seal or re-sync it. A file,
+# because those tests scrub their child environments.
+_UV_PROTECTED = Path(__file__).resolve().parent / ".l9" / "uv-environment.protected"
+
+
+def _uv_protection_holder_alive() -> bool:
+    try:
+        holder = int(_UV_PROTECTED.read_text(encoding="utf-8").split()[0])
+        os.kill(holder, 0)
+    except (OSError, ValueError, IndexError):
+        return False
+    return True
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    if hasattr(config, "workerinput"):  # xdist worker: the controller owns it
+        return
+    # A session nested inside another (a test running pytest on this checkout)
+    # leaves the outer holder in place, so its exit cannot lift the protection.
+    if _uv_protection_holder_alive():
+        return
+    try:
+        _UV_PROTECTED.parent.mkdir(parents=True, exist_ok=True)
+        _UV_PROTECTED.write_text(f"{os.getpid()}\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    if hasattr(config, "workerinput"):
+        return
+    try:
+        if _UV_PROTECTED.read_text(encoding="utf-8").strip() == str(os.getpid()):
+            _UV_PROTECTED.unlink()
+    except OSError:
+        pass
 
 
 def _git_in(repo: Path, *args: str) -> None:
