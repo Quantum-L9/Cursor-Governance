@@ -119,7 +119,10 @@ claude-deepseek-verify:
 # ---------------------------------------------------------------------------
 # Shared agent / IDE surfaces
 # ---------------------------------------------------------------------------
+# Canonical identity projection assurance, then agent-bindings validation
+# (ADR-0038 / ADR-0039).
 agents-env:
+	$(PYTHON) tools/assurance/check_canonical_identity_projection.py
 	$(PYTHON) environment/agents/tools/validate_agents.py
 ide-profile:
 	bash ops/scripts/install_ide_profile.sh "$(WS)"
