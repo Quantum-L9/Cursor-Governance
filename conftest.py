@@ -52,6 +52,8 @@ def pytest_configure(config: pytest.Config) -> None:
         _UV_PROTECTED.parent.mkdir(parents=True, exist_ok=True)
         _UV_PROTECTED.write_text(f"{os.getpid()}\n", encoding="utf-8")
     except OSError:
+        # Best-effort: a read-only checkout cannot be protected, and failing
+        # the whole session over it would be worse than running unprotected.
         pass
 
 
@@ -62,6 +64,8 @@ def pytest_unconfigure(config: pytest.Config) -> None:
         if _UV_PROTECTED.read_text(encoding="utf-8").strip() == str(os.getpid()):
             _UV_PROTECTED.unlink()
     except OSError:
+        # Already gone, or never written: nothing to release. A file left
+        # behind is harmless once this pid exits; the script ignores dead holders.
         pass
 
 
