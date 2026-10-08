@@ -37,6 +37,8 @@ ENV_AGENT_SIGNING_KEYS_JSON = "L9_MEMORY_AGENT_SIGNING_KEYS_JSON"
 ENV_AGENT_GRANTS_JSON = "L9_MEMORY_AGENT_GRANTS_JSON"
 ENV_AGENT_ID = "L9_MEMORY_AGENT_ID"
 ENV_HUMAN_DOOR_SECRET = "L9_MEMORY_HUMAN_DOOR_SECRET"
+ENV_IDENTITY_ASSERTION_JSON = "L9_MEMORY_IDENTITY_ASSERTION_JSON"
+ENV_IDENTITY_ASSERTION_HMAC = "L9_MEMORY_IDENTITY_ASSERTION_HMAC"
 
 
 def _fallback_mint_assertion(
@@ -73,6 +75,37 @@ def _refuse_human(agent_id: str) -> None:
         raise ValueError("refusing to mint agent MCP env for human private entrance")
 
 
+def local_assertion_digest(assertion: Mapping[str, Any]) -> str:
+    """Local interop digest shared with l9-graphiti-memory. Not global L9 law.
+
+    Copy the object, drop ``assertion_digest``, and hash UTF-8 JSON with
+    sorted keys, compact separators, and ``ensure_ascii=False``. Prefix
+    ``sha256:``.
+    """
+
+    body = {key: value for key, value in assertion.items() if key != "assertion_digest"}
+    payload = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def identity_assertion_hmac(assertion_digest: str, signing_key: str | bytes) -> str:
+    """HMAC-SHA256 of the ASCII assertion digest under the per-agent signing key.
+
+    Transport integrity only. It grants no role or namespace.
+    """
+
+    key = signing_key.encode("utf-8") if isinstance(signing_key, str) else signing_key
+    return hmac.new(key, assertion_digest.encode("ascii"), hashlib.sha256).hexdigest()
+
+
+def seal_identity_assertion(assertion: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a copy of *assertion* with ``assertion_digest`` recomputed."""
+
+    sealed = {key: value for key, value in assertion.items() if key != "assertion_digest"}
+    sealed["assertion_digest"] = local_assertion_digest(sealed)
+    return sealed
+
+
 def load_grants_file(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if "grants" in data:
@@ -99,22 +132,31 @@ def build_agent_mcp_env(
     agents_door_secret: str,
     signing_key: str,
     grants: Mapping[str, Any],
+    identity_assertion: Mapping[str, Any],
     ttl_seconds: int = 3600,
 ) -> dict[str, str]:
     """Env block for ONE agent MCP server process (never includes human secret).
 
     ``grants`` may be the whole registry-rendered map; only ``grants[agent_id]``
     is exported. The signing-key map exported is ``{agent_id: signing_key}``.
+    The authentication token wire format is unchanged. The canonical identity
+    assertion and its HMAC travel beside it and grant nothing.
     """
     _refuse_human(agent_id)
     grant = own_grant(grants, agent_id)
     assertion = mint_assertion(agent_id, signing_key, ttl_seconds=ttl_seconds)
+    sealed = seal_identity_assertion(identity_assertion)
+    digest = str(sealed["assertion_digest"])
     return {
         ENV_AGENTS_DOOR_SECRET: agents_door_secret,
         ENV_AGENT_ASSERTION: assertion,
         ENV_AGENT_SIGNING_KEYS_JSON: json.dumps({agent_id: signing_key}),
         ENV_AGENT_GRANTS_JSON: json.dumps({agent_id: grant}),
         ENV_AGENT_ID: agent_id,
+        ENV_IDENTITY_ASSERTION_JSON: json.dumps(
+            sealed, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ),
+        ENV_IDENTITY_ASSERTION_HMAC: identity_assertion_hmac(digest, signing_key),
     }
 
 
@@ -122,6 +164,7 @@ def env_from_local_secret_map(
     agent_id: str,
     secret_map_path: Path,
     grants_path: Path,
+    identity_assertion: Mapping[str, Any],
     *,
     ttl_seconds: int = 3600,
 ) -> dict[str, str]:
@@ -143,5 +186,6 @@ def env_from_local_secret_map(
         agents_door_secret=door,
         signing_key=keys[agent_id],
         grants=grants,
+        identity_assertion=identity_assertion,
         ttl_seconds=ttl_seconds,
     )
