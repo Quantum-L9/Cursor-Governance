@@ -195,6 +195,8 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
     ]
 
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    # A cloud session's own marker must not leak into the desktop case under test.
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
@@ -219,6 +221,8 @@ def test_print_helper_skip_message_names_no_path(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    # A cloud session's own marker must not leak into the desktop case under test.
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     missing = tmp_path / "absent.json"
