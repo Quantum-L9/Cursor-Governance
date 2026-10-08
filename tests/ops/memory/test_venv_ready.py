@@ -733,3 +733,112 @@ def test_a_second_apply_on_unchanged_inputs_does_not_resync(tmp_path: Path) -> N
     assert fingerprint.read_text(encoding="utf-8") == recorded, "fingerprint stays valid"
     assert (root / ".venv" / "bin" / "python3").is_file(), "python3 survives the second apply"
     assert not (root / ".l9" / "uv-environment.installing").exists()
+
+
+# --- protected root: the checkout a test suite executes from -----------------
+#
+# Regression (PR #696 / main d864e21 CI): tests ran the real installer,
+# SessionStart hook and ensure_gov_python.sh against this checkout, each
+# reaching `apply` on the .venv the other xdist workers were executing from.
+# Lock + marker made memory readers refuse the venv; a sync that asked for a
+# different interpreter rebuilt it out from under them. The root conftest now
+# registers each controller pid under .l9/uv-environment.protected.d/.
+
+
+def _protect(root: Path, pid: int) -> None:
+    registry = root / ".l9" / "uv-environment.protected.d"
+    registry.mkdir(parents=True, exist_ok=True)
+    (registry / str(pid)).touch()
+
+
+def _dead_pid() -> int:
+    child = subprocess.Popen(["true"])
+    child.wait()
+    return child.pid
+
+
+def test_the_running_session_protects_this_checkout() -> None:
+    registry = ROOT / ".l9" / "uv-environment.protected.d"
+    live = []
+    for entry in registry.iterdir() if registry.is_dir() else ():
+        try:
+            os.kill(int(entry.name), 0)
+        except (OSError, ValueError):
+            continue
+        live.append(entry.name)
+    assert live, "root conftest did not register this session's controller"
+
+
+@needs_util_linux
+def test_one_live_session_keeps_the_root_protected_after_another_ends(tmp_path: Path) -> None:
+    """Codex P2 on #702: overlapping controllers must not lift each other's protection."""
+    root, env = _writer_root(tmp_path)
+    _protect(root, _dead_pid())  # the session that already finished
+    _protect(root, os.getpid())  # the one still running
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 1, done.stderr
+    assert "protected by a running test session" in done.stderr
+    assert _sync_argv(tmp_path) == []
+
+
+@needs_util_linux
+def test_a_protected_root_is_never_synced(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    _protect(root, os.getpid())
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 1, done.stderr
+    assert "protected by a running test session" in done.stderr
+    assert "synchronization required" in done.stderr
+    assert _sync_argv(tmp_path) == [], "a protected root is verified, never synced"
+    assert not (root / ".venv").exists()
+    assert not (root / ".l9" / "uv-environment.installing").exists()
+
+
+@needs_util_linux
+def test_a_protected_root_reached_through_a_symlink_is_still_protected(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    _protect(root, os.getpid())
+    linked = tmp_path / "home" / ".cursor-governance"
+    linked.parent.mkdir()
+    linked.symlink_to(root, target_is_directory=True)
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(linked)], env=env, capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 1, done.stderr
+    assert _sync_argv(tmp_path) == []
+
+
+@needs_util_linux
+def test_a_cached_protected_root_verifies_without_a_lock_or_marker(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    first = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert first.returncode == 0, first.stderr
+    (root / ".l9" / "uv-environment.lock").unlink(missing_ok=True)
+
+    _protect(root, os.getpid())
+    second = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert second.returncode == 0, second.stderr
+    assert "cached locked environment" in second.stderr
+    assert len(_sync_argv(tmp_path)) == 1, "the protected apply did not sync"
+    assert not (root / ".l9" / "uv-environment.lock").exists(), "no lock was taken"
+    assert not (root / ".l9" / "uv-environment.installing").exists()
+
+
+@needs_util_linux
+def test_a_stale_protection_no_longer_blocks_apply(tmp_path: Path) -> None:
+    root, env = _writer_root(tmp_path)
+    _protect(root, _dead_pid())
+    done = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert done.returncode == 0, done.stderr
+    assert "protected" not in done.stderr
+    assert len(_sync_argv(tmp_path)) == 1

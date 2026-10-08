@@ -55,6 +55,23 @@ class SelectPrPytestPathsTests(unittest.TestCase):
         self.assertFalse(any(PE in item or item == PE for item in selected))
         self.assertFalse(any(GENERATED in item or item == GENERATED for item in selected))
 
+    def test_a_directory_is_never_split_by_a_parent_directory_target(self) -> None:
+        # pytest builds one `Dir` node per contiguous run of arguments; the
+        # second `tests/ops/memory` node here lost the directory's conftest
+        # fixtures (`fixture 'bound' not found`).
+        changed = [
+            "tests/ops/memory/test_secret_isolation.py",
+            "tests/ops/test_precommit_helm_yaml_exclude.py",
+            "tests/ops/memory/test_control_plane_client.py",
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            registry = _registry(Path(raw) / "python-contract.json")
+            selected = select_pr_pytest_paths(changed, registry=registry)
+        self.assertEqual(sorted(changed), selected)
+        parents = [str(Path(item).parent) for item in selected]
+        runs = [parent for i, parent in enumerate(parents) if i == 0 or parents[i - 1] != parent]
+        self.assertEqual(len(runs), len(set(runs)), f"a directory is split: {selected}")
+
     def test_never_emits_repo_root_dot(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             registry = _registry(Path(raw) / "python-contract.json")
