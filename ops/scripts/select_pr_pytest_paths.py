@@ -434,7 +434,13 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             + ", ".join(unrunnable),
             file=sys.stderr,
         )
-    return selected
+    # Sorted, so every directory's targets are contiguous. pytest builds its
+    # collection tree in argument order: `a/memory/x.py a/y.py a/memory/z.py`
+    # yields two `Dir memory` nodes, and the second one does not carry that
+    # directory's conftest fixtures (`fixture 'bound' not found` across
+    # tests/ops/memory). Lexicographic order cannot interleave a parent
+    # directory's file between two of a child directory's.
+    return sorted(selected)
 
 
 def _read_changed(path: Path) -> list[str]:
