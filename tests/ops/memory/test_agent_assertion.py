@@ -24,11 +24,37 @@ from ops.memory.agent_assertion import (
     ENV_AGENT_SIGNING_KEYS_JSON,
     ENV_AGENTS_DOOR_SECRET,
     ENV_HUMAN_DOOR_SECRET,
+    ENV_IDENTITY_ASSERTION_HMAC,
+    ENV_IDENTITY_ASSERTION_JSON,
     _fallback_mint_assertion,
     build_agent_mcp_env,
     env_from_local_secret_map,
+    identity_assertion_hmac,
+    local_assertion_digest,
     mint_assertion,
 )
+from ops.memory.agent_identity import (
+    normalized_runtime_evidence,
+    runtime_evidence_digest,
+)
+
+
+def _identity(agent_id: str) -> dict:
+    actor = f"l9.actor-registry/global@1#{agent_id}"
+    return {
+        "schema": "l9.identity-assertion/v1",
+        "subject_ref": actor,
+        "product_ref": "l9-graphiti-memory:product/l9-graphite-memory",
+        "resolved_dimensions": {
+            "actor_identity": actor,
+            "surface_identity": "unknown",
+            "release_identity": "unknown",
+            "runtime_identity": "unknown",
+            "constellation_identity": "unknown",
+        },
+        "result": "resolved",
+    }
+
 
 DOOR = "door-secret-at-least-24-chars!!"
 HUMAN = "human-secret-at-least-24-chars!"
@@ -59,6 +85,7 @@ def test_build_agent_mcp_env_omits_human_secret() -> None:
         agents_door_secret=DOOR,
         signing_key=CURSOR_KEY,
         grants={"cursor": {"role": "orchestrator"}},
+        identity_assertion=_identity("cursor"),
     )
     assert env[ENV_AGENT_ID] == "cursor"
     assert ENV_AGENT_ASSERTION in env
@@ -72,6 +99,7 @@ def test_refuses_human_agent_id() -> None:
             agents_door_secret=DOOR,
             signing_key="human-signing-key-24chars!!",
             grants={},
+            identity_assertion=_identity("human"),
         )
 
 
@@ -82,12 +110,13 @@ def test_refuses_a_principal_without_its_own_grant() -> None:
             agents_door_secret=DOOR,
             signing_key=CLAUDE_KEY,
             grants={"cursor": GRANTS["cursor"]},
+            identity_assertion=_identity("claude-code"),
         )
 
 
 def test_env_from_local_secret_map(tmp_path: Path) -> None:
     sp, gp = _two_principal_store(tmp_path)
-    env = env_from_local_secret_map("cursor", sp, gp)
+    env = env_from_local_secret_map("cursor", sp, gp, _identity("cursor"))
     assert env[ENV_AGENTS_DOOR_SECRET] == DOOR
     assert ENV_HUMAN_DOOR_SECRET not in env
     assert HUMAN not in json.dumps(env)
@@ -97,7 +126,7 @@ def test_env_carries_only_the_launching_principals_material(tmp_path: Path) -> N
     """P570-F1 closure, part 1: a peer's key and grants are not readable."""
 
     sp, gp = _two_principal_store(tmp_path)
-    env = env_from_local_secret_map("claude-code", sp, gp)
+    env = env_from_local_secret_map("claude-code", sp, gp, _identity("claude-code"))
 
     assert json.loads(env[ENV_AGENT_SIGNING_KEYS_JSON]) == {"claude-code": CLAUDE_KEY}
     assert json.loads(env[ENV_AGENT_GRANTS_JSON]) == {"claude-code": GRANTS["claude-code"]}
@@ -119,7 +148,7 @@ def test_a_peer_assertion_cannot_be_used_from_a_launch_context(tmp_path: Path) -
     """
 
     sp, gp = _two_principal_store(tmp_path)
-    env = env_from_local_secret_map("claude-code", sp, gp)
+    env = env_from_local_secret_map("claude-code", sp, gp, _identity("claude-code"))
     exported_keys = json.loads(env[ENV_AGENT_SIGNING_KEYS_JSON])
     full_map = {"cursor": CURSOR_KEY, "claude-code": CLAUDE_KEY}
 
@@ -165,6 +194,9 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
         "json",
     ]
 
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
     assert helper.main(argv) == 0
     out = capsys.readouterr().out.strip()
@@ -184,8 +216,11 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
 
 
 def test_print_helper_skip_message_names_no_path(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     missing = tmp_path / "absent.json"
     assert (
         helper.main(
@@ -196,3 +231,206 @@ def test_print_helper_skip_message_names_no_path(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert str(tmp_path) not in captured.err
+
+
+_PROJECTION_DIGEST = "sha256:489195262a26195a649170c63145f6ad317a99eb082bf360444164ad3ef5a667"
+_AUTHORITY = "07b0df96fc3008d55a96f804923e2177ff312295"
+GOLDEN_KEY = "golden-identity-hmac-key"
+GOLDEN_DIGEST = "sha256:8c72474b8c0a21b465ec6d8971217455754b89008fcd61c88d51fecc47af816f"
+GOLDEN_HMAC = "a937237875b4b8b3c3ed51ec151383806480c03da8e4e8606c8fc69435373b2e"
+
+
+def _golden_body() -> dict:
+    actor = "l9.actor-registry/global@1#claude-code"
+    return {
+        "schema": "l9.identity-assertion/v1",
+        "subject_ref": actor,
+        "product_ref": "l9-graphiti-memory:product/l9-graphite-memory",
+        "resolved_dimensions": {
+            "actor_identity": actor,
+            "constellation_identity": "unknown",
+            "release_identity": "unknown",
+            "runtime_identity": "unknown",
+            "surface_identity": "l9.surface-registry/global@1#claude-code-cli",
+        },
+        "bindings": [
+            "l9.cursor-governance/identity-binding@1",
+            "l9.cursor-governance/agent-bindings@2#claude-code",
+        ],
+        "evidence_refs": [
+            "l9.projection/cursor-governance-identity@1",
+            "l9.cursor-governance/identity-binding@1",
+            "l9.cursor-governance/agent-bindings@2#claude-code",
+        ],
+        "resolver_ref": "l9.cursor-governance/resolver/runtime-agent-identity@1",
+        "governing_coordinates": {
+            "actor_registry_digest": (
+                "sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f"
+            ),
+            "agent_bindings_ref": "l9.cursor-governance/agent-bindings@2",
+            "global_identity_authority_revision": _AUTHORITY,
+            "identity_binding_ref": "l9.cursor-governance/identity-binding@1",
+            "identity_projection_digest": _PROJECTION_DIGEST,
+            "identity_projection_ref": "l9.projection/cursor-governance-identity@1",
+            "surface_registry_digest": (
+                "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988"
+            ),
+        },
+        "result": "resolved",
+        "provenance": {
+            "runtime_evidence_digest": (
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            )
+        },
+    }
+
+
+def _resolved(env: dict[str, str]) -> dict:
+    return helper.build_runtime_identity_assertion(env)
+
+
+def test_cursor_resolves_actor_and_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    assertion = _resolved({"CURSOR_AGENT": "1"})
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#cursor"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#cursor-ide"
+    assert assertion["result"] == "resolved"
+
+
+def test_claude_cli_resolves_actor_and_surface() -> None:
+    assertion = _resolved({"CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "cli"})
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-cli"
+
+
+def test_claude_remote_mobile_resolves_mobile_surface() -> None:
+    assertion = _resolved(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+            "CLAUDE_CODE_SESSION_ID": "session-secret-must-not-leak",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+    encoded = json.dumps(assertion)
+    assert "session-secret-must-not-leak" not in encoded
+    evidence = normalized_runtime_evidence(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+            "CLAUDE_CODE_SESSION_ID": "session-secret-must-not-leak",
+        }
+    )
+    assert evidence["CLAUDE_CODE_SESSION_ID_present"] is True
+    assert "session-secret-must-not-leak" not in json.dumps(evidence)
+
+
+def test_unknown_claude_remote_entrypoint_refuses_identity() -> None:
+    with pytest.raises(Exception, match="no memory identity|no registered|ENTRYPOINT"):
+        _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_unknown"})
+
+
+def test_adapter_without_surface_evidence_is_unknown() -> None:
+    assertion = _resolved({"L9_MEMORY_AGENT_ID": "codex"})
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#codex"
+    assert dims["surface_identity"] == "unknown"
+    assert assertion["result"] == "resolved"
+    assert "codex-cli" not in dims["surface_identity"]
+
+
+def test_actor_ref_comes_from_the_binding_not_a_guess() -> None:
+    import yaml
+
+    registry = yaml.safe_load(
+        (helper._ROOT / "environment/agents/agent_registry.yaml").read_text(encoding="utf-8")
+    )
+    assertion = _resolved({"CURSOR_AGENT": "1"})
+    assert assertion["subject_ref"] == registry["agents"]["cursor"]["actor_ref"]
+    assert assertion["subject_ref"] == assertion["resolved_dimensions"]["actor_identity"]
+
+
+def test_resolved_surface_must_be_in_the_binding() -> None:
+    import yaml
+
+    from ops.memory.agent_identity import surface_ref_from_binding
+
+    registry = yaml.safe_load(
+        (helper._ROOT / "environment/agents/agent_registry.yaml").read_text(encoding="utf-8")
+    )
+    binding = registry["agents"]["claude-code"]
+    cli = surface_ref_from_binding("claude-code-cli", binding)
+    assert cli == "l9.surface-registry/global@1#claude-code-cli"
+    assert cli in binding["surface_refs"]
+    assert surface_ref_from_binding("claude-code-desktop", binding) == "unknown"
+    desktop = _resolved({"CLAUDECODE": "1"})
+    assert desktop["resolved_dimensions"]["actor_identity"].endswith("#claude-code")
+    assert desktop["resolved_dimensions"]["surface_identity"] == "unknown"
+
+
+def test_assertion_carries_authority_revision_and_projection_digest() -> None:
+    assertion = _resolved({"CURSOR_AGENT": "1"})
+    coords = assertion["governing_coordinates"]
+    assert coords["global_identity_authority_revision"] == _AUTHORITY
+    assert coords["identity_projection_digest"] == _PROJECTION_DIGEST
+
+
+def test_assertion_digest_is_deterministic() -> None:
+    first = _resolved({"CURSOR_AGENT": "1"})
+    second = _resolved({"CURSOR_AGENT": "1"})
+    assert first["assertion_digest"] == second["assertion_digest"]
+    assert first["assertion_digest"] == local_assertion_digest(first)
+
+
+def test_golden_identity_hmac_vector() -> None:
+    body = _golden_body()
+    assert local_assertion_digest(body) == GOLDEN_DIGEST
+    assert identity_assertion_hmac(GOLDEN_DIGEST, GOLDEN_KEY) == GOLDEN_HMAC
+
+
+def test_authentication_token_wire_format_is_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
+    import secrets
+    import time
+
+    monkeypatch.setattr(time, "time", lambda: 1_700_000_000)
+    monkeypatch.setattr(secrets, "token_hex", lambda n: "ab" * n)
+    token = _fallback_mint_assertion("claude-code", GOLDEN_KEY, ttl_seconds=3600)
+    assert token == (
+        "claude-code.1700003600.abababababababababababababababab."
+        "16b37add9b79e72250b4560ea23571d3340a9959208e4e13598c898014f663c4"
+    )
+    assert verify_assertion(token, {"claude-code": GOLDEN_KEY}) == "claude-code"
+
+
+def test_launch_env_omits_human_secret_and_peer_material(tmp_path: Path) -> None:
+    sp, gp = _two_principal_store(tmp_path)
+    env = env_from_local_secret_map("claude-code", sp, gp, _identity("claude-code"))
+    assert ENV_IDENTITY_ASSERTION_JSON in env
+    assert ENV_IDENTITY_ASSERTION_HMAC in env
+    assert ENV_HUMAN_DOOR_SECRET not in env
+    everything = "\n".join(env.values())
+    assert HUMAN not in everything
+    assert CURSOR_KEY not in everything
+    identity = json.loads(env[ENV_IDENTITY_ASSERTION_JSON])
+    assert identity["assertion_digest"].startswith("sha256:")
+    assert env[ENV_IDENTITY_ASSERTION_HMAC] == identity_assertion_hmac(
+        identity["assertion_digest"], CLAUDE_KEY
+    )
+
+
+def test_session_start_env_contains_identity_assertion() -> None:
+    bootstrap = helper._ROOT / "ops/hooks/session_start_bootstrap.sh"
+    text = bootstrap.read_text(encoding="utf-8")
+    start = text.index("ADR-0031: mint signed agent assertion")
+    block = text[start : text.index('COMBINED="$COMBINED"', start)]
+    assert "L9_MEMORY_IDENTITY_ASSERTION_JSON" in block
+    assert "L9_MEMORY_IDENTITY_ASSERTION_HMAC" in block
+    assert "L9_MEMORY_HUMAN_DOOR_SECRET" in text
+    assert text.count('assertion_env.pop("L9_MEMORY_HUMAN_DOOR_SECRET"') == 1
+    evidence = normalized_runtime_evidence({"CURSOR_AGENT": "1"})
+    again = normalized_runtime_evidence({"CURSOR_AGENT": "1"})
+    assert runtime_evidence_digest(evidence) == runtime_evidence_digest(again)

@@ -29,6 +29,8 @@ class ManusMemoryLifecycleTests(unittest.TestCase):
             "L9_MEMORY_AGENT_ASSERTION": "test-assertion",
             "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": '{"manus":"test-key"}',
             "L9_MEMORY_AGENT_GRANTS_JSON": '{"manus":{"user_id":"manus_agent"}}',
+            "L9_MEMORY_IDENTITY_ASSERTION_JSON": "{}",
+            "L9_MEMORY_IDENTITY_ASSERTION_HMAC": "00",
         }
 
     def test_signed_agent_status_reports_names_only(self) -> None:
