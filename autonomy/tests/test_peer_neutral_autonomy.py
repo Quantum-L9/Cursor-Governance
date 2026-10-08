@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -24,6 +25,10 @@ class PeerNeutralAutonomyTests(unittest.TestCase):
             AdapterConfig.from_dict(payload)
         )
 
+    def _adapter_002(self, payload: dict):
+        report = self._report(payload)
+        return next(check for check in report.checks if check.check_id == "ADAPTER-002")
+
     def test_current_examples_bind_canonical_peer_and_surface(self) -> None:
         for name, peer_ref, surface in (
             ("adapters/cursor.json", "cursor", "cursor-ide"),
@@ -31,7 +36,10 @@ class PeerNeutralAutonomyTests(unittest.TestCase):
         ):
             config = AdapterConfig.from_dict(load_example(name))
             self.assertEqual((config.peer_ref, config.surface), (peer_ref, surface))
-            self.assertEqual(self._report(load_example(name)).status.value, "PASS")
+            report = self._report(load_example(name))
+            self.assertEqual(report.status.value, "PASS")
+            binding = next(check for check in report.checks if check.check_id == "ADAPTER-002")
+            self.assertTrue(binding.passed)
 
     def test_string_false_cannot_become_true(self) -> None:
         payload = load_example("adapters/cursor.json")
@@ -91,7 +99,50 @@ class PeerNeutralAutonomyTests(unittest.TestCase):
     def test_unregistered_peer_fails_closed(self) -> None:
         payload = load_example("adapters/cursor.json")
         payload["peer_ref"] = "unknown-peer"
-        self.assertEqual(self._report(payload).status.value, "FAIL")
+        report = self._report(payload)
+        self.assertEqual(report.status.value, "FAIL")
+        binding = next(check for check in report.checks if check.check_id == "ADAPTER-002")
+        self.assertFalse(binding.passed)
+
+    def test_nonexistent_provider_or_profile_fails_adapter_002(self) -> None:
+        provider = load_example("adapters/cursor.json")
+        provider["provider_ref"] = "missing-provider"
+        self.assertFalse(self._adapter_002(provider).passed)
+        profile = load_example("adapters/cursor.json")
+        profile["execution_profile_ref"] = "missing-profile"
+        self.assertFalse(self._adapter_002(profile).passed)
+
+    def test_ambiguous_surface_without_coordinates_fails_adapter_002(self) -> None:
+        payload = load_example("adapters/cursor.json")
+        payload.pop("provider_ref")
+        payload.pop("execution_profile_ref")
+        self.assertFalse(self._adapter_002(payload).passed)
+
+    def test_malformed_or_unavailable_registry_fails_closed(self) -> None:
+        payload = load_example("adapters/cursor.json")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            conformance = AdapterConformance(load_policy("adapter-requirements"), root)
+            unavailable = conformance.run(AdapterConfig.from_dict(payload))
+            unavailable_check = next(
+                check for check in unavailable.checks if check.check_id == "ADAPTER-002"
+            )
+            self.assertFalse(unavailable_check.passed)
+            self.assertEqual(unavailable.status.value, "FAIL")
+            registry = root / "environment" / "agents"
+            schema_dir = registry / "schemas"
+            schema_dir.mkdir(parents=True)
+            (registry / "PEER_RUNTIME_BINDINGS.yaml").write_text("[]\n", encoding="utf-8")
+            (schema_dir / "peer-runtime-bindings.schema.json").write_text(
+                '{"type": "object"}\n',
+                encoding="utf-8",
+            )
+            malformed = conformance.run(AdapterConfig.from_dict(payload))
+            malformed_check = next(
+                check for check in malformed.checks if check.check_id == "ADAPTER-002"
+            )
+            self.assertFalse(malformed_check.passed)
+            self.assertEqual(malformed.status.value, "FAIL")
 
 
 if __name__ == "__main__":

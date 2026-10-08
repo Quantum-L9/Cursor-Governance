@@ -16,8 +16,8 @@ TOPOLOGIES = {
     "EXISTING_SYSTEM_CAMPAIGN",
 }
 ADMISSION = {"UNCHECKED", "COMPATIBLE", "BLOCKED"}
-GREENFIELD_CORE_STAGES = ("architecture", "planning", "campaign", "realization")
-GREENFIELD_COHORT = {"l9-global-architect", "l9-plan", "l9-pe-campaign-activate"}
+GREENFIELD_CORE_STAGES = ("architecture",)
+GREENFIELD_COHORT = {"l9-global-architect"}
 
 
 def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
@@ -95,26 +95,21 @@ def validate_graph(data: Any, envelope: Any | None = None) -> dict[str, Any]:
                     errors.append(f"{label}.orchestration.profile is invalid")
                 cohort = orchestration.get("cohort")
                 if not isinstance(cohort, list) or set(cohort) != GREENFIELD_COHORT:
-                    errors.append(
-                        f"{label}.orchestration.cohort must load GAR, Plan, and Campaign Activation"
-                    )
+                    errors.append(f"{label}.orchestration.cohort must load GAR")
                 stages = orchestration.get("stages")
                 if not isinstance(stages, list):
                     errors.append(f"{label}.orchestration.stages must be a list")
                 else:
                     stage_ids = [stage.get("id") for stage in stages if isinstance(stage, dict)]
-                    if tuple(stage_ids[:4]) != GREENFIELD_CORE_STAGES:
-                        errors.append(
-                            f"{label}.orchestration must start with GAR, Plan, Campaign, "
-                            "and realization"
-                        )
+                    if tuple(stage_ids[:1]) != GREENFIELD_CORE_STAGES:
+                        errors.append(f"{label}.orchestration must start with GAR")
                     requested = orchestration.get("birth_handoff_requested")
                     if not isinstance(requested, bool):
                         errors.append(
                             f"{label}.orchestration.birth_handoff_requested must be boolean"
                         )
                     elif requested:
-                        if stage_ids[4:] != ["birth_handoff", "birth"]:
+                        if stage_ids[1:] != ["birth_handoff", "birth"]:
                             errors.append(
                                 f"{label}.orchestration requested birth must declare handoff "
                                 "then factory"

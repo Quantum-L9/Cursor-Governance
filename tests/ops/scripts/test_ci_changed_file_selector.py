@@ -124,9 +124,7 @@ def test_live_ops_script_change_skips_non_owner_suites() -> None:
     assert _suite_intersects(by_id["repo-root"], selected, changed, selector)
     for suite_id in (
         "skill-contracts",
-        "claude-code-autonomy",
         "subagent-generated-data-wave3",
-        "program-execution-controller",
     ):
         assert not _suite_intersects(by_id[suite_id], selected, changed, selector), suite_id
 

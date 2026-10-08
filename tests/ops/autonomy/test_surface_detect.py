@@ -12,7 +12,6 @@ from ops.autonomy.surface_detect import (
     claude_runtime_present,
     detect_surface,
     is_claude_gate_surface,
-    kernel_latch_surface,
 )
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -97,37 +96,13 @@ def test_shell_python_parity(env: dict[str, str], expected: str) -> None:
     assert detect_surface(env) == expected
 
 
-def test_claude_gate_and_kernel_helpers() -> None:
+def test_claude_gate_helpers() -> None:
     assert is_claude_gate_surface({"CLAUDECODE": "1"}) is True
     assert is_claude_gate_surface({"CURSOR_AGENT": "1"}) is False
     assert is_claude_gate_surface({}) is False  # unknown → not a Claude gate surface
     assert claude_runtime_present({"CLAUDECODE": "1"}) is True
     assert claude_runtime_present({"L9_GOVERNANCE_SURFACE": "claude-code"}) is False
     assert claude_runtime_present({"CURSOR_EXTENSION_HOST_ROLE": "agent-exec"}) is False
-    assert kernel_latch_surface({"CLAUDECODE": "1"}) is True
-    assert kernel_latch_surface({"CLAUDE_CODE_REMOTE": "true"}) is True
-    assert kernel_latch_surface({"L9_GOVERNANCE_SURFACE": "codex"}) is True
-    assert kernel_latch_surface({"CURSOR_AGENT": "1"}) is True
-    assert kernel_latch_surface({}) is True
-    assert kernel_latch_surface({"GITHUB_ACTIONS": "true"}) is False
-    assert kernel_latch_surface({"CI": "true"}) is False
-    assert kernel_latch_surface({"GITHUB_ACTIONS": "true", "CURSOR_AGENT": "1"}) is True
-
-
-def test_non_truthy_ci_markers_do_not_skip_the_kernel_latch() -> None:
-    """CI is the one thing that SKIPS the latch, so a misread is a bypass.
-
-    GitHub Actions writes the literal string "false" for a disabled
-    condition. Treating any non-empty value as CI would silently turn the
-    kernel gate off in a non-CI environment.
-    """
-    for value in ("false", "0", "no", "off", " ", "FALSE"):
-        assert kernel_latch_surface({"GITHUB_ACTIONS": value}) is True, value
-        assert kernel_latch_surface({"CI": value}) is True, value
-    # Truthy spellings still skip, case-insensitively.
-    for value in ("true", "TRUE", "1", "yes", " true "):
-        assert kernel_latch_surface({"GITHUB_ACTIONS": value}) is False, value
-        assert kernel_latch_surface({"CI": value}) is False, value
 
 
 def test_detect_surface_keeps_its_governance_profile_domain() -> None:

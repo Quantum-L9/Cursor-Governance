@@ -23,7 +23,9 @@ from ops.autonomy import receipt_binding  # noqa: E402
 
 def _load_plan_validator():
     """Import the skill pack's validator the way the pack is invoked."""
-    script = REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py"
+    script = (
+        REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py"
+    )
     sys.path.insert(0, str(script.parent))
     try:
         spec = importlib.util.spec_from_file_location("_plan_kernel_receipt", script)
@@ -98,14 +100,6 @@ def test_skill_pack_fallback_matches_the_library() -> None:
         assert bare == expected
 
 
-def test_sha256_file_is_exact_bytes_not_canonicalized(tmp_path: Path) -> None:
-    path = tmp_path / "r.md"
-    path.write_text("x\n", encoding="utf-8")
-    first = receipt_binding.sha256_file(path)
-    path.write_text("x \n", encoding="utf-8")
-    assert receipt_binding.sha256_file(path) != first
-
-
 def test_tree_digest_survives_a_no_op_commit(repo: Path) -> None:
     """The defect the L4 content binding closes: HEAD moved, tree did not."""
     before = receipt_binding.tree_digest(repo)
@@ -166,7 +160,7 @@ def test_module_writes_no_receipt_and_decides_no_policy() -> None:
 
 def test_callers_prefer_in_repo_receipt_binding() -> None:
     """Bare `receipt_binding` on sys.path is a third-party module, not ours."""
-    for rel in ("ops/autonomy/l4_local.py", "ops/autonomy/kernel_predicates.py"):
+    for rel in ("ops/autonomy/l4_local.py",):
         src = (REPO / rel).read_text(encoding="utf-8")
         in_repo = src.index("from ops.autonomy.receipt_binding import")
         local = src.index("from receipt_binding import")
@@ -174,9 +168,9 @@ def test_callers_prefer_in_repo_receipt_binding() -> None:
 
 
 def test_skill_pack_loads_binding_by_file_location() -> None:
-    src = (REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py").read_text(
-        encoding="utf-8"
-    )
+    src = (
+        REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "validate_plan_kernel_receipt.py"
+    ).read_text(encoding="utf-8")
     assert "spec_from_file_location" in src
     assert "from ops.autonomy import receipt_binding" not in src
 

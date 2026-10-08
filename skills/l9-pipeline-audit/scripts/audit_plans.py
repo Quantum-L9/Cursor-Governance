@@ -7,7 +7,6 @@ import argparse
 import json
 import os
 import re
-import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -285,19 +284,12 @@ def is_simple_kind(frontmatter: dict[str, Any], body: str) -> bool:
 
 
 def kernel_unfired(path: Path) -> bool:
-    # Deliberately broad: this reaches into a sibling skill by path and imports
-    # it dynamically. Any failure of that arrangement means "cannot prove the
-    # kernel is unfired", which is False, not an audit crash.
-    # nosemgrep: l9.baseline.python.broad-except
-    try:
-        scripts = Path(__file__).resolve().parents[2] / "l9-plan" / "scripts"
-        if str(scripts) not in sys.path:
-            sys.path.insert(0, str(scripts))
-        import validate_plan_kernel_receipt as checker
+    """The retired plan-kernel checker is not an audit execution owner.
 
-        return bool(checker.check_plan(path))
-    except Exception:
-        return False
+    Absence of that checker does not make a plan incomplete.
+    """
+    del path
+    return False
 
 
 def classify_components(
@@ -350,7 +342,7 @@ def flags_for(
     if STATUS_SUPERSEDED_RE.search(body) or path.name in superseded_names:
         flags.append("superseded")
     fm = frontmatter or {}
-    if not is_simple_kind(fm, body) and EXECUTE_NEEDLE not in body:
+    if has_live_campaign_command(body):
         flags.append("missing_execute_section")
     if kernel_unfired(path):
         flags.append("kernel_unfired")

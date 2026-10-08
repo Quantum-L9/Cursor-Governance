@@ -12,7 +12,6 @@
 ```yaml
 packet_id: string          # e.g. autonomy-2026-08-02-1
 authority: A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
-profile: pr-convergence
 autonomous_merge: false
 declared_prs: [number]     # lock keys pr:<n>
 declared_branches: [string]

@@ -442,7 +442,7 @@ def main() -> int:
     plan_path = safe_cli_path(args.plan_json)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     skill_root = Path(__file__).resolve().parents[1]
-    repo_root = skill_root.parents[1]
+    repo_root = skill_root.parents[2]
     if args.template:
         template_path = safe_cli_path(args.template)
     else:

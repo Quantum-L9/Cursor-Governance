@@ -22,7 +22,7 @@ up to `origin/main` **in place**, in parallel, when they are different
 gitdirs.
 `.venv`, env.local keep-list files (`.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json`), **corpus keep-list files**
-(`TODO.md`, `docs/plans/`, `environment/program-execution/campaigns/`
+(`TODO.md`, `docs/plans/`
 — `ssot_is_ff_corpus_keep`), and unique untracked files
 stay. Unique local commits and other dirty tracked paths are parked first.
 Nothing unique is deleted.

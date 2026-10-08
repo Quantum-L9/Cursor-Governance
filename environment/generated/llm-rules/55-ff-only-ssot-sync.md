@@ -18,8 +18,7 @@ governance clone,” use **`/ff`** — nothing else.
 | [`skills/l9-repo-sync/scripts/ff.sh`](../skills/l9-repo-sync/scripts/ff.sh) | Park unique work, then `reset --keep` |
 
 An in-place catch-up leaves `.venv`, **env.local keep-list files**, **corpus
-keep-list files** (`TODO.md`, `docs/plans/`,
-`environment/program-execution/campaigns/` — see
+keep-list files** (`TODO.md`, `docs/plans/` — see
 `ssot_is_ff_corpus_keep` in `ops/scripts/lib/ssot_machine_local_keep.sh`), and
 unique untracked files. Unique commits and other dirty tracked bytes are parked
 (preserve branch, dirty ref, `$HOME/.cursor/l9-ff-hold/`). That is the

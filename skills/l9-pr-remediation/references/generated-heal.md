@@ -20,7 +20,7 @@ Never `git merge origin/main` to "fix" a failing required check. After the oldes
 
 After `git merge origin/main` (or GitHub `CONFLICTING`), list dirty / unresolved paths.
 
-A path is generated when `ops/scripts/sync_generated_artifacts.py` `is_generated_path` is true, or the path is `environment/program-execution/MANIFEST.json`.
+A path is generated when `ops/scripts/sync_generated_artifacts.py` `is_generated_path` is true.
 
 File-by-file architecture audit is forbidden unless
 `git diff --name-only --diff-filter=U` lists a path that is **not** generated.
@@ -31,14 +31,7 @@ File-by-file architecture audit is forbidden unless
 "$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --root . --force
 ```
 
-When `environment/program-execution/MANIFEST.json` is in the set:
-
-```bash
-"$PWD/.venv/bin/python" environment/program-execution/scripts/generate_manifest.py
-"$PWD/.venv/bin/python" environment/program-execution/scripts/validate_manifest.py
-```
-
-`validate_manifest.py` must print `"status": "PASS"`. Then `PR_BASE=origin/main make precommit-repo`, one commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+Then `PR_BASE=origin/main make precommit-repo`, one commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. An unexpected Program Execution manifest is not a generated artifact this skill regenerates.
 
 ## Fail closed
 

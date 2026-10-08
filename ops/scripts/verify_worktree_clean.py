@@ -39,10 +39,7 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 _CORPUS_EXACT = frozenset({"TODO.md"})
-_CORPUS_PREFIXES = (
-    "docs/plans/",
-    "environment/program-execution/campaigns/",
-)
+_CORPUS_PREFIXES = ("docs/plans/",)
 
 
 def _is_corpus_keep(rel: str) -> bool:

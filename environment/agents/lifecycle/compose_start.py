@@ -443,8 +443,8 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
 
     Two paths, never mixed:
 
-    1. ``L9_ADMISSION_TOKEN`` present — Program Execution / root Autonomy
-       only. Missing DB or unknown token stays denied (PR #287 floor).
+    1. ``L9_ADMISSION_TOKEN`` present — root Autonomy only. Missing DB or
+       unknown token stays denied (PR #287 floor).
     2. No token — host-native. Remediator, recon, issue remediator, and
        other managed Cursor Task types, capped by the execution profile.
        PEC is not consulted.
@@ -478,7 +478,7 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
         "admission_token": bound["admission_token"],
         "lease_id": bound["lease_id"],
         "action_id": bound["action_id"],
-        "path": "program-execution",
+        "path": "root-autonomy",
     }
 
 

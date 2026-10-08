@@ -14,13 +14,12 @@ tags: [l9, autonomy, first_class, control_plane]
 # Root autonomy control plane — metadata
 
 **SSOT path:** `autonomy/`  
-**Provider:** `environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml`  
 **owns_program_state:** `false`
 
 ## Purpose
 
-Campaign compiler, leases, capability gateway, and receipts. Subordinate to the
-Program Execution Controller.
+Campaign compiler, leases, capability gateway, receipts, and provider-neutral
+bounded-concurrency runtime. Provider adapters remain thin consumers.
 
 ## Not for
 

@@ -19,7 +19,6 @@ broken. Also gates that governed readers no longer consume agent_registry.execut
 from __future__ import annotations
 
 import importlib.util
-import re
 import unittest
 from pathlib import Path
 
@@ -98,37 +97,6 @@ class ExecutablePeerContractTests(unittest.TestCase):
         module._check_bindings(model, errors)
         self.assertTrue(any("[E7]" in e for e in errors), errors)
 
-    def test_e8_unknown_adapter(self) -> None:
-        module = _load()
-        model = module.ExecutablePeerModel(REPO_ROOT)
-        model.peers["cursor"]["execution"]["bindings"] = [
-            {
-                "surface": "cursor-ide",
-                "provider_ref": "no-such-adapter",
-                "execution_profile_ref": "worker-default",
-            }
-        ]
-        errors: list[str] = []
-        module._check_bindings(model, errors)
-        self.assertTrue(any("[E8]" in e for e in errors), errors)
-
-    def test_e12_binding_to_dormant_adapter(self) -> None:
-        module = _load()
-        model = module.ExecutablePeerModel(REPO_ROOT)
-        model.peers["codex"]["execution"] = {
-            "required": True,
-            "bindings": [
-                {
-                    "surface": "codex-cloud",
-                    "provider_ref": "codex-cloud",
-                    "execution_profile_ref": "worker-default",
-                }
-            ],
-        }
-        errors: list[str] = []
-        module._check_bindings(model, errors)
-        self.assertTrue(any("[E12]" in e for e in errors), errors)
-
     def test_e14_missing_bootstrap_carrier(self) -> None:
         module = _load()
         model = module.ExecutablePeerModel(REPO_ROOT)
@@ -169,16 +137,9 @@ class ExecutablePeerContractTests(unittest.TestCase):
         validator = (REPO_ROOT / "environment/agents/tools/validate_executable_peers.py").read_text(
             encoding="utf-8"
         )
-        probe = (
-            REPO_ROOT / "environment/program-execution/scripts/probe_executable_peers.py"
-        ).read_text(encoding="utf-8")
-        # Validator may load agent_registry for identity FKs only.
+        self.assertNotIn("environment/program-execution", validator)
         self.assertNotIn('agent.get("execution")', validator)
         self.assertNotRegex(validator, r"""agents\[.*\]\.get\(\s*['\"]execution['\"]""")
-        # Probe must read bindings only — never agent_registry.
-        self.assertIn("load_peer_bindings", probe)
-        self.assertNotIn("agent_registry.yaml", probe)
-        self.assertIsNotNone(re.search(r"execution\.required|get\(\"required\"\)", probe))
 
 
 if __name__ == "__main__":

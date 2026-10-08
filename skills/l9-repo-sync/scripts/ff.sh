@@ -151,7 +151,7 @@ if [ -n "$_SSOT_KEEP_LIB" ]; then
 else
   ssot_is_ff_corpus_keep() {
     case "${1#./}" in
-      TODO.md|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index) return 0 ;;
+      TODO.md|docs/plans/*|reports/repo-index/*|reports/repo-index) return 0 ;;
     esac
     return 1
   }

@@ -47,7 +47,6 @@ READABLE_PREFIXES = (
     "docs/",
     "environment/agents/",
     "environment/contracts/",
-    "environment/program-execution/",
     "governance/",
     "kernels/",
     "ops/autonomy/",
@@ -549,13 +548,6 @@ class GovernanceMcpService:
                     [
                         sys.executable,
                         str(self.governance_root / "environment/agents/tools/validate_agents.py"),
-                    ],
-                    [
-                        sys.executable,
-                        str(
-                            self.governance_root
-                            / "environment/program-execution/scripts/validate_execution_adapters.py"
-                        ),
                     ],
                 ]
             )

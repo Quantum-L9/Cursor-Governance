@@ -133,7 +133,6 @@ If the plan touches `pec/*`, `skills/*`, or `rules/*`, name the generator and in
 Cursor-Governance examples:
 
 - skill description/version → `"$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py` → `ops/generated/skill-registry.json` + `environment/agents/adapters/claude-code/generated/skill-registry.json`
-- `environment/program-execution/**` → core + pair `MANIFEST.yaml`
 - `rules/*` → `sync_generated_artifacts.py --force` for `rules/RULES-MANIFEST.*`
 
 A companion miss is a plan-gate failure, not a remote-CI discovery.

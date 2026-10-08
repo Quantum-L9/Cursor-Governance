@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# PUBLIC make improve — L4 begin / authorize only.
-# Tree kernels are NOT an L4 phase (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1).
-# They fire as the first step of make precommit-repo
-# (ops/autonomy/kernel_gate.py). Two-step:
-#   make improve                 → begin (if needed)
-#   make improve IMPROVE_RECORD=1 → authorize-release (no kernel stamp)
+# PUBLIC make improve - L4 begin / authorize only.
+# Two-step:
+#   make improve                  -> begin (if needed)
+#   make improve IMPROVE_RECORD=1 -> authorize-release
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -45,13 +43,13 @@ _phase() {
 
 if [[ "$IMPROVE_RECORD" = "1" ]]; then
   phase="$(_phase)"
-  if [[ "$phase" != "executing" && "$phase" != "kernels_recorded" ]]; then
+  if [[ "$phase" != "executing" ]]; then
     echo "FAIL: IMPROVE_RECORD refused — phase is '${phase:-none}'." >&2
     echo "      Run make improve first, then make improve IMPROVE_RECORD=1" >&2
-    echo "      to authorize-release. Kernels fire in make precommit-repo." >&2
+    echo "      to authorize-release." >&2
     exit 1
   fi
-  echo "--- make improve: authorize-release (phase=$phase; kernels are not L4) ---"
+  echo "--- make improve: authorize-release (phase=$phase) ---"
   _l4 authorize-release
   echo "RESULT: PASS — L4 release authorized. Next: PR_REMEDIATE=0 make pr"
   exit 0
@@ -64,25 +62,28 @@ if [[ -z "$phase" ]]; then
   phase="executing"
 elif [[ "$phase" = "release_authorized" ]]; then
   echo "OK: L4 already release_authorized — no begin."
+elif [[ "$phase" != "executing" ]]; then
+  # A phase this L4 no longer has (the retired kernels_recorded) cannot be
+  # authorized; begin again so the documented two-step flow still completes.
+  echo "--- make improve: l4-begin (retired phase '${phase}' migrated) ---"
+  _l4 begin ${CONTRACT_ID:+--contract-id "$CONTRACT_ID"} ${PR_BASE:+--base "$PR_BASE"}
+  phase="executing"
 fi
 
 cat <<EOF
 
 === L9_AGENT_REQUIRED ===
-ACTION: authorize_then_precommit
-SKILL: L4 authorize + kernel_gate precommit hook
+ACTION: authorize_then_publish
+SKILL: L4 local authorization
 COMMAND: make improve
 PHASE: ${phase}
 WORKSPACE: ${WS}
 PR_BASE: ${PR_BASE}
 INSTRUCTIONS:
   1. Authorize when the local program is finished: make improve IMPROVE_RECORD=1
-  2. Publish once: PR_REMEDIATE=0 make pr
-  3. The first step of precommit-repo is ops/autonomy/kernel_gate.py.
-     If it fails, apply Recursive Alignment then Validate & Repair, commit,
-     run the record command that hook prints, and re-run the same make pr.
-     Hooks and tests fire once after that hook passes.
-Kernels are not an L4 phase. Do not treat L4 record-kernels as the apply path.
+  2. Publish once through the sanctioned ceremony: make pr
+  3. If publication validation fails, stop on that evidence. Repair separately.
+     Any authored repair that changes the tree requires fresh authorize-release.
 === END L9_AGENT_REQUIRED ===
 
 RESULT: PASS — improve phase ready (authorize, then make pr)

@@ -13,8 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 REPO = ROOT.parents[1]
-PLAN_PASS = REPO / "skills" / "l9-plan" / "fixtures" / "plan_pass.json"
-RENDER = REPO / "skills" / "l9-plan" / "scripts" / "render_plan_pe_autonomy.py"
+PLAN_PASS = REPO / "skills" / "_archived" / "l9-plan" / "fixtures" / "plan_pass.json"
+RENDER = REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "render_plan_pe_autonomy.py"
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -25,7 +25,7 @@ from validate_plan_section_receipt import check_receipt  # noqa: E402
 # Repo-root paths: the scripts confine CLI arguments to the working directory,
 # so the SKILL.md Validation block is documented and run from the repo root.
 INVOKED = [
-    "skills/l9-plan/scripts/validate_plan_document.py",
+    "skills/_archived/l9-plan/scripts/validate_plan_document.py",
     "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
     "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
     "skills/l9-plan-simple/scripts/self_test.py",
@@ -41,7 +41,10 @@ def _skill_validation_scripts() -> list[str]:
     block = re.search(r"## Validation\s+.*?```bash\n(.*?)```", text, re.S)
     if not block:
         return []
-    return re.findall(r"skills/[a-zA-Z0-9_.-]+/scripts/[a-zA-Z0-9_./-]+\.py", block.group(1))
+    return re.findall(
+        r"skills/(?:_archived/)?[a-zA-Z0-9_.-]+/scripts/[a-zA-Z0-9_./-]+\.py",
+        block.group(1),
+    )
 
 
 def _render(dest: Path, mode: str = "cursor-build") -> None:

@@ -4,18 +4,13 @@
 SSOT doctrine: ops/autonomy/surface_profile.yaml (l4_local_autonomy).
 State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
-Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
-precommit-repo). They are not an L4 phase, and authorize-release does not
-require a kernel stamp (CANONICAL_LAW KERNEL_PRECOMMIT_HOOK_V1). It does
-require kernel *evidence* when a kernel receipt exists: a present receipt
-must still re-derive clean, and an absent one authorizes, which is what
-keeps the corpus-only `/ff` publish path working (CANONICAL_LAW §6.2.9
-item 6, the mechanical blocker `eace25ed` named).
+L4 owns exact-tree release authorization only. It does not own validation
+or repair: publication validation belongs to `make pr`, and audit/repair
+capabilities run outside it (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1).
 
 Phases:
-  executing          — local commits on stacked branch; push/PR denied
-  kernels_recorded   — compat only; record-kernels still stamps kernel_gate
-  release_authorized — scoped push + PR using PULL_REQUEST_TEMPLATE allowed
+  executing          - local commits on stacked branch; push/PR denied
+  release_authorized - scoped push + PR for the exact authorized tree
 
 The release receipt binds the working tree's content digest. `head_sha`
 stays recorded, and remains what `extend-release` chains on, but it is
@@ -49,11 +44,7 @@ RECEIPT_SCHEMA_V1 = "l9.l4_local_release_receipt/v1"
 STATE_REL = Path(".l9/autonomy/l4-local-phase.json")
 RECEIPT_REL = Path(".l9/autonomy/l4-release-receipt.json")
 
-KERNEL_RECURSIVE_ALIGNMENT = "kernels/Recursive Alignment.md"
-KERNEL_VALIDATE_REPAIR = "kernels/Validate & Repair.md"
-
 PHASE_EXECUTING = "executing"
-PHASE_KERNELS = "kernels_recorded"
 PHASE_RELEASE = "release_authorized"
 
 
@@ -386,10 +377,6 @@ def begin(
         "stacked_branch": branch,
         "stacked_base": stacked_base or os.environ.get("PR_BASE", "origin/main"),
         "started_at": _utc_now(),
-        "kernels": {
-            "recursive_alignment": {"path": KERNEL_RECURSIVE_ALIGNMENT, "status": "pending"},
-            "validate_repair": {"path": KERNEL_VALIDATE_REPAIR, "status": "pending"},
-        },
         "head_sha_at_begin": current_head(root),
     }
     write_autonomy_json(root, STATE_FILENAME, state)
@@ -397,169 +384,6 @@ def begin(
     if rp.is_file():
         rp.unlink()
     return state
-
-
-def record_kernels(
-    root: Path,
-    *,
-    recursive_alignment: str,
-    validate_repair: str,
-    notes: str | None = None,
-) -> dict[str, Any]:
-    """Record the outcome of the two post-execution kernels.
-
-    Both statuses are REQUIRED and have no default. They used to default to
-    ``"passed"``, which meant the laziest possible invocation -- bare
-    ``record-kernels``, no flags -- produced the strongest possible claim, and a
-    caller could attest a kernel pass without having applied either kernel
-    (INC-2026-09-14-001). The caller must now state what it observed, so a false
-    attestation is at least a deliberate sentence rather than a default.
-
-    This is still a self-report: nothing here verifies that a kernel ran. See
-    TODO.md -- the standing intent is for this to read evidence (the
-    ``kernel_gate`` receipt, plan ``kernel_pass`` blocks) instead of trusting
-    the caller.
-    """
-    state = load_phase(root)
-    if state is None:
-        state = begin(root)
-    if state.get("phase") not in {PHASE_EXECUTING, PHASE_KERNELS, PHASE_RELEASE}:
-        raise RuntimeError(f"invalid phase for kernel record: {state.get('phase')}")
-    for label, status in (
-        ("recursive_alignment", recursive_alignment),
-        ("validate_repair", validate_repair),
-    ):
-        if status not in {"passed", "failed"}:
-            raise RuntimeError(f"kernel status must be passed|failed, got {status!r}")
-        entry = dict(state.setdefault("kernels", {}).get(label) or {})
-        entry["status"] = status
-        entry["ran_at"] = _utc_now()
-        entry["path"] = (
-            KERNEL_RECURSIVE_ALIGNMENT if label == "recursive_alignment" else KERNEL_VALIDATE_REPAIR
-        )
-        state["kernels"][label] = entry
-    if notes:
-        state["kernel_notes"] = notes
-    ra = state["kernels"]["recursive_alignment"]["status"]
-    vr = state["kernels"]["validate_repair"]["status"]
-    if ra == "passed" and vr == "passed":
-        state["phase"] = PHASE_KERNELS
-        state.pop("blockers", None)
-        # No kernel_gate stamp here. This function used to write the tree
-        # receipt as a side effect of an L4 self-report, which made two modules
-        # writers of .l9/autonomy/kernel-receipt.json and let the weaker claim
-        # (a CLI flag) satisfy a gate that asks for evidence. kernel_gate.record
-        # is the sole writer; it is reached by applying the kernels and
-        # recording the apply report.
-    else:
-        state["phase"] = PHASE_EXECUTING
-        state["blockers"] = ["kernel_gate_failed"]
-    write_autonomy_json(root, STATE_FILENAME, state)
-    return state
-
-
-KERNEL_EVIDENCE_EVIDENCED = "evidenced"
-KERNEL_EVIDENCE_ABSENT = "absent"
-KERNEL_EVIDENCE_STALE = "stale"
-KERNEL_EVIDENCE_ABSENT_NOTE = "kernel_gate.precommit decides exemption"
-
-
-def kernel_evidence_blocker(root: Path) -> str | None:
-    """Refuse release when a kernel receipt exists but no longer re-derives.
-
-    This is the narrow coupling CANONICAL_LAW §6.2.9 item 6 licenses, and it
-    is deliberately not the one `eace25ed` reverted. That coupling *required*
-    a kernel receipt, which `authorize_release` cannot do: it has no
-    changed-path context, so it cannot tell a corpus-only `/ff` changeset
-    (exempt) from a code changeset (not exempt), and requiring one broke the
-    `/ff` publish flow outright.
-
-    So absence authorizes. What is refused is a receipt that is present and
-    false — an edited or deleted apply report, or kernel files that moved
-    since the apply. Nothing here recomputes the exemption; the only reader
-    of changed paths is still `kernel_gate.precommit`.
-
-    Returns a blocker message, or None when release may proceed.
-    """
-    evidence = kernel_evidence(root)
-    if evidence["status"] == KERNEL_EVIDENCE_STALE:
-        # An unreadable verdict is not a pass. Naming it beats authorizing on
-        # an exception nobody sees.
-        return str(evidence.get("detail") or "FAIL: kernel receipt does not re-derive") + "\n"
-    return None
-
-
-def kernel_evidence(root: Path) -> dict[str, Any]:
-    """What the tree-kernel receipt says about this workspace, re-derived.
-
-    ``evidenced`` — a ``l9.kernel_receipt.v2`` is present and still verifies:
-    the apply report hashes to what it recorded and the kernel files have not
-    moved. ``stale`` — a receipt is present and does not verify. ``absent`` —
-    no receipt; whether that is acceptable is a changed-path question only
-    ``kernel_gate.precommit`` can answer (CANONICAL_LAW §6.2.9 item 6).
-
-    This reads through ``kernel_gate.load_receipt`` and ``verify_tree``. It
-    never records, and never spells the receipt path: ``kernel_gate`` is the
-    sole writer, and ``tests/ops/autonomy/test_kernel_receipt_writers.py``
-    keeps it that way. ``load_receipt`` returns None only for a missing file;
-    an existing unreadable or non-object receipt raises and is classified
-    ``stale``, not ``absent``.
-    """
-    try:
-        from kernel_gate import ReceiptLoadError, gov_root_from_env, load_receipt, verify_tree
-    except ImportError:  # pragma: no cover - package import
-        from ops.autonomy.kernel_gate import (
-            ReceiptLoadError,
-            gov_root_from_env,
-            load_receipt,
-            verify_tree,
-        )
-    try:
-        receipt = load_receipt(root)
-    except ReceiptLoadError as exc:
-        return {"status": KERNEL_EVIDENCE_STALE, "detail": f"FAIL: {exc}"}
-    if receipt is None:
-        return {"status": KERNEL_EVIDENCE_ABSENT, "note": KERNEL_EVIDENCE_ABSENT_NOTE}
-    try:
-        verdict = verify_tree(root, gov_root_from_env())
-    except (OSError, RuntimeError, ValueError) as exc:
-        verdict = f"FAIL: kernel receipt could not be verified: {exc}\n"
-    if verdict:
-        return {"status": KERNEL_EVIDENCE_STALE, "detail": verdict.strip()}
-    deltas = receipt.get("deltas")
-    return {
-        "status": KERNEL_EVIDENCE_EVIDENCED,
-        "schema": receipt.get("schema"),
-        "report_rel": receipt.get("report_rel"),
-        "report_sha256": receipt.get("report_sha256"),
-        "applied_at": receipt.get("applied_at"),
-        "delta_count": len(deltas) if isinstance(deltas, list) else 0,
-    }
-
-
-def _annotate_kernels(kernels: dict[str, Any] | None, evidence: dict[str, Any]) -> dict[str, Any]:
-    """Overlay measured kernel evidence on the self-reported kernel block.
-
-    ``record-kernels`` writes ``passed``/``failed`` from a CLI flag; that is a
-    sentence, not a measurement. When a verified receipt exists it overwrites
-    the status with ``evidenced`` and keeps the sentence as ``self_reported``.
-    When none exists the sentence stands, marked ``evidence: absent`` so a
-    reader cannot mistake it for an apply.
-    """
-    out: dict[str, Any] = {}
-    for label, raw in (kernels or {}).items():
-        entry = dict(raw or {})
-        entry["evidence"] = evidence["status"]
-        if evidence["status"] == KERNEL_EVIDENCE_EVIDENCED:
-            if entry.get("status") not in {None, KERNEL_EVIDENCE_EVIDENCED}:
-                entry["self_reported"] = entry["status"]
-            entry["status"] = KERNEL_EVIDENCE_EVIDENCED
-            for key in ("report_rel", "report_sha256", "applied_at", "delta_count"):
-                entry[key] = evidence.get(key)
-        else:
-            entry["note"] = evidence.get("note") or evidence.get("detail")
-        out[label] = entry
-    return out
 
 
 def authorize_release(root: Path) -> dict[str, Any]:
@@ -571,23 +395,12 @@ def authorize_release(root: Path) -> dict[str, Any]:
         raise RuntimeError(
             f"branch drift: phase started on {state.get('stacked_branch')!r}, now on {branch!r}"
         )
-    blocker = kernel_evidence_blocker(root)
-    if blocker:
-        raise RuntimeError(
-            "authorize-release: this workspace holds a kernel receipt that no longer "
-            f"re-derives, so it cannot be shown to attest this tree.\n{blocker}"
-        )
-    # The blocker has refused a stale receipt, so what remains is evidenced or
-    # absent. Absence still authorizes; it is annotated, never refused.
-    evidence = kernel_evidence(root)
     head = current_head(root)
     digest = tree_digest(root)
     state["phase"] = PHASE_RELEASE
     state["authorized_at"] = _utc_now()
     state["head_sha"] = head
     state["tree_digest"] = digest
-    state["kernels"] = _annotate_kernels(state.get("kernels"), evidence)
-    state["kernel_evidence"] = evidence["status"]
     write_autonomy_json(root, STATE_FILENAME, state)
     receipt = {
         "schema": RECEIPT_SCHEMA,
@@ -598,8 +411,6 @@ def authorize_release(root: Path) -> dict[str, Any]:
         "tree_digest": digest,
         "head_sha": head,
         "authorized_at": state["authorized_at"],
-        "kernels": state.get("kernels"),
-        "kernel_evidence": evidence["status"],
         "pr_template": resolve_pr_template(root),
         "doctrine": "l4_local_autonomy",
     }
@@ -710,8 +521,7 @@ def _allow_from_receipt(
     ``tree_digest`` is the binding as of v2, re-derived here on every read.
     ``head_sha`` remains the fallback for a v1 receipt written before the
     upgrade: it is a weaker proxy, not a falsehood, so it is honored rather
-    than rejected by name (unlike the v1 *kernel* receipt, which attested
-    nothing at all).
+    than rejected by name.
     """
     del state  # the phase file never authorizes remote work by itself
     if receipt.get("phase") != PHASE_RELEASE:
@@ -729,12 +539,12 @@ def _allow_from_receipt(
             return False, f"L4 receipt binds a tree digest this workspace cannot re-derive: {exc}"
         if live == bound:
             return True, "L4 release_authorized (receipt matches worktree content)"
-        if pr_open_for_branch(root, branch):
-            return True, "L4 remediation push on open PR"
+        # An open PR is not authorization for a changed tree: a repair spends
+        # the receipt (CANONICAL_LAW PUBLISH_ASSURANCE_DECOUPLING_V1 item 4).
         return False, (
             f"L4 receipt stale: authorized tree {bound[:12]}, this worktree is "
-            f"{live[:12]} and no PR is open for this branch. Re-run kernels + "
-            "authorize-release (or extend-release after a governed push-recovery merge)."
+            f"{live[:12]}. Re-run authorize-release (or extend-release after a "
+            "governed push-recovery merge)."
         )
     pinned = str(receipt.get("head_sha") or "").strip()
     head = current_head(root)
@@ -745,12 +555,9 @@ def _allow_from_receipt(
             "L4 receipt binds neither a tree digest nor a head_sha, so it cannot be shown "
             "to authorize this tree — re-run: python3 ops/autonomy/l4_local.py authorize-release"
         )
-    if pr_open_for_branch(root, branch):
-        return True, "L4 remediation push on open PR"
     return False, (
-        f"L4 receipt stale: authorized {pinned[:12]}, HEAD is {head[:12] or 'unreadable'} "
-        "and no PR is open for this branch. Re-run kernels + authorize-release "
-        "(or extend-release after a governed push-recovery merge)."
+        f"L4 receipt stale: authorized {pinned[:12]}, HEAD is {head[:12] or 'unreadable'}. "
+        "Re-run authorize-release (or extend-release after a governed push-recovery merge)."
     )
 
 
@@ -760,9 +567,7 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
             "L4 local autonomy: mid-execution remote denied. "
             "Commit locally on a stacked branch, finish the program/contract, "
             "then: python3 ops/autonomy/l4_local.py begin && "
-            "python3 ops/autonomy/l4_local.py authorize-release. "
-            "Kernels fire as the first precommit-repo hook "
-            "(ops/autonomy/kernel_gate.py), not as an L4 phase."
+            "python3 ops/autonomy/l4_local.py authorize-release."
         )
     phase = state.get("phase")
     if phase == PHASE_RELEASE:
@@ -773,14 +578,9 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
             "L4 phase says release_authorized but no release receipt binds a HEAD sha — "
             "re-run: python3 ops/autonomy/l4_local.py authorize-release"
         )
-    if phase == PHASE_KERNELS:
-        return False, (
-            "L4 kernels recorded but release not authorized — run: "
-            "python3 ops/autonomy/l4_local.py authorize-release"
-        )
     return False, (
         f"L4 phase={phase}: no mid-execution push/PR. Finish locally, then "
-        "authorize-release. Kernels fire in kernel_gate.py before precommit."
+        "authorize-release before publication."
     )
 
 
@@ -915,10 +715,6 @@ def status_dict(root: Path) -> dict[str, Any]:
         "remote_allowed": allowed,
         "reason": reason,
         "stale": stale,
-        "kernels_required": [KERNEL_RECURSIVE_ALIGNMENT, KERNEL_VALIDATE_REPAIR],
-        # Live, not copied from the receipt: a receipt written while the apply
-        # report still verified must read `stale` once that report is edited.
-        "kernel_evidence": kernel_evidence(root)["status"],
         "pr_template": resolve_pr_template(root),
     }
 
@@ -928,17 +724,6 @@ def cmd_begin(args: argparse.Namespace) -> int:
         workspace_root(args.workspace),
         contract_id=args.contract_id,
         stacked_base=args.base,
-    )
-    print(json.dumps(state, indent=2))
-    return 0
-
-
-def cmd_record_kernels(args: argparse.Namespace) -> int:
-    state = record_kernels(
-        workspace_root(args.workspace),
-        recursive_alignment=args.recursive_alignment,
-        validate_repair=args.validate_repair,
-        notes=args.notes,
     )
     print(json.dumps(state, indent=2))
     return 0
@@ -979,25 +764,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--base", default=None, help="Stacked base ref (default PR_BASE/origin/main)")
     b.set_defaults(func=cmd_begin)
 
-    k = sub.add_parser(
-        "record-kernels",
-        help="Record Recursive Alignment + Validate & Repair results",
-        epilog=(
-            "Record what you observed AFTER applying both kernels. This command "
-            "does not apply them, and 'passed' is a claim about work you did, not "
-            "a flag that makes a gate go green.\n"
-            "  e.g. record-kernels --recursive-alignment passed --validate-repair passed"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    # Required, not defaulted: a bare `record-kernels` used to assert that both
-    # kernels passed (INC-2026-09-14-001). State the observed outcome.
-    k.add_argument("--recursive-alignment", required=True, choices=["passed", "failed"])
-    k.add_argument("--validate-repair", required=True, choices=["passed", "failed"])
-    k.add_argument("--notes", default=None)
-    k.set_defaults(func=cmd_record_kernels)
-
-    a = sub.add_parser("authorize-release", help="Authorize push/PR after kernels passed")
+    a = sub.add_parser("authorize-release", help="Authorize push/PR for the current finished tree")
     a.set_defaults(func=cmd_authorize)
 
     e = sub.add_parser(
@@ -1019,7 +786,6 @@ def build_parser() -> argparse.ArgumentParser:
 _SUBCOMMANDS = frozenset(
     {
         "begin",
-        "record-kernels",
         "authorize-release",
         "extend-release",
         "status",

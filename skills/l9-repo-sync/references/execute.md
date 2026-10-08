@@ -14,8 +14,7 @@ updated: 2026-09-30
 and `/ff --ssot` are one target each (other repos). Unique work is parked
 first. Nothing unique is deleted. Keep-list: `.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json`. **Corpus keep-list** (worktree
-bytes survive catch-up): `TODO.md`, `docs/plans/`,
-`environment/program-execution/campaigns/` (`ssot_is_ff_corpus_keep`).
+bytes survive catch-up): `TODO.md`, `docs/plans/` (`ssot_is_ff_corpus_keep`).
 Never `git stash push` corpus. Leave unique plans in the tree.
 Do not run `ff_shelf.py`. Do not run `run_ff_post_shelf.sh`.
 

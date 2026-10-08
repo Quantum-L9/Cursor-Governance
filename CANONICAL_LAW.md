@@ -1251,3 +1251,61 @@ has an open PR — the remediator path") is refined by this amendment and ADR-00
 4. **Merge-train stack safety:** Linearly stacking scope expansions preserves local gate
    verification, eliminates in-flight CI cancellation storms, and avoids the \(O(N^2)\)
    branch-updating cascades required by strict branch protection rulesets.
+
+<!-- PUBLISH_ASSURANCE_DECOUPLING_V1 -->
+## L4 and publication assurance decoupling (2026-10-06)
+
+Append-only. This section supersedes the §6.2 post-finish-kernel requirement,
+`KERNEL_PRECOMMIT_HOOK_V1`, and §6.2.9 / §6.2.11 only where those clauses
+require the retired tree-kernel receipt/latch or make Program Execution part of
+the surviving L4/publication path. Historical text remains on disk.
+
+1. **L4 authorizes, it does not validate.** L4 owns local execution state and
+   exact-tree release authorization. `authorize-release` binds the finished
+   worktree content and carries no Recursive Alignment, Validate & Repair, or
+   kernel-receipt prerequisite.
+2. **The tree-kernel publication latch is retired.**
+   `kernels/Recursive Alignment.md` and `kernels/Validate & Repair.md` remain
+   explicit audit/repair capabilities. Neither is a `make pr` prerequisite,
+   writer, validator, receipt producer, or hidden retry step.
+3. **Preparation and validation are separate.** The sanctioned `make pr`
+   ceremony may run existing deterministic formatter/generated-artifact
+   preparation before validation. Once validation begins, validation is
+   observational and non-mutating. A failure or unresolved mandatory criterion
+   stops publication.
+4. **Repair is outside validation.** A failed validator may emit evidence. It
+   may not repair the subject. If an authorized repair changes worktree
+   content, the prior L4 tree authorization is spent and `authorize-release`
+   must be run against the repaired tree before publication.
+5. **Program Execution is an eviction target.** No surviving L4, autonomy, or
+   publication capability may require, invoke, import, resolve through, derive
+   ownership from, or condition success on `environment/program-execution/`.
+   PE-owned artifacts may remain temporarily only as part of the bounded
+   eviction target itself.
+6. **Receipts remain evidence-bound.** L4 release receipts continue to bind the
+   exact tree with `tree_digest`; publication gate receipts continue to bind
+   their own deterministic gate state. Retirement of the tree-kernel receipt
+   does not weaken the general rule that a receipt must bind the artifact that
+   constitutes its claim.
+7. **Single ceremony remains.** `make pr` remains the one sanctioned
+   publication ceremony. No replacement kernel gate, assurance runner, parallel
+   validator framework, or second publication path is introduced.
+
+<!-- PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 -->
+
+## Program Execution eviction reachability (2026-10-07)
+
+This section supersedes the earlier executable-plan and Peer Execution
+authority rows where they assign live authority to `l9-plan`,
+`make peer-execution-conformance`, the PE Controller, or Program Execution.
+
+Program Execution is no longer a live planning, execution, validation,
+autonomy, or publication authority.
+
+`l9-plan-simple` remains the ordinary planning owner but does not inherit
+Program Execution semantics.
+
+Root autonomy remains the surviving provider-neutral autonomy authority.
+
+PE-owned artifacts may remain physically present only as an inert
+eviction target until their separate physical-removal slice.

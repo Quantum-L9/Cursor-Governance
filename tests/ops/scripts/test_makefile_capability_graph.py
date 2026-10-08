@@ -98,11 +98,22 @@ def _consumer_safe_targets() -> list[str]:
     return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
 
 
+# Program Execution is an eviction target (CANONICAL_LAW
+# PUBLISH_ASSURANCE_DECOUPLING_V1): its fragment stays on disk until its own
+# eviction slice, but the surviving root capability graph must not require it.
+EVICTED_FRAGMENTS = {"ops/make/program-execution.mk"}
+
+
 def test_root_composes_every_live_make_fragment_once() -> None:
     fragments = _make_fragments()
-    live = sorted(path.relative_to(ROOT).as_posix() for path in MAKE_DIR.glob("*.mk"))
+    live = sorted(
+        rel
+        for rel in (path.relative_to(ROOT).as_posix() for path in MAKE_DIR.glob("*.mk"))
+        if rel not in EVICTED_FRAGMENTS
+    )
     assert len(fragments) == len(set(fragments)), "fragment composition contains duplicates"
     assert sorted(fragments) == live
+    assert not EVICTED_FRAGMENTS & set(fragments), "an evicted fragment is still composed"
 
     root = MAKEFILE.read_text(encoding="utf-8")
     assert "include $(MAKE_FRAGMENTS)" in root

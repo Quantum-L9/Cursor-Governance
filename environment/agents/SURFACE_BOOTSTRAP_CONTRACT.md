@@ -122,7 +122,6 @@ invent a fourth personality.
 | Close / PICKUP | canonical `close_session` / `hydration.cli close` |
 | Local execution / L4 / merge gates | `ops/autonomy/` |
 | Memory boundary | `ops/memory/` |
-| Tree-kernel latch | `ops/autonomy/kernel_gate.py` |
 
 ## Platform event binding
 

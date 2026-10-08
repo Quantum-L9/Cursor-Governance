@@ -66,9 +66,6 @@ adapter environment file.
 ```bash
 make agents-env
 make agents-runtime-bindings-validate
-make program-execution-adapters
-make program-execution-conformance
-make peer-execution-validate
 ```
 
 Publish only through `PR_REMEDIATE=0 make pr`. Raw `git push`, `gh pr create`,

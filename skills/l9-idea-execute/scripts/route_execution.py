@@ -121,23 +121,31 @@ def route_envelope(envelope: dict[str, Any], registry: dict[str, Any]) -> dict[s
                 "execution_characteristics.cross_repository is true but "
                 "repository_change targets fewer than two unique repositories"
             )
-        campaign = len(repos) > 1
-        spec = generic["existing_system_campaign" if campaign else "bounded_existing_repo"]
-        preferred = "unit-existing-system-campaign" if campaign else "unit-existing-repo-change"
-        unit_id = _allocate_unit_id(preferred, used_ids)
-        unit = {
-            "id": unit_id,
-            "topology": spec["topology"],
-            "owner": spec["owner"],
-            "adapter": spec["adapter"],
-            "requirement_ids": [r["id"] for r in repo_changes],
-            "target_repos": repos,
-            "depends_on_units": [],
-            "admission_status": "UNCHECKED",
-        }
-        units.append(unit)
-        for req in repo_changes:
-            req_to_unit[req["id"]] = unit_id
+        if len(repos) > 1:
+            for req in repo_changes:
+                blockers.append(
+                    {
+                        "code": "EXECUTION_TOPOLOGY_UNSUPPORTED",
+                        "requirement_id": req["id"],
+                        "detail": ("coordinated multi-repository work has no live execution owner"),
+                    }
+                )
+        else:
+            spec = generic["bounded_existing_repo"]
+            unit_id = _allocate_unit_id("unit-existing-repo-change", used_ids)
+            unit = {
+                "id": unit_id,
+                "topology": spec["topology"],
+                "owner": spec["owner"],
+                "adapter": spec["adapter"],
+                "requirement_ids": [r["id"] for r in repo_changes],
+                "target_repos": repos,
+                "depends_on_units": [],
+                "admission_status": "UNCHECKED",
+            }
+            units.append(unit)
+            for req in repo_changes:
+                req_to_unit[req["id"]] = unit_id
 
     req_by_id = {req["id"]: req for req in requirements}
     for unit in units:

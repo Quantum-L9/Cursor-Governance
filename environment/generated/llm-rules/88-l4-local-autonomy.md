@@ -1,11 +1,15 @@
 ---
-description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on Cursor and adapter make pr before pytest, not as L4.
+description: L4 local autonomy - stacked local commits, exact-tree release authorization, then the single make pr publication ceremony.
 ---
 
 # L4 Local Autonomy (no mid-execution push)
 
-SSOT: `ops/autonomy/surface_profile.yaml` → `l4_local_autonomy` (CANONICAL_LAW §6.2).
+SSOT: `ops/autonomy/surface_profile.yaml` → `l4_local_autonomy` (CANONICAL_LAW §6.2,
+as amended by `PUBLISH_ASSURANCE_DECOUPLING_V1`).
 Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
+
+L4 owns two things: the local-execution phase, and authorization of the exact
+finished tree. It does not run validation and it does not own repair.
 
 ## MUST
 
@@ -19,10 +23,9 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
    doctrine you keep, not a gate that stops you.
 3. **Do not** stall for push-approval pacing during local execution.
 4. When the program/contract is finished locally on **every** surface
-   (Cursor, Claude Code desktop, Claude Code Mobile): scoped-commit,
-   then authorize release, then publish **only** via Makefile checkers.
-   Do not run `make precommit-repo` then `make pr`. Tree kernels fire on
-   Cursor and adapters as the first `make pr` writers step, before pytest.
+   (Cursor, Claude Code desktop, Claude Code Mobile): scoped-commit, `begin`
+   if not begun, `authorize-release`, then publish once through `make pr`.
+   Do not run `make precommit-repo` then `make pr`.
 
 ```bash
 python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
@@ -30,32 +33,17 @@ python3 ops/autonomy/l4_local.py authorize-release
 PR_REMEDIATE=0 make pr   # or l9 pr / make -C "$GOV" pr WS="$PWD"
 ```
 
-If the kernel hook fails, apply `kernels/Recursive Alignment.md` then
-`kernels/Validate & Repair.md`, commit, **write the apply report**, record
-against it, and re-run the same `make pr`. Do not run precommit or pytest
-first.
-
-```bash
-GOV="$HOME/.cursor-governance"
-KG="$GOV/.venv/bin/python $GOV/ops/autonomy/kernel_gate.py"
-$KG apply-report-template --workspace "$PWD"     # skeleton; fill in deltas
-$KG record --workspace "$PWD" --report ".l9/autonomy/kernel-apply.md"
-```
-
-That kernel commit changes worktree bytes, and the L4 release receipt is bound
-to them (`ops/autonomy/receipt_binding.py`): a receipt issued before the
-kernel apply no longer matches the tree, and nothing re-binds it across a
-commit you authored. `kernel_gate.py record` prints a `NEXT:` line when that
-is the case — run `authorize-release` again before the re-run, or the remote
-check refuses at the end of `make pr` with `L4 receipt stale`.
-
-The report **is** the receipt (CANONICAL_LAW §6.2.9). `record` refuses an
-absent report, empty `deltas`, a path outside `.l9/autonomy/`, or a delta
-naming a file that does not exist — and writes nothing when it refuses, so
-there is no receipt to fall back on. `verify` re-hashes the report on every
-read, so editing it after recording fails the gate; `l9.kernel_receipt.v1` is
-rejected by name. The hook's own `L9_AGENT_REQUIRED` block prints the exact
-two commands bound to your workspace.
+5. Treat `make pr` as preparation then validation. Its existing deterministic
+   preparation (formatters, generated-artifact heal) may write before
+   validation; once validation begins it is observational and fail-closed.
+   `make pr` never runs `kernels/Recursive Alignment.md` or
+   `kernels/Validate & Repair.md`; those stay explicit capabilities you invoke
+   on your own, outside the publication gate.
+6. When validation fails, stop on that evidence. Repair is a separate action,
+   never a hidden step of the validator. Any authored repair that changes tree
+   content spends the release receipt (`ops/autonomy/receipt_binding.py`
+   `tree_digest`): run `authorize-release` again before the next `make pr`, or
+   the remote check refuses with `L4 receipt stale`.
 
 On every surface, `make pr` runs the **governance** Makefile's
 `pr` target regardless of the workspace repo or its Makefile — reach it
@@ -63,28 +51,25 @@ with `l9 pr` / `make -C "$GOV" pr WS="$PWD"` from a consumer checkout
 with no local `pr` target. A consumer needs no additional local target;
 there is no raw-push fallback where one is absent.
 
-5. Do **not** merge from the campaign / `make pr` path. Campaign end state
-   is green + merge-ready. Merge only after the user invokes
-   `/l9-pr-remediation` (see `rules/48-make-pr-remediation.mdc`).
-6. Program Execution campaigns: land work on `campaign/<campaign_id>` and set
-   `PR_BASE` to that branch. Do **not** open campaign PRs against `main`.
-   Do **not** mix campaign commits onto unrelated feature branches.
+7. Do **not** merge from the `make pr` path. Its end state is green +
+   merge-ready. Merge only after the user invokes `/l9-pr-remediation`
+   (see `rules/48-make-pr-remediation.mdc`).
 
 ## Enforcement
 
 - Claude PreToolUse: `local_execution_gate_wrap.py` → `ops/autonomy/local_execution_gate.py`
 - Cursor `beforeShellExecution`: `ops/hooks/l4-local-execution-gate-shell.sh`
 - Shared-worktree isolation (same gate): see `rules/49-shared-worktree-isolation.mdc`
-- `make pr` / `open_pr_after_gate.sh` fail-closed without release receipt
+- `make pr` / `open_pr_after_gate.sh` fail-closed without a release receipt that
+  matches the worktree
 
 ## MUST NOT
 
 - Mid-execution remote mutation
-- Skipping the kernel hook by running pytest / pre-commit before
-  `kernel_gate.py`. Cursor and adapters take the latch before tests.
+- Treating a validation failure as permission for the validator to repair the
+  tree, or publishing a repaired tree on the pre-repair authorization
 - Inventing "wait for push approval" contracts that recreate pacing stalls
-- Merging from the campaign / `make pr` path (merge is `/l9-pr-remediation`)
+- Merging from the `make pr` path (merge is `/l9-pr-remediation`)
 - Force-push, admin-merge, or hard-reset
-- Opening campaign PRs against `main`
 
 <!-- generated-from: rules/88-l4-local-autonomy.mdc; do-not-edit -->

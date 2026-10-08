@@ -10,7 +10,6 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator
 
-DORMANT_STATUSES = {"dormant", "non_routable"}
 ROOT_AUTONOMY_PROVIDER_ID = "root-autonomy-control-plane"
 BOOTSTRAP_GLOBS = (
     "session_bootstrap.md",
@@ -31,7 +30,6 @@ class ExecutablePeerModel:
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root
         self.agents_root = repo_root / "environment/agents"
-        self.pe_root = repo_root / "environment/program-execution"
         self.bindings_path = self.agents_root / "PEER_RUNTIME_BINDINGS.yaml"
         self.bindings_doc = _load_yaml(self.bindings_path)
         self.peers = self.bindings_doc.get("peers") or {}
@@ -43,33 +41,6 @@ class ExecutablePeerModel:
             )
         )
         self.bindings_validator = Draft202012Validator(bindings_schema)
-        exec_registry = _load_yaml(self.pe_root / "registry/EXECUTION_ADAPTER_REGISTRY.yaml")
-        self.exec_entries = list(exec_registry.get("adapters") or [])
-        spec_schema = json.loads(
-            (self.pe_root / "conformance/schemas/execution-adapter-spec.schema.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        self.spec_validator = Draft202012Validator(spec_schema)
-        self.profile_registry = _load_yaml(
-            self.pe_root / "registry/EXECUTION_PROFILE_REGISTRY.yaml"
-        )
-        profile_schema = json.loads(
-            (self.pe_root / "conformance/schemas/execution-profile.schema.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        self.profile_validator = Draft202012Validator(profile_schema)
-        self._descriptors: dict[str, dict[str, Any]] = {}
-
-    def entries_for(self, provider_ref: str) -> list[dict[str, Any]]:
-        return [item for item in self.exec_entries if item.get("adapter_id") == provider_ref]
-
-    def descriptor(self, entry: dict[str, Any]) -> dict[str, Any]:
-        provider_ref = str(entry["adapter_id"])
-        if provider_ref not in self._descriptors:
-            self._descriptors[provider_ref] = _load_yaml(self.pe_root / str(entry["descriptor"]))
-        return self._descriptors[provider_ref]
 
     def required_peers(self) -> dict[str, Any]:
         return {
@@ -82,8 +53,6 @@ class ExecutablePeerModel:
 def _check_schema(model: ExecutablePeerModel, errors: list[str]) -> None:
     for err in sorted(model.bindings_validator.iter_errors(model.bindings_doc), key=str):
         errors.append(f"[E2] bindings schema: {err.message}")
-    for err in sorted(model.profile_validator.iter_errors(model.profile_registry), key=str):
-        errors.append(f"[E2] profile registry schema: {err.message}")
 
 
 def _check_registry_coverage(model: ExecutablePeerModel, errors: list[str]) -> None:
@@ -133,11 +102,9 @@ def _agent_surfaces(agent: dict) -> set[str]:
 
 
 def _check_bindings(model: ExecutablePeerModel, errors: list[str]) -> None:
-    profiles = model.profile_registry.get("profiles") or {}
     for key, peer in model.peers.items():
         if not isinstance(peer, dict):
             continue
-        required = (peer.get("execution") or {}).get("required") is True
         agent = model.agents.get(peer.get("agent_ref")) or {}
         seen: set[tuple[str, str, str]] = set()
         for binding in (peer.get("execution") or {}).get("bindings") or []:
@@ -150,43 +117,11 @@ def _check_bindings(model: ExecutablePeerModel, errors: list[str]) -> None:
             seen.add(identity)
             if surface not in _agent_surfaces(agent):
                 errors.append(f"[E7] {key}: unknown surface '{surface}'")
-            entries = model.entries_for(provider_ref)
-            if len(entries) != 1:
-                errors.append(f"[E8] {key}: provider_ref '{provider_ref}' not unique")
-                continue
-            entry = entries[0]
-            if entry.get("adapter_kind") not in {"worker_host", "verifier"}:
-                errors.append(f"[E9] {key}: provider '{provider_ref}' is not a peer execution kind")
-            descriptor = model.descriptor(entry)
-            if list(model.spec_validator.iter_errors(descriptor)):
-                errors.append(f"[E10] {key}: descriptor '{provider_ref}' fails schema")
-            provider_identity = descriptor.get("identity") or {}
-            if provider_identity.get("binding") != "peer_runtime_binding":
-                errors.append(f"[E10] {key}: '{provider_ref}' is not peer_runtime_binding")
-            if "agent_ref" in provider_identity:
-                errors.append(f"[E11] {key}: provider '{provider_ref}' embeds agent_ref")
-            if profile_ref not in profiles:
-                errors.append(f"[E11] {key}: unknown execution profile '{profile_ref}'")
-            if required and entry.get("status") in DORMANT_STATUSES:
-                errors.append(f"[E12] {key}: provider '{provider_ref}' is not routable")
 
 
 def _check_autonomy(model: ExecutablePeerModel, errors: list[str]) -> None:
-    provider_path = model.pe_root / "integrations/autonomy-control-plane/PROVIDER.yaml"
-    compat_path = model.pe_root / "COMPATIBILITY.yaml"
-    provider = _load_yaml(provider_path) if provider_path.is_file() else {}
-    compat = _load_yaml(compat_path) if compat_path.is_file() else {}
-    compat_path_value = ((compat.get("providers") or {}).get("root_autonomy") or {}).get("path")
-
-    if provider.get("provider_id") != ROOT_AUTONOMY_PROVIDER_ID:
-        errors.append("[E13] canonical root autonomy provider missing")
-    if provider.get("owns_program_state") is not False:
-        errors.append("[E13] autonomy must not own Program state")
-    canonical = provider.get("canonical_path")
-    if not canonical or not (model.repo_root / str(canonical)).is_dir():
+    if not (model.repo_root / "autonomy").is_dir():
         errors.append("[E13] canonical autonomy path does not resolve")
-    if compat_path_value and canonical != compat_path_value:
-        errors.append("[E13] autonomy provider path disagrees with compatibility")
 
     for key, peer in model.peers.items():
         autonomy = peer.get("autonomy") if isinstance(peer, dict) else None
@@ -216,7 +151,7 @@ def _has_bootstrap_carrier(model: ExecutablePeerModel, adapter: str) -> bool:
 
 
 def _check_carriers(model: ExecutablePeerModel, errors: list[str]) -> None:
-    for root in (model.agents_root / "adapters", model.pe_root / "adapters"):
+    for root in (model.agents_root / "adapters",):
         if not root.is_dir():
             continue
         for autonomy in root.glob("*/autonomy"):

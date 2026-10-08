@@ -31,7 +31,6 @@ from audit_plans import (  # noqa: E402
     resolve_plans_dir,
 )
 
-SPENT_CAMPAIGN = frozenset({"complete", "completed", "cancelled", "spent", "converged"})
 README_QUEUE_RE = re.compile(r"(?m)^\d+\.\s+`([^`]+)`")
 LIVE_QUEUE = (
     "pe_loop_compiled_8-28-26",
@@ -54,8 +53,7 @@ def resolve_gov_root(workspace: Path, explicit: str | None) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
     home_gov = Path.home() / ".cursor-governance"
-    campaigns = workspace / "environment" / "program-execution" / "campaigns"
-    if (workspace / "docs" / "plans").is_dir() and campaigns.is_dir():
+    if (workspace / "docs" / "plans").is_dir():
         return workspace
     if home_gov.is_dir():
         return home_gov
@@ -160,45 +158,12 @@ def scan_plans(plans_dir: Path, workspace: Path, window_days: float) -> list[dic
 
 
 def scan_campaigns(campaigns_root: Path) -> list[dict[str, Any]]:
-    if not campaigns_root.is_dir():
-        return []
-    rows: list[dict[str, Any]] = []
-    for source in sorted(campaigns_root.glob("*/CAMPAIGN_SOURCE.yaml")):
-        if "environment/program-execution/environment" in source.as_posix():
-            continue
-        data = _load_yaml(source)
-        meta = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
-        name = str(meta.get("campaign_id") or source.parent.name)
-        status = str(meta.get("status") or "").lower()
-        plan_status = str(data.get("plan_status") or "").lower()
-        lifecycle = str(meta.get("lifecycle") or "").lower()
-        spent = any(token in SPENT_CAMPAIGN for token in (status, plan_status, lifecycle))
-        objective = ""
-        directive = data.get("operator_directive")
-        if isinstance(directive, dict):
-            objective = str(directive.get("objective") or "")
-        leftover = bool(objective)
-        harvestable = spent and leftover
-        pending = not spent
-        flags: list[str] = []
-        if leftover or not spent:
-            flags.append("live_invariant")
-        if spent:
-            flags.append("superseded_mission")
-        if harvestable:
-            flags.append("harvestable")
-        rows.append(
-            {
-                "surface": "campaigns",
-                "path": str(source),
-                "name": name,
-                "flags": flags,
-                "harvestable": harvestable,
-                "pending": pending,
-                "status": status or plan_status or lifecycle,
-            }
-        )
-    return rows
+    """Program Execution campaigns are not a live audit surface.
+
+    The argument is ignored. There is no replacement campaign scanner.
+    """
+    del campaigns_root
+    return []
 
 
 def _readme_queue(plans_dir: Path) -> list[str]:
@@ -420,12 +385,9 @@ def run(
         alt = gov_root / "docs" / "plans"
         if alt.is_dir():
             plans_dir = alt
-    campaigns_root = workspace / "environment" / "program-execution" / "campaigns"
-    if not campaigns_root.is_dir():
-        campaigns_root = gov_root / "environment" / "program-execution" / "campaigns"
     findings = [
         *scan_plans(plans_dir, workspace, window_days),
-        *scan_campaigns(campaigns_root),
+        *scan_campaigns(workspace),
     ]
     archived: list[str] = []
     if archive and _tracked_store(plans_dir, workspace, gov_root):

@@ -1,17 +1,21 @@
 ---
 name: l9-pe-campaign-activate
-description: Run the only live Program Execution campaign front door, `make campaign INTENT=`, from a complete direct campaign-source.v2, architecture intent, activate seed, plan, or brief through verified local commits. Use when the user asks to author from the canonical campaign template, activate a campaign, run a PE campaign, compile campaign source, emit campaign seeds, or take a brief through Program Execution. Do not call PEC, inner compile/accept scripts, PR publication, or merge as substitutes.
+description: "deprecated — do not activate. The Program Execution campaign front door is retired and has no live owner."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, program-execution, campaign, campaign-source-v2, compiler, activate, merge]
+  tags: [l9, program-execution, campaign, campaign-source-v2, compiler, activate, merge, deprecated]
   owner: igor_beylin
-  status: active
+  status: deprecated
   version: 1.6.0
-  updated: 2026-09-14
+  updated: 2026-10-07
 ---
+
+# l9-pe-campaign-activate (retired)
+
+Do not activate. This pack is archived. `make campaign` and campaign activation have no live owner and no replacement front door.
 
 # PE Campaign Activation
 

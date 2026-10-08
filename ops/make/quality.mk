@@ -16,7 +16,6 @@ L9_TARGETS += \
 	lint \
 	uv-lock-check \
 	test \
-	test-ci-parity \
 	corpus-reachability \
 	rules-corpus-audit \
 	rules-validate \
@@ -32,10 +31,8 @@ L9_TARGETS += \
 # ---------------------------------------------------------------------------
 autonomy-contracts-validate:
 	$(PYTHON) ops/scripts/validate_autonomy_contracts.py
-autonomy-validate: autonomy-contracts-validate
-	$(PYTHON) \
-		environment/program-execution/peer_execution/autonomy/validate_autonomy.py
-autonomy-validate: autonomy-policy-check
+autonomy-validate: autonomy-contracts-validate autonomy-policy-check
+	$(PYTHON) -m unittest discover -s autonomy/tests -v
 autonomy-policy-embed:
 	$(PYTHON) ops/scripts/regenerate_autonomy_policy_loader.py
 autonomy-policy-check:
@@ -96,33 +93,6 @@ uv-lock-check:
 	fi
 test: venv
 	bash ops/scripts/run_pytest_suites.sh --tb=short -q
-# CI-parity Git-worktree validation with no developer Git identity inherited.
-test-ci-parity:
-	@parity_home="$$(mktemp -d)" || { \
-		echo "test-ci-parity: mktemp failed" >&2; \
-		exit 1; \
-	}; \
-	[ -n "$$parity_home" ] && [ -d "$$parity_home" ] || { \
-		echo "test-ci-parity: refusing — scratch HOME unresolved" >&2; \
-		exit 1; \
-	}; \
-	for key in user.name user.email; do \
-		if val="$$(HOME="$$parity_home" git config --get "$$key" 2>/dev/null)"; then \
-			echo "test-ci-parity: NOT at parity — git still resolves $$key=$$val" >&2; \
-			echo "  a system-level gitconfig is leaking an identity CI would not have." >&2; \
-			rm -rf -- "$$parity_home"; \
-			exit 1; \
-		fi; \
-	done; \
-	echo "--- CI parity: HOME=$$parity_home, no git identity resolvable ---"; \
-	rc=0; \
-	HOME="$$parity_home" \
-		$(MAKE) \
-			program-execution-campaign-brief \
-			program-execution-controller-tests \
-			|| rc=$$?; \
-	rm -rf -- "$$parity_home"; \
-	exit $$rc
 corpus-reachability: venv
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
 rules-corpus-audit: venv

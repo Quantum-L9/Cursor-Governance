@@ -8,8 +8,8 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 |---|---|---|
 | ADR-0001 | `docs/decisions/ADR-0001-claude-code-bounded-concurrent-autonomy.md` | Autonomy ON, ordinary merge ON after remediation, force/admin OFF |
 | Settings | `environment/agents/adapters/claude-code/settings.template.json` | Allow scoped push/PR create; omit merge; deny force/admin |
-| Profile | `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` | Lanes 4/2, waiting_external, merge_gate |
-| Runtime | `environment/program-execution/peer_execution/autonomy/*.py` | Claude-only machine scheduler (do not rewrite for Cursor) |
+| Runtime | `autonomy/` | provider-neutral authorization, leases, scheduling, capability mediation, and receipts |
+| Claude adapter | `autonomy/adapters/claude_code/` | thin Claude Code binding to root autonomy |
 | Hooks | `environment/agents/adapters/claude-code/hooks/*` | Thin fail-open adapters over `ops/skill_routing/` (SessionStart, route hint, usage log) |
 | Routing | `ops/skill_routing/` + `ops/generated/skill-registry.json`; rule `rules/23-l9-skill-routing.mdc` (+ generated `environment/generated/llm-rules/l9-skill-routing.md`) | Recommendation ≠ authority; `hint_allowed` may surface Read (`explicit_hint`); mutate only with packet |
 
@@ -25,7 +25,6 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 | Step | Mechanism |
 |---|---|
 | Stacked local execution | Feature branch commits only; no mid-exec remote |
-| Post-finish kernels | `kernels/Recursive Alignment.md` → `kernels/Validate & Repair.md` |
 | Release receipt | `python3 ops/autonomy/l4_local.py authorize-release` |
 | Scoped PR | `make pr` / `PULL_REQUEST_TEMPLATE.md` |
 | Gate | Claude PreToolUse + Cursor `beforeShellExecution` → `local_execution_gate.py` |
@@ -36,7 +35,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 **Fail-closed** remote gates (do not weaken): `ops/autonomy/merge_gate.py` and
 `ops/autonomy/local_execution_gate.py` (L4 no mid-execution push).
 
-## Profile parallelism flags → Cursor
+## Parallelism flags → Cursor
 
 | Profile flag | Cursor SOP mechanism |
 |---|---|
@@ -51,15 +50,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 
 ## Dual-surface rule
 
-- **Claude Code surface:** use `environment/program-execution/peer_execution/autonomy/cli.py` + profile — see `claude-code-bridge.md`.
+- **Claude Code surface:** use the root `autonomy/` runtime through
+  `autonomy/adapters/claude_code/`. Provider-specific code does not own a scheduler.
+  Claude multi-lane scheduling is unavailable from this skill.
 - **Cursor surface:** this skill + `/autonomy` + agent-requested rule — Task/background poll SOP only; no second Python scheduler.
-
-## Program Execution System (PES) Phase 0
-
-| Source | Path | Role |
-|---|---|---|
-| Phase 0 dial-in | `WIP/_program-execution-system-v2.0.0/.../PHASE0_USER_CONFIG.yaml` (promoted under `environment/program-execution/core/`) | Autonomy profile, blocking inventory, make pr / lock alignment, packet fields |
-| Autonomy bridge | `.../program-execution-controller-template/references/AUTONOMY_BRIDGE.md` | Packet ↔ Program Lock; Task Card `autonomy_action_id`; dual stores |
-| Lessons LL-001..004 | `.../LEARNED_LESSONS.md` | CI hygiene, Phase 0 max autonomy, make pr, uv.lock pins |
-
-When a PES program is deploying, Phase 0 selects `program_deploy_max_autonomy` (max within ceiling, `autonomous_merge: false`). Align campaign packet fields with Phase 0; never use “envelope.”

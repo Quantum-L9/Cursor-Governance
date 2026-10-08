@@ -1,15 +1,13 @@
 schema: l9.autonomy-contracts.manifest.v1
-schema_version: 2.0.0
+schema_version: 2.1.0
 family: l9_autonomy_architecture
 status: active
-updated: "2026-09-02"
+updated: "2026-10-06"
 purpose: >
-  First-class autonomy family registry. Program Execution remains the controller;
-  root autonomy declares owns_program_state: false. Shared bounded-concurrency
-  mechanics are Peer Execution infrastructure, not provider-owned adapter state.
+  First-class autonomy family registry. Root autonomy owns the provider-neutral
+  authorization and bounded-concurrency runtime. Provider adapters remain thin
+  and no external execution subsystem is required to provide autonomy.
 law:
-  program_execution_controller: environment/program-execution
-  peer_contract: environment/agents/PEER_EXECUTION.md
   subordinate_invariant: owns_program_state_false
 artifacts:
   - artifact_id: root-autonomy-control-plane
@@ -19,11 +17,9 @@ artifacts:
     status: active
     canonical_path: autonomy/
     provider_id: root-autonomy-control-plane
-    provider_manifest: environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml
     owns_program_state: false
     meta: meta/root-autonomy-control-plane.meta.md
     consumed_by:
-      - environment/program-execution
       - environment/agents/PEER_EXECUTION.md
       - commands/autonomy.md
       - skills/l9-bounded-autonomy
@@ -67,24 +63,6 @@ artifacts:
       - skills/l9-pr-remediation
     not_for:
       - mid_execution_push_before_release_authorized
-  - artifact_id: peer-execution-bounded-autonomy-runtime
-    kind: execution_runtime
-    first_class_artifact: true
-    version: 1.0.0
-    status: active
-    canonical_path: environment/program-execution/peer_execution/autonomy/
-    owns_program_state: false
-    note: >
-      Shared provider-neutral bounded-concurrency mechanics discovered in the
-      former Claude adapter. No provider receives a scheduler exemption.
-    meta: meta/peer-execution-bounded-autonomy-runtime.meta.md
-    consumed_by:
-      - make autonomy-validate
-      - environment/program-execution/peer_execution
-      - skills/l9-bounded-autonomy
-    not_for:
-      - provider_owned_scheduler
-      - owning_program_state
   - artifact_id: context-sensitive-git-guardrails
     kind: destructive_risk_gate
     first_class_artifact: true

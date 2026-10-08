@@ -59,7 +59,6 @@ MAKE_FRAGMENTS := \
 	ops/make/quality.mk \
 	ops/make/publish.mk \
 	ops/make/adapters.mk \
-	ops/make/program-execution.mk \
 	ops/make/security.mk \
 	ops/make/memory.mk \
 	ops/make/maintenance.mk \
@@ -101,7 +100,6 @@ L9_CONSUMER_SAFE_TARGETS := \
 	ide-profile \
 	l4-status \
 	l4-begin \
-	l4-record-kernels \
 	l4-authorize \
 	clean \
 	workspace-clean

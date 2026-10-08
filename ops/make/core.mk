@@ -2,8 +2,7 @@ L9_TARGETS += \
 	gov-python \
 	venv \
 	start \
-	sync-generated \
-	sync-generated-pe
+	sync-generated
 # ---------------------------------------------------------------------------
 # Runtime / bootstrap
 # ---------------------------------------------------------------------------
@@ -27,12 +26,3 @@ sync-generated:
 		--root "$(CURDIR)" \
 		--force \
 		--check
-
-# Also reconcile the Program Execution manifest. This stays separate from
-# sync-generated because it hashes the entire mutable PE tree.
-sync-generated-pe:
-	$(PYTHON) ops/scripts/sync_generated_artifacts.py \
-		--root "$(CURDIR)" \
-		--force \
-		--check \
-		--pe-manifest

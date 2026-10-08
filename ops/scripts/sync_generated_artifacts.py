@@ -11,37 +11,6 @@ Covered artifacts:
   * environment/agents/adapters/claude-code/settings.template.json skillOverrides
   * skills/AUTONOMY_MANIFEST.yaml (orphan skills → explicit_only)
   * commands/COMMANDS_MANIFEST.yaml
-  * environment/program-execution/core/MANIFEST.yaml
-  * environment/program-execution/core/program-execution-{blueprint,controller}-template/
-    MANIFEST.yaml — each template's own integrity manifest, gated by
-    validate_pair.py in CI
-
-Opt-in via --pe-manifest (--force alone does not reach it; `make sync-generated-pe`
-passes it, `make sync-generated` does not):
-  * environment/program-execution/MANIFEST.json — hashes the whole mutable
-    Program Execution tree, so ordinary PE edits rewrite it. It is not
-    advisory: `make program-execution-conformance` runs validate_manifest.py
-    and fails on a digest mismatch.
-
-    The flag stays opt-in so a caller that only wants the cheap artifacts does
-    not pay for hashing ~500 files, but two callers now pass it, and between
-    them the manifest is healed and enforced:
-
-      * ops/scripts/run_pr_gate.sh — regenerates on the sanctioned publish
-        path, scoped by --changed-file to branches that touched the PE tree.
-        The old objection (writing during a gate run reads as "files were
-        modified by this hook") no longer holds: this path is in
-        GENERATED_PATH_PREFIXES, and classify_generated_dirtiness.sh resolves
-        classes through is_generated_path, so the churn is WARN + stage.
-      * .github/workflows/governance-self-check.yml — regenerates in CI and
-        fails the PR on drift, the same treatment every other generated
-        artifact gets.
-
-    .pre-commit-config.yaml also passes it, but that hook is inert: this repo
-    has no git commit hook (run_pr_precommit.sh), and the make pr path SKIPs
-    the hook by name. Until the gate opted in, the "commit-time heal" that
-    earlier notes here described ran nowhere at all, which is why the manifest
-    drifted until a human regenerated it by hand.
 """
 
 from __future__ import annotations
@@ -73,13 +42,6 @@ GENERATED_PATH_PREFIXES = (
     ".claude/settings.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
-    "environment/program-execution/core/MANIFEST.yaml",
-    "environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml",
-    "environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml",
-    # Opt-in to write (--pe-manifest), but generated for every other purpose:
-    # membership here is what gives it the l9-generated merge driver, the PR
-    # overlap exemption, and the gate's WARN-not-FAIL dirtiness class.
-    "environment/program-execution/MANIFEST.json",
     "docs/decisions/README.md",
 )
 
@@ -452,79 +414,6 @@ def sync_commands(root: Path, wrote: list[str]) -> None:
         wrote.append(str(out.relative_to(root)))
 
 
-def sync_pe_core(root: Path, wrote: list[str]) -> None:
-    pe_core = root / "environment" / "program-execution" / "core"
-    if not pe_core.is_dir():
-        return
-    out = pe_core / "MANIFEST.yaml"
-    prior = out.read_bytes() if out.is_file() else None
-    run_generator(
-        [
-            sys.executable,
-            str(pe_core / "scripts" / "generate_manifest.py"),
-            str(pe_core),
-            "--schema",
-            "program-execution-system.manifest.v2",
-            "--artifact",
-            "program-execution-system-v2.0.0",
-        ],
-        root,
-    )
-    if out.is_file() and out.read_bytes() != prior:
-        wrote.append(str(out.relative_to(root)))
-
-
-#: The two distributable templates under `core/`. Each carries its own manifest,
-#: hashed by its own validator, and both are gated by `validate_pair.py` in CI.
-PE_TEMPLATE_DIRS = (
-    "program-execution-blueprint-template",
-    "program-execution-controller-template",
-)
-
-
-def sync_pe_templates(root: Path, wrote: list[str]) -> None:
-    """Regenerate the blueprint and controller template manifests.
-
-    These were gated without being generated: `validate_pair.py` runs each
-    template's validator in CI, but nothing regenerated their manifests, so a
-    contributor who added a file to a template had to hand-write digest YAML.
-    The generator reads each manifest's own shape, so one call serves both.
-    """
-    pe_core = root / "environment" / "program-execution" / "core"
-    generator = pe_core / "scripts" / "generate_manifest.py"
-    if not generator.is_file():
-        return
-    for name in PE_TEMPLATE_DIRS:
-        template = pe_core / name
-        if not template.is_dir():
-            continue
-        out = template / "MANIFEST.yaml"
-        prior = out.read_bytes() if out.is_file() else None
-        run_generator([sys.executable, str(generator), str(template)], root)
-        if out.is_file() and out.read_bytes() != prior:
-            wrote.append(str(out.relative_to(root)))
-
-
-def sync_pe_adapters(root: Path, wrote: list[str]) -> None:
-    """Regenerate environment/program-execution/MANIFEST.json.
-
-    Reached only when a caller opts in (``sync(..., pe_manifest=True)`` /
-    ``--pe-manifest``): the PR gate and the governance-self-check drift job.
-    A plain ``--force`` still skips it -- see the module docstring.
-    """
-    pe = root / "environment" / "program-execution"
-    if not pe.is_dir():
-        return
-    out = pe / "MANIFEST.json"
-    prior = out.read_bytes() if out.is_file() else None
-    run_generator(
-        [sys.executable, str(pe / "scripts" / "generate_manifest.py"), str(pe)],
-        root,
-    )
-    if out.is_file() and out.read_bytes() != prior:
-        wrote.append(str(out.relative_to(root)))
-
-
 def should_run(changed: set[str] | None, prefixes: tuple[str, ...]) -> bool:
     if changed is None:
         return True
@@ -537,7 +426,6 @@ def sync(
     changed_paths: set[str] | None = None,
     force: bool = False,
     workspace: Path | None = None,
-    pe_manifest: bool = False,
 ) -> dict[str, Any]:
     root = root.resolve()
     wrote: list[str] = []
@@ -580,14 +468,6 @@ def sync(
             sync_claude_settings(root, wrote, warnings)
             reconcile_llm_adapters(root, warnings, workspace=workspace)
         sync_commands(root, wrote)
-        pe_touched = should_run(changed, ("environment/program-execution/",))
-        if pe_touched:
-            sync_pe_core(root, wrote)
-            sync_pe_templates(root, wrote)
-            # environment/program-execution/MANIFEST.json is opt-in only —
-            # --force does not reach it. See the module docstring.
-            if pe_manifest:
-                sync_pe_adapters(root, wrote)
     except Exception as exc:  # noqa: BLE001 — surface as structured error to gate
         errors.append(str(exc))
 
@@ -651,7 +531,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     Extracted so callers of this script can be checked against the real parser
     rather than a second copy of the flag list -- see
-    tests/ops/scripts/test_pe_manifest_heal.py.
+    tests/ops/scripts/test_generated_self_check_scope.py.
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -666,12 +546,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print GENERATED_PATH_PREFIXES one per line and exit (single SSOT for "
         "merge-driver attributes and overlap-gate exemptions)",
-    )
-    parser.add_argument(
-        "--pe-manifest",
-        action="store_true",
-        help="Also regenerate environment/program-execution/MANIFEST.json "
-        "(opt-in: it hashes the whole PE tree, so --force alone skips it)",
     )
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
@@ -708,7 +582,6 @@ def main() -> int:
         changed_paths=changed,
         force=args.force,
         workspace=args.workspace.resolve() if args.workspace else None,
-        pe_manifest=args.pe_manifest,
     )
     if args.check and not result["errors"]:
         result["errors"].extend(validate_after_sync(root))

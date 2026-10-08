@@ -97,7 +97,7 @@ def test_todos_json_expands_every_declared_file() -> None:
             "files": [
                 "ops/autonomy/surface_detect.py",
                 "ops/scripts/lib/surface_detect.sh",
-                "ops/autonomy/kernel_gate.py",
+                "ops/autonomy/l4_local.py",
                 "workflows/gmp_executor.py",
             ],
         }

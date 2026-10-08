@@ -1,21 +1,9 @@
 # Claude Code bridge
 
-When `L9_GOVERNANCE_SURFACE=claude-code` or the session is clearly Claude Code
-CLI/Web/Mobile, use the shared Peer Execution bounded runtime. Claude is a thin
-provider and does not own a scheduler.
+Root authorization and gating remain `ops/autonomy/`. Claude multi-lane scheduling is unavailable from this skill after Program Execution retirement. This pack does not invent a Claude scheduler.
 
-```bash
-python3 "$HOME/.cursor-governance/environment/program-execution/peer_execution/autonomy/cli.py" init <campaign.json>
-python3 "$HOME/.cursor-governance/environment/program-execution/peer_execution/autonomy/cli.py" plan <campaign-id>
-```
+1. Root `autonomy/` remains the authorization and control plane.
+2. A Claude PreToolUse event reaches the existing root execution gate through `environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py`.
+3. SessionStart context bootstrap remains fail-open; degraded context does not widen authority.
 
-1. Shared bounded-runtime default profile:
-   `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json`.
-2. Root `autonomy/` remains the authorization/control plane and owns no Program state.
-3. Peer Execution Core owns admitted-dispatch concurrency and lifecycle mechanics.
-4. Claude-specific code owns only Claude invocation and response translation.
-5. SessionStart context bootstrap remains fail-open; degraded context does not widen authority.
-
-When the session is Cursor Composer/Agent, use the same Program Controller and
-Peer Execution substrate through the Cursor provider binding. No surface may
-invent a second scheduler.
+When the session is Cursor Composer/Agent, use the same root autonomy gate. No surface may invent a second scheduler.

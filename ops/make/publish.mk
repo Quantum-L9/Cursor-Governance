@@ -2,9 +2,7 @@ L9_TARGETS += \
 	issue \
 	l4-status \
 	l4-begin \
-	l4-record-kernels \
 	l4-authorize \
-	kernel-precommit \
 	improve \
 	pr-preflight \
 	pr-security \
@@ -18,7 +16,7 @@ L9_TARGETS += \
 	pr-full \
 	pr-full-corpus
 # ---------------------------------------------------------------------------
-# L4 / kernel lifecycle
+# L4 lifecycle
 # ---------------------------------------------------------------------------
 l4-status:
 	$(PYTHON) ops/autonomy/l4_local.py \
@@ -29,25 +27,10 @@ l4-begin:
 		--workspace "$(WS)" \
 		begin \
 		$(if $(CONTRACT_ID),--contract-id "$(CONTRACT_ID)",)
-l4-record-kernels:
-	@test -n "$(RA)" -a -n "$(VR)" || { \
-		echo "ERROR: RA and VR are required — e.g. make l4-record-kernels RA=passed VR=passed"; \
-		echo "  Record what you observed after applying both kernels. Do not use this to APPLY them."; \
-		exit 2; \
-	}
-	$(PYTHON) ops/autonomy/l4_local.py \
-		--workspace "$(WS)" \
-		record-kernels \
-		--recursive-alignment "$(RA)" \
-		--validate-repair "$(VR)"
 l4-authorize:
 	$(PYTHON) ops/autonomy/l4_local.py \
 		--workspace "$(WS)" \
 		authorize-release
-kernel-precommit:
-	$(PYTHON) ops/autonomy/kernel_gate.py \
-		precommit \
-		--workspace "$(WS)"
 improve:
 	IMPROVE_RECORD="$(IMPROVE_RECORD)" \
 	CONTRACT_ID="$(CONTRACT_ID)" \

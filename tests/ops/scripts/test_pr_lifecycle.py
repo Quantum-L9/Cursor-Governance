@@ -11,7 +11,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 L4 = ROOT / "ops" / "autonomy" / "l4_local.py"
-KERNEL_GATE = ROOT / "ops" / "autonomy" / "kernel_gate.py"
 
 
 def git_in(repo: Path, *args: str) -> None:
@@ -127,24 +126,6 @@ def test_preflight_passes_after_authorize(tmp_path: Path) -> None:
     )
     assert (
         _run(
-            [
-                "python3",
-                str(L4),
-                "--workspace",
-                str(repo),
-                "record-kernels",
-                "--recursive-alignment",
-                "passed",
-                "--validate-repair",
-                "passed",
-            ],
-            cwd=repo,
-            env=env,
-        ).returncode
-        == 0
-    )
-    assert (
-        _run(
             ["python3", str(L4), "--workspace", str(repo), "authorize-release"],
             cwd=repo,
             env=env,
@@ -195,6 +176,33 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
     assert rec.returncode == 0, rec.stderr
     receipt = json.loads((repo / ".l9" / "autonomy" / "l4-release-receipt.json").read_text())
     assert receipt["phase"] == "release_authorized"
+
+
+def test_improve_migrates_a_retired_kernels_recorded_phase(tmp_path: Path) -> None:
+    """A workspace left in the retired phase must still finish the two-step flow."""
+    repo = _init_repo(tmp_path, feature=True)
+    env = {
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "IMPROVE_RECORD": "0",
+        "L9_AUTONOMY_STATE_DIR": "",
+    }
+    assert _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env).returncode == 0
+    state_file = repo / ".l9" / "autonomy" / "l4-local-phase.json"
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    state["phase"] = "kernels_recorded"
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+
+    migrate = _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env)
+    assert migrate.returncode == 0, migrate.stderr
+    assert "retired phase 'kernels_recorded' migrated" in migrate.stdout
+    assert json.loads(state_file.read_text(encoding="utf-8"))["phase"] == "executing"
+    rec = _run(
+        ["bash", str(SCRIPTS / "run_improve.sh")],
+        cwd=repo,
+        env={**env, "IMPROVE_RECORD": "1"},
+    )
+    assert rec.returncode == 0, rec.stderr
 
 
 def test_gate_receipt_invalidates_on_tracked_deletion_leaving_bytes(tmp_path: Path) -> None:
@@ -388,67 +396,6 @@ def test_gate_failure_receipt_clears_when_digest_changes(tmp_path: Path) -> None
     assert proc.returncode != 2
 
 
-def test_recording_the_kernels_clears_a_stale_failure_receipt(tmp_path: Path) -> None:
-    """The kernel gate's own instruction must be followable.
-
-    kernel_gate.py fails the gate with "apply the two kernels, record, and
-    re-run the same command". Its receipt lives at .l9/autonomy/, which is
-    gitignored — invisible to `git ls-files` with or without
-    `--others --exclude-standard` — so recording it changed nothing the state
-    digest observed, and the STOP-LOOPING latch then refused the very re-run the
-    hook had just demanded. An unclearable gate is worse than no gate: the only
-    exits left are bypassing it or abandoning the work.
-    """
-    repo = _init_repo(tmp_path, feature=True)
-    paths, content = _state_digest(repo)
-    receipt_dir = repo / ".l9" / "pr"
-    receipt_dir.mkdir(parents=True)
-    (receipt_dir / "gate-failure.json").write_text(
-        json.dumps(
-            {
-                "schema": "l9.pr_gate_failure.v2",
-                "paths_digest": paths,
-                "content_digest": content,
-                "pr_base": "main",
-                "failed_nodes": [],
-                "failed_hooks": [],
-                "recheck_command": "",
-                "message": "STOP LOOPING",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    # Precondition: with no kernel receipt, the latch holds.
-    assert _state_digest(repo) == (paths, content)
-
-    kernel_receipt = repo / ".l9" / "autonomy" / "kernel-receipt.json"
-    kernel_receipt.parent.mkdir(parents=True, exist_ok=True)
-    kernel_receipt.write_text(
-        json.dumps(
-            {
-                "schema": "l9.kernel_receipt.v1",
-                "phase": "recorded",
-                "applied_at": "2026-01-01T00:00:00Z",
-            }
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    assert _state_digest(repo) != (paths, content), (
-        "recording the kernels must invalidate the stale FAIL receipt"
-    )
-
-    proc = _run(
-        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
-        cwd=repo,
-        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
-    )
-    output = proc.stdout + proc.stderr
-    assert "FAIL receipt matches unchanged state" not in output
-    assert proc.returncode != 2
-
-
 def test_precommit_reuses_changed_file(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     listed = tmp_path / "changed.txt"
@@ -486,80 +433,6 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
     assert proc.returncode == 1
     assert "INTERNAL publication-gate hook catalog" in proc.stderr
     assert "Do not run 'pre-commit install'" in proc.stderr
-
-
-def _stamp_kernel(repo: Path) -> None:
-    """Satisfy the tree latch through a bound, path-confined apply report."""
-    alignment_delta = "kernel-ra-fixture.txt"
-    validation_delta = "kernel-vr-fixture.txt"
-    (repo / alignment_delta).write_text("alignment\n", encoding="utf-8")
-    (repo / validation_delta).write_text("validation\n", encoding="utf-8")
-    report = repo / ".l9" / "autonomy" / "kernel-apply.md"
-    report.parent.mkdir(parents=True, exist_ok=True)
-    changed_file = repo / ".l9" / "pr" / "changed-files.txt"
-    changed_file.parent.mkdir(parents=True, exist_ok=True)
-    changed_file.write_text(f"{alignment_delta}\n{validation_delta}\n", encoding="utf-8")
-    report.write_text(
-        "---\n"
-        "schema: l9.kernel_apply.v1\n"
-        "kernels: [recursive_alignment, validate_repair]\n"
-        "convergence_status: converged\n"
-        "deltas:\n"
-        f"  - path: {alignment_delta}\n"
-        "    kernel: recursive_alignment\n"
-        "    note: prepared the lifecycle kernel fixture\n"
-        f"  - path: {validation_delta}\n"
-        "    kernel: validate_repair\n"
-        "    note: validated the lifecycle kernel fixture\n"
-        "---\n\n## Recursive Alignment\n\nfixture\n\n"
-        "## Validate & Repair\n\nfixture\n",
-        encoding="utf-8",
-    )
-    proc = _run(
-        [
-            "python3",
-            str(KERNEL_GATE),
-            "record",
-            "--workspace",
-            str(repo),
-            "--gov-root",
-            str(ROOT),
-            "--changed-file",
-            str(changed_file),
-        ],
-        cwd=repo,
-    )
-    assert proc.returncode == 0, proc.stderr
-
-
-def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
-    repo = _init_repo(tmp_path, feature=True)
-    listed = tmp_path / "changed.txt"
-    listed.write_text("a.txt\n", encoding="utf-8")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    stub = bin_dir / "pre-commit"
-    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    stub.chmod(0o755)
-    proc = _run(
-        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
-        cwd=repo,
-        env={
-            "WS": str(repo),
-            "PR_BASE": "main",
-            "PR_CHANGED_FILE": str(listed),
-            "PATH": f"{bin_dir}:/usr/bin:/bin",
-            # Tree kernels are adapter-surface only. Cursor pytest inherits
-            # CURSOR_AGENT, which outranks L9_GOVERNANCE_SURFACE=claude-code.
-            "L9_GOVERNANCE_SURFACE": "claude-code",
-            "CURSOR_AGENT": "",
-        },
-    )
-    assert proc.returncode == 2, proc.stdout + proc.stderr
-    combined = proc.stdout + proc.stderr
-    assert "apply_kernels_then_precommit" in combined
-    assert "tracked files dirty after precommit-repo" not in combined
-    assert "lint-ruff" not in combined
 
 
 def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path) -> None:
@@ -606,7 +479,6 @@ def test_gate_commit_writer_dirt_finishes_without_second_make_pr(tmp_path: Path)
 
 def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    _stamp_kernel(repo)
     (repo / "a.txt").write_text("dirty\n", encoding="utf-8")
     listed = tmp_path / "changed.txt"
     listed.write_text("a.txt\n", encoding="utf-8")
@@ -653,16 +525,19 @@ def test_pr_full_owns_corpus_validators() -> None:
         assert name in publish
 
 
-def test_precommit_script_runs_kernel_hook_first() -> None:
+def test_precommit_writers_run_before_locked_ruff_and_no_kernel() -> None:
+    """Deterministic preparation, then a separate reader wave; no kernel latch."""
     precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
-    kernel_at = precommit.find("kernel_gate.py")
-    hook_at = precommit.find("pre-commit run")
-    ruff_at = precommit.find("--- ruff (locked writer)")
-    assert kernel_at != -1
-    assert kernel_at < hook_at < ruff_at
-    readers_branch = precommit.find('STAGE" == "readers"')
-    assert readers_branch != -1
-    assert kernel_at < readers_branch or "_run_kernel" in precommit
+    assert "kernel_gate.py" not in precommit
+    assert "_run_kernel" not in precommit
+    readers_branch = precommit.find('if [[ "$STAGE" == "readers" ]]; then')
+    reader_hooks = precommit.find('_run_hooks "$_READER_SKIP"')
+    writer_hooks = precommit.find('_run_hooks "$_WRITER_SKIP"')
+    locked_ruff = precommit.find("_run_locked_ruff_writer || exit $?")
+    assert -1 not in (readers_branch, reader_hooks, writer_hooks, locked_ruff)
+    # The reader invocation exits inside its own branch, before any writer runs.
+    assert readers_branch < reader_hooks < writer_hooks < locked_ruff
+    assert precommit.find('echo "OK: precommit readers clean"', reader_hooks) < writer_hooks
 
 
 def test_precommit_skip_lists_are_disjoint() -> None:

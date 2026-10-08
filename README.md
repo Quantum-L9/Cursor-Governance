@@ -110,7 +110,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 
 ### Skills
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
-- [`skills/l9-plan/SKILL.md`](skills/l9-plan/SKILL.md) — execution planning → PE+autonomy `.plan.md`
+- [`skills/_archived/l9-plan/SKILL.md`](skills/_archived/l9-plan/SKILL.md) — retired Program Execution planning; ordinary plans stay with `l9-plan-simple`
 - [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) — **first-class** executable plan template SSOT
 - [`environment/contracts/autonomy/MANIFEST.yaml`](environment/contracts/autonomy/MANIFEST.yaml) — **first-class** autonomy family registry (subordinate to PE; `owns_program_state: false`)
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)

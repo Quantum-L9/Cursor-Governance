@@ -94,6 +94,11 @@ collect_ignore = [
     "environment/program-execution/integrations",
     "environment/program-execution/conformance",
     "environment/program-execution/tests",
+    # Program Execution is an eviction target (CANONICAL_LAW
+    # PUBLISH_ASSURANCE_DECOUPLING_V1): the generic root suite collects none of
+    # its tests. Remove with the eviction slice.
+    "environment/program-execution",
+    "tests/environment/program_execution",
     # Local runtime / nested worktrees — never root-suite collection targets.
     ".l9",
     # Skill self-check scripts share basename `self_test.py` and collide under
@@ -119,6 +124,11 @@ collect_ignore = [
     "skills/l9-idea-foundry/scripts/self_test.py",
     "skills/l9-plan-simple/scripts/self_test.py",
     "skills/l9-intelligence-harvest/scripts/self_test.py",
+    "skills/_archived/l9-plan/scripts/self_test.py",
+    "skills/_archived/l9-pe-campaign-activate/scripts/test_compile_activation_files.py",
+    "skills/_archived/l9-pe-campaign-activate/scripts/test_compile_brief.py",
+    "skills/_archived/l9-pe-campaign-activate/scripts/test_skill_contract.py",
+    "skills/_archived/l9-pe-nuggets/scripts/test_extract_nuggets.py",
     "skills/l9-pr-digest/scripts/self_test.py",
     "skills/l9-pr-audit/scripts/self_test.py",
     # Local PE/PR worktrees must never enter root discovery (import collisions).

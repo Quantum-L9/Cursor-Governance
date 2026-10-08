@@ -7,7 +7,6 @@ def execution_ready(dimensions: dict[str, bool]) -> dict[str, Any]:
     """Cursor EXECUTION_READY = all required dimensions true."""
     required = [
         "IDENTITY_READY",
-        "PROGRAM_EXECUTION_READY",
         "AUTONOMY_READY",
         "DEPLOYMENT_READY",
         "RESULT_INGRESS_READY",

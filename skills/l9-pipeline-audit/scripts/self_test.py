@@ -106,8 +106,8 @@ def main() -> int:
         else:
             payload = json.loads(proc.stdout)
             names = {row["name"] for row in payload.get("harvestable", [])}
-            if "spent-with-objective" not in names:
-                errors.append("complete campaign with objective must be harvestable")
+            if "spent-with-objective" in names:
+                errors.append("PE campaigns must not enter the live audit queue")
             if not payload.get("plans_store_ok"):
                 errors.append("temp workspace docs/plans must count as tracked store")
             next_names = [row.get("name") for row in payload.get("next") or []]
@@ -119,8 +119,8 @@ def main() -> int:
                 "pe_loop_compiled_8-28-26" not in next_stems
             ):
                 errors.append(f"compiled packet must be NEXT: {next_names}")
-            if "spent-with-objective" not in next_names:
-                errors.append(f"harvestable campaign must be NEXT: {next_names}")
+            if "spent-with-objective" in next_names:
+                errors.append(f"PE campaign must not be NEXT: {next_names}")
             archived = (ws / "docs" / "plans" / "BUILT" / "spent_done.plan.md").is_file() or (
                 ws / "docs" / "plans" / "built" / "spent_done.plan.md"
             ).is_file()

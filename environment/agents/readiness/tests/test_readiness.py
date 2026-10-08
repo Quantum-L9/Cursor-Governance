@@ -11,7 +11,6 @@ class ReadinessTests(unittest.TestCase):
             k: True
             for k in [
                 "IDENTITY_READY",
-                "PROGRAM_EXECUTION_READY",
                 "AUTONOMY_READY",
                 "DEPLOYMENT_READY",
                 "RESULT_INGRESS_READY",
@@ -25,7 +24,6 @@ class ReadinessTests(unittest.TestCase):
             k: True
             for k in [
                 "IDENTITY_READY",
-                "PROGRAM_EXECUTION_READY",
                 "AUTONOMY_READY",
                 "DEPLOYMENT_READY",
                 "RESULT_INGRESS_READY",

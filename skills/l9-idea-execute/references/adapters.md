@@ -3,7 +3,7 @@ l9_schema: 1
 parent: l9-idea-execute
 layer: reference
 role: adapters
-tags: [ideaos, gar, plan, website-bot, program-execution, birth, evidence]
+tags: [ideaos, gar, plan, website-bot, birth, evidence]
 owner: igor_beylin
 status: active
 version: 1.2.0
@@ -66,10 +66,8 @@ Use only when a new standalone product/system repository is required and no spec
 Do not use for Website-Bot-generated sites, existing-repository modifications, or generic code changes merely because code is required.
 
 Idea Execute is the cross-owner orchestrator for this Graph only. It resolves
-GAR, `l9-plan`, and `l9-pe-campaign-activate` as a cohort, then observes their
-ordered native outputs. GAR does not invoke Plan; Plan does not invoke campaign
-activation; PEC does not invoke birth. `l9-repo-birth` is the explicit-only
-control surface for an optional handoff after a verified PE receipt.
+GAR. Program Execution planning and campaign activation are not cohort members.
+`l9-repo-birth` is the explicit-only control surface for an optional handoff.
 `l9-repo-template` implements both birth stages: packaging
 (`scripts/birth-runner/package_birth_handoff.py`, `l9.repo-birth-contract/v1`)
 and the separately authorized remote birth (`make birth`), and owns factory
@@ -97,13 +95,9 @@ Before invoking:
 
 The existence of embedded mode or another accepted handoff must be proven from the live contract. An old capability snapshot is not sufficient evidence.
 
-## 6. Program Execution
+## 6. Campaign-shaped coordinated work
 
-Use for campaign-shaped coordinated modifications to existing systems.
-
-Program Execution is an evolving adapter. Read `program-execution-adapter.md` as a discovery guide, then inspect the live front door before each mutating handoff.
-
-Never call inner PE components to bypass public admission. Never decompose one atomic campaign merely because the current adapter cannot represent it.
+Campaign-shaped coordinated modifications whose only demonstrated topology was Program Execution fail `EXECUTION_TOPOLOGY_UNSUPPORTED`. Do not invent a replacement executor.
 
 ## 7. Failure behavior
 

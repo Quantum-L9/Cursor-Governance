@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import importlib.util
+import json
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -31,36 +30,34 @@ _CHECK_IDS = {
 }
 
 
-_BINDING_RESOLVER_MODULE = "l9_peer_binding_resolver"
+_PEER_BINDINGS_REL = "environment/agents/PEER_RUNTIME_BINDINGS.yaml"
+_PEER_BINDINGS_SCHEMA_REL = "environment/agents/schemas/peer-runtime-bindings.schema.json"
 
 
-def _load_binding_resolver(repository_root: Path):
-    """Bind the one canonical peer-binding resolver owned by Peer Execution.
+def _load_peer_runtime_registry(repository_root: Path) -> dict[str, Any]:
+    """Read the peer runtime registry and fail closed when it cannot be trusted."""
+    import yaml
+    from jsonschema import Draft202012Validator
 
-    Root autonomy cannot import it as a package (the subsystem path is not a
-    Python identifier), so it is loaded by path with the same semantics as
-    peer_execution.imports.load_module: registered in sys.modules before
-    execution (dataclass construction reads it back) and unregistered if the
-    module fails to execute.
-    """
-    path = repository_root / "environment/program-execution/peer_execution/bindings.py"
-    cached = sys.modules.get(_BINDING_RESOLVER_MODULE)
-    if cached is not None and getattr(cached, "__file__", None) == str(path):
-        return cached.resolve_peer_binding
-    spec = importlib.util.spec_from_file_location(_BINDING_RESOLVER_MODULE, path)
-    if spec is None or spec.loader is None:
-        raise ValueError(f"cannot load canonical peer binding resolver: {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_BINDING_RESOLVER_MODULE] = module
+    registry_path = repository_root / _PEER_BINDINGS_REL
+    schema_path = repository_root / _PEER_BINDINGS_SCHEMA_REL
+    registry_text = registry_path.read_text(encoding="utf-8")
+    schema_text = schema_path.read_text(encoding="utf-8")
     try:
-        spec.loader.exec_module(module)
-    # BaseException, not Exception: a partially executed module must be
-    # unregistered even when the load is interrupted, or the next import
-    # silently gets the broken half. The block re-raises.
-    except BaseException:
-        sys.modules.pop(_BINDING_RESOLVER_MODULE, None)
-        raise
-    return module.resolve_peer_binding
+        document = yaml.safe_load(registry_text)
+    except yaml.YAMLError as exc:
+        raise ValueError("peer runtime registry is malformed") from exc
+    if not isinstance(document, dict):
+        raise ValueError("peer runtime registry is malformed")
+    try:
+        schema = json.loads(schema_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError("peer runtime registry schema is malformed") from exc
+    if not isinstance(schema, dict):
+        raise ValueError("peer runtime registry schema is malformed")
+    if any(Draft202012Validator(schema).iter_errors(document)):
+        raise ValueError("peer runtime registry does not satisfy its schema")
+    return document
 
 
 class AdapterConformance:
@@ -115,32 +112,58 @@ class AdapterConformance:
 
     def _peer_surface_binding(self, config: AdapterConfig) -> ConformanceCheck:
         try:
-            resolve = _load_binding_resolver(self.repository_root)
-            binding = resolve(
-                self.repository_root,
-                config.peer_ref,
-                config.surface,
-                config.provider_ref,
-                config.execution_profile_ref,
-            )
-            expected_autonomy = self.requirements.get("canonical_autonomy_provider")
-            if expected_autonomy and binding.autonomy_provider_ref != expected_autonomy:
+            document = _load_peer_runtime_registry(self.repository_root)
+            peers = document.get("peers")
+            if not isinstance(peers, Mapping):
+                raise ValueError("peer runtime registry has no peers")
+            peer = peers.get(config.peer_ref)
+            if not isinstance(peer, Mapping):
+                raise ValueError("peer is not in the runtime registry")
+            if peer.get("agent_ref") != config.peer_ref:
+                raise ValueError("registered peer identity disagrees with the requested peer")
+            autonomy = peer.get("autonomy")
+            if not isinstance(autonomy, Mapping) or autonomy.get("required") is not True:
+                raise ValueError("peer does not require root autonomy")
+            provider_id = autonomy.get("provider_id")
+            if provider_id != self.requirements.get("canonical_autonomy_provider"):
                 raise ValueError(
-                    f"autonomy provider {binding.autonomy_provider_ref!r} != {expected_autonomy!r}"
+                    "peer autonomy provider disagrees with the conformance requirement"
                 )
+            execution = peer.get("execution")
+            bindings = execution.get("bindings") if isinstance(execution, Mapping) else None
+            if not isinstance(bindings, list):
+                raise ValueError("peer has no execution bindings")
+            matched: list[Mapping[str, Any]] = []
+            for row in bindings:
+                if not isinstance(row, Mapping) or row.get("surface") != config.surface:
+                    continue
+                if (
+                    config.provider_ref is not None
+                    and row.get("provider_ref") != config.provider_ref
+                ):
+                    continue
+                if (
+                    config.execution_profile_ref is not None
+                    and row.get("execution_profile_ref") != config.execution_profile_ref
+                ):
+                    continue
+                matched.append(row)
+            if len(matched) != 1:
+                raise ValueError("peer surface does not identify exactly one binding")
+            chosen = matched[0]
+            provider_ref = chosen.get("provider_ref")
+            profile_ref = chosen.get("execution_profile_ref")
+            message = (
+                "Canonical peer binding valid: "
+                f"{config.peer_ref}/{config.surface}/{provider_ref}/{profile_ref}/{provider_id}"
+            )
         except (OSError, ValueError, TypeError, ImportError) as exc:
             return ConformanceCheck(
                 "ADAPTER-002",
                 False,
                 f"Canonical peer/surface binding invalid: {exc}",
             )
-        return ConformanceCheck(
-            "ADAPTER-002",
-            True,
-            "Canonical peer binding valid: "
-            f"{binding.agent_ref}/{binding.surface}/{binding.provider_ref}/"
-            f"{binding.execution_profile_ref}/{binding.autonomy_provider_ref}",
-        )
+        return ConformanceCheck("ADAPTER-002", True, message)
 
     def _policy_checks(self, config: AdapterConfig) -> tuple[ConformanceCheck, ...]:
         checks: list[ConformanceCheck] = []

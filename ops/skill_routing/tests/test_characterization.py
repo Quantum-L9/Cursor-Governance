@@ -277,17 +277,23 @@ def test_registry_reorder_preserves_selection(router):
     [
         ("plan this before coding", "l9-plan-simple"),
         ("create an execution plan for this feature", "l9-plan-simple"),
-        ("prepare a PE campaign", "l9-plan"),
-        (
-            "make campaign INTENT=brief.md and take this brief through completed",
-            "l9-pe-campaign-activate",
-        ),
     ],
 )
 def test_planning_doctrine(router, live_registry, prompt, expected):
     got = router.route_prompt(prompt, live_registry)
     assert got is not None, prompt
     assert got["primary"] == expected
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "prepare a PE campaign",
+        "make campaign INTENT=brief.md and take this brief through completed",
+    ],
+)
+def test_retired_pe_planning_has_no_live_owner(router, live_registry, prompt):
+    assert router.route_prompt(prompt, live_registry) is None
 
 
 def test_rule_and_router_agree_on_ordinary_planning(router, live_registry):

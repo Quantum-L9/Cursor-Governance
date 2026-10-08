@@ -19,7 +19,7 @@ GATE = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "merge_gate.py
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
-from l4_local import authorize_release, begin, record_kernels  # noqa: E402
+from l4_local import authorize_release, begin  # noqa: E402
 
 MERGE_TOOL = "mcp__github__merge_pull_request"
 
@@ -162,7 +162,6 @@ def test_breakglass_allows_merge() -> None:
 
 def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="merge-auth-test")
-    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
 
     code, out, err = _run(
@@ -179,7 +178,6 @@ def test_l4_release_receipt_does_not_allow_merge(stacked_repo: Path) -> None:
 
 def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None:
     begin(stacked_repo, contract_id="merge-admin-test")
-    record_kernels(stacked_repo, recursive_alignment="passed", validate_repair="passed")
     authorize_release(stacked_repo)
 
     code, out, err = _run(
