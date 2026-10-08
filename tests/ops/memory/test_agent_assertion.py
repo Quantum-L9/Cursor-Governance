@@ -195,6 +195,8 @@ def test_print_helper_emits_per_principal_env_only_to_a_pipe(
     ]
 
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    # A cloud session's own marker must not leak into the desktop case under test.
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
@@ -219,6 +221,8 @@ def test_print_helper_skip_message_names_no_path(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    # A cloud session's own marker must not leak into the desktop case under test.
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "cli")
     missing = tmp_path / "absent.json"
@@ -233,11 +237,11 @@ def test_print_helper_skip_message_names_no_path(
     assert str(tmp_path) not in captured.err
 
 
-_PROJECTION_DIGEST = "sha256:489195262a26195a649170c63145f6ad317a99eb082bf360444164ad3ef5a667"
-_AUTHORITY = "07b0df96fc3008d55a96f804923e2177ff312295"
+_PROJECTION_DIGEST = "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
+_AUTHORITY = "9b27869dd893fcd28f76f99c9184a90435542c76"
 GOLDEN_KEY = "golden-identity-hmac-key"
-GOLDEN_DIGEST = "sha256:8c72474b8c0a21b465ec6d8971217455754b89008fcd61c88d51fecc47af816f"
-GOLDEN_HMAC = "a937237875b4b8b3c3ed51ec151383806480c03da8e4e8606c8fc69435373b2e"
+GOLDEN_DIGEST = "sha256:cf7b14bef03986dbabbb926267a470b0ea14d24154ae99e1d95dc4242de21ab4"
+GOLDEN_HMAC = "ae9a689df2cdd819fe8fa980b5474030e0d64ec333a31d2f641b7cb74f076108"
 
 
 def _golden_body() -> dict:
