@@ -696,3 +696,40 @@ def test_a_matching_architecture_venv_stays_cached(tmp_path: Path) -> None:
     assert again.returncode == 0, again.stderr
     assert "cached locked environment" in again.stderr
     assert len(_sync_argv(tmp_path)) == before, "no sync for a healthy environment"
+
+
+def test_a_second_apply_on_unchanged_inputs_does_not_resync(tmp_path: Path) -> None:
+    """APPLY mode, twice, same inputs: one sync, one fingerprint, no second sync.
+
+    Regression (PR #696 CI): the Test Suite built ``.venv`` with a raw
+    ``uv sync`` that wrote no fingerprint, so the first repository test to
+    reach ``run_pr_gate.sh`` → ``ensure_gov_python.sh`` (APPLY, not check)
+    re-entered ``uv sync`` under live xdist workers. Once the owner has run
+    APPLY once, a later APPLY on unchanged pyproject/uv.lock/interpreter must
+    be a cached no-op: the fingerprint stays valid and the sync count does
+    not move. ``check`` mode is covered above; this pins the mode the gate
+    actually calls.
+    """
+    root, env = _writer_root(tmp_path)
+    fingerprint = root / ".venv" / ".l9-uv-fingerprint"
+    first = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert first.returncode == 0, first.stderr
+    assert "synchronized locked environment" in first.stderr
+    assert len(_sync_argv(tmp_path)) == 1, "the first apply syncs exactly once"
+    assert fingerprint.is_file()
+    recorded = fingerprint.read_text(encoding="utf-8")
+    assert recorded.strip()
+    assert (root / ".venv" / "bin" / "python3").is_file()
+
+    second = subprocess.run(
+        ["bash", str(ENSURE), str(root)], env=env, capture_output=True, text=True, timeout=120
+    )
+    assert second.returncode == 0, second.stderr
+    assert "cached locked environment" in second.stderr
+    assert "synchronized locked environment" not in second.stderr
+    assert len(_sync_argv(tmp_path)) == 1, "a second apply on unchanged inputs must not sync"
+    assert fingerprint.read_text(encoding="utf-8") == recorded, "fingerprint stays valid"
+    assert (root / ".venv" / "bin" / "python3").is_file(), "python3 survives the second apply"
+    assert not (root / ".l9" / "uv-environment.installing").exists()
