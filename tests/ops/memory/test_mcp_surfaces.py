@@ -123,12 +123,9 @@ def test_committed_projection_is_current_for_an_unbound_environment() -> None:
     assert committed["mcpServers"]["l9-graphite-memory"]["command"] == MEMORY_WRAPPER
 
 
-@pytest.mark.skipif(
-    not os.environ.get("L9_MEMORY_DEV_CHECKOUT"),
-    reason="L9_MEMORY_DEV_CHECKOUT unset: the package-shape proof needs the memory checkout",
-)
 def test_template_argv_equals_the_packages_managed_entry() -> None:
-    interpreter = Path(os.environ["L9_MEMORY_DEV_CHECKOUT"]) / ".venv" / "bin" / "python"
+    checkout = os.environ.get("L9_MEMORY_DEV_CHECKOUT", "").strip()
+    interpreter = str(Path(checkout) / ".venv" / "bin" / "python") if checkout else sys.executable
     script = "\n".join(
         [
             "import json",
@@ -225,9 +222,12 @@ def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -
     (venv / "python").write_text("", encoding="utf-8")
     (venv / "l9-memory").write_text("", encoding="utf-8")
     calls: list[list[str]] = []
+    envs: list[dict[str, str]] = []
 
-    def runner(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+    def runner(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append(argv)
+        env = kwargs.get("env")
+        envs.append(dict(env) if isinstance(env, dict) else {})
         return subprocess.CompletedProcess(argv, 0, json.dumps({"status": "complete"}), "")
 
     receipt = desktop._memory_entry(
@@ -242,6 +242,7 @@ def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -
     assert argv[0] == str(venv / "l9-memory")
     assert argv[1:4] == ["client", "cursor", "install"]
     assert "--dry-run" in argv and "--path" in argv and "--interpreter" in argv
+    assert envs[0]["L9_MEMORY_MCP_COMMAND"].endswith("ops/memory/run_memory_mcp.sh")
 
 
 def test_memory_entry_without_interpreter_is_skipped_not_invented(tmp_path: Path) -> None:

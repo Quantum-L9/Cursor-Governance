@@ -8,12 +8,9 @@ real file, because the configurator refuses symlinks by design.
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from pathlib import Path
 from typing import Any
-
-import pytest
 
 from ops.memory import mcp_instantiation as inst
 from ops.memory.runtime_binding import RuntimeBinding
@@ -48,10 +45,13 @@ def _binding(tmp_path: Path, *, ok: bool = True) -> RuntimeBinding:
 class _Runner:
     def __init__(self, rc: int = 0) -> None:
         self.calls: list[list[str]] = []
+        self.envs: list[dict[str, str]] = []
         self.rc = rc
 
-    def __call__(self, argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+    def __call__(self, argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         self.calls.append(list(argv))
+        env = kwargs.get("env")
+        self.envs.append(dict(env) if isinstance(env, dict) else {})
         return subprocess.CompletedProcess(argv, self.rc, json.dumps({"status": "complete"}), "")
 
 
@@ -185,6 +185,8 @@ def test_memory_entry_is_delegated_to_the_bound_runtime(tmp_path: Path) -> None:
     assert install[1:4] == ["client", "cursor", "install"]
     assert install[install.index("--path") + 1] == str(target)
     assert install[install.index("--interpreter") + 1] == binding.interpreter
+    assert runner.envs[0].get(inst.ENV_MCP_LAUNCHER) == str(inst.SIGNED_AGENT_LAUNCHER)
+    assert runner.envs[0]["L9_MEMORY_MCP_COMMAND"] == runner.envs[1]["L9_MEMORY_MCP_COMMAND"]
     assert verify[1:4] == ["client", "cursor", "verify"] and "--path" in verify
     assert receipt["binding_status"] == "exact"
     assert receipt["authority"] == "none" and receipt["schema"] == inst.RECEIPT_SCHEMA
@@ -242,10 +244,6 @@ def test_cli_writes_a_receipt_with_no_authority(tmp_path: Path) -> None:
     assert written["status"] == "written"
 
 
-@pytest.mark.skipif(
-    not os.environ.get("L9_MEMORY_DEV_CHECKOUT"),
-    reason="L9_MEMORY_DEV_CHECKOUT unset: the real configurator needs the memory checkout",
-)
 def test_real_configurator_installs_and_verifies_into_the_rendered_file(tmp_path: Path) -> None:
     master_path = tmp_path / "master.json"
     master_path.write_text(json.dumps(_master(Playwright={"command": "npx"})), encoding="utf-8")
@@ -256,6 +254,7 @@ def test_real_configurator_installs_and_verifies_into_the_rendered_file(tmp_path
     servers = json.loads(target.read_text(encoding="utf-8"))["mcpServers"]
     entry = servers["l9-graphite-memory"]
     assert entry["args"] == MEMORY_ARGS and "env" not in entry
+    assert entry["command"] == str(inst.SIGNED_AGENT_LAUNCHER)
     assert servers["Playwright"] == {"command": "npx"}
     # A second run is byte-stable and keeps the configurator's entry.
     again = inst.instantiate(path=target, master_path=master_path, check=True, skip_memory=True)

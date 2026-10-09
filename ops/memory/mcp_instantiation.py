@@ -46,6 +46,11 @@ MEMORY_KEY = "l9-graphite-memory"
 LEGACY_KEYS = frozenset({"graphiti-memory", "l9-shared-memory"})
 RECEIPT_SCHEMA = "cursor.mcp-instantiation/v1"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
+#: Read by l9-graphite-memory 2.6.0 client_config. The value is an absolute
+#: executable path, never a secret, and is written as the managed command
+#: only — never as an env block. A missing file fails the install.
+ENV_MCP_LAUNCHER = "L9_MEMORY_MCP_COMMAND"
+SIGNED_AGENT_LAUNCHER = _REPO_ROOT / "ops" / "memory" / "run_memory_mcp.sh"
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -157,6 +162,20 @@ def _decode(stdout: str, stderr: str) -> dict[str, Any]:
     return decoded if isinstance(decoded, dict) else {"raw": str(decoded)[:400]}
 
 
+def package_install_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Env for ``l9-memory client cursor install``.
+
+    A caller-supplied launcher path is dropped. Regeneration names this
+    repository's signed-agent wrapper, or it names nothing.
+    """
+
+    env = dict(os.environ if base is None else base)
+    env.pop(ENV_MCP_LAUNCHER, None)
+    if SIGNED_AGENT_LAUNCHER.is_file():
+        env[ENV_MCP_LAUNCHER] = str(SIGNED_AGENT_LAUNCHER)
+    return env
+
+
 def memory_entry(
     *,
     config_path: Path,
@@ -204,7 +223,9 @@ def memory_entry(
     ]
     if check:
         argv.append("--dry-run")
-    result = runner(argv, capture_output=True, text=True, check=False, timeout=60)
+    result = runner(
+        argv, capture_output=True, text=True, check=False, timeout=60, env=package_install_env()
+    )
     receipt: dict[str, Any] = {
         "interpreter_source": source,
         "argv": argv,
@@ -230,6 +251,7 @@ def memory_entry(
             text=True,
             check=False,
             timeout=90,
+            env=package_install_env(),
         )
         receipt["verify"] = _decode(probe.stdout, probe.stderr)
         receipt["verify_exit_code"] = probe.returncode

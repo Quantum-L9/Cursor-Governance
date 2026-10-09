@@ -7,8 +7,10 @@
 #      git ls-remote, a bare SHA is taken as is — and refuse any commit other
 #      than release_evidence.memory_sha (a moved tag fails here, never rebinds);
 #      then clone Quantum-L9/l9-graphiti-memory at that immutable SHA
-#   2. build its wheel reproducibly (uv build --wheel, fixed SOURCE_DATE_EPOCH)
-#      and refuse a digest that differs from release_evidence.artifact_sha256
+#   2. rebuild its wheel with uv build --wheel and the fixed SOURCE_DATE_EPOCH
+#      and refuse a digest that differs from release_evidence.artifact_sha256.
+#      That digest is the official published wheel (python -m build / PyPI).
+#      The rebuild is kept because it reproduces those bytes; a mismatch fails.
 #   3. install that wheel into a clean environment and bind it through
 #      L9_MEMORY_INTERPRETER (runtime_mode=pinned_environment) — never a
 #      development checkout, never whatever l9-memory is on PATH
