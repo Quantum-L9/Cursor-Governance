@@ -76,7 +76,7 @@ Live workstation MCP or the SSOT clone is in the request. True only when the use
 - Bound interpreter: distribution, version, contract, schema, CLI, and `exact` provenance.
 - Acceptance tests with the cross-repo flag: failures 0, skips 0.
 - `make pr` local gate passes, then the PR head's required checks pass.
-- `python scripts/validate_skill_pack.py` is the pack gate for this skill, not a substitute for the rebind proofs.
+- `python skills/l9-skill-compiler/scripts/validate_skill_pack.py skills/l9-memory-consumer-rebind` is the pack gate for this skill, not a substitute for the rebind proofs. Run it from the repository root.
 
 ## Stop
 
