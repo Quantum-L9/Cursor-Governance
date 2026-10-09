@@ -1050,20 +1050,24 @@ def _run_handoff(interpreter: str, payload: dict, data_dir: Path) -> dict:
 
 
 def test_canonical_actor_identity_handoff(runtime, tmp_path: Path) -> None:
-    """Cursor evidence becomes the persisted canonical actor, and a mismatch writes nothing."""
+    """Cursor evidence becomes the persisted canonical actor, and a mismatch writes nothing.
+
+    This runs against the bound interpreter, including the pinned 2.6.0 wheel.
+    A development checkout is additional containment evidence, not the only
+    runtime the handoff is allowed to see.
+    """
 
     from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
 
     client, _env = runtime
+    assert client.binding.interpreter
     checkout_raw = os.environ.get(ENV_DEV_CHECKOUT, "").strip()
-    if not checkout_raw:
-        # The required CI job proves the pinned wheel and counts a skip as a
-        # failure. That wheel is not this campaign's consumer. The handoff
-        # runs only when a development checkout is named.
-        return
-    checkout = Path(checkout_raw).expanduser().resolve()
-    assert client.binding.runtime_mode == "development_checkout"
-    assert str(checkout) in str(client.binding.module_path)
+    if checkout_raw:
+        checkout = Path(checkout_raw).expanduser().resolve()
+        assert client.binding.runtime_mode == "development_checkout"
+        assert str(checkout) in str(client.binding.module_path)
+        assert _git_head(ROOT)
+        assert _git_head(checkout)
     cursor_assertion = build_runtime_identity_assertion({"CURSOR_AGENT": "1"})
     fragment = cursor_assertion["resolved_dimensions"]["actor_identity"].rsplit("#", 1)[-1]
     assert fragment == "cursor"
@@ -1108,5 +1112,250 @@ def test_canonical_actor_identity_handoff(runtime, tmp_path: Path) -> None:
     )
     assert rejected["wrote"] is False
     assert "authenticated agent_id" in rejected["error"]
-    assert _git_head(ROOT)
-    assert _git_head(checkout)
+
+
+class _StdioSession:
+    """One newline-delimited JSON-RPC session against the bound memory server."""
+
+    def __init__(self, interpreter: str, env: dict[str, str], cwd: Path, stderr_path: Path) -> None:
+        self._stderr = stderr_path.open("w", encoding="utf-8")
+        self.proc = subprocess.Popen(
+            [interpreter, "-m", "l9_graphite_memory.server", "--transport", "stdio"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=self._stderr,
+            env=env,
+            cwd=str(cwd),
+            text=True,
+        )
+        self._next = 0
+
+    def request(self, method: str, params: dict | None = None) -> dict:
+        assert self.proc.stdin is not None and self.proc.stdout is not None
+        self._next += 1
+        payload = {"jsonrpc": "2.0", "id": self._next, "method": method}
+        if params is not None:
+            payload["params"] = params
+        self.proc.stdin.write(json.dumps(payload) + "\n")
+        self.proc.stdin.flush()
+        line = self.proc.stdout.readline()
+        assert line, self.stderr_text()
+        return json.loads(line)
+
+    def notify(self, method: str) -> None:
+        assert self.proc.stdin is not None
+        self.proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": method}) + "\n")
+        self.proc.stdin.flush()
+
+    def tool(self, name: str, arguments: dict | None = None) -> dict:
+        response = self.request("tools/call", {"name": name, "arguments": arguments or {}})
+        if "error" in response:
+            return response
+        content = response["result"]["content"]
+        body = json.loads(content[0]["text"])
+        response["body"] = body
+        return response
+
+    def stderr_text(self) -> str:
+        self._stderr.flush()
+        return Path(self._stderr.name).read_text(encoding="utf-8")
+
+    def close(self) -> None:
+        if self.proc.poll() is None and self.proc.stdin is not None:
+            self.proc.stdin.close()
+            self.proc.wait(timeout=20)
+        self._stderr.close()
+
+
+def _stdio_env(tmp_path: Path, door: dict[str, str]) -> dict[str, str]:
+    data = tmp_path / "data"
+    state = tmp_path / "state"
+    data.mkdir(parents=True, exist_ok=True)
+    state.mkdir(parents=True, exist_ok=True)
+    return {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(tmp_path),
+        "L9_MEMORY_DATA_DIR": str(data),
+        "L9_MEMORY_STATE_DIR": str(state),
+        "L9_MEMORY_JSON_LOGS": "0",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        **door,
+    }
+
+
+def _cursor_door(namespace: str) -> dict[str, str]:
+    from ops.memory.agent_assertion import build_agent_mcp_env
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+
+    return build_agent_mcp_env(
+        agent_id="cursor",
+        agents_door_secret="mcp-rebind-agents-door-secret",
+        signing_key="mcp-rebind-cursor-signing-key",
+        grants={
+            "cursor": {
+                "principal_id": "cursor",
+                "roles": ["orchestrator"],
+                "read_namespaces": [namespace],
+                "write_namespaces": [namespace],
+            }
+        },
+        identity_assertion=build_runtime_identity_assertion({"CURSOR_AGENT": "1"}),
+    )
+
+
+def test_stdio_mcp_write_persists_across_restart(runtime, tmp_path: Path) -> None:
+    """The pinned server admits one agent write and a second process reads it back.
+
+    Missing grant, a bad signature, the wrong actor, and an unauthorized
+    namespace are refused. The local-operator fallback is not used.
+    """
+
+    client, _env = runtime
+    interpreter = client.binding.interpreter
+    assert interpreter
+    namespace = "mcp-rebind-proof"
+    store = tmp_path / "store"
+    door = _cursor_door(namespace)
+    session = _StdioSession(interpreter, _stdio_env(store, door), store, tmp_path / "server-a.err")
+    try:
+        initialized = session.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "rebind", "version": "0"},
+            },
+        )
+        assert initialized["result"]["protocolVersion"]
+        session.notify("notifications/initialized")
+        listed = session.request("tools/list")
+        names = {tool["name"] for tool in listed["result"]["tools"]}
+        for required in (
+            "memory.health",
+            "memory.search",
+            "memory.hydrate",
+            "memory.write_agent",
+            "memory.phase_lock",
+            "memory.write_governed",
+        ):
+            assert required in names
+        health = session.tool("memory.health")
+        assert "error" not in health, health.get("error")
+        content = "memory 2.6.0 isolated stdio persistence proof"
+        written = session.tool(
+            "memory.write_agent",
+            {
+                "namespace": namespace,
+                "content": content,
+                "memory_class": "observation",
+                "idempotency_key": "mcp-rebind-write",
+            },
+        )
+        assert "error" not in written, written.get("error")
+        record_id = written["body"]["record_id"]
+        assert record_id
+        fetched = session.tool("memory.get", {"record_id": record_id})
+        assert fetched["body"]["found"] is True
+        assert fetched["body"]["record"]["provenance"]["source_agent_id"] == "cursor"
+        found = session.tool(
+            "memory.search", {"query": content, "namespaces": [namespace], "limit": 5}
+        )
+        assert record_id in {hit["record"]["record_id"] for hit in found["body"]["hits"]}
+        hydrated = session.tool("memory.hydrate", {"task": content, "namespaces": [namespace]})
+        assert hydrated["body"]["status"] in {"complete", "partial"}
+        locked = session.tool(
+            "memory.phase_lock",
+            {"namespace": namespace, "task_signature": "rebind-phase-lock-task"},
+        )
+        assert locked["body"]["granted"] is True
+        governed = session.tool(
+            "memory.write_governed",
+            {
+                "namespace": namespace,
+                "content": "governed companion of the stdio proof",
+                "memory_class": "observation",
+                "task_signature": "rebind-phase-lock-task",
+                "idempotency_key": "mcp-rebind-governed",
+            },
+        )
+        assert "error" not in governed, governed.get("error")
+        refused = session.tool(
+            "memory.write_agent",
+            {
+                "namespace": "not-granted",
+                "content": "must not persist",
+                "memory_class": "observation",
+                "idempotency_key": "mcp-rebind-denied",
+            },
+        )
+        if "error" in refused:
+            assert refused["error"]["code"] in {-32001, -32010}
+        else:
+            assert refused["body"]["status"] == "rejected"
+            assert refused["body"]["record_id"] is None
+    finally:
+        session.close()
+
+    again = _StdioSession(interpreter, _stdio_env(store, door), store, tmp_path / "server-b.err")
+    try:
+        again.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "rebind", "version": "0"},
+            },
+        )
+        again.notify("notifications/initialized")
+        reread = again.tool("memory.get", {"record_id": record_id})
+        assert reread["body"]["found"] is True
+        assert reread["body"]["record"]["provenance"]["source_agent_id"] == "cursor"
+    finally:
+        again.close()
+
+    def assert_refused(env: dict[str, str], folder: str, needle: str) -> None:
+        root = tmp_path / folder
+        refused_session = _StdioSession(
+            interpreter, _stdio_env(root, env), root, tmp_path / f"{folder}.err"
+        )
+        try:
+            line = ""
+            if refused_session.proc.stdin is not None and refused_session.proc.stdout is not None:
+                refused_session.proc.stdin.write(
+                    json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}) + "\n"
+                )
+                refused_session.proc.stdin.flush()
+                line = refused_session.proc.stdout.readline()
+            text = refused_session.stderr_text()
+            if line:
+                payload = json.loads(line)
+                assert "error" in payload
+                assert needle in payload["error"]["message"].lower()
+            else:
+                refused_session.proc.wait(timeout=20)
+                assert refused_session.proc.returncode not in (None, 0)
+                assert needle in text.lower()
+                assert "local-operator" not in text.lower()
+        finally:
+            refused_session.close()
+
+    missing = dict(door)
+    missing.pop("L9_MEMORY_AGENT_GRANTS_JSON", None)
+    assert_refused(missing, "missing-grant", "l9_memory_agent_grants_json is missing")
+
+    forged = dict(door)
+    forged["L9_MEMORY_AGENT_ASSERTION"] = "not-a-signed-assertion"
+    assert_refused(forged, "bad-sig", "authenticationerror")
+
+    from ops.memory.agent_assertion import identity_assertion_hmac, seal_identity_assertion
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+
+    wrong = dict(door)
+    claude = seal_identity_assertion(
+        build_runtime_identity_assertion({"CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "cli"})
+    )
+    wrong["L9_MEMORY_IDENTITY_ASSERTION_JSON"] = json.dumps(claude)
+    wrong["L9_MEMORY_IDENTITY_ASSERTION_HMAC"] = identity_assertion_hmac(
+        str(claude["assertion_digest"]), "mcp-rebind-cursor-signing-key"
+    )
+    assert_refused(wrong, "wrong-actor", "agent")

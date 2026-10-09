@@ -90,7 +90,7 @@ def scoped_tokens(raw: object, agent_id: str) -> dict[str, object]:
 def signed_door_grant(principal: dict[str, object]) -> dict[str, object]:
     """Keep only claims ``AgentDoorGrant`` accepts.
 
-    Release 2.5.0 types ``L9_MEMORY_AGENT_GRANTS_JSON`` with ``extra="forbid"``.
+    The bound release types ``L9_MEMORY_AGENT_GRANTS_JSON`` with ``extra="forbid"``.
     Tenant, organization, workspace, and agent id are not grant claims: the
     door reads the first three from settings and the agent id from the signed
     assertion. Passing the full principal raises ``AuthenticationError`` before

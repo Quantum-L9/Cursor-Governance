@@ -521,7 +521,7 @@ requires-dist = [
     { name = "claude-agent-sdk", marker = "extra == 'agent-sdk'", specifier = "==0.2.163" },
     { name = "cryptography", specifier = ">=42,<51" },
     { name = "jsonschema", specifier = ">=4.22,<5" },
-    { name = "l9-graphite-memory", path = "ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl" },
+    { name = "l9-graphite-memory", specifier = "==2.6.0" },
     { name = "langgraph", specifier = ">=0.2" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==2.3.0" },
@@ -830,50 +830,16 @@ wheels = [
 
 [[package]]
 name = "l9-graphite-memory"
-version = "2.5.0"
-source = { path = "ops/vendor/wheels/l9_graphite_memory-2.5.0-py3-none-any.whl" }
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/20/40/b858b0a5d9a5fe8f7a6826d587dde6d63c9357161f38632d37c926a44174/l9_graphite_memory-2.6.0.tar.gz", hash = "sha256:7507070e9eb974bc53df9e3ca90b27755284b99375d8a396b72bbb4cc4e893cc", size = 972275, upload-time = "2026-10-09T02:01:44.045Z" }
 wheels = [
-    { filename = "l9_graphite_memory-2.5.0-py3-none-any.whl", hash = "sha256:794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a" },
+    { url = "https://files.pythonhosted.org/packages/d3/bf/e1e7174b0d9229c7fe369cde3d750d68d8a9224404bb65faebe8d879127c/l9_graphite_memory-2.6.0-py3-none-any.whl", hash = "sha256:d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15", size = 398742, upload-time = "2026-10-09T02:01:42.263Z" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2,<2" },
-    { name = "cryptography", marker = "extra == 'dev'", specifier = ">=46.0,<47" },
-    { name = "cryptography", marker = "extra == 'phase6'", specifier = ">=46.0,<47" },
-    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.115,<1" },
-    { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.115,<1" },
-    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115,<1" },
-    { name = "httpx2", marker = "extra == 'dev'", specifier = ">=2.12,<3" },
-    { name = "infisical-python", marker = "extra == 'all'", specifier = ">=2.0,<3" },
-    { name = "infisical-python", marker = "extra == 'infisical'", specifier = ">=2.0,<3" },
-    { name = "jsonschema", marker = "extra == 'dev'", specifier = ">=4.26,<5" },
-    { name = "jsonschema", marker = "extra == 'phase6'", specifier = ">=4.26,<5" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11,<2" },
-    { name = "psycopg2-binary", marker = "extra == 'all'", specifier = ">=2.9,<3" },
-    { name = "psycopg2-binary", marker = "extra == 'dev'", specifier = ">=2.9,<3" },
-    { name = "psycopg2-binary", marker = "extra == 'postgres'", specifier = ">=2.9,<3" },
-    { name = "pydantic", specifier = ">=2.7,<3" },
-    { name = "pyjwt", marker = "extra == 'dev'", specifier = ">=2.13,<3" },
-    { name = "pyjwt", marker = "extra == 'phase6'", specifier = ">=2.13,<3" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3,<10" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23,<1" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5,<7" },
-    { name = "pyyaml", specifier = ">=6.0,<7" },
-    { name = "redis", marker = "extra == 'active'", specifier = ">=5,<7" },
-    { name = "redis", marker = "extra == 'all'", specifier = ">=5,<7" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8,<1" },
-    { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.30,<1" },
-    { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30,<1" },
-    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30,<1" },
-    { name = "zep-cloud", marker = "extra == 'all'", specifier = ">=3.0,<4" },
-    { name = "zep-cloud", marker = "extra == 'zep'", specifier = ">=3.0,<4" },
-]
-provides-extras = ["server", "active", "postgres", "zep", "phase6", "infisical", "all", "dev"]
 
 [[package]]
 name = "langchain-core"
@@ -966,7 +932,7 @@ wheels = [
 
 [[package]]
 name = "langgraph-sdk"
-version = "0.4.2"
+version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -975,9 +941,9 @@ dependencies = [
     { name = "orjson" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/2b/bd8ac26d4e97f6df88ef05ce5b6a38945a3903e1025d926f4752aa88aa97/langgraph_sdk-0.4.2.tar.gz", hash = "sha256:b88f0f5f6328ac0680d6790614a905b2bcfa257f2276dba4e38f0e86db0aa738", size = 348327, upload-time = "2026-06-01T17:51:19.856Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/85/54edf4902c0378510f09a009f64e3d3f5644aeeb51d13cf67ec380a5245b/langgraph_sdk-0.4.6.tar.gz", hash = "sha256:ea5b1749d70987d741c9b9fe2b7e1c5f7da7e4d102f64e390333c1890c9bbd5b", size = 350632, upload-time = "2026-10-06T14:17:53.641Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/05/aac507337cceae773c2cc9ab91eb6301963af7aeeb55b4217a00e15aff17/langgraph_sdk-0.4.2-py3-none-any.whl", hash = "sha256:75fa5096c1177ce39c847096a8fe3745ffd480ddb412995f836e9f5f884c43dd", size = 160521, upload-time = "2026-06-01T17:51:18.849Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/c7/69d13026db3577c157877dea47a9dc5fffd3dcde2d1ab8009fa8f7e5f6a6/langgraph_sdk-0.4.6-py3-none-any.whl", hash = "sha256:57122b02bda41d37a97a5e09eb018aa8c9b3dc85c433880073779bd9324b7eea", size = 162390, upload-time = "2026-10-06T14:17:52.134Z" },
 ]
 
 [[package]]

@@ -4,13 +4,13 @@
   "epoch": {
     "started_at": "2026-09-06T00:00:00+00:00",
     "campaign_stage": "C10",
-    "memory_release": "2.5.0",
-    "memory_source_ref": "78b304a3948214fa4b17bf97ed0529c5b0c22673",
-    "memory_source_sha": "78b304a3948214fa4b17bf97ed0529c5b0c22673",
+    "memory_release": "2.6.0",
+    "memory_source_ref": "846f283f7dade101b324b87008ab4f5901f97074",
+    "memory_source_sha": "846f283f7dade101b324b87008ab4f5901f97074",
     "control_plane_contract": "memory-control-plane/v1",
     "continuation_schema": "cursor.continuation/v2",
-    "memory_artifact_sha256": "794ad0e6e0b9c278623ff79314ae70ee539ce0cd7bea772ce8556400887cab3a",
-    "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest); 2026-09-07 (source ref moved to the v2.3.0 release tag); 2026-09-08 (MEMORY_TARGET_VERSION moved to v2.3.1, first PyPI upload); 2026-09-13 (ADR-0031 candidate 2.4.0 signed-agent door); 2026-10-01 (pin v2.5.0 / 78b304a3948214fa4b17bf97ed0529c5b0c22673, uv build --wheel digest)"
+    "memory_artifact_sha256": "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15",
+    "memory_rebound_at": "2026-09-06 (audit closure C14: rebound from the M2 head to the final #56 head with the wheel digest); 2026-09-07 (source ref moved to the v2.3.0 release tag); 2026-09-08 (MEMORY_TARGET_VERSION moved to v2.3.1, first PyPI upload); 2026-09-13 (ADR-0031 candidate 2.4.0 signed-agent door); 2026-10-01 (pin v2.5.0 / 78b304a3948214fa4b17bf97ed0529c5b0c22673, uv build --wheel digest); 2026-10-08 (pin v2.6.0 / 846f283f7dade101b324b87008ab4f5901f97074, official PyPI wheel)"
   },
   "authority": {
     "canonical": "l9-graphite-memory MemoryService (Quantum-L9/l9-graphiti-memory)",

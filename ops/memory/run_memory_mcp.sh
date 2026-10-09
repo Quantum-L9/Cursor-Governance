@@ -24,7 +24,18 @@
 # No env block in .mcp.json. Extra argv from .mcp.json is forwarded.
 set -euo pipefail
 
-GOV="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+# The checkout that contains this script is the governance tree it binds.
+# $HOME/.cursor-governance remains the fallback for a copied wrapper.
+# L9_GOVERNANCE_DIR still wins when a caller names a tree on purpose.
+_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_script_gov="$(cd "$_script_dir/../.." && pwd)"
+if [[ -n "${L9_GOVERNANCE_DIR:-}" ]]; then
+  GOV="$L9_GOVERNANCE_DIR"
+elif [[ -f "$_script_gov/CANONICAL_LAW.md" ]]; then
+  GOV="$_script_gov"
+else
+  GOV="$HOME/.cursor-governance"
+fi
 BIND="$GOV/ops/scripts/lib/bind_memory_interpreter.sh"
 
 if [[ ! -f "$GOV/CANONICAL_LAW.md" || ! -f "$BIND" ]]; then

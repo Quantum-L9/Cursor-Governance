@@ -1309,3 +1309,27 @@ Root autonomy remains the surviving provider-neutral autonomy authority.
 
 PE-owned artifacts may remain physically present only as an inert
 eviction target until their separate physical-removal slice.
+
+<!-- MEMORY_RELEASE_260_V1 -->
+## 8.8 Memory release 2.6.0 (2026-10-08) — supersedes the 2.5.0 pin in §8.7
+
+Append-only. §8.7 stays the historical 2.5.0 pin. This section is the live
+release identity. The signed-agent door in §8.5 is unchanged. Tag `v2.6.0`
+is not retargeted onto the documentation commit that followed the source.
+
+1. **Bound head.** `ops/config/memory-binding.json` `source.ref` and
+   `release_evidence.memory_sha` are
+   `846f283f7dade101b324b87008ab4f5901f97074`. Annotated tag `v2.6.0`, tag
+   object `9c1b37727b03d3c9754c379f2cb54d934c5f2e2b`. Package
+   `l9-graphite-memory==2.6.0`.
+2. **Wheel.** Official published artifact
+   `l9_graphite_memory-2.6.0-py3-none-any.whl`, sha256
+   `d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15`.
+   `pyproject.toml` / `uv.lock` pin that registry wheel. The 2.5.0 path
+   override is removed. `uv build --wheel` under
+   `SOURCE_DATE_EPOCH=1784592000` reproduces this digest; the cross-repo
+   proof still refuses any other bytes.
+3. **Contract.** `memory-control-plane/v1` and memory schema `2.2.0` are
+   unchanged. 2.6.0 adds the canonical identity assertion on the agents
+   door, the `L9_MEMORY_MCP_COMMAND` launcher, and graph MCP operations.
+   `installed_record_digest` stays unpinned.
