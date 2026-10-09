@@ -1,5 +1,5 @@
 {
-  "generation_id": "b85e52e85c42a98d852ed3163095f2f3f0f7a964fc7c69c3587f129fb01ef1bb",
+  "generation_id": "3d0aa21ce0a476c448017d4afaae4b12abc0aee199fcce0965f99d4dea10fbb0",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1247,7 +1247,7 @@
       "path": "skills/l9-memory-consumer-rebind",
       "reason": "pins a consumer onto one published memory release and publishes that pin through make pr \u2014 high blast radius, explicit only, hint_allowed so a matching rebind prompt surfaces Read/attach; hydrate, host deploy, retag, and live MCP cutover stay out",
       "skill_md": "skills/l9-memory-consumer-rebind/SKILL.md",
-      "skill_sha256": "9087b1369afe5b5198b674d67b2bd2c530e737d268839e2d462dab3aea2ea9e2",
+      "skill_sha256": "9e9824e9fca95f3efb4a650fece1084b6831517700865c6f26884a1ed972809b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1540,5 +1540,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "46143d4121ef18b9feeb74aaf8d59a46d4ceb1d98e22bd81011e3dfa48487f68",
-  "source_skill_corpus_sha256": "8283b5080cce8dcd7a0249f55af8e9cae839c1a483c2f4c646258905a9b3e4e1"
+  "source_skill_corpus_sha256": "a3db8e7b513009225169ad45ecd8a4aa761440258d70e5112c71901c6a0bf1c4"
 }
