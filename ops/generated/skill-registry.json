@@ -1,5 +1,5 @@
 {
-  "generation_id": "0abdb3d6e5fd93d02c100dfbb9f44b824c53fd574c9b85d1d370ff13fcedca49",
+  "generation_id": "3d0aa21ce0a476c448017d4afaae4b12abc0aee199fcce0965f99d4dea10fbb0",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -381,6 +381,11 @@
       },
       {
         "id": "graphiti_memory",
+        "negative_signals": [
+          "memory consumer rebind",
+          "published memory wheel",
+          "pin l9-graphite-memory release"
+        ],
         "positive_signals": [
           "graphiti memory",
           "memory prefetch",
@@ -394,6 +399,36 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "memory_consumer_rebind",
+        "negative_signals": [
+          "memory hydrate",
+          "graphiti health",
+          "deploy the memory host",
+          "retag the release",
+          "live workstation MCP cutover"
+        ],
+        "positive_signals": [
+          "/l9-memory-consumer-rebind",
+          "memory consumer rebind",
+          "rebind memory release",
+          "published memory wheel",
+          "replace vendored memory wheel",
+          "pin l9-graphite-memory release"
+        ],
+        "primary": "l9-memory-consumer-rebind",
+        "required_any": [
+          "/l9-memory-consumer-rebind",
+          "memory consumer rebind",
+          "rebind memory release",
+          "published memory wheel",
+          "replace vendored memory wheel",
+          "pin l9-graphite-memory release"
+        ],
+        "signal_weight": 8,
+        "supporting": []
       },
       {
         "id": "aws_secrets",
@@ -1204,6 +1239,19 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "Rebind a governed consumer onto one immutable published l9-graphite-memory release. Verify the official wheel digest, replace the vendored pin with the registry lock, seal PEP 610 provenance, prove signed-agent grants and Cursor and Claude MCP on an isolated store, then publish once through make pr. Use when a tagged memory release must replace the consumer pin. Do not use for hydrate debugging, host deployment, retagging the release, or a live workstation MCP cutover.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-memory-consumer-rebind",
+      "path": "skills/l9-memory-consumer-rebind",
+      "reason": "pins a consumer onto one published memory release and publishes that pin through make pr \u2014 high blast radius, explicit only, hint_allowed so a matching rebind prompt surfaces Read/attach; hydrate, host deploy, retag, and live MCP cutover stay out",
+      "skill_md": "skills/l9-memory-consumer-rebind/SKILL.md",
+      "skill_sha256": "9e9824e9fca95f3efb4a650fece1084b6831517700865c6f26884a1ed972809b",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "watch running terminal processes for crashes and stack traces. when an error appears, navigate to the failing file and line, diagnose, and fix it automatically. use when a dev server, watcher, or test process is running and may emit runtime errors to fix live.",
       "disable_model_invocation": false,
@@ -1491,6 +1539,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "746f0934892a659a8819c91675c4bdbc0acf56a5e4c2848c18911c1eaaccd2eb",
-  "source_skill_corpus_sha256": "3ee26cd06f0023374dd91ebc63d6aa34b70647d916ac77768002c9bf90fa9b13"
+  "source_manifest_sha256": "46143d4121ef18b9feeb74aaf8d59a46d4ceb1d98e22bd81011e3dfa48487f68",
+  "source_skill_corpus_sha256": "a3db8e7b513009225169ad45ecd8a4aa761440258d70e5112c71901c6a0bf1c4"
 }

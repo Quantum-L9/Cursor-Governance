@@ -1,0 +1,112 @@
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - memory consumer rebind
+      - published memory wheel digest
+      - replace vendored memory wheel
+      - pin l9-graphite-memory release
+      - tagged memory release consumer pin
+    weak_signals:
+      - memory binding manifest
+      - PEP 610 seal
+    reject_signals:
+      - memory hydrate or prefetch repair
+      - deploy the memory host
+      - retag or move the release
+      - live workstation MCP cutover
+      - redesign memory schema or transport
+    specificity_score: 5
+    false_positive_risk_score: 1
+    false_positive_risks:
+      - A memory health failure is l9-graphiti-memory, not a pin change.
+  authority_model:
+    order:
+      - admitted release identity
+      - official published wheel bytes
+      - binding manifest and lockfile
+      - bound package verifier and configurator
+      - existing proof and test owners
+      - inference
+    conflict_rule: Higher authority wins. A local rebuild never outranks the admitted digest.
+  expert_heuristics:
+    - condition: The official wheel hash differs from the admitted digest.
+      judgment: The release in hand is not the release that was admitted.
+      action: Stop. Do not pin the bytes that hashed differently.
+    - condition: The registry serves a wheel whose hash equals the admitted digest.
+      judgment: A path override would be a second active source.
+      action: Remove the override, delete the old vendored wheel, and lock the registry pin.
+    - condition: A rebuild from the peeled source and the release epoch matches the official digest.
+      judgment: The existing proof already identifies the official artifact.
+      action: Keep that proof and update only the expected digest.
+    - condition: The interpreter version matches and PEP 610 has no archive hash.
+      judgment: The install is compatible, not exact.
+      action: Seal from the locked URL and require artifact_sha256. Do not pin the RECORD digest.
+    - condition: The launcher is invoked from a consumer checkout that contains CANONICAL_LAW.md.
+      judgment: $HOME/.cursor-governance may be a different release or absent.
+      action: Bind the checkout that contains the script unless L9_GOVERNANCE_DIR is set.
+    - condition: MCP proof would write the live workstation config or read a workstation key file.
+      judgment: That proves the workstation, not the release, and cutover is separate.
+      action: Use a temporary config and a door minted for the test.
+    - condition: The lockfile audit reinstalls the project environment or fails on an untouched one-package advisory.
+      judgment: A sync drops the seal. A wider upgrade is not part of the rebind.
+      action: Add --no-sync to the existing audit. Take a one-package in-constraint fix only. Otherwise stop.
+  doctrine:
+    - Do not retarget the release tag.
+    - Do not replace the admitted digest with a local build.
+    - Do not keep two active versions of the distribution.
+    - Do not treat a version string as provenance.
+    - Do not merge the consumer PR from this skill.
+  invariants:
+    - One active resolution.
+    - Official digest verified before the pin edit.
+    - exact artifact_sha256 after seal.
+    - Required cross-repo run has zero skips.
+    - Unauthorized grant cases are refused without a local-operator fallback.
+  adapter_map:
+    core_default: Pin the official wheel, seal it, prove grants and MCP, publish once.
+    adapters:
+      - name: rebuild-mismatch
+        load_when:
+          - source rebuild digest differs from the official wheel
+        changes:
+          - proof owner verifies the official artifact
+          - rebuild is not treated as the release
+  failure_modes:
+    - name: substituted-digest
+      prevention: verify_wheel_digest.py before any pin edit
+    - name: unsealed-interpreter
+      prevention: seal and require exact
+    - name: workstation-shaped-proof
+      prevention: temporary config, script-local root, test door
+    - name: audit-unseal
+      prevention: audit command does not sync
+    - name: dirty-tree-release
+      prevention: hold unrelated paths before authorize-release
+  leverage_points:
+    - Hash the official wheel first.
+    - Drop the vendor override only after the registry matches.
+    - Keep a matching rebuild proof.
+    - Seal once and keep the audit from reinstalling.
+    - One make pr, then read the checks.
+  evidence_hierarchy:
+    - official wheel bytes
+    - seal receipt and binding status
+    - test counts with skip count
+    - pull request check conclusions
+  self_improvement_hook:
+    - After a rebind, record only a failure that changed a decision.
+    - Add that condition to expert_heuristics.
+    - Do not add the search path that found it.
+    - Re-run validate_exemplary_skill.py before packaging the next revision.
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates: pass
+    skill_intelligence_report: pass
+  tier_decision: exemplary
