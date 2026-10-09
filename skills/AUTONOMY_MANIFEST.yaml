@@ -106,6 +106,8 @@ tiers:
     reason: parallel Tasks and background PR-poll under an explicit authorization packet — high blast radius, explicit only
   - skill: l9-cli-optimization
     reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
+  - skill: l9-memory-consumer-rebind
+    reason: pins a consumer onto one published memory release and publishes that pin through make pr — high blast radius, explicit only, hint_allowed so a matching rebind prompt surfaces Read/attach; hydrate, host deploy, retag, and live MCP cutover stay out
   - skill: l9-e2e-blocker-resolution
     reason: runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only
   - skill: l9-governance-symlinks
@@ -539,6 +541,35 @@ claude_routing:
     - graphiti health
     supporting:
     - l9-structured-reasoning
+    negative_signals:
+    - memory consumer rebind
+    - published memory wheel
+    - pin l9-graphite-memory release
+  - id: memory_consumer_rebind
+    primary: l9-memory-consumer-rebind
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /l9-memory-consumer-rebind
+    - memory consumer rebind
+    - rebind memory release
+    - published memory wheel
+    - replace vendored memory wheel
+    - pin l9-graphite-memory release
+    positive_signals:
+    - /l9-memory-consumer-rebind
+    - memory consumer rebind
+    - rebind memory release
+    - published memory wheel
+    - replace vendored memory wheel
+    - pin l9-graphite-memory release
+    negative_signals:
+    - memory hydrate
+    - graphiti health
+    - deploy the memory host
+    - retag the release
+    - live workstation MCP cutover
+    supporting: []
   - id: aws_secrets
     primary: l9-aws-secrets
     signal_weight: 8

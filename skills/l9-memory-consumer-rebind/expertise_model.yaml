@@ -1,0 +1,63 @@
+expertise_model:
+  experts:
+    - id: release-identity
+      judgment: The admitted wheel digest is the release. A rebuild is a witness, not a source.
+    - id: provenance
+      judgment: Exact means the sealed interpreter's PEP 610 hash. A version string is not identity.
+    - id: publication
+      judgment: One governed make pr against the integration base. Merge is a separate authority.
+  doctrine:
+    - Do not retarget the release tag.
+    - Do not replace the admitted digest with a local build.
+    - Do not keep a vendored wheel once the registry serves the admitted bytes.
+    - Do not pin the installed RECORD digest.
+    - Do not prove MCP by editing the live workstation config.
+    - Do not grant identity from a caller-supplied static value.
+    - Do not let a lockfile audit reinstall the sealed wheel.
+  invariants:
+    - One active resolution of the distribution.
+    - Official wheel sha256 matches the admitted digest before any pin edit.
+    - Binding status exact with artifact_sha256 after seal.
+    - Cross-repo proof with the requirement flag has zero skips.
+    - Launcher governance root is the checkout that contains the script.
+    - Unauthorized grant, signature, actor, and namespace are refused.
+  authority_hierarchy:
+    - admitted release identity
+    - official published wheel bytes
+    - binding manifest and lockfile
+    - bound package verifier and configurator
+    - existing proof and test owners
+    - inference
+  activation_signals:
+    - memory consumer rebind
+    - published memory wheel digest
+    - replace vendored memory wheel
+    - pin l9-graphite-memory release
+    - tagged memory release consumer pin
+  reject_signals:
+    - memory hydrate or prefetch repair
+    - deploy the memory host
+    - retag or move the release
+    - live workstation MCP cutover
+    - redesign memory schema or transport
+  adapters:
+    - id: rebuild-mismatch
+      load_when: the source rebuild digest differs from the official wheel
+      changes: the proof owner verifies the official artifact instead of the rebuild
+  failure_modes:
+    - id: substituted-digest
+      prevention: hash the official wheel before editing the pin and stop on mismatch
+    - id: unsealed-interpreter
+      prevention: seal after sync and require exact artifact_sha256
+    - id: workstation-shaped-proof
+      prevention: temporary MCP config, script-local governance root, and a test door
+    - id: audit-unseal
+      prevention: lockfile audit must not sync the project environment
+    - id: dirty-tree-release
+      prevention: hold unrelated paths before authorize-release
+  leverage_points:
+    - Verify the official digest before any file edit.
+    - Drop the vendor override only after the registry bytes match.
+    - Keep the rebuild proof when it already reproduces the digest.
+    - Seal once and stop the audit from reinstalling that wheel.
+    - Publish the clean tree once and read the PR checks.
