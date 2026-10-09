@@ -46,6 +46,8 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 MASTER_PATH = REPO_ROOT / "environment" / "mcp" / "master.mcp.json"
 MEMORY_KEY = "l9-graphite-memory"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
+ENV_MCP_LAUNCHER = "L9_MEMORY_MCP_COMMAND"
+SIGNED_AGENT_LAUNCHER = REPO_ROOT / "ops" / "memory" / "run_memory_mcp.sh"
 
 _VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 _SECRET_MARKERS = ("TOKEN", "KEY", "SECRET", "PASSWORD", "CREDENTIAL", "DSN")
@@ -203,6 +205,16 @@ def _atomic_write(path: Path, payload: str) -> str | None:
     return backup
 
 
+def _package_install_env() -> dict[str, str]:
+    """Same launcher contract as Cursor instantiation. A caller override is dropped."""
+
+    env = dict(os.environ)
+    env.pop(ENV_MCP_LAUNCHER, None)
+    if SIGNED_AGENT_LAUNCHER.is_file():
+        env[ENV_MCP_LAUNCHER] = str(SIGNED_AGENT_LAUNCHER)
+    return env
+
+
 def _memory_entry(
     *,
     config_path: Path,
@@ -236,7 +248,9 @@ def _memory_entry(
     ]
     if check:
         argv.append("--dry-run")
-    result = runner(argv, capture_output=True, text=True, check=False, timeout=60)
+    result = runner(
+        argv, capture_output=True, text=True, check=False, timeout=60, env=_package_install_env()
+    )
     receipt: dict[str, Any] = {"argv": argv, "exit_code": result.returncode}
     try:
         receipt["install"] = json.loads(result.stdout)
@@ -264,6 +278,7 @@ def _memory_entry(
             text=True,
             check=False,
             timeout=90,
+            env=_package_install_env(),
         )
         try:
             receipt["verify"] = json.loads(probe.stdout)

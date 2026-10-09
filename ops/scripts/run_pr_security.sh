@@ -379,7 +379,9 @@ run_pip_audit() {
   (
     cd "$WS"
     if [[ -f uv.lock ]]; then
-      uv run --with "pip-audit==${PIP_AUDIT_PIN}" pip-audit --progress-spinner off
+      # --no-sync keeps the sealed memory wheel. A syncing `uv run` reinstalls it
+      # and drops the PEP 610 hash while the reader wave is still importing it.
+      uv run --no-sync --with "pip-audit==${PIP_AUDIT_PIN}" pip-audit --progress-spinner off
     elif [[ -f requirements.txt ]]; then
       run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r requirements.txt --progress-spinner off
     elif [[ -f requirements.lock ]]; then
