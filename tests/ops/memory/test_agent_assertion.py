@@ -338,6 +338,127 @@ def test_unknown_claude_remote_entrypoint_refuses_identity() -> None:
         _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_unknown"})
 
 
+def _full_principal(agent_id: str) -> dict[str, object]:
+    """A workstation principal: door claims plus the four fields the door rejects."""
+    return {
+        "principal_id": agent_id,
+        "user_id": "operator",
+        "roles": ["orchestrator"],
+        "read_namespaces": ["*"],
+        "write_namespaces": ["stale-namespace-not-from-registry"],
+        "promote_namespaces": [],
+        "is_admin": False,
+        "tenant_id": "l9",
+        "organization_id": "quantum-l9",
+        "workspace_id": "igor-workspace",
+        "agent_id": agent_id,
+    }
+
+
+def _export_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    agent_id: str,
+) -> dict[str, str]:
+    secrets = {
+        "agents_door_secret": DOOR,
+        "human_door_secret": HUMAN,
+        "agent_signing_keys": {"cursor": CURSOR_KEY, "claude-code": CLAUDE_KEY},
+    }
+    grants = {
+        "schema_version": 1,
+        "grants": {agent_id: _full_principal(agent_id)},
+    }
+    secret_path = tmp_path / "tokens.json"
+    grants_path = tmp_path / "grants.json"
+    secret_path.write_text(json.dumps(secrets), encoding="utf-8")
+    grants_path.write_text(json.dumps(grants), encoding="utf-8")
+    before = grants_path.read_bytes()
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+    assert (
+        helper.main(
+            [
+                "--secret-map",
+                str(secret_path),
+                "--grants-map",
+                str(grants_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    assert grants_path.read_bytes() == before
+    out = capsys.readouterr().out.strip()
+    assert DOOR not in out and CURSOR_KEY not in out and CLAUDE_KEY not in out
+    path = Path(out)
+    env = json.loads(path.read_text(encoding="utf-8"))
+    path.unlink()
+    return env
+
+
+def test_stale_cursor_principal_exports_a_legal_door_grant(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+    from ops.memory.materialize_agent_authority import agent_grants
+
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    for name in (
+        "CLAUDECODE",
+        "CLAUDE_CODE_REMOTE",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "CLAUDE_CODE_SESSION_ID",
+        "L9_MEMORY_AGENT_ID",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    env = _export_env(tmp_path, monkeypatch, capsys, "cursor")
+    grant = json.loads(env[ENV_AGENT_GRANTS_JSON])["cursor"]
+    AgentDoorGrant.model_validate(grant)
+    for forbidden in ("tenant_id", "organization_id", "workspace_id", "agent_id"):
+        assert forbidden not in grant
+    assert grant == agent_grants(helper._ROOT, "cursor")["grants"]["cursor"]
+    assertion = json.loads(env[ENV_IDENTITY_ASSERTION_JSON])
+    assert assertion["resolved_dimensions"]["actor_identity"] == "l9.actor-registry/global@1#cursor"
+
+
+def test_remote_mobile_exports_claude_actor_and_a_legal_door_grant(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.delenv("L9_MEMORY_AGENT_ID", raising=False)
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "remote_mobile")
+    monkeypatch.setenv("CLAUDECODE", "1")
+    env = _export_env(tmp_path, monkeypatch, capsys, "claude-code")
+    grant = json.loads(env[ENV_AGENT_GRANTS_JSON])["claude-code"]
+    AgentDoorGrant.model_validate(grant)
+    for forbidden in ("tenant_id", "organization_id", "workspace_id", "agent_id"):
+        assert forbidden not in grant
+    assertion = json.loads(env[ENV_IDENTITY_ASSERTION_JSON])
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+
+
+def test_unknown_remote_entrypoint_refuses_export(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
+    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "remote_unknown")
+    monkeypatch.setenv("CLAUDECODE", "1")
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+    assert helper.main(["--format", "json"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "remote_unknown" in captured.err
+
+
 def test_adapter_without_surface_evidence_is_unknown() -> None:
     assertion = _resolved({"L9_MEMORY_AGENT_ID": "codex"})
     dims = assertion["resolved_dimensions"]

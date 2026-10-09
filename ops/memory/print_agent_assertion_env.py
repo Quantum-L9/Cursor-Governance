@@ -61,6 +61,31 @@ def _runtime_dir() -> str | None:
     return None
 
 
+def projected_door_grants(agent_id: str, grants_map: Path) -> dict[str, Any]:
+    """The grant the signed door accepts for ``agent_id``.
+
+    A workstation file often stores the full principal, including tenant,
+    organization, workspace, and agent id. Those are not door claims. When
+    any key falls outside ``AgentDoorGrant``, the claims are rendered from
+    ``environment/agents/agent_registry.yaml`` via ``agent_grants`` (which
+    applies ``signed_door_grant``). A file that is already a door grant is
+    passed through ``signed_door_grant`` so the allowed set stays the model,
+    not a private key list. The grants file on disk is not rewritten.
+    """
+    from l9_graphite_memory.authz.signed_assertion import AgentDoorGrant
+
+    from ops.memory.agent_assertion import load_grants_file
+    from ops.memory.materialize_agent_authority import agent_grants, signed_door_grant
+
+    loaded = load_grants_file(grants_map)
+    entry = loaded.get(agent_id) if isinstance(loaded, dict) else None
+    if not isinstance(entry, dict) or not entry:
+        raise KeyError(f"no grants for agent_id={agent_id}")
+    if set(entry) - set(AgentDoorGrant.model_fields):
+        return agent_grants(_ROOT, agent_id)
+    return {"grants": {agent_id: signed_door_grant(entry)}}
+
+
 def _write_secret_file(payload: str) -> Path:
     """Write payload to a 0600 tempfile. stdout later gets only this path."""
     fd, name = tempfile.mkstemp(
@@ -290,9 +315,20 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    env = env_from_local_secret_map(
-        args.agent_id, args.tokens_map, args.grants_map, identity_assertion
-    )
+    projected: Path | None = None
+    try:
+        projected = _write_secret_file(
+            json.dumps(projected_door_grants(args.agent_id, args.grants_map))
+        )
+        env = env_from_local_secret_map(
+            args.agent_id, args.tokens_map, projected, identity_assertion
+        )
+    except (KeyError, OSError, ValueError) as exc:
+        print(f"refusing to mint an agent assertion: {exc}", file=sys.stderr)
+        return 2
+    finally:
+        if projected is not None:
+            projected.unlink(missing_ok=True)
     # Structural guarantee from the library; kept as a hard refusal here too.
     env.pop(ENV_HUMAN_DOOR_SECRET, None)
     if args.format == "json":
