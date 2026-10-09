@@ -433,3 +433,40 @@ artifact pin remain operator steps named in `release_evidence.operator_gated`;
 the pin waits for `publish.yml` to succeed on the tag, whose first run was
 rejected by the memory repository's `release` environment deployment policy
 (it does not yet allow the `v*` tag pattern).
+
+## Shared Hetzner memory staging binding (target; not live proof)
+
+For the approved Claude Code -> Cursor memory test, Cursor-Governance is the
+existing composer of the `l9-graphite-memory` dependency. The release binding
+in `ops/config/memory-binding.json` is `2.6.0` / `memory-control-plane/v1`.
+Both agents must use that exact compatible package via their existing managed
+stdio MCP launchers, with each agent independently authenticated and authorized.
+
+The staged target is ONE shared PostgreSQL canonical store on authorized
+Hetzner infrastructure. Each local MCP process composes its own MemoryService
+and uses product-supported configuration to select that same canonical store.
+No client may read or write the PostgreSQL tables directly, call a Graphiti
+provider as its memory authority, reuse the other actor's signed assertion,
+or receive a default local-operator fallback. Runtime credentials must be
+injected through permitted secret sources and must not enter MCP JSON,
+Git-tracked configuration, logs or model-visible output.
+
+First E2E: Claude Code creates a new canonical memory via package MCP and
+retains the server-issued record ID/receipt. After the writer exits, Cursor
+starts separately, independently authenticates, retrieves the same record ID
+and normalized content through the package's own MCP surface, then repeats
+successfully after reader restart. An unauthorized namespace request must fail.
+A matching search phrase alone, an MCP handshake, or a mocked provider does
+not close this proof.
+
+Full deployment is a different acceptance bar: PostgreSQL, real Graphiti plus
+Neo4j, and real Redis active store plus awareness must each qualify, with an
+aggregate fail-closed readiness verdict, outage/recovery and restore evidence.
+The remote-host/Mobile consumer access boundary is explicitly unresolved.
+Do not treat the two local processes' successful shared-database test as
+permission to publish a remote HTTP memory endpoint or a database port.
+
+This binding does not introduce a hosted application image, a new deployment
+profile, a memory front door, new schema fields, or domain rules in l9-deploy.
+Deployment profile/admission and actual Hetzner changes require separately
+verified executable artifacts and authorized target infrastructure.
