@@ -96,4 +96,14 @@ grep -Fq 'pip-audit could not run' "$SECURITY" \
   || fail "tooling errors must not be labelled as vulnerabilities"
 pass "pip-audit has a requirements.lock branch and distinct tooling-error text"
 
+# T7 — a uv.lock audit must read the lock, not the ambient environment.
+grep -Fq 'uv export --frozen --no-emit-project --no-hashes' "$SECURITY" \
+  || fail "uv.lock audit must export the lock"
+grep -Fq 'pip-audit -r "$req"' "$SECURITY" \
+  || fail "uv.lock audit must pass the exported requirements to pip-audit"
+if grep -Fq 'uv run --no-sync' "$SECURITY"; then
+  fail "uv.lock audit must not skip environment sync and then audit the ambient venv"
+fi
+pass "pip-audit exports uv.lock instead of auditing the ambient environment"
+
 echo "OK: $PASS assertions"
