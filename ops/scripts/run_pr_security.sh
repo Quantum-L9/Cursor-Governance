@@ -379,9 +379,17 @@ run_pip_audit() {
   (
     cd "$WS"
     if [[ -f uv.lock ]]; then
-      # --no-sync keeps the sealed memory wheel. A syncing `uv run` reinstalls it
-      # and drops the PEP 610 hash while the reader wave is still importing it.
-      uv run --no-sync --with "pip-audit==${PIP_AUDIT_PIN}" pip-audit --progress-spinner off
+      # Audit this workspace lock. Do not sync the project environment:
+      # UV_PROJECT_ENVIRONMENT is the governance venv, and a sync reinstalls
+      # the sealed memory wheel. `uv export --frozen` reads the lock only.
+      req="$(mktemp "${TMPDIR:-/tmp}/l9-pip-audit-req.XXXXXX")"
+      trap 'rm -f "$req"' EXIT
+      if ! uv export --frozen --no-emit-project --no-hashes \
+        --format requirements.txt -o "$req"; then
+        echo "pip-audit: uv export failed for $WS/uv.lock" >&2
+        exit 2
+      fi
+      run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r "$req" --progress-spinner off
     elif [[ -f requirements.txt ]]; then
       run_uvx_pkg "pip-audit==${PIP_AUDIT_PIN}" pip-audit -r requirements.txt --progress-spinner off
     elif [[ -f requirements.lock ]]; then
