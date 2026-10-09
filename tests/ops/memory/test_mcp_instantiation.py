@@ -244,7 +244,39 @@ def test_cli_writes_a_receipt_with_no_authority(tmp_path: Path) -> None:
     assert written["status"] == "written"
 
 
-def test_real_configurator_installs_and_verifies_into_the_rendered_file(tmp_path: Path) -> None:
+def test_real_configurator_installs_and_verifies_into_the_rendered_file(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    from ops.memory.agent_assertion import build_agent_mcp_env
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+
+    # The probe launches the installed launcher. A runner has no workstation
+    # door and no ~/.cursor-governance, so the test supplies a cursor door and
+    # lets the script bind the checkout that contains it.
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    monkeypatch.delenv("L9_GOVERNANCE_DIR", raising=False)
+    data = tmp_path / "data"
+    state = tmp_path / "state"
+    data.mkdir()
+    state.mkdir()
+    monkeypatch.setenv("L9_MEMORY_DATA_DIR", str(data))
+    monkeypatch.setenv("L9_MEMORY_STATE_DIR", str(state))
+    door = build_agent_mcp_env(
+        agent_id="cursor",
+        agents_door_secret="mcp-rebind-agents-door-secret",
+        signing_key="mcp-rebind-cursor-signing-key",
+        grants={
+            "cursor": {
+                "principal_id": "cursor",
+                "roles": ["orchestrator"],
+                "read_namespaces": ["mcp-install-proof"],
+                "write_namespaces": ["mcp-install-proof"],
+            }
+        },
+        identity_assertion=build_runtime_identity_assertion({"CURSOR_AGENT": "1"}),
+    )
+    for key, value in door.items():
+        monkeypatch.setenv(key, value)
     master_path = tmp_path / "master.json"
     master_path.write_text(json.dumps(_master(Playwright={"command": "npx"})), encoding="utf-8")
     target = tmp_path / "mcp.json"
