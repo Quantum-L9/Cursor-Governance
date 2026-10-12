@@ -1,8 +1,10 @@
 """Tests for ops/autonomy/merge_gate.py
 
-Shell ``git``/``gh`` skip merge *authorization*. Stack safety still applies:
-``gh pr merge --squash`` of a parent is denied on Shell and MCP. Other shell
-git/gh forms stay unrestricted here.
+Merge authority is a human grant bound to repo + PR + exact head (§6.2.12), on
+every transport: shell ``gh``, REST (gh api / curl), MCP, and
+``stack_safe_merge.py --run``. Stack safety still applies after authority:
+``gh pr merge --squash`` of a parent is denied on Shell and MCP. Non-merge
+shell git/gh forms stay unrestricted here.
 """
 
 from __future__ import annotations
@@ -44,16 +46,21 @@ def _mcp(**tool_input) -> dict:
     return {"tool_name": MERGE_TOOL, "tool_input": tool_input}
 
 
+SHA = "a" * 40
+
+
 def _auth_file(
     tmp_path: Path,
     *,
     repo: str = "Quantum-L9/SEO-Bot",
     pr: int | str = 53,
     expires_at: float | None = None,
-    head_sha: str | None = None,
+    head_sha: str | None = SHA,
+    issuer: str | None = "human",
     no_expiry: bool = False,
     extra: str = "",
 ) -> Path:
+    """A grant in the shape authorize_merge.py writes; overrides make it invalid."""
     import time
 
     entry: dict = {"repo": repo, "pr": pr}
@@ -61,6 +68,8 @@ def _auth_file(
         entry["expires_at"] = expires_at or (time.time() + 3600)
     if head_sha is not None:
         entry["head_sha"] = head_sha
+    if issuer is not None:
+        entry["issuer"] = issuer
     payload = json.dumps({"authorizations": [entry]}) + extra
     path = tmp_path / "merge-authorization.json"
     path.write_text(payload, encoding="utf-8")
@@ -110,30 +119,74 @@ def test_shell_git_and_gh_are_allowed(command: str) -> None:
     assert out.strip() == "", command
 
 
+CLI_MERGE = " ".join(["gh", "pr", "merge"])
+
+
+def _granted(tmp_path: Path, probe: dict | None = None, **auth) -> dict[str, str]:
+    return {
+        "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, **auth)),
+        "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, probe)),
+    }
+
+
 def test_shell_squash_denied_when_head_is_base_of_open_pr(tmp_path: Path) -> None:
-    """Agents type gh in Shell; squash of a parent must still be denied."""
+    """Past authority, squash of a parent must still be denied."""
     code, out, err = _run(
         {
             "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash"},
+            "tool_input": {
+                "command": f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --squash "
+                f"--match-head-commit {SHA}"
+            },
         },
-        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+        env=_granted(tmp_path, STACKED),
     )
     assert code == 0, err
     assert "deny" in out
     assert "#54" in out
 
 
-def test_shell_merge_commit_allowed_when_stacked(tmp_path: Path) -> None:
+def test_shell_merge_commit_allowed_when_stacked_and_granted(tmp_path: Path) -> None:
     code, out, err = _run(
         {
             "tool_name": "Bash",
-            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --merge"},
+            "tool_input": {
+                "command": f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge "
+                f"--match-head-commit {SHA}"
+            },
         },
-        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+        env=_granted(tmp_path, STACKED),
     )
     assert code == 0, err
     assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge",
+        f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --squash --match-head-commit {SHA}",
+        f"cd /tmp && {CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge",
+    ],
+)
+def test_shell_gh_merge_without_grant_is_merge_pending(tmp_path: Path, command: str) -> None:
+    """The git/gh workflow exemption never covered merge authority (§6.2.12)."""
+    code, out, err = _run(
+        _shell(command),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path))},
+    )
+    assert code == 0, err
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert reason.startswith("MERGE_PENDING")
+
+
+def test_shell_gh_merge_with_grant_but_unnamed_head_is_denied(tmp_path: Path) -> None:
+    code, out, err = _run(
+        _shell(f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge"),
+        env=_granted(tmp_path),
+    )
+    assert code == 0, err
+    assert "MERGE_PENDING" in out
 
 
 # --- MCP merge tool: authorization --------------------------------------------
@@ -194,7 +247,7 @@ def test_l4_release_receipt_still_denies_admin_merge(stacked_repo: Path) -> None
 def test_human_file_authorization_allows_matching_merge(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path)
     code, out, err = _run(
-        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha=SHA),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
@@ -285,9 +338,9 @@ def test_receipt_bound_to_head_sha_denies_when_head_unnamed(tmp_path: Path) -> N
     assert "deny" in out
 
 
-def test_unbound_receipt_ignores_named_head(tmp_path: Path) -> None:
-    """A receipt with no head_sha stays repo/PR-scoped even when a head is named."""
-    auth = _auth_file(tmp_path)
+def test_head_unbound_receipt_never_authorizes(tmp_path: Path) -> None:
+    """The pre-§6.2.12 receipt shape (no head_sha) is legacy: it grants nothing."""
+    auth = _auth_file(tmp_path, head_sha=None)
     code, out, err = _run(
         _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha="c" * 40),
         env={
@@ -296,20 +349,52 @@ def test_unbound_receipt_ignores_named_head(tmp_path: Path) -> None:
         },
     )
     assert code == 0, err
-    assert out.strip() == ""
+    assert "MERGE_PENDING" in out
 
 
-def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
+def test_repo_scope_authorization_never_authorizes(tmp_path: Path) -> None:
+    """The receipt Converge used to self-issue (pr "*") authorizes no PR."""
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
-        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=99, merge_method="squash"),
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=99, merge_method="squash", sha=SHA),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
         },
     )
     assert code == 0, err
-    assert out.strip() == ""
+    assert "MERGE_PENDING" in out
+
+
+@pytest.mark.parametrize(
+    "auth",
+    [
+        {"issuer": None},  # legacy source: l9-pr-remediation receipt
+        {"issuer": "l9-pr-remediation"},
+        {"pr": 54},  # another PR
+        {"repo": "Quantum-L9/Website-Bot"},  # another repository
+        {"head_sha": "abc1234"},  # short sha is not an exact head
+    ],
+)
+def test_receipt_for_another_target_or_issuer_denies(tmp_path: Path, auth: dict) -> None:
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="merge", sha=SHA),
+        env=_granted(tmp_path, **auth),
+    )
+    assert code == 0, err
+    assert "MERGE_PENDING" in out
+
+
+def test_grant_with_overlong_life_denies(tmp_path: Path) -> None:
+    """A grant claiming to outlive MAX_GRANT_TTL_SECONDS is not one the issuer writes."""
+    import time
+
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="merge", sha=SHA),
+        env=_granted(tmp_path, expires_at=time.time() + 30 * 86400),
+    )
+    assert code == 0, err
+    assert "MERGE_PENDING" in out
 
 
 def test_repo_scope_authorization_wrong_repo_denies(tmp_path: Path) -> None:
@@ -362,11 +447,8 @@ def test_env_authorization_never_waives_admin_merge() -> None:
 
 def _authorized_merge(tmp_path: Path, entries: dict, **tool_input) -> tuple[int, str, str]:
     return _run(
-        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, **tool_input),
-        env={
-            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
-            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, entries)),
-        },
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, sha=SHA, **tool_input),
+        env=_granted(tmp_path, entries),
     )
 
 
@@ -412,9 +494,9 @@ def test_squash_allowed_when_no_open_child(tmp_path: Path) -> None:
 def test_unknown_stack_state_fails_closed_for_squash(tmp_path: Path) -> None:
     """An unreadable probe cannot prove safety, so deny rather than guess."""
     code, out, err = _run(
-        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha=SHA),
         env={
-            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
+            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path)),
             "L9_STACK_PROBE_FILE": str(tmp_path / "missing-probe.json"),
         },
     )
@@ -438,10 +520,9 @@ def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
     code, out, err = _authorized_merge(tmp_path, STACKED, merge_method="squash")
     assert "deny" in out
     code, out, err = _run(
-        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha=SHA),
         env={
-            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
-            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
+            **_granted(tmp_path, STACKED),
             "L9_STACK_CHECK_BYPASS": "children already retargeted to main",
         },
     )
@@ -505,7 +586,7 @@ def test_github_mcp_owner_repo_shape_is_authorized(tmp_path: Path) -> None:
     """
     auth = _auth_file(tmp_path)
     code, out, err = _run(
-        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash", sha=SHA),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
@@ -519,7 +600,7 @@ def test_github_mcp_owner_repo_shape_wrong_repo_still_denies(tmp_path: Path) -> 
     """Joining owner + repo must not widen scope: a receipt for another repo still denies."""
     auth = _auth_file(tmp_path, repo="Quantum-L9/Website-Bot")
     code, out, err = _run(
-        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash", sha=SHA),
         env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
     )
     assert code == 0, err
@@ -535,6 +616,7 @@ def test_github_mcp_owner_does_not_rewrite_explicit_owner_name(tmp_path: Path) -
             repo="Quantum-L9/SEO-Bot",
             pullNumber=53,
             merge_method="squash",
+            sha=SHA,
         ),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
@@ -554,7 +636,7 @@ def test_github_mcp_shape_stack_parent_squash_still_denied(tmp_path: Path) -> No
     auth = _auth_file(tmp_path)
     probe = _probe_file(tmp_path, STACKED)
     code, out, err = _run(
-        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash", sha=SHA),
         env={
             "L9_MERGE_AUTHORIZATION_FILE": str(auth),
             "L9_STACK_PROBE_FILE": str(probe),
@@ -578,12 +660,16 @@ def test_github_mcp_shape_stack_parent_squash_still_denied(tmp_path: Path) -> No
 # path -- the stack probe returns early on an empty PR number, so detection
 # alone would still have read every REST merge as safe.
 
-REST_SQUASH = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=squash"
-REST_MERGE_COMMIT = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=merge"
-REST_UNSPECIFIED = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge"
+REST_SQUASH = (
+    f"gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=squash -f sha={SHA}"
+)
+REST_MERGE_COMMIT = (
+    f"gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=merge -f sha={SHA}"
+)
+REST_UNSPECIFIED = f"gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f sha={SHA}"
 CURL_SQUASH = (
     "curl -X PUT https://api.github.com/repos/Quantum-L9/SEO-Bot/pulls/53/merge "
-    "-f merge_method=squash"
+    f"-f merge_method=squash -f sha={SHA}"
 )
 
 
@@ -599,10 +685,7 @@ def test_rest_squash_of_a_stack_parent_is_denied(tmp_path: Path, command: str) -
     ANCESTRY_BREAKING, so the gate needs no claim about the endpoint's
     server-side default to stay correct.
     """
-    code, out, err = _run(
-        _shell(command),
-        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
-    )
+    code, out, err = _run(_shell(command), env=_granted(tmp_path, STACKED))
     assert code == 0, err
     assert "deny" in out, command
     assert "#54" in out, command
@@ -629,21 +712,29 @@ def test_curl_rest_squash_of_a_stack_parent_denied_even_with_a_receipt(
     """Past authorization, the same ancestry check must still fire."""
     code, out, err = _run(
         _shell(CURL_SQUASH),
-        env={
-            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
-            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
-        },
+        env=_granted(tmp_path, STACKED),
     )
     assert code == 0, err
     assert "deny" in out
     assert "#54" in out
 
 
+@pytest.mark.parametrize("command_name", ["REST_MERGE_COMMIT", "REST_SQUASH"])
+def test_gh_rest_merge_without_grant_is_merge_pending(tmp_path: Path, command_name: str) -> None:
+    """gh api is a git/gh event, but a REST merge is an effect: authority applies."""
+    code, out, err = _run(
+        _shell(globals()[command_name]),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path))},
+    )
+    assert code == 0, err
+    assert "MERGE_PENDING" in out
+
+
 def test_rest_merge_commit_of_a_stack_parent_stays_allowed(tmp_path: Path) -> None:
     """--merge's REST spelling keeps the head's commits, so the child survives."""
     code, out, err = _run(
         _shell(REST_MERGE_COMMIT),
-        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+        env=_granted(tmp_path, STACKED),
     )
     assert code == 0, err
     assert out.strip() == ""
@@ -653,14 +744,7 @@ def test_rest_squash_of_a_leaf_is_allowed(tmp_path: Path) -> None:
     """No false positive: the REST path must not block a safe leaf merge."""
     code, out, err = _run(
         _shell(REST_SQUASH),
-        env={
-            "L9_STACK_PROBE_FILE": str(
-                _probe_file(
-                    tmp_path,
-                    {"Quantum-L9/SEO-Bot#53": {"head": "fix/leaf", "children": []}},
-                )
-            )
-        },
+        env=_granted(tmp_path, {"Quantum-L9/SEO-Bot#53": {"head": "fix/leaf", "children": []}}),
     )
     assert code == 0, err
     assert out.strip() == ""
@@ -683,3 +767,141 @@ def test_rest_non_merges_are_not_treated_as_merges(tmp_path: Path, command: str)
     )
     assert code == 0, err
     assert out.strip() == "", command
+
+
+# --- §6.2.12: self-issuance, the helper's --run, and alternate transports ------
+#
+# Literals naming the scripts are assembled from parts so this file's bytes do
+# not trip the PreToolUse shell matcher that fronts the gate.
+
+AUTHORIZE = "ops/autonomy/" + "authorize_merge.py"
+STACK_SAFE = "ops/autonomy/" + "stack_safe_merge.py"
+GRANT_FILE = "~/.l9/autonomy/" + "merge-authorization.json"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"python3 {AUTHORIZE} --repo Quantum-L9/SEO-Bot --all-open",
+        f"python3 {AUTHORIZE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}",
+        f'"$GOV_PY" {AUTHORIZE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}',
+        f"cd /x && .venv/bin/python {AUTHORIZE} --repo o/r --pr 1",
+        "python -m ops.autonomy.authorize_merge --repo o/r --pr 1",
+        f"bash -c 'python3 {AUTHORIZE} --repo o/r --pr 1'",
+        f"echo '{{}}' > {GRANT_FILE}",
+        f"cat grant.json | tee {GRANT_FILE}",
+        f"cp /tmp/forged.json {GRANT_FILE}",
+        f"python3 - <<'PY'\nopen('{GRANT_FILE}','w').write('x')\nPY",
+    ],
+)
+def test_agent_self_issued_authorization_is_denied(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "never by an agent" in reason, command
+
+
+@pytest.mark.parametrize("tool", ["Write", "Edit", "MultiEdit"])
+def test_file_tool_write_to_grant_file_is_denied(tool: str) -> None:
+    code, out, err = _run(
+        {
+            "tool_name": tool,
+            "tool_input": {"file_path": "/root/.l9/autonomy/merge-authorization.json"},
+        }
+    )
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        _shell(f"cat {GRANT_FILE}"),
+        _shell(f"jq . {GRANT_FILE}"),
+        _shell(f"git diff -- {AUTHORIZE}"),
+        _shell(f"grep -n head_sha {AUTHORIZE}"),
+        _shell(f"python3 {STACK_SAFE} --repo o/r --pr 53 --json"),
+        _shell(f"python3 {STACK_SAFE} --repo o/r --pr 53 --print"),
+        {"tool_name": "Write", "tool_input": {"file_path": "/repo/ops/autonomy/merge_gate.py"}},
+    ],
+)
+def test_reading_and_planning_stay_allowed(event: dict) -> None:
+    code, out, err = _run(event)
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_stack_safe_run_without_grant_is_merge_pending(tmp_path: Path) -> None:
+    """Its gh calls are subprocesses no hook sees, so --run itself needs the grant."""
+    for command in (
+        f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --run",
+        f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run",
+    ):
+        code, out, err = _run(_shell(command))
+        assert code == 0, err
+        assert "MERGE_PENDING" in out, command
+
+
+def test_stack_safe_run_with_grant_for_other_head_is_denied(tmp_path: Path) -> None:
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {'b' * 40} --run"
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert "MERGE_PENDING" in out
+
+
+def test_stack_safe_run_with_matching_grant_is_allowed(tmp_path: Path) -> None:
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        _shell(f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --auto --merge"),
+        _shell("gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/ccr/auto_merge"),
+        {"tool_name": "mcp__github__enable_pr_auto_merge", "tool_input": {"pullNumber": 53}},
+    ],
+)
+def test_auto_merge_enablement_is_denied_even_with_a_grant(tmp_path: Path, event: dict) -> None:
+    code, out, err = _run(event, env=_granted(tmp_path))
+    assert code == 0, err
+    assert "auto-merge" in out
+
+
+def test_auto_merge_allowed_under_human_breakglass() -> None:
+    code, out, err = _run(
+        {"tool_name": "mcp__github__enable_pr_auto_merge", "tool_input": {"pullNumber": 53}},
+        env={"L9_MERGE_AUTHORIZED": "human enabled auto-merge for #53"},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_plugin_namespaced_mcp_merge_tool_is_governed(tmp_path: Path) -> None:
+    """Another GitHub MCP server's merge tool is the same effect."""
+    event = {
+        "tool_name": "mcp__plugin_engineering_github__merge_pull_request",
+        "tool_input": {"owner": "Quantum-L9", "repo": "SEO-Bot", "pullNumber": 53},
+    }
+    code, out, err = _run(event)
+    assert "MERGE_PENDING" in out, err
+    event["tool_input"].update(merge_method="merge", sha=SHA)
+    code, out, err = _run(event, env=_granted(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f".venv/bin/python -m ruff check {AUTHORIZE} {STACK_SAFE}",
+        f"python3 -m pytest -q tests/ops/autonomy/test_authorize_merge.py  # {AUTHORIZE}",
+        f"sed -n 1,20p {AUTHORIZE}",
+    ],
+)
+def test_tools_that_only_name_the_scripts_are_not_invocations(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    assert out.strip() == ""

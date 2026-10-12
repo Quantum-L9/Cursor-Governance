@@ -402,6 +402,79 @@ class RootGateForwardingTests(unittest.TestCase):
         self.assertNotIn("L9_PROGRAM_", text)
 
 
+MERGE_WRAPPER = REPO / "environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py"
+
+STUB_RAISES = """raise RuntimeError("gate import broke")
+"""
+
+STUB_CRASH_EXIT = """raise SystemExit(1)
+"""
+
+
+class MergeGateWrapperFailsClosedTests(unittest.TestCase):
+    """merge_gate_wrap is exec'd by the launcher, so its status IS the hook's.
+
+    A missing or crashing merge gate used to exit 0 (allow) or 1 (Claude's
+    non-blocking error, also an allow) — silently granting the merge authority
+    the gate withholds (CANONICAL_LAW §6.2.12). Each must now block with 2.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.wrapper = _load(MERGE_WRAPPER, "l9_test_merge_gate_wrap")
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def _run(self, source: str | None) -> int:
+        gate = self.root / "merge_gate.py"
+        if source is not None:
+            gate.write_text(source, encoding="utf-8")
+        with mock.patch.object(self.wrapper, "GATE", gate):
+            return self.wrapper.main()
+
+    def test_missing_merge_gate_blocks(self) -> None:
+        self.assertEqual(self._run(None), 2)
+
+    def test_merge_gate_exception_blocks(self) -> None:
+        self.assertEqual(self._run(STUB_RAISES), 2)
+
+    def test_merge_gate_nonzero_exit_blocks(self) -> None:
+        self.assertEqual(self._run(STUB_CRASH_EXIT), 2)
+
+    def test_merge_gate_decision_propagates(self) -> None:
+        """Exit 0 is how the real gate reports both allow and a JSON deny."""
+        self.assertEqual(self._run("raise SystemExit(0)\n"), 0)
+
+    def test_real_merge_gate_denies_unauthorized_merge_through_wrapper(self) -> None:
+        gate = REPO / "ops" / "autonomy" / "merge_gate.py"
+        event = {
+            "tool_name": "mcp__github__merge_pull_request",
+            "tool_input": {"owner": "o", "repo": "r", "pullNumber": 1},
+        }
+        env = {k: v for k, v in os.environ.items() if k != "L9_MERGE_AUTHORIZED"}
+        env["L9_MERGE_AUTHORIZATION_FILE"] = str(self.root / "none.json")
+        env["HOME"] = str(self.root)
+        home_gate = self.root / ".cursor-governance" / "ops" / "autonomy"
+        home_gate.mkdir(parents=True)
+        for name in gate.parent.glob("*.py"):
+            (home_gate / name.name).write_bytes(name.read_bytes())
+        proc = subprocess.run(
+            [sys.executable, str(MERGE_WRAPPER)],
+            input=json.dumps(event),
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        decision = json.loads(proc.stdout)["hookSpecificOutput"]
+        self.assertEqual(decision["permissionDecision"], "deny")
+        self.assertIn("MERGE_PENDING", decision["permissionDecisionReason"])
+
+
 class GovernanceDirIsNotRedirectableTests(unittest.TestCase):
     """INV-1c: the launcher dispatches out of $HOME/.cursor-governance, only.
 
