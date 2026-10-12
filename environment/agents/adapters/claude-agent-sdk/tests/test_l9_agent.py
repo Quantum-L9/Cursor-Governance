@@ -207,6 +207,56 @@ def test_validator_fails_when_report_path_is_tracked_tree(tmp_path):
     assert unknowns == [] and errors[0].startswith("REPORT_IGNORED")
 
 
+@pytest.fixture
+def stub_main(monkeypatch):
+    """main() up to the credential preflight; SDK and runs are stubbed, no network."""
+
+    class _Err(Exception):
+        pass
+
+    sdk = SimpleNamespace(ClaudeSDKError=_Err, ResultError=_Err)
+    monkeypatch.setitem(sys.modules, "claude_agent_sdk", sdk)
+    monkeypatch.setattr(agent, "missing_governance", lambda _repo: [])
+    monkeypatch.setattr(agent, "build_options", lambda kwargs: kwargs)
+
+    async def ran(*_args):
+        return 0
+
+    monkeypatch.setattr(agent, "run", ran)
+    monkeypatch.setattr(agent, "probe_mcp", ran)
+    for var in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+    return monkeypatch
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {"ANTHROPIC_API_KEY": "sk-test"},
+        {"ANTHROPIC_AUTH_TOKEN": "tok-test"},
+        {"ANTHROPIC_API_KEY": "sk-test", "ANTHROPIC_AUTH_TOKEN": "tok-test"},
+        {"ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": "tok-test"},
+    ],
+)
+def test_credential_preflight_accepts_either_variable(stub_main, env):
+    for var, value in env.items():
+        stub_main.setenv(var, value)
+    assert agent.main(["task"]) == 0
+
+
+@pytest.mark.parametrize("env", [{}, {"ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": ""}])
+def test_credential_preflight_rejects_when_both_absent(stub_main, env, capsys):
+    for var, value in env.items():
+        stub_main.setenv(var, value)
+    assert agent.main(["task"]) == 2
+    err = capsys.readouterr().err
+    assert "ANTHROPIC_API_KEY" in err and "ANTHROPIC_AUTH_TOKEN" in err
+
+
+def test_mcp_status_is_exempt_from_credential_preflight(stub_main):
+    assert agent.main(["--mcp-status"]) == 0
+
+
 # The agent-sdk extra is optional (each wheel bundles a ~100 MB CLI) and is not
 # synced by the default `--extra dev` CI environment. This is the one seam that
 # needs the real SDK; it runs wherever `uv sync --locked --extra agent-sdk` ran.
