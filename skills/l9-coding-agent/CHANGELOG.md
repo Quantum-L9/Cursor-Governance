@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.1 - 2026-10-12
+
+Projection boundary correction. `.github` owns the law and profiles, a producer emits projections, an upstream publication mechanism supplies them, and this skill consumes them without running the producer.
+
+- `RUNBOOK.md` no longer tells the executing agent to run `python -m l9_semantic_compiler project`. Intake takes an externally supplied artifact, receipt, and authority revision pin. An absent projection stays `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, and the skill does not assume a producer or publication pipeline is operational.
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.2.0 declares the supply boundary (`supplied_by`, `producer_execution`, `revision_pin`, `pin_rule`), rejects self-produced projections and unpinned runs, and marks receipts unauthenticated.
+- F-02 (untrusted local authority revision) is repaired in `scripts/verify_canonical_binding.py`:
+  - `--expect-revision` is required in both modes. Previously an unpinned run bound whatever `HEAD` the checkout claimed. An absent pin returns `BLOCKED AUTHORITY_REVISION_PIN_ABSENT`; a malformed one returns `AUTHORITY_REVISION_PIN_MALFORMED`.
+  - Law bytes are read from the pinned commit's objects, and every commit, tree, and blob hash is recomputed. Working-tree edits hidden by `--skip-worktree`, replace refs, and rewritten loose objects cannot substitute law. Path traversal out of the authority tree is blocked.
+  - A pin that no fetched `refs/remotes/origin/*` ref contains returns `BLOCKED AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF`.
+  - Binding records state `revision_basis: caller_pinned_not_authenticated`, `content_basis: pinned_commit_objects_hash_verified`, and `producer_authentication: unauthenticated_unkeyed_receipt`.
+- Added `tests/test_coding_agent_canonical_binding.py`, with 27 cases against a synthetic authority repository and no producer. Behavior conformance grows from 52 to 57 cases (CA-E53 to CA-E57). Runtime alignment adds an absent-pin negative control that checks the blocking reason.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.0 - 2026-10-12
 
 - Intake now binds applicable L9 global invariants from `Quantum-L9/.github`, before any mutation and in every mode, through the `l9.projection/cursor-governance-operating-plane@1` profile (`integrations/L9_RUNTIME_BINDING.yaml#canonical_invariant_binding`). The pack references upstream law by identity and digest and holds no copy of it.

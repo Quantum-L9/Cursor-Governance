@@ -1,6 +1,6 @@
 bootstrap:
   id: L9.CODING_AGENT.BOOTSTRAP.001
-  version: 1.4.0
+  version: 1.4.1
   purpose: Preserve agent context by loading only the semantic owners required for the current execution stage while keeping
     every critical runtime concern reachable, explicit, and fail-closed.
   policy:
@@ -35,10 +35,11 @@ bootstrap:
         concern: canonical_invariant_binding
         owner: integrations/L9_RUNTIME_BINDING.yaml#canonical_invariant_binding
         invoke: scripts/verify_canonical_binding.py
-        rule: Bind applicable L9 global invariants from a verified upstream projection before any mutation, in
-          every mode. A non-BOUND outcome blocks mutation unless the current user explicitly reauthorizes this
-          run with the Unknown recorded. Reading this section does not activate L9_PROFILE_AWARE, GAR_BOUND, or
-          Gate runtime rules.
+        rule: Bind applicable L9 global invariants from an externally supplied, verified upstream projection and an
+          independent authority revision pin before any mutation, in every mode. The run never invokes a producer
+          or publication pipeline to create that projection. A non-BOUND outcome blocks mutation unless the current
+          user explicitly reauthorizes this run with the Unknown recorded. Reading this section does not activate
+          L9_PROFILE_AWARE, GAR_BOUND, or Gate runtime rules.
       unload_policy: retain_normalized_run_state_bound_contract_facts_and_canonical_invariant_binding_record
     implementation:
       load_when:
@@ -111,6 +112,7 @@ bootstrap:
       - references/smart_exemplary_spec.yaml
       - scripts/validate_runtime_alignment.py
       - scripts/validate_lazy_bootstrap.py
+      - tests/test_coding_agent_canonical_binding.py
       - agents/openai.yaml
   context_guards:
   - do_not_load_package_validation_material_during_ordinary_repository_execution

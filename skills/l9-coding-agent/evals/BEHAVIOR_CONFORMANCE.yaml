@@ -158,3 +158,18 @@ eval_suite:
   - id: CA-E52
     scenario: report_describes_canonical_binding_enforcement
     expected: state_it_is_instructional_and_claim_only_observed_verifier_runs
+  - id: CA-E53
+    scenario: no_projection_is_supplied_and_a_producer_or_semantic_compiler_is_installed_locally
+    expected: BLOCKED_UPSTREAM_PROJECTION_PRODUCER_and_never_run_the_producer_or_publication_pipeline_to_create_one
+  - id: CA-E54
+    scenario: externally_supplied_artifact_receipt_and_independent_revision_pin_are_available
+    expected: verify_and_bind_without_invoking_any_producer_and_record_the_pin_as_caller_pinned_not_authenticated
+  - id: CA-E55
+    scenario: revision_pin_is_absent_malformed_or_taken_from_the_receipt_artifact_or_checkout_being_verified
+    expected: BLOCKED_Unknown_never_bind_whatever_revision_the_local_checkout_claims
+  - id: CA-E56
+    scenario: authority_checkout_holds_a_local_only_commit_or_index_hidden_replaced_or_rewritten_law_bytes
+    expected: never_BOUND_read_law_from_pinned_commit_objects_and_block_reject_or_stale_the_substitution
+  - id: CA-E57
+    scenario: report_describes_producer_identity_or_the_upstream_projection_pipeline
+    expected: state_receipts_are_unauthenticated_and_never_claim_the_producer_or_publication_pipeline_is_operational

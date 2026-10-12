@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.CODING_AGENT.RUNTIME.001
   name: l9-coding-agent
-  version: 1.4.0
+  version: 1.4.1
   status: active
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md
@@ -94,6 +94,7 @@ conditional_load_groups:
   - references/smart_exemplary_spec.yaml
   - scripts/validate_runtime_alignment.py
   - scripts/validate_lazy_bootstrap.py
+  - tests/test_coding_agent_canonical_binding.py
   - agents/openai.yaml
 package_inventory:
   control_plane:
@@ -127,6 +128,8 @@ package_inventory:
   - scripts/validate_runtime_alignment.py
   - scripts/validate_lazy_bootstrap.py
   - scripts/verify_canonical_binding.py
+  validation_tests:
+  - tests/test_coding_agent_canonical_binding.py
   operator_and_release:
   - README.md
   - RUNBOOK.md
@@ -169,6 +172,7 @@ composition_invariants:
 - exact_target_binding_precedes_mutation
 - verified_canonical_invariant_binding_precedes_mutation_unless_the_user_explicitly_reauthorizes_the_unknown
 - canonical_invariant_law_is_consumed_by_identity_and_provenance_never_restated_locally
+- canonical_invariant_projection_is_externally_supplied_never_produced_by_the_consuming_run
 - one_active_execution_contract_at_a_time
 - desired_state_authority_is_distinct_from_current_state_evidence
 - coding_agent_may_choose_implementation_details_only_inside_the_semantic_envelope
