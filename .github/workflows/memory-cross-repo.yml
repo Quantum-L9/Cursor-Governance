@@ -11,7 +11,8 @@
 #      and refuse a digest that differs from release_evidence.artifact_sha256.
 #      That digest is the official published wheel (python -m build / PyPI).
 #      The rebuild is kept because it reproduces those bytes; a mismatch fails.
-#   3. install that wheel into a clean environment and bind it through
+#   3. install that wheel with its `postgres` extra (held to uv.lock, as
+#      pyproject.toml composes it) into a clean environment and bind it through
 #      L9_MEMORY_INTERPRETER (runtime_mode=pinned_environment) — never a
 #      development checkout, never whatever l9-memory is on PATH
 #   4. run tests/ops/memory/test_cross_repo_lifecycle.py with
@@ -189,7 +190,13 @@ jobs:
         run: |
           set -euo pipefail
           uv venv "${RUNNER_TEMP}/memory-venv" --python "${PYTHON_VERSION}"
-          uv pip install --python "${RUNNER_TEMP}/memory-venv/bin/python" "${WHEEL}"
+          # Same composition as pyproject.toml: the release's own postgres
+          # extra, every dependency held to its uv.lock version (a constraint
+          # pins a version, it never adds a package).
+          uv export --frozen --no-hashes --no-emit-project --no-header --no-dev \
+            -o "${RUNNER_TEMP}/memory-locked-constraints.txt"
+          uv pip install --python "${RUNNER_TEMP}/memory-venv/bin/python" \
+            --constraints "${RUNNER_TEMP}/memory-locked-constraints.txt" "${WHEEL}[postgres]"
           bound="$("${RUNNER_TEMP}/memory-venv/bin/python" -c 'import importlib.metadata as m; print(m.version("l9-graphite-memory"))')"
           if [ "${bound}" != "${EXPECTED_VERSION}" ]; then
             echo "::error::installed l9-graphite-memory ${bound}, binding expects ${EXPECTED_VERSION}"

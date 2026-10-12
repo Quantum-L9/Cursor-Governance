@@ -1359,3 +1359,177 @@ def test_stdio_mcp_write_persists_across_restart(runtime, tmp_path: Path) -> Non
         str(claude["assertion_digest"]), "mcp-rebind-cursor-signing-key"
     )
     assert_refused(wrong, "wrong-actor", "agent")
+
+
+#: Nonsecret: names no real host or account, and only localhost:9 (discard),
+#: where nothing listens, so the driver gets a refused connection.
+_PG_SENTINEL = "b1-nonsecret-sentinel"
+_UNREACHABLE_DSN = (
+    f"postgresql://b1probe:{_PG_SENTINEL}@127.0.0.1:9/b1_absent?connect_timeout=2&sslmode=disable"
+)
+
+#: Runs in the bound interpreter. The real postgres store class has only its
+#: connection replaced by an empty store, so the release's own build_store and
+#: ADR-077 transition check decide. No database exists or is contacted.
+_TRANSITION_SCRIPT = r"""
+import json
+from l9_graphite_memory.adapters import factory, postgres_store
+from l9_graphite_memory.config.loader import load_settings
+from l9_graphite_memory.errors import ConfigurationError
+
+
+class EmptyPostgres(postgres_store.PostgresRecordStore):
+    def initialize(self):
+        pass
+
+    def stats(self):
+        return {"records": 0}
+
+    def close(self):
+        pass
+
+
+postgres_store.PostgresRecordStore = EmptyPostgres
+try:
+    factory.build_store(load_settings())
+except ConfigurationError as exc:
+    print(json.dumps({"refused": True, "message": str(exc)}))
+else:
+    print(json.dumps({"refused": False, "message": ""}))
+"""
+
+
+def _sqlite_files(root: Path) -> list[str]:
+    return sorted(str(p.relative_to(root)) for p in root.rglob("*.sqlite3*"))
+
+
+def test_postgres_selection_refuses_without_sqlite_fallback(runtime, tmp_path: Path) -> None:
+    """Selecting the shared postgres store never degrades to a local ledger.
+
+    Against the bound release: the locked postgres driver is importable; a
+    missing or blank DSN and an unreachable store stop the server before it
+    serves anything, create no SQLite ledger, and leak no DSN credential to
+    its output; and a populated local ledger beside an empty postgres store is
+    refused without the ADR-077 acknowledgement, leaving the ledger untouched.
+    No live database exists here, so TLS and store identity are not proven.
+    """
+
+    import hashlib
+    import tomllib
+
+    client, _env = runtime
+    interpreter = client.binding.interpreter
+    assert interpreter
+
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked = {pkg["name"]: pkg["version"] for pkg in lock["package"]}
+    driver = subprocess.run(
+        [
+            interpreter,
+            "-I",
+            "-c",
+            "import importlib.metadata as m, psycopg2; print(m.version('psycopg2-binary'))",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert driver.returncode == 0, driver.stderr
+    assert driver.stdout.strip() == locked["psycopg2-binary"]
+
+    namespace = "postgres-refusal-proof"
+    door = _cursor_door(namespace)
+    cases = {
+        "missing-dsn": ({"L9_MEMORY_STORE_BACKEND": "postgres"}, "l9_memory_postgres_dsn"),
+        "blank-dsn": (
+            {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": "   "},
+            "l9_memory_postgres_dsn",
+        ),
+        "unreachable": (
+            {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": _UNREACHABLE_DSN},
+            "postgres connection failed",
+        ),
+    }
+    for folder, (selection, needle) in cases.items():
+        root = tmp_path / folder
+        env = _stdio_env(root, {**door, **selection})
+        assert "L9_MEMORY_ACKNOWLEDGE_BACKEND_TRANSITION" not in env
+        proc = subprocess.run(
+            [interpreter, "-m", "l9_graphite_memory.server", "--transport", "stdio"],
+            input=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}) + "\n",
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(root),
+            check=False,
+            timeout=120,
+        )
+        assert proc.returncode != 0, folder
+        assert proc.stdout == "", folder
+        assert needle in proc.stderr.lower(), proc.stderr[-600:]
+        assert _PG_SENTINEL not in proc.stderr and _PG_SENTINEL not in proc.stdout
+        assert _sqlite_files(root) == [], folder
+
+    # A ledger this deployment really wrote, through the default backend.
+    ledger_root = tmp_path / "ledger"
+    session = _StdioSession(
+        interpreter, _stdio_env(ledger_root, door), ledger_root, tmp_path / "ledger.err"
+    )
+    try:
+        session.request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "postgres-refusal", "version": "0"},
+            },
+        )
+        session.notify("notifications/initialized")
+        written = session.tool(
+            "memory.write_agent",
+            {
+                "namespace": namespace,
+                "content": "local ledger record that must stay where it is",
+                "memory_class": "observation",
+                "idempotency_key": "postgres-refusal-ledger",
+            },
+        )
+        assert "error" not in written, written.get("error")
+    finally:
+        session.close()
+    ledgers = [name for name in _sqlite_files(ledger_root) if name.endswith(".sqlite3")]
+    assert ledgers, "the default backend wrote no SQLite ledger"
+    digests = {
+        name: hashlib.sha256((ledger_root / name).read_bytes()).hexdigest() for name in ledgers
+    }
+
+    script = tmp_path / "transition.py"
+    script.write_text(_TRANSITION_SCRIPT, encoding="utf-8")
+    env = _stdio_env(
+        ledger_root,
+        {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": _UNREACHABLE_DSN},
+    )
+    assert "L9_MEMORY_ACKNOWLEDGE_BACKEND_TRANSITION" not in env
+    result = subprocess.run(
+        [interpreter, "-I", str(script)],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(ledger_root),
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    verdict = json.loads(result.stdout.strip().splitlines()[-1])
+    assert verdict["refused"] is True, verdict
+    assert "prior canonical ledger" in verdict["message"]
+    assert _PG_SENTINEL not in result.stdout and _PG_SENTINEL not in result.stderr
+    # The release's read-only ledger probe may leave SQLite's -wal/-shm read
+    # sidecars; the ledger itself is byte-identical and nothing was appended.
+    after = _sqlite_files(ledger_root)
+    assert [name for name in after if name.endswith(".sqlite3")] == ledgers
+    for name, digest in digests.items():
+        assert hashlib.sha256((ledger_root / name).read_bytes()).hexdigest() == digest, name
+        wal = ledger_root / f"{name}-wal"
+        assert not wal.exists() or wal.stat().st_size == 0, wal
