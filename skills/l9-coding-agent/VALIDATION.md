@@ -71,7 +71,7 @@ Validated at Cursor-Governance `b8941d3`, `.github` `1f42b33`, and l9-semantic-c
 - runtime alignment covers 52 behavior cases and the absent-projection negative control;
 - `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
 
-Verifier positive and negative cases ran against the real `.github` sources with **synthetic** artifacts and receipts. They prove consumer logic only. No producer-emitted projection exists for the profile, so a live binding is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, not operational.
+An evidence harness kept outside the repository ran 34 verifier cases against the real `.github` sources, all passing. The artifacts and receipts were **synthetic**. They prove consumer logic only. No producer-emitted projection exists for the profile, so a live binding is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, not operational.
 
 ## Known limitations
 
@@ -84,6 +84,7 @@ Verifier positive and negative cases ran against the real `.github` sources with
   - no `semantic_digest` canonicalization algorithm is declared;
   - the profile has 10 sources but the projection artifact is single-source, and no composition profile is declared;
   - the `conformance_profiles` source resolves outside `.github`.
+- Receipts and projection digests are unkeyed. A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream.
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook.
 - `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.
 - `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
