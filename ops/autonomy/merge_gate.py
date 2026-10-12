@@ -4,40 +4,40 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Ordinary `gh pr merge` is allowed when either of these is true:
+Merge authority is a human grant, never an invocation (CANONICAL_LAW §6.2.12).
+A merge — `gh pr merge`, the REST merge endpoint (gh api or curl), an MCP merge
+tool, or `stack_safe_merge.py --run` — is allowed only when one of these holds:
 
   L9_MERGE_AUTHORIZED=<nonempty reason string>          # human session breakglass
-  ~/.l9/autonomy/merge-authorization.json               # scoped, expiring receipt
-    {"authorizations": [{"repo": "org/repo", "pr": "*" | 53,
-                          "source": "l9-pr-remediation",
-                          "expires_at": <unix-seconds>, "reason": "...",
-                          "head_sha": "<40-hex>"      # optional revision binding
-                          }]}
-    Overridable for tests via L9_MERGE_AUTHORIZATION_FILE. An entry authorizes
-    only when: repo matches; pr is "*" (all open PRs in that repo) or the exact
-    PR number; expires_at is a positive number in the future (a receipt with no
-    valid expiry never authorizes — expiry is required); and, when the entry
-    carries a head_sha, the merge names that same head revision (a receipt bound
-    to a revision is rejected once HEAD moves, or when the caller does not name
-    the head at all).
+  ~/.l9/autonomy/merge-authorization.json               # human merge grant
+    {"authorizations": [{"repo": "org/repo", "pr": 53,
+                          "head_sha": "<40-hex>", "issuer": "human",
+                          "issued_at": <unix-seconds>,
+                          "expires_at": <unix-seconds>, "reason": "..."}]}
+    Overridable for tests via L9_MERGE_AUTHORIZATION_FILE (this hook's own
+    environment, which a tool call cannot set). A grant authorizes only when:
+    repo and PR number match exactly (a repository-wide "*" never matches);
+    issuer is "human"; expires_at is in the future and no further out than
+    MAX_GRANT_TTL_SECONDS; and the merge names the grant's exact head SHA
+    (`--match-head-commit`, `-f sha=`, an MCP `sha`, or `--head-sha`). A moved
+    head, an unnamed head, or a stale grant is MERGE_PENDING.
 
-A standing environment boolean is NOT a merge authority. An env var set once in
-the Claude account/session configuration must never grant unattended merge, so
-the retired L9_AUTONOMY_AUTONOMOUS_MERGE flag authorizes nothing here: merge
-requires the human per-session breakglass or a scoped, expiring receipt bound to
-the repo (and PR). Setting the flag has no effect on this gate.
+Grants are written by ops/autonomy/authorize_merge.py after a human types the
+target back on a controlling terminal. Invoking /l9-pr-remediation, Converge,
+green CI, an L4 release receipt, make pr, or an agent-written receipt is NOT a
+grant. An agent tool call that runs authorize_merge.py or writes the grant file
+is denied here (self-issuance). A standing environment boolean is not an
+authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE flag has no effect.
 
-Invoking /l9-pr-remediation writes that receipt via
-ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
-An L4 release receipt does NOT authorize merge. Agents still merge only
-after green + mergeable + review threads resolved (oldest first).
-
-Shell ``git``/``gh`` commands are exempt from *authorization* — see
-``git_execution_exemption``. Stack safety is not exempt: ``gh pr merge
---squash|--rebase`` (or an unspecified method) of a stack parent is denied
-on Shell and MCP alike. Agents must use ``stack_safe_merge.py`` so the
-method is selected in code, not guessed. The never-waive set still applies
-to the MCP merge tool.
+Shell ``git``/``gh`` commands are exempt from the *workflow* plane
+(``git_execution_exemption``), but a merge is an effect, so merge authority
+applies to them. Auto-merge enablement (`gh pr merge --auto`, MCP
+`enable_pr_auto_merge`, REST `ccr/auto_merge`) merges at a future head no grant
+can bind, and is denied without the human breakglass. Stack safety is applied
+after authority: ``gh pr merge --squash|--rebase`` (or an unspecified method)
+of a stack parent is denied on Shell and MCP alike. Agents must use
+``stack_safe_merge.py`` so the method is selected in code, not guessed. The
+never-waive set still applies to the MCP merge tool.
 
 Stack safety
 ------------
@@ -57,8 +57,8 @@ of an open PR and the method is squash/rebase (or unspecified). Merge with
   gh pr view / gh pr list          # live probe, fail-closed on error
 
 L9_MERGE_AUTHORIZED (session env, human-set per merge) also skips the probe. A
-receipt written by an agent does not -- unattended merging is exactly when an
-orphaned child PR would go unnoticed.
+human grant does not -- the grant authorizes the merge, the probe still decides
+whether the chosen method would orphan a child PR.
 """
 
 from __future__ import annotations
@@ -90,6 +90,22 @@ DENY_TOOL_NAMES = {
     "mcp__github__merge_pull_request",
     "MergePullRequest",
 }
+#: Any MCP server's merge tool (plugin-namespaced GitHub servers included).
+MERGE_TOOL_SUFFIX = "__merge_pull_request"
+AUTO_MERGE_TOOL_SUFFIX = "__enable_pr_auto_merge"
+
+#: Human merge grants (authorize_merge.py writes these).
+GRANT_ISSUER = "human"
+MAX_GRANT_TTL_SECONDS = 4 * 60 * 60
+GRANT_FILE_NAME = "merge-authorization.json"
+_FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+FILE_TOOL_NAMES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+SHELL_TOOL_NAMES = {"Bash", "bash", "Shell", "shell"}
+#: Heads that only read a file, so naming the grant file with them is not a write.
+_READ_ONLY_HEADS = frozenset(
+    "cat less more head tail jq ls stat wc test [ grep rg diff file git".split()
+)
+REST_AUTO_MERGE_PATH = re.compile(r"(?:^|/)repos/[^/\s]+/[^/\s]+/pulls/\d+/ccr/auto_merge/?$", re.I)
 
 MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b", re.I)
 #: The REST merge endpoint, reached by `gh api` or curl. `gh pr merge` is a
@@ -122,13 +138,38 @@ NEVER_WAIVE_REASON = (
     "destructive clean, or admin-merge."
 )
 
+#: Copy-ready command prefixes for every grant / merge instruction this package
+#: emits. They must run from any directory -- the human, or a remediation lane,
+#: may be in a consumer repository where a relative ``ops/autonomy/...`` path does
+#: not exist -- and AGENTS.md requires the locked governance interpreter.
+GOV_PYTHON = '"$HOME/.cursor-governance/.venv/bin/python"'
+GRANT_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py"'
+MERGE_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py"'
+
 MERGE_DENY_REASON = (
-    "Autonomy Surface Profile forbids merge until /l9-pr-remediation writes a "
-    "scoped, expiring authorization receipt, or a human sets "
-    "L9_MERGE_AUTHORIZED=<reason> for this session. A standing environment "
-    "boolean is not an authority. Campaigns and make pr end at green + "
-    "merge-ready. Then ops/autonomy/stack_safe_merge.py --repo <owner/name> "
-    "--pr <n> --run (no --admin) for each green mergeable PR, oldest first."
+    "MERGE_PENDING: merging requires a human merge grant bound to this repository, "
+    "PR and exact head SHA (CANONICAL_LAW §6.2.12). Invoking /l9-pr-remediation, "
+    "Converge, green CI, an L4 release, make pr, or an agent-written receipt is not "
+    "merge permission, and a standing environment boolean is not an authority. "
+    "Report MERGE_PENDING (PR, head SHA, CI/review status, stack order) and continue "
+    "independent work. A human issues the grant from their own terminal: "
+    f"{GRANT_COMMAND} --repo <owner/name> --pr <n> --head-sha <sha>; "
+    f"then {MERGE_COMMAND} --repo <owner/name> --pr <n> "
+    "--head-sha <sha> --run (no --admin), oldest first."
+)
+
+SELF_ISSUE_REASON = (
+    "Merge grants are issued by a human, never by an agent (CANONICAL_LAW §6.2.12): "
+    "an agent tool call may not run authorize_merge.py or write "
+    "merge-authorization.json. Report MERGE_PENDING with the exact grant command "
+    "for the human to run in their own terminal."
+)
+
+AUTO_MERGE_DENY_REASON = (
+    "MERGE_PENDING: auto-merge (gh pr merge --auto, enable_pr_auto_merge, REST "
+    "ccr/auto_merge) merges at a future head that no human grant can bind "
+    "(CANONICAL_LAW §6.2.12). Only the human session breakglass "
+    "L9_MERGE_AUTHORIZED=<reason> enables it."
 )
 
 
@@ -179,10 +220,23 @@ def _argv_skip_env(words: list[str]) -> list[str]:
     return words[index:]
 
 
+def _argv_is_cli_merge(rest: list[str]) -> bool:
+    return len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge"
+
+
+def _argv_is_rest_merge(rest: list[str]) -> bool:
+    method = ""
+    for index, word in enumerate(rest):
+        if word in ("-X", "--method", "--request") and index + 1 < len(rest):
+            method = rest[index + 1].strip("'\"").upper()
+        elif word.startswith(("--method=", "--request=", "-X=")):
+            method = word.split("=", 1)[1].strip("'\"").upper()
+    return method == "PUT" and any(REST_MERGE_PATH.search(word.strip("'\"")) for word in rest)
+
+
 def _segment_is_cli_pr_merge(segment: str) -> bool:
     """True when this segment *invokes* ``gh pr merge``, not when it mentions it."""
-    rest = _argv_skip_env(segment_words(segment))
-    if len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge":
+    if _argv_is_cli_merge(_argv_skip_env(segment_words(segment))):
         return True
     return any(_segment_is_cli_pr_merge(sub) for sub in wrapper_subcommands(segment))
 
@@ -208,16 +262,8 @@ def _segment_is_rest_pr_merge(segment: str) -> bool:
     A PUT to that path is a merge whatever binary issues it. GET on the same
     path only asks whether the PR is merged, so the method is required.
     """
-    rest = _argv_skip_env(segment_words(segment))
-    if rest:
-        method = ""
-        for index, word in enumerate(rest):
-            if word in ("-X", "--method", "--request") and index + 1 < len(rest):
-                method = rest[index + 1].strip("'\"").upper()
-            elif word.startswith(("--method=", "--request=", "-X=")):
-                method = word.split("=", 1)[1].strip("'\"").upper()
-        if method == "PUT" and any(REST_MERGE_PATH.search(word.strip("'\"")) for word in rest):
-            return True
+    if _argv_is_rest_merge(_argv_skip_env(segment_words(segment))):
+        return True
     return any(_segment_is_rest_pr_merge(sub) for sub in wrapper_subcommands(segment))
 
 
@@ -231,6 +277,71 @@ def _command_is_pr_merge(command: str) -> bool:
     return any(
         _segment_is_pr_merge(segment) for segment in split_segments(strip_heredoc_bodies(command))
     )
+
+
+def _merge_segments(command: str, depth: int = 0) -> list[str]:
+    """Every executed merge segment (innermost text), descending wrappers.
+
+    Authority and stack safety are judged per segment, so a grant, a head SHA
+    or a PR number elsewhere in the command line can never vouch for a merge
+    that does not itself carry them, and a second merge in the same command is
+    judged on its own.
+    """
+    found: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        rest = _argv_skip_env(segment_words(segment))
+        if _argv_is_cli_merge(rest) or _argv_is_rest_merge(rest):
+            found.append(segment)
+        elif depth < 3:
+            for sub in wrapper_subcommands(segment):
+                found.extend(_merge_segments(sub, depth + 1))
+    return found
+
+
+#: `gh pr merge` flags that take a value, so the value is not the PR argument.
+_CLI_VALUE_FLAGS = frozenset(
+    "-R --repo -b --body -F --body-file -t --subject --match-head-commit -A --author-email".split()
+)
+_FIELD_FLAGS = ("-f", "-F", "--field", "--raw-field", "-d", "--data", "--data-raw")
+_JSON_SHA = re.compile(r'"sha"\s*:\s*"([0-9a-fA-F]{7,40})"')
+
+
+def _segment_merge_target(segment: str) -> tuple[str, str, str]:
+    """(repo, pr, head_sha) named by THIS merge segment's own argv; '' when absent.
+
+    The CLI PR must be a number (a branch or URL argument cannot be matched to
+    a grant, so it reads as unknown and denies). The head is the segment's own
+    ``--match-head-commit`` or REST ``sha`` field — the binding GitHub enforces.
+    """
+    rest = _argv_skip_env(segment_words(segment))
+    if _argv_is_cli_merge(rest):
+        args, pr, index = rest[3:], "", 0
+        while index < len(args):
+            word = args[index]
+            if word in _CLI_VALUE_FLAGS:
+                index += 2
+                continue
+            if not word.startswith("-"):
+                pr = word.strip("'\"")
+                break
+            index += 1
+        repo = _argv_value(rest, "--repo") or _argv_value(rest, "-R")
+        return repo, pr if pr.isdigit() else "", _argv_value(rest, "--match-head-commit")
+    repo = pr = sha = ""
+    for index, word in enumerate(rest):
+        match = REST_MERGE_TARGET.search(word.strip("'\""))
+        if match and not pr:
+            repo, pr = f"{match.group(1)}/{match.group(2)}", match.group(3)
+        value = ""
+        if word in _FIELD_FLAGS and index + 1 < len(rest):
+            value = rest[index + 1].strip("'\"")
+        elif word.startswith(tuple(f"{flag}=" for flag in _FIELD_FLAGS)):
+            value = word.split("=", 1)[1].strip("'\"")
+        if value.startswith("sha="):
+            sha = value[4:]
+        elif json_sha := _JSON_SHA.search(value):
+            sha = json_sha.group(1)
+    return repo, pr, sha
 
 
 def _rest_merge_method(rest: list[str]) -> str:
@@ -463,11 +574,16 @@ def _stacked_children(repo: str, pr: str) -> tuple[str, list[int]]:
     raise ProbeError(detail, kind)
 
 
-def _stack_safety_reason(command: str, tool_name: str, tool_input: dict[str, Any]) -> str | None:
+def _stack_safety_reason(
+    command: str,
+    tool_name: str,
+    tool_input: dict[str, Any],
+    target: tuple[str, str] | None = None,
+) -> str | None:
     """Deny reason when this merge would orphan an open child PR, else None."""
     if os.environ.get("L9_STACK_CHECK_BYPASS", "").strip():
         return None
-    repo, pr = _target_from_input(tool_name, tool_input)
+    repo, pr = target or _target_from_input(tool_name, tool_input)
     if not pr:
         return None
     method = _merge_method(command)
@@ -534,44 +650,84 @@ def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str,
     return repo, pr
 
 
-def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
-    """True when a fresh, in-scope, unexpired authorization matches.
+def grant_matches(
+    entry: Any, repo: str, pr: str, head_sha: str, *, now: float | None = None
+) -> bool:
+    """True when ``entry`` is a live human grant for exactly repo#pr@head_sha.
 
-    Expiry is required: a receipt with no positive future ``expires_at`` never
-    authorizes. When a receipt carries ``head_sha`` it is bound to that immutable
-    revision -- the merge must name the same head (``head_sha`` argument),
-    otherwise a moved HEAD (or a caller that does not name the head) is rejected.
-    Receipts without ``head_sha`` stay repo/PR-scoped as before.
+    Every binding is required. A repository-wide "*" scope, a missing or
+    unparseable head, a non-human issuer, a missing or past expiry, and an
+    expiry further out than MAX_GRANT_TTL_SECONDS all fail: authorize_merge.py
+    never writes such an entry, so one on disk is legacy or forged.
     """
-    path = _auth_file_path()
-    if not path.is_file():
+    if not isinstance(entry, dict):
         return False
+    stamp = time.time() if now is None else now
+    expires = entry.get("expires_at")
+    if not isinstance(expires, (int, float)) or isinstance(expires, bool):
+        return False
+    if expires <= stamp or expires > stamp + MAX_GRANT_TTL_SECONDS:
+        return False
+    if entry.get("issuer") != GRANT_ISSUER:
+        return False
+    entry_repo = str(entry.get("repo") or "")
+    if not entry_repo or not repo or entry_repo != repo:
+        return False
+    entry_pr = str(entry.get("pr") or entry.get("number") or "").strip()
+    if entry_pr in REPO_SCOPE or not entry_pr.isdigit() or not pr or entry_pr != str(pr).strip():
+        return False
+    entry_sha = str(entry.get("head_sha") or "").strip().lower()
+    named_sha = head_sha.strip().lower()
+    return bool(_FULL_SHA.match(entry_sha)) and named_sha == entry_sha
+
+
+def find_grant(
+    repo: str,
+    pr: str,
+    head_sha: str,
+    *,
+    path: Path | None = None,
+    now: float | None = None,
+) -> dict[str, Any] | None:
+    """The first live human grant for repo#pr@head_sha in ``path``, else None."""
+    source = path or _auth_file_path()
+    if not source.is_file():
+        return None
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(source.read_text(encoding="utf-8"))
         entries = payload.get("authorizations", []) if isinstance(payload, dict) else []
     except (json.JSONDecodeError, OSError):
-        return False
-    now = time.time()
-    live_sha = head_sha.strip().lower()
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        # Require expiry: missing / non-numeric / already-past never authorizes.
-        expires = entry.get("expires_at")
-        if not isinstance(expires, (int, float)) or isinstance(expires, bool) or expires <= now:
-            continue
-        entry_repo = str(entry.get("repo") or "")
-        if not entry_repo or not repo or entry_repo != repo:
-            continue
-        entry_pr = str(entry.get("pr") or entry.get("number") or "")
-        if entry_pr not in REPO_SCOPE and not (pr and entry_pr == pr):
-            continue
-        # Optional immutable-revision binding.
-        entry_sha = str(entry.get("head_sha") or "").strip().lower()
-        if entry_sha and (not live_sha or live_sha != entry_sha):
-            continue
-        return True
-    return False
+        return None
+    for entry in entries if isinstance(entries, list) else []:
+        if grant_matches(entry, repo, pr, head_sha, now=now):
+            return dict(entry)
+    return None
+
+
+def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
+    """True when a live human grant binds this exact repo, PR and named head."""
+    return find_grant(repo, pr, head_sha) is not None
+
+
+def live_head_sha(repo: str, pr: str) -> str:
+    """The PR's current head SHA from GitHub, lowercased. Raises ProbeError.
+
+    L9_STACK_PROBE_FILE entries may carry ``sha`` so tests stay offline; an
+    entry without one reports the head as unknown rather than guessing.
+    """
+    entry = _probe_file_entry(repo, pr)
+    if entry is not None:
+        sha = str(entry.get("sha") or "").strip().lower()
+        if not _FULL_SHA.match(sha):
+            raise ProbeError("probe file names no head sha", "probe_failed")
+        return sha
+    if not repo:
+        raise ProbeError("no repository to recheck the head against", "no_repo")
+    view = _gh_rest_json(f"repos/{repo}/pulls/{pr}")
+    sha = str(((view or {}).get("head") or {}).get("sha") or "").strip().lower()
+    if not _FULL_SHA.match(sha):
+        raise ProbeError("REST did not report a head sha", "probe_failed")
+    return sha
 
 
 _LAST_EFFECTIVE: dict[str, str] = {}
@@ -620,6 +776,210 @@ def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
     return _file_authorizes(repo, pr, head_sha)
 
 
+def _executed_segments(command: str, depth: int = 0) -> list[list[str]]:
+    """argv of every executed segment, descending ``bash -c``-style wrappers."""
+    found: list[list[str]] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        found.append(_argv_skip_env(segment_words(segment)))
+        if depth < 3:
+            for sub in wrapper_subcommands(segment):
+                found.extend(_executed_segments(sub, depth + 1))
+    return found
+
+
+_PASSTHROUGH_HEADS = {"env", "exec", "nohup", "nice", "command"}
+
+
+def _invoked_target(words: list[str], depth: int = 0) -> tuple[str, list[str]] | None:
+    """(script-or-module, argv after it) that ``words`` executes, else None.
+
+    The target of an interpreter is its first non-option argument or its ``-m``
+    module — so ``python3 x/authorize_merge.py`` runs the script while ``python
+    -m ruff check x/authorize_merge.py`` runs ruff. A head that is an unexpanded
+    variable (``"$GOV_PY"``) is read as an interpreter, because that is how the
+    governed skills spell the locked venv. Launchers (``env``, ``uv run``,
+    ``timeout``) are looked through.
+    """
+    if not words or depth > 4:
+        return None
+    head = words[0].strip("'\"")
+    name = Path(head).name
+    rest = words[1:]
+    if name in _PASSTHROUGH_HEADS:
+        while rest and ("=" in rest[0] or rest[0].startswith("-")):
+            rest = rest[1:]
+        return _invoked_target(rest, depth + 1)
+    if name == "timeout":
+        while rest and rest[0].startswith("-"):
+            rest = rest[1:]
+        return _invoked_target(rest[1:], depth + 1)
+    if name == "uv":
+        if rest[:1] != ["run"]:
+            return None
+        rest = rest[1:]
+        valued = {"--with", "--python", "--project", "--directory"}
+        while rest and rest[0].startswith("-"):
+            rest = rest[2:] if rest[0] in valued else rest[1:]
+        return _invoked_target(rest, depth + 1)
+    if name.startswith("python") or head.startswith("$"):
+        index = 0
+        while index < len(rest):
+            word = rest[index]
+            if word == "-m" and index + 1 < len(rest):
+                return rest[index + 1], rest[index + 2 :]
+            if word in {"-c", "-"}:
+                return None
+            if word.startswith("-"):
+                index += 1
+                continue
+            return Path(word).name, rest[index + 1 :]
+        return None
+    return name, rest
+
+
+def _script_argvs(command: str, script: str) -> list[list[str]]:
+    """argv after ``script`` for every segment of the command that executes it.
+
+    ``cat``, ``git diff``, ``grep`` or a linter naming the file only reads it.
+    """
+    module = script.removesuffix(".py")
+    found: list[list[str]] = []
+    for words in _executed_segments(command):
+        target = _invoked_target(words)
+        if target and target[0] in {script, module, f"ops.autonomy.{module}"}:
+            found.append(target[1])
+    return found
+
+
+def _argv_value(argv: list[str], flag: str) -> str:
+    for index, word in enumerate(argv):
+        if word == flag and index + 1 < len(argv):
+            return argv[index + 1].strip("'\"")
+        if word.startswith(f"{flag}="):
+            return word.split("=", 1)[1].strip("'\"")
+    return ""
+
+
+def _shell_writes_grant_file(command: str) -> bool:
+    """A shell segment that names the grant file with anything but a reader.
+
+    Name-based on purpose and therefore a speed bump, not a proof: it stops the
+    ordinary agent path (``cat > …``, ``tee``, ``python - <<…``, ``cp``) while
+    deliberate obfuscation remains the host-enforcement gap of §6.2.12.
+    """
+    if GRANT_FILE_NAME not in command:
+        return False
+    for segment in split_segments(command):
+        if GRANT_FILE_NAME not in segment:
+            continue
+        words = _argv_skip_env(segment_words(segment))
+        head = Path(words[0]).name if words else ""
+        if head not in _READ_ONLY_HEADS or ">" in segment:
+            return True
+    return False
+
+
+def _file_tool_writes_grant_file(tool_input: dict[str, Any]) -> bool:
+    for key in ("file_path", "notebook_path", "path"):
+        value = str(tool_input.get(key) or "")
+        if value and Path(value).name == GRANT_FILE_NAME:
+            return True
+    return False
+
+
+def _command_enables_auto_merge(command: str) -> bool:
+    """`gh pr merge --auto` or a PUT to the REST auto-merge route."""
+    for words in _executed_segments(command):
+        if len(words) >= 3 and words[:3] == ["gh", "pr", "merge"] and "--auto" in words:
+            return True
+        method = _argv_value(words, "-X") or _argv_value(words, "--method")
+        if method.upper() == "PUT" and any(
+            REST_AUTO_MERGE_PATH.search(word.strip("'\"")) for word in words
+        ):
+            return True
+    return False
+
+
+def _is_merge_tool(tool_name: str) -> bool:
+    return tool_name in DENY_TOOL_NAMES or tool_name.endswith(MERGE_TOOL_SUFFIX)
+
+
+def _stack_safe_run_reason(argv: list[str]) -> str | None:
+    """Deny a ``stack_safe_merge.py --run`` that no human grant covers.
+
+    The helper's own entrypoint re-verifies the grant against the live head; this
+    check exists because its inner ``gh`` calls are subprocesses no hook sees.
+    """
+    if "--run" not in argv:
+        return None
+    if _human_breakglass():
+        return None
+    repo = _argv_value(argv, "--repo")
+    pr = _argv_value(argv, "--pr")
+    head_sha = _argv_value(argv, "--head-sha")
+    if _file_authorizes(repo, pr, head_sha):
+        return None
+    return (
+        f"{MERGE_DENY_REASON} (target {repo or '<repo?>'}#{pr or '<pr?>'}"
+        f"@{head_sha or '<head-sha not named>'}; effective L9_MERGE_AUTHORIZED="
+        f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+    )
+
+
+def _authorized_merge_reason(
+    command: str,
+    tool_name: str,
+    tool_input: dict[str, Any],
+    target: tuple[str, str, str] | None = None,
+) -> str | None:
+    """Authority first, then stack safety. None when the merge may proceed.
+
+    ``target`` is (repo, pr, head_sha) read from the merge segment itself; MCP
+    calls leave it None and are read from their structured input.
+    """
+    effective = lambda: _LAST_EFFECTIVE.get("L9_MERGE_AUTHORIZED", "unread")  # noqa: E731
+    if target is None:
+        authorized = _merge_authorized(tool_name, tool_input)
+        stack_target = None
+    else:
+        authorized = _human_breakglass() or _file_authorizes(*target)
+        stack_target = (target[0], target[1])
+    if not authorized:
+        return f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED={effective()})"
+    if _human_breakglass():
+        return None
+    stack = _stack_safety_reason(command, tool_name, tool_input, stack_target)
+    if stack:
+        return f"{stack} (effective L9_MERGE_AUTHORIZED={effective()})"
+    return None
+
+
+def _shell_merge_reason(command: str, tool_name: str) -> str | None:
+    """Judge every executed merge segment on its own argv; deny the first failure.
+
+    A command that names a merge only in a form no segment parse can resolve
+    (``eval``, an unusual wrapper) cannot be bound to a grant, so it is denied
+    unless the human breakglass is set.
+    """
+    segments = _merge_segments(command)
+    if not segments:
+        if _human_breakglass():
+            return None
+        return (
+            f"{MERGE_DENY_REASON} (no executed merge segment could be resolved to a "
+            "repository, PR and head; run the merge as its own command)"
+        )
+    for segment in segments:
+        if "--admin" in _argv_skip_env(segment_words(segment)):
+            return NEVER_WAIVE_REASON
+        reason = _authorized_merge_reason(
+            segment, tool_name, {"command": segment}, _segment_merge_target(segment)
+        )
+        if reason:
+            return reason
+    return None
+
+
 def _never_waive_command(command: str) -> bool:
     return bool(
         FORCE_PUSH_BASH.search(command)
@@ -630,7 +990,7 @@ def _never_waive_command(command: str) -> bool:
 
 
 def _never_waive_tool(tool_name: str, tool_input: dict[str, Any]) -> bool:
-    if tool_name in DENY_TOOL_NAMES and bool(
+    if _is_merge_tool(tool_name) and bool(
         tool_input.get("admin") or tool_input.get("admin_override")
     ):
         return True
@@ -660,76 +1020,54 @@ def evaluate(
 ) -> str | None:
     """Return deny reason or None if allowed to proceed (no decision).
 
-    Shell git/gh commands skip *authorization* (``git_execution_exemption``).
-    Stack safety still runs: squash/rebase of a parent orphans children.
-    The MCP merge tool stays fully governed.
+    Shell git/gh commands are exempt from the workflow plane, not from merge
+    authority: a merge is an effect (§6.2.12). Every merge transport needs a
+    human grant (or the human breakglass); stack safety runs after authority.
     """
     del root  # signature kept for hook callers
+
+    if tool_name in FILE_TOOL_NAMES:
+        return SELF_ISSUE_REASON if _file_tool_writes_grant_file(tool_input) else None
+
+    if tool_name in SHELL_TOOL_NAMES:
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        if _script_argvs(command, "authorize_merge.py"):
+            return SELF_ISSUE_REASON
+        if _shell_writes_grant_file(command):
+            return SELF_ISSUE_REASON
+        for run_argv in _script_argvs(command, "stack_safe_merge.py"):
+            reason = _stack_safe_run_reason(run_argv)
+            if reason:
+                return reason
+        if _command_enables_auto_merge(command) and not _human_breakglass():
+            return AUTO_MERGE_DENY_REASON
 
     if event_is_git_or_gh(tool_name, tool_input):
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         if _command_is_pr_merge(command):
-            rest = []
-            for segment in split_segments(strip_heredoc_bodies(command)):
-                if _segment_is_pr_merge(segment):
-                    rest = _argv_skip_env(segment_words(segment))
-                    break
-            if "--admin" in rest:
-                return NEVER_WAIVE_REASON
-            if _human_breakglass():
-                return None
-            stack = _stack_safety_reason(command, tool_name, tool_input)
-            if stack:
-                return (
-                    f"{stack} (effective L9_MERGE_AUTHORIZED="
-                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
-                )
-            return stack
+            return _shell_merge_reason(command, tool_name)
         return None
 
     if _never_waive_tool(tool_name, tool_input):
         return NEVER_WAIVE_REASON
 
-    if tool_name in {"Bash", "bash", "Shell", "shell"}:
+    if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         if _never_waive_command(command):
             return NEVER_WAIVE_REASON
         # _command_is_pr_merge covers the REST endpoint reached by curl, which
-        # is not a git/gh event and so lands here — where authorization runs.
+        # is not a git/gh event and so lands here.
         if MERGE_BASH.search(command) or _command_is_pr_merge(command):
-            if not _merge_authorized(tool_name, tool_input):
-                return (
-                    f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED="
-                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
-                )
-            if _human_breakglass():
-                return None
-            stack = _stack_safety_reason(command, tool_name, tool_input)
-            if stack:
-                return (
-                    f"{stack} (effective L9_MERGE_AUTHORIZED="
-                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
-                )
-            return stack
+            return _shell_merge_reason(command, tool_name)
         return None
 
-    if tool_name in DENY_TOOL_NAMES:
-        if not _merge_authorized(tool_name, tool_input):
-            return (
-                f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED="
-                f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
-            )
-        if _human_breakglass():
-            return None
+    if tool_name.endswith(AUTO_MERGE_TOOL_SUFFIX):
+        return None if _human_breakglass() else AUTO_MERGE_DENY_REASON
+
+    if _is_merge_tool(tool_name):
         method = str(tool_input.get("merge_method") or tool_input.get("method") or "")
         pseudo = f"gh pr merge --{method.lower()}" if method else "gh pr merge"
-        stack = _stack_safety_reason(pseudo, tool_name, tool_input)
-        if stack:
-            return (
-                f"{stack} (effective L9_MERGE_AUTHORIZED="
-                f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
-            )
-        return stack
+        return _authorized_merge_reason(pseudo, tool_name, tool_input)
     return None
 
 

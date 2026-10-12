@@ -15,9 +15,9 @@ AND `L9_AUTONOMY_ENABLED=true`:
    `l4_local.py authorize-release` → `make pr` (deterministic preparation,
    checkers once, then push + PR; remediates=1). Campaign/make-pr end
    state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
-   Invoking `/l9-pr-remediation` then remediates **and merges** all open
-   PRs in the target repo (bottom-up). Do **not** merge from the campaign
-   path alone.
+   Invoking `/l9-pr-remediation` then remediates all open PRs in the
+   target repo to MERGE_PENDING; merge needs a human grant per PR and head
+   (CANONICAL_LAW §6.2.12). Do **not** merge from the campaign path.
 2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
    WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
    deny. `/l9-pr-remediation` publishes an already-open PR with
@@ -64,9 +64,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
 - Post-push (all surfaces after L4 release): `PR_REMEDIATE=0 make pr` /
-  `l9 pr` to a green merge-ready PR. Merge only after `/l9-pr-remediation`
-  writes `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
-  mergeable. Force-push / admin-merge stay forbidden.
+  `l9 pr` to a green merge-ready PR. Merge only under a human grant bound
+  to the repo, PR and exact head (`ops/autonomy/authorize_merge.py`, run by
+  the human), with the PR green + mergeable; remediation stops at
+  MERGE_PENDING. Force-push / admin-merge stay forbidden.
 - Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
   choose to stack and a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict

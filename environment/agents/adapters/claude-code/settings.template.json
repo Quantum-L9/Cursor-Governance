@@ -45,7 +45,8 @@
     "There is no standing autonomous-merge grant. merge_gate.py does not consult any",
     "environment boolean; a flag set once in this configuration cannot authorize merge.",
     "Merge is allowed only by a human per-session breakglass (L9_MERGE_AUTHORIZED) or a",
-    "scoped, expiring receipt that /l9-pr-remediation writes for the target repo (and PR).",
+    "human merge grant bound to repo, PR and exact head SHA (CANONICAL_LAW 6.2.12), which a",
+    "human issues with authorize_merge.py; /l9-pr-remediation stops at MERGE_PENDING.",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
     "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
     "remain forbidden by policy."
@@ -131,13 +132,18 @@
         ]
       },
       {
-        "matcher": "Bash|mcp__github__.*",
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*github.*",
         "hooks": [
           {
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate merge_gate_wrap.py'",
             "timeout": 5
-          },
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|mcp__github__.*",
+        "hooks": [
           {
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate local_execution_gate_wrap.py'",

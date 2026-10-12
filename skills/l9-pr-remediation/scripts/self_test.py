@@ -79,7 +79,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.7.0", "SKILL.md")
+    _need(SKILL, "version: 5.8.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -286,7 +286,7 @@ def test_board_and_merge() -> None:
         "board_authority: ops/autonomy/pr_board.py",
         "board_values: [merge, fix, wait, leftover]",
         "leftover_requires_declaration: true",
-        "done_predicate: open_prs=0",
+        "done_predicate: open_prs=0 or all remaining MERGE_PENDING|leftover",
         "The board is computed, not judged",
         "ownership is not the board",
         "--human-decision",
@@ -295,10 +295,14 @@ def test_board_and_merge() -> None:
         "MERGE_TRAIN",
         "REMEDIATE_ALL",
         "oldest_created_at_default: true",
-        "stack_safe_merge.py --run",
+        "stack_safe_merge.py --head-sha {head} --run",
         "never `gh pr update-branch`",
-        "is merge authorization",
-        "merge_on_converge: true",
+        "is not merge authority for any PR",
+        "MERGE_PENDING",
+        "merge_on_converge: false",
+        "merge_authority: human_grant",
+        "self_issue_merge_grant: forbidden",
+        "--head-sha {head} --run",
         "isResolved: false",
         "any author",
         "Paginate threads",
@@ -308,8 +312,16 @@ def test_board_and_merge() -> None:
         "forbid_reinvoke_handoff: true",
     ):
         _need(SKILL, needle, "SKILL.md")
-    if "not merge authorization" in SKILL.lower() or "never merge authorization" in SKILL.lower():
-        _fail("SKILL.md must not negate merge authorization")
+    # CANONICAL_LAW §6.2.12: invocation never authorizes merge, and the skill
+    # never self-issues the human grant.
+    for retired in (
+        "is merge authorization for",
+        "merge_on_converge: true",
+        "authorize_merge.py --repo {owner}/{repo} --all-open",
+    ):
+        _forbid(SKILL, retired, "SKILL.md")
+    _forbid(REFS["merge-advise.md"], "--all-open \\", "merge-advise.md")
+    _need(REFS["merge-advise.md"], "MERGE_PENDING", "merge-advise.md")
     _need(SKILL, "**never** commit/push/merge", "SKILL.md")
     _forbid(REFS["diagnose-workflow.md"], "gh pr merge {number}", "diagnose-workflow.md")
     _need(REFS["diagnose-workflow.md"], "Diagnose never merges", "diagnose-workflow.md")
