@@ -71,7 +71,22 @@ Validated at Cursor-Governance `b8941d3`, `.github` `1f42b33`, and l9-semantic-c
 - runtime alignment covers 52 behavior cases and the absent-projection negative control;
 - `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
 
-An evidence harness kept outside the repository ran 34 verifier cases against the real `.github` sources, all passing. The artifacts and receipts were **synthetic**. They prove consumer logic only. No producer-emitted projection exists for the profile, so a live binding is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, not operational.
+An evidence harness kept outside the repository ran 34 verifier cases against the real `.github` sources, all passing. The artifacts and receipts were **synthetic**. They prove consumer logic only.
+
+### Live producer evidence (invariants source class)
+
+Quantum-L9/l9-semantic-compiler-engine#8 (head `7089305`, not yet merged) implements `project` for one source class of a `.github` projection profile. Its output was checked at `.github@1f42b33` with this verifier unchanged:
+
+- real output binds (`BOUND`), and the producer is byte-deterministic across runs;
+- each adverse case changes one fact in real output or in a clone of the authority. All were caught:
+  - tampered payload: `REJECTED`, including when its digests and receipt are recomputed;
+  - non-canonical owner: `BLOCKED`;
+  - removed selector: `BLOCKED`;
+  - a material change to a bound invariant: `STALE`;
+  - an unrelated upstream commit: stays `CURRENT`;
+  - re-projection: binds again.
+
+11/11 cases passed. Until #8 merges, the producer exists only on that PR branch. The other 8 source groups have no producer, so they stay `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
 
 ## Known limitations
 
