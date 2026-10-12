@@ -788,7 +788,10 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
     if kind == "merge":
         return (
             f"Merge {repo}#{number} at head {head} via ops/autonomy/stack_safe_merge.py "
-            "--run only. Immediately before merge: re-run pr_board.py; re-query unresolved "
+            f"--head-sha {head} --run only. It merges only under a human merge grant for "
+            "that head (CANONICAL_LAW §6.2.12); exit 3 is MERGE_PENDING — report it, never "
+            "run authorize_merge.py, never retry another transport. "
+            "Immediately before merge: re-run pr_board.py; re-query unresolved "
             "reviewThreads; abort if board is not merge or the head SHA moved. Never "
             "--admin, never hand-typed --squash, never gh pr update-branch, never "
             "force-push, never edit files. Watchers never merge; this assigned merge "
