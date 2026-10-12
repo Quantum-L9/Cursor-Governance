@@ -2208,13 +2208,14 @@ refused.
   invocation, green CI, an L4 release, nor `make pr` authorizes a merge.
 - A merge requires a **human grant** that binds one repository, one PR and
   one exact head SHA, and expires within four hours. The human issues it in
-  their own terminal and types the target back to confirm:
-  `"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>`.
+  their own terminal, from any directory, and types the target back to
+  confirm:
+  `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`.
 - Agents never run `authorize_merge.py`, never write
   `merge-authorization.json`, and never enable auto-merge.
   `ops/autonomy/merge_gate.py` denies all three.
 - With a grant, merge oldest first through
-  `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --head-sha <sha> --run`.
+  `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n> --head-sha <sha> --run`.
   It rechecks the live head first. A moved head or stale grant returns
   MERGE_PENDING (exit 3). Stack-safe method selection is unchanged.
 - `L9_MERGE_AUTHORIZED=<reason>` stays the human session breakglass for the
