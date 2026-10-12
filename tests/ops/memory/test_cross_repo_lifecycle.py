@@ -1403,24 +1403,48 @@ def _sqlite_files(root: Path) -> list[str]:
     return sorted(str(p.relative_to(root)) for p in root.rglob("*.sqlite3*"))
 
 
-def test_postgres_selection_refuses_without_sqlite_fallback(runtime, tmp_path: Path) -> None:
-    """Selecting the shared postgres store never degrades to a local ledger.
+def _assert_postgres_refused(
+    interpreter: str, root: Path, door: dict[str, str], selection: dict[str, str], needle: str
+) -> None:
+    """The stdio server exits before serving, writes no SQLite ledger, leaks no DSN."""
+    env = _stdio_env(root, {**door, **selection})
+    assert "L9_MEMORY_ACKNOWLEDGE_BACKEND_TRANSITION" not in env
+    proc = subprocess.run(
+        [interpreter, "-m", "l9_graphite_memory.server", "--transport", "stdio"],
+        input=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}) + "\n",
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(root),
+        check=False,
+        timeout=120,
+    )
+    assert proc.returncode != 0, root.name
+    assert proc.stdout == "", root.name
+    assert needle in proc.stderr.lower(), proc.stderr[-600:]
+    assert _PG_SENTINEL not in proc.stderr and _PG_SENTINEL not in proc.stdout
+    assert _sqlite_files(root) == [], root.name
 
-    Against the bound release: the locked postgres driver is importable; a
-    missing or blank DSN and an unreachable store stop the server before it
-    serves anything, create no SQLite ledger, and leak no DSN credential to
-    its output; and a populated local ledger beside an empty postgres store is
-    refused without the ADR-077 acknowledgement, leaving the ledger untouched.
+
+def test_bound_runtime_reaches_postgres_only_through_the_locked_driver(
+    runtime, tmp_path: Path
+) -> None:
+    """The bound release carries the uv.lock psycopg2 driver, and an unreachable
+    store stops the server with no SQLite fallback.
+
+    Mandatory under L9_MEMORY_CROSS_REPO_REQUIRED=1: the required job composes
+    its runtime from this checkout's uv.lock. Elsewhere the bound runtime can
+    be a donor environment composed from another lock (the make pr isolate
+    toolchain is $HOME/.cursor-governance/.venv, i.e. main), which cannot carry
+    a dependency this checkout is the one adding; that, and only that, skips.
     No live database exists here, so TLS and store identity are not proven.
     """
 
-    import hashlib
     import tomllib
 
     client, _env = runtime
     interpreter = client.binding.interpreter
     assert interpreter
-
     lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
     locked = {pkg["name"]: pkg["version"] for pkg in lock["package"]}
     driver = subprocess.run(
@@ -1435,41 +1459,47 @@ def test_postgres_selection_refuses_without_sqlite_fallback(runtime, tmp_path: P
         check=False,
         timeout=60,
     )
+    if driver.returncode != 0 and not _required():
+        pytest.skip(
+            f"bound runtime {interpreter} has no postgres driver: it was not composed from "
+            f"this checkout's uv.lock; {ENV_REQUIRED}=1 (memory-cross-repo) enforces it"
+        )
     assert driver.returncode == 0, driver.stderr
     assert driver.stdout.strip() == locked["psycopg2-binary"]
 
+    _assert_postgres_refused(
+        interpreter,
+        tmp_path / "unreachable",
+        _cursor_door("postgres-refusal-proof"),
+        {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": _UNREACHABLE_DSN},
+        "postgres connection failed",
+    )
+
+
+def test_postgres_selection_refuses_without_sqlite_fallback(runtime, tmp_path: Path) -> None:
+    """Selecting the shared postgres store never degrades to a local ledger.
+
+    Against the bound release: a missing or blank DSN stops the server before
+    it serves anything, with no SQLite ledger; and a populated local ledger
+    beside an empty postgres store is refused without the ADR-077
+    acknowledgement, leaving the ledger untouched. Neither needs the driver.
+    """
+
+    import hashlib
+
+    client, _env = runtime
+    interpreter = client.binding.interpreter
+    assert interpreter
+
     namespace = "postgres-refusal-proof"
     door = _cursor_door(namespace)
-    cases = {
-        "missing-dsn": ({"L9_MEMORY_STORE_BACKEND": "postgres"}, "l9_memory_postgres_dsn"),
-        "blank-dsn": (
-            {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": "   "},
-            "l9_memory_postgres_dsn",
-        ),
-        "unreachable": (
-            {"L9_MEMORY_STORE_BACKEND": "postgres", "L9_MEMORY_POSTGRES_DSN": _UNREACHABLE_DSN},
-            "postgres connection failed",
-        ),
-    }
-    for folder, (selection, needle) in cases.items():
-        root = tmp_path / folder
-        env = _stdio_env(root, {**door, **selection})
-        assert "L9_MEMORY_ACKNOWLEDGE_BACKEND_TRANSITION" not in env
-        proc = subprocess.run(
-            [interpreter, "-m", "l9_graphite_memory.server", "--transport", "stdio"],
-            input=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}) + "\n",
-            capture_output=True,
-            text=True,
-            env=env,
-            cwd=str(root),
-            check=False,
-            timeout=120,
+    for folder, dsn in (("missing-dsn", None), ("blank-dsn", "   ")):
+        selection = {"L9_MEMORY_STORE_BACKEND": "postgres"}
+        if dsn is not None:
+            selection["L9_MEMORY_POSTGRES_DSN"] = dsn
+        _assert_postgres_refused(
+            interpreter, tmp_path / folder, door, selection, "l9_memory_postgres_dsn"
         )
-        assert proc.returncode != 0, folder
-        assert proc.stdout == "", folder
-        assert needle in proc.stderr.lower(), proc.stderr[-600:]
-        assert _PG_SENTINEL not in proc.stderr and _PG_SENTINEL not in proc.stdout
-        assert _sqlite_files(root) == [], folder
 
     # A ledger this deployment really wrote, through the default backend.
     ledger_root = tmp_path / "ledger"
