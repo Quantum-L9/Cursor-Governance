@@ -382,9 +382,11 @@ run_pip_audit() {
       # Audit this workspace lock. Do not sync the project environment:
       # UV_PROJECT_ENVIRONMENT is the governance venv, and a sync reinstalls
       # the sealed memory wheel. `uv export --frozen` reads the lock only.
+      # run_pr_gate.sh exports UV_LOCKED=1, which uv refuses beside --frozen,
+      # so the export drops it; the gate's uv-lock wave already checked the lock.
       req="$(mktemp "${TMPDIR:-/tmp}/l9-pip-audit-req.XXXXXX")"
       trap 'rm -f "$req"' EXIT
-      if ! uv export --frozen --no-emit-project --no-hashes \
+      if ! env -u UV_LOCKED uv export --frozen --no-emit-project --no-hashes \
         --format requirements.txt -o "$req"; then
         echo "pip-audit: uv export failed for $WS/uv.lock" >&2
         exit 2

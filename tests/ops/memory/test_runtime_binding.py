@@ -710,9 +710,11 @@ def test_lock_composes_the_pinned_release_with_its_own_postgres_driver() -> None
         for dep in project["project"]["dependencies"]
         if re.split(r"[\[<>=!~ ;]", dep, maxsplit=1)[0] == manifest.distribution
     ]
-    assert memory_deps == [
-        f"{manifest.distribution}[postgres]=={manifest.expected_package_version}"
-    ]
+    # pyproject.toml is additive-only, so the extra is a second requirement on
+    # the same exact pin, never a different version or package.
+    pin = f"=={manifest.expected_package_version}"
+    assert memory_deps and all(dep.endswith(pin) for dep in memory_deps), memory_deps
+    assert f"{manifest.distribution}[postgres]{pin}" in memory_deps
 
     lock = tomllib.loads((root / "uv.lock").read_text(encoding="utf-8"))
     packages = {pkg["name"]: pkg for pkg in lock["package"]}

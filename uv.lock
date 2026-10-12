@@ -521,6 +521,7 @@ requires-dist = [
     { name = "claude-agent-sdk", marker = "extra == 'agent-sdk'", specifier = "==0.2.163" },
     { name = "cryptography", specifier = ">=42,<51" },
     { name = "jsonschema", specifier = ">=4.22,<5" },
+    { name = "l9-graphite-memory", specifier = "==2.6.0" },
     { name = "l9-graphite-memory", extras = ["postgres"], specifier = "==2.6.0" },
     { name = "langgraph", specifier = ">=0.2" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0" },
