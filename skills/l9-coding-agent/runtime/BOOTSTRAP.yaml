@@ -1,6 +1,6 @@
 bootstrap:
   id: L9.CODING_AGENT.BOOTSTRAP.001
-  version: 1.3.0
+  version: 1.4.0
   purpose: Preserve agent context by loading only the semantic owners required for the current execution stage while keeping
     every critical runtime concern reachable, explicit, and fail-closed.
   policy:
@@ -30,7 +30,16 @@ bootstrap:
       - runtime/RUN_STATE.yaml
       - contracts/AUTHORITY_AND_BOUNDARIES.yaml
       - contracts/EXECUTION_CONTRACT.yaml
-      unload_policy: retain_normalized_run_state_and_bound_contract_facts
+      - integrations/L9_RUNTIME_BINDING.yaml
+      bind_before_exit:
+        concern: canonical_invariant_binding
+        owner: integrations/L9_RUNTIME_BINDING.yaml#canonical_invariant_binding
+        invoke: scripts/verify_canonical_binding.py
+        rule: Bind applicable L9 global invariants from a verified upstream projection before any mutation, in
+          every mode. A non-BOUND outcome blocks mutation unless the current user explicitly reauthorizes this
+          run with the Unknown recorded. Reading this section does not activate L9_PROFILE_AWARE, GAR_BOUND, or
+          Gate runtime rules.
+      unload_policy: retain_normalized_run_state_bound_contract_facts_and_canonical_invariant_binding_record
     implementation:
       load_when:
       - execution_contract_is_ready
@@ -105,7 +114,8 @@ bootstrap:
       - agents/openai.yaml
   context_guards:
   - do_not_load_package_validation_material_during_ordinary_repository_execution
-  - do_not_load_gar_or_l9_integrations_without_their_activation_signal
+  - do_not_load_gar_integration_or_apply_l9_runtime_mode_rules_without_their_activation_signal
+  - canonical_invariant_binding_reads_only_its_owner_section_and_the_verifier_output_not_unrelated_upstream_law
   - do_not_load_failure_catalogs_until_failure_classification_is_material
   - do_not_reload_semantic_owners_that_are_unchanged_and_already_resolved_for_the_current_stage
   - if_a_later_stage_needs_a_prior_rule_load_only_that_owner_not_the_entire_prior_stage

@@ -1,6 +1,6 @@
 # L9 Coding Agent
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Tier:** exemplary  
 **Role:** architecture-faithful realization sibling to L9 Global Architect
 
@@ -10,11 +10,12 @@ L9 Coding Agent turns bounded, approved software intent into working code and re
 
 `SKILL.md -> runtime/BOOTSTRAP.yaml -> current stage only`
 
-Stages are intake, implementation, validation, and convergence. Failure catalogs, GAR interoperability, L9 runtime binding, structured schemas, evals, operator docs, and exemplary intelligence are conditional.
+Stages are intake, implementation, validation, and convergence. Intake also reads the `canonical_invariant_binding` section of `integrations/L9_RUNTIME_BINDING.yaml`. Failure catalogs, GAR interoperability, L9 runtime mode rules, structured schemas, evals, operator docs, and exemplary intelligence are conditional.
 
 ## Core laws
 
 - Bind the exact target before mutation.
+- Bind applicable L9 global invariants from a verified `Quantum-L9/.github` projection before mutation; never restate them locally.
 - One active execution contract at a time.
 - Make private implementation choices autonomously inside locked semantics.
 - Never smuggle architecture changes, dependencies, provider choices, or scope expansion through code.

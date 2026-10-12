@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.CODING_AGENT.RUNTIME.001
   name: l9-coding-agent
-  version: 1.3.0
+  version: 1.4.0
   status: active
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md
@@ -45,6 +45,11 @@ semantic_owners:
     owner: integrations/GAR_HANDOFF.yaml
   l9_runtime_binding:
     owner: integrations/L9_RUNTIME_BINDING.yaml
+  canonical_invariant_binding:
+    owner: integrations/L9_RUNTIME_BINDING.yaml
+    section: canonical_invariant_binding
+    upstream_semantic_owner: Quantum-L9/.github
+    local_role: consumer_procedure_only
   behavioral_conformance:
     owner: evals/BEHAVIOR_CONFORMANCE.yaml
     runtime_loaded_by_default: false
@@ -55,6 +60,7 @@ load_groups:
   - runtime/RUN_STATE.yaml
   - contracts/AUTHORITY_AND_BOUNDARIES.yaml
   - contracts/EXECUTION_CONTRACT.yaml
+  - integrations/L9_RUNTIME_BINDING.yaml
   implementation:
   - runtime/STATE_MACHINE.yaml
   - kernels/CODING_KERNEL.yaml
@@ -120,6 +126,7 @@ package_inventory:
   - scripts/validate_execution_contract.py
   - scripts/validate_runtime_alignment.py
   - scripts/validate_lazy_bootstrap.py
+  - scripts/verify_canonical_binding.py
   operator_and_release:
   - README.md
   - RUNBOOK.md
@@ -149,6 +156,7 @@ boot_sequence:
 - CENSUS_HOST_CAPABILITIES
 - BIND_EXACT_TARGET
 - RESOLVE_AUTHORITY
+- BIND_CANONICAL_INVARIANT_PROJECTION
 - BIND_OR_DERIVE_EXECUTION_CONTRACT
 - ESTABLISH_SEMANTIC_ENVELOPE
 - SELECT_DEPTH
@@ -159,6 +167,8 @@ composition_invariants:
 - lazy_bootstrap_precedes_stage_hydration
 - no_eager_full_runtime_hydration
 - exact_target_binding_precedes_mutation
+- verified_canonical_invariant_binding_precedes_mutation_unless_the_user_explicitly_reauthorizes_the_unknown
+- canonical_invariant_law_is_consumed_by_identity_and_provenance_never_restated_locally
 - one_active_execution_contract_at_a_time
 - desired_state_authority_is_distinct_from_current_state_evidence
 - coding_agent_may_choose_implementation_details_only_inside_the_semantic_envelope
@@ -183,3 +193,4 @@ package_validation_refs:
   runtime_alignment: scripts/validate_runtime_alignment.py
   lazy_bootstrap_closure: scripts/validate_lazy_bootstrap.py
   execution_contract: scripts/validate_execution_contract.py
+  canonical_invariant_binding: scripts/verify_canonical_binding.py

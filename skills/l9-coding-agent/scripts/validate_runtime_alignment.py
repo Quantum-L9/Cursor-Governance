@@ -14,6 +14,9 @@ except Exception as exc:
     raise SystemExit(f"PyYAML is required: {exc}")
 
 
+CANONICAL_BINDING_CASES = tuple(f"CA-E{n}" for n in range(41, 53))
+
+
 def flatten(groups: dict) -> set[str]:
     out: set[str] = set()
     for values in groups.values():
@@ -74,6 +77,58 @@ def main() -> int:
     for required_term in ["inspection scope", "dependency-aware target graph", "delivered state"]:
         if required_term.lower() not in skill.lower():
             errors.append(f"SKILL.md missing v1.3 readiness control: {required_term}")
+
+    case_ids = {str(c.get("id")) for c in cases if isinstance(c, dict)}
+    missing_cases = sorted(set(CANONICAL_BINDING_CASES) - case_ids)
+    if missing_cases:
+        errors.append("canonical binding behavior cases missing: " + ", ".join(missing_cases))
+
+    # Negative controls needing no upstream checkout: each must block, never pass.
+    # Fidelity, digest, and staleness controls need a real .github checkout and
+    # run in the evidence harness recorded in VALIDATION.md.
+    verifier = root / "scripts" / "verify_canonical_binding.py"
+    dummy = root / "runtime" / "RUN_STATE.yaml"
+    controls = {
+        "absent projection": ["--authority-root", str(root)],
+        "authority root absent": [
+            "--authority-root",
+            str(root / "missing-authority-root"),
+            "--artifact",
+            str(dummy),
+            "--receipt",
+            str(dummy),
+        ],
+        "prior binding not bound": [
+            "--authority-root",
+            str(root),
+            "--prior-binding",
+            str(dummy),
+            "--artifact",
+            str(dummy),
+            "--receipt",
+            str(dummy),
+        ],
+    }
+    for label, argv in controls.items():
+        try:
+            probe = subprocess.run(
+                [sys.executable, str(verifier), *argv],
+                text=True,
+                capture_output=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            errors.append(f"canonical binding verifier timed out ({label})")
+            continue
+        try:
+            status = json.loads(probe.stdout).get("status")
+        except ValueError:
+            status = None
+        if probe.returncode != 3 or status != "BLOCKED":
+            errors.append(
+                f"canonical binding verifier did not block ({label}): "
+                + f"rc={probe.returncode} status={status}"
+            )
 
     lazy_script = root / "scripts" / "validate_lazy_bootstrap.py"
     result = subprocess.run(

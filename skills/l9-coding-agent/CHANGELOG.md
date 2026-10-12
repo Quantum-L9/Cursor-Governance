@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.0 - 2026-10-12
+
+- Intake now binds applicable L9 global invariants from `Quantum-L9/.github`, before any mutation and in every mode, through the `l9.projection/cursor-governance-operating-plane@1` profile (`integrations/L9_RUNTIME_BINDING.yaml#canonical_invariant_binding`). The pack references upstream law by identity and digest and holds no copy of it.
+- Added `scripts/verify_canonical_binding.py`, a consumer-only verifier. It checks a producer-emitted `l9.projection-artifact/v1` and `l9.compiler-receipt/v1` against an exact, clean `.github` checkout:
+  - owner origin, revision, and source registry;
+  - profile identity and selector coverage;
+  - upstream required fields, read from the upstream schemas;
+  - recomputed digests;
+  - payload fidelity to the source;
+  - receipt binding.
+
+  It never emits a projection.
+- The receipt producer must hold the `projection` role that `.github` assigns in `vocabulary.yaml` `organizational_target`. Receipts are unkeyed, so this check narrows producer identity but does not authenticate it.
+- Re-checking a prior binding re-verifies its artifact and receipt; the record alone is never trusted. A change to any bound source, profile, invariant or projection digest returns `STALE`.
+- Unexpected input shapes return a typed `BLOCKED`/`REJECTED` status instead of crashing.
+- Registered the reason code `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` (`catalogs/REASON_CODES.yaml` 1.2.0).
+- A non-`BOUND`/`CURRENT` outcome blocks mutation. There is no fallback to local law. Only an explicit current user instruction may let a run proceed with the `Unknown` recorded.
+- No executable producer for this profile existed at `.github@1f42b33` or `l9-semantic-compiler-engine@a1c4104`. Quantum-L9/l9-semantic-compiler-engine#8 adds one for the `invariants` source class (`python -m l9_semantic_compiler project`). Its real output binds through this verifier unchanged, so the live binding works for that class once #8 merges. The profile's other 8 source groups still have no producer.
+- Enforcement is instructional; no host hook enforces verifier invocation.
+- `SKILL.md` is byte-identical to 1.3.0, and its frontmatter `metadata.version` still reads 1.3.0. The intake route lives in `runtime/BOOTSTRAP.yaml`, which `SKILL.md` already names as the first and only read.
+  - Reason: `ops/generated/skill-registry.json` and the Claude adapter registry pin `skill_sha256` of `SKILL.md`, and both lie outside this pack.
+  - Updating the frontmatter needs an authorized registry regeneration.
+- Behavior conformance grows from 40 to 52 cases (CA-E41 to CA-E52). The lazy-bootstrap and runtime-alignment validators now check the intake binding route, its procedure-only keys and the reason code, and run three upstream-free negative controls.
+
 ## 1.3.0 repository install - 2026-09-28
 
 - Installed into `Quantum-L9/Cursor-Governance` at `skills/l9-coding-agent/` as the `explicit_only` routing tier, beside its sibling `l9-global-architect`.

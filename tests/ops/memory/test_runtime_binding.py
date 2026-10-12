@@ -694,6 +694,39 @@ def test_3d_the_real_manifest_pins_no_record_digest(tmp_path: Path) -> None:
     assert manifest.installed_record_digest is None
 
 
+def test_lock_composes_the_pinned_release_with_its_own_postgres_driver() -> None:
+    """The bound release imports psycopg2 lazily for its postgres store and ships
+    the driver only as its own `postgres` extra. The consumer selects that extra
+    on the same exact pin, so `uv sync --locked` installs the driver and cannot
+    drop it, and the locked wheel is still the audited artifact. No second
+    memory package and no driver outside the lock."""
+    import tomllib
+
+    manifest = rb.BindingManifest.load()
+    root = Path(__file__).resolve().parents[3]
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    memory_deps = [
+        dep
+        for dep in project["project"]["dependencies"]
+        if re.split(r"[\[<>=!~ ;]", dep, maxsplit=1)[0] == manifest.distribution
+    ]
+    # pyproject.toml is additive-only, so the extra is a second requirement on
+    # the same exact pin, never a different version or package.
+    pin = f"=={manifest.expected_package_version}"
+    assert memory_deps and all(dep.endswith(pin) for dep in memory_deps), memory_deps
+    assert f"{manifest.distribution}[postgres]{pin}" in memory_deps
+
+    lock = tomllib.loads((root / "uv.lock").read_text(encoding="utf-8"))
+    packages = {pkg["name"]: pkg for pkg in lock["package"]}
+    consumer = packages[project["project"]["name"]]
+    assert {"name": manifest.distribution, "extra": ["postgres"]} in consumer["dependencies"]
+    memory = packages[manifest.distribution]
+    assert memory["version"] == manifest.expected_package_version
+    assert [wheel["hash"] for wheel in memory["wheels"]] == [f"sha256:{manifest.artifact_sha256}"]
+    assert memory["optional-dependencies"]["postgres"] == [{"name": "psycopg2-binary"}]
+    assert packages["psycopg2-binary"]["version"].startswith("2.")
+
+
 def test_4_wrong_version_is_still_rejected(tmp_path: Path) -> None:
     binding = bind(Environment(tmp_path, version="2.2.0"))
     assert binding.status == rb.STATUS_UNBOUND

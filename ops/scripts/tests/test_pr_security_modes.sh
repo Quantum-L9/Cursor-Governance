@@ -106,4 +106,12 @@ if grep -Fq 'uv run --no-sync' "$SECURITY"; then
 fi
 pass "pip-audit exports uv.lock instead of auditing the ambient environment"
 
+# T8 — the gate exports UV_LOCKED=1, and uv refuses it beside --frozen, so the
+# audit of any lock change used to stop at "could not run".
+grep -Fq 'export UV_LOCKED=1' "$PR_GATE" \
+  || fail "run_pr_gate.sh no longer exports UV_LOCKED; revisit T8"
+grep -Fq 'env -u UV_LOCKED uv export --frozen' "$SECURITY" \
+  || fail "uv.lock export must drop the gate's UV_LOCKED before --frozen"
+pass "uv.lock export runs under the gate's UV_LOCKED=1"
+
 echo "OK: $PASS assertions"
