@@ -75,7 +75,7 @@ An evidence harness kept outside the repository ran 34 verifier cases against th
 
 ### Live producer evidence (invariants source class)
 
-Quantum-L9/l9-semantic-compiler-engine#8 (head `c9b8865`, not yet merged) implements `project` for one source class of a `.github` projection profile. Its output was checked at `.github@1f42b33` with this verifier unchanged:
+Quantum-L9/l9-semantic-compiler-engine#8 (head `99dfde4`, not yet merged) implements `project` for one source class of a `.github` projection profile. Its output was checked at `.github@1f42b33` with this verifier unchanged:
 
 - real output binds (`BOUND`), and the producer is byte-deterministic across runs;
 - each adverse case changes one fact in real output or in a clone of the authority. All were caught:
@@ -84,9 +84,10 @@ Quantum-L9/l9-semantic-compiler-engine#8 (head `c9b8865`, not yet merged) implem
   - removed selector: `BLOCKED`;
   - a material change to a bound invariant: `STALE`;
   - an unrelated upstream commit: stays `CURRENT`;
-  - re-projection: binds again.
+  - re-projection: binds again;
+  - an unpinned production (receipt result `unknown`): `REJECTED`.
 
-11/11 cases passed. Until #8 merges, the producer exists only on that PR branch. The other 8 source groups have no producer, so they stay `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
+12/12 cases passed. Until #8 merges, the producer exists only on that PR branch. The other 8 source groups have no producer, so they stay `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
 
 ## Known limitations
 
