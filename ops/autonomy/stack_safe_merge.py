@@ -60,6 +60,9 @@ ANCESTRY_SAFE = "merge"
 UNSTACKED = "squash"
 #: Exit status for "remediated, not merged: a human grant is required".
 MERGE_PENDING_EXIT = 3
+#: AGENTS.md requires the locked governance interpreter for manual
+#: authorize_merge.py runs, so the MERGE_PENDING grant command names it.
+LOCKED_INTERPRETER = '"$HOME/.cursor-governance/.venv/bin/python"'
 
 
 def _account_grant_path() -> Path:
@@ -105,7 +108,8 @@ def authorization_status(
         "status": "MERGE_PENDING",
         "reason": reason,
         "grant_command": (
-            f"python3 ops/autonomy/authorize_merge.py --repo {repo} --pr {pr} --head-sha {live}"
+            f"{LOCKED_INTERPRETER} ops/autonomy/authorize_merge.py --repo {repo} --pr {pr} "
+            f"--head-sha {live}"
         ),
     }
 

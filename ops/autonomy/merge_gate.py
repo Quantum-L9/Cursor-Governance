@@ -212,10 +212,23 @@ def _argv_skip_env(words: list[str]) -> list[str]:
     return words[index:]
 
 
+def _argv_is_cli_merge(rest: list[str]) -> bool:
+    return len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge"
+
+
+def _argv_is_rest_merge(rest: list[str]) -> bool:
+    method = ""
+    for index, word in enumerate(rest):
+        if word in ("-X", "--method", "--request") and index + 1 < len(rest):
+            method = rest[index + 1].strip("'\"").upper()
+        elif word.startswith(("--method=", "--request=", "-X=")):
+            method = word.split("=", 1)[1].strip("'\"").upper()
+    return method == "PUT" and any(REST_MERGE_PATH.search(word.strip("'\"")) for word in rest)
+
+
 def _segment_is_cli_pr_merge(segment: str) -> bool:
     """True when this segment *invokes* ``gh pr merge``, not when it mentions it."""
-    rest = _argv_skip_env(segment_words(segment))
-    if len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge":
+    if _argv_is_cli_merge(_argv_skip_env(segment_words(segment))):
         return True
     return any(_segment_is_cli_pr_merge(sub) for sub in wrapper_subcommands(segment))
 
@@ -241,16 +254,8 @@ def _segment_is_rest_pr_merge(segment: str) -> bool:
     A PUT to that path is a merge whatever binary issues it. GET on the same
     path only asks whether the PR is merged, so the method is required.
     """
-    rest = _argv_skip_env(segment_words(segment))
-    if rest:
-        method = ""
-        for index, word in enumerate(rest):
-            if word in ("-X", "--method", "--request") and index + 1 < len(rest):
-                method = rest[index + 1].strip("'\"").upper()
-            elif word.startswith(("--method=", "--request=", "-X=")):
-                method = word.split("=", 1)[1].strip("'\"").upper()
-        if method == "PUT" and any(REST_MERGE_PATH.search(word.strip("'\"")) for word in rest):
-            return True
+    if _argv_is_rest_merge(_argv_skip_env(segment_words(segment))):
+        return True
     return any(_segment_is_rest_pr_merge(sub) for sub in wrapper_subcommands(segment))
 
 
@@ -264,6 +269,71 @@ def _command_is_pr_merge(command: str) -> bool:
     return any(
         _segment_is_pr_merge(segment) for segment in split_segments(strip_heredoc_bodies(command))
     )
+
+
+def _merge_segments(command: str, depth: int = 0) -> list[str]:
+    """Every executed merge segment (innermost text), descending wrappers.
+
+    Authority and stack safety are judged per segment, so a grant, a head SHA
+    or a PR number elsewhere in the command line can never vouch for a merge
+    that does not itself carry them, and a second merge in the same command is
+    judged on its own.
+    """
+    found: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        rest = _argv_skip_env(segment_words(segment))
+        if _argv_is_cli_merge(rest) or _argv_is_rest_merge(rest):
+            found.append(segment)
+        elif depth < 3:
+            for sub in wrapper_subcommands(segment):
+                found.extend(_merge_segments(sub, depth + 1))
+    return found
+
+
+#: `gh pr merge` flags that take a value, so the value is not the PR argument.
+_CLI_VALUE_FLAGS = frozenset(
+    "-R --repo -b --body -F --body-file -t --subject --match-head-commit -A --author-email".split()
+)
+_FIELD_FLAGS = ("-f", "-F", "--field", "--raw-field", "-d", "--data", "--data-raw")
+_JSON_SHA = re.compile(r'"sha"\s*:\s*"([0-9a-fA-F]{7,40})"')
+
+
+def _segment_merge_target(segment: str) -> tuple[str, str, str]:
+    """(repo, pr, head_sha) named by THIS merge segment's own argv; '' when absent.
+
+    The CLI PR must be a number (a branch or URL argument cannot be matched to
+    a grant, so it reads as unknown and denies). The head is the segment's own
+    ``--match-head-commit`` or REST ``sha`` field — the binding GitHub enforces.
+    """
+    rest = _argv_skip_env(segment_words(segment))
+    if _argv_is_cli_merge(rest):
+        args, pr, index = rest[3:], "", 0
+        while index < len(args):
+            word = args[index]
+            if word in _CLI_VALUE_FLAGS:
+                index += 2
+                continue
+            if not word.startswith("-"):
+                pr = word.strip("'\"")
+                break
+            index += 1
+        repo = _argv_value(rest, "--repo") or _argv_value(rest, "-R")
+        return repo, pr if pr.isdigit() else "", _argv_value(rest, "--match-head-commit")
+    repo = pr = sha = ""
+    for index, word in enumerate(rest):
+        match = REST_MERGE_TARGET.search(word.strip("'\""))
+        if match and not pr:
+            repo, pr = f"{match.group(1)}/{match.group(2)}", match.group(3)
+        value = ""
+        if word in _FIELD_FLAGS and index + 1 < len(rest):
+            value = rest[index + 1].strip("'\"")
+        elif word.startswith(tuple(f"{flag}=" for flag in _FIELD_FLAGS)):
+            value = word.split("=", 1)[1].strip("'\"")
+        if value.startswith("sha="):
+            sha = value[4:]
+        elif json_sha := _JSON_SHA.search(value):
+            sha = json_sha.group(1)
+    return repo, pr, sha
 
 
 def _rest_merge_method(rest: list[str]) -> str:
@@ -496,11 +566,16 @@ def _stacked_children(repo: str, pr: str) -> tuple[str, list[int]]:
     raise ProbeError(detail, kind)
 
 
-def _stack_safety_reason(command: str, tool_name: str, tool_input: dict[str, Any]) -> str | None:
+def _stack_safety_reason(
+    command: str,
+    tool_name: str,
+    tool_input: dict[str, Any],
+    target: tuple[str, str] | None = None,
+) -> str | None:
     """Deny reason when this merge would orphan an open child PR, else None."""
     if os.environ.get("L9_STACK_CHECK_BYPASS", "").strip():
         return None
-    repo, pr = _target_from_input(tool_name, tool_input)
+    repo, pr = target or _target_from_input(tool_name, tool_input)
     if not pr:
         return None
     method = _merge_method(command)
@@ -663,10 +738,7 @@ def _human_breakglass() -> bool:
 
 
 _SHA_INPUT_KEYS = ("sha", "head_sha", "expected_head_sha", "expected_head_oid", "match_head_commit")
-_MATCH_HEAD_BASH = re.compile(
-    r"(?:--match-head-commit|--head-sha)[= ]+['\"]?([0-9a-fA-F]{7,40})"
-    r"|(?:-f|-F|--field|--raw-field)[= ]+['\"]?sha=([0-9a-fA-F]{7,40})"
-)
+_MATCH_HEAD_BASH = re.compile(r"--match-head-commit[= ]+([0-9a-fA-F]{7,40})")
 
 
 def _head_sha_from_input(tool_name: str, tool_input: dict[str, Any]) -> str:
@@ -679,7 +751,7 @@ def _head_sha_from_input(tool_name: str, tool_input: dict[str, Any]) -> str:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         match = _MATCH_HEAD_BASH.search(command)
         if match:
-            return match.group(1) or match.group(2)
+            return match.group(1)
     return ""
 
 
@@ -757,17 +829,18 @@ def _invoked_target(words: list[str], depth: int = 0) -> tuple[str, list[str]] |
     return name, rest
 
 
-def _script_argv(command: str, script: str) -> list[str] | None:
-    """argv after ``script`` when the command executes it, else None.
+def _script_argvs(command: str, script: str) -> list[list[str]]:
+    """argv after ``script`` for every segment of the command that executes it.
 
     ``cat``, ``git diff``, ``grep`` or a linter naming the file only reads it.
     """
     module = script.removesuffix(".py")
+    found: list[list[str]] = []
     for words in _executed_segments(command):
         target = _invoked_target(words)
         if target and target[0] in {script, module, f"ops.autonomy.{module}"}:
-            return target[1]
-    return None
+            found.append(target[1])
+    return found
 
 
 def _argv_value(argv: list[str], flag: str) -> str:
@@ -846,17 +919,56 @@ def _stack_safe_run_reason(argv: list[str]) -> str | None:
 
 
 def _authorized_merge_reason(
-    command: str, tool_name: str, tool_input: dict[str, Any]
+    command: str,
+    tool_name: str,
+    tool_input: dict[str, Any],
+    target: tuple[str, str, str] | None = None,
 ) -> str | None:
-    """Authority first, then stack safety. None when the merge may proceed."""
+    """Authority first, then stack safety. None when the merge may proceed.
+
+    ``target`` is (repo, pr, head_sha) read from the merge segment itself; MCP
+    calls leave it None and are read from their structured input.
+    """
     effective = lambda: _LAST_EFFECTIVE.get("L9_MERGE_AUTHORIZED", "unread")  # noqa: E731
-    if not _merge_authorized(tool_name, tool_input):
+    if target is None:
+        authorized = _merge_authorized(tool_name, tool_input)
+        stack_target = None
+    else:
+        authorized = _human_breakglass() or _file_authorizes(*target)
+        stack_target = (target[0], target[1])
+    if not authorized:
         return f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED={effective()})"
     if _human_breakglass():
         return None
-    stack = _stack_safety_reason(command, tool_name, tool_input)
+    stack = _stack_safety_reason(command, tool_name, tool_input, stack_target)
     if stack:
         return f"{stack} (effective L9_MERGE_AUTHORIZED={effective()})"
+    return None
+
+
+def _shell_merge_reason(command: str, tool_name: str) -> str | None:
+    """Judge every executed merge segment on its own argv; deny the first failure.
+
+    A command that names a merge only in a form no segment parse can resolve
+    (``eval``, an unusual wrapper) cannot be bound to a grant, so it is denied
+    unless the human breakglass is set.
+    """
+    segments = _merge_segments(command)
+    if not segments:
+        if _human_breakglass():
+            return None
+        return (
+            f"{MERGE_DENY_REASON} (no executed merge segment could be resolved to a "
+            "repository, PR and head; run the merge as its own command)"
+        )
+    for segment in segments:
+        if "--admin" in _argv_skip_env(segment_words(segment)):
+            return NEVER_WAIVE_REASON
+        reason = _authorized_merge_reason(
+            segment, tool_name, {"command": segment}, _segment_merge_target(segment)
+        )
+        if reason:
+            return reason
     return None
 
 
@@ -911,12 +1023,11 @@ def evaluate(
 
     if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-        if _script_argv(command, "authorize_merge.py") is not None:
+        if _script_argvs(command, "authorize_merge.py"):
             return SELF_ISSUE_REASON
         if _shell_writes_grant_file(command):
             return SELF_ISSUE_REASON
-        run_argv = _script_argv(command, "stack_safe_merge.py")
-        if run_argv is not None:
+        for run_argv in _script_argvs(command, "stack_safe_merge.py"):
             reason = _stack_safe_run_reason(run_argv)
             if reason:
                 return reason
@@ -926,14 +1037,7 @@ def evaluate(
     if event_is_git_or_gh(tool_name, tool_input):
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         if _command_is_pr_merge(command):
-            rest = []
-            for segment in split_segments(strip_heredoc_bodies(command)):
-                if _segment_is_pr_merge(segment):
-                    rest = _argv_skip_env(segment_words(segment))
-                    break
-            if "--admin" in rest:
-                return NEVER_WAIVE_REASON
-            return _authorized_merge_reason(command, tool_name, tool_input)
+            return _shell_merge_reason(command, tool_name)
         return None
 
     if _never_waive_tool(tool_name, tool_input):
@@ -946,7 +1050,7 @@ def evaluate(
         # _command_is_pr_merge covers the REST endpoint reached by curl, which
         # is not a git/gh event and so lands here.
         if MERGE_BASH.search(command) or _command_is_pr_merge(command):
-            return _authorized_merge_reason(command, tool_name, tool_input)
+            return _shell_merge_reason(command, tool_name)
         return None
 
     if tool_name.endswith(AUTO_MERGE_TOOL_SUFFIX):

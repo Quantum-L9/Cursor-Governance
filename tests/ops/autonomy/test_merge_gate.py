@@ -905,3 +905,62 @@ def test_tools_that_only_name_the_scripts_are_not_invocations(command: str) -> N
     code, out, err = _run(_shell(command))
     assert code == 0, err
     assert out.strip() == ""
+
+
+# --- Binding is per executed merge segment (PR #712 review) --------------------
+#
+# A grant, head SHA or PR number appearing elsewhere in the command line must
+# not vouch for a merge segment that does not itself carry them.
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # decoy head binding in a sibling segment; the merge itself is unbound
+        f"echo --match-head-commit {SHA}; {CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge",
+        f"echo -f sha={SHA} && gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge "
+        "-f merge_method=merge",
+        # decoy PR number: the granted #53 is only mentioned; #54 is merged
+        f"echo '{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot'; {CLI_MERGE} 54 "
+        f"--repo Quantum-L9/SEO-Bot --merge --match-head-commit {SHA}",
+        # first merge granted, second merge rides along unauthorized
+        f"{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge --match-head-commit {SHA} && "
+        f"{CLI_MERGE} 54 --repo Quantum-L9/SEO-Bot --merge --match-head-commit {SHA}",
+        # a merge reachable only through text the parser cannot bind
+        f"eval '{CLI_MERGE} 53 --repo Quantum-L9/SEO-Bot --merge --match-head-commit {SHA}'",
+    ],
+)
+def test_grant_binds_only_the_executed_merge_segment(tmp_path: Path, command: str) -> None:
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert "MERGE_PENDING" in out, command
+
+
+def test_head_bound_merge_beside_unrelated_commands_is_allowed(tmp_path: Path) -> None:
+    command = (
+        f"git fetch origin && {CLI_MERGE} 53 -R Quantum-L9/SEO-Bot --merge "
+        f"--match-head-commit {SHA}"
+    )
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_curl_json_sha_binds_the_rest_merge(tmp_path: Path) -> None:
+    command = (
+        "curl -X PUT https://api.github.com/repos/Quantum-L9/SEO-Bot/pulls/53/merge "
+        f'-d \'{{"merge_method":"merge","sha":"{SHA}"}}\''
+    )
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_second_stack_safe_run_in_one_command_needs_its_own_grant(tmp_path: Path) -> None:
+    command = (
+        f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run; "
+        f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 54 --head-sha {SHA} --run"
+    )
+    code, out, err = _run(_shell(command), env=_granted(tmp_path))
+    assert code == 0, err
+    assert "MERGE_PENDING" in out

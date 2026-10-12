@@ -39,7 +39,7 @@ terminal and types the target back to confirm:
 
 ```bash
 # human only — merge_gate.py denies an agent that runs this or writes the grant file
-python3 ops/autonomy/authorize_merge.py --repo {owner}/{repo} --pr {number} --head-sha {sha}
+"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo {owner}/{repo} --pr {number} --head-sha {sha}
 ```
 
 One grant per PR and head, expiring. `--all-open` is refused. A head that
