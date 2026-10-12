@@ -89,6 +89,40 @@ def test_mcp_inventories_carry_no_provider_transport() -> None:
     assert offenders == [], offenders
 
 
+#: Store settings the bound release reads (config/loader.py). Selecting the
+#: shared PostgreSQL store needs a DSN in the server's environment, and on the
+#: hosted Claude surface the model shell runs as the same uid as that server,
+#: so it can read the server's environ and memory. Until a host-trusted
+#: pre-spawn hides the DSN from the model, no surface may carry these, and the
+#: transition acknowledgement is never set for anyone (ADR-077).
+STORE_SETTINGS = (
+    "L9_MEMORY_STORE_BACKEND",
+    "L9_MEMORY_POSTGRES_DSN",
+    "L9_MEMORY_ACKNOWLEDGE_BACKEND_TRANSITION",
+)
+
+#: Paths that render or launch the memory MCP process or its settings env.
+SPAWN_SURFACES = (
+    "environment/agents/adapters/claude-code/overlay_hosted_settings_env.py",
+    "environment/agents/adapters/claude-desktop/render_claude_desktop_config.py",
+    "ops/scripts/claude_projection.py",
+    "ops/scripts/lib/bind_memory_interpreter.sh",
+    ".claude/settings.json",
+    "environment/agents/adapters/claude-code/settings.template.json",
+)
+
+
+def test_no_surface_carries_store_settings_without_a_trusted_spawn() -> None:
+    paths = [*RUNTIME_SCRIPTS, *MCP_INVENTORIES, *SPAWN_SURFACES]
+    paths += [
+        str(path.relative_to(ROOT))
+        for pattern in ("*.py", "*.sh")
+        for path in sorted((ROOT / "ops" / "memory").glob(pattern))
+    ]
+    offenders = [f"{rel}: {name}" for rel in paths for name in STORE_SETTINGS if name in _text(rel)]
+    assert offenders == [], offenders
+
+
 def test_memory_boundary_holds_no_provider_vocabulary() -> None:
     forbidden = (PROVIDER_URL, PROVIDER_TOKEN, "search_memory_facts", "add_memory", "add_episode")
     offenders: list[str] = []

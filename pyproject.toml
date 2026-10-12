@@ -30,6 +30,10 @@ dependencies = [
     # v2.6.0: exact pin of the published wheel. The lock hash is
     # release_evidence.artifact_sha256. No path override.
     "l9-graphite-memory==2.6.0",
+    # The same exact release with its own `postgres` extra, so `uv sync --locked`
+    # installs the psycopg2-binary that its PostgresRecordStore imports. Same
+    # pin, same audited wheel; no second memory package (Contract B, MEMORY-B1).
+    "l9-graphite-memory[postgres]==2.6.0",
 ]
 
 [project.optional-dependencies]

@@ -454,6 +454,15 @@ or receive a default (Tier 3) local-operator fallback. Runtime credentials must 
 injected through permitted secret sources and must not enter MCP JSON,
 Git-tracked configuration, logs or model-visible output.
 
+The dependency pin selects the release's own `postgres` extra
+(`l9-graphite-memory[postgres]==2.6.0`), so `uv sync --locked` installs the
+`psycopg2-binary` that `PostgresRecordStore` imports. No launcher selects the
+postgres backend or carries a DSN yet. No host-trusted pre-spawn has been shown
+to keep a DSN out of the model's reach: on the hosted Claude surface the model
+shell has the same uid as the MCP server and can read its environment and
+memory. `tests/ops/memory/test_secret_isolation.py` keeps every surface free of
+store settings until such a boundary exists.
+
 The store is greenfield. It must be a separately authorized, fresh and empty
 PostgreSQL database. Nothing is imported into it, restored into it or
 reconciled with it: not historical SQLite ledgers, an existing PostgreSQL
@@ -490,7 +499,10 @@ permission to publish a remote HTTP memory endpoint or a database port.
 
 `2.6.0` is the current exact package binding, and the First E2E runs on it.
 It does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
-(ADR-097, not merged): five readiness families (`canonical`, `projection`,
+(ADR-097). #90 is merged on memory `main` at
+`6c98332d91ac9ec9ee5d4573b59dfc270cb705e6`, after the 2.6.0 source
+`846f283f7dade101b324b87008ab4f5901f97074`, so no admitted release carries
+it yet: five readiness families (`canonical`, `projection`,
 `graph`, `active_store`, `awareness_bus`), with `full_capability` true only
 when every family is selected and healthy. Full-deployment acceptance
 therefore needs a later, newly admitted memory release and an exact consumer
