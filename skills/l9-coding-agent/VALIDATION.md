@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.3.0  
+**Release:** 1.4.0  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`
@@ -63,11 +63,29 @@ The GAR sibling contract and L9 runtime binding remain byte-identical to v1.2.0.
 - After-use capture is recompressed to four observation-only signals and cannot self-promote policy.
 - Package intelligence remains package evidence, not runtime authority.
 
+## v1.4 canonical invariant binding
+
+Validated at Cursor-Governance `b8941d3`, `.github` `1f42b33`, and l9-semantic-compiler-engine `a1c4104`:
+
+- lazy bootstrap closes 16 semantic owners and classifies 31 files;
+- runtime alignment covers 52 behavior cases and the absent-projection negative control;
+- `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
+
+Verifier positive and negative cases ran against the real `.github` sources with **synthetic** artifacts and receipts. They prove consumer logic only. No producer-emitted projection exists for the profile, so a live binding is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, not operational.
+
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
 - This release proof covers the pack as compiled. Its installation into `Quantum-L9/Cursor-Governance` is recorded in [CHANGELOG.md](CHANGELOG.md); that install adds exactly one frontmatter line (`disable-model-invocation: true`) and no runtime semantics.
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
+- Upstream gaps block a live canonical binding:
+  - there is no producer for `l9.projection/cursor-governance-operating-plane@1`;
+  - there is no `l9.projection.cursor-governance-operating-plane/v1` output schema;
+  - no `semantic_digest` canonicalization algorithm is declared;
+  - the profile has 10 sources but the projection artifact is single-source, and no composition profile is declared;
+  - the `conformance_profiles` source resolves outside `.github`.
+- Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook.
+- `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
 
 ## Verdict
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0 - 2026-10-12
+
+- Intake now binds applicable L9 global invariants from `Quantum-L9/.github`, before any mutation and in every mode, through the `l9.projection/cursor-governance-operating-plane@1` profile (`integrations/L9_RUNTIME_BINDING.yaml#canonical_invariant_binding`). The pack references upstream law by identity and digest and holds no copy of it.
+- Added `scripts/verify_canonical_binding.py`, a consumer-only verifier. It checks a producer-emitted `l9.projection-artifact/v1` and `l9.compiler-receipt/v1` against an exact, clean `.github` checkout:
+  - owner origin, revision, and source registry;
+  - profile identity and selector coverage;
+  - upstream required fields, read from the upstream schemas;
+  - recomputed digests;
+  - payload fidelity to the source;
+  - receipt binding.
+
+  It also re-checks a prior binding under `.github` invalidation rules. It never emits a projection.
+- A non-`BOUND`/`CURRENT` outcome blocks mutation. There is no fallback to local law. Only an explicit current user instruction may let a run proceed with the `Unknown` recorded.
+- No executable producer for this profile exists at `.github@1f42b33` or `l9-semantic-compiler-engine@a1c4104`, so a live binding currently ends `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
+- Enforcement is instructional; no host hook enforces verifier invocation.
+- Behavior conformance grows from 40 to 52 cases (CA-E41 to CA-E52). The lazy-bootstrap and runtime-alignment validators now check the intake binding route and run an absent-projection negative control.
+
 ## 1.3.0 repository install - 2026-09-28
 
 - Installed into `Quantum-L9/Cursor-Governance` at `skills/l9-coding-agent/` as the `explicit_only` routing tier, beside its sibling `l9-global-architect`.

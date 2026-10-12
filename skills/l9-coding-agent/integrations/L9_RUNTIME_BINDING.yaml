@@ -1,6 +1,6 @@
 integration:
   id: L9.CODING_AGENT.L9_BINDING.001
-  version: 1.0.0
+  version: 1.1.0
 modes:
   STANDALONE:
     default: true
@@ -25,3 +25,89 @@ modes:
       - coding_agent_may_not_rewrite_the_contract_to_fit_implementation
       - architecture_conflict_returns_to_gar
 activation_law: repository_name_or_skill_presence_alone_does_not_activate_a_mode
+canonical_invariant_binding:
+  purpose: Bind the applicable L9 global invariants from their canonical owner, by exact identity and verified
+    provenance, during intake and before the first mutation, in every mode. This section is consumer procedure
+    only; it holds no invariant text and no local copy of upstream law.
+  applies_in_modes: [STANDALONE, L9_PROFILE_AWARE, GAR_BOUND]
+  mode_independence: Constitutional binding is not Gate admission, runtime transport, or L9_PROFILE_AWARE
+    activation. It requires no Program Execution, Gate, State, Graphiti, or L-CTO runtime.
+  upstream:
+    semantic_owner: Quantum-L9/.github
+    profile_ref: l9.projection/cursor-governance-operating-plane@1
+    source_class: invariants
+    source_ref: l9.source/invariants@1
+    owner_artifacts:
+      profile_catalog: semantics/projection_profiles.yaml
+      source_registry: semantics/canonical_sources.yaml
+      projection_engine_contract: semantics/projection_engine_contract.yaml
+      projection_artifact_schema: semantics/projection_artifact.schema.yaml
+      compiler_receipt_schema: semantics/compiler_receipt.schema.yaml
+      invalidation_law: semantics/semantic_dependency_model.yaml#invalidation_rules
+    governing_invariant_refs:
+      - L9-OWNER-001
+      - L9-PROJECTION-001
+      - L9-PROV-001
+      - L9-COORD-001
+      - L9-UNKNOWN-001
+      - L9-VALIDATION-001
+    revision_policy: pin the exact authority revision per run; never hardcode one into this pack
+  accepted_input:
+    artifact: producer-emitted l9.projection-artifact/v1 for the profile and source above
+    receipt: producer-emitted l9.compiler-receipt/v1 with operation projection and result pass
+    authority_root: exact clean Quantum-L9/.github checkout whose origin, revision, and semantics/ bytes are observed
+    offline_cache: a previously verified artifact and receipt are usable only when re-verified against an
+      authority root whose current source and profile digests still match
+  not_accepted:
+    - local_yaml_or_rule_text_restating_upstream_law
+    - readme_or_doc_assertions
+    - path_or_file_name_alone
+    - cached_text_without_provenance
+    - receipt_not_bound_to_the_artifact_digests
+    - model_recall_of_invariant_text
+  verifier:
+    script: scripts/verify_canonical_binding.py
+    invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --artifact <projection>
+      --receipt <receipt> --expect-revision <sha> [--require-invariant <id> ...]
+    freshness_invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --prior-binding
+      <binding.json>
+    exit_codes: {BOUND: 0, CURRENT: 0, REJECTED: 1, usage: 2, BLOCKED: 3, STALE: 4}
+    digest_conventions: Upstream defines semantic_digest without fixing an algorithm. The verifier recomputes
+      source digests as sha256 of raw source bytes (the convention .github ledgers record) and content digests as
+      sha256 of canonical JSON (the convention of the candidate producer l9-semantic-compiler-engine). A producer
+      using another canonicalization fails closed, never open.
+    emits: one binding record; it never emits, synthesizes, or repairs a projection
+  selection:
+    rule: Bind only the global invariants applicable to the bound execution contract, by id, passed as
+      --require-invariant. An empty selection binds the full verified global set by reference, not by local copy.
+    preserves: existing domain-specific implementation methodology and implementation-detail sovereignty
+  binds_into:
+    run_state.authority.sources: binding record (profile ref and digest, source ref and digest, authority revision,
+      projection digest, receipt identity and digest, applicable invariant ids and digests)
+    run_state.contract.authority_refs: profile_ref plus applicable invariant ids
+    run_state.semantic_envelope.boundary_refs: applicable invariant ids with their digests
+    run_state.contract.unresolved_unknowns: every non-BOUND outcome with its reason
+  outcomes:
+    BOUND: proceed; the binding is part of the semantic envelope
+    CURRENT: prior binding still valid; reuse it without re-projection
+    REJECTED: forged, wrong-profile, tampered, unfaithful, or unbound input; no mutation; never retry with local law
+    BLOCKED: required authority is Unknown (absent producer or projection, unreadable source, incomplete selector
+      coverage, unresolved identity); no mutation
+    STALE: governing source or profile digest changed; invalidate the binding and evidence derived from it, then
+      re-bind before further mutation
+  invalidation:
+    law: semantics/semantic_dependency_model.yaml invalidation_rules
+    rule: A change to the bound source digest or profile digest invalidates the binding. An upstream revision
+      change that leaves both unchanged is evaluated as having no dependency impact and does not invalidate it.
+    recheck_when: [before_first_mutation, target_or_contract_rebound, before_convergence]
+  unknown_handling:
+    default: Any outcome other than BOUND or CURRENT blocks mutation with typed reason
+      BLOCKED_UPSTREAM_PROJECTION_PRODUCER when no producer-emitted projection exists, otherwise the verifier reason.
+    no_fallback: Never fall back to local interpretation, recalled invariant text, or green-by-default.
+    explicit_reauthorization: Only an explicit current user instruction, recorded verbatim in the receipt, may
+      authorize this one run to proceed with the binding Unknown. The receipt then carries the Unknown, and
+      convergence must not claim canonical-invariant conformance.
+    contract_conflict: A verified invariant that conflicts with a locked execution contract or local rule is an
+      architecture escalation; the weaker local rule never wins and scope never widens implicitly.
+  enforcement_scope: Instructional. The skill requires the worker to invoke the verifier; no host hook or sandbox
+    enforces that invocation. Claim only what an observed verifier run establishes.
