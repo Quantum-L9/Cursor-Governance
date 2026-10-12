@@ -83,22 +83,45 @@ def main() -> int:
     if missing_cases:
         errors.append("canonical binding behavior cases missing: " + ", ".join(missing_cases))
 
-    # Negative control: no producer-emitted projection must block, never pass.
+    # Negative controls needing no upstream checkout: each must block, never pass.
+    # Fidelity, digest, and staleness controls need a real .github checkout and
+    # run in the evidence harness recorded in VALIDATION.md.
     verifier = root / "scripts" / "verify_canonical_binding.py"
-    absent = subprocess.run(
-        [sys.executable, str(verifier), "--authority-root", str(root)],
-        text=True,
-        capture_output=True,
-    )
-    try:
-        absent_status = json.loads(absent.stdout).get("status")
-    except ValueError:
-        absent_status = None
-    if absent.returncode != 3 or absent_status != "BLOCKED":
-        errors.append(
-            "canonical binding verifier did not block an absent projection: "
-            + f"rc={absent.returncode} status={absent_status}"
+    dummy = root / "runtime" / "RUN_STATE.yaml"
+    controls = {
+        "absent projection": ["--authority-root", str(root)],
+        "authority root absent": [
+            "--authority-root",
+            str(root / "missing-authority-root"),
+            "--artifact",
+            str(dummy),
+            "--receipt",
+            str(dummy),
+        ],
+        "prior binding not bound": [
+            "--authority-root",
+            str(root),
+            "--prior-binding",
+            str(dummy),
+            "--artifact",
+            str(dummy),
+            "--receipt",
+            str(dummy),
+        ],
+    }
+    for label, argv in controls.items():
+        probe = subprocess.run(
+            [sys.executable, str(verifier), *argv], text=True, capture_output=True
         )
+        try:
+            status = json.loads(probe.stdout).get("status")
+        except ValueError:
+            status = None
+        if probe.returncode != 3 or status != "BLOCKED":
+            errors.append(
+                f"canonical binding verifier did not block ({label}): "
+                + f"rc={probe.returncode} status={status}"
+            )
 
     lazy_script = root / "scripts" / "validate_lazy_bootstrap.py"
     result = subprocess.run(

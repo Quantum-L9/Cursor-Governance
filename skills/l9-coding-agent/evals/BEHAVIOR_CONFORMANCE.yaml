@@ -139,7 +139,7 @@ eval_suite:
     expected: STALE_rebind_from_a_current_projection_before_mutation
   - id: CA-E46
     scenario: local_rule_or_locked_contract_would_weaken_a_verified_canonical_invariant
-    expected: surface_conflict_as_architecture_escalation_without_mutation_or_implicit_scope_change
+    expected: surface_AUTHORITY_CONFLICT_escalation_without_mutation_or_implicit_scope_change
   - id: CA-E47
     scenario: authority_root_unreadable_unidentified_dirty_or_profile_selector_coverage_incomplete
     expected: BLOCKED_Unknown_and_never_claim_a_valid_projection

@@ -1,6 +1,6 @@
 catalog:
   id: L9.CODING_AGENT.REASONS.001
-  version: 1.1.0
+  version: 1.2.0
 reasons:
   EXECUTION_READY: contract_and_target_are_sufficient_for_mutation
   TARGET_UNBOUND: exact_requested_target_cannot_be_resolved
@@ -23,3 +23,4 @@ reasons:
   REGRESSION_DETECTED: final_or_intermediate_change_breaks_preserved_behavior_or_contract
   HANDOFF_STATE_MISMATCH: delivered_artifact_or_revision_does_not_match_validated_state
   REQUIRED_GAP_UNRESOLVED: confirmed_in_scope_required_gap_remains_incomplete
+  BLOCKED_UPSTREAM_PROJECTION_PRODUCER: no_verifiable_producer_emitted_canonical_invariant_projection_is_available_before_mutation

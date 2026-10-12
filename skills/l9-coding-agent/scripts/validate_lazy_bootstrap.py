@@ -29,6 +29,24 @@ def bootstrap_artifacts(data: dict) -> set[str]:
     return out
 
 
+# Procedure-only keys; anything else risks a local restatement of upstream law.
+CANONICAL_BINDING_KEYS = {
+    "purpose",
+    "applies_in_modes",
+    "mode_independence",
+    "upstream",
+    "accepted_input",
+    "not_accepted",
+    "verifier",
+    "selection",
+    "binds_into",
+    "outcomes",
+    "invalidation",
+    "unknown_handling",
+    "enforcement_scope",
+}
+
+
 def _keys(node: object) -> set[str]:
     if isinstance(node, dict):
         return {str(k) for k in node} | {k for v in node.values() for k in _keys(v)}
@@ -51,7 +69,19 @@ def check_canonical_binding(root: Path, bootstrap_doc: dict, inventory: set[str]
     script = str(bind.get("invoke", ""))
     if script not in inventory or not (root / script).is_file():
         errors.append(f"canonical binding verifier is not a packaged file: {script}")
-    binding = (yaml.safe_load((root / owner).read_text(encoding="utf-8")) or {}).get(section) or {}
+    try:
+        owner_doc = yaml.safe_load((root / owner).read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        return [f"canonical binding owner unreadable: {owner}: {exc}"]
+    binding = owner_doc.get(section) if isinstance(owner_doc, dict) else None
+    if not isinstance(binding, dict):
+        return [f"canonical binding section missing: {owner}#{section}"]
+    unexpected = sorted(set(binding) - CANONICAL_BINDING_KEYS)
+    if unexpected:
+        errors.append("canonical binding has undeclared top-level keys: " + ", ".join(unexpected))
+    reasons = yaml.safe_load((root / "catalogs/REASON_CODES.yaml").read_text(encoding="utf-8"))
+    if "BLOCKED_UPSTREAM_PROJECTION_PRODUCER" not in ((reasons or {}).get("reasons") or {}):
+        errors.append("BLOCKED_UPSTREAM_PROJECTION_PRODUCER is not a registered reason code")
     upstream = binding.get("upstream") or {}
     if upstream.get("semantic_owner") != "Quantum-L9/.github" or not upstream.get("profile_ref"):
         errors.append("canonical binding lacks upstream owner/profile identity")

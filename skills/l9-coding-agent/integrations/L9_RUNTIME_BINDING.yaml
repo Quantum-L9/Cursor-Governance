@@ -43,6 +43,7 @@ canonical_invariant_binding:
       projection_engine_contract: semantics/projection_engine_contract.yaml
       projection_artifact_schema: semantics/projection_artifact.schema.yaml
       compiler_receipt_schema: semantics/compiler_receipt.schema.yaml
+      producer_role_registry: semantics/vocabulary.yaml#organizational_target
       invalidation_law: semantics/semantic_dependency_model.yaml#invalidation_rules
     governing_invariant_refs:
       - L9-OWNER-001
@@ -70,7 +71,9 @@ canonical_invariant_binding:
     invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --artifact <projection>
       --receipt <receipt> --expect-revision <sha> [--require-invariant <id> ...]
     freshness_invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --prior-binding
-      <binding.json>
+      <binding.json> --artifact <projection> --receipt <receipt>
+    producer_rule: The receipt producer must be a component .github assigns the projection role. Receipts are
+      unkeyed, so this narrows identity but cannot authenticate it; authentication needs upstream signed receipts.
     exit_codes: {BOUND: 0, CURRENT: 0, REJECTED: 1, usage: 2, BLOCKED: 3, STALE: 4}
     digest_conventions: Upstream defines semantic_digest without fixing an algorithm. The verifier recomputes
       source digests as sha256 of raw source bytes (the convention .github ledgers record) and content digests as
@@ -92,13 +95,14 @@ canonical_invariant_binding:
     CURRENT: prior binding still valid; reuse it without re-projection
     REJECTED: forged, wrong-profile, tampered, unfaithful, or unbound input; no mutation; never retry with local law
     BLOCKED: required authority is Unknown (absent producer or projection, unreadable source, incomplete selector
-      coverage, unresolved identity); no mutation
-    STALE: governing source or profile digest changed; invalidate the binding and evidence derived from it, then
-      re-bind before further mutation
+      coverage, unresolved identity or payload shape, malformed input); no mutation
+    STALE: governing source, profile, bound invariant, or projection digest changed; invalidate the binding and
+      evidence derived from it, then re-bind before further mutation
   invalidation:
     law: semantics/semantic_dependency_model.yaml invalidation_rules
-    rule: A change to the bound source digest or profile digest invalidates the binding. An upstream revision
-      change that leaves both unchanged is evaluated as having no dependency impact and does not invalidate it.
+    rule: A change to the bound source digest, profile digest, or any bound invariant digest invalidates the
+      binding. An upstream revision change that leaves them unchanged is evaluated as having no dependency impact
+      and does not invalidate it. A prior binding is reused only after its artifact and receipt are re-verified.
     recheck_when: [before_first_mutation, target_or_contract_rebound, before_convergence]
   unknown_handling:
     default: Any outcome other than BOUND or CURRENT blocks mutation with typed reason
@@ -108,6 +112,7 @@ canonical_invariant_binding:
       authorize this one run to proceed with the binding Unknown. The receipt then carries the Unknown, and
       convergence must not claim canonical-invariant conformance.
     contract_conflict: A verified invariant that conflicts with a locked execution contract or local rule is an
-      architecture escalation; the weaker local rule never wins and scope never widens implicitly.
+      AUTHORITY_CONFLICT escalation under runtime/MANIFEST.yaml authority_precedence. Neither side is applied
+      silently, there is no mutation until it is resolved, and scope never widens implicitly.
   enforcement_scope: Instructional. The skill requires the worker to invoke the verifier; no host hook or sandbox
     enforces that invocation. Claim only what an observed verifier run establishes.
