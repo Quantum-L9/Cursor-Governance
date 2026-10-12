@@ -424,6 +424,12 @@ def test_merge_assignment_is_stack_safe_only(tmp_path: Path, monkeypatch) -> Non
     # §6.2.12: the lane names the exact head (so a human grant can match it) and
     # treats a missing grant as MERGE_PENDING, never as a cue to self-authorize.
     assert f"--head-sha {packet['base_sha']} --run" in packet["objective"]
+    # CG-712-01: the lane command is complete and cwd-independent (the lane may
+    # run in a consumer worktree).
+    assert (
+        f"{pr_fleet.MERGE_COMMAND} --repo {packet['repo']} --pr {packet['pr']} "
+        f"--head-sha {packet['base_sha']} --run"
+    ) in packet["objective"]
     assert "MERGE_PENDING" in packet["objective"]
     assert "never run authorize_merge.py" in packet["objective"]
     out = pr_fleet.accept(packet, _document(packet), use_gateway=False)

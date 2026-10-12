@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -967,3 +968,73 @@ def test_second_stack_safe_run_in_one_command_needs_its_own_grant(tmp_path: Path
     code, out, err = _run(_shell(command), env=_granted(tmp_path))
     assert code == 0, err
     assert "MERGE_PENDING" in out
+
+
+# --- CG-712-01: every copy-ready grant / merge instruction runs from any cwd ---
+#
+# A human (or a remediation lane) may sit in a consumer repository, where a
+# relative ops/autonomy/... path or $PWD/.venv does not exist. Every instruction
+# that names either script with arguments must therefore use the locked
+# governance interpreter and the absolute script path.
+
+ABS_PREFIX = '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/'
+INSTRUCTION_SURFACES = (
+    "ops/autonomy/surface_profile.yaml",
+    "rules/48-make-pr-remediation.mdc",
+    "environment/generated/llm-rules/48-make-pr-remediation.md",
+    "environment/generated/llm-rules/zz-autonomy-surface-override.md",
+    "skills/l9-pr-remediation/SKILL.md",
+    "skills/l9-pr-remediation/references/merge-advise.md",
+    "skills/l9-pr-remediation/references/run-contract.md",
+    "skills/l9-pr-remediation/references/fleet-waves.md",
+    "skills/l9-pr-remediation/references/convergence-loop.md",
+)
+_COMMAND = re.compile(r'(\S*?)((?:authorize|stack_safe)_merge\.py)("?)\s+--repo\b')
+
+
+def _relative_commands(text: str) -> list[str]:
+    bad = []
+    for match in _COMMAND.finditer(text):
+        start = text.rfind("\n", 0, match.start()) + 1
+        line_prefix = text[start : match.start(2)]
+        if not (line_prefix.endswith(ABS_PREFIX) and match.group(3) == '"'):
+            bad.append(text[start : match.end()].strip())
+    return bad
+
+
+@pytest.mark.parametrize("rel", INSTRUCTION_SURFACES)
+def test_documented_merge_commands_are_cwd_independent(rel: str) -> None:
+    assert _relative_commands((REPO / rel).read_text(encoding="utf-8")) == []
+
+
+def test_emitted_merge_commands_are_cwd_independent() -> None:
+    import merge_gate as mg
+    import pr_fleet
+
+    assert mg.GRANT_COMMAND == ABS_PREFIX + 'authorize_merge.py"'
+    assert mg.MERGE_COMMAND == ABS_PREFIX + 'stack_safe_merge.py"'
+    assert pr_fleet.MERGE_COMMAND is mg.MERGE_COMMAND  # one owner, no copy
+    assert _relative_commands(mg.MERGE_DENY_REASON) == []
+    assert mg.GRANT_COMMAND in mg.MERGE_DENY_REASON and mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
+
+
+def test_relative_command_detector_catches_the_old_forms() -> None:
+    """The scan would have failed on PR #712 at 705acd8."""
+    for old in (
+        "then ops/autonomy/stack_safe_merge.py --repo o/r --pr 1",
+        '"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo o/r --pr 1 --run',
+        "authorize_merge.py --repo <owner/name> --pr <n>",
+        '"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo o/r',
+    ):
+        assert _relative_commands(old), old
+
+
+@pytest.mark.parametrize("granted", [False, True])
+def test_absolute_stack_safe_run_is_governed(tmp_path: Path, granted: bool) -> None:
+    """The cwd-independent spelling the docs now prescribe is still recognised."""
+    command = (
+        f'{ABS_PREFIX}stack_safe_merge.py" --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run'
+    )
+    code, out, err = _run(_shell(command), env=_granted(tmp_path) if granted else None)
+    assert code == 0, err
+    assert (out.strip() == "") is granted, out

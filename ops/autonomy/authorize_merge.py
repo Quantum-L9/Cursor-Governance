@@ -52,7 +52,9 @@ _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 REPO_WIDE_REFUSAL = (
     "Repository-wide merge authority is not issuable (CANONICAL_LAW §6.2.12). "
     "Issue one grant per PR and exact head SHA: "
-    "authorize_merge.py --repo <owner/name> --pr <n> --head-sha <40-hex>."
+    '"$HOME/.cursor-governance/.venv/bin/python" '
+    '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" '
+    "--repo <owner/name> --pr <n> --head-sha <40-hex>."
 )
 
 

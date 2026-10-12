@@ -60,7 +60,7 @@ for _path in (str(_HERE), str(_ROOT / "ops" / "scripts"), str(_ROOT)):
         sys.path.insert(0, _path)
 
 import execution_profile  # noqa: E402
-from merge_gate import _gh_json  # noqa: E402
+from merge_gate import MERGE_COMMAND, _gh_json  # noqa: E402
 from sync_generated_artifacts import GENERATED_PATH_PREFIXES, is_generated_path  # noqa: E402
 
 PAGE_SIZE = 100
@@ -787,8 +787,9 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
         )
     if kind == "merge":
         return (
-            f"Merge {repo}#{number} at head {head} via ops/autonomy/stack_safe_merge.py "
-            f"--head-sha {head} --run only. It merges only under a human merge grant for "
+            f"Merge {repo}#{number} at head {head} via `{MERGE_COMMAND} --repo {repo} "
+            f"--pr {number} --head-sha {head} --run` only (absolute paths: the lane may "
+            "run in a consumer worktree). It merges only under a human merge grant for "
             "that head (CANONICAL_LAW §6.2.12); exit 3 is MERGE_PENDING — report it, never "
             "run authorize_merge.py, never retry another transport. "
             "Immediately before merge: re-run pr_board.py; re-query unresolved "

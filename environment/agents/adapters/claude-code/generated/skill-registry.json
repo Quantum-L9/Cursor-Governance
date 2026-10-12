@@ -1,5 +1,5 @@
 {
-  "generation_id": "f45fc1c6ec7428ce272107b013aa65b1b07e3edceb1e1f9d977cdab00dc6f517",
+  "generation_id": "c9e1b91de34338a5ad66b512269681d10bde2b57f10334d9b322ee9a82f8749d",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1338,7 +1338,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "0da26e50c348a7068c19133adab82db31273577ebd05d6b77cf002df18d681e9",
+      "skill_sha256": "252729a8d5561ff29c1a4a39ebd8a99d5e80f4f02c7c2e214d04c5c4c073e6fc",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1540,5 +1540,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "46143d4121ef18b9feeb74aaf8d59a46d4ceb1d98e22bd81011e3dfa48487f68",
-  "source_skill_corpus_sha256": "b33b2f3d69cd40facc87d0c3f87936ae1a0c3469a80b187427deee5352e9d52d"
+  "source_skill_corpus_sha256": "e9d0354d6eafe82a98164be39472bef586054da1ab129516a55decf078d0ab7d"
 }

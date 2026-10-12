@@ -54,17 +54,18 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from merge_gate import GRANT_FILE_NAME, _stacked_children, find_grant, live_head_sha  # noqa: E402
+from merge_gate import (  # noqa: E402
+    GRANT_COMMAND,
+    GRANT_FILE_NAME,
+    _stacked_children,
+    find_grant,
+    live_head_sha,
+)
 
 ANCESTRY_SAFE = "merge"
 UNSTACKED = "squash"
 #: Exit status for "remediated, not merged: a human grant is required".
 MERGE_PENDING_EXIT = 3
-#: AGENTS.md requires the locked governance interpreter for manual
-#: authorize_merge.py runs, so the MERGE_PENDING grant command names it -- and
-#: names the script absolutely, since the human may run it from a consumer repo.
-LOCKED_INTERPRETER = '"$HOME/.cursor-governance/.venv/bin/python"'
-GRANT_SCRIPT = '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py"'
 
 
 def _account_grant_path() -> Path:
@@ -109,9 +110,7 @@ def authorization_status(
         **record,
         "status": "MERGE_PENDING",
         "reason": reason,
-        "grant_command": (
-            f"{LOCKED_INTERPRETER} {GRANT_SCRIPT} --repo {repo} --pr {pr} --head-sha {live}"
-        ),
+        "grant_command": (f"{GRANT_COMMAND} --repo {repo} --pr {pr} --head-sha {live}"),
     }
 
 

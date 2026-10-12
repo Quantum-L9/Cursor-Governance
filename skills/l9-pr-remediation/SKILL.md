@@ -198,7 +198,9 @@ Emit `RUN_CONTRACT` from the receipt including `hold_merge`.
 # NEVER type --squash yourself. The helper emits --merge for a stack parent,
 # --squash only for an unstacked leaf. It merges only under a human grant for
 # {head}; otherwise it prints MERGE_PENDING and exits 3.
-"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --head-sha {head} --run
+# Absolute paths: a merge lane may run in a consumer worktree, where neither
+# ops/autonomy/ nor $PWD/.venv belongs to governance.
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {head} --run
 ```
 
 Never `--admin`. Never unpack diffs. Never merge-as-you-go. An unpredicted `CONFLICTING` after a merge means the head moved — re-plan (fingerprint) before the next merge.

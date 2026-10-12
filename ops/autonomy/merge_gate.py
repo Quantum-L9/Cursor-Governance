@@ -138,6 +138,14 @@ NEVER_WAIVE_REASON = (
     "destructive clean, or admin-merge."
 )
 
+#: Copy-ready command prefixes for every grant / merge instruction this package
+#: emits. They must run from any directory -- the human, or a remediation lane,
+#: may be in a consumer repository where a relative ``ops/autonomy/...`` path does
+#: not exist -- and AGENTS.md requires the locked governance interpreter.
+GOV_PYTHON = '"$HOME/.cursor-governance/.venv/bin/python"'
+GRANT_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py"'
+MERGE_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py"'
+
 MERGE_DENY_REASON = (
     "MERGE_PENDING: merging requires a human merge grant bound to this repository, "
     "PR and exact head SHA (CANONICAL_LAW §6.2.12). Invoking /l9-pr-remediation, "
@@ -145,8 +153,8 @@ MERGE_DENY_REASON = (
     "merge permission, and a standing environment boolean is not an authority. "
     "Report MERGE_PENDING (PR, head SHA, CI/review status, stack order) and continue "
     "independent work. A human issues the grant from their own terminal: "
-    "ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>; "
-    "then ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> "
+    f"{GRANT_COMMAND} --repo <owner/name> --pr <n> --head-sha <sha>; "
+    f"then {MERGE_COMMAND} --repo <owner/name> --pr <n> "
     "--head-sha <sha> --run (no --admin), oldest first."
 )
 

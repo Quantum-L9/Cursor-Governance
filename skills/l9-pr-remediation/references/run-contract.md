@@ -46,7 +46,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - publish: `PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked child remediation PR)
 - fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
 - board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
-- merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --head-sha {sha} --run` (method chosen in code; oldest `createdAt` first; only under a human grant for that head, else MERGE_PENDING)
+- merge: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run` (absolute: lanes may run in a consumer worktree) (method chosen in code; oldest `createdAt` first; only under a human grant for that head, else MERGE_PENDING)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
 
@@ -155,7 +155,7 @@ run_contract:
     publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"
     board: "ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json"
-    merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --head-sha {sha} --run"  # human grant required
+    merge: '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run'  # human grant required
     interpreter: "{repo}/.venv/bin/python"
     readonly_git: true
   venv:
