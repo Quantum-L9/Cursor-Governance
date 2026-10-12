@@ -31,8 +31,13 @@ from typing import Any
 
 try:
     import yaml
-except Exception as exc:
-    raise SystemExit(f"PyYAML is required: {exc}")
+except Exception as exc:  # wrong interpreter is Unknown, never a REJECTED-looking rc 1
+    print(
+        json.dumps(
+            {"status": "BLOCKED", "reason": "VERIFIER_INTERPRETER_UNRESOLVED", "error": repr(exc)}
+        )
+    )
+    raise SystemExit(3) from exc
 
 OWNER_REPOSITORY = "Quantum-L9/.github"
 PROFILE_REF = "l9.projection/cursor-governance-operating-plane@1"
@@ -48,7 +53,12 @@ VOCABULARY_PATH = "semantics/vocabulary.yaml"
 PRODUCER_ROLE = "projection"
 
 EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
-_ORIGIN = re.compile(r"github\.com[/:]quantum-l9/\.github(\.git)?/?$", re.IGNORECASE)
+# Exact host and repository; a suffix match would accept any path ending in it.
+_ORIGIN = re.compile(
+    r"(?:https://(?:[^@/\s]+@)?github\.com/|ssh://git@github\.com/|git@github\.com:)"
+    r"quantum-l9/\.github(?:\.git)?/?",
+    re.IGNORECASE,
+)
 
 
 class Outcome(Exception):
@@ -110,7 +120,7 @@ def authority_root(root: Path, expect_revision: str | None) -> dict[str, Any]:
     if not root.is_dir():
         raise Outcome("BLOCKED", "AUTHORITY_ROOT_ABSENT", path=str(root))
     origin = _git(root, "remote", "get-url", "origin")
-    if not _ORIGIN.search(origin):
+    if not _ORIGIN.fullmatch(origin):
         raise Outcome(
             "BLOCKED",
             "AUTHORITY_ROOT_NOT_CANONICAL_OWNER",

@@ -56,7 +56,8 @@ canonical_invariant_binding:
   accepted_input:
     artifact: producer-emitted l9.projection-artifact/v1 for the profile and source above
     receipt: producer-emitted l9.compiler-receipt/v1 with operation projection and result pass
-    authority_root: exact clean Quantum-L9/.github checkout whose origin, revision, and semantics/ bytes are observed
+    authority_root: exact clean Quantum-L9/.github checkout whose origin (exact github.com host and repository),
+      revision, and semantics/ bytes are observed; origin is local git config, so the operator must control the checkout
     offline_cache: a previously verified artifact and receipt are usable only when re-verified against an
       authority root whose current source and profile digests still match
   not_accepted:
@@ -68,9 +69,11 @@ canonical_invariant_binding:
     - model_recall_of_invariant_text
   verifier:
     script: scripts/verify_canonical_binding.py
-    invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --artifact <projection>
+    interpreter: $HOME/.cursor-governance/.venv/bin/python per AGENTS.md section 5; an interpreter without PyYAML
+      returns BLOCKED VERIFIER_INTERPRETER_UNRESOLVED
+    invocation: <interpreter> scripts/verify_canonical_binding.py --authority-root <.github> --artifact <projection>
       --receipt <receipt> --expect-revision <sha> [--require-invariant <id> ...]
-    freshness_invocation: python3 scripts/verify_canonical_binding.py --authority-root <.github> --prior-binding
+    freshness_invocation: <interpreter> scripts/verify_canonical_binding.py --authority-root <.github> --prior-binding
       <binding.json> --artifact <projection> --receipt <receipt>
     producer_rule: The receipt producer must be a component .github assigns the projection role. Receipts are
       unkeyed, so this narrows identity but cannot authenticate it; authentication needs upstream signed receipts.

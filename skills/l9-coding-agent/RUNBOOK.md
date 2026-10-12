@@ -5,7 +5,7 @@
 1. Activate the skill for a mutating coding request.
 2. Read `runtime/BOOTSTRAP.yaml` only.
 3. Load the intake group, bind the exact target/revision, resolve authority, and bind or derive one execution contract.
-4. Bind canonical invariants: run `python3 scripts/verify_canonical_binding.py --authority-root <exact Quantum-L9/.github checkout> --artifact <projection> --receipt <receipt> --expect-revision <sha> --require-invariant <id> ...` on a producer-emitted projection. Record the printed binding in run state. Exit 1/3/4 (`REJECTED`/`BLOCKED`/`STALE`) blocks mutation; with no projection the reason is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`. Only an explicit current user instruction may let the run proceed with that `Unknown` recorded in the receipt.
+4. Bind canonical invariants: run `"$HOME/.cursor-governance/.venv/bin/python" scripts/verify_canonical_binding.py --authority-root <exact Quantum-L9/.github checkout> --artifact <projection> --receipt <receipt> --expect-revision <sha> --require-invariant <id> ...` on a producer-emitted projection. Record the printed binding in run state. Exit 1/3/4 (`REJECTED`/`BLOCKED`/`STALE`) blocks mutation; with no projection the reason is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`. Only an explicit current user instruction may let the run proceed with that `Unknown` recorded in the receipt.
 5. Establish the semantic envelope before mutation.
 
 ## Execute
