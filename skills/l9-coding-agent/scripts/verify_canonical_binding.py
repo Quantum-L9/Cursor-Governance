@@ -113,10 +113,11 @@ def _load(path: Path, what: str, missing_status: str = "BLOCKED") -> Any:
         raise Outcome("REJECTED", f"{what}_MALFORMED", path=str(path), error=str(exc)) from exc
 
 
-def _git_raw(root: Path, *args: str) -> tuple[int, bytes, str]:
+def _git_raw(root: Path, *args: str, stdin: bytes | None = None) -> tuple[int, bytes, str]:
     try:
         result = subprocess.run(
             ["git", "-C", str(root), *args],
+            input=stdin,
             capture_output=True,
             timeout=GIT_TIMEOUT_S,
             env=GIT_ENV,
@@ -212,8 +213,11 @@ class PinnedTree:
             raise Outcome(
                 "BLOCKED", "AUTHORITY_OBJECT_UNREADABLE", oid=oid, kind=kind, error=stderr
             )
-        header = f"{kind} {len(raw)}\0".encode()
-        if hashlib.sha1(header + raw).hexdigest() != oid:  # noqa: S324 - git object identity
+        # Recompute the id from the bytes read, in git's own object format.
+        rehash, recomputed, _ = _git_raw(
+            self.root, "hash-object", "--no-filters", "-t", kind, "--stdin", stdin=raw
+        )
+        if rehash != 0 or recomputed.decode("ascii", "replace").strip() != oid:
             raise Outcome("REJECTED", "AUTHORITY_OBJECT_NOT_BOUND_TO_PIN", oid=oid, kind=kind)
         return raw
 

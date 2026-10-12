@@ -8,7 +8,6 @@ in the fixture is illustrative, not a copy of `.github`.
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import subprocess
@@ -389,7 +388,9 @@ def test_rewritten_loose_object_is_rejected(authority, tmp_path, capsys, monkeyp
     loose = authority / ".git" / "objects" / oid[:2] / oid[2:]
     loose.chmod(0o644)
     loose.write_bytes(zlib.compress(f"blob {len(tampered)}\0".encode() + tampered))
-    assert hashlib.sha1(f"blob {len(tampered)}\0".encode() + tampered).hexdigest() != oid  # noqa: S324
+    forged_file = tmp_path / "forged.yaml"
+    forged_file.write_bytes(tampered)
+    assert git(authority, "hash-object", "--no-filters", str(forged_file)) != oid
     artifact, receipt = build_projection(authority, tmp_path / "forged", source_bytes=tampered)
     rc, record, _ = run(
         capsys, monkeypatch, *bind_args(authority, artifact, receipt, "--expect-revision", pin)
