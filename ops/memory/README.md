@@ -433,3 +433,76 @@ artifact pin remain operator steps named in `release_evidence.operator_gated`;
 the pin waits for `publish.yml` to succeed on the tag, whose first run was
 rejected by the memory repository's `release` environment deployment policy
 (it does not yet allow the `v*` tag pattern).
+
+## Shared Hetzner memory staging binding (target; not live proof)
+
+For the approved Claude Code -> Cursor memory test, Cursor-Governance is the
+existing composer of the `l9-graphite-memory` dependency. The release binding
+in `ops/config/memory-binding.json` is `2.6.0` / `memory-control-plane/v1`.
+Both agents must use that exact compatible package via their existing managed
+stdio MCP launchers, with each agent independently authenticated and authorized.
+
+The staged target is ONE shared PostgreSQL canonical store on authorized
+Hetzner infrastructure. That store does not exist yet: nothing has been
+provisioned, inventoried or bound, and this section names no live database.
+Each agent runs its own package-owned local stdio MCP process, which composes
+its own MemoryService, signs with that agent's own unique identity, and uses
+product-supported configuration to select that same canonical store.
+No client may read or write the PostgreSQL tables directly, call a Graphiti
+provider as its memory authority, reuse the other actor's signed assertion,
+or receive a default (Tier 3) local-operator fallback. Runtime credentials must be
+injected through permitted secret sources and must not enter MCP JSON,
+Git-tracked configuration, logs or model-visible output.
+
+The store is greenfield. It must be a separately authorized, fresh and empty
+PostgreSQL database. Nothing is imported into it, restored into it or
+reconciled with it: not historical SQLite ledgers, an existing PostgreSQL
+database, Graphiti/Neo4j graphs, Redis state, C1 data, backups, snapshots or
+transcripts. Migrating an existing ledger is a different change, separately
+authorized under the memory repository's ADR-072 and ADR-077. This decision
+deletes nothing: existing memory data stay where they are, and retiring or
+deleting them needs its own inventoried, separately authorized destructive
+campaign.
+
+Store identity is pending. Both agents must resolve the exact same store: one
+resource identity, not two stores that each count as authorized Hetzner
+infrastructure. After the store is provisioned under its own approval, record
+here its non-secret identifier and named environment, and its Infisical
+reference paths only (never values) in the existing
+`ops/secrets/infisical-cursor-governance.yaml` inventory, with evidence that
+both independently launched agents resolved that one store. Until that
+inventory is observed, the shared-store proof stays open.
+
+First E2E: Claude Code creates a new canonical memory via package MCP and
+retains the server-issued record ID/receipt. After the writer exits, Cursor
+starts separately, independently authenticates, retrieves the same record ID
+and normalized content through the package's own MCP surface, then repeats
+successfully after reader restart. An unauthorized namespace request must fail.
+A matching search phrase alone, an MCP handshake, or a mocked provider does
+not close this proof.
+
+Full deployment is a different acceptance bar: PostgreSQL, real Graphiti plus
+Neo4j, and real Redis active store plus awareness must each qualify, with an
+aggregate fail-closed readiness verdict, outage/recovery and restore evidence.
+The remote-host/Mobile consumer access boundary is explicitly unresolved.
+Do not treat the two local processes' successful shared-database test as
+permission to publish a remote HTTP memory endpoint or a database port.
+
+`2.6.0` is the current exact package binding, and the First E2E runs on it.
+It does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
+(ADR-097, not merged): five readiness families (`canonical`, `projection`,
+`graph`, `active_store`, `awareness_bus`), with `full_capability` true only
+when every family is selected and healthy. Full-deployment acceptance
+therefore needs a later, newly admitted memory release and an exact consumer
+rebind of `ops/config/memory-binding.json`. This section changes no pin. A
+`health` result, an HTTP 200 or an MCP handshake is not full-capability
+acceptance.
+
+This binding does not introduce a hosted application image, a new deployment
+profile, a memory front door, new schema fields, or domain rules in l9-deploy.
+Deployment profile/admission and actual Hetzner changes require separately
+verified executable artifacts and authorized target infrastructure. Nothing
+here authorizes changes to the C1 host, its Docker/Compose files or `.env`
+(`rules/93-c1-server-protection.mdc`), running
+`scripts/deployment/10X_Deploy_Script.sh` (`rules/94-deployment-prohibition.mdc`),
+or any other external mutation.
