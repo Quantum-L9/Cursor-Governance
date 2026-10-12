@@ -82,7 +82,7 @@ An evidence harness kept outside the repository ran 34 verifier cases against th
   - there is no producer for `l9.projection/cursor-governance-operating-plane@1`;
   - there is no `l9.projection.cursor-governance-operating-plane/v1` output schema;
   - no `semantic_digest` canonicalization algorithm is declared;
-  - the profile has 10 sources but the projection artifact is single-source, and no composition profile is declared;
+  - the profile has 9 source groups but the projection artifact is single-source, and no composition profile is declared;
   - the `conformance_profiles` source resolves outside `.github`.
 - Receipts and projection digests are unkeyed. A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream.
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook.
