@@ -1,7 +1,7 @@
 ---
 id: l9.rule.48.make.pr.remediation
-version: 1.7.1
-description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge; all remediations publish as stacked PRs via make pr without bare git push
+version: 1.8.0
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs a human grant (CANONICAL_LAW §6.2.12); all remediations publish as stacked PRs via make pr without bare git push
 scope: global
 domain: general
 activation: always
@@ -9,7 +9,7 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# make pr → green merge-ready; /l9-pr-remediation → merge
+# make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; human grant → merge
 
 Default publish path on every surface (Cursor, Claude Code desktop,
 Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
@@ -35,23 +35,32 @@ preparation before an observational validation wave; it runs no kernel.
 4. Campaign / `make pr` end state: every published PR is **green and
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
-   with Converge intent): merge **is** authorized for **all open PRs** in
-   the target repo. Remediation follows the File-Scope Invariant (ADR-0052):
+   with Converge intent): remediate **all open PRs** in the target repo to
+   merge readiness. Invocation is **not** merge authorization
+   (CANONICAL_LAW §6.2.12). Remediation follows the File-Scope Invariant (ADR-0052):
    - In-scope surgical fixes (files already created/modified by the PR):
      verify via `make precommit-repo`, commit pathspecs, push to open PR branch.
    - Scope-expanding fixes (requiring a new file to be touched): publish
      as a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
-   Write the receipt, converge each PR, then merge bottom-up:
+   Converge each PR, then stop at **MERGE_PENDING**: report the PR, its
+   exact head SHA, CI and review status, and stack order, and keep working
+   on independent PRs. Agents never run `authorize_merge.py` and never
+   write the grant file. A **human** issues one grant per PR and head in
+   their own terminal; with that grant, merge bottom-up:
 
 ```bash
-python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open \
-  --reason "l9-pr-remediation invoked"
-python3 ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run
+# human, own terminal — types the target back to confirm
+python3 ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>
+# then (agent or human) — rechecks the live head; MERGE_PENDING if it moved
+python3 ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --head-sha <sha> --run
 ```
 
-`ops/autonomy/merge_gate.py` allows ordinary `gh pr merge` after that
-receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
-`--admin` stay denied.
+`ops/autonomy/merge_gate.py` denies every merge transport — `gh pr merge`,
+the REST endpoint, MCP merge tools, `stack_safe_merge.py --run` — without a
+live grant bound to that repo, PR and exact head (or the human session
+breakglass `L9_MERGE_AUTHORIZED`). Repository-wide `--all-open` authority is
+not issuable. Force-push, hard-reset, `--admin`, and auto-merge enablement
+stay denied.
 
 **Both merge transports are governed.** `gh pr merge` is a GraphQL call; where
 GraphQL is unavailable (a session gateway serving only a pinned set of
@@ -62,8 +71,8 @@ gh api -X PUT repos/<owner>/<name>/pulls/<n>/merge -f merge_method=merge
 ```
 
 The gate recognises that form — and the `curl` spelling of it — as a merge,
-resolving owner/name/number from the endpoint path so the receipt check and the
-stack-safety probe both apply. Name `merge_method` explicitly: an unspecified
+resolving owner/name/number from the endpoint path so the grant check and the
+stack-safety probe both apply (name the head with `-f sha=<sha>`). Name `merge_method` explicitly: an unspecified
 method is treated as ancestry-breaking and is denied for a stack parent, which
 is why `stack_safe_merge.py` selects it in code rather than leaving it to a
 server-side default. A transport that the gate cannot see is not a licence to
@@ -84,7 +93,8 @@ Stacked PRs (operator default 2026-08-15; **opt-in since 2026-09-19**):
 `make pr` writes `.l9/pr/pr-remediation-handoff.json` plus
 `L9_AGENT_REQUIRED` when remediates=1 (the default). Follow that handoff:
 poll to green + merge-ready. Standing campaign contract is still no merge.
-`/l9-pr-remediation` Converge / `authorize_merge.py` is the merge path.
+`/l9-pr-remediation` Converge ends at MERGE_PENDING; a human grant
+(`authorize_merge.py`, run by the human) is the merge authority.
 `PR_REMEDIATE=0` skips the handoff marker.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),

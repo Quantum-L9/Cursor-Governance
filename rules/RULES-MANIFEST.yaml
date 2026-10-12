@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-07T20:18:35Z'
+generated_utc: '2026-10-12T03:16:18Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:a956ad4d56c4f68b1f1cb83bf9c024ea5fe1fdd04293d7368c7398159ae5ac87
+source_tree_digest: sha256:4ec1a6cf03da372a889b4b1e9976dceaa60b8bd71ffd51f3e7f1dd8d63a1fb77
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -543,18 +543,18 @@ rules:
 - file: 48-make-pr-remediation.mdc
   id: l9.rule.48.make.pr.remediation
   id_source: explicit
-  version: 1.7.1
-  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge; all remediations publish as stacked PRs via make pr without bare git push
+  version: 1.8.0
+  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs a human grant (CANONICAL_LAW §6.2.12); all remediations publish as stacked PRs via make pr without bare git push
   scope: global
   domain: general
   activation: always
   activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
+  first_heading: make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; human grant → merge
   has_yaml_frontmatter: true
-  line_count: 158
-  content_digest: sha256:8cf42ff60ce6bc25cd85e63b72f02954c612153574b976837ea7b3c572d17a6c
+  line_count: 168
+  content_digest: sha256:5cb18aa6dd308ab1f2e57964c7ed7f1398ad14517e5ec7336e10bc8c22f463d2
   authority: canonical_global
   context_cost: moderate
   deprecated: false

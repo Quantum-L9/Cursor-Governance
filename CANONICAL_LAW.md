@@ -1333,3 +1333,61 @@ is not retargeted onto the documentation commit that followed the source.
    unchanged. 2.6.0 adds the canonical identity assertion on the agents
    door, the `L9_MEMORY_MCP_COMMAND` launcher, and graph MCP operations.
    `installed_record_digest` stays unpinned.
+
+<!-- HUMAN_GATED_MERGE_V1 -->
+## 6.2.12 Merge authority is a human grant, never an invocation (2026-10-12) — supersedes §6.2.1, §6.2.3, and the merge-authorization phrasing of §6.1 and §6.2
+
+Append-only. §6.2.1 ("Build implies merge") and §6.2.3 ("/l9-pr-remediation
+authorizes merge") remain on disk as history. Neither confers merge authority.
+
+1. **Remediation is not authorization.** No merge authority comes from any of
+   these: invoking `l9-pr-remediation` (Diagnose or Converge, agent-driven or
+   user-typed), a finished task, green CI, a resolved review, an L4 release
+   receipt, `make pr`, a campaign or DAG step, or any instruction or receipt an
+   agent wrote. Autonomous remediation ends at **`MERGE_PENDING`**, reporting
+   the PR, its exact head SHA, its CI and review status, and the stack order.
+   Independent work continues meanwhile.
+2. **The ordinary merge authority is a human grant.** A grant names one
+   repository, one PR and one exact 40-hex head SHA. It has issuer `human` and
+   expires within four hours.
+   [`ops/autonomy/authorize_merge.py`](ops/autonomy/authorize_merge.py) writes
+   it only after a human types the target back on the controlling terminal.
+   Repository-wide authority (`--all-open`, `pr: "*"`) cannot be issued. A
+   legacy repository-scoped, head-unbound, or non-human receipt authorizes
+   nothing.
+3. **Agents never issue grants.**
+   [`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py) denies any agent
+   tool call that runs `authorize_merge.py` or writes `merge-authorization.json`.
+4. **Every merge transport answers to the grant.** This covers the `gh` merge
+   subcommand, the REST merge endpoint (via `gh api` or `curl`), any MCP
+   `*merge_pull_request` tool, and `stack_safe_merge.py --run`. A merge is an
+   effect, so §6.2.4's git/gh workflow exemption never covered merge authority.
+   `stack_safe_merge.py --run` rechecks the PR's live head first. A moved head,
+   a stale grant or a missing grant returns `MERGE_PENDING`. Otherwise it passes
+   the SHA to GitHub, so the merge itself is bound to that head. Stack-safe
+   method selection is unchanged. Auto-merge enablement merges at a future head
+   that no grant can bind, so it is denied.
+5. **Breakglass stays breakglass.** `L9_MERGE_AUTHORIZED=<reason>` in the human's
+   session environment is still the hook's human breakglass, and it still skips
+   the stack probe. It is not the ordinary approval path.
+   `stack_safe_merge.py` does not honour it, because an agent controls that
+   process's environment.
+6. **Fail closed.** If the merge gate is missing or crashes, the tool call is
+   blocked (INV-1).
+7. **Remaining host-enforcement requirement.** These controls bind every
+   sanctioned path, but on a host where the worker runs as the human's OS
+   account they are not unforgeable. A worker running arbitrary code could:
+   - write the grant file through an obfuscated path;
+   - allocate a pseudo-terminal to answer the challenge;
+   - run a renamed copy of the merge helper;
+   - call GitHub with the session credential directly.
+
+   Cursor's shell hook does not register `merge_gate.py` at all, so on Cursor
+   only `stack_safe_merge.py`'s entrypoint check applies. Unforgeable human
+   authorization requires issuing and storing grants under a principal the
+   worker cannot act as (the standalone CTO host), or GitHub-side enforcement
+   the worker credential cannot satisfy. Until then, forging a grant is a
+   violation of this section, not a loophole in it.
+
+SSOT: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
+(`remediation`, `l4_local_autonomy.post_push`).
