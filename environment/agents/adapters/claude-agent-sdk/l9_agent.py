@@ -194,8 +194,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    if not a.mcp_status and not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY not set", file=sys.stderr)
+    if not a.mcp_status and not (
+        os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    ):
+        print("neither ANTHROPIC_API_KEY nor ANTHROPIC_AUTH_TOKEN is set", file=sys.stderr)
         return 2
     opts = build_options(option_kwargs(a.mode, a.budget, a.turns))
     try:

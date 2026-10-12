@@ -40,7 +40,8 @@ uv run --extra agent-sdk python $A "Summarize open plan shelves" --mode plan
 uv run --extra agent-sdk python $A "<task>" --mode acceptEdits --budget 5 --turns 20
 ```
 
-A task run needs `ANTHROPIC_API_KEY`. The report is written to
+A task run needs a nonempty `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`
+(either satisfies the preflight). The report is written to
 `reports/agent_sdk/latest.json` (gitignored): the model's structured output
 plus result metadata and per-server MCP `name` / `status` / `scope` / `error`
 (server `config` is omitted because it can carry environment values).
