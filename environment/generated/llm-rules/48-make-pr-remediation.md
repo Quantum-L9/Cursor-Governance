@@ -43,7 +43,7 @@ preparation before an observational validation wave; it runs no kernel.
 
 ```bash
 # human, own terminal — types the target back to confirm
-"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>
 # then (agent or human) — rechecks the live head; MERGE_PENDING if it moved
 python3 ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --head-sha <sha> --run
 ```

@@ -9,7 +9,8 @@ DAG step, or an agent instruction is NOT a grant, and an agent never runs this
 script: autonomous remediation stops at MERGE_PENDING and reports the exact
 command below for the human to run.
 
-    "$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py \\
+    "$HOME/.cursor-governance/.venv/bin/python" \\
+        "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" \\
         --repo owner/name --pr 53 --head-sha <40-hex> --reason "reviewed; merge it"
 
 Repository-wide authority (``--all-open`` / ``--pr '*'``) is not issuable, and a

@@ -786,6 +786,9 @@ GRANT_FILE = "~/.l9/autonomy/" + "merge-authorization.json"
         f"python3 {AUTHORIZE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}",
         f'"$GOV_PY" {AUTHORIZE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}',
         f"cd /x && .venv/bin/python {AUTHORIZE} --repo o/r --pr 1",
+        '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/'
+        + AUTHORIZE
+        + '" --repo o/r --pr 1',
         "python -m ops.autonomy.authorize_merge --repo o/r --pr 1",
         f"bash -c 'python3 {AUTHORIZE} --repo o/r --pr 1'",
         f"echo '{{}}' > {GRANT_FILE}",

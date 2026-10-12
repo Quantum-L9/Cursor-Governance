@@ -279,7 +279,7 @@ session_start_block: |
     **MERGE_PENDING** (PR, exact head SHA, CI/review status, stack order).
     Invoking it is never merge authorization (CANONICAL_LAW §6.2.12). Merge
     needs a human grant per PR and head — the human runs
-    `"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>`
+    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`
     in their own terminal; agents never run it or write the grant file. With
     a grant: `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n>
     --head-sha <sha> --run`, oldest first. Force-push and `--admin` stay denied.
