@@ -22,7 +22,7 @@ expertise_model:
     - merge through the stack-safe executor as soon as merge_now is non-empty, oldest first, parents before children
   invariants:
     - Diagnose never commits, pushes, edits, or merges
-    - Converge invocation is merge authorization for every open PR in the target repo
+    - Converge invocation is not merge authority; each merge needs a human grant bound to repo, PR and exact head (CANONICAL_LAW §6.2.12), and a merge-ready PR without one is reported MERGE_PENDING
     - remediator verify is `make precommit-repo`; publish is stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`; direct bare `git push` is forbidden (ADR-0052)
     - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
