@@ -110,9 +110,16 @@ def main() -> int:
         ],
     }
     for label, argv in controls.items():
-        probe = subprocess.run(
-            [sys.executable, str(verifier), *argv], text=True, capture_output=True
-        )
+        try:
+            probe = subprocess.run(
+                [sys.executable, str(verifier), *argv],
+                text=True,
+                capture_output=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            errors.append(f"canonical binding verifier timed out ({label})")
+            continue
         try:
             status = json.loads(probe.stdout).get("status")
         except ValueError:

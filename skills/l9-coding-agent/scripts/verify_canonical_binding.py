@@ -52,6 +52,7 @@ RECEIPT_SCHEMA_PATH = "semantics/compiler_receipt.schema.yaml"
 VOCABULARY_PATH = "semantics/vocabulary.yaml"
 PRODUCER_ROLE = "projection"
 
+GIT_TIMEOUT_S = 30
 EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
 # Exact host and repository; a suffix match would accept any path ending in it.
 _ORIGIN = re.compile(
@@ -105,7 +106,14 @@ def _load(path: Path, what: str, missing_status: str = "BLOCKED") -> Any:
 
 
 def _git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", "-C", str(root), *args], text=True, capture_output=True)
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *args], text=True, capture_output=True, timeout=GIT_TIMEOUT_S
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise Outcome(
+            "BLOCKED", "AUTHORITY_ROOT_PROVENANCE_UNKNOWN", git=list(args), error=repr(exc)
+        )
     if result.returncode != 0:
         raise Outcome(
             "BLOCKED",
