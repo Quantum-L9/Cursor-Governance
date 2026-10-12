@@ -9,8 +9,8 @@ metadata:
   tags: [l9, coding-agent, implementation, repair, validation, evidence, gar-sibling]
   owner: igor_beylin
   status: active
-  version: "1.4.0"
-  updated: "2026-10-12"
+  version: "1.3.0"
+  updated: "2026-09-27"
   license: Proprietary
   tier: exemplary
   compiler: l9-skill-compiler@3.8.0
@@ -40,11 +40,8 @@ Load when a mutating coding task activates or the target/contract changes:
 - `runtime/RUN_STATE.yaml`
 - `contracts/AUTHORITY_AND_BOUNDARIES.yaml`
 - `contracts/EXECUTION_CONTRACT.yaml`
-- `integrations/L9_RUNTIME_BINDING.yaml` — its `canonical_invariant_binding` section only
 
 Bind exact repository/artifact, revision, scope, delivery surface, acceptance criteria, forbidden actions, and observed host capabilities. Desired-state authority defines what should be true; exact repository evidence defines what is true now.
-
-Before any mutation, in every mode, bind the applicable L9 global invariants from `Quantum-L9/.github` by running `scripts/verify_canonical_binding.py` on a producer-emitted projection and receipt for `l9.projection/cursor-governance-operating-plane@1`, and record the binding in run state. Any outcome other than `BOUND`/`CURRENT` blocks mutation: no fallback to local or recalled law. Only an explicit current user instruction may let one run proceed with that `Unknown` recorded. This binding is not Gate admission and needs no Program Execution or L9 runtime.
 
 ### Implementation
 Load after the execution contract is ready and before mutation:
@@ -75,7 +72,7 @@ Load only when the trigger exists:
 
 - Failure, block, stagnation, or escalation classification: `catalogs/REASON_CODES.yaml` + `catalogs/KILL_PATTERNS.yaml`.
 - GAR-issued contract, GAR review, or architecture escalation: `integrations/GAR_HANDOFF.yaml`.
-- Observed active L9 runtime/Gate concern: the mode rules in `integrations/L9_RUNTIME_BINDING.yaml`.
+- Observed active L9 runtime/Gate concern: `integrations/L9_RUNTIME_BINDING.yaml`.
 - Structured execution contract: `schemas/execution-contract.schema.json` + `scripts/validate_execution_contract.py`.
 - Structured execution receipt: `schemas/execution-receipt.schema.json`.
 - Skill maintenance, promotion, or packaging: package-quality route in `runtime/BOOTSTRAP.yaml` plus `evals/BEHAVIOR_CONFORMANCE.yaml`.

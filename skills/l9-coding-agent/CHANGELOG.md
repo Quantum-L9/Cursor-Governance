@@ -15,6 +15,9 @@
 - A non-`BOUND`/`CURRENT` outcome blocks mutation. There is no fallback to local law. Only an explicit current user instruction may let a run proceed with the `Unknown` recorded.
 - No executable producer for this profile exists at `.github@1f42b33` or `l9-semantic-compiler-engine@a1c4104`, so a live binding currently ends `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
 - Enforcement is instructional; no host hook enforces verifier invocation.
+- `SKILL.md` is byte-identical to 1.3.0, and its frontmatter `metadata.version` still reads 1.3.0. The intake route lives in `runtime/BOOTSTRAP.yaml`, which `SKILL.md` already names as the first and only read.
+  - Reason: `ops/generated/skill-registry.json` and the Claude adapter registry pin `skill_sha256` of `SKILL.md`, and both lie outside this pack.
+  - Updating the frontmatter needs an authorized registry regeneration.
 - Behavior conformance grows from 40 to 52 cases (CA-E41 to CA-E52). The lazy-bootstrap and runtime-alignment validators now check the intake binding route and run an absent-projection negative control.
 
 ## 1.3.0 repository install - 2026-09-28

@@ -85,6 +85,7 @@ Verifier positive and negative cases ran against the real `.github` sources with
   - the profile has 10 sources but the projection artifact is single-source, and no composition profile is declared;
   - the `conformance_profiles` source resolves outside `.github`.
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook.
+- `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.
 - `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
 
 ## Verdict

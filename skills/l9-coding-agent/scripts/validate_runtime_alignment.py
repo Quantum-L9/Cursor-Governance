@@ -82,8 +82,6 @@ def main() -> int:
     missing_cases = sorted(set(CANONICAL_BINDING_CASES) - case_ids)
     if missing_cases:
         errors.append("canonical binding behavior cases missing: " + ", ".join(missing_cases))
-    if "scripts/verify_canonical_binding.py" not in skill:
-        errors.append("SKILL.md does not route intake to scripts/verify_canonical_binding.py")
 
     # Negative control: no producer-emitted projection must block, never pass.
     verifier = root / "scripts" / "verify_canonical_binding.py"
