@@ -214,8 +214,8 @@ remediation:
     reports MERGE_PENDING (PR, exact head SHA, CI/review status, stack
     order). It is never merge authorization and never writes a grant. A
     human issues one grant per PR and head with
-    `ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>`;
-    with that grant `ops/autonomy/stack_safe_merge.py --repo <owner/name>
+    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`;
+    with that grant `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name>
     --pr <n> --head-sha <sha> --run` rechecks the live head and merges
     bottom-up (method chosen in code: --merge for a stack parent,
     --squash only for a leaf). Force-push and admin-merge stay
@@ -279,9 +279,9 @@ session_start_block: |
     **MERGE_PENDING** (PR, exact head SHA, CI/review status, stack order).
     Invoking it is never merge authorization (CANONICAL_LAW §6.2.12). Merge
     needs a human grant per PR and head — the human runs
-    `"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>`
+    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`
     in their own terminal; agents never run it or write the grant file. With
-    a grant: `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n>
+    a grant: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n>
     --head-sha <sha> --run`, oldest first. Force-push and `--admin` stay denied.
   - Mid-execution `make pr` and the MCP write tools are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized. git and

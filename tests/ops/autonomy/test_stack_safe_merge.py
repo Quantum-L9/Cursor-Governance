@@ -219,7 +219,10 @@ def test_run_without_grant_is_merge_pending_and_never_merges(
     assert record["head_sha"] == SHA
     assert record["grant_command"].endswith(f"--pr 53 --head-sha {SHA}")
     # AGENTS.md: manual authorize_merge.py runs use the locked governance interpreter.
-    assert record["grant_command"].startswith('"$HOME/.cursor-governance/.venv/bin/python" ')
+    assert record["grant_command"].startswith(
+        '"$HOME/.cursor-governance/.venv/bin/python" '
+        '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" '
+    )  # absolute script path: the human may run it from a consumer repository
 
 
 def test_run_without_named_head_is_merge_pending(tmp_path: Path, monkeypatch) -> None:

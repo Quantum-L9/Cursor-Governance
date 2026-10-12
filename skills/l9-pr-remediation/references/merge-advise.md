@@ -39,7 +39,7 @@ terminal and types the target back to confirm:
 
 ```bash
 # human only — merge_gate.py denies an agent that runs this or writes the grant file
-"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo {owner}/{repo} --pr {number} --head-sha {sha}
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo {owner}/{repo} --pr {number} --head-sha {sha}
 ```
 
 One grant per PR and head, expiring. `--all-open` is refused. A head that
@@ -55,9 +55,9 @@ the live head and whether a human grant covers it (`AUTHORIZED` /
 grant, and binds the merge to the SHA:
 
 ```bash
-GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
-"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {number} --json
-"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {number} --head-sha {sha} --run
+# absolute paths: runs from any directory, consumer worktrees included
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {number} --json
+"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {number} --head-sha {sha} --run
 ```
 
 Hand-typed `gh pr merge --squash` of a stack parent is denied by
