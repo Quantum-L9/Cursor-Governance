@@ -2193,3 +2193,29 @@ text positively routes through Program Execution.
   surfaces must not require `environment/program-execution/`.
 - Negative containment may continue to reference the PE tree until
   physical eviction.
+
+<!-- HUMAN_GATED_MERGE_V1 -->
+## Merge authority is a human grant (2026-10-12) — supersedes §3.2 "Invoking `/l9-pr-remediation` (Converge) is merge authorization" and every `authorize_merge.py --all-open` instruction
+
+Operating form of CANONICAL_LAW §6.2.12. §3.2's Converge bullet and its
+`--all-open` command are history and confer nothing; that command is now
+refused.
+
+- `/l9-pr-remediation` (Converge) remediates every open PR to merge
+  readiness and stops at **MERGE_PENDING**. For each PR, report the exact
+  head SHA, the CI and review status, its position in the stack order, and
+  the grant command. Then keep working on independent PRs. Neither the
+  invocation, green CI, an L4 release, nor `make pr` authorizes a merge.
+- A merge requires a **human grant** that binds one repository, one PR and
+  one exact head SHA, and expires within four hours. The human issues it in
+  their own terminal and types the target back to confirm:
+  `"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --pr <n> --head-sha <sha>`.
+- Agents never run `authorize_merge.py`, never write
+  `merge-authorization.json`, and never enable auto-merge.
+  `ops/autonomy/merge_gate.py` denies all three.
+- With a grant, merge oldest first through
+  `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --head-sha <sha> --run`.
+  It rechecks the live head first. A moved head or stale grant returns
+  MERGE_PENDING (exit 3). Stack-safe method selection is unchanged.
+- `L9_MERGE_AUTHORIZED=<reason>` stays the human session breakglass for the
+  hook. It is not the ordinary approval path.
