@@ -5,7 +5,8 @@
 1. Activate the skill for a mutating coding request.
 2. Read `runtime/BOOTSTRAP.yaml` only.
 3. Load the intake group, bind the exact target/revision, resolve authority, and bind or derive one execution contract.
-4. Establish the semantic envelope before mutation.
+4. Bind canonical invariants: run `"$HOME/.cursor-governance/.venv/bin/python" scripts/verify_canonical_binding.py --authority-root <exact Quantum-L9/.github checkout> --artifact <projection> --receipt <receipt> --expect-revision <sha> --require-invariant <id> ...` on a producer-emitted projection. Produce it with `python -m l9_semantic_compiler project --authority-root <.github> --profile l9.projection/cursor-governance-operating-plane@1 --source-class invariants --output-dir <dir> --authority-revision <sha> --expect-source-digest <pin> --expect-profile-digest <pin>` from Quantum-L9/l9-semantic-compiler-engine (#8 or later). Take the pins from an independent record, never from the run being checked. A receipt without both pins has result `unknown`, and the verifier rejects it. Record the printed binding in run state. Exit 1/3/4 (`REJECTED`/`BLOCKED`/`STALE`) blocks mutation; with no projection the reason is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`. Only an explicit current user instruction may let the run proceed with that `Unknown` recorded in the receipt.
+5. Establish the semantic envelope before mutation.
 
 ## Execute
 
@@ -30,7 +31,7 @@
 
 ## Finish
 
-1. Load `contracts/CONVERGENCE.yaml`.
+1. Load `contracts/CONVERGENCE.yaml`. Re-check a bound canonical binding with `--prior-binding <binding.json>`; `STALE` invalidates the binding and the evidence derived from it.
 2. Evaluate terminal state against observed evidence.
 3. Emit the execution receipt.
 4. Perform external delivery only when capability and authority are both observed.

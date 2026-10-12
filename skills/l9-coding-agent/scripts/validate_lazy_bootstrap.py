@@ -29,6 +29,73 @@ def bootstrap_artifacts(data: dict) -> set[str]:
     return out
 
 
+# Procedure-only keys; anything else risks a local restatement of upstream law.
+CANONICAL_BINDING_KEYS = {
+    "purpose",
+    "applies_in_modes",
+    "mode_independence",
+    "upstream",
+    "accepted_input",
+    "not_accepted",
+    "verifier",
+    "selection",
+    "binds_into",
+    "outcomes",
+    "invalidation",
+    "unknown_handling",
+    "enforcement_scope",
+}
+
+
+def _keys(node: object) -> set[str]:
+    if isinstance(node, dict):
+        return {str(k) for k in node} | {k for v in node.values() for k in _keys(v)}
+    if isinstance(node, list):
+        return {k for v in node for k in _keys(v)}
+    return set()
+
+
+def check_canonical_binding(root: Path, bootstrap_doc: dict, inventory: set[str]) -> list[str]:
+    """Intake must bind canonical invariants by reference before mutation."""
+    errors: list[str] = []
+    intake = bootstrap_doc.get("stages", {}).get("intake", {})
+    bind = intake.get("bind_before_exit") or {}
+    owner, _, section = str(bind.get("owner", "")).partition("#")
+    if owner not in intake.get("artifacts", []) or section != "canonical_invariant_binding":
+        errors.append(
+            "intake does not bind canonical_invariant_binding from a routed owner section"
+        )
+        return errors
+    script = str(bind.get("invoke", ""))
+    if script not in inventory or not (root / script).is_file():
+        errors.append(f"canonical binding verifier is not a packaged file: {script}")
+    try:
+        owner_doc = yaml.safe_load((root / owner).read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        return [f"canonical binding owner unreadable: {owner}: {exc}"]
+    binding = owner_doc.get(section) if isinstance(owner_doc, dict) else None
+    if not isinstance(binding, dict):
+        return [f"canonical binding section missing: {owner}#{section}"]
+    unexpected = sorted(set(binding) - CANONICAL_BINDING_KEYS)
+    if unexpected:
+        errors.append("canonical binding has undeclared top-level keys: " + ", ".join(unexpected))
+    reasons = yaml.safe_load((root / "catalogs/REASON_CODES.yaml").read_text(encoding="utf-8"))
+    if "BLOCKED_UPSTREAM_PROJECTION_PRODUCER" not in ((reasons or {}).get("reasons") or {}):
+        errors.append("BLOCKED_UPSTREAM_PROJECTION_PRODUCER is not a registered reason code")
+    upstream = binding.get("upstream") or {}
+    if upstream.get("semantic_owner") != "Quantum-L9/.github" or not upstream.get("profile_ref"):
+        errors.append("canonical binding lacks upstream owner/profile identity")
+    if (binding.get("verifier") or {}).get("script") != script:
+        errors.append("canonical binding verifier differs from the intake route")
+    if not (binding.get("unknown_handling") or {}).get("no_fallback"):
+        errors.append("canonical binding lacks an explicit no-fallback rule for Unknown")
+    if "Instructional" not in str(binding.get("enforcement_scope", "")):
+        errors.append("canonical binding must state that its enforcement is instructional")
+    if {"statement", "statements"} & _keys(binding):
+        errors.append("canonical binding restates upstream law text instead of referencing it")
+    return errors
+
+
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1]).resolve()
     errors: list[str] = []
@@ -100,6 +167,8 @@ def main() -> int:
     first_stage = set(bootstrap_doc.get("stages", {}).get("intake", {}).get("artifacts", []))
     if any(x in package_only_exact or x.startswith(package_only_prefixes) for x in first_stage):
         errors.append("package-only intelligence or operator evidence leaked into intake stage")
+
+    errors.extend(check_canonical_binding(root, bootstrap_doc, inventory))
 
     if errors:
         for error in errors:
