@@ -75,7 +75,7 @@ An evidence harness kept outside the repository ran 34 verifier cases against th
 
 ### Live producer evidence (invariants source class)
 
-Quantum-L9/l9-semantic-compiler-engine#8 (head `7089305`, not yet merged) implements `project` for one source class of a `.github` projection profile. Its output was checked at `.github@1f42b33` with this verifier unchanged:
+Quantum-L9/l9-semantic-compiler-engine#8 (head `c9b8865`, not yet merged) implements `project` for one source class of a `.github` projection profile. Its output was checked at `.github@1f42b33` with this verifier unchanged:
 
 - real output binds (`BOUND`), and the producer is byte-deterministic across runs;
 - each adverse case changes one fact in real output or in a clone of the authority. All were caught:
