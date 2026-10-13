@@ -80,13 +80,17 @@ class Level:
     detail: str
 
 
-def _overall(levels: dict[str, str]) -> str:
+def _overall(levels: dict[str, str], *, health_only: bool = False) -> str:
     if levels["R0"] != PASS or levels["R1"] != PASS:
         return "PACKAGE_UNBOUND"
     if levels["R2"] != PASS or levels["R3"] != PASS:
         return "MEMORY_UNAVAILABLE"
-    core = all(levels[key] == PASS for key in ("R6", "R7", "R8"))
     surface = levels["R4"] == PASS and levels["R5"] in (PASS, SKIPPED)
+    if health_only:
+        # Hydration, write and close were never probed: HEALTH_READY says
+        # bound + healthy, and deliberately never READY.
+        return "HEALTH_READY" if surface else "PARTIAL_SURFACE_READY"
+    core = all(levels[key] == PASS for key in ("R6", "R7", "R8"))
     if not core:
         return "MEMORY_DEGRADED"
     if not surface:
@@ -103,7 +107,15 @@ def readiness_report(
     client: MemoryControlPlaneClient | None = None,
     verify_mcp: bool = True,
     mcp_config_path: str | None = None,
+    health_only: bool = False,
 ) -> dict[str, Any]:
+    """Layered readiness R0..R9.
+
+    ``health_only`` stops at binding, health, MCP status and projection: R6
+    (hydrate), R7 (write dry run) and R8 (close dry run) are SKIPPED, so no
+    memory record is read and no admission call is made. SessionStart readiness
+    uses it; the full probe stays for ``make memory-readiness``.
+    """
     workspace_path = str(Path(workspace).expanduser().resolve())
     binding = binding or resolve_runtime_binding()
     client = client or MemoryControlPlaneClient(binding)
@@ -163,7 +175,10 @@ def readiness_report(
         record("R5", SKIPPED, "binding failed")
 
     namespace = context.write_namespace_hint
-    if binding.ok and results["R2"].status == PASS and context.read_namespace_hints:
+    if health_only:
+        for level in ("R6", "R7", "R8"):
+            record(level, SKIPPED, "health-only: no memory read or admission probe")
+    elif binding.ok and results["R2"].status == PASS and context.read_namespace_hints:
         hydrate = client.hydrate(
             "readiness probe",
             workspace=workspace_path,
@@ -203,7 +218,9 @@ def readiness_report(
     else:
         record("R6", FAIL, "no namespace hint or store not ready")
 
-    if binding.ok and namespace and results["R2"].status == PASS:
+    if health_only:
+        pass
+    elif binding.ok and namespace and results["R2"].status == PASS:
         write_probe = client.write_probe(workspace=workspace_path, namespace=namespace)
         record(
             "R7",
@@ -240,7 +257,7 @@ def readiness_report(
         )
 
     statuses = {key: results[key].status for key, _ in LEVELS}
-    overall = _overall(statuses)
+    overall = _overall(statuses, health_only=health_only)
     return {
         "checked_at": datetime.now(UTC).isoformat(),
         "workspace": workspace_path,
@@ -255,7 +272,7 @@ def readiness_report(
 
 #: Overall statuses that mean the runtime never reached memory (ADR-0032).
 _ENVIRONMENT_OVERALL = frozenset({"PACKAGE_UNBOUND"})
-_READY_OVERALL = frozenset({"READY", "CANONICAL_READY_PROJECTION_DEGRADED"})
+_READY_OVERALL = frozenset({"READY", "CANONICAL_READY_PROJECTION_DEGRADED", "HEALTH_READY"})
 
 
 def fault_class_for_overall(overall: str) -> str:
@@ -333,6 +350,11 @@ def main(argv: list[str] | None = None) -> int:
         help="skip the R5 handshake (it spawns a server for ~1.2s)",
     )
     parser.add_argument("--mcp-config-path", default=None)
+    parser.add_argument(
+        "--health-only",
+        action="store_true",
+        help="R0-R5 and R9 only: skip the R6 hydrate and R7/R8 dry-run probes (no memory read)",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     binding = resolve_runtime_binding()
@@ -344,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
         binding=binding,
         verify_mcp=args.verify_mcp,
         mcp_config_path=args.mcp_config_path,
+        health_only=args.health_only,
     )
     if args.json:
         sys.stdout.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
@@ -357,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(
                 f"  {level['level']} {level['name']:<24} {level['status']:<7} {level['detail']}\n"
             )
-    return 0 if result["overall_status"] in {"READY", "CANONICAL_READY_PROJECTION_DEGRADED"} else 1
+    return 0 if result["overall_status"] in _READY_OVERALL else 1
 
 
 if __name__ == "__main__":

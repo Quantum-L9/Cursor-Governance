@@ -283,15 +283,22 @@ def test_resolve_memory_interpreter_narrows_resolver_errors(monkeypatch) -> None
 
 
 def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> None:
-    """R0/R1 -> cli, R2/R3/R6 -> control plane; mcp is Claude .mcp.json + env, not R4."""
+    """R0/R1 -> cli, R2/R3 -> control plane; mcp is Claude .mcp.json + env, not R4.
+
+    SessionStart readiness is health-only: R6 (hydrate) is SKIPPED by the probe
+    and never decides the control-plane verdict, so a skipped or failed R6 does
+    not turn a healthy store and service into DEGRADED.
+    """
     assert er._memory_cli_health(_levels())[0] == READY
     assert er._memory_control_plane_health(_levels())[0] == READY
     status, note = er._memory_cli_health(_levels(R0="fail"))
     assert status == DEGRADED and "unbound" in note
     status, note = er._memory_control_plane_health(_levels(R2="fail"))
     assert status == DEGRADED and "store" in note
-    status, note = er._memory_control_plane_health(_levels(R6="fail"))
-    assert status == DEGRADED and "namespace" in note
+    status, note = er._memory_control_plane_health(_levels(R3="fail"))
+    assert status == DEGRADED and "service" in note
+    assert er._memory_control_plane_health(_levels(R6="skipped"))[0] == READY
+    assert er._memory_control_plane_health(_levels(R6="fail"))[0] == READY
     # An unrunnable readiness report is UNKNOWN, never PASS.
     assert er._memory_cli_health(None)[0] == UNKNOWN
     assert er._memory_control_plane_health(None)[0] == UNKNOWN
