@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from environment.agents.tools.validate_agents import (
     FORBIDDEN_LOCAL_IDENTITY_FIELDS,
@@ -13,6 +16,7 @@ from environment.agents.tools.validate_agents import (
 from tools.authority.project_canonical_identity import (
     ACTOR_ARTIFACT,
     ACTOR_PREFIX,
+    PROFILE_CATALOG_ARTIFACT,
     PROFILE_REF,
     SURFACE_ARTIFACT,
     SURFACE_PREFIX,
@@ -492,3 +496,272 @@ def test_agents_env_gate_composes_assurance_before_validation() -> None:
         "$(PYTHON) environment/agents/tools/validate_agents.py",
     ]
     assert recipe.count("\nagents-env:") == 1
+
+
+# --- provenance-equivalent check (upstream revision advance, inputs unchanged) ---
+#
+# A real git authority: the projection is committed at revision H, the authority
+# advances, and --check must accept it only when H is a verified ancestor, the
+# committed bytes replay from H, and every governing input is unchanged.
+
+
+PROJECTOR = (
+    Path(__file__).resolve().parents[1] / "tools" / "authority" / "project_canonical_identity.py"
+)
+
+
+def _profile_catalog(purpose: str = "identity", other: str = "other") -> dict[str, Any]:
+    return {
+        "artifact_id": PROFILE_CATALOG_ARTIFACT,
+        "canonical": True,
+        "projection_profiles": [
+            {"id": PROFILE_REF, "consumer": "Cursor-Governance", "purpose": purpose},
+            {"id": "l9.projection/unrelated@1", "consumer": "Other", "purpose": other},
+        ],
+    }
+
+
+def _git(root: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def _commit_authority(root: Path, message: str, **documents: Any) -> str:
+    files = {
+        "actor_registry": "semantics/actor_registry.yaml",
+        "surface_registry": "semantics/surface_registry.yaml",
+        "projection_profile": "semantics/projection_profiles.yaml",
+        "unrelated": "semantics/unrelated.yaml",
+    }
+    for name, document in documents.items():
+        path = root / files[name]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    _git(root, "add", "-A")
+    _git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message)
+    return _git(root, "rev-parse", "HEAD")
+
+
+def _authority(tmp_path: Path) -> tuple[Path, str]:
+    root = tmp_path / "authority"
+    root.mkdir()
+    _git(root, "init", "-q", "-b", "main")
+    historical = _commit_authority(
+        root,
+        "historical",
+        actor_registry=actor_registry(),
+        surface_registry=surface_registry(),
+        projection_profile=_profile_catalog(),
+        unrelated={"v": 1},
+    )
+    return root, historical
+
+
+def _workspace(tmp_path: Path) -> Path:
+    workspace = tmp_path / "governance"
+    (workspace / "generated").mkdir(parents=True)
+    (workspace / "registry.yaml").write_text(yaml.safe_dump(bindings()), encoding="utf-8")
+    return workspace
+
+
+def _projector(workspace: Path, authority: Path, *extra: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(PROJECTOR),
+            "--authority-root",
+            str(authority),
+            "--registry",
+            "registry.yaml",
+            "--output",
+            "generated/identity.yaml",
+            "--receipt",
+            "generated/identity.receipt.yaml",
+            *extra,
+        ],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+@pytest.fixture
+def advanced(tmp_path: Path) -> tuple[Path, Path, str]:
+    """Projection committed at H; the authority then advances with an unrelated change."""
+    authority, historical = _authority(tmp_path)
+    workspace = _workspace(tmp_path)
+    assert _projector(workspace, authority).returncode == 0
+    _commit_authority(authority, "unrelated advance", unrelated={"v": 2})
+    return authority, workspace, historical
+
+
+def test_unrelated_upstream_advance_is_provenance_equivalent(
+    advanced: tuple[Path, Path, str],
+) -> None:
+    authority, workspace, historical = advanced
+    before = (workspace / "generated" / "identity.yaml").read_bytes()
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 0, result.stderr
+    assert f"provenance-equivalent: committed at Quantum-L9/.github@{historical}" in result.stdout
+    assert (workspace / "generated" / "identity.yaml").read_bytes() == before
+    assert historical in before.decode(), "the historical source_revision is preserved"
+
+
+def test_other_profile_change_does_not_invalidate_the_selected_profile(
+    advanced: tuple[Path, Path, str],
+) -> None:
+    authority, workspace, _ = advanced
+    _commit_authority(authority, "other profile", projection_profile=_profile_catalog(other="new"))
+    assert _projector(workspace, authority, "--check").returncode == 0
+
+
+def _actor_changed() -> dict[str, Any]:
+    changed = actor_registry()
+    changed["actors"][1]["status"] = "retired"
+    return changed
+
+
+def _surface_changed() -> dict[str, Any]:
+    changed = surface_registry()
+    changed["surfaces"].append({"id": "new-surface", "status": "current", "description": "x"})
+    return changed
+
+
+@pytest.mark.parametrize(
+    ("documents", "reason"),
+    [
+        ({"actor_registry": _actor_changed()}, "governing input actor_registry changed"),
+        ({"surface_registry": _surface_changed()}, "governing input surface_registry changed"),
+        (
+            {"projection_profile": _profile_catalog(purpose="changed")},
+            "governing input projection_profile changed",
+        ),
+    ],
+    ids=["actor", "surface", "selected-profile"],
+)
+def test_material_upstream_change_fails_closed(
+    advanced: tuple[Path, Path, str], documents: dict[str, Any], reason: str
+) -> None:
+    authority, workspace, _ = advanced
+    _commit_authority(authority, "material change", **documents)
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "stale generated projection" in result.stderr
+    assert reason in result.stderr
+
+
+def test_surface_digest_change_alone_fails_even_when_selected_entries_match(
+    advanced: tuple[Path, Path, str],
+) -> None:
+    """An unrequested surface entry still changes the registry.
+
+    Unchanged selected entries are not enough: the governing input itself changed.
+    """
+    authority, workspace, _ = advanced
+    _commit_authority(authority, "unselected surface", surface_registry=_surface_changed())
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "governing input surface_registry changed" in result.stderr
+
+
+def test_local_binding_change_fails_closed(advanced: tuple[Path, Path, str]) -> None:
+    authority, workspace, _ = advanced
+    document = bindings()
+    del document["agents"]["cursor"]
+    (workspace / "registry.yaml").write_text(yaml.safe_dump(document), encoding="utf-8")
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "not reproducible from" in result.stderr
+
+
+def _rewrite(path: Path, edit: Any) -> None:
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    edit(document)
+    path.write_text(yaml.safe_dump(document, sort_keys=False, width=100), encoding="utf-8")
+
+
+def test_tampered_projection_fails_closed(advanced: tuple[Path, Path, str]) -> None:
+    authority, workspace, _ = advanced
+    _rewrite(
+        workspace / "generated" / "identity.yaml",
+        lambda d: d["actors"][0].__setitem__("description", "tampered"),
+    )
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "committed projection is not reproducible" in result.stderr
+
+
+def test_tampered_receipt_fails_closed(advanced: tuple[Path, Path, str]) -> None:
+    authority, workspace, _ = advanced
+    _rewrite(
+        workspace / "generated" / "identity.receipt.yaml",
+        lambda d: d["output"].__setitem__("digest", "sha256:" + "0" * 64),
+    )
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "committed receipt is not reproducible" in result.stderr
+
+
+def test_mismatched_receipt_revision_fails_closed(advanced: tuple[Path, Path, str]) -> None:
+    authority, workspace, _ = advanced
+    current = _git(authority, "rev-parse", "HEAD")
+    _rewrite(
+        workspace / "generated" / "identity.receipt.yaml",
+        lambda d: d["projection"].__setitem__("source_revision", current),
+    )
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "receipt source_revision disagrees" in result.stderr
+
+
+def test_unknown_historical_revision_fails_closed(advanced: tuple[Path, Path, str]) -> None:
+    authority, workspace, historical = advanced
+    for name in ("identity.yaml", "identity.receipt.yaml"):
+        path = workspace / "generated" / name
+        path.write_text(path.read_text().replace(historical, "f" * 40), encoding="utf-8")
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "is not a commit in the authority checkout" in result.stderr
+
+
+def test_non_ancestor_historical_revision_fails_closed(tmp_path: Path) -> None:
+    """A commit off the canonical line (a sibling branch) is not canonical history."""
+    authority, base = _authority(tmp_path)
+    _git(authority, "checkout", "-qb", "side")
+    side = _commit_authority(authority, "side", unrelated={"v": "side"})
+    workspace = _workspace(tmp_path)
+    assert _projector(workspace, authority).returncode == 0
+    _git(authority, "checkout", "-q", "main")
+    _commit_authority(authority, "main advance", unrelated={"v": 3})
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert f"historical revision {side} is not an ancestor" in result.stderr
+    assert base != side
+
+
+def test_shallow_authority_cannot_prove_provenance(
+    advanced: tuple[Path, Path, str], tmp_path: Path
+) -> None:
+    authority, workspace, _ = advanced
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", f"file://{authority}", str(shallow)], check=True
+    )
+    result = _projector(workspace, shallow, "--check")
+    assert result.returncode == 1
+    assert "unverifiable provenance" in result.stderr
+
+
+def test_current_revision_content_drift_is_still_stale(tmp_path: Path) -> None:
+    authority, _ = _authority(tmp_path)
+    workspace = _workspace(tmp_path)
+    assert _projector(workspace, authority).returncode == 0
+    _rewrite(
+        workspace / "generated" / "identity.yaml",
+        lambda d: d["actors"][0].__setitem__("description", "drift"),
+    )
+    result = _projector(workspace, authority, "--check")
+    assert result.returncode == 1
+    assert "claims the current revision but its content differs" in result.stderr

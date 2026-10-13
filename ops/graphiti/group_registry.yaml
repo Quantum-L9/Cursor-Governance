@@ -260,3 +260,51 @@ repos:
     path_hints: [Website-Bot, website-bot]
     remote_patterns: ["*/Website-Bot*", "*/Website-Bot.git"]
     integrates_with: [cursor-governance]
+  # --- RECON-0 allowlist registered 2026-10-12: exact owner/repo remotes. Hints
+  # only; Memory decides grants. Quantum-L9/.github carries no path hint: a
+  # .github segment exists in nearly every checkout.
+  quantum-l9-github:
+    github: Quantum-L9/.github
+    path_hints: []
+    remote_patterns: ["*/Quantum-L9/.github", "*/Quantum-L9/.github.git", "*:Quantum-L9/.github", "*:Quantum-L9/.github.git"]
+    integrates_with: [cursor-governance]
+  ideaos:
+    github: Quantum-L9/IdeaOS
+    path_hints: [IdeaOS, ideaos]
+    remote_patterns: ["*/Quantum-L9/IdeaOS", "*/Quantum-L9/IdeaOS.git", "*:Quantum-L9/IdeaOS", "*:Quantum-L9/IdeaOS.git"]
+    integrates_with: [cursor-governance]
+  l9-campaign-execution:
+    github: Quantum-L9/l9-campaign-execution
+    path_hints: [l9-campaign-execution]
+    remote_patterns: ["*/Quantum-L9/l9-campaign-execution", "*/Quantum-L9/l9-campaign-execution.git", "*:Quantum-L9/l9-campaign-execution", "*:Quantum-L9/l9-campaign-execution.git"]
+    integrates_with: [cursor-governance]
+  l9-learning-foundry:
+    github: Quantum-L9/l9-learning-foundry
+    path_hints: [l9-learning-foundry]
+    remote_patterns: ["*/Quantum-L9/l9-learning-foundry", "*/Quantum-L9/l9-learning-foundry.git", "*:Quantum-L9/l9-learning-foundry", "*:Quantum-L9/l9-learning-foundry.git"]
+    integrates_with: [cursor-governance]
+  l9-observability-core:
+    github: Quantum-L9/l9-observability-core
+    path_hints: [l9-observability-core]
+    remote_patterns: ["*/Quantum-L9/l9-observability-core", "*/Quantum-L9/l9-observability-core.git", "*:Quantum-L9/l9-observability-core", "*:Quantum-L9/l9-observability-core.git"]
+    integrates_with: [cursor-governance]
+  l9-revops:
+    github: Quantum-L9/l9-revops
+    path_hints: [l9-revops]
+    remote_patterns: ["*/Quantum-L9/l9-revops", "*/Quantum-L9/l9-revops.git", "*:Quantum-L9/l9-revops", "*:Quantum-L9/l9-revops.git"]
+    integrates_with: [cursor-governance]
+  l9-semantic-compiler-engine:
+    github: Quantum-L9/l9-semantic-compiler-engine
+    path_hints: [l9-semantic-compiler-engine]
+    remote_patterns: ["*/Quantum-L9/l9-semantic-compiler-engine", "*/Quantum-L9/l9-semantic-compiler-engine.git", "*:Quantum-L9/l9-semantic-compiler-engine", "*:Quantum-L9/l9-semantic-compiler-engine.git"]
+    integrates_with: [cursor-governance]
+  l9-state:
+    github: Quantum-L9/l9-state
+    path_hints: [l9-state]
+    remote_patterns: ["*/Quantum-L9/l9-state", "*/Quantum-L9/l9-state.git", "*:Quantum-L9/l9-state", "*:Quantum-L9/l9-state.git"]
+    integrates_with: [cursor-governance]
+  l9-wip:
+    github: Quantum-L9/l9-wip
+    path_hints: [l9-wip]
+    remote_patterns: ["*/Quantum-L9/l9-wip", "*/Quantum-L9/l9-wip.git", "*:Quantum-L9/l9-wip", "*:Quantum-L9/l9-wip.git"]
+    integrates_with: [cursor-governance]
