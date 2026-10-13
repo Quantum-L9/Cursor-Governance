@@ -104,9 +104,10 @@ _PREFETCH_RECEIPT_TTL = 86400
 #: distinct ids) and must never be read as a write bind.
 _WRITEBACK_RECEIPT_SUFFIX = ".writeback"
 
-#: ``status`` values ``memory_prefetch.py`` stamps. A receipt that carries
-#: neither is not a prefetch receipt, whatever else is in the directory.
-_PREFETCH_RECEIPT_STATUSES = frozenset({"prefetched", "degraded"})
+#: ``status`` values ``memory_prefetch.py`` stamps: ``health_only`` /
+#: ``degraded`` since SessionStart became health-only, ``prefetched`` on older
+#: receipts. A receipt that carries none is not a session receipt.
+_PREFETCH_RECEIPT_STATUSES = frozenset({"health_only", "prefetched", "degraded"})
 
 
 def _current_writer_agent() -> str:

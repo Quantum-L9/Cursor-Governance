@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Behavioral proof that the memory gate enforces (denies) rather than advises.
+"""Behavioral proof of the memory gate's contract evaluation.
 
-The gate enforces exactly one precondition: fresh session hydration. It does not
-consult, require, or accept a Graphiti phase-lock — repository-write authority
-comes from worktree/branch isolation and the publication gate
-(rules/96-multi-agent-main-bound-execution.mdc, E7/E10). These assertions are
-network-free and run everywhere.
+Since SessionStart became health-only (2026-10-13), the shipped contract
+declares no memory precondition on any governed write, so repository writes
+pass without a session receipt (``ShippedContractAllowsWithoutReceiptTests``).
+The evaluator still enforces a precondition a rule declares; those mechanics
+(receipt identity, repair hint, no side doors) are proven against a fixture
+contract that declares ``session_prefetch`` (``run_gate_declaring_prefetch``).
+The gate never consults, requires, or accepts a Graphiti phase-lock —
+repository-write authority comes from worktree/branch isolation and the
+publication gate (rules/96-multi-agent-main-bound-execution.mdc, E7/E10).
+These assertions are network-free and run everywhere.
 """
 
 from __future__ import annotations
@@ -69,6 +74,56 @@ def run_gate(
         check=False,
     )
     return proc.stdout, proc.returncode
+
+
+def declaring_prefetch(contract: dict) -> dict:
+    """The shipped contract with ``session_prefetch`` declared on every rule."""
+    declared = json.loads(json.dumps(contract))
+    for rule in declared["governed_writes"]:
+        rule["requires"] = ["session_prefetch"]
+    return declared
+
+
+def run_gate_declaring_prefetch(
+    event: dict,
+    env: dict,
+    *,
+    claude_runtime: bool = True,
+) -> tuple[str, int]:
+    """Run the gate in-process against a contract that declares the receipt.
+
+    Same host-marker handling as ``run_gate``; the only difference is the
+    contract the gate loads, so the evaluator's receipt mechanics stay proven
+    while the shipped contract declares no memory precondition.
+    """
+    import contextlib
+    import importlib.util
+    import io
+
+    env = {
+        key: value
+        for key, value in env.items()
+        if key not in _CURSOR_HOST_MARKERS and key not in _CLAUDE_RUNTIME_MARKERS
+    }
+    if claude_runtime:
+        env["CLAUDECODE"] = "1"
+    spec = importlib.util.spec_from_file_location("memory_gate_under_test", GATE)
+    gate = importlib.util.module_from_spec(spec)
+    out = io.StringIO()
+    code = 0
+    with mock.patch.dict(os.environ, env, clear=True):
+        spec.loader.exec_module(gate)
+        declared = declaring_prefetch(gate.st.load_contract())
+        with (
+            mock.patch.object(gate.st, "load_contract", return_value=declared),
+            mock.patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stdout(out),
+        ):
+            try:
+                code = gate.main()
+            except SystemExit as exc:
+                code = int(exc.code or 0)
+    return out.getvalue(), code
 
 
 def _enter_claude_runtime(test: unittest.TestCase) -> None:
@@ -170,7 +225,7 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual(code, 0)
 
     def test_denies_governed_write_without_receipt(self) -> None:
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "skills/x/SKILL.md"},
@@ -245,7 +300,7 @@ class MemoryGateTests(unittest.TestCase):
 
     def test_denies_authority_edit_without_hydration(self) -> None:
         """The gate still enforces: no receipt, no governed write."""
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
@@ -271,7 +326,7 @@ class MemoryGateTests(unittest.TestCase):
             "session_id": self.session,
         }
         env = {**self.env, "L9_MEMORY_SESSION_STATE_DIR": str(Path(self.workspace) / "state")}
-        out, _ = run_gate(event, env)
+        out, _ = run_gate_declaring_prefetch(event, env)
         self.assertTrue(is_deny(out), "no receipt yet: the governed write must be denied")
         reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
         # Both identity parts are path-safe by construction (memory_state._safe_id_part).
@@ -311,7 +366,7 @@ class MemoryGateTests(unittest.TestCase):
         self.assertEqual([p.name for p in receipts], [f"{self._receipt_id()}.json"])
         self.assertNotIn("__claude-code__", receipts[0].name)
 
-        out, code = run_gate(event, env)
+        out, code = run_gate_declaring_prefetch(event, env)
         self.assertFalse(is_deny(out), "the hinted repair must unblock the same governed write")
         self.assertEqual(code, 0)
 
@@ -423,7 +478,7 @@ class MemoryGateTests(unittest.TestCase):
         is memory, so the ``git-mutation`` rule classifies it and, without a
         receipt, denies. A memory prefix must not launder anything else.
         """
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Bash",
                 "tool_input": {
@@ -437,7 +492,7 @@ class MemoryGateTests(unittest.TestCase):
 
     def test_enforcement_off_is_not_a_side_door(self) -> None:
         """L9_MEMORY_ENFORCEMENT=off must not bypass the gate — admin breakglass only."""
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "skills/x/SKILL.md"},
@@ -461,6 +516,50 @@ class MemoryGateTests(unittest.TestCase):
         overrides = st.state_root(self.contract) / "overrides.jsonl"
         self.assertTrue(overrides.is_file(), "breakglass must persist an override event")
         self.assertIn("incident-123", overrides.read_text(encoding="utf-8"))
+
+
+class ShippedContractAllowsWithoutReceiptTests(unittest.TestCase):
+    """M05: no SessionStart receipt, and ordinary writes are still allowed.
+
+    The shipped contract declares no memory precondition, so the gate allows
+    every governed write it matches without a receipt. L4, merge, worktree and
+    publication gates are separate hooks and are not exercised or weakened here.
+    """
+
+    def setUp(self) -> None:
+        self.workspace = tempfile.mkdtemp()
+        self.session = "no-receipt-session"
+        _enter_claude_runtime(self)
+        self.env = {**os.environ, "CLAUDE_PROJECT_DIR": self.workspace}
+        self.contract = st.load_contract()
+
+    def tearDown(self) -> None:
+        _leave_claude_runtime(self)
+
+    def test_shipped_contract_declares_no_memory_precondition(self) -> None:
+        for rule in self.contract["governed_writes"]:
+            self.assertEqual(rule["requires"], [], rule["id"])
+
+    def test_every_governed_write_passes_without_a_receipt(self) -> None:
+        events = [
+            {"tool_name": "Edit", "tool_input": {"file_path": "skills/x/SKILL.md"}},
+            {"tool_name": "Write", "tool_input": {"file_path": "notes.txt"}},
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+            },
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "l9-memory health && git commit -m 'x'"},
+            },
+            {"tool_name": "mcp__github__create_or_update_file", "tool_input": {"path": "a"}},
+        ]
+        receipts = Path(self.workspace) / ".l9" / "memory" / "receipts"
+        for event in events:
+            out, code = run_gate({**event, "session_id": self.session}, self.env)
+            self.assertFalse(is_deny(out), f"{event['tool_name']}: {out}")
+            self.assertEqual(code, 0)
+        self.assertFalse(receipts.exists(), "the gate must not need or write a receipt")
 
 
 class WorkspaceRootTests(unittest.TestCase):
@@ -598,6 +697,17 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
         )
         return out
 
+    def _authority_edit_declared(self, env: dict | None = None) -> str:
+        out, _ = run_gate_declaring_prefetch(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "environment/agents/adapters/claude-code/x.py"},
+                "session_id": self.session,
+            },
+            env or self.env,
+        )
+        return out
+
     def test_stray_lock_artifact_grants_nothing(self) -> None:
         """A lock file on disk is inert: hydration alone decides."""
         locks = st.state_root(self.contract) / "locks"
@@ -615,7 +725,9 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             encoding="utf-8",
         )
         # No receipt: the forged "granted" lock must not unlock the write.
-        self.assertTrue(is_deny(self._authority_edit()), "a lock artifact must not grant authority")
+        self.assertTrue(
+            is_deny(self._authority_edit_declared()), "a lock artifact must not grant authority"
+        )
 
         # With hydration, the write is allowed -- and still not because of the lock.
         st.write_receipt(
@@ -623,7 +735,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             self._receipt_id(),
             {"namespaces": ["cursor-governance"], "session_id": self.session},
         )
-        self.assertFalse(is_deny(self._authority_edit()))
+        self.assertFalse(is_deny(self._authority_edit_declared()))
 
     def test_another_sessions_lock_does_not_revoke_authority(self) -> None:
         """E10: another agent's memory state cannot block this agent's write."""
@@ -679,7 +791,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             self.session,
             {"namespaces": ["cursor-governance"], "session_id": self.session},
         )
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "skills/x/SKILL.md"},
@@ -697,7 +809,7 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             self.session,
             {"namespaces": ["cursor-governance"], "session_id": self.session},
         )
-        out, _ = run_gate(
+        out, _ = run_gate_declaring_prefetch(
             {
                 "tool_name": "Edit",
                 "tool_input": {"file_path": "skills/x/SKILL.md"},
