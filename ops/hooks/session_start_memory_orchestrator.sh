@@ -83,8 +83,8 @@ PY="${GOV_ROOT}/.venv/bin/python3"
 # SessionStart is the only hook that knows a new session began: when the
 # payload carried no session id (Cursor's conversation-only payload) the id is
 # generated HERE, once, persisted under .l9/memory/session.json, and handed to
-# both the open latch and the packet compile below — never "default" for the
-# latch while the compiler invents a UUID of its own. A real id (env or
+# the open latch below (and to sessionEnd close) — never "default" for the
+# latch while another stage invents a UUID of its own. A real id (env or
 # payload) passes through unchanged; rotate=True means a pointer left by a
 # previous session is never reused, so previous_opened.json rotates and a
 # missed close surfaces as a close-gap. Persistence is fail-open; a resolver
@@ -110,45 +110,45 @@ if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
     "${BG_OPEN[@]}" >/dev/null 2>&1) || true
 fi
 
+# SessionStart is memory HEALTH-ONLY (2026-10-13): one bounded health call,
+# no hydrate / search / conflicts / packet compile, no resume content. The
+# session identity, open latch and code-graph diagnostics above are unchanged.
+# Retrieval is on demand: python -m ops.memory.cli hydrate "<task>" --workspace <repo>.
+# Output lines use classify_hydrate_state.py's markers so the runtime report
+# stays truthful: DEGRADED (memory ran, unhealthy) / ENVIRONMENT_FAULT (never
+# reached memory).
 if graphiti_enabled; then
-  if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
-    if OUT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-        "$PY" -m ops.graphiti.hydration.cli compile \
-        --project-dir "$REPO" \
-        --session-id "$CURSOR_SESSION_ID" \
-        --agent-id "$L9_MEMORY_AGENT_ID" \
-        --format json 2>/dev/null)"; then
-      HYDRATE_MD="$(echo "$OUT" | python3 -c '
-import sys, json
+  if [ -f "$GOV_ROOT/ops/memory/cli.py" ]; then
+    HYDRATE_MD="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+      "$PY" -c '
+import json, subprocess, sys
+from ops.memory.control_plane_client import fault_class_for
+
+on_demand = "on demand: python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
 try:
-    d = json.load(sys.stdin)
-except ValueError:  # json.JSONDecodeError / UnicodeDecodeError: not a packet
-    print("hydration degraded — resume via PICKUP search when online; next=")
-    raise SystemExit(0)
-ctx = d.get("additional_context") or ""
-pkt = d.get("packet") or {}
-stats = pkt.get("hydrate_stats") or {}
-if ctx.strip():
-    print(ctx)
-else:
-    print(
-        "memory hydrate: namespace=%s agent_id=%s facts_returned=%s pickup_parsed=%s"
-        % (
-            pkt.get("group_id", "unresolved"),
-            pkt.get("agent_id", ""),
-            stats.get("facts_returned", 0),
-            "yes" if stats.get("pickup_parsed") else "no",
-        )
+    proc = subprocess.run(
+        [sys.executable, "-m", "ops.memory.cli", "--surface", "cursor-session-start",
+         "--timeout", "10", "health"],
+        capture_output=True, text=True, timeout=15, check=False,
     )
-' 2>/dev/null || echo "hydration degraded — resume via PICKUP search when online; next=")"
-    else
-      # Stage C8: no provider fallback. The canonical compile is the only
-      # hydration; when it fails the session says so and resumes from the
-      # user request (memory never gates repository writes).
-      HYDRATE_MD="hydration degraded — canonical memory unavailable (make memory-readiness); next="
-    fi
+    doc = json.loads(proc.stdout or "{}")
+except (subprocess.TimeoutExpired, ValueError) as exc:
+    doc = {"status": "TIMEOUT" if isinstance(exc, subprocess.TimeoutExpired) else "INVALID_RECEIPT",
+           "error": type(exc).__name__}
+status = str(doc.get("status") or "UNKNOWN").rsplit(".", 1)[-1]
+print("### memory status")
+print("- SessionStart is health-only: no records read, nothing hydrated")
+if doc.get("ok"):
+    print("- memory health: OK")
+elif fault_class_for(status) == "environment":
+    print("ENVIRONMENT_FAULT memory runtime did not answer health (%s)" % status)
+    print("REPAIR: make memory-readiness")
+else:
+    print("DEGRADED memory health %s: %s" % (status, str(doc.get("error") or "")[:200]))
+print("- " + on_demand)
+' 2>/dev/null || printf '%s\n' '### memory status' 'DEGRADED memory health check failed to run' '- on demand: python -m ops.memory.cli hydrate "<task>" --workspace <repo>')"
   else
-    HYDRATE_MD="hydrate CLI missing — resume via PICKUP search when online; next="
+    HYDRATE_MD="$(printf '%s\n' '### memory status' 'ENVIRONMENT_FAULT memory CLI missing (ops/memory/cli.py)' 'REPAIR: make memory-readiness')"
   fi
 else
   HYDRATE_MD="Graphiti disabled — no resume memory"
