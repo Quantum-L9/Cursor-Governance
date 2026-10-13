@@ -125,6 +125,37 @@ agents:
       - cursor-governance
       - l9-graphiti-memory
       - l9-node-template
+      # RECON-0 allowlist (2026-10-12): bounded write-grant expansion for this
+      # actor only. Finite list, no wildcard, role unchanged.
+      - quantum-l9-github
+      - cognitive-engine-graphs
+      - constellation-gate
+      - enrichment-inference-engine
+      - gate-sdk
+      - ideaos
+      - seo-bot
+      - splitwisely-ai
+      - website-bot
+      - l9-assurance
+      - l9-campaign-execution
+      - l9-ci-core
+      - l9-ci-debt-intelligence
+      - l9-ci-debt-lsp
+      - l9-ci-debt-resolver
+      - l9-ci-sdk
+      - l9-cognitive-runtime
+      - l9-constellation-topology
+      - l9-harness
+      - l9-learning-foundry
+      - l9-meta-injector
+      - l9-observability-core
+      - pr-repair
+      - l9-repo-template
+      - l9-revops
+      - l9-semantic-compiler-engine
+      - l9-state
+      - l9-wip
+      - ib-odoo-19
     adapter: claude-code
     binding_status: active
   manus:

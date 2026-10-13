@@ -234,3 +234,121 @@ def test_locate_clone_survives_an_unresolvable_start_path(tmp_path: Path) -> Non
     # must also come back as "not located" rather than a false positive.
     missing = tmp_path / "absent" / "deeper"
     assert nc.locate_clone_for_namespace("cursor-governance", from_workspace=missing) is None
+
+
+# --- RECON-0 allowlist (2026-10-12): the same 31 slugs Memory registers --------
+
+RECON_0_NAMESPACES = {
+    "Quantum-L9/.github": "quantum-l9-github",
+    "Quantum-L9/Cognitive.Engine.Graphs": "cognitive-engine-graphs",
+    "Quantum-L9/Constellation.Gate": "constellation-gate",
+    "Quantum-L9/Cursor-Governance": "cursor-governance",
+    "Quantum-L9/Enrichment.Inference.Engine": "enrichment-inference-engine",
+    "Quantum-L9/Gate_SDK": "gate-sdk",
+    "Quantum-L9/IdeaOS": "ideaos",
+    "Quantum-L9/SEO-Bot": "seo-bot",
+    "Quantum-L9/SplitWisely.ai": "splitwisely-ai",
+    "Quantum-L9/Website-Bot": "website-bot",
+    "Quantum-L9/l9-assurance": "l9-assurance",
+    "Quantum-L9/l9-campaign-execution": "l9-campaign-execution",
+    "Quantum-L9/l9-ci-core": "l9-ci-core",
+    "Quantum-L9/l9-ci-debt-intelligence": "l9-ci-debt-intelligence",
+    "Quantum-L9/l9-ci-debt-lsp": "l9-ci-debt-lsp",
+    "Quantum-L9/l9-ci-debt-resolver": "l9-ci-debt-resolver",
+    "Quantum-L9/l9-ci-sdk": "l9-ci-sdk",
+    "Quantum-L9/l9-cognitive-runtime": "l9-cognitive-runtime",
+    "Quantum-L9/l9-constellation-topology": "l9-constellation-topology",
+    "Quantum-L9/l9-graphiti-memory": "l9-graphiti-memory",
+    "Quantum-L9/l9-harness": "l9-harness",
+    "Quantum-L9/l9-learning-foundry": "l9-learning-foundry",
+    "Quantum-L9/l9-meta-injector": "l9-meta-injector",
+    "Quantum-L9/l9-observability-core": "l9-observability-core",
+    "Quantum-L9/l9-pr-repair": "pr-repair",
+    "Quantum-L9/l9-repo-template": "l9-repo-template",
+    "Quantum-L9/l9-revops": "l9-revops",
+    "Quantum-L9/l9-semantic-compiler-engine": "l9-semantic-compiler-engine",
+    "Quantum-L9/l9-state": "l9-state",
+    "Quantum-L9/l9-wip": "l9-wip",
+    "cryptoxdog/IB-Odoo_19": "ib-odoo-19",
+}
+
+
+def _remote_forms(owner_repo: str) -> list[str]:
+    return [
+        f"https://github.com/{owner_repo}",
+        f"https://github.com/{owner_repo}.git",
+        f"git@github.com:{owner_repo}.git",
+        f"ssh://git@github.com/{owner_repo}.git",
+        f"http://local_proxy@127.0.0.1:8080/git/{owner_repo}",
+    ]
+
+
+def test_recon_allowlist_maps_one_to_one_onto_the_hint_registry() -> None:
+    repos = nc.load_registry()["repos"]
+    by_github: dict[str, list[str]] = {}
+    for slug, entry in repos.items():
+        by_github.setdefault(entry["github"], []).append(slug)
+    for owner_repo, slug in RECON_0_NAMESPACES.items():
+        assert by_github.get(owner_repo) == [slug], owner_repo
+
+
+def test_every_recon_remote_form_hints_its_own_slug(tmp_path: Path) -> None:
+    registry = nc.load_registry()
+    for index, (owner_repo, slug) in enumerate(sorted(RECON_0_NAMESPACES.items())):
+        name = owner_repo.split("/", 1)[1]
+        for form, remote in enumerate(_remote_forms(owner_repo)):
+            repo = _git_repo(tmp_path / f"r{index:02d}f{form}" / name, remote)
+            context = nc.resolve_namespace_context(repo, registry=registry, env={})
+            assert context.write_namespace_hint == slug, (remote, context.candidates)
+            assert context.as_dict()["authorization"] == "not_decided_here"
+
+
+def test_a_nested_dot_github_directory_is_not_the_dot_github_repository(tmp_path: Path) -> None:
+    registry = nc.load_registry()
+    seo = _git_repo(tmp_path / "SEO-Bot", "https://github.com/Quantum-L9/SEO-Bot.git")
+    nested = seo / ".github" / "workflows"
+    nested.mkdir(parents=True)
+    assert nc.match_registry_slugs(registry, remote=None, path_parts=set(nested.parts)) != [
+        "quantum-l9-github"
+    ]
+    assert nc.resolve_namespace_context(nested, registry=registry, env={}).write_namespace_hint == (
+        "seo-bot"
+    )
+    orphan = tmp_path / "plain" / ".github" / "workflows"
+    orphan.mkdir(parents=True)
+    unresolved = nc.resolve_namespace_context(orphan, registry=registry, env={})
+    assert unresolved.write_namespace_hint is None
+    real = _git_repo(tmp_path / ".github", "https://github.com/Quantum-L9/.github")
+    assert nc.resolve_namespace_context(real, registry=registry, env={}).write_namespace_hint == (
+        "quantum-l9-github"
+    )
+
+
+def test_lookalike_remotes_do_not_borrow_a_new_recon_slug(tmp_path: Path) -> None:
+    registry = nc.load_registry()
+    new_slugs = {
+        "quantum-l9-github",
+        "ideaos",
+        "l9-campaign-execution",
+        "l9-learning-foundry",
+        "l9-observability-core",
+        "l9-revops",
+        "l9-semantic-compiler-engine",
+        "l9-state",
+        "l9-wip",
+    }
+    for index, remote in enumerate(
+        (
+            "https://github.com/someone-else/.github",
+            "https://github.com/Quantum-L9/.github-mirror",
+            "https://github.com/Quantum-L9/l9-state-machine",
+            "https://github.com/Quantum-L9/IdeaOS-2.git",
+            "git@github.com:not-Quantum-L9/l9-revops.git",
+            "https://github.com/Quantum-L9/l9-wip2",
+        )
+    ):
+        repo = _git_repo(tmp_path / f"neutral{index}", remote)
+        matches = nc.match_registry_slugs(
+            registry, remote=nc.git_remote_url(repo), path_parts=set(repo.parts)
+        )
+        assert not set(matches) & new_slugs, (remote, matches)

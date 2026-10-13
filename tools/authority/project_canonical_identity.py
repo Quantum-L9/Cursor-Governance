@@ -8,7 +8,7 @@ import subprocess
 import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 import yaml
 
@@ -51,43 +51,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+SOURCE_PATHS = {
+    "actor_registry": "semantics/actor_registry.yaml",
+    "surface_registry": "semantics/surface_registry.yaml",
+    "projection_profile": "semantics/projection_profiles.yaml",
+}
+
+
 def main() -> int:
     args = parse_args()
     authority_root = args.authority_root.resolve()
-    actor_path = authority_root / "semantics" / "actor_registry.yaml"
-    surface_path = authority_root / "semantics" / "surface_registry.yaml"
-    profile_path = authority_root / "semantics" / "projection_profiles.yaml"
-    actor_bytes = _read_required(actor_path)
-    surface_bytes = _read_required(surface_path)
-    profile_bytes = _read_required(profile_path)
+    sources = {
+        name: _read_required(authority_root / relative) for name, relative in SOURCE_PATHS.items()
+    }
     binding_bytes = _read_required(args.registry)
-    actor_registry = _yaml_mapping(actor_bytes, actor_path)
-    surface_registry = _yaml_mapping(surface_bytes, surface_path)
-    profile_catalog = _yaml_mapping(profile_bytes, profile_path)
-    bindings = _yaml_mapping(binding_bytes, args.registry)
-    _require_artifact(actor_registry, ACTOR_ARTIFACT, actor_path)
-    _require_artifact(surface_registry, SURFACE_ARTIFACT, surface_path)
-    _require_artifact(profile_catalog, PROFILE_CATALOG_ARTIFACT, profile_path)
-    profile = _projection_profile(profile_catalog, PROFILE_REF)
-    actor_ids, surface_ids = _requested_identities(bindings)
     source_revision = args.source_revision or _git_revision(authority_root)
-    projection = project(
-        actor_registry=actor_registry,
-        surface_registry=surface_registry,
-        actor_ids=actor_ids,
-        surface_ids=surface_ids,
-        source_revision=source_revision,
-        actor_digest=_digest(actor_bytes),
-        surface_digest=_digest(surface_bytes),
-        profile_digest=_object_digest(profile),
-    )
-    output_bytes = _dump_yaml(projection)
-    receipt = build_receipt(
-        projection=projection,
+    output_bytes, receipt_bytes, _ = render(
+        sources=sources,
+        binding_bytes=binding_bytes,
+        registry_path=args.registry,
         output_path=args.output,
-        output_digest=_digest(output_bytes),
+        source_revision=source_revision,
     )
-    receipt_bytes = _dump_yaml(receipt)
     if args.check:
         failures: list[str] = []
         if not args.output.is_file():
@@ -98,17 +83,179 @@ def main() -> int:
             failures.append(f"missing projection receipt: {args.receipt}")
         elif args.receipt.read_bytes() != receipt_bytes:
             failures.append(f"stale projection receipt: {args.receipt}")
-        if failures:
-            for failure in failures:
-                print(failure, file=sys.stderr)
-            return 1
-        print("canonical identity projection is current")
-        return 0
+        if not failures:
+            print("canonical identity projection is current")
+            return 0
+        if args.output.is_file() and args.receipt.is_file():
+            historical, reasons = provenance_equivalence(
+                authority_root=authority_root,
+                current_revision=source_revision,
+                current_sources=sources,
+                binding_bytes=binding_bytes,
+                registry_path=args.registry,
+                output_path=args.output,
+                committed_output=args.output.read_bytes(),
+                committed_receipt=args.receipt.read_bytes(),
+            )
+            if not reasons:
+                print(
+                    "canonical identity projection is provenance-equivalent: committed "
+                    f"at Quantum-L9/.github@{historical}, governing inputs unchanged "
+                    f"through @{source_revision}"
+                )
+                return 0
+            failures.extend(f"not provenance-equivalent: {reason}" for reason in reasons)
+        for failure in failures:
+            print(failure, file=sys.stderr)
+        return 1
     _write(args.output, output_bytes)
     _write(args.receipt, receipt_bytes)
     print(args.output)
     print(args.receipt)
     return 0
+
+
+def render(
+    *,
+    sources: Mapping[str, bytes],
+    binding_bytes: bytes,
+    registry_path: Path,
+    output_path: Path,
+    source_revision: str,
+) -> tuple[bytes, bytes, dict[str, str]]:
+    """Projection bytes, receipt bytes and the governing input digests."""
+    actor_path = Path(SOURCE_PATHS["actor_registry"])
+    surface_path = Path(SOURCE_PATHS["surface_registry"])
+    profile_path = Path(SOURCE_PATHS["projection_profile"])
+    actor_registry = _yaml_mapping(sources["actor_registry"], actor_path)
+    surface_registry = _yaml_mapping(sources["surface_registry"], surface_path)
+    profile_catalog = _yaml_mapping(sources["projection_profile"], profile_path)
+    bindings = _yaml_mapping(binding_bytes, registry_path)
+    _require_artifact(actor_registry, ACTOR_ARTIFACT, actor_path)
+    _require_artifact(surface_registry, SURFACE_ARTIFACT, surface_path)
+    _require_artifact(profile_catalog, PROFILE_CATALOG_ARTIFACT, profile_path)
+    profile = _projection_profile(profile_catalog, PROFILE_REF)
+    actor_ids, surface_ids = _requested_identities(bindings)
+    digests = {
+        "actor_registry": _digest(sources["actor_registry"]),
+        "surface_registry": _digest(sources["surface_registry"]),
+        "projection_profile": _object_digest(profile),
+    }
+    projection = project(
+        actor_registry=actor_registry,
+        surface_registry=surface_registry,
+        actor_ids=actor_ids,
+        surface_ids=surface_ids,
+        source_revision=source_revision,
+        actor_digest=digests["actor_registry"],
+        surface_digest=digests["surface_registry"],
+        profile_digest=digests["projection_profile"],
+    )
+    output_bytes = _dump_yaml(projection)
+    receipt = build_receipt(
+        projection=projection,
+        output_path=output_path,
+        output_digest=_digest(output_bytes),
+    )
+    return output_bytes, _dump_yaml(receipt), digests
+
+
+def provenance_equivalence(
+    *,
+    authority_root: Path,
+    current_revision: str,
+    current_sources: Mapping[str, bytes],
+    binding_bytes: bytes,
+    registry_path: Path,
+    output_path: Path,
+    committed_output: bytes,
+    committed_receipt: bytes,
+) -> tuple[str | None, list[str]]:
+    """Accept a committed projection whose only difference is an upstream revision advance.
+
+    The canonical dependency model (``.github`` ``semantic_dependency_model``) marks
+    dependents stale on a source or profile digest change, and on a bare upstream
+    revision change requires evaluating dependency impact; historical artifacts are
+    immutable. So the committed projection stays valid, keeping its own historical
+    ``source_revision``, only when every condition below is proven:
+
+    1. its source revision is a commit in the authority checkout and an ancestor of
+       (or equal to) the current authority revision;
+    2. the committed projection and receipt are reproduced byte-for-byte from the
+       authority sources at that exact historical commit;
+    3. every governing input the profile declares (actor registry, surface registry,
+       selected projection profile) has the same digest at the current revision, and
+       the current inputs reproduce the committed bytes under the historical label.
+
+    Returns ``(historical_revision, reasons)``; an empty ``reasons`` means equivalent.
+    Anything unprovable is a reason: this never relaxes to a permissive match.
+    """
+
+    reasons: list[str] = []
+    try:
+        committed = _yaml_mapping(committed_output, output_path)
+        receipt = _yaml_mapping(committed_receipt, output_path)
+        historical = _mapping(committed.get("projection"), "projection").get("source_revision")
+        receipt_revision = _mapping(receipt.get("projection"), "receipt.projection").get(
+            "source_revision"
+        )
+    except ProjectionError as exc:
+        return None, [f"committed projection or receipt is unreadable: {exc}"]
+    if not _is_git_sha(historical):
+        return None, ["committed projection carries no pinned source revision"]
+    if receipt_revision != historical:
+        reasons.append("receipt source_revision disagrees with projection source_revision")
+    if historical == current_revision:
+        reasons.append("committed projection claims the current revision but its content differs")
+        return historical, reasons
+    if not _git_ok(authority_root, "cat-file", "-e", f"{historical}^{{commit}}"):
+        reasons.append(
+            f"historical revision {historical} is not a commit in the authority checkout "
+            "(unverifiable provenance; a shallow checkout cannot prove it)"
+        )
+        return historical, reasons
+    if not _git_ok(authority_root, "merge-base", "--is-ancestor", historical, current_revision):
+        reasons.append(
+            f"historical revision {historical} is not an ancestor of the current authority "
+            f"revision {current_revision}"
+        )
+        return historical, reasons
+    historical_sources: dict[str, bytes] = {}
+    for name, relative in SOURCE_PATHS.items():
+        blob = _git_show(authority_root, historical, relative)
+        if blob is None:
+            reasons.append(f"{relative} is missing at historical revision {historical}")
+        else:
+            historical_sources[name] = blob
+    if reasons:
+        return historical, reasons
+    try:
+        replay_output, replay_receipt, historical_digests = render(
+            sources=historical_sources,
+            binding_bytes=binding_bytes,
+            registry_path=registry_path,
+            output_path=output_path,
+            source_revision=historical,
+        )
+        relabel_output, relabel_receipt, current_digests = render(
+            sources=current_sources,
+            binding_bytes=binding_bytes,
+            registry_path=registry_path,
+            output_path=output_path,
+            source_revision=historical,
+        )
+    except ProjectionError as exc:
+        return historical, [f"historical projection cannot be reproduced: {exc}"]
+    if replay_output != committed_output:
+        reasons.append(f"committed projection is not reproducible from @{historical}")
+    if replay_receipt != committed_receipt:
+        reasons.append(f"committed receipt is not reproducible from @{historical}")
+    for name in SOURCE_PATHS:
+        if historical_digests[name] != current_digests[name]:
+            reasons.append(f"governing input {name} changed between @{historical} and current")
+    if not reasons and (relabel_output, relabel_receipt) != (committed_output, committed_receipt):
+        reasons.append("current governing inputs do not reproduce the committed projection")
+    return historical, reasons
 
 
 def project(
@@ -335,6 +482,40 @@ def _git_revision(root: Path) -> str:
     if len(revision) != 40:
         raise ProjectionError(f"unexpected git revision: {revision}")
     return revision
+
+
+def _is_git_sha(value: Any) -> TypeGuard[str]:
+    return (
+        isinstance(value, str)
+        and len(value) == 40
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _git_ok(root: Path, *args: str) -> bool:
+    git = shutil.which("git")
+    if git is None:
+        return False
+    result = subprocess.run(
+        [git, "-C", str(root), *args],
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    return result.returncode == 0
+
+
+def _git_show(root: Path, revision: str, relative: str) -> bytes | None:
+    git = shutil.which("git")
+    if git is None:
+        return None
+    result = subprocess.run(
+        [git, "-C", str(root), "show", f"{revision}:{relative}"],
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    return result.stdout if result.returncode == 0 else None
 
 
 def _read_required(path: Path) -> bytes:

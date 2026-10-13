@@ -852,6 +852,8 @@ _l9_door_status() {
   [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)
   [ -n "${L9_MEMORY_AGENT_SIGNING_KEYS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_SIGNING_KEYS_JSON)
   [ -n "${L9_MEMORY_AGENT_GRANTS_JSON:-}" ] || missing+=(L9_MEMORY_AGENT_GRANTS_JSON)
+  [ -n "${L9_MEMORY_IDENTITY_ASSERTION_JSON:-}" ] || missing+=(L9_MEMORY_IDENTITY_ASSERTION_JSON)
+  [ -n "${L9_MEMORY_IDENTITY_ASSERTION_HMAC:-}" ] || missing+=(L9_MEMORY_IDENTITY_ASSERTION_HMAC)
   if [ -n "${L9_MEMORY_HUMAN_DOOR_SECRET:-}" ]; then
     say "signed-agent door: WARN L9_MEMORY_HUMAN_DOOR_SECRET is present in an agent session environment — the human private entrance must never reach agent processes (ADR-0031); unset it in the launching shell"
   fi
@@ -867,20 +869,20 @@ _l9_door_status() {
     say "signed-agent door: PROVISIONED — ~/.config/l9-memory holds the $_agent key and grants (container-local on a hosted session; never in the environment settings); run_memory_mcp.sh mints the door at MCP spawn. Every agent memory names its author"
   elif [ "${#missing[@]}" -eq 0 ]; then
     say "signed-agent door: pre-launch handoff PRESENT (agent_id=${_agent:-UNRESOLVED}) — the l9-graphite-memory stdio server inherits it from the Claude parent environment"
-  elif [ "${#missing[@]}" -eq 4 ] && [ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" = "1" ]; then
+  elif [ "${#missing[@]}" -eq 6 ] && [ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" = "1" ]; then
     say "signed-agent door: ABSENT with L9_MEMORY_ALLOW_LOCAL_OPERATOR=1 — the memory server runs as the anonymous local-operator: agent memory writes carry NO agent identity this session (operator opt-out)"
-  elif [ "${#missing[@]}" -eq 4 ] && [ "$(printf '%s' "${CLAUDE_CODE_REMOTE:-}" | tr '[:upper:]' '[:lower:]')" = "true" ] && [ -n "$_agent" ]; then
+  elif [ "${#missing[@]}" -eq 6 ] && [ "$(printf '%s' "${CLAUDE_CODE_REMOTE:-}" | tr '[:upper:]' '[:lower:]')" = "true" ] && [ -n "$_agent" ]; then
     # Hosted: nothing for the operator to do. run_memory_mcp.sh mints the
     # container-local authority at spawn when setup did not.
     say "signed-agent door: NOT YET MINTED on this hosted container — run_memory_mcp.sh mints the $_agent authority into ~/.config/l9-memory at MCP spawn (nothing to paste). If the l9-graphite-memory tools are absent this session, its stderr names why"
-  elif [ "${#missing[@]}" -eq 4 ]; then
+  elif [ "${#missing[@]}" -eq 6 ]; then
     # A memory must name the agent that wrote it, so run_memory_mcp.sh refuses
     # to start the server without the door rather than fall back to the
     # anonymous local-operator principal. Say that here, at session start, so an
     # absent memory tool is never a mystery.
     say "signed-agent door: UNAVAILABLE — AGENT MEMORY WRITES ARE OFF this session. The l9-graphite-memory MCP server refuses to start without the signed ${_agent:-UNRESOLVED} door (a memory must name the agent that wrote it). Fix (workstation, once): python -m ops.memory.materialize_agent_authority --add-keys-to ~/.config/l9-memory/agent_tokens.local.json --agent-id ${_agent:-<id>} (ops/memory/AGENT_WRITE_CONTRACT.md → Signed agent identity); the next session mints the door at spawn. Never paste a key into the environment settings. Hook-lane hydrate/close are unaffected. Do not reroute a model-authored fact through the operator CLI (ADR-0033 / INV-03b)"
   else
-    say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; the package server refuses the door when L9_MEMORY_AGENTS_DOOR_SECRET is set without the assertion, key map, and grants (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
+    say "signed-agent door: PARTIAL pre-launch handoff — missing ${missing[*]}; run_memory_mcp.sh refuses to launch without all six signed-door values, including the canonical identity assertion and its HMAC (fail-closed). Re-source ops/memory/export_agent_assertion_env.sh in the launching shell"
   fi
 }
 _l9_door_status

@@ -27,6 +27,8 @@ DOOR_VARS = (
     "L9_MEMORY_AGENT_ASSERTION",
     "L9_MEMORY_AGENT_SIGNING_KEYS_JSON",
     "L9_MEMORY_AGENT_GRANTS_JSON",
+    "L9_MEMORY_IDENTITY_ASSERTION_JSON",
+    "L9_MEMORY_IDENTITY_ASSERTION_HMAC",
 )
 
 
@@ -134,11 +136,15 @@ MOBILE = {
 }
 
 
-def _launch(env_extra: dict[str, str], tmp_path: Path) -> subprocess.CompletedProcess[str]:
+def _launch(
+    env_extra: dict[str, str], tmp_path: Path, probe: str | None = None
+) -> subprocess.CompletedProcess[str]:
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith(("L9_MEMORY_AGENT", "L9_MEMORY_ALLOW", "L9_MEMORY_SECRET"))
+        if not key.startswith(
+            ("L9_MEMORY_AGENT", "L9_MEMORY_ALLOW", "L9_MEMORY_SECRET", "L9_MEMORY_IDENTITY")
+        )
         and key not in ("L9_MEMORY_AGENTS_DOOR_SECRET", "L9_MEMORY_GRANTS_MAP")
         and not key.startswith(SURFACE_MARKERS)
     }
@@ -149,7 +155,7 @@ def _launch(env_extra: dict[str, str], tmp_path: Path) -> subprocess.CompletedPr
         L9_MEMORY_AGENT_ID="claude-code",  # the projected family marker, refined by surface
         **env_extra,
     )
-    probe = (
+    probe = probe or (
         "import os; print(os.environ['L9_MEMORY_AGENT_ID'], "
         f"' '.join(n for n in {DOOR_VARS!r} if os.environ.get(n)))"
     )
@@ -404,3 +410,82 @@ def test_session_start_sees_a_provisioned_local_door(tmp_path: Path) -> None:
     maa.provision_local(ROOT, tmp_path / ".config" / "l9-memory", ["claude-code"])
     assert _door_has(tmp_path, "claude-code") == 0
     assert _door_has(tmp_path, "cursor") == 1, "only the keyed identity"
+
+
+# --- the minted door against the real Memory verifier ---------------------------
+
+#: Runs inside the launched interpreter, so it sees exactly the six values the
+#: launcher exec'd with. Prints names, verdicts, and namespaces only; never a value.
+_VERIFY_PROBE = """
+import json, os
+from l9_graphite_memory.config import MemorySettings
+from l9_graphite_memory.server import StdioPrincipalResolver
+
+def door():
+    return StdioPrincipalResolver(MemorySettings()).door_principal
+
+good = door()
+identity = json.loads(os.environ["L9_MEMORY_IDENTITY_ASSERTION_JSON"])
+report = {
+    "agent_id": good.agent_id,
+    "auth_method": good.auth_method,
+    "is_admin": good.is_admin,
+    "write_namespaces": sorted(good.write_namespaces),
+    "promote_namespaces": sorted(good.promote_namespaces),
+    "surface_identity": identity["resolved_dimensions"]["surface_identity"],
+    "refused": {},
+}
+saved = dict(os.environ)
+signing = json.loads(saved["L9_MEMORY_AGENT_SIGNING_KEYS_JSON"])
+other_actor = dict(identity, subject_ref="l9.actor-registry/global@1#cursor")
+cases = {
+    "missing_hmac": {"L9_MEMORY_IDENTITY_ASSERTION_HMAC": None},
+    "wrong_hmac": {"L9_MEMORY_IDENTITY_ASSERTION_HMAC": "0" * 64},
+    "malformed_identity": {"L9_MEMORY_IDENTITY_ASSERTION_JSON": "{not json"},
+    "missing_identity": {"L9_MEMORY_IDENTITY_ASSERTION_JSON": None},
+    "other_actor_identity": {"L9_MEMORY_IDENTITY_ASSERTION_JSON": json.dumps(other_actor)},
+    "wrong_signing_key": {
+        "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": json.dumps({k: "f" * 48 for k in signing})
+    },
+    "key_for_another_agent": {
+        "L9_MEMORY_AGENT_SIGNING_KEYS_JSON": json.dumps({"cursor": next(iter(signing.values()))})
+    },
+    "missing_assertion": {"L9_MEMORY_AGENT_ASSERTION": None},
+}
+for case, change in cases.items():
+    os.environ.clear()
+    os.environ.update(saved)
+    for name, value in change.items():
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
+    try:
+        door()
+    except Exception as exc:  # any refusal is a refusal; the class is reported
+        report["refused"][case] = type(exc).__name__
+    else:
+        report["refused"][case] = None
+print(json.dumps(report))
+"""
+
+
+def test_the_minted_mobile_door_verifies_and_tampering_is_refused(tmp_path: Path) -> None:
+    """Hosted mint -> launcher exec -> the real Memory verifier, no live data."""
+    result = _launch(MOBILE, tmp_path, probe=_VERIFY_PROBE)
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout.strip().splitlines()[-1])
+
+    registry = yaml.safe_load((ROOT / "environment/agents/agent_registry.yaml").read_text())
+    assigned = registry["agents"]["claude-code"]["assigned_groups"]
+    assert report["agent_id"] == "claude-code", "the author is the actor, never the surface"
+    assert report["auth_method"] == "stdio-agent-assertion"
+    assert report["is_admin"] is False
+    assert report["write_namespaces"] == sorted(assigned)
+    assert "*" not in report["write_namespaces"]
+    assert report["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
+    assert all(report["refused"].values()), report["refused"]
+
+    local = tmp_path / ".config" / "l9-memory" / "agent_tokens.local.json"
+    key = json.loads(local.read_text())["agent_signing_keys"]["claude-code"]
+    assert key not in result.stdout + result.stderr, "values never printed"

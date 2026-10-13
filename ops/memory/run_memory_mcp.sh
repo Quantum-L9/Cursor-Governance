@@ -120,15 +120,26 @@ if [[ ! -f "$_exporter" ]]; then
   echo "run_memory_mcp: $_exporter missing — cannot mint the signed agent door; refuse to launch" >&2
   exit 1
 fi
+# The six Tier-2 admission values the server reads. The server verifies the
+# signature, digest, and actor; this gate only refuses to exec without them.
+_door_names=(L9_MEMORY_AGENTS_DOOR_SECRET L9_MEMORY_AGENT_ASSERTION
+  L9_MEMORY_AGENT_SIGNING_KEYS_JSON L9_MEMORY_AGENT_GRANTS_JSON
+  L9_MEMORY_IDENTITY_ASSERTION_JSON L9_MEMORY_IDENTITY_ASSERTION_HMAC)
+L9_ASSERTION_EXPORT_STATUS=""
 # shellcheck source=/dev/null
 source "$_exporter"
 if [[ -n "${_authority_dir:-}" ]]; then
   rm -rf "$_authority_dir"
   trap - EXIT
 fi
+if [[ "${L9_ASSERTION_EXPORT_STATUS:-}" == "failed" ]]; then
+  # A refused mint leaves whatever door the parent environment carried. Drop
+  # it rather than launch on stale values that merely look complete.
+  echo "run_memory_mcp: signed agent door mint FAILED for ${L9_MEMORY_AGENT_ID} — inherited door values discarded" >&2
+  unset "${_door_names[@]}"
+fi
 _door_missing=()
-for _name in L9_MEMORY_AGENTS_DOOR_SECRET L9_MEMORY_AGENT_ASSERTION \
-  L9_MEMORY_AGENT_SIGNING_KEYS_JSON L9_MEMORY_AGENT_GRANTS_JSON; do
+for _name in "${_door_names[@]}"; do
   [[ -n "${!_name:-}" ]] || _door_missing+=("$_name")
 done
 if [[ "${#_door_missing[@]}" -ne 0 ]]; then
