@@ -384,6 +384,12 @@ fi
 # of the open PR's body (read into .l9/pr/open-pr-body.md): the regions are a
 # function of the range, and the range moves with every push.
 _compose_title_and_body() {
+  # Refresh runs AFTER the push: nothing on that path may abort make pr. A
+  # failure there is a WARN and leaves the open PR's body as it was; the
+  # create path still fails closed before anything is opened.
+  _compose_refresh=0
+  _refresh_blocked=""
+  [[ "${1:-}" == "--refresh" ]] && _compose_refresh=1
   # The composer owns the range rule (no merges, nothing already on origin/main).
   # A bare `git log base..HEAD | head -1` here titled PR #602 with a main commit
   # the stack parent had merely not caught up to yet.
@@ -422,6 +428,10 @@ _compose_title_and_body() {
       _additive_measured=1
       rm -f "$_additive_err"
     else
+      if [[ "$_compose_refresh" -eq 1 ]]; then
+        _refresh_blocked="the additive_only root files could not be measured (see $_additive_err)"
+        return 0
+      fi
       echo "ERROR: could not measure additive_only root files in ${PR_BASE}..HEAD." >&2
       [[ -s "$_additive_err" ]] && sed 's/^/       /' "$_additive_err" >&2
       echo "       Refusing to compose a PR body that would claim there are none." >&2
@@ -468,16 +478,25 @@ _compose_title_and_body() {
     printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"
     compose_args+=(--campaign-body-file "$WS/.l9/pr/campaign-body.md")
   fi
-  if [[ "${1:-}" == "--refresh" ]]; then
+  if [[ "$_compose_refresh" -eq 1 ]]; then
     # Regions only: the open PR's body is read, its machine-owned regions are
     # recomposed, and everything outside them -- reviewer prose, ticked gates,
     # a human-edited title -- is left exactly as it is.
     compose_args+=(--refresh-body "$WS/.l9/pr/open-pr-body.md"
       --status-file "$WS/.l9/pr/pr-body-refresh.json")
+    rm -f "$WS/.l9/pr/pr-body-refresh.json"
   fi
   if ! body="$("$compose_python" "$compose_py" "${compose_args[@]}")"; then
+    if [[ "$_compose_refresh" -eq 1 ]]; then
+      _refresh_blocked="the composer could not refresh it (see the error above)"
+      return 0
+    fi
     echo "FAIL: could not compose the PR body (see the composer error above); nothing was sent" >&2
     exit 1
+  fi
+  if [[ "$_compose_refresh" -eq 1 ]] && grep -q '"status": "unmanaged"' "$WS/.l9/pr/pr-body-refresh.json" 2>/dev/null; then
+    # Not ours to edit or to judge; the advisory WARN below covers it.
+    return 0
   fi
   # Prove the body satisfies the protected-root contract BEFORE the PR exists.
   # The stamp check is CI-enforced (`--require-pr-body` / GITHUB_ACTIONS), so a
@@ -489,6 +508,10 @@ _compose_title_and_body() {
     if ! "$_gov_python" "$_root_protect_py" \
         --base "$PR_BASE" --head HEAD --repo "$WS" \
         --pr-body-file "$WS/.l9/pr/pr-body.md" --require-pr-body; then
+      if [[ "$_compose_refresh" -eq 1 ]]; then
+        _refresh_blocked="the refreshed body does not satisfy the protected-root contract (draft: $WS/.l9/pr/pr-body.md)"
+        return 0
+      fi
       echo "FAIL: composed PR body does not satisfy the protected-root contract" >&2
       echo "      body draft: $WS/.l9/pr/pr-body.md" >&2
       echo "      nothing was opened; fix the body or the template, then re-run make pr" >&2
@@ -560,8 +583,15 @@ else
       _compose_title_and_body --refresh
       _refresh_status="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' \
         "$WS/.l9/pr/pr-body-refresh.json" 2>/dev/null || echo unknown)"
-      printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
+      if [[ -n "$_refresh_blocked" ]]; then
+        _refresh_status="blocked"
+      else
+        printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
+      fi
       case "$_refresh_status" in
+        blocked)
+          echo "WARN: the PR body was not refreshed: $_refresh_blocked; the open PR keeps its previous text"
+          ;;
         unchanged)
           _refreshed=1
           echo "Unchanged: the PR body's machine-owned regions already match this range"

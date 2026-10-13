@@ -765,6 +765,36 @@ def test_open_pr_after_gate_refreshes_only_machine_owned_regions() -> None:
     assert '"$_refreshed" -eq 0' in reopen
 
 
+def test_a_refresh_after_the_push_never_aborts_make_pr() -> None:
+    """Codex/Copilot on #720: the refresh runs after the push, so a create-time
+    `exit 1` reached from it reported a published PR as failed and skipped the
+    summary and subscribe steps. An unmanaged (person-authored) body is not
+    validated at all; every other refresh failure becomes a WARN and leaves the
+    open body untouched. The create path still fails closed.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    compose = script[script.index("_compose_title_and_body() {") :]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
+    assert '[[ "${1:-}" == "--refresh" ]] && _compose_refresh=1' in compose
+    # Each fatal exit inside the compose function that a refresh can reach is
+    # preceded by its refresh guard.
+    for fatal in (
+        "could not measure additive_only root files",
+        "could not compose the PR body",
+        "composed PR body does not satisfy the protected-root contract",
+    ):
+        at = compose.index(fatal)
+        guard = compose.rfind('if [[ "$_compose_refresh" -eq 1 ]]; then', 0, at)
+        assert guard != -1 and "_refresh_blocked=" in compose[guard:at], fatal
+    # An unmanaged body returns before the protected-root check runs on it.
+    unmanaged = compose.index('"status": "unmanaged"')
+    assert unmanaged < compose.index("--require-pr-body")
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    assert "blocked)" in reopen
+    assert "the PR body was not refreshed: $_refresh_blocked" in reopen
+
+
 def test_open_pr_after_gate_composes_only_from_the_canonical_org_template() -> None:
     """A consumer-local or governance-checkout copy never chooses the schema.
 

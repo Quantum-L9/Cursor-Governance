@@ -668,6 +668,11 @@ _PATHS_PH = re.compile(r"^- ` `$", re.M)
 _EVIDENCE_PH = re.compile(r"```\n\$ pytest -q\n\$ ruff check \. && pyright\n```")
 _FILES_PH = re.compile(r"_pending — the bot fills this in on push_")
 _INTENT_PH = re.compile(r"\*\*Added\*\*.*?\*\*Deleted\*\*\n- `path/to/dead.py`[^\n]*", re.S)
+_REGION_PLACEHOLDERS = {
+    REGION_PROTECTED_PATHS: _PATHS_PH,
+    REGION_EVIDENCE: _EVIDENCE_PH,
+    REGION_INTENT: _INTENT_PH,
+}
 
 
 def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
@@ -1067,7 +1072,13 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
     )
 
 
-def refresh_body(existing: str, facts: MechanicalFacts, *, remote: bool = False) -> tuple[str, str]:
+def refresh_body(
+    existing: str,
+    facts: MechanicalFacts,
+    *,
+    remote: bool = False,
+    template: Callable[[], str] | None = None,
+) -> tuple[str, str]:
     """Rewrite only the machine-owned regions of an open PR's body.
 
     Returns ``(body, status)`` with status one of ``unchanged``, ``updated``,
@@ -1078,6 +1089,13 @@ def refresh_body(existing: str, facts: MechanicalFacts, *, remote: bool = False)
     ``remote`` is the event-driven refresh: no local receipts and no
     additive_only measurement exist there, so Evidence is only ever marked
     stale for a new head and Protected-root paths are left as measured.
+
+    ``template`` loads the canonical template. It is called only when a local
+    refresh measures a different protected-root path set or edit mode: then
+    the whole Protected-root section (paths, Edit mode, Why, Proof) is
+    recomposed, because every one of those claims described the old range.
+    Without a loader that case raises TemplateError rather than leaving a
+    stale declaration under a current stamp.
     """
     body = existing.replace("\r\n", "\n")
     status = "updated"
@@ -1097,13 +1115,47 @@ def refresh_body(existing: str, facts: MechanicalFacts, *, remote: bool = False)
     if evidence is not None:
         fresh = stale_evidence(evidence, facts.head) if remote else render_evidence(facts)
         body = set_region(body, REGION_EVIDENCE, fresh)
-    if not remote:
-        body = set_region(body, REGION_PROTECTED_PATHS, render_protected_paths(facts))
+    if not remote and _region_span(body, REGION_PROTECTED_PATHS) is not None:
+        body = _refresh_protected_root(body, facts, template)
         if facts.additive_only_paths and PROTECTED_STAMP not in body:
             body = PROTECTED_STAMP + "\n" + body
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
+
+
+_EDIT_MODE_RE = re.compile(r"^- \[x\] \*\*(Append-only|Justified rewrite)\*\*", re.M)
+
+
+def _protected_claims(text: str) -> tuple[str, tuple[str, ...]]:
+    paths = (region_content(text, REGION_PROTECTED_PATHS) or "").strip()
+    return paths, tuple(_EDIT_MODE_RE.findall(text))
+
+
+def _refresh_protected_root(
+    body: str, facts: MechanicalFacts, template: Callable[[], str] | None
+) -> str:
+    """Recompose the Protected-root section when its measured claims moved."""
+    fresh_paths = render_protected_paths(facts).strip()
+    current_paths, current_mode = _protected_claims(body)
+    if current_paths == fresh_paths:
+        rewrite = any(path in facts.deletion_markers for path in facts.additive_only_paths)
+        expected = ("Justified rewrite",) if rewrite else ("Append-only",)
+        if not facts.additive_only_paths or current_mode == expected:
+            return body
+    if template is None:
+        msg = (
+            "the protected-root path set or edit mode changed; the canonical template is "
+            "needed to recompose Edit mode, Why and Proof"
+        )
+        raise TemplateError(msg)
+    fresh = compose_pr_body(facts, template()).body
+    old_bounds = _section_bounds(body, "## Protected-root")
+    new_bounds = _section_bounds(fresh, "## Protected-root")
+    if old_bounds is None or new_bounds is None:
+        return set_region(body, REGION_PROTECTED_PATHS, fresh_paths)
+    section = fresh[new_bounds[0] : new_bounds[1]]
+    return body[: old_bounds[0]] + section + body[old_bounds[1] :]
 
 
 _LEGACY_APPENDIX = ("## Commits", "## Test plan", "## Changed files", "## Mechanical evidence")
@@ -1205,6 +1257,14 @@ def validate_template(text: str) -> list[str]:
         f"missing region markers {region_markers(name)[0]} ... {region_markers(name)[1]}"
         for name in REQUIRED_TEMPLATE_REGIONS
         if _region_span(text, name) is None
+    )
+    # Every other machine region needs its markers or the exact placeholder
+    # the composer knows how to wrap; otherwise _put_region would insert
+    # nothing and the body would ship boilerplate where a measurement belongs.
+    errors.extend(
+        f"region {name}: neither its markers nor the supported placeholder"
+        for name, placeholder in _REGION_PLACEHOLDERS.items()
+        if _region_span(text, name) is None and placeholder.search(text) is None
     )
     return errors
 
@@ -1375,7 +1435,15 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
 
     if args.refresh_body is not None:
         existing = args.refresh_body.read_text(encoding="utf-8")
-        body, status = refresh_body(existing, facts, remote=args.remote)
+        loader: Callable[[], str] | None = None
+        if args.template and args.template.is_file():
+            loader = args.template.read_text
+        elif args.org_owner:
+
+            def loader() -> str:
+                return resolve_template(workspace, args.org_owner, args.repo_name).text
+
+        body, status = refresh_body(existing, facts, remote=args.remote, template=loader)
         _write_status(
             args.status_file,
             {"status": status, "head": facts.head, "rows": len(facts.changed_files)},

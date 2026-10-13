@@ -911,16 +911,47 @@ class RefreshTests(unittest.TestCase):
         self.assertNotIn("STALE", fresh)
         self.assertIn("content_digest=d2", fresh)
 
-    def test_protected_root_paths_refresh_only_when_measured(self) -> None:
+    def test_protected_root_section_refreshes_only_when_measured(self) -> None:
         composed = compose_pr_body(_facts(self.FIRST), CANONICAL_TEMPLATE).body
         touched = _facts(["M\tAGENTS.md"], additive_only_paths=["AGENTS.md"])
         remote, _ = refresh_body(composed, touched, remote=True)
         self.assertEqual(
             region_content(remote, REGION_PROTECTED_PATHS), "- N/A — no additive_only root files"
         )
-        local, _ = refresh_body(composed, touched)
+        # A measured change recomposes every claim in the section, not just
+        # the path list: Edit mode, Why and Proof described the old range.
+        local, _ = refresh_body(composed, touched, template=lambda: CANONICAL_TEMPLATE)
         self.assertEqual(region_content(local, REGION_PROTECTED_PATHS), "- `AGENTS.md`")
         self.assertIn(PROTECTED_STAMP, local)
+        section = _section(local, "Protected-root")
+        self.assertIn("- [x] **Append-only**", section)
+        self.assertNotIn("N/A — no additive_only root files in this diff.", section)
+        rewritten = _facts(
+            ["M\tAGENTS.md"],
+            additive_only_paths=["AGENTS.md"],
+            deletion_markers={"AGENTS.md": "fold stale pointer"},
+        )
+        again, _ = refresh_body(local, rewritten, template=lambda: CANONICAL_TEMPLATE)
+        self.assertIn("- [x] **Justified rewrite**", _section(again, "Protected-root"))
+        self.assertIn("AGENTS.md: fold stale pointer", _section(again, "Protected-root"))
+
+    def test_protected_root_change_without_template_fails_closed(self) -> None:
+        composed = compose_pr_body(_facts(self.FIRST), CANONICAL_TEMPLATE).body
+        touched = _facts(["M\tAGENTS.md"], additive_only_paths=["AGENTS.md"])
+        with self.assertRaisesRegex(TemplateError, "recompose Edit mode, Why and Proof"):
+            refresh_body(composed, touched)
+
+    def test_unchanged_protected_root_keeps_reviewer_text(self) -> None:
+        facts = _facts(["M\tAGENTS.md"], additive_only_paths=["AGENTS.md"])
+        composed = compose_pr_body(facts, CANONICAL_TEMPLATE).body
+        why = _section(composed, "Protected-root").split("### Why a root file")[1].split("###")[0]
+        edited = composed.replace(why.strip(), "Reviewer: only AGENTS.md can carry this pointer.")
+
+        def must_not_load() -> str:
+            raise AssertionError("no measured change, so the template is not needed")
+
+        body, _ = refresh_body(edited, facts, template=must_not_load)
+        self.assertIn("Reviewer: only AGENTS.md can carry this pointer.", body)
 
     def test_legacy_composer_body_is_migrated_once(self) -> None:
         legacy = "\n".join(
@@ -1041,6 +1072,26 @@ class TemplateResolutionTests(unittest.TestCase):
         body = compose_pr_body(facts, source.text).body
         self.assertIn(f"<!-- l9-pr-template: Quantum-L9/.github@{self.SHA} -->", body)
         self.assertNotIn("## Divergent", body)
+
+    def test_template_missing_a_region_and_its_placeholder_is_rejected(self) -> None:
+        for name, start, end in (
+            (REGION_EVIDENCE, "<!-- EVIDENCE:START -->", "<!-- EVIDENCE:END -->"),
+            (REGION_INTENT, "<!-- CHANGES-BY-INTENT:START -->", "<!-- CHANGES-BY-INTENT:END -->"),
+            (
+                REGION_PROTECTED_PATHS,
+                "<!-- PROTECTED-ROOT-PATHS:START -->",
+                "<!-- PROTECTED-ROOT-PATHS:END -->",
+            ),
+        ):
+            with self.subTest(region=name):
+                # Markers gone and the placeholder edited: nothing left to fill.
+                head, rest = CANONICAL_TEMPLATE.split(start, 1)
+                inner, tail = rest.split(end, 1)
+                broken = head + "edited by hand\n" + tail
+                self.assertTrue(any(name in e for e in validate_template(broken)))
+                # Markers gone but the exact legacy placeholder kept: still fillable.
+                legacy = head + inner.strip("\n") + tail
+                self.assertEqual(validate_template(legacy), [])
 
     def test_unreachable_or_invalid_template_fails_closed(self) -> None:
         def down(endpoint: str) -> object:
