@@ -5,9 +5,9 @@
     {
       "file": "governance-pr.yml",
       "source": "Quantum-L9/.github:.github/workflows/governance-pr.yml",
-      "ref": "3e841ea4f7f8be2a8c9fc45cad5bed46fe801d08",
-      "why": "The SHA consumer repos pin in templates/governance-caller.yml; the validator their PRs actually run.",
-      "sha256": "a26b5848dae7f8d8c627bc27e1462bb8ee63722b9d5089153b71afea06e8bc6e"
+      "ref": "02ea092a098563b27970d21416fabc47dd005fb0",
+      "why": "The SHA consumer repos pin in policies/governance-caller.yml (merge of Quantum-L9/.github#176); the validator their PRs actually run.",
+      "sha256": "6d69ba4f89481029e45d94f4664fc2b83182817cf9b179cf9d9683036deb743d"
     },
     {
       "file": "pr-files.yml",
