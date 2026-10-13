@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.4.0  
+**Release:** 1.4.1  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`
@@ -89,19 +89,47 @@ Quantum-L9/l9-semantic-compiler-engine#8 (head `99dfde4`, not yet merged) implem
 
 12/12 cases passed. Until #8 merges, the producer exists only on that PR branch. The other 8 source groups have no producer, so they stay `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`.
 
+## v1.4.1 projection boundary and F-02 repair
+
+Validated at Cursor-Governance base `2993930`, against a synthetic authority repository and the real `.github` `1f42b33`. No producer or Semantic Compiler was invoked.
+
+- The runbook and binding consume an externally supplied artifact, receipt, and independent revision pin. The skill no longer instructs the agent to produce a projection.
+- `tests/test_coding_agent_canonical_binding.py`: 27/27 pass. The verifier issued only `git` commands.
+- The same tests against the 1.4.0 verifier failed 11 cases. The observed 1.4.0 outcomes:
+
+  | Case | 1.4.0 | 1.4.1 |
+  |---|---|---|
+  | no `--expect-revision` | `BOUND` | `BLOCKED AUTHORITY_REVISION_PIN_ABSENT` |
+  | `--prior-binding` without a pin | `CURRENT` | `BLOCKED AUTHORITY_REVISION_PIN_ABSENT` |
+  | pin = local-only commit with rewritten law | `BOUND` | `BLOCKED AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF` |
+  | law edit hidden by `--skip-worktree`, matching forged projection | `BOUND` | `STALE SOURCE_DIGEST_NOT_CURRENT` |
+  | rewritten loose blob, matching forged projection | `STALE` | `REJECTED AUTHORITY_OBJECT_NOT_BOUND_TO_PIN` |
+  | malformed pin (`HEAD`, short, uppercase, non-hex) | `STALE` | `BLOCKED AUTHORITY_REVISION_PIN_MALFORMED` |
+
+  The remaining failure was the new record fields, absent in 1.4.0.
+- Kept unchanged: tampered payload, recomputed-but-unfaithful payload, tampered receipt, unpinned production (`result: unknown`), unbound receipt output, a producer without the projection role, a wrong profile, an unprojected required invariant, non-canonical origin, uncommitted semantics, upstream law change (`STALE`), and an unrelated upstream commit (`CURRENT`).
+- Real `.github@1f42b33`, with the projection built consumer-side from the producer's shape:
+  - pinned: `BOUND`, 30 global invariants, all six governing refs;
+  - unpinned: `BLOCKED`;
+  - wrong pin: `STALE`;
+  - prior re-check: `CURRENT`.
+- Lazy bootstrap closes 16 semantic owners and classifies 32 files. Runtime alignment covers 57 cases and four negative controls. `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
+
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
 - This release proof covers the pack as compiled. Its installation into `Quantum-L9/Cursor-Governance` is recorded in [CHANGELOG.md](CHANGELOG.md); that install adds exactly one frontmatter line (`disable-model-invocation: true`) and no runtime semantics.
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
+- No projection publication mechanism is assumed operational. Until one supplies a verified artifact, receipt, and revision pin, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
+- The revision pin is caller-supplied. The verifier binds law bytes to it by recomputed hashes, and refuses absent, malformed, and local-only pins, but it cannot prove the pin is the published revision. That trust comes from the independent record. Origin URL and tracking refs are local state, so a deliberately forged `refs/remotes/origin/*` defeats the local-only check.
 - Upstream gaps block a live canonical binding:
-  - there is no producer for `l9.projection/cursor-governance-operating-plane@1`;
+  - no merged producer exists for `l9.projection/cursor-governance-operating-plane@1` (at l9-semantic-compiler-engine `a1c4104`, the revision observed for 1.4.1, `project` exists only on the #8 branch, for the `invariants` class);
   - there is no `l9.projection.cursor-governance-operating-plane/v1` output schema;
   - no `semantic_digest` canonicalization algorithm is declared;
   - the profile has 9 source groups but the projection artifact is single-source, and no composition profile is declared;
   - the `conformance_profiles` source resolves outside `.github`.
-- Receipts and projection digests are unkeyed. A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream.
-- Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook.
+- Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
+- Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook (F-04, outside this pack).
 - `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.
 - `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
 

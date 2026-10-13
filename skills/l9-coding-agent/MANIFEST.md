@@ -1,6 +1,6 @@
 # L9 Coding Agent Manifest
 
-**Release:** 1.4.0  
+**Release:** 1.4.1  
 **Runtime identity:** `l9-coding-agent`  
 **Distribution shape:** root `SKILL.md`, no wrapper directory
 
@@ -41,11 +41,13 @@
 - `scripts/validate_runtime_alignment.py`
 - `scripts/verify_canonical_binding.py`
 - `skill_intelligence_report.yaml`
+- `tests/test_coding_agent_canonical_binding.py`
 
 ## Ownership notes
 
 - Runtime semantics live under `runtime/`, `contracts/`, `kernels/`, `catalogs/`, and `integrations/`.
 - Schemas and their runtime validators load only when structured contract/receipt validation is material.
 - `expertise_model.yaml`, `skill_intelligence_report.yaml`, `references/smart_exemplary_spec.yaml`, evals, and operator docs do not govern ordinary coding execution.
-- `integrations/L9_RUNTIME_BINDING.yaml` owns the canonical-invariant consumer procedure only; `Quantum-L9/.github` owns the invariants, profile, schemas, and invalidation law it references.
+- `integrations/L9_RUNTIME_BINDING.yaml` owns the canonical-invariant consumer procedure only; `Quantum-L9/.github` owns the invariants, profile, schemas, and invalidation law it references. A producer emits the projection and an upstream publication mechanism supplies it; this pack never produces one.
+- `tests/test_coding_agent_canonical_binding.py` is package validation evidence for the verifier, run against a synthetic authority repository; it never loads during coding work.
 - `agents/openai.yaml` is retained intentionally because this release targets ChatGPT as one supported installation surface.

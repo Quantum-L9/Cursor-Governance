@@ -2,21 +2,25 @@
 """Verify a canonical L9 invariant projection before Coding Agent mutation.
 
 Consumer-side verifier only. It never emits, synthesizes, or repairs a
-projection: it checks a producer-emitted `l9.projection-artifact/v1` and its
-`l9.compiler-receipt/v1` against an exact `Quantum-L9/.github` checkout and
-prints one binding record for `runtime/RUN_STATE.yaml` `authority.sources`.
+projection, and it never runs a producer: it checks an externally supplied,
+producer-emitted `l9.projection-artifact/v1` and its `l9.compiler-receipt/v1`
+against an exact `Quantum-L9/.github` checkout and prints one binding record
+for `runtime/RUN_STATE.yaml` `authority.sources`.
 
-Law, schemas, and the profile are read from the authority root at its exact
-revision; nothing upstream is copied here. Constants below are identity
-coordinates, not doctrine.
+Law, schemas, and the profile are read from the commit objects of the pinned
+authority revision, each object hash recomputed, so neither the working tree,
+the index, nor replace refs can substitute bytes. The pin is required and must
+come from an independent record; the verifier binds bytes to the pin but
+cannot authenticate the pin itself. Nothing upstream is copied here. Constants
+below are identity coordinates, not doctrine.
 
 Exit codes: 0 BOUND/CURRENT, 1 REJECTED, 2 usage, 3 BLOCKED (Unknown), 4 STALE.
 
 Usage:
   verify_canonical_binding.py --authority-root DIR --artifact FILE --receipt FILE
-      [--expect-revision SHA] [--require-invariant ID ...]
+      --expect-revision SHA [--require-invariant ID ...]
   verify_canonical_binding.py --authority-root DIR --prior-binding FILE
-      --artifact FILE --receipt FILE
+      --artifact FILE --receipt FILE --expect-revision SHA
 """
 
 from __future__ import annotations
@@ -24,9 +28,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 try:
@@ -53,7 +58,10 @@ VOCABULARY_PATH = "semantics/vocabulary.yaml"
 PRODUCER_ROLE = "projection"
 
 GIT_TIMEOUT_S = 30
+# Replace refs would let a local ref swap object content; hashes are rechecked too.
+GIT_ENV = {**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"}
 EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
+_SHA1 = re.compile(r"[0-9a-f]{40}")
 # Exact host and repository; a suffix match would accept any path ending in it.
 _ORIGIN = re.compile(
     r"(?:https://(?:[^@/\s]+@)?github\.com/|ssh://git@github\.com/|git@github\.com:)"
@@ -105,28 +113,44 @@ def _load(path: Path, what: str, missing_status: str = "BLOCKED") -> Any:
         raise Outcome("REJECTED", f"{what}_MALFORMED", path=str(path), error=str(exc)) from exc
 
 
-def _git(root: Path, *args: str) -> str:
+def _git_raw(root: Path, *args: str, stdin: bytes | None = None) -> tuple[int, bytes, str]:
     try:
         result = subprocess.run(
-            ["git", "-C", str(root), *args], text=True, capture_output=True, timeout=GIT_TIMEOUT_S
+            ["git", "-C", str(root), *args],
+            input=stdin,
+            capture_output=True,
+            timeout=GIT_TIMEOUT_S,
+            env=GIT_ENV,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise Outcome(
             "BLOCKED", "AUTHORITY_ROOT_PROVENANCE_UNKNOWN", git=list(args), error=repr(exc)
-        )
-    if result.returncode != 0:
-        raise Outcome(
-            "BLOCKED",
-            "AUTHORITY_ROOT_PROVENANCE_UNKNOWN",
-            git=list(args),
-            error=result.stderr.strip(),
-        )
-    return result.stdout.strip()
+        ) from exc
+    return result.returncode, result.stdout, result.stderr.decode("utf-8", "replace").strip()
+
+
+def _git(root: Path, *args: str) -> str:
+    returncode, stdout, stderr = _git_raw(root, *args)
+    if returncode != 0:
+        raise Outcome("BLOCKED", "AUTHORITY_ROOT_PROVENANCE_UNKNOWN", git=list(args), error=stderr)
+    return stdout.decode("utf-8", "replace").strip()
 
 
 def authority_root(root: Path, expect_revision: str | None) -> dict[str, Any]:
     if not root.is_dir():
         raise Outcome("BLOCKED", "AUTHORITY_ROOT_ABSENT", path=str(root))
+    # The checkout's own HEAD, origin, and refs are local state anyone can set,
+    # so an unpinned run would bind whatever revision the checkout claims.
+    if not expect_revision:
+        raise Outcome(
+            "BLOCKED",
+            "AUTHORITY_REVISION_PIN_ABSENT",
+            detail="pass --expect-revision from an independent record of the published revision",
+        )
+    if not _SHA1.fullmatch(expect_revision):
+        raise Outcome(
+            "BLOCKED", "AUTHORITY_REVISION_PIN_MALFORMED", expected="40-hex lowercase commit id"
+        )
     origin = _git(root, "remote", "get-url", "origin")
     if not _ORIGIN.fullmatch(origin):
         raise Outcome(
@@ -135,21 +159,116 @@ def authority_root(root: Path, expect_revision: str | None) -> dict[str, Any]:
             origin=origin,
             expected=OWNER_REPOSITORY,
         )
+    object_format = _git(root, "rev-parse", "--show-object-format")
+    if object_format != "sha1":
+        raise Outcome("BLOCKED", "AUTHORITY_OBJECT_FORMAT_UNSUPPORTED", object_format=object_format)
     revision = _git(root, "rev-parse", "HEAD")
-    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+    if not _SHA1.fullmatch(revision):
         raise Outcome("BLOCKED", "AUTHORITY_ROOT_PROVENANCE_UNKNOWN", revision=revision)
     if _git(root, "status", "--porcelain", "--", "semantics"):
         raise Outcome("BLOCKED", "AUTHORITY_ROOT_SEMANTICS_UNCOMMITTED", revision=revision)
-    if expect_revision and revision != expect_revision:
+    if revision != expect_revision:
         raise Outcome(
             "STALE", "AUTHORITY_REVISION_MISMATCH", observed=revision, expected=expect_revision
         )
-    return {"repository": OWNER_REPOSITORY, "revision": revision}
+    # A commit no fetched origin ref contains exists only locally. Tracking refs
+    # are local state too: this excludes local-only commits, it does not prove
+    # publication.
+    tracking = _git(root, "for-each-ref", "--format=%(refname)", "refs/remotes/origin")
+    if not any(
+        _git_raw(root, "merge-base", "--is-ancestor", revision, ref)[0] == 0
+        for ref in tracking.splitlines()
+        if ref and ref != "refs/remotes/origin/HEAD"
+    ):
+        raise Outcome(
+            "BLOCKED",
+            "AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF",
+            revision=revision,
+            detail="fetch the canonical owner; a local-only commit is not authority",
+        )
+    return {
+        "repository": OWNER_REPOSITORY,
+        "revision": revision,
+        "revision_basis": "caller_pinned_not_authenticated",
+        "content_basis": "pinned_commit_objects_hash_verified",
+    }
 
 
-def resolve_law(root: Path) -> dict[str, Any]:
-    """Resolve source, profile, and current digests at the authority root."""
-    registry = _load(root / SOURCES_PATH, "SOURCE_REGISTRY")
+class PinnedTree:
+    """Read law bytes from the pinned commit, recomputing every object hash.
+
+    The working tree, the index (`--skip-worktree`, `--assume-unchanged`),
+    replace refs, and rewritten loose objects cannot substitute content: bytes
+    are returned only when the commit, every tree on the path, and the blob each
+    hash to the id that links them to the pinned revision.
+    """
+
+    def __init__(self, root: Path, revision: str) -> None:
+        self.root = root
+        self.revision = revision
+
+    def _object(self, oid: str, kind: str) -> bytes:
+        returncode, raw, stderr = _git_raw(self.root, "cat-file", kind, oid)
+        if returncode != 0:
+            raise Outcome(
+                "BLOCKED", "AUTHORITY_OBJECT_UNREADABLE", oid=oid, kind=kind, error=stderr
+            )
+        # Recompute the id from the bytes read, in git's own object format.
+        rehash, recomputed, _ = _git_raw(
+            self.root, "hash-object", "--no-filters", "-t", kind, "--stdin", stdin=raw
+        )
+        if rehash != 0 or recomputed.decode("ascii", "replace").strip() != oid:
+            raise Outcome("REJECTED", "AUTHORITY_OBJECT_NOT_BOUND_TO_PIN", oid=oid, kind=kind)
+        return raw
+
+    @staticmethod
+    def _entry(tree: bytes, name: bytes) -> tuple[bytes, str] | None:
+        i = 0
+        while i < len(tree):
+            space = tree.index(b" ", i)
+            nul = tree.index(b"\0", space)
+            if tree[space + 1 : nul] == name:
+                return tree[i:space], tree[nul + 1 : nul + 21].hex()
+            i = nul + 21
+        return None
+
+    def read(self, rel: str, what: str, missing_status: str = "BLOCKED") -> bytes:
+        parts = PurePosixPath(rel).parts
+        if (
+            not parts
+            or PurePosixPath(rel).is_absolute()
+            or any(p in ("", ".", "..") for p in parts)
+        ):
+            raise Outcome("BLOCKED", "AUTHORITY_PATH_UNRESOLVED", path=rel)
+        commit = self._object(self.revision, "commit")
+        first = commit.split(b"\n", 1)[0]
+        tree_oid = first[5:].decode("ascii", "replace")
+        if not first.startswith(b"tree ") or not _SHA1.fullmatch(tree_oid):
+            raise Outcome("REJECTED", "AUTHORITY_COMMIT_MALFORMED", revision=self.revision)
+        missing = Outcome(missing_status, f"{what}_UNREADABLE", path=rel, revision=self.revision)
+        oid, mode = tree_oid, b"40000"
+        for part in parts:
+            if mode != b"40000":
+                raise missing
+            entry = self._entry(self._object(oid, "tree"), part.encode("utf-8"))
+            if entry is None:
+                raise missing
+            mode, oid = entry
+        if mode not in (b"100644", b"100755"):
+            raise missing
+        return self._object(oid, "blob")
+
+    def load(self, rel: str, what: str) -> Any:
+        raw = self.read(rel, what)
+        try:
+            return yaml.safe_load(raw)
+        except Exception as exc:
+            raise Outcome("REJECTED", f"{what}_MALFORMED", path=rel, error=str(exc)) from exc
+
+
+def resolve_law(tree: PinnedTree) -> dict[str, Any]:
+    """Resolve source, profile, and current digests at the pinned revision."""
+    registry = tree.load(SOURCES_PATH, "SOURCE_REGISTRY")
     entries = [
         s
         for s in (registry or {}).get("sources", [])
@@ -163,7 +282,7 @@ def resolve_law(root: Path) -> dict[str, Any]:
     if source.get("canonical") is not True or source.get("projection_allowed") is not True:
         raise Outcome("BLOCKED", "CANONICAL_SOURCE_NOT_PROJECTABLE", source_ref=SOURCE_REF)
 
-    catalog = _load(root / PROFILES_PATH, "PROFILE_CATALOG")
+    catalog = tree.load(PROFILES_PATH, "PROFILE_CATALOG")
     profiles = [
         p
         for p in (catalog or {}).get("projection_profiles", [])
@@ -195,13 +314,7 @@ def resolve_law(root: Path) -> dict[str, Any]:
             class_artifact=class_artifact,
         )
 
-    source_path = root / str(source["path"])
-    try:
-        raw = source_path.read_bytes()
-    except OSError as exc:
-        raise Outcome(
-            "BLOCKED", "CANONICAL_SOURCE_UNREADABLE", path=str(source_path), error=str(exc)
-        ) from exc
+    raw = tree.read(str(source["path"]), "CANONICAL_SOURCE")
     document = yaml.safe_load(raw)
     global_entries = [
         e
@@ -222,9 +335,9 @@ def _mapping(doc: dict[str, Any], key: str, what: str) -> dict[str, Any]:
     return value
 
 
-def projection_producers(root: Path) -> list[str]:
+def projection_producers(tree: PinnedTree) -> list[str]:
     """Components `.github` assigns the projection role (`organizational_target`)."""
-    vocabulary = _load(root / VOCABULARY_PATH, "VOCABULARY")
+    vocabulary = tree.load(VOCABULARY_PATH, "VOCABULARY")
     targets = (vocabulary or {}).get("organizational_target")
     if not isinstance(targets, dict):
         raise Outcome("BLOCKED", "PRODUCER_ROLE_REGISTRY_UNRESOLVED", path=VOCABULARY_PATH)
@@ -235,18 +348,18 @@ def projection_producers(root: Path) -> list[str]:
     )
 
 
-def _required(root: Path, schema_path: str) -> tuple[list[str], dict[str, Any]]:
-    schema = _load(root / schema_path, "UPSTREAM_SCHEMA")
+def _required(tree: PinnedTree, schema_path: str) -> tuple[list[str], dict[str, Any]]:
+    schema = tree.load(schema_path, "UPSTREAM_SCHEMA")
     required = (schema or {}).get("required")
     if not isinstance(required, list) or not required:
         raise Outcome("BLOCKED", "UPSTREAM_SCHEMA_INCOMPLETE", path=schema_path)
     return [str(r) for r in required], (schema.get("properties") or {})
 
 
-def _check_shape(doc: Any, root: Path, schema_path: str, what: str) -> None:
+def _check_shape(doc: Any, tree: PinnedTree, schema_path: str, what: str) -> None:
     if not isinstance(doc, dict):
         raise Outcome("REJECTED", f"{what}_NOT_A_MAPPING")
-    required, properties = _required(root, schema_path)
+    required, properties = _required(tree, schema_path)
     missing = sorted(set(required) - set(doc))
     if missing:
         raise Outcome(
@@ -273,17 +386,19 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
         raise Outcome(
             "BLOCKED",
             "BLOCKED_UPSTREAM_PROJECTION_PRODUCER",
-            detail="no producer-emitted projection and receipt; local law is no substitute",
+            detail="no externally supplied producer-emitted projection and receipt; this run"
+            " never produces one, and local law is no substitute",
             artifact=args.artifact,
             receipt=args.receipt,
         )
     artifact_path, receipt_path = Path(args.artifact), Path(args.receipt)
     root = Path(args.authority_root)
     coordinates = authority_root(root, args.expect_revision)
-    law = resolve_law(root)
+    tree = PinnedTree(root, coordinates["revision"])
+    law = resolve_law(tree)
 
     artifact = _load(artifact_path, "ARTIFACT", missing_status="BLOCKED")
-    _check_shape(artifact, root, ARTIFACT_SCHEMA_PATH, "ARTIFACT")
+    _check_shape(artifact, tree, ARTIFACT_SCHEMA_PATH, "ARTIFACT")
     if artifact["projection_profile_ref"] != PROFILE_REF:
         raise Outcome(
             "REJECTED",
@@ -346,7 +461,7 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
         raise Outcome("REJECTED", "PAYLOAD_NOT_FAITHFUL_TO_SOURCE", altered=altered)
 
     receipt = _load(receipt_path, "RECEIPT", missing_status="BLOCKED")
-    _check_shape(receipt, root, RECEIPT_SCHEMA_PATH, "RECEIPT")
+    _check_shape(receipt, tree, RECEIPT_SCHEMA_PATH, "RECEIPT")
     if receipt["operation"] != "projection" or receipt["result"] != "pass":
         raise Outcome(
             "REJECTED",
@@ -378,7 +493,7 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
         raise Outcome("REJECTED", "RECEIPT_PRODUCER_UNIDENTIFIED")
     # Receipts are unkeyed: this narrows identity to the upstream-assigned
     # producer role but cannot authenticate it (an upstream signing gap).
-    producers = projection_producers(root)
+    producers = projection_producers(tree)
     if producer["compiler"] not in producers:
         raise Outcome(
             "REJECTED",
@@ -406,6 +521,8 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
             "identity": receipt["receipt_identity"],
             "digest": receipt["receipt_digest"],
             "producer": producer,
+            # Receipts are unkeyed: the role is checked, the identity is not proven.
+            "producer_authentication": "unauthenticated_unkeyed_receipt",
         },
         "applicable_invariants": [
             {"id": i, "digest": content_digest(expected[i])} for i in applicable
@@ -445,7 +562,7 @@ def verify_prior(args: argparse.Namespace) -> dict[str, Any]:
 
     root = Path(args.authority_root)
     coordinates = authority_root(root, args.expect_revision)
-    law = resolve_law(root)
+    law = resolve_law(PinnedTree(root, coordinates["revision"]))
     current = law["global_entries"]
     affected = sorted(
         i["id"]

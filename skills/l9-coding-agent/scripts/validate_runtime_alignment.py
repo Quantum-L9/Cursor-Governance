@@ -14,7 +14,7 @@ except Exception as exc:
     raise SystemExit(f"PyYAML is required: {exc}")
 
 
-CANONICAL_BINDING_CASES = tuple(f"CA-E{n}" for n in range(41, 53))
+CANONICAL_BINDING_CASES = tuple(f"CA-E{n}" for n in range(41, 58))
 
 
 def flatten(groups: dict) -> set[str]:
@@ -84,12 +84,20 @@ def main() -> int:
         errors.append("canonical binding behavior cases missing: " + ", ".join(missing_cases))
 
     # Negative controls needing no upstream checkout: each must block, never pass.
-    # Fidelity, digest, and staleness controls need a real .github checkout and
-    # run in the evidence harness recorded in VALIDATION.md.
+    # Pin, fidelity, digest, and staleness behavior runs against a synthetic
+    # authority repository in tests/test_coding_agent_canonical_binding.py.
     verifier = root / "scripts" / "verify_canonical_binding.py"
     dummy = root / "runtime" / "RUN_STATE.yaml"
     controls = {
         "absent projection": ["--authority-root", str(root)],
+        "absent revision pin": [
+            "--authority-root",
+            str(root),
+            "--artifact",
+            str(dummy),
+            "--receipt",
+            str(dummy),
+        ],
         "authority root absent": [
             "--authority-root",
             str(root / "missing-authority-root"),
@@ -109,6 +117,8 @@ def main() -> int:
             str(dummy),
         ],
     }
+    # Controls whose blocking reason is itself the property under test.
+    expected_reasons = {"absent revision pin": "AUTHORITY_REVISION_PIN_ABSENT"}
     for label, argv in controls.items():
         try:
             probe = subprocess.run(
@@ -121,14 +131,17 @@ def main() -> int:
             errors.append(f"canonical binding verifier timed out ({label})")
             continue
         try:
-            status = json.loads(probe.stdout).get("status")
+            record = json.loads(probe.stdout)
         except ValueError:
-            status = None
+            record = {}
+        status, reason = record.get("status"), record.get("reason")
         if probe.returncode != 3 or status != "BLOCKED":
             errors.append(
                 f"canonical binding verifier did not block ({label}): "
                 + f"rc={probe.returncode} status={status}"
             )
+        elif label in expected_reasons and reason != expected_reasons[label]:
+            errors.append(f"canonical binding verifier blocked ({label}) for reason {reason}")
 
     lazy_script = root / "scripts" / "validate_lazy_bootstrap.py"
     result = subprocess.run(
