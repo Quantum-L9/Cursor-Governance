@@ -15,6 +15,13 @@
       "ref": "77587b7421b2e7cfad391e5036f531d8b5833e2b",
       "why": "Runs only in Quantum-L9/.github (not called by consumers); main at vendoring time.",
       "sha256": "b329a53e30ec39af124842e91cace74e2ce985400bb89d4adf9f69fb80a9b7d5"
+    },
+    {
+      "file": "pull_request_template.md",
+      "source": "Quantum-L9/.github:.github/pull_request_template.md",
+      "ref": "3847df36b41fd4b20db8f2f8f82311594b97a4d3",
+      "why": "The canonical org template with machine-owned region markers; make pr resolves the live copy at an exact org commit, tests compose from this one.",
+      "sha256": "40596753d48e467acd59661071fe75844a95694e5e330c656641e7c60cf4169e"
     }
   ],
   "refresh": "When the consumer caller pin or the validator moves: copy the file from that ref, update ref and sha256 here. The digest test fails until both agree."
