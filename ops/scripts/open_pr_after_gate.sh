@@ -380,8 +380,9 @@ if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
 fi
 
 # Sets title, body, compose_python, compose_handoff, _touched_additive. Used
-# both to open a PR and to refresh one this script composed earlier: the body
-# is a function of the range, and the range moves with every push.
+# both to open a PR and, with --refresh, to recompose the machine-owned regions
+# of the open PR's body (read into .l9/pr/open-pr-body.md): the regions are a
+# function of the range, and the range moves with every push.
 _compose_title_and_body() {
   # The composer owns the range rule (no merges, nothing already on origin/main).
   # A bare `git log base..HEAD | head -1` here titled PR #602 with a main commit
@@ -394,7 +395,6 @@ _compose_title_and_body() {
     title="$branch"
   fi
   campaign_body=""
-  template_file=""
   _root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
   _gov_python="${GOV_ROOT}/.venv/bin/python"
   [[ -x "$_gov_python" ]] || _gov_python="python3"
@@ -433,39 +433,15 @@ _compose_title_and_body() {
     _additive_measured=1
     _touched_additive=""
   fi
-  # Resolve the template the way GitHub does: the repository's own copy, then
-  # the org default in <owner>/.github. Skipping the org step composed every
-  # inherit-class consumer's body from the governance fork (Protected-root,
-  # Type of Change) while the org PR gates judge against the org template.
-  # The governance fork stays the last resort when the org copy is unreachable.
-  _org_template=""
-  if [[ ! -f "$WS/.github/pull_request_template.md" && -n "${owner:-}" && "${name:-}" != ".github" ]]; then
-    mkdir -p "$WS/.l9/pr"
-    _org_template="$WS/.l9/pr/org-pull_request_template.md"
-    # Decode the JSON contents object's base64 `content` rather than asking for
-    # a raw media type: a host that ignores the Accept alias answers with the
-    # JSON object itself, which is non-empty and would be composed as the body.
-    # `--jq` fails on anything that is not a base64 file object, so the
-    # fallback below still fires.
-    if ! gh api "repos/${owner}/.github/contents/.github/pull_request_template.md" \
-        --jq 'select(.type == "file" and .encoding == "base64") | .content' 2>/dev/null \
-        | base64 -d >"$_org_template" 2>/dev/null || ! grep -q '^## ' "$_org_template"; then
-      echo "NOTE: org PR template ${owner}/.github unreachable; composing from the governance template"
-      rm -f "$_org_template"
-      _org_template=""
-    fi
-  fi
-  for candidate in \
-    "$WS/.github/pull_request_template.md" \
-    ${_org_template:+"$_org_template"} \
-    "$GOV_ROOT/.github/pull_request_template.md"; do
-    if [[ -f "$candidate" ]]; then
-      template_file="$candidate"
-      break
-    fi
-  done
-  if [[ -z "$template_file" ]]; then
-    echo "ERROR: one PR template missing: .github/pull_request_template.md" >&2
+  # The body is composed from ONE template: the org's canonical
+  # <owner>/.github .github/pull_request_template.md, resolved by the composer
+  # at an exact commit (compose_pr_body.py resolve_template). A consumer's local
+  # copy and the governance checkout's copy are never read: a divergent copy
+  # must not change what the body says, and an unreachable org template is an
+  # error rather than a silent switch to stale bytes. Org-managed sync
+  # (Quantum-L9/.github continuous-sync.yml) reconciles the local copies.
+  if [[ -z "${owner:-}" || -z "${name:-}" ]]; then
+    echo "ERROR: cannot resolve owner/repo, so the org PR template has no source" >&2
     exit 1
   fi
   if [[ -n "$_touched_additive" ]]; then
@@ -480,10 +456,8 @@ _compose_title_and_body() {
   fi
   mkdir -p "$WS/.l9/pr"
   compose_handoff="$WS/.l9/pr/pr-body-completion.json"
-  compose_args=(--workspace "$WS" --pr-base "$PR_BASE" --handoff "$compose_handoff")
-  if [[ -n "$template_file" ]]; then
-    compose_args+=(--template "$template_file")
-  fi
+  compose_args=(--workspace "$WS" --pr-base "$PR_BASE" --handoff "$compose_handoff"
+    --org-owner "$owner" --repo-name "$name")
   if [[ -n "$_touched_additive" ]]; then
     printf '%s\n' "$_touched_additive" > "$WS/.l9/pr/additive-only.txt"
     compose_args+=(--additive-only-file "$WS/.l9/pr/additive-only.txt")
@@ -494,7 +468,17 @@ _compose_title_and_body() {
     printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"
     compose_args+=(--campaign-body-file "$WS/.l9/pr/campaign-body.md")
   fi
-  body="$("$compose_python" "$compose_py" "${compose_args[@]}")"
+  if [[ "${1:-}" == "--refresh" ]]; then
+    # Regions only: the open PR's body is read, its machine-owned regions are
+    # recomposed, and everything outside them -- reviewer prose, ticked gates,
+    # a human-edited title -- is left exactly as it is.
+    compose_args+=(--refresh-body "$WS/.l9/pr/open-pr-body.md"
+      --status-file "$WS/.l9/pr/pr-body-refresh.json")
+  fi
+  if ! body="$("$compose_python" "$compose_py" "${compose_args[@]}")"; then
+    echo "FAIL: could not compose the PR body (see the composer error above); nothing was sent" >&2
+    exit 1
+  fi
   # Prove the body satisfies the protected-root contract BEFORE the PR exists.
   # The stamp check is CI-enforced (`--require-pr-body` / GITHUB_ACTIONS), so a
   # body missing it used to be discovered only after the PR was open — a red
@@ -561,49 +545,65 @@ PY
   fi
 else
   echo "PR already open: $pr_url"
-  # A body this script composed is a function of the range, and the range just
-  # moved. Recompose it (and the title) so the PR describes what it now carries;
-  # #602 kept a title from a range rule that had since been fixed. Only a body
-  # that carries the composer's own marker is touched -- a human-authored body
-  # is theirs, and the WARN below is all it gets.
+  # The machine-owned regions of the body (Changes by intent paths, Files
+  # touched, Evidence, Protected-root paths) are a function of the range, and
+  # the range just moved. Recompose those regions only; reviewer text, ticked
+  # gates and the title are theirs and are never rewritten. A body with no
+  # regions that this script did not compose is left alone (the composer
+  # reports it "unmanaged"), and an unchanged body is not PATCHed at all, so a
+  # re-run fires no `edited` event.
   _refreshed=0
   if [[ -n "${owner:-}" && -n "${name:-}" ]]; then
-    if ! _open_body="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body 2>/dev/null)"; then
-      _open_body=""
-    fi
-    if [[ "$_open_body" == *"<!-- autonomous compile from open_pr_after_gate.sh -->"* ]]; then
-      _compose_title_and_body
+    mkdir -p "$WS/.l9/pr"
+    if gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body \
+        >"$WS/.l9/pr/open-pr-body.md" 2>/dev/null; then
+      _compose_title_and_body --refresh
+      _refresh_status="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' \
+        "$WS/.l9/pr/pr-body-refresh.json" 2>/dev/null || echo unknown)"
       printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
-      # REST PATCH, not `gh pr edit`. That subcommand is GraphQL-backed, so on a
-      # gateway that refuses GraphQL the refresh silently no-opped and the open
-      # PR kept describing only its first commit while later pushes added
-      # unrelated work — a stale description is what reviewers read. The body
-      # READ two lines up was already REST; this makes the write match it.
-      # Unlike per-PR subscribe, this one has a REST route.
-      _edit_json="$WS/.l9/pr/pr-edit.json"
-      _edit_ok=0
-      if python3 - "$title" "$WS/.l9/pr/pr-body.md" "$_edit_json" <<'PY'
+      case "$_refresh_status" in
+        unchanged)
+          _refreshed=1
+          echo "Unchanged: the PR body's machine-owned regions already match this range"
+          ;;
+        unmanaged)
+          echo "NOTE: the open PR body has no machine-owned regions and was not composed here; left as written"
+          ;;
+        updated|migrated)
+          # REST PATCH, not `gh pr edit` (GraphQL-backed; it silently no-opped on
+          # a gateway that refuses GraphQL). Body only: the title may be a
+          # reviewer's.
+          _edit_json="$WS/.l9/pr/pr-edit.json"
+          _edit_ok=0
+          if python3 - "$WS/.l9/pr/pr-body.md" "$_edit_json" <<'PY'
 import json
 import sys
 
-title, body_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+body_path, out_path = sys.argv[1], sys.argv[2]
 with open(body_path, encoding="utf-8") as handle:
     body = handle.read()
 with open(out_path, "w", encoding="utf-8") as handle:
-    json.dump({"title": title, "body": body}, handle)
+    json.dump({"body": body}, handle)
 PY
-      then
-        if gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}" \
-            --input "$_edit_json" >/dev/null 2>&1; then
-          _edit_ok=1
-        fi
-      fi
-      if [[ "$_edit_ok" -eq 1 ]]; then
-        _refreshed=1
-        echo "Refreshed: title and body recomposed for the current range"
-      else
-        echo "WARN: could not refresh the PR title/body (REST PATCH failed); the open PR keeps its previous text"
-      fi
+          then
+            if gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}" \
+                --input "$_edit_json" >/dev/null 2>&1; then
+              _edit_ok=1
+            fi
+          fi
+          if [[ "$_edit_ok" -eq 1 ]]; then
+            _refreshed=1
+            echo "Refreshed ($_refresh_status): machine-owned body regions recomposed for the current range"
+          else
+            echo "WARN: could not refresh the PR body (REST PATCH failed); the open PR keeps its previous text"
+          fi
+          ;;
+        *)
+          echo "WARN: PR body refresh status unreadable ($_refresh_status); the open PR keeps its previous text"
+          ;;
+      esac
+    else
+      echo "WARN: could not read the open PR body; it was not refreshed"
     fi
   fi
   # The protected-root contract is proven when the PR is CREATED, from the diff

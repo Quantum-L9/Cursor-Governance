@@ -732,35 +732,56 @@ def test_open_pr_composer_skips_root_protect_without_workspace_config() -> None:
     assert '-f "$WS/ops/config/root-file-protection.json"' in reopen
 
 
-def test_open_pr_after_gate_refreshes_only_a_composer_authored_body() -> None:
-    """An already-open PR keeps a stale title/body unless this script wrote it.
+def test_open_pr_after_gate_refreshes_only_machine_owned_regions() -> None:
+    """An already-open PR gets its measured regions recomposed, and nothing else.
 
-    #602 kept a title from a range rule that had since been fixed, because the
-    already-open path pushed and stopped. The body is a function of the range;
-    when the marker proves the composer authored it, recompose both. A body
-    without the marker is human-authored and is only warned about, as before.
+    #602 kept a stale description because the already-open path pushed and
+    stopped. The fix that followed recomposed the whole title and body, which
+    also erased every reviewer edit on each push. Now the composer refreshes
+    only the machine-owned regions of the body it reads back; the title is
+    never PATCHed, and an unchanged body is not PATCHed at all.
     """
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     # One composer for both paths: the title never comes from a second git log.
-    assert script.count("_compose_title_and_body\n") == 2, "open + refresh both call it"
+    assert "_compose_title_and_body\n" in script
+    assert "_compose_title_and_body --refresh\n" in script
     assert "git log \"${PR_BASE}..HEAD\" --format='%s'" not in script
     assert "--print-title" in script
     reopen = script[script.index('echo "PR already open: $pr_url"') :]
     reopen = reopen[: reopen.index("_pr_summary_py=")]
-    marker_at = reopen.index('*"<!-- autonomous compile from open_pr_after_gate.sh -->"*')
-    # The write is REST PATCH, not `gh pr edit`: that subcommand is
-    # GraphQL-backed, so on a gateway that refuses GraphQL the refresh silently
-    # no-opped and the open PR kept a stale description. The assertion below is
-    # unchanged in intent — the marker check still guards the edit — only the
-    # call it anchors on moved.
+    # The composer reads the open body and decides; the shell keys on its status.
+    read_at = reopen.index('--jq .body \\\n        >"$WS/.l9/pr/open-pr-body.md"')
     edit_at = reopen.index('gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}"')
-    assert marker_at < edit_at, "the marker check guards the edit"
+    assert read_at < edit_at
+    assert reopen.index("updated|migrated)") < edit_at, "only a changed body is PATCHed"
+    assert "unchanged)" in reopen and "unmanaged)" in reopen
+    assert 'json.dump({"body": body}, handle)' in reopen, "the title is never rewritten"
+    assert '"title"' not in reopen
     assert "gh pr edit " not in reopen, "the refresh must not reach GraphQL-backed gh pr"
     # A refresh failure is reported, never fatal: the push already happened.
-    assert "could not refresh the PR title/body" in reopen
+    assert "could not refresh the PR body" in reopen
     # The human-authored WARN survives for bodies we do not own.
     assert "but its body predates them and lacks" in reopen
     assert '"$_refreshed" -eq 0' in reopen
+
+
+def test_open_pr_after_gate_composes_only_from_the_canonical_org_template() -> None:
+    """A consumer-local or governance-checkout copy never chooses the schema.
+
+    The publisher used to prefer the workspace's own template, then an unpinned
+    org fetch, then the governance fork. Template resolution now belongs to the
+    composer (one exact <owner>/.github commit, fail closed), so the shell must
+    not name a template file at all.
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    compose = script[script.index("_compose_title_and_body() {") :]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
+    assert '--org-owner "$owner" --repo-name "$name"' in compose
+    assert "--template" not in compose
+    assert '"$WS/.github/pull_request_template.md"' not in compose
+    assert '"$GOV_ROOT/.github/pull_request_template.md"' not in compose
+    assert "org-pull_request_template.md" not in script
+    assert "could not compose the PR body" in compose
 
 
 def test_open_pr_after_gate_remediates_defaults_to_one() -> None:

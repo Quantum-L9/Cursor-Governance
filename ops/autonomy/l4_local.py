@@ -272,13 +272,14 @@ def current_head(root: Path) -> str:
         return ""
 
 
-#: Where a PR template may live in the RELEASED repository, in the order
-#: `ops/scripts/open_pr_after_gate.sh` searches. GitHub's default filename is
-#: `.github/pull_request_template.md` (this repo's only body).
+#: Where a PR template copy may live in the RELEASED repository. GitHub's
+#: default filename is `.github/pull_request_template.md`.
 #:
-#: The governance clone's own template is the publisher's LAST resort and is
-#: deliberately absent here: naming it in a receipt written for a consumer
-#: would report the governance default as if it were that repo's template.
+#: Reported, never composed from: `ops/scripts/open_pr_after_gate.sh` composes
+#: every body from the org's canonical `<owner>/.github` template at an exact
+#: commit (compose_pr_body.resolve_template), so a local copy cannot change the
+#: body's schema. The receipt field says whether the repo still carries one for
+#: org-managed sync to reconcile.
 PR_TEMPLATE_CANDIDATES: tuple[str, ...] = (
     ".github/pull_request_template.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
