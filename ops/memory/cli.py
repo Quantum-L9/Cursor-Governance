@@ -384,6 +384,19 @@ def cmd_hydrate(args: argparse.Namespace) -> int:
         continuation_policy=args.continuation_policy,
     )
     document = hydration.as_dict()
+    if args.record_session:
+        # The opt-in GATES-002 write gate reads this conversation's session
+        # state; SessionStart no longer hydrates (CANONICAL_LAW §8.9), so an
+        # on-demand hydrate is what satisfies it. The state carries the real
+        # canonical status: only a hydration memory answered counts as fresh.
+        from ops.memory.session_state import write_session_state
+
+        try:
+            document["session_state_path"] = str(
+                write_session_state(args.record_session, hydration)
+            )
+        except OSError as exc:
+            document["session_state_error"] = type(exc).__name__
     # #region agent log
     try:
         from ops.memory.store_compat import _debug
@@ -489,6 +502,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--workspace", default=None)
     p.add_argument("--group-id", default=None)
     p.add_argument("--session-id", default=None)
+    p.add_argument(
+        "--record-session",
+        default=None,
+        metavar="CONVERSATION_ID",
+        help=(
+            "write this hydration into the conversation's session state, which the "
+            "opt-in GATES-002 write gate (L9_MEMORY_WRITE_GATES=1) reads"
+        ),
+    )
     p.add_argument("--token-budget", type=int, default=1_200)
     p.add_argument("--max-records", type=int, default=40)
     p.add_argument(

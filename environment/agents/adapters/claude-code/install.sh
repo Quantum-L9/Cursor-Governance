@@ -45,12 +45,14 @@
 #
 # --reuse-if-verified (SessionStart only): when the previous session receipt is
 # READY for the same governance revision, workspace and inputs key, AND this
-# run verifies — locked uv environment `check`, and a projection `--check`
-# of every domain except settings — the toolchain install and the projection
-# apply are skipped. Settings (and the hosted overlay) are re-applied, the
-# memory probe, structural validation and dispatcher check still run, and the
-# receipt this ceremony writes says `mode: verified_reuse` with `reused_from`.
-# Anything that does not verify falls back to the full install.
+# run's projection `--check` of every domain except settings is clean, the
+# projection apply is skipped. Everything session-scoped still runs: the shared
+# bootstrap (its toolchain step is fingerprint-cached and re-verifies the seal;
+# secrets plane, leak check, publish-path probe, repository identity, git
+# excludes and preflight are per session), settings and the hosted overlay, the
+# memory probe, structural validation and the dispatcher check. The receipt
+# this ceremony writes says `mode: verified_reuse` with `reused_from`.
+# Anything that does not verify falls back to the full projection apply.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -505,8 +507,6 @@ if [ "$REUSE_REQUESTED" = "1" ] && [ "$CHECK" != "1" ]; then
   _reuse_why=""
   if [ -z "$_reuse_id" ]; then
     _reuse_why="no READY receipt for this revision, workspace and inputs"
-  elif ! bash "$GOV_DIR/ops/scripts/ensure_uv_environment.sh" "$GOV_DIR" check >/dev/null 2>&1; then
-    _reuse_why="locked uv environment check failed"
   elif ! REUSE_CHECK_OUT="$("$GOV_DIR/.venv/bin/python3" "$GOV_DIR/ops/scripts/claude_projection.py" \
          --root "$GOV_DIR" --workspace "$WORKSPACE" --summary --check --no-receipt \
          --domains skills,commands,rules,hooks,plugins,mcp 2>/dev/null)" \
@@ -517,9 +517,9 @@ if [ "$REUSE_REQUESTED" = "1" ] && [ "$CHECK" != "1" ]; then
     REUSE_FROM="$_reuse_id"
   fi
   if [ "$REUSE" = "1" ]; then
-    say "bootstrap: verified reuse of $REUSE_FROM (uv check ok, projection check ok)"
+    say "bootstrap: verified reuse of $REUSE_FROM (projection check ok; shared bootstrap still runs)"
   else
-    say "bootstrap: full install ($_reuse_why)"
+    say "bootstrap: full projection apply ($_reuse_why)"
   fi
 fi
 
@@ -532,11 +532,10 @@ SHARED_BOOTSTRAP="$GOV_DIR/ops/scripts/bootstrap_agent_environment.sh"
 if [ "${L9_SKIP_SHARED_BOOTSTRAP:-0}" = "1" ]; then
   warn "L9_SKIP_SHARED_BOOTSTRAP=1 — toolchain, secrets and preflight NOT run"
   downgrade STATUS_SHARED DEGRADED "shared bootstrap skipped by request"
-elif [ "$REUSE" = "1" ]; then
-  # Verified above by this ceremony: the locked uv environment `check` passed
-  # and the inputs it was installed from are unchanged since $REUSE_FROM.
-  say "shared bootstrap: verified reuse (uv check ok; inputs unchanged since $REUSE_FROM)"
 elif [ -f "$SHARED_BOOTSTRAP" ]; then
+  # Never skipped on verified reuse: the secrets plane, leak check, publish-path
+  # probe, repository identity and git excludes are session-scoped state the
+  # inputs key does not cover, and the toolchain step is already cached.
   shared_args=(--surface claude-code --governance "$GOV_DIR" --workspace "$WORKSPACE")
   [ "$CHECK" = "1" ] && shared_args+=(--check)
   [ "$QUIET" = "1" ] && shared_args+=(--quiet)

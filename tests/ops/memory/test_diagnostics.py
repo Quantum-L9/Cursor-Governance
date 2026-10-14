@@ -88,6 +88,23 @@ def test_health_only_reads_no_record_and_is_never_ready(bound, fake_cli) -> None
     assert report["fault_class"] == "none"
 
 
+def test_health_only_projection_down_is_not_plain_health_ready(bound, fake_cli) -> None:
+    """R9 is probed in both modes; health-only must not hide its failure."""
+    cli = _healthy_cli(fake_cli, projection="http", projection_healthy=False)
+    cli.reply("health", 1, health_payload(projection="http", projection_healthy=False))
+    client = MemoryControlPlaneClient(bound, runner=cli.run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT,
+        binding=_with_capabilities(bound),
+        client=client,
+        verify_mcp=False,
+        health_only=True,
+    )
+    assert _levels(report)["R9"] == "fail"
+    assert report["overall_status"] == "HEALTH_READY_PROJECTION_DEGRADED"
+    assert report["fault_class"] == "none"
+
+
 def test_health_only_store_down_is_still_memory_unavailable(bound, fake_cli) -> None:
     cli = _healthy_cli(fake_cli)
     cli.reply("health", 1, health_payload(store_healthy=False))

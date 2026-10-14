@@ -552,6 +552,11 @@ def test_orchestrator_session_start_reads_no_memory_records() -> None:
     # Session identity, open latch and code-graph diagnostics are preserved.
     for kept in ("resolve_or_create_session_id", "cli open", "code-graph-health.sh"):
         assert kept in text, kept
+    # Codex P1 on #722: with GATES-002 opted in, the advertised on-demand
+    # hydrate records this conversation's session state, decided by the gate's
+    # own switch reader rather than a second copy of it.
+    assert "from ops.graphiti.graphiti_gate_lib import gates_enabled" in text
+    assert "--record-session" in text
 
 
 def test_orchestrator_resolves_one_lifecycle_id_before_open() -> None:

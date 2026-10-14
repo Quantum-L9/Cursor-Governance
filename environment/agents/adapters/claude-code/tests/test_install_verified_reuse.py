@@ -1,13 +1,13 @@
 """The SessionStart warm path reuses a verdict only after verifying it this ceremony.
 
-``install.sh --reuse-if-verified`` may skip the toolchain install and the
-projection apply only when the previous receipt is READY for the same
-governance revision, workspace and inputs key AND this run's locked uv
-``check`` and projection ``--check`` pass. A fingerprint match alone never
-reuses a verdict (acceptance B02), the receipt names the mode and the source
-ceremony, and anything that does not verify runs the full install.
-Live evidence: two full installs 10.4-10.8 s, verified reuse 7.8 s, and a
-deliberately broken projected link fell back to a full install that repaired it.
+``install.sh --reuse-if-verified`` may skip only the projection apply, and only
+when the previous receipt is READY for the same governance revision, workspace
+and inputs key AND this run's projection ``--check`` is clean. A fingerprint
+match alone never reuses a verdict (acceptance B02). The shared bootstrap is
+never skipped: its secrets plane, leak check, publish-path probe, repository
+identity and git excludes are session-scoped state no inputs key covers. The
+receipt names the mode and the source ceremony, and anything that does not
+verify runs the full projection apply.
 """
 
 from __future__ import annotations
@@ -43,7 +43,6 @@ def test_reuse_requires_a_ready_complete_receipt_for_the_same_inputs() -> None:
 
 def test_reuse_is_decided_by_checks_run_this_ceremony() -> None:
     decision = _between(INSTALL, 'stage "reuse-verify"', 'stage "shared-bootstrap"')
-    assert "ensure_uv_environment.sh" in decision and " check " in decision
     assert "--check --no-receipt" in decision
     assert "projection=ok" in decision
     assert "REUSE=1" in decision
@@ -69,8 +68,12 @@ def test_receipt_names_the_reuse_and_its_source() -> None:
     assert '"reused_from"' in INSTALL and '"inputs_key"' in INSTALL
 
 
-def test_memory_probe_and_structural_validation_still_run_on_reuse() -> None:
-    # Neither stage is gated on REUSE: the runtime verdicts are always fresh.
-    for stage in ('stage "memory-readiness"', 'stage "structural-validate"'):
+def test_session_scoped_stages_still_run_on_reuse() -> None:
+    # None of these is gated on REUSE: session-scoped verdicts are always fresh.
+    for stage in (
+        'stage "shared-bootstrap"',
+        'stage "memory-readiness"',
+        'stage "structural-validate"',
+    ):
         body = _between(INSTALL, stage, "\nstage ")
         assert "REUSE" not in body, stage

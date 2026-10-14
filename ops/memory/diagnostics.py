@@ -88,8 +88,13 @@ def _overall(levels: dict[str, str], *, health_only: bool = False) -> str:
     surface = levels["R4"] == PASS and levels["R5"] in (PASS, SKIPPED)
     if health_only:
         # Hydration, write and close were never probed: HEALTH_READY says
-        # bound + healthy, and deliberately never READY.
-        return "HEALTH_READY" if surface else "PARTIAL_SURFACE_READY"
+        # bound + healthy, and deliberately never READY. Projection (R9) is
+        # probed in both modes, so its failure is reported the same way.
+        if not surface:
+            return "PARTIAL_SURFACE_READY"
+        if levels["R9"] == FAIL:
+            return "HEALTH_READY_PROJECTION_DEGRADED"
+        return "HEALTH_READY"
     core = all(levels[key] == PASS for key in ("R6", "R7", "R8"))
     if not core:
         return "MEMORY_DEGRADED"
@@ -272,7 +277,14 @@ def readiness_report(
 
 #: Overall statuses that mean the runtime never reached memory (ADR-0032).
 _ENVIRONMENT_OVERALL = frozenset({"PACKAGE_UNBOUND"})
-_READY_OVERALL = frozenset({"READY", "CANONICAL_READY_PROJECTION_DEGRADED", "HEALTH_READY"})
+_READY_OVERALL = frozenset(
+    {
+        "READY",
+        "CANONICAL_READY_PROJECTION_DEGRADED",
+        "HEALTH_READY",
+        "HEALTH_READY_PROJECTION_DEGRADED",
+    }
+)
 
 
 def fault_class_for_overall(overall: str) -> str:

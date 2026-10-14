@@ -121,10 +121,16 @@ if graphiti_enabled; then
   if [ -f "$GOV_ROOT/ops/memory/cli.py" ]; then
     HYDRATE_MD="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
       "$PY" -c '
-import json, subprocess, sys
+import json, os, subprocess, sys
+from ops.graphiti.graphiti_gate_lib import gates_enabled
 from ops.memory.control_plane_client import fault_class_for
 
 on_demand = "on demand: python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
+conversation = os.environ.get("CURSOR_CONVERSATION_ID", "").strip() or "default"
+if gates_enabled():
+    # GATES-002 is opted in: edits stay denied until this conversation has a
+    # fresh hydration, so the advertised command must record one.
+    on_demand += " --record-session %s (required: L9_MEMORY_WRITE_GATES=1)" % conversation
 try:
     proc = subprocess.run(
         [sys.executable, "-m", "ops.memory.cli", "--surface", "cursor-session-start",
