@@ -163,3 +163,25 @@ def test_wrapper_allows_a_visible_non_authorizing_comment(tmp_path: Path) -> Non
     proc = _run(tmp_path, _comment_event(command), review=False)
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == ""
+
+
+def test_wrapper_denies_a_curl_comment_on_the_github_api(tmp_path: Path) -> None:
+    line = f"authorize merge {SLUG}#53@{SHA}"
+    command = f"curl -X POST https://api.github.com/repos/{SLUG}/issues/53/comments -d '{line}'"
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
+
+
+def test_wrapper_ignores_a_lookalike_github_host(tmp_path: Path) -> None:
+    line = f"authorize merge {SLUG}#53@{SHA}"
+    command = (
+        "curl -X POST "
+        f"https://api.github.com.evil.example/repos/{SLUG}/issues/53/comments "
+        f"-d '{line}'"
+    )
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == ""

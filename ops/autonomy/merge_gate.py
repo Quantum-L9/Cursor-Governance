@@ -817,6 +817,17 @@ def _referenced_payloads(words: list[str]) -> tuple[str, bool]:
     return "\n".join(chunks), hidden
 
 
+def _url_is_github_api_record(token: str) -> bool:
+    """True when this argv token is a URL whose host is exactly api.github.com."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(token.strip("'\""))
+    if (parsed.hostname or "").lower() != "api.github.com":
+        return False
+    path = parsed.path or ""
+    return "/reviews" in path or "/comments" in path
+
+
 def _is_authorization_write(words: list[str]) -> bool:
     """True when this argv can create the GitHub review or comment the gate trusts."""
     if not words:
@@ -828,11 +839,7 @@ def _is_authorization_write(words: list[str]) -> bool:
     api = words[:2] == ["gh", "api"] and any(
         token in joined for token in ("/reviews", "/comments", "addPullRequestReview", "addComment")
     )
-    curl = (
-        head == "curl"
-        and "api.github.com" in joined
-        and any(token in joined for token in ("/reviews", "/comments"))
-    )
+    curl = head == "curl" and any(_url_is_github_api_record(word) for word in words)
     if not (review or comment or api or curl):
         return False
     if api or curl:
