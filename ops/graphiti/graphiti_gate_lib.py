@@ -89,9 +89,12 @@ READ_ONLY_TOOLS = frozenset(
     }
 )
 
+# SessionStart is health-only and no longer hydrates, so a fresh session does not
+# satisfy this gate; recording a hydration for this conversation does.
 DENY_HINT = (
-    "Run a canonical memory search/hydrate (l9-graphite-memory) or start a fresh "
-    "session so SessionStart hydrates. This is a hydration gate, not a lock."
+    "Run `python -m ops.memory.cli hydrate \"<task>\" --workspace <repo> "
+    "--record-session <conversation-id>` or a canonical memory search "
+    "(l9-graphite-memory). This is a hydration gate, not a lock."
 )
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sessionStart — code-graph health + canonical memory hydrate packet.
+# sessionStart — code-graph health + canonical memory health (no record retrieval).
 # Emits hydrate_markdown + codegraph_markdown + additional_context (JSON).
 # Resume SSOT is the canonical memory control plane (ops/memory) — never
 # memory-bank, and since stage C8 never a provider call.
