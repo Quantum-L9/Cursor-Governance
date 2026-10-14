@@ -11,17 +11,20 @@ the only sanctioned way for l9-pr-remediation to choose a merge method.
     --run --head-sha  execute the merge (does not merge when children exist
                       unless method is merge)
 
-Authorization (CANONICAL_LAW §6.2.12). ``--run`` merges only under a live human
-merge grant for exactly this repository, PR and head. Before merging it rechecks
-the PR's current head on GitHub: a head that differs from ``--head-sha``, or no
-grant for that head, prints a MERGE_PENDING record and exits MERGE_PENDING_EXIT
-without merging. The SHA then travels with the merge (REST ``sha``, CLI
+Authorization (CANONICAL_LAW §6.2.13). ``--run`` merges only when a human GitHub
+authorization covers exactly this repository, PR and current head, or when the
+optional legacy grant file does. Before merging it rechecks the PR's current
+head on GitHub: a head that differs from ``--head-sha``, or no authorization for
+that head, prints a MERGE_PENDING record and exits MERGE_PENDING_EXIT without
+merging. The SHA then travels with the merge (REST ``sha``, CLI
 ``--match-head-commit``) so GitHub itself refuses a head that moves in between.
-The grant is read from the invoking account's home as recorded in the password
-database, not from ``$HOME`` or ``L9_MERGE_AUTHORIZATION_FILE``: this process's
-environment belongs to whoever runs it, and an agent controls that. The human
-session breakglass L9_MERGE_AUTHORIZED is honoured by merge_gate's hook, not
-here, for the same reason.
+GitHub evidence is read from GitHub, not from ``L9_MERGE_REVIEW_FILE``. The
+legacy grant is read from the invoking account's home as recorded in the
+password database, not from ``$HOME`` or ``L9_MERGE_AUTHORIZATION_FILE``: this
+process's environment belongs to whoever runs it, and an agent controls that.
+The human session breakglass L9_MERGE_AUTHORIZED is honoured by merge_gate's
+hook, not here, for the same reason. Failing required checks stay GitHub's
+refusal: a non-zero merge API result is returned, not overridden.
 
 Two execution transports, same order as the probe above it:
 
@@ -54,8 +57,8 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+from github_merge_authorization import authorization_line, authorize_for_merge  # noqa: E402
 from merge_gate import (  # noqa: E402
-    GRANT_COMMAND,
     GRANT_FILE_NAME,
     _stacked_children,
     find_grant,
@@ -74,13 +77,20 @@ def _account_grant_path() -> Path:
     return home / ".l9" / "autonomy" / GRANT_FILE_NAME
 
 
+def _github_authorization(repo: str, pr: str, head_sha: str) -> dict[str, Any]:
+    """Live GitHub verdict. Tests replace this; production does not read a fixture."""
+    return authorize_for_merge(repo, pr, head_sha)
+
+
 def authorization_status(
     repo: str, pr: str, requested_sha: str, *, path: Path | None = None
 ) -> dict[str, Any]:
-    """AUTHORIZED only for a live human grant on the PR's current head.
+    """AUTHORIZED only for human authorization on the PR's current head.
 
-    Rechecks GitHub first, so a grant for an older head, or a caller naming a
-    head that is no longer current, returns MERGE_PENDING rather than merging.
+    Rechecks GitHub first, so an approval or grant for an older head, or a
+    caller naming a head that is no longer current, returns MERGE_PENDING
+    rather than merging. A legacy grant file still counts; it is not required
+    when GitHub already records the human authorization.
     """
     requested = requested_sha.strip().lower()
     record: dict[str, Any] = {
@@ -98,19 +108,38 @@ def authorization_status(
             "reason": f"cannot recheck the live head ({exc})",
         }
     record["head_sha"] = live
+    line = authorization_line(repo, pr, live) if live else ""
     if not requested:
-        reason = "no --head-sha named; a grant binds an exact head"
+        reason = "no --head-sha named; authorization binds an exact head"
     elif requested != live:
         reason = f"head moved: requested {requested}, live {live}"
-    elif find_grant(repo, str(pr), live, path=path or _account_grant_path()) is None:
-        reason = "no live human merge grant for this repository, PR and head"
-    else:
+    elif find_grant(repo, str(pr), live, path=path or _account_grant_path()) is not None:
         return {**record, "status": "AUTHORIZED", "reason": "human grant matches live head"}
+    else:
+        github = _github_authorization(repo, str(pr), live)
+        if github.get("authorized"):
+            return {
+                **record,
+                "status": "AUTHORIZED",
+                "reason": str(
+                    github.get("reason") or "human GitHub authorization matches live head"
+                ),
+                "channel": github.get("channel"),
+                "authorizer": github.get("authorizer"),
+            }
+        reason = str(
+            github.get("reason")
+            or "no human GitHub merge authorization for this repository, PR and head"
+        )
     return {
         **record,
         "status": "MERGE_PENDING",
         "reason": reason,
-        "grant_command": (f"{GRANT_COMMAND} --repo {repo} --pr {pr} --head-sha {live}"),
+        "grant_command": line,
+        "missing_prerequisite": (
+            f"A human with write access posts this exact line on the pull request, "
+            f"or submits an APPROVED review on {live}: {line}"
+        ),
     }
 
 

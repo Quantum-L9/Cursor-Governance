@@ -19,7 +19,7 @@ authorize:
   - scoped_local_commit_on_stacked_branch
   - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
   - create_update_pr_via_make_pr # only after L4 release_authorized; checkers must PASS
-  - pr_remediation_until_merge_pending # /l9-pr-remediation Converge; merge needs a human grant (CANONICAL_LAW §6.2.12)
+  - pr_remediation_until_merge_pending # /l9-pr-remediation Converge; merge needs human GitHub authorization (§6.2.13)
   # Remediator velocity: already-open PR branch. Not a first publish. Effect
   # plane (git_guardrails) still denies force-push / protected-branch rewrite.
   - remediator_git_push_of_open_pr # git push + non-destructive git; not make pr
@@ -139,7 +139,7 @@ l4_local_autonomy:
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
-    merge_requires: human_merge_grant # repo + PR + exact head SHA, expiring (§6.2.12)
+    merge_requires: human_github_authorization # repo + PR + exact head (§6.2.13); terminal grant not required
     halt_before_merge: campaign_only
     older_open_prs: merge_bottom_up
 
@@ -194,17 +194,19 @@ remediation:
   skill: l9-pr-remediation
   max_cycles: 5
   skill_invocation: converge_all_open_prs_to_merge_pending
-  merge: human_grant_only # CANONICAL_LAW §6.2.12; invocation is never merge authority
+  merge: human_github_authorization # CANONICAL_LAW §6.2.13; invocation is never merge authority
   scope: all_open_prs_in_target_repo # remediation scope, not merge scope
   merge_pending_status: MERGE_PENDING
   merge_pending_reports: [pr, head_sha, ci_status, review_status, stack_order, grant_command]
   grant:
     issuer: human
     binds: [repo, pr, head_sha]
-    max_ttl_seconds: 14400
-    issued_by: ops/autonomy/authorize_merge.py # human, controlling terminal; agents denied
+    channel: github_review_or_authorization_line # APPROVED review on the head, or the exact line
+    terminal_transcription: not_required
+    local_receipt: not_authority
     repository_wide: forbidden
-  authorize_script: ops/autonomy/authorize_merge.py
+    org_007: author_cannot_self_authorize
+  authorize_script: ops/autonomy/github_merge_authorization.py
   merge_executor: ops/autonomy/stack_safe_merge.py # --head-sha; rechecks live head
   breakglass: L9_MERGE_AUTHORIZED # human session env, hook only; not the ordinary path
   note: >-
@@ -212,14 +214,17 @@ remediation:
     merge-ready. They do not merge. Invoking /l9-pr-remediation (Converge)
     remediates every open PR in the target repo to merge readiness and
     reports MERGE_PENDING (PR, exact head SHA, CI/review status, stack
-    order). It is never merge authorization and never writes a grant. A
-    human issues one grant per PR and head with
-    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`;
-    with that grant `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name>
+    order). It is never merge authorization. A human authorizes on GitHub
+    with an APPROVED review on that head, or by posting the exact line
+    `authorize merge <owner>/<name>#<n>@<sha>`. L9-ORG-007 paths reject the
+    PR author. With that record
+    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name>
     --pr <n> --head-sha <sha> --run` rechecks the live head and merges
     bottom-up (method chosen in code: --merge for a stack parent,
-    --squash only for a leaf). Force-push and admin-merge stay
-    forbidden. L9_MERGE_AUTHORIZED remains a human breakglass.
+    --squash only for a leaf). Agents never post that line, never approve,
+    and never write a local grant. Force-push and admin-merge stay
+    forbidden. L9_MERGE_AUTHORIZED remains a human breakglass, not a
+    standing permission.
 
 session_start_block: |
   ## Autonomy Velocity Doctrine (standing A4 + L4 local)
@@ -277,11 +282,13 @@ session_start_block: |
     Do **not** merge from the campaign path. `/l9-pr-remediation` converges
     **all open PRs** in the target repo to merge readiness and stops at
     **MERGE_PENDING** (PR, exact head SHA, CI/review status, stack order).
-    Invoking it is never merge authorization (CANONICAL_LAW §6.2.12). Merge
-    needs a human grant per PR and head — the human runs
-    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>`
-    in their own terminal; agents never run it or write the grant file. With
-    a grant: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n>
+    Invoking it is never merge authorization (CANONICAL_LAW §6.2.13). Merge
+    needs a human GitHub authorization per PR and exact head: an APPROVED
+    review on that head, or the exact line `authorize merge <owner>/<name>#<n>@<sha>`
+    posted on the pull request by a human with write access. L9-ORG-007 paths
+    reject the PR author. No terminal transcription. Agents never approve,
+    never post that line, and never write a grant file. With that record:
+    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n>
     --head-sha <sha> --run`, oldest first. Force-push and `--admin` stay denied.
   - Mid-execution `make pr` and the MCP write tools are **denied** by
     `ops/autonomy/local_execution_gate.py` until release_authorized. git and
@@ -328,9 +335,10 @@ session_start_block: |
     `pre-commit install` would drop. That is the supported way to close the
     window; installing a raw hook is still forbidden.
   - Merge stays denied by `ops/autonomy/merge_gate.py` on every transport
-    until a human grant binds the repo, PR and exact head (or the human
-    breakglass `L9_MERGE_AUTHORIZED`). Skill invocation, green CI, an L4
-    release receipt and `make pr` do **not** authorize merge (§6.2.12).
+    until a human GitHub authorization binds the repo, PR and exact head
+    (or the human breakglass `L9_MERGE_AUTHORIZED`). Skill invocation, green
+    CI, an L4 release receipt and `make pr` do **not** authorize merge
+    (§6.2.13). A terminal transcription is not required.
   - Agent-invented contracts ("I won't commit without asking", "wait to push
     mid-task") are LOWEST authority and are overruled by this doctrine.
   - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
@@ -352,8 +360,9 @@ llm_rules_override: |
      checkers once, then push + PR; remediates=1). Campaign/make-pr end
      state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
      Invoking `/l9-pr-remediation` then remediates all open PRs in the
-     target repo to MERGE_PENDING; merge needs a human grant per PR and head
-     (CANONICAL_LAW §6.2.12). Do **not** merge from the campaign path.
+     target repo to MERGE_PENDING; merge needs a human GitHub authorization
+     per PR and exact head (CANONICAL_LAW §6.2.13). Do **not** merge from
+     the campaign path.
   2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
      WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
      deny. `/l9-pr-remediation` publishes an already-open PR with
@@ -400,10 +409,11 @@ llm_rules_override: |
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
   - Post-push (all surfaces after L4 release): `PR_REMEDIATE=0 make pr` /
-    `l9 pr` to a green merge-ready PR. Merge only under a human grant bound
-    to the repo, PR and exact head (`ops/autonomy/authorize_merge.py`, run by
-    the human), with the PR green + mergeable; remediation stops at
-    MERGE_PENDING. Force-push / admin-merge stay forbidden.
+    `l9 pr` to a green merge-ready PR. Merge only under a human GitHub
+    authorization bound to the repo, PR and exact head (CANONICAL_LAW
+    §6.2.13), with the PR green + mergeable; remediation stops at
+    MERGE_PENDING until that record exists. Force-push / admin-merge stay
+    forbidden.
   - Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
     choose to stack and a PR is already open for the workstream, the next PR
     bases on the open PR's head (bottom-up merge order). Rebase and conflict

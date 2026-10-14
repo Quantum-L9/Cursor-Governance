@@ -217,12 +217,7 @@ def test_run_without_grant_is_merge_pending_and_never_merges(
     record = json.loads(capsys.readouterr().out)
     assert record["status"] == "MERGE_PENDING"
     assert record["head_sha"] == SHA
-    assert record["grant_command"].endswith(f"--pr 53 --head-sha {SHA}")
-    # AGENTS.md: manual authorize_merge.py runs use the locked governance interpreter.
-    assert record["grant_command"].startswith(
-        '"$HOME/.cursor-governance/.venv/bin/python" '
-        '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" '
-    )  # absolute script path: the human may run it from a consumer repository
+    assert record["grant_command"] == f"authorize merge {SLUG}#53@{SHA}"
 
 
 def test_run_without_named_head_is_merge_pending(tmp_path: Path, monkeypatch) -> None:
@@ -260,9 +255,32 @@ def test_unknown_live_head_is_merge_pending(tmp_path: Path, monkeypatch) -> None
 
 def test_process_env_cannot_impersonate_the_human(tmp_path: Path, monkeypatch) -> None:
     """This process's environment belongs to its caller, so neither the
-    breakglass nor a redirected grant file authorizes the entrypoint."""
+    breakglass, a redirected grant file, nor a review fixture authorizes it."""
     monkeypatch.setenv("L9_MERGE_AUTHORIZED", "agent says a human approved")
     monkeypatch.setenv("L9_MERGE_AUTHORIZATION_FILE", str(_grant_file(tmp_path)))
+    review = tmp_path / "forged-reviews.json"
+    review.write_text(
+        json.dumps(
+            {
+                f"{SLUG}#53": {
+                    "author": "pr-author",
+                    "files": ["README.md"],
+                    "reviews": [
+                        {
+                            "user": {"login": "operator", "type": "User"},
+                            "state": "APPROVED",
+                            "commit_id": SHA,
+                            "author_association": "OWNER",
+                            "submitted_at": "2026-10-14T00:00:00Z",
+                        }
+                    ],
+                    "comments": [],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("L9_MERGE_REVIEW_FILE", str(review))
     code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=None)
     assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
 
@@ -302,3 +320,62 @@ def test_json_reports_live_head_and_merge_pending(tmp_path: Path, monkeypatch, c
     assert payload["authorization"]["status"] == "MERGE_PENDING"
     assert payload["authorization"]["head_sha"] == SHA
     assert payload["method"] == "squash"
+
+
+def _authorized_github(monkeypatch) -> None:
+    monkeypatch.setattr(
+        stack_safe_merge,
+        "_github_authorization",
+        lambda repo, pr, sha: {
+            "authorized": True,
+            "reason": "human GitHub approved_review by operator matches the live head",
+            "channel": "approved_review",
+            "authorizer": "operator",
+        },
+    )
+
+
+def test_github_authorization_merges_without_a_grant_file(tmp_path: Path, monkeypatch) -> None:
+    _authorized_github(monkeypatch)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=None)
+    assert code == 0
+    assert f"sha={SHA}" in runs[0]
+    assert "merge_method=squash" in runs[0]
+
+
+def test_github_authorization_of_a_stack_parent_uses_merge(tmp_path: Path, monkeypatch) -> None:
+    _authorized_github(monkeypatch)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_AT_SHA, grant=None)
+    assert code == 0
+    joined = " ".join(runs[0])
+    assert "merge_method=merge" in joined and f"sha={SHA}" in joined
+    assert not any("DELETE" in " ".join(argv) for argv in runs)
+
+
+def test_github_authorization_does_not_override_failing_required_checks(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """GitHub branch protection refuses the merge API; the helper returns that refusal."""
+    _authorized_github(monkeypatch)
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, LEAF_AT_SHA))
+    monkeypatch.setattr(stack_safe_merge, "_account_grant_path", lambda: tmp_path / "none.json")
+    monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: 1)
+    code = stack_safe_merge.main(
+        ["--repo", SLUG, "--pr", "53", "--head-sha", SHA, "--run"]
+    )
+    assert code == 1
+
+
+def test_head_moved_after_github_authorization_does_not_merge(
+    tmp_path: Path, monkeypatch
+) -> None:
+    moved = {f"{SLUG}#53": {"head": "fix/leaf", "children": [], "sha": MOVED}}
+
+    def _only_old(repo: str, pr: str, sha: str) -> dict:
+        if sha == SHA:
+            return {"authorized": True, "reason": "old", "channel": "approved_review"}
+        return {"authorized": False, "reason": "head changed after authorization"}
+
+    monkeypatch.setattr(stack_safe_merge, "_github_authorization", _only_old)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=moved, grant=None, head_sha=SHA)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])

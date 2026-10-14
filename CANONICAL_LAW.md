@@ -1391,3 +1391,48 @@ authorizes merge") remain on disk as history. Neither confers merge authority.
 
 SSOT: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
 (`remediation`, `l4_local_autonomy.post_push`).
+
+<!-- GITHUB_MERGE_AUTHORIZATION_V1 -->
+## 6.2.13 Human GitHub authorization, agent execution (2026-10-14) — supersedes the terminal-grant requirement of §6.2.12
+
+Append-only. §6.2.12 remains on disk. This section supersedes only its
+requirement that an agent-operated merge be preceded by a controlling-terminal
+transcription and a local `merge-authorization.json`. It does not create an
+unrestricted autonomous-merge mode. Invocation, green CI, an L4 release,
+`make pr`, a campaign step, and any receipt or assertion an agent wrote are
+still not merge authority.
+
+1. **Human authorization and agent execution are different acts.** A human
+   authorizes one repository, one pull request and one exact head. An agent
+   may execute that authorized merge. The agent cannot supply the
+   authorization. L9-ORG-007 is unchanged: on a governance-protected path the
+   pull request author cannot self-authorize, and a coding agent is not an
+   authorizer.
+2. **The ordinary record is already on GitHub.** It is either an `APPROVED`
+   review by a human with write access (`OWNER`, `MEMBER` or `COLLABORATOR`,
+   user type `User`) whose `commit_id` is the pull request's current 40-hex
+   head, or a review or issue comment by such a human whose body contains the
+   exact line `authorize merge <owner>/<repo>#<pr>@<40-hex>`. Bots and a
+   missing identity do not count. A later `CHANGES_REQUESTED` or `DISMISSED`
+   review from that human revokes an earlier approval. A material head change
+   leaves the old record behind: it does not authorize the new head.
+3. **No terminal ceremony is required.** `authorize_merge.py` and
+   `merge-authorization.json` are no longer a prerequisite. An agent tool call
+   that runs `authorize_merge.py`, writes that file, submits an approving
+   review, or posts the authorization line is still denied. A forged local
+   fixture is not authorization. `stack_safe_merge.py` reads the GitHub record
+   and does not honor `L9_MERGE_REVIEW_FILE`.
+4. **Execution checks are unchanged.** `stack_safe_merge.py --run` rechecks the
+   live head and passes that SHA to GitHub. A moved head returns
+   `MERGE_PENDING`. Stack-safe method selection is unchanged. Required checks
+   and branch protection are GitHub's refusal and are not overridden. Force,
+   hard-reset, `--admin` and auto-merge enablement stay denied.
+   `L9_MERGE_AUTHORIZED` remains the human session breakglass for the hook, not
+   the ordinary path and not a standing permission.
+5. **Fail closed.** Absent a verifiable GitHub authorization for the live head,
+   the merge is denied and the missing prerequisite is reported. If the merge
+   gate is missing or crashes, the tool call is blocked (INV-1).
+
+SSOT: [`ops/autonomy/github_merge_authorization.py`](ops/autonomy/github_merge_authorization.py),
+[`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
+[`ops/autonomy/stack_safe_merge.py`](ops/autonomy/stack_safe_merge.py).

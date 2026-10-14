@@ -2220,3 +2220,28 @@ refused.
   MERGE_PENDING (exit 3). Stack-safe method selection is unchanged.
 - `L9_MERGE_AUTHORIZED=<reason>` stays the human session breakglass for the
   hook. It is not the ordinary approval path.
+
+<!-- GITHUB_MERGE_AUTHORIZATION_V1 -->
+## GitHub merge authorization, agent execution (2026-10-14) — supersedes the terminal-grant sentences in HUMAN_GATED_MERGE_V1
+
+Operating form of CANONICAL_LAW §6.2.13. The §6.2.12 paragraphs above stay on
+disk. Where they require a controlling-terminal transcription before an agent
+may merge, this section is current.
+
+- A human authorizes one repository, one PR and one exact head on GitHub: an
+  `APPROVED` review on that head by a human with write access, or a review or
+  comment whose body contains the exact line
+  `authorize merge <owner>/<name>#<n>@<40-hex>`. No terminal transcription and
+  no local grant file is required.
+- The agent verifies that record, runs
+  `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n> --head-sha <sha> --run`,
+  and verifies the merge. Invocation, green CI, an L4 release and `make pr`
+  are still not authorization.
+- L9-ORG-007 paths reject authorization by the PR author. Bots do not
+  authorize. A head that moved after the record is `MERGE_PENDING`.
+- Agents never run `authorize_merge.py`, never write
+  `merge-authorization.json`, never submit an approving review, and never post
+  the authorization line. Force, `--admin` and auto-merge stay denied.
+  Required checks remain GitHub's refusal.
+- `L9_MERGE_AUTHORIZED=<reason>` stays the human session breakglass for the
+  hook. It is not a standing autonomous-merge permission.

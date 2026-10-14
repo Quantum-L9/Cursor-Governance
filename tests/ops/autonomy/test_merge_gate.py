@@ -1015,7 +1015,9 @@ def test_emitted_merge_commands_are_cwd_independent() -> None:
     assert mg.MERGE_COMMAND == ABS_PREFIX + 'stack_safe_merge.py"'
     assert pr_fleet.MERGE_COMMAND is mg.MERGE_COMMAND  # one owner, no copy
     assert _relative_commands(mg.MERGE_DENY_REASON) == []
-    assert mg.GRANT_COMMAND in mg.MERGE_DENY_REASON and mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
+    assert mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
+    assert "authorize merge <owner>/<repo>#<n>@<40-hex>" in mg.MERGE_DENY_REASON
+    assert mg.GRANT_COMMAND not in mg.MERGE_DENY_REASON
 
 
 def test_relative_command_detector_catches_the_old_forms() -> None:

@@ -1,8 +1,8 @@
 ---
-description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs a human grant (CANONICAL_LAW §6.2.12); all remediations publish as stacked PRs via make pr without bare git push
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs human GitHub authorization (CANONICAL_LAW §6.2.13); all remediations publish as stacked PRs via make pr without bare git push
 ---
 
-# make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; human grant → merge
+# make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; GitHub authorization → merge
 
 Default publish path on every surface (Cursor, Claude Code desktop,
 Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
@@ -30,30 +30,31 @@ preparation before an observational validation wave; it runs no kernel.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): remediate **all open PRs** in the target repo to
    merge readiness. Invocation is **not** merge authorization
-   (CANONICAL_LAW §6.2.12). Remediation follows the File-Scope Invariant (ADR-0052):
+   (CANONICAL_LAW §6.2.13). Remediation follows the File-Scope Invariant (ADR-0052):
    - In-scope surgical fixes (files already created/modified by the PR):
      verify via `make precommit-repo`, commit pathspecs, push to open PR branch.
    - Scope-expanding fixes (requiring a new file to be touched): publish
      as a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
    Converge each PR, then stop at **MERGE_PENDING**: report the PR, its
    exact head SHA, CI and review status, and stack order, and keep working
-   on independent PRs. Agents never run `authorize_merge.py` and never
-   write the grant file. A **human** issues one grant per PR and head in
-   their own terminal; with that grant, merge bottom-up:
+   on independent PRs. A **human** authorizes on GitHub: an APPROVED review
+   on the current head, or a comment whose body contains the exact line
+   `authorize merge <owner>/<name>#<n>@<sha>`. L9-ORG-007 paths reject the
+   PR author. No terminal transcription. Agents never run `authorize_merge.py`,
+   never write the grant file, never approve, and never post that line.
+   With the GitHub record, merge bottom-up:
 
 ```bash
-# human, own terminal — types the target back to confirm
-"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo <owner/name> --pr <n> --head-sha <sha>
-# then (agent or human) — rechecks the live head; MERGE_PENDING if it moved
+# agent, after the human GitHub record exists — rechecks the live head
 "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n> --head-sha <sha> --run
 ```
 
 `ops/autonomy/merge_gate.py` denies every merge transport — `gh pr merge`,
-the REST endpoint, MCP merge tools, `stack_safe_merge.py --run` — without a
-live grant bound to that repo, PR and exact head (or the human session
-breakglass `L9_MERGE_AUTHORIZED`). Repository-wide `--all-open` authority is
-not issuable. Force-push, hard-reset, `--admin`, and auto-merge enablement
-stay denied.
+the REST endpoint, MCP merge tools, `stack_safe_merge.py --run` — without
+human GitHub authorization for that repo, PR and exact head (or the human
+session breakglass `L9_MERGE_AUTHORIZED`). A standing environment boolean is
+not an authority. Force-push, hard-reset, `--admin`, and auto-merge
+enablement stay denied.
 
 **Both merge transports are governed.** `gh pr merge` is a GraphQL call; where
 GraphQL is unavailable (a session gateway serving only a pinned set of
@@ -86,8 +87,8 @@ Stacked PRs (operator default 2026-08-15; **opt-in since 2026-09-19**):
 `make pr` writes `.l9/pr/pr-remediation-handoff.json` plus
 `L9_AGENT_REQUIRED` when remediates=1 (the default). Follow that handoff:
 poll to green + merge-ready. Standing campaign contract is still no merge.
-`/l9-pr-remediation` Converge ends at MERGE_PENDING; a human grant
-(`authorize_merge.py`, run by the human) is the merge authority.
+`/l9-pr-remediation` Converge ends at MERGE_PENDING until a human GitHub
+authorization covers that head (CANONICAL_LAW §6.2.13).
 `PR_REMEDIATE=0` skips the handoff marker.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),

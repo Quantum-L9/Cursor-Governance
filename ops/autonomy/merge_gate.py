@@ -4,12 +4,14 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Merge authority is a human grant, never an invocation (CANONICAL_LAW §6.2.12).
-A merge — `gh pr merge`, the REST merge endpoint (gh api or curl), an MCP merge
-tool, or `stack_safe_merge.py --run` — is allowed only when one of these holds:
+Merge authority is a human act, never an invocation (CANONICAL_LAW §6.2.12,
+§6.2.13). A merge — `gh pr merge`, the REST merge endpoint (gh api or curl),
+an MCP merge tool, or `stack_safe_merge.py --run` — is allowed only when one
+of these holds:
 
-  L9_MERGE_AUTHORIZED=<nonempty reason string>          # human session breakglass
-  ~/.l9/autonomy/merge-authorization.json               # human merge grant
+  a human GitHub authorization on the named head          # ordinary path (§6.2.13)
+  L9_MERGE_AUTHORIZED=<nonempty reason string>            # human session breakglass
+  ~/.l9/autonomy/merge-authorization.json                 # optional legacy grant
     {"authorizations": [{"repo": "org/repo", "pr": 53,
                           "head_sha": "<40-hex>", "issuer": "human",
                           "issued_at": <unix-seconds>,
@@ -22,12 +24,16 @@ tool, or `stack_safe_merge.py --run` — is allowed only when one of these holds
     (`--match-head-commit`, `-f sha=`, an MCP `sha`, or `--head-sha`). A moved
     head, an unnamed head, or a stale grant is MERGE_PENDING.
 
-Grants are written by ops/autonomy/authorize_merge.py after a human types the
-target back on a controlling terminal. Invoking /l9-pr-remediation, Converge,
-green CI, an L4 release receipt, make pr, or an agent-written receipt is NOT a
-grant. An agent tool call that runs authorize_merge.py or writes the grant file
-is denied here (self-issuance). A standing environment boolean is not an
-authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE flag has no effect.
+The ordinary record is a human GitHub approval or the exact line
+``authorize merge <owner>/<repo>#<pr>@<sha>`` on that pull request
+(``github_merge_authorization.py``). A terminal transcription is not required.
+The optional legacy grant is still written only by authorize_merge.py, and an
+agent tool call that runs that script, writes the grant file, submits an
+approving review, or posts the authorization line is denied (self-issuance).
+Invoking /l9-pr-remediation, Converge, green CI, an L4 release receipt, make pr,
+or an agent-written receipt is NOT authorization. A standing environment
+boolean is not an authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE
+flag has no effect.
 
 Shell ``git``/``gh`` commands are exempt from the *workflow* plane
 (``git_execution_exemption``), but a merge is an effect, so merge authority
@@ -84,6 +90,7 @@ from command_parse import (  # noqa: E402
     wrapper_subcommands,
 )
 from git_execution_exemption import event_is_git_or_gh  # noqa: E402
+from github_merge_authorization import verdict_for_hook  # noqa: E402
 from l4_local import workspace_from_event  # noqa: E402
 
 DENY_TOOL_NAMES = {
@@ -147,22 +154,25 @@ GRANT_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/authorize_
 MERGE_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py"'
 
 MERGE_DENY_REASON = (
-    "MERGE_PENDING: merging requires a human merge grant bound to this repository, "
-    "PR and exact head SHA (CANONICAL_LAW §6.2.12). Invoking /l9-pr-remediation, "
-    "Converge, green CI, an L4 release, make pr, or an agent-written receipt is not "
-    "merge permission, and a standing environment boolean is not an authority. "
-    "Report MERGE_PENDING (PR, head SHA, CI/review status, stack order) and continue "
-    "independent work. A human issues the grant from their own terminal: "
-    f"{GRANT_COMMAND} --repo <owner/name> --pr <n> --head-sha <sha>; "
-    f"then {MERGE_COMMAND} --repo <owner/name> --pr <n> "
+    "MERGE_PENDING: merging requires human GitHub authorization bound to this "
+    "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). An APPROVED review "
+    "on that head, or a pull-request comment whose body contains the exact line "
+    "`authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write access, "
+    "is that authorization. L9-ORG-007 paths reject the PR author. Invoking "
+    "/l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, or a "
+    "terminal transcription is not merge permission, and a standing environment "
+    "boolean is not an authority. Report MERGE_PENDING and "
+    "continue independent work. With that authorization: "
+    f"{MERGE_COMMAND} --repo <owner/name> --pr <n> "
     "--head-sha <sha> --run (no --admin), oldest first."
 )
 
 SELF_ISSUE_REASON = (
-    "Merge grants are issued by a human, never by an agent (CANONICAL_LAW §6.2.12): "
-    "an agent tool call may not run authorize_merge.py or write "
-    "merge-authorization.json. Report MERGE_PENDING with the exact grant command "
-    "for the human to run in their own terminal."
+    "Merge authorization is a human GitHub act, never by an agent "
+    "(CANONICAL_LAW §6.2.13): an agent tool call may not run authorize_merge.py, "
+    "write merge-authorization.json, submit an approving review, or post an "
+    "`authorize merge` line. Report MERGE_PENDING with the exact line for the "
+    "human to post on the pull request."
 )
 
 AUTO_MERGE_DENY_REASON = (
@@ -709,6 +719,51 @@ def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
     return find_grant(repo, pr, head_sha) is not None
 
 
+def _github_verdict(repo: str, pr: str, head_sha: str) -> dict[str, Any]:
+    """GitHub authorization verdict. A short or missing SHA fails closed."""
+    if not repo or not str(pr).strip().isdigit() or not _FULL_SHA.match(head_sha.strip().lower()):
+        return {
+            "authorized": False,
+            "reason": "the merge did not name the repository, PR and full head SHA",
+        }
+    return verdict_for_hook(repo, str(pr).strip(), head_sha.strip().lower())
+
+
+def _github_authorizes(repo: str, pr: str, head_sha: str) -> bool:
+    """True when a human GitHub record covers this exact head."""
+    return bool(_github_verdict(repo, pr, head_sha).get("authorized"))
+
+
+_AUTH_LINE_IN_COMMAND = re.compile(
+    r"authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}"
+)
+
+
+def _segment_posts_github_authorization(words: list[str]) -> bool:
+    """True when this argv would create the GitHub record the gate trusts."""
+    if not words:
+        return False
+    joined = " ".join(words)
+    if len(words) >= 3 and words[:3] == ["gh", "pr", "review"]:
+        return "--approve" in words or _AUTH_LINE_IN_COMMAND.search(joined) is not None
+    if len(words) >= 3 and words[:3] == ["gh", "pr", "comment"]:
+        return _AUTH_LINE_IN_COMMAND.search(joined) is not None
+    method = (
+        _argv_value(words, "-X")
+        or _argv_value(words, "--method")
+        or _argv_value(words, "--request")
+    ).upper()
+    if method not in {"POST", "PATCH", "PUT"}:
+        return False
+    if _AUTH_LINE_IN_COMMAND.search(joined):
+        return True
+    return "APPROVE" in joined and any("/reviews" in word for word in words)
+
+
+def _shell_posts_github_authorization(command: str) -> bool:
+    return any(_segment_posts_github_authorization(words) for words in _executed_segments(command))
+
+
 def live_head_sha(repo: str, pr: str) -> str:
     """The PR's current head SHA from GitHub, lowercased. Raises ProbeError.
 
@@ -773,7 +828,7 @@ def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
         return True
     repo, pr = _target_from_input(tool_name, tool_input)
     head_sha = _head_sha_from_input(tool_name, tool_input)
-    return _file_authorizes(repo, pr, head_sha)
+    return _file_authorizes(repo, pr, head_sha) or _github_authorizes(repo, pr, head_sha)
 
 
 def _executed_segments(command: str, depth: int = 0) -> list[list[str]]:
@@ -917,10 +972,12 @@ def _stack_safe_run_reason(argv: list[str]) -> str | None:
     repo = _argv_value(argv, "--repo")
     pr = _argv_value(argv, "--pr")
     head_sha = _argv_value(argv, "--head-sha")
-    if _file_authorizes(repo, pr, head_sha):
+    if _file_authorizes(repo, pr, head_sha) or _github_authorizes(repo, pr, head_sha):
         return None
+    detail = str(_github_verdict(repo, pr, head_sha).get("reason") or "")
     return (
-        f"{MERGE_DENY_REASON} (target {repo or '<repo?>'}#{pr or '<pr?>'}"
+        f"{MERGE_DENY_REASON} Missing prerequisite: {detail}. "
+        f"(target {repo or '<repo?>'}#{pr or '<pr?>'}"
         f"@{head_sha or '<head-sha not named>'}; effective L9_MERGE_AUTHORIZED="
         f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
     )
@@ -942,10 +999,19 @@ def _authorized_merge_reason(
         authorized = _merge_authorized(tool_name, tool_input)
         stack_target = None
     else:
-        authorized = _human_breakglass() or _file_authorizes(*target)
+        authorized = _human_breakglass() or _file_authorizes(*target) or _github_authorizes(*target)
         stack_target = (target[0], target[1])
     if not authorized:
-        return f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED={effective()})"
+        if target is None:
+            named_repo, named_pr = _target_from_input(tool_name, tool_input)
+            named_sha = _head_sha_from_input(tool_name, tool_input)
+        else:
+            named_repo, named_pr, named_sha = target
+        detail = ""
+        if not _file_authorizes(named_repo, named_pr, named_sha):
+            detail = str(_github_verdict(named_repo, named_pr, named_sha).get("reason") or "")
+        missing = f" Missing prerequisite: {detail}." if detail else ""
+        return f"{MERGE_DENY_REASON}{missing} (effective L9_MERGE_AUTHORIZED={effective()})"
     if _human_breakglass():
         return None
     stack = _stack_safety_reason(command, tool_name, tool_input, stack_target)
@@ -1034,6 +1100,8 @@ def evaluate(
         if _script_argvs(command, "authorize_merge.py"):
             return SELF_ISSUE_REASON
         if _shell_writes_grant_file(command):
+            return SELF_ISSUE_REASON
+        if _shell_posts_github_authorization(command):
             return SELF_ISSUE_REASON
         for run_argv in _script_argvs(command, "stack_safe_merge.py"):
             reason = _stack_safe_run_reason(run_argv)
