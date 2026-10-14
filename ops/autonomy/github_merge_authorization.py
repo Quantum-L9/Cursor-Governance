@@ -307,9 +307,7 @@ def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
     view = _gh_json(f"repos/{repo}/pulls/{number}")
     if not isinstance(view, dict):
         raise RuntimeError("pull request payload was not an object")
-    reviews, reviews_full = _as_list(
-        _gh_json(f"repos/{repo}/pulls/{number}/reviews?per_page=100")
-    )
+    reviews, reviews_full = _as_list(_gh_json(f"repos/{repo}/pulls/{number}/reviews?per_page=100"))
     comments, comments_full = _as_list(
         _gh_json(f"repos/{repo}/issues/{number}/comments?per_page=100")
     )

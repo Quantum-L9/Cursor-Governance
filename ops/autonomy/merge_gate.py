@@ -734,9 +734,7 @@ def _github_authorizes(repo: str, pr: str, head_sha: str) -> bool:
     return bool(_github_verdict(repo, pr, head_sha).get("authorized"))
 
 
-_AUTH_LINE_IN_COMMAND = re.compile(
-    r"authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}"
-)
+_AUTH_LINE_IN_COMMAND = re.compile(r"authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}")
 
 
 def _segment_posts_github_authorization(words: list[str]) -> bool:

@@ -360,15 +360,11 @@ def test_github_authorization_does_not_override_failing_required_checks(
     monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, LEAF_AT_SHA))
     monkeypatch.setattr(stack_safe_merge, "_account_grant_path", lambda: tmp_path / "none.json")
     monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: 1)
-    code = stack_safe_merge.main(
-        ["--repo", SLUG, "--pr", "53", "--head-sha", SHA, "--run"]
-    )
+    code = stack_safe_merge.main(["--repo", SLUG, "--pr", "53", "--head-sha", SHA, "--run"])
     assert code == 1
 
 
-def test_head_moved_after_github_authorization_does_not_merge(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_head_moved_after_github_authorization_does_not_merge(tmp_path: Path, monkeypatch) -> None:
     moved = {f"{SLUG}#53": {"head": "fix/leaf", "children": [], "sha": MOVED}}
 
     def _only_old(repo: str, pr: str, sha: str) -> dict:
