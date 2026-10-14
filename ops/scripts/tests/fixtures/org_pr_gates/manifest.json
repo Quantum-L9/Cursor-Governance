@@ -24,5 +24,5 @@
       "sha256": "40596753d48e467acd59661071fe75844a95694e5e330c656641e7c60cf4169e"
     }
   ],
-  "refresh": "When the consumer caller pin or the validator moves: copy the file from that ref, update ref and sha256 here. The digest test fails until both agree."
+  "refresh": "When the canonical target caller pin or the validator moves: copy the file from that ref, update ref and sha256 here. The digest test fails until both agree. The vendored ref is a target, not a record of what any consumer runs."
 }
