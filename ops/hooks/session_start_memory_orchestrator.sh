@@ -125,7 +125,7 @@ import json, os, subprocess, sys
 from ops.graphiti.graphiti_gate_lib import gates_enabled
 from ops.memory.control_plane_client import fault_class_for
 
-on_demand = "on demand: python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
+on_demand = "on demand: cd \"$HOME/.cursor-governance\" && .venv/bin/python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
 conversation = os.environ.get("CURSOR_CONVERSATION_ID", "").strip() or "default"
 if gates_enabled():
     # GATES-002 is opted in: edits stay denied until this conversation has a
