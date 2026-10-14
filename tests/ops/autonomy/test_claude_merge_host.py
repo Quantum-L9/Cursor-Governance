@@ -35,6 +35,7 @@ def _review_file(tmp_path: Path) -> Path:
                             "state": "APPROVED",
                             "commit_id": SHA,
                             "author_association": "OWNER",
+                            "permission": "admin",
                             "submitted_at": "2026-10-14T00:00:00Z",
                         }
                     ],
@@ -119,3 +120,46 @@ def test_wrapper_blocks_when_the_gate_is_missing(tmp_path: Path) -> None:
     )
     assert proc.returncode == 2
     assert "BLOCKING" in proc.stderr
+
+
+def _comment_event(command: str) -> dict:
+    return {"tool_name": "Bash", "tool_input": {"command": command}}
+
+
+def test_wrapper_denies_an_authorization_line_in_a_body_file(tmp_path: Path) -> None:
+    payload = tmp_path / "auth.txt"
+    payload.write_text(f"authorize merge {SLUG}#53@{SHA}\n", encoding="utf-8")
+    command = f"gh pr comment 53 --repo {SLUG} --body-file {payload}"
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
+
+
+def test_wrapper_denies_an_unreadable_review_payload(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.json"
+    command = f"gh api --method POST repos/{SLUG}/pulls/53/reviews --input {missing}"
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
+
+
+def test_wrapper_denies_approve_event_supplied_through_input_file(tmp_path: Path) -> None:
+    payload = tmp_path / "review.json"
+    payload.write_text('{"event":"APPROVE","commit_id":"' + SHA + '"}\n', encoding="utf-8")
+    command = f"gh api --method POST repos/{SLUG}/pulls/53/reviews --input {payload}"
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
+
+
+def test_wrapper_allows_a_visible_non_authorizing_comment(tmp_path: Path) -> None:
+    command = f"gh pr comment 53 --repo {SLUG} --body 'checks are green'"
+    proc = _run(tmp_path, _comment_event(command), review=False)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == ""

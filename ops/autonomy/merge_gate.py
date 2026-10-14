@@ -735,30 +735,143 @@ def _github_authorizes(repo: str, pr: str, head_sha: str) -> bool:
 
 
 _AUTH_LINE_IN_COMMAND = re.compile(r"authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}")
+_APPROVE_EVENT = re.compile(r'(?i)(?:event\s*=\s*APPROVE|"event"\s*:\s*"APPROVE")')
+_PAYLOAD_VALUE_FLAGS = {
+    "-f",
+    "--raw-field",
+    "-F",
+    "--field",
+    "--body",
+    "-b",
+    "-d",
+    "--data",
+    "--data-binary",
+    "--data-raw",
+}
+_MAX_PAYLOAD_BYTES = 1_000_000
+
+
+def _payload_text(path_text: str) -> str | None:
+    """File body, or None when the path is missing, huge, or not a file."""
+    raw = path_text.strip().strip("'\"")
+    if not raw or raw == "-":
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    try:
+        if not path.is_file() or path.stat().st_size > _MAX_PAYLOAD_BYTES:
+            return None
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def _referenced_payloads(words: list[str]) -> tuple[str, bool]:
+    """Text of inline and file payloads. The flag is true when a file cannot be read.
+
+    ``gh pr review`` and ``gh pr comment`` use ``-F`` as a body file. ``gh api``
+    uses ``-F`` as a field, and ``@path`` as that field's file.
+    """
+    pr_body = len(words) >= 3 and words[:2] == ["gh", "pr"] and words[2] in {"review", "comment"}
+    file_flags = {"--body-file", "--input"}
+    value_flags = set(_PAYLOAD_VALUE_FLAGS)
+    if pr_body:
+        file_flags.add("-F")
+        value_flags.discard("-F")
+    chunks: list[str] = []
+    hidden = False
+    index = 0
+    while index < len(words):
+        word = words[index]
+        value = ""
+        consumed = 1
+        if word in value_flags and index + 1 < len(words):
+            value = words[index + 1].strip("'\"")
+            consumed = 2
+        else:
+            for flag in value_flags:
+                if word.startswith(f"{flag}="):
+                    value = word.split("=", 1)[1].strip("'\"")
+                    break
+        index += consumed
+        if not value:
+            continue
+        if value.startswith("@"):
+            body = _payload_text(value[1:])
+            if body is None:
+                hidden = True
+            else:
+                chunks.append(body)
+        else:
+            chunks.append(value)
+    for flag in file_flags:
+        named = _argv_value(words, flag)
+        if not named:
+            continue
+        body = _payload_text(named)
+        if body is None:
+            hidden = True
+        else:
+            chunks.append(body)
+    return "\n".join(chunks), hidden
+
+
+def _is_authorization_write(words: list[str]) -> bool:
+    """True when this argv can create the GitHub review or comment the gate trusts."""
+    if not words:
+        return False
+    head = Path(words[0]).name
+    joined = " ".join(words)
+    review = len(words) >= 3 and words[:3] == ["gh", "pr", "review"]
+    comment = len(words) >= 3 and words[:3] == ["gh", "pr", "comment"]
+    api = words[:2] == ["gh", "api"] and any(
+        token in joined for token in ("/reviews", "/comments", "addPullRequestReview", "addComment")
+    )
+    curl = (
+        head == "curl"
+        and "api.github.com" in joined
+        and any(token in joined for token in ("/reviews", "/comments"))
+    )
+    if not (review or comment or api or curl):
+        return False
+    if api or curl:
+        method = (
+            _argv_value(words, "-X")
+            or _argv_value(words, "--method")
+            or _argv_value(words, "--request")
+        ).upper()
+        writes = method in {"POST", "PATCH", "PUT"} or any(
+            token in words for token in ("-d", "--data", "--data-binary", "--data-raw", "--input")
+        )
+        if api and "graphql" in words:
+            writes = True
+        if not writes:
+            return False
+    return True
 
 
 def _segment_posts_github_authorization(words: list[str]) -> bool:
-    """True when this argv would create the GitHub record the gate trusts."""
-    if not words:
+    """True when this argv would create, or could hide, the GitHub record the gate trusts."""
+    if not _is_authorization_write(words):
         return False
     joined = " ".join(words)
-    if len(words) >= 3 and words[:3] == ["gh", "pr", "review"]:
-        return "--approve" in words or _AUTH_LINE_IN_COMMAND.search(joined) is not None
-    if len(words) >= 3 and words[:3] == ["gh", "pr", "comment"]:
-        return _AUTH_LINE_IN_COMMAND.search(joined) is not None
-    method = (
-        _argv_value(words, "-X")
-        or _argv_value(words, "--method")
-        or _argv_value(words, "--request")
-    ).upper()
-    if method not in {"POST", "PATCH", "PUT"}:
-        return False
-    if _AUTH_LINE_IN_COMMAND.search(joined):
+    if any(token in joined for token in ("$(", "`", "<<")) or " <" in f" {joined}":
         return True
-    return "APPROVE" in joined and any("/reviews" in word for word in words)
+    if "--editor" in words or "--web" in words or "--approve" in words:
+        return True
+    visible, hidden = _referenced_payloads(words)
+    if hidden:
+        return True
+    blob = f"{joined}\n{visible}"
+    return _AUTH_LINE_IN_COMMAND.search(blob) is not None or _APPROVE_EVENT.search(blob) is not None
 
 
 def _shell_posts_github_authorization(command: str) -> bool:
+    if ("<<" in command or "$(" in command or "`" in command) and any(
+        _is_authorization_write(words) for words in _executed_segments(command)
+    ):
+        return True
     return any(_segment_posts_github_authorization(words) for words in _executed_segments(command))
 
 

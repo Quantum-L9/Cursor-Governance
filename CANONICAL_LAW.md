@@ -1437,6 +1437,14 @@ SSOT: [`ops/autonomy/github_merge_authorization.py`](ops/autonomy/github_merge_a
 [`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
 [`ops/autonomy/stack_safe_merge.py`](ops/autonomy/stack_safe_merge.py).
 
+Write access in item 2 is the repository permission `admin`, `maintain`, or
+`write` for that user. `author_association` does not establish it. L9-ORG-007
+is unchanged: on a protected path the pull request author cannot authorize,
+including when that author is a repository admin. A different human who holds
+the permission, including a governance owner, still can. An agent command that
+can create the review or comment and whose body is not fully visible is
+denied. Review, comment, and file lists are read in full across pages.
+
 <!-- L9_SESSION_START_HEALTH_ONLY_V1 -->
 ## 8.9 SessionStart is memory health-only (2026-10-13) — supersedes §8 "Session start prefetch", §8.1 item 3, §8.2 item 6's "The gate is hydration-only", and §8.3 item 5's "SessionStart hydration"
 

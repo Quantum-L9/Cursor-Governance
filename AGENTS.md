@@ -2245,3 +2245,8 @@ may merge, this section is current.
   Required checks remain GitHub's refusal.
 - `L9_MERGE_AUTHORIZED=<reason>` stays the human session breakglass for the
   hook. It is not a standing autonomous-merge permission.
+- Write access is the repository permission `admin`, `maintain`, or `write`.
+  `author_association` is not that permission. On an L9-ORG-007 path the PR
+  author still cannot authorize. A different human with that permission,
+  including a governance owner, can. An agent write of a review or comment
+  whose body is not visible in the command is denied.

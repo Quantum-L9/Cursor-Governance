@@ -40,6 +40,7 @@ def _review(
     association: str = "OWNER",
     submitted_at: str = "2026-10-14T00:00:00Z",
     kind: str = "User",
+    permission: str = "write",
 ) -> dict:
     return {
         "user": _user(login, kind),
@@ -47,6 +48,7 @@ def _review(
         "commit_id": commit,
         "body": body,
         "author_association": association,
+        "permission": permission,
         "submitted_at": submitted_at,
     }
 
@@ -92,6 +94,29 @@ def test_bot_approval_is_not_human_authorization() -> None:
     assert verdict["authorized"] is False
 
 
+def test_member_association_without_repository_permission_is_denied() -> None:
+    review = _review("operator", "APPROVED", SHA, association="MEMBER")
+    review.pop("permission")
+    verdict = _verdict(reviews=[review])
+    assert verdict["authorized"] is False
+    assert "no human GitHub merge authorization" in verdict["reason"]
+
+
+def test_write_permission_authorizes_when_association_is_none() -> None:
+    verdict = _verdict(
+        reviews=[_review("operator", "APPROVED", SHA, association="NONE", permission="write")]
+    )
+    assert verdict["authorized"] is True
+    assert verdict["authorizer"] == "operator"
+
+
+def test_read_permission_does_not_authorize() -> None:
+    verdict = _verdict(
+        reviews=[_review("operator", "APPROVED", SHA, association="MEMBER", permission="read")]
+    )
+    assert verdict["authorized"] is False
+
+
 def test_drive_by_comment_without_write_access_is_denied() -> None:
     verdict = _verdict(
         comments=[
@@ -111,6 +136,7 @@ def test_authorization_line_on_the_current_head_authorizes() -> None:
             {
                 "user": _user("operator"),
                 "author_association": "MEMBER",
+                "permission": "write",
                 "body": "ship it\n" + authz.authorization_line(SLUG, 53, SHA) + "\n",
             }
         ]
@@ -329,6 +355,45 @@ def test_hook_denies_squash_of_a_parent_even_with_github_authorization(tmp_path:
 def test_hook_denies_an_agent_posting_the_authorization(command: str) -> None:
     _code, out = _gate({"tool_name": "Bash", "tool_input": {"command": command}})
     assert "never by an agent" in out
+
+
+def test_paginated_pages_flatten_past_one_hundred_records() -> None:
+    first = [{"id": index} for index in range(100)]
+    second = [{"id": 100, "permission": "admin"}]
+    separate = json.dumps(first) + "\n" + json.dumps(second)
+    slurped = json.dumps([first, second])
+    assert authz.flatten_list_pages(authz.parse_paginated_documents(separate)) == first + second
+    assert authz.flatten_list_pages(authz.parse_paginated_documents(slurped)) == first + second
+
+
+def test_fetch_evidence_keeps_an_approval_after_the_first_page(monkeypatch) -> None:
+    reviews = [
+        {
+            "user": {"login": "reader", "type": "User"},
+            "state": "COMMENTED",
+            "commit_id": SHA,
+            "author_association": "MEMBER",
+            "permission": "read",
+        }
+        for _ in range(100)
+    ]
+    reviews.append(_review("operator", "APPROVED", SHA, permission="admin"))
+
+    def pages(path: str) -> list:
+        if "/reviews?" in path:
+            return reviews
+        if "/comments?" in path:
+            return []
+        return [{"filename": "README.md"}]
+
+    monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
+    monkeypatch.setattr(authz, "_gh_pages", pages)
+    evidence = authz.fetch_evidence(SLUG, 53)
+    assert evidence["truncated"] is False
+    assert len(evidence["reviews"]) == 101
+    verdict = authz.evaluate_evidence(SLUG, 53, SHA, evidence)
+    assert verdict["authorized"] is True
+    assert verdict["authorizer"] == "operator"
 
 
 def test_mentioning_the_authorization_line_is_not_posting_it() -> None:

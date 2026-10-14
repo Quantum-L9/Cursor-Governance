@@ -31,7 +31,7 @@ _LINE = re.compile(
     re.IGNORECASE,
 )
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
-WRITE_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+WRITE_PERMISSIONS = frozenset({"admin", "maintain", "write"})
 _BOT_LOGINS = frozenset(
     {
         "copilot-pull-request-reviewer",
@@ -57,15 +57,32 @@ def _login(user: Any) -> str:
     return str(user.get("login") or "").strip()
 
 
-def _is_human(user: Any, association: Any) -> bool:
+def _is_human_identity(user: Any) -> bool:
+    """A GitHub user who is not a bot. Association is not write permission."""
     login = _login(user)
     kind = str(user.get("type") or "") if isinstance(user, dict) else ""
     if kind != "User" or not login:
         return False
     folded = login.casefold()
-    if folded.endswith("[bot]") or folded in _BOT_LOGINS:
-        return False
-    return str(association or "") in WRITE_ASSOCIATIONS
+    return not folded.endswith("[bot]") and folded not in _BOT_LOGINS
+
+
+def record_permission(record: dict[str, Any]) -> str:
+    """Repository permission on the record, or on its user. Empty when absent."""
+    sources: list[Any] = [record]
+    user = record.get("user")
+    if isinstance(user, dict):
+        sources.append(user)
+    for source in sources:
+        value = str(source.get("permission") or "").strip().lower()
+        if value:
+            return value
+    return ""
+
+
+def _write_capable(record: dict[str, Any]) -> bool:
+    """True only for a repository role that can change the repository."""
+    return record_permission(record) in WRITE_PERMISSIONS
 
 
 @lru_cache(maxsize=1)
@@ -137,8 +154,9 @@ def evaluate_evidence(
     """Decide whether ``evidence`` authorizes ``repo#pr`` at ``head_sha``.
 
     ``evidence`` keys: ``author`` (str), ``files`` (list or None), ``reviews``
-    (list), ``comments`` (list). A full page of 100 is ``truncated`` and fails
-    closed when no authorization was visible on that page.
+    (list), ``comments`` (list). Each authorizing record carries ``permission``
+    ``admin``, ``maintain`` or ``write``. ``author_association`` is not that
+    permission. ``truncated`` fails closed when a list was not read in full.
     """
     sha = head_sha.strip().lower()
     number = str(pr).strip()
@@ -170,7 +188,7 @@ def evaluate_evidence(
         if not isinstance(review, dict):
             continue
         user = review.get("user")
-        if not _is_human(user, review.get("author_association")):
+        if not _is_human_identity(user) or not _write_capable(review):
             continue
         login = _login(user)
         state = str(review.get("state") or "")
@@ -206,35 +224,24 @@ def evaluate_evidence(
         if accepted:
             return accepted
 
-    def _consider_body(
-        user: Any, association: Any, body: Any, commit_id: str | None
-    ) -> dict[str, Any] | None:
-        if not _is_human(user, association):
+    def _consider_body(record: dict[str, Any], commit_id: str | None) -> dict[str, Any] | None:
+        user = record.get("user")
+        if not _is_human_identity(user) or not _write_capable(record):
             return None
         if commit_id is not None and commit_id.strip().lower() not in {"", sha}:
             return None
-        if not _line_authorizes(str(body or ""), repo, number, sha):
+        if not _line_authorizes(str(record.get("body") or ""), repo, number, sha):
             return None
         return _accept(_login(user), "authorization_line")
 
     for review in reviews:
         if isinstance(review, dict):
-            accepted = _consider_body(
-                review.get("user"),
-                review.get("author_association"),
-                review.get("body"),
-                str(review.get("commit_id") or ""),
-            )
+            accepted = _consider_body(review, str(review.get("commit_id") or ""))
             if accepted:
                 return accepted
     for comment in comments:
         if isinstance(comment, dict):
-            accepted = _consider_body(
-                comment.get("user"),
-                comment.get("author_association"),
-                comment.get("body"),
-                None,
-            )
+            accepted = _consider_body(comment, None)
             if accepted:
                 return accepted
 
@@ -267,12 +274,51 @@ def load_review_fixture(path: Path, repo: str, pr: str | int) -> dict[str, Any] 
     return evidence_from_mapping(payload, repo, pr)
 
 
-def _gh_json(path: str) -> Any:
+def parse_paginated_documents(raw: str) -> Any:
+    """Decode one JSON document, or every document ``gh api --paginate`` emitted."""
+    text = (raw or "").strip()
+    if not text:
+        return []
+    decoder = json.JSONDecoder()
+    values: list[Any] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        while index < length and text[index].isspace():
+            index += 1
+        if index >= length:
+            break
+        try:
+            value, end = decoder.raw_decode(text, index)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"gh emitted non-JSON: {exc}") from exc
+        values.append(value)
+        index = end
+    if not values:
+        return []
+    if len(values) == 1:
+        return values[0]
+    return values
+
+
+def flatten_list_pages(payload: Any) -> list[Any]:
+    """Flatten a list of pages. A list of records is already one complete page."""
+    if not isinstance(payload, list):
+        return []
+    if payload and all(isinstance(item, list) for item in payload):
+        flat: list[Any] = []
+        for page in payload:
+            flat.extend(page)
+        return flat
+    return payload
+
+
+def _gh_capture(args: list[str]) -> str:
     if not _which_gh():
         raise RuntimeError("gh not on PATH")
     try:
         proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            ["gh", "api", "--paginate", path],
+            ["gh", "api", *args],
             capture_output=True,
             text=True,
             timeout=_GH_TIMEOUT_SECONDS,
@@ -283,10 +329,17 @@ def _gh_json(path: str) -> Any:
     if proc.returncode != 0:
         detail = (proc.stderr or "gh returned non-zero").strip().splitlines()
         raise RuntimeError(detail[-1][:200] if detail else "gh returned non-zero")
-    try:
-        return json.loads(proc.stdout or "null")
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"gh emitted non-JSON: {exc}") from exc
+    return proc.stdout or ""
+
+
+def _gh_json(path: str) -> Any:
+    return parse_paginated_documents(_gh_capture([path]))
+
+
+def _gh_pages(path: str) -> list[Any]:
+    """Every page of a list endpoint. ``--slurp`` wraps pages; raw pages still parse."""
+    raw = _gh_capture(["--paginate", "--slurp", path])
+    return flatten_list_pages(parse_paginated_documents(raw))
 
 
 def _which_gh() -> bool:
@@ -295,10 +348,28 @@ def _which_gh() -> bool:
     return which("gh") is not None
 
 
-def _as_list(payload: Any) -> tuple[list[Any], bool]:
-    if isinstance(payload, list):
-        return payload, len(payload) >= 100
-    return [], False
+def _lookup_permission(repo: str, login: str) -> str:
+    try:
+        payload = _gh_json(f"repos/{repo}/collaborators/{login}/permission")
+    except RuntimeError:
+        return ""
+    if isinstance(payload, dict):
+        return str(payload.get("permission") or "").strip().lower()
+    return ""
+
+
+def _attach_permissions(repo: str, records: list[Any]) -> None:
+    cache: dict[str, str] = {}
+    for record in records:
+        if not isinstance(record, dict) or record_permission(record):
+            continue
+        login = _login(record.get("user"))
+        if not login or not _is_human_identity(record.get("user")):
+            continue
+        if login not in cache:
+            cache[login] = _lookup_permission(repo, login)
+        if cache[login]:
+            record["permission"] = cache[login]
 
 
 def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
@@ -307,13 +378,11 @@ def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
     view = _gh_json(f"repos/{repo}/pulls/{number}")
     if not isinstance(view, dict):
         raise RuntimeError("pull request payload was not an object")
-    reviews, reviews_full = _as_list(_gh_json(f"repos/{repo}/pulls/{number}/reviews?per_page=100"))
-    comments, comments_full = _as_list(
-        _gh_json(f"repos/{repo}/issues/{number}/comments?per_page=100")
-    )
-    files_payload, files_full = _as_list(
-        _gh_json(f"repos/{repo}/pulls/{number}/files?per_page=100")
-    )
+    reviews = _gh_pages(f"repos/{repo}/pulls/{number}/reviews?per_page=100")
+    comments = _gh_pages(f"repos/{repo}/issues/{number}/comments?per_page=100")
+    files_payload = _gh_pages(f"repos/{repo}/pulls/{number}/files?per_page=100")
+    _attach_permissions(repo, reviews)
+    _attach_permissions(repo, comments)
     files = [
         str(item.get("filename"))
         for item in files_payload
@@ -324,7 +393,7 @@ def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
         "files": files,
         "reviews": reviews,
         "comments": comments,
-        "truncated": reviews_full or comments_full or files_full,
+        "truncated": False,
     }
 
 
