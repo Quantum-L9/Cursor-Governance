@@ -6,7 +6,7 @@
       "file": "governance-pr.yml",
       "source": "Quantum-L9/.github:.github/workflows/governance-pr.yml",
       "ref": "02ea092a098563b27970d21416fabc47dd005fb0",
-      "why": "The SHA consumer repos pin in policies/governance-caller.yml (merge of Quantum-L9/.github#176); the validator their PRs actually run.",
+      "why": "The canonical TARGET caller pin (merge of Quantum-L9/.github#176) that policies/governance-caller.yml carries once the pending Quantum-L9/.github caller-pin PRs land. Not evidence of consumer rollout: an existing consumer keeps running whatever pin its own caller names until it is individually updated by the separately authorized manual continuous-sync Preview/Apply and its consumer PR is merged.",
       "sha256": "6d69ba4f89481029e45d94f4664fc2b83182817cf9b179cf9d9683036deb743d"
     },
     {
