@@ -67,7 +67,7 @@ ui-operator = [
 # required for make pr. Optional because each platform wheel bundles the Claude
 # Code CLI (~100 MB). Install: uv sync --locked --extra dev --extra agent-sdk
 agent-sdk = [
-    "claude-agent-sdk==0.2.163",
+    "claude-agent-sdk==0.2.165",
 ]
 
 # Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable
