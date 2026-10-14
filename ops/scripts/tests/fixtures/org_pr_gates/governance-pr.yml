@@ -8,17 +8,24 @@ on:
         default: false   # ADVISORY BY DEFAULT — young infrastructure.
                          # Callers opt in per repo with `with: {strict: true}`.
                          # See docs/ADVISORY.md for the promotion ladder.
+      gates:
+        type: boolean
+        default: true    # pr-files.yml (this repo) runs only the body job;
+                         # pr-gates.yml already judges this repo's bodies.
 
+# Read-only by default; the one job that edits the PR body asks for write
+# itself. `gates` reads the event payload and writes only the job summary.
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   gates:
-    if: github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: inputs.gates && github.event.pull_request.draft == false && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const body = context.payload.pull_request.body || '';
@@ -48,3 +55,119 @@ jobs:
                 core.notice(`${fail.length} advisory gate finding(s) — not blocking. See job summary.`);
               }
             }
+
+  # Machine-owned PR-body regions (Changes by intent paths, Files touched,
+  # Evidence staleness) follow every push, whoever made it: make pr, another
+  # client, a bot, a web edit, a base change. The renderer is the one make pr
+  # uses — Cursor-Governance ops/scripts/compose_pr_body.py at a pinned commit —
+  # so there is no second implementation here. Reviewer text outside the
+  # regions is never rewritten; an unchanged body is never PATCHed.
+  body:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: pr-body-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      # Re-pin together with the ref below; docs/DISTRIBUTION.md "PR body".
+      COMPOSER: Quantum-L9/Cursor-Governance@47ffe6f0ce0bb267d8dae0a27184c8754ffa0f26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: pr
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Quantum-L9/Cursor-Governance
+          ref: 47ffe6f0ce0bb267d8dae0a27184c8754ffa0f26
+          path: composer
+          sparse-checkout: ops/scripts/compose_pr_body.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          STRICT: ${{ inputs.strict }}
+        with:
+          script: |
+            const fs = require('fs');
+            const { execFileSync } = require('child_process');
+            const number = context.payload.pull_request.number;
+            const composer = 'composer/ops/scripts/compose_pr_body.py';
+            const report = async (status, detail) => {
+              core.info(`${status}: ${detail}`);
+              await core.summary.addHeading('PR body refresh', 2)
+                .addTable([[{ data: 'status', header: true }, { data: 'detail', header: true }], [status, detail]])
+                .write();
+            };
+            const run = (args) => execFileSync('python3', [composer, '--workspace', 'pr', ...args],
+              { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+
+            // The event payload can be older than the PR. Read the live PR and
+            // refuse to describe a head this job did not check out.
+            const checkedOut = execFileSync('git', ['-C', 'pr', 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            const live = (await github.rest.pulls.get({ ...context.repo, pull_number: number })).data;
+            if (live.state !== 'open') return report('SKIPPED_CLOSED', `PR #${number} is ${live.state}`);
+            if (live.head.sha !== checkedOut) {
+              return report('SKIPPED_STALE_EVENT', `checked out ${checkedOut}, PR head is ${live.head.sha}; the newer event refreshes it`);
+            }
+
+            // Render from the body as it is now. If a reviewer edits it while
+            // this runs, render again from their text rather than PATCH over it.
+            // PATCH /pulls takes no precondition, so the residual window is the
+            // final GET -> PATCH round trip; every other gap is closed here.
+            let current = live;
+            let next;
+            let status;
+            for (let attempt = 1; ; attempt += 1) {
+              fs.writeFileSync('body.md', current.body || '');
+              try {
+                next = run(['--pr-base', live.base.sha, '--refresh-body', 'body.md', '--remote', '--status-file', 'status.json']);
+              } catch (e) {
+                core.setFailed(`composer failed (${process.env.COMPOSER}): ${e.stderr || e.message}`);
+                return;
+              }
+              status = JSON.parse(fs.readFileSync('status.json', 'utf8')).status;
+              if (status === 'unmanaged') {
+                return report('UNMANAGED', 'body has no machine-owned regions and was not composed by make pr; left as written');
+              }
+              if (status === 'unchanged') break;
+              const now = (await github.rest.pulls.get({ ...context.repo, pull_number: number })).data;
+              if (now.head.sha !== live.head.sha || now.base.sha !== live.base.sha) {
+                return report('SKIPPED_MOVED', 'the PR head or base changed during the refresh; the next event refreshes it');
+              }
+              if ((now.body || '') !== (current.body || '')) {
+                if (attempt >= 3) {
+                  return report('SKIPPED_MOVED', 'the body kept changing during the refresh; the next edit event refreshes it');
+                }
+                current = now;
+                continue;
+              }
+              try {
+                await github.rest.pulls.update({ ...context.repo, pull_number: number, body: next });
+              } catch (e) {
+                if (e.status === 403 || e.status === 404) {
+                  core.warning(`PR body not refreshed: this token cannot edit PR #${number} (HTTP ${e.status}); fork PRs get a read-only token.`);
+                  return report('BLOCKED_PERMISSION', `HTTP ${e.status}`);
+                }
+                throw e;
+              }
+              break;
+            }
+
+            // The inventory must equal the diff after the refresh, whatever wrote it.
+            fs.writeFileSync('body.md', next);
+            try {
+              run(['--pr-base', live.base.sha, '--check-body', 'body.md']);
+            } catch (e) {
+              const msg = `Changes by intent does not match the diff: ${(e.stderr || e.message).trim()}`;
+              if (process.env.STRICT === 'true') core.setFailed(msg); else core.notice(msg);
+              return report('INVENTORY_MISMATCH', msg);
+            }
+            await report(status === 'unchanged' ? 'UNCHANGED' : status.toUpperCase(), `head ${live.head.sha} base ${live.base.sha}`);
