@@ -661,7 +661,6 @@ if GOV=$(resolve_governance_dir); then
           fi
           bash "$0" "$@"
         ' "$BOOTSTRAP_INSTALLER" --governance "$GOV" --workspace "$WORKSPACE" \
-          --reuse-if-verified \
         </dev/null >/dev/null 2>&1 &
       _gen_pid=$!
       _gen_until=$(( $(date +%s) + _gen_cap ))
@@ -676,8 +675,6 @@ if GOV=$(resolve_governance_dir); then
         wait "$_gen_pid" || _gen_rc=$?
         if [ "$_gen_rc" = 0 ]; then
           say "bootstrap receipt: generated this bootstrap (id $_L9_CEREMONY_ID, ${_gen_rev:0:8})"
-          _gen_reuse="$(grep -m1 '^bootstrap: ' "$_gen_log" 2>/dev/null || true)"
-          [ -n "$_gen_reuse" ] && say "$_gen_reuse"
         elif [ "$_gen_rc" = 75 ]; then
           say "bootstrap receipt: NOT GENERATED — an installer from an earlier ceremony is still running; its receipt lands when it finishes (log $_gen_log). Do not start another."
         elif [ "$_gen_rc" = 76 ]; then
@@ -696,7 +693,7 @@ if GOV=$(resolve_governance_dir); then
     elif run_with_timeout "$_gen_cap" \
       env L9_BOOTSTRAP_ID="$_L9_CEREMONY_ID" L9_BOOTSTRAP_LOG_PATH="$_gen_log" \
       bash "$BOOTSTRAP_INSTALLER" --governance "$GOV" --workspace "$WORKSPACE" \
-      --reuse-if-verified >"$_gen_log" 2>&1; then
+      >"$_gen_log" 2>&1; then
       say "bootstrap receipt: generated this bootstrap (id $_L9_CEREMONY_ID, ${_gen_rev:0:8})"
     else
       _gen_rc=$?

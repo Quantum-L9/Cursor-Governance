@@ -41,18 +41,6 @@
 #
 # Usage:
 #   install.sh [--governance <dir>] [--workspace <dir>] [--check] [--quiet]
-#              [--reuse-if-verified]
-#
-# --reuse-if-verified (SessionStart only): when the previous session receipt is
-# READY for the same governance revision, workspace and inputs key, AND this
-# run's projection `--check` of every domain except settings is clean, the
-# projection apply is skipped. Everything session-scoped still runs: the shared
-# bootstrap (its toolchain step is fingerprint-cached and re-verifies the seal;
-# secrets plane, leak check, publish-path probe, repository identity, git
-# excludes and preflight are per session), settings and the hosted overlay, the
-# memory probe, structural validation and the dispatcher check. The receipt
-# this ceremony writes says `mode: verified_reuse` with `reused_from`.
-# Anything that does not verify falls back to the full projection apply.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -60,7 +48,6 @@ GOV_DIR="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
 WORKSPACE="$PWD"
 CHECK=0
 QUIET=0
-REUSE_REQUESTED=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -68,7 +55,6 @@ while [ $# -gt 0 ]; do
     --workspace)  WORKSPACE="${2:?--workspace needs a path}"; shift 2 ;;
     --check)      CHECK=1; shift ;;
     --quiet)      QUIET=1; shift ;;
-    --reuse-if-verified) REUSE_REQUESTED=1; shift ;;
     -h|--help)    sed -n '2,50p' "$0"; exit 0 ;;
     *) echo "install.sh: unknown argument '$1'" >&2; exit 2 ;;
   esac
@@ -243,85 +229,6 @@ _receipt_reason() { # $1=status $2=recorded reason $3=STATUS_* name
 
 json_token() { printf '%s' "$1" | tr -d '\n\r\t"\\' | head -c 200; }
 
-receipt_mode() {
-  if [ "$CHECK" = "1" ]; then
-    echo check
-  elif [ "${REUSE:-0}" = "1" ]; then
-    echo verified_reuse
-  else
-    echo local
-  fi
-}
-
-# sha256 over everything a READY verdict depends on that a projection check
-# cannot see: governance revision, the locked uv environment fingerprint, the
-# interpreter, the workspace and the roots it covers, and the hosted flags that
-# change what is installed. Empty when it cannot be computed (reuse disabled).
-compute_inputs_key() {
-  local py="$GOV_DIR/.venv/bin/python3"
-  [ -x "$py" ] || return 0
-  "$py" - "$GOV_DIR" "$WORKSPACE" "$(receipt_covered_roots)" <<'KEYPY'
-import hashlib, json, os, subprocess, sys
-from pathlib import Path
-
-gov, workspace, roots = sys.argv[1], sys.argv[2], sys.argv[3]
-head = subprocess.run(
-    ["git", "-C", gov, "rev-parse", "HEAD"], capture_output=True, text=True, check=False
-).stdout.strip()
-fingerprint = Path(gov, ".venv", ".l9-uv-fingerprint")
-material = {
-    "governance_revision": head,
-    "uv_fingerprint": fingerprint.read_text(encoding="utf-8").strip()
-    if fingerprint.is_file()
-    else "",
-    "python": sys.version,
-    "workspace": workspace,
-    "covered_roots": roots,
-    "flags": {
-        name: os.environ.get(name, "")
-        for name in ("CLAUDE_CODE_REMOTE", "SKIP_PLUGIN_MARKETPLACE", "L9_MEMORY_INTERPRETER")
-    },
-}
-if head and material["uv_fingerprint"]:
-    print(hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest())
-KEYPY
-}
-
-# Prints the previous receipt's bootstrap_id when it may be reused: READY,
-# written by a complete local or verified-reuse run, same governance revision,
-# workspace and inputs key, inside its TTL. Prints nothing otherwise.
-previous_reusable_id() {
-  local py="$GOV_DIR/.venv/bin/python3"
-  [ -x "$py" ] && [ -f "$RECEIPT" ] && [ -n "${INPUTS_KEY:-}" ] || return 0
-  "$py" - "$RECEIPT" "$INPUTS_KEY" "$WORKSPACE" \
-    "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null)" <<'REUSEPY'
-import json, sys
-from datetime import UTC, datetime
-
-path, key, workspace, head = sys.argv[1:5]
-try:
-    data = json.loads(open(path, encoding="utf-8").read())
-    age = (
-        datetime.now(UTC)
-        - datetime.strptime(data["generated_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
-    ).total_seconds()
-except (OSError, ValueError, KeyError, TypeError):
-    sys.exit(0)
-ok = (
-    data.get("overall") == "READY"
-    and data.get("stage") == "receipt"
-    and data.get("mode") in ("local", "verified_reuse")
-    and not data.get("interrupted_by")
-    and data.get("governance_revision") == head
-    and data.get("workspace") == workspace
-    and data.get("inputs_key") == key
-    and 0 <= age < float(data.get("ttl_seconds") or 0)
-)
-if ok and data.get("bootstrap_id"):
-    print(data["bootstrap_id"])
-REUSEPY
-}
-
 write_receipt() {
   local state="$1" ts
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo 'unknown')"
@@ -330,11 +237,7 @@ write_receipt() {
     printf '{\n'
     printf '  "schema": "l9.claude-bootstrap.v1",\n'
     printf '  "surface": "claude-code",\n'
-    printf '  "mode": "%s",\n' "$(receipt_mode)"
-    # Inputs this verdict depends on (revision, toolchain fingerprint, roots,
-    # hosted flags), and — for a verified reuse — the ceremony it reused.
-    printf '  "inputs_key": "%s",\n' "$(json_token "${INPUTS_KEY:-}")"
-    printf '  "reused_from": "%s",\n' "$(json_token "${REUSE_FROM:-}")"
+    printf '  "mode": "%s",\n' "$([ "$CHECK" = "1" ] && echo check || echo local)"
     printf '  "state": "%s",\n' "$(json_token "$state")"
     printf '  "stage": "%s",\n' "$(json_token "$RECEIPT_STAGE")"
     printf '  "remediation": "%s",\n' "$(json_token "$RECEIPT_REMEDIATION")"
@@ -494,35 +397,6 @@ fi
 # Its exit code is part of the contract: a nonzero bootstrap means the locked
 # interpreter / toolchain / secret plane is unusable, and this installer no
 # longer paperes over that with a later "adapter ready".
-# --- Verified reuse decision (SessionStart warm path) ------------------------
-# Decided BEFORE anything is applied. Each check below is a verification run
-# now, by this ceremony; a fingerprint match alone never reuses a verdict.
-stage "reuse-verify"
-REUSE=0
-REUSE_FROM=""
-REUSE_CHECK_OUT=""
-INPUTS_KEY="$(compute_inputs_key)"
-if [ "$REUSE_REQUESTED" = "1" ] && [ "$CHECK" != "1" ]; then
-  _reuse_id="$(previous_reusable_id)"
-  _reuse_why=""
-  if [ -z "$_reuse_id" ]; then
-    _reuse_why="no READY receipt for this revision, workspace and inputs"
-  elif ! REUSE_CHECK_OUT="$("$GOV_DIR/.venv/bin/python3" "$GOV_DIR/ops/scripts/claude_projection.py" \
-         --root "$GOV_DIR" --workspace "$WORKSPACE" --summary --check --no-receipt \
-         --domains skills,commands,rules,hooks,plugins,mcp 2>/dev/null)" \
-       || ! printf '%s\n' "$REUSE_CHECK_OUT" | grep -qx 'projection=ok'; then
-    _reuse_why="projection check is not clean"
-  else
-    REUSE=1
-    REUSE_FROM="$_reuse_id"
-  fi
-  if [ "$REUSE" = "1" ]; then
-    say "bootstrap: verified reuse of $REUSE_FROM (projection check ok; shared bootstrap still runs)"
-  else
-    say "bootstrap: full projection apply ($_reuse_why)"
-  fi
-fi
-
 stage "shared-bootstrap"
 SHARED_BOOTSTRAP="$GOV_DIR/ops/scripts/bootstrap_agent_environment.sh"
 # Testing seam. The shared bootstrap needs network egress and a uv sync, and it
@@ -533,9 +407,6 @@ if [ "${L9_SKIP_SHARED_BOOTSTRAP:-0}" = "1" ]; then
   warn "L9_SKIP_SHARED_BOOTSTRAP=1 — toolchain, secrets and preflight NOT run"
   downgrade STATUS_SHARED DEGRADED "shared bootstrap skipped by request"
 elif [ -f "$SHARED_BOOTSTRAP" ]; then
-  # Never skipped on verified reuse: the secrets plane, leak check, publish-path
-  # probe, repository identity and git excludes are session-scoped state the
-  # inputs key does not cover, and the toolchain step is already cached.
   shared_args=(--surface claude-code --governance "$GOV_DIR" --workspace "$WORKSPACE")
   [ "$CHECK" = "1" ] && shared_args+=(--check)
   [ "$QUIET" = "1" ] && shared_args+=(--quiet)
@@ -590,20 +461,8 @@ PROJECTION_ENGINE="$GOV_DIR/ops/scripts/claude_projection.py"
 if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
   projection_args=(--root "$GOV_DIR" --workspace "$WORKSPACE" --summary)
   [ "$CHECK" = "1" ] && projection_args+=(--check)
-  # Verified reuse: every other domain was checked clean above; settings are
-  # re-applied because the hosted overlay below rewrites them after projection,
-  # so a settings check would always read drift in a hosted session.
-  # --no-receipt keeps the last full projection receipt, whose other domains
-  # were just checked clean; readiness reads the mcp domain detail from it.
-  [ "$REUSE" = "1" ] && [ "$CHECK" != "1" ] && projection_args+=(--domains settings --no-receipt)
   projection_out="$("$GOV_PY" "$PROJECTION_ENGINE" "${projection_args[@]}" 2>&1)"
   projection_rc=$?
-  if [ "$REUSE" = "1" ]; then
-    # The other domains' verdicts are the clean check this ceremony ran before
-    # deciding to reuse; classify them from that output, not from silence.
-    projection_out="$(printf '%s\n' "$REUSE_CHECK_OUT" | grep '^domain=' | grep -v '^domain=settings ')
-${projection_out}"
-  fi
   printf '%s\n' "$projection_out"
   if ! printf '%s' "$projection_out" | grep -q '^projection='; then
     # The engine crashed before emitting a summary — nothing was classified,
