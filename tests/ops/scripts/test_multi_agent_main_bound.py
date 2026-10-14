@@ -345,12 +345,16 @@ def test_no_agent_facing_force_lock_interface_exists() -> None:
 
 
 def test_contract_does_not_gate_repository_writes_on_phase_lock() -> None:
-    """E7: no governed write may require a phase-lock."""
+    """E7: no governed write may require a phase-lock.
+
+    Since SessionStart became health-only no governed write requires memory
+    hydration either: repository writes carry no memory precondition at all.
+    """
     contract = json.loads(
         (CLAUDE / "memory" / "memory-enforcement.contract.json").read_text(encoding="utf-8")
     )
     for rule in contract["governed_writes"]:
-        assert rule["requires"] == ["session_prefetch"], rule["id"]
+        assert rule["requires"] == [], rule["id"]
     assert "phase_lock" not in contract["preconditions"]
 
 

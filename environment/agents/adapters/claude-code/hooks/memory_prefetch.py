@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
-"""SessionStart prefetch — thin wrap of the canonical session hydration (stage C8).
+"""SessionStart memory status: health only, no memory read.
 
-Every repository this session works in is hydrated through the canonical
-memory control plane (``ops.memory.hydration.canonical_hydrate`` via the
-Cursor session-packet compiler); nothing here calls a provider or the retired
-legacy client. The receipt this hook writes is the ONLY memory precondition a
-governed write may carry (``memory_gate.py``), so it records what happened —
-a hydration that resolved no namespace is ``degraded``, never ``prefetched``.
+SessionStart reports whether the canonical memory runtime is bound and healthy
+(``MemoryControlPlaneClient.health``) and which repository namespaces this
+session resolves to locally. It never hydrates, searches, reads conflicts, or
+injects resume content: retrieval is on demand
+(``python -m ops.memory.cli hydrate "<task>" --workspace <repo>``), and the
+``claude-session-start`` hook envelope admits only ``resolve`` / ``health`` /
+``capabilities``, so a reintroduced read is refused before a process spawns.
 
-Mid-session repair: when the automatic SessionStart stamp is stale or missing,
-run with an explicit session id instead of guessing:
+The receipt this hook writes marks that the session started and what memory
+health was observed. It is no longer a precondition for repository writes
+(``memory_gate.py`` contract): Stop / post-publish hooks read it as the
+session-start timestamp and the repository roots in scope. A receipt records
+what happened — ``health_only`` when the runtime answered healthy, ``degraded``
+when it did not — never ``prefetched``.
+
+Mid-session repair: when the automatic SessionStart stamp is missing, run with
+an explicit session id instead of guessing:
 
     python3 memory_prefetch.py --session-id <uuid> --workspace <owning-clone>
 
@@ -27,7 +35,7 @@ from pathlib import Path
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
 
-#: Receipt transport tag: the contract the hydration crossed, not a tool name.
+#: Receipt transport tag: the contract the health probe crossed, not a tool name.
 TRANSPORT = "memory-control-plane/v1"
 
 
@@ -52,7 +60,6 @@ for _path in (_GOV_LIB, _GOV_SCRIPTS, _GOV_AUTONOMY):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from classify_hydrate_state import classify as classify_hydrate_state  # noqa: E402
 from surface_detect import is_claude_gate_surface  # noqa: E402
 from workspace_roots import DROPPED_CAP  # noqa: E402
 from workspace_roots import select_workspace_roots as _shared_select_workspace_roots  # noqa: E402
@@ -72,10 +79,9 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
     return st.writer_identity(dict(os.environ if env is None else env))
 
 
-#: Cloud containers put several repositories side by side. Hydrating each costs
-#: one packet of context, so the count is capped rather than unbounded — and the
-#: cap is reported in the emitted text, because a silent truncation reads as
-#: "everything was covered".
+#: Cloud containers put several repositories side by side. The roots in scope
+#: are capped rather than unbounded — and the cap is reported in the emitted
+#: text, because a silent truncation reads as "everything was covered".
 _MAX_HYDRATION_ROOTS = 6
 
 
@@ -100,7 +106,7 @@ def _resolves_to_own_namespace(root: Path) -> bool:
         from ops.memory.namespace_context import resolve_namespace_context
 
         return bool(resolve_namespace_context(root).write_namespace_hint)
-    except Exception:  # noqa: BLE001 — a resolver fault must not lose hydration
+    except Exception:  # noqa: BLE001 — a resolver fault must not drop a root
         return True
 
 
@@ -135,7 +141,7 @@ def _dropped_summary(dropped: list[tuple[Path, str]]) -> str:
     parts = []
     if by_cap:
         parts.append(
-            f"beyond the cap of {_MAX_HYDRATION_ROOTS}, so NOT hydrated this "
+            f"beyond the cap of {_MAX_HYDRATION_ROOTS}, so not in scope this "
             f"session: {', '.join(by_cap)}"
         )
     if by_ns:
@@ -186,8 +192,41 @@ def _emit(context: str, system_message: str | None = None) -> None:
     )
 
 
-def _loud_read_failure(detail: str) -> str:
-    return f"L9 MEMORY READ — {detail}"
+def _loud_status(detail: str) -> str:
+    return f"L9 MEMORY — {detail}"
+
+
+def _local_namespaces(roots: list[Path]) -> list[str]:
+    """Write namespaces the in-scope repositories resolve to, locally.
+
+    ``resolve_namespace_context`` reads the namespace registry and git
+    identity; it does not call memory. A root that resolves none is omitted.
+    """
+    from ops.memory.namespace_context import resolve_namespace_context
+
+    namespaces: list[str] = []
+    for root in roots:
+        hint = resolve_namespace_context(root).write_namespace_hint
+        if hint and hint != "unresolved" and hint not in namespaces:
+            namespaces.append(hint)
+    return namespaces
+
+
+def _memory_health(session_id: str) -> dict[str, str]:
+    """One bounded ``health`` call: binding, store and projection status only.
+
+    Reads no records. ``UNBOUND`` when the runtime binding fails (the call never
+    reached memory), the outcome status otherwise.
+    """
+    client = mb.memory_client(session_id)
+    binding = getattr(client, "binding", None)
+    if binding is not None and not getattr(binding, "ok", True):
+        reasons = "; ".join(str(r) for r in (getattr(binding, "reasons", None) or []))
+        return {"status": "UNBOUND", "detail": reasons or "memory runtime not bound"}
+    outcome = client.health()
+    status = "OK" if outcome.ok else str(outcome.status.value)
+    detail = "" if outcome.ok else str(outcome.error or "")
+    return {"status": status, "detail": detail[:300]}
 
 
 def main() -> int:
@@ -251,9 +290,10 @@ def main() -> int:
         workspace = Path(args.workspace).expanduser().resolve()
     else:
         workspace = session_ws
-    # Derived identity overwrites a configured value. The later receipt uses
-    # the in-scope namespaces, so this site does not resolve them early.
-    agent_id = st.bind_identity_env()
+    # Derived identity overwrites a configured value (the health probe's hook
+    # principal reads it). The later receipt uses the in-scope namespaces, so
+    # this site does not resolve them early.
+    st.bind_identity_env()
 
     # BEFORE root selection: the namespace predicate imports ops.memory from the
     # governance root, and its except-branch fails OPEN so a resolver fault can
@@ -264,49 +304,14 @@ def main() -> int:
     roots, dropped = selection.selected, selection.dropped
 
     try:
-        from ops.graphiti.hydration.compile_session_packet import compile_and_format
-
-        contexts: list[str] = []
-        group_ids: list[str] = []
-        packet_ids: list[str] = []
-        memory_statuses: dict[str, str] = {}
-        continuation_ids: dict[str, str] = {}
-        degraded_any = False
-
-        for root in roots:
-            compiled = compile_and_format(
-                project_dir=root,
-                conversation_id=session_id,
-                agent_id=agent_id,
-            )
-            packet = compiled.get("packet") or {}
-            group_id = str(packet.get("group_id") or "")
-            stats = packet.get("hydrate_stats") or {}
-            if group_id and group_id != "unresolved":
-                group_ids.append(group_id)
-            else:
-                degraded_any = True
-            if packet.get("degraded"):
-                degraded_any = True
-            memory_statuses[root.name] = str(stats.get("memory_status") or "unknown")
-            if stats.get("continuation_record_id"):
-                continuation_ids[root.name] = str(stats["continuation_record_id"])
-            if packet.get("packet_id"):
-                packet_ids.append(str(packet["packet_id"]))
-            body = compiled.get("additional_context") or ""
-            if body:
-                hydrate_degraded, _hydrate_reason = classify_hydrate_state(body)
-                if hydrate_degraded:
-                    degraded_any = True
-                header = f"### {root.name} (namespace={group_id or 'unresolved'})"
-                contexts.append(header + "\n" + body if len(roots) > 1 else body)
-
-        degraded = degraded_any or not group_ids
+        group_ids = _local_namespaces(roots)
+        health = _memory_health(session_id)
+        degraded = health["status"] != "OK" or not group_ids
         # Requested = the in-scope repositories' own namespaces (explicit
         # L9_MEMORY_NAMESPACES aside), never a governance-repo constant.
         namespaces = st.resolve_namespaces(contract, group_ids)
         if not receipt_id:
-            raise ValueError("prefetch refused to stamp a session-scoped write-gate receipt")
+            raise ValueError("refused to stamp a session receipt without a writer identity")
         st.write_receipt(
             contract,
             receipt_id,
@@ -318,18 +323,14 @@ def main() -> int:
                 "transport": TRANSPORT,
                 "group_id": group_ids[0] if len(group_ids) == 1 else "",
                 "group_ids": group_ids,
-                "hydrated_roots": [str(r) for r in roots],
-                "packet_id": packet_ids[0] if packet_ids else None,
-                "packet_ids": packet_ids,
-                "memory_statuses": memory_statuses,
-                "continuation_record_ids": continuation_ids,
-                # A receipt records what HAPPENED, not what was attempted. Writing
-                # "prefetched" over a hydration that resolved no namespace and
-                # returned nothing made the precondition self-satisfying: the gate
-                # saw a fresh receipt, never re-hydrated, and the session ran
-                # memory-blind for the full TTL while every surface reported it
-                # satisfied.
-                "status": "degraded" if degraded else "prefetched",
+                # Repository roots in scope for this session. Nothing was read
+                # from memory for them; Stop hooks use them to place write-back.
+                "roots": [str(r) for r in roots],
+                "memory_health": health,
+                # A receipt records what HAPPENED: SessionStart observed health
+                # and read no records. ``degraded`` when memory did not answer
+                # healthy or no repository resolved a namespace of its own.
+                "status": "degraded" if degraded else "health_only",
                 "degraded": degraded,
                 "exclusive_bind": bool(args.workspace),
             },
@@ -337,15 +338,17 @@ def main() -> int:
         )
         resolved = ", ".join(group_ids) if group_ids else "unresolved"
         lines = [
-            "L9 memory: ENFORCED",
+            "L9 memory: HEALTH-ONLY at SessionStart (no records read, nothing hydrated)",
+            f"health={health['status']}"
+            + (f" ({health['detail']})" if health.get("detail") else ""),
             f"transport={TRANSPORT}",
             f"namespace={resolved}",
             f"requested={', '.join(namespaces) or 'none'}",
+            'on_demand=python -m ops.memory.cli hydrate "<task>" --workspace <repo>',
             "rule=03-graphiti-memory",
             "skill=l9-graphiti-memory",
             "law=CANONICAL_LAW §8",
-            *contexts,
-            "note=Governed writes require this hydration only.",
+            "note=Repository writes do not require memory hydration.",
             "isolation=dedicated worktree + branch off origin/main + publication gate",
             "phase_lock=not required",
         ]
@@ -353,42 +356,36 @@ def main() -> int:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
                 1,
-                f"multi_repo=hydrated {len(roots)} of "
-                f"{_repo_count(workspace)} under {workspace}"
-                + (f"; excluded={dropped_note}" if dropped_note else ""),
+                f"multi_repo={len(roots)} of {_repo_count(workspace)} repositories under "
+                f"{workspace} in scope" + (f"; excluded={dropped_note}" if dropped_note else ""),
             )
         loud = None
         if degraded:
-            healthy = {"OK", "NO_HITS"}  # NO_HITS: memory answered, nothing to resume
-            unresolved = [r.name for r in roots if memory_statuses.get(r.name) not in healthy]
-            loud = _loud_read_failure(
+            loud = _loud_status(
                 "DEGRADED at session start: "
                 + (
-                    f"namespace unresolved for {', '.join(r.name for r in roots)}"
-                    if not group_ids
-                    else "hydration degraded for "
-                    + ", ".join(
-                        f"{name} ({memory_statuses.get(name, 'unknown')})"
-                        for name in (unresolved or [r.name for r in roots])
-                    )
+                    f"memory health {health['status']}"
+                    + (f" ({health['detail']})" if health.get("detail") else "")
+                    if health["status"] != "OK"
+                    else f"namespace unresolved for {', '.join(r.name for r in roots) or workspace}"
                 )
-                + ". This session may be missing its memory; repair: make memory-readiness."
+                + ". Repository work is unaffected; memory reads and writes may fail. "
+                "Repair: make memory-readiness."
             )
         if dropped:
-            note = _dropped_summary(dropped)
-            loud = (loud + " " if loud else "") + _loud_read_failure(
-                f"NOT HYDRATED this session: {note}."
+            loud = (loud + " " if loud else "") + _loud_status(
+                f"OUT OF SCOPE this session: {_dropped_summary(dropped)}."
             )
         _emit("\n".join(line for line in lines if line), loud)
     except Exception as exc:  # fail-open, never silent
         _emit(
-            "L9 memory: prefetch DEGRADED ("
-            f"{exc}). No receipt written; governed writes remain fail-closed until the "
-            "canonical memory runtime is bound (make memory-readiness). Operator-only "
-            "override: L9_MEMORY_ENFORCEMENT_BREAKGLASS. next=",
-            _loud_read_failure(
-                f"FAILED at session start ({type(exc).__name__}): no memory was loaded "
-                "for this session. Repair: make memory-readiness."
+            "L9 memory: health check FAILED at SessionStart ("
+            f"{exc}). No session receipt written. Repository work is unaffected; "
+            "memory reads and writes may fail until the canonical memory runtime is bound "
+            "(make memory-readiness).",
+            _loud_status(
+                f"health check FAILED at session start ({type(exc).__name__}). "
+                "Repair: make memory-readiness."
             ),
         )
     return 0
