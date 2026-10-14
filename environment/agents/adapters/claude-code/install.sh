@@ -258,7 +258,7 @@ receipt_mode() {
 compute_inputs_key() {
   local py="$GOV_DIR/.venv/bin/python3"
   [ -x "$py" ] || return 0
-  "$py" - "$GOV_DIR" "$WORKSPACE" "$(receipt_covered_roots)" <<'KEYPY' 2>/dev/null || true
+  "$py" - "$GOV_DIR" "$WORKSPACE" "$(receipt_covered_roots)" <<'KEYPY'
 import hashlib, json, os, subprocess, sys
 from pathlib import Path
 
@@ -292,7 +292,7 @@ previous_reusable_id() {
   local py="$GOV_DIR/.venv/bin/python3"
   [ -x "$py" ] && [ -f "$RECEIPT" ] && [ -n "${INPUTS_KEY:-}" ] || return 0
   "$py" - "$RECEIPT" "$INPUTS_KEY" "$WORKSPACE" \
-    "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null)" <<'REUSEPY' 2>/dev/null || true
+    "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null)" <<'REUSEPY'
 import json, sys
 from datetime import UTC, datetime
 
