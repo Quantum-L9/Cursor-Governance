@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
-"""PreToolUse memory gate — contract-declared memory preconditions only.
+"""PreToolUse memory gate — canonical memory hydration only (stage C8).
 
-Since 2026-10-13 SessionStart is health-only and no ``governed_writes`` rule in
-``memory-enforcement.contract.json`` declares a memory precondition, so this
-gate allows every repository write it matches; repository mutation authority
-comes from Git isolation, L4, the merge gate and the publication gate. The gate
-stays as the contract evaluator: a precondition a rule declares is still
-checked against the local session receipt ``memory_prefetch.py`` writes. It
-never calls memory itself and knows no provider.
+The gate reads the local prefetch receipt ``memory_prefetch.py`` wrote after
+hydrating through the memory control plane. It never calls memory itself and
+knows no provider.
 
 Operator-only escape hatch (admin key, never agent-settable):
   L9_MEMORY_ENFORCEMENT_BREAKGLASS=<reason>
 
 There is no ``ENFORCEMENT-off`` side door.
 
-**No hydration precondition.** The only legal precondition is the session
-receipt, and no rule currently requires it. The historical shape was::
+**Hydration only.** The single permitted gate shape is::
 
     fresh hydration?  yes -> continue
                       no  -> hydrate, then continue

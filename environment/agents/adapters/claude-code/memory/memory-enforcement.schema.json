@@ -284,8 +284,8 @@
                 "session_prefetch"
               ]
             },
-            "minItems": 0,
-            "description": "Repository-write authority comes from Git isolation, not memory state. Empty means the write carries no memory precondition (the default since SessionStart became health-only). 'phase_lock' is deliberately not a legal value."
+            "minItems": 1,
+            "description": "Repository-write authority comes from Git isolation, not memory state. 'phase_lock' is deliberately not a legal value."
           },
           "fail_mode": {
             "enum": [

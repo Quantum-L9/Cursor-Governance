@@ -34,7 +34,7 @@
   "surfaces": {
     "cursor-session-start": {
       "callers": [
-        "ops/hooks/graphiti-prefetch.sh (Cursor subagentStart, GATES-002 opt-in) -> ops/graphiti/hydration/compile_session_packet.py (canonical_hydrate); Cursor sessionStart no longer hydrates"
+        "ops/hooks/session_start_memory_orchestrator.sh -> ops/graphiti/hydration/compile_session_packet.py (canonical_hydrate)"
       ],
       "allowed_operations": [
         "resolve",
@@ -51,12 +51,15 @@
     },
     "claude-session-start": {
       "callers": [
-        "environment/agents/adapters/claude-code/hooks/memory_prefetch.py -> memory_bridge.memory_client (health only; SessionStart reads no records)"
+        "environment/agents/adapters/claude-code/memory/memory_bridge.py (hydrate, conflicts) via memory_prefetch.py"
       ],
       "allowed_operations": [
         "resolve",
         "health",
-        "capabilities"
+        "capabilities",
+        "hydrate",
+        "search",
+        "conflicts"
       ],
       "record_classes": [],
       "max_records": 0,

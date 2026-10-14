@@ -303,7 +303,7 @@ def _gated_out_servers(receipt: dict[str, Any] | None) -> frozenset[str]:
 
 
 def _memory_levels(gov: Path) -> dict[str, str] | None:
-    """R0..R5/R9 statuses from the health-only readiness report, or None when unrunnable.
+    """R0..R9 statuses from the canonical readiness report, or None when unrunnable.
 
     Runs in a subprocess on the governance interpreter so a broken memory
     boundary can never crash the emitter (fail-open to UNKNOWN). Only levels
@@ -315,11 +315,8 @@ def _memory_levels(gov: Path) -> dict[str, str] | None:
         py = Path(sys.executable)
     if not (gov / "ops" / "memory" / "diagnostics.py").is_file():
         return None
-    # --health-only: readiness at SessionStart is binding + health; the R6
-    # hydrate and R7/R8 admission dry runs belong to `make memory-readiness`
-    # and are SKIPPED, so this probe reads no memory record.
     # --no-verify-mcp: R5 is default-on for interactive readiness, but this
-    # emitter reads only R0/R1/R2/R3 (see _memory_cli_health and
+    # emitter reads only R0/R1/R2/R3/R6 (see _memory_cli_health and
     # _memory_control_plane_health) and the Claude MCP verdict comes from
     # _claude_mcp_health, never from R4/R5. Running the handshake here would
     # spawn a server for ~1.2s of the SessionStart hook's 8s budget for a level
@@ -333,7 +330,6 @@ def _memory_levels(gov: Path) -> dict[str, str] | None:
             str(gov),
             "--json",
             "--no-verify-mcp",
-            "--health-only",
         ],
         timeout=90,
         cwd=str(gov),
@@ -370,7 +366,7 @@ def _memory_cli_health(levels: dict[str, str] | None) -> tuple[str, str]:
 
 
 def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, str]:
-    """R2 CANONICAL_STORE_READY + R3 MEMORY_SERVICE_READY (health only, no read)."""
+    """R2 CANONICAL_STORE_READY + R3 MEMORY_SERVICE_READY (+ R6 hydrate answered)."""
     if levels is None:
         return UNKNOWN, "memory readiness unavailable"
     if levels.get("R0") != "pass" or levels.get("R1") != "pass":
@@ -379,7 +375,9 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
         return DEGRADED, "store not ready (blocker: store)"
     if levels.get("R3") != "pass":
         return DEGRADED, "service not ready (blocker: service)"
-    return READY, "canonical store and service ready (health only; hydrate not probed)"
+    if levels.get("R6") != "pass":
+        return DEGRADED, "hydrate not answering (blocker: namespace)"
+    return READY, "canonical store and service ready"
 
 
 #: Claude Code's projected command is the spawn wrapper. HOME is expanded by

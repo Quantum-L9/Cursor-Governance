@@ -99,15 +99,13 @@ def is_subagent(event: dict) -> bool:
 
 
 def session_roots(contract: dict, receipt_id: str, fallback: Any, workspace: Path) -> list[Path]:
-    """Repositories this session put in scope, else ``fallback(workspace)``.
+    """Repositories this session hydrated, else ``fallback(workspace)``.
 
-    ``roots`` records the roots SessionStart selected (``hydrated_roots`` on a
-    receipt written before SessionStart became health-only), so reusing it
-    keeps the post-publish end symmetric with SessionStart. An absent or
-    malformed session receipt is an ordinary state, not an error.
+    ``hydrated_roots`` records the roots whose identity resolved at hydrate time,
+    so reusing it keeps the post-publish end symmetric with SessionStart. An
+    absent or malformed prefetch receipt is an ordinary state, not an error.
     """
-    receipt = prefetch_receipt(contract, receipt_id)
-    roots = [Path(r) for r in (receipt.get("roots") or receipt.get("hydrated_roots") or [])]
+    roots = [Path(r) for r in (prefetch_receipt(contract, receipt_id).get("hydrated_roots") or [])]
     roots = [r for r in roots if str(r) and r.is_dir()]
     return roots or list(fallback(workspace))
 

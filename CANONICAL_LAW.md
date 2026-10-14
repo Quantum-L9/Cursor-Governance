@@ -1444,35 +1444,3 @@ including when that author is a repository admin. A different human who holds
 the permission, including a governance owner, still can. An agent command that
 can create the review or comment and whose body is not fully visible is
 denied. Review, comment, and file lists are read in full across pages.
-
-<!-- L9_SESSION_START_HEALTH_ONLY_V1 -->
-## 8.9 SessionStart is memory health-only (2026-10-13) — supersedes §8 "Session start prefetch", §8.1 item 3, §8.2 item 6's "The gate is hydration-only", and §8.3 item 5's "SessionStart hydration"
-
-1. **Health, not hydration.** Claude SessionStart
-   (`environment/agents/adapters/claude-code/hooks/memory_prefetch.py`) and
-   Cursor sessionStart (`ops/hooks/session_start_memory_orchestrator.sh`) make
-   one bounded `health` call through the canonical control plane. They do not
-   hydrate, search, read conflicts, compile a session packet, or inject resume
-   content. The `claude-session-start` hook envelope admits only `resolve`,
-   `health` and `capabilities`
-   ([`ops/config/memory-hook-envelopes.json`](ops/config/memory-hook-envelopes.json)).
-2. **Retrieval is on demand.** Resume and context come from an explicit
-   `python -m ops.memory.cli hydrate "<task>" --workspace <repo>` (or the
-   `l9-graphite-memory` MCP tools). The resume SSOT is unchanged: the canonical
-   `session_continuation` record (§8.3 item 6).
-3. **No memory precondition on repository mutation.** No `governed_writes` rule
-   in `memory-enforcement.contract.json` requires `session_prefetch`. Edits, git
-   mutation and GitHub writes are decided by worktree isolation, L4, the merge
-   gate (§6.2.12) and the publication gate, none of which change. `memory_gate.py`
-   stays as the contract evaluator for a precondition a rule declares.
-4. **Readiness reads no record.** SessionStart readiness runs
-   `ops.memory.diagnostics --health-only`: R6 hydrate and R7/R8 admission dry
-   runs are skipped, and the verdict is `HEALTH_READY`, never `READY`. The full
-   probe stays `make memory-readiness`.
-5. **Unchanged.** Signed agent identity and MemoryService grants for real memory
-   writes (§8.5, §8.6), the sessionEnd close and its session receipt (now
-   `status: health_only|degraded`), the Cursor planning-prompt prefetch
-   (`ops/hooks/plan_memory_prefetch.py`), and the opt-in GATES-002 Cursor write
-   gate (`L9_MEMORY_WRITE_GATES=1`, default off). An operator who enables
-   GATES-002 must hydrate on demand before writing, because sessionStart no
-   longer produces its hydration state.

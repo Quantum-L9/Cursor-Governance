@@ -22,10 +22,10 @@ repositories' memory and wrote back to zero, so nothing a session learned
 survived it.
 
 The repository set comes from ``ops/scripts/lib/workspace_roots.py`` — the same
-one answer SessionStart uses — but the *preferred* source is the session
-receipt this session already wrote. ``roots`` records the repository roots
-SessionStart put in scope, so reusing it makes close symmetric with
-SessionStart by construction rather than by re-deriving a set that could drift
+one answer prefetch uses — but the *preferred* source is the prefetch receipt
+this session already wrote. ``hydrated_roots`` records the roots whose identity
+actually resolved at hydrate time, so reusing it makes close symmetric with
+hydrate by construction rather than by re-deriving a set that could drift
 between the two ends of one session.
 
 Every close crosses the memory control plane (continuation capsule admitted as
@@ -359,16 +359,14 @@ def main() -> int:
     # it was never closed and was announced as "no prefetch receipt". The write
     # gate made the same move for the same reason (memory_state.usable_receipt).
     if not st.usable_receipt(contract, receipt_id):
-        # A policy skip: SessionStart never stamped this session (its health
-        # check did not run or found no writer identity), so there is no session
-        # start to close from. Recorded so it stays distinguishable from a
-        # runtime failure. The status token is kept for existing readers.
+        # A policy skip: this session never prefetched, so there is nothing to
+        # close. Recorded so it stays distinguishable from a runtime failure.
         announced = _announce_state(
             contract,
             session_id,
             "skipped_no_prefetch",
             f"L9 MEMORY WRITE-BACK — NOT WRITTEN (session {session_id}): no SessionStart "
-            "session receipt for this session, so its continuation was not closed. "
+            "prefetch receipt for this session, so its continuation was not closed. "
             "Repair: memory_prefetch.py --session-id <id>, or /end-session.",
         )
         _record(

@@ -6,8 +6,6 @@ description: Memory namespace gate — forbidden namespaces; hydration-only writ
 
 **Updated: 2026-09-06** — Memory realignment C11/C12: the sole front door is the canonical `l9-graphite-memory` control plane through `ops/memory` (`python -m ops.memory.cli`); Graphiti is a projection memory owns. `ops/graphiti/graphiti_memory_client.py` is a tombstone, no surface holds a provider URL or bearer, and `~/.cursor/graphiti.env` carries switches only. CANONICAL_LAW §8.2, ADR-0030.
 
-**Updated: 2026-10-13** — CANONICAL_LAW §8.9: sessionStart no longer hydrates, so the opt-in GATES-002 write gate (`L9_MEMORY_WRITE_GATES=1`) is satisfied only after an on-demand hydrate that writes session state. The Claude `memory_gate.py` contract requires no memory precondition on any governed write.
-
 **Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). This gate gates **repository edits** on hydration; it never gates a memory write. The Bash matcher exempts `l9-memory`, `python -m ops.memory.cli` and `memory_prefetch.py` (`ops/autonomy/memory_lane_exemption.py`), and no PreToolUse / `before*` matcher, deny list or contract may name a memory MCP tool (`mcp__l9-graphite-memory__*`) — `tests/ops/memory/test_no_agent_lane_interposition.py`. The ordinary agent write is `memory.write_agent`, ungated; `phase_lock` → `write_governed` below is the optional conflict-sensitive pair. `graphiti_memory_client.py` is deleted at C15.
 
 ## Namespace contract
@@ -60,7 +58,7 @@ remove the memory-side prerequisite of a governed write:
   write itself.
 - Do not evade the prerequisite: a model-authored fact is not routed through
   generic `memory.ingest` or the operator CLI `write` to avoid the lock.
-  Deterministic adapters (SessionStart health, sessionEnd close,
+  Deterministic adapters (SessionStart hydrate, sessionEnd close,
   `repair-write`, reconciliation, diagnostics) use their own purpose-specific
   `ops/memory` operations over the same admission path.
 - The machine form is `interactive_memory_write` in the Claude memory

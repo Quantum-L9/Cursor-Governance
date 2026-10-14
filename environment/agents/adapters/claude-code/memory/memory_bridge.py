@@ -57,9 +57,8 @@ def bind_session_env(env: dict[str, str], session_id: str | None) -> dict[str, s
     return env
 
 
-#: Hook-lane surface for the Claude SessionStart health check (ADR-0033 B7):
-#: a resolve/health/capabilities-only envelope in
-#: ``ops/config/memory-hook-envelopes.json`` — SessionStart reads no records. The agent
+#: Hook-lane surface for the Claude SessionStart prefetch (ADR-0033 B7):
+#: read-only envelope in ``ops/config/memory-hook-envelopes.json``. The agent
 #: itself writes through the public MCP / ``l9-memory`` surface, never here.
 HOOK_SURFACE = "claude-session-start"
 
@@ -79,10 +78,46 @@ def memory_client(session_id: str | None = None, *, surface: str = HOOK_SURFACE)
     )
 
 
+def hydrate(
+    task: str, *, workspace: Path, session_id: str, continuation_policy: str = "task"
+) -> dict[str, Any]:
+    """Canonical hydration for one repository (integration-receipt shape).
+
+    ``continuation_policy`` is ``task`` (resume only this task's capsule) or
+    ``repository_fallback`` (a SessionStart with no task yet may take the
+    newest repository capsule, marked as a fallback on the receipt).
+    """
+    ensure_importable()
+    from ops.memory.hydration import canonical_hydrate
+
+    return canonical_hydrate(
+        workspace,
+        task=task,
+        session_id=session_id,
+        continuation_policy=continuation_policy,
+        surface=HOOK_SURFACE,
+    ).as_dict()
+
+
+def conflicts(*, workspace: Path, session_id: str) -> dict[str, Any]:
+    """Memory conflicts are evidence, never a mutex."""
+    ensure_importable()
+    from ops.memory.namespace_context import resolve_namespace_context
+
+    context = resolve_namespace_context(workspace)
+    namespace = context.write_namespace_hint
+    if not namespace:
+        return {"status": "NAMESPACE_UNRESOLVED", "warnings": list(context.warnings)}
+    outcome = memory_client(session_id).conflicts(workspace=str(workspace), namespace=namespace)
+    return {"status": outcome.status.value, "ok": outcome.ok, "error": outcome.error}
+
+
 __all__ = [
     "BOUNDARY_REL",
     "bind_session_env",
+    "conflicts",
     "ensure_importable",
     "find_governance_root",
+    "hydrate",
     "memory_client",
 ]

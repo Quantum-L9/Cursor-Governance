@@ -73,13 +73,13 @@
       "event": "SessionStart",
       "script": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
       "fail_mode": "open",
-      "note": "SessionStart memory HEALTH check only (MemoryControlPlaneClient.health under the claude-session-start envelope: resolve/health/capabilities). Reads no records and injects no resume content. Writes the session receipt (status health_only|degraded) that Stop hooks read as the session start. Fail-open."
+      "note": "SessionStart thin wrap of the canonical session hydration (ops.memory.hydration via the session-packet compiler). Writes receipt on success. Fail-open."
     },
     "gate": {
       "event": "PreToolUse",
       "script": "environment/agents/adapters/claude-code/hooks/memory_gate.py",
       "fail_mode": "closed",
-      "note": "Emits a PreToolUse permissionDecision. Denies a matched governed write only when a precondition it declares is unmet; since 2026-10-13 no governed write declares a memory precondition, so repository mutation is decided by Git isolation, L4, the merge gate and the publication gate."
+      "note": "Emits a PreToolUse permissionDecision. Denies a matched governed write when its required preconditions are unmet."
     },
     "writeback": {
       "event": "Stop",
@@ -99,14 +99,14 @@
       "id": "session_prefetch",
       "satisfied_by": "a session receipt under state.session_receipt_glob whose session_id matches the current session and whose age is < state.session_ttl_seconds",
       "established_by": "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
-      "gate_shape": "session receipt present? yes -> continue; no -> continue (no governed write requires it)",
-      "note": "Defines the session receipt SessionStart writes. Since 2026-10-13 (SessionStart health-only) no governed write requires it: repository mutation carries no memory precondition. There is no conflicts -> phase-lock -> edit-permission chain."
+      "gate_shape": "fresh hydration? yes -> continue; no -> hydrate, then continue",
+      "note": "The ONLY permitted memory precondition on repository mutation. There is no conflicts -> phase-lock -> edit-permission chain."
     }
   },
   "governed_writes": [
     {
       "id": "edit-authority-files",
-      "description": "Edits to governance-authority paths carry no memory precondition. Isolation and collision safety are Git's job (worktree + branch + publication gate).",
+      "description": "Edits to governance-authority paths require that memory was hydrated this session. Isolation and collision safety are Git's job (worktree + branch + publication gate).",
       "match": {
         "tools": [
           "Edit",
@@ -127,12 +127,14 @@
           ".claude/**"
         ]
       },
-      "requires": [],
+      "requires": [
+        "session_prefetch"
+      ],
       "fail_mode": "closed"
     },
     {
       "id": "edit-other",
-      "description": "Any other edit carries no memory precondition.",
+      "description": "Any other edit still requires that memory was prefetched this session.",
       "match": {
         "tools": [
           "Edit",
@@ -143,12 +145,14 @@
           "**"
         ]
       },
-      "requires": [],
+      "requires": [
+        "session_prefetch"
+      ],
       "fail_mode": "closed"
     },
     {
       "id": "git-mutation",
-      "description": "Local history mutation and publication carry no memory precondition. Push/PR routing is governed by L4 and the publication gate, never by memory state.",
+      "description": "Local history mutation and publication require session hydration only. Push/PR routing is governed by L4 and the publication gate, never by memory lock state.",
       "match": {
         "tools": [
           "Bash"
@@ -157,12 +161,14 @@
           "(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"
         ]
       },
-      "requires": [],
+      "requires": [
+        "session_prefetch"
+      ],
       "fail_mode": "closed"
     },
     {
       "id": "external-write",
-      "description": "External GitHub writes carry no memory precondition; collision safety comes from the publication overlap gate.",
+      "description": "External GitHub writes require session hydration only; collision safety comes from the publication overlap gate.",
       "match": {
         "tools": [
           "mcp__github__create_pull_request",
@@ -173,7 +179,9 @@
           "mcp__github__delete_file"
         ]
       },
-      "requires": [],
+      "requires": [
+        "session_prefetch"
+      ],
       "fail_mode": "closed"
     }
   ],

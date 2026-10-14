@@ -148,11 +148,7 @@ repo_write_lock_acquire() {
       # Where available, also hold a kernel lock on a sidecar file so a
       # hard-killed holder is detectable without waiting out the stale age.
       if command -v flock >/dev/null 2>&1; then
-        # Brace group: a bare `exec 9>f 2>/dev/null` would make the stderr
-        # redirect permanent for the calling shell and silence every later
-        # diagnostic of the installer that holds this lock. On the group, the
-        # redirect is scoped to the open; only fd 9 persists.
-        if { exec 9>"$dir/owner.flock"; } 2>/dev/null && flock -n 9 2>/dev/null; then
+        if exec 9>"$dir/owner.flock" 2>/dev/null && flock -n 9 2>/dev/null; then
           _REPO_WRITE_LOCK_FD_OPEN=1
         fi
       fi
@@ -171,7 +167,7 @@ repo_write_lock_acquire() {
 
 repo_write_lock_release() {
   if [ "$_REPO_WRITE_LOCK_FD_OPEN" = "1" ]; then
-    { exec 9>&-; } 2>/dev/null || true
+    exec 9>&- 2>/dev/null || true
     _REPO_WRITE_LOCK_FD_OPEN=0
   fi
   if [ -n "$_REPO_WRITE_LOCK_DIR" ]; then

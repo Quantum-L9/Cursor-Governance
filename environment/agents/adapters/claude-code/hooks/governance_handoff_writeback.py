@@ -134,12 +134,7 @@ def _observe_prefetch(contract: dict, receipt_id: str) -> dict | None:
     data = pp.prefetch_receipt(contract, receipt_id)
     if not data.get("degraded"):
         return None
-    return {
-        "status": data.get("status"),
-        # memory_health: health-only SessionStart; memory_statuses: older receipts.
-        "memory_health": data.get("memory_health"),
-        "memory_statuses": data.get("memory_statuses"),
-    }
+    return {"status": data.get("status"), "memory_statuses": data.get("memory_statuses")}
 
 
 def _observe_hook_skips(started_at: float) -> list[str]:
