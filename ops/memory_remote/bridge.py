@@ -455,6 +455,8 @@ class RemoteBridge:
                 f"remote memory negotiated MCP revision {self._protocol!r}, "
                 f"not one of {list(self.protocol_versions)}"
             )
+        # MCP lifecycle: the client confirms initialization before any request.
+        self.exchange_once({"jsonrpc": "2.0", "method": "notifications/initialized"})
         replies = self.exchange_once(
             {
                 "jsonrpc": "2.0",
@@ -517,6 +519,16 @@ class RemoteBridge:
                 request_id,
                 UNAVAILABLE,
                 f"remote memory unavailable ({type(exc).__name__}); no fallback backend",
+            )
+            return
+        if request_id is not None and not replies:
+            # A 2xx that carries no JSON-RPC reply would leave the host waiting
+            # on its own timeout; answer the request instead.
+            print("memory_remote: remote memory returned no JSON-RPC reply", file=sys.stderr)
+            self._error(
+                request_id,
+                UNAVAILABLE,
+                "remote memory returned no JSON-RPC reply; no fallback backend",
             )
             return
         for reply in replies:

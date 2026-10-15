@@ -359,7 +359,11 @@ def test_notifications_and_sse_are_relayed() -> None:
 
 def test_the_service_must_prove_the_bound_release() -> None:
     bridge, _ = _bridge(
-        FakeSend(_ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"), _capabilities())
+        FakeSend(
+            _ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"),
+            Reply(202, b""),
+            _capabilities(),
+        )
     )
     assert bridge.verify_service("3.0.0")["package_version"] == "3.0.0"
     for drift in (
@@ -369,7 +373,9 @@ def test_the_service_must_prove_the_bound_release() -> None:
     ):
         bridge, _ = _bridge(
             FakeSend(
-                _ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"), _capabilities(**drift)
+                _ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"),
+                Reply(202, b""),
+                _capabilities(**drift),
             )
         )
         with pytest.raises(b.RemoteBindingError, match="not the bound release"):
@@ -414,3 +420,34 @@ def test_the_bridge_imports_no_provider_or_third_party_transport() -> None:
     source = (REPO_ROOT / "ops" / "memory_remote" / "bridge.py").read_text(encoding="utf-8")
     for forbidden in ("graphiti_core", "neo4j", "requests", "httpx", "aiohttp", "import mcp"):
         assert forbidden not in source, forbidden
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        Reply(200, b"not json"),
+        Reply(200, b"[1, 2]"),
+        Reply(200, b""),
+        Reply(200, b"event: message\n\n", "text/event-stream"),
+    ],
+)
+def test_a_request_never_goes_unanswered(reply: Reply) -> None:
+    """A malformed or empty 2xx still answers the caller's id (no host-side timeout)."""
+    bridge, out = _bridge(FakeSend(reply))
+    bridge.forward(json.dumps({"jsonrpc": "2.0", "id": 9, "method": "tools/list"}))
+    answer = json.loads(out.getvalue())
+    assert answer["id"] == 9
+    assert answer["error"]["code"] == b.UNAVAILABLE
+    assert "no fallback backend" in answer["error"]["message"]
+
+
+def test_startup_completes_the_mcp_lifecycle_before_any_request() -> None:
+    send = FakeSend(
+        _ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"),
+        Reply(202, b""),
+        _capabilities(),
+    )
+    bridge, _ = _bridge(send)
+    bridge.verify_service("3.0.0")
+    methods = [json.loads(request.data)["method"] for request in send.requests]
+    assert methods == ["initialize", "notifications/initialized", "tools/call"]
