@@ -433,7 +433,7 @@ if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
 fi
 DIVERGENCE_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
 
-# Orchestrator: hydrate + code-graph as structured fields
+# Orchestrator: memory health + code-graph as structured fields
 HYDRATE_MD="Graphiti disabled — no resume memory"
 CODEGRAPH_MD="skipped"
 if [ -f "$ORCH" ]; then
@@ -575,12 +575,13 @@ if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
   rm -f "$RUNTIME_ERR"
 fi
 
-# compile_session_packet.py already emits its own heading (### memory hydrate since
-# stage C4; ### Graphiti hydrate before it). Do not wrap twice.
+# The orchestrator emits its own heading (### memory status since SessionStart
+# became health-only; ### memory hydrate / ### Graphiti hydrate before it).
+# Do not wrap twice.
 HYDRATE_BLOCK="$HYDRATE_MD"
 case "$HYDRATE_MD" in
-  *"### memory hydrate"*|*"### Graphiti hydrate"*) ;;
-  *) HYDRATE_BLOCK="### memory hydrate
+  *"### memory status"*|*"### memory hydrate"*|*"### Graphiti hydrate"*) ;;
+  *) HYDRATE_BLOCK="### memory status
 ${HYDRATE_MD}" ;;
 esac
 
