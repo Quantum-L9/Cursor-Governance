@@ -61,6 +61,11 @@ input:
     driver: tools/authority/produce_architecture_intelligence.py
     ci: .github/workflows/l9-architecture-intelligence-bundle.yml
     gar_produces: false
+    production_attestation: >-
+      CI reproduces the committed bundle byte for byte with the compiler revision named in
+      bundle.lock.json (driver --check) and fails closed when the compiler cannot be obtained.
+      The verifier's digests are recomputable: they prove integrity and currentness, not
+      production.
   verifier: scripts/verify_architecture_intelligence.py
 load_condition:
   when:
@@ -132,3 +137,8 @@ integration_invariants:
     rule: The bundle is produced only by the canonical compiler; GAR verifies and never regenerates it.
   - id: AIB-005
     rule: Provenance is recorded in run state before the payload is read and is never inferred.
+  - id: AIB-006
+    rule: >-
+      A committed bundle is accepted only after CI reproduces it byte for byte with the pinned
+      compiler; BOUND attests integrity and currentness of those reproduced bytes and is never
+      by itself evidence of compiler production.

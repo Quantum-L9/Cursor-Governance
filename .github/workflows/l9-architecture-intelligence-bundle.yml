@@ -42,8 +42,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
-    # Consumer verification of the committed bundle: GAR's verifier, then currentness against
-    # Quantum-L9/.github at the exact revision the bundle names. No compiler is needed here.
+    # Consumer verification of the committed bundle: GAR's verifier and currentness against
+    # Quantum-L9/.github at the exact revision the bundle names, then byte-for-byte reproduction
+    # with the compiler revision the bundle names (production attestation).
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -66,7 +67,11 @@ jobs:
         shell: bash
         run: |
           revision="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["authority"]["revision"])')"
-          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
+          compiler="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["producer"]["revision"])')"
+          for value in "$revision" "$compiler"; do
+            [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo "bundle.lock.json revisions must be full 40-hex SHAs"; exit 1; }
+          done
+          printf 'revision=%s\ncompiler=%s\n' "$revision" "$compiler" >> "$GITHUB_OUTPUT"
       - name: Checkout canonical Semantic Foundation at the bundle revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -84,6 +89,34 @@ jobs:
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
             --authority-root ../org-authority \
             --expect-revision "$REVISION"
+      # The verifier's digests are recomputable, so they prove integrity, not who produced the
+      # bytes. Production is proven by reproducing the committed bundle byte for byte with the
+      # pinned compiler. Without L9_SEMANTIC_COMPILER_READ_TOKEN the checkout fails and the job
+      # fails closed: an unreproduced bundle is never accepted.
+      - name: Checkout pinned canonical compiler
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/l9-semantic-compiler-engine
+          ref: ${{ steps.lock.outputs.compiler }}
+          path: compiler
+          fetch-depth: 1
+          token: ${{ secrets.L9_SEMANTIC_COMPILER_READ_TOKEN }}
+          persist-credentials: false
+      - name: Install compiler
+        run: python -m pip install ./compiler
+      - name: Reproduce bundle with the pinned compiler
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          REVISION: ${{ steps.lock.outputs.revision }}
+          COMPILER: ${{ steps.lock.outputs.compiler }}
+        run: |
+          python tools/authority/produce_architecture_intelligence.py \
+            --authority-root ../org-authority \
+            --authority-revision "$REVISION" \
+            --compiler-revision "$COMPILER" \
+            --compiler l9-semantic-compiler \
+            --check
   refresh:
     # Producer regeneration. Requires L9_SEMANTIC_COMPILER_READ_TOKEN, a read-only credential for
     # the private Quantum-L9/l9-semantic-compiler-engine repository; without it this job fails
@@ -180,11 +213,13 @@ jobs:
         env:
           AUTHORITY: ${{ steps.refs.outputs.authority }}
           COMPILER: ${{ steps.refs.outputs.compiler }}
+          DRIVER: ${{ github.sha }}
         run: |
-          # One immutable branch per (authority, compiler) pair. The producer is byte-deterministic
-          # for that pair (--check), so an existing branch already carries this bundle: it is
-          # never rewritten, and nothing is ever force-pushed.
-          branch="automation/architecture-intelligence-${AUTHORITY:0:12}-${COMPILER:0:12}"
+          # One immutable branch per (authority, compiler, driver) triple: the governance revision
+          # pins the producer driver. The producer is byte-deterministic for that triple (--check),
+          # so an existing branch already carries this bundle: it is never rewritten, and nothing
+          # is ever force-pushed.
+          branch="automation/architecture-intelligence-${AUTHORITY:0:12}-${COMPILER:0:12}-${DRIVER:0:12}"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             echo "$branch already exists; not rewriting it"
