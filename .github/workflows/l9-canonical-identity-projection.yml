@@ -19,6 +19,10 @@ on:
       - "tools/assurance/check_canonical_identity_projection.py"
       - "rules/64-canonical-identity-authority.mdc"
       - ".github/workflows/l9-canonical-identity-projection.yml"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "generated/governance/coding_projection/**"
+      - "tools/authority/project_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
   push:
     branches:
       - main
@@ -29,6 +33,10 @@ on:
       - "generated/governance/canonical_identity.receipt.yaml"
       - "tools/authority/project_canonical_identity.py"
       - "tools/assurance/check_canonical_identity_projection.py"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "generated/governance/coding_projection/**"
+      - "tools/authority/project_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
   repository_dispatch:
     types:
       - l9-semantic-authority-updated
@@ -83,6 +91,26 @@ jobs:
         working-directory: governance
         run: |
           python tools/assurance/check_canonical_identity_projection.py
+      - name: Verify coding projection reproduces from its pinned authority revision
+        working-directory: governance
+        run: |
+          python tools/authority/project_coding_projection.py \
+            --authority-root ../org-authority \
+            --check
+      - name: Classify coding projection against authority main (report-only)
+        working-directory: governance
+        run: |
+          # BLOCKED (tamper / non-reproduction) and UNVERIFIED (authority not
+          # observed) fail; STALE means Quantum-L9/.github moved the profile or
+          # an input after the pin, which is a rebind to do, not this PR's
+          # failure, so it is surfaced as a warning.
+          rc=0
+          line="$(python ops/scripts/coding_projection_status.py \
+            --authority-root ../org-authority --format line --fail-on BLOCKED,UNVERIFIED)" \
+            || rc=$?
+          echo "$line"
+          case "$line" in *": STALE "*) echo "::warning::$line" ;; esac
+          exit "$rc"
   refresh:
     if: >-
       github.event_name == 'schedule' ||
