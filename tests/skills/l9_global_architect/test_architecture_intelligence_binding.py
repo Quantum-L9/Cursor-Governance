@@ -208,7 +208,14 @@ def _module():
     spec = importlib.util.spec_from_file_location("verify_ai", VERIFIER)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # The pack forbids residue directories (validate_runtime_alignment.py), so the in-process
+    # import must not leave scripts/__pycache__ behind.
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
