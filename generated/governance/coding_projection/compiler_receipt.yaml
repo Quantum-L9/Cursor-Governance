@@ -1,0 +1,39 @@
+schema: l9.compiler-receipt/v1
+receipt_identity: cursor-governance.coding-projection-producer/v1#69134217267626182ac95182a56d1d9bc296135e
+receipt_type: l9.receipt/compilation@1
+exact_subject_ref: l9.projection/coding-agent-execution@1
+claim: l9.projection/coding-agent-execution@1 executed against Quantum-L9/.github@69134217267626182ac95182a56d1d9bc296135e;
+  one projection artifact per selected source ledger
+operation: projection
+inputs:
+- ref: l9.source/authority-model@1
+  digest: sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620
+- ref: l9.source/contracts@1
+  digest: sha256:fe6064bf5a4dd9849fbb8033c1ff66dcc9bddb2672d5824a1af60d84e7327896
+- ref: l9.source/invariants@1
+  digest: sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a
+profile:
+  ref: l9.projection/coding-agent-execution@1
+  digest: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
+output:
+  ref: l9.projection.coding-agent-execution/v1
+  digest: sha256:81acdc8c1d2f2e3b4cccae5ea6bcfd99e6916d15b529820c3b11a1d80bb3c0d5
+outputs:
+  authority_model.projection.yaml: sha256:5d0868591949b448316c827bde179a8822d7b6644cd2fd3e27983339010553e9
+  contracts.projection.yaml: sha256:6747328f5e9423df8439a2c8abb594c5b6c09c1c938dddb4e125f53f8bcbe07b
+  invariants.projection.yaml: sha256:546a6ab16b3bd5827fe9aa952b4e0133a8e950b88eb41adcd245ce4fa7cae6b0
+governing_coordinates:
+  source_repository: Quantum-L9/.github
+  source_revision: 69134217267626182ac95182a56d1d9bc296135e
+  profile_pin: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
+result: pass
+verification_basis:
+  source_read: git show <revision>:<path> from a checkout whose origin is Quantum-L9/.github
+  profile_pin: canonical JSON digest equals the binding pin (RC-028 form)
+  selectors: exact-id filters and top-level sections only; each resolves once
+  digest_canonicalization: 'consumer-local: sha256 over canonical JSON (sorted keys, compact separators,
+    UTF-8); upstream declares none'
+producer_identity:
+  compiler: cursor-governance.coding-projection-producer/v1
+  version: '1'
+receipt_digest: sha256:9d59ac468b1f08cef537245bf8e1d0db62e42d601da52d8c18f573c82184f71c

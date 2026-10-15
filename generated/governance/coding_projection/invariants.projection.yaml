@@ -1,0 +1,165 @@
+schema: l9.projection-artifact/v1
+source_ref: l9.source/invariants@1
+source_digest: sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a
+projection_profile_ref: l9.projection/coding-agent-execution@1
+projection_profile_digest: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
+provenance:
+  source_repository: Quantum-L9/.github
+  source_revision: 69134217267626182ac95182a56d1d9bc296135e
+  source_path: semantics/invariants.yaml
+  canonical: false
+  derived: true
+generated_by:
+  compiler: cursor-governance.coding-projection-producer/v1
+  version: '1'
+payload:
+  output_schema: l9.projection.coding-agent-execution/v1
+  source_class: invariants
+  records:
+  - id: L9-AUTH-001
+    statement: 'No component may expand its own authority.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-AUTH-002
+    statement: 'Capability to perform a function does not confer authority over the governing decision
+      or action.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-OWNER-001
+    statement: 'Within a given semantic scope and revision, each canonical concept has one authoritative
+      owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution
+      by another component does not by itself transfer ownership or create a competing canonical source.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-MONOTONIC-001
+    statement: 'Where canonical law permits subordinate extension, a subordinate policy may narrow permissions
+      or strengthen applicable constraints within its delegated scope; it must not weaken, bypass, reinterpret,
+      shadow, or replace canonical law except through authority explicitly delegated by the canonical
+      owner.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-PROMOTION-001
+    statement: 'A semantic artifact or result does not acquire a stronger semantic or authority class
+      merely by being produced, consumed, repeated, or validated; promotion requires explicit admission
+      by the authority that owns the target semantic or authority class.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-DERIVED-001
+    statement: 'Derived artifacts do not become canonical authority automatically.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-EVIDENCE-001
+    statement: 'Evidence and receipts attest only to the observations or outcomes declared by their contracts;
+      they confer neither semantic nor execution authority.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-ASSURANCE-001
+    statement: 'Normative requirement, implementation state, and assurance state are distinct. A claim
+      that a requirement or control is implemented, verified, blocking, conformant, or complete requires
+      current, independently verifiable evidence appropriate to that claim; missing, stale, or unverifiable
+      required evidence leaves the claim unverified or unknown.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-UNKNOWN-001
+    statement: 'Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or
+      results remain explicit; they must not be silently coerced, reconciled, or treated as establishing
+      a value, compatibility, validity, authorization, or success. An applicable authoritative rule may
+      resolve a conflict, but authority does not manufacture missing evidence or establish an unproven
+      claim.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-DEGRADE-001
+    statement: 'Unavailability of one semantic capability does not authorize another to impersonate or
+      substitute its semantics; substitution requires an explicit compatibility contract and applicable
+      authority.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-PROV-001
+    statement: 'Every derived semantic artifact must preserve enough provenance to resolve its authoritative
+      inputs and the declared transformations and coordinates that produced it.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-COORD-001
+    statement: 'A derived result is valid only against its declared governing coordinates; a material
+      coordinate change makes it non-current until compatibility is proven or it is recomputed.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-COMPAT-001
+    statement: 'Semantic equivalence and compatibility must be declared by the applicable type or contract;
+      similarity, convenience, or successful execution must not substitute for them.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-REVISION-001
+    statement: 'The semantic content of an admitted revision is immutable; correction or change creates
+      a successor or supersession rather than rewriting prior meaning.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-ADMISSION-001
+    statement: 'Authority and admission decisions are bound to the exact subject revision they evaluate;
+      a material change to that subject requires a new decision unless an explicit governing contract
+      preserves compatibility.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-PROJECTION-001
+    statement: 'A projection is a bounded view of existing source semantics; it may select or reshape
+      representation but may not invent, reconcile, reinterpret, or expand source meaning or authority.
+      A transformation that introduces semantic consequences is not projection and must be classified
+      under another applicable governed operation.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-VALIDATION-001
+    statement: 'Validation and conformance are observational and non-mutating; they may evaluate a subject
+      and emit evidence, but may not mutate or repair the subject or alter, relax, substitute, or reinterpret
+      the governing criteria used to evaluate it.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-CORRECTNESS-001
+    statement: 'A candidate, implementation, or generated artifact cannot define or establish its own
+      correctness; correctness must be evaluated against governing criteria whose authority does not derive
+      from the candidate or the process that produced it.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+  - id: L9-GLOBALIZATION-001
+    statement: 'Recurrence or pattern recognition may justify a globalization candidate but never creates
+      global law; global law requires explicit admission by the global authority.
+
+      '
+    scope: global
+    owner: Quantum-L9/.github
+projection_digest: sha256:546a6ab16b3bd5827fe9aa952b4e0133a8e950b88eb41adcd245ce4fa7cae6b0
