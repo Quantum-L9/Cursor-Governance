@@ -327,6 +327,55 @@ def test_an_idless_refusal_answers_the_callers_id() -> None:
     }
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"{}",
+        b'{"id": 9, "foo": 1}',
+        b'{"jsonrpc": "2.0", "id": 9}',
+        b'{"jsonrpc": "2.0", "id": 9, "result": {}, "error": {"code": 1, "message": "x"}}',
+        b'{"id": 9, "result": {"tools": []}}',
+        b'{"jsonrpc": "2.0", "id": 999, "result": {"tools": []}}',
+    ],
+    ids=["empty-object", "bare-object", "no-result-or-error", "both", "no-jsonrpc", "wrong-id"],
+)
+def test_a_malformed_reply_is_an_error_not_relayed(body: bytes) -> None:
+    bridge, out = _bridge(FakeSend(Reply(200, body)))
+    bridge.forward(json.dumps({"jsonrpc": "2.0", "id": 9, "method": "tools/list"}))
+    lines = out.getvalue().splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0]) == {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "error": {
+            "code": b.UNAVAILABLE,
+            "message": "remote memory returned a malformed JSON-RPC reply; no fallback backend",
+        },
+    }
+
+
+def test_a_failing_status_with_a_result_body_is_an_outage() -> None:
+    body = json.dumps({"jsonrpc": "2.0", "id": 9, "result": {"tools": []}}).encode()
+    bridge, out = _bridge(FakeSend(Reply(500, body)))
+    bridge.forward(json.dumps({"jsonrpc": "2.0", "id": 9, "method": "tools/list"}))
+    reply = json.loads(out.getvalue())
+    assert reply["id"] == 9
+    assert "result" not in reply
+    assert reply["error"]["code"] == b.UNAVAILABLE
+
+
+def test_a_server_notification_on_the_stream_passes_through() -> None:
+    stream = (
+        b'data: {"jsonrpc": "2.0", "method": "notifications/progress", "params": {"p": 1}}\n\n'
+        b'data: {"jsonrpc": "2.0", "id": 9, "result": {"tools": []}}\n\n'
+    )
+    bridge, out = _bridge(FakeSend(Reply(200, stream, "text/event-stream")))
+    bridge.forward(json.dumps({"jsonrpc": "2.0", "id": 9, "method": "tools/list"}))
+    first, second = (json.loads(line) for line in out.getvalue().splitlines())
+    assert first["method"] == "notifications/progress" and "id" not in first
+    assert second == {"jsonrpc": "2.0", "id": 9, "result": {"tools": []}}
+
+
 def test_a_response_echoing_the_key_is_withheld() -> None:
     leak = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"echo": KEY}}).encode()
     bridge, out = _bridge(FakeSend(Reply(200, leak)))

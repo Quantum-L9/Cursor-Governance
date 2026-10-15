@@ -424,8 +424,13 @@ class RemoteBridge:
                 continue
             if isinstance(parsed, dict):
                 replies.append(parsed)
-        if not replies and status >= 400:
-            raise RemoteBindingError(f"remote memory answered HTTP {status}")
+        if status >= 400:
+            # A failing status never carries a success: keep only the refusal
+            # objects (memory-remote-mcp/v1 refusals ride 4xx bodies) and treat
+            # a 5xx that happens to carry a ``result`` as the outage it is.
+            replies = [reply for reply in replies if "error" in reply]
+            if not replies:
+                raise RemoteBindingError(f"remote memory answered HTTP {status}")
         for reply in replies:
             result = reply.get("result")
             if isinstance(result, dict) and isinstance(result.get("protocolVersion"), str):
@@ -532,11 +537,33 @@ class RemoteBridge:
             )
             return
         for reply in replies:
+            if reply.get("jsonrpc") == "2.0" and "method" in reply and reply.get("id") is None:
+                self.emit(reply)  # a server notification riding the stream
+                continue
             # Refusal bodies carry no id (memory-remote-mcp/v1); answer the caller's.
             if "id" not in reply or reply.get("id") is None:
                 if request_id is None:
                     continue
                 reply = {**reply, "id": request_id}
+            if request_id is not None and (
+                reply.get("jsonrpc") != "2.0"
+                or reply.get("id") != request_id
+                or ("result" in reply) == ("error" in reply)
+            ):
+                # Not a JSON-RPC response to this request: a bare object, a
+                # reply for another id, or one with neither / both of result
+                # and error. Relaying it would hand the host an invalid message
+                # or leave this request unanswered; refuse it instead.
+                print(
+                    "memory_remote: remote memory returned a malformed JSON-RPC reply",
+                    file=sys.stderr,
+                )
+                self._error(
+                    request_id,
+                    UNAVAILABLE,
+                    "remote memory returned a malformed JSON-RPC reply; no fallback backend",
+                )
+                return
             self.emit(reply)
 
     def serve(self, stream: Iterable[str]) -> None:
