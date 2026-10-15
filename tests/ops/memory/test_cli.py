@@ -436,3 +436,65 @@ def test_prefetch_bind_skips_non_dict_and_expired_receipts(tmp_path, monkeypatch
     os.utime(expired, (6000.0, 6000.0))
 
     assert cli.bound_write_namespace(cli.read_prefetch_bind(str(tmp_path))) == "mine"
+
+
+def _stub_hydration(status: str):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        ok=status in ("OK", "NO_HITS"),
+        status=status,
+        task_signature="task-sig",
+        integration_receipts=[],
+        namespace_context=SimpleNamespace(write_namespace_hint="cursor-governance"),
+        requested_namespaces=["cursor-governance"],
+        hydrate_receipt_digest="sha256:" + "0" * 64,
+        record_ids=[],
+        continuation=None,
+        as_dict=lambda: {"status": status},
+    )
+
+
+@pytest.mark.parametrize("record", [True, False])
+def test_hydrate_record_session_satisfies_the_opt_in_write_gate(
+    monkeypatch, tmp_path, capsys, record
+) -> None:
+    """Codex P1 on #722: SessionStart no longer hydrates, so the advertised
+    on-demand hydrate must be able to satisfy GATES-002 for this conversation."""
+    import ops.memory.hydration as hydration_module
+    from ops.memory.session_state import memory_satisfied, read_session_state
+
+    monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        hydration_module, "canonical_hydrate", lambda *a, **k: _stub_hydration("OK")
+    )
+    monkeypatch.setattr(cli, "_client", lambda args: None)
+    argv = ["hydrate", "fix the gate", "--workspace", str(ROOT)]
+    if record:
+        argv += ["--record-session", "conv-722"]
+    assert cli.main(argv) == 0
+    document = json.loads(capsys.readouterr().out)
+    state = read_session_state("conv-722")
+    if record:
+        assert document["session_state_path"].endswith("conv-722.json")
+        assert memory_satisfied(state)
+    else:
+        assert state is None and "session_state_path" not in document
+
+
+def test_hydrate_record_session_never_marks_a_failed_hydration_fresh(
+    monkeypatch, tmp_path, capsys
+) -> None:
+    import ops.memory.hydration as hydration_module
+    from ops.memory.session_state import memory_satisfied, read_session_state
+
+    monkeypatch.setenv("L9_MEMORY_SESSION_STATE_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        hydration_module,
+        "canonical_hydrate",
+        lambda *a, **k: _stub_hydration("CANONICAL_UNAVAILABLE"),
+    )
+    monkeypatch.setattr(cli, "_client", lambda args: None)
+    assert cli.main(["hydrate", "t", "--workspace", str(ROOT), "--record-session", "conv-x"]) != 0
+    capsys.readouterr()
+    assert not memory_satisfied(read_session_state("conv-x"))

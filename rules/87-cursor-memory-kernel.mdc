@@ -25,6 +25,8 @@ alwaysApply: true
 
 **Updated: 2026-09-24** — Agent memory write contract `l9.agent_memory_write.v1` (`ops/memory/AGENT_WRITE_CONTRACT.md`, schema `ops/memory/schemas/l9.agent_memory_write.v1.schema.json`): a model-authored fact is never freehand. Build its arguments with `python -m ops.memory.agent_write build` (one atomic one-line fact, any class except `identity`, exactly one `agent:<id>` tag plus a topic tag, content-derived `idempotency_key`) and pass them unchanged to `memory_write_agent` (or `memory_write_governed` with `task_signature`). The agent keeps this contract itself; nothing sits in front of the tool, and `MemoryService` still decides grants and admission. The agent lane accepts every class except `identity`. `lesson` is an operator-CLI spelling of `procedural`, not a seventh class and not a refusal.
 
+**Updated: 2026-10-13** — SessionStart is memory **health-only** (CANONICAL_LAW §8.9): Claude `memory_prefetch.py` and Cursor `session_start_memory_orchestrator.sh` make one bounded `health` call and inject no resume content; resume is on demand via `python -m ops.memory.cli hydrate "<task>" --workspace <repo>`. No governed repository write requires a memory receipt.
+
 **Updated: 2026-09-15** — ADR-0033 / CANONICAL_LAW §8.6 (two lanes, one `MemoryService`; INV-03b). The agent lane is direct: `memory.write_agent` is the ordinary write and is not gated by any Cursor-Governance receipt, phase, session close or PR step; `phase_lock` → `write_governed` is optional. The hook lane (`SessionStart` / `sessionEnd` / prefetch / PR publish / PE-SGD ingest) is `MemoryControlPlaneClient(surface=…)` bounded by `ops/config/memory-hook-envelopes.json` and stamped `principal.type=hook`. "Sole front door through `ops/memory`" above describes the hook lane and the operator CLI, not a toll booth on agent writes. `graphiti_memory_client.py` is deleted at C15; local Phase B distill / promotion is gone — sessionEnd calls `l9-memory distill`.
 
 **Effective: 2026-02-14**
@@ -83,9 +85,9 @@ Every verdict is the canonical receipt; a refused lock or write is the verdict, 
 
 When starting a session (whether via `/start-session` or manually):
 
-1. Prefer SessionStart `additional_context` hydration (`next=` + packet JSON) from `ops/graphiti/hydration/`
-2. **Health check** if hydration degraded: `memcli health`
-3. **Hydrate** if `next=` empty: `memcli hydrate "current task"`
+1. SessionStart reports memory **health only** (`### memory status` / `L9 memory: HEALTH-ONLY`); it injects no `next=` or packet
+2. **Health check** if it reports DEGRADED / ENVIRONMENT_FAULT: `memcli health`, then `make memory-readiness`
+3. **Hydrate on demand** when the task needs resume or prior decisions: `memcli hydrate "current task"`
 4. **Do not** read `memory-bank/activeContext.md` as SSOT
 
 ---
@@ -222,7 +224,7 @@ Before committing, verify:
 - [ ] No hardcoded credentials in any agent file (ADR-0090)
 - [ ] Lessons from user corrections are written to memory immediately
 - [ ] Error solutions are checked in memory before debugging from scratch
-- [ ] Resume path uses sessionStart canonical hydrate (continuation capsule), not `memory-bank/`
+- [ ] Resume path uses an on-demand canonical hydrate (continuation capsule), not `memory-bank/`
 
 ---
 

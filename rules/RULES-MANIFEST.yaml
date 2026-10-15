@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-14T19:47:41Z'
+generated_utc: '2026-10-15T02:50:35Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:6577598c0c94c602c21f01464d530042f1fe10fb13d52df0155e862bc7dc7976
+source_tree_digest: sha256:dfed8f8a61a6b1a3a6ad2ad5f2ed39b322feb85afd4af0c46e6c9b33b0c924b1
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -91,8 +91,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 116
-  content_digest: sha256:2b743af607ee3b707a100efef6cb1ae92c663e5b5253e49388b3f14a283f9037
+  line_count: 118
+  content_digest: sha256:04187b094fd61c09f70fd8723a71079559eca741fa7a38700c98178e89291d76
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -114,7 +114,7 @@ rules:
   first_heading: Cursor + Redis Session Context (no amnesia)
   has_yaml_frontmatter: true
   line_count: 72
-  content_digest: sha256:7f6cee55bbaaaafe719ab5b21cc5399d08ad0510b8a7c2aa3047464e37841e7b
+  content_digest: sha256:97752a5553dd264eabbc2d44b329b80f0379d1e6ca808c81fe921fc981f9cf30
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1299,7 +1299,7 @@ rules:
   first_heading: Session resume bridge (L9)
   has_yaml_frontmatter: true
   line_count: 93
-  content_digest: sha256:240b44175cfd912ae1b01500572c63e92f707d0f6611446ee6cb398f8c739364
+  content_digest: sha256:85f59ed0e27575d807d2577915a3f79bf6d29854c9278bdcbd1ac7a72918006c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1342,8 +1342,8 @@ rules:
   globs: null
   first_heading: Cursor Memory Kernel Enforcement
   has_yaml_frontmatter: true
-  line_count: 241
-  content_digest: sha256:ba13447e82692c0563d814d8b419c959a474435d310036c69dbd47e1b7feb4d6
+  line_count: 243
+  content_digest: sha256:19841608cbb05e29ccbd32cfe79e00a8d6d136407df777b19208a06189a13deb
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1584,10 +1584,10 @@ rules:
   globs: null
   first_heading: Memory Gate (canonical control plane)
   has_yaml_frontmatter: true
-  line_count: 79
-  content_digest: sha256:f539c06c295b80cb369e99c7a51d5a649023e80fc7460c79bacb46fddb02d8e8
+  line_count: 81
+  content_digest: sha256:cb225a2dbc600620d284e584ebf7babb245737737458c561bf05f78c3c5ca108
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
