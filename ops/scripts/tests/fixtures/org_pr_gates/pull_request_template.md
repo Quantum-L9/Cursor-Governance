@@ -1,47 +1,46 @@
 <!-- L9_PROTECTED_ROOT_PR -->
 <!--
   The stamp above is required in the PR body when any additive_only root file
-  is in the diff (ops/config/root-file-protection.json). make pr fills this
-  Protected-root block. When no additive_only path is touched, the composer
-  marks the section N/A.
+  is in the diff (ops/config/root-file-protection.json). make pr fills the
+  Protected-root block at the end of this template. When no additive_only path
+  is touched, the composer marks that section N/A.
 
   Prefer append-only edits. A rewrite/deletion also needs a commit line:
     ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>
+
+  Machine-owned regions sit between <!-- NAME:START --> / <!-- NAME:END -->
+  markers. make pr (Cursor-Governance ops/scripts/compose_pr_body.py) fills
+  them, and the governance-pr workflow refreshes them on every push. Text
+  outside the regions is yours and survives every refresh.
 -->
 
-## Protected-root
+## Files touched
 
-### Paths
+<!-- Machine-owned: make pr and the governance-pr workflow refresh it from the
+     diff on every push. Do not edit by hand. -->
 
-<!-- One path per line. Must match the additive_only diff. Composer fills. -->
+<!-- FILES-TOUCHED:START -->
+_pending — the bot fills this in on push_
+<!-- FILES-TOUCHED:END -->
 
-<!-- PROTECTED-ROOT-PATHS:START -->
-- ` `
-<!-- PROTECTED-ROOT-PATHS:END -->
+## Changes by intent
 
-### Edit mode (pick one per path)
+<!-- Machine-owned path list: one `path — why` line per diff row, refreshed on
+     every push. Edit the text after a path; it survives refresh. -->
 
-- [ ] **Append-only** — existing lines kept; only new lines added (no `ALLOW-ROOT-DELETION`)
-- [ ] **Justified rewrite** — commit contains `ALLOW-ROOT-DELETION: <path> — <reason>`
-
-### Why a root file
-
-<!-- What cannot be done in a non-root path. Composer fills. -->
-
-### Proof of necessity (rewrites only)
-
-<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->
+<!-- CHANGES-BY-INTENT:START -->
+_pending — the composer lists every changed path from the diff_
+<!-- CHANGES-BY-INTENT:END -->
 
 ## Problem
 
 <!-- REQUIRED. The error, bug, or gap this fixes. Lead with the symptom a human saw.
-     Paste the actual traceback, failing assertion, alert, or log line. -->
+     Paste the actual traceback, failing assertion, alert, or log line.
+     Name an issue with a closing keyword only when this PR closes it. -->
 
 ```
 paste the error / failing output here, or delete this block and describe the gap
 ```
-
-Closes #
 
 ## Type of Change
 
@@ -70,14 +69,12 @@ Rollback:
 ## Evidence
 
 <!-- Show the problem is gone. Pasted output or a CI link. Not "tests pass".
-     The EVIDENCE block is machine-owned (make pr receipts, marked STALE when a
-     later push was not measured). Add your own evidence below it. -->
+     The EVIDENCE block is machine-owned (make pr receipts, each marked BOUND,
+     STALE or UNVERIFIED against the head it describes). Add your own evidence
+     below it. -->
 
 <!-- EVIDENCE:START -->
-```
-$ pytest -q
-$ ruff check . && pyright
-```
+_not measured — make pr records its receipts here_
 <!-- EVIDENCE:END -->
 
 ## Gates
@@ -95,7 +92,8 @@ $ ruff check . && pyright
 
 ## Semantic change
 
-<!-- Applies when the diff touches semantics/ or docs/semantic-foundation/. Otherwise tick N/A. -->
+<!-- Applies when the diff touches semantics/ or docs/semantic-foundation/.
+     Otherwise tick N/A; make pr does it from the measured diff. -->
 
 - [ ] N/A — no canonical semantic artifact or release record changed
 - Foundation / release candidate affected:
@@ -110,27 +108,25 @@ $ ruff check . && pyright
 
 <!-- Where to look hardest. Trade-offs accepted. Deferred follow-ups, with issue links. -->
 
-## Changes by intent
+## Protected-root
 
-<!-- Machine-owned path list: one `path — why` line per diff row, refreshed on
-     every push. Edit the text after a path; it survives refresh. -->
+### Paths
 
-<!-- CHANGES-BY-INTENT:START -->
-**Added**
-- `path/to/new_file.py` — why this file needs to exist
+<!-- One path per line. Must match the additive_only diff. Composer fills. -->
 
-**Modified**
-- `path/to/existing.py` — what changed in it and why
+<!-- PROTECTED-ROOT-PATHS:START -->
+_pending — the composer lists additive_only root paths from the diff_
+<!-- PROTECTED-ROOT-PATHS:END -->
 
-**Deleted**
-- `path/to/dead.py` — why it is safe to remove
-<!-- CHANGES-BY-INTENT:END -->
+### Edit mode (pick one per path)
 
-## Files touched
+- [ ] **Append-only** — existing lines kept; only new lines added (no `ALLOW-ROOT-DELETION`)
+- [ ] **Justified rewrite** — commit contains `ALLOW-ROOT-DELETION: <path> — <reason>`
 
-<!-- Machine-owned: make pr and the governance-pr workflow refresh it from the
-     diff on every push. Do not edit by hand. -->
+### Why a root file
 
-<!-- FILES-TOUCHED:START -->
-_pending — the bot fills this in on push_
-<!-- FILES-TOUCHED:END -->
+<!-- What cannot be done in a non-root path. Composer fills. -->
+
+### Proof of necessity (rewrites only)
+
+<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->

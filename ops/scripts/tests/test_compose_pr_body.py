@@ -24,6 +24,8 @@ from compose_pr_body import (  # noqa: E402
     REGION_FILES,
     REGION_INTENT,
     REGION_PROTECTED_PATHS,
+    REVIEWER_PLACEHOLDER,
+    REVIEWER_UNRESOLVED,
     SCHEMA,
     THIN_PROBLEM_NOTE,
     UNMEASURED,
@@ -38,6 +40,7 @@ from compose_pr_body import (  # noqa: E402
     range_title,
     refresh_body,
     region_content,
+    render_evidence,
     resolve_template,
     validate_template,
     write_handoff,
@@ -142,6 +145,7 @@ class ComposePrBodyTests(unittest.TestCase):
             },
             l4_receipt={"phase": "release_authorized", "head_sha": "abc"},
             template_path=".github/pull_request_template.md",
+            path_subjects={"ops/scripts/open_pr_after_gate.sh": "fix: fill PR body from receipts"},
         )
         result = compose_pr_body(facts, TEMPLATE)
         self.assertIn("fix: fill PR body from receipts", result.body)
@@ -155,8 +159,13 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn(
             "- [x] Medium — touches shared code, config, or a public interface", result.body
         )
-        self.assertIn("- [x] CI / governance change", result.body)
+        # Type comes from the conventional-commit type, not from where the path lives.
+        self.assertIn("- [x] Bug fix", result.body)
+        self.assertNotIn("- [x] CI / governance change", result.body)
         self.assertIn("Rollback: revert this PR", result.body)
+        # Nobody checked the receipts' binding here, so neither is evidence.
+        self.assertIn("UNVERIFIED (no caller checked its binding)", result.body)
+        self.assertNotIn("- [x] No secrets", result.body)
         self.assertIn(
             "`ops/scripts/open_pr_after_gate.sh` — fix: fill PR body from receipts", result.body
         )
@@ -209,6 +218,7 @@ class ComposePrBodyTests(unittest.TestCase):
             commits=["subject one"],
             changed_files=["A\tnew.py"],
             campaign_body="Campaign note",
+            path_subjects={"new.py": "subject one"},
         )
         result = compose_pr_body(facts, None)
         self.assertIn("Campaign note", result.body)
@@ -263,11 +273,20 @@ class ComposePrBodyTests(unittest.TestCase):
             commits=["a"],
             changed_files=["M\tops/x.py"],
             l4_receipt={"phase": "release_authorized", "tree_digest": "d"},
+            l4_binding="bound",
+            l4_binding_detail="L4 release_authorized (receipt matches worktree content)",
         )
         body = compose_pr_body(released, template).body
         self.assertIn("L4 receipt present", body)
         self.assertIn("tree_digest=d", body)
+        self.assertIn("BOUND (L4 release_authorized", body)
         self.assertIn("- [x] **L4 local autonomy**", body)
+        # The phase name alone is not authorization of this tree.
+        released.l4_binding = "stale"
+        released.l4_binding_detail = "L4 receipt stale: authorized tree d, this worktree is e"
+        stale = compose_pr_body(released, template).body
+        self.assertIn("STALE (L4 receipt stale", stale)
+        self.assertNotIn("- [x] **L4 local autonomy**", stale)
         self.assertNotIn("kernel_evidence", body)
         self.assertNotIn("Post-exec kernels", body)
 
@@ -334,7 +353,11 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertNotIn("first: bind receipts", why_section)
 
     def test_single_commit_range_reads_as_before(self) -> None:
-        facts = MechanicalFacts(commits=["only: one"], changed_files=["M\tops/x.py"])
+        facts = MechanicalFacts(
+            commits=["only: one"],
+            changed_files=["M\tops/x.py"],
+            path_subjects={"ops/x.py": "only: one"},
+        )
         body = compose_pr_body(facts, TEMPLATE).body
         self.assertNotIn("more commit", body)
         self.assertNotIn("- only: one", body.split("## Fix")[1].split("## Risk")[0])
@@ -807,7 +830,12 @@ def _facts(changed: list[str], **extra: object) -> MechanicalFacts:
         "commits": ["feat: first", "feat: second"],
         "commit_bodies": ["Why the work started.", ""],
         "changed_files": changed,
-        "path_subjects": {},
+        "path_subjects": {
+            "ops/a.py": "feat: first",
+            "ops/b.py": "feat: second",
+            "ops/c.py": "feat: second",
+            "new/x.py": "feat: second",
+        },
         "head": "a" * 40,
         "shortstat": f"{len(changed)} files changed",
     }
@@ -824,14 +852,12 @@ class RefreshTests(unittest.TestCase):
     def _reviewed(self) -> str:
         body = compose_pr_body(_facts(self.FIRST), CANONICAL_TEMPLATE).body
         body = body.replace("Why the work started.", "Reviewer-rewritten problem statement.")
-        body = body.replace(
-            "- `ops/a.py` — feat: first (+1 more)", "- `ops/a.py` — hand-written why"
-        )
+        body = body.replace("- `ops/a.py` — feat: first", "- `ops/a.py` — hand-written why")
         body = body.replace(
             "<!-- EVIDENCE:END -->", "<!-- EVIDENCE:END -->\n\nManual: ran the soak for 2h."
         )
         return body.replace(
-            "See Changes by intent and Protected-root (if any additive_only path).",
+            REVIEWER_UNRESOLVED,
             "Look hardest at the retry loop.",
         )
 
@@ -1086,12 +1112,14 @@ class TemplateResolutionTests(unittest.TestCase):
             with self.subTest(region=name):
                 # Markers gone and the placeholder edited: nothing left to fill.
                 head, rest = CANONICAL_TEMPLATE.split(start, 1)
-                inner, tail = rest.split(end, 1)
+                _inner, tail = rest.split(end, 1)
                 broken = head + "edited by hand\n" + tail
                 self.assertTrue(any(name in e for e in validate_template(broken)))
-                # Markers gone but the exact legacy placeholder kept: still fillable.
-                legacy = head + inner.strip("\n") + tail
-                self.assertEqual(validate_template(legacy), [])
+                # Markers present around new pending text: fillable in place.
+                self.assertEqual(validate_template(CANONICAL_TEMPLATE), [])
+        # Markers gone but the exact legacy placeholders kept (the pre-region
+        # template, TEMPLATE above): still fillable, so older org revisions work.
+        self.assertEqual(validate_template(TEMPLATE), [])
 
     def test_unreachable_or_invalid_template_fails_closed(self) -> None:
         def down(endpoint: str) -> object:
@@ -1188,6 +1216,251 @@ class CliTests(unittest.TestCase):
             again = run("--refresh-body", str(body_file), "--remote", "--status-file", str(status))
             self.assertEqual(json.loads(status.read_text())["status"], "unchanged")
             self.assertEqual(again.stdout, refreshed.stdout)
+
+
+#: Visible ``## `` headings of a composed canonical body, in order. Files
+#: touched leads; Protected-root disclosures close the body.
+CANONICAL_ORDER = [
+    "Files touched",
+    "Changes by intent",
+    "Problem",
+    "Type of Change",
+    "Fix",
+    "Risk",
+    "Evidence",
+    "Gates",
+    "Semantic change",
+    "Reviewer focus",
+    "Protected-root",
+]
+
+
+def _headings(body: str) -> list[str]:
+    return re.findall(r"^## (.+?)\s*$", body, re.M)
+
+
+class CanonicalCompletenessTests(unittest.TestCase):
+    """Mechanical completeness and truthfulness of a body composed from the
+    canonical template: every changed file at the top, nothing dummy left,
+    nothing claimed that was not measured."""
+
+    NAME_STATUS = [
+        "A\tops/new_tool.py",
+        "M\tREADME.md",
+        "D\tops/dead.py",
+        "R100\told/name.py\tnew/name.py",
+        "C075\tsrc/base.py\tsrc/copy of base.py",
+    ]
+
+    def _facts(self, **extra: object) -> MechanicalFacts:
+        base: dict[str, object] = {
+            "commits": ["chore: rework the tool", "test: cover it"],
+            "commit_bodies": ["The tool kept dropping rows on large inputs.", ""],
+            "changed_files": list(self.NAME_STATUS),
+            "path_subjects": {"ops/new_tool.py": "chore: rework the tool"},
+            "head": "a" * 40,
+            "shortstat": "5 files changed",
+        }
+        base.update(extra)
+        return MechanicalFacts(**base)  # type: ignore[arg-type]
+
+    def test_changed_files_lead_and_sections_follow_the_canonical_order(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        self.assertEqual(_headings(body), CANONICAL_ORDER)
+        files = region_content(body, REGION_FILES) or ""
+        self.assertTrue(files.startswith("**5 files**"), files)
+        for row in [parse_row(line) for line in self.NAME_STATUS]:
+            self.assertIn(f"`{row.path.rsplit('/', 1)[-1]}`", files)
+        self.assertIn("~~`dead.py`~~ — deleted", files)
+        self.assertIn("— renamed from `old/name.py`", files)
+        self.assertIn("— copied from `src/base.py`", files)
+
+    def test_no_dummy_or_dangling_template_content_survives(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        for dummy in (
+            "path/to/",
+            "paste the error / failing output here",
+            "_pending",
+            "_not measured — make pr records its receipts here_",
+            "$ pytest -q",
+            "- ` `",
+        ):
+            self.assertNotIn(dummy, body)
+        self.assertIsNone(re.search(r"Closes #(?!\d)", body), "dangling Closes #")
+        self.assertIsNone(re.search(r"^(Blast radius|Rollback):\s*$", body, re.M))
+        self.assertIsNone(re.search(r"^- [^\[\n][^\n]*:\s*$", body, re.M), "bare field label")
+        for name in (REGION_FILES, REGION_INTENT, REGION_EVIDENCE, REGION_PROTECTED_PATHS):
+            start, end = (f"<!-- {name}:START -->", f"<!-- {name}:END -->")
+            self.assertEqual((body.count(start), body.count(end)), (1, 1), name)
+        self.assertEqual(body.count("## Files touched"), 1)
+        risk = re.findall(r"^- \[[xX]\] ", _section(body, "Risk"), re.M)
+        self.assertEqual(len(risk), 1)
+
+    def test_inventory_has_every_row_and_no_phantom(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        rows = [parse_row(line) for line in self.NAME_STATUS]
+        self.assertEqual(check_inventory(body, rows), ([], []))
+        # A path no own commit touched is said to be unresolved, not explained
+        # with some other commit's subject.
+        self.assertIn("- `README.md` — _unresolved — no commit", body)
+        self.assertIn("commit context, not a verified per-file rationale", body)
+
+    def test_composed_body_passes_the_org_gates_and_is_deterministic(self) -> None:
+        first = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        second = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        self.assertEqual(first, second)
+        result = _run_org_validator("governance-pr.yml", first)
+        self.assertEqual(result["failures"], [])
+        self.assertEqual(result["findings"], [])
+
+    def test_closes_only_for_issues_a_commit_names(self) -> None:
+        none = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        self.assertNotIn("Closes", _section(none, "Problem"))
+        named = compose_pr_body(self._facts(issue_closes=[12, 40]), CANONICAL_TEMPLATE).body
+        self.assertIn("Closes #12, #40", _section(named, "Problem"))
+        # The older template's bare line is filled or removed, never left.
+        older = compose_pr_body(self._facts(), TEMPLATE).body
+        self.assertIsNone(re.search(r"Closes #(?!\d)", older))
+        self.assertIn("Closes #7", compose_pr_body(self._facts(issue_closes=[7]), TEMPLATE).body)
+
+    def test_type_of_change_is_evidence_or_explicitly_unresolved(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        section = _section(body, "Type of Change")
+        self.assertNotIn("[x]", section)
+        self.assertIn("unresolved — no conventional-commit type", section)
+        fixed = compose_pr_body(
+            self._facts(commits=["fix(io)!: stop dropping rows"]), CANONICAL_TEMPLATE
+        ).body
+        section = _section(fixed, "Type of Change")
+        self.assertIn("- [x] Bug fix", section)
+        self.assertIn("- [x] Breaking change", section)
+        self.assertIn(
+            "Feature / enhancement — not indicated by this branch's commit types", section
+        )
+
+    def test_semantic_change_is_classified_from_the_diff(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        section = _section(body, "Semantic change").strip()
+        self.assertTrue(section.startswith("- [x] N/A"), section)
+        self.assertNotIn("Foundation / release candidate affected", section)
+        changed = [*self.NAME_STATUS, "M\tsemantics/registry.yaml"]
+        applicable = compose_pr_body(self._facts(changed_files=changed), CANONICAL_TEMPLATE).body
+        section = _section(applicable, "Semantic change")
+        self.assertIn("- [ ] N/A", section)
+        self.assertIn("not applicable: this diff changes `semantics/registry.yaml`", section)
+        self.assertIn("Foundation / release candidate affected: _unresolved", section)
+        self.assertNotIn("[x]", section)
+
+    def test_human_judgment_fields_stay_explicitly_unresolved(self) -> None:
+        body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
+        self.assertIn(REVIEWER_UNRESOLVED, _section(body, "Reviewer focus"))
+        risk = _section(body, "Risk")
+        self.assertIn("not an assessment", risk)
+        self.assertIn("Rollback: revert this PR (composer default; not verified", risk)
+        self.assertIn("Blast radius: 5 changed files", risk)
+
+    def test_duplicate_region_template_is_rejected(self) -> None:
+        doubled = (
+            CANONICAL_TEMPLATE + "\n<!-- FILES-TOUCHED:START -->\nx\n<!-- FILES-TOUCHED:END -->\n"
+        )
+        self.assertIn("region FILES-TOUCHED is declared more than once", validate_template(doubled))
+        self.assertEqual(validate_template(CANONICAL_TEMPLATE), [])
+
+
+class EvidenceBindingTests(unittest.TestCase):
+    """A receipt is evidence only for the tree it was written for."""
+
+    def _gate(self, repo: _Repo, security: str) -> None:
+        proc = subprocess.run(
+            ["bash", str(REPO / "ops" / "scripts" / "run_pr_gate.sh"), "--print-state-digest"],
+            cwd=repo.root,
+            env={**repo.env, "WS": str(repo.root), "PR_BASE": "main"},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        paths, content, base = proc.stdout.strip().split(" ", 2)
+        receipt = {
+            "schema": "l9.pr_gate_receipt.v2",
+            "paths_digest": paths,
+            "content_digest": content,
+            "pr_base": base,
+            "security": security,
+            "head_sha": repo.git("rev-parse", "HEAD").strip(),
+            "passed_at": "2026-10-15T00:00:00Z",
+        }
+        (repo.root / ".l9" / "pr").mkdir(parents=True, exist_ok=True)
+        (repo.root / ".l9" / "pr" / "gate-receipt.json").write_text(json.dumps(receipt))
+
+    def _repo(self, tmp: str) -> _Repo:
+        repo = _Repo(Path(tmp) / "r")
+        repo.write(".gitignore", ".l9/\n")
+        repo.write("a.py", "a\n")
+        repo.commit("base")
+        repo.git("checkout", "-q", "-b", "feat")
+        repo.write("a.py", "b\n")
+        repo.commit("fix: change a")
+        return repo
+
+    def _secrets_ticked(self, facts: MechanicalFacts) -> bool:
+        body = compose_pr_body(facts, CANONICAL_TEMPLATE).body
+        return "- [x] No secrets" in body and "- [x] `semgrep` clean" in body
+
+    def test_bound_passing_receipt_ticks_security_gates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(tmp)
+            self._gate(repo, "pass")
+            facts = collect_mechanical(repo.root, pr_base="main")
+        self.assertEqual(facts.gate_binding, "bound", facts.gate_binding_detail)
+        self.assertTrue(self._secrets_ticked(facts))
+        self.assertIn("BOUND (digest matches this tree", render_evidence(facts))
+
+    def test_receipt_from_an_earlier_head_is_stale_and_proves_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self._repo(tmp)
+            self._gate(repo, "pass")
+            repo.write("a.py", "c\n")
+            repo.commit("fix: change a again")
+            facts = collect_mechanical(repo.root, pr_base="main")
+        self.assertEqual(facts.gate_binding, "stale")
+        self.assertFalse(self._secrets_ticked(facts))
+        self.assertIn("STALE (", render_evidence(facts))
+
+    def test_advisory_or_unrecorded_security_is_not_a_clean_scan(self) -> None:
+        for security in ("advisory", "not_run", ""):
+            with self.subTest(security=security), tempfile.TemporaryDirectory() as tmp:
+                repo = self._repo(tmp)
+                self._gate(repo, security)
+                facts = collect_mechanical(repo.root, pr_base="main")
+                self.assertEqual(facts.gate_binding, "bound")
+                self.assertFalse(self._secrets_ticked(facts))
+
+    def test_missing_receipt_is_explicitly_unmeasured(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            facts = collect_mechanical(self._repo(tmp).root, pr_base="main")
+        self.assertEqual(facts.gate_binding, "")
+        self.assertIn("gate-receipt.json absent", render_evidence(facts))
+        self.assertFalse(self._secrets_ticked(facts))
+
+
+class HumanBodyRefreshTests(unittest.TestCase):
+    """A PR opened from the template in the web UI, then refreshed by the
+    governance-pr workflow: inventory filled, nothing claimed."""
+
+    def test_remote_refresh_of_a_template_body_claims_no_evidence(self) -> None:
+        human = CANONICAL_TEMPLATE.replace(REVIEWER_PLACEHOLDER, "Look at the parser.")
+        facts = _facts(["M\tops/a.py"], head="c" * 40)
+        body, status = refresh_body(human, facts, remote=True)
+        self.assertEqual(status, "updated")
+        evidence = region_content(body, REGION_EVIDENCE) or ""
+        self.assertIn("UNVERIFIED: no make pr receipt was recorded", evidence)
+        self.assertNotIn("STALE", evidence)
+        self.assertNotIn("_not measured — make pr records", evidence)
+        self.assertIn("NOT MEASURED", region_content(body, REGION_PROTECTED_PATHS) or "")
+        self.assertIn("- `ops/a.py` — feat: first", body)
+        self.assertIn("Look at the parser.", body)
+        again, status = refresh_body(body, facts, remote=True)
+        self.assertEqual((again, status), (body, "unchanged"))
 
 
 if __name__ == "__main__":

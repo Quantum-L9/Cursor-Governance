@@ -19,9 +19,9 @@
     {
       "file": "pull_request_template.md",
       "source": "Quantum-L9/.github:.github/pull_request_template.md",
-      "ref": "3847df36b41fd4b20db8f2f8f82311594b97a4d3",
-      "why": "The canonical org template with machine-owned region markers; make pr resolves the live copy at an exact org commit, tests compose from this one.",
-      "sha256": "40596753d48e467acd59661071fe75844a95694e5e330c656641e7c60cf4169e"
+      "ref": "d4134ccf5d910de5dfd7002e07d5dc96fe7f4b7e",
+      "why": "The canonical org template: changed files first, machine-owned region markers, no placeholder the composer cannot fill. make pr resolves the live copy at an exact org commit; tests compose from this one.",
+      "sha256": "2bbe24a3be6b0fa3445604a9569e540a6f34a180c4829d2240eed43f4efd6a9a"
     }
   ],
   "refresh": "When the canonical target caller pin or the validator moves: copy the file from that ref, update ref and sha256 here. The digest test fails until both agree. The vendored ref is a target, not a record of what any consumer runs."
