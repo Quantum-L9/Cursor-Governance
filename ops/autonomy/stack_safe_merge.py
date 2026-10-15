@@ -11,20 +11,26 @@ the only sanctioned way for l9-pr-remediation to choose a merge method.
     --run --head-sha  execute the merge (does not merge when children exist
                       unless method is merge)
 
-Authorization (CANONICAL_LAW §6.2.13). ``--run`` merges only when a human GitHub
-authorization covers exactly this repository, PR and current head, or when the
-optional legacy grant file does. Before merging it rechecks the PR's current
-head on GitHub: a head that differs from ``--head-sha``, or no authorization for
-that head, prints a MERGE_PENDING record and exits MERGE_PENDING_EXIT without
-merging. The SHA then travels with the merge (REST ``sha``, CLI
-``--match-head-commit``) so GitHub itself refuses a head that moves in between.
-GitHub evidence is read from GitHub, not from ``L9_MERGE_REVIEW_FILE``. The
-legacy grant is read from the invoking account's home as recorded in the
-password database, not from ``$HOME`` or ``L9_MERGE_AUTHORIZATION_FILE``: this
-process's environment belongs to whoever runs it, and an agent controls that.
-The human session breakglass L9_MERGE_AUTHORIZED is honoured by merge_gate's
-hook, not here, for the same reason. Failing required checks stay GitHub's
-refusal: a non-zero merge API result is returned, not overridden.
+Authorization (CANONICAL_LAW §6.2.13). ``--run`` merges only when a human
+authorization covers exactly this repository, PR and current head: a GitHub
+record (approval or authorization line), or a grant in the account's grant
+file -- written by ``authorize_merge.py`` from a controlling terminal or, as
+``--operator-instruction``, from the operator's own recorded prompt. Before
+merging it rechecks the PR's current head on GitHub: a head that differs from
+``--head-sha``, or no authorization for that head, prints a MERGE_PENDING
+record and exits MERGE_PENDING_EXIT without merging. The SHA then travels with
+the merge (REST ``sha``, CLI ``--match-head-commit``) so GitHub itself refuses
+a head that moves in between. After a merge returns success the helper reads
+the pull request back and reports ``MERGED`` with GitHub's merge commit; a
+merge GitHub does not confirm exits MERGE_UNVERIFIED_EXIT rather than being
+reported as done. GitHub evidence is read from GitHub, not from
+``L9_MERGE_REVIEW_FILE``. The grant is read from the invoking account's home as
+recorded in the password database, not from ``$HOME`` or
+``L9_MERGE_AUTHORIZATION_FILE``: this process's environment belongs to whoever
+runs it, and an agent controls that. The human session breakglass
+L9_MERGE_AUTHORIZED is honoured by merge_gate's hook, not here, for the same
+reason. Failing required checks stay GitHub's refusal: a non-zero merge API
+result is returned, not overridden.
 
 Two execution transports, same order as the probe above it:
 
@@ -59,7 +65,10 @@ if str(_HERE) not in sys.path:
 
 from github_merge_authorization import authorization_line, authorize_for_merge  # noqa: E402
 from merge_gate import (  # noqa: E402
+    _FULL_SHA,
     GRANT_FILE_NAME,
+    _gh_rest_json,
+    _probe_file_entry,
     _stacked_children,
     find_grant,
     live_head_sha,
@@ -69,6 +78,8 @@ ANCESTRY_SAFE = "merge"
 UNSTACKED = "squash"
 #: Exit status for "remediated, not merged: a human grant is required".
 MERGE_PENDING_EXIT = 3
+#: Exit status for "the merge call returned success but GitHub does not show it merged".
+MERGE_UNVERIFIED_EXIT = 4
 
 
 def _account_grant_path() -> Path:
@@ -113,8 +124,17 @@ def authorization_status(
         reason = "no --head-sha named; authorization binds an exact head"
     elif requested != live:
         reason = f"head moved: requested {requested}, live {live}"
-    elif find_grant(repo, str(pr), live, path=path or _account_grant_path()) is not None:
-        return {**record, "status": "AUTHORIZED", "reason": "human grant matches live head"}
+    elif (grant := find_grant(repo, str(pr), live, path=path or _account_grant_path())) is not None:
+        provenance = grant.get("provenance") if isinstance(grant.get("provenance"), dict) else {}
+        channel = str(provenance.get("channel") or "human_grant")
+        return {
+            **record,
+            "status": "AUTHORIZED",
+            "reason": f"human grant ({channel}) matches live head",
+            "channel": channel,
+            "authorizer": "operator" if channel == "operator_prompt" else "human",
+            "grant_provenance": provenance or None,
+        }
     else:
         github = _github_authorization(repo, str(pr), live)
         if github.get("authorized"):
@@ -233,6 +253,29 @@ def _run(argv: list[str]) -> int:
     return int(subprocess.run(argv, check=False).returncode)  # noqa: S603
 
 
+def merged_state(repo: str, pr: str) -> dict[str, Any]:
+    """GitHub's view of whether ``repo#pr`` is merged, and by which commit.
+
+    ``L9_STACK_PROBE_FILE`` entries may carry ``merged`` / ``merge_commit_sha``
+    so tests stay offline. Raises RuntimeError when the state cannot be read:
+    an unobserved merge is never reported as a merge.
+    """
+    entry = _probe_file_entry(repo, str(pr))
+    if entry is not None:
+        merged = bool(entry.get("merged"))
+        sha = str(entry.get("merge_commit_sha") or "").strip().lower()
+        return {"merged": merged, "merge_commit_sha": sha or None}
+    view = _gh_rest_json(f"repos/{repo}/pulls/{pr}")
+    if not isinstance(view, dict):
+        raise RuntimeError("pull request payload was not an object")
+    sha = str(view.get("merge_commit_sha") or "").strip().lower()
+    return {
+        "merged": bool(view.get("merged")),
+        "merge_commit_sha": sha if _FULL_SHA.match(sha) else None,
+        "state": view.get("state"),
+    }
+
+
 def _execute(selection: dict[str, Any], *, delete_branch: bool, head_sha: str = "") -> int:
     """Merge over REST, falling back to the CLI subcommand. Report honestly.
 
@@ -349,7 +392,42 @@ def main(argv: list[str] | None = None) -> int:
             print(" ".join(selection["rest_argv"]))
             print(" ".join(command))
             return 0
-        return _execute(selection, delete_branch=not args.keep_branch, head_sha=bound_sha)
+        rc = _execute(selection, delete_branch=not args.keep_branch, head_sha=bound_sha)
+        if rc != 0:
+            return rc
+        # "The merge command returned 0" is not "the pull request merged". Read
+        # the result back from GitHub before reporting it.
+        try:
+            observed = merged_state(args.repo, args.pr)
+        except RuntimeError as exc:
+            print(
+                f"UNVERIFIED: merge call succeeded but GitHub state could not be read ({exc})",
+                file=sys.stderr,
+            )
+            return MERGE_UNVERIFIED_EXIT
+        if not observed.get("merged"):
+            print(
+                f"UNVERIFIED: merge call succeeded but GitHub does not show {args.repo}#{args.pr} "
+                "as merged",
+                file=sys.stderr,
+            )
+            return MERGE_UNVERIFIED_EXIT
+        print(
+            json.dumps(
+                {
+                    "status": "MERGED",
+                    "repo": args.repo,
+                    "pr": int(args.pr) if str(args.pr).isdigit() else args.pr,
+                    "head_sha": bound_sha,
+                    "merge_commit_sha": observed.get("merge_commit_sha"),
+                    "method": selection["method"],
+                    "authorization": selection["authorization"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
     print(" ".join(command))
     return 0
 

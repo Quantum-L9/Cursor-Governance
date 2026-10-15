@@ -126,6 +126,80 @@ def _comment_event(command: str) -> dict:
     return {"tool_name": "Bash", "tool_input": {"command": command}}
 
 
+AUTHORIZE = "ops/autonomy/" + "authorize_merge.py"
+
+
+def _operator_run(repo: str = SLUG, pr: int = 53) -> str:
+    return (
+        f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{AUTHORIZE}" '
+        f"--operator-instruction --repo {repo} --pr {pr} --head-sha {SHA}"
+    )
+
+
+def _run_with_instruction(
+    tmp_path: Path, command: str, *, record_for: tuple[str, int] | None
+) -> subprocess.CompletedProcess[str]:
+    """The real wrapper, with the receipt written where the host hook writes it."""
+    import sys as _sys
+
+    _sys.path.insert(0, str(REPO / "ops" / "autonomy"))
+    import operator_merge_instruction as omi
+
+    home = tmp_path / "home"
+    gov = home / ".cursor-governance"
+    gov.parent.mkdir(parents=True, exist_ok=True)
+    gov.symlink_to(REPO)
+    if record_for:
+        repo, pr = record_for
+        omi.record_instructions(
+            f"Fix and merge {repo}#{pr} after the checks pass.",
+            host="claude-code",
+            session_id="sess-1",
+            path=home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME,
+            cwd_repo=None,
+        )
+    env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+    for key in (
+        "L9_MERGE_AUTHORIZED",
+        "L9_STACK_PROBE_FILE",
+        "L9_MERGE_AUTHORIZATION_FILE",
+        "L9_MERGE_REVIEW_FILE",
+        "L9_OPERATOR_INSTRUCTION_FILE",
+    ):
+        env.pop(key, None)
+    return subprocess.run(
+        [sys.executable, str(WRAP)],
+        input=json.dumps(_comment_event(command)),
+        text=True,
+        capture_output=True,
+        env=env,
+        check=False,
+        timeout=30,
+        start_new_session=True,
+    )
+
+
+def test_wrapper_accepts_the_operator_instruction_transcription(tmp_path: Path) -> None:
+    """Positive 8: Claude Code's actual hook path lets the recorded instruction be transcribed."""
+    proc = _run_with_instruction(tmp_path, _operator_run(), record_for=(SLUG, 53))
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == ""
+
+
+def test_wrapper_denies_the_transcription_without_a_recorded_instruction(tmp_path: Path) -> None:
+    proc = _run_with_instruction(tmp_path, _operator_run(), record_for=None)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
+
+
+def test_wrapper_denies_the_transcription_for_another_pull_request(tmp_path: Path) -> None:
+    proc = _run_with_instruction(tmp_path, _operator_run(pr=54), record_for=(SLUG, 53))
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
 def test_wrapper_denies_an_authorization_line_in_a_body_file(tmp_path: Path) -> None:
     payload = tmp_path / "auth.txt"
     payload.write_text(f"authorize merge {SLUG}#53@{SHA}\n", encoding="utf-8")

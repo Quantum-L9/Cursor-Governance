@@ -206,6 +206,18 @@ def _merge_run(
 
 LEAF_AT_SHA = {f"{SLUG}#53": {"head": "fix/leaf", "children": [], "sha": SHA}}
 PARENT_AT_SHA = {f"{SLUG}#53": {"head": "fix/parent", "children": [54], "sha": SHA}}
+#: The same heads, as GitHub reports them once the merge API has landed them.
+MERGE_COMMIT = "e" * 40
+LEAF_MERGED = {
+    f"{SLUG}#53": {**LEAF_AT_SHA[f"{SLUG}#53"], "merged": True, "merge_commit_sha": MERGE_COMMIT}
+}
+PARENT_MERGED = {
+    f"{SLUG}#53": {
+        **PARENT_AT_SHA[f"{SLUG}#53"],
+        "merged": True,
+        "merge_commit_sha": MERGE_COMMIT,
+    }
+}
 
 
 def test_run_without_grant_is_merge_pending_and_never_merges(
@@ -285,16 +297,47 @@ def test_process_env_cannot_impersonate_the_human(tmp_path: Path, monkeypatch) -
     assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
 
 
-def test_granted_leaf_merges_squash_bound_to_head(tmp_path: Path, monkeypatch) -> None:
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=_grant_file(tmp_path))
+def test_granted_leaf_merges_squash_bound_to_head(tmp_path: Path, monkeypatch, capsys) -> None:
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=_grant_file(tmp_path))
     assert code == 0
     rest = runs[0]
     assert "merge_method=squash" in rest and f"sha={SHA}" in rest
+    record = json.loads(capsys.readouterr().out)
+    assert record["status"] == "MERGED"
+    assert record["merge_commit_sha"] == MERGE_COMMIT
+    assert record["head_sha"] == SHA
+    assert record["authorization"]["channel"] == "human_grant"
+
+
+def test_operator_prompt_grant_reports_its_provenance(tmp_path: Path, monkeypatch, capsys) -> None:
+    grant = _grant_file(
+        tmp_path,
+        provenance={"channel": "operator_prompt", "instruction_id": "abc", "host": "claude-code"},
+    )
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=grant)
+    assert code == 0 and runs
+    record = json.loads(capsys.readouterr().out)
+    auth = record["authorization"]
+    assert auth["status"] == "AUTHORIZED"
+    assert (auth["channel"], auth["authorizer"]) == ("operator_prompt", "operator")
+    assert auth["grant_provenance"]["instruction_id"] == "abc"
+
+
+def test_merge_call_success_is_not_reported_merged_until_github_shows_it(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """Positive 10: the merger verifies GitHub's final state; a 0 exit is not proof."""
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=_grant_file(tmp_path))
+    assert code == stack_safe_merge.MERGE_UNVERIFIED_EXIT
+    assert runs  # the merge call did run
+    captured = capsys.readouterr()
+    assert "MERGED" not in captured.out
+    assert "UNVERIFIED" in captured.err
 
 
 def test_granted_stack_parent_still_merges_with_merge_commit(tmp_path: Path, monkeypatch) -> None:
     """Authority does not relax stack safety: a parent keeps --merge, no ref delete."""
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_AT_SHA, grant=_grant_file(tmp_path))
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_MERGED, grant=_grant_file(tmp_path))
     assert code == 0
     joined = [" ".join(argv) for argv in runs]
     assert "merge_method=merge" in joined[0] and f"sha={SHA}" in joined[0]
@@ -337,7 +380,7 @@ def _authorized_github(monkeypatch) -> None:
 
 def test_github_authorization_merges_without_a_grant_file(tmp_path: Path, monkeypatch) -> None:
     _authorized_github(monkeypatch)
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=None)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=None)
     assert code == 0
     assert f"sha={SHA}" in runs[0]
     assert "merge_method=squash" in runs[0]
@@ -345,7 +388,7 @@ def test_github_authorization_merges_without_a_grant_file(tmp_path: Path, monkey
 
 def test_github_authorization_of_a_stack_parent_uses_merge(tmp_path: Path, monkeypatch) -> None:
     _authorized_github(monkeypatch)
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_AT_SHA, grant=None)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_MERGED, grant=None)
     assert code == 0
     joined = " ".join(runs[0])
     assert "merge_method=merge" in joined and f"sha={SHA}" in joined

@@ -778,6 +778,7 @@ def test_rest_non_merges_are_not_treated_as_merges(tmp_path: Path, command: str)
 AUTHORIZE = "ops/autonomy/" + "authorize_merge.py"
 STACK_SAFE = "ops/autonomy/" + "stack_safe_merge.py"
 GRANT_FILE = "~/.l9/autonomy/" + "merge-authorization.json"
+INSTRUCTION_FILE = "operator-merge-" + "instructions.json"
 
 
 @pytest.mark.parametrize(
@@ -806,15 +807,172 @@ def test_agent_self_issued_authorization_is_denied(command: str) -> None:
 
 
 @pytest.mark.parametrize("tool", ["Write", "Edit", "MultiEdit"])
-def test_file_tool_write_to_grant_file_is_denied(tool: str) -> None:
+@pytest.mark.parametrize("name", ["merge-authorization.json", INSTRUCTION_FILE])
+def test_file_tool_write_to_grant_or_instruction_file_is_denied(tool: str, name: str) -> None:
     code, out, err = _run(
         {
             "tool_name": tool,
-            "tool_input": {"file_path": "/root/.l9/autonomy/merge-authorization.json"},
+            "tool_input": {"file_path": f"/root/.l9/autonomy/{name}"},
         }
     )
     assert code == 0, err
     assert "never by an agent" in out
+
+
+# --- §6.2.13 operator-prompt channel: the one authorize_merge.py run an agent may make
+
+
+def _instruction_env(tmp_path: Path, repo: str = "Quantum-L9/SEO-Bot", pr: int = 53) -> dict:
+    """A receipt as the host prompt hook writes it, exposed through the hook's env."""
+    import operator_merge_instruction as omi
+
+    store = tmp_path / INSTRUCTION_FILE
+    omi.record_instructions(
+        f"Fix and merge {repo}#{pr} after the checks pass.",
+        host="claude-code",
+        session_id="sess-1",
+        path=store,
+        cwd_repo=None,
+    )
+    return {"L9_OPERATOR_INSTRUCTION_FILE": str(store)}
+
+
+OPERATOR_RUN = (
+    f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{AUTHORIZE}" '
+    f"--operator-instruction --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}"
+)
+
+
+def test_operator_instruction_run_is_allowed_when_a_receipt_covers_the_target(
+    tmp_path: Path,
+) -> None:
+    code, out, err = _run(_shell(OPERATOR_RUN), env=_instruction_env(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_operator_instruction_run_is_allowed_through_a_wrapper(tmp_path: Path) -> None:
+    code, out, err = _run(_shell(f"bash -c '{OPERATOR_RUN}'"), env=_instruction_env(tmp_path))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "env_target",
+    [
+        None,  # no receipt at all
+        ("Quantum-L9/Other", 53),  # receipt for another repository
+        ("Quantum-L9/SEO-Bot", 54),  # receipt for another pull request
+    ],
+)
+def test_operator_instruction_run_without_a_covering_receipt_is_denied(
+    tmp_path: Path, env_target: tuple[str, int] | None
+) -> None:
+    env = _instruction_env(tmp_path, *env_target) if env_target else {}
+    code, out, err = _run(_shell(OPERATOR_RUN), env=env)
+    assert code == 0, err
+    assert "never by an agent" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_terminal_mode_run_stays_denied_even_with_a_receipt(tmp_path: Path) -> None:
+    """The receipt licenses one mode. The terminal ceremony is still not the agent's."""
+    command = OPERATOR_RUN.replace("--operator-instruction ", "")
+    code, out, err = _run(_shell(command), env=_instruction_env(tmp_path))
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_cohort_receipt_licenses_the_attempt_for_that_repository_only(tmp_path: Path) -> None:
+    import operator_merge_instruction as omi
+
+    store = tmp_path / INSTRUCTION_FILE
+    omi.record_instructions(
+        "Remediate and merge all currently open PRs in Quantum-L9/SEO-Bot.",
+        host="cursor",
+        session_id="conv-1",
+        path=store,
+        cwd_repo=None,
+    )
+    env = {"L9_OPERATOR_INSTRUCTION_FILE": str(store)}
+    code, out, err = _run(_shell(OPERATOR_RUN), env=env)
+    assert code == 0, err
+    assert out.strip() == ""  # membership is the script's check (it has created_at)
+    other = OPERATOR_RUN.replace("Quantum-L9/SEO-Bot", "Quantum-L9/Other")
+    code, out, err = _run(_shell(other), env=env)
+    assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"echo '{{}}' > ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"cat forged.json | tee ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"cp /tmp/forged.json ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"python3 - <<'PY'\nopen('/root/.l9/autonomy/{INSTRUCTION_FILE}','w').write('x')\nPY",
+    ],
+)
+def test_agent_cannot_write_the_instruction_receipt(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    assert "never by an agent" in out, command
+
+
+def test_reading_the_instruction_receipt_stays_allowed() -> None:
+    code, out, err = _run(_shell(f"cat ~/.l9/autonomy/{INSTRUCTION_FILE}"))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_operator_grant_then_stack_safe_run_passes_the_gate(tmp_path: Path) -> None:
+    """End to end through the gate: the grant an operator instruction produced
+    is the grant the merge run is judged by."""
+    import authorize_merge
+
+    store = tmp_path / INSTRUCTION_FILE
+    import operator_merge_instruction as omi
+
+    omi.record_instructions(
+        "Merge Quantum-L9/SEO-Bot#53 after the checks pass.",
+        host="claude-code",
+        session_id="sess-1",
+        path=store,
+        cwd_repo=None,
+    )
+    grant_path = tmp_path / "merge-authorization.json"
+    code = authorize_merge.main(
+        [
+            "--operator-instruction",
+            "--repo",
+            "Quantum-L9/SEO-Bot",
+            "--pr",
+            "53",
+            "--head-sha",
+            SHA,
+            "--auth-file",
+            str(grant_path),
+        ],
+        instruction_path=store,
+        pull_request=lambda r, p: {
+            "state": "open",
+            "merged": False,
+            "created_at": "2026-10-14T00:00:00Z",
+            "head": {"sha": SHA},
+            "user": {"login": "pr-author"},
+        },
+        pull_request_files=lambda r, p: ["README.md"],
+    )
+    assert code == 0
+    env = {
+        "L9_MERGE_AUTHORIZATION_FILE": str(grant_path),
+        "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+    }
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_shell(command), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+    moved = command.replace(SHA, "b" * 40)
+    code, out, err = _run(_shell(moved), env=env)
+    assert "MERGE_PENDING" in out
 
 
 @pytest.mark.parametrize(
@@ -1017,7 +1175,10 @@ def test_emitted_merge_commands_are_cwd_independent() -> None:
     assert _relative_commands(mg.MERGE_DENY_REASON) == []
     assert mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
     assert "authorize merge <owner>/<repo>#<n>@<40-hex>" in mg.MERGE_DENY_REASON
-    assert mg.GRANT_COMMAND not in mg.MERGE_DENY_REASON
+    # The grant command appears only as the operator-prompt transcription,
+    # never as a terminal ceremony the human is told to perform.
+    assert f"{mg.GRANT_COMMAND} --operator-instruction" in mg.MERGE_DENY_REASON
+    assert "terminal transcription is not merge permission" in mg.MERGE_DENY_REASON
 
 
 def test_relative_command_detector_catches_the_old_forms() -> None:

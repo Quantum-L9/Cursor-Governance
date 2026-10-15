@@ -129,6 +129,38 @@ def _requires_independent_authorizer(files: list[str] | None) -> bool:
     return any(_path_is_protected(path, patterns) for path in files)
 
 
+def protected_paths_in(files: list[str] | None) -> list[str] | None:
+    """The L9-ORG-007 protected paths among ``files``; None when the list is unknown.
+
+    An unknown list is the fail-closed answer: callers treat None as protected.
+    """
+    if files is None:
+        return None
+    patterns = protected_patterns()
+    return [path for path in files if _path_is_protected(path, patterns)]
+
+
+def fetch_pull_request(repo: str, pr: str | int) -> dict[str, Any]:
+    """The live pull request object. Raises RuntimeError."""
+    view = _gh_json(f"repos/{repo}/pulls/{str(pr).strip()}")
+    if not isinstance(view, dict):
+        raise RuntimeError("pull request payload was not an object")
+    return view
+
+
+def fetch_pull_request_files(repo: str, pr: str | int) -> list[str] | None:
+    """Every changed path, previous names included; None when unreadable or empty."""
+    files_payload = _gh_pages(f"repos/{repo}/pulls/{str(pr).strip()}/files?per_page=100")
+    files = [
+        str(item.get(key))
+        for item in files_payload
+        if isinstance(item, dict)
+        for key in ("filename", "previous_filename")
+        if item.get(key)
+    ]
+    return files or None
+
+
 def _line_authorizes(body: str, repo: str, pr: str, head_sha: str) -> bool:
     wanted_repo = repo.casefold()
     wanted_pr = str(pr).strip()
@@ -377,26 +409,17 @@ def _attach_permissions(repo: str, records: list[Any]) -> None:
 def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
     """Live pull request, reviews, comments and files. Raises RuntimeError."""
     number = str(pr).strip()
-    view = _gh_json(f"repos/{repo}/pulls/{number}")
-    if not isinstance(view, dict):
-        raise RuntimeError("pull request payload was not an object")
+    view = fetch_pull_request(repo, number)
     reviews = _gh_pages(f"repos/{repo}/pulls/{number}/reviews?per_page=100")
     comments = _gh_pages(f"repos/{repo}/issues/{number}/comments?per_page=100")
-    files_payload = _gh_pages(f"repos/{repo}/pulls/{number}/files?per_page=100")
-    _attach_permissions(repo, reviews)
-    _attach_permissions(repo, comments)
     # A renamed protected file is still that file: keep both names. An empty or
     # unreadable file list is unknown, which evaluate_evidence treats as protected.
-    files = [
-        str(item.get(key))
-        for item in files_payload
-        if isinstance(item, dict)
-        for key in ("filename", "previous_filename")
-        if item.get(key)
-    ]
+    files = fetch_pull_request_files(repo, number)
+    _attach_permissions(repo, reviews)
+    _attach_permissions(repo, comments)
     return {
         "author": _login(view.get("user")),
-        "files": files or None,
+        "files": files,
         "reviews": reviews,
         "comments": comments,
         "truncated": False,

@@ -24,12 +24,17 @@ of these holds:
     (`--match-head-commit`, `-f sha=`, an MCP `sha`, or `--head-sha`). A moved
     head, an unnamed head, or a stale grant is MERGE_PENDING.
 
-The ordinary record is a human GitHub approval or the exact line
+The ordinary records are a human GitHub approval or the exact line
 ``authorize merge <owner>/<repo>#<pr>@<sha>`` on that pull request
-(``github_merge_authorization.py``). A terminal transcription is not required.
-The optional legacy grant is still written only by authorize_merge.py, and an
-agent tool call that runs that script, writes the grant file, submits an
-approving review, or posts the authorization line is denied (self-issuance).
+(``github_merge_authorization.py``), and an explicit merge instruction the
+operator typed, recorded by the host's prompt hook
+(``operator_merge_instruction.py``) and transcribed into the grant file by
+``authorize_merge.py --operator-instruction``. A terminal transcription is not
+required. An agent tool call may run ``authorize_merge.py`` only in that mode
+and only when a live recorded instruction covers the named repository and PR;
+any other run of it, a direct write of the grant file or of the instruction
+receipt, an approving review, or a posted authorization line is denied
+(self-issuance).
 Invoking /l9-pr-remediation, Converge, green CI, an L4 release receipt, make pr,
 or an agent-written receipt is NOT authorization. A standing environment
 boolean is not an authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE
@@ -92,6 +97,7 @@ from command_parse import (  # noqa: E402
 from git_execution_exemption import event_is_git_or_gh  # noqa: E402
 from github_merge_authorization import verdict_for_hook  # noqa: E402
 from l4_local import workspace_from_event  # noqa: E402
+from operator_merge_instruction import INSTRUCTION_FILE_NAME, find_instruction  # noqa: E402
 
 DENY_TOOL_NAMES = {
     "mcp__github__merge_pull_request",
@@ -105,6 +111,11 @@ AUTO_MERGE_TOOL_SUFFIX = "__enable_pr_auto_merge"
 GRANT_ISSUER = "human"
 MAX_GRANT_TTL_SECONDS = 4 * 60 * 60
 GRANT_FILE_NAME = "merge-authorization.json"
+#: Files only a human act may produce: the grant, and the host-recorded
+#: operator instruction the grant may be transcribed from. An agent tool call
+#: that writes either one is self-issuance.
+PROTECTED_RECORD_FILES = frozenset({GRANT_FILE_NAME, INSTRUCTION_FILE_NAME})
+OPERATOR_FLAG = "--operator-instruction"
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 FILE_TOOL_NAMES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 SHELL_TOOL_NAMES = {"Bash", "bash", "Shell", "shell"}
@@ -154,25 +165,29 @@ GRANT_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/authorize_
 MERGE_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py"'
 
 MERGE_DENY_REASON = (
-    "MERGE_PENDING: merging requires human GitHub authorization bound to this "
-    "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). An APPROVED review "
-    "on that head, or a pull-request comment whose body contains the exact line "
-    "`authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write access, "
-    "is that authorization. L9-ORG-007 paths reject the PR author. Invoking "
-    "/l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, or a "
-    "terminal transcription is not merge permission, and a standing environment "
-    "boolean is not an authority. Report MERGE_PENDING and "
-    "continue independent work. With that authorization: "
-    f"{MERGE_COMMAND} --repo <owner/name> --pr <n> "
+    "MERGE_PENDING: merging requires human authorization bound to this "
+    "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). That is either an "
+    "APPROVED review on that head, or a pull-request comment whose body contains the "
+    "exact line `authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write "
+    "access; or an explicit merge instruction the operator typed in their own prompt, "
+    f"recorded by the host prompt hook and transcribed with {GRANT_COMMAND} "
+    "--operator-instruction --repo <owner/name> --pr <n> --head-sha <live sha>. "
+    "L9-ORG-007 paths reject the PR author and accept no operator-prompt grant. "
+    "Invoking /l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, "
+    "or a terminal transcription is not merge permission, and a standing environment "
+    "boolean is not an authority. Report MERGE_PENDING and continue independent work. "
+    f"With that authorization: {MERGE_COMMAND} --repo <owner/name> --pr <n> "
     "--head-sha <sha> --run (no --admin), oldest first."
 )
 
 SELF_ISSUE_REASON = (
-    "Merge authorization is a human GitHub act, never by an agent "
-    "(CANONICAL_LAW §6.2.13): an agent tool call may not run authorize_merge.py, "
-    "write merge-authorization.json, submit an approving review, or post an "
-    "`authorize merge` line. Report MERGE_PENDING with the exact line for the "
-    "human to post on the pull request."
+    "Merge authorization is a human act, never by an agent "
+    "(CANONICAL_LAW §6.2.13): an agent tool call may not run authorize_merge.py "
+    "except as `--operator-instruction` backed by a recorded operator prompt that "
+    f"names this repository and PR, may not write {GRANT_FILE_NAME} or "
+    f"{INSTRUCTION_FILE_NAME}, submit an approving review, or post an "
+    "`authorize merge` line. Report MERGE_PENDING: the operator authorizes in their "
+    "own prompt, or on the pull request."
 )
 
 AUTO_MERGE_DENY_REASON = (
@@ -615,6 +630,37 @@ def _auth_file_path() -> Path:
     if override:
         return Path(override).expanduser()
     return Path.home() / ".l9" / "autonomy" / "merge-authorization.json"
+
+
+def _instruction_file_path() -> Path:
+    """The host-recorded operator instructions. Hook-environment override for tests only."""
+    override = os.environ.get("L9_OPERATOR_INSTRUCTION_FILE", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".l9" / "autonomy" / INSTRUCTION_FILE_NAME
+
+
+def _operator_grant_run_allowed(argv: list[str]) -> bool:
+    """True when this ``authorize_merge.py`` argv transcribes a recorded operator instruction.
+
+    The run must ask for ``--operator-instruction`` and name a repository and PR
+    that a live receipt covers. A cohort receipt for the repository counts here;
+    the script itself, which can read the pull request's creation time, decides
+    membership. The script also rechecks the live head and L9-ORG-007, so this
+    check gates the attempt, not the grant.
+    """
+    if OPERATOR_FLAG not in argv:
+        return False
+    repo = _argv_value(argv, "--repo")
+    pr = _argv_value(argv, "--pr")
+    if not repo or not pr.isdigit():
+        return False
+    return (
+        find_instruction(
+            repo, pr, path=_instruction_file_path(), allow_cohort_without_membership=True
+        )
+        is not None
+    )
 
 
 def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str, str]:
@@ -1081,16 +1127,16 @@ def _argv_value(argv: list[str], flag: str) -> str:
 
 
 def _shell_writes_grant_file(command: str) -> bool:
-    """A shell segment that names the grant file with anything but a reader.
+    """A shell segment that names the grant or instruction file with anything but a reader.
 
     Name-based on purpose and therefore a speed bump, not a proof: it stops the
     ordinary agent path (``cat > …``, ``tee``, ``python - <<…``, ``cp``) while
     deliberate obfuscation remains the host-enforcement gap of §6.2.12.
     """
-    if GRANT_FILE_NAME not in command:
+    if not any(name in command for name in PROTECTED_RECORD_FILES):
         return False
     for segment in split_segments(command):
-        if GRANT_FILE_NAME not in segment:
+        if not any(name in segment for name in PROTECTED_RECORD_FILES):
             continue
         words = _argv_skip_env(segment_words(segment))
         head = Path(words[0]).name if words else ""
@@ -1102,7 +1148,7 @@ def _shell_writes_grant_file(command: str) -> bool:
 def _file_tool_writes_grant_file(tool_input: dict[str, Any]) -> bool:
     for key in ("file_path", "notebook_path", "path"):
         value = str(tool_input.get(key) or "")
-        if value and Path(value).name == GRANT_FILE_NAME:
+        if value and Path(value).name in PROTECTED_RECORD_FILES:
             return True
     return False
 
@@ -1265,8 +1311,9 @@ def evaluate(
 
     if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-        if _script_argvs(command, "authorize_merge.py"):
-            return SELF_ISSUE_REASON
+        for grant_argv in _script_argvs(command, "authorize_merge.py"):
+            if not _operator_grant_run_allowed(grant_argv):
+                return SELF_ISSUE_REASON
         if _shell_writes_grant_file(command):
             return SELF_ISSUE_REASON
         if _shell_posts_github_authorization(command):

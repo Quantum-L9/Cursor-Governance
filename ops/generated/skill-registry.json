@@ -1,5 +1,5 @@
 {
-  "generation_id": "b1632d2385a586c42b1b570fecc4db0e47f84907a0fd2d1edbafcfcba8af9365",
+  "generation_id": "c298f86d3b56452204bfd66a8c4137f719dc79aa8a0690b5d736cb3786080a3e",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1331,14 +1331,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, publish all remediations as stacked PRs via make pr without bare git push, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then stop at MERGE_PENDING; stack-safe merge trains run only under human GitHub authorization bound to each PR's exact head. do not wait for every PR to be green. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, publish all remediations as stacked PRs via make pr without bare git push, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then stop at MERGE_PENDING; stack-safe merge trains run only under human authorization (GitHub record or operator prompt) bound to the exact head. do not wait for every PR to be green. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "1db36a8fdd54735a903b90687d9744ecd5e46d47f6ea6b1f002ffbc5709e49a4",
+      "skill_sha256": "359362cc10a24bb0807d24750fb1feb70daa631df3230d1fd751c0532c79d732",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1540,5 +1540,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "60bf4a6783b83d864aef31f2afff4397a79f150e963ac2081af3b3ac9e03f09f",
-  "source_skill_corpus_sha256": "18ebbed0762a8e59ab92178f042622ced8296364c3830d35413f1e3d219405e4"
+  "source_skill_corpus_sha256": "2ac4aab45ce732028629c9c9f0c2e93e86dccdddc02f0e5c2cbfdd58c6a20995"
 }

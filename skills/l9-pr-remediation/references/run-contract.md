@@ -117,7 +117,7 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - overlap matrix known
 - stack parents known (`P_stack`)
 - the PR is in `merge_now` (oldest safe green prefix; later remediations do not hold it)
-- human GitHub authorization covers the PR at its current head (CANONICAL_LAW §6.2.13) — otherwise the PR is MERGE_PENDING and the train reports it
+- human authorization covers the PR at its current head (CANONICAL_LAW §6.2.13): a GitHub record, or the operator's recorded prompt instruction transcribed with `authorize_merge.py --operator-instruction` — otherwise the PR is MERGE_PENDING and the train reports it
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 

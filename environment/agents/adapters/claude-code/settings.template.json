@@ -45,9 +45,13 @@
     "There is no standing autonomous-merge grant. merge_gate.py does not consult any",
     "environment boolean; a flag set once in this configuration cannot authorize merge.",
     "Merge is allowed only by a human per-session breakglass (L9_MERGE_AUTHORIZED) or",
-    "human GitHub authorization bound to repo, PR and exact head (CANONICAL_LAW 6.2.13):",
-    "an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha.",
-    "No terminal transcription. /l9-pr-remediation stops at MERGE_PENDING without it.",
+    "human authorization bound to repo, PR and exact head (CANONICAL_LAW 6.2.13): a GitHub",
+    "record (an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha),",
+    "or an explicit merge instruction the operator typed, recorded at UserPromptSubmit by",
+    "operator_merge_instruction_wrap.py and transcribed by authorize_merge.py --operator-instruction",
+    "after a live head and L9-ORG-007 recheck. The recorder is an observer: it never blocks a",
+    "prompt and an agent tool call cannot invoke it or write its receipt. No terminal",
+    "transcription. /l9-pr-remediation stops at MERGE_PENDING without one of those records.",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
     "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
     "remain forbidden by policy."
@@ -107,6 +111,11 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer root_file_advisory_wrap.py'",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer operator_merge_instruction_wrap.py'",
+            "timeout": 10
           }
         ]
       }

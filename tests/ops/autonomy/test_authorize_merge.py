@@ -1,7 +1,9 @@
-"""Tests for ops/autonomy/authorize_merge.py — human merge grants (§6.2.12).
+"""Tests for ops/autonomy/authorize_merge.py — human merge grants (§6.2.12, §6.2.13).
 
-A grant is one repository, one PR, one exact head, expiring, issuer ``human``,
-and it is written only after a human confirms the target on a terminal.
+A grant is one repository, one PR, one exact head, expiring, issuer ``human``.
+It is written after a human confirms the target on a terminal, or — as
+``--operator-instruction`` — after the host-recorded operator instruction is
+verified against the live pull request and L9-ORG-007.
 """
 
 from __future__ import annotations
@@ -18,11 +20,14 @@ SCRIPT = REPO / "ops" / "autonomy" / "authorize_merge.py"
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
 import authorize_merge  # noqa: E402
+import operator_merge_instruction as omi  # noqa: E402
 from authorize_merge import MAX_TTL_SECONDS, write_authorization  # noqa: E402
 from merge_gate import grant_matches  # noqa: E402
 
 SHA = "abcdef1234567890abcdef1234567890abcdef12"
+MOVED = "0" * 40
 SLUG = "Quantum-L9/Cursor-Governance"
+NOW = 1_800_000_000
 
 
 def _grant(path: Path, **overrides) -> dict:
@@ -156,3 +161,284 @@ def test_cli_confirmed_by_human_writes_bound_grant(tmp_path: Path) -> None:
         SHA,
         "human",
     )
+    assert entry["provenance"] == {"channel": authorize_merge.TERMINAL_CHANNEL}
+
+
+# --- issuance: the operator's recorded prompt (§6.2.13) ------------------------
+
+
+def _instructions(tmp_path: Path, prompt: str = f"Fix and merge {SLUG}#42.", **kw) -> Path:
+    store = tmp_path / "operator-merge-instructions.json"
+    defaults = {"host": "claude-code", "session_id": "sess-1", "path": store, "now": NOW}
+    defaults.update(kw)
+    omi.record_instructions(prompt, cwd_repo=None, **defaults)
+    return store
+
+
+def _view(
+    *,
+    sha: str = SHA,
+    state: str = "open",
+    merged: bool = False,
+    created_at: str = "2026-10-14T19:19:43Z",
+    author: str = "cryptoxdog",
+) -> dict:
+    return {
+        "state": state,
+        "merged": merged,
+        "created_at": created_at,
+        "head": {"sha": sha},
+        "user": {"login": author},
+    }
+
+
+def _operator_main(
+    tmp_path: Path,
+    store: Path,
+    *,
+    view: dict | None = None,
+    files: list[str] | None = ["README.md", "ops/autonomy/pr_board.py"],
+    files_error: str | None = None,
+    view_error: str | None = None,
+    extra: tuple[str, ...] = (),
+    now: int = NOW + 60,
+) -> int:
+    def pull_request(repo: str, pr: int) -> dict:
+        assert (repo, pr) == (SLUG, 42)
+        if view_error:
+            raise RuntimeError(view_error)
+        return view if view is not None else _view()
+
+    def pull_request_files(repo: str, pr: int) -> list[str] | None:
+        if files_error:
+            raise RuntimeError(files_error)
+        return files
+
+    return authorize_merge.main(
+        _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", SHA, *extra),
+        confirm=lambda _t: pytest.fail("operator mode must never ask a terminal"),
+        instruction_path=store,
+        pull_request=pull_request,
+        pull_request_files=pull_request_files,
+        now=now,
+    )
+
+
+def _grants(tmp_path: Path) -> list[dict]:
+    path = tmp_path / "auth.json"
+    if not path.exists():
+        return []
+    return json.loads(path.read_text(encoding="utf-8"))["authorizations"]
+
+
+def test_operator_instruction_writes_a_scoped_grant_with_provenance(tmp_path: Path) -> None:
+    """Positive 1 + 2: an explicit prompt becomes a grant without a terminal."""
+    store = _instructions(tmp_path)
+    assert _operator_main(tmp_path, store) == 0
+    (entry,) = _grants(tmp_path)
+    assert (entry["repo"], entry["pr"], entry["head_sha"], entry["issuer"]) == (
+        SLUG,
+        42,
+        SHA,
+        "human",
+    )
+    assert entry["expires_at"] - entry["issued_at"] == authorize_merge.DEFAULT_TTL_SECONDS
+    prov = entry["provenance"]
+    assert prov["channel"] == authorize_merge.OPERATOR_CHANNEL
+    assert prov["recorded_by"] == "agent"
+    assert (prov["host"], prov["session_id"], prov["scope"]) == ("claude-code", "sess-1", "pr")
+    assert prov["instruction_id"] == omi.load_instructions(store)[0]["id"]
+    assert prov["prompt_sha256"] == omi.prompt_digest(f"Fix and merge {SLUG}#42.")
+    assert "merge" in prov["excerpt"]
+    assert prov["pull_request_author"] == "cryptoxdog"
+    assert grant_matches(entry, SLUG, "42", SHA, now=NOW + 120)
+
+
+def test_operator_grant_never_outlives_the_instruction(tmp_path: Path) -> None:
+    store = _instructions(tmp_path)
+    late = NOW + omi.DEFAULT_TTL_SECONDS - 300
+    assert _operator_main(tmp_path, store, now=late) == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["expires_at"] == NOW + omi.DEFAULT_TTL_SECONDS
+
+
+def test_operator_mode_without_an_instruction_refuses(tmp_path: Path, capsys) -> None:
+    store = tmp_path / "operator-merge-instructions.json"  # never written
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+    out = capsys.readouterr()
+    record = json.loads(out.out)
+    assert record["status"] == "MERGE_PENDING"
+    assert "no live operator merge instruction" in record["reason"]
+    assert "REFUSED" in out.err
+
+
+def test_agent_written_instruction_text_is_not_a_recorded_instruction(tmp_path: Path) -> None:
+    """Negative 2: a file an agent wrote has no recorder stamp and binds nothing."""
+    store = tmp_path / "operator-merge-instructions.json"
+    store.write_text(
+        json.dumps(
+            {
+                "schema": omi.SCHEMA,
+                "instructions": [
+                    {
+                        "id": "a" * 16,
+                        "host": "claude-code",
+                        "session_id": "sess-1",
+                        "recorded_at": NOW,
+                        "expires_at": NOW + 3600,
+                        "scope": "pr",
+                        "repo": SLUG,
+                        "pr": 42,
+                        "excerpt": "merge PR #42",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_wrong_repository_refuses(tmp_path: Path) -> None:
+    store = _instructions(tmp_path, prompt="Fix and merge Quantum-L9/SEO-Bot#42.")
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_wrong_pull_request_refuses(tmp_path: Path) -> None:
+    store = _instructions(tmp_path, prompt=f"Fix and merge {SLUG}#43.")
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_expired_instruction_refuses(tmp_path: Path, capsys) -> None:
+    store = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store, now=NOW + omi.DEFAULT_TTL_SECONDS + 1)
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert "expired" in json.loads(capsys.readouterr().out)["reason"]
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_moved_head_refuses_but_keeps_the_task_alive(tmp_path: Path, capsys) -> None:
+    """Negative 7 / positive 4: the old head binds nothing; the instruction still covers the PR."""
+    store = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store, view=_view(sha=MOVED))
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    reason = json.loads(capsys.readouterr().out)["reason"]
+    assert "head moved" in reason and MOVED in reason
+    assert _grants(tmp_path) == []
+    # The same instruction authorizes the final head once it is the live one.
+    live = authorize_merge.main(
+        _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", MOVED),
+        instruction_path=store,
+        pull_request=lambda repo, pr: _view(sha=MOVED),
+        pull_request_files=lambda repo, pr: ["README.md"],
+        now=NOW + 120,
+    )
+    assert live == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["head_sha"] == MOVED
+    assert entry["provenance"]["instruction_id"] == omi.load_instructions(store)[0]["id"]
+
+
+def test_operator_mode_closed_or_merged_pull_request_refuses(tmp_path: Path) -> None:
+    store = _instructions(tmp_path)
+    assert (
+        _operator_main(tmp_path, store, view=_view(state="closed"))
+        == authorize_merge.OPERATOR_REFUSED_EXIT
+    )
+    assert (
+        _operator_main(tmp_path, store, view=_view(state="closed", merged=True))
+        == authorize_merge.OPERATOR_REFUSED_EXIT
+    )
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_unreadable_pull_request_refuses(tmp_path: Path, capsys) -> None:
+    """Negative 10: a verifier that cannot run grants nothing."""
+    store = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store, view_error="HTTP 503")
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert "cannot verify the live pull request" in json.loads(capsys.readouterr().out)["reason"]
+    store2 = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store2, files_error="HTTP 503")
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+
+
+def test_cohort_instruction_grants_each_pull_request_open_at_the_time(tmp_path: Path) -> None:
+    """Positive 5 / negative 8: a cohort resolves into scoped grants, never future PRs."""
+    store = _instructions(
+        tmp_path, prompt=f"Remediate and merge all currently open PRs in {SLUG}.", now=NOW
+    )
+    before = "2026-10-14T19:19:43Z"  # well before NOW (2027-01-15)
+    assert _operator_main(tmp_path, store, view=_view(created_at=before)) == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["provenance"]["scope"] == "open_cohort"
+    after = "2027-01-15T12:00:00Z"
+    (tmp_path / "auth.json").unlink()
+    assert (
+        _operator_main(tmp_path, store, view=_view(created_at=after))
+        == authorize_merge.OPERATOR_REFUSED_EXIT
+    )
+    assert _grants(tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    "files",
+    [
+        ["CANONICAL_LAW.md", "README.md"],
+        ["ops/config/root-file-protection.json"],
+        [".github/workflows/governance.yml"],
+        None,  # unknown file list fails closed
+    ],
+)
+def test_operator_mode_refuses_org_007_protected_changes(
+    tmp_path: Path, capsys, files: list[str] | None
+) -> None:
+    """Negative 11: a prompt is not an independent human approver for governance paths."""
+    store = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store, files=files)
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    reason = json.loads(capsys.readouterr().out)["reason"]
+    assert "L9-ORG-007" in reason
+    assert f"authorize merge {SLUG}#42@{SHA}" in reason
+    assert "not the author (cryptoxdog)" in reason
+    assert _grants(tmp_path) == []
+
+
+def test_operator_mode_cli_subprocess_needs_no_terminal(tmp_path: Path) -> None:
+    """Run the real CLI detached from any terminal; only the verifiers are offline here."""
+    store = _instructions(tmp_path)
+    argv = _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", SHA)
+    driver = tmp_path / "driver.py"
+    driver.write_text(
+        "\n".join(
+            [
+                "import sys",
+                f"sys.path.insert(0, {str(REPO / 'ops' / 'autonomy')!r})",
+                "import authorize_merge",
+                "from pathlib import Path",
+                "code = authorize_merge.main(",
+                f"    {argv!r},",
+                f"    instruction_path=Path({str(store)!r}),",
+                f"    pull_request=lambda r, p: {_view()!r},",
+                "    pull_request_files=lambda r, p: ['README.md'],",
+                f"    now={NOW + 60},",
+                ")",
+                "raise SystemExit(code)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        [sys.executable, str(driver)],
+        capture_output=True,
+        text=True,
+        start_new_session=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["provenance"]["channel"] == "operator_prompt"
