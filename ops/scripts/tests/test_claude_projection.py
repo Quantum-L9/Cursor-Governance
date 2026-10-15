@@ -326,7 +326,11 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         user_settings.write_text(
             json.dumps({"syncClaudeAiSkills": True, "theme": "dark"}), encoding="utf-8"
         )
-        self.run_engine()
+        first = self.run_engine()
+        # The receipt describes the projected state, not the pre-repair one: the
+        # settings domain fixed the `true`, so the census must see `false`.
+        skills = next(d for d in first["domains"] if d["domain"] == "skills")
+        self.assertIs(skills["detail"]["coverage"]["account_sync_policy"], False)
         self.run_engine()
         merged = json.loads(user_settings.read_text(encoding="utf-8"))
         self.assertIs(merged["syncClaudeAiSkills"], False)
