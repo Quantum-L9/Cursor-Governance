@@ -118,6 +118,12 @@ second transport, with per-agent identity and server-owned grants.
   Infisical inventory (`ops/secrets/capabilities.yaml`). Delivering a key
   needs a separate secret-plane change.
 
+- The bridge reuses `ops/lib/safe_https.exchange`: verified TLS 1.2+, one
+  pinned host, no redirects, plain HTTP on loopback only. That client opens a
+  direct socket and does not use `HTTPS_PROXY`. A host whose egress is only
+  through a proxy cannot reach the service yet, and the bridge refuses to
+  launch there instead of degrading.
+
 ## Verification
 
 - `tests/ops/memory_remote/test_bridge.py`: endpoint, binding, credential and
