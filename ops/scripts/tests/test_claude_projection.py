@@ -292,6 +292,49 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         self.assertEqual(merged["consumerKey"], 7)
         self.assertEqual(merged["env"]["L9_GOVERNANCE_SURFACE"], "claude-code")
 
+    def test_skills_receipt_carries_unique_coverage_without_schema_change(self) -> None:
+        """`projected` sums links across mount roots; coverage counts identities."""
+        receipt = self.run_engine()
+        skills = next(d for d in receipt["domains"] if d["domain"] == "skills")
+        coverage = skills["detail"]["coverage"]
+        self.assertEqual(coverage["status"], "complete")
+        self.assertEqual(coverage["canonical_count"], 1)
+        self.assertEqual(coverage["covered_count"], 1)
+        self.assertEqual(receipt["schema_version"], "l9.claude-projection.v1")
+        write_registry(self.root, ["l9-demo", "l9-absent"])
+        (self.root / "skills" / "l9-absent").mkdir()
+        (self.root / "skills" / "l9-absent" / "SKILL.md").write_text("x\n", encoding="utf-8")
+        check = self.run_engine(check=True)
+        skills = next(d for d in check["domains"] if d["domain"] == "skills")
+        self.assertEqual(skills["detail"]["coverage"]["missing"], ["l9-absent"])
+        self.assertEqual(check["status"], "drift")
+
+    def test_account_skill_sync_policy_retained_across_projection(self) -> None:
+        template_path = (
+            self.root
+            / "environment"
+            / "agents"
+            / "adapters"
+            / "claude-code"
+            / "settings.template.json"
+        )
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+        template["syncClaudeAiSkills"] = False
+        template_path.write_text(json.dumps(template, indent=2) + "\n", encoding="utf-8")
+        user_settings = self.home / ".claude" / "settings.json"
+        user_settings.parent.mkdir(parents=True)
+        user_settings.write_text(
+            json.dumps({"syncClaudeAiSkills": True, "theme": "dark"}), encoding="utf-8"
+        )
+        self.run_engine()
+        self.run_engine()
+        merged = json.loads(user_settings.read_text(encoding="utf-8"))
+        self.assertIs(merged["syncClaudeAiSkills"], False)
+        self.assertEqual(merged["theme"], "dark")
+        workspace = json.loads((self.ws / ".claude" / "settings.json").read_text("utf-8"))
+        self.assertNotIn("syncClaudeAiSkills", workspace)
+        self.assertEqual(self.run_engine(check=True)["status"], "ok")
+
     def test_plugins_skipped_when_marketplace_disabled(self) -> None:
         receipt = self.run_engine()
         plugin_domain = next(d for d in receipt["domains"] if d["domain"] == "plugins")

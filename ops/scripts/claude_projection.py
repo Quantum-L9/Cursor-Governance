@@ -119,6 +119,23 @@ def project_skills(root: Path, workspace: Path, check: bool) -> DomainOutcome:
         outcome.status = "conflict"
     elif outcome.failures and outcome.status == "ok":
         outcome.status = "conflict"
+    # `projected` sums links across every adapter and mount root, so it is not a
+    # skill count. The census is the unique canonical coverage, carried in the
+    # existing free-form `detail` so the receipt schema does not change.
+    try:
+        from reconcile_claude_l9_skills import REGISTRY_REL, SYNCED_DIR_NAME, coverage_census
+
+        registry = json.loads((root / REGISTRY_REL).read_text(encoding="utf-8"))
+        user_skills = Path.home() / ".claude" / "skills"
+        outcome.detail["coverage"] = coverage_census(
+            root,
+            registry,
+            [workspace / ".claude" / "skills", user_skills],
+            synced_root=user_skills / SYNCED_DIR_NAME,
+            user_settings=Path.home() / ".claude" / "settings.json",
+        )
+    except Exception as exc:  # noqa: BLE001
+        outcome.detail["coverage"] = {"status": "unknown", "error": str(exc)}
     return outcome
 
 

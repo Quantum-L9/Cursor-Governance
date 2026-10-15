@@ -35,7 +35,14 @@ RECONCILER = REPO / "ops" / "scripts" / "reconcile_claude_settings.py"
 #: The authoritative resolver — one owner for "where is governance".
 L9_ENV_LIB = REPO / "ops" / "scripts" / "resolve_governance_paths.sh"
 
-MANAGED = ("hooks", "permissions", "skillOverrides", "env", "workflowSizeGuideline")
+MANAGED = (
+    "hooks",
+    "permissions",
+    "skillOverrides",
+    "env",
+    "workflowSizeGuideline",
+    "syncClaudeAiSkills",
+)
 
 
 class UserScopeSettingsTests(unittest.TestCase):
@@ -179,6 +186,23 @@ class UserScopeSettingsTests(unittest.TestCase):
         result = self._reconcile("--check")
         self.assertNotEqual(result.returncode, 0, "missing settings is drift")
         self.assertFalse(self._settings.exists(), "--check must not write")
+
+    # -- issue #690: claude.ai account skill sync stays disabled -------------
+
+    def test_account_skill_sync_disabled_and_retained_across_reconciliation(self) -> None:
+        """`false` is honoured from user scope; a user `true` is drift, not policy."""
+        self._settings.write_text(
+            json.dumps({"theme": "dark", "syncClaudeAiSkills": True}), encoding="utf-8"
+        )
+        self.assertNotEqual(self._reconcile("--check").returncode, 0, "a true is drift")
+        self._reconcile()
+        settings = json.loads(self._settings.read_text(encoding="utf-8"))
+        self.assertIs(settings["syncClaudeAiSkills"], False)
+        self.assertEqual(settings["theme"], "dark")
+        first = self._settings.read_bytes()
+        self._reconcile()
+        self.assertEqual(self._settings.read_bytes(), first, "second run must not churn")
+        self.assertEqual(self._reconcile("--check").returncode, 0)
 
 
 class NonLoginShellEnvTests(unittest.TestCase):
