@@ -215,3 +215,128 @@ def test_without_local_maps_an_inherited_complete_door_still_launches(tmp_path: 
     result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR}, args=["-m", "x"])
     assert result.returncode == 0, result.stderr
     assert result.stdout.split() == ["LAUNCH", *DOOR_NAMES]
+
+
+# --- transport selection (ADR-0053, CANONICAL_LAW §8.10) --------------------
+
+#: Stands in for ops/memory_remote/bridge.py inside the stub tree: --check
+#: answers per STUB_REMOTE_CHECK; --serve reports which door values reached it.
+_STUB_BRIDGE = f"""
+import os, sys
+if "--check" in sys.argv:
+    verdict = os.environ.get("STUB_REMOTE_CHECK", "remote")
+    if verdict == "refuse":
+        print("memory_remote: stub refusal", file=sys.stderr)
+        raise SystemExit(1)
+    print(verdict)
+    raise SystemExit(0)
+present = [n for n in {list(DOOR_NAMES)!r} if os.environ.get(n)]
+print("BRIDGE " + " ".join(["serve", *present]))
+"""
+REMOTE = {"L9_MEMORY_REMOTE_MCP_ENDPOINT": "https://memory.example.org/mcp"}
+
+
+def _with_stub_bridge(gov: Path) -> None:
+    remote = gov / "ops" / "memory_remote"
+    remote.mkdir(parents=True)
+    (remote / "__init__.py").write_text("", encoding="utf-8")
+    (remote / "bridge.py").write_text(_STUB_BRIDGE, encoding="utf-8")
+
+
+def test_no_endpoint_keeps_the_local_server(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR}, args=["-m", "x"])
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "LAUNCH -m x"
+
+
+def test_an_endpoint_execs_the_bridge_instead_of_the_local_server(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    env = {"STUB_FALLBACK": str(launched), **DOOR, **REMOTE}
+    result = _run(gov, env, args=["-m", "l9_graphite_memory.server", "--transport", "stdio"])
+    assert result.returncode == 0, result.stderr
+    assert "LAUNCH" not in result.stdout, "the local server must not start"
+    assert result.stdout.split()[:2] == ["BRIDGE", "serve"]
+
+
+def test_the_address_file_also_selects_the_bridge(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    config = gov.parent / ".config" / "l9-memory"
+    config.mkdir(parents=True)
+    (config / "remote-endpoint.json").write_text(
+        '{"endpoint": "https://memory.example.org/mcp"}', encoding="utf-8"
+    )
+    launched = _executable(tmp_path / "proven-python")
+    result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.startswith("BRIDGE serve")
+
+
+def test_an_inadmissible_remote_never_falls_back_to_local(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    env = {"STUB_FALLBACK": str(launched), "STUB_REMOTE_CHECK": "refuse", **DOOR, **REMOTE}
+    result = _run(gov, env)
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "no fallback to the local store" in result.stderr
+
+
+def test_a_missing_bridge_never_falls_back_to_local(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR, **REMOTE})
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "no fallback to the local store" in result.stderr
+
+
+def test_the_anonymous_local_operator_never_goes_remote(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    env = {
+        "STUB_FALLBACK": str(launched),
+        "L9_MEMORY_ALLOW_LOCAL_OPERATOR": "1",
+        **DESKTOP,
+        **REMOTE,
+    }
+    result = _run(gov, env)
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "admits signed agents only" in result.stderr
+
+
+def test_remote_refuses_foreign_server_argv(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    env = {"STUB_FALLBACK": str(launched), **DOOR, **REMOTE}
+    result = _run(gov, env, args=["-m", "l9_graphite_memory.server", "--transport", "http"])
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "takes no server argv" in result.stderr
+
+
+def test_a_hosted_container_key_cannot_go_remote(tmp_path: Path) -> None:
+    """The container self-mint is valid only in-process; remote needs a durable key."""
+    gov = _stub_gov(tmp_path)
+    _with_stub_bridge(gov)
+    launched = _executable(tmp_path / "proven-python")
+    env = {
+        "STUB_FALLBACK": str(launched),
+        "CLAUDE_CODE_REMOTE": "true",
+        "CLAUDE_CODE_ENTRYPOINT": "remote_mobile",
+        **DOOR,
+        **REMOTE,
+    }
+    result = _run(gov, env)
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "durable per-agent signing key" in result.stderr

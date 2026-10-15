@@ -99,10 +99,13 @@ export L9_MEMORY_AGENT_ID="$_agent_id"
 # this wrapper then execs the consumer bridge instead of the local server. A
 # requested remote transport that cannot be proven refuses to launch; it never
 # falls back to the local store.
+# The bridge runs on the governance Python, pinned here: the exporter sourced
+# below reassigns PY to the memory interpreter.
+_gov_py="$PY"
 _remote_config="${L9_MEMORY_REMOTE_CONFIG:-$HOME/.config/l9-memory/remote-endpoint.json}"
 _transport=local
 if [[ -n "${L9_MEMORY_REMOTE_MCP_ENDPOINT:-}" || -e "$_remote_config" ]]; then
-  if ! _transport="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory_remote.bridge --check)" \
+  if ! _transport="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$_gov_py" -m ops.memory_remote.bridge --check)" \
     || [[ "$_transport" != "remote" ]]; then
     echo "run_memory_mcp: remote memory transport requested but not admissible (ops/memory_remote/bridge.py) — refuse to launch; no fallback to the local store" >&2
     exit 1
@@ -189,7 +192,7 @@ if [[ "$_transport" == "remote" ]]; then
   # The bridge keeps only {agent_id: key} and the sealed identity, and drops
   # every server-side value (door secret, grants) before it serves: the
   # remote service owns grants and verifies against its own key registry.
-  PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m ops.memory_remote.bridge --serve
+  PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" exec "$_gov_py" -m ops.memory_remote.bridge --serve
 fi
 if [[ $# -gt 0 ]]; then
   exec "$L9_MEMORY_INTERPRETER" "$@"

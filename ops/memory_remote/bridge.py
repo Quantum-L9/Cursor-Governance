@@ -560,7 +560,9 @@ def resolve(env: Mapping[str, str]) -> tuple[str, dict[str, Any], dict[str, str]
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        description="stdio MCP bridge to the admitted remote Memory service (ADR-0053)."
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
         "--check",
