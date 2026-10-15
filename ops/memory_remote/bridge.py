@@ -36,8 +36,10 @@ import argparse
 import base64
 import json
 import os
+import re
 import sys
 import threading
+import tomllib
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterable, Mapping
@@ -216,7 +218,168 @@ def load_binding(path: Path = BINDING_PATH) -> dict[str, Any]:
     return data
 
 
-_RELEASE_EVIDENCE = ("version", "source_sha", "tag", "wheel_sha256", "admission_receipt")
+#: The consumer's own CI-proved release identity (the exact package pin): a source
+#: commit and wheel digest that .github/workflows/memory-cross-repo.yml rebuilds and
+#: compares on every Cursor head, and that uv.lock holds as the published hash
+#: uv verifies on install. A hosted release is admissible only as this same
+#: release; nothing in the remote binding stands on its own say-so.
+ANCHOR_PATH = ROOT / "ops" / "config" / "memory-binding.json"
+LOCK_PATH = ROOT / "uv.lock"
+PACKAGE = "l9-graphite-memory"
+ADMISSION_RECEIPT_TYPE = "l9.receipt/admission@1"
+#: Fields of Quantum-L9/.github semantics/receipt_catalog.yaml l9.receipt/admission@1
+#: that the consumer binds to the exact release.
+ADMISSION_RECEIPT_FIELDS = (
+    "receipt_type",
+    "receipt_identity",
+    "receipt_digest",
+    "candidate_or_subject_ref",
+    "candidate_or_subject_digest",
+    "decision_authority_ref",
+    "decision_result",
+)
+#: Admitted verifiers of a receipt's authenticity, keyed by receipt type. EMPTY by
+#: design: no admitted verifier for product-release admission receipts exists
+#: (the 2.6.0 receipt is unsigned markdown; .github defines the receipt family but
+#: ships no verifier). A field-shaped receipt therefore proves nothing about who
+#: admitted the release, and the hosted transport stays refused until an admitted
+#: verifier is registered here through a governed change (ADR-0053).
+ADMISSION_RECEIPT_VERIFIERS: dict[str, Callable[[Mapping[str, Any]], None]] = {}
+
+_HEX40 = re.compile(r"[0-9a-f]{40}")
+_HEX64 = re.compile(r"[0-9a-f]{64}")
+_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
+
+
+class ReleaseEvidenceError(RemoteBindingError):
+    """The remote release binding is malformed or contradicts the consumer's pin."""
+
+
+class AdmissionUnverifiable(RemoteBindingError):
+    """No admitted verifier can establish the admission receipt's authenticity."""
+
+
+def _anchor_identity(anchor_path: Path, lock_path: Path) -> dict[str, str]:
+    """The consumer's proved release identity, read from its governed pins."""
+
+    try:
+        anchor = json.loads(anchor_path.read_text(encoding="utf-8"))
+        lock = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ReleaseEvidenceError(f"consumer release anchor unreadable: {exc}") from exc
+    evidence = anchor.get("release_evidence") or {}
+    source = anchor.get("source") or {}
+    if source.get("ref") != evidence.get("memory_sha"):
+        raise ReleaseEvidenceError(
+            "consumer release anchor is inconsistent: source.ref != release_evidence.memory_sha"
+        )
+    packages = [p for p in lock.get("package", []) if p.get("name") == PACKAGE]
+    if len(packages) != 1:
+        raise ReleaseEvidenceError(f"uv.lock must lock exactly one {PACKAGE}")
+    wheel = str(evidence.get("artifact") or "")
+    locked = {
+        Path(str(w.get("url", ""))).name: str(w.get("hash", "")).removeprefix("sha256:")
+        for w in packages[0].get("wheels", [])
+    }
+    return {
+        "version": str(anchor.get("expected_package_version") or ""),
+        "lock_version": str(packages[0].get("version") or ""),
+        "source_sha": str(evidence.get("memory_sha") or ""),
+        "tag": str(evidence.get("memory_tag") or ""),
+        "wheel": wheel,
+        "wheel_sha256": str(evidence.get("artifact_sha256") or ""),
+        "lock_wheel_sha256": locked.get(wheel, ""),
+    }
+
+
+def verify_admitted_release(
+    release: Mapping[str, Any],
+    *,
+    anchor_path: Path = ANCHOR_PATH,
+    lock_path: Path = LOCK_PATH,
+    verifiers: Mapping[str, Callable[[Mapping[str, Any]], None]] = ADMISSION_RECEIPT_VERIFIERS,
+) -> dict[str, str]:
+    """Authenticate an admitted release binding before any hosted transport.
+
+    Three separate questions, all of which must hold:
+
+    1. Exact identity. Every field is the exact form of one release: a semver
+       version, a full 40-hex source commit, ``v<version>``, the wheel filename
+       for that version and a full 64-hex digest.
+    2. Consistency with authenticated evidence. The release is the very release
+       the consumer's governed pin proves (memory-binding.json, rebuilt from the
+       source commit by memory-cross-repo.yml) and that uv.lock holds as the
+       published wheel hash. A fabricated SHA or digest cannot match both.
+    3. Admission authenticity. The admission receipt names this exact subject,
+       and an admitted verifier for its receipt type establishes who issued it.
+
+    The live service's own report (``memory.capabilities``) is never evidence
+    here: it is checked separately, after this, and only for drift.
+    """
+
+    claimed = {
+        key: str(release.get(key) or "")
+        for key in ("package", "version", "source_sha", "tag", "wheel", "wheel_sha256")
+    }
+    if claimed["package"] != PACKAGE:
+        raise ReleaseEvidenceError(f"release.package must be {PACKAGE}")
+    if not _VERSION.fullmatch(claimed["version"]):
+        raise ReleaseEvidenceError("release.version is not an exact X.Y.Z version")
+    if not _HEX40.fullmatch(claimed["source_sha"]):
+        raise ReleaseEvidenceError("release.source_sha is not a full 40-hex commit")
+    if claimed["tag"] != f"v{claimed['version']}":
+        raise ReleaseEvidenceError("release.tag does not name release.version")
+    if claimed["wheel"] != f"l9_graphite_memory-{claimed['version']}-py3-none-any.whl":
+        raise ReleaseEvidenceError("release.wheel is not the wheel of release.version")
+    if not _HEX64.fullmatch(claimed["wheel_sha256"]):
+        raise ReleaseEvidenceError("release.wheel_sha256 is not a full 64-hex digest")
+
+    anchor = _anchor_identity(anchor_path, lock_path)
+    mismatched = [
+        key
+        for key in ("version", "source_sha", "tag", "wheel", "wheel_sha256")
+        if claimed[key] != anchor[key]
+    ]
+    if anchor["lock_version"] != claimed["version"]:
+        mismatched.append("uv.lock version")
+    if anchor["lock_wheel_sha256"] != claimed["wheel_sha256"]:
+        mismatched.append("uv.lock wheel hash")
+    if mismatched:
+        raise ReleaseEvidenceError(
+            "remote release binding is not the release this consumer's governed pin proves "
+            f"(ops/config/memory-binding.json + uv.lock); mismatched: {', '.join(mismatched)}"
+        )
+
+    receipt = release.get("admission_receipt")
+    if not isinstance(receipt, Mapping):
+        raise ReleaseEvidenceError(
+            f"release.admission_receipt must be a structured {ADMISSION_RECEIPT_TYPE} "
+            "reference, not a path or free text"
+        )
+    missing = [key for key in ADMISSION_RECEIPT_FIELDS if not str(receipt.get(key) or "").strip()]
+    if missing:
+        raise ReleaseEvidenceError(f"admission receipt is missing {', '.join(missing)}")
+    if receipt["receipt_type"] != ADMISSION_RECEIPT_TYPE:
+        raise ReleaseEvidenceError(f"admission receipt is not {ADMISSION_RECEIPT_TYPE}")
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", str(receipt["receipt_digest"])):
+        raise ReleaseEvidenceError("admission receipt_digest is not sha256:<64-hex>")
+    if receipt["candidate_or_subject_digest"] != f"sha256:{claimed['wheel_sha256']}":
+        raise ReleaseEvidenceError("admission receipt subject digest is not this release's wheel")
+    subject_ref = f"Quantum-L9/l9-graphiti-memory@{claimed['source_sha']}"
+    if receipt["candidate_or_subject_ref"] != subject_ref:
+        raise ReleaseEvidenceError("admission receipt subject is not this release's source commit")
+    if receipt["decision_result"] != "admitted":
+        raise ReleaseEvidenceError("admission receipt decision_result is not admitted")
+
+    verify = verifiers.get(ADMISSION_RECEIPT_TYPE)
+    if verify is None:
+        raise AdmissionUnverifiable(
+            f"BLOCKED: no admitted verifier exists for {ADMISSION_RECEIPT_TYPE}; the "
+            "admission receipt's authenticity cannot be established, so the hosted "
+            "transport stays disabled (ADR-0053)"
+        )
+    verify(receipt)
+    return {key: claimed[key] for key in ("version", "source_sha", "wheel_sha256")}
 
 
 def bound_release(
@@ -232,12 +395,8 @@ def bound_release(
 
     release = binding.get("release") or {}
     if release.get("admission") == "admitted":
-        missing = [key for key in _RELEASE_EVIDENCE if not str(release.get(key) or "").strip()]
-        if missing:
-            raise RemoteBindingError(
-                f"remote release binding claims admission without evidence: {', '.join(missing)}"
-            )
-        return {"mode": "admitted", "version": str(release["version"])}
+        verified = verify_admitted_release(release)
+        return {"mode": "admitted", "version": verified["version"]}
     reason = env.get(ENV_CANDIDATE, "").strip()
     candidate = binding.get("candidate") or {}
     if reason.lower() not in _NOT_A_REASON and str(candidate.get("version") or "").strip():
@@ -434,7 +593,14 @@ class RemoteBridge:
 
     # -- service identity -------------------------------------------------
     def verify_service(self, release_version: str) -> dict[str, Any]:
-        """Prove the service is the bound release before serving any client."""
+        """Refuse a service that reports anything but the bound release.
+
+        Everything checked here is SELF-REPORTED by the service (constants compiled
+        into the package it runs). It catches drift and misconfiguration; it does
+        not authenticate the running artifact. Release authenticity comes only from
+        ``verify_admitted_release``; authenticated runtime artifact identity
+        (immutable OCI digest or equivalent) is a deployment-phase obligation.
+        """
 
         init = self.exchange_once(
             {
@@ -483,7 +649,8 @@ class RemoteBridge:
         }
         if drift:
             raise RemoteBindingError(
-                f"remote memory is not the bound release (expected {expected}, got {drift})"
+                "remote memory is not the bound release (self-reported, unauthenticated: "
+                f"expected {expected}, got {drift})"
             )
         return capabilities
 

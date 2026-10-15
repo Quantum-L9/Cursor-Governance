@@ -99,13 +99,39 @@ network.
    operator input: `L9_MEMORY_REMOTE_MCP_ENDPOINT`, or
    `~/.config/l9-memory/remote-endpoint.json` = `{"endpoint": …}` for hosts
    that launch without a shell environment. It is never repository content.
-   The bridge serves only when `ops/config/memory-remote-binding.json` names an
-   admitted release with full evidence (version, source SHA, tag, wheel
-   digest, admission receipt). Before relaying anything, it then proves the
-   live service reports that exact package version and both contract versions.
+   The bridge serves a hosted endpoint only when
+   `ops/config/memory-remote-binding.json` names an admitted release that
+   passes `verify_admitted_release`. That check answers three separate
+   questions, offline:
+
+   - **Exact identity.** The version is semver, the source is a full 40-hex
+     commit, the tag is `v<version>`, the wheel is that version's wheel, and
+     the wheel digest is a full 64-hex digest.
+   - **Consistency with authenticated evidence.** The release must be the
+     very release this consumer's governed pin already proves. That pin is
+     `memory-binding.json` `release_evidence`, which `memory-cross-repo.yml`
+     rebuilds from the source commit and compares by digest; the published
+     wheel hash in `uv.lock` must match too. A fabricated SHA or digest cannot
+     equal both, so a hosted release is admissible only after the governed
+     consumer rebind to that same release.
+   - **Admission authenticity.** `admission_receipt` must be a structured
+     `l9.receipt/admission@1` reference (field names from
+     `Quantum-L9/.github` `semantics/receipt_catalog.yaml`) for this exact
+     subject, and an *admitted* verifier for that receipt type must
+     establish who issued it. No such verifier exists: the 2.6.0 receipt is
+     unsigned markdown, the tag is unsigned, and `.github` defines the
+     receipt family but ships no verifier. The registry
+     `ADMISSION_RECEIPT_VERIFIERS` is therefore empty, so the hosted
+     transport is **BLOCKED**, by design, even for a fully consistent
+     binding. Registering a verifier is a governed change.
+
+   Only after that does the bridge compare what the live service *reports*
+   (`memory.capabilities`) with the bound version and both contract
+   versions. Those values are constants the service compiles in, so the
+   comparison catches drift and misconfiguration but authenticates nothing.
    A release candidate can be reached only on loopback, under an explicit
    `L9_MEMORY_REMOTE_CANDIDATE_QUALIFICATION` reason, for consumer
-   qualification.
+   qualification. That path is never an admission.
 4. **Identity is the agent's own.** The door is minted exactly as for the
    local server: actor derived from host markers, sealed canonical identity
    assertion. The bridge keeps only `{agent_id: key}` and the sealed identity,
@@ -146,6 +172,17 @@ network.
   HTTP.
 - Until a 3.0.0 release is admitted, `release.admission` is `pending`, and
   every hosted endpoint is refused by construction.
+- Even once a release is admitted, the hosted transport stays refused until an
+  admitted verifier for `l9.receipt/admission@1` exists. A signed, verifiable
+  admission receipt is the missing prerequisite. Another field in the
+  binding cannot stand in for it.
+- **Runtime artifact identity is a deployment-phase obligation.** Memory
+  3.0.0 exposes no authenticated runtime artifact identity: no OCI digest, no
+  attestation, and no build SHA in its reports. The signed-agent HMAC
+  authenticates the client to the server, not the server's artifact.
+  Proving that the running service is the admitted wheel needs
+  deployment-owned immutable identity (an OCI image digest bound to the
+  admitted wheel). This ADR adds no attestation protocol.
 - The hook lane (`ops/memory/control_plane_client.py`: SessionStart health,
   sessionEnd close, the operator CLI) still talks to the locally bound
   runtime. On a machine that selects the remote MCP transport, model-authored
@@ -166,7 +203,11 @@ network.
 ## Verification
 
 - `tests/ops/memory_remote/test_bridge.py`: endpoint, binding, credential and
-  relay refusals, network-free.
+  relay refusals, network-free. It includes the release-evidence matrix:
+  fabricated source SHAs and wheel digests, fabricated receipt paths,
+  mismatched version, tag and wheel evidence, tampered `uv.lock` and anchor,
+  the empty verifier registry that keeps the hosted transport blocked, and
+  the separation between service-reported values and release evidence.
 - `tests/ops/memory/test_run_memory_mcp.py`: transport selection and launcher
   refusals.
 - `tests/ops/memory_remote/test_candidate_interop.py`: the consumer bridge

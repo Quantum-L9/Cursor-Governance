@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import sys
 import urllib.error
 from email.message import Message
@@ -139,19 +140,142 @@ def test_a_candidate_is_reachable_on_loopback_with_a_reason_only() -> None:
     assert release == {"mode": "candidate_qualification", "version": "3.0.0"}
 
 
-def test_admission_requires_every_evidence_field() -> None:
+HOSTED = "https://memory.example.org/mcp"
+
+
+def _anchored_release() -> dict[str, Any]:
+    """A release binding equal to the consumer's own governed, CI-proved pin."""
+    anchor = json.loads(b.ANCHOR_PATH.read_text(encoding="utf-8"))
+    evidence = anchor["release_evidence"]
+    version = anchor["expected_package_version"]
+    return {
+        "admission": "admitted",
+        "package": b.PACKAGE,
+        "version": version,
+        "source_sha": evidence["memory_sha"],
+        "tag": evidence["memory_tag"],
+        "wheel": evidence["artifact"],
+        "wheel_sha256": evidence["artifact_sha256"],
+        "admission_receipt": {
+            "receipt_type": b.ADMISSION_RECEIPT_TYPE,
+            "receipt_identity": f"l9-memory-release-{version}",
+            "receipt_digest": "sha256:" + "c" * 64,
+            "candidate_or_subject_ref": f"Quantum-L9/l9-graphiti-memory@{evidence['memory_sha']}",
+            "candidate_or_subject_digest": f"sha256:{evidence['artifact_sha256']}",
+            "decision_authority_ref": "l9.authority/product-admission",
+            "decision_result": "admitted",
+        },
+    }
+
+
+def test_no_admitted_admission_verifier_exists_so_hosted_stays_blocked() -> None:
+    """F1: a fully consistent binding still cannot select hosted transport."""
+    assert b.ADMISSION_RECEIPT_VERIFIERS == {}, "registering one is a governed change"
     binding = b.load_binding()
-    binding["release"] = {"admission": "admitted", "version": "3.0.0"}
-    with pytest.raises(b.RemoteBindingError, match="without evidence"):
-        b.bound_release(binding, "https://memory.example.org/mcp", {})
-    binding["release"].update(
-        source_sha="a" * 40,
-        tag="v3.0.0",
-        wheel_sha256="b" * 64,
-        admission_receipt="docs/receipts/l9-memory-release-3.0.0.md",
+    binding["release"] = _anchored_release()
+    with pytest.raises(b.AdmissionUnverifiable, match="BLOCKED: no admitted verifier"):
+        b.bound_release(binding, HOSTED, {})
+
+
+def test_identity_and_consistency_pass_before_the_authenticity_gate() -> None:
+    """With a verifier present, the same binding passes: the gate is the only blocker."""
+    seen: list[Any] = []
+    verified = b.verify_admitted_release(
+        _anchored_release(), verifiers={b.ADMISSION_RECEIPT_TYPE: seen.append}
     )
-    release = b.bound_release(binding, "https://memory.example.org/mcp", {})
-    assert release == {"mode": "admitted", "version": "3.0.0"}
+    assert verified["source_sha"] == _anchored_release()["source_sha"]
+    assert seen and seen[0]["decision_result"] == "admitted"
+
+
+def _receipt(**changes: Any) -> dict[str, Any]:
+    release = _anchored_release()
+    release["admission_receipt"].update(changes)
+    return release
+
+
+def _release(**changes: Any) -> dict[str, Any]:
+    release = _anchored_release()
+    release.update(changes)
+    return release
+
+
+@pytest.mark.parametrize(
+    ("release", "reason"),
+    [
+        # fabricated source SHAs
+        (_release(source_sha="a" * 40), "mismatched: source_sha"),
+        (_release(source_sha="846f283f"), "not a full 40-hex commit"),
+        (_release(source_sha="A" * 40), "not a full 40-hex commit"),
+        # fabricated or malformed wheel digests
+        (_release(wheel_sha256="b" * 64), "mismatched: wheel_sha256, uv.lock wheel hash"),
+        (_release(wheel_sha256="b" * 63), "not a full 64-hex digest"),
+        # mismatched release evidence
+        (_release(version="3.0.0"), "release.tag does not name release.version"),
+        (
+            _release(
+                version="3.0.0", tag="v3.0.0", wheel="l9_graphite_memory-3.0.0-py3-none-any.whl"
+            ),
+            "mismatched: version, tag, wheel",
+        ),
+        (_release(tag="v9.9.9"), "release.tag does not name release.version"),
+        (_release(wheel="other-2.6.0-py3-none-any.whl"), "not the wheel of release.version"),
+        (_release(package="graphiti-core"), "release.package must be"),
+        (_release(version="latest"), "not an exact X.Y.Z version"),
+        # fabricated receipt paths and receipts
+        (_release(admission_receipt="docs/receipts/l9-memory-release-2.6.0.md"), "not a path"),
+        (_release(admission_receipt=None), "not a path"),
+        (_receipt(receipt_digest=""), "missing receipt_digest"),
+        (_receipt(receipt_type="l9.receipt/distribution@1"), "is not l9.receipt/admission@1"),
+        (_receipt(receipt_digest="sha256:short"), "receipt_digest is not sha256"),
+        (_receipt(candidate_or_subject_digest="sha256:" + "d" * 64), "subject digest"),
+        (
+            _receipt(candidate_or_subject_ref="Quantum-L9/l9-graphiti-memory@" + "e" * 40),
+            "subject is not this release's source commit",
+        ),
+        (_receipt(decision_result="rejected"), "decision_result is not admitted"),
+    ],
+)
+def test_fabricated_or_mismatched_release_evidence_is_refused(
+    release: dict[str, Any], reason: str
+) -> None:
+    accept_all = {b.ADMISSION_RECEIPT_TYPE: lambda _receipt: None}
+    with pytest.raises(b.ReleaseEvidenceError, match=re.escape(reason)):
+        b.verify_admitted_release(release, verifiers=accept_all)
+
+
+def test_a_tampered_lock_or_anchor_is_refused(tmp_path: Path) -> None:
+    """The binding must equal BOTH the governed pin and the uv.lock published hash."""
+    accept_all = {b.ADMISSION_RECEIPT_TYPE: lambda _receipt: None}
+    real_hash = _anchored_release()["wheel_sha256"]
+    lock = tmp_path / "uv.lock"
+    lock.write_text(
+        b.LOCK_PATH.read_text(encoding="utf-8").replace(real_hash, "f" * 64), encoding="utf-8"
+    )
+    with pytest.raises(b.ReleaseEvidenceError, match="mismatched: uv.lock wheel hash"):
+        b.verify_admitted_release(_anchored_release(), lock_path=lock, verifiers=accept_all)
+    anchor = tmp_path / "memory-binding.json"
+    data = json.loads(b.ANCHOR_PATH.read_text(encoding="utf-8"))
+    data["source"]["ref"] = "0" * 40
+    anchor.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(b.ReleaseEvidenceError, match="anchor is inconsistent"):
+        b.verify_admitted_release(_anchored_release(), anchor_path=anchor, verifiers=accept_all)
+
+
+def test_service_reports_are_never_release_evidence() -> None:
+    """Release verification is offline; the live service is only checked for drift."""
+    import inspect
+
+    source = inspect.getsource(b.verify_admitted_release)
+    assert "exchange" not in source and "capabilities" not in source.split('"""')[-1]
+    bridge, _ = _bridge(
+        FakeSend(
+            _ok({"protocolVersion": "2025-11-25"}, "l9-bridge-init"),
+            Reply(202, b""),
+            _capabilities(package_version="9.9.9"),
+        )
+    )
+    with pytest.raises(b.RemoteBindingError, match="self-reported, unauthenticated"):
+        bridge.verify_service("3.0.0")
 
 
 def test_a_foreign_binding_schema_is_refused(tmp_path: Path) -> None:

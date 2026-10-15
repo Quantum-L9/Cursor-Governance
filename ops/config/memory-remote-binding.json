@@ -2,13 +2,17 @@
   "schema": "l9.memory-remote-binding.v1",
   "_comment": [
     "Consumer release binding for the remote Memory MCP transport (ADR-0053, CANONICAL_LAW §8.10).",
-    "Read by ops/memory_remote/bridge.py. The bridge refuses to serve unless release.admission is",
-    "'admitted' and every release evidence field is set, and it then proves the live service reports",
-    "exactly release.version and both contract versions before relaying any client message.",
-    "candidate names release-candidate bytes the consumer may be qualified against on loopback only,",
-    "under an explicit L9_MEMORY_REMOTE_CANDIDATE_QUALIFICATION reason. It never reaches a hosted endpoint.",
-    "No endpoint, credential, grant or key belongs in this file: the endpoint is operator-supplied per",
-    "machine (L9_MEMORY_REMOTE_MCP_ENDPOINT or ~/.config/l9-memory/remote-endpoint.json)."
+    "Read by ops/memory_remote/bridge.py. An 'admitted' release is accepted only after three checks:",
+    "(1) exact identity: semver version, full 40-hex source_sha, tag v<version>, the version's wheel name, full 64-hex wheel_sha256;",
+    "(2) consistency with authenticated evidence: it must be the very release the consumer's governed pin proves",
+    "(ops/config/memory-binding.json, rebuilt from source by memory-cross-repo.yml, and the uv.lock published wheel hash);",
+    "(3) admission authenticity: admission_receipt is a structured l9.receipt/admission@1 reference for this exact subject,",
+    "and an ADMITTED verifier for that receipt type must exist. None exists today, so the hosted transport stays refused",
+    "(BLOCKED, by design) even for a fully consistent binding.",
+    "Values the live service reports (memory.capabilities) are self-reported and checked only for drift, never as release evidence.",
+    "candidate names release-candidate bytes the consumer may be qualified against on loopback only, under an explicit",
+    "L9_MEMORY_REMOTE_CANDIDATE_QUALIFICATION reason. It never reaches a hosted endpoint and is never an admission.",
+    "No endpoint, credential, grant or key belongs in this file: the endpoint is operator-supplied per machine."
   ],
   "remote_contract_version": "memory-remote-mcp/v1",
   "control_plane_contract_version": "memory-control-plane/v1",
@@ -23,13 +27,14 @@
     "plain_http": "loopback_only"
   },
   "release": {
-    "package": "l9-graphite-memory",
     "admission": "pending",
+    "package": "l9-graphite-memory",
     "version": null,
     "source_sha": null,
     "tag": null,
     "wheel": null,
     "wheel_sha256": null,
+    "anchor": "ops/config/memory-binding.json#release_evidence + uv.lock",
     "admission_receipt": null
   },
   "candidate": {
