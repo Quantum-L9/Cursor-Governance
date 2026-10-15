@@ -62,6 +62,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0050 | Accepted | Compiler-owned structure, target resolution, and program owner | `docs/decisions/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md`<br>`environment/contracts/execution/adr/ADR-0050-compiler-owned-structure-target-resolution-and-program-owner.md` |
 | ADR-0051 | Accepted | Cloud Graphiti HTTPS reachability | `docs/decisions/ADR-0051-cloud-graphiti-https-reachability.md` |
 | ADR-0052 | Accepted | Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement | `docs/decisions/ADR-0052-immutable-pr-remediation-via-stacked-publish.md` |
+| ADR-0053 | Accepted | Remote Memory MCP consumer binding (memory-remote-mcp/v1) | `docs/decisions/ADR-0053-remote-memory-mcp-consumer-binding.md` |
 
 <!-- END L9 ADR INDEX -->
 

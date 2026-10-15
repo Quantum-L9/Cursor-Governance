@@ -497,6 +497,15 @@ The remote-host/Mobile consumer access boundary is explicitly unresolved.
 Do not treat the two local processes' successful shared-database test as
 permission to publish a remote HTTP memory endpoint or a database port.
 
+**Consumer side, 2026-10-15 (ADR-0053, CANONICAL_LAW §8.10).** The consumer may
+now reach an admitted Memory release over `memory-remote-mcp/v1`. The route is
+signed-agent only and operator-selected. `run_memory_mcp.sh` execs
+`ops/memory_remote/bridge.py`, and the model-visible stdio entry does not change.
+Nothing in this repository publishes or deploys an endpoint. The bridge refuses
+every endpoint until `ops/config/memory-remote-binding.json` names an admitted
+release. The hook lane above (this package boundary) still talks to the locally
+bound runtime.
+
 `2.6.0` is the current exact package binding, and the First E2E runs on it.
 It does not contain the readiness work in Quantum-L9/l9-graphiti-memory#90
 (ADR-097). #90 is merged on memory `main` at
