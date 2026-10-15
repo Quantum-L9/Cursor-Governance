@@ -179,15 +179,23 @@ jobs:
         shell: bash
         env:
           AUTHORITY: ${{ steps.refs.outputs.authority }}
+          COMPILER: ${{ steps.refs.outputs.compiler }}
         run: |
-          branch="automation/architecture-intelligence-${AUTHORITY:0:12}"
+          # One immutable branch per (authority, compiler) pair. The producer is byte-deterministic
+          # for that pair (--check), so an existing branch already carries this bundle: it is
+          # never rewritten, and nothing is ever force-pushed.
+          branch="automation/architecture-intelligence-${AUTHORITY:0:12}-${COMPILER:0:12}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "$branch already exists; not rewriting it"
+            exit 0
+          fi
           git config user.name "quantum-l9-automation"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
+          git switch -c "$branch"
           git add generated/governance/architecture_intelligence
           git commit -m "chore(governance): produce architecture intelligence bundle"
-          git push --force-with-lease origin "$branch"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          git push origin "$branch"
       - name: Open bundle pull request
         if: steps.diff.outputs.changed == 'true'
         working-directory: governance
