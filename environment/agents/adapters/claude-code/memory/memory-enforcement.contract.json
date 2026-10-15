@@ -1,9 +1,9 @@
 {
   "$schema": "./memory-enforcement.schema.json",
   "contract": "l9.claude-code.memory-enforcement",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "status": "enforced",
-  "summary": "Memory hydration is a precondition for governed *repository* writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state. Single front door: package-owned l9-graphite-memory MCP stdio (memory-control-plane/v1). Agent HTTP / provider clients are sealed side doors (ADR-0030/0031). Model durable writes: cold path memory.write_agent (no phase_lock); high-stakes path memory.phase_lock -> memory.write_governed. generic memory.ingest is not a model bypass. Operator breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS.",
+  "summary": "Memory hydration is a precondition for governed *repository* writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state. Single front door: package-owned l9-graphite-memory MCP (memory-control-plane/v1), reached over stdio, or — only when an operator names the admitted service — over memory-remote-mcp/v1 through the consumer bridge launched by the same stdio wrapper (ADR-0053). Legacy provider HTTP and retired endpoints stay sealed side doors (ADR-0030/0031). Model durable writes: cold path memory.write_agent (no phase_lock); high-stakes path memory.phase_lock -> memory.write_governed. generic memory.ingest is not a model bypass. Operator breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS.",
   "memory": {
     "front_door": "ops/memory/control_plane_client.py",
     "bridge": "environment/agents/adapters/claude-code/memory/memory_bridge.py",
@@ -38,7 +38,22 @@
     "governed_write_operation": "memory.write_governed",
     "repository_authority": false,
     "provider_direct": "forbidden",
-    "http_transport": "forbidden",
+    "http_transport": "admitted_remote_only",
+    "remote_transport": {
+      "contract": "memory-remote-mcp/v1",
+      "control_plane_contract": "memory-control-plane/v1",
+      "auth_mode": "signed-agent",
+      "selection": "operator_endpoint_with_admitted_release",
+      "model_visible_entry": "stdio_wrapper_only",
+      "launcher": "ops/memory/run_memory_mcp.sh",
+      "bridge": "ops/memory_remote/bridge.py",
+      "release_binding": "ops/config/memory-remote-binding.json",
+      "grants": "server_owned",
+      "fallback": "forbidden",
+      "admin_over_http": "forbidden",
+      "retired_endpoints": "forbidden",
+      "ephemeral_signing_keys": "forbidden"
+    },
     "generic_ingest_as_model_write": "forbidden",
     "cli_adapter": "python -m ops.memory.cli",
     "cli_write_role": "operator_and_deterministic_adapters",
@@ -53,12 +68,14 @@
     "authority": [
       "docs/decisions/ADR-0030-memory-control-plane-single-front-door.md",
       "docs/decisions/ADR-0031-signed-agent-mcp-write-classes.md",
+      "docs/decisions/ADR-0053-remote-memory-mcp-consumer-binding.md",
       "CANONICAL_LAW.md#8.3",
+      "CANONICAL_LAW.md#8.10",
       "rules/03-graphiti-memory.mdc",
       "rules/87-cursor-memory-kernel.mdc",
       "rules/98-graphiti-memory-gate.mdc"
     ],
-    "note": "Cold agents call memory.write_agent without SessionStart/phase_lock. Conflict-sensitive facts use memory.phase_lock then memory.write_governed. HTTP and provider transports remain forbidden.",
+    "note": "Cold agents call memory.write_agent without SessionStart/phase_lock. Conflict-sensitive facts use memory.phase_lock then memory.write_governed. Provider transports and every HTTP route other than the admitted memory-remote-mcp/v1 service remain forbidden; the remote route is operator-selected, signed-agent only, and never a fallback.",
     "prerequisite": "memory.phase_lock",
     "write_operation": "memory.write_governed"
   },
@@ -108,11 +125,7 @@
       "id": "edit-authority-files",
       "description": "Edits to governance-authority paths carry no memory precondition. Isolation and collision safety are Git's job (worktree + branch + publication gate).",
       "match": {
-        "tools": [
-          "Edit",
-          "Write",
-          "NotebookEdit"
-        ],
+        "tools": ["Edit", "Write", "NotebookEdit"],
         "path_globs": [
           "CANONICAL_LAW.md",
           "AGENTS.md",
@@ -134,14 +147,8 @@
       "id": "edit-other",
       "description": "Any other edit carries no memory precondition.",
       "match": {
-        "tools": [
-          "Edit",
-          "Write",
-          "NotebookEdit"
-        ],
-        "path_globs": [
-          "**"
-        ]
+        "tools": ["Edit", "Write", "NotebookEdit"],
+        "path_globs": ["**"]
       },
       "requires": [],
       "fail_mode": "closed"
@@ -150,12 +157,8 @@
       "id": "git-mutation",
       "description": "Local history mutation and publication carry no memory precondition. Push/PR routing is governed by L4 and the publication gate, never by memory state.",
       "match": {
-        "tools": [
-          "Bash"
-        ],
-        "command_patterns": [
-          "(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"
-        ]
+        "tools": ["Bash"],
+        "command_patterns": ["(^|\\s|&&|;|\\|)\\s*git\\s+(commit|push|merge|rebase|tag)\\b"]
       },
       "requires": [],
       "fail_mode": "closed"

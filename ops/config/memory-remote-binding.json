@@ -1,0 +1,43 @@
+{
+  "schema": "l9.memory-remote-binding.v1",
+  "_comment": [
+    "Consumer release binding for the remote Memory MCP transport (ADR-0053, CANONICAL_LAW §8.10).",
+    "Read by ops/memory_remote/bridge.py. The bridge refuses to serve unless release.admission is",
+    "'admitted' and every release evidence field is set, and it then proves the live service reports",
+    "exactly release.version and both contract versions before relaying any client message.",
+    "candidate names release-candidate bytes the consumer may be qualified against on loopback only,",
+    "under an explicit L9_MEMORY_REMOTE_CANDIDATE_QUALIFICATION reason. It never reaches a hosted endpoint.",
+    "No endpoint, credential, grant or key belongs in this file: the endpoint is operator-supplied per",
+    "machine (L9_MEMORY_REMOTE_MCP_ENDPOINT or ~/.config/l9-memory/remote-endpoint.json)."
+  ],
+  "remote_contract_version": "memory-remote-mcp/v1",
+  "control_plane_contract_version": "memory-control-plane/v1",
+  "auth_mode": "signed-agent",
+  "http_mcp_protocol_versions": ["2025-11-25", "2025-06-18"],
+  "assertion_ttl_seconds": 300,
+  "endpoint": {
+    "env": "L9_MEMORY_REMOTE_MCP_ENDPOINT",
+    "operator_config": "~/.config/l9-memory/remote-endpoint.json",
+    "path": "/mcp",
+    "scheme": "https",
+    "plain_http": "loopback_only"
+  },
+  "release": {
+    "package": "l9-graphite-memory",
+    "admission": "pending",
+    "version": null,
+    "source_sha": null,
+    "tag": null,
+    "wheel": null,
+    "wheel_sha256": null,
+    "admission_receipt": null
+  },
+  "candidate": {
+    "package": "l9-graphite-memory",
+    "version": "3.0.0",
+    "source": "Quantum-L9/l9-graphiti-memory#96",
+    "source_sha": "efa900621dd0230544a9135470a7ca51974afc3f",
+    "status": "release_candidate_unadmitted",
+    "reachable": "loopback_qualification_only"
+  }
+}

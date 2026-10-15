@@ -157,7 +157,21 @@ class FrontDoorTests(unittest.TestCase):
         self.assertEqual(imw["governed_write_operation"], "memory.write_governed")
         self.assertEqual(imw["prerequisite"], "memory.phase_lock")
         self.assertEqual(imw["write_operation"], "memory.write_governed")
-        self.assertEqual(imw["http_transport"], "forbidden")
+        # ADR-0053 / CANONICAL_LAW 8.10 superseded "forbidden": HTTP reaches memory
+        # only as the admitted memory-remote-mcp/v1 service, never a fallback.
+        self.assertEqual(imw["http_transport"], "admitted_remote_only")
+        remote = imw["remote_transport"]
+        self.assertEqual(remote["contract"], "memory-remote-mcp/v1")
+        self.assertEqual(remote["auth_mode"], "signed-agent")
+        self.assertEqual(remote["model_visible_entry"], "stdio_wrapper_only")
+        self.assertEqual(remote["grants"], "server_owned")
+        for sealed in (
+            "fallback",
+            "admin_over_http",
+            "retired_endpoints",
+            "ephemeral_signing_keys",
+        ):
+            self.assertEqual(remote[sealed], "forbidden", sealed)
         self.assertIs(imw["repository_authority"], False)
         self.assertEqual(imw["provider_direct"], "forbidden")
         self.assertEqual(imw["generic_ingest_as_model_write"], "forbidden")
@@ -177,6 +191,11 @@ class FrontDoorTests(unittest.TestCase):
         self.assertIs(props["repository_authority"]["const"], False)
         self.assertEqual(props["provider_direct"]["const"], "forbidden")
         self.assertEqual(props["generic_ingest_as_model_write"]["const"], "forbidden")
+        self.assertEqual(props["http_transport"]["const"], "admitted_remote_only")
+        remote = props["remote_transport"]
+        self.assertIs(remote["additionalProperties"], False)
+        self.assertEqual(remote["properties"]["fallback"]["const"], "forbidden")
+        self.assertEqual(remote["properties"]["admin_over_http"]["const"], "forbidden")
         # Retired provider properties are not legal on the memory block any more.
         memory_props = schema["properties"]["memory"]["properties"]
         for retired in ("url_env", "token_env", "mcp_path"):
@@ -211,6 +230,45 @@ class FrontDoorTests(unittest.TestCase):
         failures: list[str] = []
         vme.doctrine_check(planted, failures)
         self.assertTrue([f for f in failures if "provider_direct" in f], failures)
+
+    def test_validator_rejects_unrestricted_http(self) -> None:
+        """ADR-0053 admits one HTTP route; 'allowed' reopens every side door."""
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["http_transport"] = "allowed"
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "http_transport" in f], failures)
+
+    def test_validator_rejects_a_remote_fallback_or_admin_over_http(self) -> None:
+        vme = self._validator()
+        for key in ("fallback", "admin_over_http", "ephemeral_signing_keys", "grants"):
+            planted = self._contract()
+            planted["interactive_memory_write"]["remote_transport"][key] = "allowed"
+            failures: list[str] = []
+            vme.doctrine_check(planted, failures)
+            self.assertTrue(
+                [f for f in failures if f"remote_transport.{key}" in f], (key, failures)
+            )
+
+    def test_validator_rejects_an_endpoint_in_the_contract(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        planted["interactive_memory_write"]["remote_transport"]["endpoint"] = (
+            "https://m.example/mcp"
+        )
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "carries an endpoint" in f], failures)
+        self.assertTrue([f for f in failures if "unknown keys" in f], failures)
+
+    def test_validator_rejects_a_missing_remote_transport_block(self) -> None:
+        vme = self._validator()
+        planted = self._contract()
+        del planted["interactive_memory_write"]["remote_transport"]
+        failures: list[str] = []
+        vme.doctrine_check(planted, failures)
+        self.assertTrue([f for f in failures if "remote_transport missing" in f], failures)
 
     def test_validator_rejects_phase_lock_as_repository_authority(self) -> None:
         vme = self._validator()

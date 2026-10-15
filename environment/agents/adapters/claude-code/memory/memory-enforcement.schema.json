@@ -30,10 +30,7 @@
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
     },
     "status": {
-      "enum": [
-        "enforced",
-        "disabled"
-      ]
+      "enum": ["enforced", "disabled"]
     },
     "summary": {
       "type": "string"
@@ -42,12 +39,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "The canonical front door only. A provider URL env, token env or MCP path is retired doctrine (realignment C9/C11, ADR-0030) and is deliberately not a legal property.",
-      "required": [
-        "front_door",
-        "bridge",
-        "control_plane_contract",
-        "forbidden_side_doors"
-      ],
+      "required": ["front_door", "bridge", "control_plane_contract", "forbidden_side_doors"],
       "properties": {
         "front_door": {
           "const": "ops/memory/control_plane_client.py"
@@ -99,6 +91,7 @@
         "governed_write_prerequisite",
         "governed_write_operation",
         "http_transport",
+        "remote_transport",
         "payload_contract"
       ],
       "properties": {
@@ -167,17 +160,50 @@
           "const": "memory.write_governed"
         },
         "http_transport": {
-          "const": "forbidden"
+          "const": "admitted_remote_only",
+          "description": "ADR-0053 / CANONICAL_LAW 8.10 (supersedes the 'forbidden' value of contract 3.x). HTTP reaches memory only as memory-remote-mcp/v1 to the admitted release, operator-selected, through the stdio wrapper's consumer bridge. Every other HTTP route stays forbidden."
+        },
+        "remote_transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The one admitted HTTP route (ADR-0053). Every const is doctrine.",
+          "required": [
+            "contract",
+            "control_plane_contract",
+            "auth_mode",
+            "selection",
+            "model_visible_entry",
+            "launcher",
+            "bridge",
+            "release_binding",
+            "grants",
+            "fallback",
+            "admin_over_http",
+            "retired_endpoints",
+            "ephemeral_signing_keys"
+          ],
+          "properties": {
+            "contract": { "const": "memory-remote-mcp/v1" },
+            "control_plane_contract": { "const": "memory-control-plane/v1" },
+            "auth_mode": { "const": "signed-agent" },
+            "selection": { "const": "operator_endpoint_with_admitted_release" },
+            "model_visible_entry": { "const": "stdio_wrapper_only" },
+            "launcher": { "const": "ops/memory/run_memory_mcp.sh" },
+            "bridge": { "const": "ops/memory_remote/bridge.py" },
+            "release_binding": { "const": "ops/config/memory-remote-binding.json" },
+            "grants": { "const": "server_owned" },
+            "fallback": { "const": "forbidden" },
+            "admin_over_http": { "const": "forbidden" },
+            "retired_endpoints": { "const": "forbidden" },
+            "ephemeral_signing_keys": { "const": "forbidden" }
+          }
         }
       }
     },
     "state": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "root",
-        "session_ttl_seconds"
-      ],
+      "required": ["root", "session_ttl_seconds"],
       "properties": {
         "root": {
           "type": "string"
@@ -197,12 +223,7 @@
     "hooks": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "prefetch",
-        "gate",
-        "writeback",
-        "governance_writeback"
-      ],
+      "required": ["prefetch", "gate", "writeback", "governance_writeback"],
       "properties": {
         "prefetch": {
           "$ref": "#/definitions/hook"
@@ -221,9 +242,7 @@
     "preconditions": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "session_prefetch"
-      ],
+      "required": ["session_prefetch"],
       "properties": {
         "session_prefetch": {
           "$ref": "#/definitions/precondition"
@@ -236,12 +255,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "match",
-          "requires",
-          "fail_mode"
-        ],
+        "required": ["id", "match", "requires", "fail_mode"],
         "properties": {
           "id": {
             "type": "string"
@@ -252,9 +266,7 @@
           "match": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "tools"
-            ],
+            "required": ["tools"],
             "properties": {
               "tools": {
                 "type": "array",
@@ -280,18 +292,13 @@
           "requires": {
             "type": "array",
             "items": {
-              "enum": [
-                "session_prefetch"
-              ]
+              "enum": ["session_prefetch"]
             },
             "minItems": 0,
             "description": "Repository-write authority comes from Git isolation, not memory state. Empty means the write carries no memory precondition (the default since SessionStart became health-only). 'phase_lock' is deliberately not a legal value."
           },
           "fail_mode": {
-            "enum": [
-              "closed",
-              "open"
-            ]
+            "enum": ["closed", "open"]
           }
         }
       }
@@ -299,10 +306,7 @@
     "operator_override": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "env",
-        "agent_settable"
-      ],
+      "required": ["env", "agent_settable"],
       "properties": {
         "env": {
           "type": "string"
@@ -318,10 +322,7 @@
     "disable_env": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "env",
-        "agent_settable"
-      ],
+      "required": ["env", "agent_settable"],
       "properties": {
         "env": {
           "type": "string"
@@ -337,11 +338,7 @@
     "repository_authority": {
       "type": "object",
       "description": "Authorities that must not be substituted for one another (rules/96-multi-agent-main-bound-execution.mdc).",
-      "required": [
-        "repository_isolation",
-        "collision_detection",
-        "prohibited"
-      ],
+      "required": ["repository_isolation", "collision_detection", "prohibited"],
       "properties": {
         "note": {
           "type": "string"
@@ -378,27 +375,16 @@
     "hook": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "event",
-        "script",
-        "fail_mode"
-      ],
+      "required": ["event", "script", "fail_mode"],
       "properties": {
         "event": {
-          "enum": [
-            "SessionStart",
-            "PreToolUse",
-            "Stop"
-          ]
+          "enum": ["SessionStart", "PreToolUse", "Stop"]
         },
         "script": {
           "type": "string"
         },
         "fail_mode": {
-          "enum": [
-            "closed",
-            "open"
-          ]
+          "enum": ["closed", "open"]
         },
         "note": {
           "type": "string"
@@ -408,10 +394,7 @@
     "precondition": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "satisfied_by"
-      ],
+      "required": ["id", "satisfied_by"],
       "properties": {
         "id": {
           "type": "string"

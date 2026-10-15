@@ -74,10 +74,28 @@ INTERACTIVE_WRITE_CONSTS: dict[str, object] = {
     "write_operation": "memory.write_governed",
     "repository_authority": False,
     "provider_direct": "forbidden",
-    "http_transport": "forbidden",
+    # ADR-0053 / CANONICAL_LAW 8.10: HTTP reaches memory only as the admitted
+    # memory-remote-mcp/v1 service; "allowed" (or anything else) is a regression.
+    "http_transport": "admitted_remote_only",
     "generic_ingest_as_model_write": "forbidden",
     "cli_adapter": "python -m ops.memory.cli",
     "cli_write_role": "operator_and_deterministic_adapters",
+}
+#: The one admitted HTTP route (ADR-0053). Every value is doctrine.
+REMOTE_TRANSPORT_CONSTS: dict[str, object] = {
+    "contract": "memory-remote-mcp/v1",
+    "control_plane_contract": CANONICAL_CONTROL_PLANE,
+    "auth_mode": "signed-agent",
+    "selection": "operator_endpoint_with_admitted_release",
+    "model_visible_entry": "stdio_wrapper_only",
+    "launcher": "ops/memory/run_memory_mcp.sh",
+    "bridge": "ops/memory_remote/bridge.py",
+    "release_binding": "ops/config/memory-remote-binding.json",
+    "grants": "server_owned",
+    "fallback": "forbidden",
+    "admin_over_http": "forbidden",
+    "retired_endpoints": "forbidden",
+    "ephemeral_signing_keys": "forbidden",
 }
 DETERMINISTIC_ADAPTER_OPERATIONS = frozenset(
     {"hydrate", "close", "ingest_candidate", "repair-write", "legacy_reconciliation", "readiness"}
@@ -211,6 +229,28 @@ def doctrine_check(contract: dict, failures: list[str]) -> None:
             elif imw[key] != expected or type(imw[key]) is not type(expected):
                 _fail(
                     f"interactive_memory_write.{key} must be {expected!r} (got {imw[key]!r})",
+                    failures,
+                )
+        remote = imw.get("remote_transport")
+        if not isinstance(remote, dict):
+            _fail("interactive_memory_write.remote_transport missing (ADR-0053)", failures)
+        else:
+            for key, expected in REMOTE_TRANSPORT_CONSTS.items():
+                if remote.get(key) != expected or type(remote.get(key)) is not type(expected):
+                    _fail(
+                        f"interactive_memory_write.remote_transport.{key} must be "
+                        f"{expected!r} (got {remote.get(key)!r})",
+                        failures,
+                    )
+            extra = sorted(set(remote) - set(REMOTE_TRANSPORT_CONSTS))
+            if extra:
+                _fail(
+                    f"interactive_memory_write.remote_transport has unknown keys {extra}", failures
+                )
+            if any("://" in str(value) for value in remote.values()):
+                _fail(
+                    "interactive_memory_write.remote_transport carries an endpoint: the address "
+                    "is operator-supplied per machine, never repository content",
                     failures,
                 )
         ops = imw.get("deterministic_adapter_operations")

@@ -91,6 +91,40 @@ if ! _agent_id="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memo
   exit 1
 fi
 export L9_MEMORY_AGENT_ID="$_agent_id"
+
+# --- Transport selection (ADR-0053, CANONICAL_LAW §8.10) ---------------------
+# Local stdio is the default. An operator selects the admitted remote service
+# by naming its endpoint (L9_MEMORY_REMOTE_MCP_ENDPOINT, or the per-machine
+# address file for Dock-launched hosts). The model-visible entry never changes:
+# this wrapper then execs the consumer bridge instead of the local server. A
+# requested remote transport that cannot be proven refuses to launch; it never
+# falls back to the local store.
+_remote_config="${L9_MEMORY_REMOTE_CONFIG:-$HOME/.config/l9-memory/remote-endpoint.json}"
+_transport=local
+if [[ -n "${L9_MEMORY_REMOTE_MCP_ENDPOINT:-}" || -e "$_remote_config" ]]; then
+  if ! _transport="$(PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -m ops.memory_remote.bridge --check)" \
+    || [[ "$_transport" != "remote" ]]; then
+    echo "run_memory_mcp: remote memory transport requested but not admissible (ops/memory_remote/bridge.py) — refuse to launch; no fallback to the local store" >&2
+    exit 1
+  fi
+  if [[ "${L9_MEMORY_ALLOW_LOCAL_OPERATOR:-0}" == "1" ]]; then
+    echo "run_memory_mcp: L9_MEMORY_ALLOW_LOCAL_OPERATOR=1 is local-only; the remote transport admits signed agents only — refuse to launch" >&2
+    exit 1
+  fi
+  if [[ $# -gt 0 && "$*" != "-m l9_graphite_memory.server --transport stdio" ]]; then
+    echo "run_memory_mcp: remote transport takes no server argv (got: $*) — refuse to launch" >&2
+    exit 1
+  fi
+  if [[ -z "${L9_MEMORY_AGENT_AUTHORITY_JSON:-}" \
+    && "$(printf '%s' "${CLAUDE_CODE_REMOTE:-}" | tr '[:upper:]' '[:lower:]')" == "true" ]]; then
+    # The hosted self-mint below makes a key only this container knows: valid
+    # against an in-process server, never against a remote one. Say so rather
+    # than mint a key the service can only reject.
+    echo "run_memory_mcp: remote memory needs a durable per-agent signing key provisioned to the service; a container-minted key cannot authenticate remotely — refuse to launch (ADR-0053)" >&2
+    exit 1
+  fi
+fi
+
 if [[ -n "${L9_MEMORY_AGENT_AUTHORITY_JSON:-}" ]]; then
   _authority_dir="$(mktemp -d "${TMPDIR:-/tmp}/l9-memory-authority.XXXXXX")"
   chmod 700 "$_authority_dir"
@@ -151,6 +185,12 @@ if [[ "${#_door_missing[@]}" -ne 0 ]]; then
   fi
 fi
 
+if [[ "$_transport" == "remote" ]]; then
+  # The bridge keeps only {agent_id: key} and the sealed identity, and drops
+  # every server-side value (door secret, grants) before it serves: the
+  # remote service owns grants and verifies against its own key registry.
+  PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m ops.memory_remote.bridge --serve
+fi
 if [[ $# -gt 0 ]]; then
   exec "$L9_MEMORY_INTERPRETER" "$@"
 fi
