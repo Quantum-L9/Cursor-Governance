@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sessionStart — code-graph health + canonical memory hydrate packet.
+# sessionStart — code-graph health + canonical memory health (no record retrieval).
 # Emits hydrate_markdown + codegraph_markdown + additional_context (JSON).
 # Resume SSOT is the canonical memory control plane (ops/memory) — never
 # memory-bank, and since stage C8 never a provider call.
@@ -125,7 +125,7 @@ import json, os, subprocess, sys
 from ops.graphiti.graphiti_gate_lib import gates_enabled
 from ops.memory.control_plane_client import fault_class_for
 
-on_demand = "on demand: python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
+on_demand = "on demand: cd \"$HOME/.cursor-governance\" && .venv/bin/python -m ops.memory.cli hydrate \"<task>\" --workspace <repo>"
 conversation = os.environ.get("CURSOR_CONVERSATION_ID", "").strip() or "default"
 if gates_enabled():
     # GATES-002 is opted in: edits stay denied until this conversation has a
