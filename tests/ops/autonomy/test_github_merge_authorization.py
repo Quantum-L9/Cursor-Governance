@@ -398,10 +398,10 @@ def test_hook_denies_squash_of_a_parent_even_with_github_authorization(tmp_path:
         f"gh pr comment 53 --repo {SLUG} -b '{authz.authorization_line(SLUG, 53, SHA).upper()}'",
         f"gh issue comment 53 --repo {SLUG} --body '{authz.authorization_line(SLUG, 53, SHA)}'",
         "gh api --method POST repos/Quantum-L9/SEO-Bot/pulls/53/reviews -f event=APPROVE",
-        'gh api graphql -f query=\'mutation{addPullRequestReview(input:{pullRequestId:"x",'
-        "event:APPROVE}){clientMutationId}}'",
-        "gh api graphql -f query='mutation{submitPullRequestReview(input:{pullRequestReviewId:"
-        '"x",event:APPROVE}){clientMutationId}}\'',
+        "gh api graphql -f query='mutation{addPullRequestReview(input:"
+        + '{pullRequestId:"x",event:APPROVE}){clientMutationId}}\'',
+        "gh api graphql -f query='mutation{submitPullRequestReview(input:"
+        + '{pullRequestReviewId:"x",event:APPROVE}){clientMutationId}}\'',
     ],
 )
 def test_hook_denies_an_agent_posting_the_authorization(command: str) -> None:
