@@ -44,6 +44,45 @@ variables, a shared bearer, a model-visible URL, and the retired hosts and
 ports. The admitted service is none of these. It is the canonical service on a
 second transport, with per-agent identity and server-owned grants.
 
+## Options Considered
+
+### Option A: Flip `http_transport` to `allowed`
+
+Make the 3.x const permissive and let adapters select HTTP.
+
+*Rejected:* one value would reopen every side door the seal closed (provider
+URLs, shared bearers, retired hosts), and the validator would no longer
+distinguish the admitted service from them.
+
+### Option B: Declare the service as an HTTP MCP entry with headers
+
+Render `l9-graphite-memory` as `{"type": "http", "url": …, "headers": …}` in
+`.mcp.json` and Cursor's `mcp.json`.
+
+*Rejected:* the credential and endpoint would sit in model-visible
+configuration. The signed-agent token is short-lived per request, Cursor has
+static `${env:VAR}` headers and no refresh hook, and the memory template test
+already forbids `url` / `headers` on the memory entry.
+
+### Option C: Extend the context7 vault bridge
+
+Add a memory row to `ops/secrets/vault-mcp-bridges.json`.
+
+*Rejected:* that bridge forwards one static header bound from one Infisical
+secret. Memory needs a fresh HMAC token per request plus the sealed identity
+assertion under the agent's own key, a release-identity proof before relaying,
+and loopback-only qualification for a candidate.
+
+### Option D: Keep the stdio entry and let the launcher exec a consumer bridge (chosen)
+
+The wrapper that already mints the ADR-0031 door selects the transport. A
+dedicated bridge, outside the `ops/memory` network boundary, relays to the
+admitted service and refuses everything else.
+
+*Chosen:* the model-visible entry does not change, the identity chain is the
+one already proven, and every refusal is local and testable without a
+network.
+
 ## Decision
 
 1. **One more route, not an open door.** Agent memory may cross HTTP only as
