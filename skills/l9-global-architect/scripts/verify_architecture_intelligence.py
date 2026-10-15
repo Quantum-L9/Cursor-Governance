@@ -494,6 +494,41 @@ def resolve_admission(
     }
 
 
+def _slot(**fields: Any) -> dict[str, Any]:
+    """A complete `$.architecture_intelligence` slot: every field the run-state template owns,
+    except the session-owned `citations`, so recording a verdict replaces the whole slot and no
+    field of an earlier verdict survives into a later one."""
+    slot: dict[str, Any] = {
+        "binding_ref": BINDING_REF,
+        "mode": None,
+        "status": None,
+        "bundle_status": None,
+        "authority_status": None,
+        "authoritative": False,
+        "load_status": "NOT_LOADED",
+        "bundle_ref": None,
+        "authority_repository": None,
+        "authority_revision": None,
+        "projection_profile": None,
+        "composition_profile": None,
+        "composition_digest": None,
+        "component_digests": {},
+        "component_sources": {},
+        "producer": None,
+        "production_attested_by_verifier": False,
+        "assurance_limitations": [],
+        "verifier": "scripts/verify_architecture_intelligence.py",
+        "currentness": None,
+        "refusal_reason": None,
+        "fallback_used": False,
+    }
+    unknown = set(fields) - set(slot)
+    if unknown:
+        raise KeyError(f"not a run-state slot field: {sorted(unknown)}")
+    slot.update(fields)
+    return slot
+
+
 def state_record(
     result: dict[str, Any], binding: dict[str, Any], *, mode: str, status: str, admission: dict
 ) -> dict[str, Any]:
@@ -506,22 +541,21 @@ def state_record(
         load_status = "LOADED_AS_CANDIDATE"
     else:
         load_status = "NOT_LOADED"
-    record: dict[str, Any] = {
-        "binding_ref": BINDING_REF,
-        "mode": mode,
-        "status": status,
-        "bundle_status": "BUNDLE_VERIFIED",
-        "authority_status": admission,
-        "authoritative": authoritative,
-        "load_status": load_status,
-        "bundle_ref": binding["input"]["bundle"]["path"],
-        "authority_repository": lock["authority"]["repository"],
-        "authority_revision": lock["authority"]["revision"],
-        "projection_profile": lock["projection_profile"],
-        "composition_profile": lock["composition_profile"],
-        "composition_digest": result["composition_digest"],
-        "component_digests": result["component_digests"],
-        "component_sources": {
+    return _slot(
+        mode=mode,
+        status=status,
+        bundle_status="BUNDLE_VERIFIED",
+        authority_status=admission,
+        authoritative=authoritative,
+        load_status=load_status,
+        bundle_ref=binding["input"]["bundle"]["path"],
+        authority_repository=lock["authority"]["repository"],
+        authority_revision=lock["authority"]["revision"],
+        projection_profile=lock["projection_profile"],
+        composition_profile=lock["composition_profile"],
+        composition_digest=result["composition_digest"],
+        component_digests=result["component_digests"],
+        component_sources={
             c["source_class"]: {
                 "source_ref": c["source_ref"],
                 "source_digest": c["source_digest"],
@@ -529,15 +563,10 @@ def state_record(
             }
             for c in lock["components"]
         },
-        "producer": lock.get("producer"),
-        "production_attested_by_verifier": False,
-        "assurance_limitations": binding.get("assurance_limitations") or [],
-        "verifier": "scripts/verify_architecture_intelligence.py",
-        "fallback_used": False,
-    }
-    if load_status == "NOT_LOADED":
-        record["refusal_reason"] = admission.get("reason")
-    return record
+        producer=lock.get("producer"),
+        assurance_limitations=binding.get("assurance_limitations") or [],
+        refusal_reason=admission.get("reason") if load_status == "NOT_LOADED" else None,
+    )
 
 
 def _pointer(document: Any, pointer: str) -> Any:
@@ -581,15 +610,11 @@ def cite(bundle: Path, result: dict[str, Any], record: dict[str, Any], target: s
 
 
 def _refusal(outcome: Outcome, mode: str) -> dict[str, Any]:
-    return {
-        "binding_ref": BINDING_REF,
-        "mode": mode,
-        "status": "UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
-        "authoritative": False,
-        "load_status": "NOT_LOADED",
-        "refusal_reason": outcome.reason,
-        "fallback_used": False,
-    }
+    return _slot(
+        mode=mode,
+        status="UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
+        refusal_reason=outcome.reason,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

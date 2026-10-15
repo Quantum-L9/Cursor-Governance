@@ -699,8 +699,10 @@ class Session:
         # Step 1: verify and record provenance. Step 2: read only through the recorded slot.
         code, report = _verify(*args)
         record = report["architecture_intelligence"]
-        assert set(record) <= set(self.state) | {"currentness"}, set(record) - set(self.state)
-        self.state.update(record)
+        # The verifier owns every slot field but the session's citations: a verdict replaces the
+        # slot whole, so nothing from an earlier verdict survives into this one.
+        assert set(record) == set(self.state) - {"citations"}, set(record) ^ set(self.state)
+        self.state = {**record, "citations": self.state["citations"]}
         if record["load_status"] == "NOT_LOADED":
             self.event("ARCHITECTURE_INTELLIGENCE_REFUSED", report["reason"])
             return report
@@ -785,3 +787,24 @@ def test_citation_pointer_must_resolve() -> None:
     assert report["citation"]["refused"] == "CITATION_POINTER_UNRESOLVED"
     _, report = _verify("--mode", "candidate", "--cite", "nonexistent:/x")
     assert report["citation"]["refused"] == "CITATION_SOURCE_CLASS_UNKNOWN"
+
+
+def test_a_later_verdict_leaves_nothing_of_an_earlier_one(authority: Authority) -> None:
+    # Found by a live GAR session: a candidate load recorded after an admitted-mode refusal kept
+    # the refusal's reason, and a refusal after a load would keep the loaded provenance.
+    session = Session()
+    session.load("--authority-root", str(authority.root), cite="invariants:/invariants/0")
+    assert session.state["refusal_reason"] == "AUTHORITY_REVISION_NOT_INTEGRATED"
+    session.load("--mode", "candidate", cite="invariants:/invariants/0")
+    assert session.state["refusal_reason"] is None
+    assert session.state["load_status"] == "LOADED_AS_CANDIDATE"
+    assert len(session.state["citations"]) == 1
+    session.load("--bundle", "/nonexistent", "--mode", "candidate", cite="invariants:/invariants/0")
+    assert session.state["status"] == "UNAVAILABLE"
+    assert session.state["component_sources"] == {} and session.state["composition_digest"] is None
+    assert [e["event_type"] for e in session.events] == [
+        "ARCHITECTURE_INTELLIGENCE_REFUSED",
+        "ARCHITECTURE_INTELLIGENCE_CANDIDATE_INSPECTED",
+        "ARCHITECTURE_INTELLIGENCE_FACT_CITED",
+        "ARCHITECTURE_INTELLIGENCE_REFUSED",
+    ]
