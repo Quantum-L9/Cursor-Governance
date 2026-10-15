@@ -5,9 +5,9 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-10-14
-schema: l9.cursor-governance.coding-projection-binding/v1
+#   version: 2.0.0
+#   updated: 2026-10-15
+schema: l9.cursor-governance.coding-projection-binding/v2
 artifact_id: l9.cursor-governance/coding-projection-binding@1
 canonical: true
 authority:
@@ -16,47 +16,39 @@ authority:
   authority_class: local_canonical_binding
 purpose: >
   Bind the canonical coding-agent execution projection profile from
-  Quantum-L9/.github into the Cursor-Governance operating plane at bootstrap.
-  The semantics stay upstream: this file pins which admitted revision is
-  projected and how the result is verified. It grants no execution,
+  Quantum-L9/.github into the Cursor-Governance operating plane at bootstrap,
+  as a consumer verifier. Cursor-Governance never produces the projection:
+  l9-semantic-compiler holds the projection role and its pairs are published
+  to the Quantum-L9/.github projections branch
+  (docs/PROJECTION_PUBLICATION.md). This binding grants no execution,
   publication or merge authority and changes no grant.
 upstream:
   repository: Quantum-L9/.github
-  # Merge commit of Quantum-L9/.github#179, which admitted the profile on main.
-  # Rebinding is deliberate: change revision (and profile_digest if the
-  # profile changed), regenerate, and review the diff.
-  revision: 69134217267626182ac95182a56d1d9bc296135e
   profile_ref: l9.projection/coding-agent-execution@1
-  profile_path: semantics/projection_profiles.yaml
-  # Canonical-JSON digest of the profile entry; equals the RC-028 pin in
-  # Quantum-L9/.github scripts/validate-semantics.py.
+  # Admitted by Quantum-L9/.github#179 (merge 69134217267626182ac95182a56d1d9bc296135e).
+  # Canonical-JSON digest of the profile entry; equals the RC-028 pin.
+  # A different digest on main is STALE: rebind deliberately, never silently.
   profile_digest: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
-  output_schema: l9.projection.coding-agent-execution/v1
-  registry_path: semantics/canonical_sources.yaml
-sources:
-  invariants:
-    source_ref: l9.source/invariants@1
-    path: semantics/invariants.yaml
-    artifact_id: l9.invariants/global@1
-  contracts:
-    source_ref: l9.source/contracts@1
-    path: semantics/contracts.yaml
-    artifact_id: l9.contracts/global@1
-  authority_model:
-    source_ref: l9.source/authority-model@1
-    path: semantics/authority_model.yaml
-    artifact_id: l9.authority-model/global@1
-generated_projection:
-  directory: generated/governance/coding_projection
-  producer: tools/authority/project_coding_projection.py
+  admitted_revision: 69134217267626182ac95182a56d1d9bc296135e
+  source_classes: [authority_model, contracts, invariants]
+publication:
+  producer: l9-semantic-compiler
+  branch: projections
+  ref: refs/remotes/origin/projections
+  index: index.json
+  upstream_state: >-
+    publisher implemented, not activated; multi-selector source classes are
+    UNSUPPORTED_SOURCE_CLASS upstream as of Quantum-L9/.github@d4397e5
+verification:
+  verifier: tools/authority/verify_coding_projection.py
   status_reader: ops/scripts/coding_projection_status.py
-  digest_canonicalization: >
-    Consumer-local. source_digest is sha256 over raw ledger bytes; profile,
-    payload, output and receipt digests are sha256 over canonical JSON (sorted
-    keys, compact separators, UTF-8), the RC-028 form. Quantum-L9/.github
-    declares no semantic_digest canonicalization.
+  conventions: >
+    Mirrors Quantum-L9/.github scripts/publish-projection.py: sha256 of raw
+    source bytes; sha256 of canonical JSON (sorted keys, compact, UTF-8) for
+    payload, profile entry and receipt; schema rules read at the receipt's
+    asserted revision, which must be an ancestor of main.
+  producer_authentication: unauthenticated_unkeyed_receipt
 enforcement:
   mode: report_only
-  # BOUND / CURRENT only with observed proof; never inferred from cache age.
   statuses: [CURRENT, BOUND, STALE, UNVERIFIED, BLOCKED]
   blocks_mutation: false

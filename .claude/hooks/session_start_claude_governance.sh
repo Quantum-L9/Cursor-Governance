@@ -968,9 +968,10 @@ emit_account_drift() {
 
 # --- Coding projection (report-only) ---------------------------------------
 # One line from the shared classifier (ops/scripts/coding_projection_status.py;
-# Cursor renders the same verdict as markdown). It never fetches or writes:
-# CURRENT/BOUND need a verified Quantum-L9/.github checkout whose pinned commit
-# reproduces the committed projection; without one the line says UNVERIFIED.
+# Cursor renders the same verdict as markdown). Cursor-Governance verifies
+# l9-semantic-compiler pairs published to Quantum-L9/.github and never produces
+# them. It never fetches or writes, and with no independent record of main its
+# best verdict is BOUND; no verified checkout or no published pair is UNVERIFIED.
 emit_coding_projection() {
   local py="$1"
   local reader="$GOV/ops/scripts/coding_projection_status.py"

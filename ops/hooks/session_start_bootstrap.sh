@@ -598,9 +598,10 @@ if [ -f "$SESSION_LOCATOR_PY" ]; then
   ROUTE_LOCATOR_ENV="$("$AUDIT_PY_BIN" "$SESSION_LOCATOR_PY" --env 2>/dev/null || echo '{}')"
 fi
 
-# Coding projection (report-only): the same classifier the Claude hook prints
-# as one line (ops/scripts/coding_projection_status.py). Bounded to 3 s; it
-# never fetches, writes or blocks, and a timeout is reported, not hidden.
+# Coding projection (report-only): the same consumer-side classifier the Claude
+# hook prints as one line (ops/scripts/coding_projection_status.py); it verifies
+# l9-semantic-compiler pairs and never produces them. Bounded to 3 s; it never
+# fetches, writes or blocks, and a timeout is reported, not hidden.
 CODING_PROJECTION_MD="### coding projection
 - UNVERIFIED: classifier unavailable (report-only)"
 CODING_PROJECTION_PY="$GC/ops/scripts/coding_projection_status.py"
