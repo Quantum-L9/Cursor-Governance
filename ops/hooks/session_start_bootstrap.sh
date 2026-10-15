@@ -597,6 +597,27 @@ if [ -f "$SESSION_LOCATOR_PY" ]; then
   ROUTE_LOCATOR_ENV="$("$AUDIT_PY_BIN" "$SESSION_LOCATOR_PY" --env 2>/dev/null || echo '{}')"
 fi
 
+# Coding projection (report-only): the same classifier the Claude hook prints
+# as one line (ops/scripts/coding_projection_status.py). Bounded to 3 s; it
+# never fetches, writes or blocks, and a timeout is reported, not hidden.
+CODING_PROJECTION_MD="### coding projection
+- UNVERIFIED: classifier unavailable (report-only)"
+CODING_PROJECTION_PY="$GC/ops/scripts/coding_projection_status.py"
+if [ -f "$CODING_PROJECTION_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$GC/ops/scripts/lib/run_with_timeout.sh"
+  _cp_out="$(run_with_timeout 3 "$AUDIT_PY_BIN" "$CODING_PROJECTION_PY" \
+    --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
+  _cp_rc=$?
+  if [ "$_cp_rc" = 124 ]; then
+    CODING_PROJECTION_MD="### coding projection
+- UNVERIFIED: TIMED OUT after 3 s (report-only)"
+  elif [ -n "$_cp_out" ]; then
+    CODING_PROJECTION_MD="$_cp_out"
+  fi
+  unset _cp_out _cp_rc
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -613,6 +634,7 @@ ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
+${CODING_PROJECTION_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"
