@@ -5,9 +5,9 @@
     {
       "file": "governance-pr.yml",
       "source": "Quantum-L9/.github:.github/workflows/governance-pr.yml",
-      "ref": "02ea092a098563b27970d21416fabc47dd005fb0",
-      "why": "The canonical TARGET caller pin (merge of Quantum-L9/.github#176) that policies/governance-caller.yml carries once the pending Quantum-L9/.github caller-pin PRs land. Not evidence of consumer rollout: an existing consumer keeps running whatever pin its own caller names until it is individually updated by the separately authorized manual continuous-sync Preview/Apply and its consumer PR is merged.",
-      "sha256": "6d69ba4f89481029e45d94f4664fc2b83182817cf9b179cf9d9683036deb743d"
+      "ref": "d0ca5541a87c3bbb66fb408deac2b2f4c564b872",
+      "why": "The governance-pr.yml that pins this composer (Quantum-L9/.github PR re-pinning COMPOSER to Cursor-Governance@ba71177). Its gates job is unchanged from the previous vendored ref 02ea092a. Not evidence of consumer rollout: a consumer runs whatever caller pin its own governance.yml names until continuous-sync Apply re-pins it and that consumer PR merges.",
+      "sha256": "f58ee31c4f8fd6567d10bb05b903eeb01b7117bf0ac8a52620ca1889d3beb067"
     },
     {
       "file": "pr-files.yml",
