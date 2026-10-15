@@ -528,7 +528,6 @@ def main() -> None:
         "decisions/ADR-L9-GAR-005.yaml",
         "decisions/ADR-L9-GAR-006.yaml",
         "decisions/ADR-L9-GAR-007.yaml",
-        "decisions/ADR-L9-GAR-008.yaml",
         "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
         "scripts/verify_architecture_intelligence.py",
     ):

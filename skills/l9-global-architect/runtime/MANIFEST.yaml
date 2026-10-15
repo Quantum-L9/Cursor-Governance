@@ -252,5 +252,4 @@ historical_artifacts:
   - decisions/ADR-L9-GAR-005.yaml
   - decisions/ADR-L9-GAR-006.yaml
   - decisions/ADR-L9-GAR-007.yaml
-  - decisions/ADR-L9-GAR-008.yaml
   - ../CHANGELOG.md

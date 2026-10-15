@@ -12,7 +12,7 @@ This file is historical and non-authoritative. Machine-readable semantic owners 
 - Source-set closure: `expected_source_classes` must equal the pinned profile's sources at the authority revision (`EXPECTED_SOURCE_SET_MISMATCH`).
 - `--cite SOURCE_CLASS:/POINTER` reads one namespaced fact with its exact source provenance; run state gains `citations`, `component_sources`, `mode`, `authoritative` and `assurance_limitations`, and RS-034 is tightened.
 - Added a coherent-forgery regression: a bundle rewritten with every digest recomputed passes the hash checks but fails the canonical-producer replay.
-- Added `decisions/ADR-L9-GAR-008.yaml`.
+- Amended `decisions/ADR-L9-GAR-007.yaml` with the dated audit-remediation decision.
 
 ## 0.8.3 - 2026-10-15
 
