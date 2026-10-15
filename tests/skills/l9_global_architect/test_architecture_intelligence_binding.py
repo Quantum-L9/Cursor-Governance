@@ -266,6 +266,121 @@ STUB = textwrap.dedent(
 )
 
 
+def _coherent_forgery(bundle: Bundle, source_class: str = "invariants") -> str:
+    """Rewrite one canonical fact and recompute every digest a hash-only check can see.
+
+    The projection payload, its projection digest, its receipt (output digest and receipt
+    digest), the composed namespace, the composed component list, the composition digest, the
+    composed receipt and every lock hash are all made mutually consistent. Source digests are
+    untouched, so currentness against the authority checkout still holds. Returns the forged
+    statement."""
+    forged = "FORGED: this invariant was never admitted"
+    lock = bundle.lock()
+    entry = next(c for c in lock["components"] if c["source_class"] == source_class)
+    artifact = bundle.read(entry["path"])
+    artifact["payload"][source_class][0]["statement"] = forged
+    artifact["projection_digest"] = _digest(
+        {k: v for k, v in artifact.items() if k != "projection_digest"}
+    )
+    bundle.write(entry["path"], artifact)
+    receipt = bundle.read(entry["receipt"])
+    receipt["output"]["digest"] = artifact["projection_digest"]
+    receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
+    (bundle.root / entry["receipt"]).write_text(json.dumps(receipt, indent=2, sort_keys=True))
+    composed = bundle.read("composed.json")
+    composed["payload"][source_class] = artifact["payload"]
+    for component in composed["components"]:
+        if component["source_class"] == source_class:
+            component["projection_digest"] = artifact["projection_digest"]
+    composed["composition_digest"] = _digest(
+        {k: v for k, v in composed.items() if k != "composition_digest"}
+    )
+    bundle.write("composed.json", composed)
+    composed_receipt = bundle.read(lock["composed"]["receipt"])
+    composed_receipt["output"]["digest"] = composed["composition_digest"]
+    composed_receipt["receipt_digest"] = _digest(
+        {k: v for k, v in composed_receipt.items() if k != "receipt_digest"}
+    )
+    (bundle.root / lock["composed"]["receipt"]).write_text(
+        json.dumps(composed_receipt, indent=2, sort_keys=True)
+    )
+    lock = bundle.lock()
+    for component in lock["components"]:
+        if component["source_class"] == source_class:
+            component["projection_digest"] = artifact["projection_digest"]
+    lock["composed"]["composition_digest"] = composed["composition_digest"]
+    bundle.save_lock(lock)
+    return forged
+
+
+def _fixture_authority(tmp_path: Path) -> tuple[Path, str]:
+    authority = tmp_path / "authority"
+    (authority / "semantics").mkdir(parents=True)
+    # The driver re-derives the composition pin from the authority checkout; the fixture
+    # authority declares an entry, so the regenerated pin is checked by the driver itself.
+    (authority / "semantics/composition_profiles.yaml").write_text(
+        yaml.safe_dump({"profiles": [{"id": "l9.compose/architecture-intelligence@1"}]})
+    )
+    _git(authority, "init", "-q")
+    _git(authority, "add", "-A")
+    _git(authority, "commit", "-q", "-m", "fixture authority")
+    return authority, _git(authority, "rev-parse", "HEAD")
+
+
+def _replay(tmp_path: Path, committed: Path) -> subprocess.CompletedProcess[str]:
+    """The canonical-producer replay gate: regenerate with the producer and byte-compare.
+
+    The stub stands in for the pinned compiler: it emits the canonical artifacts (the bytes
+    the real compiler produced, kept in the repository's committed bundle), not whatever the
+    candidate bundle under test contains."""
+    authority, head = _fixture_authority(tmp_path)
+    stub = tmp_path / "stub_compiler.py"
+    stub.write_text(STUB)
+    lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
+    return subprocess.run(
+        [
+            sys.executable,
+            str(PRODUCER),
+            "--authority-root",
+            str(authority),
+            "--authority-revision",
+            head,
+            "--compiler-revision",
+            lock["producer"]["revision"],
+            "--compiler",
+            f"{sys.executable} {stub} {BUNDLE}",
+            "--output",
+            str(committed),
+            "--check",
+        ],
+        env=ENV,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_coherent_forgery_passes_hash_checks_but_fails_producer_replay(
+    tmp_path: Path, bundle: Bundle
+) -> None:
+    forged = _coherent_forgery(bundle)
+    # Every digest is self-consistent, so the structural verifier cannot tell: that is the
+    # boundary AIB-006 states. Hash checks prove integrity, never production.
+    code, report = bundle.verify()
+    assert code == 0 and report["bundle_status"] == "BUNDLE_VERIFIED", report
+    assert forged in (bundle.root / "composed.json").read_text()
+    # The canonical-producer replay regenerates from the canonical compiler output and refuses.
+    replay = _replay(tmp_path / "replay", bundle.root)
+    assert replay.returncode == 1, replay.stderr
+    assert "stale architecture-intelligence bundle" in replay.stderr
+    lock = bundle.lock()
+    entry = next(c for c in lock["components"] if c["source_class"] == "invariants")
+    for drifted in ("composed.json", entry["path"], entry["receipt"], "bundle.lock.json"):
+        assert drifted in replay.stderr, (drifted, replay.stderr)
+    # The untampered committed bundle replays clean under the same gate.
+    clean = _replay(tmp_path / "clean", BUNDLE)
+    assert clean.returncode == 0, clean.stderr
+
+
 def test_producer_check_detects_drift(tmp_path: Path) -> None:
     lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
     authority = tmp_path / "authority"

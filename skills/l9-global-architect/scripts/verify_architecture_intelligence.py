@@ -385,6 +385,21 @@ def verify_currentness(
         ]
         if len(entries) != 1:
             raise Outcome("STALE", "PROFILE_NOT_RESOLVABLE", ref=ref, matches=len(entries))
+        if collection == "projection_profiles":
+            # Source-set closure: the binding's expected classes are derived facts of this exact
+            # canonical profile, never a second declaration that may drift from it.
+            canonical = list((entries[0].get("sources") or {}).keys())
+            expected = list(pins["expected_source_classes"])
+            if canonical != expected:
+                raise Outcome(
+                    "REJECTED",
+                    "EXPECTED_SOURCE_SET_MISMATCH",
+                    ref=ref,
+                    revision=expect_revision,
+                    missing_from_binding=[c for c in canonical if c not in expected],
+                    absent_from_profile=[c for c in expected if c not in canonical],
+                    order_differs=sorted(canonical) == sorted(expected),
+                )
         current = content_digest(entries[0])
         if current != pinned:
             raise Outcome(
