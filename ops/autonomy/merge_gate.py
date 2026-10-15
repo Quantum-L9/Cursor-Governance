@@ -734,8 +734,17 @@ def _github_authorizes(repo: str, pr: str, head_sha: str) -> bool:
     return bool(_github_verdict(repo, pr, head_sha).get("authorized"))
 
 
-_AUTH_LINE_IN_COMMAND = re.compile(r"authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}")
-_APPROVE_EVENT = re.compile(r'(?i)(?:event\s*=\s*APPROVE|"event"\s*:\s*"APPROVE")')
+_AUTH_LINE_IN_COMMAND = re.compile(r"(?i)authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}")
+_APPROVE_EVENT = re.compile(r'(?i)\bevent"?\s*[=:]\s*"?APPROVE\b')
+#: MCP tools that create the review or comment the gate trusts (same act as
+#: ``gh pr review`` / ``gh pr comment``): denied when they carry the record.
+_GITHUB_RECORD_TOOL_SUFFIXES = (
+    "__pull_request_review_write",
+    "__add_comment_to_pending_review",
+    "__add_issue_comment",
+    "__update_issue_comment",
+    "__add_reply_to_pull_request_comment",
+)
 _PAYLOAD_VALUE_FLAGS = {
     "-f",
     "--raw-field",
@@ -773,7 +782,7 @@ def _referenced_payloads(words: list[str]) -> tuple[str, bool]:
     ``gh pr review`` and ``gh pr comment`` use ``-F`` as a body file. ``gh api``
     uses ``-F`` as a field, and ``@path`` as that field's file.
     """
-    pr_body = len(words) >= 3 and words[:2] == ["gh", "pr"] and words[2] in {"review", "comment"}
+    pr_body = _gh_record_subcommand(words) is not None
     file_flags = {"--body-file", "--input"}
     value_flags = set(_PAYLOAD_VALUE_FLAGS)
     if pr_body:
@@ -828,16 +837,43 @@ def _url_is_github_api_record(token: str) -> bool:
     return "/reviews" in path or "/comments" in path
 
 
+def _gh_record_subcommand(words: list[str]) -> str | None:
+    """``review`` or ``comment`` when argv is ``gh pr review|comment`` or ``gh issue comment``.
+
+    ``gh`` is matched by basename: ``/usr/bin/gh`` creates the same record.
+    """
+    if len(words) < 3 or Path(words[0]).name != "gh":
+        return None
+    if words[1] == "pr" and words[2] in {"review", "comment"}:
+        return words[2]
+    if words[1] == "issue" and words[2] == "comment":
+        return "comment"
+    return None
+
+
 def _is_authorization_write(words: list[str]) -> bool:
     """True when this argv can create the GitHub review or comment the gate trusts."""
     if not words:
         return False
     head = Path(words[0]).name
     joined = " ".join(words)
-    review = len(words) >= 3 and words[:3] == ["gh", "pr", "review"]
-    comment = len(words) >= 3 and words[:3] == ["gh", "pr", "comment"]
-    api = words[:2] == ["gh", "api"] and any(
-        token in joined for token in ("/reviews", "/comments", "addPullRequestReview", "addComment")
+    subcommand = _gh_record_subcommand(words)
+    review = subcommand == "review"
+    comment = subcommand == "comment"
+    api = (
+        head == "gh"
+        and len(words) >= 2
+        and words[1] == "api"
+        and any(
+            token in joined
+            for token in (
+                "/reviews",
+                "/comments",
+                "addPullRequestReview",
+                "submitPullRequestReview",
+                "addComment",
+            )
+        )
     )
     curl = head == "curl" and any(_url_is_github_api_record(word) for word in words)
     if not (review or comment or api or curl):
@@ -867,11 +903,22 @@ def _segment_posts_github_authorization(words: list[str]) -> bool:
         return True
     if "--editor" in words or "--web" in words or "--approve" in words:
         return True
+    if _gh_record_subcommand(words) == "review" and "-a" in words:
+        return True  # gh pr review -a is --approve
     visible, hidden = _referenced_payloads(words)
     if hidden:
         return True
     blob = f"{joined}\n{visible}"
     return _AUTH_LINE_IN_COMMAND.search(blob) is not None or _APPROVE_EVENT.search(blob) is not None
+
+
+def _mcp_posts_github_authorization(tool_name: str, tool_input: dict[str, Any]) -> bool:
+    """True when an MCP review/comment tool would submit APPROVE or post the line."""
+    if not tool_name.endswith(_GITHUB_RECORD_TOOL_SUFFIXES):
+        return False
+    if str(tool_input.get("event") or "").strip().upper() == "APPROVE":
+        return True
+    return _AUTH_LINE_IN_COMMAND.search(json.dumps(tool_input, default=str)) is not None
 
 
 def _shell_posts_github_authorization(command: str) -> bool:
@@ -1212,6 +1259,9 @@ def evaluate(
 
     if tool_name in FILE_TOOL_NAMES:
         return SELF_ISSUE_REASON if _file_tool_writes_grant_file(tool_input) else None
+
+    if _mcp_posts_github_authorization(tool_name, tool_input):
+        return SELF_ISSUE_REASON
 
     if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")

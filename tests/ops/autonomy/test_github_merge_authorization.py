@@ -220,6 +220,50 @@ def test_unknown_files_fail_closed_for_the_author() -> None:
     assert "L9-ORG-007" in verdict["reason"]
 
 
+def test_unknown_author_fails_closed_on_an_org_007_path() -> None:
+    verdict = _verdict(
+        author="",
+        files=["CANONICAL_LAW.md"],
+        reviews=[_review("somebody", "APPROVED", SHA)],
+    )
+    assert verdict["authorized"] is False
+    assert "L9-ORG-007" in verdict["reason"]
+
+
+def test_unknown_author_may_still_authorize_an_ordinary_change() -> None:
+    verdict = _verdict(
+        author="", files=["README.md"], reviews=[_review("somebody", "APPROVED", SHA)]
+    )
+    assert verdict["authorized"] is True
+
+
+def test_fetch_evidence_keeps_the_previous_name_of_a_renamed_file(monkeypatch) -> None:
+    def pages(path: str) -> list:
+        if "/files?" in path:
+            return [
+                {
+                    "filename": "docs/old_law.md",
+                    "previous_filename": "CANONICAL_LAW.md",
+                    "status": "renamed",
+                }
+            ]
+        return [_review("pr-author", "APPROVED", SHA)] if "/reviews?" in path else []
+
+    monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
+    monkeypatch.setattr(authz, "_gh_pages", pages)
+    evidence = authz.fetch_evidence(SLUG, 53)
+    assert "CANONICAL_LAW.md" in evidence["files"]
+    verdict = authz.evaluate_evidence(SLUG, 53, SHA, evidence)
+    assert verdict["authorized"] is False
+    assert "L9-ORG-007" in verdict["reason"]
+
+
+def test_fetch_evidence_reports_an_empty_file_list_as_unknown(monkeypatch) -> None:
+    monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
+    monkeypatch.setattr(authz, "_gh_pages", lambda path: [])
+    assert authz.fetch_evidence(SLUG, 53)["files"] is None
+
+
 def test_review_fixture_does_not_authorize_the_merge_helper(tmp_path: Path, monkeypatch) -> None:
     fixture = tmp_path / "reviews.json"
     fixture.write_text(
@@ -348,13 +392,108 @@ def test_hook_denies_squash_of_a_parent_even_with_github_authorization(tmp_path:
     "command",
     [
         f"gh pr review 53 --repo {SLUG} --approve",
+        f"gh pr review 53 --repo {SLUG} -a",
+        f"/usr/bin/gh pr review 53 --repo {SLUG} --approve",
         f"gh pr comment 53 --repo {SLUG} --body '{authz.authorization_line(SLUG, 53, SHA)}'",
+        f"gh pr comment 53 --repo {SLUG} -b '{authz.authorization_line(SLUG, 53, SHA).upper()}'",
+        f"gh issue comment 53 --repo {SLUG} --body '{authz.authorization_line(SLUG, 53, SHA)}'",
         "gh api --method POST repos/Quantum-L9/SEO-Bot/pulls/53/reviews -f event=APPROVE",
+        'gh api graphql -f query=\'mutation{addPullRequestReview(input:{pullRequestId:"x",'
+        "event:APPROVE}){clientMutationId}}'",
+        "gh api graphql -f query='mutation{submitPullRequestReview(input:{pullRequestReviewId:"
+        '"x",event:APPROVE}){clientMutationId}}\'',
     ],
 )
 def test_hook_denies_an_agent_posting_the_authorization(command: str) -> None:
     _code, out = _gate({"tool_name": "Bash", "tool_input": {"command": command}})
     assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "tool_input"),
+    [
+        (
+            "mcp__github__pull_request_review_write",
+            {
+                "method": "create",
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "pullNumber": 53,
+                "event": "APPROVE",
+            },
+        ),
+        (
+            "mcp__github__pull_request_review_write",
+            {
+                "method": "submit_pending",
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "pullNumber": 53,
+                "event": "approve",
+            },
+        ),
+        (
+            "mcp__github__add_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
+        (
+            "mcp__github__add_reply_to_pull_request_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "pullNumber": 53,
+                "commentId": 1,
+                "body": f"ok\n{authz.authorization_line(SLUG, 53, SHA)}",
+            },
+        ),
+    ],
+)
+def test_hook_denies_an_agent_posting_the_authorization_through_mcp(
+    tool_name: str, tool_input: dict
+) -> None:
+    _code, out = _gate({"tool_name": tool_name, "tool_input": tool_input})
+    assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "tool_input"),
+    [
+        (
+            "mcp__github__pull_request_review_write",
+            {
+                "method": "create",
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "pullNumber": 53,
+                "event": "COMMENT",
+                "body": "looks fine",
+            },
+        ),
+        (
+            "mcp__github__add_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": "MERGE_PENDING: a human must authorize",
+            },
+        ),
+    ],
+)
+def test_hook_allows_ordinary_mcp_reviews_and_comments(tool_name: str, tool_input: dict) -> None:
+    _code, out = _gate({"tool_name": tool_name, "tool_input": tool_input})
+    assert out.strip() == ""
+
+
+def test_hook_allows_an_ordinary_issue_comment() -> None:
+    command = f"gh issue comment 53 --repo {SLUG} --body 'MERGE_PENDING: a human must authorize'"
+    _code, out = _gate({"tool_name": "Bash", "tool_input": {"command": command}})
+    assert out.strip() == ""
 
 
 def test_paginated_pages_flatten_past_one_hundred_records() -> None:

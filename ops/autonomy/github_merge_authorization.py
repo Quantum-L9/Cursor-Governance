@@ -207,7 +207,9 @@ def evaluate_evidence(
 
     def _accept(login: str, channel: str) -> dict[str, Any] | None:
         nonlocal author_only
-        if independent and author and login.casefold() == author.casefold():
+        # Independence cannot be established without the author's identity:
+        # an unknown author on a protected path fails closed.
+        if independent and (not author or login.casefold() == author.casefold()):
             author_only = True
             return None
         return {
@@ -383,14 +385,18 @@ def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
     files_payload = _gh_pages(f"repos/{repo}/pulls/{number}/files?per_page=100")
     _attach_permissions(repo, reviews)
     _attach_permissions(repo, comments)
+    # A renamed protected file is still that file: keep both names. An empty or
+    # unreadable file list is unknown, which evaluate_evidence treats as protected.
     files = [
-        str(item.get("filename"))
+        str(item.get(key))
         for item in files_payload
-        if isinstance(item, dict) and item.get("filename")
+        if isinstance(item, dict)
+        for key in ("filename", "previous_filename")
+        if item.get(key)
     ]
     return {
         "author": _login(view.get("user")),
-        "files": files,
+        "files": files or None,
         "reviews": reviews,
         "comments": comments,
         "truncated": False,
