@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
   name: l9-global-architect
-  version: 0.8.2
+  version: 0.8.3
   status: experimental
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md
@@ -54,6 +54,9 @@ semantic_owners:
     owner: integrations/REASONING_FOURSOME_BINDING.yaml
   l9_architecture_profile:
     owner: contracts/L9_ARCHITECTURE_PROFILE.yaml
+  architecture_intelligence_input:
+    owner: integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
+    runtime_loaded_by_default: false
 load_order:
 - catalogs/REASON_CODES.yaml
 - runtime/EVALUATOR_REGISTRY.yaml
@@ -80,6 +83,16 @@ optional_load:
     - eval_or_promotion_work_requested
     artifacts:
     - evals/BEHAVIOR_CONFORMANCE.yaml
+  architecture_intelligence:
+    when:
+    - architecture_intelligence_requested
+    - canonical_architecture_semantics_required_for_architectural_judgment
+    artifacts:
+    - integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
+    requires_verifier_status: BOUND
+    verifier: scripts/verify_architecture_intelligence.py
+    state_target: $.architecture_intelligence
+    fallback: none
 authority_precedence:
   ordered_sources:
   - platform_safety_and_system_constraints
@@ -194,6 +207,7 @@ conformance_ref: evals/BEHAVIOR_CONFORMANCE.yaml
 package_validation_refs:
   runtime_alignment: scripts/validate_runtime_alignment.py
   product_architecture_decision: scripts/validate_product_architecture_decision.py
+  architecture_intelligence: scripts/verify_architecture_intelligence.py
   rule: >-
     Package validators verify shipped cross-file wiring, schema integrity, decision-artifact behavior,
     final-state hygiene, and reproducible package readiness; they do not become runtime semantic owners.
@@ -220,6 +234,8 @@ composition_invariants:
 - l9_profile_applicability_is_distinct_from_l9_runtime_binding_activation
 - applicable_l9_profile_constraints_are_available_to_first_order_before_intervention_selection
 - package_validation_is_reproducible_and_does_not_require_unrelated_semantic_owner_version_churn
+- architecture_intelligence_is_a_separate_verified_input_and_never_replaces_the_l9_architecture_profile
+- architecture_intelligence_has_no_fallback_to_the_historical_observer_projection_or_any_other_input
 historical_artifacts:
   normative: false
   runtime_loaded_by_default: false
@@ -231,4 +247,5 @@ historical_artifacts:
   - decisions/ADR-L9-GAR-004.yaml
   - decisions/ADR-L9-GAR-005.yaml
   - decisions/ADR-L9-GAR-006.yaml
+  - decisions/ADR-L9-GAR-007.yaml
   - ../CHANGELOG.md

@@ -1,0 +1,1289 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "contracts": [
+      {
+        "applies_to": [
+          "components",
+          "capabilities",
+          "validators",
+          "executors",
+          "providers",
+          "consumers"
+        ],
+        "forbidden": [
+          "self_authorization",
+          "authority_inference_from_capability",
+          "authority_inference_from_execution_success",
+          "authority_expansion_by_consumer_or_provider"
+        ],
+        "guarantees": [
+          "functional_capability_does_not_transfer_governing_authority",
+          "successful_execution_does_not_expand_authority",
+          "delegated_authority_remains_bounded_by_its_declared_scope"
+        ],
+        "id": "l9.contract/authority-boundary@1",
+        "outcomes": {
+          "satisfied": "governing_action_remains_within_declared_authority",
+          "unresolved": "required_governing_authority_cannot_be_resolved",
+          "violated": "attempted_or_effective_authority_expansion"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve governing authority boundaries when a component computes, validates, recommends, transports, or executes a function.\n",
+        "requires": [
+          "governing_authority_is_resolvable_for_decisions_or_actions_that_require_authority",
+          "component_behavior_remains_within_declared_authority"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-AUTH-001",
+          "L9-AUTH-002"
+        ]
+      },
+      {
+        "applies_to": [
+          "canonical_concepts",
+          "mirrors",
+          "projections",
+          "providers",
+          "consumers",
+          "implementations",
+          "dependencies",
+          "co_located_components",
+          "shared_execution_processes",
+          "generalized_global_laws"
+        ],
+        "forbidden": [
+          "competing_canonical_sources_within_one_scope_and_revision",
+          "provider_identity_as_semantic_ownership",
+          "consumer_identity_as_semantic_ownership",
+          "ownership_transfer_by_projection_or_consumption",
+          "ownership_transfer_by_dependency_colocation_or_shared_execution"
+        ],
+        "guarantees": [
+          "one_canonical_owner_per_semantic_scope_and_revision",
+          "mirrors_and_projections_remain_non_owning",
+          "provider_and_implementation_identity_remain_non_owning",
+          "dependency_colocation_or_shared_execution_do_not_transfer_ownership",
+          "global_admission_does_not_transfer_originating_domain_ownership"
+        ],
+        "id": "l9.contract/semantic-ownership@1",
+        "outcomes": {
+          "satisfied": "canonical_owner_is_unambiguous",
+          "unresolved": "canonical_owner_cannot_be_resolved",
+          "violated": "competing_or_implicit_semantic_ownership"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Keep canonical semantic ownership singular and explicit across mirrors, projections, providers, consumers, implementations, dependencies, co-location, execution, and scope changes.\n",
+        "requires": [
+          "semantic_scope_is_declared",
+          "semantic_revision_is_resolvable_when_revisioned",
+          "canonical_owner_is_resolvable"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-OWNER-001",
+          "L9-SEM-001",
+          "L9-SCOPE-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "subordinate_policy",
+          "domain_policy",
+          "project_contracts",
+          "local_governance"
+        ],
+        "forbidden": [
+          "weakening_canonical_law_without_delegated_authority",
+          "bypassing_canonical_law_without_delegated_authority",
+          "reinterpreting_or_shadowing_canonical_law_without_delegated_authority",
+          "replacing_canonical_law_without_delegated_authority",
+          "assuming_extension_permission_from_local_ownership"
+        ],
+        "guarantees": [
+          "permitted_extensions_remain_inside_delegated_scope",
+          "narrowing_or_strengthening_does_not_remove_canonical_obligations",
+          "canonical_owner_retains_authority_over_canonical_law"
+        ],
+        "id": "l9.contract/monotonic-subordination@1",
+        "outcomes": {
+          "satisfied": "subordinate_extension_is_monotonic_and_in_scope",
+          "unresolved": "extension_permission_or_delegated_scope_is_unknown",
+          "violated": "subordinate_extension_weakens_or_replaces_canonical_law"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Govern how subordinate policy or contracts may extend canonical law without weakening or replacing it.\n",
+        "requires": [
+          "canonical_extension_permission_when_extension_is_attempted",
+          "delegated_scope_is_explicit",
+          "inherited_canonical_obligations_are_resolvable"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-MONOTONIC-001",
+          "L9-AUTH-001",
+          "L9-OWNER-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "admission_decisions",
+          "authority_decisions",
+          "semantic_class_promotion",
+          "globalization_candidates",
+          "derived_artifacts"
+        ],
+        "forbidden": [
+          "self_admission",
+          "admission_by_producer_or_consumer_without_target_class_authority",
+          "replaying_a_decision_against_a_materially_changed_subject_without_compatibility",
+          "treating_recurrence_as_global_admission",
+          "treating_hypothetical_reuse_repeated_assertion_or_single_domain_repetition_as_cross_domain_recurrence",
+          "treating_derivation_or_validation_as_automatic_canonicalization"
+        ],
+        "guarantees": [
+          "decisions_bind_only_the_exact_subject_evaluated",
+          "promotion_is_performed_only_by_target_class_authority",
+          "recurrence_or_validation_creates_no_implicit_promotion",
+          "cross_domain_recurrence_claims_are_evidence_bound_when_used_to_support_higher_scope_admission",
+          "independent_domain_witnesses_when_cross_domain_recurrence_is_asserted_as_admission_evidence",
+          "materially_changed_subjects_require_new_decisions_unless_compatibility_preserves_the_prior_decision"
+        ],
+        "id": "l9.contract/admission-and-promotion@1",
+        "outcomes": {
+          "admitted": "exact_subject_is_admitted_by_target_class_authority",
+          "new_decision_required": "subject_changed_materially_without_compatibility_preservation",
+          "refused": "exact_subject_is_not_admitted",
+          "unresolved": "subject_identity_or_target_class_authority_is_unresolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Bind admission and semantic-class promotion to the exact subject evaluated and to the authority that owns the target class.\n",
+        "requires": [
+          "exact_subject_identity",
+          "exact_subject_revision_or_digest_when_revisioned",
+          "target_semantic_or_authority_class",
+          "target_class_authority",
+          "explicit_decision_record",
+          "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROMOTION-001",
+          "L9-ADMISSION-001",
+          "L9-GLOBALIZATION-001",
+          "L9-DERIVED-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "derived_artifacts",
+          "generated_artifacts",
+          "compiled_views",
+          "synthesized_candidates"
+        ],
+        "forbidden": [
+          "implicit_canonicalization",
+          "authority_expansion_by_derivation",
+          "provenance_free_derived_artifacts",
+          "derived_artifact_as_competing_canonical_source"
+        ],
+        "guarantees": [
+          "derived_status_is_preserved_until_explicit_admission",
+          "source_authority_is_not_transferred_to_the_derived_artifact",
+          "transformation_lineage_remains_resolvable"
+        ],
+        "id": "l9.contract/derived-artifact@1",
+        "outcomes": {
+          "satisfied": "artifact_remains_traceable_and_non_authoritative",
+          "unresolved": "source_or_transformation_lineage_cannot_be_resolved",
+          "violated": "artifact_claims_undelegated_or_implicit_authority"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve the non-authoritative status and source relationship of artifacts produced from upstream semantics.\n",
+        "requires": [
+          "authoritative_source_identity",
+          "declared_transformation_identity",
+          "derivation_or_generation_provenance"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-DERIVED-001",
+          "L9-AUTH-001",
+          "L9-PROV-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "evidence",
+          "receipts",
+          "attestations",
+          "validation_results",
+          "conformance_results"
+        ],
+        "forbidden": [
+          "ambient_head_phase_or_flag_as_the_only_subject_binding",
+          "producer_verdict_as_the_only_verification_basis",
+          "evidence_as_authorization",
+          "receipt_as_canonical_semantic_authority",
+          "claim_replay_against_an_unbound_or_materially_changed_subject"
+        ],
+        "guarantees": [
+          "claim_scope_is_limited_to_the_declared_subject_and_declared_observation_or_outcome",
+          "verifier_can_resolve_the_subject_criteria_and_evidence_without_relying_only_on_the_recorded_verdict",
+          "receipt_or_evidence_confers_no_semantic_or_execution_authority",
+          "material_subject_change_invalidates_reuse_unless_compatibility_explicitly_preserves_it"
+        ],
+        "id": "l9.contract/evidence-and-receipt@1",
+        "outcomes": {
+          "attested": "claim_is_bound_and_independently_verifiable",
+          "invalid_binding": "claim_does_not_bind_the_subject_or_coordinates_it_asserts",
+          "unverified": "required_evidence_or_binding_is_missing_stale_or_unverifiable"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Bind an evidence or receipt claim to the exact subject, coordinates, criteria, and outcome it attests so the claim can be independently checked.\n",
+        "requires": [
+          "declared_claim",
+          "exact_subject_identity",
+          "governing_subject_coordinates_when_material",
+          "declared_observation_or_outcome",
+          "evidence_or_criteria_sufficient_for_independent_verification"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-EVIDENCE-001",
+          "L9-ASSURANCE-001",
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-ADMISSION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "requirements",
+          "controls",
+          "implementations",
+          "verification_claims",
+          "conformance_claims",
+          "completion_claims"
+        ],
+        "forbidden": [
+          "self_attestation_as_the_sole_basis_for_verification",
+          "artifact_presence_as_proof_of_effectiveness",
+          "workflow_presence_as_proof_of_blocking_enforcement",
+          "pass_claim_without_required_evidence",
+          "unknown_or_unverified_as_verified"
+        ],
+        "guarantees": [
+          "requirement_truth_is_not_confused_with_implementation_state",
+          "implementation_presence_is_not_confused_with_verified_effectiveness",
+          "stronger_assurance_claims_require_correspondingly_sufficient_evidence",
+          "missing_stale_or_unverifiable_required_evidence_remains_unverified_or_unknown"
+        ],
+        "id": "l9.contract/assurance-and-verification@1",
+        "outcomes": {
+          "supported": "claim_has_current_sufficient_independently_verifiable_evidence",
+          "unsupported": "evidence_proves_the_claim_is_not_satisfied",
+          "unverified": "required_evidence_is_missing_stale_or_unverifiable"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Separate normative requirements, implementation state, and assurance claims and define when stronger assurance language is permitted.\n",
+        "requires": [
+          "claim_class_is_explicit",
+          "evidence_requirements_for_that_claim_class_are_known",
+          "current_independently_verifiable_evidence_for_every_required_condition"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-ASSURANCE-001",
+          "L9-CORRECTNESS-001",
+          "L9-EVIDENCE-001",
+          "L9-UNKNOWN-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "missing_inputs",
+          "unresolved_results",
+          "conflicting_authoritative_claims",
+          "unavailable_capabilities",
+          "degraded_execution",
+          "fallback_paths"
+        ],
+        "forbidden": [
+          "coercing_unknown_to_default_value",
+          "coercing_unknown_to_success_failure_validity_or_authorization",
+          "silent_conflict_reconciliation",
+          "authority_declaration_as_substitute_for_missing_evidence",
+          "silent_semantic_fallback",
+          "cross_owner_impersonation_without_compatibility_and_authority"
+        ],
+        "guarantees": [
+          "unknown_remains_distinguishable_from_known_values_and_success",
+          "conflicting_semantics_are_not_silently_reconciled",
+          "conflict_resolution_does_not_manufacture_missing_evidence_or_prove_unproven_claims",
+          "unavailable_semantics_are_not_replaced_by_undeclared_fallbacks",
+          "authorized_compatible_substitution_preserves_declared_semantic_guarantees"
+        ],
+        "id": "l9.contract/unknown-and-degradation@1",
+        "outcomes": {
+          "refused": "requested_substitution_lacks_compatibility_or_authority",
+          "resolved": "required_semantics_are_known_or_validly_substituted_or_conflict_is_authoritatively_resolved",
+          "unresolved": "unknown_unavailable_or_conflicting_semantics_remain_explicit"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve unknown, unresolved, and conflicting semantics and constrain degraded behavior so unavailable capabilities cannot silently impersonate other semantic owners.\n",
+        "requires": [
+          "unknown_or_unavailable_state_is_explicit",
+          "conflicting_semantics_remain_explicit_until_resolved_by_applicable_authoritative_rule_or_decision",
+          "substitution_has_explicit_compatibility_contract_when_attempted",
+          "substitution_has_applicable_authority_when_attempted"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-UNKNOWN-001",
+          "L9-DEGRADE-001",
+          "L9-COMPAT-001",
+          "L9-AUTH-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "hard_constraints",
+          "acceptance_decisions",
+          "optimization_and_ranking"
+        ],
+        "forbidden": [
+          "trading_hard_constraint_failure_for_utility",
+          "trading_hard_constraint_failure_for_probability_or_confidence",
+          "ranking_or_optimization_overriding_a_hard_constraint"
+        ],
+        "guarantees": [
+          "soft_objectives_operate_only_within_the_admissible_region",
+          "failed_hard_constraints_block_acceptance",
+          "unresolved_hard_constraints_are_not_compensated_by_soft_scores"
+        ],
+        "id": "l9.contract/hard-constraint@1",
+        "outcomes": {
+          "admissible": "all_applicable_hard_constraints_are_satisfied",
+          "inadmissible": "one_or_more_applicable_hard_constraints_fail",
+          "unresolved": "one_or_more_applicable_hard_constraints_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Keep applicable hard constraints outside compensating optimization or preference logic.\n",
+        "requires": [
+          "acceptance_requires_all_applicable_hard_constraints_to_be_satisfied",
+          "unresolved_hard_constraints_remain_unresolved"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-HARD-001",
+          "L9-UNKNOWN-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "derived_results",
+          "compiled_artifacts",
+          "projections"
+        ],
+        "forbidden": [
+          "provenance_truncation_that_prevents_authority_resolution",
+          "silently_consuming_non_current_results_as_current",
+          "unbound_reuse_across_material_coordinate_change"
+        ],
+        "guarantees": [
+          "authoritative_inputs_and_transformations_are_resolvable",
+          "validity_is_evaluated_against_declared_coordinates",
+          "material_coordinate_change_makes_affected_results_non_current_until_recomputed_or_compatibility_is_proven"
+        ],
+        "id": "l9.contract/provenance-and-coordinate@1",
+        "outcomes": {
+          "current": "declared_coordinates_match_or_compatibility_is_proven",
+          "non_current": "a_material_governing_coordinate_changed_without_compatibility_proof",
+          "unresolved": "required_provenance_or_coordinate_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Bind derived validity to resolvable authoritative inputs, transformations, and governing coordinates.\n",
+        "requires": [
+          "authoritative_input_references",
+          "authoritative_input_revisions_or_digests_when_revisioned",
+          "declared_transformation_identity",
+          "all_governing_coordinates_material_to_validity"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-REVISION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "representations",
+          "providers",
+          "implementations",
+          "transports",
+          "storage",
+          "semantic_types",
+          "contract_versions"
+        ],
+        "forbidden": [
+          "inferring_equivalence_from_shape_or_similarity",
+          "inferring_compatibility_from_successful_execution",
+          "provider_identity_as_semantic_identity",
+          "undeclared_cross_version_or_cross_type_compatibility"
+        ],
+        "guarantees": [
+          "provider_or_representation_change_alone_does_not_change_semantic_identity",
+          "compatibility_is_decided_by_the_applicable_declared_type_or_contract",
+          "compatible_substitution_preserves_the_semantics_promised_by_the_compatibility_contract"
+        ],
+        "id": "l9.contract/semantic-identity-and-compatibility@1",
+        "outcomes": {
+          "compatible": "applicable_declared_compatibility_contract_is_satisfied",
+          "incompatible": "applicable_declared_compatibility_contract_is_violated",
+          "unresolved": "no_applicable_compatibility_decision_can_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Separate semantic identity from representation and provider choice while requiring explicit compatibility across semantic boundaries.\n",
+        "requires": [
+          "semantic_identity_or_type_is_resolvable",
+          "compatibility_rule_is_explicit_when_compatibility_is_required"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-IDENTITY-001",
+          "L9-COMPAT-001",
+          "L9-SEM-001",
+          "L9-DEGRADE-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "admitted_semantic_revisions",
+          "corrected_semantics",
+          "superseding_semantics"
+        ],
+        "forbidden": [
+          "in_place_rewrite_of_admitted_semantic_content",
+          "revision_identity_reuse_for_changed_meaning",
+          "hidden_rebinding_of_prior_admission_or_evidence"
+        ],
+        "guarantees": [
+          "prior_admitted_meaning_remains_addressable",
+          "material_change_receives_a_distinct_revision_identity",
+          "decisions_bound_to_prior_revisions_are_not_silently_rebound"
+        ],
+        "id": "l9.contract/revision-and-supersession@1",
+        "outcomes": {
+          "preserved": "revision_semantics_are_unchanged",
+          "successor_required": "material_semantic_change_requires_new_revision_identity",
+          "violated": "admitted_history_was_rewritten_or_reused_for_changed_meaning"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve admitted historical meaning by representing correction and change as successor or supersession rather than in-place semantic rewrite.\n",
+        "requires": [
+          "immutable_revision_identity_for_admitted_semantics",
+          "successor_or_supersession_relationship_for_material_semantic_change"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-REVISION-001",
+          "L9-ADMISSION-001",
+          "L9-COORD-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "projection_engines",
+          "projection_profiles",
+          "projection_artifacts"
+        ],
+        "forbidden": [
+          "semantic_invention",
+          "semantic_reconciliation",
+          "semantic_reinterpretation",
+          "semantic_derivation_or_synthesis_misclassified_as_projection",
+          "authority_expansion",
+          "projection_as_admission_or_promotion"
+        ],
+        "guarantees": [
+          "output_is_bounded_by_source_semantics_and_declared_selection",
+          "source_lineage_remains_resolvable",
+          "projection_remains_derived_and_non_authoritative",
+          "transformations_that_add_semantic_consequences_are_classified_under_another_governed_operation"
+        ],
+        "id": "l9.contract/projection@1",
+        "outcomes": {
+          "invalid_projection": "output_invents_reinterprets_reconciles_or_expands_source_semantics",
+          "unresolved": "source_or_projection_contract_cannot_be_resolved",
+          "valid_projection": "output_is_a_bounded_semantics_preserving_view"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Define projection as a bounded source-derived view that may select or reshape representation without creating new meaning or authority.\n",
+        "requires": [
+          "source_identity",
+          "source_revision_or_digest_when_revisioned",
+          "declared_projection_profile_or_selector_contract",
+          "projection_provenance"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROJECTION-001",
+          "L9-DERIVED-001",
+          "L9-PROV-001",
+          "L9-AUTH-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "validators",
+          "conformance_systems",
+          "validation_profiles",
+          "candidate_artifacts",
+          "generated_artifacts"
+        ],
+        "forbidden": [
+          "repair_during_validation",
+          "constraint_relaxation_during_validation",
+          "governing_criteria_mutation_or_substitution_during_validation",
+          "reinterpretation_to_obtain_success",
+          "candidate_or_production_path_defined_correctness_as_the_only_criterion",
+          "unknown_to_success_coercion",
+          "silent_skip_of_applicable_required_validation",
+          "default_success_on_missing_unreadable_unexecuted_or_unresolved_required_validation",
+          "partial_validation_coverage_reported_as_complete"
+        ],
+        "guarantees": [
+          "candidate_is_not_mutated_by_validation_or_conformance",
+          "validation_emits_only_evidence_about_the_candidate_against_declared_criteria",
+          "candidate_or_its_production_path_is_not_the_sole_correctness_authority",
+          "validation_does_not_alter_relax_substitute_or_reinterpret_governing_criteria",
+          "unresolved_validation_semantics_remain_unresolved",
+          "validation_success_requires_every_applicable_required_criterion_to_be_evaluated_and_satisfied",
+          "unavailable_unreadable_unexecuted_or_unresolved_required_criteria_preclude_success",
+          "validation_coverage_is_explicit_and_evidence_bound"
+        ],
+        "id": "l9.contract/validation-and-correctness@1",
+        "outcomes": {
+          "rejected": "evidence_refutes_the_candidate_against_declared_criteria",
+          "satisfied": "every_applicable_required_criterion_was_evaluated_and_evidence_supports_the_candidate_against_each",
+          "unresolved": "validation_cannot_resolve_the_candidate_against_every_applicable_required_criterion"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Keep validation and conformance observational, bind them to correctness criteria independent of the candidate and its production path, prevent validators from changing candidates or governing criteria, and make success depend on complete, evidence-bound evaluation of every applicable required criterion.\n",
+        "requires": [
+          "exact_candidate_identity",
+          "correctness_criteria_independent_of_candidate_and_production_path",
+          "declared_validation_or_conformance_contract"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-VALIDATION-001",
+          "L9-CORRECTNESS-001",
+          "L9-EVIDENCE-001",
+          "L9-UNKNOWN-001",
+          "L9-ASSURANCE-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "capability_catalogs",
+          "capability_admission",
+          "capability_availability",
+          "authorization",
+          "invocation"
+        ],
+        "forbidden": [
+          "treating_declaration_as_admission",
+          "treating_admission_as_availability",
+          "treating_availability_as_authorization",
+          "treating_authorization_as_availability",
+          "treating_any_single_state_as_invocability_without_required_contract_conditions"
+        ],
+        "guarantees": [
+          "declaration_admission_availability_authorization_and_invocability_remain_distinct",
+          "no_state_implies_another_without_declared_contract_semantics",
+          "invocation_does_not_create_missing_authorization_or_admission"
+        ],
+        "id": "l9.contract/capability-state@1",
+        "outcomes": {
+          "invocable": "all_contract_required_states_and_authority_are_satisfied",
+          "not_invocable": "one_or_more_required_states_or_authority_conditions_fail",
+          "unresolved": "one_or_more_required_capability_states_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve the distinction among capability declaration, admission, availability, authorization, and invocability.\n",
+        "requires": [
+          "each_relevant_capability_state_is_explicit",
+          "state_implications_are_defined_only_by_applicable_canonical_contract",
+          "invocation_satisfies_all_required_states_and_authority"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-CAPABILITY-001",
+          "L9-AUTH-001",
+          "L9-PROMOTION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "product_topologies",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "product_kind_exception_claims"
+        ],
+        "forbidden": [
+          "kind_inferred_from_provider",
+          "kind_inferred_from_repository_shape",
+          "kind_inferred_from_package_format",
+          "kind_inferred_from_semantic_complexity",
+          "sdk_kind_assumed_before_admission",
+          "product_kind_exception_claimed_without_exact_subject_binding",
+          "product_kind_exception_admitted_by_the_subject_or_a_consumer",
+          "product_kind_exception_used_to_acquire_constellation_identity_gate_admission_or_routing_authority",
+          "product_kind_exception_used_to_relax_security_attribution_isolation_authorization_or_admission"
+        ],
+        "guarantees": [
+          "node_means_remote_invocation_plus_independent_runtime",
+          "dependency_means_local_composition_plus_consumer_bound_artifact_unless_an_admitted_product_kind_exception_binds_the_exact_product",
+          "kind_does_not_transfer_semantic_ownership",
+          "kind_specific_archetype_catalog_is_selected_mechanically",
+          "product_kind_exception_displaces_only_enumerated_obligations_of_its_exact_subject",
+          "product_kind_exception_preserves_kind_archetype_and_all_undisplaced_obligations"
+        ],
+        "id": "l9.contract/product-kind@1",
+        "outcomes": {
+          "invalid": "declared_kind_conflicts_with_consumption_or_deployment_without_an_exactly_bound_admitted_product_kind_exception",
+          "resolved": "declared_kind_consumption_deployment_and_archetype_are_coherent_directly_or_through_an_exactly_bound_admitted_product_kind_exception",
+          "unresolved": "kind_or_archetype_semantics_are_not_admitted"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Classify an L9 product by its canonical consumption and deployment boundary without inferring kind from implementation technology, repository shape, semantic complexity, or incidental process topology; an exactly bound admitted product-kind exception is the only departure from that classification.",
+        "requires": [
+          "declared_product_kind",
+          "declared_consumption_model",
+          "declared_deployment_model",
+          "admitted_kind_semantics",
+          "kind_compatible_archetype",
+          "exactly_bound_admitted_product_kind_exception_when_declared_models_depart_from_kind"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-OWNER-001",
+          "L9-COMPAT-001",
+          "L9-UNKNOWN-001",
+          "L9-MONOTONIC-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "product_topologies",
+          "product_birth_requests",
+          "product_semantic_inputs"
+        ],
+        "forbidden": [
+          "compiler_invents_product_purpose_boundary_or_authority",
+          "provider_name_used_as_product_kind_or_capability_meaning",
+          "repository_shape_used_as_product_kind",
+          "package_format_used_as_product_kind",
+          "hidden_authority_inference",
+          "preference_used_to_smuggle_hard_semantic_requirement"
+        ],
+        "guarantees": [
+          "one_topology_vocabulary_describes_all_l9_products",
+          "product_owner_declares_semantics_not_compiler_derivable_structure",
+          "product_kind_constrains_consumption_and_deployment_except_as_an_exactly_bound_admitted_product_kind_exception_enumerates",
+          "archetype_specializes_exact_product_kind",
+          "omitted_derivable_structure_may_be_resolved_downstream",
+          "product_semantic_decisions_remain_explicit",
+          "identity_dimensions_are_explicit",
+          "governance_profile_is_separate_from_identity"
+        ],
+        "id": "l9.contract/product-topology@1",
+        "outcomes": {
+          "invalid": "required_product_contract_semantics_are_missing_or_malformed",
+          "satisfied": "product_topology_is_structurally_and_semantically_admissible_for_resolution",
+          "unresolved": "referenced_semantics_kind_archetype_or_authority_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Define the authoritative ProductTopology contract from which every L9 product is compiled using one shared topology vocabulary, while preserving product-owner semantics and kind-specific obligations.",
+        "requires": [
+          "product_identity",
+          "product_kind",
+          "product_archetype",
+          "declared_purpose",
+          "semantic_boundary",
+          "capability_refs",
+          "consumption_model",
+          "deployment_model",
+          "applicable_or_product_invariant_refs",
+          "product_contract_refs",
+          "source_provenance",
+          "material_unknowns",
+          "identity_topology",
+          "identity_resolution_contract"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-AUTH-001",
+          "L9-OWNER-001",
+          "L9-UNKNOWN-001",
+          "L9-HARD-001",
+          "L9-CAPABILITY-001",
+          "L9-PROV-001",
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-IDENTITY-002",
+          "L9-IDENTITY-003",
+          "L9-IDENTITY-004"
+        ]
+      },
+      {
+        "applies_to": [
+          "requirements",
+          "requirement_closures",
+          "resolution_engines"
+        ],
+        "forbidden": [
+          "silent_requirement_drop",
+          "hard_requirement_converted_to_score",
+          "requirement_invented_without_governing_source",
+          "unknown_requirement_treated_as_satisfied"
+        ],
+        "guarantees": [
+          "hard_requirements_remain_non_compensable",
+          "transitive_requirements_preserve_provenance",
+          "unresolved_requirements_remain_explicit",
+          "conflicting_hard_requirements_surface_conflict_or_unsat"
+        ],
+        "id": "l9.contract/requirement-resolution@1",
+        "outcomes": {
+          "ambiguous": "materially_distinct_requirement_interpretations_remain",
+          "resolved": "requirement_closure_is_complete_for_declared_inputs",
+          "unresolved": "one_or_more_required_semantics_cannot_be_resolved",
+          "unsat": "hard_requirement_set_has_no_satisfying_closure"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Translate an admitted ProductTopology and governing semantics into a typed, provenance-preserving requirement closure without losing hard obligations or manufacturing missing requirements.",
+        "requires": [
+          "typed_requirement_identity",
+          "source_ref",
+          "hardness",
+          "satisfaction_semantics",
+          "governing_coordinates"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-UNKNOWN-001",
+          "L9-HARD-001",
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-COMPAT-001",
+          "L9-VALIDATION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "capability_resolution",
+          "architecture_resolution",
+          "port_resolution"
+        ],
+        "forbidden": [
+          "architecture_invented_outside_admitted_semantics",
+          "provider_selected_before_semantic_requirements_are_known",
+          "port_identity_defined_by_provider_api",
+          "unresolved_semantics_collapsed_into_guess"
+        ],
+        "guarantees": [
+          "capability_dependencies_are_resolved_without_implying_availability_or_authorization",
+          "product_kind_obligations_trace_to_product_topology",
+          "archetype_obligations_trace_to_kind_specific_catalog",
+          "architecture_obligations_trace_to_requirements_and_admitted_patterns",
+          "required_ports_remain_provider_neutral",
+          "resolver_outputs_preserve_source_coordinates"
+        ],
+        "id": "l9.contract/semantic-resolution@1",
+        "outcomes": {
+          "ambiguous": "multiple materially distinct semantic closures remain without canonical selector",
+          "incompatible": "candidate_semantic_composition_violates_compatibility",
+          "resolved": "semantic_closure_is_sufficient_for_realization_binding",
+          "unresolved": "required_semantic_identity_owner_or_contract_is_missing",
+          "unsat": "hard_semantic_requirements_admit_no_valid_closure"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Resolve capability closure, architecture obligations, and required ports from authoritative requirements while preserving ownership, compatibility, hard constraints, and explicit uncertainty.\n",
+        "requires": [
+          "requirement_closure",
+          "applicable_capability_semantics",
+          "applicable_contracts",
+          "admitted_product_kind",
+          "applicable_kind_archetype_catalog",
+          "admitted_architecture_patterns"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-OWNER-001",
+          "L9-SEM-001",
+          "L9-DEGRADE-001",
+          "L9-COMPAT-001",
+          "L9-UNKNOWN-001",
+          "L9-HARD-001",
+          "L9-CAPABILITY-001",
+          "L9-PROJECTION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "technology_profiles",
+          "provider_bindings",
+          "target_bindings",
+          "realization_selection"
+        ],
+        "forbidden": [
+          "provider_capability_inferred_from_model_memory",
+          "incompatible_binding_selected_for_convenience",
+          "unknown_capability_treated_as_supported",
+          "provider_identity_used_as_semantic_identity"
+        ],
+        "guarantees": [
+          "required_capabilities_are_subset_of_provided_capabilities",
+          "technology_selection_does_not_transfer_semantic_ownership",
+          "optimization_occurs_only_among_compatible_realizations",
+          "binding_provenance_is_preserved"
+        ],
+        "id": "l9.contract/technology-binding@1",
+        "outcomes": {
+          "ambiguous": "multiple admissible bindings remain without canonical selection rule",
+          "incompatible": "required_realization_semantics_are_not_supported",
+          "resolved": "admissible_binding_is_selected_or_compatible_set_is_identified",
+          "unresolved": "technology_capability_or_binding_facts_are_missing"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Bind resolved semantic ports and realization requirements to declared technologies only when registered capability facts and compatibility contracts prove the realization admissible.\n",
+        "requires": [
+          "resolved_port_or_target_requirements",
+          "technology_profile",
+          "registered_technology_capability_facts",
+          "registered_binding_coordinates"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-COMPAT-001",
+          "L9-DEGRADE-001",
+          "L9-UNKNOWN-001",
+          "L9-HARD-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "conformance_requirements",
+          "fixture_resolution_requests",
+          "implementation_acceptance",
+          "generated_implementation_acceptance"
+        ],
+        "forbidden": [
+          "fixture_or_test_invents_law",
+          "implementation_defines_its_own_expected_result",
+          "unresolved_semantics_compiled_to_false_pass",
+          "conformance_evidence_used_as_authority_grant"
+        ],
+        "guarantees": [
+          "proof_obligations_preexist_candidate_implementation",
+          "every_obligation_traces_to_governing_semantics",
+          "expected_results_are_not_owned_by_system_under_test",
+          "conformance_authority_remains_separate_from_global_law_owner"
+        ],
+        "id": "l9.contract/conformance-resolution@1",
+        "outcomes": {
+          "incompatible": "requested conformance binding cannot faithfully realize obligation",
+          "resolved": "complete_conformance_requirement_set_is_available_for_conformance_owner",
+          "unresolved": "governing_semantics_or_observable_proof_surface_is_insufficient"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Derive proof obligations from governing semantics before implementation and hand executable realization of those obligations to the independently owned conformance system.\n",
+        "requires": [
+          "governing_semantic_refs",
+          "exact_subject_coordinates",
+          "observable_semantics",
+          "verification_class"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-CORRECTNESS-001",
+          "L9-VALIDATION-001",
+          "L9-EVIDENCE-001",
+          "L9-ASSURANCE-001",
+          "L9-PROV-001",
+          "L9-UNKNOWN-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "product_manifests",
+          "resolved_product_realizations",
+          "implementation_lowering_gates"
+        ],
+        "forbidden": [
+          "manifest_becomes_domain_or_product_authority",
+          "implementation_lowering_over_unresolved_manifest",
+          "manifest_silently_changes_declared_product_topology",
+          "manifest_converts_unknown_to_resolved_without_evidence"
+        ],
+        "guarantees": [
+          "manifest_is_derived_and_non_owning",
+          "manifest_preserves_exact_product_topology_coordinates",
+          "manifest_preserves_product_kind_and_archetype",
+          "implementation_lowering_consumes_only_resolved_manifest",
+          "material_upstream_change_invalidates_manifest_currentness_unless_compatibility_preserves_it",
+          "manifest_preserves_identity_dimension_semantics",
+          "manifest_preserves_identity_contract_coordinates"
+        ],
+        "id": "l9.contract/product-manifest@1",
+        "outcomes": {
+          "blocked": "one_or_more_required_realization_obligations_are_unresolved_or_invalid",
+          "non_current": "material_upstream_coordinate_changed_without_compatibility_preservation",
+          "resolved": "manifest_passes_resolved_manifest_gate"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Define the proof-carrying derived ProductManifest that binds one exact authoritative ProductTopology to its fully resolved requirement, capability, architecture, port, adapter, relationship, technology, provider, admission, lifecycle, and conformance closure before implementation lowering.",
+        "requires": [
+          "source_product_topology_coordinates",
+          "resolved_product_kind",
+          "resolved_product_archetype",
+          "resolved_requirement_closure",
+          "resolved_capability_closure",
+          "resolved_architecture",
+          "resolved_ports",
+          "resolved_adapters",
+          "resolved_product_relationships",
+          "admissible_provider_bindings",
+          "resolved_admission_requirements",
+          "resolved_conformance_requirements",
+          "compiler_coordinates",
+          "provenance",
+          "material_unknowns",
+          "resolved_identity_model",
+          "resolved_identity_resolution_contract"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-REVISION-001",
+          "L9-UNKNOWN-001",
+          "L9-HARD-001",
+          "L9-DERIVED-001",
+          "L9-ADMISSION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "product_topologies",
+          "product_manifests",
+          "identity_bindings"
+        ],
+        "forbidden": [
+          "governance_profile_as_actor_identity",
+          "adapter_identity_as_actor_identity",
+          "provider_identity_as_actor_identity",
+          "surface_identity_as_actor_identity",
+          "string_equality_used_as_identity_equivalence"
+        ],
+        "guarantees": [
+          "identity_dimensions_remain_distinct",
+          "kind_constrains_applicability_without_redefining_identity",
+          "governance_profile_remains_non_identity",
+          "bindings_do_not_transfer_authority"
+        ],
+        "id": "l9.contract/identity-topology@1",
+        "outcomes": {
+          "invalid": "identity_dimensions_are_collapsed_or_misused",
+          "satisfied": "identity_topology_is_explicit_and_non_colliding",
+          "unresolved": "required_identity_semantics_or_sources_are_unknown"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Define the identity dimensions and bindings every ProductTopology may declare without conflating product, runtime, actor, surface, provider, adapter, or governance-profile semantics.",
+        "requires": [
+          "product_identity",
+          "declared_applicable_identity_dimensions",
+          "identity_resolution_contract",
+          "identity_unknown_policy"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-IDENTITY-001",
+          "L9-IDENTITY-002",
+          "L9-IDENTITY-003",
+          "L9-OWNER-001",
+          "L9-AUTH-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "runtime_identity_resolution",
+          "actor_identity_resolution",
+          "surface_identity_resolution",
+          "bootstrap_identity_resolution"
+        ],
+        "forbidden": [
+          "independent_downstream_rederivation_when_valid_assertion_exists",
+          "configured_governance_profile_used_as_actor_evidence",
+          "guessing_actor_from_adapter_or_provider",
+          "silently_collapsing_ambiguous_runtime_evidence"
+        ],
+        "guarantees": [
+          "same_material_evidence_uses_one_resolution_path",
+          "unrecognized_evidence_remains_unknown",
+          "downstream_consumers_receive_one_typed_result",
+          "runtime_markers_are_evidence_not_authority"
+        ],
+        "id": "l9.contract/identity-resolution@1",
+        "outcomes": {
+          "ambiguous": "multiple_materially_distinct_identities_remain",
+          "invalid": "evidence_or_binding_violates_identity_contract",
+          "resolved": "required_identity_dimensions_are_resolved",
+          "unknown": "evidence_is_insufficient"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Resolve dynamic runtime, constellation, actor, and surface identity from bounded runtime evidence under one canonical resolver contract and preserve Unknown rather than guess.",
+        "requires": [
+          "runtime_evidence",
+          "applicable_product_topology",
+          "applicable_identity_bindings",
+          "canonical_resolver_coordinates"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-IDENTITY-002",
+          "L9-IDENTITY-003",
+          "L9-IDENTITY-004",
+          "L9-IDENTITY-005",
+          "L9-UNKNOWN-001",
+          "L9-PROV-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "identity_assertions",
+          "memory_authorship",
+          "consequential_receipts",
+          "bootstrap_receipts",
+          "governance_profile_selection"
+        ],
+        "forbidden": [
+          "assertion_grants_missing_authorization",
+          "assertion_relabels_governance_profile_as_actor",
+          "consumer_silently_mutates_resolved_identity",
+          "stale_assertion_consumed_after_material_evidence_change"
+        ],
+        "guarantees": [
+          "assertion_is_evidence_not_authority",
+          "assertion_preserves_resolution_provenance",
+          "consumers_may_validate_or_challenge_but_not_rewrite",
+          "actor_identity_is_available_to_memory_when_resolved"
+        ],
+        "id": "l9.contract/identity-assertion@1",
+        "outcomes": {
+          "invalid": "assertion_shape_or_provenance_is_invalid",
+          "non_current": "material_evidence_or_coordinates_changed",
+          "unknown": "required_identity_remains_unknown",
+          "valid": "assertion_is_current_and_verifiable"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Define the typed provenance-bearing evidence artifact by which resolved identity is propagated to bootstrap, governance, memory, receipts, evidence, and observability consumers.",
+        "requires": [
+          "exact_subject_ref",
+          "product_ref",
+          "resolved_dimensions",
+          "evidence_refs",
+          "resolver_ref",
+          "governing_coordinates",
+          "result",
+          "assertion_digest"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-IDENTITY-004",
+          "L9-IDENTITY-005",
+          "L9-IDENTITY-006",
+          "L9-PROV-001",
+          "L9-COORD-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "l9_product_releases",
+          "product_release_candidates",
+          "product_release_artifacts",
+          "release_validation",
+          "release_conformance",
+          "release_compatibility",
+          "release_admission",
+          "release_publication",
+          "release_distribution",
+          "release_reconciliation",
+          "release_currentness",
+          "release_supersession"
+        ],
+        "forbidden": [
+          "product_specific_provider_runtime_language_framework_registry_or_ci_semantics_embedded_in_the_global_release_contract",
+          "parallel_product_kind_specific_release_languages",
+          "validation_that_mutates_repairs_canonicalizes_or_regenerates_the_frozen_candidate",
+          "hidden_preparation_inside_validation",
+          "candidate_defined_correctness",
+          "production_path_defined_correctness",
+          "validator_defined_admission",
+          "validator_defined_publication_authority",
+          "self_admission",
+          "self_publication_when_publication_authority_is_owned_elsewhere",
+          "validation_receipt_as_admission",
+          "conformance_receipt_as_admission",
+          "distribution_receipt_as_admission",
+          "publication_as_implicit_admission",
+          "publication_as_implicit_runtime_admission",
+          "successful_execution_as_compatibility_proof",
+          "successful_execution_as_release_admission",
+          "version_string_as_sufficient_release_identity",
+          "provider_identity_as_release_identity",
+          "runtime_identity_as_release_identity",
+          "adapter_identity_as_release_identity",
+          "surface_or_actor_identity_as_release_identity",
+          "publication_of_artifacts_not_bound_to_the_admitted_candidate_subject_set",
+          "publication_of_artifact_bytes_with_digests_different_from_the_validated_and_admitted_artifact_digests",
+          "rebuilding_different_artifact_bytes_after_admission_without_new_candidate_validation_and_admission",
+          "evidence_reuse_across_material_candidate_change_without_explicit_compatibility",
+          "admission_decision_reuse_across_material_candidate_change_without_explicit_compatibility",
+          "unknown_to_pass_coercion",
+          "missing_evidence_treated_as_success",
+          "stale_evidence_treated_as_current",
+          "consumer_binding_as_release_identity_redefinition",
+          "distribution_as_payload_semantic_mutation",
+          "in_place_rewrite_of_an_admitted_or_published_release",
+          "silent_rebinding_of_prior_receipts_or_decisions_to_a_successor_release"
+        ],
+        "guarantees": [
+          "this_contract_orchestrates_existing_semantics_without_redefining_their_ownership",
+          "product_kind_specific_release_obligations_are_derived_from_product_kind_law_not_redeclared_here",
+          "product_specific_release_obligations_are_derived_from_the_authoritative_product_topology_and_current_resolved_product_manifest",
+          "provider_language_package_registry_ci_platform_and_deployment_mechanism_are_not_global_release_semantics",
+          "preparation_may_transform_a_candidate_only_before_the_candidate_subject_set_is_frozen",
+          "validation_and_conformance_are_observational_and_do_not_mutate_or_repair_the_frozen_candidate",
+          "validation_evidence_does_not_admit_a_release",
+          "conformance_evidence_does_not_admit_a_release",
+          "successful_build_or_execution_does_not_admit_a_release",
+          "admission_is_an_explicit_authority_decision_bound_to_the_exact_candidate_subject_set",
+          "admission_does_not_imply_publication",
+          "publication_does_not_imply_consumer_binding_or_reconciliation",
+          "publication_does_not_imply_runtime_availability_authorization_invocability_or_runtime_admission",
+          "publication_does_not_replace_product_release_admission",
+          "release_currentness_is_distinct_from_validation_admission_publication_distribution_and_runtime_state",
+          "release_identity_is_bound_to_exact_version_revision_and_digest_coordinates_and_is_not_established_by_version_string_alone",
+          "published_artifacts_are_byte_identical_to_the_artifacts_admitted_and_validated_for_publication",
+          "publication_must_not_rebuild_to_materially_different_artifact_bytes_under_the_same_release_admission",
+          "rebuilt_artifacts_with_different_digests_are_new_release_candidate_subjects_and_require_new_applicable_validation_and_admission",
+          "every_validation_conformance_admission_publication_distribution_and_reconciliation_claim_remains_bound_to_its_exact_subject_and_material_coordinates",
+          "receipts_remain_evidence_and_do_not_grant_semantic_execution_admission_or publication authority",
+          "missing_stale_failed_or_unverifiable_required_evidence_cannot_be_coerced_to_release_success",
+          "material_candidate_change_invalidates_affected_validation_conformance_compatibility_and_admission_evidence_unless_an_applicable_compatibility_contract_explicitly_preserves_it",
+          "material_upstream_product_topology_product_manifest_semantic_or_build_coordinate_change_makes_affected_release_evidence_non_current_until_recomputed_or_compatibility_is_proven",
+          "admitted_or_published_release_history_is_not_rewritten_in_place",
+          "correction_or_material_change_after_admission_requires_a_successor_release_identity_or_explicit_supersession",
+          "prior_release_identity_artifact_digests_decisions_and_receipts_remain_addressable",
+          "release_distribution_preserves_exact_published_identity_and_digest_without_reinterpreting_product_semantics",
+          "downstream_consumer_binding_reconciliation_or_installation_does_not_change_release_identity_or_product_semantics",
+          "product_specific_release_bindings_may_narrow_or_strengthen_required_evidence_but_may_not_weaken_bypass_or_reinterpret_this_contract_or_other_applicable_global_law",
+          "one_global_release_contract_can_govern_all_admitted_product_kinds_while_product_kind_and_product_topology_supply_kind_and_product_specific_obligations"
+        ],
+        "id": "l9.contract/product-release@1",
+        "outcomes": {
+          "blocked": "one_or_more_required_release_obligations_are_failed_missing_stale_or_unsatisfied",
+          "new_candidate_required": "release_candidate_or_material_governing_coordinates_changed_and_prior_evidence_or_admission_is_not_preserved_by_explicit_compatibility",
+          "satisfied": "exact_release_progression_satisfies_all_applicable_global_kind_product_validation_conformance_compatibility_admission_publication_distribution_and_currentness_obligations",
+          "unresolved": "required_release_authority_identity_evidence_compatibility_or_governing_coordinates_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Govern progression of an exact L9 product release candidate through validation, compatibility proof, admission, publication, distribution, currentness, supersession, and retirement by composing the applicable canonical product, identity, validation, compatibility, admission, lifecycle, provenance, conformance, and distribution semantics without redefining or absorbing the semantics owned by those contracts. ",
+        "requires": [
+          "product_identity_is_resolved",
+          "product_kind_is_resolved_to_an_admitted_product_kind",
+          "authoritative_product_topology_coordinates_are_resolved",
+          "current_resolved_product_manifest_coordinates_are_resolved",
+          "release_identity_is_explicit_and_distinct_from_product_runtime_provider_adapter_actor_and_surface_identity",
+          "release_candidate_subject_set_is_explicit",
+          "release_candidate_source_revision_is_immutable_and_exact",
+          "every_release_artifact_in_the_candidate_subject_set_has_exact_identity_and_digest",
+          "all_material_build_toolchain_profile_and_dependency_coordinates_are_bound_when_they_affect_release_validity",
+          "applicable_product_kind_requirements_are_resolved",
+          "applicable_product_topology_requirements_are_resolved",
+          "applicable_product_manifest_requirements_are_resolved",
+          "applicable_conformance_requirements_are_resolved",
+          "applicable_compatibility_requirements_are_resolved",
+          "applicable_publication_requirements_are_resolved",
+          "applicable_distribution_requirements_are_resolved_when_distribution_is_required",
+          "applicable_migration_and_rollback_requirements_are_resolved_when_state_or_compatibility_can_be affected",
+          "preparation_operations_are_declared_separately_from_validation_operations",
+          "release_candidate_is_frozen_before_observational_validation_receipts_are relied upon",
+          "validation_and_conformance_use_governing_criteria_independent_of_the_candidate_and_its_production_path",
+          "validation_receipts_bind_exact_candidate_subjects_and_governing_coordinates",
+          "conformance_receipts_bind_exact_implementation_or_artifact_coordinates_when_conformance_is_required",
+          "compatibility_is_proven_by_applicable_declared_compatibility_contracts",
+          "admission_decision_is_bound_to_the_exact_release_candidate_subject_set",
+          "admission_authority_is_resolved_from_the_applicable_product_contract_and_lifecycle",
+          "publication_uses_only_artifacts_admitted_as_part_of_the_exact_release_candidate_subject_set",
+          "publication_artifact_digests_equal_the_admitted_and_validated_artifact_digests",
+          "distribution_uses_exact_published_identity_and_digest",
+          "required_consumer_reconciliation_or_binding_evidence_is explicit when consumer acceptance is part of release completion",
+          "material_unknowns_required_for_release_progression_are_resolved_before_progression"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-AUTH-001",
+          "L9-AUTH-002",
+          "L9-OWNER-001",
+          "L9-PROMOTION-001",
+          "L9-EVIDENCE-001",
+          "L9-ASSURANCE-001",
+          "L9-UNKNOWN-001",
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-IDENTITY-001",
+          "L9-IDENTITY-002",
+          "L9-COMPAT-001",
+          "L9-REVISION-001",
+          "L9-ADMISSION-001",
+          "L9-VALIDATION-001",
+          "L9-CORRECTNESS-001",
+          "L9-CAPABILITY-001"
+        ]
+      }
+    ],
+    "derivation": {
+      "rule": "Contracts operationalize admitted global invariants as reusable cross-boundary obligations. They do not create new semantic authority or absorb domain-owned behavior.\n",
+      "source_admission": "canonical_active",
+      "source_artifact": "invariants.yaml",
+      "source_artifact_id": "l9.invariants/global@1",
+      "source_digest_sha256": "771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_invariant_count": 31
+    },
+    "outcome_semantics": {
+      "global_error_taxonomy_defined_here": false,
+      "rule": "Outcome keys describe only the local resolution states of each contract. They do not define or replace the canonical global error or validation-result taxonomy.\n",
+      "scope": "contract_local"
+    }
+  },
+  "projection_digest": "sha256:e521fd9ac3e8930b78467310c68a7324a1f9c6c2e69b7e8075edfaf9ea62977e",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+  "source_ref": "l9.source/contracts@1"
+}

@@ -1,0 +1,170 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "consumer_rules": {
+      "bootstrap": [
+        "bootstrap_may_use_surface_and_runtime_identity_to_select_adapter_or_projection",
+        "bootstrap_must_not_relabel_governance_profile_as_actor_identity"
+      ],
+      "governance": [
+        "governance_profile_selection_may_consume_surface_runtime_or_actor_coordinates",
+        "governance_profile_selection_does_not_change_identity"
+      ],
+      "memory": [
+        "agent_or_memory_authorship_requires_actor_identity",
+        "governance_profile_must_never_be_used_as_memory_author",
+        "valid_identity_assertion_is_preferred_over_local_runtime_marker_rederivation"
+      ],
+      "receipts": [
+        "consequential_receipts_bind_applicable_actor_identity",
+        "receipts_preserve_runtime_and_product_provenance_when_material"
+      ]
+    },
+    "global_rules": {
+      "adapter_identity_is_not_actor_identity": true,
+      "equal_strings_do_not_imply_equal_identity_kinds": true,
+      "governance_profile_is_not_identity": true,
+      "identity_assertion_is_consumed_not_rederived": true,
+      "identity_dimensions_are_semantically_distinct": true,
+      "identity_resolution_is_evidence_bound": true,
+      "memory_authorship_uses_actor_identity": true,
+      "provider_identity_is_not_actor_identity": true,
+      "receipts_bind_applicable_actor_and_runtime_provenance": true,
+      "runtime_identity_is_not_actor_identity": true,
+      "surface_identity_is_not_actor_identity": true,
+      "unknown_or_ambiguous_consequential_actor_identity_fails_closed": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/identity-topology@1",
+        "l9.contract/identity-resolution@1",
+        "l9.contract/identity-assertion@1",
+        "l9.contract/provenance-and-coordinate@1",
+        "l9.contract/unknown-and-degradation@1"
+      ]
+    },
+    "identity_assertion": {
+      "definition": "Typed provenance-bearing evidence artifact recording the resolved identity dimensions for one bounded runtime/operation context.",
+      "required": [
+        "subject_ref",
+        "product_ref",
+        "resolved_dimensions",
+        "evidence_refs",
+        "resolver_ref",
+        "governing_coordinates",
+        "result",
+        "assertion_digest"
+      ],
+      "rules": [
+        "assertion_does_not_grant_new_authority",
+        "assertion_must_bind_exact_resolution_evidence",
+        "material_evidence_change_invalidates_currentness",
+        "downstream_may_validate_or_challenge_but_not_silently_rewrite"
+      ],
+      "schema_ref": "l9.schema/identity-assertion@1"
+    },
+    "identity_binding": {
+      "allowed_fields": [
+        "product_ref",
+        "release_ref",
+        "runtime_ref",
+        "constellation_ref",
+        "actor_ref",
+        "surface_ref",
+        "adapter_ref",
+        "provider_ref",
+        "governance_profile_ref",
+        "contract_refs",
+        "scope",
+        "provenance"
+      ],
+      "definition": "Declared relation among identity dimensions and non-identity realization coordinates without collapsing their meanings.",
+      "rules": [
+        "binding_does_not_alias_identity_kinds",
+        "binding_does_not_transfer_authority",
+        "binding_must_preserve_each_dimension_semantics"
+      ]
+    },
+    "identity_dimensions": {
+      "actor_identity": {
+        "authority_source": "actor_registry_and_identity_resolution_contract",
+        "definition": "Identity of the actor attributable for an operation, authorship event, memory write, consequential action, or receipt where actor attribution is material.",
+        "dynamic": true,
+        "question": "Which admitted actor performed or authored this operation?"
+      },
+      "constellation_identity": {
+        "authority_source": "constellation_admission_authority",
+        "definition": "Identity used for admitted Constellation participation where the ProductKind requires independent participation.",
+        "dynamic": true,
+        "question": "Which admitted Constellation participant identity is this runtime using?"
+      },
+      "product_identity": {
+        "authority_source": "product_semantic_owner",
+        "definition": "Stable semantic identity of an L9 product across releases, deployments, runtimes, providers, and surfaces.",
+        "dynamic": false,
+        "question": "Which L9 product is this?"
+      },
+      "release_identity": {
+        "authority_source": "release_provenance_and_admission",
+        "definition": "Immutable version/revision/digest-bound realization identity of one product release.",
+        "dynamic": false,
+        "question": "Which exact immutable product release or artifact realization is this?"
+      },
+      "runtime_identity": {
+        "authority_source": "runtime_identity_contract",
+        "definition": "Identity of a concrete running realization, deployment, process, or consumer-inherited runtime as defined by the applicable ProductKind and topology.",
+        "dynamic": true,
+        "question": "Which exact running realization is participating?"
+      },
+      "surface_identity": {
+        "authority_source": "surface_registry_and_runtime_evidence",
+        "definition": "Identity of the concrete user/runtime interaction surface through which an actor is operating, distinct from the actor, adapter, provider, and governance profile.",
+        "dynamic": true,
+        "question": "Through which execution or interaction surface is the actor operating?"
+      }
+    },
+    "identity_resolution": {
+      "definition": "Evidence-bound determination of applicable dynamic identity dimensions for one runtime context.",
+      "inputs": [
+        "runtime_evidence",
+        "applicable_product_topology",
+        "identity_binding_catalog_or_registry",
+        "governing_identity_contracts"
+      ],
+      "result_domain": [
+        "resolved",
+        "unknown",
+        "ambiguous",
+        "invalid"
+      ],
+      "rules": [
+        "classify_once_for_same_evidence_and_coordinates",
+        "downstream_consumers_do_not_independently_rederive",
+        "runtime_markers_are_evidence_not_authority",
+        "configured_profile_string_is_not_actor_evidence",
+        "unrecognized_runtime_evidence_remains_unknown"
+      ]
+    },
+    "non_identity_dimensions": {
+      "adapter_identity": {
+        "definition": "Identity of the integration adapter used to realize a boundary. It is not actor identity."
+      },
+      "governance_profile": {
+        "definition": "Policy/autonomy profile selected for a runtime/surface. It is not an identity dimension and cannot be used as authorship."
+      },
+      "provider_identity": {
+        "definition": "Identity of the underlying provider/tool/runtime mechanism. It is not actor identity."
+      }
+    },
+    "purpose": "Define distinct L9 identity dimensions, their binding and resolution semantics, and the provenance-bearing assertion consumed by downstream systems without conflating governance profile, provider, adapter, or transport identity with actor authorship."
+  },
+  "projection_digest": "sha256:f94407106185d5ebb43bd65aebf328628282784f94affe4f6810278efa414ae3",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:b9245eca99501a38976e909e1d151942c1253b2eee2bd6bab9c6382687db4288",
+  "source_ref": "l9.source/identity-model@1"
+}

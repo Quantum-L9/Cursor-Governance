@@ -1,0 +1,398 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "catalog_status": {
+      "admitted_kinds": [
+        "node",
+        "dependency"
+      ],
+      "unresolved_kinds": [
+        "sdk"
+      ]
+    },
+    "global_rules": {
+      "archetype_specializes_kind_without_redefining_kind": true,
+      "every_admitted_product_has_exactly_one_primary_kind": true,
+      "identity_dimension_meaning_is_owned_by_identity_model": true,
+      "kind_law_applies_unmodified_unless_an_admitted_product_kind_exception_binds_the_exact_product": true,
+      "product_kind_constrains_identity_obligations_without_redefining_identity_semantics": true,
+      "product_kind_does_not_create_semantic_ownership": true,
+      "product_kind_exception_is_admitted_only_by_the_product_kind_owner": true,
+      "product_kind_exception_is_not_a_product_kind_archetype_or_waiver_class": true,
+      "product_kind_is_architectural_participation_identity": true,
+      "product_kind_is_determined_by_canonical_consumption_and_deployment_model_unless_an_admitted_product_kind_exception_binds_the_exact_product": true,
+      "product_kind_is_not_inferred_from_package_format": true,
+      "product_kind_is_not_inferred_from_process_presence_alone": true,
+      "product_kind_is_not_inferred_from_provider_identity": true,
+      "product_kind_is_not_inferred_from_repository_shape": true,
+      "product_kind_is_not_inferred_from_semantic_complexity": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/product-kind@1",
+        "l9.contract/product-topology@1",
+        "l9.contract/semantic-ownership@1",
+        "l9.contract/monotonic-subordination@1",
+        "l9.contract/admission-and-promotion@1"
+      ]
+    },
+    "kind_exception_model": {
+      "admission_authority": "Quantum-L9/.github",
+      "binding_requires": [
+        "topology_declares_kind_exception_ref_equal_to_the_exception_id",
+        "exception_catalog_is_exactly_the_admitted_set",
+        "exception_status_is_admitted",
+        "exception_authority_owner_is_the_product_kind_owner",
+        "exception_kind_equals_declared_product_kind",
+        "subject_product_ref_equals_declared_product_id",
+        "subject_canonical_repository_equals_declared_identity_canonical_repository",
+        "subject_archetype_ref_equals_declared_product_archetype_ref",
+        "subject_repository_ref_resolves_to_a_current_repository_registry_entry_with_the_same_coordinate",
+        "release_admitted_under_the_claim_is_at_or_after_subject_applies_from_release"
+      ],
+      "claim_field": "product_topology.schema.yaml#properties.product.fields.kind_exception_ref",
+      "definition": "A product-kind exception is canonical law admitted by the ProductKind owner that lets one exactly identified product keep its admitted ProductKind while departing from an enumerated set of that kind's consumption, deployment, process-lifecycle, runtime-identity, and composition obligations. It is not a ProductKind, an archetype, a waiver class, or a delegation of canonical authority to the product.\n",
+      "protected_prohibitions": [
+        "implicit_gate_registration",
+        "independent_constellation_identity_as_dependency",
+        "provider_identity_as_product_identity"
+      ],
+      "protected_requirements": [
+        "installable_artifact",
+        "public_programmatic_contract",
+        "no_independent_constellation_runtime_identity",
+        "no_independent_constellation_identity",
+        "actor_identity_when_local_authorship_is_material",
+        "surface_identity_when_local_surface_affects_governance_or_projection",
+        "product_release_admission"
+      ],
+      "rules": [
+        "exception_applies_only_to_its_exact_subject",
+        "matching_configuration_without_exact_subject_binding_is_invalid",
+        "exception_displaces_only_its_enumerated_obligations",
+        "undisplaced_kind_archetype_and_global_obligations_remain_in_force",
+        "exception_never_changes_product_kind_archetype_or_archetype_catalog",
+        "exception_never_grants_constellation_identity_gate_admission_or_routing_authority",
+        "exception_never_relaxes_security_attribution_isolation_authorization_provenance_or_admission",
+        "malformed_unadmitted_or_unbound_exception_claim_is_invalid_not_ignored",
+        "absent_exception_claim_means_kind_law_applies_unmodified",
+        "release_floor_is_a_product_kind_release_obligation_enforced_at_product_release_admission_through_l9_contract_product_release_at_1",
+        "hosting_coordinates_remain_deployment_owned_and_are_not_semantic_categories"
+      ]
+    },
+    "kind_exceptions": [
+      {
+        "authority": {
+          "authority_class": "canonical",
+          "decision_ref": "docs/adr/ADR-011-product-kind-node-dependency-taxonomy.md#amendment-2026-10-14-memory-hosted-service-exception",
+          "owner": "Quantum-L9/.github"
+        },
+        "departures": [
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.consumption_model",
+            "replacement": "remote_invocation_through_authenticated_mcp_streamable_http_only"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.deployment_model",
+            "replacement": "independent_runtime_as_one_operational_service"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.requires.consumer_owned_process_lifecycle",
+            "replacement": "product_owned_server_process_lifecycle_and_operational_health"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.forbidden.remote_invocation_as_canonical_consumption",
+            "replacement": "remote_invocation_only_through_authenticated_mcp_streamable_http"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.identity_dimensions",
+            "replacement": "product_release_and_service_runtime_identity_without_constellation_identity"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.runtime_identity_rule",
+            "replacement": "service_runtime_identity_rule"
+          },
+          {
+            "displaces": "product_kinds.yaml#kinds.dependency.consumer_binding_required",
+            "replacement": "hosted_service_admission_and_remote_consumer_authentication"
+          },
+          {
+            "displaces": "architecture_rules.yaml#rules[l9.arch-rule/product-kind-dependency@1].derive.architecture_obligations.local_composition",
+            "replacement": "remote_invocation_through_authenticated_mcp_streamable_http_only"
+          },
+          {
+            "displaces": "architecture_rules.yaml#rules[l9.arch-rule/product-kind-dependency@1].derive.architecture_obligations.consumer_bound_artifact",
+            "replacement": "independent_runtime_as_one_operational_service"
+          },
+          {
+            "displaces": "architecture_rules.yaml#rules[l9.arch-rule/product-kind-dependency@1].derive.architecture_obligations.consumer_owned_process_lifecycle",
+            "replacement": "product_owned_server_process_lifecycle_and_operational_health"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].lifecycle",
+            "replacement": "product_owned_server_process_lifecycle_and_operational_health"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].runtime_identity",
+            "replacement": "service_runtime_identity_rule"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].preconditions.independent_deployment_not_required",
+            "replacement": "independent_runtime_as_one_operational_service"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].guarantees.consumer_owns_process_lifecycle",
+            "replacement": "product_owned_server_process_lifecycle_and_operational_health"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].guarantees.canonical_consumption_is_local_composition",
+            "replacement": "remote_invocation_through_authenticated_mcp_streamable_http_only"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].guarantees.canonical_deployment_is_consumer_bound_artifact",
+            "replacement": "independent_runtime_as_one_operational_service"
+          },
+          {
+            "displaces": "architecture_patterns.yaml#patterns[l9.pattern/dependency-package@1].forbidden.separate_runtime_identity_without_explicit_node_binding",
+            "replacement": "service_runtime_identity_rule"
+          },
+          {
+            "displaces": "dependency_archetypes.yaml#global_rules.dependencies_are_locally_composed",
+            "replacement": "remote_invocation_through_authenticated_mcp_streamable_http_only"
+          },
+          {
+            "displaces": "dependency_archetypes.yaml#global_rules.dependency_runtime_identity_is_consumer_bound",
+            "replacement": "service_runtime_identity_rule"
+          },
+          {
+            "displaces": "dependency_archetypes.yaml#archetypes[l9.dependency-archetype/semantic-subsystem@1].properties.consumer_bound_runtime",
+            "replacement": "product_owned_server_process_lifecycle_and_operational_health"
+          }
+        ],
+        "deployment": {
+          "canonical_persistence": {
+            "role": "shared_canonical_persistence_backend",
+            "semantic_owner_unchanged": true,
+            "technology_ref": "technology_capabilities.yaml#technologies[postgresql]"
+          },
+          "hosting": "one_independent_operational_service",
+          "hosting_coordinate": "deployment_owned",
+          "operational_health_owner": "product",
+          "process_lifecycle_owner": "product"
+        },
+        "effective_models": {
+          "consumption_model": "remote_invocation",
+          "deployment_model": "independent_runtime"
+        },
+        "forbidden": [
+          "constellation_identity_through_exception",
+          "gate_admission_through_exception",
+          "gate_routing_authority_through_exception",
+          "node_archetype_binding_through_exception",
+          "runnable_node_pattern_requirement_through_exception",
+          "peer_url_awareness_through_exception",
+          "unauthenticated_remote_consumption",
+          "credential_material_in_topology_or_exception",
+          "exception_inheritance_by_another_product",
+          "hosting_coordinate_as_semantic_category"
+        ],
+        "hosted_service_admission": {
+          "distinctions": {
+            "admission": "Only the applicable target-class authority admits an exact running Memory service deployment; topology validation, release admission, and deployment never do.",
+            "declaration": "A bound ProductTopology declares service_admitted as a kind-specific admission requirement.",
+            "resolution": "Product release admission resolves that requirement under l9.contract/product-release@1 without admitting any running service."
+          },
+          "rule": "Successful deployment does not self-admit the Memory service; service admission binds the exact admitted release and never confers Constellation identity, Gate admission, or routability.",
+          "states": [
+            "deployed",
+            "release_identity_bound",
+            "runtime_identity_bound",
+            "authentication_enforced",
+            "health_ready",
+            "service_admitted",
+            "degraded_or_current",
+            "withdrawn"
+          ],
+          "topology_declaration": {
+            "field": "admission.kind_specific_requirements",
+            "requires": "service_admitted"
+          }
+        },
+        "id": "l9.product-kind-exception/memory-hosted-service@1",
+        "identity": {
+          "identity_dimensions": [
+            "product_identity",
+            "release_identity",
+            "runtime_identity"
+          ],
+          "runtime_identity_rule": "RuntimeIdentity(memory_service_instance) = RuntimeIdentity(admitted Memory service deployment); it is never ConstellationIdentity and confers no Gate admission or routability."
+        },
+        "kind": "dependency",
+        "purpose": "Let the canonical Memory product remain a Dependency while one centrally hosted Memory service is consumed remotely by agents through authenticated MCP Streamable HTTP.\n",
+        "remote_consumption": {
+          "authentication": "required",
+          "authorization": "namespace_scoped",
+          "gate_routing": "ordinary_agent_mcp_requests_are_actor_to_service_consumption_not_gate_routed_inter_product_work",
+          "protocol": "mcp_streamable_http"
+        },
+        "retained_prohibitions": [
+          "implicit_gate_registration",
+          "independent_constellation_identity_as_dependency",
+          "provider_identity_as_product_identity"
+        ],
+        "retained_requirements": [
+          "installable_artifact",
+          "public_programmatic_contract",
+          "no_independent_constellation_runtime_identity",
+          "no_independent_constellation_identity",
+          "actor_identity_when_local_authorship_is_material",
+          "surface_identity_when_local_surface_affects_governance_or_projection",
+          "product_release_admission",
+          "l9.pattern/dependency-package@1",
+          "canonical_semantic_ownership_by_the_memory_semantic_owner",
+          "actor_attribution_for_every_consequential_memory_operation",
+          "tenant_isolation",
+          "namespace_authorization",
+          "credential_protection",
+          "lifecycle_consistency",
+          "provenance",
+          "immutable_release_identity",
+          "deployment_admission"
+        ],
+        "status": "admitted",
+        "subject": {
+          "applies_from_release": "3.0.0",
+          "archetype_ref": "l9.dependency-archetype/semantic-subsystem@1",
+          "canonical_repository": "Quantum-L9/l9-graphiti-memory",
+          "product_ref": "l9-graphiti-memory:product/l9-graphite-memory",
+          "repository_ref": "l9-graphiti-memory"
+        }
+      }
+    ],
+    "kinds": {
+      "dependency": {
+        "admission_model": {
+          "consumer_binding": [
+            "select_admitted_release",
+            "verify_consumer_compatibility",
+            "resolve_dependency_graph",
+            "install_exact_artifact",
+            "bind_configuration_and_extensions",
+            "run_consumer_conformance",
+            "record_binding"
+          ],
+          "product_release_admission": [
+            "candidate",
+            "identified",
+            "contract_bound",
+            "validated",
+            "compatibility_proven",
+            "admitted",
+            "current",
+            "superseded",
+            "retired"
+          ],
+          "rule": "Dependency admission proves an exact release is an admissible L9 Dependency; consumer binding separately proves that release is admissible for one consumer."
+        },
+        "archetype_catalog": "dependency_archetypes.yaml",
+        "consumer_binding_required": true,
+        "consumption_model": "local_composition",
+        "definition": "An installable L9 product whose admitted capability or subsystem is consumed by local composition inside another product's runtime boundary.\n",
+        "deployment_model": "consumer_bound_artifact",
+        "forbidden": [
+          "implicit_gate_registration",
+          "independent_constellation_identity_as_dependency",
+          "remote_invocation_as_canonical_consumption",
+          "provider_identity_as_product_identity"
+        ],
+        "identity_contract_ref": "l9.contract/identity-topology@1",
+        "identity_dimensions": [
+          "product_identity",
+          "release_identity"
+        ],
+        "required_patterns": [
+          "l9.pattern/dependency-package@1"
+        ],
+        "requires": [
+          "installable_artifact",
+          "public_programmatic_contract",
+          "consumer_owned_process_lifecycle",
+          "no_independent_constellation_runtime_identity",
+          "actor_identity_when_local_authorship_is_material",
+          "surface_identity_when_local_surface_affects_governance_or_projection"
+        ],
+        "runtime_identity_rule": "RuntimeIdentity(dependency_instance) = RuntimeIdentity(consumer)"
+      },
+      "node": {
+        "admission_model": {
+          "product_release_admission": [
+            "candidate",
+            "identified",
+            "contract_bound",
+            "validated",
+            "compatibility_proven",
+            "admitted",
+            "current",
+            "superseded",
+            "retired"
+          ],
+          "rule": "Product release admission and runtime participation admission are distinct; successful deployment does not self-admit a Node.",
+          "runtime_admission": [
+            "deployed",
+            "identity_bound",
+            "health_ready",
+            "gate_admitted",
+            "routable",
+            "degraded_or_current",
+            "withdrawn"
+          ]
+        },
+        "archetype_catalog": "node_archetypes.yaml",
+        "consumption_model": "remote_invocation",
+        "definition": "An independently deployed L9 runtime whose admitted capability is consumed remotely through canonical Constellation communication.\n",
+        "deployment_model": "independent_runtime",
+        "forbidden": [
+          "peer_import_of_server_implementation_as_canonical_consumption",
+          "direct_peer_routing_when_gate_is_required",
+          "provider_identity_as_product_identity"
+        ],
+        "identity_contract_ref": "l9.contract/identity-topology@1",
+        "identity_dimensions": [
+          "product_identity",
+          "release_identity",
+          "runtime_identity",
+          "constellation_identity"
+        ],
+        "required_patterns": [
+          "l9.pattern/runnable-node@1",
+          "l9.pattern/semantic-core-gate-adapter@1"
+        ],
+        "requires": [
+          "independent_runtime_identity",
+          "independent_health_and_readiness",
+          "canonical_constellation_communication",
+          "gate_routed_inter_product_work",
+          "runtime_admission",
+          "actor_identity_when_consequential_authorship_exists",
+          "surface_identity_when_multiple_execution_surfaces_exist"
+        ]
+      }
+    },
+    "unresolved_kind_candidates": {
+      "sdk": {
+        "admission": "none",
+        "rule": "SDK is intentionally not admitted as a ProductKind in this release. Gate_SDK and l9-ci-sdk require a separate comparative architecture pass before global SDK semantics are established.\n",
+        "status": "unresolved"
+      }
+    }
+  },
+  "projection_digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
+  "source_ref": "l9.source/product-kinds@1"
+}

@@ -2,6 +2,16 @@
 
 This file is historical and non-authoritative. Machine-readable semantic owners declared by `runtime/MANIFEST.yaml` govern runtime behavior.
 
+## 0.8.3 - 2026-10-15
+
+### Architecture intelligence input
+
+- Added `integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml`: canonical architecture intelligence from `Quantum-L9/.github` (`l9.projection/architecture-intelligence@1` composed by `l9.compose/architecture-intelligence@1`) as a separate, explicitly loaded input, pinned by profile, composition, payload-schema, and source-class identity.
+- Added `scripts/verify_architecture_intelligence.py`, the consumer verifier (BOUND / REJECTED / BLOCKED / STALE). It checks the producer's claims and implements no selector or composition semantics.
+- Added the optional load `architecture_intelligence`, the run-state slot `$.architecture_intelligence`, its status enum and events, and RS-034. There is no fallback to the historical observer projection.
+- `contracts/L9_ARCHITECTURE_PROFILE.yaml` is unchanged and keeps its runtime role.
+- Added `decisions/ADR-L9-GAR-007.yaml`.
+
 ## 0.8.2 - 2026-09-27
 
 ### Validate & Repair hardening

@@ -1,0 +1,207 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "governed_by": {
+      "contracts": [
+        "l9.contract/product-manifest@1",
+        "l9.contract/provenance-and-coordinate@1",
+        "l9.contract/revision-and-supersession@1"
+      ]
+    },
+    "properties": {
+      "adapters": {
+        "type": "object"
+      },
+      "admission": {
+        "type": "object"
+      },
+      "architecture": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "bindings": {
+        "type": "object"
+      },
+      "build": {
+        "type": "object"
+      },
+      "capabilities": {
+        "type": "object"
+      },
+      "communication": {
+        "type": "object"
+      },
+      "compatibility": {
+        "type": "object"
+      },
+      "compiler": {
+        "fields": {
+          "compiler_version": "semantic_ref_or_string",
+          "profile_digest": "semantic_digest",
+          "profile_ref": "semantic_ref"
+        },
+        "required": [
+          "profile_ref",
+          "profile_digest"
+        ],
+        "type": "object"
+      },
+      "conformance": {
+        "type": "object"
+      },
+      "distribution": {
+        "type": "object"
+      },
+      "failure": {
+        "type": "object"
+      },
+      "governance": {
+        "type": "object"
+      },
+      "identity": {
+        "type": "object"
+      },
+      "lifecycle": {
+        "type": "object"
+      },
+      "manifest_digest": {
+        "type": "semantic_digest"
+      },
+      "observability": {
+        "type": "object"
+      },
+      "ports": {
+        "type": "object"
+      },
+      "product": {
+        "fields": {
+          "archetype_ref": "semantic_ref",
+          "id": "semantic_ref",
+          "kind": "product_kind",
+          "kind_exception_ref": "semantic_ref_or_null"
+        },
+        "required": [
+          "id",
+          "kind",
+          "archetype_ref"
+        ],
+        "type": "object"
+      },
+      "provenance": {
+        "type": "object"
+      },
+      "providers": {
+        "type": "object"
+      },
+      "receipts": {
+        "type": "object"
+      },
+      "relationships": {
+        "type": "object"
+      },
+      "requirements": {
+        "type": "object"
+      },
+      "runtime": {
+        "type": "object"
+      },
+      "schema": {
+        "const": "l9.product-manifest/v1"
+      },
+      "security": {
+        "type": "object"
+      },
+      "source_topology": {
+        "fields": {
+          "digest": "semantic_digest",
+          "ref": "semantic_ref"
+        },
+        "required": [
+          "ref",
+          "digest"
+        ],
+        "type": "object"
+      },
+      "state": {
+        "type": "object"
+      },
+      "technology": {
+        "type": "object"
+      },
+      "unresolved": {
+        "type": "array"
+      }
+    },
+    "purpose": "Define the proof-carrying derived realization closure compiled from one exact authoritative ProductTopology under pinned semantic and compiler coordinates.\n",
+    "required": [
+      "schema",
+      "product",
+      "source_topology",
+      "authority",
+      "identity",
+      "requirements",
+      "capabilities",
+      "architecture",
+      "ports",
+      "adapters",
+      "relationships",
+      "technology",
+      "bindings",
+      "providers",
+      "admission",
+      "lifecycle",
+      "conformance",
+      "compiler",
+      "provenance",
+      "unresolved",
+      "manifest_digest"
+    ],
+    "resolved_manifest_gate": {
+      "all_of": [
+        "source_product_topology_valid",
+        "product_kind_resolved",
+        "product_archetype_resolved",
+        "product_kind_exception_absent_or_exactly_bound_and_admitted",
+        "governance_profile_separate_from_identity",
+        "identity_resolution_contract_resolved",
+        "identity_topology_resolved",
+        "hard_requirements_resolved",
+        "capability_closure_resolved",
+        "architecture_obligations_resolved",
+        "required_ports_resolved",
+        "required_adapters_resolved",
+        "product_relationships_resolved",
+        "provider_bindings_admissible",
+        "admission_requirements_resolved",
+        "conformance_requirements_resolved",
+        "authority_boundaries_valid",
+        "unresolved_hard_semantic_gaps_empty"
+      ],
+      "rule": "A ProductManifest may exist while unresolved, but implementation lowering may consume only a manifest satisfying the resolved_manifest_gate.\n"
+    },
+    "semantic_rules": [
+      "manifest_is_proof_carrying_derived_semantics",
+      "manifest_does_not_become_product_or_domain_owner",
+      "manifest_preserves_exact_source_topology_and_profile_coordinates",
+      "manifest_preserves_product_kind_and_archetype_identity",
+      "manifest_preserves_the_exact_applied_product_kind_exception_coordinate",
+      "manifest_product_kind_exception_ref_is_required_when_the_source_topology_declares_one",
+      "material_upstream_change_invalidates_currentness_until_recompiled_or_compatibility_proven",
+      "manifest_preserves_identity_dimension_semantics",
+      "manifest_preserves_identity_resolution_and_assertion_contract_coordinates",
+      "manifest_does_not_collapse_governance_profile_into_identity"
+    ],
+    "type": "object"
+  },
+  "projection_digest": "sha256:02f97ba4e61ddf6939e77435bc905adc954e4b401d869c759ef771ea13c4ab01",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7e31b8202e9daece716e1f5a9fa2c6bb5cb7e6f1bc42115fba708538b6fd6efa",
+  "source_ref": "l9.source/product-manifest-schema@1"
+}

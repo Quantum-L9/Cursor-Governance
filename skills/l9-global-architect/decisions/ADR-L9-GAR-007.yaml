@@ -1,0 +1,24 @@
+adr:
+  id: ADR-L9-GAR-007
+  title: Architecture intelligence as a separate, producer-emitted, consumer-verified GAR input
+  status: accepted
+  date: 2026-10-15
+  decision_scope: l9-global-architect v0.8.3 runtime integration binding
+  normative: false
+authorization: repository_owner_approved_compiler_produced_consumer_verified_binding_2026_10_15
+context:
+  - GAR consumed no canonical projection; contracts/L9_ARCHITECTURE_PROFILE.yaml is GAR-owned law, not a projection.
+  - Quantum-L9/.github v3.22.0 candidate defines l9.projection/architecture-intelligence@1 and l9.compose/architecture-intelligence@1.
+  - l9-semantic-compiler produces one PASS artifact per source and a source-namespaced composed view with PASS receipts.
+decision:
+  - Add integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml as a separate input with exact profile, composition, schema, and source-class pins.
+  - The bundle is produced only by the compiler via tools/authority/produce_architecture_intelligence.py and CI; GAR never produces it.
+  - scripts/verify_architecture_intelligence.py checks bytes, envelope digests, pins, receipts, exact source coverage, namespace byte-equivalence, and optional currentness; it executes no selector or composition semantics.
+  - Load only on the optional_load trigger and only when the verifier returns BOUND; record provenance in $.architecture_intelligence (RS-034).
+  - BLOCKED, REJECTED, and STALE never fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
+preserved:
+  - contracts/L9_ARCHITECTURE_PROFILE.yaml unchanged and loaded in its existing boot position.
+  - Every other semantic owner, eval, and transition unchanged.
+validation:
+  - scripts/validate_runtime_alignment.py checks the binding pins, fallbacks, manifest wiring, run-state slot, and RS-034.
+  - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py exercises BOUND and every refusal path.

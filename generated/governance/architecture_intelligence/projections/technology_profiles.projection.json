@@ -1,0 +1,57 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "global_rules": {
+      "binding_facts_come_from_binding_catalog": true,
+      "profile_declares_intent_and_constraints_not_provider_semantics": true,
+      "provider_facts_come_from_technology_capabilities": true,
+      "technology_profile_does_not_create_semantic_ownership": true,
+      "unknown_provider_capability_fails_closed": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/technology-binding@1",
+        "l9.contract/semantic-identity-and-compatibility@1",
+        "l9.contract/unknown-and-degradation@1"
+      ]
+    },
+    "profile_shape": {
+      "optional": [
+        "runtime",
+        "persistence",
+        "cache",
+        "testing",
+        "packaging",
+        "deployment",
+        "constraints",
+        "preferences"
+      ],
+      "required": [
+        "id",
+        "language",
+        "transport"
+      ]
+    },
+    "profiles": [],
+    "resolution": {
+      "compatibility_rule": "RequiredCapabilities subset_of ProvidedCapabilities",
+      "inputs": [
+        "technology_profile",
+        "technology_capabilities",
+        "binding_catalog",
+        "required_port_capabilities",
+        "operational_requirements"
+      ],
+      "optimization_rule": "Preferences may rank only already compatible realizations."
+    }
+  },
+  "projection_digest": "sha256:e74e00836c742d753758ec5b3184abe80475edc46e1b728c08a33e3811bcf228",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:423a6da9cbf80f89d40fb3d524a5ee6c9ae7acff360fc89e25bb997014546246",
+  "source_ref": "l9.source/technology-profiles@1"
+}

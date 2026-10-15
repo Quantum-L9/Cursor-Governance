@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[3]
 PACK = REPO / "skills" / "l9-global-architect"
 VALIDATOR = PACK / "scripts" / "validate_runtime_alignment.py"
 REGISTRY = REPO / "ops" / "generated" / "skill-registry.json"
-PACK_VERSION = "0.8.2"
+PACK_VERSION = "0.8.3"
 
 
 def _run_validator(root: Path) -> subprocess.CompletedProcess[str]:

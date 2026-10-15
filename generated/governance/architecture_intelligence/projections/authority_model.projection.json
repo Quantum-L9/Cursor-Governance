@@ -1,0 +1,234 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "admission_rules": {
+      "candidate_generation_is_not_admission": true,
+      "changed_material_subject_requires_new_decision_unless_compatibility_preserves_it": true,
+      "global_requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "self_admission_without_target_class_authority_forbidden": true
+    },
+    "agent_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "agent_must_not_self_expand_authority",
+        "bounded_autonomy_requires_explicit_scope",
+        "conformance_evidence_does_not_grant_authority"
+      ]
+    },
+    "authority_classes": {
+      "candidate": {
+        "authoritative": false,
+        "meaning": "Proposed artifact pending validation and authorized admission."
+      },
+      "canonical": {
+        "implicit_derivation_allowed": false,
+        "meaning": "Authoritative within the declared semantic owner scope."
+      },
+      "derived": {
+        "may_self_promote": false,
+        "meaning": "Derived from upstream authority and cannot expand authority."
+      },
+      "evidence": {
+        "grants_authority": false,
+        "meaning": "Records an observed operation or validation result."
+      },
+      "global_governance": {
+        "does_not_own": [
+          "executable_conformance_semantics"
+        ],
+        "owner": "Quantum-L9/.github",
+        "roles": [
+          "organization_governance_plane",
+          "organization_control_plane",
+          "organization_distribution_plane",
+          "canonical_l9_vocabulary_owner"
+        ]
+      }
+    },
+    "compiler_authority": {
+      "may": [
+        "project",
+        "derive_when_profile_allows",
+        "synthesize_candidates",
+        "resolve_registered_bindings",
+        "lower",
+        "render",
+        "mechanically_validate",
+        "emit_receipts",
+        "mark_artifacts_stale",
+        "propose_recompilation"
+      ],
+      "may_not": [
+        "admit_global_law",
+        "admit_project_semantics_without_authority",
+        "self_expand_authority",
+        "redefine_canonical_vocabulary",
+        "redefine_canonical_profiles",
+        "reinterpret_failed_validation_as_success"
+      ],
+      "semantic_owner": "l9-semantic-compiler"
+    },
+    "escalation_rules": {
+      "authority_missing": "block",
+      "changed_candidate_after_decision": "require_new_decision",
+      "semantic_conflict": "block",
+      "unknown": "remain_unknown"
+    },
+    "global_admission_rules": {
+      "candidate_generation_is_not_admission": true,
+      "requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "requires_global_authority": true
+    },
+    "global_promotion": {
+      "automatic_promotion_forbidden": true,
+      "candidate": "globalization_candidate",
+      "requires": [
+        "cross_domain_evidence",
+        "authorized_global_state_change"
+      ]
+    },
+    "human_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "approval_binds_exact_candidate_digest",
+        "changed_candidate_requires_new_decision"
+      ]
+    },
+    "identity_authority": {
+      "actor_identity_source": "admitted_actor_registry_or_authorized_identity_owner",
+      "global_semantics_owner": "Quantum-L9/.github",
+      "governance_profile_owner": "applicable_governance_owner",
+      "product_identity_owner": "product_semantic_owner",
+      "rules": [
+        "identity_resolution_does_not_create_actor_authority",
+        "identity_assertion_does_not_grant_authorization",
+        "governance_profile_selection_does_not_rewrite_identity",
+        "memory_and_receipt_consumers_do_not_own_actor_identity_semantics"
+      ],
+      "runtime_and_surface_resolution_owner": "applicable_identity_resolution_contract"
+    },
+    "product_admission_authority": {
+      "candidate_generation_is_not_admission": true,
+      "decision_authority": "applicable_target_class_authority",
+      "global_semantics_owner": "Quantum-L9/.github",
+      "id": "l9.authority/product-admission",
+      "implies": {
+        "capability_invocation_authorization": false,
+        "consumer_compatibility": false,
+        "implementation_conformance": false,
+        "publication": false,
+        "runtime_admission": false,
+        "runtime_availability": false
+      },
+      "inherits_global_requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "inherits_rules": [
+        "admission_rules",
+        "escalation_rules"
+      ],
+      "meaning": "Semantic authority role under which an exact ProductTopology or exact product release may be admitted by the applicable target-class authority.",
+      "operation": "product_admission",
+      "rules": [
+        "product_admission_binds_exact_subject",
+        "compilation_or_validation_is_not_product_admission",
+        "candidate_does_not_self_admit_because_validation_passes",
+        "global_semantics_owner_does_not_admit_products",
+        "product_release_admission_is_not_runtime_admission"
+      ],
+      "self_admission_without_target_class_authority_forbidden": true,
+      "subjects": [
+        "exact_product_topology",
+        "exact_product_release"
+      ]
+    },
+    "product_manifest_authority": {
+      "artifact_class": "derived",
+      "implementation_gate": "resolved_manifest_gate_must_pass_before_lowering",
+      "product_authority": false,
+      "rule": "ProductManifest records the exact resolved realization closure and never becomes the owner of ProductTopology or domain semantics.",
+      "semantic_owner": "l9-semantic-compiler"
+    },
+    "product_topology_authority": {
+      "compiler_may": [
+        "validate_structure",
+        "normalize_representation",
+        "resolve_references",
+        "derive_governed_consequences",
+        "resolve_kind_and_archetype_obligations"
+      ],
+      "compiler_may_not": [
+        "invent_product_purpose",
+        "invent_product_boundary",
+        "invent_product_kind",
+        "invent_product_archetype",
+        "mutate_admitted_product_contract",
+        "infer_undeclared_authority",
+        "replace_product_owner_decisions"
+      ],
+      "global_schema_owner": "Quantum-L9/.github",
+      "rule": "An admitted ProductTopology is the authoritative product contract. Compilation may derive consequences but may not reinterpret product-owned semantics.",
+      "semantic_owner": "product_semantic_owner",
+      "status": "candidate_until_admitted"
+    },
+    "profile_publication": {
+      "canonical_identity_required": true,
+      "catalog_entry_required": true,
+      "distribution_availability_required": true,
+      "existing_profile_versions_are_immutable": true,
+      "immutable_digest_required": true,
+      "profile_membership_required": true
+    },
+    "project_contract_admission": {
+      "downstream_use_requires_admission": true,
+      "requires": [
+        "validated_global_baseline",
+        "product_topology_or_requirements",
+        "mechanical_validation",
+        "valid_authority"
+      ]
+    },
+    "promotion_rules": {
+      "authorized_global_state_change_required": true,
+      "globalization_candidate_is_not_global_authority": true,
+      "sequence": [
+        "admitted_domain_laws",
+        "harvest",
+        "globalization_candidate",
+        "authorized_global_state_change",
+        "global_invariant_or_contract",
+        "canonical_global_law",
+        "global_fixture",
+        "published_global_profile"
+      ]
+    }
+  },
+  "projection_digest": "sha256:773fcaa04fe23b2a6c44b68f8be24916b57219a54500ddd3353e65631f408e12",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+  "source_ref": "l9.source/authority-model@1"
+}

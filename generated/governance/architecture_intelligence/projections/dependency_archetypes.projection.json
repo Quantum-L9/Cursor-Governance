@@ -1,0 +1,146 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "archetypes": [
+      {
+        "forbidden": [
+          "implicit_gate_registration",
+          "consumer_semantic_ownership_capture",
+          "provider_becomes_semantic_owner"
+        ],
+        "id": "l9.dependency-archetype/semantic-subsystem@1",
+        "optional_patterns": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/reference-model-conformance@1",
+          "l9.pattern/fixture-backed-conformance@1"
+        ],
+        "properties": [
+          "owned_reusable_semantics",
+          "public_programmatic_contract",
+          "consumer_bound_runtime",
+          "independent_release_identity"
+        ],
+        "purpose": "Reusable installable subsystem that owns a bounded semantic domain while executing inside a consuming product's runtime boundary.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/dependency-package@1"
+          ],
+          "conformance_classes": [
+            "core"
+          ]
+        }
+      },
+      {
+        "forbidden": [
+          "implicit_domain_ownership",
+          "implicit_gate_registration"
+        ],
+        "id": "l9.dependency-archetype/infrastructure@1",
+        "properties": [
+          "reusable_mechanism",
+          "public_programmatic_contract",
+          "consumer_bound_runtime"
+        ],
+        "purpose": "Reusable installable infrastructure mechanism with an L9-owned public contract and no independent Constellation identity.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/dependency-package@1"
+          ],
+          "conformance_classes": [
+            "core"
+          ]
+        }
+      },
+      {
+        "forbidden": [
+          "provider_api_promoted_to_owner_contract",
+          "consumer_semantics_redefined_by_adapter"
+        ],
+        "id": "l9.dependency-archetype/adapter-package@1",
+        "properties": [
+          "adapter_implementation",
+          "explicit_port_conformance",
+          "provider_binding"
+        ],
+        "purpose": "Reusable installable package whose primary responsibility is a concrete realization of one or more owner-defined ports.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/dependency-package@1",
+            "l9.pattern/semantic-core-provider-adapter@1"
+          ],
+          "conformance_classes": [
+            "core",
+            "adapter"
+          ]
+        }
+      },
+      {
+        "forbidden": [
+          "hidden_runtime_side_effects",
+          "implicit_process_ownership"
+        ],
+        "id": "l9.dependency-archetype/contract-package@1",
+        "properties": [
+          "stable_contract_surface",
+          "minimal_runtime",
+          "independent_release_identity"
+        ],
+        "purpose": "Reusable installable package whose primary public surface is canonical or owner-admitted types, schemas, contracts, validators, and compatibility machinery with minimal runtime behavior.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/dependency-package@1"
+          ],
+          "conformance_classes": [
+            "core"
+          ]
+        }
+      },
+      {
+        "forbidden": [
+          "consumer_domain_semantic_ownership",
+          "implicit_constellation_identity"
+        ],
+        "id": "l9.dependency-archetype/chassis@1",
+        "properties": [
+          "reusable_runtime_substrate",
+          "consumer_bound_runtime",
+          "domain_semantic_non_ownership"
+        ],
+        "purpose": "Reusable installable runtime substrate providing common bootstrap, configuration, health, observability, security, or lifecycle mechanics without acquiring the consumer's domain semantics.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/dependency-package@1"
+          ],
+          "conformance_classes": [
+            "core"
+          ]
+        }
+      }
+    ],
+    "global_rules": {
+      "archetype_does_not_create_semantic_ownership": true,
+      "archetype_does_not_define_consumer_semantics": true,
+      "archetype_obligations_apply_unmodified_unless_an_admitted_product_kind_exception_displaces_them_for_its_exact_product": true,
+      "archetype_specializes_dependency_kind": true,
+      "catalog_applies_only_to_product_kind_dependency": true,
+      "dependencies_are_locally_composed": true,
+      "dependency_runtime_identity_is_consumer_bound": true,
+      "package_complexity_does_not_imply_node_kind": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/product-kind@1",
+        "l9.contract/product-topology@1"
+      ]
+    }
+  },
+  "projection_digest": "sha256:152547bcadb1463f8cc4fdffbd5988816a20fc9572815e2faa2196574814a818",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+  "source_ref": "l9.source/dependency-archetypes@1"
+}

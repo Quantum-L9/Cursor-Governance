@@ -1,0 +1,186 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+      "path": "semantics/projection_artifact.schema.yaml",
+      "ref": "l9.schema/projection-artifact@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:6162c745bf9d818a96d8197f6c47ca22a23da64b622b1699d58c1942aee26674",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:fe5d79a65acd7e2587337136d4874b04399d9166d2b652accefd2309fc986be2",
+      "path": "semantics/projection_engine_contract.yaml",
+      "ref": "l9.compiler/projection-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:b91d3bfea487e148be37349a705137c7f351ffc877d9fce8fabf4bb13372478e",
+      "path": "semantics/projection_profiles.yaml",
+      "ref": "l9.projection-profile-catalog/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b",
+    "selector_model": {
+      "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
+      "path": "semantics/selector_model.yaml",
+      "ref": "l9.selector-model/global@1"
+    },
+    "source_registry": {
+      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+      "path": "semantics/repository_registry.yaml",
+      "ref": "l9.source/repository-registry@1",
+      "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b"
+    }
+  ],
+  "operation": "projection",
+  "output": {
+    "digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+    "ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "profile": {
+    "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+    "ref": "l9.projection/architecture-intelligence@1"
+  },
+  "receipt_digest": "sha256:d69e044720873e2c8fdec5e5f3d16f7d7d97a11ec227cba0ea873f96bf37c4ac",
+  "receipt_identity": "l9.receipt-instance/3209be166fa9cf1711fbaf8934620ee40165573e7e49b858d040141525a8ec87",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "coverage": "complete",
+    "criteria": {
+      "declared_constraint:forbidden:provider_implementation_details": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:target_rendering_details": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:unrelated_domain_payloads": {
+        "criterion": "source_authority",
+        "owner": "Quantum-L9/.github",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:78a47db19741be92d1db28168793572d829c0177a6e05f4b0a1a0130fd934d24",
+        "path": "l9.projection_architecture-intelligence_1/l9.source_repository-registry_1.projection.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+          "path": "semantics/projection_artifact.schema.yaml",
+          "ref": "l9.schema/projection-artifact@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "schema": "l9.projection.architecture-intelligence/v1",
+        "schema_artifact": {
+          "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+          "path": "semantics/architecture_intelligence_projection.schema.yaml",
+          "ref": "l9.schema/architecture-intelligence-projection@1"
+        },
+        "status": "pass"
+      },
+      "profile_currentness": {
+        "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "ref": "l9.projection/architecture-intelligence@1",
+        "status": "pass"
+      },
+      "projection_digest": {
+        "digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+        "status": "pass"
+      },
+      "selection_equivalence": {
+        "selectors": 7,
+        "status": "pass"
+      },
+      "source_currentness": {
+        "digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+        "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b",
+        "status": "pass"
+      },
+      "source_identity": {
+        "path": "semantics/repository_registry.yaml",
+        "ref": "l9.source/repository-registry@1",
+        "source_class": "repository_registry",
+        "status": "pass"
+      },
+      "successor_of": {
+        "predecessor": "l9.projection/gar-architecture-observer@1",
+        "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+        "rule": "PROJECTION-014",
+        "status": "pass"
+      }
+    },
+    "selection_coverage": [
+      {
+        "records_lacking_selection": [],
+        "selector": "$.purpose",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.global_rules",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.does_not_own",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.repository_lifecycle",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.repositories",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.aliases",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.downstream_obligations",
+        "status": "resolved"
+      }
+    ],
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

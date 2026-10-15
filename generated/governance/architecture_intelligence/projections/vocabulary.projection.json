@@ -1,0 +1,436 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "relationships": {
+      "authority_flow": {
+        "sequence": [
+          "authority",
+          "invariant",
+          "law",
+          "fixture",
+          "conformance"
+        ]
+      },
+      "binding_lowering_relationship": {
+        "binding_can_exist_without_lowering": true,
+        "binding_declares_mapping": true,
+        "lowering_applies_mapping": true,
+        "target_lowering_requires_binding": true
+      },
+      "compilation_relationship": {
+        "compilation_may_contain": [
+          "projection",
+          "derivation",
+          "synthesis",
+          "binding_selection",
+          "lowering",
+          "rendering"
+        ]
+      },
+      "harvest_promotion_flow": {
+        "sequence": [
+          "admitted_domain_laws",
+          "harvest",
+          "globalization_candidate",
+          "authorized_global_state_change",
+          "global_invariant_or_contract",
+          "canonical_global_law",
+          "global_fixture",
+          "published_global_profile"
+        ]
+      },
+      "identity_resolution_flow": {
+        "rules": [
+          "resolution_occurs_once_per_materially_identical_evidence_and_coordinates",
+          "downstream_consumers_validate_or_challenge_assertion_but_do_not_silently_rederive",
+          "governance_profile_selection_is_downstream_of_identity_and_does_not_rewrite_it"
+        ],
+        "sequence": [
+          "runtime_evidence",
+          "identity_resolution",
+          "identity_assertion",
+          "downstream_consumers"
+        ]
+      },
+      "project_contract_flow": {
+        "inputs": [
+          "global_semantic_baseline",
+          "product_topology",
+          "project_requirements"
+        ],
+        "operation": "synthesis",
+        "output": "project_contract"
+      },
+      "projection_derivation_distinction": {
+        "derivation_exposes_entailed_consequences": true,
+        "projection_selects_existing_semantics": true
+      },
+      "surgical_repair_flow": {
+        "sequence": [
+          "validation_failure",
+          "unsat_core_or_failure_evidence",
+          "provenance_resolution",
+          "earliest_affected_semantic_artifact",
+          "new_revision",
+          "dependency_scoped_invalidation",
+          "affected_recompilation",
+          "revalidation"
+        ]
+      }
+    },
+    "terms": {
+      "adapter": {
+        "definition": "Concrete translator or realization boundary that implements an owner-defined port using a provider, protocol, or external mechanism without acquiring the port owner's semantic authority.",
+        "rules": [
+          "adapter_implements_port",
+          "adapter_does_not_redefine_port_semantics",
+          "provider_details_should_not_escape_adapter_boundary"
+        ],
+        "semantic_class": "realization_boundary"
+      },
+      "admission": {
+        "definition": "Deterministic evaluation and authorized state transition that determines whether a candidate semantic artifact becomes an admitted artifact within a declared scope.\n",
+        "hard_checks": [
+          "authority_valid",
+          "source_traceable",
+          "derivation_valid",
+          "deterministic",
+          "reproducible",
+          "non_vacuous",
+          "independent",
+          "executable",
+          "non_conflicting",
+          "version_valid"
+        ],
+        "semantic_class": "governance_operation"
+      },
+      "authority": {
+        "definition": "The recognized right to establish, admit, modify, approve, reject, or govern a semantic fact, artifact, operation, or state transition.\n",
+        "question": "Who is permitted to make this authoritative?",
+        "rules": [
+          "authority_must_be_explicit",
+          "derived_artifacts_do_not_gain_authority_automatically",
+          "conformance_does_not_grant_authority",
+          "agents_must_not_self_expand_authority"
+        ],
+        "semantic_class": "governance"
+      },
+      "binding": {
+        "definition": "A declaration mapping an abstract semantic role, concept, operation, port, or expectation onto a concrete realization mechanism.\n",
+        "properties": {
+          "declares_realization_rules": true,
+          "may_exist_without_lowering": true,
+          "performs_lowering": false
+        },
+        "question": "What concrete mechanism realizes this abstract role?",
+        "semantic_class": "realization_mapping"
+      },
+      "capability": {
+        "authority_rule": "Capability identity and functional ability do not grant governing authority, and provider realization does not transfer semantic ownership.\n",
+        "definition": "A stable provider-independent semantic function identity with an explicit semantic owner, semantic scope, effect class, requirements, and applicable authorization requirements. Declaration, admission, availability, authorization, and invocability remain distinct dimensions.\n",
+        "detailed_model": "capabilities.yaml",
+        "semantic_class": "semantic_function"
+      },
+      "capability_closure": {
+        "definition": "Desired capabilities plus all transitively required capabilities and their governing contract and ownership coordinates.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "constraint": {
+        "definition": "A mechanically evaluable condition restricting the admissible solution space of a semantic artifact or compilation stage.\n",
+        "semantic_class": "formal_semantics"
+      },
+      "contract": {
+        "definition": "A machine-usable declaration of an operation, capability, interface, accepted inputs, outputs, outcomes, obligations, boundaries, or compatibility requirements.\n",
+        "question": "What behavior or interface is explicitly promised or required?",
+        "rules": [
+          "contracts_must_not_violate_applicable_invariants",
+          "contracts_must_have_explicit_scope",
+          "contract_compatibility_must_be_explicit"
+        ],
+        "semantic_class": "semantic_interface"
+      },
+      "dependency": {
+        "definition": "L9 product whose canonical consumption is local composition and canonical deployment is a consumer-bound installable artifact.",
+        "rules": [
+          "departs_only_through_an_admitted_product_kind_exception_bound_to_the_exact_product"
+        ],
+        "semantic_class": "product_kind",
+        "subtype_of": "product_kind"
+      },
+      "derivation": {
+        "definition": "Production of an explicit semantic consequence that is logically entailed by already-authoritative or validated semantics.\n",
+        "examples": [
+          "laws_to_fixture_cases",
+          "conjunction_to_truth_table_cases",
+          "idempotency_law_to_replay_cases"
+        ],
+        "notation": [
+          "S ⊢ D"
+        ],
+        "properties": {
+          "may_create_authority": false,
+          "may_create_new_explicit_knowledge": true,
+          "representation_change_required": false
+        },
+        "question": "What follows from what is already known?",
+        "semantic_class": "compiler_operation"
+      },
+      "globalization_candidate": {
+        "definition": "A recurring normalized domain law or fixture pattern that appears broadly reusable across L9 but lacks sufficient global semantic authority to be admitted as global.\n",
+        "rules": [
+          "globalization_candidate_is_not_global_authority",
+          "promotion_requires_authorized_global_state_change"
+        ],
+        "semantic_class": "governance_candidate"
+      },
+      "hard_constraint": {
+        "definition": "A non-compensable requirement whose violation makes a candidate inadmissible regardless of optimization score or utility.\n",
+        "notation": [
+          "HardConstraint = false => Feasible = false"
+        ],
+        "semantic_class": "formal_semantics",
+        "subtype_of": "constraint"
+      },
+      "harvest": {
+        "definition": "Deterministic or evidence-bound discovery of recurring normalized laws, fixtures, patterns, or semantic structures across domains for possible promotion into reusable higher-scope semantics.\n",
+        "produces": [
+          "globalization_candidates",
+          "promotion_packets"
+        ],
+        "question": "Which repeated domain semantics may deserve promotion upstream?",
+        "semantic_class": "compiler_operation"
+      },
+      "identity_assertion": {
+        "definition": "Typed provenance-bearing evidence artifact recording resolved identity dimensions for one bounded runtime or operation context.",
+        "detailed_model": "identity_model.yaml",
+        "schema_ref": "l9.schema/identity-assertion@1",
+        "semantic_class": "evidence"
+      },
+      "invariant": {
+        "authority_rule": "An invariant is authoritative only when admitted by its semantic owner.\n",
+        "definition": "A property that must remain true across all admissible states, implementations, transitions, or representations within its scope.\n",
+        "produces": [
+          "law_candidates"
+        ],
+        "question": "What must always remain true?",
+        "semantic_class": "semantic_constraint"
+      },
+      "lowering": {
+        "definition": "A compilation step that transforms an abstract intermediate representation into a more concrete intermediate representation using an applicable binding.\n",
+        "produces": [
+          "lower_level_ir"
+        ],
+        "question": "How is this abstract representation realized more concretely?",
+        "requires": [
+          "source_ir",
+          "applicable_binding",
+          "target_abstraction_level"
+        ],
+        "rules": [
+          "lowering_requires_applicable_binding",
+          "lowering_must_not_expand_semantic_authority",
+          "output_should_reduce_remaining_realization_freedom"
+        ],
+        "semantic_class": "compiler_operation"
+      },
+      "node": {
+        "definition": "L9 product whose canonical consumption is remote invocation and canonical deployment is an independent runtime participating through canonical Constellation communication.",
+        "semantic_class": "product_kind",
+        "subtype_of": "product_kind"
+      },
+      "objective": {
+        "definition": "A declared optimization criterion evaluated only among candidates that satisfy all applicable hard constraints.\n",
+        "examples": [
+          "minimize_critical_path",
+          "minimize_cost",
+          "minimize_risk",
+          "maximize_leverage"
+        ],
+        "semantic_class": "optimization"
+      },
+      "port": {
+        "definition": "Provider-neutral semantic interface owned by a semantic domain and governed by explicit contracts, capability requirements, effect semantics, and compatibility rules.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "product": {
+        "definition": "An L9-owned software product described by one ProductTopology and governed by an explicit semantic owner, ProductKind, archetype, capability boundary, contracts, lifecycle, admission, and provenance.",
+        "rules": [
+          "repository_identity_is_not_product_kind",
+          "provider_identity_is_not_product_identity"
+        ],
+        "semantic_class": "architecture_identity"
+      },
+      "product_archetype": {
+        "definition": "Kind-specific reusable specialization that adds structural, pattern, and conformance obligations without redefining ProductKind or domain semantics.",
+        "rules": [
+          "archetype_must_belong_to_product_kind",
+          "archetype_does_not_create_semantic_ownership"
+        ],
+        "semantic_class": "architecture_classification"
+      },
+      "product_kind": {
+        "definition": "Primary architectural participation form of an L9 product, determined by its canonical consumption and deployment model.",
+        "detailed_model": "product_kinds.yaml",
+        "rules": [
+          "kind_is_not_inferred_from_provider",
+          "kind_is_not_inferred_from_repository_shape",
+          "kind_is_not_inferred_from_semantic_complexity"
+        ],
+        "semantic_class": "architecture_classification"
+      },
+      "product_kind_exception": {
+        "definition": "Canonical, owner-admitted departure that lets one exactly identified product keep its ProductKind while an enumerated set of that kind's obligations is displaced; it is not a ProductKind, archetype, or waiver class.",
+        "detailed_model": "product_kinds.yaml",
+        "rules": [
+          "binds_exact_product_identity_and_canonical_repository",
+          "claimed_only_by_explicit_reference",
+          "grants_no_constellation_identity_gate_admission_or_routing_authority"
+        ],
+        "semantic_class": "architecture_classification"
+      },
+      "product_manifest": {
+        "definition": "Proof-carrying derived realization closure compiled from one exact ProductTopology, preserving ProductKind, archetype, requirements, capabilities, architecture, ports, adapters, relationships, technology/provider bindings, admission, conformance, compiler coordinates, provenance, and unresolved gaps.",
+        "rules": [
+          "product_manifest_is_derived_not_product_authority",
+          "implementation_lowering_requires_resolved_manifest_gate"
+        ],
+        "schema_ref": "l9.schema/product-manifest@1",
+        "semantic_class": "derived_artifact"
+      },
+      "product_relationship": {
+        "definition": "Declared directed relationship between two L9 products preserving product boundaries, consumption direction, capability references, contract coordinates, and authority separation.",
+        "relations": {
+          "compose": "Local composition of an installable product inside a consumer runtime.",
+          "integrate": "Explicit integration across a declared public contract without implying ownership transfer.",
+          "invoke": "Remote capability consumption of an independently running product.",
+          "provide_to": "Declaration that a product exposes a capability or contract intended for another product or product family."
+        },
+        "semantic_class": "architecture_relation"
+      },
+      "product_topology": {
+        "definition": "Authoritative first-class product contract describing an L9 product through the universal topology vocabulary: identity, kind, archetype, purpose, boundary, requirements, capabilities, consumption, deployment, contracts, architecture, interfaces, ports, adapters, relationships, bindings, providers, runtime, security, state, failures, receipts, observability, admission, lifecycle, conformance, distribution, provenance, and Unknowns.",
+        "question": "What product is this, what does it own, how is it consumed and deployed, and which obligations govern its realization?",
+        "rules": [
+          "product_topology_is_authoritative_only_when_admitted",
+          "one_topology_vocabulary_for_all_products",
+          "compiler_derives_consequences_without_rewriting_declared_product_semantics"
+        ],
+        "schema_ref": "l9.schema/product-topology@1",
+        "semantic_class": "product_contract",
+        "subtype_of": "contract"
+      },
+      "project_contract": {
+        "definition": "A product- or domain-specific contract synthesized or normalized under the applicable global semantic baseline from authoritative ProductTopology semantics, requirements, capabilities, and boundaries.",
+        "rules": [
+          "project_contracts_are_candidates_until_validated_and_admitted",
+          "project_contracts_must_satisfy_applicable_global_invariants",
+          "project_contracts_must_satisfy_applicable_global_contracts"
+        ],
+        "semantic_class": "semantic_interface",
+        "subtype_of": "contract",
+        "synthesized_from": [
+          "product_topology",
+          "product_requirements",
+          "applicable_global_invariants",
+          "applicable_global_contracts"
+        ]
+      },
+      "projection": {
+        "definition": "A bounded view of existing authoritative or validated semantics selected and optionally reshaped for a specific consumer, concern, or stage without introducing new semantic consequences or authority.\n",
+        "notation": [
+          "P = π(S)"
+        ],
+        "properties": {
+          "creates_new_semantic_consequence": false,
+          "may_change_representation": true,
+          "may_create_authority": false,
+          "may_reduce_information": true
+        },
+        "question": "Which existing semantics are relevant here?",
+        "rules": [
+          "projection_must_trace_to_source",
+          "projection_must_preserve_relevant_source_semantics"
+        ],
+        "semantic_class": "compiler_operation"
+      },
+      "provenance": {
+        "definition": "Machine-readable lineage linking an artifact to the authoritative sources, revisions, transformations, bindings, validators, and decisions from which it originated.\n",
+        "rules": [
+          "provenance_must_survive_compilation",
+          "provenance_must_support_upstream_conflict_localization"
+        ],
+        "semantic_class": "lineage"
+      },
+      "provider": {
+        "definition": "A concrete implementation, service, framework, datastore, runtime, or technology that realizes an abstract semantic capability or port.\n",
+        "rules": [
+          "provider_does_not_become_semantic_owner",
+          "provider_is_replaceable_when_contract_and_conformance_hold"
+        ],
+        "semantic_class": "realization"
+      },
+      "rendering": {
+        "definition": "Final materialization of sufficiently concrete intermediate representation into target syntax, bytes, files, or another final artifact representation.\n",
+        "properties": {
+          "semantic_freedom_target": "approximately_zero",
+          "usually_final_compiler_pass": true
+        },
+        "question": "How is the already-decided artifact serialized into final form?",
+        "rules": [
+          "rendering_must_not_invent_semantics",
+          "rendering_must_not_change_authority",
+          "rendering_must_preserve_concrete_ir_meaning"
+        ],
+        "semantic_class": "compiler_operation"
+      },
+      "requirement": {
+        "definition": "Typed obligation or objective with explicit source, hardness, and satisfaction semantics used during semantic resolution.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "requirement_closure": {
+        "definition": "Transitive, provenance-preserving set of applicable requirements after dependency expansion and canonicalization.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "resolution": {
+        "definition": "Evidence-bound determination of whether a semantic subject is resolved, unresolved, incompatible, unsatisfiable, or ambiguous under governing coordinates.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "semantic_owner": {
+        "definition": "The authority responsible for defining and governing the semantics of a capability, domain, contract, or artifact.\n",
+        "rules": [
+          "semantic_owner_is_not_implied_by_provider",
+          "semantic_owner_is_not_implied_by_deployment_location"
+        ],
+        "semantic_class": "ownership"
+      },
+      "synthesis": {
+        "definition": "Construction of a candidate artifact satisfying declared requirements and constraints when the complete artifact is not uniquely entailed by existing semantics.\n",
+        "examples": [
+          "project_contract_synthesis",
+          "architecture_synthesis",
+          "implementation_synthesis"
+        ],
+        "properties": {
+          "candidate_is_not_authoritative_until_admitted": true,
+          "candidate_requires_validation": true,
+          "creates_candidate_structure": true
+        },
+        "question": "What admissible candidate can satisfy these constraints?",
+        "semantic_class": "compiler_operation"
+      },
+      "technology_profile": {
+        "definition": "Declarative technology intent and constraints used for binding selection; it does not define provider capability facts or semantic ownership.",
+        "semantic_owner": "Quantum-L9/.github"
+      }
+    }
+  },
+  "projection_digest": "sha256:17bd721067fa57d47d680d3527ed954379de92a87ae5c1930bb09a9f2e7d0857",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+  "source_ref": "l9.source/vocabulary@1"
+}

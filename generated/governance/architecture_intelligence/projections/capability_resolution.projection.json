@@ -1,0 +1,47 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "governed_by": {
+      "contracts": [
+        "l9.contract/semantic-resolution@1",
+        "l9.contract/capability-state@1",
+        "l9.contract/semantic-ownership@1"
+      ]
+    },
+    "inputs": [
+      "desired_capability_refs",
+      "capability_catalog_projection",
+      "applicable_contract_projection",
+      "authority_projection",
+      "requirement_closure"
+    ],
+    "outputs": {
+      "capability_closure_ir": "Exact desired and transitive semantic capability closure with provenance.",
+      "unresolved_capability_refs": "Capabilities whose meaning, owner, dependency, or governing contract cannot be resolved."
+    },
+    "resolution_order": [
+      "resolve_semantic_identity",
+      "resolve_semantic_owner",
+      "resolve_required_capabilities",
+      "resolve_applicable_contracts",
+      "resolve_authorization_requirements",
+      "emit_capability_closure"
+    ],
+    "rules": [
+      "capability_identity_is_provider_independent",
+      "dependency_closure_does_not_imply_availability_or_authorization",
+      "unregistered_component_local_capability_may_be_resolved_only_from_its_semantic_owner_source",
+      "missing_capability_semantics_remain_unresolved",
+      "closure_preserves_all_source_coordinates"
+    ]
+  },
+  "projection_digest": "sha256:9be0586972500d2b3a08ff185e6f17b6eda9d08a3d70c1b772bf741eb2d7634d",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+  "source_ref": "l9.source/capability-resolution@1"
+}

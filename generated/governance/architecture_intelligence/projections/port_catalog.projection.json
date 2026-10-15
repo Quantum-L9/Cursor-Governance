@@ -1,0 +1,50 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "catalog_status": {
+      "concrete_global_ports_admitted": 0,
+      "rule": "Domain ports remain owned by their semantic owners and are referenced through canonical coordinates rather than copied into this catalog."
+    },
+    "global_rules": {
+      "port_compatibility_must_be_declared": true,
+      "port_identity_is_semantic_not_provider_specific": true,
+      "ports_require_contract_refs": true,
+      "ports_require_explicit_owner": true,
+      "provider_native_api_is_not_canonical_port_contract": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/semantic-resolution@1",
+        "l9.contract/semantic-identity-and-compatibility@1",
+        "l9.contract/semantic-ownership@1"
+      ]
+    },
+    "port_entry_contract": {
+      "optional": [
+        "input_semantics",
+        "output_semantics",
+        "failure_semantics",
+        "compatibility_refs",
+        "conformance_requirement_refs"
+      ],
+      "required": [
+        "id",
+        "semantic_owner",
+        "purpose",
+        "contract_refs",
+        "required_capabilities",
+        "effect_class"
+      ]
+    },
+    "ports": []
+  },
+  "projection_digest": "sha256:9db948b9bf19ffcb3b5916c521b4b6fbcfc80ac0c8763a3d29f1ce4a837e4a6d",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
+  "source_ref": "l9.source/port-catalog@1"
+}

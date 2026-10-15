@@ -1,0 +1,228 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "global_rules": {
+      "admission_binds_exact_subject_revision_or_digest": true,
+      "admitted_revision_content_is_immutable": true,
+      "capability_state_dimensions_are_not_lifecycle_states": true,
+      "derived_currentness_is_not_authority": true,
+      "lifecycle_state_does_not_create_authority": true,
+      "lifecycle_transition_does_not_imply_capability_authorization": true,
+      "lifecycles_are_typed_not_universal": true,
+      "material_semantic_change_creates_successor_or_supersession": true,
+      "prior_revisions_remain_addressable": true,
+      "published_is_stronger_than_file_presence": true,
+      "receipt_emission_does_not_imply_subject_admission_or_authorization": true,
+      "transition_authority_must_be_explicit_when_transition_requires_authority": true,
+      "unknown_or_unresolved_state_remains_explicit": true
+    },
+    "lifecycle_relations": {
+      "current_for": {
+        "semantics": "subject_remains_applicable_to_exact_declared_material_coordinates"
+      },
+      "successor_of": {
+        "semantics": "new_authoritative_revision_or_version_preserves_history_while_replacing_future_current_use"
+      },
+      "supersedes": {
+        "semantics": "newer_authoritative_subject_displaces_prior_subject_for_current_use_without_rewriting_prior_meaning"
+      }
+    },
+    "lifecycles": {
+      "architecture_pattern": {
+        "branches": {
+          "admitted_global_pattern": "applicable_global_authority_admits_exact_candidate",
+          "domain_pattern": "domain_specific_authority_is_required_or_globalization_is_not_supported",
+          "rejected": "applicable_authority_refuses_candidate",
+          "unresolved": "evidence_or_authority_is_insufficient"
+        },
+        "purpose": "Govern observation and graduation of recurring architecture patterns without letting recognition create global authority.\n",
+        "rules": [
+          "recurrence_does_not_create_global_law",
+          "harvest_packet_is_proposal_not_admission",
+          "authority_resolution_binds_exact_candidate"
+        ],
+        "semantic_owner": "Quantum-L9/.github",
+        "stages": [
+          "seed",
+          "observed",
+          "cross_domain",
+          "semantically_stable",
+          "graduation_candidate",
+          "harvest_packet",
+          "authority_resolution"
+        ]
+      },
+      "globalization_candidate": {
+        "purpose": "Govern a normalized cross-domain candidate from evidence accumulation to an explicit global-authority resolution.\n",
+        "rules": [
+          "candidate_generation_is_not_global_admission",
+          "target_global_authority_owns_resolution",
+          "material_candidate_change_requires_new_resolution"
+        ],
+        "semantic_owner": "Quantum-L9/.github",
+        "stages": [
+          "candidate",
+          "evidence_accumulating",
+          "awaiting_authority",
+          "authority_resolution"
+        ],
+        "terminal_resolutions": [
+          "admitted_global_law",
+          "retained_domain_local",
+          "rejected",
+          "unresolved"
+        ]
+      },
+      "harvest_packet": {
+        "artifact_state": "immutable_after_emission",
+        "purpose": "Preserve an emitted harvest proposal as an immutable evidence-bearing packet while the target authority resolves the candidate it carries.\n",
+        "rules": [
+          "packet_does_not_create_authority",
+          "packet_resolution_does_not_rewrite_emitted_packet",
+          "resolution_ref_may_be_attached_by_new_artifact_or_receipt"
+        ],
+        "semantic_owner": "packet_semantic_owner",
+        "stages": [
+          "emitted",
+          "awaiting_authority_resolution",
+          "resolved"
+        ]
+      },
+      "identity_assertion": {
+        "branches": {
+          "ambiguous": "multiple_materially_distinct_identities_remain",
+          "invalid": "assertion_or_evidence_binding_is_invalid",
+          "unknown": "required_identity_cannot_be_resolved"
+        },
+        "purpose": "Govern a dynamic IdentityAssertion as evidence bound to exact runtime evidence and governing coordinates without promoting it into authorization or identity-source authority.",
+        "rules": [
+          "identity_assertion_is_evidence_not_authority",
+          "material_runtime_evidence_change_invalidates_currentness",
+          "valid_current_assertion_is_consumed_not_rederived",
+          "unknown_actor_blocks_consequential_authorship_when_actor_required"
+        ],
+        "semantic_owner": "applicable_identity_resolution_owner",
+        "stages": [
+          "candidate",
+          "resolved",
+          "current",
+          "non_current",
+          "superseded"
+        ]
+      },
+      "product_manifest": {
+        "branches": {
+          "blocked": "resolved_manifest_gate_fails",
+          "unresolved": "required_product_resolution_is_incomplete"
+        },
+        "purpose": "Govern a derived proof-carrying ProductManifest while preserving exact upstream coordinates and non-authoritative derived status.",
+        "rules": [
+          "product_manifest_is_derived_not_product_authority",
+          "implementation_lowering_requires_validated_current_resolved_manifest",
+          "upstream_material_change_makes_manifest_non_current_unless_compatibility_preserves_it"
+        ],
+        "semantic_owner": "l9-semantic-compiler",
+        "stages": [
+          "derived",
+          "validated",
+          "current",
+          "non_current",
+          "superseded"
+        ]
+      },
+      "product_topology": {
+        "branches": {
+          "rejected": "schema_semantic_or_authority_gate_refuses_topology",
+          "unresolved": "kind_archetype_semantics_or_authority_cannot_be_resolved"
+        },
+        "purpose": "Govern an authoritative ProductTopology revision from candidate through admission, currentness, supersession, and retirement without allowing compiler resolution to overwrite product-owned semantics.",
+        "rules": [
+          "material_product_contract_change_creates_new_revision",
+          "compiler_does_not_mutate_admitted_product_topology",
+          "topology_admission_does_not_imply_implementation_conformance",
+          "product_kind_change_is_material"
+        ],
+        "semantic_owner": "product_semantic_owner",
+        "stages": [
+          "candidate",
+          "admission_evaluated",
+          "awaiting_authority",
+          "admitted",
+          "published",
+          "current",
+          "superseded",
+          "retired"
+        ]
+      },
+      "profile": {
+        "purpose": "Govern exact profile versions from candidate through publication and supersession.\n",
+        "rules": [
+          "profile_identity_and_digest_are_required_for_publication",
+          "membership_change_requires_new_version",
+          "existing_published_versions_are_immutable"
+        ],
+        "semantic_owner": "applicable_profile_semantic_owner",
+        "stages": [
+          "candidate",
+          "admitted",
+          "published",
+          "resolvable",
+          "superseded"
+        ]
+      },
+      "published_artifact": {
+        "publication_gate": {
+          "all_of": [
+            "canonical_identity_exists",
+            "immutable_digest_exists",
+            "catalog_presence_exists",
+            "owner_defined_publication_requirements_satisfied"
+          ],
+          "when_applicable": [
+            "required_profile_reachability_exists",
+            "required_distribution_availability_exists"
+          ]
+        },
+        "purpose": "Govern canonical publication and later supersession without collapsing admission, publication, or currentness into one state.\n",
+        "rules": [
+          "admission_does_not_imply_publication",
+          "publication_does_not_erase_prior_versions",
+          "material_change_requires_successor_revision_or_version"
+        ],
+        "semantic_owner": "applicable_artifact_semantic_owner",
+        "stages": [
+          "admitted",
+          "published",
+          "current",
+          "superseded",
+          "retired"
+        ]
+      }
+    },
+    "state_semantics": {
+      "admission_evaluated": "mechanical_or_contractual_admission_evaluation_completed",
+      "admitted": "exact_subject_accepted_by_applicable_admission_authority",
+      "awaiting_authority": "evaluation_complete_but_required_authority_decision_not_yet_bound",
+      "candidate": "proposed_subject_not_yet_admitted",
+      "current": "declared_material_coordinates_still_match_or_compatibility_preserves_applicability",
+      "executed": "declared operation_or_conformance_case_was_run_against_exact_coordinates",
+      "non_current": "one_or_more_material_coordinates_changed_without_compatibility_preservation",
+      "published": "admitted_subject_satisfies_its_semantic_owner_defined_canonical_publication_contract",
+      "receipted": "execution_or_evaluation_has_bound_evidence_receipt",
+      "rejected": "applicable_authority_or_mechanical_gate_refused_admission_or_progression",
+      "resolvable": "consumers_can_resolve_exact_identity_and_digest",
+      "retired": "authoritative_owner_has_ended_future_use_while_preserving_history",
+      "superseded": "newer_authoritative_revision_or_version_replaces_current_use_without_rewriting_history",
+      "unresolved": "required semantics_authority_or_evidence_cannot_be_resolved"
+    }
+  },
+  "projection_digest": "sha256:0d1ad617ea86d5653957aa0e3761fb1ef6aca9b682a3c58d2094d9b4d0d87c52",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+  "source_ref": "l9.source/lifecycle@1"
+}

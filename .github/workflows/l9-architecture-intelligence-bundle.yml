@@ -1,0 +1,209 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: .github/workflows/l9-architecture-intelligence-bundle.yml
+#   layer: operations
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-10-15
+name: L9 Architecture Intelligence Bundle
+on:
+  pull_request:
+    paths:
+      - "generated/governance/architecture_intelligence/**"
+      - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+      - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "tools/authority/produce_architecture_intelligence.py"
+      - ".github/workflows/l9-architecture-intelligence-bundle.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "generated/governance/architecture_intelligence/**"
+      - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+      - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "tools/authority/produce_architecture_intelligence.py"
+  repository_dispatch:
+    types:
+      - l9-semantic-authority-updated
+  workflow_dispatch:
+    inputs:
+      authority_ref:
+        description: Quantum-L9/.github revision to produce from (full 40-hex SHA)
+        required: true
+      compiler_ref:
+        description: Quantum-L9/l9-semantic-compiler-engine revision (full 40-hex SHA)
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: l9-architecture-intelligence-bundle
+  cancel-in-progress: false
+jobs:
+  verify:
+    # Consumer verification of the committed bundle: GAR's verifier, then currentness against
+    # Quantum-L9/.github at the exact revision the bundle names. No compiler is needed here.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: governance
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install YAML dependency
+        run: python -m pip install "pyyaml>=6.0,<7"
+      - name: Resolve bundle authority revision
+        id: lock
+        working-directory: governance
+        shell: bash
+        run: |
+          revision="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["authority"]["revision"])')"
+          printf 'revision=%s\n' "$revision" >> "$GITHUB_OUTPUT"
+      - name: Checkout canonical Semantic Foundation at the bundle revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/.github
+          ref: ${{ steps.lock.outputs.revision }}
+          path: org-authority
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify bundle as GAR consumes it
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          REVISION: ${{ steps.lock.outputs.revision }}
+        run: |
+          python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
+            --authority-root ../org-authority \
+            --expect-revision "$REVISION"
+  refresh:
+    # Producer regeneration. Requires L9_SEMANTIC_COMPILER_READ_TOKEN, a read-only credential for
+    # the private Quantum-L9/l9-semantic-compiler-engine repository; without it this job fails
+    # closed at checkout. GAR never produces the bundle.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Resolve revisions
+        id: refs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_AUTHORITY_REF: ${{ inputs.authority_ref }}
+          INPUT_COMPILER_REF: ${{ inputs.compiler_ref }}
+          PAYLOAD_AUTHORITY_REF: ${{ github.event.client_payload.authority_ref }}
+          PAYLOAD_COMPILER_REF: ${{ github.event.client_payload.compiler_ref }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            authority="$INPUT_AUTHORITY_REF"; compiler="$INPUT_COMPILER_REF"
+          else
+            authority="$PAYLOAD_AUTHORITY_REF"; compiler="$PAYLOAD_COMPILER_REF"
+          fi
+          for value in "$authority" "$compiler"; do
+            [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo "revisions must be full 40-hex SHAs"; exit 1; }
+          done
+          printf 'authority=%s\ncompiler=%s\n' "$authority" "$compiler" >> "$GITHUB_OUTPUT"
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: governance
+          fetch-depth: 0
+      - name: Checkout canonical Semantic Foundation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/.github
+          ref: ${{ steps.refs.outputs.authority }}
+          path: org-authority
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout canonical compiler
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/l9-semantic-compiler-engine
+          ref: ${{ steps.refs.outputs.compiler }}
+          path: compiler
+          fetch-depth: 1
+          token: ${{ secrets.L9_SEMANTIC_COMPILER_READ_TOKEN }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install compiler
+        run: python -m pip install ./compiler
+      - name: Produce bundle with the canonical compiler
+        working-directory: governance
+        env:
+          AUTHORITY: ${{ steps.refs.outputs.authority }}
+          COMPILER: ${{ steps.refs.outputs.compiler }}
+        run: |
+          python tools/authority/produce_architecture_intelligence.py \
+            --authority-root ../org-authority \
+            --authority-revision "$AUTHORITY" \
+            --compiler-revision "$COMPILER" \
+            --compiler l9-semantic-compiler
+      - name: Verify bundle as GAR consumes it
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          AUTHORITY: ${{ steps.refs.outputs.authority }}
+        run: |
+          python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
+            --authority-root ../org-authority \
+            --expect-revision "$AUTHORITY"
+      - name: Detect bundle change
+        id: diff
+        working-directory: governance
+        shell: bash
+        run: |
+          git add -N generated/governance/architecture_intelligence
+          if git diff --quiet -- generated/governance/architecture_intelligence; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Commit regenerated bundle
+        if: steps.diff.outputs.changed == 'true'
+        id: branch
+        working-directory: governance
+        shell: bash
+        env:
+          AUTHORITY: ${{ steps.refs.outputs.authority }}
+        run: |
+          branch="automation/architecture-intelligence-${AUTHORITY:0:12}"
+          git config user.name "quantum-l9-automation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add generated/governance/architecture_intelligence
+          git commit -m "chore(governance): produce architecture intelligence bundle"
+          git push --force-with-lease origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      - name: Open bundle pull request
+        if: steps.diff.outputs.changed == 'true'
+        working-directory: governance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.branch.outputs.branch }}
+          AUTHORITY: ${{ steps.refs.outputs.authority }}
+          COMPILER: ${{ steps.refs.outputs.compiler }}
+        shell: bash
+        run: |
+          existing="$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "$existing" ]]; then
+            exit 0
+          fi
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(governance): produce architecture intelligence bundle" \
+            --body "Compiler-produced architecture intelligence bundle from Quantum-L9/.github@$AUTHORITY with l9-semantic-compiler@$COMPILER. Verified by GAR's consumer verifier. Do not edit the bundle by hand."
