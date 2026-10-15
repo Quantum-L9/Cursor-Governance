@@ -2,6 +2,18 @@
 
 This file is historical and non-authoritative. Machine-readable semantic owners declared by `runtime/MANIFEST.yaml` govern runtime behavior.
 
+## 0.8.4 - 2026-10-15
+
+### Architecture intelligence authority separation (audit remediation)
+
+- The verifier now distinguishes `BUNDLE_VERIFIED` (coherent and current at the revision the bundle names) from `ADMITTED_AND_CURRENT` (admission resolved independently of `bundle.lock.json`). Only the latter is read as admitted law. `BOUND` is retired.
+- Mode `admitted` (default) requires an authority checkout and resolves `refs/remotes/origin/main` itself. Mode `candidate` permits non-authoritative inspection only.
+- Admission needs integration into authority main, currency at its tip, and an admission decision record. `Quantum-L9/.github` defines no such record, so integrated revisions are `ADMISSION_UNRESOLVED`; nothing is invented.
+- Source-set closure: `expected_source_classes` must equal the pinned profile's sources at the authority revision (`EXPECTED_SOURCE_SET_MISMATCH`).
+- `--cite SOURCE_CLASS:/POINTER` reads one namespaced fact with its exact source provenance; run state gains `citations`, `component_sources`, `mode`, `authoritative` and `assurance_limitations`, and RS-034 is tightened.
+- Added a coherent-forgery regression: a bundle rewritten with every digest recomputed passes the hash checks but fails the canonical-producer replay.
+- Added `decisions/ADR-L9-GAR-008.yaml`.
+
 ## 0.8.3 - 2026-10-15
 
 ### Architecture intelligence input

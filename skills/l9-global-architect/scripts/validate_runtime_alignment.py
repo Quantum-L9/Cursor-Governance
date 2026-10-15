@@ -17,7 +17,7 @@ import yaml
 
 sys.dont_write_bytecode = True
 
-PACK_VERSION = "0.8.3"
+PACK_VERSION = "0.8.4"
 EXPECTED_EVAL_MAX = 61
 FORBIDDEN_DIR_NAMES = {"__pycache__", "__MACOSX", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 FORBIDDEN_FILE_NAMES = {".DS_Store", "Thumbs.db"}
@@ -503,8 +503,17 @@ def main() -> None:
     if "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml" in manifest["load_order"]:
         fail("architecture intelligence must not be in the required load_order")
     ai_load = manifest["optional_load"].get("architecture_intelligence") or {}
-    if ai_load.get("fallback") != "none" or ai_load.get("requires_verifier_status") != "BOUND":
-        fail("architecture intelligence optional load must require BOUND and declare no fallback")
+    if (
+        ai_load.get("fallback") != "none"
+        or ai_load.get("requires_verifier_status") != "ADMITTED_AND_CURRENT"
+        or (ai_load.get("candidate_inspection") or {}).get("authoritative") is not False
+    ):
+        fail(
+            "architecture intelligence optional load must require ADMITTED_AND_CURRENT, keep "
+            "candidate inspection non-authoritative, and declare no fallback"
+        )
+    if binding.get("admission", {}).get("resolved_independently_of") != "bundle.lock.json":
+        fail("architecture intelligence admission must be resolved independently of the lock")
     ai_state = run_state["instance_template"].get("architecture_intelligence") or {}
     if ai_state.get("status") != "NOT_REQUESTED" or ai_state.get("fallback_used") is not False:
         fail("run state must carry an unrequested architecture_intelligence slot")
@@ -519,6 +528,7 @@ def main() -> None:
         "decisions/ADR-L9-GAR-005.yaml",
         "decisions/ADR-L9-GAR-006.yaml",
         "decisions/ADR-L9-GAR-007.yaml",
+        "decisions/ADR-L9-GAR-008.yaml",
         "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
         "scripts/verify_architecture_intelligence.py",
     ):

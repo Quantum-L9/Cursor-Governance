@@ -1,6 +1,6 @@
 integration:
   integration_id: L9.GAR.ARCHITECTURE_INTELLIGENCE_BINDING.001
-  version: 0.1.0
+  version: 0.2.0
   artifact_class: runtime_integration_binding
   status: experimental
   semantic_owner: integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
@@ -67,16 +67,51 @@ input:
       The verifier's digests are recomputable: they prove integrity and currentness, not
       production.
   verifier: scripts/verify_architecture_intelligence.py
+admission:
+  # BUNDLE_VERIFIED (a coherent, current bundle) is never admitted global law by itself.
+  # ADMITTED_AND_CURRENT is resolved by the verifier independently of bundle.lock.json.
+  resolved_independently_of: bundle.lock.json
+  authority_main_ref: refs/remotes/origin/main
+  integration: the bundle revision is the independently resolved tip of the authority's main or an ancestor of it
+  currency: every governing source and profile is byte-identical at that tip
+  decision_record:
+    required_by: Quantum-L9/.github semantics/authority_model.yaml#admission_rules.global_requirements.explicit_decision_record
+    canonical_form: undefined
+    effect_while_undefined: >-
+      ADMISSION_UNRESOLVED. Integration into main is necessary but is not treated as the
+      admission decision; the semantic owner has not defined an admission decision record, and
+      this binding does not invent one.
+assurance_limitations:
+  - forbidden_category: unrelated_domain_payloads
+    criterion: source_authority
+    independent_restrictive_power: false
+    basis: >-
+      Quantum-L9/.github ADR-019: the criterion duplicates the canonical authority loader's
+      ownership check and cannot detect architecturally unrelated material inside authorized
+      sources. It is not counted as independent exclusion assurance; the semantic owner decides
+      whether a source classification is required.
 load_condition:
   when:
     - architecture_intelligence_requested
     - canonical_architecture_semantics_required_for_architectural_judgment
   requires_all:
-    - verifier.status == BOUND
-    - $.architecture_intelligence.authority_revision recorded before the payload is read
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+    - $.architecture_intelligence provenance recorded before the payload is read
+  candidate_inspection:
+    requires: verifier.status == BUNDLE_VERIFIED (mode candidate)
+    authoritative: false
+    rule: >-
+      Every claim citing a candidate-mode fact is labelled non-authoritative and is never
+      treated as admitted global law, an admitted contract, or a resolved Unknown.
   repository_presence_alone_loads: false
   loads: the composed view only; each namespace is one source projection exactly as produced
 failure_behavior:
+  BUNDLE_VERIFIED:
+    meaning: >-
+      The bundle is coherent and current at the revision it names, but that revision is not
+      admitted global law (NOT_ADMITTED or ADMISSION_UNRESOLVED).
+    run_state: {status: BUNDLE_VERIFIED, load_status: NOT_LOADED (admitted mode) or LOADED_AS_CANDIDATE (candidate mode)}
+    effect: Not admitted law. Admitted mode reads nothing; candidate mode reads non-authoritatively.
   BLOCKED:
     meaning: The bundle, binding, or authority object needed for verification is absent or unreadable.
     run_state: {status: UNAVAILABLE, load_status: NOT_LOADED}
@@ -128,9 +163,12 @@ forbidden_duplication:
   - digest_convention_redefinition
 integration_invariants:
   - id: AIB-001
-    rule: Architecture intelligence is loaded only after verify_architecture_intelligence.py returns BOUND.
+    rule: >-
+      Architecture intelligence is read as admitted law only after
+      verify_architecture_intelligence.py returns ADMITTED_AND_CURRENT; BUNDLE_VERIFIED permits
+      only explicit, non-authoritative candidate inspection.
   - id: AIB-002
-    rule: A non-BOUND outcome never falls back to the historical observer projection or any other input.
+    rule: A refused outcome never falls back to the historical observer projection or any other input.
   - id: AIB-003
     rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is BOUND.
   - id: AIB-004
@@ -140,5 +178,14 @@ integration_invariants:
   - id: AIB-006
     rule: >-
       A committed bundle is accepted only after CI reproduces it byte for byte with the pinned
-      compiler; BOUND attests integrity and currentness of those reproduced bytes and is never
-      by itself evidence of compiler production.
+      compiler; BUNDLE_VERIFIED and ADMITTED_AND_CURRENT attest integrity, currentness and
+      authority status of those bytes and are never by themselves evidence of compiler
+      production.
+  - id: AIB-007
+    rule: >-
+      Admission is resolved independently of bundle.lock.json from the authority checkout's own
+      main; BUNDLE_VERIFIED never grants admitted-law status.
+  - id: AIB-008
+    rule: >-
+      expected_source_classes equals, in order, the sources of the pinned projection profile
+      at the authority revision; any divergence is REJECTED (EXPECTED_SOURCE_SET_MISMATCH).

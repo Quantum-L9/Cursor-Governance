@@ -6,12 +6,22 @@ places no payload, and authors no schema. It checks only what the producer alrea
 file bytes against the bundle lock, envelope digests, profile and schema pins against
 ``integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml``, exact source coverage, that each
 namespace of the composed view is byte-for-byte its component's payload (the contract's
-placement invariant), the producer's receipts, and, when an authority checkout is given,
-that the bundle is current at the expected revision.
+placement invariant), the producer's receipts, and the authority status of the revision the bundle names.
 
-Outcomes: BOUND (0), REJECTED (1), BLOCKED (3), STALE (4); 2 is a usage error. A non-BOUND
-outcome means GAR must not load the payload. There is no fallback to the historical observer
-projection or to any other input.
+Two questions are kept apart. BUNDLE_VERIFIED answers "is this the coherent, current output
+the bundle claims to be?". ADMITTED_AND_CURRENT additionally answers "is that revision admitted
+global law?", and is resolved independently of the bundle lock: integration into the
+independently resolved tip of the authority's main, content currency at that tip, and an
+admission decision record bound to the exact revision. The verifier's digests are recomputable,
+so neither status attests that the canonical compiler produced the bytes; production is proven
+by the CI replay the binding names (AIB-006).
+
+Modes: ``admitted`` (default) loads only ADMITTED_AND_CURRENT and requires an authority checkout;
+``candidate`` permits non-authoritative inspection of a BUNDLE_VERIFIED bundle.
+
+Outcomes: ADMITTED_AND_CURRENT (0), REJECTED (1), BLOCKED (3), STALE (4), BUNDLE_VERIFIED (5);
+2 is a usage error. There is no fallback to the historical observer projection or to any other
+input.
 """
 
 from __future__ import annotations
@@ -38,7 +48,9 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
 PACK = Path(__file__).resolve().parents[1]
 REPO = PACK.parents[1]
 DEFAULT_BINDING = PACK / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
-EXIT = {"BOUND": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
+EXIT = {"ADMITTED_AND_CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUNDLE_VERIFIED": 5}
+AUTHORITY_MAIN_REF = "refs/remotes/origin/main"
+BINDING_REF = "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
 LOCK_SCHEMA = "l9.gar.architecture-intelligence-bundle/v1"
 PROJECTION_ENVELOPE = "l9.projection-artifact/v1"
 COMPOSED_ENVELOPE = "l9.composed-projection/v1"
@@ -336,19 +348,37 @@ def _git_bytes(root: Path, revision: str, path: str) -> bytes:
     return completed.stdout
 
 
+def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
+    )
+
+
+def _require_root(root: Path) -> None:
+    if not (root / ".git").exists():
+        raise Outcome("BLOCKED", "AUTHORITY_ROOT_ABSENT", root=str(root))
+
+
 def verify_currentness(
     root: Path, expect_revision: str, lock: dict[str, Any], binding: dict[str, Any]
 ) -> None:
     """The bundle is current at *expect_revision*: same revision, same source and profile bytes."""
     if not _SHA.match(expect_revision):
         raise Outcome("BLOCKED", "AUTHORITY_PIN_MALFORMED", revision=expect_revision)
-    if not (root / ".git").exists():
-        raise Outcome("BLOCKED", "AUTHORITY_ROOT_ABSENT", root=str(root))
+    _require_root(root)
     observed = lock["authority"]["revision"]
     if observed != expect_revision:
         raise Outcome(
             "STALE", "AUTHORITY_REVISION_MISMATCH", bundle=observed, expected=expect_revision
         )
+    verify_content_at(root, expect_revision, lock, binding)
+
+
+def verify_content_at(
+    root: Path, expect_revision: str, lock: dict[str, Any], binding: dict[str, Any]
+) -> None:
+    """Every source and profile the bundle was produced from is byte-identical at *expect_revision*,
+    and the binding's expected source classes are exactly that profile's sources."""
     registry = yaml.safe_load(_git_bytes(root, expect_revision, "semantics/canonical_sources.yaml"))
     paths = {s["id"]: s["path"] for s in registry.get("sources", []) if isinstance(s, dict)}
     for component in lock["components"]:
@@ -407,22 +437,157 @@ def verify_currentness(
             )
 
 
-def state_record(result: dict[str, Any], bundle_ref: str) -> dict[str, Any]:
+def resolve_authority_main(root: Path, override: str | None) -> str:
+    """The tip of the authority's main, resolved from the authority checkout, never the lock."""
+    _require_root(root)
+    if override is not None:
+        if not _SHA.match(override):
+            raise Outcome("BLOCKED", "AUTHORITY_PIN_MALFORMED", revision=override)
+        if _git(root, "cat-file", "-e", f"{override}^{{commit}}").returncode != 0:
+            raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", revision=override)
+        return override
+    resolved = _git(root, "rev-parse", "--verify", "--quiet", f"{AUTHORITY_MAIN_REF}^{{commit}}")
+    if resolved.returncode != 0 or not _SHA.match(resolved.stdout.strip()):
+        raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", ref=AUTHORITY_MAIN_REF)
+    return resolved.stdout.strip()
+
+
+def resolve_admission(
+    root: Path, revision: str, main_tip: str, lock: dict[str, Any], binding: dict[str, Any]
+) -> dict[str, Any]:
+    """Whether *revision* is admitted global law, decided without the bundle lock.
+
+    Integration: *revision* is *main_tip* or an ancestor of it. Currency: every governing input
+    is byte-identical at *main_tip* (otherwise STALE). Decision: an admission decision record
+    bound to the exact revision (authority_model.yaml#admission_rules). The semantic owner
+    defines no such record yet, so a revision that passes the first two remains
+    ADMISSION_UNRESOLVED: integration alone is not admission."""
+    rule = (binding.get("admission") or {}).get("decision_record") or {}
+    base = {"revision": revision, "authority_main": main_tip}
+    if _git(root, "cat-file", "-e", f"{revision}^{{commit}}").returncode != 0 or (
+        _git(root, "merge-base", "--is-ancestor", revision, main_tip).returncode != 0
+    ):
+        return {
+            **base,
+            "status": "NOT_ADMITTED",
+            "reason": "AUTHORITY_REVISION_NOT_INTEGRATED",
+        }
+    verify_content_at(root, revision, lock, binding)
+    if main_tip != revision:
+        try:
+            verify_content_at(root, main_tip, lock, binding)
+        except Outcome as outcome:
+            raise Outcome(
+                "STALE",
+                "NOT_CURRENT_AT_AUTHORITY_MAIN",
+                authority_main=main_tip,
+                cause=outcome.reason,
+                **outcome.detail,
+            ) from None
+    return {
+        **base,
+        "status": "ADMISSION_UNRESOLVED",
+        "reason": "ADMISSION_DECISION_RECORD_UNDEFINED",
+        "integrated": True,
+        "current_at_authority_main": True,
+        "decision_record_required_by": rule.get("required_by"),
+    }
+
+
+def state_record(
+    result: dict[str, Any], binding: dict[str, Any], *, mode: str, status: str, admission: dict
+) -> dict[str, Any]:
     """The `$.architecture_intelligence` fragment GAR records in run state."""
     lock = result["lock"]
-    return {
-        "binding_ref": "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
-        "status": "BOUND",
-        "load_status": "LOADED",
-        "bundle_ref": bundle_ref,
+    authoritative = status == "ADMITTED_AND_CURRENT"
+    if authoritative:
+        load_status = "LOADED"
+    elif mode == "candidate":
+        load_status = "LOADED_AS_CANDIDATE"
+    else:
+        load_status = "NOT_LOADED"
+    record: dict[str, Any] = {
+        "binding_ref": BINDING_REF,
+        "mode": mode,
+        "status": status,
+        "bundle_status": "BUNDLE_VERIFIED",
+        "authority_status": admission,
+        "authoritative": authoritative,
+        "load_status": load_status,
+        "bundle_ref": binding["input"]["bundle"]["path"],
         "authority_repository": lock["authority"]["repository"],
         "authority_revision": lock["authority"]["revision"],
         "projection_profile": lock["projection_profile"],
         "composition_profile": lock["composition_profile"],
         "composition_digest": result["composition_digest"],
         "component_digests": result["component_digests"],
+        "component_sources": {
+            c["source_class"]: {
+                "source_ref": c["source_ref"],
+                "source_digest": c["source_digest"],
+                "projection_digest": c["projection_digest"],
+            }
+            for c in lock["components"]
+        },
         "producer": lock.get("producer"),
+        "production_attested_by_verifier": False,
+        "assurance_limitations": binding.get("assurance_limitations") or [],
         "verifier": "scripts/verify_architecture_intelligence.py",
+        "fallback_used": False,
+    }
+    if load_status == "NOT_LOADED":
+        record["refusal_reason"] = admission.get("reason")
+    return record
+
+
+def _pointer(document: Any, pointer: str) -> Any:
+    """Read one value by RFC 6901 JSON pointer; reading is not selection or composition."""
+    if not pointer.startswith("/"):
+        raise Outcome("REJECTED", "CITATION_POINTER_MALFORMED", pointer=pointer)
+    value = document
+    for raw in pointer[1:].split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(value, dict) and token in value:
+            value = value[token]
+        elif isinstance(value, list) and token.isdigit() and int(token) < len(value):
+            value = value[int(token)]
+        else:
+            raise Outcome("REJECTED", "CITATION_POINTER_UNRESOLVED", pointer=pointer)
+    return value
+
+
+def cite(bundle: Path, result: dict[str, Any], record: dict[str, Any], target: str) -> dict:
+    """Read one namespaced fact from the composed view with its exact source provenance.
+
+    Called only after the record (provenance) exists and only when it is loadable (RS-034)."""
+    source_class, _, pointer = target.partition(":")
+    if record["load_status"] not in ("LOADED", "LOADED_AS_CANDIDATE"):
+        raise Outcome("REJECTED", "CITATION_REFUSED_NOT_LOADED", record_status=record["status"])
+    provenance = record["component_sources"].get(source_class)
+    if provenance is None:
+        raise Outcome("REJECTED", "CITATION_SOURCE_CLASS_UNKNOWN", source_class=source_class)
+    _, composed = _read_json(bundle / result["composed_path"])
+    return {
+        "source_class": source_class,
+        "namespace_pointer": f"/payload/{source_class}{pointer}",
+        "value": _pointer(composed["payload"][source_class], pointer),
+        "authoritative": record["authoritative"],
+        "mode": record["mode"],
+        **provenance,
+        "composition_digest": record["composition_digest"],
+        "authority_repository": record["authority_repository"],
+        "authority_revision": record["authority_revision"],
+    }
+
+
+def _refusal(outcome: Outcome, mode: str) -> dict[str, Any]:
+    return {
+        "binding_ref": BINDING_REF,
+        "mode": mode,
+        "status": "UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
+        "authoritative": False,
+        "load_status": "NOT_LOADED",
+        "refusal_reason": outcome.reason,
         "fallback_used": False,
     }
 
@@ -431,50 +596,72 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Verify GAR's architecture-intelligence bundle.")
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--binding", type=Path, default=DEFAULT_BINDING)
+    parser.add_argument("--mode", choices=("admitted", "candidate"), default="admitted")
     parser.add_argument("--authority-root", type=Path)
-    parser.add_argument("--expect-revision")
+    parser.add_argument("--authority-main", help="independently resolved tip of authority main")
+    parser.add_argument("--expect-revision", help="candidate mode: revision to check currency at")
+    parser.add_argument("--cite", metavar="SOURCE_CLASS:/POINTER")
     args = parser.parse_args(argv)
-    if (args.authority_root is None) != (args.expect_revision is None):
-        parser.error("--authority-root and --expect-revision are given together")
-    report: dict[str, Any] = {"verifier": "gar.architecture-intelligence/v1"}
+    if args.mode == "admitted" and args.expect_revision is not None:
+        parser.error("--expect-revision is candidate-mode only; admitted mode resolves main")
+    if args.mode == "candidate" and args.expect_revision and args.authority_root is None:
+        parser.error("--expect-revision needs --authority-root")
+    report: dict[str, Any] = {"verifier": "gar.architecture-intelligence/v2", "mode": args.mode}
     try:
         binding = load_binding(args.binding)
         bundle = args.bundle or REPO / binding["input"]["bundle"]["path"]
         result = verify_bundle(bundle, binding)
-        if args.authority_root is not None:
-            verify_currentness(args.authority_root, args.expect_revision, result["lock"], binding)
-        record = state_record(result, binding["input"]["bundle"]["path"])
-        record["currentness"] = (
-            {"checked_against": args.expect_revision}
-            if args.authority_root is not None
-            else {"checked_against": None, "status": "NOT_CHECKED"}
+        lock = result["lock"]
+        if args.mode == "admitted":
+            if args.authority_root is None:
+                raise Outcome("BLOCKED", "AUTHORITY_ROOT_REQUIRED")
+            main_tip = resolve_authority_main(args.authority_root, args.authority_main)
+            admission = resolve_admission(
+                args.authority_root, lock["authority"]["revision"], main_tip, lock, binding
+            )
+            currentness: dict[str, Any] = {"checked_against": main_tip, "basis": "authority_main"}
+        else:
+            if args.authority_root is not None and args.expect_revision is not None:
+                verify_currentness(args.authority_root, args.expect_revision, lock, binding)
+                currentness = {"checked_against": args.expect_revision, "basis": "named_revision"}
+            else:
+                currentness = {"checked_against": None, "status": "NOT_CHECKED"}
+            admission = {"status": "NOT_EVALUATED", "reason": "CANDIDATE_MODE"}
+        status = (
+            "ADMITTED_AND_CURRENT"
+            if admission.get("status") == "ADMITTED_AND_CURRENT"
+            else "BUNDLE_VERIFIED"
         )
-        report.update(status="BOUND", reason="VERIFIED", architecture_intelligence=record)
+        record = state_record(result, binding, mode=args.mode, status=status, admission=admission)
+        record["currentness"] = currentness
+        report.update(
+            status=status,
+            reason="ADMITTED" if status == "ADMITTED_AND_CURRENT" else admission["reason"],
+            bundle_status="BUNDLE_VERIFIED",
+            authority_status=admission.get("status"),
+            architecture_intelligence=record,
+        )
+        if args.cite is not None:
+            try:
+                report["citation"] = cite(bundle, result, record, args.cite)
+            except Outcome as refused:
+                report["citation"] = {"refused": refused.reason, **refused.detail}
     except Outcome as outcome:
         report.update(
             status=outcome.status,
             reason=outcome.reason,
             detail=outcome.detail,
-            architecture_intelligence={
-                "binding_ref": "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
-                "status": "UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
-                "load_status": "NOT_LOADED",
-                "refusal_reason": outcome.reason,
-                "fallback_used": False,
-            },
+            architecture_intelligence=_refusal(outcome, args.mode),
         )
+        if args.cite is not None:
+            report["citation"] = {"refused": "CITATION_REFUSED_NOT_LOADED"}
     except (KeyError, TypeError, ValueError) as exc:
+        refused = Outcome("REJECTED", "BUNDLE_STRUCTURE_INVALID")
         report.update(
             status="REJECTED",
             reason="BUNDLE_STRUCTURE_INVALID",
             detail={"error": f"{type(exc).__name__}: {exc}"},
-            architecture_intelligence={
-                "binding_ref": "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
-                "status": "REJECTED",
-                "load_status": "NOT_LOADED",
-                "refusal_reason": "BUNDLE_STRUCTURE_INVALID",
-                "fallback_used": False,
-            },
+            architecture_intelligence=_refusal(refused, args.mode),
         )
     print(json.dumps(report, indent=2, sort_keys=True))
     return EXIT[report["status"]]

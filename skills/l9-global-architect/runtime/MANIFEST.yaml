@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
   name: l9-global-architect
-  version: 0.8.3
+  version: 0.8.4
   status: experimental
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md
@@ -89,7 +89,11 @@ optional_load:
     - canonical_architecture_semantics_required_for_architectural_judgment
     artifacts:
     - integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
-    requires_verifier_status: BOUND
+    requires_verifier_status: ADMITTED_AND_CURRENT
+    candidate_inspection:
+      requires_verifier_status: BUNDLE_VERIFIED
+      mode: candidate
+      authoritative: false
     verifier: scripts/verify_architecture_intelligence.py
     state_target: $.architecture_intelligence
     fallback: none
@@ -248,4 +252,5 @@ historical_artifacts:
   - decisions/ADR-L9-GAR-005.yaml
   - decisions/ADR-L9-GAR-006.yaml
   - decisions/ADR-L9-GAR-007.yaml
+  - decisions/ADR-L9-GAR-008.yaml
   - ../CHANGELOG.md

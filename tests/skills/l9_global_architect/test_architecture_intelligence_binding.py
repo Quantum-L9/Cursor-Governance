@@ -21,6 +21,7 @@ VERIFIER = PACK / "scripts/verify_architecture_intelligence.py"
 BINDING = PACK / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
 BUNDLE = REPO / "generated/governance/architecture_intelligence"
 PRODUCER = REPO / "tools/authority/produce_architecture_intelligence.py"
+RUN_STATE = PACK / "runtime/RUN_STATE.yaml"
 OBSERVER = "l9.projection/gar-architecture-observer@1"
 ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
 
@@ -85,7 +86,7 @@ def bundle(tmp_path: Path) -> Bundle:
 def _refused(result: tuple[int, dict], status: str, reason: str) -> dict:
     code, report = result
     assert (code, report["status"], report["reason"]) == (
-        {"REJECTED": 1, "BLOCKED": 3, "STALE": 4}[status],
+        {"REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUNDLE_VERIFIED": 5}[status],
         status,
         reason,
     ), report
@@ -94,10 +95,21 @@ def _refused(result: tuple[int, dict], status: str, reason: str) -> dict:
     return report
 
 
-def test_committed_bundle_binds_and_records_provenance() -> None:
-    code, report = _verify()
-    assert code == 0 and report["status"] == "BOUND", report
+def test_admitted_mode_requires_an_authority_checkout() -> None:
+    # No authority checkout, no admission: the old "BOUND, currentness NOT_CHECKED" is gone.
+    _refused(_verify(), "BLOCKED", "AUTHORITY_ROOT_REQUIRED")
+
+
+def test_committed_bundle_verifies_as_a_non_authoritative_candidate() -> None:
+    code, report = _verify("--mode", "candidate")
+    assert code == 5 and report["status"] == "BUNDLE_VERIFIED", report
+    assert report["authority_status"] == "NOT_EVALUATED"
     state = report["architecture_intelligence"]
+    assert state["authoritative"] is False and state["load_status"] == "LOADED_AS_CANDIDATE"
+    assert state["production_attested_by_verifier"] is False
+    limitation = state["assurance_limitations"][0]
+    assert limitation["forbidden_category"] == "unrelated_domain_payloads"
+    assert limitation["independent_restrictive_power"] is False
     pins = yaml.safe_load(BINDING.read_text())["input"]["authority"]
     lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
     assert state["projection_profile"] == {
@@ -107,7 +119,7 @@ def test_committed_bundle_binds_and_records_provenance() -> None:
     assert state["composition_digest"] == lock["composed"]["composition_digest"]
     assert sorted(state["component_digests"]) == sorted(pins["expected_source_classes"])
     assert state["authority_revision"] == lock["authority"]["revision"]
-    assert state["fallback_used"] is False and state["load_status"] == "LOADED"
+    assert state["fallback_used"] is False
     composed = json.loads((BUNDLE / "composed.json").read_text())
     assert list(composed["payload"]) == sorted(pins["expected_source_classes"])
 
@@ -198,7 +210,9 @@ def test_bundle_from_another_authority_revision_is_stale(tmp_path: Path) -> None
     _git(authority, "commit", "-q", "--allow-empty", "-m", "newer authority")
     head = _git(authority, "rev-parse", "HEAD")
     _refused(
-        _verify("--authority-root", str(authority), "--expect-revision", head),
+        _verify(
+            "--mode", "candidate", "--authority-root", str(authority), "--expect-revision", head
+        ),
         "STALE",
         "AUTHORITY_REVISION_MISMATCH",
     )
@@ -365,20 +379,32 @@ def test_coherent_forgery_passes_hash_checks_but_fails_producer_replay(
     forged = _coherent_forgery(bundle)
     # Every digest is self-consistent, so the structural verifier cannot tell: that is the
     # boundary AIB-006 states. Hash checks prove integrity, never production.
-    code, report = bundle.verify()
-    assert code == 0 and report["bundle_status"] == "BUNDLE_VERIFIED", report
+    code, report = bundle.verify("--mode", "candidate")
+    assert code == 5 and report["bundle_status"] == "BUNDLE_VERIFIED", report
     assert forged in (bundle.root / "composed.json").read_text()
     # The canonical-producer replay regenerates from the canonical compiler output and refuses.
     replay = _replay(tmp_path / "replay", bundle.root)
-    assert replay.returncode == 1, replay.stderr
-    assert "stale architecture-intelligence bundle" in replay.stderr
+    clean = _replay(tmp_path / "clean", BUNDLE)
     lock = bundle.lock()
     entry = next(c for c in lock["components"] if c["source_class"] == "invariants")
-    for drifted in ("composed.json", entry["path"], entry["receipt"], "bundle.lock.json"):
-        assert drifted in replay.stderr, (drifted, replay.stderr)
-    # The untampered committed bundle replays clean under the same gate.
-    clean = _replay(tmp_path / "clean", BUNDLE)
-    assert clean.returncode == 0, clean.stderr
+    # Control: the untampered committed bundle drifts only in bundle.lock.json, because the
+    # fixture authority's revision is not the one the committed lock names.
+    assert clean.returncode == 1 and _drift(clean) == {"bundle.lock.json"}, clean.stderr
+    # The forgery drifts additionally in every rewritten artifact: the replay refuses it.
+    assert replay.returncode == 1, replay.stderr
+    assert _drift(replay) == {
+        "bundle.lock.json",
+        "composed.json",
+        entry["path"],
+        entry["receipt"],
+        lock["composed"]["receipt"],
+    }, replay.stderr
+
+
+def _drift(completed: subprocess.CompletedProcess[str]) -> set[str]:
+    lines = completed.stderr.splitlines()
+    assert lines and lines[0] == "stale architecture-intelligence bundle:", completed.stderr
+    return {line.strip() for line in lines[1:] if line.strip()}
 
 
 def test_producer_check_detects_drift(tmp_path: Path) -> None:
@@ -422,3 +448,340 @@ def test_producer_check_detects_drift(tmp_path: Path) -> None:
     victim.write_bytes(victim.read_bytes() + b" ")
     drift = subprocess.run([*args, "--check"], env=ENV, capture_output=True, text=True)
     assert drift.returncode == 1 and produced["components"][0]["path"] in drift.stderr
+
+
+# --- Authority separation (audit F1) and source-set closure (audit F3) -----------------------
+
+
+class Authority:
+    """A real git authority with canonical_sources, one source per class, and both profiles."""
+
+    PROFILE = "l9.projection/architecture-intelligence@1"
+    COMPOSITION = "l9.compose/architecture-intelligence@1"
+
+    def __init__(self, root: Path, classes: tuple[str, ...] = ("alpha", "beta")) -> None:
+        self.root = root
+        (root / "semantics").mkdir(parents=True)
+        _git(root, "init", "-q", "-b", "trunk")
+        self.write_sources(classes)
+        self.commit("canonical authority")
+        _git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
+
+    def write_sources(self, classes: tuple[str, ...], profile_classes=None) -> None:
+        semantics = self.root / "semantics"
+        (semantics / "canonical_sources.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "sources": [
+                        {"id": f"l9.source/{c}@1", "path": f"semantics/{c}.yaml"} for c in classes
+                    ]
+                }
+            )
+        )
+        for c in classes:
+            (semantics / f"{c}.yaml").write_text(f"{c}: [fact]\n")
+        (semantics / "projection_profiles.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "projection_profiles": [
+                        {
+                            "id": self.PROFILE,
+                            "sources": {
+                                c: {"selectors": [f"$.{c}"]} for c in (profile_classes or classes)
+                            },
+                        }
+                    ]
+                },
+                sort_keys=False,
+            )
+        )
+        (semantics / "composition_profiles.yaml").write_text(
+            yaml.safe_dump({"profiles": [{"id": self.COMPOSITION}]})
+        )
+
+    def commit(self, message: str) -> str:
+        _git(self.root, "add", "-A")
+        _git(self.root, "commit", "-q", "--allow-empty", "-m", message)
+        return _git(self.root, "rev-parse", "HEAD")
+
+    def profile_entry(self, revision: str, catalog: str, collection: str, ref: str) -> dict:
+        raw = _git(self.root, "show", f"{revision}:semantics/{catalog}")
+        return next(p for p in yaml.safe_load(raw)[collection] if p["id"] == ref)
+
+    def lock_and_binding(self, revision: str) -> tuple[dict, dict]:
+        """The lock and binding a producer at *revision* would pair with this authority."""
+        registry = yaml.safe_load(
+            _git(self.root, "show", f"{revision}:semantics/canonical_sources.yaml")
+        )
+        components = []
+        for source in registry["sources"]:
+            raw = subprocess.run(
+                ["git", "-C", str(self.root), "show", f"{revision}:{source['path']}"],
+                check=True,
+                capture_output=True,
+            ).stdout
+            components.append(
+                {
+                    "source_ref": source["id"],
+                    "source_digest": "sha256:" + hashlib.sha256(raw).hexdigest(),
+                }
+            )
+        projection = self.profile_entry(
+            revision, "projection_profiles.yaml", "projection_profiles", self.PROFILE
+        )
+        binding = yaml.safe_load(BINDING.read_text())
+        pins = binding["input"]["authority"]
+        pins["projection_profile_digest"] = _digest(projection)
+        pins["composition_profile_digest"] = _digest(
+            self.profile_entry(revision, "composition_profiles.yaml", "profiles", self.COMPOSITION)
+        )
+        pins["expected_source_classes"] = list(projection["sources"])
+        lock = {
+            "authority": {"repository": "Quantum-L9/.github", "revision": revision},
+            "components": components,
+        }
+        return lock, binding
+
+
+@pytest.fixture
+def authority(tmp_path: Path) -> Authority:
+    return Authority(tmp_path / "authority")
+
+
+def test_valid_candidate_revision_that_is_not_admitted(authority: Authority) -> None:
+    module = _module()
+    _git(authority.root, "switch", "-q", "-c", "candidate")
+    (authority.root / "semantics/alpha.yaml").write_text("alpha: [candidate fact]\n")
+    candidate = authority.commit("candidate release")
+    main_tip = module.resolve_authority_main(authority.root, None)
+    assert main_tip != candidate
+    lock, binding = authority.lock_and_binding(candidate)
+    # The bundle is perfectly current at the revision it names...
+    module.verify_currentness(authority.root, candidate, lock, binding)
+    # ...but that revision is not integrated into main, so it is not admitted law.
+    admission = module.resolve_admission(authority.root, candidate, main_tip, lock, binding)
+    assert (admission["status"], admission["reason"]) == (
+        "NOT_ADMITTED",
+        "AUTHORITY_REVISION_NOT_INTEGRATED",
+    )
+
+
+def test_integrated_revision_stays_admission_unresolved(authority: Authority) -> None:
+    # Integration into main is necessary, not sufficient: no admission decision record exists.
+    module = _module()
+    head = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    admission = module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (admission["status"], admission["reason"]) == (
+        "ADMISSION_UNRESOLVED",
+        "ADMISSION_DECISION_RECORD_UNDEFINED",
+    )
+    assert admission["integrated"] is True and admission["current_at_authority_main"] is True
+    assert "explicit_decision_record" in admission["decision_record_required_by"]
+
+
+def test_integrated_revision_whose_sources_changed_on_main_is_stale(
+    authority: Authority,
+) -> None:
+    module = _module()
+    produced = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(produced)
+    (authority.root / "semantics/beta.yaml").write_text("beta: [changed on main]\n")
+    tip = authority.commit("main moves on")
+    with pytest.raises(module.Outcome) as caught:
+        module.resolve_admission(authority.root, produced, tip, lock, binding)
+    assert (caught.value.status, caught.value.reason) == ("STALE", "NOT_CURRENT_AT_AUTHORITY_MAIN")
+    assert caught.value.detail["cause"] == "SOURCE_DIGEST_NOT_CURRENT"
+
+
+def test_main_is_resolved_from_the_authority_not_the_lock(authority: Authority) -> None:
+    module = _module()
+    _git(authority.root, "update-ref", "-d", "refs/remotes/origin/main")
+    with pytest.raises(module.Outcome) as caught:
+        module.resolve_authority_main(authority.root, None)
+    assert (caught.value.status, caught.value.reason) == ("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED")
+    with pytest.raises(module.Outcome) as caught:
+        module.resolve_authority_main(authority.root, "0" * 40)
+    assert caught.value.reason == "AUTHORITY_MAIN_UNRESOLVED"
+
+
+def test_committed_bundle_is_not_admitted_against_an_authority_lacking_its_revision(
+    authority: Authority,
+) -> None:
+    # The real bundle names .github 1d87032. Against an authority whose main does not contain
+    # it, admitted mode verifies the bundle but refuses to load it.
+    code, report = _verify(
+        "--authority-root", str(authority.root), "--cite", "invariants:/invariants/0"
+    )
+    assert code == 5 and report["status"] == "BUNDLE_VERIFIED", report
+    assert report["authority_status"] == "NOT_ADMITTED"
+    state = report["architecture_intelligence"]
+    assert state["load_status"] == "NOT_LOADED" and state["authoritative"] is False
+    assert state["refusal_reason"] == "AUTHORITY_REVISION_NOT_INTEGRATED"
+    assert report["citation"]["refused"] == "CITATION_REFUSED_NOT_LOADED"
+    assert "value" not in report["citation"]
+
+
+@pytest.mark.parametrize(
+    ("binding_classes", "reason_field"),
+    [
+        (("alpha",), "missing_from_binding"),  # profile gains a source; binding not updated
+        (("alpha", "beta", "gamma"), "absent_from_profile"),
+        (("beta", "alpha"), "order_differs"),
+    ],
+)
+def test_expected_source_set_must_equal_the_canonical_profile(
+    authority: Authority, binding_classes: tuple[str, ...], reason_field: str
+) -> None:
+    module = _module()
+    head = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    # The digest pin is current (a partial binding update); only the class list drifted.
+    binding["input"]["authority"]["expected_source_classes"] = list(binding_classes)
+    with pytest.raises(module.Outcome) as caught:
+        module.verify_currentness(authority.root, head, lock, binding)
+    assert (caught.value.status, caught.value.reason) == (
+        "REJECTED",
+        "EXPECTED_SOURCE_SET_MISMATCH",
+    )
+    assert caught.value.detail[reason_field]
+
+
+def test_canonical_profile_gaining_a_source_is_caught_even_with_a_matching_digest_pin(
+    authority: Authority,
+) -> None:
+    module = _module()
+    authority.write_sources(("alpha", "beta"), profile_classes=("alpha", "beta", "gamma"))
+    (authority.root / "semantics/gamma.yaml").write_text("gamma: [new]\n")
+    head = authority.commit("profile gains gamma")
+    lock, binding = authority.lock_and_binding(head)
+    binding["input"]["authority"]["expected_source_classes"] = ["alpha", "beta"]
+    with pytest.raises(module.Outcome) as caught:
+        module.verify_currentness(authority.root, head, lock, binding)
+    assert caught.value.reason == "EXPECTED_SOURCE_SET_MISMATCH"
+    assert caught.value.detail["missing_from_binding"] == ["gamma"]
+
+
+def test_committed_binding_equals_the_pinned_profile_sources() -> None:
+    # The committed bundle carries the canonical profile's own source order in composition order.
+    pins = yaml.safe_load(BINDING.read_text())["input"]["authority"]
+    composed = json.loads((BUNDLE / "composed.json").read_text())
+    assert [c["source_class"] for c in composed["components"]] == pins["expected_source_classes"]
+
+
+# --- GAR session: verify, record provenance, cite a namespaced fact (audit F4) ---------------
+
+
+class Session:
+    """One GAR run's `$.architecture_intelligence` slot and append-only event log, built from
+    runtime/RUN_STATE.yaml exactly as the bootloader instantiates it."""
+
+    def __init__(self) -> None:
+        spec = yaml.safe_load(RUN_STATE.read_text())
+        self.spec = spec
+        self.state = json.loads(json.dumps(spec["instance_template"]["architecture_intelligence"]))
+        self.events: list[dict] = []
+
+    def event(self, event_type: str, summary: str, **extra: object) -> None:
+        assert event_type in self.spec["event_model"]["permitted_event_types"], event_type
+        self.events.append(
+            {
+                "event_id": f"evt-{len(self.events) + 1}",
+                "occurred_at": "2026-10-15T00:00:00Z",
+                "event_type": event_type,
+                "state": self.state["status"],
+                "summary": summary,
+                **extra,
+            }
+        )
+
+    def load(self, *args: str, cite: str) -> dict:
+        # Step 1: verify and record provenance. Step 2: read only through the recorded slot.
+        code, report = _verify(*args)
+        record = report["architecture_intelligence"]
+        assert set(record) <= set(self.state) | {"currentness"}, set(record) - set(self.state)
+        self.state.update(record)
+        if record["load_status"] == "NOT_LOADED":
+            self.event("ARCHITECTURE_INTELLIGENCE_REFUSED", report["reason"])
+            return report
+        self.event(
+            "ARCHITECTURE_INTELLIGENCE_ADMITTED"
+            if record["authoritative"]
+            else "ARCHITECTURE_INTELLIGENCE_CANDIDATE_INSPECTED",
+            report["reason"],
+        )
+        _, cited = _verify(*args, "--cite", cite)
+        citation = cited["citation"]
+        self.state["citations"].append(citation)
+        self.event(
+            "ARCHITECTURE_INTELLIGENCE_FACT_CITED",
+            f"{citation['source_class']} {citation['namespace_pointer']}",
+            evidence_refs=[citation["source_ref"], citation["projection_digest"]],
+        )
+        return cited
+
+
+def test_gar_session_cites_a_namespaced_fact_with_exact_source_provenance() -> None:
+    session = Session()
+    report = session.load("--mode", "candidate", cite="invariants:/invariants/0")
+    citation = report["citation"]
+    lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
+    component = next(c for c in lock["components"] if c["source_class"] == "invariants")
+    artifact = json.loads((BUNDLE / component["path"]).read_text())
+    # The fact read is the canonical source projection's own record, at an exact address.
+    assert citation["value"] == artifact["payload"]["invariants"][0]
+    assert citation["value"]["id"] == "L9-AUTH-001"
+    assert citation["namespace_pointer"] == "/payload/invariants/invariants/0"
+    # Its provenance is the exact source, projection, composition and authority revision.
+    assert (citation["source_ref"], citation["source_digest"], citation["projection_digest"]) == (
+        component["source_ref"],
+        component["source_digest"],
+        component["projection_digest"],
+    )
+    assert citation["composition_digest"] == lock["composed"]["composition_digest"]
+    assert citation["authority_revision"] == lock["authority"]["revision"]
+    # A candidate read is never admitted law, and the run state says so.
+    assert citation["authoritative"] is False and session.state["authoritative"] is False
+    assert session.state["load_status"] == "LOADED_AS_CANDIDATE"
+    assert [e["event_type"] for e in session.events] == [
+        "ARCHITECTURE_INTELLIGENCE_CANDIDATE_INSPECTED",
+        "ARCHITECTURE_INTELLIGENCE_FACT_CITED",
+    ]
+    required = session.spec["event_model"]["required_fields"]
+    assert all(set(required) <= set(e) for e in session.events)
+
+
+def test_gar_session_refuses_unavailable_intelligence(tmp_path: Path) -> None:
+    session = Session()
+    report = session.load(
+        "--bundle", str(tmp_path / "absent"), "--mode", "candidate", cite="invariants:/invariants/0"
+    )
+    assert report["status"] == "BLOCKED" and session.state["status"] == "UNAVAILABLE"
+    assert session.state["citations"] == [] and session.state["fallback_used"] is False
+    assert [e["event_type"] for e in session.events] == ["ARCHITECTURE_INTELLIGENCE_REFUSED"]
+
+
+def test_gar_session_refuses_unauthoritative_intelligence_as_law(authority: Authority) -> None:
+    # Admitted mode against an authority whose main lacks the bundle revision: nothing is read.
+    session = Session()
+    report = session.load("--authority-root", str(authority.root), cite="invariants:/invariants/0")
+    assert report["status"] == "BUNDLE_VERIFIED" and report["authority_status"] == "NOT_ADMITTED"
+    assert session.state["load_status"] == "NOT_LOADED" and session.state["citations"] == []
+    assert [e["event_type"] for e in session.events] == ["ARCHITECTURE_INTELLIGENCE_REFUSED"]
+
+
+def test_gar_session_refuses_tampered_intelligence(bundle: Bundle) -> None:
+    path = bundle.root / bundle.lock()["components"][1]["path"]
+    path.write_bytes(path.read_bytes() + b"\n")
+    session = Session()
+    report = session.load(
+        "--bundle", str(bundle.root), "--mode", "candidate", cite="invariants:/invariants/0"
+    )
+    assert report["status"] == "REJECTED" and session.state["citations"] == []
+
+
+def test_citation_pointer_must_resolve() -> None:
+    _, report = _verify("--mode", "candidate", "--cite", "invariants:/invariants/99999")
+    assert report["citation"]["refused"] == "CITATION_POINTER_UNRESOLVED"
+    _, report = _verify("--mode", "candidate", "--cite", "nonexistent:/x")
+    assert report["citation"]["refused"] == "CITATION_SOURCE_CLASS_UNKNOWN"

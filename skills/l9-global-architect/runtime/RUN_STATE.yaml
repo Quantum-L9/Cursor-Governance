@@ -1,6 +1,6 @@
 run_state_model:
   model_id: L9.GAR.RUN_STATE.001
-  version: 0.8.3
+  version: 0.8.4
   artifact_class: runtime_state_template
   status: experimental
   semantic_owner: runtime/RUN_STATE.yaml
@@ -110,6 +110,10 @@ instance_template:
   architecture_intelligence:
     binding_ref: integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
     status: NOT_REQUESTED
+    mode:
+    bundle_status:
+    authority_status:
+    authoritative: false
     load_status: NOT_LOADED
     bundle_ref:
     authority_repository:
@@ -118,10 +122,14 @@ instance_template:
     composition_profile:
     composition_digest:
     component_digests: {}
+    component_sources: {}
     producer:
+    production_attested_by_verifier: false
+    assurance_limitations: []
     verifier: scripts/verify_architecture_intelligence.py
     currentness:
     refusal_reason:
+    citations: []
     fallback_used: false
   epistemic:
     verified_facts: []
@@ -310,7 +318,8 @@ state_enums:
   target_binding_state: [UNBOUND, BOUND, AMBIGUOUS, UNAVAILABLE]
   capability_state: [available, unavailable, unknown]
   integration_binding_state: [UNBOUND, DISCOVERED, BOUND, ACTIVE, ACTIVE_DEGRADED, RELEASED]
-  architecture_intelligence_status: [NOT_REQUESTED, BOUND, UNAVAILABLE, REJECTED, STALE]
+  architecture_intelligence_status: [NOT_REQUESTED, ADMITTED_AND_CURRENT, BUNDLE_VERIFIED, UNAVAILABLE, REJECTED, STALE]
+  architecture_intelligence_load_status: [NOT_LOADED, LOADED, LOADED_AS_CANDIDATE]
   realization_mode: [MUTATION, ARTIFACT, ANALYSIS, DECISION, UNKNOWN]
   delivery_mode: [IN_PLACE_WORKSPACE, RETURNED_FILES, RETURNED_ARCHIVE, PERSISTED_REPOSITORY, NONE]
   artifact_status: [absent, partial, candidate, accepted, invalidated]
@@ -372,7 +381,9 @@ event_model:
     - INTEGRATION_ACTIVATED
     - INTEGRATION_DEGRADED
     - INTEGRATION_AUTHORITY_RELEASED
-    - ARCHITECTURE_INTELLIGENCE_BOUND
+    - ARCHITECTURE_INTELLIGENCE_ADMITTED
+    - ARCHITECTURE_INTELLIGENCE_CANDIDATE_INSPECTED
+    - ARCHITECTURE_INTELLIGENCE_FACT_CITED
     - ARCHITECTURE_INTELLIGENCE_REFUSED
     - EVIDENCE_ADDED
     - EVIDENCE_INVALIDATED
@@ -496,7 +507,7 @@ transition_invariants:
   - id: RS-033
     assertion: A similarly named repository, file, branch, package, archive, or workspace MUST NOT satisfy target binding without evidence that it is the requested target.
   - id: RS-034
-    assertion: Architecture intelligence MUST NOT be read unless $.architecture_intelligence.status == BOUND with its verifier provenance recorded; any other status MUST NOT fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
+    assertion: Architecture intelligence MUST NOT be read as admitted law unless $.architecture_intelligence.status == ADMITTED_AND_CURRENT with its verifier provenance recorded; BUNDLE_VERIFIED may be read only with load_status LOADED_AS_CANDIDATE and every citation marked authoritative false; each cited fact MUST record its source_class, namespace pointer, source_ref, source_digest, projection_digest and composition_digest; any refusal MUST NOT fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
 material_progress:
   accepted_kinds:
     - new_discriminating_evidence

@@ -9,7 +9,7 @@ metadata:
   tags: [l9, gar, architect, runtime, contracts, convergence, reasoning-foursome, signal-leverage, architecture-profile]
   owner: igor_beylin
   status: experimental
-  version: 0.8.3
+  version: 0.8.4
   updated: 2026-09-27
 ---
 # L9 Global Architect
@@ -22,7 +22,7 @@ Use this file only as the host bootloader.
 5. Reject unresolved required references rather than inventing missing semantics.
 6. Instantiate the logical run state from `runtime/RUN_STATE.yaml` before recording any observation into it.
 7. Observe current host capability and authority from actual session evidence and record them in run state; do not infer either from this Skill or repository contents. Bind the exact target identity, artifact type, revision or version when material, inspection scope, correction scope, exclusions, and inaccessible areas before whole-target claims or mutation. Never substitute a similarly named target. Derive objective facts only through `contracts/OBJECTIVE_DERIVATION.yaml`.
-8. Load canonical architecture intelligence only through `integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml`, only when its load condition applies, and only after `scripts/verify_architecture_intelligence.py` returns BOUND; record the verifier's provenance in `$.architecture_intelligence` before reading the composed view. It is a separate input: it never replaces the L9 Architecture Profile, and a BLOCKED, REJECTED, or STALE result never falls back to the historical observer projection or any other input.
+8. Load canonical architecture intelligence only through `integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml`, only when its load condition applies, and as admitted law only after `scripts/verify_architecture_intelligence.py` (mode `admitted`, with an authority checkout) returns ADMITTED_AND_CURRENT; BUNDLE_VERIFIED is not admitted law and may be read only in mode `candidate`, with every citation marked non-authoritative. Record the verifier's provenance in `$.architecture_intelligence` before reading, and cite each fact with `--cite SOURCE_CLASS:/POINTER` so its exact source provenance is recorded. It is a separate input: it never replaces the L9 Architecture Profile, and a BLOCKED, REJECTED, or STALE result never falls back to the historical observer projection or any other input.
 9. Select integration mode only through `integrations/L9_RUNTIME_BINDING.yaml`; repository presence and L9 profile applicability never activate integrated execution, and transferred orchestration authority returns only through explicit release.
 10. Enter the runtime through `runtime/STATE_MACHINE.yaml`. During INVESTIGATE or MODEL, as the selected depth requires, resolve L9 profile applicability, hydrate stable L9 role semantics, bind current role instances only from evidence, and build the bounded solution-surface census required by the reasoning-foursome binding. Do not architect, harvest, plan, or build a material intervention until a current First-Order intervention decision is bound and required pre-execution Second-Order, Signal-Leverage propagation, and Leverage receipts are present.
 11. If GAR discovers evidence that materially favors a different intervention class, record `INTERVENTION_RECONSIDERATION_REQUIRED`, invalidate intervention fidelity, and return the evidence to First-Order. GAR must never silently substitute intervention classes.
