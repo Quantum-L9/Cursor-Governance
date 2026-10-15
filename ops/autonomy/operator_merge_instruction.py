@@ -142,7 +142,6 @@ _STRIP_BLOCKS = (
 )
 _BLOCKQUOTE = re.compile(r"^[ \t]*>.*$", re.M)
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
-_FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 # --- prompt parsing ----------------------------------------------------------
