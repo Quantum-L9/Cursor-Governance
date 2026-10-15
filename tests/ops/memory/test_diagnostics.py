@@ -63,6 +63,62 @@ def test_all_green_with_projection_none_is_ready(bound, fake_cli) -> None:
     assert "--dry-run" in fake_cli.last("write")
 
 
+def test_health_only_reads_no_record_and_is_never_ready(bound, fake_cli) -> None:
+    """M03: SessionStart readiness is bind/health/MCP status, never a hydrate.
+
+    The intercepted call list proves R6 (hydrate) and R7/R8 (write/close dry
+    runs) never ran, and the overall verdict says HEALTH_READY — not READY,
+    because hydration, write and close admission were not observed.
+    """
+    client = MemoryControlPlaneClient(bound, runner=_healthy_cli(fake_cli).run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT,
+        binding=_with_capabilities(bound),
+        client=client,
+        verify_mcp=False,
+        health_only=True,
+    )
+    levels = _levels(report)
+    called = {args[1] for args, _cwd, _stdin in fake_cli.calls if len(args) > 1}
+    assert called.isdisjoint({"hydrate", "search", "conflicts", "write", "close"}), called
+    assert "health" in called
+    assert levels["R2"] == levels["R3"] == "pass"
+    assert levels["R6"] == levels["R7"] == levels["R8"] == "skipped"
+    assert report["overall_status"] == "HEALTH_READY"
+    assert report["fault_class"] == "none"
+
+
+def test_health_only_projection_down_is_not_plain_health_ready(bound, fake_cli) -> None:
+    """R9 is probed in both modes; health-only must not hide its failure."""
+    cli = _healthy_cli(fake_cli, projection="http", projection_healthy=False)
+    cli.reply("health", 1, health_payload(projection="http", projection_healthy=False))
+    client = MemoryControlPlaneClient(bound, runner=cli.run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT,
+        binding=_with_capabilities(bound),
+        client=client,
+        verify_mcp=False,
+        health_only=True,
+    )
+    assert _levels(report)["R9"] == "fail"
+    assert report["overall_status"] == "HEALTH_READY_PROJECTION_DEGRADED"
+    assert report["fault_class"] == "none"
+
+
+def test_health_only_store_down_is_still_memory_unavailable(bound, fake_cli) -> None:
+    cli = _healthy_cli(fake_cli)
+    cli.reply("health", 1, health_payload(store_healthy=False))
+    client = MemoryControlPlaneClient(bound, runner=cli.run)
+    report = diagnostics.readiness_report(
+        workspace=ROOT,
+        binding=_with_capabilities(bound),
+        client=client,
+        verify_mcp=False,
+        health_only=True,
+    )
+    assert report["overall_status"] == "MEMORY_UNAVAILABLE"
+
+
 def test_canonical_healthy_projection_down_is_canonical_ready_projection_degraded(
     bound, fake_cli
 ) -> None:

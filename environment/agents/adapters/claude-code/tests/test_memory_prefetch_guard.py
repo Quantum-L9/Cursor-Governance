@@ -75,11 +75,19 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertNotIn("canonical surface detector says this is not Claude", proc.stderr)
 
-    def test_prefetch_wires_shared_hydrate_classifier_after_compile(self) -> None:
+    def test_session_start_never_compiles_hydrates_or_searches(self) -> None:
+        """SessionStart is health-only: no hydrate, search, conflicts or packet compile."""
         text = PREFETCH.read_text(encoding="utf-8")
-        compile_pos = text.index("compiled = compile_and_format(")
-        classify_pos = text.index("classify_hydrate_state(body)")
-        self.assertGreater(classify_pos, compile_pos)
+        for forbidden in (
+            "compile_and_format",
+            "canonical_hydrate",
+            ".hydrate(",
+            ".search(",
+            ".conflicts(",
+            "classify_hydrate_state",
+        ):
+            self.assertNotIn(forbidden, text)
+        self.assertIn("client.health()", text)
         self.assertNotIn("_claude_runtime_marker_present", text)
         self.assertNotIn('agent_id="claude-code"', text)
         self.assertNotIn('or ["cursor-governance"]', text)
@@ -109,23 +117,25 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         )
         # No host marker, no identity: a governance-surface string is not evidence.
         self.assertEqual(prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}), "")
-        # An unknown cloud entrypoint leaves the SURFACE unknown, never the actor.
+        # A cloud session with an unadmitted entrypoint derives no actor: the
+        # identity owner's contract (tests/ops/memory/test_agent_identity.py,
+        # ``{**CLAUDE, "CLAUDE_CODE_REMOTE": "true"} -> ""``) is authoritative.
         self.assertEqual(
             prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}),
-            "claude-code",
+            "",
         )
 
     def test_a_degraded_read_is_shown_to_the_user(self) -> None:
-        """A memory read that failed or degraded is a user-visible systemMessage."""
+        """Degraded memory health is a user-visible systemMessage."""
         sys.path.insert(0, str(PREFETCH.parent))
         import memory_prefetch as prefetch
 
         quiet = prefetch.hook_session_start_payload("ctx")
-        self.assertNotIn("systemMessage", quiet, "a healthy read adds nothing")
+        self.assertNotIn("systemMessage", quiet, "a healthy session adds nothing")
         loud = prefetch.hook_session_start_payload(
-            "ctx", prefetch._loud_read_failure("DEGRADED at session start: x")
+            "ctx", prefetch._loud_status("DEGRADED at session start: x")
         )
-        self.assertEqual(loud["systemMessage"], "L9 MEMORY READ — DEGRADED at session start: x")
+        self.assertEqual(loud["systemMessage"], "L9 MEMORY — DEGRADED at session start: x")
 
     def test_additional_context_is_a_string_not_an_array(self) -> None:
         """SESSION_START_SPEC §3: ``additionalContext`` is a string.
@@ -139,7 +149,7 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         import memory_prefetch as prefetch
 
         context = (
-            "L9 memory: ENFORCED\n"
+            "L9 memory: HEALTH-ONLY at SessionStart (no records read, nothing hydrated)\n"
             "transport=memory-control-plane/v1\n"
             "namespace=cursor-governance\n"
             "law=CANONICAL_LAW §8"
@@ -168,6 +178,96 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
 
         markdown = '```json\n{"degraded": false, "hydrate_stats": {"close_gap": false}}\n```'
         self.assertEqual(classify(markdown), (False, ""))
+
+
+class _RecordingClient:
+    """Stands in for MemoryControlPlaneClient; records every operation called."""
+
+    def __init__(self, calls: list[str], healthy: bool) -> None:
+        self.calls = calls
+        self.healthy = healthy
+        self.binding = type("Binding", (), {"ok": True, "reasons": []})()
+
+    def health(self):
+        self.calls.append("health")
+        status = type("Status", (), {"value": "OK" if self.healthy else "CANONICAL_UNAVAILABLE"})()
+        return type(
+            "Outcome",
+            (),
+            {"ok": self.healthy, "status": status, "error": None if self.healthy else "store down"},
+        )()
+
+    def __getattr__(self, name: str):
+        def _record(*_args, **_kwargs):
+            self.calls.append(name)
+            raise AssertionError(f"SessionStart must not call memory.{name}")
+
+        return _record
+
+
+class HealthOnlySessionStartTests(unittest.TestCase):
+    """M01: the intercepted call list at SessionStart is exactly ``health``."""
+
+    def _run_main(self, *, healthy: bool, namespaces: list[str]):
+        import contextlib
+        import io
+        import tempfile
+        from unittest import mock
+
+        sys.path.insert(0, str(PREFETCH.parent))
+        import memory_prefetch as prefetch
+
+        calls: list[str] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp) / "repo"
+            (workspace / ".git").mkdir(parents=True)
+            out = io.StringIO()
+            event = json.dumps({"session_id": "chat-1", "transcript_path": ""})
+            with (
+                mock.patch.dict(
+                    os.environ, {"CLAUDE_PROJECT_DIR": str(workspace), "CLAUDECODE": "1"}
+                ),
+                mock.patch.object(prefetch, "is_claude_gate_surface", return_value=True),
+                mock.patch.object(
+                    prefetch.mb, "memory_client", lambda *_a, **_k: _RecordingClient(calls, healthy)
+                ),
+                mock.patch.object(prefetch.mb, "ensure_importable", lambda *_a, **_k: None),
+                mock.patch.object(prefetch, "_local_namespaces", lambda _roots: list(namespaces)),
+                mock.patch.object(sys, "argv", ["memory_prefetch.py"]),
+                mock.patch.object(sys, "stdin", io.StringIO(event)),
+                contextlib.redirect_stdout(out),
+            ):
+                self.assertEqual(prefetch.main(), 0)
+                receipts = sorted((workspace / ".l9" / "memory" / "receipts").glob("*.json"))
+                receipt = json.loads(receipts[0].read_text()) if receipts else {}
+        return calls, json.loads(out.getvalue()), receipt
+
+    def test_healthy_session_start_calls_only_health(self) -> None:
+        calls, payload, receipt = self._run_main(healthy=True, namespaces=["repo-ns"])
+        self.assertEqual(calls, ["health"])
+        context = payload["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("HEALTH-ONLY", context)
+        self.assertIn("health=OK", context)
+        self.assertNotIn("### memory hydrate", context)
+        self.assertNotIn("facts_preview", context)
+        self.assertNotIn("systemMessage", payload)
+        self.assertEqual(receipt["status"], "health_only")
+        self.assertEqual(receipt["memory_health"]["status"], "OK")
+        self.assertNotIn("packet_ids", receipt)
+        self.assertNotIn("hydrated_roots", receipt)
+        self.assertTrue(receipt["roots"])
+
+    def test_unhealthy_memory_is_degraded_and_loud_not_a_hydrate(self) -> None:
+        calls, payload, receipt = self._run_main(healthy=False, namespaces=["repo-ns"])
+        self.assertEqual(calls, ["health"])
+        self.assertEqual(receipt["status"], "degraded")
+        self.assertIn("CANONICAL_UNAVAILABLE", payload["systemMessage"])
+        self.assertIn("Repository work is unaffected", payload["systemMessage"])
+
+    def test_no_namespace_is_degraded_never_health_only(self) -> None:
+        calls, _payload, receipt = self._run_main(healthy=True, namespaces=[])
+        self.assertEqual(calls, ["health"])
+        self.assertEqual(receipt["status"], "degraded")
 
 
 if __name__ == "__main__":
