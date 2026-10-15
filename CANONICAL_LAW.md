@@ -1334,6 +1334,40 @@ is not retargeted onto the documentation commit that followed the source.
    door, the `L9_MEMORY_MCP_COMMAND` launcher, and graph MCP operations.
    `installed_record_digest` stays unpinned.
 
+<!-- MEMORY_REMOTE_MCP_CONSUMER_V1 -->
+## 8.10 Remote Memory MCP consumer binding (2026-10-15) — supersedes §8.2 item 2's "package-owned `l9-graphite-memory` stdio server only" and §8.5 item 4's "HTTP sealed", for the admitted `memory-remote-mcp/v1` route only
+
+Append-only. §8.2 and §8.5 remain on disk. Decision record:
+[ADR-0053](docs/decisions/ADR-0053-remote-memory-mcp-consumer-binding.md).
+
+1. **One admitted HTTP route.** Agent memory may cross HTTP only as
+   `memory-remote-mcp/v1`, in `signed-agent` mode, to the admitted Memory
+   release. Every other HTTP route stays forbidden: provider transport,
+   `L9_MEMORY_HTTP_*`, a shared bearer, a retired host or port, any path but
+   `/mcp`.
+2. **Same entry, same service.** The model-visible memory entry stays the stdio
+   wrapper `ops/memory/run_memory_mcp.sh`, with no URL, headers or env block.
+   When an operator names an endpoint, the wrapper execs
+   `ops/memory_remote/bridge.py`, which relays to the one canonical
+   `MemoryService` (`memory-control-plane/v1`).
+3. **Operator-selected, release-bound.** The endpoint is per-machine operator
+   input, never repository content. The bridge serves only an admitted release
+   in [`ops/config/memory-remote-binding.json`](ops/config/memory-remote-binding.json),
+   and only after the live service has proved that exact version and both
+   contract versions. A release candidate is reachable on loopback only, for
+   named qualification.
+4. **Signed agents only.** Each request carries the agent's freshly minted
+   ADR-0031 token and its sealed canonical identity assertion. The service owns
+   grants and keys. The human door, `is_admin`, the anonymous local operator and
+   container-ephemeral keys never cross this route.
+5. **No fallback.** If the remote transport is requested but cannot be proven,
+   the server refuses to launch, and it never serves from the local store.
+   Accepted memory writes still confer no repository authority (§8.3, E7).
+6. **Machine form.** `memory-enforcement.contract.json` 4.0.0
+   `interactive_memory_write.http_transport: admitted_remote_only` and
+   `remote_transport`, validated by `validate_memory_enforcement.py` and pinned
+   by `tests/test_memory_front_door.py`.
+
 <!-- HUMAN_GATED_MERGE_V1 -->
 ## 6.2.12 Merge authority is a human grant, never an invocation (2026-10-12) — supersedes §6.2.1, §6.2.3, and the merge-authorization phrasing of §6.1 and §6.2
 
@@ -1423,37 +1457,3 @@ SSOT: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
    gate (`L9_MEMORY_WRITE_GATES=1`, default off). An operator who enables
    GATES-002 must hydrate on demand before writing, because sessionStart no
    longer produces its hydration state.
-
-<!-- MEMORY_REMOTE_MCP_CONSUMER_V1 -->
-## 8.10 Remote Memory MCP consumer binding (2026-10-15) — supersedes §8.2 item 2's "package-owned `l9-graphite-memory` stdio server only" and §8.5 item 4's "HTTP sealed", for the admitted `memory-remote-mcp/v1` route only
-
-Append-only. §8.2 and §8.5 remain on disk. Decision record:
-[ADR-0053](docs/decisions/ADR-0053-remote-memory-mcp-consumer-binding.md).
-
-1. **One admitted HTTP route.** Agent memory may cross HTTP only as
-   `memory-remote-mcp/v1`, in `signed-agent` mode, to the admitted Memory
-   release. Every other HTTP route stays forbidden: provider transport,
-   `L9_MEMORY_HTTP_*`, a shared bearer, a retired host or port, any path but
-   `/mcp`.
-2. **Same entry, same service.** The model-visible memory entry stays the stdio
-   wrapper `ops/memory/run_memory_mcp.sh`, with no URL, headers or env block.
-   When an operator names an endpoint, the wrapper execs
-   `ops/memory_remote/bridge.py`, which relays to the one canonical
-   `MemoryService` (`memory-control-plane/v1`).
-3. **Operator-selected, release-bound.** The endpoint is per-machine operator
-   input, never repository content. The bridge serves only an admitted release
-   in [`ops/config/memory-remote-binding.json`](ops/config/memory-remote-binding.json),
-   and only after the live service has proved that exact version and both
-   contract versions. A release candidate is reachable on loopback only, for
-   named qualification.
-4. **Signed agents only.** Each request carries the agent's freshly minted
-   ADR-0031 token and its sealed canonical identity assertion. The service owns
-   grants and keys. The human door, `is_admin`, the anonymous local operator and
-   container-ephemeral keys never cross this route.
-5. **No fallback.** If the remote transport is requested but cannot be proven,
-   the server refuses to launch, and it never serves from the local store.
-   Accepted memory writes still confer no repository authority (§8.3, E7).
-6. **Machine form.** `memory-enforcement.contract.json` 4.0.0
-   `interactive_memory_write.http_transport: admitted_remote_only` and
-   `remote_transport`, validated by `validate_memory_enforcement.py` and pinned
-   by `tests/test_memory_front_door.py`.
