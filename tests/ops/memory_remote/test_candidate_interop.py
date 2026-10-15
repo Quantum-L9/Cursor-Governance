@@ -15,6 +15,15 @@ unconditionally. The PostgreSQL restart and tenant cases additionally need
 ``L9_MEMORY_REMOTE_CANDIDATE_POSTGRES_DSN`` (a disposable cluster). Unrelated failures
 are not hidden: the skips are module- and case-scoped to those two variables only.
 
+Exact bytes. A run qualifies one exact wheel, never "a candidate". With a candidate
+interpreter supplied, ``L9_MEMORY_REMOTE_CANDIDATE_WHEEL_SHA256`` must name the wheel's
+digest, and ``test_the_installed_candidate_is_the_declared_wheel`` FAILS unless the
+installed distribution's PEP 610 record proves it came from exactly those bytes and
+reports the binding's candidate version. ``L9_MEMORY_REMOTE_CANDIDATE_SOURCE_SHA`` names
+the source revision the wheel was built from. The wheel is reproducible under
+``SOURCE_DATE_EPOCH`` (memory ``scripts/validate_release.sh``), so that link is
+re-derivable by rebuilding. Results against one revision never qualify another.
+
 This does not certify a hosted deployment, Cursor or Claude Code Mobile UI clients, or
 TLS. Those stay deployment-acceptance obligations (ADR-0053).
 """
@@ -24,6 +33,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import re
 import secrets
 import socket
 import subprocess
@@ -42,6 +52,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER = REPO_ROOT / "ops" / "memory" / "run_memory_mcp.sh"
 CANDIDATE_PY = os.environ.get("L9_MEMORY_REMOTE_CANDIDATE_PYTHON", "").strip()
 POSTGRES_DSN = os.environ.get("L9_MEMORY_REMOTE_CANDIDATE_POSTGRES_DSN", "").strip()
+CANDIDATE_WHEEL_SHA256 = os.environ.get("L9_MEMORY_REMOTE_CANDIDATE_WHEEL_SHA256", "").strip()
+CANDIDATE_SOURCE_SHA = os.environ.get("L9_MEMORY_REMOTE_CANDIDATE_SOURCE_SHA", "").strip()
 
 pytestmark = pytest.mark.skipif(
     not CANDIDATE_PY or not Path(CANDIDATE_PY).is_file(),
@@ -362,6 +374,36 @@ def write(host: McpHost, namespace: str, content: str, agent: str) -> dict[str, 
 # ---------------------------------------------------------------------------
 # Positive cases
 # ---------------------------------------------------------------------------
+
+
+def test_the_installed_candidate_is_the_declared_wheel() -> None:
+    """F3: qualify exact bytes. The PEP 610 record must name the declared digest."""
+    assert re.fullmatch(r"[0-9a-f]{64}", CANDIDATE_WHEEL_SHA256), (
+        "L9_MEMORY_REMOTE_CANDIDATE_WHEEL_SHA256 must name the exact wheel under test"
+    )
+    assert re.fullmatch(r"[0-9a-f]{40}", CANDIDATE_SOURCE_SHA), (
+        "L9_MEMORY_REMOTE_CANDIDATE_SOURCE_SHA must name the exact source revision"
+    )
+    probe = (
+        "import json, importlib.metadata as md\n"
+        "d = md.distribution('l9-graphite-memory')\n"
+        "import l9_graphite_memory.version as v\n"
+        "print(json.dumps({'version': d.version, 'module_version': v.PACKAGE_VERSION,"
+        " 'remote': v.REMOTE_MCP_CONTRACT_VERSION,"
+        " 'direct_url': json.loads(d.read_text('direct_url.json') or '{}')}))\n"
+    )
+    out = subprocess.run(
+        [CANDIDATE_PY, "-I", "-c", probe], capture_output=True, text=True, check=True, timeout=60
+    )
+    installed = json.loads(out.stdout)
+    hashes = installed["direct_url"].get("archive_info", {}).get("hashes", {})
+    assert hashes.get("sha256") == CANDIDATE_WHEEL_SHA256, installed["direct_url"]
+    binding = json.loads(
+        (REPO_ROOT / "ops" / "config" / "memory-remote-binding.json").read_text(encoding="utf-8")
+    )
+    expected_version = binding["candidate"]["version"]
+    assert installed["version"] == installed["module_version"] == expected_version
+    assert installed["remote"] == "memory-remote-mcp/v1"
 
 
 def test_both_agents_authenticate_through_the_real_consumer_path(
