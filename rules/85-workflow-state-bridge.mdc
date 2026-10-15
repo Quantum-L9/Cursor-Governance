@@ -13,7 +13,7 @@ alwaysApply: false
 
 **Updated: 2026-08-06** *(resume-SSOT wording superseded 2026-09-13)* — `memory-bank/activeContext.md` and `workflow_state.md` are **legacy/archival** where still present — do not treat them as SSOT.
 
-**Updated: 2026-09-13** — Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`) via SessionStart hydrate / `python -m ops.memory.cli hydrate`. Never Graphiti `inject` / PICKUP or `graphiti_memory_client.py`. ADR-0031 / CANONICAL_LAW §8.5.
+**Updated: 2026-09-13** — Resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`) via `python -m ops.memory.cli hydrate` (on demand; SessionStart is health-only since 2026-10-13, CANONICAL_LAW §8.9). Never Graphiti `inject` / PICKUP or `graphiti_memory_client.py`. ADR-0031 / CANONICAL_LAW §8.5.
 
 ## State sync required before edits
 
@@ -27,7 +27,7 @@ alwaysApply: false
 
 When starting a run, use:
 
-> 1. `memcli hydrate` (or SessionStart packet) for this repo namespace.
+> 1. `memcli hydrate` for this repo namespace (SessionStart injects no packet).
 > 2. Summarize in bullets:
 >    - Last continuation task / next / blocker
 >    - Context summary
@@ -77,7 +77,7 @@ Do not modify repository files until STATE_SYNC is complete (and confirmed when 
 ## Anti-patterns
 
 ❌ **DON'T** treat `memory-bank/` or `workflow_state.md` as resume SSOT
-✅ **DO** resume from SessionStart hydrate / `memcli hydrate` (`ContinuationCapsuleV2`)
+✅ **DO** resume from an on-demand `memcli hydrate` (`ContinuationCapsuleV2`)
 
 ❌ **DON'T** skip sessionEnd close when canonical memory is bound
 ✅ **DO** close via the hook (`memory.close`); `/end-session` `repair-write` only on a close-gap

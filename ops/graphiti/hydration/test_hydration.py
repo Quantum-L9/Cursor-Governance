@@ -529,15 +529,43 @@ def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
         encoding="utf-8"
     )
     assert text.index("cli open") < text.index("if graphiti_enabled")
-    assert text.index("if graphiti_enabled") < text.index("cli compile")
+    # SessionStart is health-only: the open latch stays, the packet compile is gone.
+    assert "cli compile" not in text
+    assert text.index("if graphiti_enabled") < text.index('"health"')
+
+
+def test_orchestrator_session_start_reads_no_memory_records() -> None:
+    """M02: Cursor sessionStart makes one health call and no read."""
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert '"--surface", "cursor-session-start"' in text
+    for forbidden in (
+        "cli compile",
+        "compile_session_packet",
+        "canonical_hydrate",
+        '"hydrate"',
+        '"search"',
+        '"conflicts"',
+    ):
+        assert forbidden not in text, forbidden
+    # Session identity, open latch and code-graph diagnostics are preserved.
+    for kept in ("resolve_or_create_session_id", "cli open", "code-graph-health.sh"):
+        assert kept in text, kept
+    # Codex P1 on #722: with GATES-002 opted in, the advertised on-demand
+    # hydrate records this conversation's session state, decided by the gate's
+    # own switch reader rather than a second copy of it.
+    assert "from ops.graphiti.graphiti_gate_lib import gates_enabled" in text
+    assert "--record-session" in text
 
 
 def test_orchestrator_resolves_one_lifecycle_id_before_open() -> None:
-    """Audit P573-F2: the id handed to `cli open` is the id `cli compile` gets.
+    """Audit P573-F2: the id handed to `cli open` is resolved once, first.
 
     A conversation-only payload used to open ``opens/default.json`` while the
-    compiler generated a UUID for itself; now the orchestrator resolves once
-    (SessionStart mode: ``rotate=True``) before either call.
+    compiler generated a UUID for itself; the orchestrator resolves once
+    (SessionStart mode: ``rotate=True``) before the open latch. SessionStart no
+    longer compiles a packet, so the open latch is the only consumer here.
     """
     text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
         encoding="utf-8"
@@ -545,7 +573,7 @@ def test_orchestrator_resolves_one_lifecycle_id_before_open() -> None:
     assert "resolve_or_create_session_id" in text
     assert "rotate=True" in text
     assert text.index("resolve_or_create_session_id") < text.index("cli open")
-    assert text.count('--session-id "$CURSOR_SESSION_ID"') == 2
+    assert text.count('--session-id "$CURSOR_SESSION_ID"') == 1
     # Copilot: the payload parsers name the failures they tolerate.
     assert "except Exception" not in text
     assert text.count("except (json.JSONDecodeError, TypeError)") == 2
