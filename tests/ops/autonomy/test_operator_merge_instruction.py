@@ -1112,7 +1112,7 @@ def test_gar_agent_text_never_authorizes(tmp_path: Path) -> None:
     "prompt",
     [
         "Should we merge these PRs?",
-        "Can you merge them?",
+        "Should these be merged now?",
         "The reviewer said to fix and merge them.",
         "They asked whether to merge everything we just fixed.",
         '"Merge these PRs" is what the bot wrote.',
@@ -1295,3 +1295,269 @@ def test_gar_a_leading_condition_still_authorizes(prompt: str) -> None:
 )
 def test_gar_purpose_and_conditional_clauses_are_not_instructions(prompt: str) -> None:
     assert _targets(prompt, cwd_repo=MEMORY) == []
+
+
+# =============================================================================
+# Independent adversarial review of the GAR change (findings F1-F9). Every
+# input below is the reviewer's; each failed against the first GAR revision.
+# =============================================================================
+
+
+def test_review_f1_negated_red_and_issue_refs_do_not_join_the_context(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    reply = (
+        f"Working in {MEMORY}. Fixed #96 and #97; both green. #98 is still red. "
+        "#99 is an external contributor's draft - do NOT merge. Closes #45."
+    )
+    prompt = "go ahead and merge everything we just fixed"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", reply), ("human", prompt))
+    recorded = _capture(store, prompt, transcript)["recorded"]
+    assert sorted(e["pr"] for e in recorded) == [96, 97]
+
+
+def test_review_f1_a_relayed_turn_closes_the_exchange(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("human", f"Remediate the open PRs in {MEMORY}."),
+        ("agent", f"{MEMORY}#96 and {MEMORY}#97 are green."),
+        ("relay", f"<task-notification>{MEMORY}#120 opened</task-notification>"),
+        ("agent", f"A webhook says {MEMORY}#120 was opened."),
+        ("human", "merge them"),
+    )
+    recorded = _capture(store, "merge them", transcript)["recorded"]
+    assert sorted(e["pr"] for e in recorded) == [96, 97]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Merging #96 broke the build.",
+        "The merge of #96 failed yesterday.",
+        "A merge of #96 would break main.",
+        "The squash merge of #12 lost the history.",
+        "I need to merge #96 myself, don't touch it.",
+        "I want to merge #96 manually tomorrow.",
+    ],
+)
+def test_review_f2_declarative_and_first_person_prose_does_not_authorize(prompt: str) -> None:
+    assert [k for k in _kinds(prompt) if k[0] == "authorize"] == []
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Merge these two functions into one helper.",
+        "merge them into a single file",
+        "merge all the config files into one",
+        "Merge both dictionaries.",
+        "Pull main and merge it into your branch.",
+        "merge it with the existing helper",
+    ],
+)
+def test_review_f2_coding_prose_does_not_resolve_the_conversation(
+    tmp_path: Path, prompt: str
+) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", prompt))
+    recorded = _capture(store, prompt, transcript)["recorded"]
+    assert [e for e in recorded if e["kind"] == "authorize"] == []
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Don't forget to merge #96.",
+        "Don't ask me, merge #96.",
+        "Never mind, just merge #96.",
+        "No problem, merge #96.",
+        "Stop asking and merge #96.",
+        "Cancel the stale CI run and merge #96.",
+        "Undo the last commit and merge #96.",
+        "Abort the rebase and merge #96.",
+        "Squash-merge #96, not a regular merge.",
+        "merge #96 after CI passes, do not merge before that",
+        "Merge #96 when CI is green — don't merge it before then.",
+        "Merge #96 and #97, but don't merge until CI is green.",
+        "Merge #96 but don't merge anything else.",
+    ],
+)
+def test_review_f3_instructions_are_not_recorded_as_cancellations(
+    tmp_path: Path, prompt: str
+) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    _capture(store, f"Merge {MEMORY}#96.", transcript, now=NOW - 10)
+    payload = _claude_payload(prompt, transcript, cwd="/home/user")
+    omi.capture_instructions(
+        prompt,
+        host="claude-code",
+        session_id=SESSION,
+        cwd="/home/user",
+        path=store,
+        now=NOW,
+        cwd_repo=MEMORY,
+        provenance=omi.host_provenance("claude-code", payload),
+        open_pull_requests=lambda repo: [],
+        context=None,
+    )
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 1) is not None, prompt
+
+
+def test_review_f3_real_cancellations_still_record() -> None:
+    for prompt in (
+        "Do not merge #96.",
+        "Don't merge #96 yet.",
+        "Cancel the merge of #96.",
+        "Stop merging #96.",
+        "Hold off on merging #96.",
+        "Never merge #96.",
+    ):
+        assert ("revoke", "pr", SLUG, 96) in _kinds(prompt), prompt
+
+
+def test_review_f4_workspace_outranks_a_repository_the_agent_mentions(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("agent", f"Unrelated: {OTHER} has a release."),
+        ("human", "merge #12"),
+    )
+    payload = _claude_payload("merge #12", transcript, cwd="/ws")
+    recorded = omi.capture_instructions(
+        "merge #12",
+        host="claude-code",
+        session_id=SESSION,
+        path=store,
+        now=NOW,
+        cwd_repo=SLUG,
+        provenance=omi.host_provenance("claude-code", payload),
+        context=omi.conversation_context(str(transcript), SESSION, current_prompt="merge #12"),
+    )["recorded"]
+    assert [(e["repo"], e["pr"]) for e in recorded] == [(SLUG, 12)]
+
+
+def test_review_f4_agent_text_never_names_a_cohorts_repository(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = "merge all open PRs"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", f"See {OTHER}."), ("human", prompt))
+    result = _capture(store, prompt, transcript)
+    assert result["recorded"] == []
+    assert any("repository could not be resolved" in n for n in result["notes"])
+
+
+def _timed(func, *args, **kwargs) -> float:
+    start = time.perf_counter()
+    func(*args, **kwargs)
+    return time.perf_counter() - start
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "merge pr" + " " * 20000,
+        "please, " * 2000 + "x merge",
+        "x" + "and" * 40 + " zz merge #1",
+        "a" + ".a" * 20000 + "/b#1 merge",
+        "once x, " * 2000 + "merge #1",
+    ],
+)
+def test_review_f5_f8_adversarial_prompts_are_fast_and_never_raise(prompt: str) -> None:
+    assert _timed(omi.parse_prompt, prompt, cwd_repo=SLUG) < 1.0
+
+
+def test_review_f5_adversarial_agent_text_is_fast(tmp_path: Path) -> None:
+    transcript = _conversation(
+        tmp_path / "t.jsonl", ("agent", "a" + ".a" * 40000 + "/b"), ("human", "merge them")
+    )
+    assert _timed(omi.conversation_context, str(transcript), SESSION) < 1.0
+
+
+def test_review_f6_slashed_prose_is_not_a_repository() -> None:
+    assert _targets("merge #96 once CI/CD is green", cwd_repo=SLUG) == [("pr", SLUG, 96)]
+    assert _targets("merge #96 and/or #97", cwd_repo=SLUG) == [("pr", SLUG, 96), ("pr", SLUG, 97)]
+
+
+def test_review_f6_dot_repositories_can_be_named() -> None:
+    assert _targets("merge Quantum-L9/.github#12") == [("pr", "Quantum-L9/.github", 12)]
+
+
+def test_review_f6_a_plural_noun_carries_bare_numbers() -> None:
+    assert [t[2] for t in _targets("merge PRs 96, 97, 98", cwd_repo=SLUG)] == [96, 97, 98]
+
+
+def test_review_f7_a_spaced_hyphen_before_a_quantity_is_not_a_range() -> None:
+    assert _targets("Merge PR #5 - 10 minutes after CI goes green.", cwd_repo=SLUG) == [
+        ("pr", SLUG, 5)
+    ]
+
+
+def test_review_f9_a_same_second_cancellation_beats_an_earlier_issue(tmp_path: Path) -> None:
+    """A grant issued at NOW (whole seconds) and cancelled at NOW + 0.5 is cancelled."""
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "x"))
+    _capture(store, f"Do not merge {SLUG}#735.", transcript, now=NOW + 0.5)
+    (entry,) = omi.load_instructions(store)
+    assert entry["recorded_at"] == NOW + 0.5
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 1, since=NOW) is not None
+
+
+def test_review_f9_cursor_authorization_never_spends_a_cancellation(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "x"))
+    _capture(store, f"Do not merge {SLUG}#735.", transcript, now=NOW)
+    cursor_payload = {
+        "hook_event_name": "beforeSubmitPrompt",
+        "conversation_id": "conv",
+        "prompt": f"Merge {SLUG}#735.",
+    }
+    omi.record_instructions(
+        f"Merge {SLUG}#735.",
+        host="cursor",
+        session_id="conv",
+        path=store,
+        now=NOW + 10,
+        cwd_repo=None,
+        provenance=omi.host_provenance("cursor", cursor_payload),
+    )
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 20) is not None
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Let's merge #96.",
+        "LGTM, merge #96",
+        "Approved, merge PR 96",
+        "I'd like you to merge #96",
+        "Ship it: merge #96",
+        "Can you merge #96?",
+        "Could you merge #96 please",
+    ],
+)
+def test_review_missed_natural_instructions_now_authorize(prompt: str) -> None:
+    assert _targets(prompt, cwd_repo=SLUG) == [("pr", SLUG, 96)], prompt
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Should we merge #96?",
+        "Could you check whether #96 should merge?",
+        "Can you merge #96 or should we wait?",
+    ],
+)
+def test_review_asking_whether_to_merge_still_authorizes_nothing(prompt: str) -> None:
+    assert _targets(prompt, cwd_repo=SLUG) == []
+
+
+def test_review_an_unrecognised_merge_mention_is_reported() -> None:
+    found, notes = omi.parse_prompt("After the checks pass merge #96", cwd_repo=SLUG)
+    assert found or notes
+
+
+def test_review_a_bare_cancellation_never_takes_a_later_clauses_object() -> None:
+    """'Don't merge it, merge #97 instead' cancels 'it' and authorizes #97."""
+    context = omi.ConversationContext(latest_refs=[(SLUG, 96)], repos=[SLUG])
+    found = omi.parse_instructions("Don't merge it, merge #97 instead", context=context)
+    assert [(f["kind"], f["pr"]) for f in found] == [("revoke", 96), ("authorize", 97)]

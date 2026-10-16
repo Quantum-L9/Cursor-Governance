@@ -1603,17 +1603,28 @@ assertion `owner_merge_authorization@1`.
 2. **Recognition is language, not a phrase.** The recorder folds typographic
    apostrophes and quotes, accepts a repository as `owner/name` or a
    github.com URL, and expands ranges. A pull request named without its
-   repository resolves from the sentence, the prompt, the conversation (a
-   qualified reference to that number, or the one repository it discusses),
-   then the workspace remote. A contextual object ("these PRs", "them",
-   "everything we just fixed") resolves at recording time to the pull
-   requests named in the agent's latest reply in the host transcript (else
-   the last few exchanges); the receipt stores each resolved pull request, so
-   the authority is frozen when spoken. Only typed human turns and the
-   agent's visible replies are conversation: tool results, relayed turns and
-   sidechains are not. Questions, quoted, pasted or presented text,
-   third-person reports, tool output, agent-authored text and relayed turns
-   still authorize nothing (§6.2.13 item 2 stands for them).
+   repository resolves from the sentence, then the prompt, then a qualified
+   reference to that exact number in the conversation, then the workspace
+   remote, then the one repository the operator's own turns named, then the
+   one repository the conversation discusses; a cohort ("all open PRs") never
+   takes its repository from agent text. A contextual object ("these PRs",
+   "them", "everything we just fixed") resolves at recording time to the pull
+   requests the agent's latest reply to a human turn put forward (else the
+   last few exchanges); a sentence that negates, or marks a pull request red,
+   draft, blocked, closed, external or unrelated, contributes nothing, and an
+   issue-closing keyword ("Closes #45") names an issue. The receipt stores
+   each resolved pull request, so the authority is frozen when spoken. Only
+   typed human turns and the agent's visible replies are conversation: tool
+   results and sidechains are not, and a relayed turn closes the exchange.
+   "Merge these two functions into one helper" and "merge it into your
+   branch" merge code, not pull requests. Questions, quoted, pasted or
+   presented text, third-person reports, declarative reports ("merging #96
+   broke the build"), tool output, agent-authored text and relayed turns still
+   authorize nothing (§6.2.13 item 2 stands for them); a polite request ("can
+   you merge #96?") is an instruction, a whether-question is not. A negation
+   counts only when it governs the merge ("don't forget to merge #96" is an
+   instruction), and "don't merge until CI is green" is a condition, not a
+   cancellation.
 3. **Capture is observable.** Whenever a prompt carries merge intent, the
    prompt hook tells the agent what it recorded, or exactly why nothing was
    recorded (an unresolvable repository, an ambiguous "it", an empty
