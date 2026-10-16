@@ -103,9 +103,17 @@ jobs:
         env:
           SHA: ${{ steps.subject.outputs.sha }}
           URL: ${{ steps.subject.outputs.url }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           git init -q subject-git
           git -C subject-git fetch -q --no-tags --depth=1 "$URL" "$SHA"
+          # A push to main before any bundle exists (the bootstrap itself) has nothing to attest.
+          # Every other event without a bundle is refused by the extractor below.
+          if [[ "$EVENT_NAME" == "push" && -z "$(git -C subject-git ls-tree "$SHA" -- generated/governance/architecture_intelligence)" ]]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "present=true" >> "$GITHUB_OUTPUT"
           bundle=subject/generated/governance/architecture_intelligence
           # The trusted extractor refuses symlinks, gitlinks, executable files and any other
           # non-regular entry before writing a single byte; only 100644 blobs are extracted.
@@ -122,14 +130,16 @@ jobs:
           digest="sha256:$(cd "$bundle" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)"
           printf 'compiler=%s\nauthority=%s\nbundle_digest=%s\n' "$compiler" "$authority" "$digest" >> "$GITHUB_OUTPUT"
       - name: Checkout canonical Semantic Foundation at the bundle revision
+        if: steps.pins.outputs.present == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
           ref: ${{ steps.pins.outputs.authority }}
           path: authority
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
       - name: Checkout the pinned private compiler
+        if: steps.pins.outputs.present == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/l9-semantic-compiler-engine
@@ -140,9 +150,11 @@ jobs:
           persist-credentials: false
       - name: Trust gate (no compiler code runs here)
         id: gate
+        if: steps.pins.outputs.present == 'true'
         shell: bash
         env:
           PIN: ${{ steps.pins.outputs.compiler }}
+          AUTHORITY: ${{ steps.pins.outputs.authority }}
         run: |
           head="$(git -C compiler rev-parse HEAD)"
           [[ "$head" == "$PIN" ]] || { echo "compiler HEAD $head is not the pinned $PIN"; exit 1; }
@@ -152,22 +164,30 @@ jobs:
             echo "trusted=false" >> "$GITHUB_OUTPUT"
             echo "compiler $PIN is not reachable from the compiler's protected main; it is not executed"
           fi
+          # The authority pin is as untrusted as the compiler pin: only canonical Semantic
+          # Foundation on Quantum-L9/.github's protected main is replayed.
+          if git -C authority merge-base --is-ancestor "$AUTHORITY" refs/remotes/origin/main; then
+            echo "authority_trusted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authority_trusted=false" >> "$GITHUB_OUTPUT"
+            echo "authority $AUTHORITY is not reachable from Quantum-L9/.github protected main"
+          fi
           if [[ -f trusted/tools/authority/produce_architecture_intelligence.py ]]; then
             echo "driver=true" >> "$GITHUB_OUTPUT"
           else
             echo "driver=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Set up Python
-        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.driver == 'true'
+        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.authority_trusted == 'true' && steps.gate.outputs.driver == 'true'
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       - name: Install the trusted compiler
-        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.driver == 'true'
+        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.authority_trusted == 'true' && steps.gate.outputs.driver == 'true'
         run: python -m pip install "pyyaml>=6.0,<7" ./compiler
       - name: Replay byte for byte with the trusted driver (subject bundle is data)
         id: replay
-        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.driver == 'true'
+        if: steps.gate.outputs.trusted == 'true' && steps.gate.outputs.authority_trusted == 'true' && steps.gate.outputs.driver == 'true'
         shell: bash
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -188,7 +208,9 @@ jobs:
         if: always()
         shell: bash
         env:
+          PRESENT: ${{ steps.pins.outputs.present }}
           TRUSTED: ${{ steps.gate.outputs.trusted }}
+          AUTHORITY_TRUSTED: ${{ steps.gate.outputs.authority_trusted }}
           DRIVER: ${{ steps.gate.outputs.driver }}
           REPLAY_EXIT: ${{ steps.replay.outputs.exit }}
           SUBJECT: ${{ steps.subject.outputs.sha }}
@@ -197,17 +219,24 @@ jobs:
           DIGEST: ${{ steps.pins.outputs.bundle_digest }}
           DRIVER_REF: ${{ github.sha }}
         run: |
-          if [[ "$TRUSTED" != "true" ]]; then verdict=FAIL; reason=COMPILER_NOT_ON_PROTECTED_MAIN
+          if [[ "$PRESENT" == "false" ]]; then verdict=NOT_APPLICABLE; reason=NO_BUNDLE_ON_MAIN
+          elif [[ "$TRUSTED" != "true" ]]; then verdict=FAIL; reason=COMPILER_NOT_ON_PROTECTED_MAIN
+          elif [[ "$AUTHORITY_TRUSTED" != "true" ]]; then verdict=FAIL; reason=AUTHORITY_NOT_ON_PROTECTED_MAIN
           elif [[ "$DRIVER" != "true" ]]; then verdict=FAIL; reason=TRUSTED_DRIVER_ABSENT
           elif [[ "$REPLAY_EXIT" == "0" ]]; then verdict=PASS; reason=BYTE_FOR_BYTE_MATCH
           else verdict=FAIL; reason=REPLAY_MISMATCH_OR_ERROR; fi
-          [[ -n "$COMPILER" && -n "$AUTHORITY" && -n "$DIGEST" ]] || { verdict=FAIL; reason=SUBJECT_UNRESOLVED; }
+          if [[ "$verdict" != "NOT_APPLICABLE" ]]; then
+            [[ -n "$COMPILER" && -n "$AUTHORITY" && -n "$DIGEST" ]] || { verdict=FAIL; reason=SUBJECT_UNRESOLVED; }
+          fi
           jq -n --arg verdict "$verdict" --arg reason "$reason" --arg subject "$SUBJECT" \
             --arg compiler "$COMPILER" --arg authority "$AUTHORITY" --arg digest "$DIGEST" \
-            --arg driver "$DRIVER_REF" \
+            --arg driver "$DRIVER_REF" --arg compiler_main "${TRUSTED:-false}" \
+            --arg authority_main "${AUTHORITY_TRUSTED:-false}" \
             '{schema: "l9.gar.architecture-intelligence-replay-attestation/v1", verdict: $verdict,
               reason: $reason, subject_sha: $subject, compiler_sha: $compiler,
-              authority_revision: $authority, bundle_digest: $digest, trusted_driver_sha: $driver}' \
+              compiler_on_protected_main: ($compiler_main == "true"), authority_revision: $authority,
+              authority_on_protected_main: ($authority_main == "true"), bundle_digest: $digest,
+              trusted_driver_sha: $driver}' \
             > "$RUNNER_TEMP/attestation.json"
           tee -a "$GITHUB_STEP_SUMMARY" < "$RUNNER_TEMP/attestation.json"
           printf 'verdict=%s\nreason=%s\n' "$verdict" "$reason" >> "$GITHUB_OUTPUT"
@@ -224,12 +253,13 @@ jobs:
         shell: bash
         env:
           VERDICT: ${{ steps.attest.outputs.verdict }}
-        run: '[[ "$VERDICT" == "PASS" ]]'
+          EVENT_NAME: ${{ github.event_name }}
+        run: '[[ "$VERDICT" == "PASS" || ( "$VERDICT" == "NOT_APPLICABLE" && "$EVENT_NAME" == "push" ) ]]'
   status:
     # Executes no code from any checkout: it only publishes the replay job's verdict on the
     # exact subject commit, so a branch-protection rule can require it.
     needs: replay
-    if: always() && needs.replay.outputs.subject_sha != ''
+    if: always() && needs.replay.outputs.subject_sha != '' && needs.replay.outputs.verdict != 'NOT_APPLICABLE'
     runs-on: ubuntu-latest
     permissions:
       statuses: write
