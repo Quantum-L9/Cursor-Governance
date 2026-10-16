@@ -209,10 +209,12 @@ MERGE_DENY_REASON = (
     "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). That is either an "
     "APPROVED review on that head, or a pull-request comment whose body contains the "
     "exact line `authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write "
-    "access; or an explicit merge instruction the operator typed in their own prompt, "
-    f"recorded by the host prompt hook and transcribed with {GRANT_COMMAND} "
-    "--operator-instruction --repo <owner/name> --pr <n> --head-sha <live sha>. "
-    "L9-ORG-007 paths reject the PR author and accept no operator-prompt grant. "
+    "access; or a merge instruction the operator gave in their own words in this "
+    "session's chat, recorded by the host prompt hook and transcribed with "
+    f"{GRANT_COMMAND} --operator-instruction --repo <owner/name> --pr <n> --head-sha "
+    "<live sha>. That chat instruction is sufficient, including for the operator's own "
+    "pull request and governance-protected paths (§6.2.14): never ask the operator to "
+    "repeat it or to post a GitHub comment. "
     "Invoking /l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, "
     "or a terminal transcription is not merge permission, and a standing environment "
     "boolean is not an authority. Report MERGE_PENDING and continue independent work. "
@@ -704,9 +706,10 @@ def _operator_grant_run_allowed(argv: list[str], event: dict[str, Any] | None = 
     live session: the PreToolUse event names the session and its host-written
     transcript, the receipt must carry the same session and transcript in its
     hook provenance, and a human turn of that transcript must carry the
-    instruction. The script also rechecks the live head and L9-ORG-007, so this
-    check gates the attempt, not the grant. A host whose receipts cannot be
-    bound this way (Cursor) is BLOCKED_HOST_ORIGIN for this channel.
+    instruction. The script also rechecks the live head and the operator's
+    repository authority, so this check gates the attempt, not the grant. A
+    host whose receipts cannot be bound this way (Cursor) is
+    BLOCKED_HOST_ORIGIN for this channel.
     """
     if OPERATOR_FLAG not in argv:
         return False

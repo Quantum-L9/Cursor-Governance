@@ -3,7 +3,7 @@
 A grant is one repository, one PR, one exact head, expiring, issuer ``human``.
 It is written after a human confirms the target on a terminal, or — as
 ``--operator-instruction`` — after the host-recorded operator instruction is
-verified against the live pull request and L9-ORG-007.
+verified against the live pull request and the operator's repository authority.
 """
 
 from __future__ import annotations
@@ -28,6 +28,11 @@ SHA = "abcdef1234567890abcdef1234567890abcdef12"
 MOVED = "0" * 40
 SLUG = "Quantum-L9/Cursor-Governance"
 NOW = 1_800_000_000
+
+
+#: The session's GitHub identity as fetch_session_principal reports it: the
+#: operator's own account, repository admin.
+OWNER = {"login": "cryptoxdog", "type": "User", "permission": "admin", "human": True}
 
 
 def _grant(path: Path, **overrides) -> dict:
@@ -223,8 +228,8 @@ def _operator_main(
     store: Path,
     *,
     view: dict | None = None,
-    files: list[str] | None = ["README.md", "ops/autonomy/pr_board.py"],
-    files_error: str | None = None,
+    principal: dict | None = None,
+    principal_error: str | None = None,
     view_error: str | None = None,
     extra: tuple[str, ...] = (),
     now: int = NOW + 60,
@@ -235,17 +240,18 @@ def _operator_main(
             raise RuntimeError(view_error)
         return view if view is not None else _view()
 
-    def pull_request_files(repo: str, pr: int) -> list[str] | None:
-        if files_error:
-            raise RuntimeError(files_error)
-        return files
+    def session_principal(repo: str) -> dict:
+        assert repo == SLUG
+        if principal_error:
+            raise RuntimeError(principal_error)
+        return principal if principal is not None else OWNER
 
     return authorize_merge.main(
         _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", SHA, *extra),
         confirm=lambda _t: pytest.fail("operator mode must never ask a terminal"),
         instruction_path=store,
         pull_request=pull_request,
-        pull_request_files=pull_request_files,
+        session_principal=session_principal,
         now=now,
     )
 
@@ -360,7 +366,7 @@ def test_operator_mode_moved_head_refuses_but_keeps_the_task_alive(tmp_path: Pat
         _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", MOVED),
         instruction_path=store,
         pull_request=lambda repo, pr: _view(sha=MOVED),
-        pull_request_files=lambda repo, pr: ["README.md"],
+        session_principal=lambda repo: OWNER,
         now=NOW + 120,
     )
     assert live == 0
@@ -389,7 +395,7 @@ def test_operator_mode_unreadable_pull_request_refuses(tmp_path: Path, capsys) -
     assert code == authorize_merge.OPERATOR_REFUSED_EXIT
     assert "cannot verify the live pull request" in json.loads(capsys.readouterr().out)["reason"]
     store2 = _instructions(tmp_path)
-    code = _operator_main(tmp_path, store2, files_error="HTTP 503")
+    code = _operator_main(tmp_path, store2, principal_error="HTTP 503")
     assert code == authorize_merge.OPERATOR_REFUSED_EXIT
     assert _grants(tmp_path) == []
 
@@ -409,27 +415,55 @@ def test_cohort_instruction_grants_each_pull_request_open_at_the_time(tmp_path: 
     assert _grants(tmp_path) == []
 
 
+def test_operator_may_authorize_their_own_pull_request_on_protected_paths(
+    tmp_path: Path,
+) -> None:
+    """§6.2.14 / L9-ORG-007 as amended: an authorized owner's chat instruction is the
+    authorization, even when the owner authored the pull request and it touches
+    governance-protected paths. No second human, no GitHub comment."""
+    store = _instructions(tmp_path)
+    assert _operator_main(tmp_path, store, view=_view(author="cryptoxdog")) == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["provenance"]["pull_request_author"] == "cryptoxdog"
+    assert entry["provenance"]["authorizer_login"] == "cryptoxdog"
+    assert entry["provenance"]["authorizer_permission"] == "admin"
+
+
 @pytest.mark.parametrize(
-    "files",
+    "principal",
     [
-        ["CANONICAL_LAW.md", "README.md"],
-        ["ops/config/root-file-protection.json"],
-        [".github/workflows/governance.yml"],
-        None,  # unknown file list fails closed
+        {"login": "drive-by", "type": "User", "permission": "read", "human": True},
+        {"login": "triager", "type": "User", "permission": "triage", "human": True},
+        {"login": "someone", "type": "User", "permission": "", "human": True},
+        {"login": "github-actions[bot]", "type": "Bot", "permission": "write", "human": False},
     ],
 )
-def test_operator_mode_refuses_org_007_protected_changes(
-    tmp_path: Path, capsys, files: list[str] | None
+def test_operator_without_repository_authority_cannot_authorize(
+    tmp_path: Path, capsys, principal: dict
 ) -> None:
-    """Negative 11: a prompt is not an independent human approver for governance paths."""
+    """A person (or bot) without write authority over the repository authorizes nothing."""
     store = _instructions(tmp_path)
-    code = _operator_main(tmp_path, store, files=files)
+    code = _operator_main(tmp_path, store, principal=principal)
     assert code == authorize_merge.OPERATOR_REFUSED_EXIT
     reason = json.loads(capsys.readouterr().out)["reason"]
-    assert "L9-ORG-007" in reason
-    assert f"authorize merge {SLUG}#42@{SHA}" in reason
-    assert "not the author (cryptoxdog)" in reason
+    assert "outside the operator's authorized scope" in reason
     assert _grants(tmp_path) == []
+
+
+def test_operator_authority_that_cannot_be_read_fails_closed(tmp_path: Path, capsys) -> None:
+    store = _instructions(tmp_path)
+    code = _operator_main(tmp_path, store, principal_error="HTTP 403")
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert "cannot verify the operator's authority" in json.loads(capsys.readouterr().out)["reason"]
+    assert _grants(tmp_path) == []
+
+
+def test_refusal_never_prescribes_magic_wording(tmp_path: Path, capsys) -> None:
+    store = tmp_path / "empty.json"
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    reason = json.loads(capsys.readouterr().out)["reason"]
+    assert "no particular wording is required" in reason
+    assert "authorize merge " not in reason
 
 
 def test_operator_mode_cli_subprocess_needs_no_terminal(tmp_path: Path) -> None:
@@ -448,7 +482,7 @@ def test_operator_mode_cli_subprocess_needs_no_terminal(tmp_path: Path) -> None:
                 f"    {argv!r},",
                 f"    instruction_path=Path({str(store)!r}),",
                 f"    pull_request=lambda r, p: {_view()!r},",
-                "    pull_request_files=lambda r, p: ['README.md'],",
+                f"    session_principal=lambda r: {OWNER!r},",
                 f"    now={NOW + 60},",
                 ")",
                 "raise SystemExit(code)",

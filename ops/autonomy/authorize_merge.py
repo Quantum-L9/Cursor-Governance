@@ -13,16 +13,19 @@ gate can bind to an exact head. Two confirmations exist:
   run this script in that mode, without a terminal, and it writes the grant
   only after rechecking, live on GitHub, that the pull request is open, that
   ``--head-sha`` is its current head, that a live receipt covers it (an
-  explicit PR, or membership of the open-pull-request snapshot the recorder
-  took when the operator spoke) and has not been cancelled by a later
-  instruction, that the receipt carries the host hook's own provenance and is
-  corroborated by a human turn of its session in the host-written transcript,
-  and that the change touches no L9-ORG-007 protected path. The grant carries
-  the instruction's provenance. A protected change is refused here: a prompt
-  proves no GitHub identity, so it cannot be the independent human
-  authorization that invariant requires. A receipt from a host whose prompt
-  channel cannot be verified this way (Cursor) is refused as
-  BLOCKED_HOST_ORIGIN; the GitHub record remains that host's channel.
+  explicit PR, a pull request resolved from the conversation when the operator
+  spoke, or membership of the open-pull-request snapshot the recorder took
+  then) and has not been cancelled by a later instruction, that the receipt
+  carries the host hook's own provenance and is corroborated by a human turn
+  of its session in the host-written transcript, and that the session's GitHub
+  identity — the operator's own connected account — is a human holding
+  ``admin``, ``maintain`` or ``write`` on the repository (§6.2.14). The grant
+  carries the instruction's provenance and that authorizer. The operator may
+  be the pull request's author and the change may touch L9-ORG-007 paths: an
+  authorized owner's direct instruction is that invariant's authorization
+  (as amended). A receipt from a host whose prompt channel cannot be verified
+  this way (Cursor) is refused as BLOCKED_HOST_ORIGIN; the GitHub record
+  remains that host's channel.
 
 * **Controlling terminal** (default). A human types the exact target back on
   ``/dev/tty``. An agent's tool shell has no controlling terminal, so this mode
@@ -45,7 +48,7 @@ It does not merge. It does not authorize force-push, admin-merge, or hard-reset.
 Metadata:
   layer: ops
   role: merge_authorization
-  version: 4.0.0
+  version: 5.0.0
 """
 
 from __future__ import annotations
@@ -69,8 +72,8 @@ if str(_HERE) not in sys.path:
 import operator_merge_instruction as omi  # noqa: E402
 from github_merge_authorization import (  # noqa: E402
     fetch_pull_request,
-    fetch_pull_request_files,
-    protected_paths_in,
+    fetch_session_principal,
+    principal_may_authorize,
 )
 
 DEFAULT_TTL_SECONDS = 60 * 60
@@ -222,13 +225,14 @@ def operator_verdict(
     instruction_path: Path | None = None,
     now: float | None = None,
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
-    pull_request_files: Callable[[str, int], list[str] | None] = fetch_pull_request_files,
+    session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
 ) -> dict[str, Any]:
     """Whether a recorded operator instruction may become a grant for this head.
 
     Every refusal names the missing prerequisite. The checks run in the order a
     reader can act on them: the live pull request first (an instruction for a
-    closed or moved PR is moot), then the instruction, then L9-ORG-007.
+    closed or moved PR is moot), then the instruction, then the operator's
+    authority over the repository.
     """
     stamp = time.time() if now is None else now
     sha = head_sha.strip().lower()
@@ -276,8 +280,9 @@ def operator_verdict(
     if not verdict["authorized"]:
         refused["reason"] = (
             f"no live operator merge instruction covers {repo}#{pr}: {verdict['reason']}. The "
-            "operator authorizes by saying so in their own prompt (for example "
-            f'"merge PR #{pr} after the checks pass"), or on GitHub (CANONICAL_LAW §6.2.13)'
+            "operator authorizes by asking for the merge in their own words in this session's "
+            "chat, or on GitHub (CANONICAL_LAW §6.2.13, §6.2.14); no particular wording is "
+            "required"
         )
         return refused
     instruction = verdict["instruction"]
@@ -293,35 +298,38 @@ def operator_verdict(
         return refused
 
     try:
-        files = pull_request_files(repo, pr)
+        principal = session_principal(repo)
     except RuntimeError as exc:
-        refused["reason"] = f"cannot read the pull request's files ({exc})"
+        refused["reason"] = f"cannot verify the operator's authority over {repo} ({exc})"
         refused["instruction"] = instruction
         return refused
-    protected = protected_paths_in(files)
-    if protected is None or protected:
-        shown = ", ".join(sorted(protected)[:6]) if protected else "<file list unknown>"
+    if not principal_may_authorize(principal):
         refused["reason"] = (
-            "L9-ORG-007: this change touches governance-protected paths "
-            f"({shown}). An operator prompt establishes no GitHub identity, so it cannot be "
-            "the independent human authorization that invariant requires. Required instead: "
-            f"an APPROVED review on {live} by a human with write access who is not the author "
-            f"({author or 'unknown'}), or that human's exact line "
-            f"`authorize merge {repo}#{pr}@{live}` on the pull request"
+            f"the session's GitHub identity {principal.get('login') or '<unknown>'} "
+            f"({principal.get('type') or 'unknown type'}) holds "
+            f"{principal.get('permission') or 'no'} permission on {repo}; only a human with "
+            "admin, maintain or write authority over the repository can authorize its merge "
+            "(CANONICAL_LAW §6.2.14). This pull request is outside the operator's authorized scope"
         )
         refused["instruction"] = instruction
         return refused
 
     return {
         "authorized": True,
-        "reason": "live operator instruction covers an open, unprotected PR at its live head",
+        "reason": (
+            "live operator instruction from a human with "
+            f"{principal.get('permission')} authority covers an open PR at its live head"
+        ),
         "instruction": instruction,
         "pull_request": summary,
+        "authorizer": principal,
     }
 
 
 def operator_provenance(
-    instruction: dict[str, Any], pull_request: dict[str, Any]
+    instruction: dict[str, Any],
+    pull_request: dict[str, Any],
+    authorizer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     hook = instruction.get("provenance") if isinstance(instruction.get("provenance"), dict) else {}
     return {
@@ -333,6 +341,7 @@ def operator_provenance(
         "hook_event_name": hook.get("hook_event_name"),
         "transcript_path": hook.get("transcript_path"),
         "scope": instruction.get("scope"),
+        "source": instruction.get("source"),
         "cohort_members": instruction.get("members")
         if instruction.get("scope") == "open_cohort"
         else None,
@@ -341,6 +350,8 @@ def operator_provenance(
         "prompt_sha256": instruction.get("prompt_sha256"),
         "excerpt": instruction.get("excerpt"),
         "pull_request_author": pull_request.get("author"),
+        "authorizer_login": (authorizer or {}).get("login"),
+        "authorizer_permission": (authorizer or {}).get("permission"),
     }
 
 
@@ -350,7 +361,7 @@ def main(
     confirm: Callable[[str], bool] | None = None,
     instruction_path: Path | None = None,
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
-    pull_request_files: Callable[[str, int], list[str] | None] = fetch_pull_request_files,
+    session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
     now: float | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -396,14 +407,16 @@ def main(
             instruction_path=instruction_path,
             now=now,
             pull_request=pull_request,
-            pull_request_files=pull_request_files,
+            session_principal=session_principal,
         )
         if not verdict["authorized"]:
             print(json.dumps({**verdict, "status": "MERGE_PENDING"}, indent=2, sort_keys=True))
             print(f"REFUSED: {verdict['reason']}", file=sys.stderr)
             return OPERATOR_REFUSED_EXIT
         instruction = verdict["instruction"]
-        provenance = operator_provenance(instruction, verdict["pull_request"])
+        provenance = operator_provenance(
+            instruction, verdict["pull_request"], verdict.get("authorizer")
+        )
         stamp = time.time() if now is None else now
         remaining = int(float(instruction.get("expires_at") or 0) - stamp)
         ttl = max(1, min(ttl, remaining))

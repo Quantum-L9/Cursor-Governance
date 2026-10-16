@@ -970,7 +970,12 @@ def test_operator_grant_then_stack_safe_run_passes_the_gate(tmp_path: Path) -> N
             "head": {"sha": SHA},
             "user": {"login": "pr-author"},
         },
-        pull_request_files=lambda r, p: ["README.md"],
+        session_principal=lambda r: {
+            "login": "operator",
+            "type": "User",
+            "permission": "admin",
+            "human": True,
+        },
     )
     assert code == 0
     env = {

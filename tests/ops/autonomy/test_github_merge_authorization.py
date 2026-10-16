@@ -187,21 +187,40 @@ def test_author_may_authorize_an_ordinary_change() -> None:
     assert verdict["authorized"] is True
 
 
-def test_author_cannot_authorize_an_org_007_path() -> None:
+def test_authorized_owner_may_authorize_their_own_protected_change() -> None:
+    """L9-ORG-007 as amended by CANONICAL_LAW §6.2.14: an authorized repository
+    owner may authorize their own pull request, governance-protected paths
+    included. The filename alone never demands a second human."""
     verdict = _verdict(
         author="pr-author",
-        files=["CANONICAL_LAW.md"],
-        reviews=[_review("pr-author", "APPROVED", SHA)],
+        files=["CANONICAL_LAW.md", "pyproject.toml", ".github/workflows/publish.yml"],
         comments=[
             {
                 "user": _user("pr-author"),
                 "author_association": "OWNER",
+                "permission": "admin",
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            }
+        ],
+    )
+    assert verdict["authorized"] is True
+    assert verdict["authorizer"] == "pr-author"
+
+
+def test_author_without_repository_authority_cannot_authorize() -> None:
+    verdict = _verdict(
+        author="pr-author",
+        files=["CANONICAL_LAW.md"],
+        comments=[
+            {
+                "user": _user("pr-author"),
+                "author_association": "CONTRIBUTOR",
+                "permission": "read",
                 "body": authz.authorization_line(SLUG, 53, SHA),
             }
         ],
     )
     assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
 
 
 def test_a_different_human_can_authorize_an_org_007_path() -> None:
@@ -214,54 +233,68 @@ def test_a_different_human_can_authorize_an_org_007_path() -> None:
     assert verdict["authorizer"] == "governance-owner"
 
 
-def test_unknown_files_fail_closed_for_the_author() -> None:
-    verdict = _verdict(files=None, reviews=[_review("pr-author", "APPROVED", SHA)])
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
-
-
-def test_unknown_author_fails_closed_on_an_org_007_path() -> None:
-    verdict = _verdict(
-        author="",
-        files=["CANONICAL_LAW.md"],
-        reviews=[_review("somebody", "APPROVED", SHA)],
-    )
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
-
-
-def test_unknown_author_may_still_authorize_an_ordinary_change() -> None:
-    verdict = _verdict(
-        author="", files=["README.md"], reviews=[_review("somebody", "APPROVED", SHA)]
-    )
+@pytest.mark.parametrize("author", ["", "pr-author", "somebody"])
+def test_the_authors_identity_no_longer_changes_the_verdict(author: str) -> None:
+    verdict = _verdict(author=author, files=None, reviews=[_review("somebody", "APPROVED", SHA)])
     assert verdict["authorized"] is True
 
 
-def test_fetch_evidence_keeps_the_previous_name_of_a_renamed_file(monkeypatch) -> None:
+def test_fetch_evidence_reads_no_file_list(monkeypatch) -> None:
+    """The independence check was the file list's only consumer."""
+    asked: list[str] = []
+
     def pages(path: str) -> list:
-        if "/files?" in path:
-            return [
-                {
-                    "filename": "docs/old_law.md",
-                    "previous_filename": "CANONICAL_LAW.md",
-                    "status": "renamed",
-                }
-            ]
+        asked.append(path)
         return [_review("pr-author", "APPROVED", SHA)] if "/reviews?" in path else []
 
     monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
     monkeypatch.setattr(authz, "_gh_pages", pages)
     evidence = authz.fetch_evidence(SLUG, 53)
-    assert "CANONICAL_LAW.md" in evidence["files"]
-    verdict = authz.evaluate_evidence(SLUG, 53, SHA, evidence)
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
+    assert not any("/files" in path for path in asked)
+    assert authz.evaluate_evidence(SLUG, 53, SHA, evidence)["authorized"] is True
 
 
-def test_fetch_evidence_reports_an_empty_file_list_as_unknown(monkeypatch) -> None:
-    monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
-    monkeypatch.setattr(authz, "_gh_pages", lambda path: [])
-    assert authz.fetch_evidence(SLUG, 53)["files"] is None
+@pytest.mark.parametrize(
+    ("permissions", "role"),
+    [
+        ({"admin": True, "maintain": True, "push": True, "pull": True}, "admin"),
+        ({"admin": False, "maintain": True, "push": True, "pull": True}, "maintain"),
+        ({"admin": False, "maintain": False, "push": True, "pull": True}, "write"),
+        ({"admin": False, "maintain": False, "push": False, "triage": True}, "triage"),
+        ({"pull": True}, "read"),
+        (None, ""),
+    ],
+)
+def test_repository_role_reads_the_highest_rest_permission(permissions, role) -> None:
+    assert authz._repository_role(permissions) == role
+
+
+def test_session_principal_is_the_operator_and_their_role(monkeypatch) -> None:
+    payloads = {
+        "user": {"login": "cryptoxdog", "type": "User"},
+        f"repos/{SLUG}": {"permissions": {"admin": True, "push": True, "pull": True}},
+    }
+    monkeypatch.setattr(authz, "_gh_json", lambda path: payloads[path])
+    principal = authz.fetch_session_principal(SLUG)
+    assert principal == {
+        "login": "cryptoxdog",
+        "type": "User",
+        "permission": "admin",
+        "human": True,
+    }
+    assert authz.principal_may_authorize(principal)
+
+
+@pytest.mark.parametrize(
+    "principal",
+    [
+        {"login": "reader", "type": "User", "permission": "read", "human": True},
+        {"login": "ci[bot]", "type": "Bot", "permission": "admin", "human": False},
+        {},
+    ],
+)
+def test_principal_without_write_authority_may_not_authorize(principal: dict) -> None:
+    assert not authz.principal_may_authorize(principal)
 
 
 def test_review_fixture_does_not_authorize_the_merge_helper(tmp_path: Path, monkeypatch) -> None:
