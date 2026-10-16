@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-15T20:56:49Z'
+generated_utc: '2026-10-16T02:45:50Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:7794251e311f66a6f01585c76ef3d4a04019880ea788e8a3a1f119b975142d6f
+source_tree_digest: sha256:1544ee4e7eae5fe184808b26a9feb059fa2ab591873e0783092e2dfddf49c7b2
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -553,8 +553,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; GitHub authorization → merge
   has_yaml_frontmatter: true
-  line_count: 188
-  content_digest: sha256:6f89acafd256ede9f30bb8fc07f864fd47f418c4ae4781018f2a5087f4d6e9a3
+  line_count: 190
+  content_digest: sha256:57541298dcc29ee9073551e28b2bfee0791352b79b3c0525c8a538103946cd7b
   authority: canonical_global
   context_cost: moderate
   deprecated: false

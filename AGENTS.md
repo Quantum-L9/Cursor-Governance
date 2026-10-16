@@ -2308,3 +2308,28 @@ current.
   transcript. The second is a filter, not a proof; a same-account forger
   defeats both (§6.2.12 item 7). A receipt is not cryptographic proof of who
   typed it and establishes no GitHub identity. Do not claim more.
+
+<!-- CHAT_MERGE_AUTHORIZATION_V1 -->
+## An authorized owner's chat instruction is merge authorization (2026-10-16) — supersedes the L9-ORG-007, cohort-repository and quoted-example sentences of GITHUB_MERGE_AUTHORIZATION_V1 (CANONICAL_LAW §6.2.14)
+
+- One natural instruction from the operator is the merge authorization:
+  "merge these PRs", "go ahead and merge everything we just fixed", "merge
+  all open PR’s in https://github.com/<owner>/<name>", "fix and merge #96
+  through #99 when green". Never ask the operator to repeat it, to use
+  special wording, to post a GitHub comment or approval, or for any other
+  confirmation. Contextual objects resolve from the conversation when spoken;
+  a bare `#n` or an unnamed cohort takes the repository the conversation or
+  workspace establishes.
+- Read the prompt hook's `additionalContext`: it says what was recorded, or
+  exactly why nothing was, or that the recorder failed. Never report an
+  authorization it did not record; when nothing was recorded, ask the one
+  plain question that resolves it.
+- `authorize_merge.py --operator-instruction` binds the grant to the
+  session's live GitHub identity (the operator's account) and requires
+  `admin`, `maintain` or `write` on the repository. The operator may be the
+  PR author and the PR may touch L9-ORG-007 paths (`pyproject.toml`,
+  `.github/workflows/**`, governance files). A GitHub record from a
+  write-capable author counts too. Required checks, branch protection,
+  review threads, stack safety and the exact head still decide.
+- A cancellation never lapses; "stop, don't merge yet" withdraws every
+  earlier operator authority until the operator authorizes again.

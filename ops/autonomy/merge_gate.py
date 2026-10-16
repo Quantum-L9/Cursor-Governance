@@ -209,10 +209,12 @@ MERGE_DENY_REASON = (
     "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). That is either an "
     "APPROVED review on that head, or a pull-request comment whose body contains the "
     "exact line `authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write "
-    "access; or an explicit merge instruction the operator typed in their own prompt, "
-    f"recorded by the host prompt hook and transcribed with {GRANT_COMMAND} "
-    "--operator-instruction --repo <owner/name> --pr <n> --head-sha <live sha>. "
-    "L9-ORG-007 paths reject the PR author and accept no operator-prompt grant. "
+    "access; or a merge instruction the operator gave in their own words in this "
+    "session's chat, recorded by the host prompt hook and transcribed with "
+    f"{GRANT_COMMAND} --operator-instruction --repo <owner/name> --pr <n> --head-sha "
+    "<live sha>. That chat instruction is sufficient, including for the operator's own "
+    "pull request and governance-protected paths (§6.2.14): never ask the operator to "
+    "repeat it or to post a GitHub comment. "
     "Invoking /l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, "
     "or a terminal transcription is not merge permission, and a standing environment "
     "boolean is not an authority. Report MERGE_PENDING and continue independent work. "
@@ -704,9 +706,10 @@ def _operator_grant_run_allowed(argv: list[str], event: dict[str, Any] | None = 
     live session: the PreToolUse event names the session and its host-written
     transcript, the receipt must carry the same session and transcript in its
     hook provenance, and a human turn of that transcript must carry the
-    instruction. The script also rechecks the live head and L9-ORG-007, so this
-    check gates the attempt, not the grant. A host whose receipts cannot be
-    bound this way (Cursor) is BLOCKED_HOST_ORIGIN for this channel.
+    instruction. The script also rechecks the live head and the operator's
+    repository authority, so this check gates the attempt, not the grant. A
+    host whose receipts cannot be bound this way (Cursor) is
+    BLOCKED_HOST_ORIGIN for this channel.
     """
     if OPERATOR_FLAG not in argv:
         return False
@@ -949,13 +952,29 @@ _AUTH_LINE_IN_COMMAND = re.compile(r"(?i)authorize merge [\w.-]+/[\w.-]+#[1-9]\d
 _APPROVE_EVENT = re.compile(r'(?i)\bevent"?\s*[=:]\s*"?APPROVE\b')
 #: MCP tools that create the review or comment the gate trusts (same act as
 #: ``gh pr review`` / ``gh pr comment``): denied when they carry the record.
+#: Matched case-insensitively on the tool part, whatever the server is called:
+#: providers spell the same act differently, and an agent must not be able to
+#: post the record by picking the provider this list forgot.
 _GITHUB_RECORD_TOOL_SUFFIXES = (
+    # github/github-mcp-server
     "__pull_request_review_write",
     "__add_comment_to_pending_review",
     "__add_issue_comment",
     "__update_issue_comment",
     "__add_reply_to_pull_request_comment",
+    # earlier github-mcp-server and @modelcontextprotocol/server-github releases
+    "__create_pull_request_review",
+    "__create_and_submit_pull_request_review",
+    "__create_pending_pull_request_review",
+    "__submit_pending_pull_request_review",
+    "__add_pull_request_review_comment_to_pending_review",
+    "__create_issue_comment",
+    # other GitHub MCP providers (``action`` carries the verdict, ``comment`` the text)
+    "__add_review_to_pr",
+    "__add_comment_to_issue",
 )
+#: Argument names a provider uses for the review verdict.
+_REVIEW_VERDICT_KEYS = frozenset({"event", "action", "state", "review_event", "reviewevent"})
 _PAYLOAD_VALUE_FLAGS = {
     "-f",
     "--raw-field",
@@ -1123,11 +1142,30 @@ def _segment_posts_github_authorization(words: list[str]) -> bool:
     return _AUTH_LINE_IN_COMMAND.search(blob) is not None or _APPROVE_EVENT.search(blob) is not None
 
 
+def _approves(value: Any, depth: int = 0) -> bool:
+    """True when any review-verdict argument, at any nesting, is APPROVE(D)."""
+    if depth > 8:
+        return False
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if (
+                str(key).lower() in _REVIEW_VERDICT_KEYS
+                and isinstance(item, str)
+                and item.strip().upper() in {"APPROVE", "APPROVED"}
+            ):
+                return True
+            if _approves(item, depth + 1):
+                return True
+    elif isinstance(value, list):
+        return any(_approves(item, depth + 1) for item in value)
+    return False
+
+
 def _mcp_posts_github_authorization(tool_name: str, tool_input: dict[str, Any]) -> bool:
     """True when an MCP review/comment tool would submit APPROVE or post the line."""
-    if not tool_name.endswith(_GITHUB_RECORD_TOOL_SUFFIXES):
+    if not tool_name.lower().endswith(_GITHUB_RECORD_TOOL_SUFFIXES):
         return False
-    if str(tool_input.get("event") or "").strip().upper() == "APPROVE":
+    if _approves(tool_input):
         return True
     return _AUTH_LINE_IN_COMMAND.search(json.dumps(tool_input, default=str)) is not None
 
