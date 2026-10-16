@@ -142,7 +142,7 @@
         ]
       },
       {
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*github.*",
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|mcp__.*[Gg][Ii][Tt][Hh][Uu][Bb].*",
         "hooks": [
           {
             "type": "command",

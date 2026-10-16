@@ -484,6 +484,70 @@ def test_hook_denies_an_agent_posting_the_authorization(command: str) -> None:
                 "body": f"ok\n{authz.authorization_line(SLUG, 53, SHA)}",
             },
         ),
+        # Other GitHub MCP providers name the same acts differently: the review
+        # verdict is ``action``, the comment text is ``comment``.
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "APPROVE",
+            },
+        ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "approve",
+                "review": "lgtm",
+            },
+        ),
+        (
+            "mcp__github__add_review_to_pr",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pr": 53, "review": {"event": "APPROVE"}},
+        ),
+        (
+            "mcp__GitHub__add_comment_to_issue",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "issue_number": 53,
+                "comment": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
+        (
+            "mcp__plugin_engineering_github__add_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
+        (
+            "mcp__github__create_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pull_number": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__create_and_submit_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pullNumber": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__submit_pending_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pullNumber": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__create_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
     ],
 )
 def test_hook_denies_an_agent_posting_the_authorization_through_mcp(
@@ -516,11 +580,73 @@ def test_hook_denies_an_agent_posting_the_authorization_through_mcp(
                 "body": "MERGE_PENDING: a human must authorize",
             },
         ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "COMMENT",
+                "review": "consider renaming this helper",
+            },
+        ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "REQUEST_CHANGES",
+                "review": "approve once the test is fixed",
+            },
+        ),
+        (
+            "mcp__GitHub__add_comment_to_issue",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "issue_number": 53,
+                "comment": "CI is green; waiting on the operator to merge",
+            },
+        ),
     ],
 )
 def test_hook_allows_ordinary_mcp_reviews_and_comments(tool_name: str, tool_input: dict) -> None:
     _code, out = _gate({"tool_name": tool_name, "tool_input": tool_input})
     assert out.strip() == ""
+
+
+def _merge_gate_matchers() -> list[str]:
+    settings = json.loads(
+        (
+            REPO / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+        ).read_text(encoding="utf-8")
+    )
+    return [
+        entry["matcher"]
+        for entry in settings["hooks"]["PreToolUse"]
+        if any("merge_gate_wrap.py" in hook.get("command", "") for hook in entry["hooks"])
+    ]
+
+
+@pytest.mark.parametrize(
+    "tool_name",
+    [
+        "mcp__github__pull_request_review_write",
+        "mcp__github__add_issue_comment",
+        "mcp__GitHub__add_review_to_pr",
+        "mcp__GitHub__add_comment_to_issue",
+        "mcp__GITHUB__add_issue_comment",
+        "mcp__plugin_engineering_github__add_issue_comment",
+    ],
+)
+def test_merge_gate_hook_matcher_routes_every_github_mcp_provider(tool_name: str) -> None:
+    """Claude Code matchers are case-sensitive regexes: ``mcp__GitHub__*`` must reach the gate."""
+    import re
+
+    matchers = _merge_gate_matchers()
+    assert matchers, "merge_gate_wrap.py is not wired into PreToolUse"
+    assert any(re.fullmatch(matcher, tool_name) for matcher in matchers)
 
 
 def test_hook_allows_an_ordinary_issue_comment() -> None:
