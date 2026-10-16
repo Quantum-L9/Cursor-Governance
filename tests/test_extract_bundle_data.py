@@ -85,7 +85,7 @@ def test_regular_bundle_is_extracted_byte_for_byte(subject: Subject, tmp_path: P
     assert (code, report["status"], report["files"]) == (0, "EXTRACTED", 2), report
     for rel in ("bundle.lock.json", "projections/a.projection.json"):
         assert (dest / rel).read_bytes() == (subject.bundle / rel).read_bytes()
-        assert stat.S_IMODE((dest / rel).stat().st_mode) == 0o644
+        assert stat.S_IMODE((dest / rel).stat().st_mode) == 0o600
         assert not (dest / rel).is_symlink()
 
 

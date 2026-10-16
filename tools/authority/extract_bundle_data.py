@@ -6,7 +6,7 @@ out or executing anything from it. ``git archive | tar -x`` would materialize wh
 tree holds: a symlink pointing outside the extraction root, a gitlink, an executable file. This
 extractor inspects every tree entry under the requested path first and refuses the whole
 extraction unless each one is a regular, non-executable blob (mode 100644) at a safe relative
-path. Only then does it write the blob bytes, with mode 0644, into a fresh destination.
+path. Only then does it write the blob bytes, owner-only (0600), into a fresh destination.
 
 Exit codes: 0 extracted, 1 refused, 2 usage error. The report is JSON on stdout.
 Standard library only, so it runs before any dependency is installed.
@@ -102,10 +102,10 @@ def extract(git_dir: Path, commit: str, root: str, dest: Path) -> int:
         if not target.parent.resolve().is_relative_to(base):
             raise Refused("UNSAFE_PATH", path=path)
         data = _git(git_dir, "cat-file", "blob", oid)
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "wb") as handle:
             handle.write(data)
-        os.chmod(target, 0o644)
+        os.chmod(target, 0o600)
     return len(found)
 
 
