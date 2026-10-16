@@ -8,10 +8,12 @@
   Prefer append-only edits. A rewrite/deletion also needs a commit line:
     ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>
 
-  Machine-owned regions sit between <!-- NAME:START --> / <!-- NAME:END -->
-  markers. make pr (Cursor-Governance ops/scripts/compose_pr_body.py) fills
-  them, and the governance-pr workflow refreshes them on every push. Text
-  outside the regions is yours and survives every refresh.
+  Machine-owned regions sit between a pair of HTML-comment markers named
+  NAME:START and NAME:END (the real ones are below; they are never written
+  inside another comment). make pr (Cursor-Governance
+  ops/scripts/compose_pr_body.py) fills them, and the governance-pr workflow
+  refreshes them on every push. Text outside the regions is yours and
+  survives every refresh.
 -->
 
 ## Files touched
@@ -92,7 +94,9 @@ _not measured — make pr records its receipts here_
 
 ## Semantic change
 
-<!-- Applies when the diff touches semantics/ or docs/semantic-foundation/.
+<!-- Applies when the diff touches semantics/, docs/semantic-foundation/, or a
+     repository's authoritative product artifacts (product-topology.yaml,
+     release-work/product-manifest.json, release-work/product-release-binding.yaml).
      Otherwise tick N/A; make pr does it from the measured diff. -->
 
 - [ ] N/A — no canonical semantic artifact or release record changed

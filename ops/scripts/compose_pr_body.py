@@ -56,13 +56,31 @@ REVIEWER_UNRESOLVED = (
     "measures no basis for it. State it here; this text survives refresh._"
 )
 #: Paths that make the ``## Semantic change`` section applicable. Measured from
-#: the diff rows (both endpoints of a rename), never assumed.
+#: the diff rows (both endpoints of a rename), never assumed. Two families:
+#: the organization's canonical semantic sources and release records live
+#: under these prefixes (Quantum-L9/.github ``semantics/``,
+#: ``docs/semantic-foundation/<version>/``) ...
 SEMANTIC_PREFIXES = ("semantics/", "docs/semantic-foundation/")
+#: ... and a product repository carries its authoritative product artifacts at
+#: exact paths: the ProductTopology (``l9.schema/product-topology@1``, the
+#: product contract), the derived ProductManifest
+#: (``l9.schema/product-manifest@1``) and the repository's release binding
+#: (ADR-094). Exact paths, not basenames: a scaffold or a copy elsewhere
+#: (``templates/semantic-authoring/product-topology.yaml``) is not the
+#: authoritative artifact and must not make the section applicable.
+SEMANTIC_ARTIFACTS = {
+    "product-topology.yaml": "ProductTopology",
+    "release-work/product-manifest.json": "ProductManifest",
+    "release-work/product-release-binding.yaml": "product release binding",
+}
 SEMANTIC_NA = (
     "- [x] N/A — no canonical semantic artifact or release record changed "
-    "(measured: no `semantics/` or `docs/semantic-foundation/` path in this diff)"
+    "(measured: no `semantics/` or `docs/semantic-foundation/` path and no "
+    "`product-topology.yaml`, `release-work/product-manifest.json` or "
+    "`release-work/product-release-binding.yaml` in this diff)"
 )
 SEMANTIC_FIELD_UNRESOLVED = "_unresolved — the author states this; the composer cannot measure it_"
+SEMANTIC_FOUNDATION_FIELD = "Foundation / release candidate affected:"
 #: Type of Change is ticked from conventional-commit types in this branch's own
 #: commits (and docs-only / .github-only diffs). With no such evidence nothing
 #: is ticked: a guessed type is a fabricated claim.
@@ -209,11 +227,24 @@ class MechanicalFacts:
     l4_binding_detail: str = ""
 
 
+#: Completion status of one PR-body field in the handoff (``fields``):
+#: measured and bound to this head; measured not applicable; unverified but
+#: not the author's to supply (a composer default, an unbound receipt — a
+#: reviewer may tick it); or the author's to complete. ``needs_completion``
+#: lists exactly the last kind, so an unknown is never reported as done.
+COMPLETION_VERIFIED = "verified"
+COMPLETION_NOT_APPLICABLE = "not_applicable"
+COMPLETION_UNVERIFIED = "unverified"
+COMPLETION_NEEDS_AUTHOR = "needs_author"
+
+
 @dataclass
 class ComposeResult:
     body: str
     needs_completion: list[str]
     mechanical_filled: list[str]
+    # field -> {"status": COMPLETION_*, "detail": why}; see completion_fields.
+    fields: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 def _run_git(workspace: Path, *args: str) -> str:
@@ -718,10 +749,122 @@ def _security_passed(facts: MechanicalFacts) -> bool:
     return False
 
 
-def _needs_completion(template: str | None) -> list[str]:
-    # Autonomous compile fills every heading the one template still carries.
-    del template
-    return []
+def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, str]]:
+    """Per-field completion status, read off the composed body itself.
+
+    The handoff and the rendered Markdown must tell one truth, so every
+    status here is derived from the marker the body carries (the unresolved
+    text, the ticked box, the receipt verdict), never from a parallel
+    bookkeeping of what the composer meant to write. A field the template
+    does not carry is absent, not "done".
+    """
+    fields: dict[str, dict[str, str]] = {}
+
+    def put(name: str, status: str, detail: str) -> None:
+        fields[name] = {"status": status, "detail": detail}
+
+    if THIN_PROBLEM_NOTE in body:
+        put(
+            "problem",
+            COMPLETION_NEEDS_AUTHOR,
+            "a commit subject only — the oldest commit has no body paragraph; rewrite it",
+        )
+    elif "## Problem" in body:
+        put("problem", COMPLETION_VERIFIED, "oldest own commit subject and its body paragraph")
+    if TYPE_UNRESOLVED in body:
+        put(
+            "type_of_change",
+            COMPLETION_NEEDS_AUTHOR,
+            "no box ticked — no conventional-commit type in this branch's commits; tick one",
+        )
+    elif "## Type of Change" in body:
+        put(
+            "type_of_change",
+            COMPLETION_VERIFIED,
+            "ticked from this branch's commit types: " + ", ".join(infer_type_of_change(facts)),
+        )
+    if RISK_NOTE in body:
+        put(
+            "risk",
+            COMPLETION_UNVERIFIED,
+            "the composer's path-based default, not an assessment; change it if it is wrong",
+        )
+    if facts.gate_receipt:
+        put(
+            "gate_receipt",
+            COMPLETION_VERIFIED if facts.gate_binding == BOUND else COMPLETION_UNVERIFIED,
+            facts.gate_binding_detail or "present; no caller checked its binding",
+        )
+    else:
+        put("gate_receipt", COMPLETION_UNVERIFIED, "gate-receipt.json absent — not measured here")
+    if facts.l4_receipt:
+        put(
+            "l4_receipt",
+            COMPLETION_VERIFIED if facts.l4_binding == BOUND else COMPLETION_UNVERIFIED,
+            facts.l4_binding_detail or "present; no caller checked its binding",
+        )
+    else:
+        put("l4_receipt", COMPLETION_UNVERIFIED, "L4 receipt absent — not measured here")
+    if "## Gates" in body:
+        if _security_passed(facts):
+            put(
+                "security_gates",
+                COMPLETION_VERIFIED,
+                "secrets and semgrep boxes ticked from a bound receipt whose security wave passed",
+            )
+        else:
+            put(
+                "security_gates",
+                COMPLETION_UNVERIFIED,
+                "no bound passing receipt; every Gate box is unticked and marked unverified",
+            )
+    if SEMANTIC_FIELD_UNRESOLVED in body:
+        put(
+            "semantic_change",
+            COMPLETION_NEEDS_AUTHOR,
+            "applicable — this diff changes "
+            + ", ".join(f"{path} ({semantic_kind(path)})" for path in semantic_paths(facts))
+            + "; release coordinates, dependents revalidation and admission are the author's",
+        )
+    elif SEMANTIC_NA in body:
+        put(
+            "semantic_change",
+            COMPLETION_NOT_APPLICABLE,
+            "no canonical semantic artifact or release record in the measured diff",
+        )
+    if REVIEWER_UNRESOLVED in body:
+        put(
+            "reviewer_focus",
+            COMPLETION_NEEDS_AUTHOR,
+            "where to look hardest is the author's judgment; the composer measures no basis",
+        )
+    if facts.additive_only_paths:
+        mode = _edit_mode_expected(facts)
+        put(
+            "protected_root",
+            COMPLETION_VERIFIED,
+            "measured additive_only paths: "
+            + ", ".join(facts.additive_only_paths)
+            + f"; edit mode {mode[0] if mode else 'unresolved'}",
+        )
+    elif facts.additive_only_measured:
+        put("protected_root", COMPLETION_NOT_APPLICABLE, "no additive_only root file in the diff")
+    else:
+        put(
+            "protected_root",
+            COMPLETION_UNVERIFIED,
+            "the additive_only range was not measured; the Root-file gate verdict is unknown",
+        )
+    return fields
+
+
+def _needs_completion(fields: dict[str, dict[str, str]]) -> list[str]:
+    """The fields only the author can complete, as the body reports them."""
+    return [
+        f"{name}: {entry['detail']}"
+        for name, entry in fields.items()
+        if entry["status"] == COMPLETION_NEEDS_AUTHOR
+    ]
 
 
 def _annotate_unchecked_boxes(text: str) -> str:
@@ -733,6 +876,9 @@ def _annotate_unchecked_boxes(text: str) -> str:
             and GATE_UNVERIFIED not in line
             and TYPE_NOT_INDICATED not in line
             and TYPE_UNRESOLVED not in line
+            and SEMANTIC_FIELD_UNRESOLVED not in line
+            and " — not applicable: this diff changes " not in line
+            and EDIT_MODE_STALE_PREFIX not in line
             and " — n/a" not in line
             and " — n/a —" not in line
         ):
@@ -1138,9 +1284,63 @@ def stale_evidence(existing: str, head: str) -> str:
 
 
 PROTECTED_REMOTE_UNMEASURED = (
-    "- NOT MEASURED — the governance-pr refresh does not compute additive_only paths; "
-    "make pr does, and the Root-file gate judges the diff either way"
+    "- NOT MEASURED — the governance-pr refresh could not run "
+    "validate_root_file_protection.py for this head; make pr measures additive_only "
+    "paths, and the Root-file gate judges the diff either way"
 )
+#: Region line a remote refresh writes under the measured path list when the
+#: declarations below it (Edit mode, Why, Proof) were composed for another
+#: path set or edit mode. Deterministic in (head, old head): a repeated
+#: refresh of the same head rewrites nothing.
+PROTECTED_REMOTE_NOTICE_PREFIX = "- UNVERIFIED for head "
+#: Appended to every Edit mode box a remote refresh invalidates, after the
+#: box is unticked. Its presence also keeps the box out of the generic
+#: "not measured" annotation.
+EDIT_MODE_STALE_PREFIX = "STALE: composed for an earlier head"
+
+ROOT_PROTECT_SCRIPT = "ops/scripts/validate_root_file_protection.py"
+ROOT_PROTECT_CONFIG = "ops/config/root-file-protection.json"
+
+
+def measure_additive_only(workspace: Path, pr_base: str) -> tuple[list[str], bool]:
+    """(paths, measured): additive_only root files touched in ``pr_base..HEAD``.
+
+    Measured by the one owner of that rule — the workspace's own
+    ``validate_root_file_protection.py`` over its ``root-file-protection.json``
+    — never re-derived here. Mirrors open_pr_after_gate.sh: a workspace with
+    no policy file has no additive_only contract, so the empty list is a
+    measured answer; a policy file whose validator is absent or fails is an
+    unmeasured range, and the caller must say so rather than claim none.
+    """
+    config = workspace / ROOT_PROTECT_CONFIG
+    script = workspace / ROOT_PROTECT_SCRIPT
+    if not config.is_file():
+        return [], True
+    if not script.is_file():
+        return [], False
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--list-touched-additive-only",
+                "--base",
+                pr_base,
+                "--head",
+                "HEAD",
+                "--repo",
+                str(workspace),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return [], False
+    if proc.returncode != 0:
+        return [], False
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()], True
 
 
 def _is_placeholder(content: str | None) -> bool:
@@ -1185,23 +1385,54 @@ def _fill_gates(text: str, facts: MechanicalFacts) -> str:
     return _na_unchecked_in_section(text, "## Gates", GATE_UNVERIFIED)
 
 
+def semantic_kind(path: str) -> str:
+    """What a path is to the Semantic change section, or "" when nothing.
+
+    An exact authoritative artifact path names its kind; a path under a
+    canonical prefix names the family. Anything else — another YAML, a doc, a
+    scaffold under ``templates/`` — is not semantic, whatever its basename.
+    """
+    kind = SEMANTIC_ARTIFACTS.get(path)
+    if kind:
+        return kind
+    if path.startswith("docs/semantic-foundation/"):
+        return "semantic foundation release record"
+    if path.startswith("semantics/"):
+        return "canonical semantic source"
+    return ""
+
+
 def semantic_paths(facts: MechanicalFacts) -> list[str]:
     """Diff paths (either end of a rename) that make Semantic change applicable."""
     found: list[str] = []
     for row in _rows(facts):
         for path in (row.old_path, row.path):
-            if path and path.startswith(SEMANTIC_PREFIXES) and path not in found:
+            if path and semantic_kind(path) and path not in found:
                 found.append(path)
     return found
+
+
+def _foundation_versions(paths: list[str]) -> list[str]:
+    """Release-record version directories the diff touches, e.g. ``v3.21.0``."""
+    versions: list[str] = []
+    for path in paths:
+        match = re.match(r"^docs/semantic-foundation/(v\d+(?:\.\d+)*)/", path)
+        if match and match.group(1) not in versions:
+            versions.append(match.group(1))
+    return versions
 
 
 def _fill_semantic(text: str, facts: MechanicalFacts) -> str:
     """Classify ``## Semantic change`` from the diff instead of leaving its labels.
 
     Not applicable (the measured diff has no semantic path): the section is the
-    one ticked N/A line saying why. Applicable: every bare field label and box
-    is marked unresolved for the author — the composer cannot know a release
-    coordinate, and an empty ``Foundation:`` reads like an answered blank.
+    one ticked N/A line saying why. Applicable: the N/A line names what the
+    diff changes and the kind of each artifact, the Foundation field carries
+    the release-record version the diff establishes (when one is in it), and
+    every other field label and box is marked unresolved for the author —
+    the composer cannot know a release coordinate, a dependent's revalidation
+    or an admission decision, and an empty ``Foundation:`` reads like an
+    answered blank.
     """
     span = _heading_span(text, "## Semantic change")
     if span is None:
@@ -1213,14 +1444,21 @@ def _fill_semantic(text: str, facts: MechanicalFacts) -> str:
     paths = semantic_paths(facts)
     if not paths:
         return text[:start] + f"{heading}\n\n{SEMANTIC_NA}\n{tail}" + text[end:]
+    versions = _foundation_versions(paths)
     lines: list[str] = []
     for line in rest.splitlines():
         if re.match(r"^- \[ \] N/A\b", line):
-            listed = ", ".join(f"`{path}`" for path in paths[:5])
+            listed = ", ".join(f"`{path}` ({semantic_kind(path)})" for path in paths[:5])
             more = f" (+{len(paths) - 5} more)" if len(paths) > 5 else ""
             lines.append(f"{line} — not applicable: this diff changes {listed}{more}")
         elif re.match(r"^- \[ \] ", line):
             lines.append(f"{line} — {SEMANTIC_FIELD_UNRESOLVED}")
+        elif line.strip() == f"- {SEMANTIC_FOUNDATION_FIELD}" and versions:
+            measured = ", ".join(f"`docs/semantic-foundation/{v}/`" for v in versions)
+            lines.append(
+                f"{line.rstrip()} measured in this diff: {measured}; release candidate "
+                f"{SEMANTIC_FIELD_UNRESOLVED}"
+            )
         elif re.match(r"^- [^\[][^\n]*:\s*$", line):
             lines.append(f"{line.rstrip()} {SEMANTIC_FIELD_UNRESOLVED}")
         else:
@@ -1355,10 +1593,13 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
         filled.append("gate receipt in Evidence")
     if facts.l4_receipt:
         filled.append("L4 receipt in Evidence")
+    body = "\n".join(parts).rstrip() + "\n"
+    fields = completion_fields(body, facts)
     return ComposeResult(
-        body="\n".join(parts).rstrip() + "\n",
-        needs_completion=_needs_completion(template),
+        body=body,
+        needs_completion=_needs_completion(fields),
         mechanical_filled=filled,
+        fields=fields,
     )
 
 
@@ -1405,18 +1646,132 @@ def refresh_body(
     if evidence is not None:
         fresh = stale_evidence(evidence, facts.head) if remote else render_evidence(facts)
         body = set_region(body, REGION_EVIDENCE, fresh)
-    if not remote and _region_span(body, REGION_PROTECTED_PATHS) is not None:
-        body = _refresh_protected_root(body, facts, template)
+    if _region_span(body, REGION_PROTECTED_PATHS) is not None:
+        if remote:
+            body = _refresh_protected_root_remote(body, facts)
+        else:
+            body = _refresh_protected_root(body, facts, template)
         if facts.additive_only_paths and PROTECTED_STAMP not in body:
             body = PROTECTED_STAMP + "\n" + body
-    elif remote and _is_placeholder(region_content(body, REGION_PROTECTED_PATHS)):
-        # A body make pr never composed still carries the template's pending
-        # line. The event refresh does not compute additive_only paths, so it
-        # says that — never "none", never a pending line that reads as coming.
-        body = set_region(body, REGION_PROTECTED_PATHS, PROTECTED_REMOTE_UNMEASURED)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
+
+
+def _composed_head(body: str) -> str:
+    """The head make pr composed the body at, from its Evidence region, or ""."""
+    match = EVIDENCE_HEAD_RE.search(region_content(body, REGION_EVIDENCE) or "")
+    return match.group(1) if match else ""
+
+
+def _declared_protected_paths(region: str) -> str:
+    """The path lines of the Protected-root region, without a refresh notice."""
+    kept = [
+        line
+        for line in region.strip().splitlines()
+        if not line.startswith(PROTECTED_REMOTE_NOTICE_PREFIX)
+        and not line.startswith("- NOT MEASURED")
+    ]
+    return "\n".join(kept).strip()
+
+
+def _edit_mode_expected(facts: MechanicalFacts) -> tuple[str, ...]:
+    if not facts.additive_only_paths:
+        return ()
+    rewrite = any(path in facts.deletion_markers for path in facts.additive_only_paths)
+    return ("Justified rewrite",) if rewrite else ("Append-only",)
+
+
+_EDIT_MODE_LINE_RE = re.compile(
+    r"^- \[[ xX]\] (?P<rest>\*\*(?:Append-only|Justified rewrite)\*\*[^\n]*)$", re.M
+)
+_EDIT_MODE_SUFFIX_RE = re.compile(
+    rf"(?: — {re.escape(NA)}| — {re.escape(EDIT_MODE_STALE_PREFIX)}[^\n]*)+$"
+)
+
+
+def _invalidate_edit_mode(body: str, head: str) -> str:
+    """Untick every Edit mode box and say why: it described another head.
+
+    The boxes sit outside the machine-owned region but were ticked by the
+    composer, so they are its claims to withdraw. Why and Proof prose is
+    left exactly as written — a person's justification is not a measurement
+    to redo — and the region notice says it is unverified for this head.
+    """
+    span = _heading_span(body, "### Edit mode")
+    if span is None:
+        return body
+    start, end = span
+    chunk = body[start:end]
+
+    def untick(match: re.Match[str]) -> str:
+        rest = _EDIT_MODE_SUFFIX_RE.sub("", match.group("rest"))
+        return f"- [ ] {rest} — {EDIT_MODE_STALE_PREFIX}; not remeasured by make pr for {head}"
+
+    return body[:start] + _EDIT_MODE_LINE_RE.sub(untick, chunk) + body[end:]
+
+
+def _protected_remote_notice(facts: MechanicalFacts, old: str) -> str:
+    paths = facts.additive_only_paths
+    markers = [path for path in paths if path in facts.deletion_markers]
+    if not paths:
+        measured = "no additive_only root file in this diff"
+    elif markers:
+        measured = "ALLOW-ROOT-DELETION marker in this branch's commits for " + ", ".join(
+            f"`{path}`" for path in markers
+        )
+    else:
+        measured = "no ALLOW-ROOT-DELETION marker for these paths in this branch's commits"
+    return (
+        f"{PROTECTED_REMOTE_NOTICE_PREFIX}{facts.head}: the list above was measured by the "
+        f"governance-pr refresh ({measured}); Edit mode, Why and Proof below were composed by "
+        f"make pr at {old or 'an earlier head'} for a different path set or edit mode and "
+        "describe that head — make pr recomposes them"
+    )
+
+
+def _refresh_protected_root_remote(body: str, facts: MechanicalFacts) -> str:
+    """Protected-root on an event-driven refresh: remeasure, or withdraw.
+
+    The paths are remeasured by the repository's own validator (the caller
+    says whether that happened). Declarations that still describe the
+    measured set are left exactly as they are. When the set or the edit mode
+    moved — a root file newly touched, its change dropped, an
+    ALLOW-ROOT-DELETION marker added — the region takes the measured list and
+    every composer-ticked Edit mode box is withdrawn, because each of them was
+    verified for the head make pr measured, not this one. An unmeasured
+    moved head keeps no declaration as current truth either.
+    """
+    current = region_content(body, REGION_PROTECTED_PATHS)
+    if current is None:
+        return body
+    old = _composed_head(body)
+    moved = not old or not facts.head.startswith(old)
+    ticked = tuple(_EDIT_MODE_RE.findall(body))
+    if not facts.additive_only_measured:
+        if _is_placeholder(current):
+            return set_region(body, REGION_PROTECTED_PATHS, PROTECTED_REMOTE_UNMEASURED)
+        notice = (
+            f"{PROTECTED_REMOTE_UNMEASURED}; the declarations composed at "
+            f"{old or 'an earlier head'} are unverified for {facts.head}"
+        )
+        # Nothing moved, or nothing is left to withdraw: no rewrite.
+        if not moved or (current in (PROTECTED_REMOTE_UNMEASURED, notice) and not ticked):
+            return body
+        body = set_region(body, REGION_PROTECTED_PATHS, notice)
+        return _invalidate_edit_mode(body, facts.head)
+    fresh = render_protected_paths(facts).strip()
+    if _is_placeholder(current):
+        # Opened from the template, never composed: the measured list is a
+        # fact; the untouched boxes and placeholders below claim nothing.
+        return set_region(body, REGION_PROTECTED_PATHS, fresh)
+    declared = _declared_protected_paths(current)
+    already = PROTECTED_REMOTE_NOTICE_PREFIX in current
+    if declared == fresh and not already and ticked == _edit_mode_expected(facts):
+        return body
+    notice = _protected_remote_notice(facts, old)
+    body = set_region(body, REGION_PROTECTED_PATHS, f"{fresh}\n{notice}")
+    return _invalidate_edit_mode(body, facts.head)
 
 
 _EDIT_MODE_RE = re.compile(r"^- \[x\] \*\*(Append-only|Justified rewrite)\*\*", re.M)
@@ -1515,6 +1870,7 @@ def write_handoff(
         "template": facts.template_path,
         "template_revision": facts.template_revision,
         "needs_completion": result.needs_completion,
+        "fields": result.fields,
         "mechanical_filled": result.mechanical_filled,
         "thin_problem": THIN_PROBLEM_NOTE in result.body,
         "commit_count": len(facts.commits),
@@ -1722,12 +2078,19 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
     campaign = ""
     if args.campaign_body_file and args.campaign_body_file.is_file():
         campaign = args.campaign_body_file.read_text(encoding="utf-8")
+    additive_paths = _load_additive_only(args.additive_only_file)
+    additive_measured = not args.additive_only_unmeasured
+    if args.remote and args.additive_only_file is None and additive_measured:
+        # No caller measured the range on the runner. Measure it with the
+        # workspace's own validator, or say it is unmeasured — never let the
+        # empty default read as "no additive_only root files".
+        additive_paths, additive_measured = measure_additive_only(workspace, args.pr_base)
     facts = collect_mechanical(
         workspace,
         pr_base=args.pr_base,
         campaign_body=campaign,
-        additive_only_paths=_load_additive_only(args.additive_only_file),
-        additive_only_measured=not args.additive_only_unmeasured,
+        additive_only_paths=additive_paths,
+        additive_only_measured=additive_measured,
         # A remote refresh drops every receipt below; judging them is wasted work.
         verify=not args.remote,
     )
