@@ -5,9 +5,9 @@
     {
       "file": "governance-pr.yml",
       "source": "Quantum-L9/.github:.github/workflows/governance-pr.yml",
-      "ref": "d0ca5541a87c3bbb66fb408deac2b2f4c564b872",
-      "why": "The governance-pr.yml that pins this composer (Quantum-L9/.github PR re-pinning COMPOSER to Cursor-Governance@ba71177). Its gates job is unchanged from the previous vendored ref 02ea092a. Not evidence of consumer rollout: a consumer runs whatever caller pin its own governance.yml names until continuous-sync Apply re-pins it and that consumer PR merges.",
-      "sha256": "f58ee31c4f8fd6567d10bb05b903eeb01b7117bf0ac8a52620ca1889d3beb067"
+      "ref": "bac525910d740cb49ea0f526a0ab4190b82e2ab0",
+      "why": "The governance-pr.yml that pins this composer (Quantum-L9/.github PR #188 head, COMPOSER and checkout ref = Cursor-Governance@1a57fe7, the commit that carries the F1/F3/F4 composer; this fixture commit changes no composer byte). Its gates job is unchanged from the previous vendored refs 02ea092a and d0ca5541. The pin converges on #738's merge commit once that merge is authorized (MERGE_DEPENDENCY_PENDING). Not evidence of consumer rollout: a consumer runs whatever caller pin its own governance.yml names until continuous-sync Apply re-pins it and that consumer PR merges.",
+      "sha256": "04128b225c8c054e6e4b47e683827a8212f7090e085a35c42a2e7f834f740916"
     },
     {
       "file": "pr-files.yml",

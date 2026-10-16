@@ -73,7 +73,7 @@ jobs:
       cancel-in-progress: true
     env:
       # Re-pin together with the ref below; docs/DISTRIBUTION.md "PR body".
-      COMPOSER: Quantum-L9/Cursor-Governance@ba711770af5ba00b36e3e4eecc8722bd470daaa0
+      COMPOSER: Quantum-L9/Cursor-Governance@1a57fe7bdcb0e4001feabfddfa28b787d9df2156
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Quantum-L9/Cursor-Governance
-          ref: ba711770af5ba00b36e3e4eecc8722bd470daaa0
+          ref: 1a57fe7bdcb0e4001feabfddfa28b787d9df2156
           path: composer
           sparse-checkout: ops/scripts/compose_pr_body.py
           sparse-checkout-cone-mode: false
