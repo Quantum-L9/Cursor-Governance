@@ -823,5 +823,12 @@ def test_generation_holds_no_repository_publication_authority() -> None:
         assert "secrets." not in text
         for forbidden in ("git push", '"push"', "git commit", '"commit"', "gh pr", '"gh"'):
             assert forbidden not in text, forbidden
-    producer = yaml.safe_load(BINDING.read_text())["input"]["producer"]
-    assert "PR_REMEDIATE=0 make pr" in producer["publication"]
+    # The binding names the SSOT publication owner; restating one of its routes as the only
+    # route would contradict the governed open-PR remediation path that owner also defines.
+    publication = yaml.safe_load(BINDING.read_text())["input"]["producer"]["publication"]
+    assert "CANONICAL_LAW.md §6.2" in publication
+    assert "ops/autonomy/surface_profile.yaml" in publication
+    assert "## 6.2 " in (REPO / "CANONICAL_LAW.md").read_text()
+    assert (REPO / "ops/autonomy/surface_profile.yaml").is_file()
+    for restated in ("make pr", "PR_REMEDIATE", "git push", "l9-pr-remediation"):
+        assert restated not in publication, restated
