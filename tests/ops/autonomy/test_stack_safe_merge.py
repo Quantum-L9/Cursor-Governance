@@ -418,3 +418,71 @@ def test_head_moved_after_github_authorization_does_not_merge(tmp_path: Path, mo
     monkeypatch.setattr(stack_safe_merge, "_github_authorization", _only_old)
     code, runs = _merge_run(tmp_path, monkeypatch, probe=moved, grant=None, head_sha=SHA)
     assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+# --- GAR-MERGE-AUTHORITY-735 F03: the executor honours operator revocation ----------
+
+import operator_merge_instruction as omi  # noqa: E402
+
+
+def _revoke_store(tmp_path: Path, monkeypatch, prompt: str, *, now: float) -> Path:
+    store = tmp_path / "operator-merge-instructions.json"
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text(
+        json.dumps(
+            {
+                "type": "user",
+                "sessionId": "sess-1",
+                "turnOrigin": "human",
+                "origin": {"kind": "human"},
+                "message": {"role": "user", "content": prompt},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "session_id": "sess-1",
+        "transcript_path": str(transcript),
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+    omi.record_instructions(
+        prompt,
+        host="claude-code",
+        session_id="sess-1",
+        path=store,
+        now=now,
+        cwd_repo=None,
+        provenance=omi.host_provenance("claude-code", payload),
+    )
+    monkeypatch.setattr(stack_safe_merge, "_instruction_store_path", lambda: store)
+    return store
+
+
+def test_f03_revoked_grant_is_merge_pending(tmp_path: Path, monkeypatch, capsys) -> None:
+    import time
+
+    grant = _grant_file(tmp_path, issued_at=int(time.time()) - 600)
+    _revoke_store(tmp_path, monkeypatch, f"Cancel the merge of {SLUG}#53.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=grant)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+    record = json.loads(capsys.readouterr().out)
+    assert record["status"] == "MERGE_PENDING" and "revoked" in record["reason"]
+
+
+def test_f03_revoked_github_record_is_merge_pending(tmp_path: Path, monkeypatch) -> None:
+    import time
+
+    _authorized_github(monkeypatch)
+    _revoke_store(tmp_path, monkeypatch, f"Do not merge {SLUG}#53.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=None)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+def test_f03_revocation_of_another_pr_does_not_block(tmp_path: Path, monkeypatch) -> None:
+    import time
+
+    _revoke_store(tmp_path, monkeypatch, f"Do not merge {SLUG}#54.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=_grant_file(tmp_path))
+    assert code == 0 and runs

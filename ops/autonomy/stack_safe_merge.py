@@ -18,7 +18,11 @@ file -- written by ``authorize_merge.py`` from a controlling terminal or, as
 ``--operator-instruction``, from the operator's own recorded prompt. Before
 merging it rechecks the PR's current head on GitHub: a head that differs from
 ``--head-sha``, or no authorization for that head, prints a MERGE_PENDING
-record and exits MERGE_PENDING_EXIT without merging. The SHA then travels with
+record and exits MERGE_PENDING_EXIT without merging. An operator cancellation
+("do not merge #n", "cancel the merge of #n") recorded by the host prompt hook
+after a grant was issued, or while a GitHub record stands, is MERGE_PENDING
+too: the latest instruction wins, and the cancellation is read from the same
+account-home receipt store on every run, so it survives a restart. The SHA then travels with
 the merge (REST ``sha``, CLI ``--match-head-commit``) so GitHub itself refuses
 a head that moves in between. After a merge returns success the helper reads
 the pull request back and reports ``MERGED`` with GitHub's merge commit; a
@@ -63,6 +67,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import operator_merge_instruction as omi  # noqa: E402
 from github_merge_authorization import authorization_line, authorize_for_merge  # noqa: E402
 from merge_gate import (  # noqa: E402
     _FULL_SHA,
@@ -88,9 +93,26 @@ def _account_grant_path() -> Path:
     return home / ".l9" / "autonomy" / GRANT_FILE_NAME
 
 
+def _instruction_store_path() -> Path:
+    """The host-recorded operator instructions under the account's home (as the grant is)."""
+    return omi.account_store_path()
+
+
 def _github_authorization(repo: str, pr: str, head_sha: str) -> dict[str, Any]:
     """Live GitHub verdict. Tests replace this; production does not read a fixture."""
     return authorize_for_merge(repo, pr, head_sha)
+
+
+def _revocation(repo: str, pr: str, *, since: float | None = None) -> dict[str, Any] | None:
+    """The operator's live cancellation of ``repo#pr`` recorded at or after ``since``.
+
+    "Do not merge #n" / "cancel the merge of #n", recorded by the same host
+    prompt hook as the instruction it withdraws, outranks every authority
+    issued before it -- a grant (``since`` is its ``issued_at``) and, lacking a
+    comparable issue time, a GitHub record -- until the operator authorizes
+    again.
+    """
+    return omi.revocation_for(repo, str(pr), path=_instruction_store_path(), since=since)
 
 
 def authorization_status(
@@ -120,11 +142,18 @@ def authorization_status(
         }
     record["head_sha"] = live
     line = authorization_line(repo, pr, live) if live else ""
+    grant = find_grant(repo, str(pr), live, path=path or _account_grant_path()) if live else None
+    issued = grant.get("issued_at") if grant else None
+    since = (
+        float(issued) if isinstance(issued, (int, float)) and not isinstance(issued, bool) else None
+    )
     if not requested:
         reason = "no --head-sha named; authorization binds an exact head"
     elif requested != live:
         reason = f"head moved: requested {requested}, live {live}"
-    elif (grant := find_grant(repo, str(pr), live, path=path or _account_grant_path())) is not None:
+    elif grant is not None and (revoked := _revocation(repo, pr, since=since)) is not None:
+        reason = omi.revocation_reason(revoked)
+    elif grant is not None:
         provenance = grant.get("provenance") if isinstance(grant.get("provenance"), dict) else {}
         channel = str(provenance.get("channel") or "human_grant")
         return {
@@ -137,7 +166,8 @@ def authorization_status(
         }
     else:
         github = _github_authorization(repo, str(pr), live)
-        if github.get("authorized"):
+        revoked = _revocation(repo, pr) if github.get("authorized") else None
+        if github.get("authorized") and revoked is None:
             return {
                 **record,
                 "status": "AUTHORIZED",
@@ -147,10 +177,13 @@ def authorization_status(
                 "channel": github.get("channel"),
                 "authorizer": github.get("authorizer"),
             }
-        reason = str(
-            github.get("reason")
-            or "no human GitHub merge authorization for this repository, PR and head"
-        )
+        if revoked is not None:
+            reason = omi.revocation_reason(revoked)
+        else:
+            reason = str(
+                github.get("reason")
+                or "no human GitHub merge authorization for this repository, PR and head"
+            )
     return {
         **record,
         "status": "MERGE_PENDING",

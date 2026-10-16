@@ -295,6 +295,9 @@ improve: make improve                   # optional kernels; not publish
 merge_on_converge: false                # CANONICAL_LAW §6.2.13 — invocation is not merge authority
 merge_authority: human_github_record_or_operator_prompt_instruction  # repo + PR + exact head SHA, expiring
 operator_instruction_transcription: authorize_merge.py --operator-instruction  # live head + L9-ORG-007 recheck
+operator_instruction_revocation: latest_operator_instruction_wins  # "do not merge #n" is MERGE_PENDING on gate, writer and executor
+operator_instruction_cohort: open_prs_snapshot_at_instruction_time  # recorded from GitHub; a later or reopened PR is outside it
+operator_channel_hosts: {claude-code: session_bound, cursor: BLOCKED_HOST_ORIGIN}
 merge_pending_status: MERGE_PENDING
 self_issue_merge_grant: forbidden       # never the terminal mode, never write the grant or instruction file
 own_until_merged: true
@@ -360,7 +363,7 @@ edit_axis_owner: scripts/protocol.py
 - Local `Passed` / remote `Failed` → classify from logs; environment delta or new post-push comments → next cycle; unrun local gate → protocol failure
 - Poll worker / watcher `merge_eligible` on a stale SHA → ignore; never merge from it
 - `stack_safe_merge.py` exit 3 / `merge_gate` MERGE_PENDING → record the MERGE_PENDING line (law 19) and continue independent PRs; transcribe a recorded operator instruction if one covers the PR, otherwise never run `authorize_merge.py`, never retry with another transport
-- `authorize_merge.py --operator-instruction` exit 4 → the refusal names the prerequisite (moved head: re-run for the live head after readiness; L9-ORG-007: the independent GitHub record; no instruction: the operator says so); never forge or paraphrase
+- `authorize_merge.py --operator-instruction` exit 4 → the refusal names the prerequisite (moved head: re-run for the live head after readiness; L9-ORG-007: the independent GitHub record; no instruction: the operator says so; `revoked`: the operator cancelled — stop, do not re-run; `BLOCKED_HOST_ORIGIN`: this host's prompt channel is unverifiable, the GitHub record is the only authorization; `not corroborated by the host transcript`: the receipt is not this session's — report it, never rewrite a receipt or a transcript); never forge or paraphrase
 - `stack_safe_merge.py` exit 4 (UNVERIFIED) → the merge call returned but GitHub does not show the PR merged; read the PR state before claiming anything
 - Squash denied because head is a stack parent → merge children first, retarget, or `--merge`; do not `update-branch`
 - Unpredicted `CONFLICTING` after a merge → re-plan; do not continue the train blindly

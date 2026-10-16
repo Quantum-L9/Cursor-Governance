@@ -12,12 +12,17 @@ gate can bind to an exact head. Two confirmations exist:
   "remediate and merge all currently open PRs in owner/name"). The agent may
   run this script in that mode, without a terminal, and it writes the grant
   only after rechecking, live on GitHub, that the pull request is open, that
-  ``--head-sha`` is its current head, that the instruction covers it (an
-  explicit PR, or membership of the cohort that was open when the operator
-  spoke), and that the change touches no L9-ORG-007 protected path. The grant
-  carries the instruction's provenance. A protected change is refused here:
-  a prompt proves no GitHub identity, so it cannot be the independent human
-  authorization that invariant requires.
+  ``--head-sha`` is its current head, that a live receipt covers it (an
+  explicit PR, or membership of the open-pull-request snapshot the recorder
+  took when the operator spoke) and has not been cancelled by a later
+  instruction, that the receipt carries the host hook's own provenance and is
+  corroborated by a human turn of its session in the host-written transcript,
+  and that the change touches no L9-ORG-007 protected path. The grant carries
+  the instruction's provenance. A protected change is refused here: a prompt
+  proves no GitHub identity, so it cannot be the independent human
+  authorization that invariant requires. A receipt from a host whose prompt
+  channel cannot be verified this way (Cursor) is refused as
+  BLOCKED_HOST_ORIGIN; the GitHub record remains that host's channel.
 
 * **Controlling terminal** (default). A human types the exact target back on
   ``/dev/tty``. An agent's tool shell has no controlling terminal, so this mode
@@ -267,7 +272,6 @@ def operator_verdict(
         pr,
         path=instruction_path or account_instruction_path(),
         now=stamp,
-        pr_created_at=created,
     )
     if not verdict["authorized"]:
         refused["reason"] = (
@@ -277,6 +281,16 @@ def operator_verdict(
         )
         return refused
     instruction = verdict["instruction"]
+    receipt = omi.receipt_verdict(instruction, now=stamp)
+    if not receipt["ok"]:
+        refused["reason"] = (
+            f"operator instruction {instruction.get('id')} for {repo}#{pr} cannot become a grant: "
+            f"{receipt['reason']}. Only a receipt the host prompt hook wrote, corroborated by a "
+            "human turn of its session in the host transcript, is the operator's authority "
+            "(CANONICAL_LAW §6.2.13)"
+        )
+        refused["instruction"] = instruction
+        return refused
 
     try:
         files = pull_request_files(repo, pr)
@@ -309,13 +323,19 @@ def operator_verdict(
 def operator_provenance(
     instruction: dict[str, Any], pull_request: dict[str, Any]
 ) -> dict[str, Any]:
+    hook = instruction.get("provenance") if isinstance(instruction.get("provenance"), dict) else {}
     return {
         "channel": OPERATOR_CHANNEL,
         "recorded_by": "agent",
         "instruction_id": instruction.get("id"),
         "host": instruction.get("host"),
         "session_id": instruction.get("session_id"),
+        "hook_event_name": hook.get("hook_event_name"),
+        "transcript_path": hook.get("transcript_path"),
         "scope": instruction.get("scope"),
+        "cohort_members": instruction.get("members")
+        if instruction.get("scope") == "open_cohort"
+        else None,
         "recorded_at": instruction.get("recorded_at"),
         "instruction_expires_at": instruction.get("expires_at"),
         "prompt_sha256": instruction.get("prompt_sha256"),

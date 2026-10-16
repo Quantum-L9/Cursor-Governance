@@ -39,9 +39,11 @@ NOW = 1_800_000_000
 
 
 def _targets(prompt: str, cwd_repo: str | None = None) -> list[tuple[str, str | None, int | None]]:
+    """Authorizations only; cancellations are covered by the F03 block below."""
     return [
         (item["scope"], item["repo"], item["pr"])
         for item in omi.parse_instructions(prompt, cwd_repo=cwd_repo)
+        if item["kind"] == omi.KIND_AUTHORIZE
     ]
 
 
@@ -54,7 +56,7 @@ def _targets(prompt: str, cwd_repo: str | None = None) -> list[tuple[str, str | 
         "Merge PR #735 after the checks pass.",
         "Fix and merge PR #735.",
         "fix, then merge pull request #735",
-        "The operator authorizes the eventual merge of PR #735 after validation.",
+        "I authorize the eventual merge of PR #735 after validation.",
         "merge #735 once CI is green",
         "Please merge pull request 735 when ready",
     ],
@@ -160,6 +162,7 @@ def test_host_relayed_turns_are_not_operator_prompts(prompt: str) -> None:
 
 
 def _record(path: Path, prompt: str, **kw) -> list[dict]:
+    """Record with the provenance a Claude Code UserPromptSubmit payload carries."""
     defaults = {
         "host": "claude-code",
         "session_id": "sess-1",
@@ -167,8 +170,18 @@ def _record(path: Path, prompt: str, **kw) -> list[dict]:
         "path": path,
         "now": NOW,
         "cwd_repo": None,
+        "open_pull_requests": lambda repo: [700, 735],
     }
     defaults.update(kw)
+    defaults.setdefault(
+        "provenance",
+        {
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": defaults["session_id"],
+            "transcript_path": str(path.parent / "transcript.jsonl"),
+            "cwd": None,
+        },
+    )
     return omi.record_instructions(prompt, **defaults)
 
 
@@ -215,26 +228,16 @@ def test_unresolved_repository_binds_nothing(tmp_path: Path) -> None:
 
 
 def test_cohort_covers_only_pull_requests_open_when_it_was_spoken(tmp_path: Path) -> None:
+    """Membership is the snapshot taken at recording time, nothing else (F04)."""
     store = tmp_path / "instructions.json"
-    _record(store, f"Remediate and merge all currently open PRs in {SLUG}.")
-    older = NOW - 3600
-    newer = NOW + 60
-    assert omi.find_instruction(SLUG, 700, path=store, now=NOW + 1, pr_created_at=older)
-    assert omi.find_instruction(SLUG, 900, path=store, now=NOW + 1, pr_created_at=newer) is None
-    # Without the creation time the grant writer must not accept membership...
-    assert omi.find_instruction(SLUG, 700, path=store, now=NOW + 1) is None
-    verdict = omi.instruction_verdict(SLUG, 900, path=store, now=NOW + 1, pr_created_at=newer)
-    assert "opened after" in verdict["reason"]
-    # ...while the hook, which has no network, may gate the attempt on the repository.
-    assert omi.find_instruction(
-        SLUG, 700, path=store, now=NOW + 1, allow_cohort_without_membership=True
-    )
-    assert (
-        omi.find_instruction(
-            OTHER, 700, path=store, now=NOW + 1, allow_cohort_without_membership=True
-        )
-        is None
-    )
+    (entry,) = _record(store, f"Remediate and merge all currently open PRs in {SLUG}.")
+    assert entry["members"] == [700, 735]
+    assert entry["membership"] == "snapshot"
+    assert omi.find_instruction(SLUG, 700, path=store, now=NOW + 1)
+    assert omi.find_instruction(SLUG, 900, path=store, now=NOW + 1) is None
+    assert omi.find_instruction(OTHER, 700, path=store, now=NOW + 1) is None
+    verdict = omi.instruction_verdict(SLUG, 900, path=store, now=NOW + 1)
+    assert "not open when the cohort was authorized" in verdict["reason"]
 
 
 def test_a_forged_entry_without_the_recorder_stamp_is_dead(tmp_path: Path) -> None:
@@ -331,8 +334,14 @@ def test_claude_wrapper_is_silent_for_a_prompt_without_an_instruction(tmp_path: 
 
 
 def test_cursor_hook_records_and_never_blocks(tmp_path: Path) -> None:
-    """The real beforeSubmitPrompt adapter: conversation_id is the session identity."""
+    """The real beforeSubmitPrompt adapter: conversation_id is the session identity.
+
+    ``PATH`` carries no ``gh``, so the cohort snapshot is recorded as unavailable
+    instead of reaching GitHub from a unit test; the receipt then covers nothing.
+    """
     home = _home_with_governance(tmp_path)
+    no_tools = tmp_path / "no-tools"
+    no_tools.mkdir()
     payload = {
         "hook_event_name": "beforeSubmitPrompt",
         "conversation_id": "conv-7",
@@ -346,7 +355,12 @@ def test_cursor_hook_records_and_never_blocks(tmp_path: Path) -> None:
         input=json.dumps(payload),
         text=True,
         capture_output=True,
-        env={**os.environ, "HOME": str(home), "L9_GOVERNANCE_DIR": str(REPO)},
+        env={
+            **os.environ,
+            "HOME": str(home),
+            "L9_GOVERNANCE_DIR": str(REPO),
+            "PATH": str(no_tools),
+        },
         check=False,
         timeout=60,
     )
@@ -360,6 +374,9 @@ def test_cursor_hook_records_and_never_blocks(tmp_path: Path) -> None:
         "open_cohort",
     )
     assert entry["repo"] == SLUG
+    assert entry["provenance"]["hook_event_name"] == "beforeSubmitPrompt"
+    assert entry["members"] is None and entry["membership"] == "unavailable"
+    assert omi.find_instruction(SLUG, 735, path=store) is None
 
 
 def test_cursor_hook_fails_open_on_garbage(tmp_path: Path) -> None:
@@ -384,3 +401,430 @@ def test_show_reports_the_verdict(tmp_path: Path, monkeypatch, capsys) -> None:
     assert omi.main(["show", "--repo", SLUG, "--pr", "735"]) == 0
     assert json.loads(capsys.readouterr().out)["authorized"] is True
     assert omi.main(["show", "--repo", SLUG, "--pr", "736"]) == 3
+
+
+# =============================================================================
+# GAR-MERGE-AUTHORITY-735 remediation findings (F01-F04). Each block names the
+# defect it reproduces; every case below failed or errored against head d8723211.
+# =============================================================================
+
+MODULE = REPO / "ops" / "autonomy" / "operator_merge_instruction.py"
+SESSION = "sess-human-1"
+
+
+def _kinds(
+    prompt: str, cwd_repo: str | None = SLUG
+) -> list[tuple[str, str, str | None, int | None]]:
+    return [
+        (item["kind"], item["scope"], item["repo"], item["pr"])
+        for item in omi.parse_instructions(prompt, cwd_repo=cwd_repo)
+    ]
+
+
+def _transcript(
+    path: Path,
+    *lines: tuple[str, str] | tuple[str, str, dict],
+    session: str = SESSION,
+) -> Path:
+    """A transcript as Claude Code writes it: one JSON record per line.
+
+    Each line is ``(turn_origin, text)`` or ``(turn_origin, text, extra)``; the
+    human prompt carries ``turnOrigin: "human"`` and ``origin.kind: "human"``,
+    which is what was observed in a live Claude Code transcript on 2026-10-15.
+    """
+    records = []
+    for item in lines:
+        origin, text = item[0], item[1]
+        extra = item[2] if len(item) > 2 else {}
+        record = {
+            "type": "user",
+            "userType": "external",
+            "isSidechain": False,
+            "sessionId": session,
+            "turnOrigin": origin,
+            "origin": {"kind": origin.replace("_", "-")},
+            "promptSource": "sdk" if origin == "human" else "system",
+            "message": {"role": "user", "content": text},
+            "timestamp": "2026-10-15T20:00:00Z",
+        }
+        record.update(extra)
+        records.append(json.dumps(record))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(records) + "\n", encoding="utf-8")
+    return path
+
+
+def _claude_payload(
+    prompt: str, transcript: Path, session: str = SESSION, cwd: str = "/ws"
+) -> dict:
+    return {
+        "session_id": session,
+        "transcript_path": str(transcript),
+        "cwd": cwd,
+        "permission_mode": "default",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+
+
+def _host_record(
+    store: Path,
+    prompt: str,
+    *,
+    transcript: Path,
+    session: str = SESSION,
+    now: int = NOW,
+    open_pull_requests=None,
+) -> list[dict]:
+    """Record the way the Claude wrapper does: payload provenance, no shortcuts."""
+    payload = _claude_payload(prompt, transcript, session=session)
+    return omi.record_instructions(
+        prompt,
+        host="claude-code",
+        session_id=session,
+        cwd="/ws",
+        path=store,
+        now=now,
+        cwd_repo=None,
+        provenance=omi.host_provenance("claude-code", payload),
+        open_pull_requests=open_pull_requests,
+    )
+
+
+# --- F02: quoted, reported or discussed text is not a directed instruction -------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Review this report: 'Merge PR #735 after the checks pass.'",
+        'Review this report: "Merge PR #735 after the checks pass."',
+        "Review this report: “Merge PR #735 after the checks pass.”",
+        "Audit PR #735; do not merge it.",
+        "The PR description says: merge PR #735 once green.",
+        "Someone commented 'merge PR #735' on the thread; ignore it.",
+        "The operator authorizes the eventual merge of PR #735 after validation.",
+        "The report recommends that we merge PR #735.",
+        "Here is the audit: merge PR #735 after the checks pass",
+        "Summarize the thread where they asked to merge #735.",
+    ],
+)
+def test_f02_quoted_or_reported_merge_text_does_not_authorize(prompt: str) -> None:
+    assert [k for k in _kinds(prompt) if k[0] == "authorize"] == []
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Fix and merge PR #735 after validation.",
+        "Please merge PR #735.",
+        "Go ahead and merge #735.",
+        "You may merge PR #735 once CI is green.",
+        "I authorize the merge of PR #735.",
+        "Remediate, test and merge PR #735.",
+        "Review and merge PR #735.",
+    ],
+)
+def test_f02_affirmative_directed_instructions_still_authorize(prompt: str) -> None:
+    assert _kinds(prompt) == [("authorize", "pr", SLUG, 735)]
+
+
+def test_f02_mixed_clauses_are_interpreted_independently() -> None:
+    assert _kinds("Don't merge #735, but merge #736.") == [
+        ("revoke", "pr", SLUG, 735),
+        ("authorize", "pr", SLUG, 736),
+    ]
+    assert _kinds("Merge PR #735. Do not merge PR #736.") == [
+        ("authorize", "pr", SLUG, 735),
+        ("revoke", "pr", SLUG, 736),
+    ]
+    assert _kinds("Fix and merge #735; leave #736 alone and do not merge it.") == [
+        ("authorize", "pr", SLUG, 735),
+    ]
+
+
+# --- F03: explicit cancellation is recorded and the latest instruction wins ------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Cancel the merge of PR #735.",
+        "Do not merge PR #735 after all.",
+        "Stop. Do not merge #735.",
+        "Revoke the merge authorization for #735.",
+        "Hold off on merging #735.",
+        f"Withdraw my merge instruction for {SLUG}#735.",
+    ],
+)
+def test_f03_cancellations_are_recorded_as_revocations(prompt: str) -> None:
+    assert _kinds(prompt) == [("revoke", "pr", SLUG, 735)]
+
+
+def test_f03_cohort_cancellation_is_recorded() -> None:
+    assert _kinds(f"Do not merge any open PRs in {SLUG}.") == [
+        ("revoke", "open_cohort", SLUG, None)
+    ]
+    assert _kinds(f"Cancel all merges in {SLUG}.") == [("revoke", "open_cohort", SLUG, None)]
+
+
+def test_f03_revocation_after_authorization_withdraws_it(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", f"Merge {SLUG}#735."))
+    _host_record(store, f"Merge {SLUG}#735.", transcript=transcript, now=NOW)
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 1) is not None
+    _host_record(store, f"Do not merge {SLUG}#735.", transcript=transcript, now=NOW + 60)
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 120) is None
+    verdict = omi.instruction_verdict(SLUG, 735, path=store, now=NOW + 120)
+    assert "revoked" in verdict["reason"]
+    revoke = omi.revocation_for(SLUG, 735, path=store, now=NOW + 120)
+    assert revoke is not None and revoke["kind"] == "revoke"
+
+
+def test_f03_reauthorization_after_revocation_wins(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    _host_record(store, f"Merge {SLUG}#735.", transcript=transcript, now=NOW)
+    _host_record(store, f"Do not merge {SLUG}#735.", transcript=transcript, now=NOW + 60)
+    _host_record(store, f"Merge {SLUG}#735 after all.", transcript=transcript, now=NOW + 120)
+    found = omi.find_instruction(SLUG, 735, path=store, now=NOW + 180)
+    assert found is not None and found["recorded_at"] == NOW + 120
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 180) is None
+
+
+def test_f03_revocation_is_scoped_to_the_named_pull_request(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    _host_record(store, f"Merge {SLUG}#735 and {SLUG}#736.", transcript=transcript, now=NOW)
+    _host_record(store, f"Cancel the merge of {SLUG}#735.", transcript=transcript, now=NOW + 60)
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 120) is None
+    assert omi.find_instruction(SLUG, 736, path=store, now=NOW + 120) is not None
+
+
+def test_f03_revocation_blocks_authority_issued_before_it_only(tmp_path: Path) -> None:
+    """``since`` is the grant's issue time: a revoke after it kills it, a revoke
+    before it (followed by the re-authorization that produced the grant) does not."""
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    _host_record(store, f"Merge {SLUG}#735.", transcript=transcript, now=NOW)
+    _host_record(store, f"Do not merge {SLUG}#735.", transcript=transcript, now=NOW + 60)
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 120, since=NOW + 30) is not None
+    _host_record(store, f"Merge {SLUG}#735 again.", transcript=transcript, now=NOW + 120)
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 180, since=NOW + 150) is None
+
+
+def test_f03_cohort_revocation_covers_every_member(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    _host_record(
+        store,
+        f"Remediate and merge all currently open PRs in {SLUG}.",
+        transcript=transcript,
+        now=NOW,
+        open_pull_requests=lambda repo: [700, 735],
+    )
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 1) is not None
+    _host_record(
+        store, f"Do not merge any open PRs in {SLUG}.", transcript=transcript, now=NOW + 60
+    )
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 120) is None
+    assert omi.find_instruction(SLUG, 700, path=store, now=NOW + 120) is None
+
+
+def test_f03_revocation_persists_across_processes(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    store = home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    stamp = int(time.time())
+    _host_record(store, f"Merge {SLUG}#735.", transcript=transcript, now=stamp - 120)
+    _host_record(store, f"Do not merge {SLUG}#735.", transcript=transcript, now=stamp - 60)
+    proc = subprocess.run(
+        [sys.executable, str(MODULE), "show", "--repo", SLUG, "--pr", "735"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home)},
+        check=False,
+        timeout=60,
+    )
+    assert proc.returncode == 3, proc.stdout
+    assert "revoked" in json.loads(proc.stdout)["reason"]
+
+
+# --- F04: a cohort is the set of pull requests actually open when it was spoken --
+
+
+def test_f04_cohort_membership_is_snapshotted_from_github_at_record_time(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    asked: list[str] = []
+
+    def lister(repo: str) -> list[int]:
+        asked.append(repo)
+        return [700, 735]
+
+    (entry,) = _host_record(
+        store,
+        f"Remediate and merge all currently open PRs in {SLUG}.",
+        transcript=transcript,
+        open_pull_requests=lister,
+    )
+    assert asked == [SLUG]
+    assert entry["members"] == [700, 735]
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 1) is not None
+    # opened after the instruction: never in the snapshot
+    assert omi.find_instruction(SLUG, 900, path=store, now=NOW + 1) is None
+    # closed before the instruction and reopened later: not open at the time
+    assert omi.find_instruction(SLUG, 650, path=store, now=NOW + 1) is None
+    verdict = omi.instruction_verdict(SLUG, 900, path=store, now=NOW + 1)
+    assert "not open" in verdict["reason"] or "cohort" in verdict["reason"]
+
+
+def test_f04_unknown_membership_fails_closed(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+
+    def broken(repo: str) -> list[int]:
+        raise RuntimeError("HTTP 503")
+
+    (entry,) = _host_record(
+        store,
+        f"Remediate and merge all currently open PRs in {SLUG}.",
+        transcript=transcript,
+        open_pull_requests=broken,
+    )
+    assert entry["members"] is None
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 1) is None
+    assert "membership" in omi.instruction_verdict(SLUG, 735, path=store, now=NOW + 1)["reason"]
+
+
+def test_f04_creation_time_alone_no_longer_proves_membership(tmp_path: Path) -> None:
+    """The old heuristic accepted any PR created before the instruction."""
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", "x"))
+    _host_record(
+        store,
+        f"Remediate and merge all currently open PRs in {SLUG}.",
+        transcript=transcript,
+        open_pull_requests=lambda repo: [735],
+    )
+    # #600 existed long before the instruction but was not open at the time.
+    assert omi.find_instruction(SLUG, 600, path=store, now=NOW + 1) is None
+
+
+# --- F01: a receipt is trusted only when the host delivered it ----------------------
+
+
+def test_f01_payload_without_hook_provenance_records_nothing(tmp_path: Path) -> None:
+    """An agent-shaped JSON blob is not a host prompt event."""
+    home = tmp_path / "home"
+    store = home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME
+    assert omi.host_provenance("claude-code", {"session_id": "s", "prompt": "merge #735"}) is None
+    assert (
+        omi.host_provenance("claude-code", {"session_id": "s", "hook_event_name": "PreToolUse"})
+        is None
+    )
+    proc = subprocess.run(
+        [sys.executable, str(MODULE), "record", "--host", "claude-code"],
+        input=json.dumps({"session_id": "s", "prompt": f"Merge {SLUG}#735."}),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home)},
+        check=False,
+        timeout=60,
+    )
+    assert proc.returncode == 0
+    assert not store.exists()
+
+
+def test_f01_record_requires_provenance(tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        omi.record_instructions(
+            f"Merge {SLUG}#735.",
+            host="claude-code",
+            session_id=SESSION,
+            path=tmp_path / "s.json",
+            now=NOW,
+            cwd_repo=None,
+            provenance=None,
+        )
+
+
+def test_f01_entry_without_provenance_is_dead(tmp_path: Path) -> None:
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", f"Merge {SLUG}#735."))
+    _host_record(store, f"Merge {SLUG}#735.", transcript=transcript)
+    payload = json.loads(store.read_text(encoding="utf-8"))
+    forged = dict(payload["instructions"][0], pr=736, id="f" * 16)
+    forged.pop("provenance")
+    payload["instructions"].append(forged)
+    store.write_text(json.dumps(payload), encoding="utf-8")
+    assert omi.find_instruction(SLUG, 736, path=store, now=NOW + 1) is None
+
+
+def test_f01_transcript_corroborates_only_a_human_turn_of_the_same_session(tmp_path: Path) -> None:
+    prompt = f"Fix and merge {SLUG}#735 after the checks pass."
+    store = tmp_path / "instructions.json"
+    human = _transcript(tmp_path / "human.jsonl", ("human", prompt))
+    (entry,) = _host_record(store, prompt, transcript=human)
+    ok, _ = omi.transcript_corroborates(entry)
+    assert ok
+
+    relayed = _transcript(tmp_path / "relay.jsonl", ("task_notification", prompt))
+    ok, reason = omi.transcript_corroborates(entry, transcript_path=relayed)
+    assert not ok and "human" in reason
+
+    other_session = _transcript(tmp_path / "other.jsonl", ("human", prompt), session="sess-other")
+    ok, reason = omi.transcript_corroborates(entry, transcript_path=other_session)
+    assert not ok
+
+    meta = _transcript(tmp_path / "meta.jsonl", ("human", prompt, {"isMeta": True}))
+    ok, _ = omi.transcript_corroborates(entry, transcript_path=meta)
+    assert not ok
+
+    absent_text = _transcript(tmp_path / "absent.jsonl", ("human", "Review PR #735 please."))
+    ok, _ = omi.transcript_corroborates(entry, transcript_path=absent_text)
+    assert not ok
+
+    ok, reason = omi.transcript_corroborates(entry, transcript_path=tmp_path / "missing.jsonl")
+    assert not ok
+
+
+def test_f01_receipt_verdict_binds_session_and_transcript(tmp_path: Path) -> None:
+    prompt = f"Merge {SLUG}#735."
+    store = tmp_path / "instructions.json"
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", prompt))
+    (entry,) = _host_record(store, prompt, transcript=transcript)
+    live = {"now": NOW + 1, "transcript_path": str(transcript)}
+    assert omi.receipt_verdict(entry, session_id=SESSION, **live)["ok"]
+    assert not omi.receipt_verdict(entry, session_id="sess-agent", **live)["ok"]
+    assert not omi.receipt_verdict(
+        entry, session_id=SESSION, now=NOW + 1, transcript_path="/elsewhere.jsonl"
+    )["ok"]
+    cursor = dict(
+        entry,
+        host="cursor",
+        provenance={"hook_event_name": "beforeSubmitPrompt", "session_id": SESSION},
+    )
+    verdict = omi.receipt_verdict(cursor, session_id=SESSION, **live)
+    assert not verdict["ok"] and omi.BLOCKED_HOST_ORIGIN in verdict["reason"]
+
+
+def test_f01_claude_wrapper_records_hook_provenance(tmp_path: Path) -> None:
+    home = _home_with_governance(tmp_path)
+    prompt = f"Fix and merge {SLUG}#735 after the checks pass."
+    transcript = _transcript(tmp_path / "t.jsonl", ("human", prompt))
+    proc = subprocess.run(
+        [sys.executable, str(CLAUDE_WRAP)],
+        input=json.dumps(_claude_payload(prompt, transcript)),
+        text=True,
+        capture_output=True,
+        env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)},
+        check=False,
+        timeout=60,
+    )
+    assert proc.returncode == 0, proc.stderr
+    store = home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME
+    (entry,) = omi.load_instructions(store)
+    assert entry["provenance"]["hook_event_name"] == "UserPromptSubmit"
+    assert entry["provenance"]["transcript_path"] == str(transcript)
+    assert omi.receipt_verdict(entry, session_id=SESSION, transcript_path=str(transcript))["ok"]

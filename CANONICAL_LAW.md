@@ -1460,28 +1460,58 @@ receipt or assertion an agent wrote are still not merge authority.
      into `~/.l9/autonomy/operator-merge-instructions.json`
      ([`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge_instruction.py)).
      A request to audit, review, publish, build or remediate without merge
-     intent records nothing. A question, a negation, text inside a paste,
-     a code fence, a block quote, a tool result, a PR description, a
+     intent records nothing. A question, text inside a paste, a code fence,
+     a block quote, quotation marks, or material introduced by a colon ("the
+     report says: merge #735"), a third-person report ("the reviewer
+     recommends that we merge #735"), a tool result, a PR description, a
      repository file, or a host-relayed turn (a scheduled task, a subagent
      report, a cross-session message, a webhook) is not an operator
-     instruction and records nothing. A cohort instruction must name the
-     repository; it resolves into individual grants only for pull requests
-     already open when it was spoken, and never into standing repository-wide
-     authority or authority over a later pull request.
+     instruction and records nothing: only a clause directed at the agent in
+     the imperative or first person authorizes, and clauses are read
+     independently ("don't merge #735, but merge #736" cancels one and
+     authorizes the other). A cohort instruction must name the repository;
+     the recorder lists that repository's open pull requests through the
+     GitHub REST path at recording time and stores that membership, so the
+     instruction resolves into individual grants only for pull requests in
+     that snapshot — never a pull request opened later, never one that was
+     closed at the time and reopened since, never standing repository-wide
+     authority — and a snapshot that could not be taken covers nothing.
+   - **Cancellation.** An explicit cancellation typed by the operator — "do
+     not merge #735 after all", "cancel the merge of #735", "revoke the merge
+     authorization for #735", "do not merge any open PRs in <owner>/<name>" —
+     is recorded by the same prompt hook as a revocation receipt. The latest
+     instruction wins: a cancellation withdraws every operator authority over
+     that pull request (or every pull request of the named repository)
+     recorded before it, including a grant already issued and a cohort it
+     belonged to, and leaves other pull requests' authority untouched; a later
+     authorization stands again. `merge_gate.py`, `authorize_merge.py` and
+     `stack_safe_merge.py --run` each read the revocation from the same
+     account-home receipt store, so a cancelled grant is `MERGE_PENDING` on
+     every path and the cancellation survives a restart. A cancellation also
+     withdraws a GitHub record for that pull request until the operator
+     authorizes again in their prompt.
 3. **Recording the operator's authority.** The agent transcribes a recorded
    instruction into a grant with
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction --repo <owner/name> --pr <n> --head-sha <live 40-hex>`.
    The script writes nothing unless, live on GitHub, the pull request is open,
-   `--head-sha` is its current head, the instruction covers it (explicitly, or
-   as a member of the recorded cohort), and the change touches no L9-ORG-007
-   protected path. The grant binds repository, pull request, exact head,
-   `issuer: human`, issue and expiry times, and the instruction's provenance
-   (host, session, scope, prompt digest, excerpt). It expires within four
-   hours and never after the instruction it came from; an instruction expires
-   eight hours after it was spoken. `merge_gate.py` allows an agent to run
-   `authorize_merge.py` only in this mode and only when a live recorded
-   instruction names that repository and pull request; every other run, a
-   direct write of the grant file or of the instruction receipt, a forged
+   `--head-sha` is its current head, a live and uncancelled instruction covers
+   it (explicitly, or as a member of the recorded cohort snapshot), the
+   receipt carries the host prompt hook's own provenance (event name,
+   session, transcript path) and is corroborated by a human turn of that
+   session in the host-written transcript, and the change touches no
+   L9-ORG-007 protected path. The grant binds repository, pull request, exact
+   head, `issuer: human`, issue and expiry times, and the instruction's
+   provenance (host, session, hook event, transcript, scope, cohort members,
+   prompt digest, excerpt). It expires within four hours and never after the
+   instruction it came from; an instruction expires eight hours after it was
+   spoken. `merge_gate.py` allows an agent to run `authorize_merge.py` only in
+   this mode and only when a live, uncancelled recorded instruction names that
+   repository and pull request **and** the receipt is bound to the live
+   session: the PreToolUse event's `session_id` and `transcript_path` must
+   match the receipt's hook provenance and a human turn of that transcript
+   must carry the instruction. Every other run, an agent run of the recorder
+   (other than its read-only `show`) or of its host adapters, a direct write
+   of the grant file, the instruction receipt or a host transcript, a forged
    fixture, an approving review, and a posted authorization line are denied.
    No terminal ceremony and no redundant GitHub comment are required.
 4. **Authority survives authorized remediation.** An instruction to fix and
@@ -1512,13 +1542,29 @@ receipt or assertion an agent wrote are still not merge authority.
    who is not the pull request author. An agent transcribing a valid human
    instruction does not become an independent human approver, and this
    section does not revise the invariant.
-7. **Assurance, stated plainly.** A recorded instruction proves that the host
-   delivered that text as a user turn of that session and that no agent tool
-   call wrote the receipt. It is not cryptographic proof of who typed it: the
-   host exposes no field that distinguishes a person from a relayed turn, so
-   the recorder rejects relay-marked prompts by content, and §6.2.12 item 7's
-   host-enforcement gap still applies to both records. Forging a receipt or a
-   grant is a violation of this section, not a loophole in it.
+7. **Assurance, stated plainly.** Two different kinds of guarantee back a
+   receipt and must not be confused. **Host-enforced:** the receipt carries
+   the prompt hook's own provenance, which only the host's prompt-submission
+   event supplies, and a human turn of the same session in the host-written
+   transcript carries the same text (Claude Code marks a typed prompt
+   `turnOrigin: "human"` and a relayed one `task_notification`; that field was
+   observed on 2026-10-15, is not a documented contract, and its absence fails
+   closed). **Best-effort software restriction:** `merge_gate.py` denies by
+   name an agent tool call that runs the recorder or its adapters, or writes
+   the receipt file or a transcript. That filter stops the ordinary agent
+   path; it is not a proof that no code path reaches the Python API, and a
+   worker running arbitrary code as the same OS account could forge the
+   store and the transcript alike — §6.2.12 item 7's host-enforcement gap
+   still applies to both records. A receipt is not cryptographic proof of who
+   typed it and establishes no GitHub identity. Forging a receipt, a grant or
+   a transcript is a violation of this section, not a loophole in it.
+9. **BLOCKED_HOST_ORIGIN.** Where a host exposes no gate-side session binding
+   and no host-written transcript this repository can read, the operator
+   prompt channel cannot be verified and is not opened: the recorder still
+   writes the receipt for audit, but `authorize_merge.py` refuses it as
+   `BLOCKED_HOST_ORIGIN` and the GitHub record is that host's only
+   authorization. Cursor is such a host today: it registers no merge gate
+   hook and its `beforeSubmitPrompt` transcript format is unverified.
 8. **Fail closed.** Absent a verifiable authorization for the live head, the
    merge is denied and the missing prerequisite is reported. If the merge gate
    is missing or crashes, the tool call is blocked (INV-1).
@@ -1530,6 +1576,8 @@ SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge
 [`ops/autonomy/stack_safe_merge.py`](ops/autonomy/stack_safe_merge.py).
 Host adapters: `environment/agents/adapters/claude-code/hooks/operator_merge_instruction_wrap.py`
 (Claude Code `UserPromptSubmit`), `ops/hooks/before_submit_merge_instruction.py`
-(Cursor `beforeSubmitPrompt`). Cursor registers no merge gate hook, so on
-Cursor the recorder plus `authorize_merge.py`'s own live checks and
-`stack_safe_merge.py`'s entrypoint check are the enforcement.
+(Cursor `beforeSubmitPrompt`). Cursor registers no merge gate hook and its
+receipts cannot be bound to a verifiable session, so on Cursor the operator
+prompt channel is BLOCKED_HOST_ORIGIN (item 9) and the GitHub record is the
+authorization; `authorize_merge.py`'s own live checks and
+`stack_safe_merge.py`'s entrypoint check still run there.

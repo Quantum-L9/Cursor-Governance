@@ -208,7 +208,12 @@ remediation:
     redundant_github_comment: not_required
     local_receipt: not_authority # a grant file or instruction receipt an agent wrote binds nothing
     repository_wide: forbidden
-    cohort: open_prs_at_instruction_time_only # "merge all currently open PRs in <owner/name>" is a snapshot
+    cohort: open_prs_snapshot_from_github_at_instruction_time # recorder lists open PRs over REST; unknown membership covers nothing
+    directed_intent_only: true # imperative / first-person clause; quoted, colon-introduced, third-person text never authorizes
+    revocation: latest_operator_instruction_wins # "do not merge #n" / "cancel the merge of #n" withdraws grants and GitHub records; gate, writer, executor honour it
+    receipt_binding: host_hook_provenance_plus_live_session_transcript_corroboration # PreToolUse session_id + transcript_path; human turn in the host transcript
+    host_enforced_vs_best_effort: provenance_and_transcript_are_host_enforced_name_filters_are_best_effort
+    cursor_operator_channel: BLOCKED_HOST_ORIGIN # no merge gate hook, no verifiable transcript; GitHub record only
     survives_remediation: same_pr_fresh_head_grant # re-grant the final head from the same instruction
     org_007: author_cannot_self_authorize_and_operator_prompt_is_not_independent
     instruction_ttl_seconds: 28800

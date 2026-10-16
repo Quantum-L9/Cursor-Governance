@@ -168,8 +168,34 @@ def test_cli_confirmed_by_human_writes_bound_grant(tmp_path: Path) -> None:
 
 
 def _instructions(tmp_path: Path, prompt: str = f"Fix and merge {SLUG}#42.", **kw) -> Path:
+    """A receipt as the Claude UserPromptSubmit wrapper writes it, with the
+    host transcript carrying the same human turn."""
     store = tmp_path / "operator-merge-instructions.json"
-    defaults = {"host": "claude-code", "session_id": "sess-1", "path": store, "now": NOW}
+    transcript = tmp_path / "transcript.jsonl"
+    record = {
+        "type": "user",
+        "sessionId": "sess-1",
+        "turnOrigin": "human",
+        "origin": {"kind": "human"},
+        "message": {"role": "user", "content": prompt},
+    }
+    with transcript.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record) + "\n")
+    payload = {
+        "session_id": "sess-1",
+        "transcript_path": str(transcript),
+        "cwd": "/ws",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+    defaults = {
+        "host": "claude-code",
+        "session_id": "sess-1",
+        "path": store,
+        "now": NOW,
+        "provenance": omi.host_provenance("claude-code", payload),
+        "open_pull_requests": lambda repo: [42, 700],
+    }
     defaults.update(kw)
     omi.record_instructions(prompt, cwd_repo=None, **defaults)
     return store
@@ -369,20 +395,17 @@ def test_operator_mode_unreadable_pull_request_refuses(tmp_path: Path, capsys) -
 
 
 def test_cohort_instruction_grants_each_pull_request_open_at_the_time(tmp_path: Path) -> None:
-    """Positive 5 / negative 8: a cohort resolves into scoped grants, never future PRs."""
-    store = _instructions(
-        tmp_path, prompt=f"Remediate and merge all currently open PRs in {SLUG}.", now=NOW
-    )
-    before = "2026-10-14T19:19:43Z"  # well before NOW (2027-01-15)
-    assert _operator_main(tmp_path, store, view=_view(created_at=before)) == 0
+    """Positive 5 / negative 8: a cohort resolves into scoped grants for the pull
+    requests in the recorder's snapshot, never for one that was not open then."""
+    prompt = f"Remediate and merge all currently open PRs in {SLUG}."
+    store = _instructions(tmp_path, prompt=prompt, open_pull_requests=lambda repo: [42, 700])
+    assert _operator_main(tmp_path, store) == 0
     (entry,) = _grants(tmp_path)
     assert entry["provenance"]["scope"] == "open_cohort"
-    after = "2027-01-15T12:00:00Z"
+    assert entry["provenance"]["cohort_members"] == [42, 700]
     (tmp_path / "auth.json").unlink()
-    assert (
-        _operator_main(tmp_path, store, view=_view(created_at=after))
-        == authorize_merge.OPERATOR_REFUSED_EXIT
-    )
+    store = _instructions(tmp_path, prompt=prompt, open_pull_requests=lambda repo: [700])
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
     assert _grants(tmp_path) == []
 
 
@@ -442,3 +465,134 @@ def test_operator_mode_cli_subprocess_needs_no_terminal(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["provenance"]["channel"] == "operator_prompt"
+
+
+# --- GAR-MERGE-AUTHORITY-735 findings: the grant writer validates provenance ------
+
+
+def _transcript(path: Path, text: str, *, origin: str = "human", session: str = "sess-1") -> Path:
+    record = {
+        "type": "user",
+        "userType": "external",
+        "isSidechain": False,
+        "sessionId": session,
+        "turnOrigin": origin,
+        "origin": {"kind": origin.replace("_", "-")},
+        "promptSource": "sdk" if origin == "human" else "system",
+        "message": {"role": "user", "content": text},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    return path
+
+
+def _hosted(
+    tmp_path: Path,
+    prompt: str = f"Fix and merge {SLUG}#42.",
+    *,
+    now: int = NOW,
+    transcript_text: str | None = None,
+    origin: str = "human",
+    store: Path | None = None,
+    open_pull_requests=None,
+) -> Path:
+    """A receipt the Claude UserPromptSubmit wrapper would have written."""
+    store = store or tmp_path / "operator-merge-instructions.json"
+    transcript = _transcript(tmp_path / f"t-{now}.jsonl", transcript_text or prompt, origin=origin)
+    payload = {
+        "session_id": "sess-1",
+        "transcript_path": str(transcript),
+        "cwd": "/ws",
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+    omi.record_instructions(
+        prompt,
+        host="claude-code",
+        session_id="sess-1",
+        cwd="/ws",
+        path=store,
+        now=now,
+        cwd_repo=None,
+        provenance=omi.host_provenance("claude-code", payload),
+        open_pull_requests=open_pull_requests,
+    )
+    return store
+
+
+def test_f01_hosted_receipt_still_becomes_a_grant(tmp_path: Path) -> None:
+    store = _hosted(tmp_path)
+    assert _operator_main(tmp_path, store) == 0
+    (entry,) = _grants(tmp_path)
+    prov = entry["provenance"]
+    assert prov["channel"] == authorize_merge.OPERATOR_CHANNEL
+    assert prov["hook_event_name"] == "UserPromptSubmit"
+    assert prov["transcript_path"].endswith(".jsonl")
+
+
+def test_f01_receipt_not_corroborated_by_the_transcript_is_refused(tmp_path: Path, capsys) -> None:
+    """The receipt names a transcript whose human turns never said this."""
+    store = _hosted(tmp_path, transcript_text="Review PR #42 and report.")
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+    assert "transcript" in json.loads(capsys.readouterr().out)["reason"]
+
+
+def test_f01_relayed_turn_in_the_transcript_does_not_corroborate(tmp_path: Path) -> None:
+    store = _hosted(tmp_path, origin="task_notification")
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+
+
+def test_f01_cursor_host_is_blocked_host_origin(tmp_path: Path, capsys) -> None:
+    store = tmp_path / "operator-merge-instructions.json"
+    payload = {
+        "conversation_id": "conv-1",
+        "generation_id": "gen-1",
+        "workspace_roots": ["/ws"],
+        "hook_event_name": "beforeSubmitPrompt",
+        "prompt": f"Fix and merge {SLUG}#42.",
+    }
+    omi.record_instructions(
+        f"Fix and merge {SLUG}#42.",
+        host="cursor",
+        session_id="conv-1",
+        path=store,
+        now=NOW,
+        cwd_repo=None,
+        provenance=omi.host_provenance("cursor", payload),
+    )
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert omi.BLOCKED_HOST_ORIGIN in json.loads(capsys.readouterr().out)["reason"]
+    assert _grants(tmp_path) == []
+
+
+def test_f03_revocation_before_grant_refuses(tmp_path: Path, capsys) -> None:
+    store = _hosted(tmp_path, now=NOW)
+    _hosted(tmp_path, f"Do not merge {SLUG}#42.", now=NOW + 30, store=store)
+    assert _operator_main(tmp_path, store) == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert "revoked" in json.loads(capsys.readouterr().out)["reason"]
+    assert _grants(tmp_path) == []
+
+
+def test_f03_reauthorization_after_revocation_grants(tmp_path: Path) -> None:
+    store = _hosted(tmp_path, now=NOW)
+    _hosted(tmp_path, f"Do not merge {SLUG}#42.", now=NOW + 30, store=store)
+    _hosted(tmp_path, f"Merge {SLUG}#42 after all.", now=NOW + 45, store=store)
+    assert _operator_main(tmp_path, store) == 0
+    assert len(_grants(tmp_path)) == 1
+
+
+def test_f04_cohort_grant_requires_snapshot_membership(tmp_path: Path, capsys) -> None:
+    prompt = f"Remediate and merge all currently open PRs in {SLUG}."
+    store = _hosted(tmp_path, prompt, open_pull_requests=lambda repo: [42, 700])
+    assert _operator_main(tmp_path, store, view=_view(created_at="2026-10-14T19:19:43Z")) == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["provenance"]["scope"] == "open_cohort"
+    # A PR that existed earlier but was not open at instruction time
+    store2 = _hosted(tmp_path, prompt, now=NOW + 5, open_pull_requests=lambda repo: [700])
+    (tmp_path / "auth.json").unlink()
+    code = _operator_main(tmp_path, store2, view=_view(created_at="2026-10-01T00:00:00Z"))
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert _grants(tmp_path) == []
+    capsys.readouterr()

@@ -136,10 +136,44 @@ def _operator_run(repo: str = SLUG, pr: int = 53) -> str:
     )
 
 
+SESSION = "sess-human-1"
+
+
+def _host_transcript(
+    path: Path, text: str, *, origin: str = "human", session: str = SESSION
+) -> Path:
+    """One human turn as Claude Code writes it (observed 2026-10-15: turnOrigin/origin.kind)."""
+    record = {
+        "type": "user",
+        "userType": "external",
+        "isSidechain": False,
+        "sessionId": session,
+        "turnOrigin": origin,
+        "origin": {"kind": origin.replace("_", "-")},
+        "promptSource": "sdk" if origin == "human" else "system",
+        "message": {"role": "user", "content": text},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    return path
+
+
 def _run_with_instruction(
-    tmp_path: Path, command: str, *, record_for: tuple[str, int] | None
+    tmp_path: Path,
+    command: str,
+    *,
+    record_for: tuple[str, int] | None,
+    through_wrapper: bool = True,
+    bind_session: bool = True,
+    transcript_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """The real wrapper, with the receipt written where the host hook writes it."""
+    """The real PreToolUse wrapper, with the receipt written as the host hook writes it.
+
+    ``through_wrapper`` records with the real UserPromptSubmit wrapper from a
+    documented payload; False writes the receipt with the Python API as an
+    agent that reached the implementation would. ``bind_session`` puts the live
+    session and transcript on the PreToolUse event, as Claude Code does.
+    """
     import sys as _sys
 
     _sys.path.insert(0, str(REPO / "ops" / "autonomy"))
@@ -149,15 +183,6 @@ def _run_with_instruction(
     gov = home / ".cursor-governance"
     gov.parent.mkdir(parents=True, exist_ok=True)
     gov.symlink_to(REPO)
-    if record_for:
-        repo, pr = record_for
-        omi.record_instructions(
-            f"Fix and merge {repo}#{pr} after the checks pass.",
-            host="claude-code",
-            session_id="sess-1",
-            path=home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME,
-            cwd_repo=None,
-        )
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
     for key in (
         "L9_MERGE_AUTHORIZED",
@@ -167,9 +192,53 @@ def _run_with_instruction(
         "L9_OPERATOR_INSTRUCTION_FILE",
     ):
         env.pop(key, None)
+    transcript = home / ".claude" / "projects" / "-ws" / f"{SESSION}.jsonl"
+    prompt = ""
+    if record_for:
+        repo, pr = record_for
+        prompt = f"Fix and merge {repo}#{pr} after the checks pass."
+        _host_transcript(transcript, transcript_text or prompt)
+        payload = {
+            "session_id": SESSION,
+            "transcript_path": str(transcript),
+            "cwd": str(tmp_path),
+            "permission_mode": "default",
+            "hook_event_name": "UserPromptSubmit",
+            "prompt": prompt,
+        }
+        if through_wrapper:
+            recorded = subprocess.run(
+                [
+                    sys.executable,
+                    str(
+                        REPO
+                        / "environment/agents/adapters/claude-code/hooks"
+                        / ("operator_merge_instruction_" + "wrap.py")
+                    ),
+                ],
+                input=json.dumps(payload),
+                text=True,
+                capture_output=True,
+                env=env,
+                check=False,
+                timeout=60,
+            )
+            assert recorded.returncode == 0, recorded.stderr
+        else:
+            omi.record_instructions(
+                prompt,
+                host="claude-code",
+                session_id=SESSION,
+                path=home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME,
+                cwd_repo=None,
+                provenance=omi.host_provenance("claude-code", payload),
+            )
+    event = _comment_event(command)
+    if bind_session:
+        event.update({"session_id": SESSION, "transcript_path": str(transcript)})
     return subprocess.run(
         [sys.executable, str(WRAP)],
-        input=json.dumps(_comment_event(command)),
+        input=json.dumps(event),
         text=True,
         capture_output=True,
         env=env,
@@ -198,6 +267,46 @@ def test_wrapper_denies_the_transcription_for_another_pull_request(tmp_path: Pat
     proc = _run_with_instruction(tmp_path, _operator_run(pr=54), record_for=(SLUG, 53))
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+# --- GAR-MERGE-AUTHORITY-735 F01 on the real Claude PreToolUse path -------------------
+
+
+def test_f01_wrapper_denies_a_receipt_the_live_transcript_does_not_corroborate(
+    tmp_path: Path,
+) -> None:
+    """Same receipt shape, but the host never recorded that human turn."""
+    proc = _run_with_instruction(
+        tmp_path,
+        _operator_run(),
+        record_for=(SLUG, 53),
+        through_wrapper=False,
+        transcript_text="Review PR #53 and summarize the risks.",
+    )
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+
+
+def test_f01_wrapper_denies_when_the_event_carries_no_session_binding(tmp_path: Path) -> None:
+    proc = _run_with_instruction(
+        tmp_path, _operator_run(), record_for=(SLUG, 53), bind_session=False
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_f01_wrapper_denies_an_agent_run_of_the_recorder(tmp_path: Path) -> None:
+    command = (
+        '"$HOME/.cursor-governance/.venv/bin/python" '
+        '"$HOME/.cursor-governance/ops/autonomy/operator_merge_instruction.py" '
+        "record --host claude-code"
+    )
+    proc = _run_with_instruction(tmp_path, command, record_for=None)
+    assert proc.returncode == 0, proc.stderr
+    decision = json.loads(proc.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert "never by an agent" in decision["permissionDecisionReason"]
 
 
 def test_wrapper_denies_an_authorization_line_in_a_body_file(tmp_path: Path) -> None:
