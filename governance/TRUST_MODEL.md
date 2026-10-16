@@ -41,11 +41,13 @@ an independent enforcement boundary.
 A human contributor or repository administrator is also a change producer when
 authoring a change.
 
-Administrative access does not automatically establish independent approval.
+Repository authority, not independence from the author, is what qualifies an
+authorizer (L9-ORG-007, policy 4.0.0; CANONICAL_LAW §6.2.14).
 
 For governance-sensitive changes:
 
-- the author must not approve their own work;
+- an authenticated human with admin, maintain or write authority over the
+  repository must explicitly authorize the merge; that human may be the author;
 - agent approval is not human approval;
 - the approver must belong to the authorized owner group;
 - platform-verifiable approval evidence is required.

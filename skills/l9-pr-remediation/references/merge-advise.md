@@ -6,8 +6,8 @@ role: merge_advise
 tags: [pr, merge, diagnose, git, stack-safe]
 owner: igor_beylin
 status: active
-version: 2.2.0
-updated: 2026-10-12
+version: 2.4.0
+updated: 2026-10-15
 /L9_META -->
 
 # Merge (Diagnose advise vs Converge action)
@@ -26,31 +26,53 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
 - **Diagnose (`/pr`):** advise only. **Never merge.** If the user wants merge, tell them to invoke `/l9-pr-remediation` (Converge). Do not run `gh pr merge` from Diagnose even after a verbal “looks good.”
 - **Converge (`/l9-pr-remediation`):** remediates to merge readiness and
   stops at **MERGE_PENDING**. Invoking it is not merge authority
-  (CANONICAL_LAW §6.2.12). A PR merges only when FIRST_MERGE_GATE holds
+  (CANONICAL_LAW §6.2.13). A PR merges only when FIRST_MERGE_GATE holds
   (full open-PR inventory, overlap matrix, stack probe, remediations
-  published) **and** a human merge grant covers that PR at its current head.
-  Then MERGE_TRAIN **oldest `createdAt` first (bottom-up)**. Do not merge the
-  first green PR. Zero unresolved `reviewThreads` (any author, paginated)
+  published) **and** human authorization covers that PR at its current
+  head. Then MERGE_TRAIN **oldest `createdAt` first (bottom-up)**. Do not merge
+  the first green PR. Zero unresolved `reviewThreads` (any author, paginated)
   immediately before each merge.
 
-The grant is the human's act, never the agent's. The agent reports
-MERGE_PENDING with the exact command; the **human** runs it in their own
-terminal and types the target back to confirm:
+The authorization is the human's act, never the agent's. No terminal
+transcription. Two records count (CANONICAL_LAW §6.2.13):
 
-```bash
-# human only — merge_gate.py denies an agent that runs this or writes the grant file
-"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --repo {owner}/{repo} --pr {number} --head-sha {sha}
-```
+1. **GitHub.** The human submits an APPROVED review on the current head or
+   posts this exact line on the pull request:
 
-One grant per PR and head, expiring. `--all-open` is refused. A head that
-moves after the grant returns the PR to MERGE_PENDING.
+   ```text
+   authorize merge {owner}/{repo}#{number}@{sha}
+   ```
+
+2. **Operator prompt.** The operator asked for the merge in their own words
+   in chat — "merge these PRs", "fix and merge #{number} when green", "merge
+   all open PR’s in https://github.com/{owner}/{repo}" — and the host prompt
+   hook recorded it at submission (CANONICAL_LAW §6.2.14). Once
+   the PR is green, mergeable and thread-clean, the agent transcribes it:
+
+   ```bash
+   "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction --repo {owner}/{repo} --pr {number} --head-sha {sha}
+   ```
+
+   It refuses a moved head (re-run for the live head after readiness), a
+   closed PR, a PR the instruction does not cover (a cohort covers only PRs
+   open when it was spoken), and an operator without admin, maintain or write
+   authority over the repository. The refusal names the
+   prerequisite; it is MERGE_PENDING, not a reason to try another transport.
+
+The operator may be the PR author and the PR may touch L9-ORG-007 paths: an
+authorized owner's own instruction is the authorization (CANONICAL_LAW §6.2.14,
+policy 4.0.0). Never ask them to repeat a recorded instruction, to use special
+wording, or to post a GitHub comment. A head that moves after the record returns the PR to
+MERGE_PENDING; a still-live instruction re-grants the verified final head
+without asking the operator again. The agent does not post the line, does
+not approve, and never writes the grant file or the instruction receipt.
 
 ## Preferred — GitHub merge (stack-safe)
 
 Do **not** choose `--squash` or `--merge` by hand. The helper probes whether
 this head is the `baseRefName` of another open PR and emits the only safe
 flags (`--merge` for a parent, `--squash` for a leaf). `--json` also reports
-the live head and whether a human grant covers it (`AUTHORIZED` /
+the live head and whether human GitHub authorization covers it (`AUTHORIZED` /
 `MERGE_PENDING`); `--run` rechecks the live head, merges only under that
 grant, and binds the merge to the SHA:
 
@@ -93,8 +115,9 @@ Remediation publish is `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git 
 - Force-push to main
 - `--admin` / bypass rules
 - Merge during Diagnose (including “after user confirm” from Diagnose)
-- Merge without a human grant for the PR's current head (CANONICAL_LAW §6.2.12)
-- An agent running `authorize_merge.py`, writing `merge-authorization.json`, or enabling auto-merge
+- Merge without human authorization for the PR's current head (CANONICAL_LAW §6.2.13)
+- An agent running the terminal mode of `authorize_merge.py`, writing `merge-authorization.json` or `operator-merge-instructions.json`, inventing an operator instruction, posting `authorize merge`, submitting an approving review, or enabling auto-merge
+- Reporting a merge before `stack_safe_merge.py` prints `MERGED` with GitHub's merge commit
 - Merge a red or conflicted PR
 - Merge before FIRST_MERGE_GATE
 - Squash/rebase a head that is the base of another open PR

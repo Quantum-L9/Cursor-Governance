@@ -1,51 +1,92 @@
 #!/usr/bin/env python3
 """Issue a human merge grant: one repository, one PR, one exact head, expiring.
 
-A grant is the only ordinary merge authority ``merge_gate.py`` and
-``stack_safe_merge.py`` accept (CANONICAL_LAW §6.2.12). It is written only after
-a human types the exact target back on the controlling terminal. Invoking
-/l9-pr-remediation, entering Converge, green CI, an L4 release, ``make pr``, a
-DAG step, or an agent instruction is NOT a grant, and an agent never runs this
-script: autonomous remediation stops at MERGE_PENDING and reports the exact
-command below for the human to run.
+A grant is one of the merge authorities ``merge_gate.py`` and
+``stack_safe_merge.py`` accept (CANONICAL_LAW §6.2.12, §6.2.13). The human is
+always the authorizer; this script only records that authority in a form the
+gate can bind to an exact head. Two confirmations exist:
+
+* **Operator prompt** (``--operator-instruction``, §6.2.13). The host's
+  prompt-submission hook recorded an explicit merge instruction from the
+  operator ("merge PR #735 after the checks pass", "fix and merge #735",
+  "remediate and merge all currently open PRs in owner/name"). The agent may
+  run this script in that mode, without a terminal, and it writes the grant
+  only after rechecking, live on GitHub, that the pull request is open, that
+  ``--head-sha`` is its current head, that a live receipt covers it (an
+  explicit PR, a pull request resolved from the conversation when the operator
+  spoke, or membership of the open-pull-request snapshot the recorder took
+  then) and has not been cancelled by a later instruction, that the receipt
+  carries the host hook's own provenance and is corroborated by a human turn
+  of its session in the host-written transcript, and that the session's GitHub
+  identity — the operator's own connected account — is a human holding
+  ``admin``, ``maintain`` or ``write`` on the repository (§6.2.14). The grant
+  carries the instruction's provenance and that authorizer. The operator may
+  be the pull request's author and the change may touch L9-ORG-007 paths: an
+  authorized owner's direct instruction is that invariant's authorization
+  (as amended). A receipt from a host whose prompt channel cannot be verified
+  this way (Cursor) is refused as BLOCKED_HOST_ORIGIN; the GitHub record
+  remains that host's channel.
+
+* **Controlling terminal** (default). A human types the exact target back on
+  ``/dev/tty``. An agent's tool shell has no controlling terminal, so this mode
+  refuses there by construction, and ``merge_gate.py`` denies an agent tool
+  call that runs it.
 
     "$HOME/.cursor-governance/.venv/bin/python" \\
         "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" \\
-        --repo owner/name --pr 53 --head-sha <40-hex> --reason "reviewed; merge it"
+        --operator-instruction --repo owner/name --pr 53 --head-sha <40-hex>
 
 Repository-wide authority (``--all-open`` / ``--pr '*'``) is not issuable, and a
 receipt with no head binding, no ``issuer: human``, or a lifetime over
-MAX_TTL_SECONDS authorizes nothing. The terminal challenge proves an
-interactive caller, not identity: on a host where the worker runs as the same
-OS account it is defeatable by deliberate forgery, which is the host-enforcement
-gap §6.2.12 names.
+MAX_TTL_SECONDS authorizes nothing. Neither confirmation proves identity to a
+cryptographic standard: on a host where the worker runs as the same OS account
+both are defeatable by deliberate forgery, which is the host-enforcement gap
+§6.2.12 names. Forgery is a violation of that section, not a loophole in it.
 
 It does not merge. It does not authorize force-push, admin-merge, or hard-reset.
 
 Metadata:
   layer: ops
   role: merge_authorization
-  version: 3.0.0
+  version: 5.0.0
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import pwd
 import re
 import sys
 import time
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+import operator_merge_instruction as omi  # noqa: E402
+from github_merge_authorization import (  # noqa: E402
+    fetch_pull_request,
+    fetch_session_principal,
+    principal_may_authorize,
+)
 
 DEFAULT_TTL_SECONDS = 60 * 60
 #: merge_gate.py refuses any grant whose expiry lies further out than this.
 MAX_TTL_SECONDS = 4 * 60 * 60
 ISSUER = "human"
 DEFAULT_REASON = "human merge grant"
+OPERATOR_CHANNEL = "operator_prompt"
+TERMINAL_CHANNEL = "controlling_terminal"
 #: Exit status when no human confirmed the grant on a terminal.
 NOT_CONFIRMED_EXIT = 3
+#: Exit status when the operator-prompt path cannot bind this merge.
+OPERATOR_REFUSED_EXIT = 4
 
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 
@@ -62,6 +103,19 @@ def auth_path(explicit: str) -> Path:
     if explicit:
         return Path(explicit).expanduser()
     return Path.home() / ".l9" / "autonomy" / "merge-authorization.json"
+
+
+def account_instruction_path() -> Path:
+    """The receipt store under the account's home from the password database.
+
+    Not ``$HOME`` and not an environment override: this process's environment
+    belongs to whoever runs it, and in operator mode that is the agent.
+    """
+    try:
+        home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    except (KeyError, OSError):
+        home = Path.home()
+    return home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME
 
 
 def _normalize_pr(pr: str | int) -> int:
@@ -85,6 +139,7 @@ def write_authorization(
     path: Path,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
     now: float | None = None,
+    provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not repo or "/" not in repo:
         raise ValueError("repo must be owner/name")
@@ -107,7 +162,7 @@ def write_authorization(
         except json.JSONDecodeError:
             current = {"authorizations": []}
     stamp = int(now if now is not None else time.time())
-    entry = {
+    entry: dict[str, Any] = {
         "repo": repo,
         "pr": normalized_pr,
         "head_sha": sha,
@@ -116,6 +171,8 @@ def write_authorization(
         "expires_at": stamp + ttl_seconds,
         "reason": reason.strip(),
     }
+    if provenance:
+        entry["provenance"] = dict(provenance)
     entries = [
         item
         for item in current.get("authorizations", [])
@@ -148,7 +205,201 @@ def confirm_on_terminal(token: str) -> bool:
     return answer == token
 
 
-def main(argv: list[str] | None = None, *, confirm: Callable[[str], bool] | None = None) -> int:
+# --- operator-prompt confirmation (§6.2.13) ---------------------------------
+
+
+def _parse_github_time(value: Any) -> float | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def fetch_readiness(repo: str, pr: int) -> dict[str, Any]:
+    """The existing readiness board's verdict for ``repo#pr`` (``pr_board.board_for``).
+
+    ``board == "merge"`` means required checks are green, review threads are
+    resolved, there is no conflict and the stack allows it, at the live head.
+    """
+    import pr_board  # noqa: PLC0415 - only a readiness-conditional instruction needs it
+
+    return pr_board.board_for(repo, str(pr))
+
+
+def operator_verdict(
+    repo: str,
+    pr: int,
+    head_sha: str,
+    *,
+    instruction_path: Path | None = None,
+    now: float | None = None,
+    pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
+    session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
+    readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
+) -> dict[str, Any]:
+    """Whether a recorded operator instruction may become a grant for this head.
+
+    Every refusal names the missing prerequisite. The checks run in the order a
+    reader can act on them: the live pull request first (an instruction for a
+    closed or moved PR is moot), then the instruction, then the operator's
+    authority over the repository, then the instruction's own readiness
+    condition ("once CI is green"), proven by the readiness board at the live
+    head. A condition that waits on a decision never reaches here: it is not a
+    live authorizing instruction (``omi.pending_condition``).
+    """
+    stamp = time.time() if now is None else now
+    sha = head_sha.strip().lower()
+    refused: dict[str, Any] = {"authorized": False, "instruction": None, "pull_request": None}
+
+    try:
+        view = pull_request(repo, pr)
+    except RuntimeError as exc:
+        refused["reason"] = f"cannot verify the live pull request ({exc})"
+        return refused
+    live = str(((view or {}).get("head") or {}).get("sha") or "").strip().lower()
+    state = str(view.get("state") or "")
+    author = str(((view or {}).get("user") or {}).get("login") or "")
+    created = _parse_github_time(view.get("created_at"))
+    summary = {
+        "state": state,
+        "head_sha": live,
+        "author": author,
+        "created_at": view.get("created_at"),
+    }
+    refused["pull_request"] = summary
+    if state != "open" or view.get("merged"):
+        merged = " and merged" if view.get("merged") else ""
+        refused["reason"] = f"pull request is {state or 'unknown'}{merged}"
+        return refused
+    if not _FULL_SHA.match(live):
+        refused["reason"] = "GitHub did not report the pull request's head"
+        return refused
+    if live != sha:
+        refused["reason"] = (
+            f"head moved: requested {sha}, live {live}. Verify the live head's readiness, "
+            "then re-run with it; the operator instruction still covers this pull request"
+        )
+        return refused
+    if created is None:
+        refused["reason"] = "GitHub did not report when the pull request was opened"
+        return refused
+
+    verdict = omi.instruction_verdict(
+        repo,
+        pr,
+        path=instruction_path or account_instruction_path(),
+        now=stamp,
+    )
+    if not verdict["authorized"]:
+        refused["reason"] = (
+            f"no live operator merge instruction covers {repo}#{pr}: {verdict['reason']}. The "
+            "operator authorizes by asking for the merge in their own words in this session's "
+            "chat, or on GitHub (CANONICAL_LAW §6.2.13, §6.2.14); no particular wording is "
+            "required"
+        )
+        return refused
+    instruction = verdict["instruction"]
+    receipt = omi.receipt_verdict(instruction, now=stamp)
+    if not receipt["ok"]:
+        refused["reason"] = (
+            f"operator instruction {instruction.get('id')} for {repo}#{pr} cannot become a grant: "
+            f"{receipt['reason']}. Only a receipt the host prompt hook wrote, corroborated by a "
+            "human turn of its session in the host transcript, is the operator's authority "
+            "(CANONICAL_LAW §6.2.13)"
+        )
+        refused["instruction"] = instruction
+        return refused
+
+    try:
+        principal = session_principal(repo)
+    except RuntimeError as exc:
+        refused["reason"] = f"cannot verify the operator's authority over {repo} ({exc})"
+        refused["instruction"] = instruction
+        return refused
+    if not principal_may_authorize(principal):
+        refused["reason"] = (
+            f"the session's GitHub identity {principal.get('login') or '<unknown>'} "
+            f"({principal.get('type') or 'unknown type'}) holds "
+            f"{principal.get('permission') or 'no'} permission on {repo}; only a human with "
+            "admin, maintain or write authority over the repository can authorize its merge "
+            "(CANONICAL_LAW §6.2.14). This pull request is outside the operator's authorized scope"
+        )
+        refused["instruction"] = instruction
+        return refused
+
+    condition = instruction.get("condition")
+    if isinstance(condition, dict) and condition.get("status") == omi.CONDITION_READINESS:
+        text = condition.get("text") or "readiness"
+        try:
+            board = readiness(repo, pr)
+        except Exception as exc:  # noqa: BLE001 - an unreadable condition is unmet, never met
+            board = {"board": "wait", "reason": f"readiness unreadable ({exc})"}
+        if str((board or {}).get("board") or "") != "merge":
+            refused["reason"] = (
+                f"operator instruction {instruction.get('id')} for {repo}#{pr} is conditional "
+                f"({text}) and the condition is not yet met at head {sha}: the readiness board "
+                f"says {(board or {}).get('board') or 'unknown'} "
+                f"({(board or {}).get('reason') or 'no reason given'}). The instruction still "
+                "covers this pull request; re-run once it is ready"
+            )
+            refused["instruction"] = instruction
+            refused["readiness"] = board
+            return refused
+
+    return {
+        "authorized": True,
+        "reason": (
+            "live operator instruction from a human with "
+            f"{principal.get('permission')} authority covers an open PR at its live head"
+        ),
+        "instruction": instruction,
+        "pull_request": summary,
+        "authorizer": principal,
+    }
+
+
+def operator_provenance(
+    instruction: dict[str, Any],
+    pull_request: dict[str, Any],
+    authorizer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    raw_hook = instruction.get("provenance")
+    hook = raw_hook if isinstance(raw_hook, dict) else {}
+    return {
+        "channel": OPERATOR_CHANNEL,
+        "recorded_by": "agent",
+        "instruction_id": instruction.get("id"),
+        "host": instruction.get("host"),
+        "session_id": instruction.get("session_id"),
+        "hook_event_name": hook.get("hook_event_name"),
+        "transcript_path": hook.get("transcript_path"),
+        "scope": instruction.get("scope"),
+        "source": instruction.get("source"),
+        "cohort_members": instruction.get("members")
+        if instruction.get("scope") == "open_cohort"
+        else None,
+        "recorded_at": instruction.get("recorded_at"),
+        "instruction_expires_at": instruction.get("expires_at"),
+        "prompt_sha256": instruction.get("prompt_sha256"),
+        "excerpt": instruction.get("excerpt"),
+        "pull_request_author": pull_request.get("author"),
+        "authorizer_login": (authorizer or {}).get("login"),
+        "authorizer_permission": (authorizer or {}).get("permission"),
+    }
+
+
+def main(
+    argv: list[str] | None = None,
+    *,
+    confirm: Callable[[str], bool] | None = None,
+    instruction_path: Path | None = None,
+    pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
+    session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
+    readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
+    now: float | None = None,
+) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", required=True)
     parser.add_argument("--pr", default="", help="the PR number this grant covers")
@@ -158,7 +409,12 @@ def main(argv: list[str] | None = None, *, confirm: Callable[[str], bool] | None
         action="store_true",
         help="refused: repository-wide merge authority is not issuable",
     )
-    parser.add_argument("--reason", default=DEFAULT_REASON)
+    parser.add_argument(
+        "--operator-instruction",
+        action="store_true",
+        help="confirm from the operator's recorded prompt instruction instead of a terminal",
+    )
+    parser.add_argument("--reason", default="")
     parser.add_argument("--auth-file", default="")
     parser.add_argument("--ttl-seconds", type=int, default=DEFAULT_TTL_SECONDS)
     args = parser.parse_args(argv)
@@ -176,23 +432,55 @@ def main(argv: list[str] | None = None, *, confirm: Callable[[str], bool] | None
         print("REFUSED: --head-sha must be the full 40-hex head commit id", file=sys.stderr)
         return 2
 
-    token = confirmation_token(args.repo, pr, sha)
-    if not (confirm or confirm_on_terminal)(token):
-        print(
-            "REFUSED: no human confirmed this grant on a controlling terminal. Merge "
-            "grants are issued by a human (CANONICAL_LAW §6.2.12); an agent reports "
-            "MERGE_PENDING instead of running this script.",
-            file=sys.stderr,
+    provenance: dict[str, Any] | None = None
+    ttl = args.ttl_seconds
+    reason = args.reason.strip()
+    if args.operator_instruction:
+        verdict = operator_verdict(
+            args.repo,
+            pr,
+            sha,
+            instruction_path=instruction_path,
+            now=now,
+            pull_request=pull_request,
+            session_principal=session_principal,
+            readiness=readiness,
         )
-        return NOT_CONFIRMED_EXIT
+        if not verdict["authorized"]:
+            print(json.dumps({**verdict, "status": "MERGE_PENDING"}, indent=2, sort_keys=True))
+            print(f"REFUSED: {verdict['reason']}", file=sys.stderr)
+            return OPERATOR_REFUSED_EXIT
+        instruction = verdict["instruction"]
+        provenance = operator_provenance(
+            instruction, verdict["pull_request"], verdict.get("authorizer")
+        )
+        stamp = time.time() if now is None else now
+        remaining = int(float(instruction.get("expires_at") or 0) - stamp)
+        ttl = max(1, min(ttl, remaining))
+        reason = reason or f"operator prompt instruction {instruction.get('id')}"
+    else:
+        token = confirmation_token(args.repo, pr, sha)
+        if not (confirm or confirm_on_terminal)(token):
+            print(
+                "REFUSED: no human confirmed this grant on a controlling terminal, and no "
+                "--operator-instruction was requested. Merge grants are issued by a human "
+                "(CANONICAL_LAW §6.2.12, §6.2.13); an agent reports MERGE_PENDING instead "
+                "of running this mode.",
+                file=sys.stderr,
+            )
+            return NOT_CONFIRMED_EXIT
+        provenance = {"channel": TERMINAL_CHANNEL}
+        reason = reason or DEFAULT_REASON
     try:
         entry = write_authorization(
             repo=args.repo,
             pr=pr,
             head_sha=sha,
-            reason=args.reason,
+            reason=reason,
             path=auth_path(args.auth_file),
-            ttl_seconds=args.ttl_seconds,
+            ttl_seconds=ttl,
+            now=now,
+            provenance=provenance,
         )
     except ValueError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)

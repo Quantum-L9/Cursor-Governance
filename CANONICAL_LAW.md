@@ -1423,3 +1423,252 @@ SSOT: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
    gate (`L9_MEMORY_WRITE_GATES=1`, default off). An operator who enables
    GATES-002 must hydrate on demand before writing, because sessionStart no
    longer produces its hydration state.
+
+<!-- GITHUB_MERGE_AUTHORIZATION_V1 -->
+## 6.2.13 Human authorization on GitHub or in the operator's prompt, agent execution (2026-10-15) — supersedes the terminal-grant requirement of §6.2.12
+
+Append-only. §6.2.12 remains on disk. This section supersedes only its
+requirement that an agent-operated merge be preceded by a controlling-terminal
+transcription, and its blanket prohibition on an agent running
+`authorize_merge.py`. It does not create an unrestricted autonomous-merge
+mode. Invocation, green CI, an L4 release, `make pr`, a campaign step, and any
+receipt or assertion an agent wrote are still not merge authority.
+
+1. **Human authorization and agent execution are different acts.** A human
+   authorizes one repository, one pull request and one exact head. An agent
+   may execute that authorized merge, and may record the human's authority in
+   the form the gate binds to a head. The agent cannot supply the
+   authorization, cannot manufacture a human instruction, and cannot label
+   its own decision as one. L9-ORG-007 is unchanged: on a governance-protected
+   path the pull request author cannot self-authorize, and a coding agent is
+   not an authorizer.
+2. **Two ordinary records.**
+   - **GitHub.** An `APPROVED` review by a human with write access
+     (repository permission `admin`, `maintain` or `write`; `author_association`
+     is not that permission; user type `User`) whose `commit_id` is the pull
+     request's current 40-hex head, or a review or issue comment by such a
+     human whose body contains the exact line
+     `authorize merge <owner>/<repo>#<pr>@<40-hex>`. Bots and a missing
+     identity do not count. A later `CHANGES_REQUESTED` or `DISMISSED` review
+     from that human revokes an earlier approval. A material head change
+     leaves the old record behind.
+   - **Operator prompt.** An explicit, imperative merge instruction the
+     operator typed in their own prompt — "merge PR #735 after the checks
+     pass", "fix and merge #735", "remediate and merge all currently open PRs
+     in <owner>/<name>" — recorded at prompt submission by the host's own
+     prompt hook (Claude Code `UserPromptSubmit`, Cursor `beforeSubmitPrompt`)
+     into `~/.l9/autonomy/operator-merge-instructions.json`
+     ([`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge_instruction.py)).
+     A request to audit, review, publish, build or remediate without merge
+     intent records nothing. A question, text inside a paste, a code fence,
+     a block quote, quotation marks, or material introduced by a colon ("the
+     report says: merge #735"), a third-person report ("the reviewer
+     recommends that we merge #735"), a tool result, a PR description, a
+     repository file, or a host-relayed turn (a scheduled task, a subagent
+     report, a cross-session message, a webhook) is not an operator
+     instruction and records nothing: only a clause directed at the agent in
+     the imperative or first person authorizes, and clauses are read
+     independently ("don't merge #735, but merge #736" cancels one and
+     authorizes the other). A cohort instruction must name the repository;
+     the recorder lists that repository's open pull requests through the
+     GitHub REST path at recording time and stores that membership, so the
+     instruction resolves into individual grants only for pull requests in
+     that snapshot — never a pull request opened later, never one that was
+     closed at the time and reopened since, never standing repository-wide
+     authority — and a snapshot that could not be taken covers nothing.
+   - **Cancellation.** An explicit cancellation typed by the operator — "do
+     not merge #735 after all", "cancel the merge of #735", "revoke the merge
+     authorization for #735", "do not merge any open PRs in <owner>/<name>" —
+     is recorded by the same prompt hook as a revocation receipt. The latest
+     instruction wins: a cancellation withdraws every operator authority over
+     that pull request (or every pull request of the named repository)
+     recorded before it, including a grant already issued and a cohort it
+     belonged to, and leaves other pull requests' authority untouched; a later
+     authorization stands again. `merge_gate.py`, `authorize_merge.py` and
+     `stack_safe_merge.py --run` each read the revocation from the same
+     account-home receipt store, so a cancelled grant is `MERGE_PENDING` on
+     every path and the cancellation survives a restart. A cancellation also
+     withdraws a GitHub record for that pull request until the operator
+     authorizes again in their prompt.
+3. **Recording the operator's authority.** The agent transcribes a recorded
+   instruction into a grant with
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction --repo <owner/name> --pr <n> --head-sha <live 40-hex>`.
+   The script writes nothing unless, live on GitHub, the pull request is open,
+   `--head-sha` is its current head, a live and uncancelled instruction covers
+   it (explicitly, or as a member of the recorded cohort snapshot), the
+   receipt carries the host prompt hook's own provenance (event name,
+   session, transcript path) and is corroborated by a human turn of that
+   session in the host-written transcript, and the change touches no
+   L9-ORG-007 protected path. The grant binds repository, pull request, exact
+   head, `issuer: human`, issue and expiry times, and the instruction's
+   provenance (host, session, hook event, transcript, scope, cohort members,
+   prompt digest, excerpt). It expires within four hours and never after the
+   instruction it came from; an instruction expires eight hours after it was
+   spoken. `merge_gate.py` allows an agent to run `authorize_merge.py` only in
+   this mode and only when a live, uncancelled recorded instruction names that
+   repository and pull request **and** the receipt is bound to the live
+   session: the PreToolUse event's `session_id` and `transcript_path` must
+   match the receipt's hook provenance and a human turn of that transcript
+   must carry the instruction. Every other run, an agent run of the recorder
+   (other than its read-only `show`) or of its host adapters, a direct write
+   of the grant file, the instruction receipt or a host transcript, a forged
+   fixture, an approving review, and a posted authorization line are denied.
+   No terminal ceremony and no redundant GitHub comment are required.
+4. **Authority survives authorized remediation.** An instruction to fix and
+   merge a pull request stays effective through remediation of that pull
+   request. When remediation moves the head, the old head-specific grant is
+   dead, the same instruction still covers the pull request, and the agent
+   verifies the final head and its readiness, issues a fresh head-specific
+   grant from that same instruction, and merges only that verified head. The
+   operator is not asked again because an authorized remediation created a new
+   commit. A new pull request, a pull request outside the recorded cohort, an
+   expired instruction, or a change the operator did not describe requires a
+   fresh instruction.
+5. **Execution checks are unchanged.** `stack_safe_merge.py --run` rechecks the
+   live head and passes that SHA to GitHub. A moved head returns
+   `MERGE_PENDING`. Stack-safe method selection is unchanged: `--merge` for a
+   stack parent, `--squash` only for an unstacked leaf. Required checks,
+   branch protection and thread resolution are GitHub's refusal and are not
+   overridden. After the merge call the helper reads the pull request back and
+   reports `MERGED` with GitHub's merge commit; a merge GitHub does not confirm
+   is reported `UNVERIFIED`, never as done. Force, hard-reset, `--admin` and
+   auto-merge enablement stay denied. `L9_MERGE_AUTHORIZED` remains the human
+   session breakglass for the hook, not the ordinary path and not a standing
+   permission.
+6. **L9-ORG-007 is a separate concern.** An operator prompt establishes no
+   GitHub identity, so it cannot be the independent human authorization that
+   invariant requires. For a change touching a protected path the only
+   authorization is the GitHub record in item 2 from a human with write access
+   who is not the pull request author. An agent transcribing a valid human
+   instruction does not become an independent human approver, and this
+   section does not revise the invariant.
+7. **Assurance, stated plainly.** Two different kinds of guarantee back a
+   receipt and must not be confused. **Host-enforced:** the receipt carries
+   the prompt hook's own provenance, which only the host's prompt-submission
+   event supplies, and a human turn of the same session in the host-written
+   transcript carries the same text (Claude Code marks a typed prompt
+   `turnOrigin: "human"` and a relayed one `task_notification`; that field was
+   observed on 2026-10-15, is not a documented contract, and its absence fails
+   closed). **Best-effort software restriction:** `merge_gate.py` denies by
+   name an agent tool call that runs the recorder or its adapters, or writes
+   the receipt file or a transcript. That filter stops the ordinary agent
+   path; it is not a proof that no code path reaches the Python API, and a
+   worker running arbitrary code as the same OS account could forge the
+   store and the transcript alike — §6.2.12 item 7's host-enforcement gap
+   still applies to both records. A receipt is not cryptographic proof of who
+   typed it and establishes no GitHub identity. Forging a receipt, a grant or
+   a transcript is a violation of this section, not a loophole in it.
+9. **BLOCKED_HOST_ORIGIN.** Where a host exposes no gate-side session binding
+   and no host-written transcript this repository can read, the operator
+   prompt channel cannot be verified and is not opened: the recorder still
+   writes the receipt for audit, but `authorize_merge.py` refuses it as
+   `BLOCKED_HOST_ORIGIN` and the GitHub record is that host's only
+   authorization. Cursor is such a host today: it registers no merge gate
+   hook and its `beforeSubmitPrompt` transcript format is unverified.
+8. **Fail closed.** Absent a verifiable authorization for the live head, the
+   merge is denied and the missing prerequisite is reported. If the merge gate
+   is missing or crashes, the tool call is blocked (INV-1).
+
+SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge_instruction.py),
+[`ops/autonomy/authorize_merge.py`](ops/autonomy/authorize_merge.py),
+[`ops/autonomy/github_merge_authorization.py`](ops/autonomy/github_merge_authorization.py),
+[`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
+[`ops/autonomy/stack_safe_merge.py`](ops/autonomy/stack_safe_merge.py).
+Host adapters: `environment/agents/adapters/claude-code/hooks/operator_merge_instruction_wrap.py`
+(Claude Code `UserPromptSubmit`), `ops/hooks/before_submit_merge_instruction.py`
+(Cursor `beforeSubmitPrompt`). Cursor registers no merge gate hook and its
+receipts cannot be bound to a verifiable session, so on Cursor the operator
+prompt channel is BLOCKED_HOST_ORIGIN (item 9) and the GitHub record is the
+authorization; `authorize_merge.py`'s own live checks and
+`stack_safe_merge.py`'s entrypoint check still run there.
+
+<!-- CHAT_MERGE_AUTHORIZATION_V1 -->
+## 6.2.14 An authorized owner's chat instruction is merge authorization (2026-10-16) — supersedes §6.2.13 item 1's L9-ORG-007 sentence, item 2's cohort-must-name-its-repository and quoted-example wording, item 3's L9-ORG-007 check, item 6, and the "establishes no GitHub identity" clause of item 7
+
+Append-only. §6.2.12 and §6.2.13 remain on disk; every part of them not named
+above stands. Policy: `ORG_INVARIANTS.yaml` 4.0.0, L9-ORG-007 as amended,
+assertion `owner_merge_authorization@1`.
+
+1. **One natural instruction is enough.** When the authenticated operator
+   asks the agent, in their own words, to merge a pull request or a clearly
+   identified set of them, that instruction is the human merge authorization.
+   No second approval, special syntax, terminal confirmation, GitHub comment,
+   or repetition is required, and an agent must not ask for one. "Merge these
+   PRs", "go ahead and merge everything we just fixed", "merge all open PR’s
+   in https://github.com/<owner>/<name>" and "fix and merge #96 through #99
+   when green" are each sufficient. A conditional instruction ("when green")
+   authorizes once its condition holds; a head moved by authorized
+   remediation needs fresh technical checks, never a fresh instruction (item
+   4 of §6.2.13 stands).
+2. **Recognition is language, not a phrase.** The recorder folds typographic
+   apostrophes and quotes, accepts a repository as `owner/name` or a
+   github.com URL, and expands ranges. A pull request named without its
+   repository resolves from the sentence, then the prompt, then a qualified
+   reference to that exact number in the conversation, then the workspace
+   remote, then the one repository the operator's own turns named, then the
+   one repository the conversation discusses; a cohort ("all open PRs") never
+   takes its repository from agent text. A contextual object ("these PRs",
+   "them", "everything we just fixed") resolves at recording time to the pull
+   requests the agent's latest reply to a human turn put forward (else the
+   last few exchanges); a sentence that negates, or marks a pull request red,
+   draft, blocked, closed, external or unrelated, contributes nothing, and an
+   issue-closing keyword ("Closes #45") names an issue. The receipt stores
+   each resolved pull request, so the authority is frozen when spoken. Only
+   typed human turns and the agent's visible replies are conversation: tool
+   results and sidechains are not, and a relayed turn closes the exchange.
+   "Merge these two functions into one helper" and "merge it into your
+   branch" merge code, not pull requests. Questions, quoted, pasted or
+   presented text, third-person reports, declarative reports ("merging #96
+   broke the build"), tool output, agent-authored text and relayed turns still
+   authorize nothing (§6.2.13 item 2 stands for them); a polite request ("can
+   you merge #96?") is an instruction, a whether-question is not. A negation
+   counts only when it governs the merge ("don't forget to merge #96" is an
+   instruction), and "don't merge until CI is green" is a condition, not a
+   cancellation.
+3. **Capture is observable.** Whenever a prompt carries merge intent, the
+   prompt hook tells the agent what it recorded, or exactly why nothing was
+   recorded (an unresolvable repository, an ambiguous "it", an empty
+   conversation), and a recorder failure is reported as a failure. A capture
+   is never reported that did not happen. When nothing was recorded the agent
+   asks the one question that resolves it, in plain words.
+4. **The authorizer is the operator's GitHub identity, and authority is
+   repository authority.** `authorize_merge.py --operator-instruction` binds
+   the grant to the session's live GitHub principal — on Claude Code, the
+   operator's own connected account — and requires a human holding `admin`,
+   `maintain` or `write` on the repository (`GET /user`, `GET
+   /repos/{owner}/{name}`). Anyone else is outside the authorized scope and
+   the merge is `MERGE_PENDING`. The grant records that login and permission.
+5. **L9-ORG-007, amended.** An authenticated human with repository authority
+   may authorize a governance-sensitive change, including when they are the
+   pull request's author, and including `pyproject.toml`,
+   `.github/workflows/**`, and governance files. Protected filenames alone
+   never demand a second human. The same holds on GitHub: an APPROVED review
+   or authorization line from a write-capable human counts when that human is
+   the author. Still prohibited: an agent inventing, fabricating, relaying or
+   self-issuing authorization; authorization from a person without
+   repository authority. Still blocking: required checks, branch protection,
+   review-thread requirements, stack safety, and the exact-head binding.
+6. **Cancellation never lapses.** A cancellation stands until the operator
+   authorizes again; it has no expiry of its own, so its lapse can never
+   revive an older instruction, grant or GitHub record. A cancellation with
+   no resolvable object ("stop, don't merge yet") withdraws every operator
+   authority recorded before it. A merge of a branch ("don't merge main into
+   it") cancels no pull request. Cancellations are stored apart from
+   authorizations so that a burst of instructions cannot evict one.
+7. **Unchanged.** Every merge transport still answers to the gate; the
+   receipt still needs the host hook's provenance and a human turn of the same
+   session in the host-written transcript; the gate still binds the receipt to
+   the live session; agents still never run the recorder, write the receipt,
+   a grant or a transcript, approve, or post an authorization line; Cursor is
+   still `BLOCKED_HOST_ORIGIN`; force, `--admin` and auto-merge stay denied;
+   the §6.2.12 item 7 host-enforcement gap is unchanged and forging any record
+   remains a violation, not a loophole.
+8. **Not self-applied.** The change that introduced this section is merged
+   under the authorization in force before it, not under its own.
+
+SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge_instruction.py),
+[`ops/autonomy/authorize_merge.py`](ops/autonomy/authorize_merge.py),
+[`ops/autonomy/github_merge_authorization.py`](ops/autonomy/github_merge_authorization.py),
+[`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
+[`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) (L9-ORG-007),
+[`governance/ASSERTION_TYPES.yaml`](governance/ASSERTION_TYPES.yaml) (`owner_merge_authorization@1`).

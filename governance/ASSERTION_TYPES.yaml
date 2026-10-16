@@ -152,6 +152,52 @@ assertion_types:
       - pull_request_author_cannot_satisfy_independence
       - coding_agent_cannot_satisfy_human_approval
       - unresolved_required_review_threads_prevent_pass
+  - type: owner_merge_authorization
+    version: 1
+    purpose: >-
+      Determine whether a governance-sensitive change carries an explicit merge
+      authorization from an authenticated human who holds authority over the
+      repository. The authorizer may be the change author. A coding agent may
+      execute the authorized merge but cannot itself provide the authorization.
+      Supersedes independent_approval@1 for L9-ORG-007 (policy 4.0.0); that
+      registration remains reserved and unchanged.
+    required_inputs:
+      - authorizer_identity
+      - authorizer_repository_permission
+      - authorization_event
+      - authorization_channel
+      - bound_head_sha
+    optional_inputs:
+      - author_identity
+      - instruction_provenance
+      - cancellation_events
+    normalization:
+      identities_must_be_platform_verified: true
+      bot_and_agent_authorizations_are_non_human: true
+      repository_permission_roles_that_authorize:
+        - admin
+        - maintain
+        - write
+      authorization_channels:
+        - github_approved_review
+        - github_authorization_line
+        - operator_chat_instruction
+      latest_operator_instruction_wins: true
+    pass_condition: explicit_authorization_from_human_with_repository_authority_binds_the_head
+    fail_condition: authorization_is_missing_cancelled_agent_originated_or_lacks_repository_authority
+    unknown_condition: authorizer_identity_permission_or_instruction_provenance_is_unverifiable
+    fail_behavior:
+      critical: block
+      high: block
+      medium: indeterminate
+      low: indeterminate
+    compatibility_rules:
+      - coding_agent_cannot_satisfy_human_authorization
+      - agent_authored_or_relayed_text_is_not_an_operator_instruction
+      - authorization_binds_one_repository_pull_request_and_head
+      - cancellation_withdraws_authorization_until_reauthorized
+      - required_checks_and_branch_protection_are_not_overridden
+      - author_may_satisfy_when_holding_repository_authority
   - type: enforcement_evidence
     version: 1
     purpose: >-
