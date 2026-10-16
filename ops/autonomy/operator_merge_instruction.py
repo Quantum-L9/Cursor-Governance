@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Operator merge instructions, recorded by the host's prompt-submission hook.
 
-CANONICAL_LAW §6.2.13 (operator-prompt channel). The human who types a prompt is
+CANONICAL_LAW §6.2.13, §6.2.14 (operator-prompt channel). The human who types a prompt is
 the authorizer of the merges that prompt explicitly orders; the agent records
 and executes that authority. This module is the recorder and the reader:
 
@@ -18,19 +18,31 @@ and executes that authority. This module is the recorder and the reader:
   the receipt's provenance; ``merge_gate.py`` binds the receipt to the live
   session before letting that run proceed.
 
-What is recognised: an **affirmative instruction directed at the agent**, in
-the imperative or first person, naming its pull request:
+What is recognised (§6.2.14): an **affirmative merge instruction directed at
+the agent**, in the imperative or first person, in ordinary language. Its
+objects may be named or established by the conversation:
 
     merge PR #735 after the checks pass
-    fix and merge Quantum-L9/Cursor-Governance#735
-    I authorize the merge of PR #735
-    remediate and merge all currently open PRs in Quantum-L9/Cursor-Governance
+    fix and merge #96 through #99 when green
+    I need you to merge all open PR’s in https://github.com/Quantum-L9/l9-graphiti-memory
+    merge these PRs                          (the PRs the agent just reported)
+    go ahead and merge everything we just fixed
 
 and an **explicit cancellation**, which revokes the authority above:
 
     do not merge PR #735 after all
-    cancel the merge of #735
-    do not merge any open PRs in Quantum-L9/Cursor-Governance
+    don’t merge them
+    stop — do not merge anything
+
+Typographic apostrophes and quotes are folded before parsing, a repository may
+be written as ``owner/name`` or as a github.com URL, and ranges ("#96 through
+#99") expand to each pull request. A pull request named without its repository
+resolves from the sentence, the prompt, the conversation (a qualified reference
+to that number, or the one repository it discusses), then the workspace
+remote. A contextual object ("these PRs", "them", "everything we just fixed")
+resolves, at recording time, to the pull requests named in the agent's latest
+reply in the host transcript (else in the last few exchanges); the receipt
+stores each resolved pull request, so the authority is frozen when spoken.
 
 What is not an instruction: a question, a verb with no pull-request object,
 text inside quotation marks, code fences, block quotes or ``<pasted_content>``,
@@ -38,32 +50,41 @@ material introduced by a colon ("the report says: …"), a third-person report
 ("the reviewer recommends that we merge …"), and any prompt carrying a host
 relay marker (a scheduled task firing, a subagent reporting back, a
 cross-session message, a webhook payload). Clauses are read independently, so
-"don't merge #735, but merge #736" revokes one and authorizes the other.
+"don't merge #735, but merge #736" revokes one and authorizes the other. A
+cancellation with no resolvable object ("stop, don't merge yet") revokes every
+operator authority recorded before it; a cancellation never expires on its
+own, so its lapse can never revive an older authorization. A merge of a branch
+("don't merge main into it") is not a cancellation of a pull request.
 
-A cohort instruction ("all currently open PRs in <owner/name>") must name the
-repository. At recording time the recorder lists the repository's open pull
-requests through the GitHub REST path and stores that membership; a pull
-request not in the snapshot — opened later, or closed at the time and reopened
-since — is outside the cohort, and a snapshot that could not be taken covers
-nothing. It is never standing repository-wide authority.
+A cohort instruction ("all open PRs in <owner/name>") snapshots the
+repository's open pull requests through the GitHub REST path at recording time;
+a pull request not in the snapshot — opened later, or closed at the time and
+reopened since — is outside the cohort, and a snapshot that could not be taken
+covers nothing. It is never standing repository-wide authority.
+
+Capture is observable. Whenever a prompt carries merge intent the hook tells
+the agent, in ``additionalContext``, exactly what was recorded or exactly why
+nothing was, and a recorder failure is reported as a failure — never as a
+capture.
 
 Assurance, stated plainly. A receipt proves two things the agent cannot
 produce through a gated tool call: the host prompt hook wrote it with the
 hook's own provenance, and a human turn of the same session in the host-written
 transcript carries the same text (Claude Code records ``turnOrigin: "human"``
-on a typed prompt and ``task_notification`` on a relayed one; that field was
-observed on 2026-10-15, it is not a documented contract, and its absence fails
-closed). It is not cryptographic proof of who typed it, it does not establish a
-GitHub identity (L9-ORG-007 protected changes still need the GitHub record),
-and a worker that runs arbitrary code as the same OS account could forge the
-store and the transcript alike — the §6.2.12 item 7 gap. Cursor exposes no
-PreToolUse merge gate and no transcript this module can read, so a Cursor
-receipt is recorded for audit but never becomes a grant: BLOCKED_HOST_ORIGIN.
+on a typed prompt and ``task_notification`` on a relayed one; observed on
+2026-10-15 and again on 2026-10-16 on a ``remote_mobile`` session, not a
+documented contract, and its absence fails closed). It is not cryptographic
+proof of who typed it; ``authorize_merge.py`` binds it to the session's
+authenticated GitHub principal and that principal's repository permission. A
+worker that runs arbitrary code as the same OS account could forge the store
+and the transcript alike — the §6.2.12 item 7 gap. Cursor exposes no PreToolUse
+merge gate and no transcript this module can read, so a Cursor receipt is
+recorded for audit but never becomes a grant: BLOCKED_HOST_ORIGIN.
 
 Metadata:
   layer: ops
   role: merge_authorization
-  version: 2.0.0
+  version: 3.0.0
 """
 
 from __future__ import annotations
@@ -105,21 +126,74 @@ BLOCKED_HOST_ORIGIN = "BLOCKED_HOST_ORIGIN"
 HUMAN_TURN_ORIGINS = frozenset({"human"})
 _GH_TIMEOUT_SECONDS = 6
 
-_SLUG = r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*"
+#: Scopes. ``all`` is a cancellation only: it covers every repository and PR.
+SCOPE_PR = "pr"
+SCOPE_COHORT = "open_cohort"
+SCOPE_ALL = "all"
+#: A range ("#96 through #99") expands to at most this many pull requests.
+MAX_RANGE = 50
+#: Pull requests a contextual object ("these PRs") may resolve to.
+MAX_CONTEXT_MEMBERS = 25
+#: Exchanges (a human turn and the agent's replies) read for conversation context.
+CONTEXT_EXCHANGES = 3
+#: Only the tail of a long host transcript is read for context.
+TRANSCRIPT_TAIL_BYTES = 8 * 1024 * 1024
+#: Cancellations kept in the store. A cancellation a later authorization has
+#: superseded is dropped first; one still in force is dropped only past this cap.
+MAX_REVOCATIONS = 1024
+#: Agent reply text read per turn for conversation context.
+MAX_AGENT_TURN_CHARS = 16 * 1024
+#: Clause text the directed-instruction patterns examine.
+MAX_CLAUSE_CHARS = 400
+
+_SLUG = r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*/\.?[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*"
 _SLUG_RE = re.compile(rf"(?<![\w/.@-])(?P<slug>{_SLUG})(?![\w/-])")
-_GITHUB_URL_RE = re.compile(rf"https?://github\.com/(?P<slug>{_SLUG})(?:/|\b)", re.I)
+_GITHUB_URL_RE = re.compile(rf"https?://(?:www\.)?github\.com/(?P<slug>{_SLUG})(?:/|\b)", re.I)
+_GITHUB_REPO_URL = re.compile(
+    r"^(?:https?://)?(?:www\.)?github\.com/(?P<owner>[A-Za-z0-9_.-]+)/(?P<name>[A-Za-z0-9_.-]+)",
+    re.I,
+)
+#: Typographic apostrophes and spaces a phone keyboard produces. Folded before
+#: parsing (after quoted spans are stripped), so "PR’s" and "don’t" read as
+#: "PR's" and "don't".
+_FOLD = str.maketrans(
+    {
+        "’": "'",
+        "‘": "'",
+        "ʼ": "'",
+        "′": "'",
+        "＇": "'",
+        " ": " ",
+        " ": " ",
+        " ": " ",
+    }
+)
+#: "PR", "PRs", "PR's", "pull requests".
+_PR_NOUN = r"(?:pull[\s-]*requests?|prs?)(?:'s|s')?"
 #: One pull-request reference: ``owner/name#12``, ``#12``, ``PR 12``,
 #: ``pull request #12`` or a github.com pull URL.
 _PR_REF = re.compile(
-    rf"(?:(?P<qualified>{_SLUG})#"
-    rf"|https?://github\.com/(?P<url>{_SLUG})/pull/"
-    r"|(?:pull[\s-]*requests?|prs?)\s*#?\s*"
+    rf"(?:(?<![\w.@/-])(?P<qualified>{_SLUG})#"
+    rf"|https?://(?:www\.)?github\.com/(?P<url>{_SLUG})/pulls?/"
+    rf"|\b{_PR_NOUN}(?:\s*#)?\s*"
     r"|#)"
     r"(?P<num>[1-9]\d*)\b",
     re.I,
 )
-_REF_SEPARATOR = r"(?:\s*(?:,|and|&|then)\s*)"
-_PR_REF_ANON = re.sub(r"\(\?P<\w+>", "(?:", _PR_REF.pattern)
+#: "#96 through #99", "#96-#99", "96–99", "PRs 96 to 99". A spaced hyphen
+#: counts only before another "#" ("#5 - 10 minutes" is not a range).
+_RANGE_TAIL = (
+    r"(?:\s+(?:through|thru|to)\s+|\s*\.\.\s*|[-–—]|\s+[-–—]\s+(?=#))"
+    r"(?:#|(?:prs?|pull[\s-]*requests?)\s*#?)?"
+    r"(?P<end>[1-9]\d*)\b"
+)
+_PR_REF_RANGE = re.compile(rf"{_PR_REF.pattern}(?:{_RANGE_TAIL})?", re.I)
+_REF_SEPARATOR = r"(?:\s*,\s*(?:and\s+)?|\s+(?:and/or|and|&|then|plus)\s+)"
+#: Bare numbers continuing a run that opened with a plural PR noun ("PRs 96, 97").
+_BARE_CONTINUATION = re.compile(rf"(?:{_REF_SEPARATOR}#?([1-9]\d*)\b)+", re.I)
+_BARE_NUMBER = re.compile(r"([1-9]\d*)\b")
+_PLURAL_PR_LEAD = re.compile(r"^\s*(?:pull[\s-]*requests|prs)\b", re.I)
+_PR_REF_ANON = re.sub(r"\(\?P<\w+>", "(?:", _PR_REF_RANGE.pattern)
 _REF_RUN = re.compile(
     rf"(?:{_PR_REF_ANON})(?:{_REF_SEPARATOR}(?:{_PR_REF_ANON}))*",
     re.I,
@@ -146,40 +220,263 @@ _REVOKE_GLUE = re.compile(
 #: "remediate, test and"). A third-person subject ("the report recommends that
 #: we merge") never matches: the word before ``merge`` must be a coordinator.
 _LEAD_IN = (
-    r"(?:please|now|then|also|next|finally|just|kindly|and|&|ok|okay|yes|"
-    r"go\s+ahead\s+and|"
+    r"(?:please|now|then|also|next|finally|just|kindly|and|&|ok|okay|yes|sure|"
+    r"lgtm|approved|looks\s+good(?:\s+to\s+me)?|sounds\s+good|great|perfect|thanks|"
+    r"thank\s+you|cool|alright|nice|ship\s+it|"
+    r"let'?s|let\s+us|go\s+ahead\s+and|"
+    r"(?:can|could|would|will)\s+you(?:\s+please)?|"
     r"you\s+(?:may|can|should|must|are\s+(?:authori[sz]ed|cleared|free)\s+to)|"
-    r"i\s+(?:authori[sz]e|approve|want|need|would\s+like|am\s+authori[sz]ing)(?:\s+you)?(?:\s+to)?|"
+    r"i\s+(?:want|need|would\s+like)\s+you\s+to|i'?d\s+like\s+you\s+to)"
+)
+#: First-person authorization; only these may introduce the noun form
+#: ("I authorize the merge of #96").
+_AUTHORIZING = (
+    r"(?:i\s+(?:authori[sz]e|approve|am\s+authori[sz]ing)(?:\s+you)?(?:\s+to)?|"
     r"(?:authori[sz]ation|approval|go-ahead)\s+(?:granted|given)\s*:?)"
 )
-_VERB_CHAIN = r"(?:[a-z][a-z-]*(?:\s*(?:,|and|&|then)\s*[a-z][a-z-]*)*\s*,?\s*(?:and|then|&)\s+)"
+_VERB_WORD = r"\b[a-z][a-z-]*\b"
+_VERB_CHAIN = (
+    rf"(?:{_VERB_WORD}(?:(?:\s*,\s*|\s+(?:and|then|&)\s+){_VERB_WORD})*"
+    r"\s*,?\s+(?:and|then|&)\s+)"
+)
+_MERGE_ADJ = r"(?:(?:eventual|final|actual|subsequent|full|clean|safe)\s+|(?:squash|rebase)[\s-]+)"
+#: The imperative verb is "merge"; "merging #96 broke the build" and "the merge
+#: of #96 failed" are reports, not orders.
 _DIRECTED = re.compile(
-    rf"^\s*(?:{_LEAD_IN}\s+)*(?:(?:the|a|an)\s+)?(?:{_VERB_CHAIN})?(?:(?:the|a|an)\s+)?"
-    r"(?:(?:eventual|final|actual|subsequent|full|clean|safe|squash)\s+)?"
-    r"merg(?:e|es|ing)\b",
+    rf"^\s*(?:{_LEAD_IN}\s*[,!:]?\s+)*(?:"
+    rf"{_AUTHORIZING}\s+(?:(?:the|a|an)\s+)?{_MERGE_ADJ}?merg(?:e|es|ing)"
+    rf"|(?:{_VERB_CHAIN})?{_MERGE_ADJ}?merge"
+    r")\b",
     re.I,
 )
+#: "Fix the CI on #96 and merge it": an imperative clause, coordinated into the
+#: merge. Accepted only when it does not open with a subject ("the reviewer
+#: … and merge") and carries no reporting verb ("they asked to fix and merge").
+_LOOSE_DIRECTED = re.compile(
+    rf"^\s*(?:{_LEAD_IN}\s*[,!:]?\s+)*(?P<pre>(?:\S+\s+){{0,12}}?)(?:and|then|&)\s+"
+    rf"(?:then\s+)?(?:just\s+|please\s+)?{_MERGE_ADJ}?merge\b",
+    re.I,
+)
+_SUBJECT_START = re.compile(
+    r"^\s*(?:the|a|an|i|they|he|she|we|you|someone|somebody|everyone|nobody|reviewers?|"
+    r"it|this|that|these|those|there|here|our|their|his|her|its|my|your|copilot|codex|"
+    r"bots?|ci|who|which|to|in\s+order|if|when|once|before|after|unless|how|why|whether)\b",
+    re.I,
+)
+#: A leading condition before an imperative: "Once CI is green, merge #96".
+_CONDITION_LEAD = re.compile(
+    r"^\s*(?:once|when|whenever|after|if|as\s+soon\s+as|provided(?:\s+that)?)\b"
+    r"[^,;:?]{1,100},\s*",
+    re.I,
+)
+#: Subordinators that make a merge wait on something: "once CI is green",
+#: "after I approve the release", "merge #96 if Legal agrees".
+_CONDITION_CONJ = (
+    r"(?:once|when|whenever|after|if|as\s+soon\s+as|provided(?:\s+that)?|providing|"
+    r"so\s+long\s+as|as\s+long\s+as|assuming(?:\s+that)?|unless)"
+)
+#: A clause that is nothing but a condition: "After I approve the release" in
+#: "After I approve the release, merge #96"; "only after I approve the release"
+#: in "Merge #96, but only after I approve the release".
+_CONDITION_CLAUSE = re.compile(
+    rf"^\s*(?:(?:and|or)\s+)?(?:only\s+)?(?:then\s+)?(?P<conj>{_CONDITION_CONJ})\b(?P<body>.*)$",
+    re.I | re.S,
+)
+#: A sentence after the instruction that restricts it: "But only after …".
+_ONLY_CONDITION_SENTENCE = re.compile(
+    rf"^\s*(?:but\s+)?only\s+(?P<conj>{_CONDITION_CONJ})\b(?P<body>.*)$", re.I | re.S
+)
+#: A condition trailing the merge's objects: "merge #96 after I approve the release".
+#: "merge them all at once" is not one.
+_TRAILING_CONDITION = re.compile(
+    rf"(?:^|(?<=[\s,(]))(?<!\bat\s)(?P<conj>{_CONDITION_CONJ})\b(?P<body>[^;!?]*)", re.I
+)
+#: "merge #96 and if CI fails tell me": a new verb after "and"/"then" starts the
+#: agent's next task; the condition is that task's, not the merge's.
+_CONDITION_BREAK = re.compile(
+    r"\b(?:and|then|also|&)\s+(?!(?:also\s+|then\s+)?(?:only\b|#|prs?\b|pull\b|\d|"
+    r"[\w.-]+/[\w.-]+#|https?:|github\.com))",
+    re.I,
+)
+#: Words that only soften an imperative: "if you can", "when you get a chance",
+#: "as soon as possible", "merge #96 after all".
+_COURTESY_CONDITION = re.compile(
+    r"^(?:all|more|again|any|so|needed|necessary|possible|convenient|applicable|"
+    r"you\s+(?:can|could|like|want|wish|please|prefer|get\s+to\s+it|can\s+manage)|"
+    r"you(?:'re|\s+are)\s+(?:ready|able|free)|"
+    r"you\s+(?:get|have|find)\s+(?:a\s+)?(?:chance|moment|minute|second|time)|"
+    r"(?:it'?s|it\s+is)\s+(?:possible|convenient))$",
+    re.I,
+)
+#: The operator, or anyone else, deciding something: never readable from the
+#: pull request, so it waits for the operator's next instruction.
+_DECISION_CONDITION = re.compile(
+    r"\b(?:i|i'm|i've|i'll|i'd|me|my|myself|we|we're|we've|we'll|us|our|"
+    r"approv\w*|sign(?:s|ed)?[\s-]+off|sign-?off|green-?light\w*|go-?ahead|"
+    r"give[sn]?\s+(?:the\s+|an?\s+)?(?:ok|okay|nod)|ok(?:ay)?(?:s|'s|ed|'d)|"
+    r"confirm\w*|agree\w*|decid\w*|decision|says?\s+so|said\s+so|review\w*|"
+    r"releas\w*|deploy\w*|launch\w*|announc\w*|ship(?:s|ped|ping)?|legal|"
+    r"permission|consent\w*|accept\w*)\b",
+    re.I,
+)
+_READINESS_SUBJECT = (
+    r"(?:(?:the|all|all\s+the|its|their|required|status|our)\s+)*"
+    r"(?:ci(?:/cd)?|checks?|status\s+checks?|tests?|test\s+suite|builds?|pipelines?|"
+    r"workflows?|(?:github\s+)?actions|jobs?|everything|it|they|this|these|those|"
+    r"prs?|pull\s+requests?|branch(?:es)?|stack|(?:pr\s*)?#\d+)"
+)
+_READINESS_STATE = (
+    r"(?:green|passing|passed|pass(?:es)?|succeed(?:s|ed)?|successful|clean|done|"
+    r"finished|finish(?:es)?|complete(?:d|s)?|ready|mergeable|merge-?ready|ok(?:ay)?|"
+    r"good|fine|safe|stable|validated|verified|fixed|resolved|conflict-?free)"
+)
+#: Readiness the existing board (``pr_board``) proves from the pull request
+#: itself: required checks, review threads, conflicts and the stack at the live head.
+_READINESS_CONDITION = re.compile(
+    r"^(?:"
+    rf"{_READINESS_SUBJECT}(?:'s|'re)?(?:\s+(?:is|are|has|have|goes|go|turns?|comes?\s+back|"
+    r"gets?|looks?|stays?|been|all|now|fully|everything))*\s+(?:all\s+)?"
+    rf"{_READINESS_STATE}"
+    rf"|(?:all\s+)?{_READINESS_STATE}"
+    r"|(?:the\s+)?(?:checks?|tests?|ci|validation|verification|remediation|"
+    r"green\s+(?:ci|checks|build)|ci\s+green|fix(?:es)?\s+lands?)"
+    r"|(?:(?:the\s+)?(?:merge\s+)?conflicts?|(?:the\s+)?(?:review\s+)?threads?)\s+"
+    r"(?:are|is)\s+resolved"
+    r"|you(?:'ve|\s+have|'re|\s+are)?\s+(?:fixed|fix|resolved|resolve|addressed|address|"
+    r"finished|finish|completed|complete|repaired|repair|remediated|remediate|rebased|"
+    r"rebase|updated|update|done|cleaned\s+up|clean\s+up)"
+    r")(?:\s+[\w#/.'-]+){0,8}$",
+    re.I,
+)
+#: "unless CI fails": readiness phrased as its failure.
+_UNLESS_FAILURE = re.compile(
+    rf"^(?:{_READINESS_SUBJECT}|something|anything)\s+(?:fails?|failed|breaks?|broke|"
+    r"(?:is|are|goes|turns)\s+red|(?:has|have)\s+conflicts?)(?:\s+[\w#/.'-]+){0,6}$",
+    re.I,
+)
+CONDITION_READINESS = "readiness"
+CONDITION_PENDING_DECISION = "pending_decision"
+CONDITION_UNRESOLVABLE = "unresolvable"
+_CONDITION_RANK = {
+    CONDITION_READINESS: 1,
+    CONDITION_PENDING_DECISION: 2,
+    CONDITION_UNRESOLVABLE: 3,
+}
+_REPORTING = re.compile(
+    r"\b(?:said|says|say|asked|asks|recommend(?:s|ed)?|suggest(?:s|ed)?|wants?|wanted|"
+    r"wrote|writes|comment(?:s|ed)|request(?:s|ed)|propos(?:es|ed)|claim(?:s|ed)?|"
+    r"thinks?|thought|would|could|might|whether|if)\b|[?\"]",
+    re.I,
+)
+#: "Ship it: merge #96" — a colon after an interjection does not present material.
+_INTERJECTION = re.compile(
+    r"^\s*(?:ship\s+it|go|ok|okay|lgtm|approved|yes|sure|decision|instruction|final\s+answer)\s*$",
+    re.I,
+)
+#: "Can you merge #96?" is a request; "can you merge #96 or should we wait?" and
+#: "could you check whether #96 should merge?" are questions.
+_POLITE_REQUEST = re.compile(
+    r"^\s*(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?(?:go\s+ahead\s+and\s+)?"
+    r"(?:\w+\s+(?:and|then)\s+)?merge\b",
+    re.I,
+)
+_QUESTION_WORDS = re.compile(r"\b(?:or|whether|if|should|shall)\b", re.I)
+#: "Can you please not merge #96?" / "Could you hold off on merging it?" is a
+#: cancellation phrased politely, never a question to skip: a dropped
+#: cancellation would leave the earlier authority standing.
+_POLITE_CANCEL = re.compile(
+    r"^\s*(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?"
+    r"(?:not|stop|hold(?:\s+off)?|avoid|refrain|cancel|pause|freeze)\b",
+    re.I,
+)
+#: A deictic object followed by these merges something else into something:
+#: "merge them into a single file", "merge it with the helper".
+_DEICTIC_OTHER_TARGET = re.compile(
+    r"^\s*(?:into|onto|inside|with|together|in\s+(?!order\b)|and\s+(?!then\b))", re.I
+)
+#: What may follow a bare "these" / "them" / "it" / "both" / "all" when it means
+#: pull requests: the end, punctuation, a relative clause, an adverb.
+_DEICTIC_CONTINUATION = re.compile(
+    rf"^\s*(?:$|[.!?,;:)\]—–-]|{_PR_NOUN}\b|(?:we|you|i|that|which|now|please|too|then|when|"
+    r"once|after|if|as|all|both|safely|bottom-?up|first|today|asap|for\s+me|in\s+order|but|so|"
+    r"ok|thanks|one\s+by\s+one|in\s+sequence|oldest|again|also|already|just|right|"
+    r"whenever|provided|immediately|together\s+now)\b)",
+    re.I,
+)
+#: "all open PRs in <repo>", "every open pull request", "all PRs in <repo>",
+#: "all open PR's in https://github.com/<owner>/<name>". The repository is
+#: optional; without one the cohort resolves its repository like a bare "#12".
 _COHORT_TAIL = re.compile(
-    r"^(?:\s*(?:of|the|then|also|now|please|,|and\s+(?:then|also)))*"
-    r"\s*(?:all\s+|any\s+|every\s+)?(?:of\s+)?(?:the\s+)?(?:currently\s+|now\s+|still\s+|remaining\s+)?"
-    r"open\s+(?:pull[\s-]*requests?|prs?)\s+(?:in|of|on|for|from|under|across)\s+"
-    rf"(?:the\s+)?(?:repo(?:sitory)?\s+)?(?P<repo>{_SLUG})",
+    r"^(?:\s*(?:of|the|then|also|now|please|,|and\s+(?:then|also)))*\s*"
+    r"(?:(?:all|any|every|each)\s+(?:of\s+)?(?:the\s+)?(?:currently\s+|now\s+|still\s+|remaining\s+)?"
+    r"(?P<open1>open\s+)?"
+    r"|(?:the\s+)?(?:currently\s+|now\s+|still\s+|remaining\s+)?(?P<open2>open)\s+)"
+    rf"{_PR_NOUN}(?![\w#])"
+    r"(?:\s+(?:that\s+are\s+)?(?P<open3>open))?"
+    r"(?:\s+(?:in|of|on|for|from|under|across|at)\s+(?:the\s+)?(?:repo(?:sitory)?\s+)?"
+    r"(?P<repo>[^\s,;]+)(?:\s+(?P<repo_word>repo(?:sitory)?)\b)?)?",
     re.I,
 )
 #: "cancel all merges in owner/name" — a repository-wide cancellation.
 _COHORT_REVOKE_SHORT = re.compile(
-    rf"^\s*(?:in|for|on|across|of)\s+(?:the\s+)?(?:repo(?:sitory)?\s+)?(?P<repo>{_SLUG})",
+    r"^\s*(?:in|for|on|across|of)\s+(?:the\s+)?(?:repo(?:sitory)?\s+)?(?P<repo>[^\s,;]+)",
     re.I,
 )
+#: An object the conversation established: "these PRs", "them", "it",
+#: "everything we just fixed", "all of the green ones".
+_DEICTIC = re.compile(
+    r"^(?:\s*(?:of|then|also|now|please|,|&|and\s+(?:then|also))\b)*\s*"
+    r"(?:(?:all|both|each|every\s+one)\s+(?:of\s+)?)?"
+    r"(?:"
+    r"(?P<single>it|this\s+one|that\s+one|(?:the|this|that)\s+(?:one|pr|pull[\s-]*request))"
+    r"|them|these|those|everything|all|both|the\s+rest|the\s+lot"
+    rf"|(?:the|these|those|our|my|your|their|all)\s+(?:[a-z0-9'-]+\s+){{0,3}}?"
+    rf"(?:{_PR_NOUN}|ones|changes|fixes|branches|stack|train)"
+    r")(?![\w#])",
+    re.I,
+)
+#: A merge verb whose remaining clause names nothing else: "don't merge yet",
+#: "no merge.", "without merging". "don't merge main into it" is not bare: it
+#: merges a branch, so it cancels no pull request.
+_BARE_TAIL = re.compile(
+    r"^\s*(?:(?:it|them|this|that|these|those|anything|everything|any|yet|now|today|anymore|"
+    r"again|automatically|ever|until|before|after|without|unless|while|once|when|please|"
+    r"either|so\s+far|at\s+all|for\s+now|just\s+yet|after\s+all|any\s+more)\b|[.!?,;)\]]|$)",
+    re.I,
+)
+_EVERYTHING = re.compile(
+    r"\b(?:anything|everything|any\s+(?:more\s+)?(?:of\s+)?(?:them|prs?|pull[\s-]*requests?)|"
+    r"all\s+(?:of\s+)?(?:them|merges))\b",
+    re.I,
+)
+#: "don't merge anything else" limits scope; it cancels nothing.
+_SCOPE_LIMIT = re.compile(r"\b(?:else|other|others|besides)\b", re.I)
+#: "don't merge until CI is green" is a condition on the merge, not a cancellation.
+_CONDITIONAL = re.compile(r"\b(?:until|till|before|unless)\b", re.I)
+#: Tail words that make an unresolved directed merge worth reporting.
+_PR_ISH = re.compile(
+    rf"(?:\b(?:{_PR_NOUN}|them|these|those|it|everything|all|open|ones)\b|#\d|github\.com/)",
+    re.I,
+)
+#: A negation that governs the merge verb: only auxiliaries and adverbs may
+#: sit between ("don't ever merge", "do not yet merge"). "Don't forget to
+#: merge", "no problem, merge" and "not a regular merge" are not cancellations.
 _NEGATION = re.compile(
-    r"\b(?:don'?t|do\s+not|never|not|without|no|instead\s+of|rather\s+than|stop|"
+    r"\b(?:don'?t|do\s+not|never|not|without|no|instead\s+of|rather\s+than|"
     r"avoid|refrain\s+from|cannot|can'?t|won'?t|will\s+not|must\s+not|should\s+not|"
-    r"shouldn'?t|forbid(?:den)?|prohibit(?:ed)?|no\s+longer)\b(?:\s+\S+){0,2}\s+merg",
+    r"shouldn'?t|no\s+longer)"
+    r"(?:\s+(?:yet|ever|actually|just|really|please|you|we|i|anyone|it|be|to|even|"
+    r"automatically|go\s+ahead\s+and)){0,2}"
+    r"\s+(?:(?:squash|rebase)[\s-]+)?merg",
     re.I,
 )
+#: A cancelling verb whose object is the merge ("cancel the merge of #96",
+#: "stop merging"), not a coordinated other object ("cancel the CI run and merge").
 _REVOKE_VERB = re.compile(
     r"\b(?:cancel|revoke|withdraw|rescind|retract|abort|halt|stop|hold(?:\s+off)?(?:\s+on)?|"
-    r"pause|freeze|suspend|undo|call\s+off)\b",
+    r"pause|freeze|suspend|undo|call\s+off)"
+    r"(?:\s+(?:the|my|your|our|this|that|these|those|any|all|every|pending|planned|"
+    r"scheduled|earlier|previous|auto)){0,2}\s+merg",
     re.I,
 )
 _QUESTION_LEAD = re.compile(
@@ -214,7 +511,7 @@ _STRIP_BLOCKS = (
 _STRIP_QUOTES = (
     re.compile(r'"[^"\n]*"'),
     re.compile(r"“[^”\n]*”"),
-    re.compile(r"‘[^’\n]*’"),
+    re.compile(r"‘[^’\n]*’(?!\w)"),
     re.compile(r"`[^`\n]*`"),
     re.compile(r"(?:^|(?<=[\s:(\[,]))'[^'\n]*'(?=$|[\s.,;:!?)\]])", re.M),
 )
@@ -223,12 +520,35 @@ _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 #: Clause boundaries inside a sentence. A colon marks presented material: what
 #: follows "the report says:" is quoted, whatever its mood.
 _CLAUSE_SPLIT = re.compile(
-    r"\s*;\s*|:\s+|,?\s+(?:but|however|whereas|while|instead|although|except|yet)\s+|\s+[—–]\s+|\s+--\s+",
+    r"\s*;\s*|:\s+|,?\s+(?:but|however|whereas|while|instead|although|except|yet)\s+"
+    r"|,\s+(?=(?:do\s+not|don'?t|never)\b)"
+    r"|,\s+(?=(?:(?:please|then|just|instead|now)\s+)?merge\b)"
+    r"|\s+[—–]\s+|\s+--\s+",
+    re.I,
+)
+#: Agent-text sentences whose references are not put forward as ready: a
+#: negation, a red or draft state, an unrelated or excluded PR.
+_CONTEXT_EXCLUDE = re.compile(
+    r"\b(?:not|never|no|don'?t|isn'?t|aren'?t|won'?t|red|fail(?:s|ed|ing)?|draft|blocked|"
+    r"blocking|broken|excluded?|skip(?:ped)?|unrelated|closed|external|pending|wait(?:ing)?)\b",
+    re.I,
+)
+#: GitHub issue-closing keywords: "Closes #45" names an issue.
+_CLOSING_KEYWORD = re.compile(r"\b(?:close[sd]?|fix|fixes|resolve[sd]?)\s*:?\s*$", re.I)
+_CONTEXT_SENTENCE = re.compile(r"(?<=[.!?;])\s+|\n+")
+#: A bare "#12" after these words numbers something other than a pull request.
+_NOT_A_PR_BEFORE = re.compile(
+    r"(?:issues?|steps?|items?|phases?|lines?|options?|todos?|rows?|no\.|number|finding|f)\s*$",
     re.I,
 )
 
 
 # --- prompt parsing ----------------------------------------------------------
+
+
+def fold_text(text: str) -> str:
+    """Typographic apostrophes and spaces folded to ASCII."""
+    return text.translate(_FOLD)
 
 
 def sanitize_prompt(text: str) -> str | None:
@@ -237,6 +557,8 @@ def sanitize_prompt(text: str) -> str | None:
     Pasted blocks, system reminders, fenced code, block quotes and quoted spans
     are removed: text copied from a repository file, a PR comment, a report or a
     tool result is not an instruction even when the operator pasted or quoted it.
+    Typographic apostrophes are folded only after quoted spans are gone, so a
+    curly-quoted phrase is still stripped and "PR’s" / "don’t" still parse.
     """
     if not isinstance(text, str) or not text.strip():
         return None
@@ -249,93 +571,24 @@ def sanitize_prompt(text: str) -> str | None:
     cleaned = _BLOCKQUOTE.sub(" ", cleaned)
     for pattern in _STRIP_QUOTES:
         cleaned = pattern.sub(" ", cleaned)
-    return cleaned
+    return fold_text(cleaned)
 
 
-def _slug_candidates(text: str) -> list[str]:
-    found: list[str] = []
-    for match in _GITHUB_URL_RE.finditer(text):
-        found.append(match.group("slug"))
-    for match in _SLUG_RE.finditer(text):
-        slug = match.group("slug")
-        owner, _, name = slug.partition("/")
-        # A bare "owner/name" token; path-like fragments ("ops/autonomy") read
-        # the same, so a slug must look like a repository, not a directory.
-        if owner.startswith(".") or name in {"", "."} or "." in owner:
-            continue
-        if re.search(r"\.(?:py|md|json|ya?ml|sh|toml|txt|js|ts)$", name, re.I):
-            continue
-        found.append(slug)
-    unique: list[str] = []
-    for slug in found:
-        if slug.casefold() not in {item.casefold() for item in unique}:
-            unique.append(slug)
-    return unique
-
-
-def _sentences(text: str) -> list[str]:
-    return [part.strip() for part in _SENTENCE_SPLIT.split(text) if part and part.strip()]
-
-
-def _clauses(sentence: str) -> list[tuple[str, bool]]:
-    """``(clause, presented)`` pairs; ``presented`` marks text after a colon."""
-    parts: list[tuple[str, bool]] = []
-    position = 0
-    presented = False
-    for match in _CLAUSE_SPLIT.finditer(sentence):
-        chunk = sentence[position : match.start()].strip()
-        if chunk:
-            parts.append((chunk, presented))
-        presented = match.group(0).strip().startswith(":")
-        position = match.end()
-    tail = sentence[position:].strip()
-    if tail:
-        parts.append((tail, presented))
-    return parts
-
-
-_NEGATED_LEAD = re.compile(r"\s*(?:not|n'?t)\b", re.I)
-
-
-def _is_question(sentence: str) -> bool:
-    """A question mark, or an inverted auxiliary ("should we merge …").
-
-    "Do not merge …" / "Don't merge …" start with an auxiliary too but are
-    negative imperatives, read as cancellations rather than skipped.
-    """
-    stripped = sentence.strip()
-    if stripped.endswith("?"):
-        return True
-    lead = _QUESTION_LEAD.match(stripped)
-    if not lead:
-        return False
-    return not _NEGATED_LEAD.match(stripped[lead.end() :])
-
-
-def _is_negative(clause: str) -> bool:
-    if _NEGATION.search(clause):
-        return True
-    return bool(_REVOKE_VERB.search(clause) and _MERGE_VERB.search(clause))
-
-
-def _refs_in_run(run: str) -> list[tuple[str | None, int]]:
-    refs: list[tuple[str | None, int]] = []
-    for match in _PR_REF.finditer(run):
-        repo = match.group("qualified") or match.group("url")
-        refs.append((repo, int(match.group("num"))))
-    return refs
-
-
-def _resolve_repo(
-    explicit: str | None, sentence_slugs: list[str], prompt_slugs: list[str], cwd_repo: str | None
-) -> str | None:
-    if explicit:
-        return explicit
-    if len(sentence_slugs) == 1:
-        return sentence_slugs[0]
-    if len(prompt_slugs) == 1:
-        return prompt_slugs[0]
-    return cwd_repo
+def repo_from_token(token: str | None) -> str | None:
+    """``owner/name`` from ``owner/name`` or a github.com URL, else None."""
+    if not token:
+        return None
+    text = token.strip().strip("<>()[]{}\"'").rstrip(".,;:!?)]}>")
+    match = _GITHUB_REPO_URL.match(text)
+    if match:
+        owner, name = match.group("owner"), match.group("name")
+    elif re.fullmatch(_SLUG, text):
+        owner, _, name = text.partition("/")
+    else:
+        return None
+    name = name.removesuffix(".git").rstrip(".")
+    slug = f"{owner}/{name}"
+    return slug if re.fullmatch(_SLUG, slug) else None
 
 
 def repo_from_cwd(cwd: str | None) -> str | None:
@@ -361,40 +614,558 @@ def repo_from_cwd(cwd: str | None) -> str | None:
     return match.group("slug").removesuffix(".git")
 
 
+def plausible_repo(slug: str, known_owners: frozenset[str] = frozenset()) -> bool:
+    """A bare ``owner/name`` that reads as a repository, not prose or a path.
+
+    "CI/CD", "and/or" and "ops/autonomy" are not repositories. A slug counts when
+    its owner is already known (the workspace remote, a URL, a qualified
+    reference) or its name looks like a repository name (a hyphen, dot or digit).
+    """
+    owner, _, name = slug.partition("/")
+    if not owner or not name:
+        return False
+    if owner.casefold() in known_owners:
+        return True
+    return bool(re.search(r"[-.\d]", name))
+
+
+def _slug_candidates(text: str, known_owners: frozenset[str] = frozenset()) -> list[str]:
+    found: list[str] = []
+    for match in _GITHUB_URL_RE.finditer(text):
+        found.append(match.group("slug"))
+    for match in _SLUG_RE.finditer(text):
+        slug = match.group("slug")
+        owner, _, name = slug.partition("/")
+        # A bare "owner/name" token; path-like fragments ("ops/autonomy") read
+        # the same, so a slug must look like a repository, not a directory.
+        if owner.startswith(".") or name in {"", "."} or "." in owner:
+            continue
+        if re.search(r"\.(?:py|md|json|ya?ml|sh|toml|txt|js|ts)$", name, re.I):
+            continue
+        if not plausible_repo(slug, known_owners):
+            continue
+        found.append(slug)
+    unique: list[str] = []
+    for slug in found:
+        if slug.casefold() not in {item.casefold() for item in unique}:
+            unique.append(slug)
+    return unique
+
+
+def _known_owners(text: str, *repos: str | None) -> frozenset[str]:
+    owners = {slug.partition("/")[0].casefold() for slug in _github_url_slugs(text)}
+    owners.update(repo.partition("/")[0].casefold() for repo in repos if repo)
+    return frozenset(owners)
+
+
+def _github_url_slugs(text: str) -> list[str]:
+    return [match.group("slug") for match in _GITHUB_URL_RE.finditer(text)]
+
+
+def _sentences(text: str) -> list[str]:
+    return [part.strip() for part in _SENTENCE_SPLIT.split(text) if part and part.strip()]
+
+
+def _clauses(sentence: str) -> list[tuple[str, bool]]:
+    """``(clause, presented)`` pairs; ``presented`` marks text after a colon."""
+    parts: list[tuple[str, bool]] = []
+    position = 0
+    presented = False
+    for match in _CLAUSE_SPLIT.finditer(sentence):
+        chunk = sentence[position : match.start()].strip()
+        if chunk:
+            parts.append((chunk, presented))
+        presented = match.group(0).strip().startswith(":") and not _INTERJECTION.match(chunk)
+        position = match.end()
+    tail = sentence[position:].strip()
+    if tail:
+        parts.append((tail, presented))
+    return parts
+
+
+_NEGATED_LEAD = re.compile(r"\s*(?:not|n'?t)\b", re.I)
+
+
+def _is_question(sentence: str) -> bool:
+    """A question mark, or an inverted auxiliary ("should we merge …").
+
+    "Do not merge …" / "Don't merge …" start with an auxiliary too but are
+    negative imperatives, read as cancellations rather than skipped.
+    """
+    stripped = sentence.strip()[:MAX_CLAUSE_CHARS]
+    if _POLITE_CANCEL.match(stripped) and _is_negative(stripped):
+        return False
+    if _POLITE_REQUEST.match(stripped) and not _QUESTION_WORDS.search(stripped):
+        return False
+    if stripped.endswith("?"):
+        return True
+    # "When the checks pass, merge #96": a leading condition is not a question.
+    for _ in range(3):
+        condition = _CONDITION_LEAD.match(stripped)
+        if not condition:
+            break
+        stripped = stripped[condition.end() :]
+    lead = _QUESTION_LEAD.match(stripped)
+    if not lead:
+        return False
+    return not _NEGATED_LEAD.match(stripped[lead.end() :])
+
+
+def _is_negative(clause: str) -> bool:
+    head = clause[:MAX_CLAUSE_CHARS]
+    return bool(_NEGATION.search(head) or _REVOKE_VERB.search(head))
+
+
+def _ref_repo(match: re.Match[str], known_owners: frozenset[str]) -> str | None:
+    """The repository a reference carries; an implausible "and/or#96" carries none."""
+    if match.group("url"):
+        return match.group("url")
+    qualified = match.group("qualified")
+    if qualified and plausible_repo(qualified, known_owners):
+        return qualified
+    return None
+
+
+def _refs_in_run(
+    run: str, known_owners: frozenset[str] = frozenset()
+) -> list[tuple[str | None, int]]:
+    """Every reference in ``run``; a range ("#96 through #99") yields each member."""
+    refs: list[tuple[str | None, int]] = []
+    for match in _PR_REF_RANGE.finditer(run):
+        repo = _ref_repo(match, known_owners)
+        start = int(match.group("num"))
+        refs.append((repo, start))
+        end = match.group("end")
+        if end and start < int(end) <= start + MAX_RANGE:
+            refs.extend((repo, number) for number in range(start + 1, int(end) + 1))
+    return refs
+
+
+def _context_refs(texts: list[str]) -> list[tuple[str | None, int]]:
+    """Pull-request references the conversation put forward, in order, deduplicated.
+
+    Only what a sentence offers as ready counts: a sentence carrying a negation
+    or a red, draft, blocked, closed, unrelated or external state contributes
+    nothing ("#99 is a draft - do NOT merge"), and an issue-closing keyword
+    ("Closes #45") names an issue. A bare ``#12`` after "issue", "step", "item"
+    … numbers something else. A bare reference takes the repository of its
+    message when that message names exactly one. Each turn is read up to
+    ``MAX_AGENT_TURN_CHARS``.
+    """
+    found: list[tuple[str | None, int]] = []
+    for raw in texts:
+        text = fold_text(raw[:MAX_AGENT_TURN_CHARS])
+        slugs = _repo_mentions(text)
+        own = slugs[0] if len(slugs) == 1 else None
+        known = frozenset(slug.partition("/")[0].casefold() for slug in slugs)
+        for sentence in _CONTEXT_SENTENCE.split(text):
+            if not sentence or _CONTEXT_EXCLUDE.search(sentence):
+                continue
+            found.extend(_sentence_refs(sentence, own, known))
+    return _dedupe_refs(found)
+
+
+def _sentence_refs(
+    sentence: str, own: str | None, known: frozenset[str]
+) -> list[tuple[str | None, int]]:
+    found: list[tuple[str | None, int]] = []
+    for match in _PR_REF_RANGE.finditer(sentence):
+        before = sentence[max(0, match.start() - 16) : match.start()]
+        if _CLOSING_KEYWORD.search(before):
+            continue
+        carried = _ref_repo(match, known)
+        if not carried and match.group(0).startswith("#") and _NOT_A_PR_BEFORE.search(before):
+            continue
+        repo = repo_from_token(carried) or own
+        start = int(match.group("num"))
+        numbers = [start]
+        end = match.group("end")
+        if end and start < int(end) <= start + MAX_RANGE:
+            numbers.extend(range(start + 1, int(end) + 1))
+        found.extend((repo, number) for number in numbers)
+    return found
+
+
+def _dedupe_refs(found: list[tuple[str | None, int]]) -> list[tuple[str | None, int]]:
+    unique: list[tuple[str | None, int]] = []
+    keys: set[tuple[str | None, int]] = set()
+    for repo, number in found:
+        key = (repo.casefold() if repo else None, number)
+        if key in keys:
+            continue
+        # A bare "#12" already known with its repository adds nothing.
+        if repo is None and any(n == number for _, n in unique):
+            continue
+        keys.add(key)
+        unique.append((repo, number))
+    return unique[:MAX_CONTEXT_MEMBERS]
+
+
+def _repo_mentions(text: str) -> list[str]:
+    """Repositories a conversation turn names: URLs, qualified refs, and slugs
+    that read as a repository rather than prose or a directory path."""
+    found: list[str] = list(_github_url_slugs(text))
+    for match in _PR_REF.finditer(text):
+        qualified = match.group("qualified")
+        if qualified and plausible_repo(qualified):
+            found.append(qualified)
+    anchored = frozenset(slug.partition("/")[0].casefold() for slug in found)
+    found.extend(_slug_candidates(text, anchored))
+    unique: list[str] = []
+    for slug in found:
+        repo = repo_from_token(slug)
+        if repo and repo.casefold() not in {item.casefold() for item in unique}:
+            unique.append(repo)
+    return unique
+
+
+class ConversationContext:
+    """Pull requests and repositories the conversation has established.
+
+    ``latest_refs`` are the references the agent put forward in its replies to
+    the last human turn — what "these PRs" points at. ``recent_refs`` and
+    ``repos`` span the last few exchanges; ``human_repos`` are the repositories
+    the operator's own turns named. Read from the host-written transcript at
+    recording time.
+    """
+
+    def __init__(
+        self,
+        latest_refs: list[tuple[str | None, int]] | None = None,
+        recent_refs: list[tuple[str | None, int]] | None = None,
+        repos: list[str] | None = None,
+        human_repos: list[str] | None = None,
+    ) -> None:
+        self.latest_refs = list(latest_refs or [])
+        self.recent_refs = list(recent_refs or [])
+        self.repos = list(repos or [])
+        self.human_repos = list(human_repos or [])
+
+    def members(self) -> list[tuple[str | None, int]]:
+        return self.latest_refs or self.recent_refs
+
+
+def _single(repos: list[str]) -> str | None:
+    unique = {repo.casefold(): repo for repo in repos}
+    return next(iter(unique.values())) if len(unique) == 1 else None
+
+
+def _resolve_repo(
+    explicit: str | None,
+    sentence_slugs: list[str],
+    prompt_slugs: list[str],
+    cwd_repo: str | None,
+    *,
+    context: ConversationContext | None = None,
+    number: int | None = None,
+    cohort: bool = False,
+) -> tuple[str | None, str | None]:
+    """``(repository, where it came from)``; ``(None, None)`` when unresolvable.
+
+    The operator's words first (the reference, its sentence, the prompt), then
+    a qualified reference to that exact number in the conversation, then the
+    workspace remote, then the one repository the operator's own turns named.
+    Only for a single pull request does the one repository the whole
+    conversation discusses decide; agent text never names a cohort's repository.
+    """
+    if explicit:
+        return repo_from_token(explicit) or explicit, "prompt"
+    if len(sentence_slugs) == 1:
+        return repo_from_token(sentence_slugs[0]) or sentence_slugs[0], "prompt"
+    if len(prompt_slugs) == 1:
+        return repo_from_token(prompt_slugs[0]) or prompt_slugs[0], "prompt"
+    if context is not None and number is not None and not cohort:
+        qualified = _single([repo for repo, n in context.recent_refs if n == number and repo])
+        if qualified:
+            return qualified, "conversation"
+    if cwd_repo:
+        return cwd_repo, "workspace"
+    if context is None:
+        return None, None
+    named = _single(context.human_repos)
+    if named:
+        return named, "conversation"
+    if not cohort:
+        discussed = _single(context.repos)
+        if discussed:
+            return discussed, "conversation"
+    return None, None
+
+
+def _repo_by_name(
+    word: str | None, prompt_slugs: list[str], context: ConversationContext | None, cwd: str | None
+) -> str | None:
+    """A repository written by name only ("in the l9-graphiti-memory repo")."""
+    if not word:
+        return None
+    wanted = word.strip().strip(".,;:!?").casefold()
+    if not wanted:
+        return None
+    candidates = (
+        list(prompt_slugs) + list(context.repos if context else []) + ([cwd] if cwd else [])
+    )
+    exact = {c.casefold(): c for c in candidates if c.partition("/")[2].casefold() == wanted}
+    if len(exact) == 1:
+        return next(iter(exact.values()))
+    partial = {c.casefold(): c for c in candidates if wanted in c.partition("/")[2].casefold()}
+    return next(iter(partial.values())) if len(partial) == 1 else None
+
+
+def _cohort_repo(match: re.Match[str]) -> tuple[str | None, str | None]:
+    """(slug-or-url repository, name-only word) of a cohort match's repository slot."""
+    token = match.group("repo")
+    if not token:
+        return None, None
+    repo = repo_from_token(token)
+    if repo:
+        return repo, None
+    return None, token
+
+
 def _objects_after(
-    tail: str, *, glue: re.Pattern[str]
-) -> tuple[str | None, list[tuple[str | None, int]]]:
-    """(cohort repo, PR refs) named right after a merge verb; both empty when none."""
+    tail: str, *, glue: re.Pattern[str], known_owners: frozenset[str] = frozenset()
+) -> tuple[re.Match[str] | None, list[tuple[str | None, int]]]:
+    """(cohort match, PR refs) named right after a merge verb; both empty when none.
+
+    A cohort match counts only when it says "open" or names a repository;
+    "merge all the PRs" is a contextual object, not a cohort. A run that opens
+    with a plural PR noun carries bare numbers ("PRs 96, 97 and 98").
+    """
     cohort = _COHORT_TAIL.match(tail)
-    if cohort:
-        return cohort.group("repo"), []
+    if cohort and (
+        cohort.group("open1")
+        or cohort.group("open2")
+        or cohort.group("open3")
+        or cohort.group("repo")
+    ):
+        return cohort, []
     stripped = glue.match(tail)
     rest = tail[stripped.end() :] if stripped else tail
     run = _REF_RUN.match(rest)
-    if run:
-        return None, _refs_in_run(run.group(0))
-    return None, []
+    if not run:
+        return None, []
+    refs = _refs_in_run(run.group(0), known_owners)
+    if refs and _PLURAL_PR_LEAD.match(run.group(0)):
+        more = _BARE_CONTINUATION.match(rest, run.end())
+        if more:
+            repo = refs[-1][0]
+            refs.extend((repo, int(n)) for n in _BARE_NUMBER.findall(more.group(0)))
+    return None, refs
 
 
-def parse_instructions(prompt: str, *, cwd_repo: str | None = None) -> list[dict[str, Any]]:
-    """Explicit merge instructions in ``prompt``, authorizations and revocations.
+def condition_status(conj: str, body: str) -> str | None:
+    """How a merge's condition is met: ``readiness``, ``pending_decision``,
+    ``unresolvable``, or None when the words only soften the imperative.
 
-    Each item: ``{"kind": "authorize"|"revoke", "scope": "pr"|"open_cohort",
-    "repo": str|None, "pr": int|None, "excerpt": str}``. An authorization is
-    returned only for a clause directed at the agent (imperative or first
-    person) that is not presented material; a revocation is returned for any
-    negative clause that names its pull request or repository — over-applying a
-    cancellation fails closed. A PR instruction whose repository cannot be
-    resolved is still returned with ``repo: None``; it binds nothing.
+    Readiness is what the existing readiness board proves from the pull request
+    (required checks, threads, conflicts). A decision by the operator or anyone
+    else cannot be read from the pull request; neither can a condition this
+    reader does not understand. Neither is ever read as permission to merge now.
+    """
+    text = re.sub(r"\s+", " ", body[:MAX_CLAUSE_CHARS]).strip().strip(" ,.:-").lower()
+    text = re.sub(r"^(?:that|then)\s+", "", text)
+    if _COURTESY_CONDITION.match(text):
+        return None
+    if _DECISION_CONDITION.search(text):
+        return CONDITION_PENDING_DECISION
+    if conj.strip().lower() == "unless":
+        return CONDITION_READINESS if _UNLESS_FAILURE.match(text) else CONDITION_UNRESOLVABLE
+    if _READINESS_CONDITION.match(text):
+        return CONDITION_READINESS
+    return CONDITION_UNRESOLVABLE
+
+
+def _condition_reason(status: str, text: str) -> str:
+    if status == CONDITION_READINESS:
+        return (
+            f"waits on readiness ({text}); authorized once the readiness board proves it at "
+            "the live head"
+        )
+    if status == CONDITION_PENDING_DECISION:
+        return (
+            f"waits on a decision that cannot be read from the pull request ({text}); not "
+            "authorized until the operator's next instruction says it is met"
+        )
+    return (
+        f"waits on a condition that cannot be verified ({text}); not authorized until the "
+        "operator's next instruction says it is met"
+    )
+
+
+def merge_condition(found: list[tuple[str, str]]) -> dict[str, str] | None:
+    """The instruction's condition from every ``(conjunction, body)`` governing it.
+
+    The most restrictive status wins: one decision among readiness conditions
+    still waits on that decision.
+    """
+    statuses: list[tuple[str, str]] = []
+    for conj, body in found:
+        status = condition_status(conj, body)
+        if status is not None:
+            phrase = re.sub(r"\s+", " ", f"{conj} {body[:MAX_CLAUSE_CHARS]}").strip(" ,.;:")
+            statuses.append((status, phrase[:EXCERPT_CHARS]))
+    if not statuses:
+        return None
+    worst = max(statuses, key=lambda pair: _CONDITION_RANK[pair[0]])[0]
+    text = "; ".join(phrase for _, phrase in statuses)
+    return {"status": worst, "text": text, "reason": _condition_reason(worst, text)}
+
+
+def _leading_conditions(text: str) -> tuple[int, list[tuple[str, str]]]:
+    """Offset past every leading condition of ``text``, and those conditions."""
+    offset = 0
+    found: list[tuple[str, str]] = []
+    for _ in range(3):
+        condition = _CONDITION_LEAD.match(text[offset:])
+        if not condition:
+            break
+        words = condition.group(0).strip().rstrip(",").strip()
+        conj = re.match(r"(?i)as\s+soon\s+as|provided(?:\s+that)?|\w+", words)
+        if conj:
+            found.append((conj.group(0), words[conj.end() :]))
+        offset += condition.end()
+    return offset, found
+
+
+def _trailing_conditions(tail: str) -> list[tuple[str, str]]:
+    """A condition after the merge's objects that governs the merge itself."""
+    window = tail[:MAX_CLAUSE_CHARS]
+    match = _TRAILING_CONDITION.search(window)
+    if not match or _CONDITION_BREAK.search(window[: match.start()]):
+        return []
+    return [(match.group("conj"), match.group("body"))]
+
+
+def _condition_clause(clause: str) -> tuple[str, str] | None:
+    """``(conjunction, body)`` when ``clause`` is only a condition, else None."""
+    match = _CONDITION_CLAUSE.match(clause[:MAX_CLAUSE_CHARS])
+    if not match or _MERGE_VERB.search(match.group("body")):
+        return None
+    return match.group("conj"), match.group("body")
+
+
+def _clause_condition(
+    clauses: list[tuple[str, bool]], index: int, end: int, following: str
+) -> dict[str, str] | None:
+    """Every condition governing the merge directed in ``clauses[index]``.
+
+    The leading condition inside the clause, condition-only clauses just before
+    or after it in the sentence ("After I approve the release, merge #96";
+    "merge #96, but only after I approve the release"), a condition trailing its
+    objects ("merge #96 once CI is green"), and a next sentence that restricts it
+    ("Merge #96. But only after the release is approved.").
+    """
+    clause = clauses[index][0]
+    _, found = _leading_conditions(clause[:MAX_CLAUSE_CHARS])
+    before = index - 1
+    while before >= 0:
+        lead = _condition_clause(clauses[before][0])
+        if lead is None:
+            break
+        found.insert(0, lead)
+        before -= 1
+    found.extend(_trailing_conditions(clause[end:]))
+    after = index + 1
+    while after < len(clauses):
+        trail = _condition_clause(clauses[after][0])
+        if trail is None:
+            break
+        found.append(trail)
+        after += 1
+    if after == len(clauses) and following:
+        restriction = _ONLY_CONDITION_SENTENCE.match(following[:MAX_CLAUSE_CHARS])
+        if restriction and not _MERGE_VERB.search(restriction.group("body")):
+            found.append((restriction.group("conj"), restriction.group("body")))
+    return merge_condition(found)
+
+
+def _directed_end(clause: str) -> int | None:
+    """Offset just past the merge verb of a clause directed at the agent, else None.
+
+    A leading condition ("once CI is green, merge #96") is looked through to
+    find the verb. It is not discarded: :func:`parse_prompt` records it with the
+    instruction (:func:`merge_condition`), so it can never become permission to
+    merge before it is met.
+    """
+    offset, _ = _leading_conditions(clause[:MAX_CLAUSE_CHARS])
+    text = clause[:MAX_CLAUSE_CHARS][offset:]
+    strict = _DIRECTED.match(text)
+    if strict:
+        return offset + strict.end()
+    loose = _LOOSE_DIRECTED.match(text)
+    if not loose:
+        return None
+    pre = loose.group("pre")
+    if _SUBJECT_START.match(pre) or _REPORTING.search(pre) or _MERGE_VERB.search(pre):
+        return None
+    return offset + loose.end()
+
+
+def _deictic_object(tail: str) -> re.Match[str] | None:
+    """A contextual object that names pull requests, not code being merged.
+
+    "merge them into a single file", "merge it with the helper", "merge both
+    dictionaries" and "merge these two functions" merge something else.
+    """
+    deictic = _DEICTIC.match(tail)
+    if not deictic:
+        return None
+    after = tail[deictic.end() :]
+    if _DEICTIC_OTHER_TARGET.match(after):
+        return None
+    names_prs = re.search(
+        rf"(?:{_PR_NOUN}|ones|changes|fixes|branches|stack|train)$", deictic.group(0), re.I
+    )
+    if not names_prs and not _DEICTIC_CONTINUATION.match(after):
+        return None
+    return deictic
+
+
+_MERGE_MENTION = re.compile(r"\bmerge\b[^.!?]{0,40}?(?:#\d|\bprs?\b|pull\s+request)", re.I)
+
+
+def parse_prompt(
+    prompt: str,
+    *,
+    cwd_repo: str | None = None,
+    context: ConversationContext | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """``(instructions, notes)`` for ``prompt``.
+
+    Each instruction: ``{"kind": "authorize"|"revoke", "scope": "pr"|"open_cohort"|"all",
+    "repo": str|None, "pr": int|None, "excerpt": str, "source": str,
+    "repo_source": str|None}``. ``source`` says where the pull request came
+    from (``prompt``, ``range``, ``cohort``, ``conversation``, ``all``).
+
+    An authorization is returned only for a clause directed at the agent
+    (imperative or first person) that is not presented material. A revocation is
+    returned for a clause whose negation governs merging a pull request.
+    ``notes`` explain merge intent that resolved to nothing, so the hook can say
+    so instead of staying silent.
     """
     cleaned = sanitize_prompt(prompt)
     if cleaned is None:
-        return []
-    prompt_slugs = _slug_candidates(cleaned)
+        return [], []
+    known = _known_owners(cleaned, cwd_repo, *(context.repos if context else []))
+    prompt_slugs = _slug_candidates(cleaned, known)
+    #: References the operator named before the clause being read: the only
+    #: antecedents a bare "don't merge it" may take ("Don't merge it, merge #97
+    #: instead" never cancels #97).
+    preceding: list[tuple[str | None, int]] = []
     found: list[dict[str, Any]] = []
+    notes: list[str] = []
     seen: set[tuple[str, str, str | None, int | None]] = set()
 
-    def _add(kind: str, scope: str, repo: str | None, pr: int | None, text: str) -> None:
+    def _add(
+        kind: str,
+        scope: str,
+        repo: str | None,
+        pr: int | None,
+        text: str,
+        source: str,
+        repo_source: str | None,
+        condition: dict[str, str] | None = None,
+    ) -> None:
         key = (kind, scope, repo.casefold() if repo else None, pr)
         if key in seen:
             return
@@ -406,41 +1177,362 @@ def parse_instructions(prompt: str, *, cwd_repo: str | None = None) -> list[dict
                 "repo": repo,
                 "pr": pr,
                 "excerpt": text.strip()[:EXCERPT_CHARS],
+                "source": source,
+                "repo_source": repo_source,
+                "condition": condition if kind == KIND_AUTHORIZE else None,
             }
         )
 
-    for sentence in _sentences(cleaned):
+    def _refs(
+        kind: str,
+        refs: list[tuple[str | None, int]],
+        text: str,
+        source: str,
+        sentence_slugs: list[str],
+        condition: dict[str, str] | None = None,
+    ) -> None:
+        for explicit, number in refs:
+            repo, where = _resolve_repo(
+                explicit,
+                sentence_slugs,
+                prompt_slugs,
+                cwd_repo,
+                context=context,
+                number=number,
+            )
+            if repo is None and kind == KIND_AUTHORIZE:
+                notes.append(
+                    f"#{number}: the repository could not be resolved (name it as owner/name "
+                    "or a github.com URL)"
+                )
+            _add(kind, SCOPE_PR, repo, number, text, source, where, condition)
+
+    def _cohort(
+        kind: str,
+        match: re.Match[str],
+        text: str,
+        sentence_slugs: list[str],
+        condition: dict[str, str] | None = None,
+    ) -> None:
+        repo, word = _cohort_repo(match)
+        where: str | None = "prompt" if repo else None
+        if repo is None and word:
+            repo = _repo_by_name(word, prompt_slugs, context, cwd_repo)
+            where = "prompt" if repo else None
+        if repo is None and not word:
+            repo, where = _resolve_repo(
+                None, sentence_slugs, prompt_slugs, cwd_repo, context=context, cohort=True
+            )
+        if repo is None:
+            if kind == KIND_AUTHORIZE:
+                notes.append(
+                    "an open-pull-request cohort was named, but its repository could not be "
+                    "resolved (name it as owner/name or a github.com URL)"
+                )
+            return
+        _add(kind, SCOPE_COHORT, repo, None, text, "cohort", where, condition)
+
+    def _context_members(single: bool) -> list[tuple[str | None, int]] | None:
+        members = context.members() if context is not None else []
+        if not members:
+            return None
+        if single and len({(r or "").casefold() + f"#{n}" for r, n in members}) != 1:
+            return None
+        return members
+
+    sentences = _sentences(cleaned)
+    for position, sentence in enumerate(sentences):
         if _is_question(sentence):
             continue
-        sentence_slugs = _slug_candidates(sentence)
-        for clause, presented in _clauses(sentence):
-            if _is_negative(clause):
-                for verb in _MERGE_VERB.finditer(clause):
-                    tail = clause[verb.end() :]
-                    cohort, refs = _objects_after(tail, glue=_REVOKE_GLUE)
-                    if cohort is None and not refs:
-                        short = _COHORT_REVOKE_SHORT.match(tail)
-                        if short and verb.group(0).lower() in {"merges", "merging", "merge"}:
-                            cohort = short.group("repo")
-                    if cohort:
-                        _add(KIND_REVOKE, "open_cohort", cohort, None, clause)
-                    for explicit, number in refs:
-                        repo = _resolve_repo(explicit, sentence_slugs, prompt_slugs, cwd_repo)
-                        _add(KIND_REVOKE, "pr", repo, number, clause)
+        before = len(found)
+        sentence_slugs = _slug_candidates(sentence, known)
+        sentence_preceding: list[tuple[str | None, int]] = []
+        clauses = _clauses(sentence)
+        following = sentences[position + 1] if position + 1 < len(sentences) else ""
+        for index, (clause, presented) in enumerate(clauses):
+            clause_refs = _refs_in_run(clause, known)
+            negative = _is_negative(clause)
+            if negative:
+                _parse_cancellation(
+                    clause,
+                    sentence_refs=list(sentence_preceding),
+                    prompt_refs=list(preceding),
+                    sentence_slugs=sentence_slugs,
+                    known_owners=known,
+                    add=_add,
+                    refs=_refs,
+                    cohort=_cohort,
+                    context_members=_context_members,
+                )
+            sentence_preceding.extend(clause_refs)
+            preceding.extend(clause_refs)
+            if negative or presented:
                 continue
-            if presented:
+            end = _directed_end(clause)
+            if end is None:
                 continue
-            directed = _DIRECTED.match(clause)
-            if not directed:
+            tail = clause[end:]
+            condition = _clause_condition(clauses, index, end, following)
+            cohort, refs = _objects_after(tail, glue=_GLUE, known_owners=known)
+            if cohort is not None:
+                _cohort(KIND_AUTHORIZE, cohort, clause, sentence_slugs, condition)
                 continue
-            tail = clause[directed.end() :]
-            cohort, refs = _objects_after(tail, glue=_GLUE)
-            if cohort:
-                _add(KIND_AUTHORIZE, "open_cohort", cohort, None, clause)
-            for explicit, number in refs:
-                repo = _resolve_repo(explicit, sentence_slugs, prompt_slugs, cwd_repo)
-                _add(KIND_AUTHORIZE, "pr", repo, number, clause)
-    return found
+            if refs:
+                source = "range" if len(refs) > len(_PR_REF.findall(tail)) else "prompt"
+                _refs(KIND_AUTHORIZE, refs, clause, source, sentence_slugs, condition)
+                continue
+            deictic = _deictic_object(tail)
+            if deictic:
+                single = bool(deictic.group("single"))
+                # "Fix the CI on #96 and merge it": the clause itself names its object.
+                named_before = _refs_in_run(clause[:end], known)
+                if named_before and (not single or len(named_before) == 1):
+                    _refs(KIND_AUTHORIZE, named_before, clause, "prompt", sentence_slugs, condition)
+                    continue
+                members = _context_members(single)
+                if members is None:
+                    notes.append(
+                        f"'{clause.strip()[:80]}' refers to pull requests from the conversation, "
+                        + (
+                            "but more than one is under discussion"
+                            if single and context is not None and context.members()
+                            else "but no pull request could be found in the recent conversation"
+                        )
+                    )
+                    continue
+                _refs(KIND_AUTHORIZE, members, clause, "conversation", sentence_slugs, condition)
+                continue
+            if _PR_ISH.search(tail) and not _DEICTIC.match(tail):
+                notes.append(
+                    f"'{clause.strip()[:80]}' reads as a merge instruction, but no pull request "
+                    "or repository could be resolved from it"
+                )
+        if len(found) == before and _MERGE_MENTION.search(sentence):
+            notes.append(
+                f"'{sentence.strip()[:80]}' mentions merging a pull request but was not read as "
+                "a merge instruction; if the operator meant one, nothing was recorded"
+            )
+    return found, notes
+
+
+def _parse_cancellation(
+    clause: str,
+    *,
+    sentence_refs: list[tuple[str | None, int]],
+    prompt_refs: list[tuple[str | None, int]],
+    sentence_slugs: list[str],
+    known_owners: frozenset[str],
+    add: Callable[..., None],
+    refs: Callable[..., None],
+    cohort: Callable[..., None],
+    context_members: Callable[[bool], list[tuple[str | None, int]] | None],
+) -> None:
+    """Record a negative clause as the narrowest cancellation that still covers it.
+
+    Named objects first; then, for a bare cancellation ("don't merge it yet"),
+    the pull requests the clause names, else those named before it in its
+    sentence, else before it in the prompt; then, for a
+    contextual object ("don't merge them"), the conversation's; then the one
+    repository the clause names; then everything ("stop, don't merge yet").
+    Not a cancellation: a merge whose object is something else ("don't merge
+    main into it"), a scope limit ("don't merge anything else"), and a bare
+    condition ("don't merge until CI is green", "do not merge before that").
+    """
+    named = False
+    bare = False
+    contextual = False
+    for verb in _MERGE_VERB.finditer(clause[:MAX_CLAUSE_CHARS]):
+        tail = clause[verb.end() : MAX_CLAUSE_CHARS]
+        match, found = _objects_after(tail, glue=_REVOKE_GLUE, known_owners=known_owners)
+        if match is not None:
+            cohort(KIND_REVOKE, match, clause, sentence_slugs)
+            named = True
+            continue
+        if found:
+            refs(KIND_REVOKE, found, clause, "prompt", sentence_slugs)
+            named = True
+            continue
+        short = _COHORT_REVOKE_SHORT.match(tail)
+        if short and verb.group(0).lower() in {"merges", "merging", "merge"}:
+            repo = repo_from_token(short.group("repo"))
+            if repo:
+                add(KIND_REVOKE, SCOPE_COHORT, repo, None, clause, "cohort", "prompt")
+                named = True
+                continue
+        deictic = _DEICTIC.match(tail)
+        if deictic and not re.match(r"\s*all\b", tail, re.I):
+            contextual = True
+        if _BARE_TAIL.match(tail) or deictic or _EVERYTHING.search(tail):
+            bare = True
+    if named or not bare:
+        return
+    if _SCOPE_LIMIT.search(clause) or _CONDITIONAL.search(clause):
+        return
+    if _EVERYTHING.search(clause):
+        add(KIND_REVOKE, SCOPE_ALL, None, None, clause, "all", None)
+        return
+    for candidates in (_refs_in_run(clause, known_owners), sentence_refs, prompt_refs):
+        if candidates:
+            refs(KIND_REVOKE, candidates, clause, "prompt", sentence_slugs)
+            return
+    members = context_members(False) if contextual else None
+    if members:
+        refs(KIND_REVOKE, members, clause, "conversation", sentence_slugs)
+        return
+    slugs = _slug_candidates(clause, known_owners)
+    if len(slugs) == 1 and repo_from_token(slugs[0]):
+        add(KIND_REVOKE, SCOPE_COHORT, repo_from_token(slugs[0]), None, clause, "cohort", "prompt")
+        return
+    add(KIND_REVOKE, SCOPE_ALL, None, None, clause, "all", None)
+
+
+def parse_instructions(
+    prompt: str,
+    *,
+    cwd_repo: str | None = None,
+    context: ConversationContext | None = None,
+) -> list[dict[str, Any]]:
+    """Explicit merge instructions in ``prompt``, authorizations and revocations.
+
+    The instruction half of :func:`parse_prompt`. A PR instruction whose
+    repository cannot be resolved is still returned with ``repo: None``; it
+    binds nothing.
+    """
+    return parse_prompt(prompt, cwd_repo=cwd_repo, context=context)[0]
+
+
+# --- conversation context ------------------------------------------------------
+
+
+def _is_typed_human_record(record: dict[str, Any]) -> bool:
+    if record.get("type") != "user" or "toolUseResult" in record:
+        return False
+    if record.get("isMeta") or record.get("isSidechain"):
+        return False
+    message = record.get("message")
+    if not isinstance(message, dict) or message.get("role") != "user":
+        return False
+    return _record_is_human_turn(record) is True
+
+
+def _is_relayed_record(record: dict[str, Any]) -> bool:
+    """A user-role turn the host relayed (marked non-human), not a tool result."""
+    if record.get("type") != "user" or "toolUseResult" in record:
+        return False
+    if record.get("isMeta") or record.get("isSidechain"):
+        return False
+    return _record_is_human_turn(record) is False
+
+
+def _assistant_text(record: dict[str, Any]) -> str:
+    if record.get("type") != "assistant" or record.get("isSidechain"):
+        return ""
+    message = record.get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            str(part.get("text") or "")
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+    return ""
+
+
+def _read_tail(path: Path) -> list[str] | None:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            start = max(0, size - TRANSCRIPT_TAIL_BYTES)
+            handle.seek(start)
+            raw = handle.read().decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    lines = raw.splitlines()
+    return lines[1:] if start > 0 else lines
+
+
+def conversation_context(
+    transcript_path: str | Path | None,
+    session_id: str,
+    *,
+    current_prompt: str | None = None,
+    exchanges: int = CONTEXT_EXCHANGES,
+) -> ConversationContext | None:
+    """What the session's conversation has established, from the host transcript.
+
+    Only typed human turns and the agent's visible replies count: tool results,
+    relayed turns, meta records and sidechains are not conversation. The current
+    prompt, if the host already wrote it, is not its own context. None when the
+    transcript cannot be read.
+    """
+    if not transcript_path or not session_id:
+        return None
+    lines = _read_tail(Path(str(transcript_path)).expanduser())
+    if lines is None:
+        return None
+    turns: list[tuple[str, str]] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(record, dict) or str(record.get("sessionId") or "") != session_id:
+            continue
+        if _is_typed_human_record(record):
+            text = _record_text(record)
+            if text:
+                turns.append(("human", text))
+            continue
+        if _is_relayed_record(record):
+            # A webhook, task notification or cross-session message closes the
+            # exchange: the agent's reply to it is not what "these PRs" means.
+            turns.append(("relay", ""))
+            continue
+        text = _assistant_text(record)
+        if text:
+            turns.append(("agent", text))
+    if current_prompt:
+        digest = prompt_digest(current_prompt)
+        current = _normalized(current_prompt)
+        while (
+            turns
+            and turns[-1][0] == "human"
+            and (prompt_digest(turns[-1][1]) == digest or _normalized(turns[-1][1]) == current)
+        ):
+            turns.pop()
+    grouped: list[list[tuple[str, str]]] = []
+    for role, text in turns:
+        if role in {"human", "relay"} or not grouped:
+            grouped.append([])
+        grouped[-1].append((role, text))
+    # Exchanges a relayed turn opened are not conversation with the operator.
+    conversational = [group for group in grouped if group[0][0] != "relay"]
+    recent = conversational[-exchanges:] if exchanges > 0 else []
+    latest_agent = [text for role, text in (recent[-1] if recent else []) if role == "agent"]
+    recent_texts = [text for exchange in recent for role, text in exchange if text]
+    human_texts = [text for exchange in recent for role, text in exchange if role == "human"]
+    return ConversationContext(
+        latest_refs=_context_refs(latest_agent),
+        recent_refs=_context_refs(recent_texts),
+        repos=_mentioned_repos(recent_texts),
+        human_repos=_mentioned_repos(human_texts),
+    )
+
+
+def _mentioned_repos(texts: list[str]) -> list[str]:
+    """Repositories named in ``texts``, most recent first."""
+    repos: list[str] = []
+    for text in reversed(texts):
+        for repo in _repo_mentions(fold_text(text[:MAX_AGENT_TURN_CHARS])):
+            if repo.casefold() not in {item.casefold() for item in repos}:
+                repos.append(repo)
+    return repos
 
 
 # --- host provenance -----------------------------------------------------------
@@ -527,7 +1619,7 @@ def prompt_digest(prompt: str) -> str:
 
 
 def _normalized(text: str) -> str:
-    return " ".join(text.split()).casefold()
+    return " ".join(fold_text(text).split()).casefold()
 
 
 def _instruction_id(host: str, session_id: str, digest: str, item: dict[str, Any]) -> str:
@@ -568,11 +1660,14 @@ def _write_store(path: Path, entries: list[dict[str, Any]]) -> None:
 
 
 def is_live(entry: dict[str, Any], now: float) -> bool:
-    """A well-formed, unexpired receipt carrying the host hook's provenance."""
+    """A well-formed receipt carrying the host hook's provenance, still in force.
+
+    An authorization is in force until it expires. A cancellation is in force
+    until a later authorization supersedes it: it has no expiry of its own,
+    because its lapse would revive the authority it withdrew (§6.2.14).
+    """
     expires = entry.get("expires_at")
     recorded = entry.get("recorded_at")
-    if not isinstance(expires, (int, float)) or isinstance(expires, bool):
-        return False
     if not isinstance(recorded, (int, float)) or isinstance(recorded, bool):
         return False
     if entry.get("recorder") != RECORDER or entry.get("kind") not in KINDS:
@@ -580,7 +1675,46 @@ def is_live(entry: dict[str, Any], now: float) -> bool:
     host = str(entry.get("host") or "")
     if not _valid_provenance(host, entry.get("provenance"), str(entry.get("session_id") or "")):
         return False
+    if entry.get("kind") == KIND_REVOKE:
+        return recorded <= now
+    if not isinstance(expires, (int, float)) or isinstance(expires, bool):
+        return False
     return recorded <= now < expires
+
+
+def _retained(entries: list[dict[str, Any]], now: float) -> list[dict[str, Any]]:
+    """Entries still in force, capped: authorizations and cancellations separately,
+    so a burst of authorizations can never push a cancellation out of the store."""
+    live = [entry for entry in entries if is_live(entry, now)]
+    authorizations = [e for e in live if e.get("kind") == KIND_AUTHORIZE][-MAX_RECORDS:]
+    revocations = [e for e in live if e.get("kind") == KIND_REVOKE]
+    if len(revocations) > MAX_REVOCATIONS:
+        # Drop cancellations a later grantable authorization has superseded
+        # first; one still in force goes only when the cap leaves no choice.
+        spent = [e for e in revocations if _superseded(e, live)]
+        excess = len(revocations) - MAX_REVOCATIONS
+        drop = {id(e) for e in spent[:excess]}
+        revocations = [e for e in revocations if id(e) not in drop][-MAX_REVOCATIONS:]
+    keep = {id(entry) for entry in authorizations + revocations}
+    return [entry for entry in live if id(entry) in keep]
+
+
+def _superseded(revocation: dict[str, Any], entries: list[dict[str, Any]]) -> bool:
+    """A later grantable authorization with the same scope and target spent it."""
+    if revocation.get("scope") == SCOPE_ALL:
+        return False
+    key = (
+        revocation.get("scope"),
+        str(revocation.get("repo") or "").casefold(),
+        revocation.get("pr"),
+    )
+    return any(
+        entry.get("kind") == KIND_AUTHORIZE
+        and entry.get("host") in GRANTABLE_HOSTS
+        and (entry.get("scope"), str(entry.get("repo") or "").casefold(), entry.get("pr")) == key
+        and float(entry.get("recorded_at") or 0) > float(revocation.get("recorded_at") or 0)
+        for entry in entries
+    )
 
 
 def list_open_pull_requests(repo: str) -> list[int]:
@@ -625,7 +1759,7 @@ def list_open_pull_requests(repo: str) -> list[int]:
     return sorted(numbers)
 
 
-def record_instructions(
+def capture_instructions(
     prompt: str,
     *,
     host: str,
@@ -637,15 +1771,19 @@ def record_instructions(
     cwd_repo: str | None = None,
     provenance: dict[str, Any] | None = None,
     open_pull_requests: Callable[[str], list[int]] | None = None,
-) -> list[dict[str, Any]]:
-    """Append one receipt per explicit instruction in ``prompt``; return them.
+    context: ConversationContext | None = None,
+) -> dict[str, Any]:
+    """Record every instruction in ``prompt``; return ``{"recorded", "notes"}``.
 
     Called by the host prompt hooks only, with the payload's provenance from
     :func:`host_provenance`; a missing or inconsistent provenance is a
     ``ValueError``, never a receipt. Cohort instructions snapshot the
     repository's open pull requests through ``open_pull_requests`` (GitHub REST
     by default); a snapshot that fails is stored as ``members: None`` and covers
-    nothing. Expired receipts are pruned on every write and the store is capped.
+    nothing. ``context`` is the conversation the host transcript established;
+    contextual objects resolve against it here, once, and the resolved pull
+    requests are what the receipts store. ``notes`` name merge intent that
+    resolved to nothing. Lapsed receipts are pruned on every write.
     """
     if host not in HOSTS:
         raise ValueError(f"host must be one of {HOSTS}")
@@ -657,15 +1795,15 @@ def record_instructions(
             "transcript); an agent-shaped payload records nothing"
         )
     assert provenance is not None
-    stamp = int(now if now is not None else time.time())
+    stamp = float(now) if now is not None else time.time()
     resolved_cwd_repo = cwd_repo if cwd_repo is not None else repo_from_cwd(cwd)
-    parsed = parse_instructions(prompt, cwd_repo=resolved_cwd_repo)
+    parsed, notes = parse_prompt(prompt, cwd_repo=resolved_cwd_repo, context=context)
     if not parsed:
-        return []
+        return {"recorded": [], "notes": notes}
     lister = open_pull_requests or list_open_pull_requests
     digest = prompt_digest(prompt)
     target = path or default_store_path()
-    kept = [entry for entry in load_instructions(target) if is_live(entry, stamp)]
+    kept = _retained(load_instructions(target), stamp)
     written: list[dict[str, Any]] = []
     snapshots: dict[str, tuple[list[int] | None, str | None]] = {}
     for item in parsed:
@@ -678,15 +1816,18 @@ def record_instructions(
             "session_id": session_id,
             "cwd": str(cwd) if cwd else None,
             "recorded_at": stamp,
-            "expires_at": stamp + int(ttl_seconds),
+            "expires_at": (stamp + int(ttl_seconds) if item["kind"] == KIND_AUTHORIZE else None),
             "scope": item["scope"],
             "repo": item.get("repo"),
             "pr": item.get("pr"),
+            "source": item.get("source"),
+            "repo_source": item.get("repo_source"),
             "excerpt": item["excerpt"],
+            "condition": item.get("condition"),
             "prompt_sha256": digest,
             "provenance": dict(provenance),
         }
-        if item["scope"] == "open_cohort" and item["kind"] == KIND_AUTHORIZE and item.get("repo"):
+        if item["scope"] == SCOPE_COHORT and item["kind"] == KIND_AUTHORIZE and item.get("repo"):
             repo = str(item["repo"])
             if repo not in snapshots:
                 try:
@@ -702,11 +1843,23 @@ def record_instructions(
         kept = [k for k in kept if k.get("id") != entry["id"]]
         kept.append(entry)
         written.append(entry)
-    _write_store(target, kept[-MAX_RECORDS:])
-    return written
+    _write_store(target, _retained(kept, stamp))
+    return {"recorded": written, "notes": notes}
+
+
+def record_instructions(prompt: str, **kwargs: Any) -> list[dict[str, Any]]:
+    """Append one receipt per instruction in ``prompt``; return them.
+
+    :func:`capture_instructions` without the notes.
+    """
+    return capture_instructions(prompt, **kwargs)["recorded"]
 
 
 def _covers(entry: dict[str, Any], repo: str, pr: int) -> tuple[bool, str]:
+    if entry.get("scope") == SCOPE_ALL:
+        if entry.get("kind") == KIND_REVOKE:
+            return True, "cancellation of every pending merge"
+        return False, "unknown scope"
     entry_repo = str(entry.get("repo") or "")
     if not entry_repo or entry_repo.casefold() != repo.casefold():
         return False, "other repository"
@@ -728,6 +1881,27 @@ def _covers(entry: dict[str, Any], repo: str, pr: int) -> tuple[bool, str]:
             return True, "pull request was open when the cohort was authorized"
         return False, "pull request was not open when the cohort was authorized"
     return False, "unknown scope"
+
+
+def pending_condition(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """The condition that keeps ``entry`` from authorizing anything yet, else None.
+
+    Only objective readiness may stand as authority (``authorize_merge`` then
+    asks the readiness board). A pending decision, an unresolvable condition, or
+    a condition this reader cannot parse authorizes nothing.
+    """
+    condition = entry.get("condition")
+    if condition is None:
+        return None
+    if isinstance(condition, dict) and condition.get("status") == CONDITION_READINESS:
+        return None
+    if isinstance(condition, dict) and condition.get("reason"):
+        return condition
+    return {
+        "status": CONDITION_UNRESOLVABLE,
+        "text": str(condition)[:EXCERPT_CHARS],
+        "reason": "the recorded condition is malformed; it authorizes nothing",
+    }
 
 
 def _latest(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -762,7 +1936,9 @@ def find_instruction(
 
     The latest instruction wins: a cancellation recorded at or after the latest
     authorization withdraws it; an authorization recorded after a cancellation
-    stands.
+    stands. A latest instruction that still waits on a decision or on an
+    unverifiable condition (:func:`pending_condition`) authorizes nothing, and
+    it narrows an earlier unconditional one: the operator's newest words govern.
     """
     number = str(pr).strip()
     if not repo or not number.isdigit():
@@ -770,7 +1946,7 @@ def find_instruction(
     stamp = time.time() if now is None else now
     authorizations, revocations = _covering(repo, int(number), path=path, now=stamp)
     latest_authorization = _latest(authorizations)
-    if latest_authorization is None:
+    if latest_authorization is None or pending_condition(latest_authorization) is not None:
         return None
     latest_revocation = _latest(revocations)
     if latest_revocation is not None and float(latest_revocation["recorded_at"]) >= float(
@@ -806,7 +1982,16 @@ def revocation_for(
     revoked_at = float(latest_revocation["recorded_at"])
     if since is not None and revoked_at < float(since):
         return None
-    newer = [a for a in authorizations if float(a["recorded_at"]) > revoked_at]
+    # Only an authorization that can itself become a grant spends a cancellation:
+    # an unverifiable host's receipt (Cursor) must not revive an older grant.
+    # Nor does one still waiting on its condition: it authorizes nothing yet.
+    newer = [
+        a
+        for a in authorizations
+        if float(a["recorded_at"]) > revoked_at
+        and a.get("host") in GRANTABLE_HOSTS
+        and pending_condition(a) is None
+    ]
     if newer:
         return None
     return dict(latest_revocation)
@@ -833,6 +2018,20 @@ def instruction_verdict(
     revoked = revocation_for(repo, pr, path=path, now=stamp) if number.isdigit() else None
     if revoked is not None:
         return {"authorized": False, "instruction": None, "reason": revocation_reason(revoked)}
+    if repo and number.isdigit():
+        authorizations, _ = _covering(repo, int(number), path=path, now=stamp)
+        latest = _latest(authorizations)
+        waiting = pending_condition(latest) if latest is not None else None
+        if latest is not None and waiting is not None:
+            return {
+                "authorized": False,
+                "instruction": None,
+                "condition": waiting,
+                "reason": (
+                    f"operator instruction {latest.get('id')} for {repo}#{number} is "
+                    f"conditional and its condition is not met: {waiting.get('reason')}"
+                ),
+            }
     reasons: list[str] = []
     for entry in load_instructions(path):
         if str(entry.get("repo") or "").casefold() != (repo or "").casefold():
@@ -883,7 +2082,8 @@ def transcript_corroborates(
 ) -> tuple[bool, str]:
     """Whether a human turn of the receipt's session, in the host-written
     transcript, carries the receipt's prompt (same digest) or its excerpt."""
-    provenance = entry.get("provenance") if isinstance(entry.get("provenance"), dict) else {}
+    raw_provenance = entry.get("provenance")
+    provenance = raw_provenance if isinstance(raw_provenance, dict) else {}
     path_text = str(transcript_path or provenance.get("transcript_path") or "").strip()
     if not path_text:
         return False, "receipt names no host transcript"
@@ -989,36 +2189,152 @@ def _payload_prompt(payload: dict[str, Any]) -> str:
 
 
 def _describe(entry: dict[str, Any]) -> str:
-    target = f"{entry.get('repo') or '<repository unresolved>'}"
-    if entry.get("scope") == "pr":
+    if entry.get("scope") == SCOPE_ALL:
+        return f"{entry.get('kind')} every pending merge [id {entry['id']}]"
+    target = f"{entry.get('repo') or '<repository unresolved: binds nothing>'}"
+    if entry.get("scope") == SCOPE_PR:
         target += f"#{entry.get('pr')}"
+        if entry.get("source") == "conversation":
+            target += " (resolved from the conversation)"
     elif entry.get("kind") == KIND_REVOKE:
         target += " (every pull request)"
     else:
         members = entry.get("members")
-        shown = ", ".join(f"#{n}" for n in members) if isinstance(members, list) else "unavailable"
-        target += f" (open pull requests at the time: {shown})"
+        shown = (
+            ", ".join(f"#{n}" for n in members)
+            if isinstance(members, list)
+            else "UNAVAILABLE — this cohort covers nothing"
+        )
+        target += f" (open pull requests at the time: {shown or 'none'})"
+    condition = entry.get("condition")
+    if isinstance(condition, dict) and condition.get("text"):
+        target += f" — condition: {condition.get('text')}"
     return f"{entry.get('kind')} {target} [id {entry['id']}]"
 
 
-def record_from_payload(payload: dict[str, Any], host: str) -> list[dict[str, Any]]:
+def capture_from_payload(payload: dict[str, Any], host: str) -> dict[str, Any]:
+    """``{"recorded", "notes", "provenance"}`` for one host prompt payload.
+
+    On Claude Code the conversation context comes from the host transcript the
+    payload names, read here in the hook process — never from anything the
+    agent supplies.
+    """
     provenance = host_provenance(host, payload)
     if provenance is None:
-        return []
+        return {"recorded": [], "notes": [], "provenance": None}
     prompt = _payload_prompt(payload)
     if not prompt:
-        return []
+        return {"recorded": [], "notes": [], "provenance": provenance}
     cwd = provenance.get("cwd")
     if cwd is None:
         roots = provenance.get("workspace_roots")
         cwd = roots[0] if isinstance(roots, list) and roots else None
-    return record_instructions(
+    context = None
+    if host in GRANTABLE_HOSTS:
+        context = conversation_context(
+            provenance.get("transcript_path"),
+            str(provenance["session_id"]),
+            current_prompt=prompt,
+        )
+    result = capture_instructions(
         prompt,
         host=host,
         session_id=str(provenance["session_id"]),
         cwd=cwd,
         provenance=provenance,
+        context=context,
     )
+    return {**result, "provenance": provenance}
+
+
+def record_from_payload(payload: dict[str, Any], host: str) -> list[dict[str, Any]]:
+    return capture_from_payload(payload, host)["recorded"]
+
+
+def hook_context(recorded: list[dict[str, Any]], notes: list[str], failure: str | None) -> str:
+    """The ``additionalContext`` the agent sees. Empty when the prompt had no merge intent.
+
+    It never claims a capture that did not happen: a failure or an unresolved
+    instruction says that nothing was authorized by it.
+    """
+    parts: list[str] = []
+    if failure:
+        parts.append(
+            "L9 operator merge instruction recorder FAILED on this prompt "
+            f"({failure}). NO merge authorization was captured from it; do not report one. "
+            "Tell the operator the recorder failed and why."
+        )
+    bound = [e for e in recorded if e.get("kind") == KIND_AUTHORIZE and e.get("repo")]
+    authorized = [e for e in bound if pending_condition(e) is None]
+    waiting = [e for e in bound if pending_condition(e) is not None]
+    unbound = [e for e in recorded if e.get("kind") == KIND_AUTHORIZE and not e.get("repo")]
+    revoked = [e for e in recorded if e.get("kind") == KIND_REVOKE]
+    empty_cohorts = [
+        e
+        for e in authorized
+        if e.get("scope") == SCOPE_COHORT and not isinstance(e.get("members"), list)
+    ]
+    if authorized:
+        listed = "; ".join(_describe(entry) for entry in authorized)
+        parts.append(
+            f"L9 operator merge instruction recorded (CANONICAL_LAW §6.2.13, §6.2.14): {listed}. "
+            "This chat instruction IS the operator's merge authorization — including for a pull "
+            "request the operator authored and for governance-protected paths. Do not ask the "
+            "operator to repeat it, to post a GitHub comment or approval, or for any other "
+            "confirmation. For each covered pull request: verify CI, mergeability, review "
+            "threads and the stack at its live head; then run "
+            '"$HOME/.cursor-governance/.venv/bin/python" '
+            '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction '
+            "--repo <owner/name> --pr <n> --head-sha <live 40-hex> and "
+            '"$HOME/.cursor-governance/.venv/bin/python" '
+            '"$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> '
+            "--pr <n> --head-sha <same sha> --run, stack parents bottom-up, and report GitHub's "
+            'merge result. A readiness condition ("when green") waits for its condition; '
+            "authorize_merge.py proves it with the readiness board at the live head. A head "
+            "moved by authorized remediation needs fresh technical checks, not a fresh "
+            "instruction. A later cancellation withdraws this authority."
+        )
+    if waiting:
+        parts.append(
+            "L9 operator merge instruction recorded but NOT yet authorized — it waits on a "
+            "condition that cannot be read from the pull request: "
+            + "; ".join(
+                f"{_describe(entry)}: {(pending_condition(entry) or {}).get('reason')}"
+                for entry in waiting
+            )
+            + ". Do not merge these pull requests and do not run authorize_merge.py for them. "
+            "When the operator says the condition is met, that ordinary instruction authorizes "
+            "the merge; do not ask for special wording, a GitHub comment or an approval."
+        )
+    if empty_cohorts:
+        parts.append(
+            "The open-pull-request snapshot for "
+            + ", ".join(str(e.get("repo")) for e in empty_cohorts)
+            + " could not be taken, so that cohort authorizes NOTHING: "
+            + "; ".join(str(e.get("membership_error") or "unavailable") for e in empty_cohorts)
+            + ". Tell the operator; do not merge on it."
+        )
+    if unbound:
+        parts.append(
+            "Recorded but binding NOTHING (repository unresolved): "
+            + ", ".join(f"#{e.get('pr')}" for e in unbound)
+            + "."
+        )
+    if revoked:
+        parts.append(
+            "L9 operator merge CANCELLATION recorded: "
+            + "; ".join(_describe(entry) for entry in revoked)
+            + ". Every earlier operator authority it covers is withdrawn until the operator "
+            "authorizes again; do not merge those pull requests."
+        )
+    if notes:
+        parts.append(
+            "Merge intent in this prompt that was NOT recorded, so it authorizes nothing: "
+            + "; ".join(notes)
+            + ". Ask the operator the one question that resolves it (which repository or which "
+            "pull requests); do not claim authorization and do not ask for special wording."
+        )
+    return " ".join(parts)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1048,33 +2364,21 @@ def main(argv: list[str] | None = None) -> int:
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
-    recorded: list[dict[str, Any]] = []
+    captured: dict[str, Any] = {"recorded": [], "notes": []}
+    failure: str | None = None
     try:
-        recorded = record_from_payload(payload, args.host)
-    except Exception as exc:  # noqa: BLE001 - observer: never block a prompt
-        print(f"WARN: operator merge instruction recorder degraded: {exc}", file=sys.stderr)
+        captured = capture_from_payload(payload, args.host)
+    except Exception as exc:  # noqa: BLE001 - observer: never block a prompt, never hide it
+        failure = f"{type(exc).__name__}: {exc}"[:300]
+        print(f"WARN: operator merge instruction recorder degraded: {failure}", file=sys.stderr)
+        prompt = _payload_prompt(payload) if host_provenance(args.host, payload) else ""
+        if not (prompt and _MERGE_VERB.search(prompt)):
+            failure = None
     if args.host == "cursor":
         print(json.dumps({"continue": True}))
         return 0
-    if recorded:
-        listed = "; ".join(_describe(entry) for entry in recorded)
-        unresolved = [e for e in recorded if not e.get("repo")]
-        note = (
-            " An instruction without a resolvable repository binds nothing; name the "
-            "repository as owner/name."
-            if unresolved
-            else ""
-        )
-        context = (
-            f"L9 operator merge instruction recorded: {listed}. Once the pull request is green, "
-            "mergeable and thread-clean, the agent may transcribe an authorization with "
-            '"$HOME/.cursor-governance/.venv/bin/python" '
-            '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction '
-            "--repo <owner/name> --pr <n> --head-sha <live 40-hex> and then merge with "
-            "stack_safe_merge.py --run (CANONICAL_LAW §6.2.13). A cancellation withdraws "
-            "earlier authority for that pull request. L9-ORG-007 protected changes still need "
-            "an independent human GitHub authorization." + note
-        )
+    context = hook_context(captured["recorded"], captured["notes"], failure)
+    if context:
         print(
             json.dumps(
                 {

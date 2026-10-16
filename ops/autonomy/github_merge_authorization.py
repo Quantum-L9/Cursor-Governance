@@ -10,8 +10,11 @@ count, and only when they name the pull request's current head:
 * a review or issue comment by such a human whose body contains the exact line
   ``authorize merge <owner>/<repo>#<pr>@<40-hex>``.
 
-L9-ORG-007 protected paths reject authorization from the pull request's author.
-Bots, missing identity, and a head that moved after the record do not authorize.
+Since CANONICAL_LAW §6.2.14 an authorized repository owner may authorize their own
+pull request, protected paths included (L9-ORG-007 as amended): what counts is a
+human identity holding write authority on the repository, not independence from
+the author. Bots, missing identity, a person without write permission, and a
+head that moved after the record do not authorize.
 This module does not merge and does not trust ``L9_MERGE_REVIEW_FILE``: that
 file is a hook-test fixture read only by ``merge_gate.py``.
 """
@@ -22,7 +25,6 @@ import json
 import os
 import re
 import subprocess
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -42,7 +44,6 @@ _BOT_LOGINS = frozenset(
     }
 )
 _REVOKED = frozenset({"CHANGES_REQUESTED", "DISMISSED"})
-_ORG_INVARIANTS = Path(__file__).resolve().parents[2] / "ORG_INVARIANTS.yaml"
 _GH_TIMEOUT_SECONDS = 20
 
 
@@ -85,80 +86,12 @@ def _write_capable(record: dict[str, Any]) -> bool:
     return record_permission(record) in WRITE_PERMISSIONS
 
 
-@lru_cache(maxsize=1)
-def protected_patterns() -> tuple[str, ...]:
-    """L9-ORG-007 paths. Unreadable policy fails closed: every path is protected."""
-    try:
-        import yaml
-    except ImportError:
-        return ("**",)
-    try:
-        payload = yaml.safe_load(_ORG_INVARIANTS.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError):
-        return ("**",)
-    items = payload.get("invariants") if isinstance(payload, dict) else None
-    for item in items or []:
-        if isinstance(item, dict) and item.get("id") == "L9-ORG-007":
-            paths = item.get("protected_paths") or []
-            if isinstance(paths, list) and paths:
-                return tuple(str(path) for path in paths)
-            return ("**",)
-    return ("**",)
-
-
-def _path_is_protected(path: str, patterns: tuple[str, ...]) -> bool:
-    normalized = path.replace("\\", "/").lstrip("/")
-    for pattern in patterns:
-        token = pattern.replace("\\", "/").strip()
-        if token in {"**", "**/*"}:
-            return True
-        if token.endswith("/**"):
-            root = token[:-3].rstrip("/")
-            if normalized == root or normalized.startswith(root + "/"):
-                return True
-        elif normalized == token:
-            return True
-    return False
-
-
-def _requires_independent_authorizer(files: list[str] | None) -> bool:
-    """True when the author must not be the authorizer, or when that is unknown."""
-    if files is None:
-        return True
-    patterns = protected_patterns()
-    return any(_path_is_protected(path, patterns) for path in files)
-
-
-def protected_paths_in(files: list[str] | None) -> list[str] | None:
-    """The L9-ORG-007 protected paths among ``files``; None when the list is unknown.
-
-    An unknown list is the fail-closed answer: callers treat None as protected.
-    """
-    if files is None:
-        return None
-    patterns = protected_patterns()
-    return [path for path in files if _path_is_protected(path, patterns)]
-
-
 def fetch_pull_request(repo: str, pr: str | int) -> dict[str, Any]:
     """The live pull request object. Raises RuntimeError."""
     view = _gh_json(f"repos/{repo}/pulls/{str(pr).strip()}")
     if not isinstance(view, dict):
         raise RuntimeError("pull request payload was not an object")
     return view
-
-
-def fetch_pull_request_files(repo: str, pr: str | int) -> list[str] | None:
-    """Every changed path, previous names included; None when unreadable or empty."""
-    files_payload = _gh_pages(f"repos/{repo}/pulls/{str(pr).strip()}/files?per_page=100")
-    files = [
-        str(item.get(key))
-        for item in files_payload
-        if isinstance(item, dict)
-        for key in ("filename", "previous_filename")
-        if item.get(key)
-    ]
-    return files or None
 
 
 def _line_authorizes(body: str, repo: str, pr: str, head_sha: str) -> bool:
@@ -185,10 +118,11 @@ def evaluate_evidence(
 ) -> dict[str, Any]:
     """Decide whether ``evidence`` authorizes ``repo#pr`` at ``head_sha``.
 
-    ``evidence`` keys: ``author`` (str), ``files`` (list or None), ``reviews``
-    (list), ``comments`` (list). Each authorizing record carries ``permission``
-    ``admin``, ``maintain`` or ``write``. ``author_association`` is not that
-    permission. ``truncated`` fails closed when a list was not read in full.
+    ``evidence`` keys: ``author`` (str), ``reviews`` (list), ``comments``
+    (list). Each authorizing record carries ``permission`` ``admin``,
+    ``maintain`` or ``write``. ``author_association`` is not that permission.
+    The author may be the authorizer (L9-ORG-007 as amended by §6.2.14).
+    ``truncated`` fails closed when a list was not read in full.
     """
     sha = head_sha.strip().lower()
     number = str(pr).strip()
@@ -205,14 +139,9 @@ def evaluate_evidence(
         denied["reason"] = "GitHub merge authorization evidence was unreadable"
         return denied
 
-    author = str(evidence.get("author") or "")
-    files = evidence.get("files")
-    file_list = [str(item) for item in files] if isinstance(files, list) else None
-    independent = _requires_independent_authorizer(file_list)
     reviews = evidence.get("reviews") if isinstance(evidence.get("reviews"), list) else []
     comments = evidence.get("comments") if isinstance(evidence.get("comments"), list) else []
     stale_approval = False
-    author_only = False
 
     latest: dict[str, dict[str, Any] | None] = {}
     ordered = sorted(reviews, key=lambda item: str((item or {}).get("submitted_at") or ""))
@@ -238,12 +167,6 @@ def evaluate_evidence(
                 stale_approval = True
 
     def _accept(login: str, channel: str) -> dict[str, Any] | None:
-        nonlocal author_only
-        # Independence cannot be established without the author's identity:
-        # an unknown author on a protected path fails closed.
-        if independent and (not author or login.casefold() == author.casefold()):
-            author_only = True
-            return None
         return {
             "authorized": True,
             "channel": channel,
@@ -282,10 +205,6 @@ def evaluate_evidence(
     if evidence.get("truncated"):
         denied["reason"] = (
             "GitHub authorization page was full and no matching human authorization was visible"
-        )
-    elif author_only:
-        denied["reason"] = (
-            "L9-ORG-007: the pull request author cannot authorize this governance-protected change"
         )
     elif stale_approval:
         denied["reason"] = "head changed after authorization"
@@ -406,20 +325,54 @@ def _attach_permissions(repo: str, records: list[Any]) -> None:
             record["permission"] = cache[login]
 
 
+def _repository_role(permissions: Any) -> str:
+    """The highest repository role in a REST ``permissions`` object, else ''."""
+    if not isinstance(permissions, dict):
+        return ""
+    for flag, role in (("admin", "admin"), ("maintain", "maintain"), ("push", "write")):
+        if permissions.get(flag) is True:
+            return role
+    if permissions.get("triage") is True:
+        return "triage"
+    return "read" if permissions.get("pull") is True else ""
+
+
+def fetch_session_principal(repo: str) -> dict[str, Any]:
+    """The GitHub identity this session acts as, and its role on ``repo``.
+
+    The operator's chat instruction is bound to it (CANONICAL_LAW §6.2.14): on
+    Claude Code that is the operator's own connected GitHub account. Read live
+    over REST (``GET /user``, ``GET /repos/{repo}``). Raises RuntimeError.
+    """
+    user = _gh_json("user")
+    if not isinstance(user, dict):
+        raise RuntimeError("GitHub did not report the session's identity")
+    view = _gh_json(f"repos/{repo}")
+    if not isinstance(view, dict):
+        raise RuntimeError("GitHub did not report the repository")
+    return {
+        "login": _login(user),
+        "type": str(user.get("type") or ""),
+        "permission": _repository_role(view.get("permissions")),
+        "human": _is_human_identity(user),
+    }
+
+
+def principal_may_authorize(principal: dict[str, Any]) -> bool:
+    """A human identity holding admin, maintain or write on the repository."""
+    return bool(principal.get("human")) and principal.get("permission") in WRITE_PERMISSIONS
+
+
 def fetch_evidence(repo: str, pr: str | int) -> dict[str, Any]:
-    """Live pull request, reviews, comments and files. Raises RuntimeError."""
+    """Live pull request, reviews and comments. Raises RuntimeError."""
     number = str(pr).strip()
     view = fetch_pull_request(repo, number)
     reviews = _gh_pages(f"repos/{repo}/pulls/{number}/reviews?per_page=100")
     comments = _gh_pages(f"repos/{repo}/issues/{number}/comments?per_page=100")
-    # A renamed protected file is still that file: keep both names. An empty or
-    # unreadable file list is unknown, which evaluate_evidence treats as protected.
-    files = fetch_pull_request_files(repo, number)
     _attach_permissions(repo, reviews)
     _attach_permissions(repo, comments)
     return {
         "author": _login(view.get("user")),
-        "files": files,
         "reviews": reviews,
         "comments": comments,
         "truncated": False,

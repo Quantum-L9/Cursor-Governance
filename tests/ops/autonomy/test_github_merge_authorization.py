@@ -187,21 +187,40 @@ def test_author_may_authorize_an_ordinary_change() -> None:
     assert verdict["authorized"] is True
 
 
-def test_author_cannot_authorize_an_org_007_path() -> None:
+def test_authorized_owner_may_authorize_their_own_protected_change() -> None:
+    """L9-ORG-007 as amended by CANONICAL_LAW §6.2.14: an authorized repository
+    owner may authorize their own pull request, governance-protected paths
+    included. The filename alone never demands a second human."""
     verdict = _verdict(
         author="pr-author",
-        files=["CANONICAL_LAW.md"],
-        reviews=[_review("pr-author", "APPROVED", SHA)],
+        files=["CANONICAL_LAW.md", "pyproject.toml", ".github/workflows/publish.yml"],
         comments=[
             {
                 "user": _user("pr-author"),
                 "author_association": "OWNER",
+                "permission": "admin",
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            }
+        ],
+    )
+    assert verdict["authorized"] is True
+    assert verdict["authorizer"] == "pr-author"
+
+
+def test_author_without_repository_authority_cannot_authorize() -> None:
+    verdict = _verdict(
+        author="pr-author",
+        files=["CANONICAL_LAW.md"],
+        comments=[
+            {
+                "user": _user("pr-author"),
+                "author_association": "CONTRIBUTOR",
+                "permission": "read",
                 "body": authz.authorization_line(SLUG, 53, SHA),
             }
         ],
     )
     assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
 
 
 def test_a_different_human_can_authorize_an_org_007_path() -> None:
@@ -214,54 +233,68 @@ def test_a_different_human_can_authorize_an_org_007_path() -> None:
     assert verdict["authorizer"] == "governance-owner"
 
 
-def test_unknown_files_fail_closed_for_the_author() -> None:
-    verdict = _verdict(files=None, reviews=[_review("pr-author", "APPROVED", SHA)])
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
-
-
-def test_unknown_author_fails_closed_on_an_org_007_path() -> None:
-    verdict = _verdict(
-        author="",
-        files=["CANONICAL_LAW.md"],
-        reviews=[_review("somebody", "APPROVED", SHA)],
-    )
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
-
-
-def test_unknown_author_may_still_authorize_an_ordinary_change() -> None:
-    verdict = _verdict(
-        author="", files=["README.md"], reviews=[_review("somebody", "APPROVED", SHA)]
-    )
+@pytest.mark.parametrize("author", ["", "pr-author", "somebody"])
+def test_the_authors_identity_no_longer_changes_the_verdict(author: str) -> None:
+    verdict = _verdict(author=author, files=None, reviews=[_review("somebody", "APPROVED", SHA)])
     assert verdict["authorized"] is True
 
 
-def test_fetch_evidence_keeps_the_previous_name_of_a_renamed_file(monkeypatch) -> None:
+def test_fetch_evidence_reads_no_file_list(monkeypatch) -> None:
+    """The independence check was the file list's only consumer."""
+    asked: list[str] = []
+
     def pages(path: str) -> list:
-        if "/files?" in path:
-            return [
-                {
-                    "filename": "docs/old_law.md",
-                    "previous_filename": "CANONICAL_LAW.md",
-                    "status": "renamed",
-                }
-            ]
+        asked.append(path)
         return [_review("pr-author", "APPROVED", SHA)] if "/reviews?" in path else []
 
     monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
     monkeypatch.setattr(authz, "_gh_pages", pages)
     evidence = authz.fetch_evidence(SLUG, 53)
-    assert "CANONICAL_LAW.md" in evidence["files"]
-    verdict = authz.evaluate_evidence(SLUG, 53, SHA, evidence)
-    assert verdict["authorized"] is False
-    assert "L9-ORG-007" in verdict["reason"]
+    assert not any("/files" in path for path in asked)
+    assert authz.evaluate_evidence(SLUG, 53, SHA, evidence)["authorized"] is True
 
 
-def test_fetch_evidence_reports_an_empty_file_list_as_unknown(monkeypatch) -> None:
-    monkeypatch.setattr(authz, "_gh_json", lambda path: {"user": {"login": "pr-author"}})
-    monkeypatch.setattr(authz, "_gh_pages", lambda path: [])
-    assert authz.fetch_evidence(SLUG, 53)["files"] is None
+@pytest.mark.parametrize(
+    ("permissions", "role"),
+    [
+        ({"admin": True, "maintain": True, "push": True, "pull": True}, "admin"),
+        ({"admin": False, "maintain": True, "push": True, "pull": True}, "maintain"),
+        ({"admin": False, "maintain": False, "push": True, "pull": True}, "write"),
+        ({"admin": False, "maintain": False, "push": False, "triage": True}, "triage"),
+        ({"pull": True}, "read"),
+        (None, ""),
+    ],
+)
+def test_repository_role_reads_the_highest_rest_permission(permissions, role) -> None:
+    assert authz._repository_role(permissions) == role
+
+
+def test_session_principal_is_the_operator_and_their_role(monkeypatch) -> None:
+    payloads = {
+        "user": {"login": "cryptoxdog", "type": "User"},
+        f"repos/{SLUG}": {"permissions": {"admin": True, "push": True, "pull": True}},
+    }
+    monkeypatch.setattr(authz, "_gh_json", lambda path: payloads[path])
+    principal = authz.fetch_session_principal(SLUG)
+    assert principal == {
+        "login": "cryptoxdog",
+        "type": "User",
+        "permission": "admin",
+        "human": True,
+    }
+    assert authz.principal_may_authorize(principal)
+
+
+@pytest.mark.parametrize(
+    "principal",
+    [
+        {"login": "reader", "type": "User", "permission": "read", "human": True},
+        {"login": "ci[bot]", "type": "Bot", "permission": "admin", "human": False},
+        {},
+    ],
+)
+def test_principal_without_write_authority_may_not_authorize(principal: dict) -> None:
+    assert not authz.principal_may_authorize(principal)
 
 
 def test_review_fixture_does_not_authorize_the_merge_helper(tmp_path: Path, monkeypatch) -> None:
@@ -451,6 +484,70 @@ def test_hook_denies_an_agent_posting_the_authorization(command: str) -> None:
                 "body": f"ok\n{authz.authorization_line(SLUG, 53, SHA)}",
             },
         ),
+        # Other GitHub MCP providers name the same acts differently: the review
+        # verdict is ``action``, the comment text is ``comment``.
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "APPROVE",
+            },
+        ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "approve",
+                "review": "lgtm",
+            },
+        ),
+        (
+            "mcp__github__add_review_to_pr",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pr": 53, "review": {"event": "APPROVE"}},
+        ),
+        (
+            "mcp__GitHub__add_comment_to_issue",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "issue_number": 53,
+                "comment": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
+        (
+            "mcp__plugin_engineering_github__add_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
+        (
+            "mcp__github__create_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pull_number": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__create_and_submit_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pullNumber": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__submit_pending_pull_request_review",
+            {"owner": "Quantum-L9", "repo": "SEO-Bot", "pullNumber": 53, "event": "APPROVE"},
+        ),
+        (
+            "mcp__github__create_issue_comment",
+            {
+                "owner": "Quantum-L9",
+                "repo": "SEO-Bot",
+                "issue_number": 53,
+                "body": authz.authorization_line(SLUG, 53, SHA),
+            },
+        ),
     ],
 )
 def test_hook_denies_an_agent_posting_the_authorization_through_mcp(
@@ -483,11 +580,73 @@ def test_hook_denies_an_agent_posting_the_authorization_through_mcp(
                 "body": "MERGE_PENDING: a human must authorize",
             },
         ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "COMMENT",
+                "review": "consider renaming this helper",
+            },
+        ),
+        (
+            "mcp__GitHub__add_review_to_pr",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "pr_number": 53,
+                "action": "REQUEST_CHANGES",
+                "review": "approve once the test is fixed",
+            },
+        ),
+        (
+            "mcp__GitHub__add_comment_to_issue",
+            {
+                "repo_owner": "Quantum-L9",
+                "repo_name": "SEO-Bot",
+                "issue_number": 53,
+                "comment": "CI is green; waiting on the operator to merge",
+            },
+        ),
     ],
 )
 def test_hook_allows_ordinary_mcp_reviews_and_comments(tool_name: str, tool_input: dict) -> None:
     _code, out = _gate({"tool_name": tool_name, "tool_input": tool_input})
     assert out.strip() == ""
+
+
+def _merge_gate_matchers() -> list[str]:
+    settings = json.loads(
+        (
+            REPO / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+        ).read_text(encoding="utf-8")
+    )
+    return [
+        entry["matcher"]
+        for entry in settings["hooks"]["PreToolUse"]
+        if any("merge_gate_wrap.py" in hook.get("command", "") for hook in entry["hooks"])
+    ]
+
+
+@pytest.mark.parametrize(
+    "tool_name",
+    [
+        "mcp__github__pull_request_review_write",
+        "mcp__github__add_issue_comment",
+        "mcp__GitHub__add_review_to_pr",
+        "mcp__GitHub__add_comment_to_issue",
+        "mcp__GITHUB__add_issue_comment",
+        "mcp__plugin_engineering_github__add_issue_comment",
+    ],
+)
+def test_merge_gate_hook_matcher_routes_every_github_mcp_provider(tool_name: str) -> None:
+    """Claude Code matchers are case-sensitive regexes: ``mcp__GitHub__*`` must reach the gate."""
+    import re
+
+    matchers = _merge_gate_matchers()
+    assert matchers, "merge_gate_wrap.py is not wired into PreToolUse"
+    assert any(re.fullmatch(matcher, tool_name) for matcher in matchers)
 
 
 def test_hook_allows_an_ordinary_issue_comment() -> None:
