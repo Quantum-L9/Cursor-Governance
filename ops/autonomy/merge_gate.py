@@ -766,12 +766,24 @@ def _agent_runs_recorder(command: str) -> bool:
     return False
 
 
-def _shell_writes_host_transcript(command: str) -> bool:
-    """A shell segment that writes a host session transcript (``.claude/projects/*.jsonl``)."""
-    if not _HOST_TRANSCRIPT.search(command):
+def _shell_writes_host_transcript(command: str, event: dict[str, Any] | None = None) -> bool:
+    """A shell segment that writes a host session transcript.
+
+    Matched by shape (``.claude/projects/*.jsonl``) and, when the PreToolUse
+    event names the live session's transcript, by that exact path as well, so
+    the file the gate corroborates receipts against cannot be appended to from
+    a tool call wherever the host keeps it.
+    """
+    _, live = _session_binding(event)
+    live_names = {live, Path(live).name} - {""} if live else set()
+
+    def _names(text: str) -> bool:
+        return bool(_HOST_TRANSCRIPT.search(text)) or any(name in text for name in live_names)
+
+    if not _names(command):
         return False
     for segment in split_segments(command):
-        if not _HOST_TRANSCRIPT.search(segment):
+        if not _names(segment):
             continue
         words = _argv_skip_env(segment_words(segment))
         head = Path(words[0].strip("'\"")).name if words else ""
@@ -1460,7 +1472,14 @@ def evaluate(
     del root  # signature kept for hook callers
 
     if tool_name in FILE_TOOL_NAMES:
-        return SELF_ISSUE_REASON if _file_tool_writes_grant_file(tool_input) else None
+        if _file_tool_writes_grant_file(tool_input):
+            return SELF_ISSUE_REASON
+        _, live = _session_binding(event)
+        for key in ("file_path", "notebook_path", "path"):
+            value = str(tool_input.get(key) or "")
+            if live and value and Path(value).name == Path(live).name:
+                return SELF_ISSUE_REASON
+        return None
 
     if _mcp_posts_github_authorization(tool_name, tool_input):
         return SELF_ISSUE_REASON
@@ -1472,7 +1491,7 @@ def evaluate(
                 return SELF_ISSUE_REASON
         if _agent_runs_recorder(command):
             return SELF_ISSUE_REASON
-        if _shell_writes_grant_file(command) or _shell_writes_host_transcript(command):
+        if _shell_writes_grant_file(command) or _shell_writes_host_transcript(command, event):
             return SELF_ISSUE_REASON
         if _shell_posts_github_authorization(command):
             return SELF_ISSUE_REASON

@@ -1378,6 +1378,30 @@ def test_f01_reading_the_recorder_and_the_transcript_stays_allowed(command: str)
     assert out.strip() == "", command
 
 
+def test_f01_writing_the_live_sessions_transcript_is_denied_wherever_it_lives(
+    tmp_path: Path,
+) -> None:
+    """The event names the transcript the gate corroborates against; appending to
+    that file from a tool call is forging the corroboration, whatever its path."""
+    _env, event = _hosted_env(tmp_path)
+    transcript = event["transcript_path"]
+    assert ".claude/projects/" not in transcript
+    for command in (
+        f"echo '{{}}' >> {transcript}",
+        f"printf '%s' x | tee -a {transcript}",
+        f"cp forged.jsonl {transcript}",
+    ):
+        code, out, err = _run(_bound(command, event))
+        assert code == 0, err
+        assert "never by an agent" in out, command
+    code, out, err = _run(_bound(f"cat {transcript}", event))
+    assert code == 0, err
+    assert out.strip() == ""
+    code, out, err = _run({"tool_name": "Write", "tool_input": {"file_path": transcript}, **event})
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
 def test_f03_revocation_after_recording_denies_the_transcription(tmp_path: Path) -> None:
     import time
 
