@@ -92,10 +92,17 @@ def test_ambiguous_repository_is_recorded_unresolved() -> None:
     assert _targets(prompt) == [("pr", None, 735)]
 
 
-def test_cohort_instruction_requires_an_explicit_repository() -> None:
+def test_cohort_instruction_resolves_its_repository_like_a_bare_reference() -> None:
+    """§6.2.14 supersedes the §6.2.13 rule that a cohort must name its repository:
+    the operator need not repeat repository context the session already has. An
+    unresolvable cohort still binds nothing and is reported, never guessed."""
     prompt = f"Remediate and merge all currently open PRs in {SLUG}."
     assert _targets(prompt) == [("open_cohort", SLUG, None)]
-    assert _targets("Remediate and merge all open PRs.", cwd_repo=SLUG) == []
+    assert _targets("Remediate and merge all open PRs.", cwd_repo=SLUG) == [
+        ("open_cohort", SLUG, None)
+    ]
+    found, notes = omi.parse_prompt("Remediate and merge all open PRs.")
+    assert found == [] and any("repository could not be resolved" in n for n in notes)
 
 
 def test_trailing_period_is_not_part_of_the_repository_name() -> None:
@@ -538,8 +545,11 @@ def test_f02_mixed_clauses_are_interpreted_independently() -> None:
         ("authorize", "pr", SLUG, 735),
         ("revoke", "pr", SLUG, 736),
     ]
+    # §6.2.14: the bare cancellation "do not merge it" now records, scoped to the
+    # pull request its own clause names; it never reaches #735.
     assert _kinds("Fix and merge #735; leave #736 alone and do not merge it.") == [
         ("authorize", "pr", SLUG, 735),
+        ("revoke", "pr", SLUG, 736),
     ]
 
 
@@ -828,3 +838,436 @@ def test_f01_claude_wrapper_records_hook_provenance(tmp_path: Path) -> None:
     assert entry["provenance"]["hook_event_name"] == "UserPromptSubmit"
     assert entry["provenance"]["transcript_path"] == str(transcript)
     assert omi.receipt_verdict(entry, session_id=SESSION, transcript_path=str(transcript))["ok"]
+
+
+# =============================================================================
+# GAR-CHAT-MERGE-ROOT-CLOSURE (CANONICAL_LAW §6.2.14). Each case below failed
+# against fa5488dd: the operator's ordinary chat instruction recorded nothing,
+# a curly-apostrophe cancellation was silently dropped, and a missed capture was
+# indistinguishable from a prompt without merge intent.
+# =============================================================================
+
+MEMORY = "Quantum-L9/l9-graphiti-memory"
+#: The operator's exact prompt in the failed Memory session (2026-10-16 01:56Z):
+#: a curly apostrophe (U+2019) and a repository given only as a URL.
+FAILED_PROMPT = (
+    f"I need you to merge all open PR’s in https://github.com/{MEMORY} \n\n"
+    "This is explicitly authority to update the grant and merge them all safely."
+)
+
+
+def _conversation(path: Path, *turns: tuple[str, str], session: str = SESSION) -> Path:
+    """A host transcript with typed human turns and the agent's visible replies.
+
+    ``("human", text)`` is a typed prompt, ``("agent", text)`` an assistant reply,
+    ``("tool", text)`` a tool result and ``("relay", text)`` a host-relayed turn.
+    """
+    records = []
+    for role, text in turns:
+        if role == "agent":
+            records.append(
+                {
+                    "type": "assistant",
+                    "sessionId": session,
+                    "isSidechain": False,
+                    "message": {"role": "assistant", "content": [{"type": "text", "text": text}]},
+                }
+            )
+            continue
+        record = {
+            "type": "user",
+            "userType": "external",
+            "isSidechain": False,
+            "sessionId": session,
+            "turnOrigin": "human" if role == "human" else "task_notification",
+            "origin": {"kind": "human" if role == "human" else "task-notification"},
+            "message": {"role": "user", "content": text},
+        }
+        if role == "tool":
+            record["toolUseResult"] = {"stdout": text}
+        records.append(record)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
+    return path
+
+
+AGENT_REPORT = (
+    f"Remediation of {MEMORY} is done. Ready to merge, bottom-up:\n"
+    "| PR | base | state |\n|---|---|---|\n"
+    "| #96 | main | green |\n| #97 | #96 | green |\n| #98 | #97 | green |"
+)
+
+
+def _capture(store: Path, prompt: str, transcript: Path, *, now: int = NOW, lister=None) -> dict:
+    payload = _claude_payload(prompt, transcript, cwd="/home/user")
+    provenance = omi.host_provenance("claude-code", payload)
+    context = omi.conversation_context(str(transcript), SESSION, current_prompt=prompt)
+    return omi.capture_instructions(
+        prompt,
+        host="claude-code",
+        session_id=SESSION,
+        cwd="/home/user",
+        path=store,
+        now=now,
+        cwd_repo=None,
+        provenance=provenance,
+        open_pull_requests=lister or (lambda repo: [94, 95, 96, 97, 98, 99]),
+        context=context,
+    )
+
+
+# --- the failed session, reproduced ---------------------------------------------
+
+
+def test_gar_the_failed_memory_prompt_records_the_cohort(tmp_path: Path) -> None:
+    found, notes = omi.parse_prompt(FAILED_PROMPT)
+    assert [(f["kind"], f["scope"], f["repo"]) for f in found] == [
+        ("authorize", "open_cohort", MEMORY)
+    ]
+    assert notes == []
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", FAILED_PROMPT))
+    result = _capture(store, FAILED_PROMPT, transcript)
+    (entry,) = result["recorded"]
+    assert entry["members"] == [94, 95, 96, 97, 98, 99]
+    for pr in (94, 97, 99):
+        assert omi.find_instruction(MEMORY, pr, path=store, now=NOW + 1) is not None
+    ok, _ = omi.transcript_corroborates(entry)
+    assert ok, "a folded excerpt must still corroborate against the curly-apostrophe turn"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        f"Merge all open PR's in https://github.com/{MEMORY}.",
+        f"merge every open pull request in https://github.com/{MEMORY}/",
+        f"merge all open PRs in https://github.com/{MEMORY}.git",
+        f"Please merge all the open PRs in {MEMORY}",
+        f"go ahead and merge all PRs in https://github.com/{MEMORY}/pulls",
+    ],
+)
+def test_gar_cohort_repository_may_be_a_url_or_slug(prompt: str) -> None:
+    assert _targets(prompt) == [("open_cohort", MEMORY, None)]
+
+
+def test_gar_curly_apostrophe_cancellation_is_recorded() -> None:
+    """``Don’t merge #96`` was parsed as nothing: the cancellation was lost."""
+    assert _kinds("Don’t merge #96.") == [("revoke", "pr", SLUG, 96)]
+    assert _kinds("We won’t merge #96 today.") == [("revoke", "pr", SLUG, 96)]
+
+
+def test_gar_curly_quoted_phrase_is_still_quoted() -> None:
+    assert _kinds("Review this report: ‘Merge PR #735 now.’") == []
+    assert _kinds("The thread says “merge #735”; summarize it.") == []
+
+
+# --- ranges and repositories from context -----------------------------------------
+
+
+def test_gar_ranges_expand_to_each_pull_request() -> None:
+    assert _targets(f"Fix and merge #96 through #99 in {MEMORY} when green.") == [
+        ("pr", MEMORY, 96),
+        ("pr", MEMORY, 97),
+        ("pr", MEMORY, 98),
+        ("pr", MEMORY, 99),
+    ]
+    assert [t[2] for t in _targets(f"merge {MEMORY}#3-#5")] == [3, 4, 5]
+    assert [t[2] for t in _targets("merge PRs 7 to 8", cwd_repo=SLUG)] == [7, 8]
+
+
+def test_gar_an_oversized_range_authorizes_only_what_was_named() -> None:
+    assert [t[2] for t in _targets("merge #1 through #900", cwd_repo=SLUG)] == [1]
+
+
+def test_gar_bare_numbers_take_the_repository_the_conversation_discusses(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = "Fix and merge #96 through #99 when green."
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("human", f"Work in {MEMORY}."),
+        ("agent", AGENT_REPORT),
+        ("human", prompt),
+    )
+    recorded = _capture(store, prompt, transcript)["recorded"]
+    assert [(e["repo"], e["pr"], e["repo_source"]) for e in recorded] == [
+        (MEMORY, 96, "conversation"),
+        (MEMORY, 97, "conversation"),
+        (MEMORY, 98, "conversation"),
+        (MEMORY, 99, "conversation"),
+    ]
+
+
+def test_gar_bare_number_without_any_repository_context_is_reported(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = "Merge PR #96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    result = _capture(store, prompt, transcript)
+    (entry,) = result["recorded"]
+    assert entry["repo"] is None
+    assert any("could not be resolved" in note for note in result["notes"])
+    context = omi.hook_context(result["recorded"], result["notes"], None)
+    assert "binding NOTHING" in context and "IS the operator's merge authorization" not in context
+
+
+# --- contextual objects -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Merge these PRs.",
+        "Go ahead and merge everything we just fixed.",
+        "ok, merge them",
+        "Merge all of them, bottom-up.",
+        "Fix the last nits and merge the green ones.",
+    ],
+)
+def test_gar_contextual_objects_resolve_to_the_agents_latest_report(
+    tmp_path: Path, prompt: str
+) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("human", f"Remediate the open PRs in {MEMORY}."),
+        ("agent", AGENT_REPORT),
+        ("human", prompt),
+    )
+    recorded = _capture(store, prompt, transcript)["recorded"]
+    assert [(e["kind"], e["repo"], e["pr"], e["source"]) for e in recorded] == [
+        ("authorize", MEMORY, 96, "conversation"),
+        ("authorize", MEMORY, 97, "conversation"),
+        ("authorize", MEMORY, 98, "conversation"),
+    ]
+    for entry in recorded:
+        verdict = omi.receipt_verdict(
+            entry, now=NOW + 1, session_id=SESSION, transcript_path=str(transcript)
+        )
+        assert verdict["ok"], verdict
+
+
+def test_gar_context_is_frozen_when_spoken(tmp_path: Path) -> None:
+    """A PR the agent mentions after the instruction is not covered by it."""
+    store = tmp_path / "s.json"
+    prompt = "Merge these PRs."
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", prompt))
+    _capture(store, prompt, transcript)
+    _conversation(
+        transcript,
+        ("agent", AGENT_REPORT),
+        ("human", prompt),
+        ("agent", f"Also opened {MEMORY}#120."),
+    )
+    assert omi.find_instruction(MEMORY, 98, path=store, now=NOW + 1) is not None
+    assert omi.find_instruction(MEMORY, 120, path=store, now=NOW + 1) is None
+
+
+def test_gar_singular_object_with_several_candidates_is_reported_not_guessed(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", "merge it"))
+    result = _capture(store, "merge it", transcript)
+    assert result["recorded"] == []
+    assert any("more than one" in note for note in result["notes"])
+    assert "NOT recorded" in omi.hook_context(result["recorded"], result["notes"], None)
+
+
+def test_gar_singular_object_named_in_its_own_clause() -> None:
+    assert _targets("Fix the CI on #96 and merge it.", cwd_repo=MEMORY) == [("pr", MEMORY, 96)]
+
+
+def test_gar_contextual_object_with_no_conversation_is_reported(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "Merge these PRs."))
+    result = _capture(store, "Merge these PRs.", transcript)
+    assert result["recorded"] == [] and not store.exists()
+    assert any("no pull request could be found" in note for note in result["notes"])
+
+
+def test_gar_tool_output_and_relayed_turns_are_not_conversation(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("tool", f"gh api repos/{MEMORY}/pulls -> #96 #97"),
+        ("relay", f"<task-notification>CI green on {MEMORY}#96</task-notification>"),
+        ("human", "Merge these PRs."),
+    )
+    result = _capture(store, "Merge these PRs.", transcript)
+    assert result["recorded"] == []
+
+
+def test_gar_agent_text_never_authorizes(tmp_path: Path) -> None:
+    """Only the human prompt carries an instruction; the conversation only names objects."""
+    store = tmp_path / "s.json"
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("agent", f"I will merge {MEMORY}#96 now. Merge these PRs: #96, #97."),
+        ("human", "Thanks, looks good."),
+    )
+    result = _capture(store, "Thanks, looks good.", transcript)
+    assert result["recorded"] == [] and result["notes"] == []
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Should we merge these PRs?",
+        "Can you merge them?",
+        "The reviewer said to fix and merge them.",
+        "They asked whether to merge everything we just fixed.",
+        '"Merge these PRs" is what the bot wrote.',
+    ],
+)
+def test_gar_questions_and_reports_about_context_authorize_nothing(
+    tmp_path: Path, prompt: str
+) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", prompt))
+    recorded = _capture(store, prompt, transcript)["recorded"]
+    assert [e for e in recorded if e["kind"] == "authorize"] == []
+
+
+# --- cancellations ---------------------------------------------------------------------
+
+
+def test_gar_bare_cancellation_withdraws_every_authority(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT))
+    _capture(store, FAILED_PROMPT, transcript, now=NOW)
+    _capture(store, f"Merge {SLUG}#735.", transcript, now=NOW + 10)
+    (revoke,) = _capture(store, "Stop, don't merge yet.", transcript, now=NOW + 20)["recorded"]
+    assert (revoke["kind"], revoke["scope"]) == ("revoke", "all")
+    for repo, pr in ((MEMORY, 94), (MEMORY, 99), (SLUG, 735)):
+        assert omi.find_instruction(repo, pr, path=store, now=NOW + 30) is None
+        assert "revoked" in omi.instruction_verdict(repo, pr, path=store, now=NOW + 30)["reason"]
+    _capture(store, f"Merge {SLUG}#735 after all.", transcript, now=NOW + 40)
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 50) is not None
+    assert omi.find_instruction(MEMORY, 94, path=store, now=NOW + 50) is None
+
+
+def test_gar_contextual_cancellation_targets_the_discussed_pull_requests(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT))
+    _capture(store, "Merge these PRs.", transcript, now=NOW)
+    _capture(store, f"Merge {SLUG}#735.", transcript, now=NOW + 5)
+    recorded = _capture(store, "Don’t merge them.", transcript, now=NOW + 10)["recorded"]
+    assert {(e["repo"], e["pr"]) for e in recorded} == {(MEMORY, 96), (MEMORY, 97), (MEMORY, 98)}
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 20) is None
+    assert omi.find_instruction(SLUG, 735, path=store, now=NOW + 20) is not None
+
+
+def test_gar_merging_a_branch_is_not_a_cancellation() -> None:
+    assert _kinds("Don't merge main into it; rebase instead.") == []
+    assert _kinds("do not merge the base branch into #96") == []
+
+
+def test_gar_cancellation_never_lapses_into_reviving_an_older_authority(tmp_path: Path) -> None:
+    """A GitHub record checks ``revocation_for`` with no issue time: the cancellation
+    must still stand long after any authorization TTL."""
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "x"))
+    _capture(store, f"Do not merge {SLUG}#735.", transcript, now=NOW)
+    much_later = NOW + 30 * 24 * 60 * 60
+    assert omi.revocation_for(SLUG, 735, path=store, now=much_later) is not None
+    (entry,) = omi.load_instructions(store)
+    assert entry["expires_at"] is None
+
+
+def test_gar_a_burst_of_authorizations_cannot_evict_a_cancellation(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "x"))
+    _capture(store, f"Do not merge {SLUG}#735.", transcript, now=NOW)
+    for number in range(1, omi.MAX_RECORDS + 10):
+        _capture(store, f"Merge {OTHER}#{number}.", transcript, now=NOW + number)
+    assert omi.revocation_for(SLUG, 735, path=store, now=NOW + 1000) is not None
+
+
+# --- observable capture ------------------------------------------------------------------
+
+
+def _run_wrapper(home: Path, payload: dict) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLAUDE_WRAP)],
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        env={**os.environ, "HOME": str(home), "USERPROFILE": str(home), "PATH": "/usr/bin:/bin"},
+        check=False,
+        timeout=60,
+    )
+
+
+def test_gar_wrapper_records_a_contextual_instruction_and_says_it_is_authority(
+    tmp_path: Path,
+) -> None:
+    home = _home_with_governance(tmp_path)
+    prompt = "Go ahead and merge everything we just fixed."
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", prompt))
+    proc = _run_wrapper(home, _claude_payload(prompt, transcript, cwd=str(tmp_path)))
+    assert proc.returncode == 0, proc.stderr
+    context = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert f"{MEMORY}#96" in context and f"{MEMORY}#98" in context
+    assert "IS the operator's merge authorization" in context
+    assert "Do not ask the operator to repeat it" in context
+    assert "independent human GitHub authorization" not in context
+    store = home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME
+    assert len(omi.load_instructions(store)) == 3
+
+
+def test_gar_wrapper_reports_unresolved_intent_instead_of_staying_silent(tmp_path: Path) -> None:
+    home = _home_with_governance(tmp_path)
+    prompt = "Merge these PRs."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    proc = _run_wrapper(home, _claude_payload(prompt, transcript, cwd=str(tmp_path)))
+    assert proc.returncode == 0, proc.stderr
+    context = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "NOT recorded" in context and "authorizes nothing" in context
+    assert "IS the operator's merge authorization" not in context
+    assert not (home / ".l9" / "autonomy" / omi.INSTRUCTION_FILE_NAME).exists()
+
+
+def test_gar_cohort_snapshot_failure_is_reported_as_covering_nothing(tmp_path: Path) -> None:
+    """``PATH`` carries no ``gh``: the snapshot fails and the hook says so."""
+    home = _home_with_governance(tmp_path)
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", FAILED_PROMPT))
+    proc = subprocess.run(
+        [sys.executable, str(CLAUDE_WRAP)],
+        input=json.dumps(_claude_payload(FAILED_PROMPT, transcript, cwd=str(tmp_path))),
+        text=True,
+        capture_output=True,
+        env={**os.environ, "HOME": str(home), "PATH": str(tmp_path / "no-tools")},
+        check=False,
+        timeout=60,
+    )
+    assert proc.returncode == 0, proc.stderr
+    context = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "authorizes NOTHING" in context
+
+
+def test_gar_recorder_failure_is_reported_never_claimed(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    def boom(payload, host):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(omi, "capture_from_payload", boom)
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", "Merge PR #96."))
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        __import__("io").StringIO(json.dumps(_claude_payload("Merge PR #96.", transcript))),
+    )
+    assert omi.main(["record", "--host", "claude-code"]) == 0
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert "FAILED" in context and "NO merge authorization was captured" in context
+    assert "IS the operator's merge authorization" not in context
+
+
+def test_gar_prompt_without_merge_intent_stays_silent(tmp_path: Path, monkeypatch, capsys) -> None:
+    transcript = _conversation(tmp_path / "t.jsonl", ("agent", AGENT_REPORT), ("human", "Thanks."))
+    monkeypatch.setattr(omi, "default_store_path", lambda: tmp_path / "s.json")
+    monkeypatch.setattr(
+        sys, "stdin", __import__("io").StringIO(json.dumps(_claude_payload("Thanks.", transcript)))
+    )
+    assert omi.main(["record", "--host", "claude-code"]) == 0
+    assert capsys.readouterr().out.strip() == ""
