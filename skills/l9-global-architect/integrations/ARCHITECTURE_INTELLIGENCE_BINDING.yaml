@@ -62,6 +62,11 @@ input:
     ci: .github/workflows/l9-architecture-intelligence-bundle.yml
     trusted_replay: .github/workflows/l9-architecture-intelligence-trusted-replay.yml
     gar_produces: false
+    publication: >-
+      Generation is separate from publication. The driver writes only to its output directory
+      and no architecture-intelligence workflow commits, pushes, or opens pull requests; a
+      regenerated bundle reaches the repository only through the existing Cursor-Governance
+      publication ceremony (PR_REMEDIATE=0 make pr).
     production_attestation: >-
       The trusted replay workflow (default-branch definition, pull-request bundle read as data)
       reproduces the bundle byte for byte with the compiler revision named in bundle.lock.json,

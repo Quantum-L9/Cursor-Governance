@@ -808,3 +808,20 @@ def test_a_later_verdict_leaves_nothing_of_an_earlier_one(authority: Authority) 
         "ARCHITECTURE_INTELLIGENCE_FACT_CITED",
         "ARCHITECTURE_INTELLIGENCE_REFUSED",
     ]
+
+
+def test_generation_holds_no_repository_publication_authority() -> None:
+    """The bundle workflow and driver generate and verify; they never publish a change."""
+    workflow_path = REPO / ".github/workflows/l9-architecture-intelligence-bundle.yml"
+    workflow = yaml.safe_load(workflow_path.read_text())
+    triggers = workflow[True] if True in workflow else workflow["on"]
+    assert set(triggers) == {"pull_request", "push"}
+    assert workflow["permissions"] == {"contents": "read"}
+    for job in workflow["jobs"].values():
+        assert job["permissions"] == {"contents": "read"}
+    for text in (workflow_path.read_text(), PRODUCER.read_text()):
+        assert "secrets." not in text
+        for forbidden in ("git push", '"push"', "git commit", '"commit"', "gh pr", '"gh"'):
+            assert forbidden not in text, forbidden
+    producer = yaml.safe_load(BINDING.read_text())["input"]["producer"]
+    assert "PR_REMEDIATE=0 make pr" in producer["publication"]
