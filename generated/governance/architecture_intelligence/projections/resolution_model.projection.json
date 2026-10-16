@@ -1,0 +1,59 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "global_rules": {
+      "all_resolvers_share_one_result_algebra": true,
+      "ambiguity_is_not_silently_collapsed": true,
+      "incompatibility_is_not_optimization_failure": true,
+      "resolution_does_not_admit_subjects": true,
+      "resolution_is_evidence_bound": true,
+      "unknown_is_not_resolved": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/semantic-resolution@1",
+        "l9.contract/unknown-and-degradation@1",
+        "l9.contract/provenance-and-coordinate@1"
+      ]
+    },
+    "resolution_record": {
+      "optional": [
+        "selected",
+        "rejected",
+        "unresolved_refs",
+        "conflict_refs",
+        "compatibility_refs",
+        "optimization_receipt_ref"
+      ],
+      "required": [
+        "subject_ref",
+        "inputs",
+        "result",
+        "evidence_refs",
+        "provenance",
+        "coordinates"
+      ]
+    },
+    "result_domain": {
+      "ambiguous": "Multiple materially distinct resolutions remain and no canonical selection rule resolves them.",
+      "incompatible": "Declared requirements and candidate realization are semantically incompatible.",
+      "resolved": "Exactly one admissible resolution or an explicitly admitted equivalent set is established.",
+      "unresolved": "Required information, authority, evidence, or semantic definition is insufficient.",
+      "unsat": "Applicable hard requirements admit no satisfying resolution."
+    },
+    "selection_rules": [
+      "selection_occurs_only_within_resolved_feasible_set",
+      "optimization_must_not_convert_incompatible_or_unsat_into_resolved",
+      "selected_realization_does_not_become_semantic_owner"
+    ]
+  },
+  "projection_digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+  "source_ref": "l9.source/resolution-model@1"
+}

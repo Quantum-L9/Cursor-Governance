@@ -1,0 +1,1086 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "architecture_synthesis": {
+      "inputs": {
+        "optional": [
+          "deployment_constraints",
+          "performance_constraints",
+          "availability_constraints",
+          "data_residency_constraints",
+          "cost_constraints",
+          "existing_architecture_ir"
+        ],
+        "required": [
+          "product_topology",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "admitted_product_contracts",
+          "applicable_invariants",
+          "applicable_laws",
+          "applicable_conformance",
+          "desired_capabilities",
+          "technology_capabilities"
+        ]
+      },
+      "output": [
+        "architecture_ir",
+        "selected_pattern_refs",
+        "rejected_pattern_refs",
+        "unresolved_pattern_gaps",
+        "architecture_validation_requirements"
+      ],
+      "process": [
+        "project_applicable_patterns",
+        "resolve_required_patterns_from_product_kind",
+        "resolve_required_patterns_from_product_archetype",
+        "resolve_patterns_from_capability_requirements",
+        "reject_patterns_with_unsatisfied_preconditions",
+        "reject_forbidden_pattern_combinations",
+        "compose_candidate_pattern_graph",
+        "validate_required_guarantees",
+        "validate_capability_coverage",
+        "validate_authority_boundaries",
+        "compile_architecture_ir"
+      ]
+    },
+    "composition_rules": [
+      {
+        "id": "l9.compose/product-kind-node@1",
+        "recommend_patterns": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/reference-model-conformance@1",
+          "l9.pattern/fixture-backed-conformance@1"
+        ],
+        "require_patterns": [
+          "l9.pattern/semantic-core-gate-adapter@1",
+          "l9.pattern/runnable-node@1",
+          "l9.pattern/authority-candidate-admission@1"
+        ],
+        "when": {
+          "product_kind": "node"
+        }
+      },
+      {
+        "id": "l9.compose/product-kind-dependency@1",
+        "recommend_patterns": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/reference-model-conformance@1"
+        ],
+        "require_patterns": [
+          "l9.pattern/dependency-package@1"
+        ],
+        "when": {
+          "product_kind": "dependency"
+        }
+      },
+      {
+        "id": "l9.compose/node-archetype-authoritative-state@1",
+        "recommend_patterns": [
+          "l9.pattern/atomic-state-receipt-journal-outbox@1",
+          "l9.pattern/provider-neutral-persistence@1"
+        ],
+        "require_patterns": [
+          "l9.pattern/immutable-revisioned-state@1"
+        ],
+        "when": {
+          "product_archetype": "l9.node-archetype/authoritative-state@1",
+          "product_kind": "node"
+        }
+      },
+      {
+        "id": "l9.compose/compiled-projection-owner@1",
+        "recommend_patterns": [
+          "l9.pattern/facts-plus-lineage-compiled-views@1",
+          "l9.pattern/session-projection-cache@1"
+        ],
+        "require_patterns": [
+          "l9.pattern/canonical-source-derived-projections@1"
+        ],
+        "when": {
+          "properties": [
+            "canonical_source",
+            "multiple_derived_views"
+          ]
+        }
+      }
+    ],
+    "global_rules": {
+      "architecture_synthesis_may_only_select_admitted_patterns": true,
+      "pattern_obligations_apply_unmodified_unless_an_admitted_product_kind_exception_displaces_them_for_its_exact_product": true,
+      "patterns_are_not_complete_architectures": true,
+      "patterns_do_not_create_semantic_ownership": true,
+      "patterns_must_be_composable": true,
+      "patterns_must_declare_forbidden_uses": true,
+      "patterns_must_declare_guarantees": true,
+      "patterns_must_declare_preconditions": true,
+      "patterns_must_not_expand_authority": true,
+      "patterns_must_reference_canonical_vocabulary": true,
+      "provider_identity_does_not_define_pattern_identity": true
+    },
+    "pattern_classes": {
+      "compiler": {
+        "definition": "Pattern governing staged semantic transformation and intermediate representations.\n"
+      },
+      "deployment": {
+        "definition": "Pattern governing process, package, service, or node topology.\n"
+      },
+      "execution": {
+        "definition": "Pattern governing controlled execution, validation, receipts, and state.\n"
+      },
+      "governance": {
+        "definition": "Pattern governing authority, admission, distribution, and control-plane separation.\n"
+      },
+      "integration": {
+        "definition": "Pattern governing how independently owned semantic components interact.\n"
+      },
+      "persistence": {
+        "definition": "Pattern governing authoritative state, storage adapters, journals, caches, and derived materializations.\n"
+      },
+      "projection": {
+        "definition": "Pattern governing derived views of canonical semantics.\n"
+      },
+      "semantic_structure": {
+        "definition": "Pattern governing semantic ownership, domain boundaries, and canonical implementation structure.\n"
+      }
+    },
+    "patterns": [
+      {
+        "architecture_obligations": [
+          "contract_versioning",
+          "provider_binding",
+          "provider_conformance"
+        ],
+        "class": "semantic_structure",
+        "common_examples": [
+          "l9-state_to_mongodb",
+          "l9-memory_to_graph_provider",
+          "l9-numerical-reasoning_to_numpy"
+        ],
+        "compatible_with": [
+          "l9.pattern/semantic-core-gate-adapter@1",
+          "l9.pattern/reference-model-conformance@1",
+          "l9.pattern/dependency-package@1",
+          "l9.pattern/runnable-node@1"
+        ],
+        "forbidden": [
+          "provider_becomes_semantic_owner",
+          "provider_native_contract_exposed_as_domain_contract",
+          "implementation_details_define_semantics"
+        ],
+        "guarantees": [
+          "provider_is_replaceable_without_semantic_owner_change",
+          "provider_specific_details_do_not_define_public_semantics",
+          "conformance_can_be_applied_independently_of_provider"
+        ],
+        "id": "l9.pattern/semantic-core-provider-adapter@1",
+        "preconditions": [
+          "semantic_owner_is_explicit",
+          "semantic_contract_exists",
+          "provider_capabilities_are_machine_readable"
+        ],
+        "purpose": "Preserve semantic ownership independently of implementation technology by isolating canonical domain semantics behind a provider-neutral port.\n",
+        "structure": {
+          "edges": [
+            {
+              "from": "semantic_core",
+              "relation": "exposes",
+              "to": "semantic_port"
+            },
+            {
+              "from": "provider_adapter",
+              "relation": "implements",
+              "to": "semantic_port"
+            },
+            {
+              "from": "provider_adapter",
+              "relation": "binds",
+              "to": "provider"
+            }
+          ],
+          "nodes": [
+            "semantic_core",
+            "semantic_port",
+            "provider_adapter",
+            "provider"
+          ]
+        }
+      },
+      {
+        "class": "integration",
+        "compatible_with": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/runnable-node@1"
+        ],
+        "forbidden": [
+          "direct_peer_routing_when_gate_is_required",
+          "transport_specific_semantics_in_domain_core",
+          "application_constructs_transport_authority"
+        ],
+        "guarantees": [
+          "transport_does_not_become_semantic_owner",
+          "node_does_not_require_peer_urls",
+          "gate_remains_routing_authority",
+          "TransportPacket_is_used_for_routed_work"
+        ],
+        "id": "l9.pattern/semantic-core-gate-adapter@1",
+        "preconditions": [
+          "semantic_capability_contract_exists",
+          "gate_sdk_contract_is_available",
+          "capability_identity_is_registered"
+        ],
+        "purpose": "Expose a semantic owner through the L9 constellation without coupling domain semantics to transport or routing mechanics.\n",
+        "structure": {
+          "edges": [
+            {
+              "from": "capability_adapter",
+              "relation": "invokes",
+              "to": "semantic_core"
+            },
+            {
+              "from": "capability_adapter",
+              "relation": "uses",
+              "to": "gate_sdk"
+            },
+            {
+              "from": "gate_sdk",
+              "relation": "routes_through",
+              "to": "gate"
+            }
+          ],
+          "nodes": [
+            "semantic_core",
+            "capability_adapter",
+            "gate_sdk",
+            "gate"
+          ]
+        }
+      },
+      {
+        "class": "deployment",
+        "compatible_with": [
+          "l9.pattern/semantic-core-provider-adapter@1"
+        ],
+        "forbidden": [
+          "implicit_gate_registration",
+          "separate_runtime_identity_without_explicit_node_binding"
+        ],
+        "guarantees": [
+          "no_independent_constellation_identity",
+          "consumer_owns_process_lifecycle",
+          "semantic_owner_can_remain_independent_of_consumer",
+          "canonical_consumption_is_local_composition",
+          "canonical_deployment_is_consumer_bound_artifact"
+        ],
+        "id": "l9.pattern/dependency-package@1",
+        "lifecycle": {
+          "expression": "Lifecycle(package_instance) ⊆ Lifecycle(consumer)"
+        },
+        "preconditions": [
+          "public_programmatic_contract_exists",
+          "independent_deployment_not_required"
+        ],
+        "purpose": "Package canonical semantic implementation for in-process reuse without assigning the package an independent constellation runtime identity.\n",
+        "runtime_identity": {
+          "expression": "RuntimeIdentity(package_instance) = RuntimeIdentity(consumer)"
+        },
+        "structure": {
+          "edges": [
+            {
+              "from": "consuming_process",
+              "relation": "imports",
+              "to": "public_api"
+            },
+            {
+              "from": "public_api",
+              "relation": "exposes",
+              "to": "semantic_core"
+            }
+          ],
+          "nodes": [
+            "semantic_core",
+            "public_api",
+            "consuming_process"
+          ]
+        }
+      },
+      {
+        "architecture_obligations": [
+          "gate_transport",
+          "health_readiness",
+          "capability_manifest",
+          "receipt_support"
+        ],
+        "class": "deployment",
+        "compatible_with": [
+          "l9.pattern/semantic-core-gate-adapter@1",
+          "l9.pattern/semantic-core-provider-adapter@1"
+        ],
+        "forbidden": [
+          "peer_import_of_server_implementation",
+          "implicit_authority_inheritance"
+        ],
+        "guarantees": [
+          "independent_deployment",
+          "independent_health_and_readiness",
+          "independent_runtime_identity",
+          "independent_scaling_boundary",
+          "explicit_gate_admission",
+          "canonical_consumption_is_remote_invocation",
+          "canonical_deployment_is_independent_runtime"
+        ],
+        "id": "l9.pattern/runnable-node@1",
+        "preconditions": [
+          "semantic_capability_contract_exists",
+          "runtime_identity_is_declared",
+          "gate_admission_is_supported",
+          "health_contract_exists"
+        ],
+        "purpose": "Realize an independently admitted semantic capability as a routable constellation runtime identity.\n",
+        "structure": {
+          "nodes": [
+            "semantic_core",
+            "node_adapter",
+            "gate_sdk",
+            "runtime_identity",
+            "health_surface"
+          ]
+        }
+      },
+      {
+        "class": "execution",
+        "compatible_with": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/fixture-backed-conformance@1"
+        ],
+        "forbidden": [
+          "generated_code_and_generated_tests_as_only_authority",
+          "validator_reuses_same_buggy_interpretation_path_when_independence_is_required"
+        ],
+        "guarantees": [
+          "candidate_does_not_define_its_own_correctness",
+          "provider_substitution_is_testable",
+          "generated_implementation_can_be_independently_validated"
+        ],
+        "id": "l9.pattern/reference-model-conformance@1",
+        "preconditions": [
+          "independent_semantic_contract_exists",
+          "comparable_observable_behavior_exists"
+        ],
+        "purpose": "Validate a candidate implementation against independently owned semantic behavior rather than allowing the implementation or its generated tests to define correctness.\n",
+        "structure": {
+          "edges": [
+            {
+              "from": "semantic_contract",
+              "relation": "governs",
+              "to": "reference_model"
+            },
+            {
+              "from": "semantic_contract",
+              "relation": "governs",
+              "to": "candidate_implementation"
+            },
+            {
+              "from": "conformance_runner",
+              "relation": "compares",
+              "to": [
+                "reference_model",
+                "candidate_implementation"
+              ]
+            }
+          ],
+          "nodes": [
+            "semantic_contract",
+            "reference_model",
+            "candidate_implementation",
+            "conformance_runner",
+            "conformance_receipt"
+          ]
+        }
+      },
+      {
+        "class": "execution",
+        "forbidden": [
+          "orphan_fixture",
+          "fixture_creates_new_law",
+          "test_framework_semantics_override_fixture_semantics"
+        ],
+        "guarantees": [
+          "fixtures_trace_to_law",
+          "implementation_is_not_source_of_expected_result",
+          "same_fixture_semantics_can_target_multiple_test_frameworks"
+        ],
+        "id": "l9.pattern/fixture-backed-conformance@1",
+        "preconditions": [
+          "applicable_laws_are_admitted",
+          "fixture_derivation_is_valid",
+          "target_binding_is_available"
+        ],
+        "purpose": "Convert formal laws into concrete reusable semantic cases and execute them consistently across implementations.\n",
+        "structure": {
+          "edges": [
+            {
+              "from": "law_ir",
+              "relation": "derives",
+              "to": "fixture_ir"
+            },
+            {
+              "from": "fixture_ir",
+              "relation": "compiles_with",
+              "to": "target_binding"
+            },
+            {
+              "from": "fixture_ir",
+              "relation": "lowers_to",
+              "to": "conformance_ir"
+            },
+            {
+              "from": "conformance_ir",
+              "relation": "renders_to",
+              "to": "executable_cases"
+            }
+          ],
+          "nodes": [
+            "law_ir",
+            "fixture_ir",
+            "conformance_ir",
+            "target_binding",
+            "executable_cases"
+          ]
+        }
+      },
+      {
+        "class": "projection",
+        "examples": [
+          "vocabulary_yaml_to_vocabulary_md",
+          "vocabulary_yaml_to_vocabulary_json",
+          "canonical_workflow_to_skill_and_claude_projection",
+          "repository_semantics_to_AGENTS_and_CLAUDE"
+        ],
+        "forbidden": [
+          "derived_projection_becomes_independent_source_of_truth",
+          "separately_maintained_duplicate_semantics"
+        ],
+        "guarantees": [
+          "projection_authority_is_less_than_or_equal_to_source_authority",
+          "staleness_is_digest_detectable",
+          "multiple_consumers_share_one_semantic_ledger"
+        ],
+        "id": "l9.pattern/canonical-source-derived-projections@1",
+        "preconditions": [
+          "canonical_source_is_explicit",
+          "projection_profile_exists"
+        ],
+        "purpose": "Maintain one authoritative semantic source and compile multiple consumer-specific representations without creating competing truth.\n",
+        "required_metadata": [
+          "source_semantic_digest",
+          "compiler_version",
+          "projection_profile_version",
+          "generated_digest"
+        ],
+        "structure": {
+          "edges": [
+            {
+              "from": "projection_compiler",
+              "relation": "reads",
+              "to": "canonical_source"
+            },
+            {
+              "from": "projection_compiler",
+              "relation": "emits",
+              "to": "derived_projection"
+            }
+          ],
+          "nodes": [
+            "canonical_source",
+            "projection_compiler",
+            "derived_projection"
+          ]
+        }
+      },
+      {
+        "class": "semantic_structure",
+        "composition": {
+          "expression": "ResolvedSemantics(domain) = GlobalBaseline ∪ DomainLayer"
+        },
+        "examples": [
+          "global_fixture_profiles_plus_l9_state_fixtures",
+          "global_contracts_plus_state_contracts"
+        ],
+        "guarantees": [
+          "global_law_is_not_duplicated_in_each_domain",
+          "domain_can_specialize_without_mutating_global_semantics"
+        ],
+        "id": "l9.pattern/global-plus-domain-layering@1",
+        "preconditions": [
+          "global_baseline_is_versioned",
+          "domain_owner_is_explicit"
+        ],
+        "purpose": "Reuse an L9-wide semantic baseline while allowing each domain to add specialized laws, fixtures, contracts, and capabilities.\n",
+        "structure": {
+          "layers": [
+            "global_baseline",
+            "domain_semantics"
+          ]
+        }
+      },
+      {
+        "canonical_roles": {
+          "executable_conformance": {
+            "owner": "l9-conformance"
+          },
+          "organization_governance_distribution": {
+            "owner": "Quantum-L9/.github"
+          },
+          "user_agent_operating_plane": {
+            "owner": "Cursor-Governance"
+          }
+        },
+        "class": "governance",
+        "forbidden": [
+          "conformance_self_defines_constitutional_law",
+          "distribution_plane_mutates_payload_semantics",
+          "operating_plane_becomes_hidden_global_ssot"
+        ],
+        "guarantees": [
+          "distribution_does_not_reinterpret_artifacts",
+          "conformance_does_not_create_global_law",
+          "operating_plane_consumes_governance_and_conformance"
+        ],
+        "id": "l9.pattern/control-plane-execution-plane-separation@1",
+        "purpose": "Separate authority and distribution control from executable semantic systems and user/agent operating surfaces.\n"
+      },
+      {
+        "admission_rule": {
+          "expression": "Admit(candidate) iff AuthorityValid ∧ CandidateDigestMatches ∧ AdmissionChecksPass\n"
+        },
+        "class": "governance",
+        "forbidden": [
+          "floating_approval",
+          "self_admission_without_grant"
+        ],
+        "guarantees": [
+          "candidate_generation_does_not_equal_authority",
+          "approval_is_bound_to_exact_candidate_revision",
+          "changed_candidate_requires_new_authority_decision"
+        ],
+        "id": "l9.pattern/authority-candidate-admission@1",
+        "lifecycle": [
+          "candidate",
+          "admission_evaluated",
+          "awaiting_authority",
+          "admitted",
+          "published"
+        ],
+        "purpose": "Separate candidate generation from authoritative admission using immutable digest-bound decisions.\n"
+      },
+      {
+        "class": "persistence",
+        "guarantees": [
+          "reproducible_history",
+          "resumable_work",
+          "surgical_repair_without_history_loss"
+        ],
+        "id": "l9.pattern/immutable-revisioned-state@1",
+        "purpose": "Preserve authoritative history by committing new revisions rather than mutating previously admitted semantic or operational state.\n",
+        "rules": [
+          "expected_revision_required_for_transition",
+          "historical_revision_immutable",
+          "correction_creates_new_revision"
+        ],
+        "structure": {
+          "nodes": [
+            "current_revision",
+            "operation_receipt",
+            "journal",
+            "historical_revisions"
+          ]
+        }
+      },
+      {
+        "atomic_unit": [
+          "state_revision",
+          "operation_receipt",
+          "journal_event",
+          "outbox_intent"
+        ],
+        "class": "persistence",
+        "compatible_with": [
+          "l9.pattern/immutable-revisioned-state@1",
+          "l9.pattern/provider-neutral-persistence@1"
+        ],
+        "guarantees": [
+          "no_state_without_receipt",
+          "no_receipt_without_committed_state",
+          "event_delivery_can_recover_from_outbox"
+        ],
+        "id": "l9.pattern/atomic-state-receipt-journal-outbox@1",
+        "invariant": {
+          "expression": "Commit => StateRevision ∧ OperationReceipt ∧ JournalEvent ∧ OutboxIntent\n"
+        },
+        "purpose": "Ensure authoritative state mutation and its supporting execution evidence become externally visible atomically.\n"
+      },
+      {
+        "class": "persistence",
+        "examples": [
+          "l9-state_to_mongodb",
+          "future_l9-state_to_postgres"
+        ],
+        "guarantees": [
+          "database_is_not_semantic_owner",
+          "backend_replacement_is_conformance_problem",
+          "public_contract_is_provider_neutral"
+        ],
+        "id": "l9.pattern/provider-neutral-persistence@1",
+        "purpose": "Keep semantic persistence law independent of database technology through a canonical storage port and conformance requirements.\n",
+        "structure": {
+          "nodes": [
+            "semantic_owner",
+            "storage_port",
+            "storage_adapter",
+            "database_provider"
+          ]
+        }
+      },
+      {
+        "class": "persistence",
+        "examples": [
+          "Graphiti_world_model",
+          "Redis_projection_cache"
+        ],
+        "guarantees": [
+          "rich_querying_without_truth_centralization",
+          "cache_or_graph_failure_does_not_redefine_authority"
+        ],
+        "id": "l9.pattern/read-model-non-authority@1",
+        "invariant": {
+          "expression": "Authority(ReadModel) < Authority(SourceOwner)"
+        },
+        "purpose": "Allow rich materialized views, graphs, indexes, or caches without allowing them to manufacture authority.\n",
+        "structure": {
+          "nodes": [
+            "authoritative_owner",
+            "materialized_read_model"
+          ]
+        }
+      },
+      {
+        "architecture_obligations": [
+          "preserve_source_projection_identity_and_digest",
+          "preserve_cross_domain_reference_coordinates",
+          "derive_reverse_adjacency_in_the_read_model_only",
+          "fail_closed_on_material_reference_or_composition_conflict",
+          "keep_authoritative_mutation_at_the_source_owner"
+        ],
+        "class": "projection",
+        "common_examples": [
+          "strategic_plan_to_delegation_to_workstate_to_execution_to_evidence",
+          "derived_management_why_and_how_view"
+        ],
+        "compatible_with": [
+          "l9.pattern/canonical-source-derived-projections@1",
+          "l9.pattern/read-model-non-authority@1",
+          "l9.pattern/facts-plus-lineage-compiled-views@1",
+          "l9.pattern/session-projection-cache@1"
+        ],
+        "composition": {
+          "conflict_result": "invalid",
+          "output_authority_class": "derived",
+          "profile_ref": "l9.compose/consumer-view@1",
+          "source_projection_provenance_required": true
+        },
+        "forbidden": [
+          "mega_graph_becomes_canonical_authority",
+          "cross_domain_reference_transfers_ownership",
+          "upstream_authority_tracks_downstream_consumer_inventory",
+          "composed_view_mutates_authoritative_sources",
+          "graph_database_or_index_provider_becomes_semantic_owner",
+          "unresolved_reference_is_silently_treated_as_resolved"
+        ],
+        "guarantees": [
+          "independently_evolvable_domain_authorities",
+          "rebuildable_cross_domain_views",
+          "why_traversal_without_truth_centralization",
+          "how_traversal_without_upstream_backpatching",
+          "selective_invalidation_of_derived_views",
+          "provider_neutral_graph_materialization"
+        ],
+        "id": "l9.pattern/federated-authority-graphs@1",
+        "preconditions": [
+          "every_participating_graph_has_an_explicit_semantic_owner",
+          "every_cross_domain_reference_uses_a_resolvable_typed_semantic_coordinate_or_remains_explicitly_unknown",
+          "participating_sources_expose_projection_artifacts_under_admitted_projection_semantics",
+          "the_composition_profile_is_resolved"
+        ],
+        "purpose": "Compose independently owned graph-shaped semantic domains into provenance-preserving cross-domain views without centralizing semantic ownership, governing authority, or source truth.\n",
+        "reference_model": {
+          "authoritative_direction": "downstream_to_upstream",
+          "reverse_traversal": "derived_reverse_adjacency",
+          "rules": [
+            "downstream_objects_reference_governing_upstream_objects_they_realize",
+            "upstream_objects_do_not_embed_downstream_consumer_inventories",
+            "reverse_traversal_is_derived_from_composed_references",
+            "cross_domain_reference_does_not_transfer_semantic_ownership",
+            "relation_semantics_remain_owned_by_the_domain_that_declares_them"
+          ]
+        },
+        "structure": {
+          "edges": [
+            {
+              "from": "authoritative_domain_graph",
+              "relation": "projects",
+              "to": "projection_artifact"
+            },
+            {
+              "from": "projection_artifact",
+              "relation": "composes_into",
+              "to": "composed_consumer_view"
+            }
+          ],
+          "nodes": [
+            "authoritative_domain_graph",
+            "typed_semantic_reference",
+            "projection_artifact",
+            "composed_consumer_view"
+          ]
+        }
+      },
+      {
+        "class": "projection",
+        "compatible_with": [
+          "l9.pattern/canonical-source-derived-projections@1"
+        ],
+        "guarantees": [
+          "fewer_duplicate_ledgers",
+          "mechanically_detectable_staleness",
+          "consumer_specific_views"
+        ],
+        "id": "l9.pattern/facts-plus-lineage-compiled-views@1",
+        "invariant": {
+          "expression": "Store(Facts + Lineage); Compile(Views)"
+        },
+        "purpose": "Store canonical facts and their provenance once and generate multiple views rather than maintaining duplicated representations manually.\n"
+      },
+      {
+        "class": "governance",
+        "guarantees": [
+          "capability_existence_is_not_permission",
+          "unavailable_capability_remains_structurally_known",
+          "agent_views_are_derived_not_independent_truth"
+        ],
+        "id": "l9.pattern/capability-owner-admission-projection@1",
+        "layers": [
+          "capability_owner_declaration",
+          "admission_runtime_state",
+          "capability_graph_projection",
+          "consumer_projection"
+        ],
+        "purpose": "Separate semantic capability declaration, runtime admission, and consumer-specific capability visibility.\n",
+        "relations": {
+          "authorized": {
+            "implication_to_available": false
+          },
+          "available": {
+            "implication_to_authorized": false
+          },
+          "declared": {
+            "implication_to_available": false
+          }
+        }
+      },
+      {
+        "class": "projection",
+        "examples": [
+          "agent_capability_projection",
+          "workflow_projection",
+          "context_bundle"
+        ],
+        "guarantees": [
+          "cache_correctness_does_not_depend_on_ttl",
+          "changed_governing_input_yields_new_digest",
+          "cache_has_zero_authority"
+        ],
+        "id": "l9.pattern/session-projection-cache@1",
+        "purpose": "Materialize digest-addressed derived projections for fast reuse while preserving authoritative source validation.\n",
+        "structure": {
+          "nodes": [
+            "canonical_inputs",
+            "projection_compiler",
+            "digest",
+            "cache",
+            "projected_view"
+          ]
+        },
+        "validity": {
+          "expression": "ValidProjection iff GoverningInputDigests == ProjectionInputDigests\n"
+        }
+      },
+      {
+        "class": "compiler",
+        "compatible_with": [
+          "l9.pattern/proof-carrying-stage-state@1",
+          "l9.pattern/incremental-semantic-recompilation@1"
+        ],
+        "formula": {
+          "candidate": {
+            "expression": "Candidate_(n+1) = Compile_(n+1)(C_n, Input_(n+1))"
+          },
+          "commit": {
+            "expression": "S_(n+1) = Commit(S_n, Candidate_(n+1), Receipt_(n+1)) iff Receipt_(n+1) = PASS\n"
+          },
+          "context": {
+            "expression": "C_n = π_stage(S_n)"
+          },
+          "validation": {
+            "expression": "Receipt_(n+1) = Validate_(Solver(n+1))(Candidate_(n+1), C_n)\n"
+          }
+        },
+        "guarantees": [
+          "bounded_stage_context",
+          "early_error_localization",
+          "validated_outputs_feed_next_stage",
+          "downstream_stage_cannot_advance_over_failed_stage"
+        ],
+        "id": "l9.pattern/stage-scoped-semantic-compilation@1",
+        "purpose": "Build complex artifacts incrementally through ordered validated semantic stages, projecting only the minimum sufficient upstream semantics into each stage.\n"
+      },
+      {
+        "class": "compiler",
+        "guarantees": [
+          "stage_can_resume_without_conversation_history",
+          "downstream_compilation_can_trust_exact_upstream_coordinates"
+        ],
+        "id": "l9.pattern/proof-carrying-stage-state@1",
+        "purpose": "Bind each admitted compilation-stage artifact to provenance, source digests, validation evidence, profile identity, and state revision.\n",
+        "required_components": [
+          "artifact_digest",
+          "provenance",
+          "validation_receipt",
+          "source_digests",
+          "compilation_profile_digest",
+          "state_revision"
+        ]
+      },
+      {
+        "class": "compiler",
+        "formula": {
+          "affected": {
+            "expression": "Affected(change) = TransitiveDependents(change)"
+          }
+        },
+        "guarantees": [
+          "history_not_rewritten",
+          "unrelated_valid_artifacts_remain_valid",
+          "repair_surface_is_minimized"
+        ],
+        "id": "l9.pattern/incremental-semantic-recompilation@1",
+        "purpose": "Repair changed semantics by creating new upstream revisions and recompiling only their transitive semantic dependents.\n",
+        "workflow": [
+          "validation_failure",
+          "identify_failure_or_unsat_core",
+          "resolve_provenance",
+          "revise_earliest_affected_semantic_artifact",
+          "invalidate_transitive_dependents",
+          "recompile_affected_subgraph",
+          "revalidate"
+        ]
+      },
+      {
+        "allowed_results": [
+          "pass",
+          "fail",
+          "unsat",
+          "invalid",
+          "unknown"
+        ],
+        "class": "compiler",
+        "forbidden": [
+          "ad_hoc_solver_selection",
+          "probably_ok",
+          "llm_opinion_as_mechanical_validation"
+        ],
+        "guarantees": [
+          "validator_identity_is_receiptable",
+          "validation_is_profile_bound",
+          "failures_are_stage_local_when_possible"
+        ],
+        "id": "l9.pattern/stage-specific-mechanical-validation@1",
+        "purpose": "Validate each semantic compilation stage using only the solver declared for that stage by the canonical compilation profile.\n",
+        "solver_selection": {
+          "expression": "Solver(Stage_n) = π_solver(CanonicalCompilationProfile, Stage_n)\n"
+        }
+      },
+      {
+        "class": "projection",
+        "composition": {
+          "expression": "MixedFixture = Bind(GlobalFixtureTemplate, DomainBinding)\n"
+        },
+        "guarantees": [
+          "global_template_stays_thin",
+          "domains_only_supply_specialization",
+          "global_law_remains_single_source"
+        ],
+        "id": "l9.pattern/global-fixture-domain-binding@1",
+        "purpose": "Define reusable global fixture templates and specialize them through domain-specific bindings without duplicating global semantic law.\n",
+        "structure": {
+          "nodes": [
+            "global_fixture_template",
+            "domain_binding",
+            "mixed_fixture"
+          ]
+        }
+      },
+      {
+        "class": "governance",
+        "guarantees": [
+          "repetition_does_not_self_create_global_authority",
+          "harvested_intelligence_can_propagate_constellation_wide_after_admission"
+        ],
+        "id": "l9.pattern/harvest-promote-recompile@1",
+        "purpose": "Harvest recurring domain semantics, propose higher-scope law, require authoritative promotion, and then recompile canonical global artifacts.\n",
+        "workflow": [
+          "normalize_domain_laws",
+          "identify_repeated_semantics",
+          "emit_globalization_candidate",
+          "request_authorized_global_state_change",
+          "admit_global_invariant_or_contract",
+          "compile_global_law",
+          "derive_global_fixture",
+          "publish_global_profile"
+        ]
+      }
+    ],
+    "projection_profiles": {
+      "architect_agent": {
+        "include": [
+          "pattern_id",
+          "purpose",
+          "guarantees",
+          "forbidden",
+          "common_examples",
+          "compatible_with"
+        ]
+      },
+      "architecture_stage": {
+        "include": [
+          "pattern_id",
+          "class",
+          "purpose",
+          "structure",
+          "preconditions",
+          "guarantees",
+          "architecture_obligations",
+          "forbidden",
+          "compatible_with",
+          "composition_rules"
+        ]
+      },
+      "code_compilation": {
+        "include": [
+          "selected_pattern_refs",
+          "required_structure",
+          "required_ports",
+          "provider_binding_requirements",
+          "required_conformance"
+        ]
+      },
+      "conformance": {
+        "include": [
+          "pattern_id",
+          "preconditions",
+          "guarantees",
+          "forbidden",
+          "architecture_obligations"
+        ]
+      },
+      "human_architecture_doc": {
+        "include": [
+          "pattern_id",
+          "purpose",
+          "structure",
+          "guarantees",
+          "common_examples"
+        ]
+      },
+      "impact_analysis": {
+        "include": [
+          "pattern_id",
+          "dependencies",
+          "compatible_with",
+          "composition_rules"
+        ]
+      },
+      "semantic_compiler": {
+        "include": [
+          "pattern_id",
+          "structure",
+          "preconditions",
+          "guarantees",
+          "architecture_obligations",
+          "forbidden",
+          "compatible_with",
+          "composition_rules"
+        ]
+      }
+    },
+    "validation_rules": [
+      {
+        "id": "ARCH-PATTERN-001",
+        "rule": "every_pattern_has_unique_id"
+      },
+      {
+        "id": "ARCH-PATTERN-002",
+        "rule": "every_pattern_declares_class"
+      },
+      {
+        "id": "ARCH-PATTERN-003",
+        "rule": "every_pattern_declares_purpose"
+      },
+      {
+        "id": "ARCH-PATTERN-004",
+        "rule": "every_pattern_declares_preconditions"
+      },
+      {
+        "id": "ARCH-PATTERN-005",
+        "rule": "every_pattern_declares_guarantees"
+      },
+      {
+        "id": "ARCH-PATTERN-006",
+        "rule": "every_pattern_declares_forbidden_uses"
+      },
+      {
+        "id": "ARCH-PATTERN-007",
+        "rule": "pattern_references_must_resolve"
+      },
+      {
+        "id": "ARCH-PATTERN-008",
+        "rule": "selected_pattern_preconditions_must_be_satisfied"
+      },
+      {
+        "id": "ARCH-PATTERN-009",
+        "rule": "selected_patterns_must_not_conflict"
+      },
+      {
+        "id": "ARCH-PATTERN-010",
+        "rule": "selected_pattern_guarantees_must_cover_required_architecture_obligations"
+      },
+      {
+        "id": "ARCH-PATTERN-011",
+        "rule": "provider_specific_names_must_not_define_semantic_pattern_identity"
+      },
+      {
+        "id": "ARCH-PATTERN-012",
+        "rule": "architecture_synthesis_must_emit_selected_pattern_provenance"
+      }
+    ]
+  },
+  "projection_digest": "sha256:26b9ce9d87d7423f102f97779a4600c6002c68973e4f6f6c14b38e20b91eadd6",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+  "source_ref": "l9.source/architecture-patterns@1"
+}

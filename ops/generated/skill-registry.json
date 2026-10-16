@@ -1,5 +1,5 @@
 {
-  "generation_id": "eb233ec1e136897c7d2ab1c0a065c3af12d010bf4e56cfed585b9280791c08ec",
+  "generation_id": "8e4ad02131782d735a5e6076c0965c28ee30e99d2173c819f753633836f00453",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1117,7 +1117,7 @@
       "path": "skills/l9-global-architect",
       "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
       "skill_md": "skills/l9-global-architect/SKILL.md",
-      "skill_sha256": "3f96b5735816b6965b6c10d35b40077243552021fea24363f62a52c239308bde",
+      "skill_sha256": "df2ffa2067ea338bf88fb5d75e84402c2f7e2502ffb8165284b1c70cb21b21a6",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1540,5 +1540,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "0e624289c1506895f1e2092f60fb49806cbd5081375b93ee373df951ff2ab84b",
-  "source_skill_corpus_sha256": "aad108218da56cde75c462fa0482214259a25ff5288205a8ffb0ab4a127dfcec"
+  "source_skill_corpus_sha256": "2aa04a9d79fdeb650a8ff89fec73c6885bff213fd646fc396fb4f7c05ca606b6"
 }

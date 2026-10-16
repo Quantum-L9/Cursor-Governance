@@ -1,0 +1,152 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "archetypes": [
+      {
+        "forbidden": [
+          "semantic_ownership_inferred_from_transport",
+          "direct_peer_routing_when_gate_is_required",
+          "provider_becomes_semantic_owner"
+        ],
+        "id": "l9.node-archetype/semantic-capability@1",
+        "optional_patterns": [
+          "l9.pattern/semantic-core-provider-adapter@1",
+          "l9.pattern/reference-model-conformance@1",
+          "l9.pattern/fixture-backed-conformance@1",
+          "l9.pattern/provider-neutral-persistence@1"
+        ],
+        "properties": [
+          "semantic_owner",
+          "bounded_capability",
+          "independent_runtime_identity",
+          "independently_admitted_capabilities",
+          "independent_health_and_readiness",
+          "gate_routed"
+        ],
+        "purpose": "Base archetype for an independently deployed, Gate-routed L9 node that exposes one bounded semantic capability or cohesive capability family.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/semantic-core-gate-adapter@1",
+            "l9.pattern/runnable-node@1",
+            "l9.pattern/authority-candidate-admission@1"
+          ],
+          "conformance_classes": [
+            "core",
+            "capability",
+            "runtime"
+          ],
+          "runtime_surfaces": [
+            "gate_integration",
+            "health",
+            "readiness",
+            "receipts"
+          ],
+          "semantic_surfaces": [
+            "semantic_core",
+            "capability_contract",
+            "product_topology"
+          ]
+        }
+      },
+      {
+        "extends": [
+          "l9.node-archetype/semantic-capability@1"
+        ],
+        "forbidden": [
+          "implicit_cross_node_workflow_authority",
+          "routing_authority"
+        ],
+        "id": "l9.node-archetype/worker@1",
+        "properties": [
+          "bounded_operation_execution",
+          "caller_owned_or_external_orchestration"
+        ],
+        "purpose": "Node whose primary role is execution of bounded capability operations, not ownership of cross-node workflow composition or routing.\n"
+      },
+      {
+        "extends": [
+          "l9.node-archetype/semantic-capability@1"
+        ],
+        "forbidden": [
+          "peer_url_resolution",
+          "direct_node_to_node_dispatch",
+          "semantic_ownership_transfer_by_composition"
+        ],
+        "guarantees": [
+          "orchestration_does_not_create_routing_authority",
+          "invoked_product_semantics_remain_with_their_owners"
+        ],
+        "id": "l9.node-archetype/orchestrator@1",
+        "properties": [
+          "workflow_composition",
+          "gate_mediated_step_invocation",
+          "local_workflow_state"
+        ],
+        "purpose": "Node whose bounded capability is composition of multiple capability invocations while preserving Gate as routing authority and preserving semantic ownership of invoked products.\n"
+      },
+      {
+        "extends": [
+          "l9.node-archetype/semantic-capability@1"
+        ],
+        "forbidden": [
+          "silent_revision_overwrite",
+          "provider_becomes_state_semantic_owner"
+        ],
+        "guarantees": [
+          "historical_state_is_not_mutated",
+          "corrections_create_new_revisions",
+          "authoritative_state_boundary_is_remote_and_shared"
+        ],
+        "id": "l9.node-archetype/authoritative-state@1",
+        "optional_patterns": [
+          "l9.pattern/atomic-state-receipt-journal-outbox@1",
+          "l9.pattern/provider-neutral-persistence@1"
+        ],
+        "properties": [
+          "authoritative_state",
+          "revisioned_mutation",
+          "durable_history",
+          "consequential_operations",
+          "shared_authority_boundary"
+        ],
+        "purpose": "Node owning durable authoritative revisioned state and consequential state transitions for multiple Constellation participants.\n",
+        "requires": {
+          "architecture_patterns": [
+            "l9.pattern/immutable-revisioned-state@1"
+          ],
+          "conformance_classes": [
+            "core",
+            "capability",
+            "runtime",
+            "adapter"
+          ]
+        }
+      }
+    ],
+    "global_rules": {
+      "archetype_does_not_create_semantic_ownership": true,
+      "archetype_does_not_define_domain_semantics": true,
+      "archetype_specializes_node_kind": true,
+      "archetypes_compose_architecture_patterns": true,
+      "archetypes_declare_required_conformance_classes": true,
+      "archetypes_declare_required_structural_properties": true,
+      "catalog_applies_only_to_product_kind_node": true,
+      "deployment_topology_does_not_imply_semantic_ownership": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/product-kind@1",
+        "l9.contract/product-topology@1"
+      ]
+    }
+  },
+  "projection_digest": "sha256:66ae9c9e5d11b02a63da3848cda2cf16d97a2ba636bdc860340cf51e1d352d94",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
+  "source_ref": "l9.source/node-archetypes@1"
+}

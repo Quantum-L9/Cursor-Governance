@@ -1,0 +1,1916 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.compose/architecture-intelligence@1#l9.projection/architecture-intelligence@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+      "path": "semantics/composed_projection.schema.yaml",
+      "ref": "l9.schema/composed-projection@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:6162c745bf9d818a96d8197f6c47ca22a23da64b622b1699d58c1942aee26674",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:68db77b87d078089a34c7e687e3175d6ae298b571474784df7ec8b6b19f94b81",
+      "path": "semantics/composition_engine_contract.yaml",
+      "ref": "l9.compiler/composition-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:01e903a002f33d21494f6fadea913fa126b913401bcf339132422b0314d67721",
+      "path": "semantics/composition_profiles.yaml",
+      "ref": "l9.composition-profiles/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+    "source_registry": {
+      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:17bd721067fa57d47d680d3527ed954379de92a87ae5c1930bb09a9f2e7d0857",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/vocabulary@1"
+    },
+    {
+      "digest": "sha256:b01df9f54c1a8c010d410fe6d0566da68a25fd8e8487c484e485c8dfab23021f",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/invariants@1"
+    },
+    {
+      "digest": "sha256:e521fd9ac3e8930b78467310c68a7324a1f9c6c2e69b7e8075edfaf9ea62977e",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/contracts@1"
+    },
+    {
+      "digest": "sha256:6a628c9fda186e999d6b1c25b46f0d6bce155c2626485ed65c04cd9fee2be75e",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/requirement-model@1"
+    },
+    {
+      "digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/resolution-model@1"
+    },
+    {
+      "digest": "sha256:497f40bd6ee129fc1fd0ff38c6455a4771948c346281e8b43259a549b60aa42e",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/architecture-rules@1"
+    },
+    {
+      "digest": "sha256:e52c766b64a8fa7d31012d907455a95becbc57c079d62558dd4b70d77dd1f869",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/product-topology-schema@1"
+    },
+    {
+      "digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1"
+    },
+    {
+      "digest": "sha256:66ae9c9e5d11b02a63da3848cda2cf16d97a2ba636bdc860340cf51e1d352d94",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/node-archetypes@1"
+    },
+    {
+      "digest": "sha256:152547bcadb1463f8cc4fdffbd5988816a20fc9572815e2faa2196574814a818",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/dependency-archetypes@1"
+    },
+    {
+      "digest": "sha256:f94407106185d5ebb43bd65aebf328628282784f94affe4f6810278efa414ae3",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/identity-model@1"
+    },
+    {
+      "digest": "sha256:26b9ce9d87d7423f102f97779a4600c6002c68973e4f6f6c14b38e20b91eadd6",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/architecture-patterns@1"
+    },
+    {
+      "digest": "sha256:9db948b9bf19ffcb3b5916c521b4b6fbcfc80ac0c8763a3d29f1ce4a837e4a6d",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/port-catalog@1"
+    },
+    {
+      "digest": "sha256:1b3bbf846d054ee48e50d4dd5a9313223c39442c5a51779409ae503bd1fc816c",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/capabilities@1"
+    },
+    {
+      "digest": "sha256:9be0586972500d2b3a08ff185e6f17b6eda9d08a3d70c1b772bf741eb2d7634d",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/capability-resolution@1"
+    },
+    {
+      "digest": "sha256:e74e00836c742d753758ec5b3184abe80475edc46e1b728c08a33e3811bcf228",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/technology-profiles@1"
+    },
+    {
+      "digest": "sha256:c7fb53b80cfd24552b5f8f1f1937a877a184fa27670c6e28ea97b0a1c07d331c",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/technology-capabilities@1"
+    },
+    {
+      "digest": "sha256:cff9b725c6e8e49dd64537dfe49075c7e2a07dfcfeca7bd20ec67feb46fab00f",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/binding-catalog@1"
+    },
+    {
+      "digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1"
+    },
+    {
+      "digest": "sha256:94c12b68b87b4c8e8622277a12eb7b4d26d5203bc69673292f8712d1ef338bd1",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/artifact-model@1"
+    },
+    {
+      "digest": "sha256:02f97ba4e61ddf6939e77435bc905adc954e4b401d869c759ef771ea13c4ab01",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/product-manifest-schema@1"
+    },
+    {
+      "digest": "sha256:773fcaa04fe23b2a6c44b68f8be24916b57219a54500ddd3353e65631f408e12",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/authority-model@1"
+    },
+    {
+      "digest": "sha256:0d1ad617ea86d5653957aa0e3761fb1ef6aca9b682a3c58d2094d9b4d0d87c52",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/lifecycle@1"
+    },
+    {
+      "digest": "sha256:d0378d89856ebb476f8b1ed07d3188938bdb03ff70e9471cccd955e827c2ebf3",
+      "ref": "l9.projection/architecture-intelligence@1#l9.source/semantic-dependency-model@1"
+    }
+  ],
+  "operation": "composition",
+  "output": {
+    "digest": "sha256:0f9e3b9ce5a7764dc606022bec42eebbb069487d834068bad9f23bc524a82689",
+    "ref": "l9.compose/architecture-intelligence@1#l9.projection/architecture-intelligence@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "profile": {
+    "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
+    "ref": "l9.compose/architecture-intelligence@1"
+  },
+  "receipt_digest": "sha256:7db55c0fe8ef8a355dd451f77b989d2e23f0232350a60aefccb87c9895b71bff",
+  "receipt_identity": "l9.receipt-instance/645530bce1eb0a5a3d3a9904d3ad4c9fcd9f98f7236f17951d93157b7adb12b8",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "components": {
+      "l9.projection/architecture-intelligence@1#l9.source/architecture-patterns@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:26b9ce9d87d7423f102f97779a4600c6002c68973e4f6f6c14b38e20b91eadd6",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 16,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/architecture_patterns.yaml",
+            "ref": "l9.source/architecture-patterns@1",
+            "source_class": "architecture_patterns",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+        "source_ref": "l9.source/architecture-patterns@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/architecture-rules@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:497f40bd6ee129fc1fd0ff38c6455a4771948c346281e8b43259a549b60aa42e",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/architecture_rules.yaml",
+            "ref": "l9.source/architecture-rules@1",
+            "source_class": "architecture_rules",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
+        "source_ref": "l9.source/architecture-rules@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/artifact-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:94c12b68b87b4c8e8622277a12eb7b4d26d5203bc69673292f8712d1ef338bd1",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 13,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/artifact_model.yaml",
+            "ref": "l9.source/artifact-model@1",
+            "source_class": "artifact_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+        "source_ref": "l9.source/artifact-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/authority-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:773fcaa04fe23b2a6c44b68f8be24916b57219a54500ddd3353e65631f408e12",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 15,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/authority_model.yaml",
+            "ref": "l9.source/authority-model@1",
+            "source_class": "authority_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+        "source_ref": "l9.source/authority-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/binding-catalog@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 1,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 1,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:cff9b725c6e8e49dd64537dfe49075c7e2a07dfcfeca7bd20ec67feb46fab00f",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 2,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:bc4da9f550be0dcc3f36d072b6ead000bf5f1eda51f84bdbcfb1d8cda81fd72f",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/binding_catalog.yaml",
+            "ref": "l9.source/binding-catalog@1",
+            "source_class": "binding_catalog",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:bc4da9f550be0dcc3f36d072b6ead000bf5f1eda51f84bdbcfb1d8cda81fd72f",
+        "source_ref": "l9.source/binding-catalog@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/capabilities@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:1b3bbf846d054ee48e50d4dd5a9313223c39442c5a51779409ae503bd1fc816c",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 18,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/capabilities.yaml",
+            "ref": "l9.source/capabilities@1",
+            "source_class": "capabilities",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+        "source_ref": "l9.source/capabilities@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/capability-resolution@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:9be0586972500d2b3a08ff185e6f17b6eda9d08a3d70c1b772bf741eb2d7634d",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/capability_resolution.yaml",
+            "ref": "l9.source/capability-resolution@1",
+            "source_class": "capability_resolution",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+        "source_ref": "l9.source/capability-resolution@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/contracts@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:e521fd9ac3e8930b78467310c68a7324a1f9c6c2e69b7e8075edfaf9ea62977e",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 8,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/contracts.yaml",
+            "ref": "l9.source/contracts@1",
+            "source_class": "contracts",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+        "source_ref": "l9.source/contracts@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/dependency-archetypes@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:152547bcadb1463f8cc4fdffbd5988816a20fc9572815e2faa2196574814a818",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 3,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/dependency_archetypes.yaml",
+            "ref": "l9.source/dependency-archetypes@1",
+            "source_class": "dependency_archetypes",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+        "source_ref": "l9.source/dependency-archetypes@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/identity-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:f94407106185d5ebb43bd65aebf328628282784f94affe4f6810278efa414ae3",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 9,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:b9245eca99501a38976e909e1d151942c1253b2eee2bd6bab9c6382687db4288",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/identity_model.yaml",
+            "ref": "l9.source/identity-model@1",
+            "source_class": "identity_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:b9245eca99501a38976e909e1d151942c1253b2eee2bd6bab9c6382687db4288",
+        "source_ref": "l9.source/identity-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/invariants@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:b01df9f54c1a8c010d410fe6d0566da68a25fd8e8487c484e485c8dfab23021f",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/invariants.yaml",
+            "ref": "l9.source/invariants@1",
+            "source_class": "invariants",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+        "source_ref": "l9.source/invariants@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/lifecycle@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:0d1ad617ea86d5653957aa0e3761fb1ef6aca9b682a3c58d2094d9b4d0d87c52",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 11,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/lifecycle.yaml",
+            "ref": "l9.source/lifecycle@1",
+            "source_class": "lifecycle",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+        "source_ref": "l9.source/lifecycle@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/node-archetypes@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:66ae9c9e5d11b02a63da3848cda2cf16d97a2ba636bdc860340cf51e1d352d94",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 3,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/node_archetypes.yaml",
+            "ref": "l9.source/node-archetypes@1",
+            "source_class": "node_archetypes",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
+        "source_ref": "l9.source/node-archetypes@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/port-catalog@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:9db948b9bf19ffcb3b5916c521b4b6fbcfc80ac0c8763a3d29f1ce4a837e4a6d",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/port_catalog.yaml",
+            "ref": "l9.source/port-catalog@1",
+            "source_class": "port_catalog",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
+        "source_ref": "l9.source/port-catalog@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 7,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/product_kinds.yaml",
+            "ref": "l9.source/product-kinds@1",
+            "source_class": "product_kinds",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
+        "source_ref": "l9.source/product-kinds@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/product-manifest-schema@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:02f97ba4e61ddf6939e77435bc905adc954e4b401d869c759ef771ea13c4ab01",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 7,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7e31b8202e9daece716e1f5a9fa2c6bb5cb7e6f1bc42115fba708538b6fd6efa",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/product_manifest.schema.yaml",
+            "ref": "l9.source/product-manifest-schema@1",
+            "source_class": "product_manifest",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:7e31b8202e9daece716e1f5a9fa2c6bb5cb7e6f1bc42115fba708538b6fd6efa",
+        "source_ref": "l9.source/product-manifest-schema@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/product-topology-schema@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:e52c766b64a8fa7d31012d907455a95becbc57c079d62558dd4b70d77dd1f869",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 7,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:5ecf2e7a18eef93177230a7f379453dfcd444bedad9f74eba4d1504737bc6520",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/product_topology.schema.yaml",
+            "ref": "l9.source/product-topology-schema@1",
+            "source_class": "product_topology",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:5ecf2e7a18eef93177230a7f379453dfcd444bedad9f74eba4d1504737bc6520",
+        "source_ref": "l9.source/product-topology-schema@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 7,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/repository_registry.yaml",
+            "ref": "l9.source/repository-registry@1",
+            "source_class": "repository_registry",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+        "source_ref": "l9.source/repository-registry@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/requirement-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:6a628c9fda186e999d6b1c25b46f0d6bce155c2626485ed65c04cd9fee2be75e",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/requirement_model.yaml",
+            "ref": "l9.source/requirement-model@1",
+            "source_class": "requirement_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+        "source_ref": "l9.source/requirement-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/resolution-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/resolution_model.yaml",
+            "ref": "l9.source/resolution-model@1",
+            "source_class": "resolution_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+        "source_ref": "l9.source/resolution-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/semantic-dependency-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:d0378d89856ebb476f8b1ed07d3188938bdb03ff70e9471cccd955e827c2ebf3",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 2,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/semantic_dependency_model.yaml",
+            "ref": "l9.source/semantic-dependency-model@1",
+            "source_class": "semantic_dependency_model",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+        "source_ref": "l9.source/semantic-dependency-model@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/technology-capabilities@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 1,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:c7fb53b80cfd24552b5f8f1f1937a877a184fa27670c6e28ea97b0a1c07d331c",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 8,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:d2172c439b1fc221e9a599220065830187054747f263567e4061d8c95845ad0b",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/technology_capabilities.yaml",
+            "ref": "l9.source/technology-capabilities@1",
+            "source_class": "technology_capabilities",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:d2172c439b1fc221e9a599220065830187054747f263567e4061d8c95845ad0b",
+        "source_ref": "l9.source/technology-capabilities@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/technology-profiles@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:e74e00836c742d753758ec5b3184abe80475edc46e1b728c08a33e3811bcf228",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:423a6da9cbf80f89d40fb3d524a5ee6c9ae7acff360fc89e25bb997014546246",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/technology_profiles.yaml",
+            "ref": "l9.source/technology-profiles@1",
+            "source_class": "technology_profiles",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:423a6da9cbf80f89d40fb3d524a5ee6c9ae7acff360fc89e25bb997014546246",
+        "source_ref": "l9.source/technology-profiles@1"
+      },
+      "l9.projection/architecture-intelligence@1#l9.source/vocabulary@1": {
+        "criteria": {
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:unrelated_domain_payloads": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "schema": "l9.projection.architecture-intelligence/v1",
+            "schema_artifact": {
+              "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+              "path": "semantics/architecture_intelligence_projection.schema.yaml",
+              "ref": "l9.schema/architecture-intelligence-projection@1"
+            },
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+            "ref": "l9.projection/architecture-intelligence@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:17bd721067fa57d47d680d3527ed954379de92a87ae5c1930bb09a9f2e7d0857",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 45,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+            "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/vocabulary.yaml",
+            "ref": "l9.source/vocabulary@1",
+            "source_class": "vocabulary",
+            "status": "pass"
+          },
+          "successor_of": {
+            "predecessor": "l9.projection/gar-architecture-observer@1",
+            "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+            "rule": "PROJECTION-014",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+        "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+        "source_ref": "l9.source/vocabulary@1"
+      }
+    },
+    "coverage": "complete",
+    "criteria": {
+      "component_freshness": {
+        "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+        "status": "pass"
+      },
+      "component_provenance": {
+        "components": [
+          "l9.projection/architecture-intelligence@1#l9.source/architecture-patterns@1",
+          "l9.projection/architecture-intelligence@1#l9.source/architecture-rules@1",
+          "l9.projection/architecture-intelligence@1#l9.source/artifact-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/authority-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/binding-catalog@1",
+          "l9.projection/architecture-intelligence@1#l9.source/capabilities@1",
+          "l9.projection/architecture-intelligence@1#l9.source/capability-resolution@1",
+          "l9.projection/architecture-intelligence@1#l9.source/contracts@1",
+          "l9.projection/architecture-intelligence@1#l9.source/dependency-archetypes@1",
+          "l9.projection/architecture-intelligence@1#l9.source/identity-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/invariants@1",
+          "l9.projection/architecture-intelligence@1#l9.source/lifecycle@1",
+          "l9.projection/architecture-intelligence@1#l9.source/node-archetypes@1",
+          "l9.projection/architecture-intelligence@1#l9.source/port-catalog@1",
+          "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1",
+          "l9.projection/architecture-intelligence@1#l9.source/product-manifest-schema@1",
+          "l9.projection/architecture-intelligence@1#l9.source/product-topology-schema@1",
+          "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1",
+          "l9.projection/architecture-intelligence@1#l9.source/requirement-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/resolution-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/semantic-dependency-model@1",
+          "l9.projection/architecture-intelligence@1#l9.source/technology-capabilities@1",
+          "l9.projection/architecture-intelligence@1#l9.source/technology-profiles@1",
+          "l9.projection/architecture-intelligence@1#l9.source/vocabulary@1"
+        ],
+        "status": "pass"
+      },
+      "composition_digest": {
+        "digest": "sha256:0f9e3b9ce5a7764dc606022bec42eebbb069487d834068bad9f23bc524a82689",
+        "status": "pass"
+      },
+      "composition_equivalence": {
+        "status": "pass"
+      },
+      "composition_profile_currentness": {
+        "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
+        "ref": "l9.compose/architecture-intelligence@1",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:2d45cdea5157faa40d790b265b689722b9d295411103efb8a9b00fb931f828c5",
+        "path": "composed/l9.compose_architecture-intelligence_1_l9.projection_architecture-intelligence_1.composed.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+          "path": "semantics/composed_projection.schema.yaml",
+          "ref": "l9.schema/composed-projection@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "schema": "l9.composed-projection.architecture-intelligence/v1",
+        "schema_artifact": {
+          "digest": "sha256:459bfd197abdd47cfaced412c2798b7192fea1aa2fe968cd27d519da5fe3a552",
+          "path": "semantics/architecture_intelligence_composition.schema.yaml",
+          "ref": "l9.schema/architecture-intelligence-composition@1"
+        },
+        "status": "pass"
+      }
+    },
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}
