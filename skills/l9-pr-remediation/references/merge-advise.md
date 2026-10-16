@@ -43,10 +43,10 @@ transcription. Two records count (CANONICAL_LAW §6.2.13):
    authorize merge {owner}/{repo}#{number}@{sha}
    ```
 
-2. **Operator prompt.** The operator typed an explicit merge instruction in
-   their own prompt — "merge PR #{number} after the checks pass", "fix and
-   merge #{number}", "remediate and merge all currently open PRs in
-   {owner}/{repo}" — and the host prompt hook recorded it at submission. Once
+2. **Operator prompt.** The operator asked for the merge in their own words
+   in chat — "merge these PRs", "fix and merge #{number} when green", "merge
+   all open PR’s in https://github.com/{owner}/{repo}" — and the host prompt
+   hook recorded it at submission (CANONICAL_LAW §6.2.14). Once
    the PR is green, mergeable and thread-clean, the agent transcribes it:
 
    ```bash
@@ -55,11 +55,14 @@ transcription. Two records count (CANONICAL_LAW §6.2.13):
 
    It refuses a moved head (re-run for the live head after readiness), a
    closed PR, a PR the instruction does not cover (a cohort covers only PRs
-   open when it was spoken), and any L9-ORG-007 path. The refusal names the
+   open when it was spoken), and an operator without admin, maintain or write
+   authority over the repository. The refusal names the
    prerequisite; it is MERGE_PENDING, not a reason to try another transport.
 
-L9-ORG-007 paths reject a line or approval from the PR author and accept no
-operator-prompt grant. A head that moves after the record returns the PR to
+The operator may be the PR author and the PR may touch L9-ORG-007 paths: an
+authorized owner's own instruction is the authorization (CANONICAL_LAW §6.2.14,
+policy 4.0.0). Never ask them to repeat a recorded instruction, to use special
+wording, or to post a GitHub comment. A head that moves after the record returns the PR to
 MERGE_PENDING; a still-live instruction re-grants the verified final head
 without asking the operator again. The agent does not post the line, does
 not approve, and never writes the grant file or the instruction receipt.

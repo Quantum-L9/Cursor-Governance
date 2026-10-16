@@ -49,7 +49,7 @@
     "record (an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha),",
     "or an explicit merge instruction the operator typed, recorded at UserPromptSubmit by",
     "operator_merge_instruction_wrap.py and transcribed by authorize_merge.py --operator-instruction",
-    "after a live head and L9-ORG-007 recheck. The recorder is an observer: it never blocks a",
+    "after a live head and operator repository-authority recheck (6.2.14). The recorder never blocks a",
     "prompt and an agent tool call cannot invoke it or write its receipt. No terminal",
     "transcription. /l9-pr-remediation stops at MERGE_PENDING without one of those records.",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
