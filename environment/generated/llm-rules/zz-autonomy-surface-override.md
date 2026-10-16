@@ -71,7 +71,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   §6.2.13): a GitHub record, or the operator's recorded prompt instruction
   transcribed with `authorize_merge.py --operator-instruction`, with the PR
   green + mergeable; remediation stops at MERGE_PENDING until that record
-  exists. L9-ORG-007 paths need the GitHub record from a non-author.
+  exists. An authorized owner's chat instruction covers L9-ORG-007 paths
+  and their own pull requests (§6.2.14).
   Force-push / admin-merge stay forbidden.
 - Stacked PRs are opt-in (`PR_STACK=auto`; empty by default): when you
   choose to stack and a PR is already open for the workstream, the next PR

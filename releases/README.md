@@ -51,7 +51,7 @@ A release record should be produced only after:
 1. policy and schema validation passes;
 2. assertion references resolve;
 3. repository tests pass;
-4. independent approval is recorded;
+4. owner merge authorization is recorded (L9-ORG-007);
 5. the immutable commit is known;
 6. digests are calculated from committed files;
 7. compatibility impact is documented.
