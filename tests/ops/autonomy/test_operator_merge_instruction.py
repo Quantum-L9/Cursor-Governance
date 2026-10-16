@@ -1586,3 +1586,202 @@ def test_codex_polite_contextual_cancellation_uses_the_conversation() -> None:
 def test_codex_a_question_about_merging_still_records_nothing() -> None:
     assert _kinds("Shouldn't we merge #96?") == []
     assert _kinds("Can you check whether #96 should merge?") == []
+
+
+# =============================================================================
+# PR742-F2: a condition is part of the instruction, never discarded.
+# Objective readiness is authority the existing readiness board proves; a
+# condition that waits on someone's decision, or that cannot be read, never
+# becomes permission to merge now.
+# =============================================================================
+
+
+def _condition_statuses(prompt: str, cwd_repo: str | None = MEMORY) -> list[tuple[int, str | None]]:
+    return [
+        (item["pr"], (item.get("condition") or {}).get("status"))
+        for item in omi.parse_instructions(prompt, cwd_repo=cwd_repo)
+        if item["kind"] == omi.KIND_AUTHORIZE
+    ]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Merge #96.",
+        "Fix and merge #96.",
+        "Merge #96 after all.",
+        "Merge #96 when you get a chance.",
+        "Merge #96 if you can.",
+        "Please merge #96 as soon as possible.",
+        "When you're ready, go ahead and merge #96.",
+    ],
+)
+def test_f2_unconditional_and_courtesy_phrasing_carries_no_condition(prompt: str) -> None:
+    assert _condition_statuses(prompt) == [(96, None)]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Once CI is green, merge #96.",
+        "When the checks pass, fix and merge #96.",
+        "If it's green, please merge PR #96.",
+        "Merge PR #96 after the checks pass.",
+        "merge #96 once CI is green",
+        "Fix and merge #96 when green.",
+        "Merge #96 when ready.",
+        "I authorize the eventual merge of PR #96 after validation.",
+        "Merge #96 as soon as the tests pass.",
+        "Merge #96 once you've fixed the failing test.",
+        "Merge #96 unless CI fails.",
+        "Merge #96, but only once CI is green.",
+    ],
+)
+def test_f2_objective_readiness_is_recorded_as_readiness(prompt: str) -> None:
+    assert _condition_statuses(prompt) == [(96, "readiness")]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "After I approve the release, merge #96.",
+        "Merge #96 after I approve the release.",
+        "After I approve the release, go ahead and merge #96.",
+        "Merge #96, but only after I approve the release.",
+        "Merge #96 when I say so.",
+        "Once legal signs off, merge #96.",
+        "If Bob approves it, merge #96.",
+        "Merge #96. But only after the release is approved.",
+        "Merge #96 once we've shipped the release.",
+        "Assuming the customer agrees, merge #96.",
+        "Merge #96 once CI is green and after I approve the release.",
+    ],
+)
+def test_f2_a_pending_external_decision_is_never_unconditional(prompt: str) -> None:
+    assert _condition_statuses(prompt) == [(96, "pending_decision")]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Merge #96 after the migration window opens.",
+        "When the moon is full, merge #96.",
+        "Merge #96 unless something comes up.",
+        "Merge #96 after that.",
+    ],
+)
+def test_f2_an_unresolvable_condition_stays_pending(prompt: str) -> None:
+    assert _condition_statuses(prompt) == [(96, "unresolvable")]
+
+
+def test_f2_a_condition_binds_every_pull_request_it_governs() -> None:
+    assert _condition_statuses("Merge #96 and #97 after I approve the release.") == [
+        (96, "pending_decision"),
+        (97, "pending_decision"),
+    ]
+    found = omi.parse_instructions(
+        f"Merge all open PRs in {MEMORY} after I approve the release.", cwd_repo=None
+    )
+    (cohort,) = [f for f in found if f["kind"] == omi.KIND_AUTHORIZE]
+    assert cohort["scope"] == omi.SCOPE_COHORT
+    assert cohort["condition"]["status"] == "pending_decision"
+
+
+def test_f2_the_condition_text_is_kept(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"After I approve the release, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    (entry,) = _capture(store, prompt, transcript)["recorded"]
+    assert entry["condition"]["status"] == "pending_decision"
+    assert "approve the release" in entry["condition"]["text"]
+
+
+def test_f2_a_pending_condition_authorizes_nothing(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"After I approve the release, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    _capture(store, prompt, transcript)
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 1) is None
+    verdict = omi.instruction_verdict(MEMORY, 96, path=store, now=NOW + 1)
+    assert verdict["authorized"] is False
+    assert "approve the release" in verdict["reason"]
+    assert "condition" in verdict["reason"]
+
+
+def test_f2_an_unresolvable_condition_authorizes_nothing(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"Merge {MEMORY}#96 after the migration window opens."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    _capture(store, prompt, transcript)
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 1) is None
+    reason = omi.instruction_verdict(MEMORY, 96, path=store, now=NOW + 1)["reason"]
+    assert "cannot be verified" in reason
+
+
+def test_f2_a_readiness_condition_is_authority_that_carries_its_condition(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"Once CI is green, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    _capture(store, prompt, transcript)
+    entry = omi.find_instruction(MEMORY, 96, path=store, now=NOW + 1)
+    assert entry is not None
+    assert entry["condition"]["status"] == "readiness"
+
+
+def test_f2_the_operators_later_plain_instruction_releases_a_pending_one(tmp_path: Path) -> None:
+    """No second ceremony: the operator's next ordinary instruction is the authority."""
+    store = tmp_path / "s.json"
+    first = f"After I approve the release, merge {MEMORY}#96."
+    second = "The release is approved, merge it."
+    transcript = _conversation(
+        tmp_path / "t.jsonl",
+        ("human", first),
+        ("agent", f"Waiting on you for {MEMORY}#96."),
+        ("human", second),
+    )
+    _capture(store, first, transcript, now=NOW)
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 1) is None
+    _capture(store, second, transcript, now=NOW + 60)
+    entry = omi.find_instruction(MEMORY, 96, path=store, now=NOW + 61)
+    assert entry is not None and not entry.get("condition")
+
+
+def test_f2_a_later_condition_narrows_an_earlier_plain_instruction(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    first = f"Merge {MEMORY}#96."
+    second = f"Actually, merge {MEMORY}#96 only after I approve the release."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", first), ("human", second))
+    _capture(store, first, transcript, now=NOW)
+    _capture(store, second, transcript, now=NOW + 60)
+    assert omi.find_instruction(MEMORY, 96, path=store, now=NOW + 61) is None
+
+
+def test_f2_a_pending_instruction_does_not_spend_a_cancellation(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    first = f"Do not merge {MEMORY}#96."
+    second = f"After I approve the release, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", first), ("human", second))
+    _capture(store, first, transcript, now=NOW)
+    _capture(store, second, transcript, now=NOW + 60)
+    assert omi.revocation_for(MEMORY, 96, path=store, now=NOW + 61) is not None
+
+
+def test_f2_hook_context_does_not_call_a_pending_instruction_authority(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"After I approve the release, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    result = _capture(store, prompt, transcript)
+    text = omi.hook_context(result["recorded"], result["notes"], None)
+    assert "IS the operator's merge authorization" not in text
+    assert "NOT yet authorized" in text
+    assert "approve the release" in text
+
+
+def test_f2_hook_context_names_the_readiness_condition(tmp_path: Path) -> None:
+    store = tmp_path / "s.json"
+    prompt = f"Once CI is green, merge {MEMORY}#96."
+    transcript = _conversation(tmp_path / "t.jsonl", ("human", prompt))
+    result = _capture(store, prompt, transcript)
+    text = omi.hook_context(result["recorded"], result["notes"], None)
+    assert "IS the operator's merge authorization" in text
+    assert "ci is green" in text.lower()

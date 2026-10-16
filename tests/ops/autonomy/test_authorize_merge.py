@@ -630,3 +630,92 @@ def test_f04_cohort_grant_requires_snapshot_membership(tmp_path: Path, capsys) -
     assert code == authorize_merge.OPERATOR_REFUSED_EXIT
     assert _grants(tmp_path) == []
     capsys.readouterr()
+
+
+# --- PR742-F2: a conditional instruction never authorizes a premature merge ----
+
+
+def _conditional_main(
+    tmp_path: Path, store: Path, *, sha: str = SHA, board: str = "merge", now: int = NOW + 60
+) -> int:
+    calls: list[tuple[str, int]] = []
+
+    def readiness(repo: str, pr: int) -> dict:
+        calls.append((repo, pr))
+        return {"board": board, "reason": f"board says {board}"}
+
+    code = authorize_merge.main(
+        _cli(tmp_path, "--operator-instruction", "--pr", "42", "--head-sha", sha),
+        confirm=lambda _t: pytest.fail("operator mode must never ask a terminal"),
+        instruction_path=store,
+        pull_request=lambda repo, pr: _view(sha=sha),
+        session_principal=lambda repo: OWNER,
+        readiness=readiness,
+        now=now,
+    )
+    _conditional_main.calls = calls  # type: ignore[attr-defined]
+    return code
+
+
+def test_f2_readiness_condition_grants_once_the_board_proves_it(tmp_path: Path) -> None:
+    store = _hosted(tmp_path, f"Once CI is green, merge {SLUG}#42.")
+    assert _conditional_main(tmp_path, store, board="merge") == 0
+    assert _conditional_main.calls == [(SLUG, 42)]  # type: ignore[attr-defined]
+    assert len(_grants(tmp_path)) == 1
+
+
+@pytest.mark.parametrize("board", ["fix", "wait", "leftover"])
+def test_f2_readiness_condition_refuses_until_met(tmp_path: Path, capsys, board: str) -> None:
+    store = _hosted(tmp_path, f"Merge {SLUG}#42 after the checks pass.")
+    assert _conditional_main(tmp_path, store, board=board) == authorize_merge.OPERATOR_REFUSED_EXIT
+    reason = json.loads(capsys.readouterr().out)["reason"]
+    assert "not yet met" in reason and "checks pass" in reason
+    assert _grants(tmp_path) == []
+
+
+def test_f2_readiness_survives_a_remediation_head_change(tmp_path: Path, capsys) -> None:
+    """Red at the first head; remediation pushes; the same instruction grants the green head."""
+    store = _hosted(tmp_path, f"Once CI is green, merge {SLUG}#42.")
+    assert _conditional_main(tmp_path, store, board="fix") == authorize_merge.OPERATOR_REFUSED_EXIT
+    capsys.readouterr()
+    assert _conditional_main(tmp_path, store, sha=MOVED, board="merge", now=NOW + 600) == 0
+    (entry,) = _grants(tmp_path)
+    assert entry["head_sha"] == MOVED
+    assert entry["provenance"]["instruction_id"] == omi.load_instructions(store)[0]["id"]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        f"After I approve the release, merge {SLUG}#42.",
+        f"Merge {SLUG}#42 after the migration window opens.",
+    ],
+)
+def test_f2_pending_condition_never_grants_even_when_ready(
+    tmp_path: Path, capsys, prompt: str
+) -> None:
+    store = _hosted(tmp_path, prompt)
+    assert (
+        _conditional_main(tmp_path, store, board="merge") == authorize_merge.OPERATOR_REFUSED_EXIT
+    )
+    assert "condition" in json.loads(capsys.readouterr().out)["reason"]
+    # A head moved by remediation does not turn a pending condition into authority.
+    assert (
+        _conditional_main(tmp_path, store, sha=MOVED, board="merge", now=NOW + 600)
+        == authorize_merge.OPERATOR_REFUSED_EXIT
+    )
+    assert _grants(tmp_path) == []
+
+
+def test_f2_operators_later_plain_instruction_grants(tmp_path: Path) -> None:
+    store = _hosted(tmp_path, f"After I approve the release, merge {SLUG}#42.", now=NOW)
+    _hosted(tmp_path, f"Release approved. Merge {SLUG}#42.", now=NOW + 30, store=store)
+    assert _conditional_main(tmp_path, store, board="merge") == 0
+    assert _conditional_main.calls == []  # type: ignore[attr-defined]
+    assert len(_grants(tmp_path)) == 1
+
+
+def test_f2_unconditional_instruction_never_consults_readiness(tmp_path: Path) -> None:
+    store = _instructions(tmp_path)
+    assert _conditional_main(tmp_path, store, board="fix") == 0
+    assert _conditional_main.calls == []  # type: ignore[attr-defined]

@@ -869,6 +869,23 @@ def test_operator_instruction_run_without_a_covering_receipt_is_denied(
     assert "never by an agent" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "After I approve the release, merge Quantum-L9/SEO-Bot#53.",
+        "Merge Quantum-L9/SEO-Bot#53 after the migration window opens.",
+    ],
+)
+def test_operator_instruction_run_on_a_pending_condition_is_denied(
+    tmp_path: Path, prompt: str
+) -> None:
+    """PR742-F2: a receipt still waiting on its condition licenses no grant attempt."""
+    env, event = _hosted_env(tmp_path, prompt)
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+
+
 def test_terminal_mode_run_stays_denied_even_with_a_receipt(tmp_path: Path) -> None:
     """The receipt licenses one mode. The terminal ceremony is still not the agent's."""
     env, event = _instruction_env(tmp_path)
@@ -976,6 +993,8 @@ def test_operator_grant_then_stack_safe_run_passes_the_gate(tmp_path: Path) -> N
             "permission": "admin",
             "human": True,
         },
+        # "after the checks pass" is a readiness condition: the board proves it.
+        readiness=lambda r, p: {"board": "merge", "reason": "required checks green"},
     )
     assert code == 0
     env = {

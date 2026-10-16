@@ -269,6 +269,99 @@ _CONDITION_LEAD = re.compile(
     r"[^,;:?]{1,100},\s*",
     re.I,
 )
+#: Subordinators that make a merge wait on something: "once CI is green",
+#: "after I approve the release", "merge #96 if Legal agrees".
+_CONDITION_CONJ = (
+    r"(?:once|when|whenever|after|if|as\s+soon\s+as|provided(?:\s+that)?|providing|"
+    r"so\s+long\s+as|as\s+long\s+as|assuming(?:\s+that)?|unless)"
+)
+#: A clause that is nothing but a condition: "After I approve the release" in
+#: "After I approve the release, merge #96"; "only after I approve the release"
+#: in "Merge #96, but only after I approve the release".
+_CONDITION_CLAUSE = re.compile(
+    rf"^\s*(?:(?:and|or)\s+)?(?:only\s+)?(?:then\s+)?(?P<conj>{_CONDITION_CONJ})\b(?P<body>.*)$",
+    re.I | re.S,
+)
+#: A sentence after the instruction that restricts it: "But only after …".
+_ONLY_CONDITION_SENTENCE = re.compile(
+    rf"^\s*(?:but\s+)?only\s+(?P<conj>{_CONDITION_CONJ})\b(?P<body>.*)$", re.I | re.S
+)
+#: A condition trailing the merge's objects: "merge #96 after I approve the release".
+#: "merge them all at once" is not one.
+_TRAILING_CONDITION = re.compile(
+    rf"(?:^|(?<=[\s,(]))(?<!\bat\s)(?P<conj>{_CONDITION_CONJ})\b(?P<body>[^;!?]*)", re.I
+)
+#: "merge #96 and if CI fails tell me": a new verb after "and"/"then" starts the
+#: agent's next task; the condition is that task's, not the merge's.
+_CONDITION_BREAK = re.compile(
+    r"\b(?:and|then|also|&)\s+(?!(?:also\s+|then\s+)?(?:only\b|#|prs?\b|pull\b|\d|"
+    r"[\w.-]+/[\w.-]+#|https?:|github\.com))",
+    re.I,
+)
+#: Words that only soften an imperative: "if you can", "when you get a chance",
+#: "as soon as possible", "merge #96 after all".
+_COURTESY_CONDITION = re.compile(
+    r"^(?:all|more|again|any|so|needed|necessary|possible|convenient|applicable|"
+    r"you\s+(?:can|could|like|want|wish|please|prefer|get\s+to\s+it|can\s+manage)|"
+    r"you(?:'re|\s+are)\s+(?:ready|able|free)|"
+    r"you\s+(?:get|have|find)\s+(?:a\s+)?(?:chance|moment|minute|second|time)|"
+    r"(?:it'?s|it\s+is)\s+(?:possible|convenient))$",
+    re.I,
+)
+#: The operator, or anyone else, deciding something: never readable from the
+#: pull request, so it waits for the operator's next instruction.
+_DECISION_CONDITION = re.compile(
+    r"\b(?:i|i'm|i've|i'll|i'd|me|my|myself|we|we're|we've|we'll|us|our|"
+    r"approv\w*|sign(?:s|ed)?[\s-]+off|sign-?off|green-?light\w*|go-?ahead|"
+    r"give[sn]?\s+(?:the\s+|an?\s+)?(?:ok|okay|nod)|ok(?:ay)?(?:s|'s|ed|'d)|"
+    r"confirm\w*|agree\w*|decid\w*|decision|says?\s+so|said\s+so|review\w*|"
+    r"releas\w*|deploy\w*|launch\w*|announc\w*|ship(?:s|ped|ping)?|legal|"
+    r"permission|consent\w*|accept\w*)\b",
+    re.I,
+)
+_READINESS_SUBJECT = (
+    r"(?:(?:the|all|all\s+the|its|their|required|status|our)\s+)*"
+    r"(?:ci(?:/cd)?|checks?|status\s+checks?|tests?|test\s+suite|builds?|pipelines?|"
+    r"workflows?|(?:github\s+)?actions|jobs?|everything|it|they|this|these|those|"
+    r"prs?|pull\s+requests?|branch(?:es)?|stack|(?:pr\s*)?#\d+)"
+)
+_READINESS_STATE = (
+    r"(?:green|passing|passed|pass(?:es)?|succeed(?:s|ed)?|successful|clean|done|"
+    r"finished|finish(?:es)?|complete(?:d|s)?|ready|mergeable|merge-?ready|ok(?:ay)?|"
+    r"good|fine|safe|stable|validated|verified|fixed|resolved|conflict-?free)"
+)
+#: Readiness the existing board (``pr_board``) proves from the pull request
+#: itself: required checks, review threads, conflicts and the stack at the live head.
+_READINESS_CONDITION = re.compile(
+    r"^(?:"
+    rf"{_READINESS_SUBJECT}(?:'s|'re)?(?:\s+(?:is|are|has|have|goes|go|turns?|comes?\s+back|"
+    r"gets?|looks?|stays?|been|all|now|fully|everything))*\s+(?:all\s+)?"
+    rf"{_READINESS_STATE}"
+    rf"|(?:all\s+)?{_READINESS_STATE}"
+    r"|(?:the\s+)?(?:checks?|tests?|ci|validation|verification|remediation|"
+    r"green\s+(?:ci|checks|build)|ci\s+green|fix(?:es)?\s+lands?)"
+    r"|(?:(?:the\s+)?(?:merge\s+)?conflicts?|(?:the\s+)?(?:review\s+)?threads?)\s+"
+    r"(?:are|is)\s+resolved"
+    r"|you(?:'ve|\s+have|'re|\s+are)?\s+(?:fixed|fix|resolved|resolve|addressed|address|"
+    r"finished|finish|completed|complete|repaired|repair|remediated|remediate|rebased|"
+    r"rebase|updated|update|done|cleaned\s+up|clean\s+up)"
+    r")(?:\s+[\w#/.'-]+){0,8}$",
+    re.I,
+)
+#: "unless CI fails": readiness phrased as its failure.
+_UNLESS_FAILURE = re.compile(
+    rf"^(?:{_READINESS_SUBJECT}|something|anything)\s+(?:fails?|failed|breaks?|broke|"
+    r"(?:is|are|goes|turns)\s+red|(?:has|have)\s+conflicts?)(?:\s+[\w#/.'-]+){0,6}$",
+    re.I,
+)
+CONDITION_READINESS = "readiness"
+CONDITION_PENDING_DECISION = "pending_decision"
+CONDITION_UNRESOLVABLE = "unresolvable"
+_CONDITION_RANK = {
+    CONDITION_READINESS: 1,
+    CONDITION_PENDING_DECISION: 2,
+    CONDITION_UNRESOLVABLE: 3,
+}
 _REPORTING = re.compile(
     r"\b(?:said|says|say|asked|asks|recommend(?:s|ed)?|suggest(?:s|ed)?|wants?|wanted|"
     r"wrote|writes|comment(?:s|ed)|request(?:s|ed)|propos(?:es|ed)|claim(?:s|ed)?|"
@@ -860,20 +953,142 @@ def _objects_after(
     return None, refs
 
 
+def condition_status(conj: str, body: str) -> str | None:
+    """How a merge's condition is met: ``readiness``, ``pending_decision``,
+    ``unresolvable``, or None when the words only soften the imperative.
+
+    Readiness is what the existing readiness board proves from the pull request
+    (required checks, threads, conflicts). A decision by the operator or anyone
+    else cannot be read from the pull request; neither can a condition this
+    reader does not understand. Neither is ever read as permission to merge now.
+    """
+    text = re.sub(r"\s+", " ", body[:MAX_CLAUSE_CHARS]).strip().strip(" ,.:-").lower()
+    text = re.sub(r"^(?:that|then)\s+", "", text)
+    if _COURTESY_CONDITION.match(text):
+        return None
+    if _DECISION_CONDITION.search(text):
+        return CONDITION_PENDING_DECISION
+    if conj.strip().lower() == "unless":
+        return CONDITION_READINESS if _UNLESS_FAILURE.match(text) else CONDITION_UNRESOLVABLE
+    if _READINESS_CONDITION.match(text):
+        return CONDITION_READINESS
+    return CONDITION_UNRESOLVABLE
+
+
+def _condition_reason(status: str, text: str) -> str:
+    if status == CONDITION_READINESS:
+        return (
+            f"waits on readiness ({text}); authorized once the readiness board proves it at "
+            "the live head"
+        )
+    if status == CONDITION_PENDING_DECISION:
+        return (
+            f"waits on a decision that cannot be read from the pull request ({text}); not "
+            "authorized until the operator's next instruction says it is met"
+        )
+    return (
+        f"waits on a condition that cannot be verified ({text}); not authorized until the "
+        "operator's next instruction says it is met"
+    )
+
+
+def merge_condition(found: list[tuple[str, str]]) -> dict[str, str] | None:
+    """The instruction's condition from every ``(conjunction, body)`` governing it.
+
+    The most restrictive status wins: one decision among readiness conditions
+    still waits on that decision.
+    """
+    statuses: list[tuple[str, str]] = []
+    for conj, body in found:
+        status = condition_status(conj, body)
+        if status is not None:
+            phrase = re.sub(r"\s+", " ", f"{conj} {body[:MAX_CLAUSE_CHARS]}").strip(" ,.;:")
+            statuses.append((status, phrase[:EXCERPT_CHARS]))
+    if not statuses:
+        return None
+    worst = max(statuses, key=lambda pair: _CONDITION_RANK[pair[0]])[0]
+    text = "; ".join(phrase for _, phrase in statuses)
+    return {"status": worst, "text": text, "reason": _condition_reason(worst, text)}
+
+
+def _leading_conditions(text: str) -> tuple[int, list[tuple[str, str]]]:
+    """Offset past every leading condition of ``text``, and those conditions."""
+    offset = 0
+    found: list[tuple[str, str]] = []
+    for _ in range(3):
+        condition = _CONDITION_LEAD.match(text[offset:])
+        if not condition:
+            break
+        words = condition.group(0).strip().rstrip(",").strip()
+        conj = re.match(r"(?i)as\s+soon\s+as|provided(?:\s+that)?|\w+", words)
+        if conj:
+            found.append((conj.group(0), words[conj.end() :]))
+        offset += condition.end()
+    return offset, found
+
+
+def _trailing_conditions(tail: str) -> list[tuple[str, str]]:
+    """A condition after the merge's objects that governs the merge itself."""
+    window = tail[:MAX_CLAUSE_CHARS]
+    match = _TRAILING_CONDITION.search(window)
+    if not match or _CONDITION_BREAK.search(window[: match.start()]):
+        return []
+    return [(match.group("conj"), match.group("body"))]
+
+
+def _condition_clause(clause: str) -> tuple[str, str] | None:
+    """``(conjunction, body)`` when ``clause`` is only a condition, else None."""
+    match = _CONDITION_CLAUSE.match(clause[:MAX_CLAUSE_CHARS])
+    if not match or _MERGE_VERB.search(match.group("body")):
+        return None
+    return match.group("conj"), match.group("body")
+
+
+def _clause_condition(
+    clauses: list[tuple[str, bool]], index: int, end: int, following: str
+) -> dict[str, str] | None:
+    """Every condition governing the merge directed in ``clauses[index]``.
+
+    The leading condition inside the clause, condition-only clauses just before
+    or after it in the sentence ("After I approve the release, merge #96";
+    "merge #96, but only after I approve the release"), a condition trailing its
+    objects ("merge #96 once CI is green"), and a next sentence that restricts it
+    ("Merge #96. But only after the release is approved.").
+    """
+    clause = clauses[index][0]
+    _, found = _leading_conditions(clause[:MAX_CLAUSE_CHARS])
+    before = index - 1
+    while before >= 0:
+        lead = _condition_clause(clauses[before][0])
+        if lead is None:
+            break
+        found.insert(0, lead)
+        before -= 1
+    found.extend(_trailing_conditions(clause[end:]))
+    after = index + 1
+    while after < len(clauses):
+        trail = _condition_clause(clauses[after][0])
+        if trail is None:
+            break
+        found.append(trail)
+        after += 1
+    if after == len(clauses) and following:
+        restriction = _ONLY_CONDITION_SENTENCE.match(following[:MAX_CLAUSE_CHARS])
+        if restriction and not _MERGE_VERB.search(restriction.group("body")):
+            found.append((restriction.group("conj"), restriction.group("body")))
+    return merge_condition(found)
+
+
 def _directed_end(clause: str) -> int | None:
     """Offset just past the merge verb of a clause directed at the agent, else None.
 
-    A leading condition ("once CI is green, merge #96") is looked through; the
-    condition is the operator's, and the agent honours it before merging.
+    A leading condition ("once CI is green, merge #96") is looked through to
+    find the verb. It is not discarded: :func:`parse_prompt` records it with the
+    instruction (:func:`merge_condition`), so it can never become permission to
+    merge before it is met.
     """
-    offset = 0
-    text = clause[:MAX_CLAUSE_CHARS]
-    for _ in range(3):
-        condition = _CONDITION_LEAD.match(text)
-        if not condition:
-            break
-        offset += condition.end()
-        text = text[condition.end() :]
+    offset, _ = _leading_conditions(clause[:MAX_CLAUSE_CHARS])
+    text = clause[:MAX_CLAUSE_CHARS][offset:]
     strict = _DIRECTED.match(text)
     if strict:
         return offset + strict.end()
@@ -949,6 +1164,7 @@ def parse_prompt(
         text: str,
         source: str,
         repo_source: str | None,
+        condition: dict[str, str] | None = None,
     ) -> None:
         key = (kind, scope, repo.casefold() if repo else None, pr)
         if key in seen:
@@ -963,6 +1179,7 @@ def parse_prompt(
                 "excerpt": text.strip()[:EXCERPT_CHARS],
                 "source": source,
                 "repo_source": repo_source,
+                "condition": condition if kind == KIND_AUTHORIZE else None,
             }
         )
 
@@ -972,6 +1189,7 @@ def parse_prompt(
         text: str,
         source: str,
         sentence_slugs: list[str],
+        condition: dict[str, str] | None = None,
     ) -> None:
         for explicit, number in refs:
             repo, where = _resolve_repo(
@@ -987,9 +1205,15 @@ def parse_prompt(
                     f"#{number}: the repository could not be resolved (name it as owner/name "
                     "or a github.com URL)"
                 )
-            _add(kind, SCOPE_PR, repo, number, text, source, where)
+            _add(kind, SCOPE_PR, repo, number, text, source, where, condition)
 
-    def _cohort(kind: str, match: re.Match[str], text: str, sentence_slugs: list[str]) -> None:
+    def _cohort(
+        kind: str,
+        match: re.Match[str],
+        text: str,
+        sentence_slugs: list[str],
+        condition: dict[str, str] | None = None,
+    ) -> None:
         repo, word = _cohort_repo(match)
         where: str | None = "prompt" if repo else None
         if repo is None and word:
@@ -1006,7 +1230,7 @@ def parse_prompt(
                     "resolved (name it as owner/name or a github.com URL)"
                 )
             return
-        _add(kind, SCOPE_COHORT, repo, None, text, "cohort", where)
+        _add(kind, SCOPE_COHORT, repo, None, text, "cohort", where, condition)
 
     def _context_members(single: bool) -> list[tuple[str | None, int]] | None:
         members = context.members() if context is not None else []
@@ -1016,13 +1240,16 @@ def parse_prompt(
             return None
         return members
 
-    for sentence in _sentences(cleaned):
+    sentences = _sentences(cleaned)
+    for position, sentence in enumerate(sentences):
         if _is_question(sentence):
             continue
         before = len(found)
         sentence_slugs = _slug_candidates(sentence, known)
         sentence_preceding: list[tuple[str | None, int]] = []
-        for clause, presented in _clauses(sentence):
+        clauses = _clauses(sentence)
+        following = sentences[position + 1] if position + 1 < len(sentences) else ""
+        for index, (clause, presented) in enumerate(clauses):
             clause_refs = _refs_in_run(clause, known)
             negative = _is_negative(clause)
             if negative:
@@ -1045,13 +1272,14 @@ def parse_prompt(
             if end is None:
                 continue
             tail = clause[end:]
+            condition = _clause_condition(clauses, index, end, following)
             cohort, refs = _objects_after(tail, glue=_GLUE, known_owners=known)
             if cohort is not None:
-                _cohort(KIND_AUTHORIZE, cohort, clause, sentence_slugs)
+                _cohort(KIND_AUTHORIZE, cohort, clause, sentence_slugs, condition)
                 continue
             if refs:
                 source = "range" if len(refs) > len(_PR_REF.findall(tail)) else "prompt"
-                _refs(KIND_AUTHORIZE, refs, clause, source, sentence_slugs)
+                _refs(KIND_AUTHORIZE, refs, clause, source, sentence_slugs, condition)
                 continue
             deictic = _deictic_object(tail)
             if deictic:
@@ -1059,7 +1287,7 @@ def parse_prompt(
                 # "Fix the CI on #96 and merge it": the clause itself names its object.
                 named_before = _refs_in_run(clause[:end], known)
                 if named_before and (not single or len(named_before) == 1):
-                    _refs(KIND_AUTHORIZE, named_before, clause, "prompt", sentence_slugs)
+                    _refs(KIND_AUTHORIZE, named_before, clause, "prompt", sentence_slugs, condition)
                     continue
                 members = _context_members(single)
                 if members is None:
@@ -1072,7 +1300,7 @@ def parse_prompt(
                         )
                     )
                     continue
-                _refs(KIND_AUTHORIZE, members, clause, "conversation", sentence_slugs)
+                _refs(KIND_AUTHORIZE, members, clause, "conversation", sentence_slugs, condition)
                 continue
             if _PR_ISH.search(tail) and not _DEICTIC.match(tail):
                 notes.append(
@@ -1595,6 +1823,7 @@ def capture_instructions(
             "source": item.get("source"),
             "repo_source": item.get("repo_source"),
             "excerpt": item["excerpt"],
+            "condition": item.get("condition"),
             "prompt_sha256": digest,
             "provenance": dict(provenance),
         }
@@ -1654,6 +1883,27 @@ def _covers(entry: dict[str, Any], repo: str, pr: int) -> tuple[bool, str]:
     return False, "unknown scope"
 
 
+def pending_condition(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """The condition that keeps ``entry`` from authorizing anything yet, else None.
+
+    Only objective readiness may stand as authority (``authorize_merge`` then
+    asks the readiness board). A pending decision, an unresolvable condition, or
+    a condition this reader cannot parse authorizes nothing.
+    """
+    condition = entry.get("condition")
+    if condition is None:
+        return None
+    if isinstance(condition, dict) and condition.get("status") == CONDITION_READINESS:
+        return None
+    if isinstance(condition, dict) and condition.get("reason"):
+        return condition
+    return {
+        "status": CONDITION_UNRESOLVABLE,
+        "text": str(condition)[:EXCERPT_CHARS],
+        "reason": "the recorded condition is malformed; it authorizes nothing",
+    }
+
+
 def _latest(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not entries:
         return None
@@ -1686,7 +1936,9 @@ def find_instruction(
 
     The latest instruction wins: a cancellation recorded at or after the latest
     authorization withdraws it; an authorization recorded after a cancellation
-    stands.
+    stands. A latest instruction that still waits on a decision or on an
+    unverifiable condition (:func:`pending_condition`) authorizes nothing, and
+    it narrows an earlier unconditional one: the operator's newest words govern.
     """
     number = str(pr).strip()
     if not repo or not number.isdigit():
@@ -1694,7 +1946,7 @@ def find_instruction(
     stamp = time.time() if now is None else now
     authorizations, revocations = _covering(repo, int(number), path=path, now=stamp)
     latest_authorization = _latest(authorizations)
-    if latest_authorization is None:
+    if latest_authorization is None or pending_condition(latest_authorization) is not None:
         return None
     latest_revocation = _latest(revocations)
     if latest_revocation is not None and float(latest_revocation["recorded_at"]) >= float(
@@ -1732,10 +1984,13 @@ def revocation_for(
         return None
     # Only an authorization that can itself become a grant spends a cancellation:
     # an unverifiable host's receipt (Cursor) must not revive an older grant.
+    # Nor does one still waiting on its condition: it authorizes nothing yet.
     newer = [
         a
         for a in authorizations
-        if float(a["recorded_at"]) > revoked_at and a.get("host") in GRANTABLE_HOSTS
+        if float(a["recorded_at"]) > revoked_at
+        and a.get("host") in GRANTABLE_HOSTS
+        and pending_condition(a) is None
     ]
     if newer:
         return None
@@ -1763,6 +2018,20 @@ def instruction_verdict(
     revoked = revocation_for(repo, pr, path=path, now=stamp) if number.isdigit() else None
     if revoked is not None:
         return {"authorized": False, "instruction": None, "reason": revocation_reason(revoked)}
+    if repo and number.isdigit():
+        authorizations, _ = _covering(repo, int(number), path=path, now=stamp)
+        latest = _latest(authorizations)
+        waiting = pending_condition(latest) if latest is not None else None
+        if latest is not None and waiting is not None:
+            return {
+                "authorized": False,
+                "instruction": None,
+                "condition": waiting,
+                "reason": (
+                    f"operator instruction {latest.get('id')} for {repo}#{number} is "
+                    f"conditional and its condition is not met: {waiting.get('reason')}"
+                ),
+            }
     reasons: list[str] = []
     for entry in load_instructions(path):
         if str(entry.get("repo") or "").casefold() != (repo or "").casefold():
@@ -1813,7 +2082,8 @@ def transcript_corroborates(
 ) -> tuple[bool, str]:
     """Whether a human turn of the receipt's session, in the host-written
     transcript, carries the receipt's prompt (same digest) or its excerpt."""
-    provenance = entry.get("provenance") if isinstance(entry.get("provenance"), dict) else {}
+    raw_provenance = entry.get("provenance")
+    provenance = raw_provenance if isinstance(raw_provenance, dict) else {}
     path_text = str(transcript_path or provenance.get("transcript_path") or "").strip()
     if not path_text:
         return False, "receipt names no host transcript"
@@ -1936,6 +2206,9 @@ def _describe(entry: dict[str, Any]) -> str:
             else "UNAVAILABLE — this cohort covers nothing"
         )
         target += f" (open pull requests at the time: {shown or 'none'})"
+    condition = entry.get("condition")
+    if isinstance(condition, dict) and condition.get("text"):
+        target += f" — condition: {condition.get('text')}"
     return f"{entry.get('kind')} {target} [id {entry['id']}]"
 
 
@@ -1991,7 +2264,9 @@ def hook_context(recorded: list[dict[str, Any]], notes: list[str], failure: str 
             f"({failure}). NO merge authorization was captured from it; do not report one. "
             "Tell the operator the recorder failed and why."
         )
-    authorized = [e for e in recorded if e.get("kind") == KIND_AUTHORIZE and e.get("repo")]
+    bound = [e for e in recorded if e.get("kind") == KIND_AUTHORIZE and e.get("repo")]
+    authorized = [e for e in bound if pending_condition(e) is None]
+    waiting = [e for e in bound if pending_condition(e) is not None]
     unbound = [e for e in recorded if e.get("kind") == KIND_AUTHORIZE and not e.get("repo")]
     revoked = [e for e in recorded if e.get("kind") == KIND_REVOKE]
     empty_cohorts = [
@@ -2014,9 +2289,22 @@ def hook_context(recorded: list[dict[str, Any]], notes: list[str], failure: str 
             '"$HOME/.cursor-governance/.venv/bin/python" '
             '"$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> '
             "--pr <n> --head-sha <same sha> --run, stack parents bottom-up, and report GitHub's "
-            'merge result. A conditional instruction ("when green") waits for its condition; '
-            "a head moved by authorized remediation needs fresh technical checks, not a fresh "
+            'merge result. A readiness condition ("when green") waits for its condition; '
+            "authorize_merge.py proves it with the readiness board at the live head. A head "
+            "moved by authorized remediation needs fresh technical checks, not a fresh "
             "instruction. A later cancellation withdraws this authority."
+        )
+    if waiting:
+        parts.append(
+            "L9 operator merge instruction recorded but NOT yet authorized — it waits on a "
+            "condition that cannot be read from the pull request: "
+            + "; ".join(
+                f"{_describe(entry)}: {(pending_condition(entry) or {}).get('reason')}"
+                for entry in waiting
+            )
+            + ". Do not merge these pull requests and do not run authorize_merge.py for them. "
+            "When the operator says the condition is met, that ordinary instruction authorizes "
+            "the merge; do not ask for special wording, a GitHub comment or an approval."
         )
     if empty_cohorts:
         parts.append(

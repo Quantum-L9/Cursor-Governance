@@ -217,6 +217,17 @@ def _parse_github_time(value: Any) -> float | None:
         return None
 
 
+def fetch_readiness(repo: str, pr: int) -> dict[str, Any]:
+    """The existing readiness board's verdict for ``repo#pr`` (``pr_board.board_for``).
+
+    ``board == "merge"`` means required checks are green, review threads are
+    resolved, there is no conflict and the stack allows it, at the live head.
+    """
+    import pr_board  # noqa: PLC0415 - only a readiness-conditional instruction needs it
+
+    return pr_board.board_for(repo, str(pr))
+
+
 def operator_verdict(
     repo: str,
     pr: int,
@@ -226,13 +237,17 @@ def operator_verdict(
     now: float | None = None,
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
     session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
+    readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
 ) -> dict[str, Any]:
     """Whether a recorded operator instruction may become a grant for this head.
 
     Every refusal names the missing prerequisite. The checks run in the order a
     reader can act on them: the live pull request first (an instruction for a
     closed or moved PR is moot), then the instruction, then the operator's
-    authority over the repository.
+    authority over the repository, then the instruction's own readiness
+    condition ("once CI is green"), proven by the readiness board at the live
+    head. A condition that waits on a decision never reaches here: it is not a
+    live authorizing instruction (``omi.pending_condition``).
     """
     stamp = time.time() if now is None else now
     sha = head_sha.strip().lower()
@@ -314,6 +329,25 @@ def operator_verdict(
         refused["instruction"] = instruction
         return refused
 
+    condition = instruction.get("condition")
+    if isinstance(condition, dict) and condition.get("status") == omi.CONDITION_READINESS:
+        text = condition.get("text") or "readiness"
+        try:
+            board = readiness(repo, pr)
+        except Exception as exc:  # noqa: BLE001 - an unreadable condition is unmet, never met
+            board = {"board": "wait", "reason": f"readiness unreadable ({exc})"}
+        if str((board or {}).get("board") or "") != "merge":
+            refused["reason"] = (
+                f"operator instruction {instruction.get('id')} for {repo}#{pr} is conditional "
+                f"({text}) and the condition is not yet met at head {sha}: the readiness board "
+                f"says {(board or {}).get('board') or 'unknown'} "
+                f"({(board or {}).get('reason') or 'no reason given'}). The instruction still "
+                "covers this pull request; re-run once it is ready"
+            )
+            refused["instruction"] = instruction
+            refused["readiness"] = board
+            return refused
+
     return {
         "authorized": True,
         "reason": (
@@ -331,7 +365,8 @@ def operator_provenance(
     pull_request: dict[str, Any],
     authorizer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    hook = instruction.get("provenance") if isinstance(instruction.get("provenance"), dict) else {}
+    raw_hook = instruction.get("provenance")
+    hook = raw_hook if isinstance(raw_hook, dict) else {}
     return {
         "channel": OPERATOR_CHANNEL,
         "recorded_by": "agent",
@@ -362,6 +397,7 @@ def main(
     instruction_path: Path | None = None,
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
     session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
+    readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
     now: float | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -408,6 +444,7 @@ def main(
             now=now,
             pull_request=pull_request,
             session_principal=session_principal,
+            readiness=readiness,
         )
         if not verdict["authorized"]:
             print(json.dumps({**verdict, "status": "MERGE_PENDING"}, indent=2, sort_keys=True))
