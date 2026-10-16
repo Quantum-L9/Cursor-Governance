@@ -60,12 +60,16 @@ input:
     compiler: l9-semantic-compiler
     driver: tools/authority/produce_architecture_intelligence.py
     ci: .github/workflows/l9-architecture-intelligence-bundle.yml
+    trusted_replay: .github/workflows/l9-architecture-intelligence-trusted-replay.yml
     gar_produces: false
     production_attestation: >-
-      CI reproduces the committed bundle byte for byte with the compiler revision named in
-      bundle.lock.json (driver --check) and fails closed when the compiler cannot be obtained.
-      The verifier's digests are recomputable: they prove integrity and currentness, not
-      production.
+      The trusted replay workflow (default-branch definition, pull-request bundle read as data)
+      reproduces the bundle byte for byte with the compiler revision named in bundle.lock.json,
+      only when that revision is on the compiler's protected main, and publishes a PASS/FAIL
+      attestation bound to the subject commit, compiler SHA, authority revision and bundle
+      digest as the commit status l9/architecture-intelligence-trusted-replay. It fails closed.
+      Pull-request-controlled jobs never receive the private compiler or its credential. The
+      verifier's digests are recomputable: they prove integrity and currentness, not production.
   verifier: scripts/verify_architecture_intelligence.py
 admission:
   # BUNDLE_VERIFIED (a coherent, current bundle) is never admitted global law by itself.
