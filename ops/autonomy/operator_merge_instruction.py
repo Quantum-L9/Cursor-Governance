@@ -233,7 +233,13 @@ _LOOSE_DIRECTED = re.compile(
 _SUBJECT_START = re.compile(
     r"^\s*(?:the|a|an|i|they|he|she|we|you|someone|somebody|everyone|nobody|reviewers?|"
     r"it|this|that|these|those|there|here|our|their|his|her|its|my|your|copilot|codex|"
-    r"bots?|ci|who|which)\b",
+    r"bots?|ci|who|which|to|in\s+order|if|when|once|before|after|unless|how|why|whether)\b",
+    re.I,
+)
+#: A leading condition before an imperative: "Once CI is green, merge #96".
+_CONDITION_LEAD = re.compile(
+    r"^\s*(?:once|when|whenever|after|if|as\s+soon\s+as|provided(?:\s+that)?)\b"
+    r"[^,;:?]{1,100},\s*",
     re.I,
 )
 _REPORTING = re.compile(
@@ -480,6 +486,10 @@ def _is_question(sentence: str) -> bool:
     stripped = sentence.strip()
     if stripped.endswith("?"):
         return True
+    condition = _CONDITION_LEAD.match(stripped)
+    if condition:
+        # "When the checks pass, merge #96": the condition is not a question.
+        return _is_question(stripped[condition.end() :])
     lead = _QUESTION_LEAD.match(stripped)
     if not lead:
         return False
@@ -680,7 +690,15 @@ def _objects_after(
 
 
 def _directed_end(clause: str) -> int | None:
-    """Offset just past the merge verb of a clause directed at the agent, else None."""
+    """Offset just past the merge verb of a clause directed at the agent, else None.
+
+    A leading condition ("once CI is green, merge #96") is looked through; the
+    condition is the operator's, and the agent honours it before merging.
+    """
+    condition = _CONDITION_LEAD.match(clause)
+    if condition:
+        inner = _directed_end(clause[condition.end() :])
+        return None if inner is None else condition.end() + inner
     strict = _DIRECTED.match(clause)
     if strict:
         return strict.end()

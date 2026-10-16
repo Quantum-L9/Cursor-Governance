@@ -1271,3 +1271,27 @@ def test_gar_prompt_without_merge_intent_stays_silent(tmp_path: Path, monkeypatc
     )
     assert omi.main(["record", "--host", "claude-code"]) == 0
     assert capsys.readouterr().out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Once CI is green, merge #96.",
+        "When the checks pass, fix and merge #96.",
+        "If it's green, please merge PR #96.",
+    ],
+)
+def test_gar_a_leading_condition_still_authorizes(prompt: str) -> None:
+    assert _targets(prompt, cwd_repo=MEMORY) == [("pr", MEMORY, 96)]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "To fix and merge #96 you would need a second reviewer.",
+        "If they fix and merge #96 the stack breaks.",
+        "Once the bot said to merge #96, CI went red.",
+    ],
+)
+def test_gar_purpose_and_conditional_clauses_are_not_instructions(prompt: str) -> None:
+    assert _targets(prompt, cwd_repo=MEMORY) == []
