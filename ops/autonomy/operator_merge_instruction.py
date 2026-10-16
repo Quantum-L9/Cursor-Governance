@@ -288,6 +288,14 @@ _POLITE_REQUEST = re.compile(
     re.I,
 )
 _QUESTION_WORDS = re.compile(r"\b(?:or|whether|if|should|shall)\b", re.I)
+#: "Can you please not merge #96?" / "Could you hold off on merging it?" is a
+#: cancellation phrased politely, never a question to skip: a dropped
+#: cancellation would leave the earlier authority standing.
+_POLITE_CANCEL = re.compile(
+    r"^\s*(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?"
+    r"(?:not|stop|hold(?:\s+off)?|avoid|refrain|cancel|pause|freeze)\b",
+    re.I,
+)
 #: A deictic object followed by these merges something else into something:
 #: "merge them into a single file", "merge it with the helper".
 _DEICTIC_OTHER_TARGET = re.compile(
@@ -592,6 +600,8 @@ def _is_question(sentence: str) -> bool:
     negative imperatives, read as cancellations rather than skipped.
     """
     stripped = sentence.strip()[:MAX_CLAUSE_CHARS]
+    if _POLITE_CANCEL.match(stripped) and _is_negative(stripped):
+        return False
     if _POLITE_REQUEST.match(stripped) and not _QUESTION_WORDS.search(stripped):
         return False
     if stripped.endswith("?"):

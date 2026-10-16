@@ -1561,3 +1561,28 @@ def test_review_a_bare_cancellation_never_takes_a_later_clauses_object() -> None
     context = omi.ConversationContext(latest_refs=[(SLUG, 96)], repos=[SLUG])
     found = omi.parse_instructions("Don't merge it, merge #97 instead", context=context)
     assert [(f["kind"], f["pr"]) for f in found] == [("revoke", 96), ("authorize", 97)]
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Can you please not merge #96?",
+        "Could you hold off on merging #96?",
+        "Would you stop merging #96?",
+    ],
+)
+def test_codex_polite_cancellations_are_recorded_not_skipped(prompt: str) -> None:
+    """Codex review (PR #742): the trailing "?" used to drop these before
+    cancellation parsing, leaving an earlier authorization standing."""
+    assert ("revoke", "pr", SLUG, 96) in _kinds(prompt)
+
+
+def test_codex_polite_contextual_cancellation_uses_the_conversation() -> None:
+    context = omi.ConversationContext(latest_refs=[(SLUG, 96)], repos=[SLUG])
+    found = omi.parse_instructions("Could you not merge it?", context=context)
+    assert [(f["kind"], f["pr"]) for f in found] == [("revoke", 96)]
+
+
+def test_codex_a_question_about_merging_still_records_nothing() -> None:
+    assert _kinds("Shouldn't we merge #96?") == []
+    assert _kinds("Can you check whether #96 should merge?") == []
