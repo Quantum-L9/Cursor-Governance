@@ -79,7 +79,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.8.0", "SKILL.md")
+    _need(SKILL, "version: 5.10.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -300,7 +300,8 @@ def test_board_and_merge() -> None:
         "is not merge authority for any PR",
         "MERGE_PENDING",
         "merge_on_converge: false",
-        "merge_authority: human_grant",
+        "merge_authority: human_github_record_or_operator_prompt_instruction",
+        "operator_instruction_transcription: authorize_merge.py --operator-instruction",
         "self_issue_merge_grant: forbidden",
         "--head-sha {head} --run",
         "isResolved: false",

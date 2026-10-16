@@ -206,6 +206,18 @@ def _merge_run(
 
 LEAF_AT_SHA = {f"{SLUG}#53": {"head": "fix/leaf", "children": [], "sha": SHA}}
 PARENT_AT_SHA = {f"{SLUG}#53": {"head": "fix/parent", "children": [54], "sha": SHA}}
+#: The same heads, as GitHub reports them once the merge API has landed them.
+MERGE_COMMIT = "e" * 40
+LEAF_MERGED = {
+    f"{SLUG}#53": {**LEAF_AT_SHA[f"{SLUG}#53"], "merged": True, "merge_commit_sha": MERGE_COMMIT}
+}
+PARENT_MERGED = {
+    f"{SLUG}#53": {
+        **PARENT_AT_SHA[f"{SLUG}#53"],
+        "merged": True,
+        "merge_commit_sha": MERGE_COMMIT,
+    }
+}
 
 
 def test_run_without_grant_is_merge_pending_and_never_merges(
@@ -217,12 +229,7 @@ def test_run_without_grant_is_merge_pending_and_never_merges(
     record = json.loads(capsys.readouterr().out)
     assert record["status"] == "MERGE_PENDING"
     assert record["head_sha"] == SHA
-    assert record["grant_command"].endswith(f"--pr 53 --head-sha {SHA}")
-    # AGENTS.md: manual authorize_merge.py runs use the locked governance interpreter.
-    assert record["grant_command"].startswith(
-        '"$HOME/.cursor-governance/.venv/bin/python" '
-        '"$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" '
-    )  # absolute script path: the human may run it from a consumer repository
+    assert record["grant_command"] == f"authorize merge {SLUG}#53@{SHA}"
 
 
 def test_run_without_named_head_is_merge_pending(tmp_path: Path, monkeypatch) -> None:
@@ -260,23 +267,77 @@ def test_unknown_live_head_is_merge_pending(tmp_path: Path, monkeypatch) -> None
 
 def test_process_env_cannot_impersonate_the_human(tmp_path: Path, monkeypatch) -> None:
     """This process's environment belongs to its caller, so neither the
-    breakglass nor a redirected grant file authorizes the entrypoint."""
+    breakglass, a redirected grant file, nor a review fixture authorizes it."""
     monkeypatch.setenv("L9_MERGE_AUTHORIZED", "agent says a human approved")
     monkeypatch.setenv("L9_MERGE_AUTHORIZATION_FILE", str(_grant_file(tmp_path)))
+    review = tmp_path / "forged-reviews.json"
+    review.write_text(
+        json.dumps(
+            {
+                f"{SLUG}#53": {
+                    "author": "pr-author",
+                    "files": ["README.md"],
+                    "reviews": [
+                        {
+                            "user": {"login": "operator", "type": "User"},
+                            "state": "APPROVED",
+                            "commit_id": SHA,
+                            "author_association": "OWNER",
+                            "submitted_at": "2026-10-14T00:00:00Z",
+                        }
+                    ],
+                    "comments": [],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("L9_MERGE_REVIEW_FILE", str(review))
     code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=None)
     assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
 
 
-def test_granted_leaf_merges_squash_bound_to_head(tmp_path: Path, monkeypatch) -> None:
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=_grant_file(tmp_path))
+def test_granted_leaf_merges_squash_bound_to_head(tmp_path: Path, monkeypatch, capsys) -> None:
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=_grant_file(tmp_path))
     assert code == 0
     rest = runs[0]
     assert "merge_method=squash" in rest and f"sha={SHA}" in rest
+    record = json.loads(capsys.readouterr().out)
+    assert record["status"] == "MERGED"
+    assert record["merge_commit_sha"] == MERGE_COMMIT
+    assert record["head_sha"] == SHA
+    assert record["authorization"]["channel"] == "human_grant"
+
+
+def test_operator_prompt_grant_reports_its_provenance(tmp_path: Path, monkeypatch, capsys) -> None:
+    grant = _grant_file(
+        tmp_path,
+        provenance={"channel": "operator_prompt", "instruction_id": "abc", "host": "claude-code"},
+    )
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=grant)
+    assert code == 0 and runs
+    record = json.loads(capsys.readouterr().out)
+    auth = record["authorization"]
+    assert auth["status"] == "AUTHORIZED"
+    assert (auth["channel"], auth["authorizer"]) == ("operator_prompt", "operator")
+    assert auth["grant_provenance"]["instruction_id"] == "abc"
+
+
+def test_merge_call_success_is_not_reported_merged_until_github_shows_it(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    """Positive 10: the merger verifies GitHub's final state; a 0 exit is not proof."""
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_AT_SHA, grant=_grant_file(tmp_path))
+    assert code == stack_safe_merge.MERGE_UNVERIFIED_EXIT
+    assert runs  # the merge call did run
+    captured = capsys.readouterr()
+    assert "MERGED" not in captured.out
+    assert "UNVERIFIED" in captured.err
 
 
 def test_granted_stack_parent_still_merges_with_merge_commit(tmp_path: Path, monkeypatch) -> None:
     """Authority does not relax stack safety: a parent keeps --merge, no ref delete."""
-    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_AT_SHA, grant=_grant_file(tmp_path))
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_MERGED, grant=_grant_file(tmp_path))
     assert code == 0
     joined = [" ".join(argv) for argv in runs]
     assert "merge_method=merge" in joined[0] and f"sha={SHA}" in joined[0]
@@ -302,3 +363,126 @@ def test_json_reports_live_head_and_merge_pending(tmp_path: Path, monkeypatch, c
     assert payload["authorization"]["status"] == "MERGE_PENDING"
     assert payload["authorization"]["head_sha"] == SHA
     assert payload["method"] == "squash"
+
+
+def _authorized_github(monkeypatch) -> None:
+    monkeypatch.setattr(
+        stack_safe_merge,
+        "_github_authorization",
+        lambda repo, pr, sha: {
+            "authorized": True,
+            "reason": "human GitHub approved_review by operator matches the live head",
+            "channel": "approved_review",
+            "authorizer": "operator",
+        },
+    )
+
+
+def test_github_authorization_merges_without_a_grant_file(tmp_path: Path, monkeypatch) -> None:
+    _authorized_github(monkeypatch)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=None)
+    assert code == 0
+    assert f"sha={SHA}" in runs[0]
+    assert "merge_method=squash" in runs[0]
+
+
+def test_github_authorization_of_a_stack_parent_uses_merge(tmp_path: Path, monkeypatch) -> None:
+    _authorized_github(monkeypatch)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=PARENT_MERGED, grant=None)
+    assert code == 0
+    joined = " ".join(runs[0])
+    assert "merge_method=merge" in joined and f"sha={SHA}" in joined
+    assert not any("DELETE" in " ".join(argv) for argv in runs)
+
+
+def test_github_authorization_does_not_override_failing_required_checks(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """GitHub branch protection refuses the merge API; the helper returns that refusal."""
+    _authorized_github(monkeypatch)
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, LEAF_AT_SHA))
+    monkeypatch.setattr(stack_safe_merge, "_account_grant_path", lambda: tmp_path / "none.json")
+    monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: 1)
+    code = stack_safe_merge.main(["--repo", SLUG, "--pr", "53", "--head-sha", SHA, "--run"])
+    assert code == 1
+
+
+def test_head_moved_after_github_authorization_does_not_merge(tmp_path: Path, monkeypatch) -> None:
+    moved = {f"{SLUG}#53": {"head": "fix/leaf", "children": [], "sha": MOVED}}
+
+    def _only_old(repo: str, pr: str, sha: str) -> dict:
+        if sha == SHA:
+            return {"authorized": True, "reason": "old", "channel": "approved_review"}
+        return {"authorized": False, "reason": "head changed after authorization"}
+
+    monkeypatch.setattr(stack_safe_merge, "_github_authorization", _only_old)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=moved, grant=None, head_sha=SHA)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+# --- GAR-MERGE-AUTHORITY-735 F03: the executor honours operator revocation ----------
+
+import operator_merge_instruction as omi  # noqa: E402
+
+
+def _revoke_store(tmp_path: Path, monkeypatch, prompt: str, *, now: float) -> Path:
+    store = tmp_path / "operator-merge-instructions.json"
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text(
+        json.dumps(
+            {
+                "type": "user",
+                "sessionId": "sess-1",
+                "turnOrigin": "human",
+                "origin": {"kind": "human"},
+                "message": {"role": "user", "content": prompt},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    payload = {
+        "session_id": "sess-1",
+        "transcript_path": str(transcript),
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+    omi.record_instructions(
+        prompt,
+        host="claude-code",
+        session_id="sess-1",
+        path=store,
+        now=now,
+        cwd_repo=None,
+        provenance=omi.host_provenance("claude-code", payload),
+    )
+    monkeypatch.setattr(stack_safe_merge, "_instruction_store_path", lambda: store)
+    return store
+
+
+def test_f03_revoked_grant_is_merge_pending(tmp_path: Path, monkeypatch, capsys) -> None:
+    import time
+
+    grant = _grant_file(tmp_path, issued_at=int(time.time()) - 600)
+    _revoke_store(tmp_path, monkeypatch, f"Cancel the merge of {SLUG}#53.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=grant)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+    record = json.loads(capsys.readouterr().out)
+    assert record["status"] == "MERGE_PENDING" and "revoked" in record["reason"]
+
+
+def test_f03_revoked_github_record_is_merge_pending(tmp_path: Path, monkeypatch) -> None:
+    import time
+
+    _authorized_github(monkeypatch)
+    _revoke_store(tmp_path, monkeypatch, f"Do not merge {SLUG}#53.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=None)
+    assert (code, runs) == (stack_safe_merge.MERGE_PENDING_EXIT, [])
+
+
+def test_f03_revocation_of_another_pr_does_not_block(tmp_path: Path, monkeypatch) -> None:
+    import time
+
+    _revoke_store(tmp_path, monkeypatch, f"Do not merge {SLUG}#54.", now=time.time() - 60)
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=_grant_file(tmp_path))
+    assert code == 0 and runs

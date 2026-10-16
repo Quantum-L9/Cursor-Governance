@@ -64,6 +64,7 @@ REQUIRED_FILES: tuple[str, ...] = (
     "web/setup.sh",
     "adapters/claude-code.md",
     "hooks/user_prompt_skill_router.py",
+    "hooks/operator_merge_instruction_wrap.py",
     "hooks/skill_usage_logger.py",
     "hooks/context7_stack_pretool.py",
     "tests/test_skill_reconciliation.py",
