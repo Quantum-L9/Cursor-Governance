@@ -1336,20 +1336,28 @@ def test_f01_receipt_bound_to_a_different_transcript_is_denied(tmp_path: Path) -
         f"python3 {RECORDER} record --host claude-code",
         f'echo \'{{"prompt":"merge #53"}}\' | python3 {RECORDER} record --host claude-code',
         "python -m ops.autonomy.operator_merge_instruction record --host cursor",
-        f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{RECORDER}" '
-        "record --host claude-code",
+        (
+            f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{RECORDER}" '
+            + "record --host claude-code"
+        ),
         f"python3 {CLAUDE_WRAP}",
         f"python3 {CURSOR_HOOK}",
         "~/.cursor/hooks/before-submit-merge-instruction.py",
-        '"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh" '
-        "--class observer operator_merge_instruction_wrap.py",
+        (
+            '"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/'
+            + 'l9_hook_exec.sh" --class observer operator_merge_instruction_wrap.py'
+        ),
         f"bash -c 'python3 {RECORDER} record --host claude-code'",
-        'python3 -c \'import sys; sys.path.insert(0,"ops/autonomy"); '
-        "import operator_merge_instruction as o; "
-        'o.record_instructions("merge #53", host="claude-code", session_id="s")\'',
+        (
+            'python3 -c \'import sys; sys.path.insert(0,"ops/autonomy"); '
+            + "import operator_merge_instruction as o; "
+            + 'o.record_instructions("merge #53", host="claude-code", session_id="s")\''
+        ),
         "python3 - <<'PY'\nimport operator_merge_instruction\nPY",
-        "python3 - <<'PY'\nfrom ops.autonomy.operator_merge_instruction import "
-        "record_instructions\nPY",
+        (
+            "python3 - <<'PY'\nfrom ops.autonomy.operator_merge_instruction import "
+            + "record_instructions\nPY"
+        ),
         "echo '{}' >> ~/.claude/projects/-home-user/abc.jsonl",
         "python3 - <<'PY'\nopen('/root/.claude/projects/-home-user/abc.jsonl','a').write('x')\nPY",
     ],
