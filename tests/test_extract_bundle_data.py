@@ -218,3 +218,25 @@ def test_trusted_workflow_reads_pull_requests_only_as_data() -> None:
                 assert str(with_["path"]).endswith("attestation.json"), (
                     "only the attestation uploads"
                 )
+
+
+def test_trusted_workflow_holds_no_repository_publication_authority() -> None:
+    """Replay attests; repository changes publish only through the Cursor-Governance SSOT."""
+    workflow = yaml.safe_load(TRUSTED.read_text())
+    triggers = workflow[True] if True in workflow else workflow["on"]
+    assert set(triggers) == {"pull_request_target", "push", "workflow_dispatch"}
+    assert set(triggers["workflow_dispatch"]["inputs"]) == {"subject_pr"}
+    assert set(workflow["jobs"]) == {"replay", "status"}
+    assert workflow["permissions"] == {}
+    for name, job in workflow["jobs"].items():
+        granted = {scope for scope, level in job["permissions"].items() if level == "write"}
+        assert granted <= ({"statuses"} if name == "status" else set()), (name, granted)
+    text = TRUSTED.read_text()
+    for forbidden in (
+        "git push",
+        "git commit",
+        "git switch",
+        "gh pr create",
+        "pulls --method POST",
+    ):
+        assert forbidden not in text, forbidden
