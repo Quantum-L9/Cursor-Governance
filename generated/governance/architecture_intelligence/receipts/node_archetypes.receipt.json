@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b",
+    "revision": "5996b2a79363069875ea156d1722c1f325787d96",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
@@ -51,7 +51,7 @@
       "digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
       "path": "semantics/node_archetypes.yaml",
       "ref": "l9.source/node-archetypes@1",
-      "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b"
+      "revision": "5996b2a79363069875ea156d1722c1f325787d96"
     }
   ],
   "operation": "projection",
@@ -67,8 +67,8 @@
     "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
     "ref": "l9.projection/architecture-intelligence@1"
   },
-  "receipt_digest": "sha256:2d0eb88e7ad2abb34a8a2f237eb520e5c9ae915b431568e692a189bf3c1b56bb",
-  "receipt_identity": "l9.receipt-instance/d21dbae529bd3976df65ce469b90d94bcb5bbbe2c24be835946efea4b9151ec3",
+  "receipt_digest": "sha256:471cb67e6561c6ebe96c07c666b3a019e2a1f6c1497017208350fb4f340513c8",
+  "receipt_identity": "l9.receipt-instance/6bb03c764fcfa29ff10849a39a9073cbe1fe7e2191bfbc1c2802386689b17e12",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -127,7 +127,7 @@
       },
       "source_currentness": {
         "digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
-        "revision": "1d8703230fce2789ba40011de9ddc58bd0e8d45b",
+        "revision": "5996b2a79363069875ea156d1722c1f325787d96",
         "status": "pass"
       },
       "source_identity": {

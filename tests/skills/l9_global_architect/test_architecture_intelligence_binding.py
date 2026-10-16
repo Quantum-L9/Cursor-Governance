@@ -608,8 +608,8 @@ def test_main_is_resolved_from_the_authority_not_the_lock(authority: Authority) 
 def test_committed_bundle_is_not_admitted_against_an_authority_lacking_its_revision(
     authority: Authority,
 ) -> None:
-    # The real bundle names .github 1d87032. Against an authority whose main does not contain
-    # it, admitted mode verifies the bundle but refuses to load it.
+    # The real bundle names a .github main revision. Against an authority whose main does not
+    # contain it, admitted mode verifies the bundle but refuses to load it.
     code, report = _verify(
         "--authority-root", str(authority.root), "--cite", "invariants:/invariants/0"
     )
