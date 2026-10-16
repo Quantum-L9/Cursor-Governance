@@ -778,6 +778,7 @@ def test_rest_non_merges_are_not_treated_as_merges(tmp_path: Path, command: str)
 AUTHORIZE = "ops/autonomy/" + "authorize_merge.py"
 STACK_SAFE = "ops/autonomy/" + "stack_safe_merge.py"
 GRANT_FILE = "~/.l9/autonomy/" + "merge-authorization.json"
+INSTRUCTION_FILE = "operator-merge-" + "instructions.json"
 
 
 @pytest.mark.parametrize(
@@ -806,15 +807,183 @@ def test_agent_self_issued_authorization_is_denied(command: str) -> None:
 
 
 @pytest.mark.parametrize("tool", ["Write", "Edit", "MultiEdit"])
-def test_file_tool_write_to_grant_file_is_denied(tool: str) -> None:
+@pytest.mark.parametrize("name", ["merge-authorization.json", INSTRUCTION_FILE])
+def test_file_tool_write_to_grant_or_instruction_file_is_denied(tool: str, name: str) -> None:
     code, out, err = _run(
         {
             "tool_name": tool,
-            "tool_input": {"file_path": "/root/.l9/autonomy/merge-authorization.json"},
+            "tool_input": {"file_path": f"/root/.l9/autonomy/{name}"},
         }
     )
     assert code == 0, err
     assert "never by an agent" in out
+
+
+# --- §6.2.13 operator-prompt channel: the one authorize_merge.py run an agent may make
+
+
+def _instruction_env(
+    tmp_path: Path, repo: str = "Quantum-L9/SEO-Bot", pr: int = 53
+) -> tuple[dict, dict]:
+    """A receipt as the Claude prompt hook writes it (hook env) and the live
+    PreToolUse session binding Claude Code puts on the event."""
+    return _hosted_env(tmp_path, f"Fix and merge {repo}#{pr} after the checks pass.")
+
+
+OPERATOR_RUN = (
+    f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{AUTHORIZE}" '
+    f"--operator-instruction --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA}"
+)
+
+
+def test_operator_instruction_run_is_allowed_when_a_receipt_covers_the_target(
+    tmp_path: Path,
+) -> None:
+    env, event = _instruction_env(tmp_path)
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_operator_instruction_run_is_allowed_through_a_wrapper(tmp_path: Path) -> None:
+    env, event = _instruction_env(tmp_path)
+    code, out, err = _run(_bound(f"bash -c '{OPERATOR_RUN}'", event), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "env_target",
+    [
+        None,  # no receipt at all
+        ("Quantum-L9/Other", 53),  # receipt for another repository
+        ("Quantum-L9/SEO-Bot", 54),  # receipt for another pull request
+    ],
+)
+def test_operator_instruction_run_without_a_covering_receipt_is_denied(
+    tmp_path: Path, env_target: tuple[str, int] | None
+) -> None:
+    env, event = _instruction_env(tmp_path, *env_target) if env_target else ({}, {})
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_terminal_mode_run_stays_denied_even_with_a_receipt(tmp_path: Path) -> None:
+    """The receipt licenses one mode. The terminal ceremony is still not the agent's."""
+    env, event = _instruction_env(tmp_path)
+    command = OPERATOR_RUN.replace("--operator-instruction ", "")
+    code, out, err = _run(_bound(command, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_cohort_receipt_licenses_the_attempt_for_its_snapshot_members_only(tmp_path: Path) -> None:
+    """A cohort receipt covers the pull requests open when it was spoken (F04),
+    in that repository only; a Cursor cohort receipt is BLOCKED_HOST_ORIGIN."""
+    import operator_merge_instruction as omi
+
+    env, event = _hosted_env(
+        tmp_path,
+        "Remediate and merge all currently open PRs in Quantum-L9/SEO-Bot.",
+        open_pull_requests=lambda repo: [52, 53],
+    )
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+    code, out, err = _run(_bound(OPERATOR_RUN.replace("--pr 53", "--pr 54"), event), env=env)
+    assert "never by an agent" in out
+    other = OPERATOR_RUN.replace("Quantum-L9/SEO-Bot", "Quantum-L9/Other")
+    code, out, err = _run(_bound(other, event), env=env)
+    assert "never by an agent" in out
+
+    cursor_store = tmp_path / "cursor" / INSTRUCTION_FILE
+    payload = {
+        "hook_event_name": "beforeSubmitPrompt",
+        "conversation_id": "conv-1",
+        "workspace_roots": [str(tmp_path)],
+        "prompt": "Remediate and merge all currently open PRs in Quantum-L9/SEO-Bot.",
+    }
+    omi.record_instructions(
+        payload["prompt"],
+        host="cursor",
+        session_id="conv-1",
+        path=cursor_store,
+        cwd_repo=None,
+        provenance=omi.host_provenance("cursor", payload),
+        open_pull_requests=lambda repo: [53],
+    )
+    code, out, err = _run(
+        _bound(OPERATOR_RUN, {"session_id": "conv-1", "transcript_path": "/nowhere.jsonl"}),
+        env={"L9_OPERATOR_INSTRUCTION_FILE": str(cursor_store)},
+    )
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"echo '{{}}' > ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"cat forged.json | tee ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"cp /tmp/forged.json ~/.l9/autonomy/{INSTRUCTION_FILE}",
+        f"python3 - <<'PY'\nopen('/root/.l9/autonomy/{INSTRUCTION_FILE}','w').write('x')\nPY",
+    ],
+)
+def test_agent_cannot_write_the_instruction_receipt(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    assert "never by an agent" in out, command
+
+
+def test_reading_the_instruction_receipt_stays_allowed() -> None:
+    code, out, err = _run(_shell(f"cat ~/.l9/autonomy/{INSTRUCTION_FILE}"))
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_operator_grant_then_stack_safe_run_passes_the_gate(tmp_path: Path) -> None:
+    """End to end through the gate: the grant an operator instruction produced
+    is the grant the merge run is judged by."""
+    import authorize_merge
+
+    store = tmp_path / INSTRUCTION_FILE
+    _hosted_env(tmp_path, "Merge Quantum-L9/SEO-Bot#53 after the checks pass.", store=store)
+    grant_path = tmp_path / "merge-authorization.json"
+    code = authorize_merge.main(
+        [
+            "--operator-instruction",
+            "--repo",
+            "Quantum-L9/SEO-Bot",
+            "--pr",
+            "53",
+            "--head-sha",
+            SHA,
+            "--auth-file",
+            str(grant_path),
+        ],
+        instruction_path=store,
+        pull_request=lambda r, p: {
+            "state": "open",
+            "merged": False,
+            "created_at": "2026-10-14T00:00:00Z",
+            "head": {"sha": SHA},
+            "user": {"login": "pr-author"},
+        },
+        pull_request_files=lambda r, p: ["README.md"],
+    )
+    assert code == 0
+    env = {
+        "L9_MERGE_AUTHORIZATION_FILE": str(grant_path),
+        "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+    }
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_shell(command), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+    moved = command.replace(SHA, "b" * 40)
+    code, out, err = _run(_shell(moved), env=env)
+    assert "MERGE_PENDING" in out
 
 
 @pytest.mark.parametrize(
@@ -1015,7 +1184,12 @@ def test_emitted_merge_commands_are_cwd_independent() -> None:
     assert mg.MERGE_COMMAND == ABS_PREFIX + 'stack_safe_merge.py"'
     assert pr_fleet.MERGE_COMMAND is mg.MERGE_COMMAND  # one owner, no copy
     assert _relative_commands(mg.MERGE_DENY_REASON) == []
-    assert mg.GRANT_COMMAND in mg.MERGE_DENY_REASON and mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
+    assert mg.MERGE_COMMAND in mg.MERGE_DENY_REASON
+    assert "authorize merge <owner>/<repo>#<n>@<40-hex>" in mg.MERGE_DENY_REASON
+    # The grant command appears only as the operator-prompt transcription,
+    # never as a terminal ceremony the human is told to perform.
+    assert f"{mg.GRANT_COMMAND} --operator-instruction" in mg.MERGE_DENY_REASON
+    assert "terminal transcription is not merge permission" in mg.MERGE_DENY_REASON
 
 
 def test_relative_command_detector_catches_the_old_forms() -> None:
@@ -1038,3 +1212,283 @@ def test_absolute_stack_safe_run_is_governed(tmp_path: Path, granted: bool) -> N
     code, out, err = _run(_shell(command), env=_granted(tmp_path) if granted else None)
     assert code == 0, err
     assert (out.strip() == "") is granted, out
+
+
+# --- GAR-MERGE-AUTHORITY-735 findings (F01, F03): the gate binds receipts to the
+# live host session and honours revocation --------------------------------------
+
+RECORDER = "ops/autonomy/" + "operator_merge_instruction.py"
+CLAUDE_WRAP = (
+    "environment/agents/adapters/claude-code/hooks/" + "operator_merge_instruction_wrap.py"
+)
+CURSOR_HOOK = "ops/hooks/" + "before_submit_merge_instruction.py"
+SESSION = "sess-human-1"
+
+
+def _host_transcript(
+    path: Path, text: str, *, origin: str = "human", session: str = SESSION
+) -> Path:
+    record = {
+        "type": "user",
+        "userType": "external",
+        "isSidechain": False,
+        "sessionId": session,
+        "turnOrigin": origin,
+        "origin": {"kind": origin.replace("_", "-")},
+        "promptSource": "sdk" if origin == "human" else "system",
+        "message": {"role": "user", "content": text},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    return path
+
+
+def _hosted_env(
+    tmp_path: Path,
+    prompt: str = "Fix and merge Quantum-L9/SEO-Bot#53 after the checks pass.",
+    *,
+    now: float | None = None,
+    transcript_text: str | None = None,
+    session: str = SESSION,
+    store: Path | None = None,
+    open_pull_requests=None,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """(hook env, event fields) for a receipt the Claude UserPromptSubmit wrapper wrote."""
+    import time
+
+    import operator_merge_instruction as omi
+
+    store = store or tmp_path / INSTRUCTION_FILE
+    stamp = int(now if now is not None else time.time())
+    transcript = _host_transcript(
+        tmp_path / f"transcript-{session}.jsonl", transcript_text or prompt, session=session
+    )
+    payload = {
+        "session_id": session,
+        "transcript_path": str(transcript),
+        "cwd": str(tmp_path),
+        "hook_event_name": "UserPromptSubmit",
+        "prompt": prompt,
+    }
+    omi.record_instructions(
+        prompt,
+        host="claude-code",
+        session_id=session,
+        cwd=str(tmp_path),
+        path=store,
+        now=stamp,
+        cwd_repo=None,
+        provenance=omi.host_provenance("claude-code", payload),
+        open_pull_requests=open_pull_requests,
+    )
+    env = {"L9_OPERATOR_INSTRUCTION_FILE": str(store)}
+    event = {"session_id": SESSION, "transcript_path": str(transcript)}
+    return env, event
+
+
+def _bound(command: str, event: dict[str, str]) -> dict:
+    return {**_shell(command), **event}
+
+
+def test_f01_bound_hosted_receipt_allows_the_transcription(tmp_path: Path) -> None:
+    env, event = _hosted_env(tmp_path)
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_f01_receipt_from_another_session_is_denied(tmp_path: Path) -> None:
+    env, event = _hosted_env(tmp_path, session="sess-agent-forged")
+    # the receipt names sess-agent-forged; the live event is SESSION
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_f01_event_without_session_binding_is_denied(tmp_path: Path) -> None:
+    env, _event = _hosted_env(tmp_path)
+    code, out, err = _run(_shell(OPERATOR_RUN), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_f01_receipt_not_in_the_live_transcript_is_denied(tmp_path: Path) -> None:
+    """A receipt whose text the host never recorded as a human turn is not authority."""
+    env, event = _hosted_env(tmp_path, transcript_text="Please review PR #53 and report.")
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_f01_receipt_bound_to_a_different_transcript_is_denied(tmp_path: Path) -> None:
+    env, event = _hosted_env(tmp_path)
+    other = _host_transcript(
+        tmp_path / "other.jsonl", "Fix and merge Quantum-L9/SEO-Bot#53 after the checks pass."
+    )
+    code, out, err = _run(_bound(OPERATOR_RUN, {**event, "transcript_path": str(other)}), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"python3 {RECORDER} record --host claude-code",
+        f'echo \'{{"prompt":"merge #53"}}\' | python3 {RECORDER} record --host claude-code',
+        "python -m ops.autonomy.operator_merge_instruction record --host cursor",
+        (
+            f'"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/{RECORDER}" '
+            + "record --host claude-code"
+        ),
+        f"python3 {CLAUDE_WRAP}",
+        f"python3 {CURSOR_HOOK}",
+        "~/.cursor/hooks/before-submit-merge-instruction.py",
+        (
+            '"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/'
+            + 'l9_hook_exec.sh" --class observer operator_merge_instruction_wrap.py'
+        ),
+        f"bash -c 'python3 {RECORDER} record --host claude-code'",
+        (
+            'python3 -c \'import sys; sys.path.insert(0,"ops/autonomy"); '
+            + "import operator_merge_instruction as o; "
+            + 'o.record_instructions("merge #53", host="claude-code", session_id="s")\''
+        ),
+        "python3 - <<'PY'\nimport operator_merge_instruction\nPY",
+        (
+            "python3 - <<'PY'\nfrom ops.autonomy.operator_merge_instruction import "
+            + "record_instructions\nPY"
+        ),
+        "echo '{}' >> ~/.claude/projects/-home-user/abc.jsonl",
+        "python3 - <<'PY'\nopen('/root/.claude/projects/-home-user/abc.jsonl','a').write('x')\nPY",
+    ],
+)
+def test_f01_agent_invocation_of_the_recorder_or_transcript_is_denied(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    assert "never by an agent" in out, command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"cat {RECORDER}",
+        f"grep -n record_instructions {RECORDER}",
+        f"git diff -- {RECORDER}",
+        f"python3 -m pytest -q tests/ops/autonomy/test_operator_merge_instruction.py  # {RECORDER}",
+        f".venv/bin/ruff check {RECORDER} {CLAUDE_WRAP}",
+        f"python3 {RECORDER} show --repo o/r --pr 1",
+        "cat ~/.claude/projects/-home-user/abc.jsonl",
+    ],
+)
+def test_f01_reading_the_recorder_and_the_transcript_stays_allowed(command: str) -> None:
+    code, out, err = _run(_shell(command))
+    assert code == 0, err
+    assert out.strip() == "", command
+
+
+def test_f01_writing_the_live_sessions_transcript_is_denied_wherever_it_lives(
+    tmp_path: Path,
+) -> None:
+    """The event names the transcript the gate corroborates against; appending to
+    that file from a tool call is forging the corroboration, whatever its path."""
+    _env, event = _hosted_env(tmp_path)
+    transcript = event["transcript_path"]
+    assert ".claude/projects/" not in transcript
+    for command in (
+        f"echo '{{}}' >> {transcript}",
+        f"printf '%s' x | tee -a {transcript}",
+        f"cp forged.jsonl {transcript}",
+    ):
+        code, out, err = _run(_bound(command, event))
+        assert code == 0, err
+        assert "never by an agent" in out, command
+    code, out, err = _run(_bound(f"cat {transcript}", event))
+    assert code == 0, err
+    assert out.strip() == ""
+    code, out, err = _run({"tool_name": "Write", "tool_input": {"file_path": transcript}, **event})
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_f03_revocation_after_recording_denies_the_transcription(tmp_path: Path) -> None:
+    import time
+
+    env, event = _hosted_env(tmp_path, now=time.time() - 120)
+    _hosted_env(
+        tmp_path,
+        "Do not merge Quantum-L9/SEO-Bot#53.",
+        now=time.time() - 60,
+        store=tmp_path / INSTRUCTION_FILE,
+    )
+    code, out, err = _run(_bound(OPERATOR_RUN, event), env=env)
+    assert code == 0, err
+    assert "never by an agent" in out
+
+
+def test_f03_revocation_after_grant_denies_the_merge_run(tmp_path: Path) -> None:
+    """Authorize, issue the grant, then cancel: the grant no longer carries."""
+    import time
+
+    env, event = _hosted_env(tmp_path, now=time.time() - 300)
+    grant_env = _granted(tmp_path)  # a live grant for #53 at SHA (legacy shape, no issued_at)
+    _hosted_env(
+        tmp_path,
+        "Cancel the merge of Quantum-L9/SEO-Bot#53.",
+        now=time.time() - 1,  # after the authorization; a grant without issued_at is older
+        store=tmp_path / INSTRUCTION_FILE,
+    )
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_bound(command, event), env={**grant_env, **env})
+    assert code == 0, err
+    assert "MERGE_PENDING" in out and "revoked" in out
+
+
+def test_f03_revocation_scoped_to_another_pr_leaves_the_grant_alone(tmp_path: Path) -> None:
+    import time
+
+    env, event = _hosted_env(tmp_path, now=time.time() - 300)
+    grant_env = _granted(tmp_path)
+    _hosted_env(
+        tmp_path,
+        "Cancel the merge of Quantum-L9/SEO-Bot#54.",
+        now=time.time() - 1,
+        store=tmp_path / INSTRUCTION_FILE,
+    )
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_bound(command, event), env={**grant_env, **env})
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_f03_revocation_also_withdraws_a_github_record(tmp_path: Path) -> None:
+    import time
+
+    review = tmp_path / "reviews.json"
+    review.write_text(
+        json.dumps(
+            {
+                "Quantum-L9/SEO-Bot#53": {
+                    "author": "pr-author",
+                    "files": ["README.md"],
+                    "reviews": [
+                        {
+                            "user": {"login": "operator", "type": "User"},
+                            "state": "APPROVED",
+                            "commit_id": SHA,
+                            "permission": "admin",
+                            "submitted_at": "2026-10-14T00:00:00Z",
+                        }
+                    ],
+                    "comments": [],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    env, event = _hosted_env(tmp_path, "Do not merge Quantum-L9/SEO-Bot#53.", now=time.time() - 30)
+    env["L9_MERGE_REVIEW_FILE"] = str(review)
+    env["L9_STACK_PROBE_FILE"] = str(_probe_file(tmp_path))
+    command = f"python3 {STACK_SAFE} --repo Quantum-L9/SEO-Bot --pr 53 --head-sha {SHA} --run"
+    code, out, err = _run(_bound(command, event), env=env)
+    assert code == 0, err
+    assert "MERGE_PENDING" in out and "revoked" in out

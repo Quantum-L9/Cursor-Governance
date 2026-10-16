@@ -789,8 +789,8 @@ def _objective(kind: str, repo: str, pr: dict[str, Any]) -> str:
         return (
             f"Merge {repo}#{number} at head {head} via `{MERGE_COMMAND} --repo {repo} "
             f"--pr {number} --head-sha {head} --run` only (absolute paths: the lane may "
-            "run in a consumer worktree). It merges only under a human merge grant for "
-            "that head (CANONICAL_LAW §6.2.12); exit 3 is MERGE_PENDING — report it, never "
+            "run in a consumer worktree). It merges only under human GitHub authorization "
+            "for that head (CANONICAL_LAW §6.2.13); exit 3 is MERGE_PENDING — report it, never "
             "run authorize_merge.py, never retry another transport. "
             "Immediately before merge: re-run pr_board.py; re-query unresolved "
             "reviewThreads; abort if board is not merge or the head SHA moved. Never "
