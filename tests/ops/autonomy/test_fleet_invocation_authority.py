@@ -602,7 +602,11 @@ def test_a_remediation_successor_is_covered_with_its_lineage(fleet, tmp_path: Pa
     ("view", "heads", "why"),
     [
         (_successor(base="main"), {}, "not the head of exactly one"),
-        (_successor(author="someone-else"), {"fix/pr-96": [MEMBER_96]}, "not by the authorizing"),
+        (
+            _successor(author="someone-else"),
+            {"fix/pr-96": [MEMBER_96]},
+            "not only by the authorizing",
+        ),
         (
             _successor(created="2026-10-14T00:00:00Z"),
             {"fix/pr-96": [MEMBER_96]},
@@ -623,6 +627,47 @@ def test_an_unrelated_later_pull_request_is_not_covered(fleet, view, heads, why)
     verdict = _verdict(store, 120, view=view, pulls_with_head=_heads(heads))
     assert not verdict["authorized"]
     assert why in verdict["reason"]
+
+
+def _two_hop(store: Path, intermediate_author: str) -> dict:
+    """#130 (operator) stacked on #120 (``intermediate_author``) stacked on member #96."""
+    views = {
+        120: _successor(
+            120,
+            author=intermediate_author,
+            head={"sha": SHA, "ref": "fix/pr-120", "repo": {"full_name": MEMORY}},
+        ),
+        130: _successor(130, base="fix/pr-120"),
+    }
+    heads = {
+        "fix/pr-96": [MEMBER_96],
+        "fix/pr-120": [{"number": 120, "created_at": "2027-01-15T08:20:00Z"}],
+    }
+    return _verdict(
+        store,
+        130,
+        pull_request=lambda repo, n: views[n],
+        pulls_with_head=_heads(heads),
+    )
+
+
+def test_a_two_link_successor_chain_by_the_operator_is_covered(fleet) -> None:
+    store, transcript = fleet
+    _invoke(store, transcript)
+    verdict = _two_hop(store, OWNER["login"])
+    assert verdict["authorized"], verdict["reason"]
+    assert verdict["lineage"]["chain"] == [120, 96]
+    assert verdict["lineage"]["authors"] == [OWNER["login"], OWNER["login"]]
+
+
+def test_an_intermediate_successor_by_someone_else_breaks_the_lineage(fleet) -> None:
+    """Codex P1 on #743: only the final candidate's author was checked, so an
+    operator-authored PR stacked on another user's post-invocation PR passed."""
+    store, transcript = fleet
+    _invoke(store, transcript)
+    verdict = _two_hop(store, "someone-else")
+    assert not verdict["authorized"]
+    assert "someone-else" in verdict["reason"]
 
 
 def test_gate_admits_a_successor_attempt_only_from_the_parent(fleet, monkeypatch) -> None:

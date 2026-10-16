@@ -246,6 +246,11 @@ def _full_name(side: Any) -> str:
     return str((repo or {}).get("full_name") or "") if isinstance(repo, dict) else ""
 
 
+def _author(view: dict[str, Any]) -> str:
+    user = view.get("user") if isinstance(view.get("user"), dict) else {}
+    return str(user.get("login") or "")
+
+
 def successor_lineage(
     repo: str,
     view: dict[str, Any],
@@ -261,8 +266,11 @@ def successor_lineage(
     and before it expires, from a branch of this repository (never a fork), and
     stacked on a branch that is the head of exactly one fleet member (directly,
     or through at most ``MAX_LINEAGE_DEPTH`` successors that satisfy the same
-    test). The caller additionally requires its author to be the authorizing
-    principal. Anything else — a later pull request based on ``main``, one from a
+    test). ``lineage["authors"]`` names the author of every non-member pull
+    request in the chain — the candidate and each intermediate successor — and
+    the caller requires every one of them to be the authorizing principal, so
+    an operator-authored pull request stacked on someone else's is not covered.
+    Anything else — a later pull request based on ``main``, one from a
     fork, one opened before the invocation that the snapshot did not hold —
     is not covered.
     """
@@ -275,6 +283,7 @@ def successor_lineage(
     if created >= until:
         return None, "it was opened after the fleet invocation expired"
     chain: list[int] = []
+    authors = [_author(view)]
     current = view
     for _ in range(MAX_LINEAGE_DEPTH):
         if _full_name(current.get("head")).casefold() != repo.casefold():
@@ -299,14 +308,18 @@ def successor_lineage(
                 "fleet_instruction_id": fleet.get("id"),
                 "member": parent,
                 "chain": chain,
+                "authors": authors,
             }, f"stacked on fleet member #{parent}"
         parent_created = _parse_github_time(parents[0].get("created_at"))
         if parent_created is None or parent_created <= since:
             return None, f"its base pull request #{parent} is not a fleet member"
+        if parent_created >= until:
+            return None, f"its base pull request #{parent} was opened after the invocation expired"
         try:
             current = pull_request(repo, parent)
         except RuntimeError as exc:
             return None, f"cannot read base pull request #{parent} ({exc})"
+        authors.append(_author(current))
     return None, f"its stack is deeper than {MAX_LINEAGE_DEPTH} links above any fleet member"
 
 
@@ -422,12 +435,16 @@ def operator_verdict(
         )
         refused["instruction"] = instruction
         return refused
-    if lineage is not None and author.casefold() != str(principal.get("login") or "").casefold():
+    login = str(principal.get("login") or "").casefold()
+    foreign = [
+        name for name in (lineage or {}).get("authors", [author]) if name.casefold() != login
+    ]
+    if lineage is not None and (not login or foreign):
         refused["reason"] = (
-            f"{repo}#{pr} is stacked on fleet member #{lineage['member']}, but it was opened by "
-            f"{author or '<unknown>'}, not by the authorizing operator "
-            f"{principal.get('login') or '<unknown>'}; only the authorized remediation's own "
-            "successor is covered (CANONICAL_LAW §6.2.15)"
+            f"{repo}#{pr} is stacked on fleet member #{lineage['member']}, but its chain was "
+            f"opened by {', '.join(sorted(set(foreign))) or '<unknown>'}, not only by the "
+            f"authorizing operator {principal.get('login') or '<unknown>'}; only the authorized "
+            "remediation's own successors are covered (CANONICAL_LAW §6.2.15)"
         )
         refused["instruction"] = instruction
         return refused
