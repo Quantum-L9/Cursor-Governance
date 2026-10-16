@@ -1,5 +1,5 @@
 {
-  "generation_id": "c9e1b91de34338a5ad66b512269681d10bde2b57f10334d9b322ee9a82f8749d",
+  "generation_id": "acd6a590326a3736c4c34f0fb1b9d491ee99de9765cdd2bad0a3b03ae3895b74",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -69,7 +69,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation \u2014 do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run the campaign publication ceremony or its gate-only diagnosis. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
+        "note": "Invoking /l9-pr-remediation is not merge authority. Converge remediates every open PR and stops at MERGE_PENDING unless human GitHub authorization covers that PR at its current head (CANONICAL_LAW \u00a76.2.13): an APPROVED review on that head, or the exact line authorize merge owner/name#n@sha, from a human with write access. L9-ORG-007 paths reject the PR author. The agent then runs stack_safe_merge.py and does not approve, post that line, or write a local grant. Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; above-paygrade leftovers open a GitHub issue and launch l9-issue-remediation \u2014 do not ask the human to unblock; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run the campaign publication ceremony or its gate-only diagnosis. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -1331,14 +1331,14 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, publish all remediations as stacked PRs via make pr without bare git push, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then stop at MERGE_PENDING; stack-safe merge trains run only under a human merge grant bound to each PR's exact head. do not wait for every PR to be green. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 bind same-head /l9-pr-audit findings first, publish all remediations as stacked PRs via make pr without bare git push, launch execution-profile-capped concurrent remediations when claims do not overlap, poll, then stop at MERGE_PENDING; stack-safe merge trains run only under human authorization (GitHub record or operator prompt) bound to the exact head. do not wait for every PR to be green. use when /l9-pr-remediation, fix, babysit, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "252729a8d5561ff29c1a4a39ebd8a99d5e80f4f02c7c2e214d04c5c4c073e6fc",
+      "skill_sha256": "3eb91ceb059a57488ff46e9994195cef00e2a0f662f07cc63f029dc06e0a3656",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1539,6 +1539,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "46143d4121ef18b9feeb74aaf8d59a46d4ceb1d98e22bd81011e3dfa48487f68",
-  "source_skill_corpus_sha256": "e9d0354d6eafe82a98164be39472bef586054da1ab129516a55decf078d0ab7d"
+  "source_manifest_sha256": "60bf4a6783b83d864aef31f2afff4397a79f150e963ac2081af3b3ac9e03f09f",
+  "source_skill_corpus_sha256": "ec6b12df5edc9fe942deec21392682bf9a45695a17402a3ad443223fd170627e"
 }

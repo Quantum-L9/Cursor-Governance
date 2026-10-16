@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-10-13T21:34:43Z`. Source: `rules/*.mdc`.
+Generated: `2026-10-15T20:56:49Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -41,7 +41,7 @@ Generated: `2026-10-13T21:34:43Z`. Source: `rules/*.mdc`.
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 111 | `84c139789917` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `a56bd2ccf980` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
-| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 168 | `0cf08b3fdef6` |
+| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 188 | `6f89acafd256` |
 | `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 102 | `27c0da311804` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |

@@ -45,7 +45,7 @@ There is no tighter hidden Cursor cap this skill should wait on.
 
 | Lane | Kind | Role / managed Task | Mutates | When |
 |---|---|---|---|---|
-| merge | `merge` | `pr_remediation` / `l9-pr-remediation` | `stack_safe_merge.py --head-sha {sha} --run` only, under a human grant (exit 3 = MERGE_PENDING) | every PR in `waves.first_wave.merge` (`merge_now`) |
+| merge | `merge` | `pr_remediation` / `l9-pr-remediation` | `stack_safe_merge.py --head-sha {sha} --run` only, under human authorization — GitHub record or recorded operator prompt (exit 3 = MERGE_PENDING) | every PR in `waves.first_wave.merge` (`merge_now`) |
 | remediate | `remediate` | `pr_remediation` / `l9-pr-remediation` | bounded | every PR in `waves.first_wave.remediate` |
 | recon | `recon` | `recon` / `l9-recon` | no | PRs blocked by a claim conflict or the mutation cap: diagnose now, patch next wave |
 | watch | `watch` | `recon` / `l9-recon` | no | `board=wait` and merge-blocked greens: observe required checks |
