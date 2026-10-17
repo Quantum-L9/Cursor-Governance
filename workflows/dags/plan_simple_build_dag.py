@@ -160,7 +160,7 @@ PLAN_SIMPLE_BUILD_NODES = [
         outputs=["gmp_started"],
         metadata={
             "ir_kind": "deterministic",
-            "domain_owner": "l9-gmp-protocol",
+            "domain_owner": "commands/gmp.md",
             "argv": [
                 "--authorized-by",
                 "slash-gmp",
@@ -170,7 +170,7 @@ PLAN_SIMPLE_BUILD_NODES = [
                 "<resolved.plan.md>",
                 "<task>",
             ],
-            "also_read": ["commands/gmp.md", "skills/l9-gmp-protocol/SKILL.md"],
+            "also_read": ["commands/gmp.md"],
         },
     ),
     SessionNode(
@@ -196,7 +196,7 @@ PLAN_SIMPLE_BUILD_NODES = [
         outputs=["gmp_finalized"],
         metadata={
             "ir_kind": "deterministic",
-            "domain_owner": "l9-gmp-protocol",
+            "domain_owner": "commands/gmp.md",
             "argv": ["--resume", "--mode", "finalize", "--commit-when-done"],
         },
     ),
@@ -205,10 +205,10 @@ PLAN_SIMPLE_BUILD_NODES = [
         name="Execute complete?",
         node_type=NodeType.GATE,
         description="PASS only when Build and GMP finalize both report success",
-        action="skills/l9-gmp-protocol/SKILL.md",
+        action="commands/gmp.md",
         gate_type=GateType.CONDITIONAL,
         validation="state.get('gmp_finalized') is True",
-        metadata={"ir_kind": "deterministic", "domain_owner": "l9-gmp-protocol"},
+        metadata={"ir_kind": "deterministic", "domain_owner": "commands/gmp.md"},
     ),
     SessionNode(
         id="PASS",
@@ -327,7 +327,7 @@ PLAN_SIMPLE_BUILD_DAG = SessionDAG(
             "l9-plan-simple",
             "kernels/Improve.md",
             "kernels/Validate & Repair.md",
-            "l9-gmp-protocol",
+            "commands/gmp.md",
         ],
     },
 )

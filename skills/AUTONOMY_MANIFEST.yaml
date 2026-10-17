@@ -33,8 +33,6 @@ tiers:
     use_when: recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready
   - skill: l9-structured-reasoning
     use_when: planning, architecture decisions, debugging, trade-off analysis, or deep reasoning is needed
-  - skill: l9-gmp-protocol
-    use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -207,7 +205,6 @@ claude_routing:
   - l9-context7-docs
   - l9-recursive-optimization
   - l9-structured-reasoning
-  - l9-gmp-protocol
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -406,18 +403,6 @@ claude_routing:
     note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.
 
       '
-  - id: gmp_protocol
-    primary: l9-gmp-protocol
-    signal_weight: 8
-    positive_signals:
-    - gmp protocol
-    - run gmp
-    - modification lock
-    - phased auditable change
-    - signed evidence report
-    - gmp phases
-    supporting:
-    - l9-structured-reasoning
   - id: skill_compiler
     primary: l9-skill-compiler
     signal_weight: 8
@@ -619,7 +604,6 @@ claude_routing:
     - harvestable components
     supporting:
     - l9-intelligence-harvest
-    - l9-gmp-protocol
     - l9-ynp
   - id: performance_audit
     primary: l9-auditing-performance

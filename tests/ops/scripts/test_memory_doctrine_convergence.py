@@ -213,9 +213,9 @@ def test_missing_converged_surface_fails_only_where_memory_is_bound(
     assert rc == 0, out
 
 
-def test_episode_names_semantics_fail_on_the_gmp_skill(residue, tmp_path: Path) -> None:
+def test_episode_names_semantics_fail_on_the_gmp_slash(residue, tmp_path: Path) -> None:
     _converged_tree(tmp_path)
-    rel = "skills/l9-gmp-protocol/SKILL.md"
+    rel = "commands/gmp.md"
     original = (tmp_path / rel).read_text(encoding="utf-8")
     _write(tmp_path, rel, original + "\nDeclare `MEMORY_PREFETCH: <episode names>`.\n")
     rc, out = _run(residue, tmp_path)

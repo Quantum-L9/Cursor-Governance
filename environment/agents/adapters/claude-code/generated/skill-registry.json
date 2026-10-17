@@ -1,5 +1,5 @@
 {
-  "generation_id": "eb233ec1e136897c7d2ab1c0a065c3af12d010bf4e56cfed585b9280791c08ec",
+  "generation_id": "b7c4ecd6b10382b9dde67474db789167ef737d27bfe25e7f68eec24639abe180",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -11,7 +11,6 @@
       "l9-context7-docs",
       "l9-recursive-optimization",
       "l9-structured-reasoning",
-      "l9-gmp-protocol",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -217,22 +216,6 @@
           "decompose requirements",
           "scope is unclear"
         ],
-        "signal_weight": 8,
-        "supporting": [
-          "l9-structured-reasoning"
-        ]
-      },
-      {
-        "id": "gmp_protocol",
-        "positive_signals": [
-          "gmp protocol",
-          "run gmp",
-          "modification lock",
-          "phased auditable change",
-          "signed evidence report",
-          "gmp phases"
-        ],
-        "primary": "l9-gmp-protocol",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -489,7 +472,6 @@
         "signal_weight": 8,
         "supporting": [
           "l9-intelligence-harvest",
-          "l9-gmp-protocol",
           "l9-ynp"
         ]
       },
@@ -987,7 +969,7 @@
       "path": "skills/l9-code-maintenance",
       "reason": "lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate",
       "skill_md": "skills/l9-code-maintenance/SKILL.md",
-      "skill_sha256": "eb1357e99a30108b3ed4643fea373dc7f3176302c8c85ce95d7808de830bddca",
+      "skill_sha256": "7d8a6df6508647863fcf48037cdc60b10a49a302c04b8e8538b2bcbbf52c8ba2",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1013,7 +995,7 @@
       "path": "skills/l9-component-verification",
       "reason": "",
       "skill_md": "skills/l9-component-verification/SKILL.md",
-      "skill_sha256": "9c416a6d5468c12b1b823972804a78ea251c3876a35a8e2f026b8a9c9302ec7d",
+      "skill_sha256": "937bb94864d0bbca28ba1b34ca9c759f4d8aaeaae9adb74ffce8787366c1750b",
       "user_invocable": true,
       "when_to_use": "a named component, module, import, or wiring claim needs a read-only audit, deterministic verify, or runtime probe"
     },
@@ -1078,7 +1060,7 @@
       "path": "skills/l9-forge",
       "reason": "zero-pause batch execution",
       "skill_md": "skills/l9-forge/SKILL.md",
-      "skill_sha256": "37ab7c9aa7ff1b961faf30bd52dc2e99d56d1975b6d8785306f9bc124838b299",
+      "skill_sha256": "46bef5978625ad2f954547d10e928bfdf540c8385a48e77ba585832233e7c226",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1091,7 +1073,7 @@
       "path": "skills/l9-gap-analysis",
       "reason": "",
       "skill_md": "skills/l9-gap-analysis/SKILL.md",
-      "skill_sha256": "125c50b4788b63c069baa136b74ab91ac819489293333896175453fc21e2164f",
+      "skill_sha256": "7738fa5740ea103e5d584d6a370533a997d4db2a53d4844dc5603dbc4f21b83a",
       "user_invocable": true,
       "when_to_use": "assessing readiness, missing pieces, compliance drift, or percent-complete status"
     },
@@ -1120,19 +1102,6 @@
       "skill_sha256": "3f96b5735816b6965b6c10d35b40077243552021fea24363f62a52c239308bde",
       "user_invocable": true,
       "when_to_use": ""
-    },
-    {
-      "composition_role": "primary",
-      "description": "execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free \u2014 adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-gmp-protocol",
-      "path": "skills/l9-gmp-protocol",
-      "reason": "",
-      "skill_md": "skills/l9-gmp-protocol/SKILL.md",
-      "skill_sha256": "fc90deef1f5267f390c7c6161650f4b4727e55ee6751553603daa544bc694ffe",
-      "user_invocable": true,
-      "when_to_use": "work must be phased, auditable, traceable, or touches protected/high-risk areas"
     },
     {
       "composition_role": "general",
@@ -1273,7 +1242,7 @@
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand plans harvest can emit a compiled plan; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; Program Execution campaigns are not a live audit surface; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "8bef7d6c9ab1fd257392f0140f6f442eda82548640b8b5e786aa3f0afb9d327f",
+      "skill_sha256": "0615e1ddc215b3503c90803dba72104cb85ede0808df7187d6f7134fd72ccd82",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1377,7 +1346,7 @@
       "path": "skills/l9-recursive-optimization",
       "reason": "",
       "skill_md": "skills/l9-recursive-optimization/SKILL.md",
-      "skill_sha256": "794971aa9f6eca95a3c3e7b9dd9c600a2c11980b90cc7b82310409af388cab4c",
+      "skill_sha256": "9d8d2f93c07b830a412eb35685402de3ccc21360d205c2f3be045fb476857aea",
       "user_invocable": true,
       "when_to_use": "recursively aligning, improving, or converging artifact groups, packs, prompts, or agent outputs until execution-ready"
     },
@@ -1539,6 +1508,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "0e624289c1506895f1e2092f60fb49806cbd5081375b93ee373df951ff2ab84b",
-  "source_skill_corpus_sha256": "aad108218da56cde75c462fa0482214259a25ff5288205a8ffb0ab4a127dfcec"
+  "source_manifest_sha256": "e85549b1b992f4d01260aa9ccb9f1bc79f3b24139ab638a4a98c2195939e60f8",
+  "source_skill_corpus_sha256": "de0b0aef3a8da11cbd8c9b21d4db4b30fbaa04628ef9e96e203fd4adb4a58296"
 }
