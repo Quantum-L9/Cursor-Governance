@@ -33,7 +33,7 @@ Load [references/forge-workflow.md](references/forge-workflow.md) for execution 
 ## Authority Order
 
 1. User forge scope and modification lock.
-2. [l9-gmp-protocol](../l9-gmp-protocol/SKILL.md) for phased runs.
+2. [/gmp](../../commands/gmp.md) for locked runs.
 3. Repo protected paths (`.cursor/rules/`, `pipeline_v2.py` never activated).
 
 ## Resource Map

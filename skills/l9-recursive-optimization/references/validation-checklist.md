@@ -61,7 +61,7 @@ Reject delivery if:
 
 ## Design Principles
 
-- [ ] **Composable** — chains with `l9-skill-compiler`, `l9-gmp-protocol`, `l9-gap-analysis`
+- [ ] **Composable** — chains with `l9-skill-compiler`, `/gmp`, `l9-gap-analysis`
 - [ ] **Fail fast** — missing input surfaced before long passes
 - [ ] **Idempotent** — align-only re-run on same source yields same violations
 - [ ] **Self-documenting** — output states mode, passes, next action

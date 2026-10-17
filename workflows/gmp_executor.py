@@ -10,8 +10,11 @@ This executor just runs it.
 
 Usage:
     python3 workflows/gmp_executor.py "task description" --tier RUNTIME
-    python3 workflows/gmp_executor.py --resume
+    python3 workflows/gmp_executor.py --workspace /path/to/clone --resume
     python3 workflows/gmp_executor.py --status
+
+The mutated clone is ``--workspace`` (else ``WS``, else the cwd), normalized to
+its git toplevel. This checkout only supplies tools.
 
 The executor:
 1. Initializes the GMP state
@@ -55,21 +58,27 @@ logger = structlog.get_logger(__name__)
 # Configuration
 # =============================================================================
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Tool root only: venv, l4_local.py, the memory CLI, and the Makefile. The
+# mutation target is the caller's git toplevel (resolve_work_root), which is
+# this checkout only when Cursor-Governance is the clone being edited.
+GOV_ROOT = Path(__file__).resolve().parent.parent
 MEMORY_CLI_MODULE = "ops.memory.cli"  # canonical control plane (stage C11); never a provider
-REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
+REPORT_GENERATOR = GOV_ROOT / "scripts" / "generate_gmp_report.py"
 TEST_GENERATOR_MODULE = "core.testing"
-README_GENERATOR = REPO_ROOT / "scripts" / "generate_readme.py"
-STATE_FILE = REPO_ROOT / ".l9" / "gmp" / "executor-state.json"
-L4_LOCAL = REPO_ROOT / "ops" / "autonomy" / "l4_local.py"
-LEGACY_STATE_FILE = REPO_ROOT / ".gmp_executor_state.json"
+README_GENERATOR = GOV_ROOT / "scripts" / "generate_readme.py"
+L4_LOCAL = GOV_ROOT / "ops" / "autonomy" / "l4_local.py"
 
 EXIT_NO_SCOPE = 2
 EXIT_NO_TASK = 2
+EXIT_NO_PLAN = 2
+EXIT_NO_WORKSPACE = 2
+EXIT_OUT_OF_WORKSPACE = 2
 READY_FOR_BUILD = "READY_FOR_BUILD"
 NO_PLAN = "NO_PLAN"
 NO_SCOPE = "NO_SCOPE"
 NO_TASK = "NO_TASK"
+NO_WORKSPACE = "NO_WORKSPACE"
+OUT_OF_WORKSPACE = "OUT_OF_WORKSPACE"
 
 FILES_HEADING_RE = re.compile(r"^##\s+Files\b", re.I)
 NEXT_HEADING_RE = re.compile(r"^##\s+")
@@ -101,21 +110,64 @@ def adapter_publish_surface() -> bool:
     return surface in ADAPTER_PUBLISH_SURFACES
 
 
-def _todos_json_file(raw_path: str) -> Path:
-    """Resolve a ``--todos-json`` path and require it under ``REPO_ROOT``."""
+def resolve_work_root(explicit: str | None) -> tuple[Path, str | None] | None:
+    """Return ``(git toplevel, owner/name or None)`` for the clone being mutated.
+
+    Candidate is ``explicit``, else a non-empty ``WS``, else the cwd. A subpath
+    normalizes to its toplevel. ``None`` means no git work tree: the caller
+    prints nothing more and exits ``NO_WORKSPACE``. Never falls back to
+    ``GOV_ROOT``.
+    """
+    raw = (explicit or "").strip() or (os.environ.get("WS") or "").strip()
+    candidate = Path(raw).expanduser().resolve() if raw else Path.cwd().resolve()
+    # sys.path[0] is workflows/, so `ops` is importable only from GOV_ROOT.
+    if str(GOV_ROOT) not in sys.path:
+        sys.path.insert(0, str(GOV_ROOT))
+    from ops.memory.namespace_context import repository_identity_for
+
+    git_root, identity = repository_identity_for(candidate)
+    if git_root is None:
+        print(f"No git work tree at {candidate}")
+        print(NO_WORKSPACE)
+        return None
+    return Path(git_root).resolve(), identity
+
+
+def _confined(work_root: Path, rel: str) -> bool:
+    if not rel:
+        return True
+    try:
+        (work_root / rel).resolve().relative_to(work_root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def resolve_plan_path(raw: Path, work_root: Path) -> tuple[Path | None, list[Path]]:
+    """First existing of: absolute arg, ``work_root/arg``, ``~/.cursor/plans/<name>``."""
+    raw = raw.expanduser()
+    tried = [raw] if raw.is_absolute() else [work_root / raw]
+    tried.append(Path.home() / ".cursor" / "plans" / raw.name)
+    for path in tried:
+        if path.is_file():
+            return path, tried
+    return None, tried
+
+
+def _todos_json_file(raw_path: str, work_root: Path) -> Path:
+    """Resolve a ``--todos-json`` path and require it under ``work_root``."""
     candidate = Path(raw_path).expanduser()
     if not candidate.is_absolute():
-        candidate = REPO_ROOT / candidate
+        candidate = work_root / candidate
     resolved = candidate.resolve()
-    root = REPO_ROOT.resolve()
     try:
-        resolved.relative_to(root)
+        resolved.relative_to(work_root.resolve())
     except ValueError as exc:
-        raise ValueError("--todos-json path must be under the repository root") from exc
+        raise ValueError("--todos-json path must be under the work root") from exc
     return resolved
 
 
-def parse_todos_json(raw: str) -> list[dict[str, str]]:
+def parse_todos_json(raw: str, work_root: Path) -> list[dict[str, str]]:
     """Parse ``--todos-json`` (inline JSON or ``@path`` / path to a JSON file).
 
     Accepts a list of objects with ``id``, ``task`` (or ``description``), and
@@ -127,9 +179,9 @@ def parse_todos_json(raw: str) -> list[dict[str, str]]:
     if not payload:
         raise ValueError("--todos-json is empty")
     if payload.startswith("@"):
-        payload = _todos_json_file(payload[1:]).read_text(encoding="utf-8")
+        payload = _todos_json_file(payload[1:], work_root).read_text(encoding="utf-8")
     elif not payload.lstrip().startswith("["):
-        payload = _todos_json_file(payload).read_text(encoding="utf-8")
+        payload = _todos_json_file(payload, work_root).read_text(encoding="utf-8")
     data = json.loads(payload)
     if not isinstance(data, list):
         raise ValueError("--todos-json must be a JSON list")
@@ -287,6 +339,8 @@ class GMPState:
     # falls into the interactive DAG, where a closed stdin reads as
     # "No TODOs defined" and then "User aborted".
     authorized_by: str = ""
+    work_root: str = ""
+    repository_identity: str = ""
     generated_tests: list[str] = field(default_factory=list)
     generated_readmes: list[str] = field(default_factory=list)
 
@@ -347,7 +401,14 @@ README_KEYWORDS = ["readme", "documentation", "docs", "module", "new module", "a
 class GMPExecutor:
     """Executes the GMP DAG."""
 
-    def __init__(self):
+    def __init__(self, work_root: Path, repository_identity: str | None = None):
+        self.work_root = work_root
+        self.repository_identity = repository_identity
+        self.state_file = work_root / ".l9" / "gmp" / "executor-state.json"
+        # The pre-.l9 state location only ever existed in the governance clone.
+        self.legacy_state_file: Path | None = (
+            work_root / ".gmp_executor_state.json" if work_root == GOV_ROOT else None
+        )
         self.state: GMPState | None = None
         self.authorized = False
         self.todos_json: str | None = None
@@ -356,13 +417,20 @@ class GMPExecutor:
         self.mode = "full"
         self.subprocess_log: list[str] = []
 
+    def has_state(self) -> bool:
+        if self.state_file.exists():
+            return True
+        return self.legacy_state_file is not None and self.legacy_state_file.exists()
+
     def _save_state(self):
         if self.state:
-            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            STATE_FILE.write_text(json.dumps(self.state.to_dict(), indent=2))
+            self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            self.state_file.write_text(json.dumps(self.state.to_dict(), indent=2))
 
     def _load_state(self) -> bool:
-        path = STATE_FILE if STATE_FILE.exists() else LEGACY_STATE_FILE
+        path = self.state_file
+        if not path.exists() and self.legacy_state_file is not None:
+            path = self.legacy_state_file
         if path.exists():
             data = json.loads(path.read_text())
             self.state = GMPState.from_dict(data)
@@ -370,28 +438,42 @@ class GMPExecutor:
         return False
 
     def _clear_state(self):
-        if STATE_FILE.exists():
-            STATE_FILE.unlink()
-        if LEGACY_STATE_FILE.exists():
-            LEGACY_STATE_FILE.unlink()
+        if self.state_file.exists():
+            self.state_file.unlink()
+        if self.legacy_state_file is not None and self.legacy_state_file.exists():
+            self.legacy_state_file.unlink()
         self.state = None
 
     def _record_subprocess(self, cmd: str) -> None:
         self.subprocess_log.append(cmd)
         print(f"SUBPROCESS: {cmd}")
 
-    def _run_argv(self, argv: list[str]) -> tuple[int, str, str]:
+    def _run_argv(self, argv: list[str], *, cwd: Path) -> tuple[int, str, str]:
         rendered = " ".join(argv)
         self._record_subprocess(rendered)
         if dry_run():
             return 0, "", ""
         result = subprocess.run(
             argv,
-            cwd=REPO_ROOT,
+            cwd=cwd,
             capture_output=True,
             text=True,
         )
         return result.returncode, result.stdout, result.stderr
+
+    def _memory_argv(self, *args: str) -> list[str]:
+        """Memory CLI argv; it runs from GOV_ROOT (``ops`` is not installed)."""
+        return [
+            sys.executable,
+            "-m",
+            MEMORY_CLI_MODULE,
+            *args,
+            "--workspace",
+            str(self.work_root),
+        ]
+
+    def _make_argv(self, target: str) -> list[str]:
+        return ["make", "-C", str(GOV_ROOT), target, f"WS={self.work_root}"]
 
     def _maybe_l4_begin(self) -> None:
         if not l4_enabled():
@@ -405,12 +487,12 @@ class GMPExecutor:
             sys.executable,
             str(L4_LOCAL),
             "--workspace",
-            str(REPO_ROOT),
+            str(self.work_root),
             "begin",
             "--contract-id",
             f"gmp-{self.state.gmp_id}",
         ]
-        code, stdout, stderr = self._run_argv(argv)
+        code, stdout, stderr = self._run_argv(argv, cwd=GOV_ROOT)
         if code != 0:
             print(f"L4 begin skipped or failed: {stderr or stdout}")
 
@@ -426,8 +508,8 @@ class GMPExecutor:
         # unrecorded lets the kernel latch surface its L9_AGENT_REQUIRED block
         # so an agent applies them to the finished tree, then records.
         for sub in ("authorize-release",):
-            argv = [sys.executable, str(L4_LOCAL), "--workspace", str(REPO_ROOT), sub]
-            code, stdout, stderr = self._run_argv(argv)
+            argv = [sys.executable, str(L4_LOCAL), "--workspace", str(self.work_root), sub]
+            code, stdout, stderr = self._run_argv(argv, cwd=GOV_ROOT)
             if code != 0:
                 print(f"L4 {sub} failed: {stderr or stdout}")
 
@@ -468,9 +550,7 @@ class GMPExecutor:
 
         context_lines = []
         for query in searches:
-            code, stdout, stderr = self._run_argv(
-                [sys.executable, "-m", MEMORY_CLI_MODULE, "search", query]
-            )
+            code, stdout, stderr = self._run_argv(self._memory_argv("search", query), cwd=GOV_ROOT)
             if code != 0:
                 stdout = "Memory unavailable"
             if stdout.strip():
@@ -500,6 +580,8 @@ class GMPExecutor:
         print(f"GMP ID: {self.state.gmp_id}")
         print(f"Tier: {self.state.tier}")
         print(f"Task: {self.state.task}")
+        print(f"Workspace: {self.work_root}")
+        print(f"Identity: {self.repository_identity or 'unknown'}")
         print()
 
         if self.authorized:
@@ -507,7 +589,7 @@ class GMPExecutor:
             source = ""
             if self.todos_json:
                 try:
-                    todos = parse_todos_json(self.todos_json)
+                    todos = parse_todos_json(self.todos_json, self.work_root)
                 except (OSError, ValueError, json.JSONDecodeError) as exc:
                     return StepResult(
                         success=False,
@@ -525,6 +607,11 @@ class GMPExecutor:
                 )
                 print(msg)
                 return StepResult(success=False, error=msg)
+            escaped = [t["file"] for t in todos if not _confined(self.work_root, t["file"])]
+            if escaped:
+                for path in escaped:
+                    print(f"Todo file outside the work root: {path}")
+                return StepResult(success=False, error=OUT_OF_WORKSPACE)
             self.state.todo_plan = todos
             label = (
                 "TODO PLAN LOCKED FROM PLAN"
@@ -618,7 +705,7 @@ class GMPExecutor:
 
         errors = []
         for todo in self.state.todo_plan:
-            filepath = REPO_ROOT / todo["file"]
+            filepath = self.work_root / todo["file"]
             if todo["action"].upper() != "CREATE":
                 if not filepath.exists():
                     errors.append(f"❌ File not found: {todo['file']}")
@@ -732,7 +819,7 @@ class GMPExecutor:
 
         generated = []
         for py_file in py_files:
-            filepath = REPO_ROOT / py_file
+            filepath = self.work_root / py_file
             if not filepath.exists():
                 print(f"  ⚠️  {py_file} not found, skipping")
                 continue
@@ -758,7 +845,7 @@ class GMPExecutor:
                     filepath.read_text(encoding="utf-8"),
                     py_file.replace("/", ".").replace(".py", ""),
                 )
-                test_path = REPO_ROOT / test_file
+                test_path = self.work_root / test_file
                 test_path.parent.mkdir(parents=True, exist_ok=True)
                 test_path.write_text(tests, encoding="utf-8")
                 print(f"     ✅ generated {len(tests.splitlines())} lines")
@@ -811,7 +898,7 @@ class GMPExecutor:
 
         generated = []
         for dir_path in dirs_with_changes:
-            readme_path = REPO_ROOT / dir_path / "README.md"
+            readme_path = self.work_root / dir_path / "README.md"
 
             # Skip if README already exists
             if readme_path.exists():
@@ -827,8 +914,9 @@ class GMPExecutor:
                         sys.executable,
                         str(README_GENERATOR),
                         "--dir",
-                        str(REPO_ROOT / dir_path),
-                    ]
+                        str(self.work_root / dir_path),
+                    ],
+                    cwd=GOV_ROOT,
                 )
                 if code == 0:
                     print("     ✅ Generated via script")
@@ -864,7 +952,7 @@ class GMPExecutor:
         dir_name = dir_path.split("/")[-1]
 
         # List Python files in directory
-        py_files = list((REPO_ROOT / dir_path).glob("*.py"))
+        py_files = list((self.work_root / dir_path).glob("*.py"))
         py_files = [f.name for f in py_files if f.name != "__init__.py"]
 
         content = f"""# {dir_name.replace("_", " ").title()}
@@ -912,7 +1000,8 @@ from {module_path} import ...
         py_files = [t["file"] for t in self.state.todo_plan if t["file"].endswith(".py")]
         if py_files:
             code, stdout, stderr = self._run_argv(
-                [sys.executable, "-m", "py_compile", *[str(REPO_ROOT / f) for f in py_files]]
+                [sys.executable, "-m", "py_compile", *[str(self.work_root / f) for f in py_files]],
+                cwd=self.work_root,
             )
             if code == 0:
                 validations.append({"gate": "py_compile", "result": "✅"})
@@ -946,7 +1035,7 @@ from {module_path} import ...
         )
 
         code, stdout, stderr = self._run_argv(
-            [sys.executable, "-m", MEMORY_CLI_MODULE, "write", summary, "--kind", "lesson"]
+            self._memory_argv("write", summary, "--kind", "lesson"), cwd=GOV_ROOT
         )
 
         if "failed" in stdout.lower() or code != 0:
@@ -962,7 +1051,7 @@ from {module_path} import ...
     # =========================================================================
     def _write_local_report(self) -> Path:
         assert self.state is not None
-        reports = REPO_ROOT / "reports"
+        reports = self.work_root / "reports"
         reports.mkdir(parents=True, exist_ok=True)
         slug = re.sub(r"[^a-z0-9]+", "-", self.state.task.lower())[:40].strip("-") or "gmp"
         path = reports / f"{self.state.gmp_id}-{slug}.md"
@@ -1007,7 +1096,7 @@ from {module_path} import ...
             for v in self.state.validations:
                 argv.extend(["--validation", f"{v['gate']}|{v['result']}"])
             argv.extend(["--summary", "GMP execution via DAG executor", "--skip-verify"])
-            code, stdout, stderr = self._run_argv(argv)
+            code, stdout, stderr = self._run_argv(argv, cwd=self.work_root)
             if code == 0:
                 for line in stdout.split("\n"):
                     if "Report saved:" in line or "reports/" in line:
@@ -1018,7 +1107,7 @@ from {module_path} import ...
             print(f"Report generator failed, writing local report: {stderr}")
 
         path = self._write_local_report()
-        self.state.report_path = str(path.relative_to(REPO_ROOT))
+        self.state.report_path = str(path.relative_to(self.work_root))
         print(f"Report saved: {self.state.report_path}")
         return StepResult(success=True, output=self.state.report_path)
 
@@ -1047,7 +1136,7 @@ from {module_path} import ...
                 response = "NO"
 
         if response == "DIFF":
-            code, stdout, stderr = self._run_argv(["git", "diff", "--stat"])
+            code, stdout, stderr = self._run_argv(["git", "diff", "--stat"], cwd=self.work_root)
             print(stdout)
             try:
                 response = input("Commit? [YES/NO]: ").strip().upper()
@@ -1058,8 +1147,8 @@ from {module_path} import ...
             paths = [t["file"] for t in self.state.todo_plan if t.get("file")]
             if self.state.report_path:
                 report_rel = self.state.report_path
-                if report_rel.startswith(str(REPO_ROOT)):
-                    report_rel = str(Path(report_rel).relative_to(REPO_ROOT))
+                if report_rel.startswith(str(self.work_root)):
+                    report_rel = str(Path(report_rel).relative_to(self.work_root))
                 if "reports/" in report_rel:
                     # Keep only the reports/... suffix when the generator printed a sentence.
                     idx = report_rel.find("reports/")
@@ -1067,8 +1156,10 @@ from {module_path} import ...
                 paths.append(report_rel.split()[0])
             commit_msg = f"{self.state.gmp_id}: {self.state.task}"
             add_argv = ["git", "add", "--"] + paths
-            self._run_argv(add_argv)
-            code, stdout, stderr = self._run_argv(["git", "commit", "-m", commit_msg])
+            self._run_argv(add_argv, cwd=self.work_root)
+            code, stdout, stderr = self._run_argv(
+                ["git", "commit", "-m", commit_msg], cwd=self.work_root
+            )
 
             if code == 0:
                 print("Changes committed")
@@ -1132,7 +1223,7 @@ from {module_path} import ...
 
     def _next_gmp_id(self) -> str:
         gmp_num = 129
-        reports_dirs = [REPO_ROOT / "reports" / "GMP Reports", REPO_ROOT / "reports"]
+        reports_dirs = [self.work_root / "reports" / "GMP Reports", self.work_root / "reports"]
         for reports_dir in reports_dirs:
             if not reports_dir.is_dir():
                 continue
@@ -1154,16 +1245,29 @@ from {module_path} import ...
             started_at=datetime.now().isoformat(),
             current_step=STEP_ORDER[0],
             authorized_by="slash-gmp" if self.authorized else "",
+            work_root=str(self.work_root),
+            repository_identity=self.repository_identity or "",
         )
         self._save_state()
 
+    def state_bound_elsewhere(self) -> bool:
+        """True when loaded state names a different clone than this executor."""
+        if self.state is None or not self.state.work_root:
+            return False
+        if Path(self.state.work_root) == self.work_root:
+            return False
+        print(f"GMP state work root: {self.state.work_root}")
+        print(f"Resolved work root: {self.work_root}")
+        return True
+
     def _catalog_gate(self) -> StepResult:
-        self._record_subprocess("make precommit-repo")
+        argv = self._make_argv("precommit-repo")
+        self._record_subprocess(" ".join(argv))
         if dry_run():
             return StepResult(success=True, output="dry-run catalog")
         result = subprocess.run(
-            ["make", "precommit-repo"],
-            cwd=REPO_ROOT,
+            argv,
+            cwd=GOV_ROOT,
             capture_output=True,
             text=True,
         )
@@ -1178,15 +1282,15 @@ from {module_path} import ...
             print("Cursor finalize: catalog + commit + STOP. Do not make pr.")
             return
         self._maybe_l4_release()
-        env_prefix = "PR_REMEDIATE=1 make pr"
-        self._record_subprocess(env_prefix)
+        argv = self._make_argv("pr")
+        self._record_subprocess("PR_REMEDIATE=1 " + " ".join(argv))
         if dry_run():
             return
         env = os.environ.copy()
         env["PR_REMEDIATE"] = "1"
         result = subprocess.run(
-            ["make", "pr"],
-            cwd=REPO_ROOT,
+            argv,
+            cwd=GOV_ROOT,
             env=env,
             capture_output=True,
             text=True,
@@ -1218,8 +1322,10 @@ from {module_path} import ...
             # message: callers grep stdout for NO_SCOPE the same way they grep
             # for NO_TASK and READY_FOR_BUILD. Printing `scope.error or
             # NO_SCOPE` dropped it on exactly the runs that had a diagnostic.
-            print(NO_SCOPE)
             self._clear_state()
+            if scope.error == OUT_OF_WORKSPACE:
+                return EXIT_OUT_OF_WORKSPACE
+            print(NO_SCOPE)
             return EXIT_NO_SCOPE
         self.state.completed_steps.append(StepType.SCOPE_LOCK.value)
         self._step_user_gate()
@@ -1333,8 +1439,9 @@ def main():
         epilog="""
 Examples:
     workflows/gmp_executor.py "add validation to registry"
-    workflows/gmp_executor.py --authorized-by slash-gmp --plan path.plan.md --mode start "task"
-    workflows/gmp_executor.py --resume --mode finalize --commit-when-done
+    workflows/gmp_executor.py --workspace "$WORK" --authorized-by slash-gmp \\
+        --plan path.plan.md --mode start "task"
+    workflows/gmp_executor.py --workspace "$WORK" --resume --mode finalize --commit-when-done
         """,
     )
 
@@ -1355,18 +1462,46 @@ Examples:
     )
     parser.add_argument("--mode", choices=["start", "finalize", "full"], default=None)
     parser.add_argument("--commit-when-done", action="store_true")
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help=(
+            "Clone to mutate (normalized to its git toplevel). Default: WS, else cwd. "
+            "This checkout supplies tools only."
+        ),
+    )
 
     args = parser.parse_args()
 
-    executor = GMPExecutor()
+    bound = resolve_work_root(args.workspace)
+    if bound is None:
+        sys.exit(EXIT_NO_WORKSPACE)
+    work_root, identity = bound
+
+    executor = GMPExecutor(work_root, identity)
     executor.authorized = args.authorized_by == "slash-gmp"
     executor.commit_when_done = bool(args.commit_when_done)
     if getattr(args, "todos_json", None):
         executor.todos_json = args.todos_json
-    if args.plan is not None:
-        plan = args.plan if args.plan.is_absolute() else REPO_ROOT / args.plan
-        executor.plan_path = plan
     executor.mode = args.mode or "full"
+
+    if args.reset:
+        executor._clear_state()
+        print("State cleared")
+        return
+
+    if executor._load_state() and executor.state_bound_elsewhere():
+        sys.exit(EXIT_NO_WORKSPACE)
+    executor.state = None
+
+    if args.plan is not None:
+        plan, tried = resolve_plan_path(args.plan, work_root)
+        if plan is None:
+            for path in tried:
+                print(f"Plan not found: {path}")
+            print(NO_PLAN)
+            sys.exit(EXIT_NO_PLAN)
+        executor.plan_path = plan
 
     if not executor.authorized and (args.resume or args.mode == "finalize"):
         # Restore authorization stamped into the state file by the /gmp start,
@@ -1391,11 +1526,6 @@ Examples:
                     "incomplete; refusing to restore authorization for finalize"
                 )
 
-    if args.reset:
-        executor._clear_state()
-        print("State cleared")
-        return
-
     if args.status:
         executor.status()
         return
@@ -1408,7 +1538,7 @@ Examples:
         sys.exit(executor.run_authorized_full(args.task or "", args.tier))
 
     if args.resume:
-        if not STATE_FILE.exists() and not LEGACY_STATE_FILE.exists():
+        if not executor.has_state():
             print("No GMP to resume")
             sys.exit(1)
         success = executor.run("", resume=True)
