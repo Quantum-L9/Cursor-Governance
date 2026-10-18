@@ -647,6 +647,47 @@ class SkillStateUnfreezeTests(unittest.TestCase):
             self.assertIn("l9-a", result2.removed)
             self.assertFalse((target / "l9-a").exists())
 
+    def test_unregistered_l9_symlink_removed_without_state(self) -> None:
+        from reconcile_claude_l9_skills import reconcile_scope
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "gov"
+            for name in ("l9-a", "l9-retired"):
+                skill = root / "skills" / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text("# s\n", encoding="utf-8")
+            registry = {
+                "source_manifest_sha256": "x",
+                "skills": [{"name": "l9-a", "path": "skills/l9-a"}],
+            }
+            ws = base / "ws"
+            target = ws / ".claude" / "skills"
+            target.mkdir(parents=True)
+            (target / "l9-retired").symlink_to(
+                root / "skills" / "l9-retired", target_is_directory=True
+            )
+            local = target / "defense-attorney"
+            local.mkdir()
+            (local / "SKILL.md").write_text("# local\n", encoding="utf-8")
+
+            checked = reconcile_scope(root, registry, "project", ws, "symlink", True)
+            self.assertIn("obsolete:l9-retired", checked.drift)
+            self.assertTrue((target / "l9-retired").is_symlink())
+
+            result = reconcile_scope(root, registry, "project", ws, "symlink", False)
+            self.assertIn("l9-retired", result.removed)
+            self.assertFalse((target / "l9-retired").exists())
+            self.assertFalse((target / "l9-retired").is_symlink())
+            self.assertTrue((target / "l9-a").is_symlink())
+            self.assertTrue((local / "SKILL.md").is_file())
+            state = json.loads((target / ".l9-managed-skills.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["skills"], ["l9-a"])
+
+            again = reconcile_scope(root, registry, "project", ws, "symlink", True)
+            self.assertEqual(again.drift, [])
+            self.assertEqual(again.conflicts, [])
+
 
 class ConsumerOwnedSkillEntriesTests(unittest.TestCase):
     """A repository's committed skill links never set the bootstrap's status."""

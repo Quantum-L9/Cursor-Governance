@@ -26,6 +26,9 @@ from typing import Any
 import yaml
 
 DEFAULT_OUT = Path("ops/generated/skill-registry.json")
+# Claude Code reads this copy. It is the same bytes as DEFAULT_OUT, written
+# and checked here so the adapter register cannot drift from the repo register.
+CLAUDE_MIRROR_REL = Path("environment/agents/adapters/claude-code/generated/skill-registry.json")
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -186,20 +189,37 @@ def main() -> int:
     # --root/--out arguments cannot escape the repository root (path traversal).
     if not out.is_relative_to(root):
         raise SystemExit(f"refusing to access path outside repository root: {out}")
+    targets = [out]
+    # A custom --out is a caller-owned file. The Claude mirror stays tied to
+    # the repo register only.
+    if out == (root / DEFAULT_OUT).resolve():
+        mirror = (root / CLAUDE_MIRROR_REL).resolve()
+        if not mirror.is_relative_to(root):
+            raise SystemExit(f"refusing to access path outside repository root: {mirror}")
+        if mirror.parent.is_dir():
+            targets.append(mirror)
     registry_text = serialized(build_registry(root))
     if args.check:
-        if not out.is_file() or out.read_text(encoding="utf-8") != registry_text:
-            print(f"STALE: {out}")
+        stale = [
+            path
+            for path in targets
+            if not path.is_file() or path.read_text(encoding="utf-8") != registry_text
+        ]
+        if stale:
+            for path in stale:
+                print(f"STALE: {path}")
             return 1
-        print(f"CURRENT: {out}")
+        for path in targets:
+            print(f"CURRENT: {path}")
         return 0
 
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if out.is_file() and out.read_text(encoding="utf-8") == registry_text:
-        print(f"CURRENT: {out}")
-        return 0
-    out.write_text(registry_text, encoding="utf-8")
-    print(f"WROTE: {out}")
+    for path in targets:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.is_file() and path.read_text(encoding="utf-8") == registry_text:
+            print(f"CURRENT: {path}")
+            continue
+        path.write_text(registry_text, encoding="utf-8")
+        print(f"WROTE: {path}")
     return 0
 
 
