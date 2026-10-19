@@ -458,7 +458,15 @@ def sync(
                 "environment/skill-adapters/",
             ),
         )
-        if skills_touched:
+        # A consumer reached through `make pr WS=…` may keep its own skills/
+        # tree (cryptoxdog/IB-Odoo_19: PLASTICOS_SKILLS_MANIFEST.yaml) without
+        # this repository's skill plane. skills/AUTONOMY_MANIFEST.yaml marks that
+        # plane; run_pr_gate.sh's local-activation heal keys on it as well.
+        # Governance itself keeps the hard failure if the manifest is missing.
+        skill_plane = (
+            root == GOVERNANCE_ROOT or (root / "skills" / "AUTONOMY_MANIFEST.yaml").is_file()
+        )
+        if skills_touched and skill_plane:
             assert_no_live_deprecated_skills(root)
             heal_orphan_skills(root, wrote, warnings)
             sync_skill_registry(root, wrote)

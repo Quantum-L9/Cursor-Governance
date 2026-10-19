@@ -205,3 +205,26 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
     assert registry["generator"] == "ops/scripts/build_claude_skill_registry.py"
     assert registry["regenerate"] == "make claude-skill-registry"
     assert makefile_has_target(repo, "claude-skill-registry")
+
+
+def test_consumer_skills_tree_without_the_skill_plane_is_left_alone(tmp_path: Path) -> None:
+    """A consumer reached through `make pr WS=…` may keep its own skills/ tree.
+
+    cryptoxdog/IB-Odoo_19 has skills/<name>/SKILL.md under its own
+    PLASTICOS_SKILLS_MANIFEST.yaml. The gate's generated heal used to read
+    skills/AUTONOMY_MANIFEST.yaml there and fail make pr with ENOENT. Without
+    that manifest the tree is not this repository's skill plane, so the skills
+    block neither errors nor writes.
+    """
+    skill = tmp_path / "skills" / "consumer-skill" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("---\nname: consumer-skill\n---\n# Consumer\n", encoding="utf-8")
+    (tmp_path / "skills" / "PLASTICOS_SKILLS_MANIFEST.yaml").write_text("skills: []\n", encoding="utf-8")
+    before = skill.read_text(encoding="utf-8")
+
+    result = sync(tmp_path, changed_paths={"skills/consumer-skill/SKILL.md"})
+
+    assert result["errors"] == []
+    assert result["wrote"] == []
+    assert skill.read_text(encoding="utf-8") == before
+    assert not (tmp_path / "skills" / "AUTONOMY_MANIFEST.yaml").exists()
