@@ -46,6 +46,7 @@ GOV_ONLY_HOOKS = {
     "gh-package-deps-preflight": "ops/scripts/validate_gh_package_deps.py",
     "max-velocity": "ops/scripts/validate_max_velocity.py",
     "adr-identity": "ops/scripts/validate_adr_identity.py",
+    "cursor-skill-projection": "environment/agents/adapters/cursor/validate_skill_projection.py",
 }
 
 #: A hook whose entry is NOT a governance-tree path. It must keep running in a

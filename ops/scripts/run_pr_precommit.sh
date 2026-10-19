@@ -168,7 +168,15 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # Quantum-L9/.github it rejects that repository's accepted ADR-012..014 headings
 # and demands an index that repository does not have, so there is nothing for it
 # to check there. It stays enforced on the governance configuration.
-_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity,adr-identity"
+#
+# `cursor-skill-projection` is guarded by `files: ^(…|skills/|…)`, and every
+# consumer that keeps its own `skills/` tree matches that guard. Observed on
+# cryptoxdog/IB-Odoo_19 (PR #261 edits skills/plasticos-odoo-docker-testing/):
+#   can't open file '<consumer>/environment/agents/adapters/cursor/validate_skill_projection.py'
+# It validates this repository's Cursor plugin projection (l9-skill-gateway and
+# ops/generated/skill-registry.json), which a consumer does not have. It stays
+# enforced on the governance configuration.
+_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity,adr-identity,cursor-skill-projection"
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
