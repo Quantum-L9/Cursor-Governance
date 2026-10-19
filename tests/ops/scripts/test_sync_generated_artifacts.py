@@ -219,7 +219,9 @@ def test_consumer_skills_tree_without_the_skill_plane_is_left_alone(tmp_path: Pa
     skill = tmp_path / "skills" / "consumer-skill" / "SKILL.md"
     skill.parent.mkdir(parents=True)
     skill.write_text("---\nname: consumer-skill\n---\n# Consumer\n", encoding="utf-8")
-    (tmp_path / "skills" / "PLASTICOS_SKILLS_MANIFEST.yaml").write_text("skills: []\n", encoding="utf-8")
+    (tmp_path / "skills" / "PLASTICOS_SKILLS_MANIFEST.yaml").write_text(
+        "skills: []\n", encoding="utf-8"
+    )
     before = skill.read_text(encoding="utf-8")
 
     result = sync(tmp_path, changed_paths={"skills/consumer-skill/SKILL.md"})
