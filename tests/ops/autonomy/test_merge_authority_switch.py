@@ -20,6 +20,7 @@ GATE = AUTONOMY / "merge_gate.py"
 CURSOR_HOOK = REPO / "ops" / "hooks" / "before_submit_merge_instruction.py"
 sys.path.insert(0, str(AUTONOMY))
 
+import authorize_merge  # noqa: E402
 import merge_authority_switch as switch  # noqa: E402
 import merge_gate  # noqa: E402
 import operator_merge_instruction as omi  # noqa: E402
@@ -239,3 +240,126 @@ def test_disabled_recorder_is_silent_for_cursor(
     assert json.loads(proc.stdout) == {"continue": True}
     assert not store.exists()
     assert not (tmp_path / ".l9" / "autonomy").exists()
+
+
+# --- authorize_merge.py (the grant writer agents on both hosts still reach) ------
+
+ODOO = "cryptoxdog/IB-Odoo_19"
+ODOO_HEAD = "063bcb34da30a2fc7b1e5458dfbf2b05e232b8a6"
+
+
+def _open_pr(repo: str, pr: int) -> dict:
+    return {
+        "state": "open",
+        "merged": False,
+        "created_at": "2026-10-17T15:57:05Z",
+        "head": {"sha": ODOO_HEAD},
+        "user": {"login": "cryptoxdog"},
+    }
+
+
+def _cursor_receipt(store: Path) -> None:
+    """The receipt Cursor's beforeSubmitPrompt recorded for "merge pr's 260-266
+    safely" — the exact one strict mode refuses as BLOCKED_HOST_ORIGIN."""
+    payload = {
+        "hook_event_name": "beforeSubmitPrompt",
+        "conversation_id": "40bbda94-3477-4e54-b856-9242ff728b52",
+        "generation_id": "613cab12-b46a-4d02-af24-3e13bc29f1a5",
+        "workspace_roots": ["/Users/ib-mac/IB-Odoo_19"],
+        "prompt": "merge pr's 260-266 safely",
+    }
+    omi.record_instructions(
+        "merge pr's 260-266 safely",
+        host="cursor",
+        session_id="40bbda94-3477-4e54-b856-9242ff728b52",
+        cwd_repo=ODOO,
+        path=store,
+        provenance=omi.host_provenance("cursor", payload),
+    )
+
+
+def _grant(
+    tmp_path: Path, store: Path, *extra: str, principal_must_not_run: bool = True
+) -> tuple[int, list[dict]]:
+    auth = tmp_path / "auth.json"
+
+    def no_principal(repo: str) -> dict:
+        raise AssertionError("disabled mode must not need the session principal")
+
+    code = authorize_merge.main(
+        ["--repo", ODOO, "--pr", "261", "--head-sha", ODOO_HEAD, "--auth-file", str(auth), *extra],
+        confirm=lambda _t: pytest.fail("disabled mode must never ask a terminal"),
+        instruction_path=store,
+        pull_request=_open_pr,
+        session_principal=no_principal,
+    )
+    grants = json.loads(auth.read_text(encoding="utf-8"))["authorizations"] if auth.exists() else []
+    return code, grants
+
+
+def test_disabled_cursor_receipt_becomes_a_grant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    store = tmp_path / "operator-merge-instructions.json"
+    _cursor_receipt(store)
+    monkeypatch.setenv(switch.ENV_OVERRIDE, "disabled")
+    code, grants = _grant(tmp_path, store, "--operator-instruction")
+    assert code == 0
+    (entry,) = grants
+    assert merge_gate.grant_matches(entry, ODOO, "261", ODOO_HEAD)
+    assert entry["provenance"]["host"] == "cursor"
+
+
+def test_strict_cursor_receipt_is_still_blocked_host_origin(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    store = tmp_path / "operator-merge-instructions.json"
+    _cursor_receipt(store)
+    monkeypatch.setenv(switch.ENV_OVERRIDE, "strict")
+    code, grants = _grant(tmp_path, store, "--operator-instruction")
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert grants == []
+
+
+def test_disabled_operator_mode_needs_no_receipt(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv(switch.ENV_OVERRIDE, "disabled")
+    code, grants = _grant(tmp_path, tmp_path / "empty.json", "--operator-instruction")
+    assert code == 0
+    (entry,) = grants
+    assert merge_gate.grant_matches(entry, ODOO, "261", ODOO_HEAD)
+
+
+def test_disabled_terminal_mode_needs_no_tty(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv(switch.ENV_OVERRIDE, "disabled")
+    code, grants = _grant(tmp_path, tmp_path / "empty.json")
+    assert code == 0
+    (entry,) = grants
+    assert entry["provenance"] == {"channel": "enforcement_disabled"}
+
+
+def test_disabled_operator_mode_still_refuses_a_moved_head(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv(switch.ENV_OVERRIDE, "disabled")
+    auth = tmp_path / "auth.json"
+    code = authorize_merge.main(
+        [
+            "--repo",
+            ODOO,
+            "--pr",
+            "261",
+            "--head-sha",
+            "b" * 40,
+            "--auth-file",
+            str(auth),
+            "--operator-instruction",
+        ],
+        instruction_path=tmp_path / "empty.json",
+        pull_request=_open_pr,
+    )
+    assert code == authorize_merge.OPERATOR_REFUSED_EXIT
+    assert not auth.exists()
