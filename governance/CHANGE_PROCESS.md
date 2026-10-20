@@ -77,13 +77,18 @@ Run all repository-supported validation, including:
 
 Do not report validation that was not executed.
 
-### 8. Obtain independent approval
+### 8. Obtain owner authorization
 
-Governance-sensitive changes require authorized human review.
+Governance-sensitive changes require explicit merge authorization from an
+authenticated human who holds authority over the repository (L9-ORG-007,
+policy 4.0.0; CANONICAL_LAW §6.2.14).
 
-The author must not self-approve.
+That human may be the change author: their direct instruction to the coding
+agent, or their GitHub record, is the authorization. Protected filenames alone
+never demand a second human.
 
-Agent approval is insufficient.
+Agent approval is insufficient: an agent cannot provide, fabricate or relay the
+authorization, and a person without repository authority cannot give it.
 
 ### 9. Produce release metadata
 
@@ -136,7 +141,7 @@ Emergency policy changes still require:
 
 - exact incident reference;
 - smallest safe change;
-- independent authorized approval;
+- explicit authorization from an authorized human owner;
 - explicit expiration or follow-up review;
 - validation evidence;
 - retrospective review.

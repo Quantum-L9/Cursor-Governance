@@ -79,7 +79,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_frontmatter_and_map() -> None:
-    _need(SKILL, "version: 5.8.0", "SKILL.md")
+    _need(SKILL, "version: 5.11.0", "SKILL.md")
     _need(SKILL, "tier: exemplary", "SKILL.md")
     _need(SKILL, "disable-model-invocation: true", "SKILL.md")
     match = re.search(r"^description: (.+)$", SKILL, re.M)
@@ -297,10 +297,15 @@ def test_board_and_merge() -> None:
         "oldest_created_at_default: true",
         "stack_safe_merge.py --head-sha {head} --run",
         "never `gh pr update-branch`",
-        "is not merge authority for any PR",
+        "An agent's own Skill call is not merge authority for any PR",
+        "is merge authority for its repository's open PRs (CANONICAL_LAW §6.2.15)",
+        "Only the invoking (parent) agent transcribes",
         "MERGE_PENDING",
         "merge_on_converge: false",
-        "merge_authority: human_grant",
+        "merge_on_direct_invocation: true",
+        "grant_issuer: parent_remediator",
+        "merge_authority: human_github_record_or_operator_prompt_instruction",
+        "operator_instruction_transcription: authorize_merge.py --operator-instruction",
         "self_issue_merge_grant: forbidden",
         "--head-sha {head} --run",
         "isResolved: false",
@@ -312,8 +317,9 @@ def test_board_and_merge() -> None:
         "forbid_reinvoke_handoff: true",
     ):
         _need(SKILL, needle, "SKILL.md")
-    # CANONICAL_LAW §6.2.12: invocation never authorizes merge, and the skill
-    # never self-issues the human grant.
+    # CANONICAL_LAW §6.2.12/§6.2.15: only the operator's typed invocation (or
+    # another human record) authorizes, per PR and head; the skill never
+    # self-issues the grant and never asks for a repository-wide one.
     for retired in (
         "is merge authorization for",
         "merge_on_converge: true",
@@ -490,6 +496,9 @@ CONVERGE_SIGNALS = (
     "merge train",
     "merge the failing",
     "fix the review comments",
+    "pr remediation",
+    "land the open prs",
+    "into main",
 )
 DIAGNOSE_SIGNALS = (
     "/pr ",

@@ -40,7 +40,6 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _PRESERVE_SCRIPTS = _REPO_ROOT / "skills" / "l9-git-work-preserve" / "scripts"
 _FF_SH = _REPO_ROOT / "skills" / "l9-repo-sync" / "scripts" / "ff.sh"
 _RESOLVE_STACK = _REPO_ROOT / "ops" / "scripts" / "resolve_stack_tip.py"
-_AUTHORIZE_MERGE = _REPO_ROOT / "ops" / "autonomy" / "authorize_merge.py"
 GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
@@ -628,23 +627,16 @@ def count_open_prs(repo: Path) -> int:
 
 
 def authorize_merge(repo_slug: str, reason: str) -> None:
-    proc = subprocess.run(
-        [
-            _python(),
-            str(_AUTHORIZE_MERGE),
-            "--repo",
-            repo_slug,
-            "--all-open",
-            "--reason",
-            reason,
-        ],
-        text=True,
-        capture_output=True,
-        check=False,
-        cwd=str(_REPO_ROOT),
+    """Refused: this graph never writes merge authority (CANONICAL_LAW §6.2.12).
+
+    Kept as a named tripwire the tests patch to prove the graph never calls
+    it. Repository-wide authority (``authorize_merge.py --all-open``) is not
+    issuable; a merge needs a per-PR, exact-head human authorization.
+    """
+    del reason
+    raise RuntimeError(
+        f"pr_train never authorizes merge for {repo_slug}; see CANONICAL_LAW §6.2.12–§6.2.15"
     )
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "authorize_merge.py failed")
 
 
 def run_ff(clone: Path) -> subprocess.CompletedProcess[str]:

@@ -14,6 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from select_pr_pytest_paths import (  # noqa: E402
+    _drop_unrunnable,
     root_addopts_ignores,
     root_collect_ignores,
     select_pr_pytest_paths,
@@ -414,3 +415,38 @@ class ContractIngestStripTests(unittest.TestCase):
                 "environment/program-execution/scripts/tests/test_pe_smoke_campaign.py",
                 _velocity_exclude(registry),
             )
+
+
+class CommandSuiteOwnershipTests(unittest.TestCase):
+    """A root-ignored test owned only by a non-pytest suite is not a pytest target.
+
+    The ``skill-contracts`` suite (``command_sequence``) owns ``skills``; its
+    ownership used to keep the conftest-ignored ``skills/_archived/**`` tests in
+    the repo-root scoped run, where the explicit argument overrode
+    ``collect_ignore`` and collection failed on import.
+    """
+
+    ARCHIVED = "skills/_archived/l9-pe-campaign-activate/scripts/test_compile_activation_files.py"
+
+    def test_archived_skill_test_is_root_ignored(self) -> None:
+        self.assertIn(self.ARCHIVED, root_collect_ignores())
+
+    def test_command_suite_ownership_does_not_keep_an_ignored_path(self) -> None:
+        suites = [
+            {"id": "repo-root", "kind": "pytest", "owned_paths": ["."]},
+            {"id": "skill-contracts", "kind": "command_sequence", "owned_paths": ["skills"]},
+        ]
+        keep, dropped = _drop_unrunnable([self.ARCHIVED], suites)
+        self.assertEqual((keep, dropped), ([], [self.ARCHIVED]))
+
+    def test_a_pytest_suite_that_owns_the_path_still_keeps_it(self) -> None:
+        suites = [
+            {"id": "repo-root", "kind": "pytest", "owned_paths": ["."]},
+            {"id": "skills-pytest", "kind": "pytest", "owned_paths": ["skills/_archived"]},
+        ]
+        keep, _ = _drop_unrunnable([self.ARCHIVED], suites)
+        self.assertEqual(keep, [self.ARCHIVED])
+
+    def test_live_registry_never_selects_the_archived_test(self) -> None:
+        selected = select_pr_pytest_paths(["skills/AUTONOMY_MANIFEST.yaml", self.ARCHIVED])
+        self.assertNotIn(self.ARCHIVED, selected)

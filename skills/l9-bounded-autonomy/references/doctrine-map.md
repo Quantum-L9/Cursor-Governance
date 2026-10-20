@@ -17,7 +17,7 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 
 - **Allow:** scoped local git commits; non-force push + PR create/update **only after L4 release_authorized**.
 - **Deny:** mid-execution push/PR (`ops/autonomy/local_execution_gate.py`), `.env` / `.mcp.json` reads, `rm -rf`, force-push, `reset --hard`, `clean -fd`, `gh pr merge --admin`.
-- **Allow ordinary merge:** `Bash(gh pr merge:*)` after `/l9-pr-remediation` (green + mergeable + threads resolved). `merge_gate.py` authorizes merge only from the scoped, expiring receipt `/l9-pr-remediation` writes (or a human `L9_MERGE_AUTHORIZED=<reason>`); no environment boolean is consulted.
+- **Allow ordinary merge:** `Bash(gh pr merge:*)` on the `/l9-pr-remediation` path (green + mergeable + threads resolved), under human authorization bound to the repo, PR and exact head — the operator's typed `/l9-pr-remediation` (CANONICAL_LAW §6.2.15), their recorded chat instruction, or a GitHub record — transcribed by the parent agent with `authorize_merge.py --operator-instruction` and merged with `stack_safe_merge.py --run` (or a human `L9_MERGE_AUTHORIZED=<reason>`); no environment boolean is consulted.
 - **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_MAX_PARALLEL` / `L9_AUTONOMY_MAX_MUTATION_LANES` (Cursor and Claude: `480` / `128` — saturation, bounded by claims), `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default). There is no autonomous-merge env boolean.
 
 ## L4 local autonomy (standing)
@@ -45,7 +45,7 @@ SessionStart / skill-router hooks are **fail-open** (context/telemetry).
 | `waiting_external_releases_compute_lane` | `kind:poll` → `Task(run_in_background: true)`; main continues |
 | `waiting_external_preserves_declared_locks` | Poll owns `pr:<n>` until join/hand-back |
 | `require_join_barrier` | All Tasks terminal + evidence before merge-ready claim |
-| `autonomous_merge: false` | No standing random merges; L4 program/plan Build launch authorizes merge for that stack after green+mergeable (bottom-up) |
+| `autonomous_merge: false` | No standing random merges; an L4 program/plan Build launch is not merge authority (§6.2.12) — merge needs a per-PR human authorization (§6.2.13–§6.2.15) |
 | `concurrency_budget` 4 / 2 | Max 4 Tasks; max 2 `mutation: true` |
 
 ## Dual-surface rule
