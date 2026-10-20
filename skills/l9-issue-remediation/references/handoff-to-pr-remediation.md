@@ -39,10 +39,11 @@ GitHub `Fixes #n` auto-close on merge deadlocks the gate.
 
 ## How (only after the gate)
 
-1. Load **`l9-pr-remediation`** Converge (`commands/l9-pr-remediation.md`) for
-   each owning repo that has open PRs.
-2. That command writes `authorize_merge.py --all-open`, remediates, then
-   `stack_safe_merge.py`. This skill does not merge.
+1. Load **`l9-pr-remediation`** Converge (`skills/l9-pr-remediation/SKILL.md`)
+   for each owning repo that has open PRs.
+2. It remediates, then merges each PR with `stack_safe_merge.py` only under a
+   human authorization bound to that PR and head (CANONICAL_LAW §6.2.15: an
+   agent's own invocation is not one). This skill does not merge.
 3. Do not run a second CI babysit loop inside this skill.
 4. Breadcrumb law for issues must already be satisfied (PICKUP + comments +
    close-if-fixed + conditional session-ref).

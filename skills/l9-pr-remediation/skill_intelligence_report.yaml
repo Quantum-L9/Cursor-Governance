@@ -26,7 +26,7 @@ skill_intelligence_report:
     specificity_score: 5.0
     false_positive_risk_score: 0
     measurement: >-
-      scripts/activation_cases.json — 20 labeled prompts (converge, diagnose, reject)
+      scripts/activation_cases.json — 22 labeled prompts (converge, diagnose, reject)
       classified by the pack's own intent-precedence rule in scripts/self_test.py;
       specificity_score = 5 x accuracy, false_positive_risk_score = wrong activations.
       Plus the 2 shared router fixtures in ops/skill_routing/tests/skill_routing_cases.json.
@@ -77,7 +77,7 @@ skill_intelligence_report:
     - merge through the stack-safe executor as soon as merge_now is non-empty, oldest first, parents before children
   invariants:
     - Diagnose never commits, pushes, edits, or merges
-    - Converge invocation is not merge authority; each merge needs human authorization bound to repo, PR and exact head (CANONICAL_LAW §6.2.13) — a GitHub record, or the operator's recorded prompt instruction transcribed with authorize_merge.py --operator-instruction — and a merge-ready PR without one is reported MERGE_PENDING
+    - An agent's own Converge is not merge authority, but the operator typing /l9-pr-remediation is, for the repo's open-PR snapshot (CANONICAL_LAW §6.2.15); each merge needs human authorization bound to repo, PR and exact head — that invocation or a recorded chat instruction, transcribed by the parent remediator (never a subagent) with authorize_merge.py --operator-instruction, or a GitHub record — and a merge-ready PR without one is reported MERGE_PENDING
     - verify is make precommit-repo; publish is stacked child PR via PR_STACK=auto PR_REMEDIATE=0 make pr; direct bare git push is forbidden (ADR-0052)
     - two mutation lanes never share a branch or a non-generated path
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
@@ -151,7 +151,7 @@ skill_intelligence_report:
   exemplary_gate_results:
     activation_precision:
       status: pass
-      evidence: scripts/self_test.py test_activation_precision over scripts/activation_cases.json (20 labeled prompts, 0 wrong activations)
+      evidence: scripts/self_test.py test_activation_precision over scripts/activation_cases.json (22 labeled prompts, 0 wrong activations)
     adapter_architecture:
       status: pass
       evidence: three conditional adapters, each with load_when and decision changes; core default stays domain-agnostic
