@@ -1014,6 +1014,23 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     return _annotate_unchecked_boxes(text)
 
 
+def _with_measured_closes(body: str, facts: MechanicalFacts) -> str:
+    """Keep measured closing keywords when the template has no ``Closes #`` line.
+
+    The org template no longer carries that placeholder, so ``_fill_template``
+    has nowhere to put them; write them at the end of Problem instead of
+    dropping them. Nothing is written when no issue was measured.
+    """
+    closes = ", ".join(f"#{n}" for n in facts.issue_closes)
+    if not closes or re.search(r"Closes #\d", body):
+        return body
+    problem = re.search(r"^## Problem[ \t]*\n[\s\S]*?(?=\n## |\Z)", body, re.M)
+    if not problem:
+        return body
+    end = problem.end()
+    return body[:end].rstrip("\n") + f"\n\nCloses {closes}\n" + body[end:]
+
+
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
     parts: list[str] = []
     filled = [
@@ -1032,7 +1049,7 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
     if facts.template_revision:
         parts.append(f"<!-- l9-pr-template: {facts.template_revision} -->")
     if template and template.strip():
-        parts.append(_fill_template(template, facts))
+        parts.append(_with_measured_closes(_fill_template(template, facts), facts))
         if facts.additive_only_paths:
             filled.append("protected-root")
     else:

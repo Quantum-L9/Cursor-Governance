@@ -184,6 +184,20 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertEqual(result.needs_completion, [])
         self.assertIn("protected-root", result.mechanical_filled)
 
+    def test_template_without_closes_placeholder_writes_measured_closes_only(self) -> None:
+        template = (
+            "## Problem\n\n"
+            "```\n"
+            "paste the error / failing output here, or delete this block and describe the gap\n"
+            "```\n\n"
+            "## Risk\n"
+        )
+        rows = ["M\tops/x.py"]
+        closing = MechanicalFacts(commits=["fix: x"], changed_files=rows, issue_closes=[9])
+        self.assertIn("Closes #9", _section(compose_pr_body(closing, template).body, "Problem"))
+        silent = MechanicalFacts(commits=["fix: x"], changed_files=rows)
+        self.assertNotIn("Closes", compose_pr_body(silent, template).body)
+
     def test_protected_rewrite_checks_justified(self) -> None:
         facts = MechanicalFacts(
             commits=["fix: rewrite agents fragment"],
