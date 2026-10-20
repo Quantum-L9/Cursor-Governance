@@ -1,7 +1,7 @@
 name: Governance Violation
 description: Report a violation of CANONICAL_LAW.md policy
 title: "[Gov Violation]: "
-labels: ["governance", "violation", "triage"]
+labels: ["type:bug", "area:governance", "needs:triage"]
 assignees: []
 body:
   - type: markdown

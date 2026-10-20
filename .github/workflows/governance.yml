@@ -1,28 +1,26 @@
-# Managed by Quantum-L9/.github. Caller is SHA-pinned to that repo's main.
+# Managed by Quantum-L9/.github. Both reusable-workflow calls below pin one
+# full commit SHA on main, so main can move without retargeting any consumer.
 #
-# The v1 tag is frozen on github-script v7.0.1 (node20) and checkout v4.2.2.
-# .github main already ships github-script v9.0.0 (node24; v8 was the first
-# node24 major). Do not retarget @v1 until that tag is moved; force-moving it
-# is denied here. Governance logic still lives in
-# Quantum-L9/.github/.github/workflows/governance-*.yml.
+# Governance logic lives in Quantum-L9/.github/.github/workflows/governance-*.yml.
+# Shipping a change there: merge it, then (an operator decision) set both
+# `uses:` SHAs below to that merge commit, record the same SHA in
+# ops/governance-v1-pin.txt, and set GOVERNANCE_CALLER_PIN in
+# ops/test-distribution-triggers.js (it fails unless all three agree). Consumers that
+# already carry a caller are re-pinned by a manual continuous-sync dispatch
+# (docs/DISTRIBUTION.md). No tag is involved: moving one retargets nothing.
 #
-# SECRETS: a called workflow does NOT inherit caller secrets automatically. Today
-# both callees use only the automatic GITHUB_TOKEN, so nothing is passed. If a
-# governance job later needs a real secret, add `secrets:` to the job below —
-# `inherit` for all, or named entries (preferred, least privilege).
-# See docs/DISTRIBUTION.md Appendix A.
+# Current pin: 02ea092a, the merge of #176 (PR-body refresh `body` job and the
+# `gates` input in governance-pr.yml).
 #
-# PERMISSIONS: each job MUST declare its own job-level `permissions:`. A called
-# workflow does not inherit the caller's default token scope — it declares what
-# it needs (governance-pr.yml wants `pull-requests: write`), and GitHub validates
-# that grant BEFORE the `if:` skip is evaluated. Omit the block and every run
-# ends `startup_failure` before a single step, with no log to read. That is what
-# happened here: every run of this workflow failed that way until 2026-08-27.
-# Peer reference: Quantum-L9/SEO-Bot/.github/workflows/governance.yml.
+# SECRETS: a called workflow does NOT inherit caller secrets automatically.
+# Both callees use only GITHUB_TOKEN. Do not add blank `secrets: inherit`.
+# If a callee later needs a real secret, add a named `secrets:` entry.
 #
-# ACCESS: if this caller fails before any step runs AND the jobs below already
-# declare permissions, check the Actions policy on THIS repo — see Appendix B.
-# `gh api repos/OWNER/REPO/actions/permissions`
+# Permission validation runs BEFORE `if:` skip. Both jobs must declare
+# job-level permissions or a partial grant startup_fails on the unused job.
+#
+# ACCESS: if this caller fails before any step runs, check the Actions policy on
+# THIS repo. `gh api repos/OWNER/REPO/actions/permissions`
 
 name: Governance
 
@@ -32,26 +30,17 @@ on:
   issues:
     types: [opened, edited, reopened]
 
-# Cancel a superseded run of the same PR (saves CI minutes on rapid pushes).
-# Non-PR events get a unique group, so push/schedule/issue runs never cancel
-# or queue behind one another.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   pr:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: write
-    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@77587b7421b2e7cfad391e5036f531d8b5833e2b  # main; github-script v9.0.0
-    # secrets: inherit
+    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@02ea092a098563b27970d21416fabc47dd005fb0  # merge of #176
 
   issue:
     if: github.event_name == 'issues'
     permissions:
       contents: read
       issues: write
-    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@77587b7421b2e7cfad391e5036f531d8b5833e2b  # main; github-script v9.0.0
-    # secrets: inherit
+    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@02ea092a098563b27970d21416fabc47dd005fb0  # merge of #176

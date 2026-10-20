@@ -1,7 +1,7 @@
 name: CI Pipeline Failure
 description: Report a CI pipeline failure for triage by the platform team
 title: "[CI Failure]: "
-labels: ["ci-failure", "triage"]
+labels: ["type:bug", "area:ci", "needs:triage"]
 assignees: []
 body:
   - type: markdown
