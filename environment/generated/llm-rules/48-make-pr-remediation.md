@@ -1,8 +1,8 @@
 ---
-description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs human authorization — a GitHub record or the operator's recorded prompt instruction (CANONICAL_LAW §6.2.13); all remediations publish as stacked PRs via make pr without bare git push
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates and merges each PR only under human authorization — the operator's typed /l9-pr-remediation (CANONICAL_LAW §6.2.15), their recorded chat instruction, or a GitHub record — else MERGE_PENDING; all remediations publish as stacked PRs via make pr without bare git push
 ---
 
-# make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; GitHub authorization → merge
+# make pr → green merge-ready; /l9-pr-remediation → merge under human authorization, else MERGE_PENDING
 
 Default publish path on every surface (Cursor, Claude Code desktop,
 Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
@@ -29,15 +29,22 @@ preparation before an observational validation wave; it runs no kernel.
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): remediate **all open PRs** in the target repo to
-   merge readiness. Invocation is **not** merge authorization
-   (CANONICAL_LAW §6.2.13). Remediation follows the File-Scope Invariant (ADR-0052):
+   merge readiness. **The operator typing `/l9-pr-remediation` is merge
+   authorization for that repo's open PRs**, each once `pr_board.py` says
+   `merge` at its live head (CANONICAL_LAW §6.2.15); an agent's own Skill
+   call, or Converge reached any other way, is not. Never ask for PR numbers;
+   if the repo is ambiguous ask only which one. Only the parent agent
+   transcribes; a subagent never does (`merge_gate.py`, `agent_id`), and merge
+   workers run only `stack_safe_merge.py --run`. Remediation follows the
+   File-Scope Invariant (ADR-0052):
    - In-scope surgical fixes (files already created/modified by the PR):
      verify via `make precommit-repo`, commit pathspecs, push to open PR branch.
    - Scope-expanding fixes (requiring a new file to be touched): publish
      as a new stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`.
-   Converge each PR, then stop at **MERGE_PENDING**: report the PR, its
-   exact head SHA, CI and review status, and stack order, and keep working
-   on independent PRs. A **human** authorizes in one of two ways. On
+   Converge each PR; without a human authorization, stop at **MERGE_PENDING**:
+   report the PR, its exact head SHA, CI and review status, and stack order,
+   and keep working on independent PRs. Besides the typed invocation, a
+   **human** authorizes in one of two ways. On
    GitHub: an APPROVED review on the current head, or a comment whose body
    contains the exact line `authorize merge <owner>/<name>#<n>@<sha>`. In
    their own prompt: an explicit merge instruction ("merge PR #n after the
@@ -108,8 +115,9 @@ Stacked PRs (operator default 2026-08-15; **opt-in since 2026-09-19**):
 `L9_AGENT_REQUIRED` when remediates=1 (the default). Follow that handoff:
 poll to green + merge-ready. Standing campaign contract is still no merge.
 `/l9-pr-remediation` Converge ends at MERGE_PENDING until a human
-authorization — a GitHub record or the operator's recorded prompt
-instruction — covers that head (CANONICAL_LAW §6.2.13).
+authorization — the operator's typed invocation, a GitHub record or the
+operator's recorded prompt instruction — covers that head (CANONICAL_LAW
+§6.2.13–§6.2.15).
 `PR_REMEDIATE=0` skips the handoff marker.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),

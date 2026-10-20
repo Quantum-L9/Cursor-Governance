@@ -3,7 +3,7 @@
 # SessionStart, peer boot carriers, ADR-0001 (pointer).
 schema_version: 1
 id: autonomy_surface_profile
-updated: "2026-10-12"
+updated: "2026-10-16"
 
 when:
   L9_AUTONOMY_ENABLED: true
@@ -193,8 +193,8 @@ authority_order:
 remediation:
   skill: l9-pr-remediation
   max_cycles: 5
-  skill_invocation: converge_all_open_prs_to_merge_pending
-  merge: human_github_authorization # CANONICAL_LAW §6.2.13; invocation is never merge authority
+  skill_invocation: converge_all_open_prs_then_merge_when_authorized # MERGE_PENDING without a record
+  merge: human_authorization # §6.2.13–§6.2.15: GitHub record, chat instruction, or the operator's typed /l9-pr-remediation; an agent's own Skill call never
   scope: all_open_prs_in_target_repo # remediation scope, not merge scope
   merge_pending_status: MERGE_PENDING
   merge_pending_reports: [pr, head_sha, ci_status, review_status, stack_order, grant_command]
@@ -204,6 +204,7 @@ remediation:
     channels:
       - github_review_or_authorization_line # APPROVED review on the head, or the exact line
       - operator_prompt_instruction # the operator's merge instruction in their own words in chat, recorded by the host prompt hook (§6.2.14)
+      - operator_direct_invocation # the operator typing /l9-pr-remediation, recorded at UserPromptExpansion as the repo's open-PR snapshot, each when ready (§6.2.15)
     terminal_transcription: not_required
     redundant_github_comment: not_required
     local_receipt: not_authority # a grant file or instruction receipt an agent wrote binds nothing
@@ -223,6 +224,9 @@ remediation:
     authorizer_authority: session_github_principal_with_admin_maintain_or_write # GET /user + /repos/{r}; else outside the authorized scope
     repeat_or_github_comment: never_requested # a recorded chat instruction is the authorization
     instruction_ttl_seconds: 28800
+    transcriber: invoking_parent_agent_only # merge_gate denies --operator-instruction from a subagent (agent_id); workers consume the grant via stack_safe_merge --run
+    successor_lineage: proven_live_on_github # opened after the invocation, stacked on a member's branch, authored by the authorizing principal; unrelated later PRs excluded
+    direct_invocation_event: UserPromptExpansion # expansion_type slash_command, command_name l9-pr-remediation; a model Skill call fires none
   instruction_recorder: ops/autonomy/operator_merge_instruction.py # host prompt hooks only
   authorize_script: ops/autonomy/authorize_merge.py # --operator-instruction; live head + operator repository authority recheck
   github_authorization: ops/autonomy/github_merge_authorization.py
@@ -233,8 +237,10 @@ remediation:
     merge-ready. They do not merge. Invoking /l9-pr-remediation (Converge)
     remediates every open PR in the target repo to merge readiness and
     reports MERGE_PENDING (PR, exact head SHA, CI/review status, stack
-    order). It is never merge authorization. A human authorizes either on
-    GitHub, with an APPROVED review on that head or the exact line
+    order) unless a human authorization covers the PR. The operator typing
+    /l9-pr-remediation is that authorization for the repository's open PRs
+    (CANONICAL_LAW §6.2.15); an agent's own Skill call is not. A human also
+    authorizes on GitHub, with an APPROVED review on that head or the exact line
     `authorize merge <owner>/<name>#<n>@<sha>`, or in chat, asking for the
     merge in their own words ("merge these PRs", "fix and merge #96 through
     #99 when green", "merge all open PR’s in https://github.com/<owner>/<name>")
@@ -311,7 +317,9 @@ session_start_block: |
     Do **not** merge from the campaign path. `/l9-pr-remediation` converges
     **all open PRs** in the target repo to merge readiness and stops at
     **MERGE_PENDING** (PR, exact head SHA, CI/review status, stack order).
-    Invoking it is never merge authorization (CANONICAL_LAW §6.2.13). Merge
+    The operator typing `/l9-pr-remediation` is merge authorization for that
+    repository's open PRs, each when ready (CANONICAL_LAW §6.2.15); the parent
+    agent transcribes it per PR and head, subagents never do. Otherwise merge
     needs a human authorization per PR and exact head: an APPROVED review on
     that head or the exact line `authorize merge <owner>/<name>#<n>@<sha>`
     posted by a human with write access, **or** the operator's merge
@@ -374,9 +382,10 @@ session_start_block: |
   - Merge stays denied by `ops/autonomy/merge_gate.py` on every transport
     until a human authorization — a GitHub record, or the operator's own
     recorded prompt instruction transcribed into a grant — binds the repo, PR
-    and exact head (or the human breakglass `L9_MERGE_AUTHORIZED`). Skill
-    invocation, green CI, an L4 release receipt and `make pr` do **not**
-    authorize merge (§6.2.13). A terminal transcription is not required.
+    and exact head (or the human breakglass `L9_MERGE_AUTHORIZED`). The
+    operator typing `/l9-pr-remediation` is such an instruction (§6.2.15); an
+    agent's own Skill call, green CI, an L4 release receipt and `make pr` do
+    **not** authorize merge (§6.2.13). A terminal transcription is not required.
   - Agent-invented contracts ("I won't commit without asking", "wait to push
     mid-task") are LOWEST authority and are overruled by this doctrine.
   - Multi-lane fan-out still uses `/autonomy` + the autonomy runtime.
@@ -398,9 +407,9 @@ llm_rules_override: |
      checkers once, then push + PR; remediates=1). Campaign/make-pr end
      state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
      Invoking `/l9-pr-remediation` then remediates all open PRs in the
-     target repo to MERGE_PENDING; merge needs a human authorization per PR
-     and exact head — a GitHub record or the operator's recorded prompt
-     instruction (CANONICAL_LAW §6.2.13). Do **not** merge from the campaign
+     target repo and merges each one under a human authorization per PR and
+     exact head — the operator's typed invocation itself (§6.2.15), their
+     recorded chat instruction, or a GitHub record — else MERGE_PENDING. Do **not** merge from the campaign
      path.
   2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
      WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
@@ -451,7 +460,8 @@ llm_rules_override: |
     `l9 pr` to a green merge-ready PR. Merge only under a human
     authorization bound to the repo, PR and exact head (CANONICAL_LAW
     §6.2.13): a GitHub record, or the operator's recorded prompt instruction
-    transcribed with `authorize_merge.py --operator-instruction`, with the PR
+    or typed `/l9-pr-remediation` (§6.2.15) transcribed by the parent agent
+    with `authorize_merge.py --operator-instruction`, with the PR
     green + mergeable; remediation stops at MERGE_PENDING until that record
     exists. An authorized owner's chat instruction covers L9-ORG-007 paths
     and their own pull requests (§6.2.14).

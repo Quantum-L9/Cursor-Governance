@@ -62,6 +62,21 @@ a pull request not in the snapshot — opened later, or closed at the time and
 reopened since — is outside the cohort, and a snapshot that could not be taken
 covers nothing. It is never standing repository-wide authority.
 
+A **direct invocation** of ``/l9-pr-remediation`` (CANONICAL_LAW §6.2.15) is
+read from Claude Code's ``UserPromptExpansion`` event, which the host fires only
+for a command the user typed (``expansion_type: slash_command``) and never for a
+Skill tool call the model makes. It records the open-pull-request cohort of one
+repository (named in the arguments, else the workspace remote, else the one the
+operator's own turns named), each member merging when the readiness board says
+so; arguments asking for Diagnose, a review or no merge record nothing. The
+``UserPromptSubmit`` event for the same typed command records nothing, so the
+invocation is recorded once. Its corroboration is the transcript's typed-command
+record (``<command-name>/l9-pr-remediation</command-name>``, same ``promptId``)
+on a human turn. Ordinary completion phrases ("finish and land the open PRs",
+"get these PRs merged", "get them into main", "run PR remediation on
+<repo>") read as their merge form. A subagent's hand-back relayed into the
+parent is not an operator turn.
+
 Capture is observable. Whenever a prompt carries merge intent the hook tells
 the agent, in ``additionalContext``, exactly what was recorded or exactly why
 nothing was, and a recorder failure is reported as a failure — never as a
@@ -84,7 +99,7 @@ recorded for audit but never becomes a grant: BLOCKED_HOST_ORIGIN.
 Metadata:
   layer: ops
   role: merge_authorization
-  version: 3.0.0
+  version: 4.0.0
 """
 
 from __future__ import annotations
@@ -114,6 +129,31 @@ EXCERPT_CHARS = 300
 HOSTS = ("claude-code", "cursor")
 #: The prompt-submission event each host fires; the payload names it.
 HOST_EVENTS = {"claude-code": "UserPromptSubmit", "cursor": "beforeSubmitPrompt"}
+#: Claude Code fires this for a command the user typed, after
+#: ``UserPromptSubmit`` and with the same ``prompt_id``; never for a Skill tool
+#: call the model makes (observed 2026-10-16, Claude Code 2.1.301).
+EXPANSION_EVENT = "UserPromptExpansion"
+#: Every host event a receipt may come from (CANONICAL_LAW §6.2.15).
+RECORDING_EVENTS = {
+    "claude-code": (HOST_EVENTS["claude-code"], EXPANSION_EVENT),
+    "cursor": (HOST_EVENTS["cursor"],),
+}
+#: The one command whose direct user invocation is a fleet merge authorization.
+FLEET_SKILL = "l9-pr-remediation"
+SLASH_COMMAND = "slash_command"
+#: ``source`` of a receipt recorded from that invocation.
+SOURCE_SKILL = "skill_invocation"
+#: Arguments that ask for the read-only intent, or for no merge.
+_NO_MERGE_INTENT = re.compile(
+    r"(?:^|[\s,;(])(?:--?)?(?:diagnose|diagnosis|diagnostic|readiness|dry[\s-]?run|"
+    r"(?:review|read|report|status)[\s-]only|--review|no[\s-]?merge|"
+    r"(?:do\s+not|don'?t|never|without)\s+merg\w*)\b",
+    re.I,
+)
+_SKILL_COMMAND = re.compile(rf"^\s*/{re.escape(FLEET_SKILL)}(?:\s|$)", re.I)
+#: The typed command as Claude Code writes it into the transcript.
+_COMMAND_NAME_TAG = re.compile(r"<command-name>\s*/?(?P<name>[^<\s]+)\s*</command-name>", re.I)
+_COMMAND_ARGS_TAG = re.compile(r"<command-args>(?P<args>.*?)</command-args>", re.I | re.S)
 RECORDER = "host_prompt_hook"
 KIND_AUTHORIZE = "authorize"
 KIND_REVOKE = "revoke"
@@ -498,10 +538,16 @@ RELAY_MARKERS = (
     "<untrusted_external_data",
     "<scheduled-task",
     "<cross-session-message",
+    # A subagent's or teammate's hand-back, relayed into the parent as a turn
+    # (observed 2026-10-16: a hand-back report was read as an operator
+    # cancellation of every pending merge).
+    "<agent-message",
+    "[subagent hand-back]",
 )
 _STRIP_BLOCKS = (
     re.compile(r"<pasted_content\b[^>]*>.*?</pasted_content[^>]*>", re.I | re.S),
-    re.compile(r"<system-reminder\b[^>]*>.*?</system-reminder>", re.I | re.S),
+    # The host may stamp the closing tag too: ``</system-reminder id="…">``.
+    re.compile(r"<system-reminder\b[^>]*>.*?</system-reminder\b[^>]*>", re.I | re.S),
     re.compile(r"```.*?```", re.S),
     re.compile(r"~~~.*?~~~", re.S),
 )
@@ -1123,6 +1169,50 @@ def _deictic_object(tail: str) -> re.Match[str] | None:
 
 _MERGE_MENTION = re.compile(r"\bmerge\b[^.!?]{0,40}?(?:#\d|\bprs?\b|pull\s+request)", re.I)
 
+#: Ordinary ways to ask for the fleet workflow to finish (CANONICAL_LAW §6.2.15).
+#: Each is rewritten to the merge form the parser already reads, so every
+#: object, condition, negation and question rule applies to it unchanged.
+#: "Run PR remediation on <repo>" asks for the workflow that §6.2.15 defines as
+#: remediate-and-merge, so it reads as the open-pull-request cohort.
+_RUN_REMEDIATION = re.compile(
+    r"\b(?:run|start|launch|kick\s+off|do|perform|execute|begin|finish|complete)\s+"
+    r"(?:the\s+|a\s+)?(?:(?:pr|pull[\s-]*requests?)[\s-]+remediation|/?l9-pr-remediation)\b"
+    r"(?:\s+(?:on|for|in|against|across|of)\s+(?:the\s+)?(?P<repo>[^\s,;]+?)"
+    r"(?:\s+repo(?:sitory)?)?(?=$|[\s,;.!]))?",
+    re.I,
+)
+#: "land the open PRs", "finish and land these".
+_LAND = re.compile(
+    r"\bland\b(?=\s+(?:all|the|these|those|them|it|every|each|both|#|prs?\b|pull\b))", re.I
+)
+#: "get these PRs merged", "get them into main".
+_GET_MERGED = re.compile(
+    r"\bget\s+(?P<obj>(?:(?!\bget\b)[^.;!?]){1,80}?)\s+"
+    r"(?:merged|landed|in(?:to)?\s+(?:main|master|the\s+(?:main|default|base)\s+branch))\b",
+    re.I,
+)
+
+
+def completion_form(clause: str) -> str:
+    """``clause`` with an ordinary fleet-completion phrase read as its merge form.
+
+    "Finish and land the open PRs" reads as "Finish and merge the open PRs";
+    "Get these PRs merged" as "merge these PRs"; "Run PR remediation on
+    l9-graphiti-memory" as "merge all open PRs in l9-graphiti-memory". A clause
+    that asks for the read-only intent ("run PR remediation in diagnose mode")
+    is left as it is, so it records nothing.
+    """
+    if _NO_MERGE_INTENT.search(clause[:MAX_CLAUSE_CHARS]):
+        return clause
+    run = _RUN_REMEDIATION.search(clause)
+    if run:
+        target = f" in {run.group('repo').rstrip('.')}" if run.group("repo") else ""
+        return f"{clause[: run.start()]}merge all open PRs{target}{clause[run.end() :]}"
+    got = _GET_MERGED.search(clause)
+    if got:
+        return f"{clause[: got.start()]}merge {got.group('obj')}{clause[got.end() :]}"
+    return _LAND.sub("merge", clause, count=1)
+
 
 def parse_prompt(
     prompt: str,
@@ -1247,9 +1337,13 @@ def parse_prompt(
         before = len(found)
         sentence_slugs = _slug_candidates(sentence, known)
         sentence_preceding: list[tuple[str | None, int]] = []
-        clauses = _clauses(sentence)
+        spoken = _clauses(sentence)
+        # Ordinary completion phrases read in their merge form (§6.2.15); the
+        # receipt keeps the operator's own words as its excerpt.
+        clauses = [(completion_form(text), presented) for text, presented in spoken]
         following = sentences[position + 1] if position + 1 < len(sentences) else ""
         for index, (clause, presented) in enumerate(clauses):
+            said = spoken[index][0]
             clause_refs = _refs_in_run(clause, known)
             negative = _is_negative(clause)
             if negative:
@@ -1275,11 +1369,11 @@ def parse_prompt(
             condition = _clause_condition(clauses, index, end, following)
             cohort, refs = _objects_after(tail, glue=_GLUE, known_owners=known)
             if cohort is not None:
-                _cohort(KIND_AUTHORIZE, cohort, clause, sentence_slugs, condition)
+                _cohort(KIND_AUTHORIZE, cohort, said, sentence_slugs, condition)
                 continue
             if refs:
                 source = "range" if len(refs) > len(_PR_REF.findall(tail)) else "prompt"
-                _refs(KIND_AUTHORIZE, refs, clause, source, sentence_slugs, condition)
+                _refs(KIND_AUTHORIZE, refs, said, source, sentence_slugs, condition)
                 continue
             deictic = _deictic_object(tail)
             if deictic:
@@ -1287,12 +1381,12 @@ def parse_prompt(
                 # "Fix the CI on #96 and merge it": the clause itself names its object.
                 named_before = _refs_in_run(clause[:end], known)
                 if named_before and (not single or len(named_before) == 1):
-                    _refs(KIND_AUTHORIZE, named_before, clause, "prompt", sentence_slugs, condition)
+                    _refs(KIND_AUTHORIZE, named_before, said, "prompt", sentence_slugs, condition)
                     continue
                 members = _context_members(single)
                 if members is None:
                     notes.append(
-                        f"'{clause.strip()[:80]}' refers to pull requests from the conversation, "
+                        f"'{said.strip()[:80]}' refers to pull requests from the conversation, "
                         + (
                             "but more than one is under discussion"
                             if single and context is not None and context.members()
@@ -1300,14 +1394,17 @@ def parse_prompt(
                         )
                     )
                     continue
-                _refs(KIND_AUTHORIZE, members, clause, "conversation", sentence_slugs, condition)
+                _refs(KIND_AUTHORIZE, members, said, "conversation", sentence_slugs, condition)
                 continue
             if _PR_ISH.search(tail) and not _DEICTIC.match(tail):
                 notes.append(
-                    f"'{clause.strip()[:80]}' reads as a merge instruction, but no pull request "
+                    f"'{said.strip()[:80]}' reads as a merge instruction, but no pull request "
                     "or repository could be resolved from it"
                 )
-        if len(found) == before and _MERGE_MENTION.search(sentence):
+        read_as = " ".join(text for text, _ in clauses)
+        if len(found) == before and (
+            _MERGE_MENTION.search(sentence) or _MERGE_MENTION.search(read_as)
+        ):
             notes.append(
                 f"'{sentence.strip()[:80]}' mentions merging a pull request but was not read as "
                 "a merge instruction; if the operator meant one, nothing was recorded"
@@ -1549,7 +1646,7 @@ def host_provenance(host: str, payload: dict[str, Any]) -> dict[str, Any] | None
     if host not in HOSTS or not isinstance(payload, dict):
         return None
     event = str(payload.get("hook_event_name") or "")
-    if event != HOST_EVENTS[host]:
+    if event not in RECORDING_EVENTS[host]:
         return None
     if host == "claude-code":
         session = payload.get("session_id")
@@ -1559,12 +1656,20 @@ def host_provenance(host: str, payload: dict[str, Any]) -> dict[str, Any] | None
         if not isinstance(transcript, str) or not transcript.strip():
             return None
         cwd = payload.get("cwd")
-        return {
+        provenance: dict[str, Any] = {
             "hook_event_name": event,
             "session_id": session.strip(),
             "transcript_path": transcript.strip(),
             "cwd": cwd if isinstance(cwd, str) else None,
         }
+        prompt_id = payload.get("prompt_id")
+        if isinstance(prompt_id, str) and prompt_id.strip():
+            provenance["prompt_id"] = prompt_id.strip()
+        if event == EXPANSION_EVENT:
+            for key in ("expansion_type", "command_name", "command_args", "command_source"):
+                value = payload.get(key)
+                provenance[key] = value if isinstance(value, str) else None
+        return provenance
     conversation = payload.get("conversation_id")
     if not isinstance(conversation, str) or not conversation.strip():
         return None
@@ -1586,7 +1691,10 @@ def host_provenance(host: str, payload: dict[str, Any]) -> dict[str, Any] | None
 def _valid_provenance(host: str, provenance: Any, session_id: str) -> bool:
     if not isinstance(provenance, dict) or host not in HOSTS:
         return False
-    if provenance.get("hook_event_name") != HOST_EVENTS[host]:
+    event = provenance.get("hook_event_name")
+    if event not in RECORDING_EVENTS[host]:
+        return False
+    if event == EXPANSION_EVENT and not is_fleet_invocation(provenance):
         return False
     if str(provenance.get("session_id") or "") != session_id or not session_id:
         return False
@@ -1594,6 +1702,127 @@ def _valid_provenance(host: str, provenance: Any, session_id: str) -> bool:
         transcript = provenance.get("transcript_path")
         return isinstance(transcript, str) and bool(transcript.strip())
     return True
+
+
+# --- direct invocation of the fleet workflow (§6.2.15) ---------------------------
+
+#: Words an invocation's arguments may carry without naming a repository.
+_ARG_FILLER = frozenset(
+    "fix fixes remediate remediation converge babysit merge merged land finish complete run "
+    "and then all every each the open remaining current currently these those them it pr prs "
+    "pull request requests please now in on for of across to repo repository fleet green "
+    "ready when once safely bottom-up oldest first".split()
+)
+_ARG_WORD = re.compile(r"[A-Za-z][\w.-]*")
+_FLEET_CONDITION_TEXT = (
+    "when ready: each pull request merges once the readiness board says merge at its live head"
+)
+
+
+def is_fleet_invocation(provenance: dict[str, Any] | None) -> bool:
+    """A host ``UserPromptExpansion`` for the user-typed ``/l9-pr-remediation``.
+
+    The host fires that event only for a command the user typed (a model's Skill
+    tool call fires none), and ``expansion_type`` separates a slash command from
+    an MCP prompt. Any other command, or a plugin-namespaced one, is not it.
+    """
+    if not isinstance(provenance, dict):
+        return False
+    if provenance.get("hook_event_name") != EXPANSION_EVENT:
+        return False
+    if provenance.get("expansion_type") != SLASH_COMMAND:
+        return False
+    name = str(provenance.get("command_name") or "").strip().lstrip("/")
+    return name == FLEET_SKILL
+
+
+def parse_fleet_invocation(
+    args: str,
+    *,
+    cwd_repo: str | None = None,
+    context: ConversationContext | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """``(instructions, notes)`` for a typed ``/l9-pr-remediation <args>``.
+
+    The invocation authorizes the open-pull-request cohort of one repository,
+    each member merging when ready (CANONICAL_LAW §6.2.15). The repository is
+    the one the arguments name (``owner/name``, a URL, ``owner/name#n``, or a
+    repository name the session already knows), else the workspace remote, else
+    the one repository the operator's own turns named. Arguments that ask for
+    the read-only intent ("diagnose", "review-only", "dry-run", "no merge")
+    authorize nothing. A cancellation in the arguments ("don't merge #96") is
+    recorded as one. More than one repository, or a name that resolves to
+    none, records nothing and says so: the one question left is which
+    repository. Pull request numbers are never required.
+    """
+    text = fold_text(args or "").strip()
+    notes: list[str] = []
+    cancellations: list[dict[str, Any]] = []
+    if text:
+        found, _ = parse_prompt(text, cwd_repo=cwd_repo, context=context)
+        cancellations = [item for item in found if item["kind"] == KIND_REVOKE]
+    invoked = f"/{FLEET_SKILL}" + (f" {text}" if text else "")
+    if _NO_MERGE_INTENT.search(text):
+        notes.append(
+            f"'{invoked[:80]}' asks for the read-only intent or for no merge; no merge "
+            "authorization was recorded"
+        )
+        return cancellations, notes
+    mentioned = _repo_mentions(text)
+    repo: str | None = None
+    where: str | None = None
+    if len(mentioned) > 1:
+        notes.append(
+            f"'{invoked[:80]}' names more than one repository ({', '.join(mentioned)}); no "
+            "fleet was authorized. Ask the operator which repository, never for pull request "
+            "numbers"
+        )
+        return cancellations, notes
+    if mentioned:
+        repo, where = mentioned[0], "prompt"
+    else:
+        stripped = _PR_REF_RANGE.sub(" ", text)
+        words = [w.strip(".,;:!?") for w in _ARG_WORD.findall(stripped)]
+        names = [w for w in words if w and w.casefold() not in _ARG_FILLER]
+        resolved = {
+            hit.casefold(): hit
+            for hit in (_repo_by_name(word, [], context, cwd_repo) for word in names)
+            if hit
+        }
+        if len(resolved) == 1:
+            repo, where = next(iter(resolved.values())), "prompt"
+        elif names:
+            notes.append(
+                f"'{invoked[:80]}' names a repository that could not be resolved "
+                f"({', '.join(names[:3])}); no fleet was authorized. Ask the operator which "
+                "repository (owner/name), never for pull request numbers"
+            )
+            return cancellations, notes
+        elif cwd_repo:
+            repo, where = cwd_repo, "workspace"
+        elif context is not None and _single(context.human_repos):
+            repo, where = _single(context.human_repos), "conversation"
+    if repo is None:
+        notes.append(
+            f"'{invoked[:80]}' was invoked where no single repository is in scope; no fleet "
+            "was authorized. Ask the operator which repository, never for pull request numbers"
+        )
+        return cancellations, notes
+    authorization = {
+        "kind": KIND_AUTHORIZE,
+        "scope": SCOPE_COHORT,
+        "repo": repo,
+        "pr": None,
+        "excerpt": invoked[:EXCERPT_CHARS],
+        "source": SOURCE_SKILL,
+        "repo_source": where,
+        "condition": {
+            "status": CONDITION_READINESS,
+            "text": _FLEET_CONDITION_TEXT,
+            "reason": _condition_reason(CONDITION_READINESS, _FLEET_CONDITION_TEXT),
+        },
+    }
+    return [authorization, *cancellations], notes
 
 
 # --- receipt store -----------------------------------------------------------
@@ -1772,8 +2001,13 @@ def capture_instructions(
     provenance: dict[str, Any] | None = None,
     open_pull_requests: Callable[[str], list[int]] | None = None,
     context: ConversationContext | None = None,
+    parsed: tuple[list[dict[str, Any]], list[str]] | None = None,
 ) -> dict[str, Any]:
     """Record every instruction in ``prompt``; return ``{"recorded", "notes"}``.
+
+    ``parsed`` replaces the chat parser's reading of ``prompt`` with
+    instructions already read from a host event (a typed fleet invocation,
+    :func:`parse_fleet_invocation`); everything else is unchanged.
 
     Called by the host prompt hooks only, with the payload's provenance from
     :func:`host_provenance`; a missing or inconsistent provenance is a
@@ -1797,8 +2031,12 @@ def capture_instructions(
     assert provenance is not None
     stamp = float(now) if now is not None else time.time()
     resolved_cwd_repo = cwd_repo if cwd_repo is not None else repo_from_cwd(cwd)
-    parsed, notes = parse_prompt(prompt, cwd_repo=resolved_cwd_repo, context=context)
-    if not parsed:
+    items, notes = (
+        parsed
+        if parsed is not None
+        else parse_prompt(prompt, cwd_repo=resolved_cwd_repo, context=context)
+    )
+    if not items:
         return {"recorded": [], "notes": notes}
     lister = open_pull_requests or list_open_pull_requests
     digest = prompt_digest(prompt)
@@ -1806,7 +2044,7 @@ def capture_instructions(
     kept = _retained(load_instructions(target), stamp)
     written: list[dict[str, Any]] = []
     snapshots: dict[str, tuple[list[int] | None, str | None]] = {}
-    for item in parsed:
+    for item in items:
         entry: dict[str, Any] = {
             "id": _instruction_id(host, session_id, digest, item),
             "schema": SCHEMA,
@@ -1956,6 +2194,45 @@ def find_instruction(
     return dict(latest_authorization)
 
 
+def fleet_instruction(
+    repo: str,
+    pr: str | int | None = None,
+    *,
+    path: Path | None = None,
+    now: float | None = None,
+) -> dict[str, Any] | None:
+    """The latest live fleet invocation (``/l9-pr-remediation``) of ``repo``.
+
+    A remediation-generated successor pull request — opened after the
+    invocation, on a member's branch, by the authorized principal — is not in
+    the invocation's snapshot. This returns the invocation that may cover it so
+    ``authorize_merge.py`` can prove that lineage live on GitHub
+    (CANONICAL_LAW §6.2.15). When ``pr`` is given, a cancellation of it (or of
+    the repository, or of everything) recorded at or after the invocation
+    withdraws the invocation for it. It covers nothing by itself.
+    """
+    stamp = time.time() if now is None else now
+    fleets = [
+        entry
+        for entry in load_instructions(path)
+        if entry.get("kind") == KIND_AUTHORIZE
+        and entry.get("source") == SOURCE_SKILL
+        and entry.get("scope") == SCOPE_COHORT
+        and str(entry.get("repo") or "").casefold() == (repo or "").casefold()
+        and is_live(entry, stamp)
+        and pending_condition(entry) is None
+    ]
+    latest = _latest(fleets)
+    if latest is None:
+        return None
+    number = str(pr).strip() if pr is not None else ""
+    if number.isdigit():
+        revoked = revocation_for(repo, number, path=path, now=stamp)
+        if revoked is not None and float(revoked["recorded_at"]) >= float(latest["recorded_at"]):
+            return None
+    return dict(latest)
+
+
 def revocation_for(
     repo: str,
     pr: str | int,
@@ -2077,6 +2354,29 @@ def _record_is_human_turn(record: dict[str, Any]) -> bool | None:
     return all(verdicts)
 
 
+def _invocation_record_matches(
+    record: dict[str, Any], text: str, provenance: dict[str, Any]
+) -> bool:
+    """The transcript record of the typed command the expansion event announced.
+
+    Claude Code writes a typed slash command as a user record carrying
+    ``<command-name>/name</command-name>`` and ``<command-args>…</command-args>``
+    under the same ``promptId`` the hook payload carried (observed 2026-10-16,
+    Claude Code 2.1.301). A model's Skill tool call writes no such record — only
+    a tool result and the skill body as a meta record — so it never matches.
+    """
+    name = _COMMAND_NAME_TAG.search(text)
+    if not name or name.group("name").strip().lstrip("/") != FLEET_SKILL:
+        return False
+    prompt_id = str(provenance.get("prompt_id") or "")
+    record_prompt = str(record.get("promptId") or "")
+    if prompt_id and record_prompt:
+        return prompt_id == record_prompt
+    args = _COMMAND_ARGS_TAG.search(text)
+    typed = _normalized(args.group("args")) if args else ""
+    return typed == _normalized(str(provenance.get("command_args") or ""))
+
+
 def transcript_corroborates(
     entry: dict[str, Any], *, transcript_path: str | Path | None = None
 ) -> tuple[bool, str]:
@@ -2095,6 +2395,9 @@ def transcript_corroborates(
     session = str(entry.get("session_id") or "")
     digest = str(entry.get("prompt_sha256") or "")
     excerpt = _normalized(str(entry.get("excerpt") or ""))
+    invocation = entry.get("source") == SOURCE_SKILL
+    if invocation and not is_fleet_invocation(provenance):
+        return False, "receipt claims a fleet invocation without the host expansion event"
     matched_non_human = False
     unmarked = False
     for line in lines:
@@ -2117,9 +2420,12 @@ def transcript_corroborates(
         text = _record_text(record)
         if not text:
             continue
-        hit = (digest and prompt_digest(text) == digest) or (
-            bool(excerpt) and excerpt in _normalized(text)
-        )
+        if invocation:
+            hit = _invocation_record_matches(record, text, provenance)
+        else:
+            hit = bool(digest and prompt_digest(text) == digest) or (
+                bool(excerpt) and excerpt in _normalized(text)
+            )
         if not hit:
             continue
         human = _record_is_human_turn(record)
@@ -2223,6 +2529,17 @@ def capture_from_payload(payload: dict[str, Any], host: str) -> dict[str, Any]:
     if provenance is None:
         return {"recorded": [], "notes": [], "provenance": None}
     prompt = _payload_prompt(payload)
+    expansion = provenance.get("hook_event_name") == EXPANSION_EVENT
+    if expansion and not is_fleet_invocation(provenance):
+        # Another command, an MCP prompt: not a fleet invocation, and its
+        # prompt is already read at UserPromptSubmit.
+        return {"recorded": [], "notes": [], "provenance": provenance}
+    if not expansion and host in GRANTABLE_HOSTS and _SKILL_COMMAND.match(prompt or ""):
+        # The same typed command fires UserPromptExpansion next, with the same
+        # prompt_id; that event, which only a typed command fires, records it.
+        return {"recorded": [], "notes": [], "provenance": provenance, "deferred": True}
+    if expansion and not prompt:
+        prompt = f"/{FLEET_SKILL} {provenance.get('command_args') or ''}".strip()
     if not prompt:
         return {"recorded": [], "notes": [], "provenance": provenance}
     cwd = provenance.get("cwd")
@@ -2236,6 +2553,13 @@ def capture_from_payload(payload: dict[str, Any], host: str) -> dict[str, Any]:
             str(provenance["session_id"]),
             current_prompt=prompt,
         )
+    parsed = None
+    if expansion:
+        parsed = parse_fleet_invocation(
+            str(provenance.get("command_args") or ""),
+            cwd_repo=repo_from_cwd(cwd),
+            context=context,
+        )
     result = capture_instructions(
         prompt,
         host=host,
@@ -2243,6 +2567,7 @@ def capture_from_payload(payload: dict[str, Any], host: str) -> dict[str, Any]:
         cwd=cwd,
         provenance=provenance,
         context=context,
+        parsed=parsed,
     )
     return {**result, "provenance": provenance}
 
@@ -2293,6 +2618,19 @@ def hook_context(recorded: list[dict[str, Any]], notes: list[str], failure: str 
             "authorize_merge.py proves it with the readiness board at the live head. A head "
             "moved by authorized remediation needs fresh technical checks, not a fresh "
             "instruction. A later cancellation withdraws this authority."
+        )
+    fleets = [e for e in authorized if e.get("source") == SOURCE_SKILL]
+    if fleets:
+        parts.append(
+            f"This is a direct operator invocation of /{FLEET_SKILL} (CANONICAL_LAW §6.2.15): it "
+            "authorizes remediating that repository's open pull requests and merging each one "
+            "once the readiness board says merge at its live head. Do not ask for pull request "
+            "numbers or for any further approval. The invoking agent — never a subagent — runs "
+            "authorize_merge.py --operator-instruction for each ready member at its live head; "
+            "assigned merge workers run only stack_safe_merge.py --run against that grant. A "
+            "stacked successor pull request the remediation opens on a member's branch is "
+            "covered once authorize_merge.py proves its lineage; any other later pull request "
+            "is not. Report each merge only when stack_safe_merge.py prints MERGED."
         )
     if waiting:
         parts.append(
@@ -2379,11 +2717,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     context = hook_context(captured["recorded"], captured["notes"], failure)
     if context:
+        event = str(payload.get("hook_event_name") or "")
+        if event not in RECORDING_EVENTS["claude-code"]:
+            event = HOST_EVENTS["claude-code"]
         print(
             json.dumps(
                 {
                     "hookSpecificOutput": {
-                        "hookEventName": "UserPromptSubmit",
+                        "hookEventName": event,
                         "additionalContext": context,
                     }
                 }
