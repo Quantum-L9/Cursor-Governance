@@ -918,3 +918,15 @@ Landed on this PR: owner + libraries (already simplified) + `/start-session` STA
   - Receipts are bound to one session and transcript; a reclaimed cloud
     container loses `~/.l9/autonomy/`.
   - Terminal grants need `/dev/tty`, absent on web and mobile.
+
+## Memory cross-repo proof advisory (open, 2026-10-20)
+
+- [ ] Restore `.github/workflows/memory-cross-repo.yml` to blocking by setting
+  `MEMORY_PROOF_ADVISORY: "false"`. Made advisory by the operator because the
+  proof failed on every PR while the memory binding is realigned: step
+  "Build the memory wheel reproducibly and verify its digest" rebuilt
+  `9021eebb…` but `ops/config/memory-binding.json` `release_evidence.artifact_sha256`
+  is `d4935732…` (observed on run 39490121678). While advisory, every proof step
+  still runs and stops the chain at the first failure; the failure is a
+  `::warning::` and a job-summary line instead of a red job. Re-enable once a
+  run on `main` shows "ADVISORY: memory cross-repo proof passed every step."
