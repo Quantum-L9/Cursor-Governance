@@ -277,16 +277,24 @@ jobs:
           LIFECYCLE: ${{ steps.lifecycle.outcome }}
         run: |
           set -euo pipefail
+          # Pass only when every tracked step succeeded: a step skipped because a
+          # prerequisite (checkout, Python, toolchain) failed is not a pass.
           failed=""
+          incomplete=""
           for pair in "binding:${BINDING}" "memory_src:${MEMORY_SRC}" "wheel:${WHEEL}" \
                       "install:${INSTALL}" "prove_binding:${PROVE_BINDING}" "lifecycle:${LIFECYCLE}"; do
-            if [ "${pair#*:}" = "failure" ]; then
+            outcome="${pair#*:}"
+            if [ "${outcome}" = "failure" ] && [ -z "${failed}" ]; then
               failed="${pair%%:*}"
-              break
+            elif [ "${outcome}" != "success" ] && [ -z "${incomplete}" ]; then
+              incomplete="${pair%%:*} (${outcome:-not run})"
             fi
           done
           if [ -n "${failed}" ]; then
             msg="ADVISORY: memory cross-repo proof FAILED at step '${failed}' (not blocking; MEMORY_PROOF_ADVISORY=true). See that step's log."
+            echo "::warning title=Memory cross-repo proof (advisory)::${msg}"
+          elif [ -n "${incomplete}" ]; then
+            msg="ADVISORY: memory cross-repo proof did NOT complete: step ${incomplete}; an earlier prerequisite step failed. See the job log."
             echo "::warning title=Memory cross-repo proof (advisory)::${msg}"
           else
             msg="ADVISORY: memory cross-repo proof passed every step."
