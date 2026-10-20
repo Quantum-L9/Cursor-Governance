@@ -1548,6 +1548,48 @@ def main() -> int:
     kinds = {x["symbol_kind"] for x in rich["changed_symbols"]}
     if not {"CONSTANT", "API_ROUTE", "CONFIG_KEY"}.issubset(kinds):
         raise AssertionError(f"enhanced changed-symbol census missing expected kinds: {kinds}")
+    # One path:name detected by two methods is two machine symbols, so it needs two claims.
+    for key, rows in (
+        ("claim_id", rich["claim_seeds"]),
+        ("falsification_id", rich["falsification_seeds"]),
+    ):
+        ids = [x[key] for x in rows]
+        if len(ids) != len(set(ids)):
+            raise AssertionError(f"enhanced census emits duplicate {key} values")
+    # Every machine symbol the census emits must be representable in the canonical audit schema.
+    symbol_schema = bab.load_json(bab.schema_path())["properties"]["changed_symbol_ledger"]["items"]
+    claim_by_symbol = {
+        x["machine_symbol_id"]: x["claim_id"]
+        for x in rich["claim_seeds"]
+        if x.get("machine_symbol_id")
+    }
+    for item in rich["changed_symbols"]:
+        row = {
+            key: item[key]
+            for key in (
+                "symbol_id",
+                "pr_number",
+                "path",
+                "symbol_name",
+                "symbol_kind",
+                "change_type",
+                "detection_method",
+                "detection_confidence",
+            )
+        }
+        row.update(
+            source="MACHINE",
+            scope_disposition="UNKNOWN",
+            objective_ids=["O2"],
+            evidence_ids=["E-RED"],
+            claim_ids=[claim_by_symbol[item["symbol_id"]]],
+            finding_ids=[],
+        )
+        problems = [e.message for e in bab.Draft202012Validator(symbol_schema).iter_errors(row)]
+        if problems:
+            raise AssertionError(
+                f"census symbol {item['symbol_kind']}/{item['detection_method']} rejected by audit schema: {problems}"
+            )
     if dc.code_token_present("src/x.py", "# gateway\nvalue='gateway'\n", "gateway"):
         raise AssertionError(
             "Python comments/strings must not satisfy bypass boundary token presence"
