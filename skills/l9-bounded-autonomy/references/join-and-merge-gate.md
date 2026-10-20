@@ -1,6 +1,6 @@
 # Protocol C — Join and merge gate
 
-Owned by `ops/autonomy/merge_gate.py` and the scoped, expiring receipt `/l9-pr-remediation` writes. After that skill reaches green + mergeable + resolved threads, ordinary squash merge is authorized by that receipt (or a human `L9_MERGE_AUTHORIZED=<reason>`); `merge_gate.py` consults no environment boolean.
+Owned by `ops/autonomy/merge_gate.py` and `ops/autonomy/stack_safe_merge.py`. After `/l9-pr-remediation` reaches green + mergeable + resolved threads, a PR merges only under human authorization bound to the repo, PR and exact head — the operator's typed `/l9-pr-remediation` (CANONICAL_LAW §6.2.15), their recorded chat instruction, or a GitHub record — transcribed by the parent agent with `authorize_merge.py --operator-instruction` and merged with `stack_safe_merge.py --run` (or a human `L9_MERGE_AUTHORIZED=<reason>`); `merge_gate.py` consults no environment boolean and `--all-open` is never issuable.
 
 ## Join barrier
 
@@ -28,8 +28,8 @@ All required before `merge_gate.py` can treat a PR as merge-eligible:
 
 ## Autonomous ordinary merge after remediation
 
-- `merge_gate.py` reads no environment boolean: it authorizes merge only from the scoped, expiring receipt `/l9-pr-remediation` writes (or a human `L9_MERGE_AUTHORIZED=<reason>`).
-- After this checklist: `gh pr merge --squash` oldest first. Never `--admin`, never force-push.
+- `merge_gate.py` reads no environment boolean: it authorizes merge only from a per-PR, exact-head human authorization (or a human `L9_MERGE_AUTHORIZED=<reason>`).
+- After this checklist: `stack_safe_merge.py --head-sha <sha> --run` oldest first (it chooses the method). Never `--admin`, never force-push.
 - Campaigns and `make pr` still stop at green + merge-ready. They do not merge.
 
 ## Forbidden at join/merge
