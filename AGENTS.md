@@ -2333,3 +2333,30 @@ current.
   review threads, stack safety and the exact head still decide.
 - A cancellation never lapses; "stop, don't merge yet" withdraws every
   earlier operator authority until the operator authorizes again.
+
+<!-- DIRECT_INVOCATION_MERGE_AUTHORIZATION_V1 -->
+## A typed `/l9-pr-remediation` authorizes its fleet (2026-10-16) — supersedes the "user-typed invocation is not authorization" sentences of HUMAN_GATED_MERGE_V1 and GITHUB_MERGE_AUTHORIZATION_V1, §3.2's "--all-open" bullet, and the "§3.2 merge authority is unchanged" line of L9_PR_REMEDIATE_SPEED_V1 (CANONICAL_LAW §6.2.15)
+
+- The operator typing `/l9-pr-remediation [repo]` authorizes remediating and
+  merging that repository's open pull requests, each once `pr_board.py` says
+  `merge` at its live head. Never ask for PR numbers or another approval; if
+  the repository is ambiguous, ask only which one. Arguments asking for
+  Diagnose, review-only, dry-run or no merge authorize nothing.
+- Recorded by the host `UserPromptExpansion` hook (typed commands only); an
+  agent's own Skill call, `/pr`, an MCP prompt, quoted slash text and relayed
+  turns (including a subagent's hand-back) are not authorization. Read the
+  hook's `additionalContext` for what was recorded.
+- The parent agent — the one the operator spoke to — transcribes each ready
+  member with `authorize_merge.py --operator-instruction` at its live head;
+  `merge_gate.py` denies that run from a subagent (`agent_id`). Merge workers
+  run only `stack_safe_merge.py --run` against the parent's grant, and a merge
+  is reported only on `MERGED` with GitHub's merge commit.
+- A stacked successor the remediation opens on a member's branch is covered
+  once `authorize_merge.py` proves the lineage on GitHub; any other later PR
+  is not. Moved heads and lapsed grants are re-granted from the same
+  invocation; after eight hours one new invocation is needed. `--all-open`
+  stays refused.
+- §3.2's "Invoking `/l9-pr-remediation` (Converge) is merge authorization for
+  all open PRs … `--all-open`" and L9_PR_REMEDIATE_SPEED_V1's "§3.2 merge
+  authority is unchanged" are history: the receipt they describe is never
+  issued.

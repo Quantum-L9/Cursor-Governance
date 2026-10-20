@@ -1672,3 +1672,97 @@ SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge
 [`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
 [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) (L9-ORG-007),
 [`governance/ASSERTION_TYPES.yaml`](governance/ASSERTION_TYPES.yaml) (`owner_merge_authorization@1`).
+
+<!-- DIRECT_INVOCATION_MERGE_AUTHORIZATION_V1 -->
+## 6.2.15 The operator's direct `/l9-pr-remediation` invocation authorizes its fleet (2026-10-16) — supersedes §6.2.12 item 1's "user-typed" invocation clause, §6.2.13's preamble sentence "Invocation … [is] still not merge authority" as it applies to a user-typed invocation, and the recording-event list of §6.2.13 item 2
+
+Append-only. §6.2.12, §6.2.13 and §6.2.14 remain on disk; every part of them
+not named above stands. Policy: `ORG_INVARIANTS.yaml` 4.0.0, L9-ORG-007 and
+`owner_merge_authorization@1` unchanged (item 9).
+
+1. **One typed invocation is enough.** When the authenticated operator types
+   `/l9-pr-remediation` (optionally with a repository) in the active session,
+   that is the human merge authorization for the target repository's open
+   pull request fleet: remediate each one, and merge each one once the
+   readiness board (`pr_board.py`) says `merge` at its live head. The
+   operator is never asked for pull request numbers, commit hashes, a GitHub
+   comment, an approval, or a repetition. An explicit chat request to finish
+   that workflow carries the same intent and is read under §6.2.14:
+   "finish and land the open PRs", "get these PRs merged", "fix the
+   remaining PRs and get them into main", "merge everything we just fixed",
+   "run PR remediation on <repo>".
+2. **Only the operator's own invocation.** It is recorded from Claude Code's
+   `UserPromptExpansion` event with `expansion_type: slash_command` and
+   `command_name: l9-pr-remediation`. The host fires that event only for a
+   command the user typed; a Skill tool call the model makes fires none
+   (observed 2026-10-16, Claude Code 2.1.301; the skill is also
+   `disable-model-invocation: true`). Not authorization: an agent-initiated
+   Skill call, `/pr` or any other command, an MCP prompt expansion, the slash
+   text quoted or pasted inside a prompt, a relayed turn (scheduled task,
+   subagent or teammate hand-back, cross-session message, webhook), and an
+   invocation whose arguments ask for Diagnose, review-only, dry-run or no
+   merge. The `UserPromptSubmit` event for the same typed command records
+   nothing, so the invocation is recorded once (same `prompt_id`).
+3. **Corroboration.** The receipt carries the expansion event's provenance
+   (session, transcript, `prompt_id`, `command_name`, `command_args`). It
+   becomes a grant only when a human turn of that session in the host-written
+   transcript is the typed-command record
+   (`<command-name>/l9-pr-remediation</command-name>`, same `promptId`, else
+   the same `<command-args>`). That record carries `turnOrigin: "human"` on a
+   typed prompt; a headless or relayed origin fails closed. §6.2.13 item 7's
+   statement of assurance applies unchanged.
+4. **Target resolution.** The repository is the one the arguments name
+   (`owner/name`, a github.com URL, `owner/name#n`, or a repository name the
+   session already knows), else the workspace remote, else the one repository
+   the operator's own turns named. More than one, or a name that resolves to
+   none, records nothing and the agent asks only which repository.
+5. **The fleet is bounded.** The recorder snapshots the repository's open
+   pull requests through GitHub REST at invocation time (§6.2.13 item 2's
+   cohort rule). Beyond the snapshot it covers only a remediation-generated
+   successor — a pull request opened after the invocation and before it
+   expires, from a branch of the same repository, stacked on a branch that is
+   the head of exactly one fleet member (directly or through at most three
+   such successors), and authored by the authorizing principal — proven live
+   on GitHub by `authorize_merge.py`, which records the lineage in the grant.
+   Any other pull request opened later is outside the fleet. Repository-wide
+   authority (`--all-open`, `pr: "*"`) is still not issuable: the fleet
+   resolves into separately verified per-PR, per-head grants.
+6. **The invoking agent issues; workers consume.** Only the agent the
+   operator spoke to runs `authorize_merge.py --operator-instruction`, one
+   pull request and live head at a time. A subagent or teammate never does:
+   its tool events carry the parent's `session_id` and `transcript_path` plus
+   its own `agent_id`, and `merge_gate.py` denies the run when `agent_id` is
+   present. Merge workers run only `stack_safe_merge.py --run`, which reads
+   the parent's grant from the account grant file. Workers never run the
+   recorder, never write a receipt, a grant or a transcript, and never relay
+   or fabricate an instruction.
+7. **Authority through remediation, bounded in time.** A head moved by the
+   authorized remediation gets fresh technical checks and a fresh
+   head-specific grant from the same invocation (§6.2.13 item 4); a grant
+   that lapses (four hours) is re-issued from the same invocation. Neither
+   asks the operator again. The invocation itself expires eight hours after
+   it was typed; after that its members are `MERGE_PENDING` and one new
+   invocation re-authorizes the then-open fleet. It is never standing
+   authority.
+8. **Cancellation and technical gates unchanged.** A later cancellation
+   withdraws the invocation for what it covers (§6.2.14 item 6). Required
+   checks, review threads, branch protection, mergeability, stack safety and
+   the exact-head binding still decide; `stack_safe_merge.py` reports
+   `MERGED` only with GitHub's merge commit. Cursor stays
+   `BLOCKED_HOST_ORIGIN`. Force, `--admin` and auto-merge stay denied. The
+   §6.2.12 item 7 host-enforcement gap is unchanged.
+9. **Assertion mapping.** A typed invocation is the operator's direct
+   instruction to the coding agent in chat, so it maps to the existing
+   `operator_chat_instruction` channel of `owner_merge_authorization@1`;
+   L9-ORG-007 and the assertion registry need no change.
+10. **Not self-applied.** The change that introduced this section is merged
+    under the authorization in force before it, not under its own.
+
+SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge_instruction.py)
+(`parse_fleet_invocation`, `fleet_instruction`),
+[`ops/autonomy/authorize_merge.py`](ops/autonomy/authorize_merge.py) (`successor_lineage`),
+[`ops/autonomy/merge_gate.py`](ops/autonomy/merge_gate.py),
+[`ops/autonomy/pr_fleet.py`](ops/autonomy/pr_fleet.py),
+[`environment/agents/adapters/claude-code/settings.template.json`](environment/agents/adapters/claude-code/settings.template.json)
+(`UserPromptExpansion`, matcher `l9-pr-remediation`),
+[`skills/l9-pr-remediation/SKILL.md`](skills/l9-pr-remediation/SKILL.md).

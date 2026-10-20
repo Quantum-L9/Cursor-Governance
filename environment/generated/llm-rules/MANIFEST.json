@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "feed16c52fdabee4aeb7209bb43e43ba1e562d8e93f815222de7ff0e9b1cef4b",
+      "output_sha256": "299e85d46910aecbda0f8d4df9561f077efeadcdef8d7a197336ed5859018616",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "57541298dcc29ee9073551e28b2bfee0791352b79b3c0525c8a538103946cd7b",
+      "source_sha256": "b8b98981e12febb539ee5d43c1586ceec62feac2c811aecd27febfc341808ee4",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -519,9 +519,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "90a09fc362c726619e3316973f75794943d9321932485fb41e8b820aebddbc6b",
+      "output_sha256": "8672325eecc6060f20ddfb978f60e1a0bb4cd93abce7e7cadb93348912e84fe0",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "dfd1db9fe56ea7a63ace98066631ffa5860b72ab6acd0d0d82e43b3df0644225",
+      "source_sha256": "a70be1ff29603e1ba8918a37451e9db06cc1318b7ba0808b7dff20d52c8ba7a5",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -627,9 +627,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "332d4ca156ec6e77d3c2cb1940926a4fd530b3faeba8126a6520814dfadb9fa1",
+      "output_sha256": "ceb1283a8d2dba934224c421afd27317303bc4d61678dea71292d9149e1ba3d8",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "504506406339fd43ae7fdc76736402a0f4717c9d022e01b8ab8b1abab26c571f",
+      "source_sha256": "f63d8ea8d05c9e3207bf8a4064a81dde131a5ea17f42e0c6ba1c73616adaabe5",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "735df18342ffb961172433dcd5ae125c560b93678e7dac668744839637b3dd01"
+  "tree_sha256": "f32ab8c21633ab538a7d032abb852e7462b5eda5548c83366d5690d6c44244ff"
 }
