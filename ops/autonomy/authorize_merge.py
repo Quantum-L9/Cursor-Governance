@@ -27,6 +27,15 @@ gate can bind to an exact head. Two confirmations exist:
   this way (Cursor) is refused as BLOCKED_HOST_ORIGIN; the GitHub record
   remains that host's channel.
 
+  A direct operator invocation of ``/l9-pr-remediation`` (§6.2.15) is such an
+  instruction for its repository's open-pull-request snapshot, each member
+  once the readiness board says merge. It also covers a stacked successor the
+  remediation opened on a member's branch when GitHub shows that lineage and
+  the successor's author is the authorizing principal
+  (:func:`successor_lineage`). The invoking (parent) agent runs this mode; a
+  subagent never does — ``merge_gate.py`` denies it — and merge workers only
+  run ``stack_safe_merge.py --run`` against the grant the parent wrote.
+
 * **Controlling terminal** (default). A human types the exact target back on
   ``/dev/tty``. An agent's tool shell has no controlling terminal, so this mode
   refuses there by construction, and ``merge_gate.py`` denies an agent tool
@@ -48,7 +57,7 @@ It does not merge. It does not authorize force-push, admin-merge, or hard-reset.
 Metadata:
   layer: ops
   role: merge_authorization
-  version: 5.0.0
+  version: 6.0.0
 """
 
 from __future__ import annotations
@@ -72,9 +81,13 @@ if str(_HERE) not in sys.path:
 import operator_merge_instruction as omi  # noqa: E402
 from github_merge_authorization import (  # noqa: E402
     fetch_pull_request,
+    fetch_pulls_with_head,
     fetch_session_principal,
     principal_may_authorize,
 )
+
+#: How many stacked links a successor may sit above a fleet member.
+MAX_LINEAGE_DEPTH = 3
 
 DEFAULT_TTL_SECONDS = 60 * 60
 #: merge_gate.py refuses any grant whose expiry lies further out than this.
@@ -228,6 +241,88 @@ def fetch_readiness(repo: str, pr: int) -> dict[str, Any]:
     return pr_board.board_for(repo, str(pr))
 
 
+def _full_name(side: Any) -> str:
+    repo = (side or {}).get("repo") if isinstance(side, dict) else None
+    return str((repo or {}).get("full_name") or "") if isinstance(repo, dict) else ""
+
+
+def _author(view: dict[str, Any]) -> str:
+    user = view.get("user") if isinstance(view.get("user"), dict) else {}
+    return str(user.get("login") or "")
+
+
+def successor_lineage(
+    repo: str,
+    view: dict[str, Any],
+    fleet: dict[str, Any],
+    *,
+    pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
+    pulls_with_head: Callable[[str, str], list[dict[str, Any]]] = fetch_pulls_with_head,
+) -> tuple[dict[str, Any] | None, str]:
+    """``(lineage, reason)``: whether ``view`` is a successor of the fleet ``fleet``.
+
+    CANONICAL_LAW §6.2.15: a pull request the authorized remediation opened is
+    covered when GitHub itself shows the lineage — opened after the invocation
+    and before it expires, from a branch of this repository (never a fork), and
+    stacked on a branch that is the head of exactly one fleet member (directly,
+    or through at most ``MAX_LINEAGE_DEPTH`` successors that satisfy the same
+    test). ``lineage["authors"]`` names the author of every non-member pull
+    request in the chain — the candidate and each intermediate successor — and
+    the caller requires every one of them to be the authorizing principal, so
+    an operator-authored pull request stacked on someone else's is not covered.
+    Anything else — a later pull request based on ``main``, one from a
+    fork, one opened before the invocation that the snapshot did not hold —
+    is not covered.
+    """
+    members = {int(n) for n in (fleet.get("members") or []) if str(n).isdigit()}
+    since = float(fleet.get("recorded_at") or 0)
+    until = float(fleet.get("expires_at") or 0)
+    created = _parse_github_time(view.get("created_at"))
+    if created is None or created <= since:
+        return None, "it was not opened after the fleet invocation and is not in its snapshot"
+    if created >= until:
+        return None, "it was opened after the fleet invocation expired"
+    chain: list[int] = []
+    authors = [_author(view)]
+    current = view
+    for _ in range(MAX_LINEAGE_DEPTH):
+        if _full_name(current.get("head")).casefold() != repo.casefold():
+            return None, "its branch is not in this repository"
+        base = current.get("base") if isinstance(current.get("base"), dict) else {}
+        if _full_name(base).casefold() != repo.casefold():
+            return None, "it does not target a branch of this repository"
+        ref = str(base.get("ref") or "")
+        try:
+            parents = pulls_with_head(repo, ref) if ref else []
+        except RuntimeError as exc:
+            return None, f"cannot read which pull request owns branch {ref!r} ({exc})"
+        if len(parents) != 1:
+            return None, (
+                f"its base branch {ref or '<none>'} is not the head of exactly one pull request "
+                "of the fleet"
+            )
+        parent = int(parents[0].get("number") or 0)
+        chain.append(parent)
+        if parent in members:
+            return {
+                "fleet_instruction_id": fleet.get("id"),
+                "member": parent,
+                "chain": chain,
+                "authors": authors,
+            }, f"stacked on fleet member #{parent}"
+        parent_created = _parse_github_time(parents[0].get("created_at"))
+        if parent_created is None or parent_created <= since:
+            return None, f"its base pull request #{parent} is not a fleet member"
+        if parent_created >= until:
+            return None, f"its base pull request #{parent} was opened after the invocation expired"
+        try:
+            current = pull_request(repo, parent)
+        except RuntimeError as exc:
+            return None, f"cannot read base pull request #{parent} ({exc})"
+        authors.append(_author(current))
+    return None, f"its stack is deeper than {MAX_LINEAGE_DEPTH} links above any fleet member"
+
+
 def operator_verdict(
     repo: str,
     pr: int,
@@ -238,8 +333,14 @@ def operator_verdict(
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
     session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
     readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
+    pulls_with_head: Callable[[str, str], list[dict[str, Any]]] = fetch_pulls_with_head,
 ) -> dict[str, Any]:
     """Whether a recorded operator instruction may become a grant for this head.
+
+    A pull request outside every instruction may still be covered by a live
+    fleet invocation (``/l9-pr-remediation``, §6.2.15) when GitHub shows it is
+    that remediation's stacked successor (:func:`successor_lineage`) and its
+    author is the authorizing principal.
 
     Every refusal names the missing prerequisite. The checks run in the order a
     reader can act on them: the live pull request first (an instruction for a
@@ -286,20 +387,26 @@ def operator_verdict(
         refused["reason"] = "GitHub did not report when the pull request was opened"
         return refused
 
-    verdict = omi.instruction_verdict(
-        repo,
-        pr,
-        path=instruction_path or account_instruction_path(),
-        now=stamp,
-    )
+    store = instruction_path or account_instruction_path()
+    verdict = omi.instruction_verdict(repo, pr, path=store, now=stamp)
+    lineage: dict[str, Any] | None = None
     if not verdict["authorized"]:
-        refused["reason"] = (
-            f"no live operator merge instruction covers {repo}#{pr}: {verdict['reason']}. The "
-            "operator authorizes by asking for the merge in their own words in this session's "
-            "chat, or on GitHub (CANONICAL_LAW §6.2.13, §6.2.14); no particular wording is "
-            "required"
-        )
-        return refused
+        fleet = omi.fleet_instruction(repo, pr, path=store, now=stamp)
+        why = ""
+        if fleet is not None:
+            lineage, why = successor_lineage(
+                repo, view, fleet, pull_request=pull_request, pulls_with_head=pulls_with_head
+            )
+        if lineage is None:
+            successor = f"; not a successor of the fleet invocation: {why}" if why else ""
+            refused["reason"] = (
+                f"no live operator merge instruction covers {repo}#{pr}: {verdict['reason']}"
+                f"{successor}. The operator authorizes by asking for the merge in their own "
+                "words in this session's chat, by invoking /l9-pr-remediation, or on GitHub "
+                "(CANONICAL_LAW §6.2.13–§6.2.15); no particular wording is required"
+            )
+            return refused
+        verdict = {"authorized": True, "instruction": fleet}
     instruction = verdict["instruction"]
     receipt = omi.receipt_verdict(instruction, now=stamp)
     if not receipt["ok"]:
@@ -328,6 +435,19 @@ def operator_verdict(
         )
         refused["instruction"] = instruction
         return refused
+    login = str(principal.get("login") or "").casefold()
+    foreign = [
+        name for name in (lineage or {}).get("authors", [author]) if name.casefold() != login
+    ]
+    if lineage is not None and (not login or foreign):
+        refused["reason"] = (
+            f"{repo}#{pr} is stacked on fleet member #{lineage['member']}, but its chain was "
+            f"opened by {', '.join(sorted(set(foreign))) or '<unknown>'}, not only by the "
+            f"authorizing operator {principal.get('login') or '<unknown>'}; only the authorized "
+            "remediation's own successors are covered (CANONICAL_LAW §6.2.15)"
+        )
+        refused["instruction"] = instruction
+        return refused
 
     condition = instruction.get("condition")
     if isinstance(condition, dict) and condition.get("status") == omi.CONDITION_READINESS:
@@ -353,10 +473,12 @@ def operator_verdict(
         "reason": (
             "live operator instruction from a human with "
             f"{principal.get('permission')} authority covers an open PR at its live head"
+            + (f" (fleet successor stacked on #{lineage['member']})" if lineage else "")
         ),
         "instruction": instruction,
         "pull_request": summary,
         "authorizer": principal,
+        "lineage": lineage,
     }
 
 
@@ -364,10 +486,14 @@ def operator_provenance(
     instruction: dict[str, Any],
     pull_request: dict[str, Any],
     authorizer: dict[str, Any] | None = None,
+    lineage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw_hook = instruction.get("provenance")
     hook = raw_hook if isinstance(raw_hook, dict) else {}
     return {
+        "lineage": lineage,
+        "command_name": hook.get("command_name"),
+        "prompt_id": hook.get("prompt_id"),
         "channel": OPERATOR_CHANNEL,
         "recorded_by": "agent",
         "instruction_id": instruction.get("id"),
@@ -398,6 +524,7 @@ def main(
     pull_request: Callable[[str, int], dict[str, Any]] = fetch_pull_request,
     session_principal: Callable[[str], dict[str, Any]] = fetch_session_principal,
     readiness: Callable[[str, int], dict[str, Any]] = fetch_readiness,
+    pulls_with_head: Callable[[str, str], list[dict[str, Any]]] = fetch_pulls_with_head,
     now: float | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -445,6 +572,7 @@ def main(
             pull_request=pull_request,
             session_principal=session_principal,
             readiness=readiness,
+            pulls_with_head=pulls_with_head,
         )
         if not verdict["authorized"]:
             print(json.dumps({**verdict, "status": "MERGE_PENDING"}, indent=2, sort_keys=True))
@@ -452,7 +580,10 @@ def main(
             return OPERATOR_REFUSED_EXIT
         instruction = verdict["instruction"]
         provenance = operator_provenance(
-            instruction, verdict["pull_request"], verdict.get("authorizer")
+            instruction,
+            verdict["pull_request"],
+            verdict.get("authorizer"),
+            verdict.get("lineage"),
         )
         stamp = time.time() if now is None else now
         remaining = int(float(instruction.get("expires_at") or 0) - stamp)
