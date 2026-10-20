@@ -41,8 +41,12 @@ instruction receipt or a host transcript, an approving review, or a posted
 authorization line is denied (self-issuance). An operator cancellation ("do not
 merge #n") recorded after a grant or alongside a GitHub record withdraws it:
 the merge is MERGE_PENDING until the operator authorizes again.
-Invoking /l9-pr-remediation, Converge, green CI, an L4 release receipt, make pr,
-or an agent-written receipt is NOT authorization. A standing environment
+An agent's own Skill call to l9-pr-remediation, Converge reached any other way,
+green CI, an L4 release receipt, make pr, or an agent-written receipt is NOT
+authorization. The operator typing /l9-pr-remediation is (CANONICAL_LAW
+§6.2.15): the host prompt hook records it as a fleet instruction, and only the
+parent agent — never a subagent, whose events carry an ``agent_id`` — may
+transcribe it into per-PR grants. A standing environment
 boolean is not an authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE
 flag has no effect.
 
@@ -106,6 +110,7 @@ from l4_local import workspace_from_event  # noqa: E402
 from operator_merge_instruction import (  # noqa: E402
     INSTRUCTION_FILE_NAME,
     find_instruction,
+    fleet_instruction,
     receipt_verdict,
     revocation_for,
     revocation_reason,
@@ -215,9 +220,12 @@ MERGE_DENY_REASON = (
     "<live sha>. That chat instruction is sufficient, including for the operator's own "
     "pull request and governance-protected paths (§6.2.14): never ask the operator to "
     "repeat it or to post a GitHub comment. "
-    "Invoking /l9-pr-remediation, green CI, an L4 release, make pr, a local receipt, "
-    "or a terminal transcription is not merge permission, and a standing environment "
-    "boolean is not an authority. Report MERGE_PENDING and continue independent work. "
+    "The operator typing /l9-pr-remediation is such an instruction for its repository's "
+    "open pull requests (§6.2.15); an agent's own Skill call, green CI, an L4 release, "
+    "make pr, a local receipt, or a terminal transcription is not merge permission, and a "
+    "standing environment boolean is not an authority. A subagent never transcribes; it "
+    "merges only against a grant the parent wrote. Report MERGE_PENDING and continue "
+    "independent work. "
     f"With that authorization: {MERGE_COMMAND} --repo <owner/name> --pr <n> "
     "--head-sha <sha> --run (no --admin), oldest first."
 )
@@ -225,7 +233,8 @@ MERGE_DENY_REASON = (
 SELF_ISSUE_REASON = (
     "Merge authorization is a human act, never by an agent "
     "(CANONICAL_LAW §6.2.13): an agent tool call may not run authorize_merge.py "
-    "except as `--operator-instruction` backed by a host-recorded operator prompt "
+    "except as `--operator-instruction`, from the agent the operator spoke to (never a "
+    "subagent), backed by a host-recorded operator prompt "
     "that names this repository and PR, belongs to this live session, is "
     "corroborated by a human turn in the session's host transcript, and has not "
     f"been cancelled; may not run {RECORDER_SCRIPT} (other than `show`) or its host "
@@ -697,6 +706,14 @@ def _session_binding(event: dict[str, Any] | None) -> tuple[str, str]:
     )
 
 
+def _is_subagent_event(event: dict[str, Any] | None) -> bool:
+    """A tool call made inside a subagent or in-process teammate, not the parent."""
+    if not isinstance(event, dict):
+        return False
+    agent = event.get("agent_id")
+    return isinstance(agent, str) and bool(agent.strip())
+
+
 def _operator_grant_run_allowed(argv: list[str], event: dict[str, Any] | None = None) -> bool:
     """True when this ``authorize_merge.py`` argv transcribes a recorded operator instruction.
 
@@ -710,14 +727,28 @@ def _operator_grant_run_allowed(argv: list[str], event: dict[str, Any] | None = 
     repository authority, so this check gates the attempt, not the grant. A
     host whose receipts cannot be bound this way (Cursor) is
     BLOCKED_HOST_ORIGIN for this channel.
+
+    Only the agent the operator spoke to may transcribe (CANONICAL_LAW §6.2.15).
+    A subagent's tool call carries the parent's ``session_id`` and
+    ``transcript_path`` plus its own ``agent_id`` (observed 2026-10-16, Claude
+    Code 2.1.301), so without this check a worker would pass the session
+    binding as if it were the parent. Workers consume the parent's grant
+    through ``stack_safe_merge.py --run``; they never write one. A pull request
+    outside every instruction may still be the stacked successor of a live
+    fleet invocation; the attempt is admitted and the script proves the lineage
+    on GitHub before it writes anything.
     """
     if OPERATOR_FLAG not in argv:
+        return False
+    if _is_subagent_event(event):
         return False
     repo = _argv_value(argv, "--repo")
     pr = _argv_value(argv, "--pr")
     if not repo or not pr.isdigit():
         return False
     entry = find_instruction(repo, pr, path=_instruction_file_path())
+    if entry is None:
+        entry = fleet_instruction(repo, pr, path=_instruction_file_path())
     if entry is None:
         return False
     session, transcript = _session_binding(event)

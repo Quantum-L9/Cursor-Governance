@@ -46,7 +46,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - publish: `PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked child remediation PR)
 - fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
 - board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
-- merge: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run` (absolute: lanes may run in a consumer worktree) (method chosen in code; oldest `createdAt` first; only under human GitHub authorization for that head, else MERGE_PENDING)
+- merge: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run` (absolute: lanes may run in a consumer worktree) (method chosen in code; oldest `createdAt` first; only under human authorization (a grant the parent transcribed, or a GitHub record) for that head, else MERGE_PENDING)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
 
@@ -61,7 +61,7 @@ Forbidden during Converge (this skill):
 
 All remediation must be published via `PR_STACK=auto PR_REMEDIATE=0 make pr` as a new stacked PR. Once a PR exists, the only way to fix it is with another PR — not another commit to the same existing PR.
 
-Poll workers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --head-sha {sha} --run`, which merges only under human GitHub authorization and otherwise returns MERGE_PENDING (exit 3). Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge. The remediator must poll remediating and waiting PRs until `open_prs=0`.
+Poll workers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --head-sha {sha} --run`, which merges only under human authorization (a grant the parent transcribed, or a GitHub record) and otherwise returns MERGE_PENDING (exit 3). Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge. The remediator must poll remediating and waiting PRs until `open_prs=0`.
 
 Brace tokens in this file (`{owner}`, `{path}`, `{native}`) are templates. An action is executable only after those values are substituted from observed `gh`, Makefile, or `file` / `platform.machine()` output in this run.
 
@@ -117,11 +117,11 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - overlap matrix known
 - stack parents known (`P_stack`)
 - the PR is in `merge_now` (oldest safe green prefix; later remediations do not hold it)
-- human authorization covers the PR at its current head (CANONICAL_LAW §6.2.13): a GitHub record, or the operator's recorded prompt instruction transcribed with `authorize_merge.py --operator-instruction` — otherwise the PR is MERGE_PENDING and the train reports it
+- human authorization covers the PR at its current head (CANONICAL_LAW §6.2.13–§6.2.15): the operator's direct `/l9-pr-remediation` invocation or recorded chat instruction, transcribed by the parent remediator with `authorize_merge.py --operator-instruction`, or a GitHub record — otherwise the PR is MERGE_PENDING and the train reports it
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 
-Then MERGE_NOW: **oldest `createdAt` first (bottom-up)**, starting as soon as the planner lists a PR in `merge_now`. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN`, then merge if human GitHub authorization covers that head, else report MERGE_PENDING — do not hand the watch back to the human.
+Then MERGE_NOW: **oldest `createdAt` first (bottom-up)**, starting as soon as the planner lists a PR in `merge_now`. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN`, then merge if human authorization (a grant the parent transcribed, or a GitHub record) covers that head, else report MERGE_PENDING — do not hand the watch back to the human.
 
 Forbidden: remediate A → merge A → discover B conflicts → remediate B → rerun CI → repeat.
 
@@ -155,7 +155,7 @@ run_contract:
     publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"
     board: "ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json"
-    merge: '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run'  # human GitHub authorization required
+    merge: '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run'  # human authorization (a grant the parent transcribed, or a GitHub record) required
     interpreter: "{repo}/.venv/bin/python"
     readonly_git: true
   venv:

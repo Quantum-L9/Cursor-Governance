@@ -2001,7 +2001,7 @@ def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
 
 
 def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
-    """Refused. Merge authority is `/l9-pr-remediation` (`authorize_merge.py`), never PE.
+    """Refused. Merge is `/l9-pr-remediation` under human authorization, never PE.
 
     The authorize + `gh pr merge` implementation that used to sit under this
     refusal (audit Y7) was unreachable; it is gone so the runner carries no
