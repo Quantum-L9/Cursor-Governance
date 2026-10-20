@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-16T02:45:50Z'
+generated_utc: '2026-10-16T17:13:07Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:1544ee4e7eae5fe184808b26a9feb059fa2ab591873e0783092e2dfddf49c7b2
+source_tree_digest: sha256:21984db0f19d1c09a79c48333fb0874e0341610f1028c63613eb96b08f20971e
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -543,18 +543,18 @@ rules:
 - file: 48-make-pr-remediation.mdc
   id: l9.rule.48.make.pr.remediation
   id_source: explicit
-  version: 1.10.0
-  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates to MERGE_PENDING and merge needs human authorization — a GitHub record or the operator's recorded prompt instruction (CANONICAL_LAW §6.2.13); all remediations publish as stacked PRs via make pr without bare git push
+  version: 1.11.0
+  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation remediates and merges each PR only under human authorization — the operator's typed /l9-pr-remediation (CANONICAL_LAW §6.2.15), their recorded chat instruction, or a GitHub record — else MERGE_PENDING; all remediations publish as stacked PRs via make pr without bare git push
   scope: global
   domain: general
   activation: always
   activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: make pr → green merge-ready; /l9-pr-remediation → MERGE_PENDING; GitHub authorization → merge
+  first_heading: make pr → green merge-ready; /l9-pr-remediation → merge under human authorization, else MERGE_PENDING
   has_yaml_frontmatter: true
-  line_count: 190
-  content_digest: sha256:57541298dcc29ee9073551e28b2bfee0791352b79b3c0525c8a538103946cd7b
+  line_count: 198
+  content_digest: sha256:b8b98981e12febb539ee5d43c1586ceec62feac2c811aecd27febfc341808ee4
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1354,7 +1354,7 @@ rules:
 - file: 88-l4-local-autonomy.mdc
   id: l9.rule.l4.local-autonomy
   id_source: explicit
-  version: 1.1.0
+  version: 1.1.1
   description: L4 local autonomy - stacked local commits, exact-tree release authorization, then the single make pr publication ceremony.
   scope: global
   domain: git
@@ -1364,10 +1364,10 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 80
-  content_digest: sha256:dfd1db9fe56ea7a63ace98066631ffa5860b72ab6acd0d0d82e43b3df0644225
+  line_count: 82
+  content_digest: sha256:a70be1ff29603e1ba8918a37451e9db06cc1318b7ba0808b7dff20d52c8ba7a5
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
