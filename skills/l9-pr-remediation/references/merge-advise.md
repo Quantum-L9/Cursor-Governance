@@ -6,8 +6,8 @@ role: merge_advise
 tags: [pr, merge, diagnose, git, stack-safe]
 owner: igor_beylin
 status: active
-version: 2.4.0
-updated: 2026-10-15
+version: 2.5.0
+updated: 2026-10-16
 /L9_META -->
 
 # Merge (Diagnose advise vs Converge action)
@@ -25,8 +25,10 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
 
 - **Diagnose (`/pr`):** advise only. **Never merge.** If the user wants merge, tell them to invoke `/l9-pr-remediation` (Converge). Do not run `gh pr merge` from Diagnose even after a verbal “looks good.”
 - **Converge (`/l9-pr-remediation`):** remediates to merge readiness and
-  stops at **MERGE_PENDING**. Invoking it is not merge authority
-  (CANONICAL_LAW §6.2.13). A PR merges only when FIRST_MERGE_GATE holds
+  merges each ready PR under human authorization, else stops at
+  **MERGE_PENDING**. The operator typing `/l9-pr-remediation` is that
+  authorization for the repository's open PRs (CANONICAL_LAW §6.2.15); an
+  agent's own Skill call is not. A PR merges only when FIRST_MERGE_GATE holds
   (full open-PR inventory, overlap matrix, stack probe, remediations
   published) **and** human authorization covers that PR at its current
   head. Then MERGE_TRAIN **oldest `createdAt` first (bottom-up)**. Do not merge
@@ -34,7 +36,17 @@ Violation: Manual file write from PR diff = CRITICAL — revert and re-merge via
   immediately before each merge.
 
 The authorization is the human's act, never the agent's. No terminal
-transcription. Two records count (CANONICAL_LAW §6.2.13):
+transcription. Three records count (CANONICAL_LAW §6.2.13–§6.2.15):
+
+0. **Direct invocation.** The operator typed `/l9-pr-remediation [repo]`.
+   The host's `UserPromptExpansion` hook — fired only for a typed command,
+   never for a model Skill call — recorded the repository's open-PR snapshot,
+   each member merging once `pr_board.py` says `merge` at its live head. No PR
+   numbers and no further approval are asked for. A stacked successor this
+   remediation opened on a member's branch is covered once
+   `authorize_merge.py` proves its lineage on GitHub (opened after the
+   invocation, by the authorizing operator's account, on a member's branch);
+   any other later PR is not. Transcribe it exactly like item 2.
 
 1. **GitHub.** The human submits an APPROVED review on the current head or
    posts this exact line on the pull request:
@@ -45,9 +57,12 @@ transcription. Two records count (CANONICAL_LAW §6.2.13):
 
 2. **Operator prompt.** The operator asked for the merge in their own words
    in chat — "merge these PRs", "fix and merge #{number} when green", "merge
-   all open PR’s in https://github.com/{owner}/{repo}" — and the host prompt
-   hook recorded it at submission (CANONICAL_LAW §6.2.14). Once
-   the PR is green, mergeable and thread-clean, the agent transcribes it:
+   all open PR’s in https://github.com/{owner}/{repo}", "finish and land the
+   open PRs", "get them into main" — and the host prompt hook recorded it at
+   submission (CANONICAL_LAW §6.2.14). Once the PR is green, mergeable and
+   thread-clean, **the invoking (parent) agent** transcribes it — a merge
+   worker never does (`merge_gate.py` denies a subagent) and runs only
+   `stack_safe_merge.py --run` against the parent's grant:
 
    ```bash
    "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/authorize_merge.py" --operator-instruction --repo {owner}/{repo} --pr {number} --head-sha {sha}
@@ -72,7 +87,7 @@ not approve, and never writes the grant file or the instruction receipt.
 Do **not** choose `--squash` or `--merge` by hand. The helper probes whether
 this head is the `baseRefName` of another open PR and emits the only safe
 flags (`--merge` for a parent, `--squash` for a leaf). `--json` also reports
-the live head and whether human GitHub authorization covers it (`AUTHORIZED` /
+the live head and whether human authorization (a grant or a GitHub record) covers it (`AUTHORIZED` /
 `MERGE_PENDING`); `--run` rechecks the live head, merges only under that
 grant, and binds the merge to the SHA:
 

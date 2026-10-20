@@ -52,6 +52,10 @@
     "after a live head and operator repository-authority recheck (6.2.14). The recorder never blocks a",
     "prompt and an agent tool call cannot invoke it or write its receipt. No terminal",
     "transcription. /l9-pr-remediation stops at MERGE_PENDING without one of those records.",
+    "The operator typing /l9-pr-remediation is itself such an instruction for that repository's",
+    "open pull requests (6.2.15): the same recorder runs at UserPromptExpansion, which the host",
+    "fires only for a typed command, never for a model Skill call. Only the parent agent",
+    "transcribes; a subagent (agent_id on its events) never does.",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
     "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
     "remain forbidden by policy.",
@@ -216,6 +220,16 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer skill_usage_logger.py'",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "l9-pr-remediation",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer operator_merge_instruction_wrap.py'",
+            "timeout": 15
           }
         ]
       }

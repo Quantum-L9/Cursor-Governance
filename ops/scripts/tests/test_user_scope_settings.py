@@ -83,9 +83,11 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 18 registrations covering 17 distinct hook scripts: skill_usage_logger
-        # is registered twice (PreToolUse and UserPromptExpansion). Three are
-        # fail-closed gates; fifteen are observers. The two Stop observers,
+        # 19 registrations covering 17 distinct hook scripts: skill_usage_logger
+        # is registered twice (PreToolUse and UserPromptExpansion), and so is
+        # operator_merge_instruction_wrap.py (UserPromptSubmit and, matched to
+        # l9-pr-remediation, UserPromptExpansion). Three are fail-closed gates;
+        # sixteen are observers. The two Stop observers,
         # memory_writeback.py and governance_handoff_writeback.py, run in
         # parallel once per publication. ci_parity_push_gate.py and
         # ci_parity_posttool.py are observers, so the gate count is unchanged.
@@ -98,10 +100,11 @@ class UserScopeSettingsTests(unittest.TestCase):
         # consuming the governance-hydration hook budget.
         # operator_merge_instruction_wrap.py is the UserPromptSubmit observer that
         # records the operator's explicit merge instructions (CANONICAL_LAW
-        # §6.2.13); it decides nothing and never blocks a prompt.
-        self.assertEqual(len(commands), 18, "every L9 hook registration must reach user scope")
+        # §6.2.13); at UserPromptExpansion it records a typed /l9-pr-remediation
+        # as the fleet instruction (§6.2.15). It decides nothing and never blocks.
+        self.assertEqual(len(commands), 19, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 3)
-        self.assertEqual(sum("--class observer" in c for c in commands), 15)
+        self.assertEqual(sum("--class observer" in c for c in commands), 16)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
         self.assertEqual(len(names), 17, "seventeen distinct hook scripts")
         session_start_commands = [
