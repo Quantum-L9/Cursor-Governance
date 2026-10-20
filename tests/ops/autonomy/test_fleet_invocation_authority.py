@@ -725,7 +725,12 @@ def test_recorder_process_answers_on_the_expansion_event(tmp_path: Path) -> None
     — and says so."""
     transcript = tmp_path / "t.jsonl"
     _typed_command(transcript, MEMORY)
-    env = {"HOME": str(tmp_path), "PATH": str(Path(sys.executable).parent)}
+    env = {
+        "HOME": str(tmp_path),
+        "PATH": str(Path(sys.executable).parent),
+        # The scrubbed environment must still carry the strict pin (§6.2.16).
+        "L9_MERGE_AUTHORITY_MODE": "strict",
+    }
     proc = subprocess.run(
         [
             sys.executable,

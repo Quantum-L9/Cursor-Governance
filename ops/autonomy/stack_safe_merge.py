@@ -67,6 +67,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import merge_authority_switch  # noqa: E402
 import operator_merge_instruction as omi  # noqa: E402
 from github_merge_authorization import authorization_line, authorize_for_merge  # noqa: E402
 from merge_gate import (  # noqa: E402
@@ -151,6 +152,14 @@ def authorization_status(
         reason = "no --head-sha named; authorization binds an exact head"
     elif requested != live:
         reason = f"head moved: requested {requested}, live {live}"
+    elif merge_authority_switch.disabled():
+        return {
+            **record,
+            "status": "AUTHORIZED",
+            "reason": "merge-authority enforcement disabled (CANONICAL_LAW §6.2.16)",
+            "channel": "enforcement_disabled",
+            "authorizer": "operator",
+        }
     elif grant is not None and (revoked := _revocation(repo, pr, since=since)) is not None:
         reason = omi.revocation_reason(revoked)
     elif grant is not None:

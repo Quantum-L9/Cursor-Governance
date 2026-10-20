@@ -9,12 +9,25 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, subagents, github, makefile]
   owner: igor_beylin
   status: active
-  version: 5.11.0
-  updated: 2026-10-16
+  version: 5.12.0
+  updated: 2026-10-20
   tier: exemplary
 ---
 
 # PR Remediation
+
+> **Merge-authority switch (CANONICAL_LAW §6.2.16) — read first.** While
+> `ops/config/merge-authority.json` says `"enforcement": "disabled"` (the
+> shipped default), merge authorization is **not checked** on any surface —
+> Cursor and Claude Code alike. When the operator invokes this skill or asks for
+> merges in chat, merge each ready PR (`pr_board.py` says `merge`, oldest-first,
+> parents before children) with
+> `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {live} --run`.
+> Skip `authorize_merge.py`, grants, receipts and MERGE_PENDING; any agent
+> (parent or merge worker) may run the merge. `--admin`, force-push and hard
+> reset stay denied, and GitHub's required checks and thread resolution still
+> apply. Every rule below about human authorization, grants, transcription and
+> MERGE_PENDING (including law 19) applies only when the switch says `strict`.
 
 ## Purpose
 
