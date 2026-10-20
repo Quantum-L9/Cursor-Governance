@@ -163,11 +163,11 @@ def _todos_json_file(raw_path: str, work_root: Path) -> Path:
     try:
         resolved.relative_to(work_root.resolve())
     except ValueError as exc:
-        raise ValueError("--todos-json path must be under the work root") from exc
+        raise ValueError("--todos-json path must be under the repository root") from exc
     return resolved
 
 
-def parse_todos_json(raw: str, work_root: Path) -> list[dict[str, str]]:
+def parse_todos_json(raw: str, work_root: Path | None = None) -> list[dict[str, str]]:
     """Parse ``--todos-json`` (inline JSON or ``@path`` / path to a JSON file).
 
     Accepts a list of objects with ``id``, ``task`` (or ``description``), and
@@ -175,13 +175,14 @@ def parse_todos_json(raw: str, work_root: Path) -> list[dict[str, str]]:
     path so downstream scope lock keeps every declared file. Empty list is
     rejected by the caller.
     """
+    root = work_root if work_root is not None else Path.cwd()
     payload = raw.strip()
     if not payload:
         raise ValueError("--todos-json is empty")
     if payload.startswith("@"):
-        payload = _todos_json_file(payload[1:], work_root).read_text(encoding="utf-8")
+        payload = _todos_json_file(payload[1:], root).read_text(encoding="utf-8")
     elif not payload.lstrip().startswith("["):
-        payload = _todos_json_file(payload, work_root).read_text(encoding="utf-8")
+        payload = _todos_json_file(payload, root).read_text(encoding="utf-8")
     data = json.loads(payload)
     if not isinstance(data, list):
         raise ValueError("--todos-json must be a JSON list")
