@@ -8,6 +8,8 @@
     {"prompt": "the campaign left three PRs red, converge them", "expected": "converge"},
     {"prompt": "fix the review comments on the open PRs and get them merged", "expected": "converge"},
     {"prompt": "run the merge train on the open PRs", "expected": "converge"},
+    {"prompt": "run PR remediation on l9-graphiti-memory", "expected": "converge"},
+    {"prompt": "finish and land the open PRs on Cursor-Governance", "expected": "converge"},
     {"prompt": "/pr #488", "expected": "diagnose"},
     {"prompt": "is PR #488 ready to merge?", "expected": "diagnose"},
     {"prompt": "what are the merge blockers on PR 72", "expected": "diagnose"},

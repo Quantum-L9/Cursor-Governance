@@ -154,6 +154,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "l9-pr-remediation",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer operator_merge_instruction_wrap.py'",
+            "timeout": 15
+          }
+        ]
       }
     ]
   },

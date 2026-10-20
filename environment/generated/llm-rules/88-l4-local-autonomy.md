@@ -52,8 +52,10 @@ with no local `pr` target. A consumer needs no additional local target;
 there is no raw-push fallback where one is absent.
 
 7. Do **not** merge from the `make pr` path. Its end state is green +
-   merge-ready. Merge only after the user invokes `/l9-pr-remediation`
-   (see `rules/48-make-pr-remediation.mdc`).
+   merge-ready. Merge happens on the `/l9-pr-remediation` path, and only under
+   human authorization bound to the PR and its exact head — the operator's
+   typed invocation, recorded chat instruction, or a GitHub record (see
+   `rules/48-make-pr-remediation.mdc`, CANONICAL_LAW §6.2.15).
 
 ## Enforcement
 
@@ -69,7 +71,7 @@ there is no raw-push fallback where one is absent.
 - Treating a validation failure as permission for the validator to repair the
   tree, or publishing a repaired tree on the pre-repair authorization
 - Inventing "wait for push approval" contracts that recreate pacing stalls
-- Merging from the `make pr` path (merge is `/l9-pr-remediation`)
+- Merging from the `make pr` path (merge is `/l9-pr-remediation`, under human authorization)
 - Force-push, admin-merge, or hard-reset
 
 <!-- generated-from: rules/88-l4-local-autonomy.mdc; do-not-edit -->
