@@ -35,15 +35,17 @@ publish:
   raw_gh_pr_create: forbidden
   # Publication is a separate root operation, not a campaign stage. Campaign runs
   # end at verified local commits. When publication does run it MUST end green +
-  # merge-ready and still does not merge. Invoking /l9-pr-remediation authorizes
-  # merge of every open PR in the target repo after Converge.
+  # merge-ready and still does not merge. /l9-pr-remediation merges each PR
+  # only under human authorization bound to it and its exact head; the
+  # operator typing /l9-pr-remediation is that authorization for the repo's
+  # open PRs (CANONICAL_LAW §6.2.15), a campaign step never is.
   remediate: true
   remediate_max_cycles: 5
   halt_before_merge: true
   merge: false
   remediations:
     skill: l9-pr-remediation
-    merge: authorized_on_skill_invocation
+    merge: per_pr_human_authorization  # §6.2.12–§6.2.15; a typed /l9-pr-remediation is one
     scope: stacked_prs_opened_by_this_run
   open_pr_against_main: false
   mix_with_other_feature_branches: false
@@ -156,7 +158,7 @@ owner:
   terminal_verdict: CONVERGED
   declared_at: "2026-08-14T21:28:53Z"
   # Ceiling for AUTONOMOUS execution. Push and pull_request moved to the release
-  # transition; merge remains /l9-pr-remediation's alone.
+  # transition; merge remains /l9-pr-remediation's alone, under human authorization.
   authorization_ceiling:
     commit: true
     push: false
