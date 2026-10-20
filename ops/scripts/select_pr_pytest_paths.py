@@ -208,8 +208,17 @@ def root_addopts_ignores(repo_root: Path = REPO_ROOT) -> list[str]:
 
 
 def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
+    """A non-root *pytest* suite owns ``path`` and can collect it.
+
+    A ``command`` / ``command_sequence`` suite (skill self-tests, the Wave 3
+    orchestrator) runs its owned paths through its own entrypoint and takes no
+    pytest file arguments, so its ownership does not make a root-ignored path
+    collectable: handed to repo-root pytest, the explicit argument overrides
+    ``collect_ignore`` and the import fails (``skills/_archived/**`` tests).
+    """
     return any(
         not is_dot_owned(suite)
+        and str(suite.get("kind") or "pytest") == "pytest"
         and any(
             path_under(path, str(root)) or path_under(str(root), path) or path == str(root)
             for root in (suite.get("owned_paths") or [])

@@ -143,7 +143,7 @@ An approved release binds the policy to:
 
 - an immutable commit;
 - policy, schema, and assertion-registry digests;
-- independent approval;
+- owner merge authorization (L9-ORG-007);
 - compatibility metadata;
 - optional signature or attestation evidence.
 

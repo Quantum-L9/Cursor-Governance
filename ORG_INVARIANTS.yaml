@@ -43,7 +43,7 @@ metadata:
     name: Quantum-L9
     github_owner: Quantum-L9
 
-  policy_version: 3.0.0
+  policy_version: 4.0.0
   schema_version: 2
 
   owner:
@@ -346,6 +346,22 @@ assertion_registry:
       pass: required_independent_human_approval_exists
       fail: approval_is_missing_self_approved_or_agent_only
       unknown: approval_identity_cannot_be_verified
+
+  - type: owner_merge_authorization
+    version: 1
+    evaluator_contract: owner_merge_authorization_v1
+
+    required_inputs:
+      - authorizer_identity
+      - authorizer_repository_permission
+      - authorization_event
+      - authorization_channel
+      - bound_head_sha
+
+    outcomes:
+      pass: explicit_authorization_from_human_with_repository_authority_binds_the_head
+      fail: authorization_is_missing_cancelled_agent_originated_or_lacks_repository_authority
+      unknown: authorizer_identity_permission_or_instruction_provenance_is_unverifiable
 
   - type: enforcement_evidence
     version: 1
@@ -676,7 +692,7 @@ invariants:
   # ---------------------------------------------------------------------------
 
   - id: L9-ORG-007
-    title: Governance-sensitive changes require independent human approval
+    title: Governance-sensitive changes require explicit authorization from an authorized human owner
     domain: change_control
     severity: critical
     policy_state: active
@@ -685,12 +701,19 @@ invariants:
       statement: >-
         Changes to canonical policy, policy schemas, validators, renderers,
         governance workflows, CODEOWNERS, release controls, ruleset bindings,
-        bypass configuration, or exemption policy require independent
-        authorization from an authorized human governance owner. An explicit
-        merge authorization from that owner satisfies this requirement; a
-        coding agent may execute the authorized merge but cannot itself provide
-        the authorization, and the change author cannot self-authorize. A
-        separate recorded codeowner review is not required.
+        bypass configuration, or exemption policy require explicit merge
+        authorization from an authenticated human who holds authority over the
+        repository (admin, maintain or write). That owner's direct
+        instruction to the coding agent in chat, a GitHub approval, or a
+        GitHub authorization line satisfies this requirement, including when
+        that owner is also the change author; protected filenames alone never
+        demand a second human. A coding agent may execute the authorized merge
+        but cannot itself provide, fabricate or relay the authorization, and a
+        person without repository authority cannot authorize. Required checks
+        and branch protection still apply. A separate recorded codeowner
+        review is not required. (Amended by CANONICAL_LAW §6.2.14, policy
+        4.0.0; superseded wording: independent approval, author cannot
+        self-authorize.)
 
       enforcement_requirement: blocking
       fail_behavior: closed
@@ -711,36 +734,42 @@ invariants:
       - environment/contracts/**
 
     assertion:
-      type: independent_approval
+      type: owner_merge_authorization
       version: 1
 
       requirements:
         pull_request_required: true
         minimum_human_authorizations: 1
         human_owner_merge_authorization_satisfies: true
+        operator_chat_instruction_satisfies: true
+        authorizer_requires_repository_authority: true
+        authorized_owner_may_self_authorize: true
         codeowner_approval_required: false
-        author_cannot_self_authorize: true
         agent_authorization_is_not_authorization: true
         agent_may_execute_authorized_merge: true
+        required_checks_and_branch_protection_apply: true
         unresolved_review_threads_block: false
 
     violation:
       code: L9_ORG_INDEPENDENT_APPROVAL_REQUIRED
       action: block
       message: >-
-        Governance-sensitive changes require independent authorized human
-        approval.
+        Governance-sensitive changes require explicit merge authorization from
+        an authenticated human with authority over the repository.
 
     assurance:
       effective_enforcement_state: advisory
       assurance_state: partially_verified
       reason: >-
-        Independent authorization is satisfied by an explicit merge
-        authorization from an authorized human governance owner; the coding
-        agent may execute the authorized merge but is not the authorizer, and
-        the change author cannot self-authorize. A separate recorded codeowner
-        review is intentionally not required. This is a process control;
-        platform ruleset binding is not the gate.
+        Authorization is an explicit merge authorization from an authenticated
+        human holding repository authority: the operator's chat instruction
+        (recorded by the host prompt hook, corroborated by the host
+        transcript, and bound to the session's GitHub identity and its
+        repository permission) or a GitHub record. The author may be that
+        human. The coding agent executes the authorized merge but is not the
+        authorizer. A separate recorded codeowner review is intentionally not
+        required. This is a process control; platform ruleset binding is not
+        the gate.
 
   - id: L9-ORG-008
     title: Governance code must use immutable external references
@@ -1656,10 +1685,11 @@ change_control:
 
   requirements:
     pull_request_required: true
-    independent_human_authorization_required: true
+    owner_merge_authorization_required: true
     human_owner_merge_authorization_satisfies: true
+    operator_chat_instruction_satisfies: true
+    authorized_owner_may_self_authorize: true
     agent_may_execute_authorized_merge: true
-    author_cannot_self_authorize: true
     codeowner_approval_required: false
     direct_push_to_default_branch: forbidden
     force_push: forbidden

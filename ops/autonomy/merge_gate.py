@@ -4,12 +4,14 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Merge authority is a human grant, never an invocation (CANONICAL_LAW §6.2.12).
-A merge — `gh pr merge`, the REST merge endpoint (gh api or curl), an MCP merge
-tool, or `stack_safe_merge.py --run` — is allowed only when one of these holds:
+Merge authority is a human act, never an invocation (CANONICAL_LAW §6.2.12,
+§6.2.13). A merge — `gh pr merge`, the REST merge endpoint (gh api or curl),
+an MCP merge tool, or `stack_safe_merge.py --run` — is allowed only when one
+of these holds:
 
-  L9_MERGE_AUTHORIZED=<nonempty reason string>          # human session breakglass
-  ~/.l9/autonomy/merge-authorization.json               # human merge grant
+  a human GitHub authorization on the named head          # ordinary path (§6.2.13)
+  L9_MERGE_AUTHORIZED=<nonempty reason string>            # human session breakglass
+  ~/.l9/autonomy/merge-authorization.json                 # optional legacy grant
     {"authorizations": [{"repo": "org/repo", "pr": 53,
                           "head_sha": "<40-hex>", "issuer": "human",
                           "issued_at": <unix-seconds>,
@@ -22,12 +24,31 @@ tool, or `stack_safe_merge.py --run` — is allowed only when one of these holds
     (`--match-head-commit`, `-f sha=`, an MCP `sha`, or `--head-sha`). A moved
     head, an unnamed head, or a stale grant is MERGE_PENDING.
 
-Grants are written by ops/autonomy/authorize_merge.py after a human types the
-target back on a controlling terminal. Invoking /l9-pr-remediation, Converge,
-green CI, an L4 release receipt, make pr, or an agent-written receipt is NOT a
-grant. An agent tool call that runs authorize_merge.py or writes the grant file
-is denied here (self-issuance). A standing environment boolean is not an
-authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE flag has no effect.
+The ordinary records are a human GitHub approval or the exact line
+``authorize merge <owner>/<repo>#<pr>@<sha>`` on that pull request
+(``github_merge_authorization.py``), and an explicit merge instruction the
+operator typed, recorded by the host's prompt hook
+(``operator_merge_instruction.py``) and transcribed into the grant file by
+``authorize_merge.py --operator-instruction``. A terminal transcription is not
+required. An agent tool call may run ``authorize_merge.py`` only in that mode
+and only when a live, uncancelled recorded instruction covers the named
+repository and PR and the receipt is bound to the live session: the PreToolUse
+event's ``session_id`` and ``transcript_path`` match the receipt's hook
+provenance and a human turn of that transcript carries the instruction. Any
+other run of it, an agent run of the instruction recorder (other than ``show``)
+or of its host prompt adapters, a direct write of the grant file, the
+instruction receipt or a host transcript, an approving review, or a posted
+authorization line is denied (self-issuance). An operator cancellation ("do not
+merge #n") recorded after a grant or alongside a GitHub record withdraws it:
+the merge is MERGE_PENDING until the operator authorizes again.
+An agent's own Skill call to l9-pr-remediation, Converge reached any other way,
+green CI, an L4 release receipt, make pr, or an agent-written receipt is NOT
+authorization. The operator typing /l9-pr-remediation is (CANONICAL_LAW
+§6.2.15): the host prompt hook records it as a fleet instruction, and only the
+parent agent — never a subagent, whose events carry an ``agent_id`` — may
+transcribe it into per-PR grants. A standing environment
+boolean is not an authority either: the retired L9_AUTONOMY_AUTONOMOUS_MERGE
+flag has no effect.
 
 Shell ``git``/``gh`` commands are exempt from the *workflow* plane
 (``git_execution_exemption``), but a merge is an effect, so merge authority
@@ -84,7 +105,16 @@ from command_parse import (  # noqa: E402
     wrapper_subcommands,
 )
 from git_execution_exemption import event_is_git_or_gh  # noqa: E402
+from github_merge_authorization import verdict_for_hook  # noqa: E402
 from l4_local import workspace_from_event  # noqa: E402
+from operator_merge_instruction import (  # noqa: E402
+    INSTRUCTION_FILE_NAME,
+    find_instruction,
+    fleet_instruction,
+    receipt_verdict,
+    revocation_for,
+    revocation_reason,
+)
 
 DENY_TOOL_NAMES = {
     "mcp__github__merge_pull_request",
@@ -98,6 +128,39 @@ AUTO_MERGE_TOOL_SUFFIX = "__enable_pr_auto_merge"
 GRANT_ISSUER = "human"
 MAX_GRANT_TTL_SECONDS = 4 * 60 * 60
 GRANT_FILE_NAME = "merge-authorization.json"
+#: Files only a human act may produce: the grant, and the host-recorded
+#: operator instruction the grant may be transcribed from. An agent tool call
+#: that writes either one is self-issuance.
+PROTECTED_RECORD_FILES = frozenset({GRANT_FILE_NAME, INSTRUCTION_FILE_NAME})
+OPERATOR_FLAG = "--operator-instruction"
+#: The recorder and the host adapters that feed it. Only the host's own prompt
+#: hook may run them; an agent tool call that does is manufacturing a receipt.
+#: ``show`` is the recorder's read-only subcommand and stays allowed.
+RECORDER_SCRIPT = "operator_merge_instruction.py"
+_RECORDER_MODULE = RECORDER_SCRIPT.removesuffix(".py")
+_RECORDER_TARGETS = frozenset(
+    {RECORDER_SCRIPT, _RECORDER_MODULE, f"ops.autonomy.{_RECORDER_MODULE}"}
+)
+_RECORDER_ADAPTERS = frozenset(
+    {
+        "operator_merge_instruction_wrap.py",
+        "before_submit_merge_instruction.py",
+        "before-submit-merge-instruction.py",
+    }
+)
+_HOOK_LAUNCHERS = frozenset({"l9_hook_exec.sh"})
+#: Text that names the recorder's implementation inside inline interpreter code
+#: (``python -c``, ``python - <<EOF``), where no script argv can be resolved.
+_RECORDER_TOKENS = (
+    _RECORDER_MODULE,
+    "before_submit_merge_instruction",
+    "before-submit-merge-instruction",
+    "record_instructions(",
+)
+#: The host-written session transcript the gate corroborates a receipt against.
+#: Appending to it would forge the corroboration, so a shell or file-tool write
+#: to one is denied; reading it is not.
+_HOST_TRANSCRIPT = re.compile(r"\.claude/projects/[^\s'\"<>|;&]*\.jsonl\b")
 _FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 FILE_TOOL_NAMES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 SHELL_TOOL_NAMES = {"Bash", "bash", "Shell", "shell"}
@@ -147,22 +210,38 @@ GRANT_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/authorize_
 MERGE_COMMAND = f'{GOV_PYTHON} "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py"'
 
 MERGE_DENY_REASON = (
-    "MERGE_PENDING: merging requires a human merge grant bound to this repository, "
-    "PR and exact head SHA (CANONICAL_LAW §6.2.12). Invoking /l9-pr-remediation, "
-    "Converge, green CI, an L4 release, make pr, or an agent-written receipt is not "
-    "merge permission, and a standing environment boolean is not an authority. "
-    "Report MERGE_PENDING (PR, head SHA, CI/review status, stack order) and continue "
-    "independent work. A human issues the grant from their own terminal: "
-    f"{GRANT_COMMAND} --repo <owner/name> --pr <n> --head-sha <sha>; "
-    f"then {MERGE_COMMAND} --repo <owner/name> --pr <n> "
+    "MERGE_PENDING: merging requires human authorization bound to this "
+    "repository, PR and exact head SHA (CANONICAL_LAW §6.2.13). That is either an "
+    "APPROVED review on that head, or a pull-request comment whose body contains the "
+    "exact line `authorize merge <owner>/<repo>#<n>@<40-hex>`, from a human with write "
+    "access; or a merge instruction the operator gave in their own words in this "
+    "session's chat, recorded by the host prompt hook and transcribed with "
+    f"{GRANT_COMMAND} --operator-instruction --repo <owner/name> --pr <n> --head-sha "
+    "<live sha>. That chat instruction is sufficient, including for the operator's own "
+    "pull request and governance-protected paths (§6.2.14): never ask the operator to "
+    "repeat it or to post a GitHub comment. "
+    "The operator typing /l9-pr-remediation is such an instruction for its repository's "
+    "open pull requests (§6.2.15); an agent's own Skill call, green CI, an L4 release, "
+    "make pr, a local receipt, or a terminal transcription is not merge permission, and a "
+    "standing environment boolean is not an authority. A subagent never transcribes; it "
+    "merges only against a grant the parent wrote. Report MERGE_PENDING and continue "
+    "independent work. "
+    f"With that authorization: {MERGE_COMMAND} --repo <owner/name> --pr <n> "
     "--head-sha <sha> --run (no --admin), oldest first."
 )
 
 SELF_ISSUE_REASON = (
-    "Merge grants are issued by a human, never by an agent (CANONICAL_LAW §6.2.12): "
-    "an agent tool call may not run authorize_merge.py or write "
-    "merge-authorization.json. Report MERGE_PENDING with the exact grant command "
-    "for the human to run in their own terminal."
+    "Merge authorization is a human act, never by an agent "
+    "(CANONICAL_LAW §6.2.13): an agent tool call may not run authorize_merge.py "
+    "except as `--operator-instruction`, from the agent the operator spoke to (never a "
+    "subagent), backed by a host-recorded operator prompt "
+    "that names this repository and PR, belongs to this live session, is "
+    "corroborated by a human turn in the session's host transcript, and has not "
+    f"been cancelled; may not run {RECORDER_SCRIPT} (other than `show`) or its host "
+    f"prompt adapters; may not write {GRANT_FILE_NAME}, {INSTRUCTION_FILE_NAME} or a "
+    "host transcript; and may not submit an approving review or post an "
+    "`authorize merge` line. Report MERGE_PENDING: the operator authorizes in their "
+    "own prompt, or on the pull request."
 )
 
 AUTO_MERGE_DENY_REASON = (
@@ -607,6 +686,149 @@ def _auth_file_path() -> Path:
     return Path.home() / ".l9" / "autonomy" / "merge-authorization.json"
 
 
+def _instruction_file_path() -> Path:
+    """The host-recorded operator instructions. Hook-environment override for tests only."""
+    override = os.environ.get("L9_OPERATOR_INSTRUCTION_FILE", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".l9" / "autonomy" / INSTRUCTION_FILE_NAME
+
+
+def _session_binding(event: dict[str, Any] | None) -> tuple[str, str]:
+    """(session_id, transcript_path) the host put on the PreToolUse event."""
+    if not isinstance(event, dict):
+        return "", ""
+    session = event.get("session_id")
+    transcript = event.get("transcript_path")
+    return (
+        session.strip() if isinstance(session, str) else "",
+        transcript.strip() if isinstance(transcript, str) else "",
+    )
+
+
+def _is_subagent_event(event: dict[str, Any] | None) -> bool:
+    """A tool call made inside a subagent or in-process teammate, not the parent."""
+    if not isinstance(event, dict):
+        return False
+    agent = event.get("agent_id")
+    return isinstance(agent, str) and bool(agent.strip())
+
+
+def _operator_grant_run_allowed(argv: list[str], event: dict[str, Any] | None = None) -> bool:
+    """True when this ``authorize_merge.py`` argv transcribes a recorded operator instruction.
+
+    The run must ask for ``--operator-instruction`` and name a repository and PR
+    that a live, unrevoked receipt covers (a cohort receipt covers the pull
+    requests in its recorded snapshot). The receipt must then be bound to the
+    live session: the PreToolUse event names the session and its host-written
+    transcript, the receipt must carry the same session and transcript in its
+    hook provenance, and a human turn of that transcript must carry the
+    instruction. The script also rechecks the live head and the operator's
+    repository authority, so this check gates the attempt, not the grant. A
+    host whose receipts cannot be bound this way (Cursor) is
+    BLOCKED_HOST_ORIGIN for this channel.
+
+    Only the agent the operator spoke to may transcribe (CANONICAL_LAW §6.2.15).
+    A subagent's tool call carries the parent's ``session_id`` and
+    ``transcript_path`` plus its own ``agent_id`` (observed 2026-10-16, Claude
+    Code 2.1.301), so without this check a worker would pass the session
+    binding as if it were the parent. Workers consume the parent's grant
+    through ``stack_safe_merge.py --run``; they never write one. A pull request
+    outside every instruction may still be the stacked successor of a live
+    fleet invocation; the attempt is admitted and the script proves the lineage
+    on GitHub before it writes anything.
+    """
+    if OPERATOR_FLAG not in argv:
+        return False
+    if _is_subagent_event(event):
+        return False
+    repo = _argv_value(argv, "--repo")
+    pr = _argv_value(argv, "--pr")
+    if not repo or not pr.isdigit():
+        return False
+    entry = find_instruction(repo, pr, path=_instruction_file_path())
+    if entry is None:
+        entry = fleet_instruction(repo, pr, path=_instruction_file_path())
+    if entry is None:
+        return False
+    session, transcript = _session_binding(event)
+    if not session or not transcript:
+        return False
+    return bool(receipt_verdict(entry, session_id=session, transcript_path=transcript).get("ok"))
+
+
+def _is_interpreter(head: str) -> bool:
+    name = Path(head.strip("'\"")).name
+    return name.startswith("python") or head.startswith("$")
+
+
+def _agent_runs_recorder(command: str) -> bool:
+    """A shell segment that executes the instruction recorder or a host adapter.
+
+    Resolved from argv like the grant-writer check, so ``cat``, ``grep``,
+    ``git diff``, a linter or pytest naming the file only reads it, and the
+    recorder's own read-only ``show`` stays allowed. Inline interpreter code
+    (``python -c``, ``python - <<EOF``) that names the implementation is denied
+    by text: no argv can be resolved for it, and the gap §6.2.12 names is
+    exactly an agent reaching the Python API around the command filter.
+    """
+    inline_interpreter = False
+    for words in _executed_segments(command):
+        if not words:
+            continue
+        if Path(words[0].strip("'\"")).name in _HOOK_LAUNCHERS and any(
+            Path(word.strip("'\"")).name in _RECORDER_ADAPTERS for word in words[1:]
+        ):
+            return True
+        target = _invoked_target(words)
+        if target is None:
+            inline_interpreter = inline_interpreter or _is_interpreter(words[0])
+            continue
+        name, argv = target
+        if name in _RECORDER_TARGETS:
+            if argv and argv[0].strip("'\"") == "show":
+                continue
+            return True
+        if name in _RECORDER_ADAPTERS:
+            return True
+        if name in _HOOK_LAUNCHERS and any(
+            Path(word.strip("'\"")).name in _RECORDER_ADAPTERS for word in argv
+        ):
+            return True
+    if inline_interpreter and any(token in command for token in _RECORDER_TOKENS):
+        return True
+    return False
+
+
+def _shell_writes_host_transcript(command: str, event: dict[str, Any] | None = None) -> bool:
+    """A shell segment that writes a host session transcript.
+
+    Matched by shape (``.claude/projects/*.jsonl``) and, when the PreToolUse
+    event names the live session's transcript, by that exact path as well, so
+    the file the gate corroborates receipts against cannot be appended to from
+    a tool call wherever the host keeps it.
+    """
+    _, live = _session_binding(event)
+    live_names = {live, Path(live).name} - {""} if live else set()
+
+    def _names(text: str) -> bool:
+        return bool(_HOST_TRANSCRIPT.search(text)) or any(name in text for name in live_names)
+
+    if not _names(command):
+        return False
+    for segment in split_segments(command):
+        if not _names(segment):
+            continue
+        words = _argv_skip_env(segment_words(segment))
+        head = Path(words[0].strip("'\"")).name if words else ""
+        if head not in _READ_ONLY_HEADS or ">" in segment:
+            return True
+    for words in _executed_segments(command):
+        if words and _invoked_target(words) is None and _is_interpreter(words[0]):
+            return True
+    return False
+
+
 def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str, str]:
     """Return (repo, pr) parsed conservatively from the tool input; ('', '') when unknown.
 
@@ -704,9 +926,287 @@ def find_grant(
     return None
 
 
+def _revocation(repo: str, pr: str, *, since: float | None = None) -> dict[str, Any] | None:
+    """The operator's live cancellation covering ``repo#pr``, issued at or after ``since``.
+
+    "Do not merge #735", "cancel the merge of #735" and the repository-wide
+    forms are recorded by the same host prompt hook as the instruction they
+    withdraw. The latest instruction wins: a cancellation withdraws every
+    authority issued before it (a grant's ``issued_at`` is ``since``) until the
+    operator authorizes again. A GitHub record carries no comparable issue time
+    here, so a live cancellation withdraws it until a newer prompt instruction
+    re-authorizes the pull request.
+    """
+    if not repo or not str(pr).strip().isdigit():
+        return None
+    return revocation_for(repo, str(pr).strip(), path=_instruction_file_path(), since=since)
+
+
 def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
-    """True when a live human grant binds this exact repo, PR and named head."""
-    return find_grant(repo, pr, head_sha) is not None
+    """True when a live, unrevoked human grant binds this exact repo, PR and named head."""
+    grant = find_grant(repo, pr, head_sha)
+    if grant is None:
+        return False
+    issued = grant.get("issued_at")
+    since = (
+        float(issued) if isinstance(issued, (int, float)) and not isinstance(issued, bool) else None
+    )
+    return _revocation(repo, pr, since=since) is None
+
+
+def _github_verdict(repo: str, pr: str, head_sha: str) -> dict[str, Any]:
+    """GitHub authorization verdict. A short or missing SHA fails closed."""
+    if not repo or not str(pr).strip().isdigit() or not _FULL_SHA.match(head_sha.strip().lower()):
+        return {
+            "authorized": False,
+            "reason": "the merge did not name the repository, PR and full head SHA",
+        }
+    return verdict_for_hook(repo, str(pr).strip(), head_sha.strip().lower())
+
+
+def _github_authorizes(repo: str, pr: str, head_sha: str) -> bool:
+    """True when a human GitHub record covers this head and no operator cancellation stands."""
+    if not _github_verdict(repo, pr, head_sha).get("authorized"):
+        return False
+    return _revocation(repo, pr) is None
+
+
+def _missing_detail(repo: str, pr: str, head_sha: str) -> str:
+    """Why no authority covers the merge: an operator cancellation first, else GitHub's reason."""
+    revoked = _revocation(repo, pr)
+    if revoked is not None:
+        return revocation_reason(revoked)
+    return str(_github_verdict(repo, pr, head_sha).get("reason") or "")
+
+
+_AUTH_LINE_IN_COMMAND = re.compile(r"(?i)authorize merge [\w.-]+/[\w.-]+#[1-9]\d*@[0-9a-fA-F]{40}")
+_APPROVE_EVENT = re.compile(r'(?i)\bevent"?\s*[=:]\s*"?APPROVE\b')
+#: MCP tools that create the review or comment the gate trusts (same act as
+#: ``gh pr review`` / ``gh pr comment``): denied when they carry the record.
+#: Matched case-insensitively on the tool part, whatever the server is called:
+#: providers spell the same act differently, and an agent must not be able to
+#: post the record by picking the provider this list forgot.
+_GITHUB_RECORD_TOOL_SUFFIXES = (
+    # github/github-mcp-server
+    "__pull_request_review_write",
+    "__add_comment_to_pending_review",
+    "__add_issue_comment",
+    "__update_issue_comment",
+    "__add_reply_to_pull_request_comment",
+    # earlier github-mcp-server and @modelcontextprotocol/server-github releases
+    "__create_pull_request_review",
+    "__create_and_submit_pull_request_review",
+    "__create_pending_pull_request_review",
+    "__submit_pending_pull_request_review",
+    "__add_pull_request_review_comment_to_pending_review",
+    "__create_issue_comment",
+    # other GitHub MCP providers (``action`` carries the verdict, ``comment`` the text)
+    "__add_review_to_pr",
+    "__add_comment_to_issue",
+)
+#: Argument names a provider uses for the review verdict.
+_REVIEW_VERDICT_KEYS = frozenset({"event", "action", "state", "review_event", "reviewevent"})
+_PAYLOAD_VALUE_FLAGS = {
+    "-f",
+    "--raw-field",
+    "-F",
+    "--field",
+    "--body",
+    "-b",
+    "-d",
+    "--data",
+    "--data-binary",
+    "--data-raw",
+}
+_MAX_PAYLOAD_BYTES = 1_000_000
+
+
+def _payload_text(path_text: str) -> str | None:
+    """File body, or None when the path is missing, huge, or not a file."""
+    raw = path_text.strip().strip("'\"")
+    if not raw or raw == "-":
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    try:
+        if not path.is_file() or path.stat().st_size > _MAX_PAYLOAD_BYTES:
+            return None
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def _referenced_payloads(words: list[str]) -> tuple[str, bool]:
+    """Text of inline and file payloads. The flag is true when a file cannot be read.
+
+    ``gh pr review`` and ``gh pr comment`` use ``-F`` as a body file. ``gh api``
+    uses ``-F`` as a field, and ``@path`` as that field's file.
+    """
+    pr_body = _gh_record_subcommand(words) is not None
+    file_flags = {"--body-file", "--input"}
+    value_flags = set(_PAYLOAD_VALUE_FLAGS)
+    if pr_body:
+        file_flags.add("-F")
+        value_flags.discard("-F")
+    chunks: list[str] = []
+    hidden = False
+    index = 0
+    while index < len(words):
+        word = words[index]
+        value = ""
+        consumed = 1
+        if word in value_flags and index + 1 < len(words):
+            value = words[index + 1].strip("'\"")
+            consumed = 2
+        else:
+            for flag in value_flags:
+                if word.startswith(f"{flag}="):
+                    value = word.split("=", 1)[1].strip("'\"")
+                    break
+        index += consumed
+        if not value:
+            continue
+        if value.startswith("@"):
+            body = _payload_text(value[1:])
+            if body is None:
+                hidden = True
+            else:
+                chunks.append(body)
+        else:
+            chunks.append(value)
+    for flag in file_flags:
+        named = _argv_value(words, flag)
+        if not named:
+            continue
+        body = _payload_text(named)
+        if body is None:
+            hidden = True
+        else:
+            chunks.append(body)
+    return "\n".join(chunks), hidden
+
+
+def _url_is_github_api_record(token: str) -> bool:
+    """True when this argv token is a URL whose host is exactly api.github.com."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(token.strip("'\""))
+    if (parsed.hostname or "").lower() != "api.github.com":
+        return False
+    path = parsed.path or ""
+    return "/reviews" in path or "/comments" in path
+
+
+def _gh_record_subcommand(words: list[str]) -> str | None:
+    """``review`` or ``comment`` when argv is ``gh pr review|comment`` or ``gh issue comment``.
+
+    ``gh`` is matched by basename: ``/usr/bin/gh`` creates the same record.
+    """
+    if len(words) < 3 or Path(words[0]).name != "gh":
+        return None
+    if words[1] == "pr" and words[2] in {"review", "comment"}:
+        return words[2]
+    if words[1] == "issue" and words[2] == "comment":
+        return "comment"
+    return None
+
+
+def _is_authorization_write(words: list[str]) -> bool:
+    """True when this argv can create the GitHub review or comment the gate trusts."""
+    if not words:
+        return False
+    head = Path(words[0]).name
+    joined = " ".join(words)
+    subcommand = _gh_record_subcommand(words)
+    review = subcommand == "review"
+    comment = subcommand == "comment"
+    api = (
+        head == "gh"
+        and len(words) >= 2
+        and words[1] == "api"
+        and any(
+            token in joined
+            for token in (
+                "/reviews",
+                "/comments",
+                "addPullRequestReview",
+                "submitPullRequestReview",
+                "addComment",
+            )
+        )
+    )
+    curl = head == "curl" and any(_url_is_github_api_record(word) for word in words)
+    if not (review or comment or api or curl):
+        return False
+    if api or curl:
+        method = (
+            _argv_value(words, "-X")
+            or _argv_value(words, "--method")
+            or _argv_value(words, "--request")
+        ).upper()
+        writes = method in {"POST", "PATCH", "PUT"} or any(
+            token in words for token in ("-d", "--data", "--data-binary", "--data-raw", "--input")
+        )
+        if api and "graphql" in words:
+            writes = True
+        if not writes:
+            return False
+    return True
+
+
+def _segment_posts_github_authorization(words: list[str]) -> bool:
+    """True when this argv would create, or could hide, the GitHub record the gate trusts."""
+    if not _is_authorization_write(words):
+        return False
+    joined = " ".join(words)
+    if any(token in joined for token in ("$(", "`", "<<")) or " <" in f" {joined}":
+        return True
+    if "--editor" in words or "--web" in words or "--approve" in words:
+        return True
+    if _gh_record_subcommand(words) == "review" and "-a" in words:
+        return True  # gh pr review -a is --approve
+    visible, hidden = _referenced_payloads(words)
+    if hidden:
+        return True
+    blob = f"{joined}\n{visible}"
+    return _AUTH_LINE_IN_COMMAND.search(blob) is not None or _APPROVE_EVENT.search(blob) is not None
+
+
+def _approves(value: Any, depth: int = 0) -> bool:
+    """True when any review-verdict argument, at any nesting, is APPROVE(D)."""
+    if depth > 8:
+        return False
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if (
+                str(key).lower() in _REVIEW_VERDICT_KEYS
+                and isinstance(item, str)
+                and item.strip().upper() in {"APPROVE", "APPROVED"}
+            ):
+                return True
+            if _approves(item, depth + 1):
+                return True
+    elif isinstance(value, list):
+        return any(_approves(item, depth + 1) for item in value)
+    return False
+
+
+def _mcp_posts_github_authorization(tool_name: str, tool_input: dict[str, Any]) -> bool:
+    """True when an MCP review/comment tool would submit APPROVE or post the line."""
+    if not tool_name.lower().endswith(_GITHUB_RECORD_TOOL_SUFFIXES):
+        return False
+    if _approves(tool_input):
+        return True
+    return _AUTH_LINE_IN_COMMAND.search(json.dumps(tool_input, default=str)) is not None
+
+
+def _shell_posts_github_authorization(command: str) -> bool:
+    if ("<<" in command or "$(" in command or "`" in command) and any(
+        _is_authorization_write(words) for words in _executed_segments(command)
+    ):
+        return True
+    return any(_segment_posts_github_authorization(words) for words in _executed_segments(command))
 
 
 def live_head_sha(repo: str, pr: str) -> str:
@@ -773,7 +1273,7 @@ def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
         return True
     repo, pr = _target_from_input(tool_name, tool_input)
     head_sha = _head_sha_from_input(tool_name, tool_input)
-    return _file_authorizes(repo, pr, head_sha)
+    return _file_authorizes(repo, pr, head_sha) or _github_authorizes(repo, pr, head_sha)
 
 
 def _executed_segments(command: str, depth: int = 0) -> list[list[str]]:
@@ -861,16 +1361,16 @@ def _argv_value(argv: list[str], flag: str) -> str:
 
 
 def _shell_writes_grant_file(command: str) -> bool:
-    """A shell segment that names the grant file with anything but a reader.
+    """A shell segment that names the grant or instruction file with anything but a reader.
 
     Name-based on purpose and therefore a speed bump, not a proof: it stops the
     ordinary agent path (``cat > …``, ``tee``, ``python - <<…``, ``cp``) while
     deliberate obfuscation remains the host-enforcement gap of §6.2.12.
     """
-    if GRANT_FILE_NAME not in command:
+    if not any(name in command for name in PROTECTED_RECORD_FILES):
         return False
     for segment in split_segments(command):
-        if GRANT_FILE_NAME not in segment:
+        if not any(name in segment for name in PROTECTED_RECORD_FILES):
             continue
         words = _argv_skip_env(segment_words(segment))
         head = Path(words[0]).name if words else ""
@@ -882,7 +1382,9 @@ def _shell_writes_grant_file(command: str) -> bool:
 def _file_tool_writes_grant_file(tool_input: dict[str, Any]) -> bool:
     for key in ("file_path", "notebook_path", "path"):
         value = str(tool_input.get(key) or "")
-        if value and Path(value).name == GRANT_FILE_NAME:
+        if value and Path(value).name in PROTECTED_RECORD_FILES:
+            return True
+        if value and _HOST_TRANSCRIPT.search(value):
             return True
     return False
 
@@ -917,10 +1419,12 @@ def _stack_safe_run_reason(argv: list[str]) -> str | None:
     repo = _argv_value(argv, "--repo")
     pr = _argv_value(argv, "--pr")
     head_sha = _argv_value(argv, "--head-sha")
-    if _file_authorizes(repo, pr, head_sha):
+    if _file_authorizes(repo, pr, head_sha) or _github_authorizes(repo, pr, head_sha):
         return None
+    detail = _missing_detail(repo, pr, head_sha)
     return (
-        f"{MERGE_DENY_REASON} (target {repo or '<repo?>'}#{pr or '<pr?>'}"
+        f"{MERGE_DENY_REASON} Missing prerequisite: {detail}. "
+        f"(target {repo or '<repo?>'}#{pr or '<pr?>'}"
         f"@{head_sha or '<head-sha not named>'}; effective L9_MERGE_AUTHORIZED="
         f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
     )
@@ -942,10 +1446,17 @@ def _authorized_merge_reason(
         authorized = _merge_authorized(tool_name, tool_input)
         stack_target = None
     else:
-        authorized = _human_breakglass() or _file_authorizes(*target)
+        authorized = _human_breakglass() or _file_authorizes(*target) or _github_authorizes(*target)
         stack_target = (target[0], target[1])
     if not authorized:
-        return f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED={effective()})"
+        if target is None:
+            named_repo, named_pr = _target_from_input(tool_name, tool_input)
+            named_sha = _head_sha_from_input(tool_name, tool_input)
+        else:
+            named_repo, named_pr, named_sha = target
+        detail = _missing_detail(named_repo, named_pr, named_sha)
+        missing = f" Missing prerequisite: {detail}." if detail else ""
+        return f"{MERGE_DENY_REASON}{missing} (effective L9_MERGE_AUTHORIZED={effective()})"
     if _human_breakglass():
         return None
     stack = _stack_safety_reason(command, tool_name, tool_input, stack_target)
@@ -1017,23 +1528,41 @@ def evaluate(
     tool_input: dict[str, Any],
     *,
     root: Path | None = None,
+    event: dict[str, Any] | None = None,
 ) -> str | None:
     """Return deny reason or None if allowed to proceed (no decision).
 
     Shell git/gh commands are exempt from the workflow plane, not from merge
     authority: a merge is an effect (§6.2.12). Every merge transport needs a
     human grant (or the human breakglass); stack safety runs after authority.
+    ``event`` is the host's PreToolUse payload; its ``session_id`` and
+    ``transcript_path`` bind an operator receipt to the live session.
     """
     del root  # signature kept for hook callers
 
     if tool_name in FILE_TOOL_NAMES:
-        return SELF_ISSUE_REASON if _file_tool_writes_grant_file(tool_input) else None
+        if _file_tool_writes_grant_file(tool_input):
+            return SELF_ISSUE_REASON
+        _, live = _session_binding(event)
+        for key in ("file_path", "notebook_path", "path"):
+            value = str(tool_input.get(key) or "")
+            if live and value and Path(value).name == Path(live).name:
+                return SELF_ISSUE_REASON
+        return None
+
+    if _mcp_posts_github_authorization(tool_name, tool_input):
+        return SELF_ISSUE_REASON
 
     if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-        if _script_argvs(command, "authorize_merge.py"):
+        for grant_argv in _script_argvs(command, "authorize_merge.py"):
+            if not _operator_grant_run_allowed(grant_argv, event):
+                return SELF_ISSUE_REASON
+        if _agent_runs_recorder(command):
             return SELF_ISSUE_REASON
-        if _shell_writes_grant_file(command):
+        if _shell_writes_grant_file(command) or _shell_writes_host_transcript(command, event):
+            return SELF_ISSUE_REASON
+        if _shell_posts_github_authorization(command):
             return SELF_ISSUE_REASON
         for run_argv in _script_argvs(command, "stack_safe_merge.py"):
             reason = _stack_safe_run_reason(run_argv)
@@ -1082,7 +1611,7 @@ def main() -> int:
     if not isinstance(tool_input, dict):
         tool_input = {}
     root = workspace_from_event(event)
-    reason = evaluate(tool_name, tool_input, root=root)
+    reason = evaluate(tool_name, tool_input, root=root, event=event)
     if reason:
         return _deny(reason)
     return 0
