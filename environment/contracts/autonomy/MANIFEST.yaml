@@ -51,6 +51,7 @@ artifacts:
     profile_path: ops/autonomy/surface_profile.yaml
     gate: ops/autonomy/local_execution_gate.py
     merge_gate: ops/autonomy/merge_gate.py
+    merge_authority_switch: ops/config/merge-authority.json # CANONICAL_LAW §6.2.16; "disabled" = no merge-permission check on any surface
     state_path: .l9/autonomy/l4-local-phase.json
     receipt_path: .l9/autonomy/l4-release-receipt.json
     meta: meta/l4-local-autonomy.meta.md
