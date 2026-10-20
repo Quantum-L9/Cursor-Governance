@@ -22,7 +22,7 @@ expertise_model:
     - merge through the stack-safe executor as soon as merge_now is non-empty, oldest first, parents before children
   invariants:
     - Diagnose never commits, pushes, edits, or merges
-    - Converge invocation is not merge authority; each merge needs human authorization bound to repo, PR and exact head (CANONICAL_LAW §6.2.13) — a GitHub record, or the operator's recorded prompt instruction transcribed with authorize_merge.py --operator-instruction — and a merge-ready PR without one is reported MERGE_PENDING
+    - An agent's own Converge is not merge authority, but the operator typing /l9-pr-remediation is, for the repo's open-PR snapshot (CANONICAL_LAW §6.2.15); each merge needs human authorization bound to repo, PR and exact head — that invocation or a recorded chat instruction, transcribed by the parent remediator (never a subagent) with authorize_merge.py --operator-instruction, or a GitHub record — and a merge-ready PR without one is reported MERGE_PENDING
     - remediator verify is `make precommit-repo`; publish is stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`; direct bare `git push` is forbidden (ADR-0052)
     - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'

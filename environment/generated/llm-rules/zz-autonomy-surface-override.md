@@ -16,9 +16,9 @@ AND `L9_AUTONOMY_ENABLED=true`:
    checkers once, then push + PR; remediates=1). Campaign/make-pr end
    state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
    Invoking `/l9-pr-remediation` then remediates all open PRs in the
-   target repo to MERGE_PENDING; merge needs a human authorization per PR
-   and exact head — a GitHub record or the operator's recorded prompt
-   instruction (CANONICAL_LAW §6.2.13). Do **not** merge from the campaign
+   target repo and merges each one under a human authorization per PR and
+   exact head — the operator's typed invocation itself (§6.2.15), their
+   recorded chat instruction, or a GitHub record — else MERGE_PENDING. Do **not** merge from the campaign
    path.
 2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
    WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
@@ -69,7 +69,8 @@ AND `L9_AUTONOMY_ENABLED=true`:
   `l9 pr` to a green merge-ready PR. Merge only under a human
   authorization bound to the repo, PR and exact head (CANONICAL_LAW
   §6.2.13): a GitHub record, or the operator's recorded prompt instruction
-  transcribed with `authorize_merge.py --operator-instruction`, with the PR
+  or typed `/l9-pr-remediation` (§6.2.15) transcribed by the parent agent
+  with `authorize_merge.py --operator-instruction`, with the PR
   green + mergeable; remediation stops at MERGE_PENDING until that record
   exists. An authorized owner's chat instruction covers L9-ORG-007 paths
   and their own pull requests (§6.2.14).

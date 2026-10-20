@@ -94,6 +94,21 @@ def fetch_pull_request(repo: str, pr: str | int) -> dict[str, Any]:
     return view
 
 
+def fetch_pulls_with_head(repo: str, ref: str) -> list[dict[str, Any]]:
+    """Pull requests of ``repo`` (any state) whose head is ``ref`` in ``repo``
+    itself — never a fork's branch of the same name. Raises RuntimeError."""
+    owner = repo.partition("/")[0]
+    pulls = _gh_pages(f"repos/{repo}/pulls?state=all&per_page=100&head={owner}:{ref}")
+    return [
+        item
+        for item in pulls
+        if isinstance(item, dict)
+        and str(((item.get("head") or {}).get("ref")) or "") == ref
+        and str((((item.get("head") or {}).get("repo")) or {}).get("full_name") or "").casefold()
+        == repo.casefold()
+    ]
+
+
 def _line_authorizes(body: str, repo: str, pr: str, head_sha: str) -> bool:
     wanted_repo = repo.casefold()
     wanted_pr = str(pr).strip()

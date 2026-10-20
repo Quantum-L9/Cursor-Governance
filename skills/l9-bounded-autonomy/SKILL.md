@@ -32,7 +32,7 @@ Map ADR-0001 onto Cursor through root autonomy: fan out non-dependent work and d
 | Item | Value |
 |---|---|
 | Lanes | Max 4 total / 2 mutation |
-| Merge | Campaign/make pr: no. `/l9-pr-remediation` Converge: yes (ordinary squash) |
+| Merge | Campaign/make pr: no. `/l9-pr-remediation` Converge: per PR under human authorization (§6.2.15), stack-safe |
 | PR wait | MUST spawn background poll; main continues |
 | Authority | Campaign authorization **packet** (never “envelope”) |
 | Claude runtime | Root gate only. Multi-lane scheduling is unavailable from this skill. |
@@ -59,14 +59,13 @@ Map ADR-0001 onto Cursor through root autonomy: fan out non-dependent work and d
    If a repair changes tree content, re-authorize before publishing.
    Do **not** remediate. Do **not** merge. This skill does not open a Program Execution campaign.
 5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
-6. Do **not** merge from `/autonomy` or the campaign path. Merge only after
-   `/l9-pr-remediation` writes `ops/autonomy/authorize_merge.py --all-open`
-   and each PR is green + mergeable. An L4 release receipt is not merge authority.
+6. Do **not** merge from `/autonomy` or the campaign path. Merge only on the
+   `/l9-pr-remediation` path, under human authorization bound to the repo, PR and exact head — the operator's typed `/l9-pr-remediation` (CANONICAL_LAW §6.2.15), their recorded chat instruction, or a GitHub record — transcribed by the parent agent with `authorize_merge.py --operator-instruction` and merged with `stack_safe_merge.py --run`, with each PR green + mergeable. An L4 release receipt is not merge authority.
 7. Close with Graphiti-primary PICKUP when ending campaign/session (Protocol D / handoff).
 
 ## MUST NOT
 
-- Merge without `/l9-pr-remediation` (or `L9_MERGE_AUTHORIZED`); force-push, admin merge, weaken tests for green, commit secrets, expand scope without approval.
+- Merge without a human authorization bound to the PR and head (or `L9_MERGE_AUTHORIZED`); force-push, admin merge, weaken tests for green, commit secrets, expand scope without approval.
 - Mid-execution `git push` / `gh pr create` / `make pr` before L4 `release_authorized`.
 - Main and poll both pushing the same PR branch.
 - Silent waiver of **push/merge** outside the packet. Local commit is standing.
