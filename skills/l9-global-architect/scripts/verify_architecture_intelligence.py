@@ -545,7 +545,8 @@ def cite(bundle: Path, result: dict[str, Any], record: dict[str, Any], target: s
     }
 
 
-def _refusal(outcome: Outcome, mode: str) -> dict[str, Any]:
+def _refusal(outcome: Any, mode: str) -> dict[str, Any]:
+    """The slot for a refused verdict; *outcome* is the shared verifier's ``Outcome``."""
     return _slot(
         mode=mode,
         status="UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
@@ -620,12 +621,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.cite is not None:
             report["citation"] = {"refused": "CITATION_REFUSED_NOT_LOADED"}
     except (KeyError, TypeError, ValueError) as exc:
-        refused = Outcome("REJECTED", "BUNDLE_STRUCTURE_INVALID")
+        invalid = Outcome("REJECTED", "BUNDLE_STRUCTURE_INVALID")
         report.update(
             status="REJECTED",
             reason="BUNDLE_STRUCTURE_INVALID",
             detail={"error": f"{type(exc).__name__}: {exc}"},
-            architecture_intelligence=_refusal(refused, args.mode),
+            architecture_intelligence=_refusal(invalid, args.mode),
         )
     print(json.dumps(report, indent=2, sort_keys=True))
     return EXIT[report["status"]]
