@@ -232,6 +232,12 @@ def resolve_admission(
     """
     verifier = load_verifier(repo_root)
     pin = lock.get("projection_profile") or {}
+    decisions = (binding.get("admission") or {}).get("decisions")
+    # A decision naming a revision this checkout has not fetched is Unknown here, not a refusal.
+    for decision in decisions if isinstance(decisions, list) else []:
+        at = decision.get("admitted_revision") if isinstance(decision, dict) else None
+        if isinstance(at, str) and _SHA.match(at) and resolve(root, at) is None:
+            raise Unobserved(f"admitted revision {at[:12]} is not fetched in {root}")
 
     def currency(at: str) -> None:
         changed = material_change(root, at, lock)
@@ -251,7 +257,7 @@ def resolve_admission(
                     "collection": "projection_profiles",
                 }
             ],
-            decisions=(binding.get("admission") or {}).get("decisions"),
+            decisions=decisions,
             currency=currency,
         )
     except verifier.Outcome as outcome:

@@ -257,6 +257,16 @@ def test_a_decision_for_another_digest_is_blocked(tmp_path: Path) -> None:
     assert result["admission"]["reason"] == "ADMISSION_DECISION_SUBJECT_MISMATCH"
 
 
+def test_an_admitted_revision_not_fetched_is_unverified_not_refused(tmp_path: Path) -> None:
+    authority = make_authority(tmp_path)
+    repo = make_workspace(tmp_path, authority, pack.build_bundle(authority, tmp_path / "bundle"))
+    _rewrite_binding(
+        repo, lambda b: b["admission"]["decisions"][0].update(admitted_revision="1" * 40)
+    )
+    result = classify(repo, authority)
+    assert result["status"] == "UNVERIFIED" and "is not fetched" in result["detail"], result
+
+
 def test_shipped_admission_decision_binds_the_pinned_profile() -> None:
     binding = yaml.safe_load(BINDING.read_text())
     (decision,) = binding["admission"]["decisions"]
