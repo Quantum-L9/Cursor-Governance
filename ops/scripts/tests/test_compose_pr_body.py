@@ -1097,7 +1097,7 @@ class TemplateResolutionTests(unittest.TestCase):
         def down(endpoint: str) -> object:
             raise TemplateError(f"gh api {endpoint} failed: HTTP 502")
 
-        def git_down(owner: str) -> tuple[str, str]:
+        def git_down(owner: str, path: str) -> tuple[str, str]:
             raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
 
         # Both transports unreachable: no template, no stale fallback.
@@ -1117,23 +1117,23 @@ class TemplateResolutionTests(unittest.TestCase):
 
         owners: list[str] = []
 
-        def git(owner: str) -> tuple[str, str]:
-            owners.append(owner)
+        def git(owner: str, path: str) -> tuple[str, str]:
+            owners.append(f"{owner}:{path}")
             return self.SHA, CANONICAL_TEMPLATE
 
         source = resolve_template(Path("."), "Quantum-L9", "consumer", gh=scoped, git=git)
-        self.assertEqual(owners, ["Quantum-L9"])
+        self.assertEqual(owners, ["Quantum-L9:.github/pull_request_template.md"])
         self.assertEqual(source.text, CANONICAL_TEMPLATE)
         self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
         # Bytes read over git are validated exactly like bytes read over REST.
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
             resolve_template(
-                Path("."), "Quantum-L9", "consumer", gh=scoped, git=lambda _: (self.SHA, broken)
+                Path("."), "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
             )
 
         # REST reachable: git is never consulted.
-        def no_git(owner: str) -> tuple[str, str]:
+        def no_git(owner: str, path: str) -> tuple[str, str]:
             raise AssertionError("git transport used while REST answered")
 
         resolve_template(
