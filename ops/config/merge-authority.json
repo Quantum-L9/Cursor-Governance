@@ -1,0 +1,7 @@
+{
+  "schema": "l9.merge-authority-switch.v1",
+  "enforcement": "disabled",
+  "reason": "Operator decision 2026-10-20: the merge-authority chain blocked agent merges on every surface (Cursor and Claude Code); agents merge on explicit operator request or a typed /l9-pr-remediation. Accepted gap, tracked in TODO.md (Merge authority disabled).",
+  "reenable": "Set enforcement to \"strict\" (or delete this file) to restore CANONICAL_LAW §6.2.12-§6.2.15 unchanged. \"chat\" is reserved for agent-attested grants and reads as strict until implemented.",
+  "authority": "CANONICAL_LAW.md §6.2.16"
+}
