@@ -1,0 +1,197 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "binding_rules": {
+      "missing_technology": {
+        "result": "unregistered_technology"
+      },
+      "provider_compatibility": {
+        "expression": "RequiredCapabilities ⊆ ProviderCapabilities\n"
+      },
+      "target_compatibility": {
+        "expression": "RequiredTargetCapabilities ⊆ TargetCapabilities\n"
+      },
+      "unknown_capability": {
+        "result": "incompatible_until_resolved"
+      },
+      "unregistered_technology": {
+        "compiler_action": [
+          "stop_binding",
+          "require_technology_registration"
+        ]
+      }
+    },
+    "capability_classes": {
+      "datastore": {
+        "definition": "Persistence, transaction, indexing, consistency, and query capabilities exposed by a storage technology.\n"
+      },
+      "framework": {
+        "definition": "Capabilities provided by an application, orchestration, testing, or execution framework.\n"
+      },
+      "language": {
+        "definition": "Capabilities provided by a programming language or language runtime.\n"
+      },
+      "target": {
+        "definition": "Capabilities relevant to lowering or rendering compiled artifacts.\n"
+      },
+      "transport": {
+        "definition": "Communication, routing, packet, or protocol capabilities.\n"
+      }
+    },
+    "global_rules": {
+      "capability_claims_must_be_explicit": true,
+      "missing_capability_is_not_assumed": true,
+      "provider_binding_requires_capability_coverage": true,
+      "technology_identity_does_not_imply_semantic_ownership": true,
+      "technology_must_be_registered_before_mechanical_binding": true,
+      "technology_registration_does_not_authorize_use": true,
+      "unknown_capability_is_not_equivalent_to_supported": true
+    },
+    "registration_requirements": {
+      "optional": [
+        "constraints",
+        "compatible_with",
+        "incompatible_with",
+        "semantic_ownership"
+      ],
+      "required": [
+        "id",
+        "class",
+        "provides",
+        "target_roles"
+      ],
+      "rules": [
+        "technology_registration_precedes_provider_binding",
+        "capability_names_must_reference_canonical_vocabulary_or_capability_catalog",
+        "registration_does_not_grant_authority"
+      ]
+    },
+    "technologies": [
+      {
+        "class": "language",
+        "id": "python",
+        "provides": [
+          "modules",
+          "packages",
+          "async_functions",
+          "type_annotations",
+          "exceptions",
+          "context_managers"
+        ],
+        "target_roles": [
+          "implementation_language"
+        ]
+      },
+      {
+        "class": "framework",
+        "compatible_with": [
+          "python"
+        ],
+        "id": "pytest",
+        "provides": [
+          "test_functions",
+          "fixtures",
+          "assertions",
+          "exception_assertions",
+          "parametrization"
+        ],
+        "target_roles": [
+          "conformance_target"
+        ]
+      },
+      {
+        "class": "datastore",
+        "id": "mongodb",
+        "provides": [
+          "transactions",
+          "conditional_updates",
+          "unique_indexes",
+          "document_storage",
+          "change_notifications"
+        ],
+        "semantic_ownership": {
+          "implied": false
+        },
+        "target_roles": [
+          "persistence_provider"
+        ]
+      },
+      {
+        "class": "datastore",
+        "id": "postgresql",
+        "provides": [
+          "transactions",
+          "conditional_updates",
+          "unique_constraints",
+          "relational_storage",
+          "serializable_isolation",
+          "json_storage"
+        ],
+        "semantic_ownership": {
+          "implied": false
+        },
+        "target_roles": [
+          "persistence_provider"
+        ]
+      },
+      {
+        "class": "transport",
+        "constraints": [
+          "gate_is_routing_authority",
+          "application_does_not_require_peer_urls"
+        ],
+        "id": "gate-sdk",
+        "provides": [
+          "gate_routed_transport",
+          "TransportPacket",
+          "gate_client_surface"
+        ],
+        "semantic_ownership": {
+          "implied": false
+        },
+        "target_roles": [
+          "constellation_transport_binding"
+        ]
+      },
+      {
+        "class": "datastore",
+        "id": "graphiti-mcp",
+        "provides": [
+          "graph_episode_storage",
+          "graph_search",
+          "episode_deletion_by_locator"
+        ],
+        "semantic_ownership": {
+          "implied": false
+        },
+        "target_roles": [
+          "persistence_provider"
+        ]
+      },
+      {
+        "class": "datastore",
+        "id": "zep",
+        "provides": [
+          "graph_episode_storage",
+          "graph_search",
+          "episode_deletion_by_locator"
+        ],
+        "semantic_ownership": {
+          "implied": false
+        },
+        "target_roles": [
+          "persistence_provider"
+        ]
+      }
+    ]
+  },
+  "projection_digest": "sha256:c7fb53b80cfd24552b5f8f1f1937a877a184fa27670c6e28ea97b0a1c07d331c",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d2172c439b1fc221e9a599220065830187054747f263567e4061d8c95845ad0b",
+  "source_ref": "l9.source/technology-capabilities@1"
+}

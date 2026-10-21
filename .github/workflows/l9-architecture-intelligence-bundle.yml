@@ -1,0 +1,115 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: .github/workflows/l9-architecture-intelligence-bundle.yml
+#   layer: operations
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-10-15
+name: L9 Architecture Intelligence Bundle
+on:
+  pull_request:
+    paths:
+      - "generated/governance/architecture_intelligence/**"
+      - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+      - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "tools/authority/produce_architecture_intelligence.py"
+      - ".github/workflows/l9-architecture-intelligence-bundle.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "generated/governance/architecture_intelligence/**"
+      - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+      - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "tools/authority/produce_architecture_intelligence.py"
+permissions:
+  contents: read
+concurrency:
+  group: l9-architecture-intelligence-bundle
+  cancel-in-progress: false
+jobs:
+  verify:
+    # Consumer verification of the committed bundle: GAR's verifier and currentness against
+    # Quantum-L9/.github at the exact revision the bundle names, and admission against an
+    # independently checked-out .github main.
+    # Runs pull-request code, so it holds no secret and never touches the private compiler.
+    # Producer attestation (byte-for-byte replay with the pinned compiler) runs only in the
+    # trusted workflow l9-architecture-intelligence-trusted-replay.yml.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: governance
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install YAML dependency
+        run: python -m pip install "pyyaml>=6.0,<7"
+      - name: Resolve bundle authority revision
+        id: lock
+        working-directory: governance
+        shell: bash
+        run: |
+          revision="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["authority"]["revision"])')"
+          compiler="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["producer"]["revision"])')"
+          for value in "$revision" "$compiler"; do
+            [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo "bundle.lock.json revisions must be full 40-hex SHAs"; exit 1; }
+          done
+          printf 'revision=%s\ncompiler=%s\n' "$revision" "$compiler" >> "$GITHUB_OUTPUT"
+      - name: Checkout canonical Semantic Foundation at the bundle revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/.github
+          ref: ${{ steps.lock.outputs.revision }}
+          path: org-authority
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify bundle at the revision it names (candidate mode)
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          REVISION: ${{ steps.lock.outputs.revision }}
+        shell: bash
+        run: |
+          set +e
+          python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
+            --mode candidate \
+            --authority-root ../org-authority \
+            --expect-revision "$REVISION"
+          code=$?
+          # 5 = BUNDLE_VERIFIED: coherent and current at its revision. Anything else fails.
+          [[ $code -eq 5 ]] || exit 1
+      # Admission is resolved independently of bundle.lock.json: the verifier reads the tip of
+      # Quantum-L9/.github main from its own checkout. Before admission the expected outcome is
+      # BUNDLE_VERIFIED with authority status NOT_ADMITTED or ADMISSION_UNRESOLVED (exit 5),
+      # which is reported, not hidden; REJECTED, BLOCKED and STALE fail the job.
+      - name: Checkout Quantum-L9/.github main independently of the lock
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: Quantum-L9/.github
+          ref: main
+          path: org-main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve admission against authority main (admitted mode)
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        shell: bash
+        run: |
+          git -C ../org-main update-ref refs/remotes/origin/main HEAD
+          set +e
+          python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
+            --authority-root ../org-main > admission.json
+          code=$?
+          set -e
+          python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
+          [[ $code -eq 0 || $code -eq 5 ]] || exit 1

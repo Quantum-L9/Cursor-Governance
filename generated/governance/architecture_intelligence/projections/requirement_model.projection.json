@@ -1,0 +1,97 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "closure_rules": [
+      "transitive_requirements_are_preserved",
+      "duplicate_semantic_requirements_may_be_canonicalized_without_losing_provenance",
+      "conflicting_hard_requirements_produce_explicit_conflict_or_unsat",
+      "soft_objectives_are_evaluated_only_after_hard_feasibility"
+    ],
+    "global_rules": {
+      "hard_requirements_are_non_compensable": true,
+      "preferences_do_not_satisfy_hard_requirements": true,
+      "provider_capability_is_not_semantic_requirement_ownership": true,
+      "requirements_are_typed": true,
+      "requirements_preserve_source_provenance": true,
+      "resolution_does_not_create_authority": true,
+      "unresolved_requirements_remain_explicit": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/requirement-resolution@1",
+        "l9.contract/hard-constraint@1",
+        "l9.contract/unknown-and-degradation@1"
+      ]
+    },
+    "requirement_classes": {
+      "architecture": {
+        "default_hardness": "hard",
+        "meaning": "Required structural guarantee or prohibited structure."
+      },
+      "authority": {
+        "default_hardness": "hard",
+        "meaning": "Required authority or admission condition."
+      },
+      "capability": {
+        "default_hardness": "hard",
+        "meaning": "Required semantic capability or capability closure."
+      },
+      "conformance": {
+        "default_hardness": "hard",
+        "meaning": "Required independently verifiable behavioral obligation."
+      },
+      "interface": {
+        "default_hardness": "hard",
+        "meaning": "Required semantic port or interface obligation."
+      },
+      "objective": {
+        "default_hardness": "soft",
+        "meaning": "Optimization objective evaluated only among feasible candidates."
+      },
+      "operational": {
+        "default_hardness": "hard",
+        "meaning": "Required runtime, deployment, observability, or packaging property.",
+        "note": "Operational preferences are modeled separately as soft objectives."
+      },
+      "semantic": {
+        "default_hardness": "hard",
+        "meaning": "Required domain or L9 meaning that must be preserved."
+      },
+      "technology": {
+        "default_hardness": "hard",
+        "meaning": "Required realization property or declared technology constraint.",
+        "note": "Technology preferences are modeled separately as soft objectives."
+      }
+    },
+    "requirement_entry_contract": {
+      "hardness_domain": [
+        "hard",
+        "soft"
+      ],
+      "optional": [
+        "owner",
+        "scope",
+        "depends_on",
+        "conflicts_with",
+        "evidence_requirement",
+        "priority"
+      ],
+      "required": [
+        "id",
+        "class",
+        "source_ref",
+        "hardness",
+        "satisfaction_semantics"
+      ]
+    }
+  },
+  "projection_digest": "sha256:6a628c9fda186e999d6b1c25b46f0d6bce155c2626485ed65c04cd9fee2be75e",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+  "source_ref": "l9.source/requirement-model@1"
+}

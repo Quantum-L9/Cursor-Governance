@@ -1,0 +1,186 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+      "path": "semantics/projection_artifact.schema.yaml",
+      "ref": "l9.schema/projection-artifact@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:6162c745bf9d818a96d8197f6c47ca22a23da64b622b1699d58c1942aee26674",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:fe5d79a65acd7e2587337136d4874b04399d9166d2b652accefd2309fc986be2",
+      "path": "semantics/projection_engine_contract.yaml",
+      "ref": "l9.compiler/projection-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:b91d3bfea487e148be37349a705137c7f351ffc877d9fce8fabf4bb13372478e",
+      "path": "semantics/projection_profiles.yaml",
+      "ref": "l9.projection-profile-catalog/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+    "selector_model": {
+      "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
+      "path": "semantics/selector_model.yaml",
+      "ref": "l9.selector-model/global@1"
+    },
+    "source_registry": {
+      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
+      "path": "semantics/product_kinds.yaml",
+      "ref": "l9.source/product-kinds@1",
+      "revision": "5996b2a79363069875ea156d1722c1f325787d96"
+    }
+  ],
+  "operation": "projection",
+  "output": {
+    "digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+    "ref": "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "profile": {
+    "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+    "ref": "l9.projection/architecture-intelligence@1"
+  },
+  "receipt_digest": "sha256:793950b0ad5cda35cb7318cbdb6cf32b2aead1214a27f6f868bd7617c3076129",
+  "receipt_identity": "l9.receipt-instance/f98caf59345aa0880cdf629e9992684031dcac6cae5f295b3bb2c849f81341b3",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "coverage": "complete",
+    "criteria": {
+      "declared_constraint:forbidden:provider_implementation_details": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:target_rendering_details": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:unrelated_domain_payloads": {
+        "criterion": "source_authority",
+        "owner": "Quantum-L9/.github",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:116114742d0551848d654635bf79ace0e60a5de08e1ebbb547db11f4386af9a7",
+        "path": "l9.projection_architecture-intelligence_1/l9.source_product-kinds_1.projection.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+          "path": "semantics/projection_artifact.schema.yaml",
+          "ref": "l9.schema/projection-artifact@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "schema": "l9.projection.architecture-intelligence/v1",
+        "schema_artifact": {
+          "digest": "sha256:9b72d459aff0a943704fd6bf6709023d1ce902f41fd56c56797e5e922aff98ff",
+          "path": "semantics/architecture_intelligence_projection.schema.yaml",
+          "ref": "l9.schema/architecture-intelligence-projection@1"
+        },
+        "status": "pass"
+      },
+      "profile_currentness": {
+        "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+        "ref": "l9.projection/architecture-intelligence@1",
+        "status": "pass"
+      },
+      "projection_digest": {
+        "digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+        "status": "pass"
+      },
+      "selection_equivalence": {
+        "selectors": 7,
+        "status": "pass"
+      },
+      "source_currentness": {
+        "digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
+        "revision": "5996b2a79363069875ea156d1722c1f325787d96",
+        "status": "pass"
+      },
+      "source_identity": {
+        "path": "semantics/product_kinds.yaml",
+        "ref": "l9.source/product-kinds@1",
+        "source_class": "product_kinds",
+        "status": "pass"
+      },
+      "successor_of": {
+        "predecessor": "l9.projection/gar-architecture-observer@1",
+        "predecessor_digest": "sha256:7e0d7f414f2ff714729953c1e37add31c3c767e0e7bb2d736fa3849a415d4adc",
+        "rule": "PROJECTION-014",
+        "status": "pass"
+      }
+    },
+    "selection_coverage": [
+      {
+        "records_lacking_selection": [],
+        "selector": "$.governed_by",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.global_rules",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.kinds",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.unresolved_kind_candidates",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.catalog_status",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.kind_exception_model",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.kind_exceptions",
+        "status": "resolved"
+      }
+    ],
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

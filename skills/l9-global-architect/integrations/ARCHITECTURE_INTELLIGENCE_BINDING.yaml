@@ -1,0 +1,202 @@
+integration:
+  integration_id: L9.GAR.ARCHITECTURE_INTELLIGENCE_BINDING.001
+  version: 0.2.0
+  artifact_class: runtime_integration_binding
+  status: experimental
+  semantic_owner: integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
+purpose:
+  assertion: >-
+    Bind canonical architecture intelligence from Quantum-L9/.github into GAR as a separate,
+    explicitly loaded input: a bundle the canonical compiler produced and GAR only verifies.
+    GAR executes no selector, composes no payload, authors no schema, and never substitutes
+    another input when this one is unavailable.
+input:
+  name: architecture_intelligence
+  separate_from: contracts/L9_ARCHITECTURE_PROFILE.yaml
+  relationship_to_l9_architecture_profile: >-
+    contracts/L9_ARCHITECTURE_PROFILE.yaml keeps its runtime role unchanged: GAR-owned stable
+    invariants, roles, vocabulary, and flows, loaded by LOAD_L9_ARCHITECTURE_PROFILE. Architecture
+    intelligence is source-bound canonical evidence at an exact authority revision. Neither
+    replaces, amends, or hydrates the other, and a conflict between them is an authority
+    conflict resolved by authority_precedence, never silently.
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/architecture-intelligence@1
+    projection_profile_digest: sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4
+    composition_profile_ref: l9.compose/architecture-intelligence@1
+    composition_profile_digest: sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1
+    projection_payload_schema: l9.projection.architecture-intelligence/v1
+    composed_payload_schema: l9.composed-projection.architecture-intelligence/v1
+    expected_source_classes:
+      - vocabulary
+      - invariants
+      - contracts
+      - requirement_model
+      - resolution_model
+      - architecture_rules
+      - product_topology
+      - product_kinds
+      - node_archetypes
+      - dependency_archetypes
+      - identity_model
+      - architecture_patterns
+      - port_catalog
+      - capabilities
+      - capability_resolution
+      - technology_profiles
+      - technology_capabilities
+      - binding_catalog
+      - repository_registry
+      - artifact_model
+      - product_manifest
+      - authority_model
+      - lifecycle
+      - semantic_dependency_model
+  bundle:
+    path: generated/governance/architecture_intelligence
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_architecture_intelligence.py
+    ci: .github/workflows/l9-architecture-intelligence-bundle.yml
+    trusted_replay: .github/workflows/l9-architecture-intelligence-trusted-replay.yml
+    gar_produces: false
+    publication: >-
+      Generation is separate from publication. The driver writes only to its output directory
+      and no architecture-intelligence workflow commits, pushes, or opens pull requests; a
+      regenerated bundle reaches the repository only through the existing Cursor-Governance
+      publication authority, which this binding references and does not restate:
+      CANONICAL_LAW.md §6.2 with its dated amendments, projected by
+      ops/autonomy/surface_profile.yaml.
+    production_attestation: >-
+      The trusted replay workflow (default-branch definition, pull-request bundle read as data)
+      reproduces the bundle byte for byte with the compiler revision named in bundle.lock.json,
+      only when that revision is on the compiler's protected main, and publishes a PASS/FAIL
+      attestation bound to the subject commit, compiler SHA, authority revision and bundle
+      digest as the commit status l9/architecture-intelligence-trusted-replay. It fails closed.
+      Pull-request-controlled jobs never receive the private compiler or its credential. The
+      verifier's digests are recomputable: they prove integrity and currentness, not production.
+  verifier: scripts/verify_architecture_intelligence.py
+admission:
+  # BUNDLE_VERIFIED (a coherent, current bundle) is never admitted global law by itself.
+  # ADMITTED_AND_CURRENT is resolved by the verifier independently of bundle.lock.json.
+  resolved_independently_of: bundle.lock.json
+  authority_main_ref: refs/remotes/origin/main
+  integration: the bundle revision is the independently resolved tip of the authority's main or an ancestor of it
+  currency: every governing source and profile is byte-identical at that tip
+  decision_record:
+    required_by: Quantum-L9/.github semantics/authority_model.yaml#admission_rules.global_requirements.explicit_decision_record
+    canonical_form: undefined
+    effect_while_undefined: >-
+      ADMISSION_UNRESOLVED. Integration into main is necessary but is not treated as the
+      admission decision; the semantic owner has not defined an admission decision record, and
+      this binding does not invent one.
+assurance_limitations:
+  - forbidden_category: unrelated_domain_payloads
+    criterion: source_authority
+    independent_restrictive_power: false
+    basis: >-
+      Quantum-L9/.github ADR-019: the criterion duplicates the canonical authority loader's
+      ownership check and cannot detect architecturally unrelated material inside authorized
+      sources. It is not counted as independent exclusion assurance; the semantic owner decides
+      whether a source classification is required.
+load_condition:
+  when:
+    - architecture_intelligence_requested
+    - canonical_architecture_semantics_required_for_architectural_judgment
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+    - $.architecture_intelligence provenance recorded before the payload is read
+  candidate_inspection:
+    requires: verifier.status == BUNDLE_VERIFIED (mode candidate)
+    authoritative: false
+    rule: >-
+      Every claim citing a candidate-mode fact is labelled non-authoritative and is never
+      treated as admitted global law, an admitted contract, or a resolved Unknown.
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED:
+    meaning: >-
+      The bundle is coherent and current at the revision it names, but that revision is not
+      admitted global law (NOT_ADMITTED or ADMISSION_UNRESOLVED).
+    run_state: {status: BUNDLE_VERIFIED, load_status: NOT_LOADED (admitted mode) or LOADED_AS_CANDIDATE (candidate mode)}
+    effect: Not admitted law. Admitted mode reads nothing; candidate mode reads non-authoritatively.
+  BLOCKED:
+    meaning: The bundle, binding, or authority object needed for verification is absent or unreadable.
+    run_state: {status: UNAVAILABLE, load_status: NOT_LOADED}
+    effect: Proceed without architecture intelligence. A claim that depends on it is a typed Unknown.
+  REJECTED:
+    meaning: >-
+      A pin, digest, envelope schema, payload schema, receipt, source coverage, or namespace
+      byte-equivalence check failed.
+    run_state: {status: REJECTED, load_status: NOT_LOADED}
+    effect: No part of the bundle may be read. Report the refusal reason as evidence.
+  STALE:
+    meaning: >-
+      The bundle was produced at a different authority revision, or a source or profile
+      changed since production.
+    run_state: {status: STALE, load_status: NOT_LOADED}
+    effect: The bundle must not be treated as current. Regeneration belongs to the producer.
+  fallback:
+    historical_observer_projection: forbidden
+    l9_architecture_profile_substitution: forbidden
+    partial_bundle: forbidden
+    model_reconstruction_from_memory_or_repository_reads: forbidden
+provenance:
+  state_target: $.architecture_intelligence
+  recorded_fields:
+    - binding_ref
+    - status
+    - load_status
+    - bundle_ref
+    - authority_repository
+    - authority_revision
+    - projection_profile
+    - composition_profile
+    - composition_digest
+    - component_digests
+    - producer
+    - verifier
+    - currentness
+    - refusal_reason
+    - fallback_used
+  rule: >-
+    The verifier's architecture_intelligence object is recorded verbatim before any
+    architectural claim cites the input. A claim citing architecture intelligence names the
+    composition digest and source class it relies on.
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_gar
+  - payload_schema_authoring_or_reinterpretation
+  - cross_source_merge_or_reconciliation
+  - digest_convention_redefinition
+integration_invariants:
+  - id: AIB-001
+    rule: >-
+      Architecture intelligence is read as admitted law only after
+      verify_architecture_intelligence.py returns ADMITTED_AND_CURRENT; BUNDLE_VERIFIED permits
+      only explicit, non-authoritative candidate inspection.
+  - id: AIB-002
+    rule: A refused outcome never falls back to the historical observer projection or any other input.
+  - id: AIB-003
+    rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is BOUND.
+  - id: AIB-004
+    rule: The bundle is produced only by the canonical compiler; GAR verifies and never regenerates it.
+  - id: AIB-005
+    rule: Provenance is recorded in run state before the payload is read and is never inferred.
+  - id: AIB-006
+    rule: >-
+      A committed bundle is accepted only after CI reproduces it byte for byte with the pinned
+      compiler; BUNDLE_VERIFIED and ADMITTED_AND_CURRENT attest integrity, currentness and
+      authority status of those bytes and are never by themselves evidence of compiler
+      production.
+  - id: AIB-007
+    rule: >-
+      Admission is resolved independently of bundle.lock.json from the authority checkout's own
+      main; BUNDLE_VERIFIED never grants admitted-law status.
+  - id: AIB-008
+    rule: >-
+      expected_source_classes equals, in order, the sources of the pinned projection profile
+      at the authority revision; any divergence is REJECTED (EXPECTED_SOURCE_SET_MISMATCH).

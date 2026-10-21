@@ -1,0 +1,27 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "binding_families": {
+      "provider": {
+        "purpose": "Map an abstract semantic port or capability requirement onto a concrete implementation provider."
+      }
+    },
+    "compatibility": {
+      "binding_selection_does_not_transform_source_ir": true,
+      "optimization_permitted_only_after_compatibility": true,
+      "provider": "RequiredCapabilities ⊆ ProviderCapabilities",
+      "provider_does_not_become_semantic_owner": true,
+      "target": "RequiredTargetCapabilities ⊆ TargetCapabilities",
+      "unknown_capability": "unsupported_until_resolved"
+    }
+  },
+  "projection_digest": "sha256:cff9b725c6e8e49dd64537dfe49075c7e2a07dfcfeca7bd20ec67feb46fab00f",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:bc4da9f550be0dcc3f36d072b6ead000bf5f1eda51f84bdbcfb1d8cda81fd72f",
+  "source_ref": "l9.source/binding-catalog@1"
+}

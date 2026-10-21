@@ -1,0 +1,200 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "dependency_rules": {
+      "architecture_resolution": {
+        "change_effect": "ports_and_product_manifest_stale",
+        "depends_on": [
+          "requirement_closure",
+          "capability_closure",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "architecture_rules",
+          "architecture_patterns",
+          "node_archetypes",
+          "dependency_archetypes"
+        ]
+      },
+      "capability_closure": {
+        "change_effect": "architecture_and_conformance_resolution_stale",
+        "depends_on": [
+          "requirement_closure",
+          "capabilities",
+          "capability_resolution",
+          "contracts"
+        ]
+      },
+      "capability_declaration": {
+        "depends_on": [
+          "semantic_owner",
+          "semantic_scope",
+          "effect_class",
+          "required_capability_refs",
+          "applicable_contract_refs",
+          "authorization_requirement_refs"
+        ],
+        "material_change_effect": "new_admission_decision_required_unless_compatibility_preserves_prior_decision",
+        "provider_realization_change_alone_does_not_change_semantic_identity": true
+      },
+      "conformance": {
+        "depends_on": [
+          "resolved_profile_refs",
+          "resolved_profile_digests",
+          "fixture_refs",
+          "fixture_digests",
+          "binding_identity",
+          "implementation_or_repository_revision"
+        ],
+        "receipt_binds_exact_closure": true
+      },
+      "conformance_requirement_resolution": {
+        "change_effect": "product_manifest_and_conformance_closure_stale",
+        "depends_on": [
+          "invariants",
+          "contracts",
+          "capabilities",
+          "architecture_resolution",
+          "port_resolution",
+          "conformance_model"
+        ]
+      },
+      "fixture": {
+        "change_effect": "fixture_stale",
+        "depends_on": [
+          "source_law_identity",
+          "source_law_digest",
+          "derivation_profile_ref",
+          "derivation_profile_digest"
+        ]
+      },
+      "fixture_profile": {
+        "depends_on": [
+          "fixture_refs",
+          "fixture_digests"
+        ],
+        "existing_profile_versions_are_immutable": true,
+        "membership_change_requires_new_profile_version": true
+      },
+      "identity_topology_resolution": {
+        "change_effect": "requirement_product_manifest_and_identity_consumers_stale",
+        "depends_on": [
+          "product_topology",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "identity_model",
+          "contracts",
+          "authority_model"
+        ]
+      },
+      "port_resolution": {
+        "change_effect": "technology_binding_and_product_manifest_stale",
+        "depends_on": [
+          "architecture_resolution",
+          "port_catalog",
+          "contracts",
+          "capabilities"
+        ]
+      },
+      "product_archetype_resolution": {
+        "change_effect": "architecture_ports_and_manifest_stale",
+        "depends_on": [
+          "product_topology",
+          "product_kind_resolution",
+          "node_archetypes",
+          "dependency_archetypes"
+        ]
+      },
+      "product_kind_resolution": {
+        "change_effect": "archetype_architecture_and_manifest_stale",
+        "depends_on": [
+          "product_topology",
+          "product_kinds",
+          "repository_registry"
+        ]
+      },
+      "product_manifest": {
+        "change_effect": "implementation_and_target_artifacts_stale",
+        "depends_on": [
+          "product_topology",
+          "identity_topology_resolution",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "requirement_closure",
+          "capability_closure",
+          "architecture_resolution",
+          "port_resolution",
+          "provider_binding_resolution",
+          "conformance_requirement_resolution",
+          "compilation_profile",
+          "compiler_coordinates"
+        ]
+      },
+      "product_topology": {
+        "change_effect": "product_kind_archetype_requirement_and_resolution_closure_stale",
+        "depends_on": [
+          "vocabulary",
+          "invariants",
+          "contracts",
+          "authority_model",
+          "capability_semantics",
+          "product_kinds",
+          "node_archetypes",
+          "dependency_archetypes",
+          "technology_profile_semantics"
+        ]
+      },
+      "provider_binding_resolution": {
+        "change_effect": "product_manifest_and_implementation_stale",
+        "depends_on": [
+          "port_resolution",
+          "technology_profiles",
+          "technology_capabilities",
+          "binding_catalog"
+        ]
+      },
+      "receipt": {
+        "depends_on": [
+          "exact_subject_ref",
+          "governing_coordinates",
+          "claim",
+          "verification_basis"
+        ],
+        "material_subject_or_coordinate_change_effect": "non_current_unless_compatibility_preserves_applicability",
+        "prior_receipt_remains_immutable": true
+      },
+      "requirement_closure": {
+        "change_effect": "semantic_resolution_stale",
+        "depends_on": [
+          "product_topology",
+          "identity_topology_resolution",
+          "product_kind_resolution",
+          "product_archetype_resolution",
+          "invariants",
+          "contracts",
+          "capabilities",
+          "authority_model",
+          "requirement_model"
+        ]
+      }
+    },
+    "invalidation_rules": {
+      "affected_expression": "Affected(change) = TransitiveDependents(changed_semantics)",
+      "historical_artifacts_are_immutable": true,
+      "profile_digest_change": "mark_profile_dependents_stale",
+      "repair_default": "repair_current_stage_when_upstream_assumptions_remain_valid",
+      "silent_consumption_of_stale_input_forbidden": true,
+      "source_digest_change": "mark_transitive_dependents_stale",
+      "upstream_conflict": "create_new_upstream_revision_then_invalidate_transitive_dependents",
+      "upstream_revision_change": "evaluate_dependency_impact"
+    }
+  },
+  "projection_digest": "sha256:d0378d89856ebb476f8b1ed07d3188938bdb03ff70e9471cccd955e827c2ebf3",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+  "source_ref": "l9.source/semantic-dependency-model@1"
+}

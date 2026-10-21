@@ -1,0 +1,194 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "global_rules": {
+      "architecture_patterns_remain_separate_catalog": true,
+      "architecture_synthesis_may_not_invent_domain_law": true,
+      "kind_rule_obligations_apply_unmodified_unless_an_admitted_product_kind_exception_binds_the_exact_product": true,
+      "product_kind_obligations_precede_architecture_synthesis": true,
+      "provider_choice_does_not_define_semantic_structure": true,
+      "rules_derive_obligations_not_complete_architectures": true
+    },
+    "governed_by": {
+      "contracts": [
+        "l9.contract/semantic-resolution@1",
+        "l9.contract/hard-constraint@1",
+        "l9.contract/validation-and-correctness@1"
+      ]
+    },
+    "resolution_rule": "Applicable admitted patterns and derived obligations are composed only after all rule preconditions and hard requirements are satisfied.",
+    "rule_shape": {
+      "optional": [
+        "forbid",
+        "requires_patterns",
+        "compatible_patterns",
+        "evidence_requirements"
+      ],
+      "required": [
+        "id",
+        "when",
+        "derive",
+        "source_refs"
+      ]
+    },
+    "rules": [
+      {
+        "derive": {
+          "architecture_obligations": [
+            "remote_invocation",
+            "independent_runtime",
+            "independent_runtime_identity",
+            "canonical_constellation_communication",
+            "independent_health_and_readiness",
+            "runtime_admission"
+          ]
+        },
+        "id": "l9.arch-rule/product-kind-node@1",
+        "requires_patterns": [
+          "l9.pattern/runnable-node@1",
+          "l9.pattern/semantic-core-gate-adapter@1"
+        ],
+        "source_refs": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-OWNER-001",
+          "L9-CAPABILITY-001"
+        ],
+        "when": {
+          "product_kind": "node"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "local_composition",
+            "consumer_bound_artifact",
+            "public_programmatic_contract",
+            "consumer_owned_process_lifecycle",
+            "no_independent_constellation_runtime_identity"
+          ]
+        },
+        "id": "l9.arch-rule/product-kind-dependency@1",
+        "requires_patterns": [
+          "l9.pattern/dependency-package@1"
+        ],
+        "source_refs": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-OWNER-001",
+          "L9-COMPAT-001"
+        ],
+        "when": {
+          "product_kind": "dependency"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "exact_subject_binding_of_the_product_kind_exception",
+            "only_enumerated_kind_obligations_displaced",
+            "enumerated_replacement_obligations_applied",
+            "undisplaced_kind_and_archetype_obligations_retained"
+          ]
+        },
+        "forbid": [
+          "product_kind_exception_claimed_without_exact_subject_binding",
+          "constellation_identity_gate_admission_or_routing_authority_through_exception"
+        ],
+        "id": "l9.arch-rule/product-kind-exception@1",
+        "source_refs": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-OWNER-001",
+          "L9-MONOTONIC-001"
+        ],
+        "when": {
+          "requirement": "admitted_product_kind_exception"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "archetype_must_resolve_from_declared_kind_catalog"
+          ]
+        },
+        "forbid": [
+          "cross_kind_archetype_binding"
+        ],
+        "id": "l9.arch-rule/product-archetype-kind-coherence@1",
+        "source_refs": [
+          "L9-IDENTITY-001",
+          "L9-COMPAT-001",
+          "L9-UNKNOWN-001"
+        ],
+        "when": {
+          "requirement": "product_archetype_resolution"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "provider_neutral_port",
+            "provider_adapter_boundary",
+            "independent_conformance"
+          ]
+        },
+        "id": "l9.arch-rule/provider-backed-semantics@1",
+        "source_refs": [
+          "L9-SEM-001",
+          "L9-IDENTITY-001",
+          "L9-COMPAT-001"
+        ],
+        "when": {
+          "requirement": "replaceable_external_realization"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "explicit_authority_boundary",
+            "receipt_support",
+            "failure_semantics",
+            "reconciliation_or_unknown_handling"
+          ]
+        },
+        "id": "l9.arch-rule/consequential-capability@1",
+        "source_refs": [
+          "L9-AUTH-001",
+          "L9-EVIDENCE-001",
+          "L9-UNKNOWN-001"
+        ],
+        "when": {
+          "effect_requirement": "consequential"
+        }
+      },
+      {
+        "derive": {
+          "architecture_obligations": [
+            "canonical_source",
+            "projection_profiles",
+            "digest_bound_provenance"
+          ]
+        },
+        "id": "l9.arch-rule/canonical-source-multiple-views@1",
+        "source_refs": [
+          "L9-OWNER-001",
+          "L9-PROJECTION-001",
+          "L9-PROV-001"
+        ],
+        "when": {
+          "requirement": "multiple_consumer_views_of_same_semantics"
+        }
+      }
+    ]
+  },
+  "projection_digest": "sha256:497f40bd6ee129fc1fd0ff38c6455a4771948c346281e8b43259a549b60aa42e",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
+  "source_ref": "l9.source/architecture-rules@1"
+}
