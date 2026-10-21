@@ -17,6 +17,9 @@ on:
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
       - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
       - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "tools/authority/verify_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
       - "tools/authority/produce_projection_bundle.py"
       - ".github/workflows/l9-projection-bundle-verify.yml"
   push:
@@ -29,6 +32,9 @@ on:
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
       - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
       - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "tools/authority/verify_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
       - "tools/authority/produce_projection_bundle.py"
 permissions:
   contents: read
@@ -124,10 +130,12 @@ jobs:
             --authority-root ../org-authority \
             --bundle generated/governance/coding_agent_execution \
             --expect-revision "$REVISION"
-      # Admission is resolved independently of bundle.lock.json: the verifier reads the tip of
-      # Quantum-L9/.github main from its own checkout. Before admission the expected outcome is
-      # BUNDLE_VERIFIED with authority status NOT_ADMITTED or ADMISSION_UNRESOLVED (exit 5),
-      # which is reported, not hidden; REJECTED, BLOCKED and STALE fail the job.
+      # Admission is resolved independently of bundle.lock.json by the shared resolver: the
+      # verifier reads the tip of Quantum-L9/.github main from its own checkout and judges the
+      # binding's owner decision for each exact candidate digest. The owner admitted
+      # architecture intelligence on 2026-10-21, so the only passing outcome is
+      # ADMITTED_AND_CURRENT (exit 0); a fall back to BUNDLE_VERIFIED (exit 5), REJECTED,
+      # BLOCKED or STALE fails the job, and the reason is reported, not hidden.
       - name: Checkout Quantum-L9/.github main independently of the lock
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -151,7 +159,7 @@ jobs:
           code=$?
           set -e
           python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
-          [[ $code -eq 0 || $code -eq 5 ]] || exit 1
+          [[ $code -eq 0 ]] || exit 1
       - name: Report the coding projection status against authority main
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'coding_agent_execution'
         working-directory: governance
