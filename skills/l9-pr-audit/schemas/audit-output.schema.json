@@ -366,6 +366,7 @@
                 "description": "Required when kind is CANONICAL_LAW: the bundled record this authority source resolves to.",
                 "required": [
                   "source_class",
+                  "record_id",
                   "source_ref",
                   "source_digest",
                   "projection_digest",
@@ -378,7 +379,8 @@
                   },
                   "record_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "description": "Equals authority_id and names a record that exists in the source_class namespace of the bound bundle's composed view."
                   },
                   "source_ref": {
                     "type": "string",

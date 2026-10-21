@@ -33,6 +33,34 @@ A = "a" * 40
 B = "b" * 40
 C = "c" * 40
 
+# The fixture audit binds a synthetic canonical bundle: its composed view carries the
+# composition digest the fixture binding names and exactly one invariants record, so a
+# CANONICAL_LAW source resolves only to L9-EVIDENCE-001 in namespace invariants.
+CANONICAL_COMPOSITION_DIGEST = "sha256:" + "6" * 64
+CANONICAL_VIEW: dict[str, object] = {
+    "schema": "l9.composed-projection/v1",
+    "composition_digest": CANONICAL_COMPOSITION_DIGEST,
+    "payload": {
+        "invariants": {
+            "invariants": [
+                {
+                    "id": "L9-EVIDENCE-001",
+                    "owner": "Quantum-L9/.github",
+                    "scope": "global",
+                    "statement": "Evidence and receipts confer no authority.",
+                }
+            ]
+        },
+        "contracts": {"contracts": []},
+    },
+}
+
+
+def write_canonical_bundle(root: Path, view: dict[str, object]) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / bab.COMPOSED_VIEW_NAME).write_text(json.dumps(view, indent=2), encoding="utf-8")
+    return root
+
 
 def evidence(
     eid: str,
@@ -1056,6 +1084,10 @@ def main() -> int:
         raise AssertionError(
             "skill tree contains bytecode/cache residue before validation: " + ", ".join(residue)
         )
+
+    canonical_td = tempfile.TemporaryDirectory(prefix="l9-pr-audit-canonical-")
+    canonical_root = write_canonical_bundle(Path(canonical_td.name) / "bound", CANONICAL_VIEW)
+    bab.CANONICAL_BUNDLE_ROOT = canonical_root
 
     audit = base_audit()
     errors = bab.validate_audit(audit)
@@ -2124,6 +2156,54 @@ def main() -> int:
     del bad["authority_resolution"]["sources"][1]["canonical_ref"]
     assert_has(bab.validate_audit(bad), "is a canonical global id and must be kind CANONICAL_LAW")
 
+    # A canonical-looking id with matching digests is not bound law: the record must exist
+    # in the named namespace of the composed view, under the id the source carries.
+    bad = copy.deepcopy(audit)
+    bad["authority_resolution"]["sources"][1]["canonical_ref"]["record_id"] = "L9-FOO-999"
+    assert_has(
+        bab.validate_audit(bad), "canonical_ref record_id L9-FOO-999 must equal the authority_id"
+    )
+
+    bad = copy.deepcopy(audit)
+    bad["authority_resolution"]["sources"][1]["authority_id"] = "L9-FOO-999"
+    bad["authority_resolution"]["sources"][1]["canonical_ref"]["record_id"] = "L9-FOO-999"
+    assert_has(
+        bab.validate_audit(bad),
+        "authority L9-FOO-999 does not exist in bound namespace invariants of the composed view",
+    )
+
+    bad = copy.deepcopy(audit)
+    bad["authority_resolution"]["sources"][1]["canonical_ref"]["source_class"] = "contracts"
+    errors = bab.validate_audit(bad)
+    assert_has(errors, "canonical_ref source_class contracts is not a bound source class")
+    assert_has(errors, "does not exist in bound namespace contracts of the composed view")
+
+    bad = copy.deepcopy(audit)
+    del bad["authority_resolution"]["sources"][1]["canonical_ref"]["record_id"]
+    assert bab.validate_audit(bad), "canonical_ref without record_id must fail schema validation"
+
+    # Resolution reads the composed view on disk: an absent view or one whose composition
+    # digest differs from the reference fails closed rather than trusting the reference.
+    try:
+        bab.CANONICAL_BUNDLE_ROOT = Path(canonical_td.name) / "missing"
+        assert_has(
+            bab.validate_audit(audit),
+            "cannot be resolved: the bound bundle composed view "
+            "(generated/governance/pr_audit/composed.json) is unavailable",
+        )
+        drifted_view = copy.deepcopy(CANONICAL_VIEW)
+        drifted_view["composition_digest"] = "sha256:" + "5" * 64
+        bab.CANONICAL_BUNDLE_ROOT = write_canonical_bundle(
+            Path(canonical_td.name) / "drifted", drifted_view
+        )
+        assert_has(
+            bab.validate_audit(audit),
+            "canonical_ref composition_digest does not match the composed view of the bound bundle",
+        )
+    finally:
+        bab.CANONICAL_BUNDLE_ROOT = canonical_root
+    assert not bab.validate_audit(audit), "fixture must validate again against the bound view"
+
     bad = copy.deepcopy(audit)
     bad["canonical_authority_binding"]["fallback_used"] = True
     assert bab.validate_audit(bad), "fallback_used=true must fail schema validation"
@@ -2389,6 +2469,8 @@ def main() -> int:
         raise AssertionError(
             "validation created bytecode/cache residue: " + ", ".join(sorted(residue_after))
         )
+    bab.CANONICAL_BUNDLE_ROOT = None
+    canonical_td.cleanup()
     print("PASS: l9-pr-audit self-test passed")
     return 0
 

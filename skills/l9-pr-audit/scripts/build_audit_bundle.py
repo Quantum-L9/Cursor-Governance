@@ -35,6 +35,67 @@ HANDOFF_VERSION = "l9.pr-audit.remediation-handoff.v2.0"
 # A canonical global id (Quantum-L9/.github invariants and contracts) may only enter an audit
 # as a CANONICAL_LAW authority source bound through canonical_authority_binding.
 CANONICAL_AUTHORITY_ID = re.compile(r"^(L9-[A-Z]+-\d{3}|l9\.contract/[a-z0-9-]+@\d+)$")
+# The bound bundle lives in the governance checkout this script belongs to
+# (scripts/ -> l9-pr-audit/ -> skills/ -> repository root). A CANONICAL_LAW
+# authority source resolves against that bundle's composed view: the record it
+# names must exist in the named namespace, so an id that merely matches the
+# canonical shape cannot pass as bound law. CANONICAL_BUNDLE_ROOT overrides the
+# bundle directory (CLI --canonical-bundle; the self-test points it at a fixture).
+REPO_ROOT = Path(__file__).resolve().parents[3]
+COMPOSED_VIEW_NAME = "composed.json"
+CANONICAL_BUNDLE_ROOT: Path | None = None
+
+
+def canonical_bundle_root(audit: dict[str, Any]) -> Path | None:
+    if CANONICAL_BUNDLE_ROOT is not None:
+        return CANONICAL_BUNDLE_ROOT
+    binding = audit.get("canonical_authority_binding")
+    bundle_ref = binding.get("bundle_ref") if isinstance(binding, dict) else None
+    if not isinstance(bundle_ref, str) or not bundle_ref:
+        return None
+    return REPO_ROOT / bundle_ref
+
+
+def load_canonical_view(audit: dict[str, Any]) -> dict[str, Any] | None:
+    """Load the composed view of the bundle the audit's binding names, or None when absent."""
+    root = canonical_bundle_root(audit)
+    if root is None:
+        return None
+    path = root / COMPOSED_VIEW_NAME
+    if not path.is_file():
+        return None
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def canonical_record_exists(view: dict[str, Any], source_class: str, record_id: str) -> bool:
+    """True when the named namespace of the composed view carries a record with that id.
+
+    Records are either objects whose ``id`` equals the record id (invariants,
+    contracts, architecture rules) or entries of a mapping keyed by the id
+    (vocabulary terms, receipt kinds)."""
+    payload = view.get("payload")
+    namespace = payload.get(source_class) if isinstance(payload, dict) else None
+    if namespace is None:
+        return False
+    pending: list[Any] = [namespace]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, dict):
+            if node.get("id") == record_id:
+                return True
+            if record_id in node and isinstance(node[record_id], dict):
+                return True
+            pending.extend(node.values())
+        elif isinstance(node, list):
+            pending.extend(node)
+    return False
+
+
 MANIFEST_VERSION = "l9.pr-audit.bundle-manifest.v2.0"
 BUILDER_VERSION = "2.0.0"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
@@ -1732,9 +1793,15 @@ def deterministic_closure_errors(
 
 
 def validate_semantics(
-    audit: dict[str, Any], change_ledgers: dict[int, dict[str, Any]] | None = None
+    audit: dict[str, Any],
+    change_ledgers: dict[int, dict[str, Any]] | None = None,
+    canonical_view: dict[str, Any] | None = None,
 ) -> list[str]:
-    """Validate cross-field invariants that JSON Schema cannot express cleanly."""
+    """Validate cross-field invariants that JSON Schema cannot express cleanly.
+
+    ``canonical_view`` is the composed view of the bound canonical bundle; when
+    None it is loaded from the bundle the audit's binding names. Every
+    CANONICAL_LAW authority source must resolve to a record in that view."""
     errors: list[str] = []
     if audit.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
@@ -2246,6 +2313,8 @@ def validate_semantics(
     # Canonical authority binding: global law is bound, not recalled.
     binding = audit["canonical_authority_binding"]
     admitted = binding["status"] == "ADMITTED_AND_CURRENT"
+    if canonical_view is None:
+        canonical_view = load_canonical_view(audit)
     if admitted and not (binding["authoritative"] and binding["load_status"] == "LOADED"):
         errors.append(
             "canonical_authority_binding ADMITTED_AND_CURRENT requires authoritative=true and load_status LOADED"
@@ -2294,6 +2363,28 @@ def validate_semantics(
                     errors.append(
                         f"authority {aid} canonical_ref source provenance does not match the bound "
                         f"{ref['source_class']} component"
+                    )
+                # The id must name a record that exists in the bound namespace; a
+                # canonical-looking id with matching digests is not bound law.
+                if ref["record_id"] != aid:
+                    errors.append(
+                        f"authority {aid} canonical_ref record_id {ref['record_id']} must equal "
+                        "the authority_id"
+                    )
+                elif canonical_view is None:
+                    errors.append(
+                        f"authority {aid} cannot be resolved: the bound bundle composed view "
+                        f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable"
+                    )
+                elif canonical_view.get("composition_digest") != ref["composition_digest"]:
+                    errors.append(
+                        f"authority {aid} canonical_ref composition_digest does not match the "
+                        "composed view of the bound bundle"
+                    )
+                elif not canonical_record_exists(canonical_view, ref["source_class"], aid):
+                    errors.append(
+                        f"authority {aid} does not exist in bound namespace {ref['source_class']} "
+                        "of the composed view"
                     )
         elif canonical_id:
             errors.append(
@@ -4246,6 +4337,14 @@ def main() -> int:
     parser.add_argument("--validate-only", action="store_true")
     parser.add_argument("--verify-bundle", type=Path)
     parser.add_argument("--change-ledger", type=Path, action="append", default=[])
+    parser.add_argument(
+        "--canonical-bundle",
+        type=Path,
+        help=(
+            "Directory holding the bound canonical bundle's composed.json; defaults to the "
+            "bundle_ref named by canonical_authority_binding, relative to the governance checkout"
+        ),
+    )
     parser.add_argument("--autoremediate", type=int, choices=(0, 1), default=0)
     parser.add_argument(
         "--materialize-machine-rows",
@@ -4294,6 +4393,9 @@ def main() -> int:
                 return 1
             print("PASS: bundle verification passed")
             return 0
+        if args.canonical_bundle is not None:
+            global CANONICAL_BUNDLE_ROOT
+            CANONICAL_BUNDLE_ROOT = args.canonical_bundle
         if not args.audit:
             parser.error("--audit is required unless --verify-bundle is used")
         if not args.change_ledger:

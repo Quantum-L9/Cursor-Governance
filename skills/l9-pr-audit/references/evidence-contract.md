@@ -54,7 +54,7 @@ This closes a model-variance gap: two auditors may reason differently, but neith
 
 ## Canonical authority binding
 
-`canonical_authority_binding` is the verbatim record printed by `scripts/verify_canonical_authority.py` (fields in `integrations/CANONICAL_AUTHORITY_BINDING.yaml#provenance.recorded_fields`; `fallback_used` is always `false`). An authority source of kind `CANONICAL_LAW` is `CONFIRMED` only when the binding is `ADMITTED_AND_CURRENT` and its `canonical_ref` matches the bound component (`source_class`, `source_ref`, `source_digest`, `projection_digest`, `composition_digest`). A candidate-mode binding (`BUNDLE_VERIFIED`, `LOADED_AS_CANDIDATE`) supports `INFERENCE` only. A canonical global id (`L9-*-NNN`, `l9.contract/*@N`) never appears under another kind.
+`canonical_authority_binding` is the verbatim record printed by `scripts/verify_canonical_authority.py` (fields in `integrations/CANONICAL_AUTHORITY_BINDING.yaml#provenance.recorded_fields`; `fallback_used` is always `false`). An authority source of kind `CANONICAL_LAW` is `CONFIRMED` only when the binding is `ADMITTED_AND_CURRENT`, its `canonical_ref` matches the bound component (`source_class`, `source_ref`, `source_digest`, `projection_digest`, `composition_digest`), and its `record_id` equals the `authority_id` and resolves to a record in that namespace of the bound bundle's `composed.json` (whose `composition_digest` must equal the reference). The builder reads the composed view on disk to resolve it; an absent view fails closed. A candidate-mode binding (`BUNDLE_VERIFIED`, `LOADED_AS_CANDIDATE`) supports `INFERENCE` only. A canonical global id (`L9-*-NNN`, `l9.contract/*@N`) never appears under another kind.
 
 ## Architecture policy adapters
 

@@ -32,12 +32,14 @@ on:
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/pr_audit/**"
   push:
     branches:
       - main
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/pr_audit/**"
       - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
