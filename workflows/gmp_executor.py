@@ -13,7 +13,7 @@ Usage:
     "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" --resume
     "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" --status
 
-The mutated clone is ``--workspace`` (else ``WS``, else the cwd), normalized to
+The mutated clone is ``--workspace`` (else the cwd; never ``WS``), normalized to
 its git toplevel. This checkout only supplies tools.
 
 The executor:
@@ -1480,7 +1480,8 @@ Examples:
         "--workspace",
         default=None,
         help=(
-            "Clone to mutate (normalized to its git toplevel). Default: WS, else cwd. "
+            "Clone to mutate (normalized to its git toplevel). Default: the cwd; the WS "
+            "environment variable is never consulted. "
             "This checkout supplies tools only."
         ),
     )
