@@ -52,6 +52,7 @@ artifacts:
     gate: ops/autonomy/local_execution_gate.py
     merge_gate: ops/autonomy/merge_gate.py
     merge_authority_switch: ops/config/merge-authority.json # CANONICAL_LAW §6.2.16; "disabled" = no merge-permission check on any surface
+    publish_authority_registry: ops/config/publish-authority.json # per-repository publish route (CANONICAL_LAW §13); Governance-side data, never a consumer marker or env override (L9-ORG-006)
     state_path: .l9/autonomy/l4-local-phase.json
     receipt_path: .l9/autonomy/l4-release-receipt.json
     meta: meta/l4-local-autonomy.meta.md
@@ -62,6 +63,8 @@ artifacts:
       - environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
       - skills/l9-bounded-autonomy
       - skills/l9-pr-remediation
+      - ops/make/publish.mk
+      - ops/scripts/run_native_publish.sh
     not_for:
       - mid_execution_push_before_release_authorized
   - artifact_id: context-sensitive-git-guardrails
