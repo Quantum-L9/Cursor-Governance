@@ -181,7 +181,7 @@ integration_invariants:
   - id: AIB-002
     rule: A refused outcome never falls back to the historical observer projection or any other input.
   - id: AIB-003
-    rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is BOUND.
+    rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is ADMITTED_AND_CURRENT or BUNDLE_VERIFIED.
   - id: AIB-004
     rule: The bundle is produced only by the canonical compiler; GAR verifies and never regenerates it.
   - id: AIB-005

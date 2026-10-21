@@ -14,14 +14,14 @@ decision:
   - Add integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml as a separate input with exact profile, composition, schema, and source-class pins.
   - The bundle is produced only by the compiler via tools/authority/produce_architecture_intelligence.py and CI; GAR never produces it.
   - scripts/verify_architecture_intelligence.py checks bytes, envelope digests, pins, receipts, exact source coverage, namespace byte-equivalence, and optional currentness; it executes no selector or composition semantics.
-  - Load only on the optional_load trigger and only when the verifier returns BOUND; record provenance in $.architecture_intelligence (RS-034).
+  - Load only on the optional_load trigger and only when the verifier returns ADMITTED_AND_CURRENT (originally named BOUND; the amendment below retires that name); record provenance in $.architecture_intelligence (RS-034).
   - BLOCKED, REJECTED, and STALE never fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
 preserved:
   - contracts/L9_ARCHITECTURE_PROFILE.yaml unchanged and loaded in its existing boot position.
   - Every other semantic owner, eval, and transition unchanged.
 validation:
   - scripts/validate_runtime_alignment.py checks the binding pins, fallbacks, manifest wiring, run-state slot, and RS-034.
-  - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py exercises BOUND and every refusal path.
+  - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py exercises BUNDLE_VERIFIED (candidate and admitted modes) and every refusal path.
 
 amendments:
   - date: 2026-10-15
