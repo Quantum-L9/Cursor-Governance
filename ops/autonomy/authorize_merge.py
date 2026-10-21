@@ -78,6 +78,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import merge_authority_switch  # noqa: E402
 import operator_merge_instruction as omi  # noqa: E402
 from github_merge_authorization import (  # noqa: E402
     fetch_pull_request,
@@ -388,6 +389,21 @@ def operator_verdict(
         return refused
 
     store = instruction_path or account_instruction_path()
+    if merge_authority_switch.disabled():
+        # §6.2.16: no receipt, host, transcript or principal check on any
+        # surface. A recorded instruction, when there is one, still names the
+        # grant's provenance; the open PR and the live head were proved above.
+        found = omi.instruction_verdict(repo, pr, path=store, now=stamp)
+        recorded = found.get("instruction") if found.get("authorized") else None
+        return {
+            "authorized": True,
+            "reason": "merge-authority enforcement disabled (CANONICAL_LAW §6.2.16)",
+            "instruction": recorded
+            or {"id": "enforcement-disabled", "expires_at": stamp + MAX_TTL_SECONDS},
+            "pull_request": summary,
+            "authorizer": None,
+            "lineage": None,
+        }
     verdict = omi.instruction_verdict(repo, pr, path=store, now=stamp)
     lineage: dict[str, Any] | None = None
     if not verdict["authorized"]:
@@ -591,7 +607,10 @@ def main(
         reason = reason or f"operator prompt instruction {instruction.get('id')}"
     else:
         token = confirmation_token(args.repo, pr, sha)
-        if not (confirm or confirm_on_terminal)(token):
+        if merge_authority_switch.disabled():
+            # §6.2.16: no /dev/tty confirmation while enforcement is disabled.
+            provenance = {"channel": "enforcement_disabled"}
+        elif not (confirm or confirm_on_terminal)(token):
             print(
                 "REFUSED: no human confirmed this grant on a controlling terminal, and no "
                 "--operator-instruction was requested. Merge grants are issued by a human "
@@ -600,7 +619,8 @@ def main(
                 file=sys.stderr,
             )
             return NOT_CONFIRMED_EXIT
-        provenance = {"channel": TERMINAL_CHANNEL}
+        else:
+            provenance = {"channel": TERMINAL_CHANNEL}
         reason = reason or DEFAULT_REASON
     try:
         entry = write_authorization(

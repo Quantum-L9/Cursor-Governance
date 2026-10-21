@@ -1766,3 +1766,40 @@ SSOT: [`ops/autonomy/operator_merge_instruction.py`](ops/autonomy/operator_merge
 [`environment/agents/adapters/claude-code/settings.template.json`](environment/agents/adapters/claude-code/settings.template.json)
 (`UserPromptExpansion`, matcher `l9-pr-remediation`),
 [`skills/l9-pr-remediation/SKILL.md`](skills/l9-pr-remediation/SKILL.md).
+
+## 6.2.16 Merge-authority kill switch (2026-10-20) — suspends §6.2.12–§6.2.15 while disabled
+
+Operator decision. The merge-authority chain of §6.2.12–§6.2.15 left agents
+unable to merge on every surface: Cursor receipts are never grantable, a typed
+`/l9-pr-remediation` records nothing unless the host fires `UserPromptExpansion`
+with the exact command name, chat instructions record only when a narrow grammar
+matches, the grant file is denied to every agent write, and terminal grants need
+`/dev/tty`. The operator merged by hand on GitHub instead. This section puts the
+whole chain behind one reversible switch.
+
+1. **The switch.** `ops/config/merge-authority.json`, field `enforcement`, read
+   through `ops/autonomy/merge_authority_switch.py`. `strict` is §6.2.12–§6.2.15
+   as written. `disabled` is the shipped value. `chat` is reserved for
+   agent-attested grants and reads as `strict` until implemented. A missing,
+   unreadable or unknown value reads as `strict`; `L9_MERGE_AUTHORITY_MODE`
+   overrides the file when it names a known mode.
+2. **While `disabled`, on every surface — Cursor and Claude Code alike:**
+   merge authorization is not checked. `merge_gate.py` denies only the
+   never-waive set; `stack_safe_merge.py` treats the live head the caller names
+   as authorized; the operator-instruction recorder records nothing and emits
+   no note on either host. An agent merges a ready PR (readiness board `merge`,
+   stack-safe, oldest-first) when the operator asks in chat or invokes
+   `/l9-pr-remediation`. No grant, receipt, transcription or MERGE_PENDING is
+   required, and a merge worker may run the merge.
+3. **Still denied while `disabled`:** `--admin` merges, force-push, hard reset
+   and forced clean (the never-waive set). Stack ordering and the live-head
+   recheck of `stack_safe_merge.py` remain. GitHub's own required checks and
+   thread resolution remain; they are GitHub's rules, not this chain's. `make pr`
+   and campaigns still never merge.
+4. **Re-enable.** Set `enforcement` to `strict` (or delete the file):
+   §6.2.12–§6.2.15 apply again unchanged; their code and tests stay in the tree,
+   and the test suite pins `strict` to keep proving them.
+5. **Accepted gap.** While `disabled`, the boundary on agent merges is doctrine
+   (merge on the operator's request), not a mechanism. Tracked in `TODO.md`
+   ("Merge authority disabled") with the recorder defects to fix before the
+   chain is re-enabled.

@@ -4,7 +4,7 @@ catalog:
   - dag_id: gmp-execution-v1
     source_path: workflows/dags/gmp_execution_dag.py
     disposition: DELETE_TWIN
-    domain_owner: l9-gmp-protocol
+    domain_owner: commands/gmp.md
     proof_path: workflows/dags/gmp/graph.py
   - dag_id: harvest-deploy-v1
     source_path: workflows/dags/harvest_deploy_dag.py

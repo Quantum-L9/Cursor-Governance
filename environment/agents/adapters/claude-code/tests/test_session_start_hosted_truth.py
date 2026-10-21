@@ -39,26 +39,21 @@ class SessionStartHostedTruthTests(unittest.TestCase):
         self.assertIn("hooks/pre-commit", text)
         self.assertIn("removed forbidden raw .git/hooks/pre-commit", text)
 
-    def test_hook_probes_loadable_skills(self) -> None:
-        text = HOOK.read_text(encoding="utf-8")
-        self.assertIn("skills loadable:", text)
-        self.assertIn(".claude/skills", text)
-
-    def test_loadable_skill_counter_follows_symlinks(self) -> None:
-        """Every entry under .claude/skills is a SYMLINK to a directory in the
-        governance clone, so a bare `find` refuses to descend and counts none of
-        them. The banner printed "skills loadable: 1" against 54 resolvable
-        skills -- the single real directory under ~/.claude/skills -- which is
-        exactly the line an operator reads to conclude skills failed to load."""
+    def test_skill_banner_reports_unique_canonical_coverage(self) -> None:
+        """The banner used to SUM `find -L` SKILL.md counts over the workspace
+        and user discovery paths, so a skill projected into both read twice
+        ("skills loadable: 119" for 59 skills, issue #690). Coverage now comes
+        from the projection owner's census, which counts each canonical
+        identity once; the summing counter must not come back."""
 
         text = HOOK.read_text(encoding="utf-8")
-        start = text.index("loadable=0")
-        # Delimited by the MESSAGE, not by how it is appended: the append call
-        # is an implementation detail (it moved from `LINES+=(...)` to `say`
-        # when context became durable-on-write), the banner line is the contract.
-        counter = text[start : text.index('"skills available:', start)]
-        self.assertIn("find -L", counter)
-        self.assertNotIn('find "$d"', counter)
+        self.assertIn("reconcile_claude_l9_skills.py", text)
+        self.assertIn("--coverage", text)
+        self.assertNotIn("loadable=$((loadable", text)
+        self.assertNotIn('"skills loadable:', text)
+        # Bounded like every other SessionStart probe, and honest when it fails.
+        census = text[text.index('_census="') : text.index("coverage census unavailable")]
+        self.assertIn("_l9_bounded", census)
 
     def test_mcp_claim_is_scoped_to_governance_managed_servers(self) -> None:
         """.mcp.json is the single authority over the servers governance

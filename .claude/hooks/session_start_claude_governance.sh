@@ -526,21 +526,23 @@ if GOV=$(resolve_governance_dir); then
   fi
   say "authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts"
   if [ -d "$GOV/skills" ]; then
-    n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-    # -L is load-bearing: every entry under .claude/skills is a SYMLINK to a
-    # directory in the governance clone. Without -L, find refuses to descend and
-    # the count reports the handful of real directories -- it printed
-    # "skills loadable: 1" against 54 resolvable skills, which is precisely the
-    # line an operator reads to conclude that skills failed to load.
-    loadable=0
-    for d in "$WORKSPACE/.claude/skills" "$HOME/.claude/skills"; do
-      if [ -d "$d" ]; then
-        c=$(find -L "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-        loadable=$((loadable + c))
-      fi
-    done
-    say "skills available: $n l9-* skills under \$GOV/skills (invoke by name)"
-    say "skills loadable: $loadable SKILL.md under .claude/skills discovery paths"
+    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
+    # add `find -L` counts over the workspace and user discovery paths, so each
+    # skill projected into both read twice (a "loadable" count of 119 for 59
+    # skills, issue #690). The census counts each canonical identity once,
+    # names missing / wrong-target / non-canonical entries separately, and
+    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
+    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
+    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
+    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
+    _census_rc=$?
+    if [ -n "$_census_out" ]; then
+      while IFS= read -r _census_line; do
+        say "$_census_line"
+      done <<<"$_census_out"
+    else
+      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
+    fi
   fi
 
   # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
@@ -966,6 +968,34 @@ emit_account_drift() {
   fi
 }
 
+# --- Coding projection (report-only) ---------------------------------------
+# One line from the shared classifier (ops/scripts/coding_projection_status.py;
+# Cursor renders the same verdict as markdown). Cursor-Governance verifies
+# l9-semantic-compiler pairs published to Quantum-L9/.github and never produces
+# them. It never fetches or writes, and with no independent record of main its
+# best verdict is BOUND; no verified checkout or no published pair is UNVERIFIED.
+emit_coding_projection() {
+  local py="$1"
+  local reader="$GOV/ops/scripts/coding_projection_status.py"
+  [ -f "$reader" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out rc
+  out="$(_l9_bounded 2 "$py" "$reader" --workspace "$WORKSPACE" --format line 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
+    124) say "coding projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    *)
+      if [ -n "$out" ]; then
+        say "$out"
+      else
+        say "coding projection: UNVERIFIED — classifier printed nothing (report-only)"
+      fi
+      ;;
+  esac
+}
+
 # --- Capability plane readiness (authenticated; never a secret) -------------
 # Graphiti over HTTPS (CLI + MCP). Distinct reasons: connect vs 401 vs 403
 # allowlist. Empty hydrate is honest; memory never gates repository writes.
@@ -1065,6 +1095,7 @@ emit_readiness_receipt() {
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
+emit_coding_projection "$PY"
 emit_capability_readiness "$PY"
 
 # Context7 is rendered unconditionally (mcp.template.json) — never gated out,

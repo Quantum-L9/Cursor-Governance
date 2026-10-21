@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-10-16T17:13:07Z`. Source: `rules/*.mdc`.
+Generated: `2026-10-21T02:25:01Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -41,7 +41,7 @@ Generated: `2026-10-16T17:13:07Z`. Source: `rules/*.mdc`.
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 111 | `84c139789917` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `a56bd2ccf980` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
-| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 198 | `b8b98981e12f` |
+| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 211 | `eaca137be1d1` |
 | `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 102 | `27c0da311804` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
@@ -52,7 +52,7 @@ Generated: `2026-10-16T17:13:07Z`. Source: `rules/*.mdc`.
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
-| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 96 | `974e7ffaf232` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 104 | `f1966ca06ce9` |
 | `63-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | general | auto_attached | 42 | `369e0ab6d90f` |
 | `64-canonical-identity-authority.mdc` | `l9.rule.64.canonical.identity.authority` | global | general | always | 85 | `ad0c026c2322` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | agent_requested | 43 | `888c5c4b9057` |
@@ -75,7 +75,7 @@ Generated: `2026-10-16T17:13:07Z`. Source: `rules/*.mdc`.
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 93 | `85f59ed0e275` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 243 | `19841608cbb0` |
-| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 82 | `a70be1ff2960` |
+| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 90 | `8a7358003bd6` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | agent_requested | 40 | `3b1b5e0cfd03` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 106 | `0e67f1cc2c17` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 70 | `5043e3374dca` |

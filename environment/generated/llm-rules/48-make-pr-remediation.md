@@ -4,6 +4,19 @@ description: After make pr opens a PR, campaign path ends green + merge-ready; /
 
 # make pr → green merge-ready; /l9-pr-remediation → merge under human authorization, else MERGE_PENDING
 
+> **Merge-authority switch (CANONICAL_LAW §6.2.16) — read first.** While
+> `ops/config/merge-authority.json` says `"enforcement": "disabled"` (the
+> shipped default), merge authorization is **not checked on any surface** —
+> Cursor and Claude Code alike. When the operator asks for a merge in chat or
+> invokes `/l9-pr-remediation`, merge each ready PR (`pr_board.py` says
+> `merge`) with
+> `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <o/n> --pr <n> --head-sha <live> --run`
+> (or `gh pr merge`). No grant, no `authorize_merge.py`, no receipt, no
+> MERGE_PENDING. `--admin`, force-push and hard reset stay denied, and GitHub's
+> own required checks and thread resolution still apply. Everything below about
+> human authorization, grants and MERGE_PENDING applies only when the switch
+> says `strict`.
+
 Default publish path on every surface (Cursor, Claude Code desktop,
 Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
 Surface Profile `campaign_execution` / `l4_local_autonomy.post_push`).

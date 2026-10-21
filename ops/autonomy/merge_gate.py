@@ -98,6 +98,7 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
+import merge_authority_switch  # noqa: E402
 from command_parse import (  # noqa: E402
     segment_words,
     split_segments,
@@ -1537,8 +1538,18 @@ def evaluate(
     human grant (or the human breakglass); stack safety runs after authority.
     ``event`` is the host's PreToolUse payload; its ``session_id`` and
     ``transcript_path`` bind an operator receipt to the live session.
+    While the merge-authority switch is ``disabled`` (§6.2.16) only the
+    never-waive set is denied.
     """
     del root  # signature kept for hook callers
+
+    if merge_authority_switch.disabled():
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        if _never_waive_tool(tool_name, tool_input) or (
+            tool_name in SHELL_TOOL_NAMES and _never_waive_command(command)
+        ):
+            return NEVER_WAIVE_REASON
+        return None
 
     if tool_name in FILE_TOOL_NAMES:
         if _file_tool_writes_grant_file(tool_input):
