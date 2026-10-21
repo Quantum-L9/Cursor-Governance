@@ -212,8 +212,7 @@ MEMORY_DOCTRINE_FAIL_SURFACES: tuple[str, ...] = (
     "skills/l9-end-session/references/end-session-protocol.md",
     "skills/l9-chat-extraction/SKILL.md",
     "skills/l9-chat-extraction/references/extract-chat.md",
-    "skills/l9-gmp-protocol/SKILL.md",
-    "skills/l9-gmp-protocol/references/phase-contracts.md",
+    "commands/gmp.md",
     "docs/MEMORY_PIPELINE_MAP.md",
     "environment/agents/docs/MEMORY_TOPOLOGY.md",
     "ops/memory/README.md",
@@ -258,8 +257,7 @@ MEMORY_DOCTRINE_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
     ),
     "skills/l9-chat-extraction/SKILL.md": (AGENT_WRITE_TOKEN,),
     "skills/l9-chat-extraction/references/extract-chat.md": (AGENT_WRITE_TOKEN,),
-    "skills/l9-gmp-protocol/SKILL.md": ("snapshot_digest",),
-    "skills/l9-gmp-protocol/references/phase-contracts.md": ("snapshot_digest",),
+    "commands/gmp.md": ("snapshot_digest",),
     "docs/MEMORY_PIPELINE_MAP.md": (AGENT_WRITE_TOKEN,),
     "environment/agents/docs/MEMORY_TOPOLOGY.md": (AGENT_WRITE_TOKEN,),
     "ops/memory/README.md": (AGENT_WRITE_TOKEN,),
@@ -267,8 +265,7 @@ MEMORY_DOCTRINE_REQUIRED_TOKENS: dict[str, tuple[str, ...]] = {
 
 #: Positive absence: stale semantics a converged surface must not re-teach.
 MEMORY_DOCTRINE_FORBIDDEN_TOKENS: dict[str, tuple[str, ...]] = {
-    "skills/l9-gmp-protocol/SKILL.md": ("<episode names>",),
-    "skills/l9-gmp-protocol/references/phase-contracts.md": ("<episode names>",),
+    "commands/gmp.md": ("<episode names>",),
 }
 
 # The provider variable names are assembled from parts so this validator is

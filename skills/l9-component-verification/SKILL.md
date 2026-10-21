@@ -54,7 +54,7 @@ A DAG is an implementation detail of a mode here, never this skill's identity.
 
 ## Validation
 
-Verify and probe modes MUST NOT write code. Protected-file fixes → escalate to l9-gmp-protocol.
+Verify and probe modes MUST NOT write code. Protected-file fixes → escalate to `/gmp`.
 
 ## Failure Handling
 

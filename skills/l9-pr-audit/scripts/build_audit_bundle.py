@@ -8,6 +8,7 @@ cross-field semantic invariants and deterministic projections.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -282,6 +283,472 @@ def load_change_ledger_set(data: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return out
 
 
+# ---------------------------------------------------------------------------
+# Deterministic projections. Each value below is a pure function of the bound
+# census or of other canonical audit fields, and the validator demands exact
+# equality with it. The validator and the materialize/derive commands share
+# these functions so the rule exists once.
+# ---------------------------------------------------------------------------
+
+HIGH_IMPACT_FINDING_CLASSES = {
+    "SECURITY",
+    "CORRECTNESS",
+    "CONTRACT",
+    "INVARIANT",
+    "RELIABILITY",
+    "PRESERVATION",
+    "CROSS_PR",
+    "SOURCE_OF_TRUTH",
+}
+SEVERITY_RANK = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
+
+# The only closure details a machine seed can carry before adjudication.
+UNADJUDICATED_CLOSURE_DETAILS: dict[str, dict[str, Any]] = {
+    "PUBLIC_CONTRACT": {"disposition": "UNKNOWN"},
+    "SSOT_UNIQUENESS": {"disposition": "UNKNOWN"},
+    "BYPASS_PATH": {"disposition": "UNKNOWN"},
+    "SUPERSESSION_LIVENESS": {"classification": "UNKNOWN"},
+    "FAILURE_EDGE": {"disposition": "UNKNOWN"},
+    "CONFIG_PRECEDENCE": {"disposition": "UNKNOWN"},
+    "DEPENDENCY_CAUSALITY": {"disposition": "UNKNOWN"},
+    "DEPENDENCY_PAIRING": {"disposition": "UNKNOWN"},
+    "DIFF_HUNK": {"disposition": "UNKNOWN"},
+    "CI_CAUSALITY": {"causality": "UNKNOWN"},
+    "GENERATED_PROVENANCE": {"disposition": "UNKNOWN"},
+    "PRODUCER_CONSUMER": {"disposition": "UNKNOWN"},
+    "MUTATION_EXECUTION": {
+        "result": "NOT_EXECUTED",
+        "reason": "Mutation probe not yet executed; test discrimination for this candidate is unproven.",
+        "original_repository_unchanged": True,
+    },
+    "REVIEW_THREAD_SEMANTIC": {"disposition": "UNKNOWN"},
+    "ORPHAN_ARTIFACT": {"disposition": "UNKNOWN"},
+    "ARCHITECTURE_ECONOMY": {"justification_basis": "UNKNOWN"},
+}
+UNADJUDICATED_RATIONALE = "Seeded from the deterministic census; not yet adjudicated."
+
+
+def census_evidence_id(pr: int) -> str:
+    return f"E-CENSUS-{pr}"
+
+
+def severity_bounds(finding: dict[str, Any]) -> tuple[str, str]:
+    """Machine floor and ceiling for a finding's severity."""
+    floor = "High" if finding["merge_blocking"] else "Low"
+    ceiling = (
+        "Critical"
+        if finding["merge_blocking"]
+        and finding["confidence"] == "Confirmed"
+        and finding["finding_class"] in HIGH_IMPACT_FINDING_CLASSES
+        else "High"
+    )
+    return floor, ceiling
+
+
+def root_cause_candidate_pairs(audit: dict[str, Any]) -> set[tuple[str, str]]:
+    """Finding pairs with the same semantic owner and an overlapping implementation surface."""
+    surfaces = {
+        x["finding_id"]: set(x["implementation_surfaces"])
+        for x in audit["remediation_surface_index"]
+    }
+    findings = audit["findings"]
+    pairs: set[tuple[str, str]] = set()
+    for i, a in enumerate(findings):
+        for b in findings[i + 1 :]:
+            if a["ownership"]["semantic_owner"] == b["ownership"][
+                "semantic_owner"
+            ] and surfaces.get(a["finding_id"], set()) & surfaces.get(b["finding_id"], set()):
+                pairs.add(tuple(sorted((a["finding_id"], b["finding_id"]))))
+    return pairs
+
+
+def execution_evidence_ids(audit: dict[str, Any]) -> set[str]:
+    return {
+        e["evidence_id"]
+        for e in audit["shared_evidence_index"]
+        if e["evidence_type"] in EXECUTION_EVIDENCE
+    }
+
+
+def changed_file_counts(changed_files: list[dict[str, Any]]) -> tuple[int, int, int]:
+    """(added, deleted, modified); renamed and copied files count as modified."""
+    added = sum(1 for f in changed_files if f["status"] == "added")
+    deleted = sum(1 for f in changed_files if f["status"] == "deleted")
+    return added, deleted, len(changed_files) - added - deleted
+
+
+def blocking_ids(audit: dict[str, Any], pr: int) -> tuple[list[str], list[str]]:
+    """(merge-blocking finding IDs, readiness-blocking Unknown IDs) affecting one PR."""
+    findings = sorted(
+        f["finding_id"]
+        for f in audit["findings"]
+        if f["merge_blocking"] and pr in f["affected_prs"]
+    )
+    unknowns = sorted(
+        u["unknown_id"]
+        for u in audit["residual_unknowns"]
+        if u["blocks_readiness"] and pr in u["affected_prs"]
+    )
+    return findings, unknowns
+
+
+def mirrored_claim_status(audit: dict[str, Any], claim: dict[str, Any]) -> str | None:
+    """Status a claim must carry because it mirrors canonical audit state, or None if free."""
+    kind = claim["claim_kind"]
+    if kind == "OBJECTIVE":
+        status = {
+            item["objective_id"]: item["status"]
+            for item in audit["change_discipline"]["objective_closure"]
+        }.get(claim["subject"])
+        if status is None:
+            return None
+        return {
+            "SATISFIED": "SUPPORTED",
+            "UNPROVEN": "UNKNOWN",
+            "NOT_IMPLEMENTED": "REFUTED",
+            "CONFLICTED": "REFUTED",
+        }[status]
+    if kind == "AUDIT_DOMAIN":
+        status = {
+            item["domain"]: item["status"] for item in audit["audit_coverage"]["domain_assessments"]
+        }.get(claim["subject"])
+        if status is None:
+            return None
+        return {
+            "PASS": "SUPPORTED",
+            "FAIL": "REFUTED",
+            "NOT_APPLICABLE": "NOT_APPLICABLE",
+            "UNKNOWN": "UNKNOWN",
+        }[status]
+    if kind == "READINESS" and len(claim["pr_numbers"]) == 1:
+        verdict = {
+            item["pr_number"]: item["merge_readiness"] for item in audit["per_pr_verdicts"]
+        }.get(claim["pr_numbers"][0])
+        if verdict is None:
+            return None
+        return (
+            "SUPPORTED"
+            if verdict in READY_STATES
+            else "REFUTED"
+            if verdict == "NOT_READY"
+            else "UNKNOWN"
+        )
+    if kind == "CONVERGENCE":
+        state = audit["executive_verdict"]["convergence_status"]
+        return (
+            "SUPPORTED"
+            if state == "CONVERGED"
+            else "REFUTED"
+            if state == "NOT_CONVERGED"
+            else "UNKNOWN"
+        )
+    return None
+
+
+def mirrored_symbol_claim_status(symbol: dict[str, Any]) -> str:
+    """Status every CHANGED_SYMBOL claim linked to this symbol must carry."""
+    if symbol["finding_ids"]:
+        return "REFUTED"
+    if symbol["scope_disposition"] == "UNKNOWN":
+        return "UNKNOWN"
+    if symbol["scope_disposition"] == "NOT_APPLICABLE":
+        return "NOT_APPLICABLE"
+    return "SUPPORTED"
+
+
+def materialize_machine_rows(
+    change_ledgers: dict[int, dict[str, Any]], authority_id: str
+) -> dict[str, Any]:
+    """Project the bound census into the machine-owned audit rows, unadjudicated.
+
+    Every row preserves its census seed exactly. Judgment fields start in the
+    honest unadjudicated state (claims UNKNOWN, probes INCONCLUSIVE, obligations and
+    closures UNKNOWN); the auditor adjudicates them, never deletes them. Each PR's
+    census evidence record grounds that PR's machine claims (`claim:<id>`); it does
+    not validate them, so it can never by itself close a claim as SUPPORTED.
+    """
+    out: dict[str, Any] = {
+        "deterministic_census_binding": {
+            "ledger_schema_version": CHANGE_LEDGER_SCHEMA,
+            "generator_version": CHANGE_LEDGER_GENERATOR_VERSION,
+            "ledger_bindings": [],
+        },
+        "shared_evidence_index": [],
+        "changed_symbol_ledger": [],
+        "claim_validation_matrix": [],
+        "falsification_ledger": [],
+        "audit_obligation_ledger": [],
+        "deterministic_closure_ledger": [],
+    }
+    for pr, wrapper in sorted(change_ledgers.items()):
+        ledger = wrapper["ledger"]
+        eid = census_evidence_id(pr)
+        objective_ids = [
+            c["subject"] for c in ledger.get("claim_seeds", []) if c["claim_kind"] == "OBJECTIVE"
+        ]
+        claim_by_symbol = {
+            c["machine_symbol_id"]: c["claim_id"]
+            for c in ledger.get("claim_seeds", [])
+            if c.get("machine_symbol_id")
+        }
+        probes_by_claim: dict[str, list[str]] = defaultdict(list)
+        for seed in ledger.get("falsification_seeds", []):
+            probes_by_claim[seed["claim_id"]].append(seed["falsification_id"])
+        out["deterministic_census_binding"]["ledger_bindings"].append(
+            {"pr_number": pr, "head_sha": ledger["head_sha"], "ledger_sha256": wrapper["sha256"]}
+        )
+        out["shared_evidence_index"].append(
+            {
+                "evidence_id": eid,
+                "evidence_type": "DIFF",
+                "epistemic_state": "CONFIRMED",
+                "repository": ledger["repository"],
+                "revision": ledger["head_sha"],
+                "path_or_check": "scripts/build_change_ledger.py",
+                "locator": f"change ledger sha256 {wrapper['sha256']}",
+                "fact_proven": (
+                    f"Deterministic change census of PR #{pr} at head {ledger['head_sha']} "
+                    f"(generator {ledger.get('generator_version')}) enumerates "
+                    f"{len(ledger.get('changed_symbols', []))} changed symbols, "
+                    f"{len(ledger.get('claim_seeds', []))} claim seeds, "
+                    f"{len(ledger.get('falsification_seeds', []))} falsification seeds, "
+                    f"{len(ledger.get('obligations', []))} obligations and "
+                    f"{len(ledger.get('closure_seeds', []))} closure seeds."
+                ),
+                "properties_discriminated": ["deterministic_census"]
+                + [f"claim:{c['claim_id']}" for c in ledger.get("claim_seeds", [])],
+                "redaction_state": "NOT_APPLICABLE",
+                "findings_using_this_evidence": [],
+            }
+        )
+        for item in ledger.get("changed_symbols", []):
+            out["changed_symbol_ledger"].append(
+                {
+                    "symbol_id": item["symbol_id"],
+                    "pr_number": pr,
+                    "path": item["path"],
+                    "symbol_name": item["symbol_name"],
+                    "symbol_kind": item["symbol_kind"],
+                    "change_type": item["change_type"],
+                    "detection_method": item["detection_method"],
+                    "detection_confidence": item["detection_confidence"],
+                    "source": "MACHINE",
+                    "scope_disposition": "UNKNOWN",
+                    "objective_ids": list(objective_ids),
+                    "evidence_ids": [eid],
+                    "claim_ids": [claim_by_symbol[item["symbol_id"]]]
+                    if item["symbol_id"] in claim_by_symbol
+                    else [],
+                    "finding_ids": [],
+                }
+            )
+        for seed in ledger.get("claim_seeds", []):
+            out["claim_validation_matrix"].append(
+                {
+                    "claim_id": seed["claim_id"],
+                    "pr_numbers": [pr],
+                    "claim_kind": seed["claim_kind"],
+                    "subject": seed["subject"],
+                    "assertion": seed["assertion"],
+                    "materiality": seed["materiality"],
+                    "source": seed["source"],
+                    "status": "UNKNOWN",
+                    "authority_ids": [authority_id],
+                    "evidence_ids": [eid],
+                    "validation_evidence_ids": [],
+                    "validation_properties": [],
+                    "finding_ids": [],
+                    "falsification_ids": list(dict.fromkeys(probes_by_claim[seed["claim_id"]])),
+                }
+            )
+        for seed in ledger.get("falsification_seeds", []):
+            out["falsification_ledger"].append(
+                {
+                    "falsification_id": seed["falsification_id"],
+                    "claim_id": seed["claim_id"],
+                    "source": seed["source"],
+                    "attack_class": seed["attack_class"],
+                    "hypothesis": seed["hypothesis"],
+                    "method": seed["suggested_method"],
+                    "execution_kind": seed.get("judgment_mode") or "HYBRID",
+                    "result": "INCONCLUSIVE",
+                    "evidence_ids": [eid],
+                    "finding_ids": [],
+                    "judgment_required": True,
+                    "judgment_rationale": UNADJUDICATED_RATIONALE,
+                }
+            )
+        for seed in ledger.get("obligations", []):
+            out["audit_obligation_ledger"].append(
+                {
+                    "obligation_id": seed["obligation_id"],
+                    "pr_number": pr,
+                    "kind": seed["kind"],
+                    "subject": seed["subject"],
+                    "status": "UNKNOWN",
+                    "evidence_ids": [eid],
+                    "finding_ids": [],
+                }
+            )
+        for seed in ledger.get("closure_seeds", []):
+            out["deterministic_closure_ledger"].append(
+                {
+                    "closure_id": seed["closure_id"],
+                    "pr_number": seed["pr_number"],
+                    "closure_kind": seed["closure_kind"],
+                    "subject": seed["subject"],
+                    "source": "MACHINE_SEEDED",
+                    "seed_hash": seed["seed_hash"],
+                    "status": "UNKNOWN",
+                    "evidence_ids": [eid],
+                    "finding_ids": [],
+                    "details": copy.deepcopy(UNADJUDICATED_CLOSURE_DETAILS[seed["closure_kind"]]),
+                }
+            )
+    return out
+
+
+def derive_post_judgment(audit: dict[str, Any]) -> list[str]:
+    """Fill every field that is a pure function of the judged audit; return what changed.
+
+    Never decides anything: claim statuses only mirror the canonical store they
+    mirror, a severity row is only CONSISTENT when the severity sits inside the
+    machine bounds, and every new pair or coverage row starts UNKNOWN. Probe results,
+    evidence, findings and verdicts are left exactly as the auditor wrote them.
+    """
+    notes: list[str] = []
+    emap = evidence_map(audit)
+    fmap = finding_map(audit)
+
+    # Evidence <-> finding references are one relation recorded on both sides.
+    for fid, finding in fmap.items():
+        for eid in finding["evidence_ids"]:
+            if eid in emap and fid not in emap[eid]["findings_using_this_evidence"]:
+                emap[eid]["findings_using_this_evidence"].append(fid)
+                notes.append(f"evidence {eid}: added reciprocal reference to finding {fid}")
+    for eid, item in emap.items():
+        for fid in item["findings_using_this_evidence"]:
+            if fid in fmap and eid not in fmap[fid]["evidence_ids"]:
+                fmap[fid]["evidence_ids"].append(eid)
+                notes.append(f"finding {fid}: added reciprocal reference to evidence {eid}")
+
+    files_by_pr = {p["pr_number"]: p["changed_files"] for p in audit["pr_bindings"]}
+    for row in audit["change_discipline"]["complexity_delta"]:
+        files = files_by_pr.get(row["pr_number"])
+        if files is None:
+            continue
+        added, deleted, modified = changed_file_counts(files)
+        if (row["files_added"], row["files_deleted"], row["files_modified"]) != (
+            added,
+            deleted,
+            modified,
+        ):
+            row["files_added"], row["files_deleted"], row["files_modified"] = (
+                added,
+                deleted,
+                modified,
+            )
+            notes.append(f"PR {row['pr_number']}: complexity_delta file counts derived")
+
+    for verdict in audit["per_pr_verdicts"]:
+        found, unknown = blocking_ids(audit, verdict["pr_number"])
+        if sorted(verdict["blocking_finding_ids"]) != found:
+            verdict["blocking_finding_ids"] = found
+            notes.append(f"PR {verdict['pr_number']}: blocking_finding_ids derived")
+        if sorted(verdict["blocking_unknown_ids"]) != unknown:
+            verdict["blocking_unknown_ids"] = unknown
+            notes.append(f"PR {verdict['pr_number']}: blocking_unknown_ids derived")
+
+    symbols = audit["changed_symbol_ledger"]
+    symbol_status = {
+        cid: mirrored_symbol_claim_status(symbol)
+        for symbol in symbols
+        for cid in symbol["claim_ids"]
+    }
+    for claim in audit["claim_validation_matrix"]:
+        expected = (
+            symbol_status.get(claim["claim_id"])
+            if claim["claim_kind"] == "CHANGED_SYMBOL"
+            else mirrored_claim_status(audit, claim)
+        )
+        if expected is not None and claim["status"] != expected:
+            notes.append(
+                f"claim {claim['claim_id']}: status {claim['status']} -> {expected} (mirrors canonical state)"
+            )
+            claim["status"] = expected
+
+    post = audit["post_judgment_closure"]
+    existing_sev = {x["finding_id"]: x for x in post["severity_consistency"]}
+    severity_rows = []
+    for fid, finding in fmap.items():
+        floor, ceiling = severity_bounds(finding)
+        inside = (
+            SEVERITY_RANK[floor] <= SEVERITY_RANK[finding["severity"]] <= SEVERITY_RANK[ceiling]
+        )
+        row = existing_sev.get(fid)
+        if row is None:
+            row = {
+                "finding_id": fid,
+                "status": "CONSISTENT" if inside else "UNKNOWN",
+                "evidence_ids": list(finding["evidence_ids"][:1]),
+            }
+            notes.append(f"severity_consistency {fid}: row added ({row['status']})")
+        elif row["status"] == "CONSISTENT" and not inside:
+            row["status"] = "UNKNOWN"
+            notes.append(
+                f"severity_consistency {fid}: severity {finding['severity']} is outside "
+                f"[{floor}, {ceiling}]; status UNKNOWN until overridden with authority or re-rated"
+            )
+        row.update(
+            machine_floor=floor, machine_ceiling=ceiling, actual_severity=finding["severity"]
+        )
+        severity_rows.append(row)
+    post["severity_consistency"] = severity_rows
+
+    required = root_cause_candidate_pairs(audit)
+    existing_pairs = {
+        tuple(sorted((x["finding_a"], x["finding_b"]))): x for x in post["root_cause_dominance"]
+    }
+    pair_rows = []
+    for pair in sorted(required):
+        row = existing_pairs.get(pair)
+        if row is None:
+            row = {
+                "finding_a": pair[0],
+                "finding_b": pair[1],
+                "disposition": "UNKNOWN",
+                "evidence_ids": list(
+                    dict.fromkeys(
+                        fmap[pair[0]]["evidence_ids"][:1] + fmap[pair[1]]["evidence_ids"][:1]
+                    )
+                ),
+            }
+            notes.append(f"root_cause_dominance {pair}: candidate pair added (UNKNOWN)")
+        pair_rows.append(row)
+    for pair in sorted(set(existing_pairs) - required):
+        notes.append(f"root_cause_dominance {pair}: removed, not a machine candidate pair")
+    post["root_cause_dominance"] = pair_rows
+
+    exec_ids = execution_evidence_ids(audit)
+    existing_cov = {x["evidence_id"]: x for x in post["validation_run_coverage"]}
+    coverage = []
+    for eid in sorted(exec_ids):
+        row = existing_cov.get(eid)
+        if row is None:
+            row = {
+                "evidence_id": eid,
+                "disposition": "UNKNOWN",
+                "claim_ids": [],
+                "rationale": "Not yet dispositioned.",
+            }
+            notes.append(f"validation_run_coverage {eid}: row added (UNKNOWN)")
+        coverage.append(row)
+    for eid in sorted(set(existing_cov) - exec_ids):
+        notes.append(f"validation_run_coverage {eid}: removed, not execution evidence")
+    post["validation_run_coverage"] = coverage
+    return notes
+
+
 def red_team_semantic_errors(
     audit: dict[str, Any],
     emap: dict[str, dict[str, Any]],
@@ -485,65 +952,18 @@ def red_team_semantic_errors(
             )
 
     # Canonical claim outcomes mirror existing audit truth instead of creating another verdict store.
-    objective_status = {
-        item["objective_id"]: item["status"]
-        for item in audit["change_discipline"]["objective_closure"]
+    mirror_label = {
+        "OBJECTIVE": "objective",
+        "AUDIT_DOMAIN": "domain",
+        "READINESS": "readiness",
+        "CONVERGENCE": "convergence",
     }
-    domain_status = {
-        item["domain"]: item["status"] for item in audit["audit_coverage"]["domain_assessments"]
-    }
-    pr_verdicts = {item["pr_number"]: item["merge_readiness"] for item in audit["per_pr_verdicts"]}
     for claim in claims:
-        kind = claim["claim_kind"]
-        if kind == "OBJECTIVE" and claim["subject"] in objective_status:
-            expected = {
-                "SATISFIED": "SUPPORTED",
-                "UNPROVEN": "UNKNOWN",
-                "NOT_IMPLEMENTED": "REFUTED",
-                "CONFLICTED": "REFUTED",
-            }[objective_status[claim["subject"]]]
-            if claim["status"] != expected:
-                errors.append(
-                    f"objective claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
-                )
-        elif kind == "AUDIT_DOMAIN" and claim["subject"] in domain_status:
-            expected = {
-                "PASS": "SUPPORTED",
-                "FAIL": "REFUTED",
-                "NOT_APPLICABLE": "NOT_APPLICABLE",
-                "UNKNOWN": "UNKNOWN",
-            }[domain_status[claim["subject"]]]
-            if claim["status"] != expected:
-                errors.append(
-                    f"domain claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
-                )
-        elif kind == "READINESS" and len(claim["pr_numbers"]) == 1:
-            num = claim["pr_numbers"][0]
-            if num in pr_verdicts:
-                expected = (
-                    "SUPPORTED"
-                    if pr_verdicts[num] in READY_STATES
-                    else "REFUTED"
-                    if pr_verdicts[num] == "NOT_READY"
-                    else "UNKNOWN"
-                )
-                if claim["status"] != expected:
-                    errors.append(
-                        f"readiness claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
-                    )
-        elif kind == "CONVERGENCE":
-            state = audit["executive_verdict"]["convergence_status"]
-            expected = (
-                "SUPPORTED"
-                if state == "CONVERGED"
-                else "REFUTED"
-                if state == "NOT_CONVERGED"
-                else "UNKNOWN"
+        expected = mirrored_claim_status(audit, claim)
+        if expected is not None and claim["status"] != expected:
+            errors.append(
+                f"{mirror_label[claim['claim_kind']]} claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
             )
-            if claim["status"] != expected:
-                errors.append(
-                    f"convergence claim {claim['claim_id']} status {claim['status']} must mirror {expected}"
-                )
 
     # Every machine symbol has a matching CHANGED_SYMBOL claim and every changed-symbol claim references its machine symbol through the seed assertion.
     symbol_claims = [c for c in claims if c["claim_kind"] == "CHANGED_SYMBOL"]
@@ -552,15 +972,7 @@ def red_team_semantic_errors(
         if not linked:
             errors.append(f"changed symbol {symbol['symbol_id']} lacks CHANGED_SYMBOL claim")
             continue
-        expected = (
-            "REFUTED"
-            if symbol["finding_ids"]
-            else "UNKNOWN"
-            if symbol["scope_disposition"] == "UNKNOWN"
-            else "NOT_APPLICABLE"
-            if symbol["scope_disposition"] == "NOT_APPLICABLE"
-            else "SUPPORTED"
-        )
+        expected = mirrored_symbol_claim_status(symbol)
         for claim in linked:
             if claim["status"] != expected:
                 errors.append(
@@ -1242,18 +1654,7 @@ def deterministic_closure_errors(
 
     post = audit["post_judgment_closure"]
     # Root-cause dominance: same semantic owner + overlapping implementation surface creates a mandatory pair.
-    surfaces = {
-        x["finding_id"]: set(x["implementation_surfaces"])
-        for x in audit["remediation_surface_index"]
-    }
-    findings = audit["findings"]
-    required_pairs = set()
-    for i, a in enumerate(findings):
-        for b in findings[i + 1 :]:
-            if a["ownership"]["semantic_owner"] == b["ownership"][
-                "semantic_owner"
-            ] and surfaces.get(a["finding_id"], set()) & surfaces.get(b["finding_id"], set()):
-                required_pairs.add(tuple(sorted((a["finding_id"], b["finding_id"]))))
+    required_pairs = root_cause_candidate_pairs(audit)
     pair_rows = {
         tuple(sorted((x["finding_a"], x["finding_b"]))): x for x in post["root_cause_dominance"]
     }
@@ -1272,17 +1673,7 @@ def deterministic_closure_errors(
                 errors.append(f"root-cause pair {pair} references unknown evidence {eid}")
 
     # Severity floors/ceilings. Blocking findings default floor High; Critical requires confirmed, blocking, high-impact class.
-    rank = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
-    high_impact = {
-        "SECURITY",
-        "CORRECTNESS",
-        "CONTRACT",
-        "INVARIANT",
-        "RELIABILITY",
-        "PRESERVATION",
-        "CROSS_PR",
-        "SOURCE_OF_TRUTH",
-    }
+    rank = SEVERITY_RANK
     sev_rows = {x["finding_id"]: x for x in post["severity_consistency"]}
     if set(sev_rows) != set(fmap):
         errors.append("severity_consistency must cover every finding exactly once")
@@ -1290,14 +1681,7 @@ def deterministic_closure_errors(
         row = sev_rows.get(fid)
         if not row:
             continue
-        floor = "High" if f["merge_blocking"] else "Low"
-        ceiling = (
-            "Critical"
-            if f["merge_blocking"]
-            and f["confidence"] == "Confirmed"
-            and f["finding_class"] in high_impact
-            else "High"
-        )
+        floor, ceiling = severity_bounds(f)
         if (
             row["machine_floor"] != floor
             or row["machine_ceiling"] != ceiling
@@ -1320,7 +1704,7 @@ def deterministic_closure_errors(
             errors.append(f"CONVERGED cannot retain UNKNOWN severity consistency for {fid}")
 
     # Every executed validation is either claim-closing or explicitly justified non-closing evidence.
-    exec_ids = {eid for eid, e in emap.items() if e["evidence_type"] in EXECUTION_EVIDENCE}
+    exec_ids = execution_evidence_ids(audit)
     cov = {x["evidence_id"]: x for x in post["validation_run_coverage"]}
     if set(cov) != exec_ids:
         errors.append(
@@ -1514,10 +1898,9 @@ def validate_semantics(
     for num, item in complexity_by_pr.items():
         if num not in pr_by_num:
             continue
-        files = pr_by_num[num]["changed_files"]
-        expected_added = sum(1 for f in files if f["status"] == "added")
-        expected_deleted = sum(1 for f in files if f["status"] == "deleted")
-        expected_modified = len(files) - expected_added - expected_deleted
+        expected_added, expected_deleted, expected_modified = changed_file_counts(
+            pr_by_num[num]["changed_files"]
+        )
         if (item["files_added"], item["files_deleted"], item["files_modified"]) != (
             expected_added,
             expected_deleted,
@@ -2433,16 +2816,7 @@ def validate_semantics(
     if set(verdicts) != set(pr_by_num):
         errors.append("per_pr_verdicts must contain exactly one verdict for every bound PR")
     for num, verdict in verdicts.items():
-        actual_blocking = sorted(
-            fid
-            for fid, finding in fmap.items()
-            if finding["merge_blocking"] and num in finding["affected_prs"]
-        )
-        actual_unknowns = sorted(
-            uid
-            for uid, item in unknown_by_id.items()
-            if item["blocks_readiness"] and num in item["affected_prs"]
-        )
+        actual_blocking, actual_unknowns = blocking_ids(audit, num)
         if sorted(verdict["blocking_finding_ids"]) != actual_blocking:
             errors.append(f"PR {num} blocking_finding_ids != actual merge-blocking findings")
         if sorted(verdict["blocking_unknown_ids"]) != actual_unknowns:
@@ -3797,9 +4171,45 @@ def main() -> int:
     parser.add_argument("--verify-bundle", type=Path)
     parser.add_argument("--change-ledger", type=Path, action="append", default=[])
     parser.add_argument("--autoremediate", type=int, choices=(0, 1), default=0)
+    parser.add_argument(
+        "--materialize-machine-rows",
+        type=Path,
+        metavar="OUT",
+        help="write the census-owned audit rows (unadjudicated) for the bound ledgers to OUT",
+    )
+    parser.add_argument(
+        "--authority-id",
+        help="authority_id the materialized machine claims cite (with --materialize-machine-rows)",
+    )
+    parser.add_argument(
+        "--derive",
+        type=Path,
+        metavar="OUT",
+        help="fill the derived post-judgment fields of --audit and write the result to OUT",
+    )
     args = parser.parse_args()
 
     try:
+        if args.materialize_machine_rows:
+            if not args.change_ledger:
+                parser.error("--materialize-machine-rows requires at least one --change-ledger")
+            if not args.authority_id:
+                parser.error("--materialize-machine-rows requires --authority-id")
+            rows = materialize_machine_rows(
+                load_change_ledger_paths(args.change_ledger), args.authority_id
+            )
+            args.materialize_machine_rows.write_text(json.dumps(rows, indent=2) + "\n")
+            print(args.materialize_machine_rows)
+            return 0
+        if args.derive:
+            if not args.audit:
+                parser.error("--derive requires --audit")
+            audit = load_json(args.audit)
+            for note in derive_post_judgment(audit):
+                print(f"DERIVED: {note}")
+            args.derive.write_text(json.dumps(audit, indent=2) + "\n")
+            print(args.derive)
+            return 0
         if args.verify_bundle:
             errors = verify_zip(args.verify_bundle)
             if errors:

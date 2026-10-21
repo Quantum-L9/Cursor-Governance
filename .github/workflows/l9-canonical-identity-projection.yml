@@ -19,6 +19,9 @@ on:
       - "tools/assurance/check_canonical_identity_projection.py"
       - "rules/64-canonical-identity-authority.mdc"
       - ".github/workflows/l9-canonical-identity-projection.yml"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "tools/authority/verify_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
   push:
     branches:
       - main
@@ -29,6 +32,9 @@ on:
       - "generated/governance/canonical_identity.receipt.yaml"
       - "tools/authority/project_canonical_identity.py"
       - "tools/assurance/check_canonical_identity_projection.py"
+      - "governance/authority-bindings/coding-agent-execution.yaml"
+      - "tools/authority/verify_coding_projection.py"
+      - "ops/scripts/coding_projection_status.py"
   repository_dispatch:
     types:
       - l9-semantic-authority-updated
@@ -83,6 +89,27 @@ jobs:
         working-directory: governance
         run: |
           python tools/assurance/check_canonical_identity_projection.py
+      - name: Verify the coding projection as a consumer (report-only)
+        working-directory: governance
+        run: |
+          # Cursor-Governance verifies l9-semantic-compiler pairs from the
+          # Quantum-L9/.github projections branch; it never produces them. The
+          # fresh main checkout is the independent record CURRENT requires.
+          # BLOCKED (tamper, forgery, wrong producer role) fails. UNVERIFIED (no
+          # pair published yet) and STALE (upstream moved after publication)
+          # are annotated, not this PR's failure. fetch-depth: 0 above already
+          # brings every branch, projections included when it exists.
+          main="$(git -C ../org-authority rev-parse HEAD)"
+          rc=0
+          line="$(python ops/scripts/coding_projection_status.py \
+            --authority-root ../org-authority --expect-main "$main" \
+            --format line --fail-on BLOCKED)" || rc=$?
+          echo "$line"
+          case "$line" in
+            *": STALE "*) echo "::warning::$line" ;;
+            *": UNVERIFIED "*) echo "::notice::$line" ;;
+          esac
+          exit "$rc"
   refresh:
     if: >-
       github.event_name == 'schedule' ||
