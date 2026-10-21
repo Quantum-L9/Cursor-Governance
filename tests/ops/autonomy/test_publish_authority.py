@@ -276,7 +276,8 @@ def _stub_consumer(tmp_path: Path, *, check_target: bool = True) -> Path:
     recipe = (
         "pr:\n"
         "\t@echo NATIVE_PR base=$(base) PYTHON=[$$PYTHON] WS=[$$WS]"
-        " MAKEOVERRIDES=[$$MAKEOVERRIDES] EARLY=[$$PR_EARLY_OVERLAP]\n"
+        " MAKEOVERRIDES=[$$MAKEOVERRIDES] EARLY=[$$PR_EARLY_OVERLAP]"
+        " OPEN_PR=[$$OPEN_PR] PR_BASE=[$$PR_BASE]\n"
     )
     if check_target:
         recipe += "pr-check:\n\t@echo NATIVE_CHECK base=$(base)\n"
@@ -286,10 +287,16 @@ def _stub_consumer(tmp_path: Path, *, check_target: bool = True) -> Path:
 
 def _runner(repo: Path, **env: str) -> subprocess.CompletedProcess[str]:
     merged = os.environ.copy()
-    merged.pop("WS", None)
-    merged.pop("PR_BASE", None)
+    merged.pop("PR_BASE", None)  # tests pass PR_BASE explicitly when they mean to
+    # publish.mk exports WS/OPEN_PR/PR_BASE into the runner; WS is also what a
+    # governance `make` would have exported — the consumer must see none of it.
     merged.update(
-        {"PYTHON": "/leaked/python", "MAKEOVERRIDES": "WS=/leaked", "PR_EARLY_OVERLAP": "1"}
+        {
+            "PYTHON": "/leaked/python",
+            "MAKEOVERRIDES": "WS=/leaked",
+            "PR_EARLY_OVERLAP": "1",
+            "WS": "/leaked/ws",
+        }
     )
     merged.update(env)
     return subprocess.run(
@@ -309,7 +316,7 @@ def test_native_runner_runs_consumer_pr_once_scrubbed(tmp_path: Path) -> None:
     # base=Staging is the one override governance passes on purpose; the
     # inherited governance state must not reach the consumer recipe.
     assert "NATIVE_PR base=Staging PYTHON=[] WS=[] MAKEOVERRIDES=[" in proc.stdout
-    assert "EARLY=[]" in proc.stdout
+    assert "EARLY=[] OPEN_PR=[] PR_BASE=[]" in proc.stdout
     assert "/leaked" not in proc.stdout
     receipt = json.loads((repo / ".l9" / "pr" / "publish-route.json").read_text(encoding="utf-8"))
     assert receipt["schema"] == "l9.publish_route.v1"

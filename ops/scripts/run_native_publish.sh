@@ -84,6 +84,10 @@ PY
 echo "publish-authority: $origin → native make $target (base $declared_base) in $WS"
 # Scrub governance make state so the consumer recipe runs exactly as a human's
 # `make <target>` would: no inherited MAKEFLAGS/MAKEOVERRIDES, no governance
-# PYTHON, no PR_EARLY_OVERLAP.
+# PYTHON, no PR_EARLY_OVERLAP, and none of the governance-only knobs the
+# publish.mk recipe exported into this script (WS, OPEN_PR, PR_BASE — an
+# exported empty PR_BASE would override a consumer's own `PR_BASE ?=`).
+# "$WS" is expanded by this shell before env runs, so -u WS is safe.
 exec env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL -u MAKEOVERRIDES -u PYTHON -u PR_EARLY_OVERLAP \
+  -u WS -u OPEN_PR -u PR_BASE \
   make -C "$WS" "$target" base="$declared_base"
