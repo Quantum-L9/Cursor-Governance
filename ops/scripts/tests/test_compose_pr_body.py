@@ -1179,7 +1179,7 @@ class CheckTemplateTests(unittest.TestCase):
 
     SHA = "2" * 40
 
-    def _run(self, gh) -> tuple[int, str, str]:
+    def _run(self, gh, git) -> tuple[int, str, str]:
         import contextlib
         import io
         from unittest import mock
@@ -1190,7 +1190,9 @@ class CheckTemplateTests(unittest.TestCase):
         out, err = io.StringIO(), io.StringIO()
         with (
             tempfile.TemporaryDirectory() as tmp,
-            mock.patch.object(module, "resolve_template", lambda ws, o, n: real(ws, o, n, gh=gh)),
+            mock.patch.object(
+                module, "resolve_template", lambda ws, o, n: real(ws, o, n, gh=gh, git=git)
+            ),
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(err),
         ):
@@ -1217,7 +1219,10 @@ class CheckTemplateTests(unittest.TestCase):
                 return {"sha": self.SHA}
             return {"type": "file", "encoding": "base64", "content": encoded}
 
-        rc, out, _ = self._run(gh)
+        def no_git(owner: str, path: str) -> tuple[str, str]:
+            raise AssertionError("REST answered; the git transport must not be tried")
+
+        rc, out, _ = self._run(gh, no_git)
         self.assertEqual(rc, 0)
         self.assertEqual(out.strip(), f"TEMPLATE_OK Quantum-L9/.github@{self.SHA}")
 
@@ -1225,7 +1230,11 @@ class CheckTemplateTests(unittest.TestCase):
         def gh(endpoint: str) -> object:
             raise TemplateError(f"HTTP 404 on {endpoint}")
 
-        rc, out, err = self._run(gh)
+        def git_down(owner: str, path: str) -> tuple[str, str]:
+            raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
+
+        # Both transports refused: the proof fails, so nothing is pushed.
+        rc, out, err = self._run(gh, git_down)
         self.assertEqual(rc, 2)
         self.assertEqual(out, "")
         self.assertIn("HTTP 404", err)
