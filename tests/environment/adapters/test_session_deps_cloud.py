@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def run(
     remote: str = "true",
     budget: str = "20",
     path_prefix: Path | None = None,
+    extra_env: dict[str, str] | None = None,
 ):
     env = {
         **os.environ,
@@ -53,6 +55,8 @@ def run(
     }
     if path_prefix is not None:
         env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         ["bash", str(HELPER), "--workspace", str(workspace)],
         capture_output=True,
@@ -323,3 +327,70 @@ def test_a_governance_checkout_its_owner_rejects_is_never_stamped(tmp_path: Path
     assert result.returncode == 0
     assert "UNPROVEN" in result.stdout + result.stderr
     assert list((home / ".l9" / "claude").glob("deps-*.stamp")) == []
+
+
+needs_uv = pytest.mark.skipif(
+    shutil.which("uv") is None,
+    reason="uv is the pip-repo provisioner; this case needs it installed",
+)
+
+
+def _pip_repo(workspace: Path, requirements: str) -> Path:
+    repo = make_repo(workspace, "pip-only")
+    (repo / "requirements.txt").write_text(requirements, encoding="utf-8")
+    (repo / "requirements-dev.txt").write_text("# dev pins\n", encoding="utf-8")
+    return repo
+
+
+def _stamps(home: Path) -> set[str]:
+    return {p.name for p in (home / ".l9" / "claude").glob("deps-*.stamp")}
+
+
+@needs_uv
+def test_a_pip_repository_gets_its_own_venv_and_a_stamp(tmp_path: Path) -> None:
+    """CG-04: pip installed into the system interpreter while the proof demanded
+    <repo>/.venv, so a pip repository could never be proven. It now gets an
+    isolated .venv, and the stamp follows a complete install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, combined
+    assert "UNPROVEN" not in combined, combined
+    assert (repo / ".venv" / "bin" / "python").exists()
+    assert (repo / ".venv" / ".l9-pip-applied").is_file()
+    assert _stamps(home)
+
+
+@needs_uv
+def test_a_changed_dev_pin_set_invalidates_the_stamp(tmp_path: Path) -> None:
+    """requirements-dev.txt was not fingerprinted, so a dev pin bump kept a
+    stale stamp. A changed split pin set must re-provision."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    home = tmp_path / "home"
+    run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    first = _stamps(home)
+    assert first
+    cached = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "cached and proven" in cached.stdout, cached.stdout + cached.stderr
+    (repo / "requirements-dev.txt").write_text("# dev pins, bumped\n", encoding="utf-8")
+    again = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "cached and proven" not in again.stdout, again.stdout
+    assert _stamps(home) - first, "a changed pin set must produce a new fingerprint"
+
+
+@needs_uv
+def test_a_failed_pip_install_is_never_stamped(tmp_path: Path) -> None:
+    """A venv created and then left half-installed must not read as proven."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "no-such-package-l9-test==1.0\n")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "UNPROVEN" in result.stdout + result.stderr
+    assert not (repo / ".venv" / ".l9-pip-applied").exists()
+    assert _stamps(home) == set()

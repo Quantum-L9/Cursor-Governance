@@ -249,6 +249,69 @@ _run_locked_ruff_writer() {
     return 0
   fi
   echo "ruff (changed): $(grep -c . "$py_list") file(s)"
+  if [[ ${#RUFF_CMD[@]} -eq 0 ]]; then
+    _resolve_ruff || return $?
+  fi
+  xargs "${RUFF_CMD[@]}" check --fix <"$py_list"
+  xargs "${RUFF_CMD[@]}" format <"$py_list"
+}
+
+# The ruff that formats a workspace is the one that workspace pins. Governance's
+# own .venv ruff is not a compatible fallback merely because it exists: run
+# against a consumer pinning 0.16.0 it applied 0.16.1, so the gate rewrote files
+# the consumer's CI then disagreed with. An exact pin (`ruff==X` in
+# requirements*.txt, or [tool.ruff] required-version "==X") is satisfied by the
+# workspace .venv when its version matches, else by `uv tool run --from
+# ruff==X`; otherwise the gate stops BEFORE any writer, naming the missing
+# prerequisite. A workspace that pins nothing keeps the existing order.
+RUFF_CMD=()
+_consumer_ruff_pin() {
+  local f pin
+  for f in "$WS"/requirements*.txt; do
+    [[ -f "$f" ]] || continue
+    pin="$(sed -nE 's/^[[:space:]]*ruff[[:space:]]*==[[:space:]]*([^[:space:];#,]+).*/\1/p' "$f" | head -1)"
+    if [[ -n "$pin" ]]; then
+      printf '%s\n' "$pin"
+      return 0
+    fi
+  done
+  [[ -f "$WS/pyproject.toml" ]] || return 0
+  python3 - "$WS/pyproject.toml" <<'PY' 2>/dev/null || true
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    spec = str(tomllib.load(handle).get("tool", {}).get("ruff", {}).get("required-version", ""))
+if spec.startswith("==") and "," not in spec and "*" not in spec:
+    print(spec[2:].strip())
+PY
+}
+
+_ruff_version() {
+  "$@" --version 2>/dev/null | awk 'NR == 1 {print $2}'
+}
+
+_resolve_ruff() {
+  local pin=""
+  if [[ "$WS" != "$GOV_ROOT" ]]; then
+    pin="$(_consumer_ruff_pin)"
+  fi
+  if [[ -n "$pin" ]]; then
+    if [[ -x "$WS/.venv/bin/ruff" && "$(_ruff_version "$WS/.venv/bin/ruff")" == "$pin" ]]; then
+      RUFF_CMD=("$WS/.venv/bin/ruff")
+    elif command -v uv >/dev/null 2>&1 \
+      && [[ "$(_ruff_version uv tool run --from "ruff==$pin" ruff)" == "$pin" ]]; then
+      RUFF_CMD=(uv tool run --from "ruff==$pin" ruff)
+    else
+      echo "FAIL: TOOLCHAIN_UNAVAILABLE ruff==$pin — $WS pins ruff $pin; neither" >&2
+      echo "      $WS/.venv/bin/ruff nor 'uv tool run --from ruff==$pin' provides it." >&2
+      echo "      Governance's ruff is never substituted. Provision the workspace .venv," >&2
+      echo "      or let uv fetch ruff (allowlist pypi.org / files.pythonhosted.org)." >&2
+      return 1
+    fi
+    echo "ruff: ${RUFF_CMD[*]} (workspace pin ruff==$pin)"
+    return 0
+  fi
   local _ruff="$WS/.venv/bin/ruff"
   if [[ ! -x "$_ruff" ]]; then
     _ruff="$GOV_ROOT/.venv/bin/ruff"
@@ -260,8 +323,10 @@ _run_locked_ruff_writer() {
     echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)" >&2
     return 1
   fi
-  xargs "$_ruff" check --fix <"$py_list"
-  xargs "$_ruff" format <"$py_list"
+  RUFF_CMD=("$_ruff")
+  if [[ "$WS" != "$GOV_ROOT" ]]; then
+    echo "NOTE: $WS pins no ruff; using $_ruff $(_ruff_version "$_ruff")"
+  fi
 }
 
 _hard_stop_tracked_dirt() {
@@ -294,6 +359,12 @@ if [[ "$STAGE" == "readers" ]]; then
 fi
 
 # writers or unset (standalone): run deterministic writer hooks before readers.
+
+# Resolve the pinned ruff before any writer touches the tree, so a missing
+# toolchain fails on a clean worktree instead of after the writer pass.
+if grep -qE '\.(py|pyi)$' "$tmp"; then
+  _resolve_ruff || exit $?
+fi
 
 echo "--- pre-commit writers (once) ---"
 _run_hooks "$_WRITER_SKIP" && pc_rc=0 || pc_rc=$?

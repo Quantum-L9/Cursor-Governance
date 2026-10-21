@@ -502,6 +502,64 @@ def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     assert "Do not auto-stage" in proc.stdout
 
 
+def _pinned_ruff_consumer(tmp_path: Path, uv_body: str) -> tuple[Path, Path, dict[str, str]]:
+    """A consumer pinning ruff==0.16.0 with no .venv, a changed Python file, a
+    logging pre-commit stub and a `uv` stub with the given behaviour."""
+    repo = _init_repo(tmp_path, feature=True)
+    (repo / "requirements-dev.txt").write_text("ruff==0.16.0\n", encoding="utf-8")
+    (repo / "mod.py").write_text("x = 1\n", encoding="utf-8")
+    git_in(repo, "add", "requirements-dev.txt", "mod.py")
+    git_in(repo, "commit", "-m", "py")
+    listed = tmp_path / "changed.txt"
+    listed.write_text("mod.py\n", encoding="utf-8")
+    calls = tmp_path / "calls.log"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "pre-commit").write_text(
+        f'#!/bin/sh\necho "pre-commit $*" >> "{calls}"\nexit 0\n', encoding="utf-8"
+    )
+    (bin_dir / "uv").write_text(
+        f'#!/bin/sh\necho "uv $*" >> "{calls}"\n{uv_body}\n', encoding="utf-8"
+    )
+    for name in ("pre-commit", "uv"):
+        (bin_dir / name).chmod(0o755)
+    env = {
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "PR_CHANGED_FILE": str(listed),
+        "PR_PRECOMMIT_STAGE": "writers",
+        "PR_PRECOMMIT_DEFER_DIRTY_STOP": "1",
+        "PATH": f"{bin_dir}:/usr/bin:/bin",
+    }
+    return repo, calls, env
+
+
+def test_a_consumer_ruff_pin_is_honoured_not_replaced_by_governance_ruff(
+    tmp_path: Path,
+) -> None:
+    """CG-05: with no consumer .venv the writer fell back to governance ruff
+    0.16.1 against a repository pinning 0.16.0. The pinned version must run."""
+    uv_ok = 'case "$*" in *"--version"*) echo "ruff 0.16.0" ;; esac\nexit 0'
+    repo, calls, env = _pinned_ruff_consumer(tmp_path, uv_ok)
+    proc = _run(["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)], cwd=repo, env=env)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    log = calls.read_text(encoding="utf-8")
+    assert "uv tool run --from ruff==0.16.0 ruff check --fix" in log, log
+    assert "uv tool run --from ruff==0.16.0 ruff format" in log, log
+    assert ".venv/bin/ruff" not in proc.stdout
+
+
+def test_an_unavailable_pinned_ruff_stops_before_any_writer(tmp_path: Path) -> None:
+    """A missing pinned toolchain is a named prerequisite, not a substitution,
+    and it is reported before any writer hook touches the tree."""
+    repo, calls, env = _pinned_ruff_consumer(tmp_path, "exit 1")
+    proc = _run(["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)], cwd=repo, env=env)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "TOOLCHAIN_UNAVAILABLE ruff==0.16.0" in proc.stdout + proc.stderr
+    log = calls.read_text(encoding="utf-8") if calls.exists() else ""
+    assert "pre-commit run" not in log, log
+
+
 def test_pr_direct_gate_does_not_double_run_precommit_repo() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
