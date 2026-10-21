@@ -394,3 +394,74 @@ def test_a_failed_pip_install_is_never_stamped(tmp_path: Path) -> None:
     assert "UNPROVEN" in result.stdout + result.stderr
     assert not (repo / ".venv" / ".l9-pip-applied").exists()
     assert _stamps(home) == set()
+
+
+def _uv_provision_shim(shims: Path, calls: Path, *, fail_dev_extra: bool) -> None:
+    """A uv that records its cwd and arguments, builds a usable .venv, and
+    optionally refuses the `.[dev]` extra the way a failed resolve would."""
+    shims.mkdir()
+    fail = 'case "$*" in *".[dev]"*) exit 1 ;; esac\n' if fail_dev_extra else ""
+    (shims / "uv").write_text(
+        f'#!/usr/bin/env bash\necho "uv cwd=$PWD $*" >> "{calls}"\n'
+        '[ "${1:-}" = "--version" ] && { echo "uv 9.9.9"; exit 0; }\n'
+        'if [ "${1:-}" = "venv" ]; then mkdir -p "$2/bin" && '
+        'ln -sf "$(command -v python3)" "$2/bin/python"; exit 0; fi\n'
+        f"{fail}exit 0\n",
+        encoding="utf-8",
+    )
+    (shims / "uv").chmod(0o755)
+
+
+def test_pip_provisioning_runs_from_the_repository_not_the_caller(tmp_path: Path) -> None:
+    """uv discovers project and uv.toml settings from its cwd. Run from the
+    caller's directory, a sibling's configuration decided this install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=False)
+    result = run(workspace, tmp_path / "home", budget="60", path_prefix=tmp_path / "bin")
+    assert result.returncode == 0, result.stdout + result.stderr
+    provisioning = [
+        line for line in calls.read_text(encoding="utf-8").splitlines() if " venv " in line
+    ]
+    assert provisioning, calls.read_text(encoding="utf-8")
+    assert all(line.startswith(f"uv cwd={repo} ") for line in provisioning), provisioning
+
+
+def test_a_failed_declared_dev_extra_is_not_downgraded_to_ready(tmp_path: Path) -> None:
+    """Retrying without a declared `dev` extra once succeeded with the test and
+    lint pins absent and stamped the repository proven."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "pip-only")
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "p"\nversion = "0"\n[project.optional-dependencies]\ndev = ["pytest"]\n',
+        encoding="utf-8",
+    )
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=True)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="60", path_prefix=tmp_path / "bin")
+    assert "UNPROVEN" in result.stdout + result.stderr
+    assert _stamps(home) == set()
+    log = calls.read_text(encoding="utf-8")
+    assert ".[dev]" in log
+    assert not [line for line in log.splitlines() if line.endswith(" -e .")], log
+
+
+def test_a_project_without_a_dev_extra_installs_itself(tmp_path: Path) -> None:
+    """Positive control: no declared extra means a plain editable install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "pip-only")
+    (repo / "pyproject.toml").write_text('[project]\nname = "p"\nversion = "0"\n', encoding="utf-8")
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=True)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="60", path_prefix=tmp_path / "bin")
+    assert "UNPROVEN" not in result.stdout + result.stderr, result.stdout + result.stderr
+    assert [
+        line for line in calls.read_text(encoding="utf-8").splitlines() if line.endswith(" -e .")
+    ]
+    assert _stamps(home)

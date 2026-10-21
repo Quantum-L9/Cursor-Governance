@@ -202,43 +202,73 @@ is_pip_repo() {
 # then failed exists but has no matching marker, so it is not proven.
 PIP_APPLIED_MARKER=".l9-pip-applied"
 
+# True when pyproject declares a `dev` optional-dependency extra. A pyproject
+# this host cannot parse answers True: installing a missing extra is a warning,
+# while skipping a declared one would install without its pins.
+pyproject_declares_dev_extra() {
+  local answer
+  answer="$(python3 - "$1" <<'PY' 2>/dev/null
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    extras = tomllib.load(handle).get("project", {}).get("optional-dependencies", {})
+print("yes" if "dev" in extras else "no")
+PY
+)"
+  [ "$answer" != "no" ]
+}
+
 # Provision <repo>/.venv for a pip-managed repository.
 # The repository's own bootstrap wins: a Makefile `venv:` target is how that
 # repository says its environment is built. Otherwise build an isolated venv
 # and install each declared pin set into it, never into the system interpreter.
 provision_pip_venv() {
-  local repo="$1" py req installed=0
+  local repo="$1"
   if [ -f "$repo/Makefile" ] && grep -qE '^venv:' "$repo/Makefile"; then
     ( cd "$repo" && make venv ) || return 1
   else
-    if [ ! -x "$repo/.venv/bin/python" ]; then
-      if have uv; then
-        uv venv "$repo/.venv" >/dev/null || return 1
-      else
-        python3 -m venv "$repo/.venv" || return 1
+    # Everything below runs FROM the repository: uv discovers project and uv.toml
+    # configuration from its cwd, and the detached worker's cwd is the caller's
+    # (the workspace container, or a sibling repository whose `required-version`
+    # or index settings then decided this repository's install).
+    (
+      cd "$repo" || exit 1
+      installed=0
+      if [ ! -x .venv/bin/python ]; then
+        if have uv; then
+          uv venv .venv >/dev/null || exit 1
+        else
+          python3 -m venv .venv || exit 1
+        fi
       fi
-    fi
-    py="$repo/.venv/bin/python"
-    for req in "$repo"/requirements.txt "$repo"/requirements-*.txt; do
-      [ -f "$req" ] || continue
-      if have uv; then
-        uv pip install --python "$py" -r "$req" || return 1
-      else
-        "$py" -m pip install -r "$req" || return 1
+      py="$PWD/.venv/bin/python"
+      for req in requirements.txt requirements-*.txt; do
+        [ -f "$req" ] || continue
+        if have uv; then
+          uv pip install --python "$py" -r "$req" || exit 1
+        else
+          "$py" -m pip install -r "$req" || exit 1
+        fi
+        installed=1
+      done
+      if [ -f pyproject.toml ] && grep -q '^\[project\]' pyproject.toml; then
+        # Install the dev extra exactly when it is declared. A failed declared
+        # extra is a failed install: retrying without it once succeeded with
+        # the test and lint pins absent and still stamped the repository ready.
+        target="."
+        if pyproject_declares_dev_extra pyproject.toml; then
+          target=".[dev]"
+        fi
+        if have uv; then
+          uv pip install --python "$py" -e "$target" || exit 1
+        else
+          "$py" -m pip install -e "$target" || exit 1
+        fi
+        installed=1
       fi
-      installed=1
-    done
-    if [ -f "$repo/pyproject.toml" ] && grep -q '^\[project\]' "$repo/pyproject.toml"; then
-      if have uv; then
-        ( cd "$repo" && { uv pip install --python "$py" -e '.[dev]' 2>/dev/null \
-            || uv pip install --python "$py" -e .; } ) || return 1
-      else
-        ( cd "$repo" && { "$py" -m pip install -e '.[dev]' 2>/dev/null \
-            || "$py" -m pip install -e .; } ) || return 1
-      fi
-      installed=1
-    fi
-    [ "$installed" -eq 1 ] || echo "session-deps: $repo declares no pin set; empty .venv" >&2
+      [ "$installed" -eq 1 ] || echo "session-deps: $repo declares no pin set; empty .venv" >&2
+    ) || return 1
   fi
   [ -x "$repo/.venv/bin/python" ] || return 1
   fingerprint "$repo" >"$repo/.venv/$PIP_APPLIED_MARKER"
