@@ -237,7 +237,10 @@ GITHUB_CAPABILITIES_JSON="{}"
 probe_github_capabilities() {
   local lib="$GOV_DIR/ops/scripts/lib/gh_auth_probe.sh" owner url line json="" sep=""
   [ -f "$lib" ] || return 0
-  url="$(git -C "$GOV_DIR" remote get-url origin 2>/dev/null || true)"
+  # No origin is a real answer here: the template probe then reports UNKNOWN.
+  if ! url="$(git -C "$GOV_DIR" remote get-url origin 2>/dev/null)"; then
+    url=""
+  fi
   url="${url%.git}"
   case "$url" in
     git@*:*) owner="${url#*:}" ;;
