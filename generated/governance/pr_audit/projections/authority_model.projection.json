@@ -1,0 +1,104 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "admission_rules": {
+      "candidate_generation_is_not_admission": true,
+      "changed_material_subject_requires_new_decision_unless_compatibility_preserves_it": true,
+      "global_requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "self_admission_without_target_class_authority_forbidden": true
+    },
+    "agent_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "agent_must_not_self_expand_authority",
+        "bounded_autonomy_requires_explicit_scope",
+        "conformance_evidence_does_not_grant_authority"
+      ]
+    },
+    "authority_classes": {
+      "candidate": {
+        "authoritative": false,
+        "meaning": "Proposed artifact pending validation and authorized admission."
+      },
+      "canonical": {
+        "implicit_derivation_allowed": false,
+        "meaning": "Authoritative within the declared semantic owner scope."
+      },
+      "derived": {
+        "may_self_promote": false,
+        "meaning": "Derived from upstream authority and cannot expand authority."
+      },
+      "evidence": {
+        "grants_authority": false,
+        "meaning": "Records an observed operation or validation result."
+      },
+      "global_governance": {
+        "does_not_own": [
+          "executable_conformance_semantics"
+        ],
+        "owner": "Quantum-L9/.github",
+        "roles": [
+          "organization_governance_plane",
+          "organization_control_plane",
+          "organization_distribution_plane",
+          "canonical_l9_vocabulary_owner"
+        ]
+      }
+    },
+    "escalation_rules": {
+      "authority_missing": "block",
+      "changed_candidate_after_decision": "require_new_decision",
+      "semantic_conflict": "block",
+      "unknown": "remain_unknown"
+    },
+    "global_admission_rules": {
+      "candidate_generation_is_not_admission": true,
+      "requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "requires_global_authority": true
+    },
+    "human_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "approval_binds_exact_candidate_digest",
+        "changed_candidate_requires_new_decision"
+      ]
+    },
+    "promotion_rules": {
+      "authorized_global_state_change_required": true,
+      "globalization_candidate_is_not_global_authority": true,
+      "sequence": [
+        "admitted_domain_laws",
+        "harvest",
+        "globalization_candidate",
+        "authorized_global_state_change",
+        "global_invariant_or_contract",
+        "canonical_global_law",
+        "global_fixture",
+        "published_global_profile"
+      ]
+    }
+  },
+  "projection_digest": "sha256:7119ff477c22ab85f642eaf1d9c7bd2a9d1140193e8141ca9922da11d88a20cb",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+  "source_ref": "l9.source/authority-model@1"
+}

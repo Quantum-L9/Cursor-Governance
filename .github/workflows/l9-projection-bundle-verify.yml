@@ -13,8 +13,11 @@ on:
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/pr_audit/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "skills/l9-pr-audit/integrations/CANONICAL_AUTHORITY_BINDING.yaml"
+      - "skills/l9-pr-audit/scripts/verify_canonical_authority.py"
       - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
       - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
       - "governance/authority-bindings/coding-agent-execution.yaml"
@@ -28,8 +31,11 @@ on:
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/pr_audit/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
+      - "skills/l9-pr-audit/integrations/CANONICAL_AUTHORITY_BINDING.yaml"
+      - "skills/l9-pr-audit/scripts/verify_canonical_authority.py"
       - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
       - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
       - "governance/authority-bindings/coding-agent-execution.yaml"
@@ -56,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bundle: [architecture_intelligence, coding_agent_execution]
+        bundle: [architecture_intelligence, coding_agent_execution, pr_audit]
     steps:
       - name: Checkout Cursor-Governance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -114,6 +120,22 @@ jobs:
           code=$?
           # 5 = BUNDLE_VERIFIED: coherent and current at its revision. Anything else fails.
           [[ $code -eq 5 ]] || exit 1
+      - name: Verify the pr-audit bundle at the revision it names (candidate mode)
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'pr_audit'
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          REVISION: ${{ steps.lock.outputs.revision }}
+        shell: bash
+        run: |
+          set +e
+          python skills/l9-pr-audit/scripts/verify_canonical_authority.py \
+            --mode candidate \
+            --authority-root ../org-authority \
+            --expect-revision "$REVISION"
+          code=$?
+          # 5 = BUNDLE_VERIFIED: coherent and current at its revision. Anything else fails.
+          [[ $code -eq 5 ]] || exit 1
       - name: Verify the coding-agent-execution bundle at the revision it names
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'coding_agent_execution'
         working-directory: governance
@@ -137,7 +159,7 @@ jobs:
       # ADMITTED_AND_CURRENT (exit 0); a fall back to BUNDLE_VERIFIED (exit 5), REJECTED,
       # BLOCKED or STALE fails the job, and the reason is reported, not hidden.
       - name: Checkout Quantum-L9/.github main independently of the lock
-        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
+        if: steps.lock.outputs.present == 'true' && (matrix.bundle == 'architecture_intelligence' || matrix.bundle == 'pr_audit')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
@@ -155,6 +177,21 @@ jobs:
           git -C ../org-main update-ref refs/remotes/origin/main HEAD
           set +e
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
+            --authority-root ../org-main > admission.json
+          code=$?
+          set -e
+          python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
+          [[ $code -eq 0 ]] || exit 1
+      - name: Resolve pr-audit admission against authority main (admitted mode)
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'pr_audit'
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        shell: bash
+        run: |
+          git -C ../org-main update-ref refs/remotes/origin/main HEAD
+          set +e
+          python skills/l9-pr-audit/scripts/verify_canonical_authority.py \
             --authority-root ../org-main > admission.json
           code=$?
           set -e

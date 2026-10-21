@@ -26,7 +26,9 @@ Inspection scope and correction scope are different. Inspect directly coupled su
 
 ## 2. Resolve authority and original intent provenance
 
-Discover actual architecture law, scoped instructions, semantic owners, invariants, contracts, schemas, ADRs, policy, generators, mutation guards, and validation/merge enforcement.
+Bind canonical global law first (SKILL.md law 28). Run `scripts/verify_canonical_authority.py --authority-root <Quantum-L9/.github checkout>` and record its `canonical_authority_binding` object verbatim in `audit.json`. Only `ADMITTED_AND_CURRENT` permits an `authority_resolution.sources` entry of kind `CANONICAL_LAW`; each such entry carries a `canonical_ref` with the bound source class, source and projection digests, and the composition digest. Any other status leaves the global layer a typed Unknown and `authority_resolution` short of `RESOLVED`.
+
+Then discover actual repository-local architecture law, scoped instructions, semantic owners, invariants, contracts, schemas, ADRs, policy, generators, mutation guards, and validation/merge enforcement.
 
 Recover the original prompt/task contract used to create the PR when available. Treat it as strong historical evidence for requested objective, explicit scope, non-goals, acceptance criteria, failure behavior, and expected validation. It does not override current repository law or newer user authority. Record absence rather than guessing.
 

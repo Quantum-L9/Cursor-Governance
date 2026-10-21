@@ -477,6 +477,42 @@ def base_audit() -> dict[str, object]:
                 },
             ],
         },
+        "canonical_authority_binding": {
+            "binding_ref": "integrations/CANONICAL_AUTHORITY_BINDING.yaml",
+            "mode": "admitted",
+            "status": "ADMITTED_AND_CURRENT",
+            "bundle_status": "BUNDLE_VERIFIED",
+            "authority_status": {"status": "ADMITTED_AND_CURRENT", "reason": "ADMITTED"},
+            "authoritative": True,
+            "load_status": "LOADED",
+            "bundle_ref": "generated/governance/pr_audit",
+            "authority_repository": "Quantum-L9/.github",
+            "authority_revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+            "projection_profile": {
+                "ref": "l9.projection/pr-audit@1",
+                "digest": "sha256:" + "f" * 64,
+            },
+            "composition_profile": {"ref": "l9.compose/pr-audit@1", "digest": "sha256:" + "b" * 64},
+            "composition_digest": "sha256:" + "6" * 64,
+            "component_digests": {"invariants": "sha256:" + "1" * 64},
+            "component_sources": {
+                "invariants": {
+                    "source_ref": "l9.source/invariants@1",
+                    "source_digest": "sha256:" + "7" * 64,
+                    "projection_digest": "sha256:" + "1" * 64,
+                }
+            },
+            "producer": {"compiler": "l9-semantic-compiler", "version": "0.9.3"},
+            "production_attested_by_verifier": False,
+            "assurance_limitations": [],
+            "verifier": "scripts/verify_canonical_authority.py",
+            "currentness": {
+                "checked_against": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+                "basis": "authority_main",
+            },
+            "refusal_reason": None,
+            "fallback_used": False,
+        },
         "authority_resolution": {
             "status": "RESOLVED",
             "sources": [
@@ -487,6 +523,22 @@ def base_audit() -> dict[str, object]:
                     "scope": "src/core.py behavior and validation",
                     "precedence": 1,
                     "evidence_ids": ["E-AUTH", "E-VCMD"],
+                },
+                {
+                    "authority_id": "L9-EVIDENCE-001",
+                    "kind": "CANONICAL_LAW",
+                    "source": "Quantum-L9/.github semantics/invariants.yaml",
+                    "scope": "evidence and receipts confer no authority",
+                    "precedence": 2,
+                    "evidence_ids": ["E-AUTH"],
+                    "canonical_ref": {
+                        "source_class": "invariants",
+                        "record_id": "L9-EVIDENCE-001",
+                        "source_ref": "l9.source/invariants@1",
+                        "source_digest": "sha256:" + "7" * 64,
+                        "projection_digest": "sha256:" + "1" * 64,
+                        "composition_digest": "sha256:" + "6" * 64,
+                    },
                 },
                 {
                     "authority_id": "A-GUARD",
@@ -2042,6 +2094,39 @@ def main() -> int:
         }
     ]
     assert_has(bab.validate_audit(bad), "RESOLVED cannot retain UNKNOWN/BLOCKING conflicts")
+
+    # Canonical authority binding: global law is bound, not recalled.
+    bad = copy.deepcopy(audit)
+    bad["canonical_authority_binding"]["status"] = "UNAVAILABLE"
+    bad["canonical_authority_binding"]["authoritative"] = False
+    bad["canonical_authority_binding"]["load_status"] = "NOT_LOADED"
+    bad["canonical_authority_binding"]["mode"] = "admitted"
+    errors = bab.validate_audit(bad)
+    assert_has(
+        errors,
+        "authority_resolution cannot be RESOLVED while canonical_authority_binding is UNAVAILABLE",
+    )
+    assert_has(
+        errors, "kind CANONICAL_LAW requires canonical_authority_binding ADMITTED_AND_CURRENT"
+    )
+
+    bad = copy.deepcopy(audit)
+    bad["authority_resolution"]["sources"][1]["canonical_ref"]["projection_digest"] = (
+        "sha256:" + "2" * 64
+    )
+    assert_has(
+        bab.validate_audit(bad),
+        "canonical_ref projection_digest does not match the bound invariants component",
+    )
+
+    bad = copy.deepcopy(audit)
+    bad["authority_resolution"]["sources"][1]["kind"] = "CONTRACT"
+    del bad["authority_resolution"]["sources"][1]["canonical_ref"]
+    assert_has(bab.validate_audit(bad), "is a canonical global id and must be kind CANONICAL_LAW")
+
+    bad = copy.deepcopy(audit)
+    bad["canonical_authority_binding"]["fallback_used"] = True
+    assert bab.validate_audit(bad), "fallback_used=true must fail schema validation"
 
     # Convergence-blocking Unknowns cannot coexist with CONVERGED.
     bad = copy.deepcopy(audit)

@@ -32,6 +32,9 @@ except ImportError as exc:  # pragma: no cover - fail closed in unsupported runt
 
 SCHEMA_VERSION = "l9.pr-audit.v2.0"
 HANDOFF_VERSION = "l9.pr-audit.remediation-handoff.v2.0"
+# A canonical global id (Quantum-L9/.github invariants and contracts) may only enter an audit
+# as a CANONICAL_LAW authority source bound through canonical_authority_binding.
+CANONICAL_AUTHORITY_ID = re.compile(r"^(L9-[A-Z]+-\d{3}|l9\.contract/[a-z0-9-]+@\d+)$")
 MANIFEST_VERSION = "l9.pr-audit.bundle-manifest.v2.0"
 BUILDER_VERSION = "2.0.0"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
@@ -2240,6 +2243,66 @@ def validate_semantics(
         if unresolved_conflicts:
             errors.append("authority_resolution RESOLVED cannot retain UNKNOWN/BLOCKING conflicts")
 
+    # Canonical authority binding: global law is bound, not recalled.
+    binding = audit["canonical_authority_binding"]
+    admitted = binding["status"] == "ADMITTED_AND_CURRENT"
+    if admitted and not (binding["authoritative"] and binding["load_status"] == "LOADED"):
+        errors.append(
+            "canonical_authority_binding ADMITTED_AND_CURRENT requires authoritative=true and load_status LOADED"
+        )
+    if not admitted and binding["authoritative"]:
+        errors.append(
+            "canonical_authority_binding cannot be authoritative unless ADMITTED_AND_CURRENT"
+        )
+    if not admitted and audit["authority_resolution"]["status"] == "RESOLVED":
+        errors.append(
+            "authority_resolution cannot be RESOLVED while canonical_authority_binding is "
+            f"{binding['status']}; the global layer is a typed Unknown"
+        )
+    for source in audit["authority_resolution"]["sources"]:
+        aid = source["authority_id"]
+        canonical_id = bool(CANONICAL_AUTHORITY_ID.match(aid))
+        if source["kind"] == "CANONICAL_LAW":
+            if not admitted:
+                errors.append(
+                    f"authority {aid} kind CANONICAL_LAW requires canonical_authority_binding "
+                    "ADMITTED_AND_CURRENT"
+                )
+            ref = source.get("canonical_ref")
+            if ref is None:
+                errors.append(f"authority {aid} kind CANONICAL_LAW requires canonical_ref")
+            else:
+                digests = binding["component_digests"]
+                if ref["composition_digest"] != binding["composition_digest"]:
+                    errors.append(
+                        f"authority {aid} canonical_ref composition_digest does not match the bound bundle"
+                    )
+                if ref["source_class"] not in digests:
+                    errors.append(
+                        f"authority {aid} canonical_ref source_class {ref['source_class']} is not a bound source class"
+                    )
+                elif digests[ref["source_class"]] != ref["projection_digest"]:
+                    errors.append(
+                        f"authority {aid} canonical_ref projection_digest does not match the bound "
+                        f"{ref['source_class']} component"
+                    )
+                provenance = binding["component_sources"].get(ref["source_class"]) or {}
+                if provenance and (
+                    provenance.get("source_ref") != ref["source_ref"]
+                    or provenance.get("source_digest") != ref["source_digest"]
+                ):
+                    errors.append(
+                        f"authority {aid} canonical_ref source provenance does not match the bound "
+                        f"{ref['source_class']} component"
+                    )
+        elif canonical_id:
+            errors.append(
+                f"authority {aid} is a canonical global id and must be kind CANONICAL_LAW bound "
+                "through canonical_ref, never recalled or read from repository files"
+            )
+        elif source.get("canonical_ref") is not None:
+            errors.append(f"authority {aid} carries canonical_ref but is not kind CANONICAL_LAW")
+
     # Audit coverage has one canonical closed-world domain assessment store.
     coverage = audit["audit_coverage"]
     assessments = {item["domain"]: item for item in coverage["domain_assessments"]}
@@ -3298,6 +3361,19 @@ def make_handoff(audit: dict[str, Any], autoremediate: int = 0) -> dict[str, Any
         "repository_binding": audit["repository_binding"],
         "audit_coverage": audit["audit_coverage"],
         "authority_resolution_status": audit["authority_resolution"]["status"],
+        "canonical_authority_binding": {
+            key: audit["canonical_authority_binding"][key]
+            for key in (
+                "status",
+                "load_status",
+                "authoritative",
+                "authority_repository",
+                "authority_revision",
+                "projection_profile",
+                "composition_digest",
+                "verifier",
+            )
+        },
         "architecture_policy_adapters": audit["architecture_policy_adapters"],
         "boundary_map": audit["boundary_map"],
         "pr_bindings": audit["pr_bindings"],

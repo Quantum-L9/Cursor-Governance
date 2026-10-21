@@ -161,3 +161,7 @@ Pass only when every machine closure seed from `change-ledger.v1.4` is preserved
 ### v2.0 deterministic-closure gate
 
 Fail closure when a changed public contract lacks complete producer/consumer disposition, an applicable mutation candidate is unexecuted/survives while test discrimination is claimed strong, any current review thread lacks semantic disposition, or any newly added non-test artifact lacks proven reachability/registration/authorized future contract. Repository-wide producer/consumer and reachability absence claims require a complete repository corpus. Mutation probes must execute only in isolated temporary copies and prove the original audited source hash is unchanged.
+
+## G36 Canonical authority binding
+
+Pass only when `canonical_authority_binding` is present with `fallback_used=false`; when its status is `ADMITTED_AND_CURRENT` it is `authoritative` and `LOADED`; every `authority_resolution.sources` entry of kind `CANONICAL_LAW` exists only under that status and resolves through `canonical_ref` to the bound component digests; every canonical global id is of kind `CANONICAL_LAW`; and `authority_resolution` is not `RESOLVED` under any other binding status. The builder's semantic validation owns these checks; a hand-written copy is a competing contract.

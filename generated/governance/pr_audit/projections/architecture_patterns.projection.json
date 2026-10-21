@@ -1,0 +1,186 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "patterns": [
+      {
+        "class": "projection",
+        "examples": [
+          "vocabulary_yaml_to_vocabulary_md",
+          "vocabulary_yaml_to_vocabulary_json",
+          "canonical_workflow_to_skill_and_claude_projection",
+          "repository_semantics_to_AGENTS_and_CLAUDE"
+        ],
+        "forbidden": [
+          "derived_projection_becomes_independent_source_of_truth",
+          "separately_maintained_duplicate_semantics"
+        ],
+        "guarantees": [
+          "projection_authority_is_less_than_or_equal_to_source_authority",
+          "staleness_is_digest_detectable",
+          "multiple_consumers_share_one_semantic_ledger"
+        ],
+        "id": "l9.pattern/canonical-source-derived-projections@1",
+        "preconditions": [
+          "canonical_source_is_explicit",
+          "projection_profile_exists"
+        ],
+        "purpose": "Maintain one authoritative semantic source and compile multiple consumer-specific representations without creating competing truth.\n",
+        "required_metadata": [
+          "source_semantic_digest",
+          "compiler_version",
+          "projection_profile_version",
+          "generated_digest"
+        ],
+        "structure": {
+          "edges": [
+            {
+              "from": "projection_compiler",
+              "relation": "reads",
+              "to": "canonical_source"
+            },
+            {
+              "from": "projection_compiler",
+              "relation": "emits",
+              "to": "derived_projection"
+            }
+          ],
+          "nodes": [
+            "canonical_source",
+            "projection_compiler",
+            "derived_projection"
+          ]
+        }
+      },
+      {
+        "class": "semantic_structure",
+        "composition": {
+          "expression": "ResolvedSemantics(domain) = GlobalBaseline ∪ DomainLayer"
+        },
+        "examples": [
+          "global_fixture_profiles_plus_l9_state_fixtures",
+          "global_contracts_plus_state_contracts"
+        ],
+        "guarantees": [
+          "global_law_is_not_duplicated_in_each_domain",
+          "domain_can_specialize_without_mutating_global_semantics"
+        ],
+        "id": "l9.pattern/global-plus-domain-layering@1",
+        "preconditions": [
+          "global_baseline_is_versioned",
+          "domain_owner_is_explicit"
+        ],
+        "purpose": "Reuse an L9-wide semantic baseline while allowing each domain to add specialized laws, fixtures, contracts, and capabilities.\n",
+        "structure": {
+          "layers": [
+            "global_baseline",
+            "domain_semantics"
+          ]
+        }
+      },
+      {
+        "canonical_roles": {
+          "executable_conformance": {
+            "owner": "l9-conformance"
+          },
+          "organization_governance_distribution": {
+            "owner": "Quantum-L9/.github"
+          },
+          "user_agent_operating_plane": {
+            "owner": "Cursor-Governance"
+          }
+        },
+        "class": "governance",
+        "forbidden": [
+          "conformance_self_defines_constitutional_law",
+          "distribution_plane_mutates_payload_semantics",
+          "operating_plane_becomes_hidden_global_ssot"
+        ],
+        "guarantees": [
+          "distribution_does_not_reinterpret_artifacts",
+          "conformance_does_not_create_global_law",
+          "operating_plane_consumes_governance_and_conformance"
+        ],
+        "id": "l9.pattern/control-plane-execution-plane-separation@1",
+        "purpose": "Separate authority and distribution control from executable semantic systems and user/agent operating surfaces.\n"
+      },
+      {
+        "admission_rule": {
+          "expression": "Admit(candidate) iff AuthorityValid ∧ CandidateDigestMatches ∧ AdmissionChecksPass\n"
+        },
+        "class": "governance",
+        "forbidden": [
+          "floating_approval",
+          "self_admission_without_grant"
+        ],
+        "guarantees": [
+          "candidate_generation_does_not_equal_authority",
+          "approval_is_bound_to_exact_candidate_revision",
+          "changed_candidate_requires_new_authority_decision"
+        ],
+        "id": "l9.pattern/authority-candidate-admission@1",
+        "lifecycle": [
+          "candidate",
+          "admission_evaluated",
+          "awaiting_authority",
+          "admitted",
+          "published"
+        ],
+        "purpose": "Separate candidate generation from authoritative admission using immutable digest-bound decisions.\n"
+      },
+      {
+        "class": "persistence",
+        "guarantees": [
+          "reproducible_history",
+          "resumable_work",
+          "surgical_repair_without_history_loss"
+        ],
+        "id": "l9.pattern/immutable-revisioned-state@1",
+        "purpose": "Preserve authoritative history by committing new revisions rather than mutating previously admitted semantic or operational state.\n",
+        "rules": [
+          "expected_revision_required_for_transition",
+          "historical_revision_immutable",
+          "correction_creates_new_revision"
+        ],
+        "structure": {
+          "nodes": [
+            "current_revision",
+            "operation_receipt",
+            "journal",
+            "historical_revisions"
+          ]
+        }
+      },
+      {
+        "class": "persistence",
+        "examples": [
+          "Graphiti_world_model",
+          "Redis_projection_cache"
+        ],
+        "guarantees": [
+          "rich_querying_without_truth_centralization",
+          "cache_or_graph_failure_does_not_redefine_authority"
+        ],
+        "id": "l9.pattern/read-model-non-authority@1",
+        "invariant": {
+          "expression": "Authority(ReadModel) < Authority(SourceOwner)"
+        },
+        "purpose": "Allow rich materialized views, graphs, indexes, or caches without allowing them to manufacture authority.\n",
+        "structure": {
+          "nodes": [
+            "authoritative_owner",
+            "materialized_read_model"
+          ]
+        }
+      }
+    ]
+  },
+  "projection_digest": "sha256:ecf244ab0b688a17f642d23e8d7d2ad711f8378c9f3b08706e6bde76c749fd47",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+  "source_ref": "l9.source/architecture-patterns@1"
+}

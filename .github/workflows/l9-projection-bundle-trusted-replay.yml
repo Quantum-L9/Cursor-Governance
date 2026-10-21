@@ -65,6 +65,8 @@ jobs:
             profile: l9.projection/architecture-intelligence@1
           - bundle: coding_agent_execution
             profile: l9.projection/coding-agent-execution@1
+          - bundle: pr_audit
+            profile: l9.projection/pr-audit@1
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -268,7 +270,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bundle: [architecture_intelligence, coding_agent_execution]
+        bundle: [architecture_intelligence, coding_agent_execution, pr_audit]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)
         shell: bash

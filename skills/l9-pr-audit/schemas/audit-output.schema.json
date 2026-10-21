@@ -11,6 +11,7 @@
     "repository_binding",
     "audit_coverage",
     "authority_resolution",
+    "canonical_authority_binding",
     "architecture_policy_adapters",
     "boundary_map",
     "pr_bindings",
@@ -335,7 +336,8 @@
                   "GENERATOR",
                   "MUTATION_GUARD",
                   "ENFORCEMENT",
-                  "EXTERNAL"
+                  "EXTERNAL",
+                  "CANONICAL_LAW"
                 ]
               },
               "source": {
@@ -357,6 +359,44 @@
                   "minLength": 1
                 },
                 "uniqueItems": true
+              },
+              "canonical_ref": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Required when kind is CANONICAL_LAW: the bundled record this authority source resolves to.",
+                "required": [
+                  "source_class",
+                  "source_ref",
+                  "source_digest",
+                  "projection_digest",
+                  "composition_digest"
+                ],
+                "properties": {
+                  "source_class": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "record_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source_ref": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source_digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "projection_digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "composition_digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                }
               }
             }
           }
@@ -3668,6 +3708,157 @@
               }
             }
           }
+        }
+      }
+    },
+    "canonical_authority_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The pr-audit canonical-authority verifier record (scripts/verify_canonical_authority.py), recorded verbatim before any CANONICAL_LAW authority source or finding cites global law.",
+      "required": [
+        "binding_ref",
+        "mode",
+        "status",
+        "bundle_status",
+        "authority_status",
+        "authoritative",
+        "load_status",
+        "bundle_ref",
+        "authority_repository",
+        "authority_revision",
+        "projection_profile",
+        "composition_profile",
+        "composition_digest",
+        "component_digests",
+        "component_sources",
+        "producer",
+        "production_attested_by_verifier",
+        "assurance_limitations",
+        "verifier",
+        "currentness",
+        "refusal_reason",
+        "fallback_used"
+      ],
+      "properties": {
+        "binding_ref": {
+          "const": "integrations/CANONICAL_AUTHORITY_BINDING.yaml"
+        },
+        "mode": {
+          "enum": [
+            "admitted",
+            "candidate",
+            null
+          ]
+        },
+        "status": {
+          "enum": [
+            "ADMITTED_AND_CURRENT",
+            "BUNDLE_VERIFIED",
+            "UNAVAILABLE",
+            "REJECTED",
+            "STALE",
+            "NOT_REQUESTED"
+          ]
+        },
+        "bundle_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_status": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "load_status": {
+          "enum": [
+            "NOT_LOADED",
+            "LOADED",
+            "LOADED_AS_CANDIDATE"
+          ]
+        },
+        "bundle_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_repository": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_revision": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "projection_profile": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "composition_profile": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "composition_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "component_digests": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "component_sources": {
+          "type": "object"
+        },
+        "producer": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "production_attested_by_verifier": {
+          "const": false
+        },
+        "assurance_limitations": {
+          "type": "array"
+        },
+        "verifier": {
+          "const": "scripts/verify_canonical_authority.py"
+        },
+        "currentness": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "refusal_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fallback_used": {
+          "const": false
         }
       }
     }

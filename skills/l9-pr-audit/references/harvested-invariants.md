@@ -16,7 +16,7 @@ status: active
 - Rejected or bounded donor concepts
 - Recursive architecture alignment kernel harvest
 
-Load only when maintaining, auditing, or re-harvesting `l9-pr-audit`. Runtime audits use the compiled laws in `SKILL.md`, `audit-protocol.md`, `change-discipline.md`, and `evidence-contract.md` instead of reloading donor material.
+Load only when maintaining, auditing, or re-harvesting `l9-pr-audit`. Runtime audits use the compiled laws in `SKILL.md`, `audit-protocol.md`, `change-discipline.md`, and `evidence-contract.md` instead of reloading donor material. This file is donor-skill provenance only: canonical global law (Quantum-L9/.github invariants and contracts) is never cited from here; it is bound through `integrations/CANONICAL_AUTHORITY_BINDING.yaml` (SKILL.md law 28).
 
 ## Source identity
 

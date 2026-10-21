@@ -52,6 +52,10 @@ This closes a model-variance gap: two auditors may reason differently, but neith
 
 `audit_coverage.domain_assessments` is the single source of truth for audit-domain disposition. Every canonical domain appears exactly once with `PASS`, `FAIL`, `NOT_APPLICABLE`, or `UNKNOWN`, evidence IDs, related finding IDs, and closing-validation text when needed. There is no separate completed/skipped domain ledger. `FAIL` means the audit conclusively found a domain defect; it does not mean the audit itself failed to converge.
 
+## Canonical authority binding
+
+`canonical_authority_binding` is the verbatim record printed by `scripts/verify_canonical_authority.py` (fields in `integrations/CANONICAL_AUTHORITY_BINDING.yaml#provenance.recorded_fields`; `fallback_used` is always `false`). An authority source of kind `CANONICAL_LAW` is `CONFIRMED` only when the binding is `ADMITTED_AND_CURRENT` and its `canonical_ref` matches the bound component (`source_class`, `source_ref`, `source_digest`, `projection_digest`, `composition_digest`). A candidate-mode binding (`BUNDLE_VERIFIED`, `LOADED_AS_CANDIDATE`) supports `INFERENCE` only. A canonical global id (`L9-*-NNN`, `l9.contract/*@N`) never appears under another kind.
+
 ## Architecture policy adapters
 
 `architecture_policy_adapters` records project-, platform-, regulatory-, organizational-, or domain-specific architecture law separately from ChatGPT/Fable execution adapters. Applied adapters require exact governing authority, scope, rule domains, validation methods, and confirmed evidence. `NOT_APPLICABLE` is explicit. Do not import an adapter from unrelated repositories by naming similarity.
