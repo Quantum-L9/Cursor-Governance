@@ -152,8 +152,6 @@ FINISH_TEACHERS = (
     ROOT / "rules" / "48-make-pr-remediation.mdc",
     ROOT / "rules" / "99-no-auto-commit.mdc",
     ROOT / "commands" / "gmp.md",
-    ROOT / "skills" / "l9-gmp-protocol" / "SKILL.md",
-    ROOT / "skills" / "l9-gmp-protocol" / "references" / "gmp-autonomy-bounds.md",
 )
 
 SPLIT_FINISH = (

@@ -97,7 +97,22 @@ MANAGED_TOP_LEVEL = (
     "skillOverrides",
     "env",
     "workflowSizeGuideline",
+    "syncClaudeAiSkills",
 )
+
+#: Managed keys Claude Code ignores in a shared project `.claude/settings.json`.
+#:
+#: `syncClaudeAiSkills: false` keeps the claude.ai account skills (the
+#: `anthropic-skills:<name>` copies under `~/.claude/skills/synced/`) out of the
+#: session, so `skills/` stays the only L9 skill source (issue #690). Claude
+#: Code honours that `false` only from managed settings, `--settings`,
+#: `~/.claude/settings.json` or `.claude/settings.local.json`; the settings docs
+#: say a `false` in `.claude/settings.json` "is ignored". Writing it into the
+#: committed project file would claim isolation the runtime does not grant, so
+#: `consumer_settings` omits these keys and the user-scope and local-file paths
+#: carry them. Being managed, a user `true` is overwritten on every reconcile and
+#: reported as drift by `--check`.
+PROJECT_SCOPE_IGNORED_KEYS = ("syncClaudeAiSkills",)
 
 # Copied into every .claude/hooks/ install (consumer + gov committed tree).
 #
@@ -237,8 +252,17 @@ def merge_user_settings(
 
 
 def consumer_settings(template: dict[str, Any]) -> dict[str, Any]:
-    """Committed consumer settings: template minus private comments."""
-    out = {k: v for k, v in template.items() if not str(k).startswith("_")}
+    """Committed consumer settings: template minus private comments.
+
+    Also minus `PROJECT_SCOPE_IGNORED_KEYS`: Claude Code ignores them in a
+    shared project settings file, so they belong to user scope and
+    `settings.local.json` only.
+    """
+    out = {
+        k: v
+        for k, v in template.items()
+        if not str(k).startswith("_") and k not in PROJECT_SCOPE_IGNORED_KEYS
+    }
     return out
 
 

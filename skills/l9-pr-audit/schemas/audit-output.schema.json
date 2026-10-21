@@ -3111,6 +3111,10 @@
               "INTERFACE_OR_PROTOCOL",
               "CONFIG_OR_SCHEMA_KEY",
               "FILE_SCOPE",
+              "CONSTANT",
+              "API_ROUTE",
+              "SCHEMA_FIELD",
+              "CONFIG_KEY",
               "OTHER"
             ]
           },
@@ -3126,6 +3130,7 @@
               "PYTHON_AST",
               "PATCH_REGEX",
               "FILE_FALLBACK",
+              "PUBLIC_SURFACE_STATIC",
               "AUDITOR_SEMANTIC"
             ]
           },

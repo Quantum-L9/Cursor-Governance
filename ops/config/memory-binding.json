@@ -72,6 +72,8 @@
     "artifact": "l9_graphite_memory-2.6.0-py3-none-any.whl",
     "artifact_sha256": "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15",
     "build": "published python -m build; reproduced by uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
+    "build_backend_constraint": "setuptools==84.0.0",
+    "build_backend_note": "The source requires setuptools>=68, so an isolated uv build resolves the newest release: setuptools 84.2.1 (2026-10-20) builds 9021eebb..., not the official wheel. Built from the PyPI 2.6.0 sdist under SOURCE_DATE_EPOCH=1784592000, setuptools 84.0.0 reproduces artifact_sha256 exactly. Rebinding the release re-proves this pin.",
     "source_date_epoch": 1784592000,
     "proved_by": "tests/ops/memory/test_cross_repo_lifecycle.py",
     "proof_workflow": ".github/workflows/memory-cross-repo.yml",
