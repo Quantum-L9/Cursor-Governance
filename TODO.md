@@ -895,3 +895,38 @@ Landed on this PR: owner + libraries (already simplified) + `/start-session` STA
 - [x] Restore SessionStart secrets-plane owner: `ops/secrets/session_start_secrets.py`, `ops/secrets/aws_cli_preflight.py`, `ops/secrets/infisical_cli_login.py` (bootstrap calls the owner; reporter stays a derived view; no Makefile `secrets-bind` / `secrets-aws-preflight`).
 - [x] Apply the five small cuts: bootstrap say-line → `session_start_secrets.py`; one `BIND_NAMES` constant (reporter imports it); `aws_cli_preflight._fail(code)`; `infisical_cli_login.ensure_machine_profile()` (owner stops wrapping `main()`); reporter inserts `ops/secrets` once and derives `### FAILED` from the classified `aws-cli` line.
 - [x] `/start-session` STATE_SYNC prints `### FAILED` / `### Runtime` / `### Degraded` / `### Plan audit` from bootstrap context (no second check grid).
+
+## Merge authority disabled (open, 2026-10-20)
+
+- [ ] Re-enable the merge-authority chain (CANONICAL_LAW §6.2.12–§6.2.15) once the
+  Constellation is autonomous. Disabled by the operator through
+  `ops/config/merge-authority.json` (`"enforcement": "disabled"`, §6.2.16)
+  because agents could not merge on any surface. While disabled, agent merges
+  are bounded by doctrine only (merge on the operator's request); the
+  never-waive set (`--admin`, force-push, hard reset) stays enforced.
+  Re-enable by setting `"strict"`, or implement the reserved `"chat"` tier
+  (agent-attested grants: the parent agent runs `authorize_merge.py` on the
+  operator's chat request, live head + principal checks, no hook receipt).
+  Fix these recorder defects first, or `strict` is unusable again:
+  - Cursor receipts are never grantable (`GRANTABLE_HOSTS = ("claude-code",)`,
+    `BLOCKED_HOST_ORIGIN`).
+  - A typed `/l9-pr-remediation` is deferred at `UserPromptSubmit` and records
+    only on `UserPromptExpansion` with the exact command name; the synced
+    `anthropic-skills:l9-pr-remediation` name and a missing expansion event
+    both drop it silently.
+  - Chat instructions record only when the `_DIRECTED` grammar matches.
+  - Receipts are bound to one session and transcript; a reclaimed cloud
+    container loses `~/.l9/autonomy/`.
+  - Terminal grants need `/dev/tty`, absent on web and mobile.
+
+## Memory cross-repo proof advisory (open, 2026-10-20)
+
+- [ ] Restore `.github/workflows/memory-cross-repo.yml` to blocking by setting
+  `MEMORY_PROOF_ADVISORY: "false"`. Made advisory by the operator because the
+  proof failed on every PR while the memory binding is realigned: step
+  "Build the memory wheel reproducibly and verify its digest" rebuilt
+  `9021eebb…` but `ops/config/memory-binding.json` `release_evidence.artifact_sha256`
+  is `d4935732…` (observed on run 39490121678). While advisory, every proof step
+  still runs and stops the chain at the first failure; the failure is a
+  `::warning::` and a job-summary line instead of a red job. Re-enable once a
+  run on `main` shows "ADVISORY: memory cross-repo proof passed every step."

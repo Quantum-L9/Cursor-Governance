@@ -2518,13 +2518,30 @@ def _describe(entry: dict[str, Any]) -> str:
     return f"{entry.get('kind')} {target} [id {entry['id']}]"
 
 
+def _enforcement_disabled() -> bool:
+    """The merge-authority switch (§6.2.16). Both hosts load this module by
+    path (Cursor's ``before_submit_merge_instruction.py`` without ``main``), so
+    the sibling is imported here; an unloadable switch reads as enforced."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        import merge_authority_switch  # noqa: PLC0415
+    except ImportError:
+        return False
+    return merge_authority_switch.disabled()
+
+
 def capture_from_payload(payload: dict[str, Any], host: str) -> dict[str, Any]:
     """``{"recorded", "notes", "provenance"}`` for one host prompt payload.
 
     On Claude Code the conversation context comes from the host transcript the
     payload names, read here in the hook process — never from anything the
-    agent supplies.
+    agent supplies. While the merge-authority switch is disabled nothing is
+    recorded and no note is emitted, on either host.
     """
+    if _enforcement_disabled():
+        return {"recorded": [], "notes": [], "provenance": None}
     provenance = host_provenance(host, payload)
     if provenance is None:
         return {"recorded": [], "notes": [], "provenance": None}
