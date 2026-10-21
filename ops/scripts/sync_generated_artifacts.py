@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -287,6 +288,36 @@ def project_llm_rules(root: Path, wrote: list[str]) -> None:
                 wrote.append(rel)
 
 
+def governance_ssot_root() -> Path:
+    """The one clone whose generated tree may back the user-scope LLM adapters.
+
+    Rule 06 names ``$HOME/.cursor-governance`` as the sole governance root;
+    ``L9_GOVERNANCE_DIR`` is how a session points at it explicitly.
+    """
+    raw = os.environ.get("L9_GOVERNANCE_DIR") or str(Path.home() / ".cursor-governance")
+    return Path(raw).expanduser().resolve()
+
+
+def user_scope_adapter_flags(root: Path, warnings: list[str] | None = None) -> list[str]:
+    """``--skip-user`` unless ``root`` is the governance SSOT clone.
+
+    The adapter reconcilers re-point ``~/.claude/skills`` and ``~/.claude/rules``
+    at whatever ``--root`` they are given. A worktree, a scratch archive of a PR
+    or a consumer checkout must still regenerate its own tracked artifacts, but
+    it must never move the live account projection off the SSOT clone (that is
+    exactly what happened when the sync ran inside an archive of PR #744).
+    """
+    ssot = governance_ssot_root()
+    if root.resolve() == ssot:
+        return []
+    if warnings is not None:
+        warnings.append(
+            "user-scope LLM adapters (~/.claude/skills, ~/.claude/rules) left untouched: "
+            f"{root} is not the governance SSOT clone {ssot}"
+        )
+    return ["--skip-user"]
+
+
 def reconcile_llm_rule_adapters(
     root: Path,
     warnings: list[str],
@@ -299,6 +330,7 @@ def reconcile_llm_rule_adapters(
         warnings.append("reconcile_llm_rule_adapters.py missing — skip rule adapter refresh")
         return
     cmd = [sys.executable, str(script), "--root", str(root), "--quiet"]
+    cmd.extend(user_scope_adapter_flags(root, warnings))
     if workspace is not None:
         cmd.extend(["--workspace", str(workspace)])
     result = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
@@ -388,6 +420,7 @@ def reconcile_llm_adapters(
         warnings.append("reconcile_llm_skill_adapters.py missing — skip adapter symlink refresh")
         return
     cmd = [sys.executable, str(script), "--root", str(root), "--quiet"]
+    cmd.extend(user_scope_adapter_flags(root, warnings))
     if workspace is not None:
         cmd.extend(["--workspace", str(workspace)])
     result = subprocess.run(cmd, cwd=root, capture_output=True, text=True)

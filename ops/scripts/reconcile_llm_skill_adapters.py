@@ -65,6 +65,7 @@ def reconcile_adapters(
     workspace: Path | None,
     check: bool = False,
     quiet: bool = False,
+    skip_user: bool = False,
 ) -> dict[str, Any]:
     root = root.resolve()
     workspace = (workspace or Path.cwd()).resolve()
@@ -92,6 +93,11 @@ def reconcile_adapters(
             continue
         if kind == "project" and workspace is None:
             skipped.append({"id": adapter_id, "reason": "workspace-required"})
+            continue
+        if kind == "user" and skip_user:
+            # The caller's --root is not the governance SSOT clone; the account
+            # projection stays where it is (sync_generated_artifacts.py decides).
+            skipped.append({"id": adapter_id, "reason": "user-scope-skipped"})
             continue
 
         # Rules are whole-dir symlinked separately (reconcile_llm_rule_adapters.py).
@@ -196,6 +202,12 @@ def main() -> int:
         action="store_true",
         help="Do not move misplaced .claude/* skill packs into .claude/skills/",
     )
+    parser.add_argument(
+        "--skip-user",
+        action="store_true",
+        help="Leave user-scope adapters (~/.claude/skills) untouched; "
+        "for a --root that is not the governance SSOT clone",
+    )
     args = parser.parse_args()
 
     workspace = (args.workspace or Path.cwd()).resolve()
@@ -209,6 +221,7 @@ def main() -> int:
             workspace=workspace,
             check=args.check,
             quiet=args.quiet,
+            skip_user=args.skip_user,
         )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -231,6 +244,8 @@ def main() -> int:
         ]
         if args.check:
             rules_cmd.append("--check")
+        if args.skip_user:
+            rules_cmd.append("--skip-user")
         # argv is sys.executable + a repo-resolved script path + fixed flags (no
         # shell=True, no caller string), so the dangerous-subprocess-use-tainted-
         # env-args injection is unreachable. Authoritative rationale:
