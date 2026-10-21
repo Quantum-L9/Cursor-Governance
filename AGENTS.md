@@ -2360,3 +2360,16 @@ current.
   all open PRs … `--all-open`" and L9_PR_REMEDIATE_SPEED_V1's "§3.2 merge
   authority is unchanged" are history: the receipt they describe is never
   issued.
+
+## Merge-authority kill switch (2026-10-20) — suspends the merge-authorization sections above while disabled (CANONICAL_LAW §6.2.16)
+
+- `ops/config/merge-authority.json` ships `"enforcement": "disabled"`. While it
+  does, merge authorization is not checked on any surface, Cursor and Claude
+  Code alike: when the operator asks for a merge in chat or invokes
+  `/l9-pr-remediation`, merge each ready PR with
+  `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo <owner/name> --pr <n> --head-sha <live sha> --run`
+  (or `gh pr merge`). No grant, receipt or MERGE_PENDING.
+- `--admin`, force-push and hard reset stay denied; GitHub's required checks
+  and thread resolution still apply; `make pr` still never merges.
+- `"enforcement": "strict"` restores the 2026-10-12 → 2026-10-16 sections above
+  unchanged.

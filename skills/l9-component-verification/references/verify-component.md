@@ -20,7 +20,7 @@ status: active
 
 ## Escalation
 
-If protected file requires change → end with: `Kernel or protected-file wiring required → l9-gmp-protocol`
+If protected file requires change → end with: `Kernel or protected-file wiring required → /gmp`
 
 ## Protected files (read-only diagnosis)
 

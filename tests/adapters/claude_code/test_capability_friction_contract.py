@@ -11,9 +11,14 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "ops" / "scripts"))
+
+from reconcile_claude_settings import consumer_settings  # noqa: E402
+
 TEMPLATE = ROOT / "environment/agents/adapters/claude-code/settings.template.json"
 PROJECTED = ROOT / ".claude/settings.json"
 PREFLIGHT = ROOT / "environment/agents/adapters/claude-code/hooks/bootstrap_capability_preflight.sh"
@@ -81,8 +86,10 @@ def test_graphql_and_raw_publish_are_not_standing_approvals() -> None:
 def test_preflight_is_registered_and_projects_without_drift() -> None:
     template = _settings(TEMPLATE)
     projected = _settings(PROJECTED)
-    expected = {key: value for key, value in template.items() if not key.startswith("_")}
-    assert projected == expected
+    # The committed file is the reconciler's projection, not "template minus
+    # comments": keys Claude Code ignores at project scope (syncClaudeAiSkills,
+    # issue #690) are left out there. Ask the owner rather than re-derive it.
+    assert projected == consumer_settings(template)
 
     groups = template["hooks"]["SessionStart"]  # type: ignore[index]
     commands = [

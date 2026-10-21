@@ -10,11 +10,11 @@ compiled_prompt:
     produce evidence report. RULES ONLY — no skills, no skill wiring, no AUTONOMY_MANIFEST.
 
   agent_kickoff: >
-    Execute GMP-RULES-HARDEN-001. Phase 0 approved. Load l9-gmp-protocol.
+    Execute GMP-RULES-HARDEN-001. Phase 0 approved. Follow commands/gmp.md.
     Follow this prompt through Phase 7. Do not edit the plan file if attached.
     Stop after Wave 1 overlay checkpoint unless user says continue.
 
-  protocol: l9-gmp-protocol phases 0–7
+  protocol: commands/gmp.md
 
   artifact_trees:
     global_cursor_rules:
@@ -225,7 +225,7 @@ compiled_prompt:
 
 Paste this entire file (or say: **Execute `@.cursor-commands/kernels/GMP Rules Hardening — Execute.md`**).
 
-Load **l9-gmp-protocol**. Do **not** edit attached plan files.
+Follow **commands/gmp.md**. Do **not** edit attached plan files.
 
 ---
 

@@ -55,4 +55,4 @@ Every gap row MUST name a dimension and numeric Gap %. No subjective labels with
 - No files provided → STOP; ask for paths.
 - Target undefined → default `L9_CANON`; state assumption in report.
 - Binary files or unreadable paths → skip with `Unknown`; do not invent coverage.
-- User asks for fixes → recommend `l9-plan` or `l9-gmp-protocol`; do not execute in this skill.
+- User asks for fixes → recommend `l9-plan-simple` then `/gmp`; do not execute in this skill.

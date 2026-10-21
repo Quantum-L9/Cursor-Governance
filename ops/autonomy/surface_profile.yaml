@@ -194,6 +194,7 @@ remediation:
   skill: l9-pr-remediation
   max_cycles: 5
   skill_invocation: converge_all_open_prs_then_merge_when_authorized # MERGE_PENDING without a record
+  merge_authority_switch: ops/config/merge-authority.json # §6.2.16: "disabled" (shipped) = no merge-permission check on any surface (Cursor and Claude Code); "strict" restores the merge rules of this block
   merge: human_authorization # §6.2.13–§6.2.15: GitHub record, chat instruction, or the operator's typed /l9-pr-remediation; an agent's own Skill call never
   scope: all_open_prs_in_target_repo # remediation scope, not merge scope
   merge_pending_status: MERGE_PENDING
@@ -379,6 +380,14 @@ session_start_block: |
     `run_pr_precommit.sh --staged`, keeping the SKIP list a raw
     `pre-commit install` would drop. That is the supported way to close the
     window; installing a raw hook is still forbidden.
+  - **Merge-authority switch (CANONICAL_LAW §6.2.16).** While
+    `ops/config/merge-authority.json` says `"enforcement": "disabled"` (the
+    shipped default), merge authorization is not checked on any surface —
+    Cursor and Claude Code alike: an agent merges a ready PR with
+    `stack_safe_merge.py --run` (or `gh pr merge`) when the operator asks or
+    invokes `/l9-pr-remediation`, with no grant and no MERGE_PENDING.
+    `--admin`, force-push and hard reset stay denied. The merge-authorization
+    statements below apply only when the switch says `strict`.
   - Merge stays denied by `ops/autonomy/merge_gate.py` on every transport
     until a human authorization — a GitHub record, or the operator's own
     recorded prompt instruction transcribed into a grant — binds the repo, PR

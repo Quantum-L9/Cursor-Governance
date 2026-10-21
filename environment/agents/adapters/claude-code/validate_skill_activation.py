@@ -190,6 +190,10 @@ def main() -> int:
             explicit.add(name)
             if not disabled:
                 fail(f"{name}: explicit-only skill is model-invocable")
+            # Explicit-only means the user invokes it by name, so hiding it from
+            # the user as well would leave no way to run it at all.
+            if fm.get("user-invocable", True) is False:
+                fail(f"{name}: explicit-only skill is not user-invocable")
         elif invocation == "model_allowed":
             auto.add(name)
             if disabled:
@@ -221,6 +225,13 @@ def main() -> int:
         fail(f"explicit-only skillOverrides missing or wrong: {wrong_overrides}")
     else:
         print("  OK: explicit-only skills hidden from model by settings override")
+    # claude.ai account skills arrive as `anthropic-skills:<name>`, an identity
+    # skillOverrides never matches, so the only control is not loading them
+    # (issue #690). reconcile_claude_settings projects this key to user scope.
+    if settings.get("syncClaudeAiSkills") is not False:
+        fail("settings.template.json must set syncClaudeAiSkills: false (issue #690)")
+    else:
+        print("  OK: claude.ai account skill sync disabled in the settings template")
 
     router = load_shared_router()
     cases = json.loads(CASES_PATH.read_text(encoding="utf-8")).get("cases", [])
