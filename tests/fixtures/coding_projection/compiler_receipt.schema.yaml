@@ -1,0 +1,77 @@
+schema: l9.schema-definition/v1
+artifact_id: l9.schema/compiler-receipt@1
+canonical: true
+type: object
+required:
+- schema
+- receipt_identity
+- receipt_type
+- exact_subject_ref
+- claim
+- operation
+- inputs
+- profile
+- output
+- governing_coordinates
+- result
+- verification_basis
+- producer_identity
+- receipt_digest
+properties:
+  schema:
+    const: l9.compiler-receipt/v1
+  receipt_identity:
+    type: semantic_ref
+  receipt_type:
+    const: l9.receipt/compilation@1
+  exact_subject_ref:
+    type: semantic_ref
+  claim:
+    type: string
+  operation:
+    enum:
+    - projection
+    - derivation
+    - resolution
+    - synthesis
+    - binding_selection
+    - lowering
+    - rendering
+    - composition
+    - validation
+  inputs:
+    type: array
+    items:
+      required:
+      - ref
+      - digest
+  profile:
+    type: object
+    required:
+    - ref
+    - digest
+  output:
+    type: object
+    required:
+    - ref
+    - digest
+  governing_coordinates:
+    type: object
+  result:
+    enum:
+    - pass
+    - fail
+    - unsat
+    - invalid
+    - unknown
+  verification_basis:
+    type: object
+  producer_identity:
+    type: object
+    required:
+    - compiler
+    - version
+  receipt_digest:
+    type: semantic_digest
+  diagnostics:
+    type: array
