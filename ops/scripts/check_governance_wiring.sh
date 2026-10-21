@@ -320,9 +320,24 @@ fi
 fi
 
 if [ "$CHECK_MACHINE" -eq 1 ]; then
+# Cursor-host assertions (~/.cursor/plugins/local, ~/.cursor/hooks.json,
+# ~/.cursor/hooks/*) describe Cursor's own installation. On another surface
+# they judge an install that is not supposed to exist there: a healthy Claude
+# Code session failed about seventeen of them, while the make-pr gate (which
+# already scopes by surface) passed. Gate them on the one shared predicate from
+# resolve_governance_paths.sh, as run_pr_gate.sh and
+# validate_governance_symlinks.sh do. Surface-neutral checks still run.
+CURSOR_HOST=0
+if is_cursor_host_surface; then
+  CURSOR_HOST=1
+fi
+cursor_host_skip() {
+  pass "skipped: $1 (Cursor-host check; surface=${L9_GOVERNANCE_SURFACE:-unset})"
+}
 CURRENT_FAIL_CLASS=wiring
 echo ""
 echo "=== Cursor plugin directory (one l9-governance, no siblings) ==="
+if [ "$CURSOR_HOST" -eq 1 ]; then
 # Cursor loads every child of ~/.cursor/plugins/local as a plugin. A stale
 # l9-governance.backup.<stamp> beside the live link is a second copy of the
 # rules tree, loaded always-apply. A sibling is a FAIL, not a WARN.
@@ -336,6 +351,9 @@ if [ -n "$SIBLINGS" ]; then
 else
   pass "no l9-governance siblings under $(l9_plugins_local_dir)"
 fi
+else
+  cursor_host_skip "plugin siblings under ~/.cursor/plugins/local"
+fi
 
 CURRENT_FAIL_CLASS=sessionend
 echo ""
@@ -348,6 +366,7 @@ else
   pass "hook script exists: $HOOK_SRC"
 fi
 
+if [ "$CURSOR_HOST" -eq 1 ]; then
 if [ ! -L "$HOOK_LINK" ]; then
   fail "hook symlink missing: $HOOK_LINK"
 else
@@ -446,6 +465,10 @@ EOF
   fi
 fi
 
+else
+  cursor_host_skip "Cursor hooks.json registrations, hook links and registry liveness"
+fi
+
 CURRENT_FAIL_CLASS=graphiti
 echo ""
 echo "=== Memory control plane (GLOBAL-001, realignment C11) ==="
@@ -484,6 +507,7 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     pass "no provider client (pre-C15 tree: tombstone only)"
   fi
+  if [ "$CURSOR_HOST" -eq 1 ]; then
   # The bootstrap hook delegates to the memory orchestrator internally, so either
   # entry in sessionStart satisfies the wiring (setup retires the orchestrator-only entry).
   if grep -qE "session-start-bootstrap|session-start-memory-orchestrator" "$HOOKS_JSON" 2>/dev/null; then
@@ -555,6 +579,9 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
     pass "plan-kernel-execute-gate.sh installed under ~/.cursor/hooks"
   else
     fail "plan-kernel-execute-gate.sh missing under ~/.cursor/hooks"
+  fi
+  else
+    cursor_host_skip "hooks.json sessionStart, prompt and shell gate registrations"
   fi
   # The gate must NOT deny on a memory marker: repository-write authority comes
   # from worktree/branch isolation and the publication gate, never from a

@@ -104,6 +104,22 @@ def test_wiring_check_fails_on_a_sibling_and_passes_once_relocated(home: Path) -
     assert "plugin sibling loads as a second plugin" not in after.stdout
 
 
+def test_a_non_cursor_surface_is_not_judged_by_cursor_host_checks(home: Path) -> None:
+    """CG-09: the same temp HOME (stale plugin sibling, no hooks.json, no
+    ~/.cursor/hooks) on a Claude Code surface. None of that is Claude's
+    installation, so none of it may FAIL there; the Cursor control above still
+    FAILs on the identical tree, so the checks were scoped, not deleted."""
+    env = {**_env(home), "L9_GOVERNANCE_SURFACE": "claude-code"}
+    result = subprocess.run(
+        ["bash", str(CHECK), "--machine"], capture_output=True, text=True, env=env, check=False
+    )
+    fails = [line for line in result.stdout.splitlines() if "FAIL:" in line]
+    assert not [line for line in fails if ".cursor" in line or "hooks.json" in line], fails
+    assert "plugin sibling loads as a second plugin" not in result.stdout
+    assert "skipped: plugin siblings" in result.stdout
+    assert "surface=claude-code" in result.stdout
+
+
 def test_links_only_wire_relocates_a_sibling_even_when_links_are_healthy(home: Path) -> None:
     ws = home / "consumer"
     ws.mkdir()
