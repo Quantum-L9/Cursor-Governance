@@ -54,11 +54,6 @@ DEFAULT_BINDING = PACK / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
 CORE_PATH = PACK.parent / "l9-coding-agent/scripts/verify_canonical_binding.py"
 EXIT = {"ADMITTED_AND_CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUNDLE_VERIFIED": 5}
 BINDING_REF = "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
-# The committed architecture lock was cut under the architecture-only driver's schema id.
-# It is re-cut under the shared lock schema by the first bundle refresh after the shared driver
-# lands on main, because trusted replay can only attest a lock the default-branch driver
-# reproduces; this transitional id is removed with that refresh.
-TRANSITIONAL_LOCK_SCHEMA = "l9.gar.architecture-intelligence-bundle/v1"
 COMPOSED_ENVELOPE = "l9.composed-projection/v1"
 PROFILES_PATH = "semantics/projection_profiles.yaml"
 COMPOSITIONS_PATH = "semantics/composition_profiles.yaml"
@@ -91,7 +86,9 @@ Outcome = core.Outcome
 content_digest = core.content_digest
 bytes_digest = core.bytes_digest
 resolve_authority_main = core.resolve_authority_main
-LOCK_SCHEMAS = (core.LOCK_SCHEMA, TRANSITIONAL_LOCK_SCHEMA)
+# The architecture lock is cut under the shared lock schema (the transitional
+# architecture-only id retired with the re-cut lock).
+LOCK_SCHEMAS = (core.LOCK_SCHEMA,)
 
 
 def _without(document: dict[str, Any], field: str) -> dict[str, Any]:

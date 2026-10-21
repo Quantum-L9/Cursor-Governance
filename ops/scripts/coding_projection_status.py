@@ -123,6 +123,9 @@ def classify(
         "schema": "l9.coding-projection-status/v3",
         "enforcement": "report_only",
         "role": "consumer_verifier",
+        # Reporting never blocks. Coding-agent mutation is gated separately, while a
+        # run is active, by the PreToolUse gate the governance binding names.
+        "mutation_gate": "ops/autonomy/coding_agent_binding_gate.py",
     }
 
     def done(status: str, detail: str) -> dict[str, Any]:

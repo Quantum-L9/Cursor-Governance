@@ -80,6 +80,15 @@ no secondary PR-gate target.
 (rules `48-make-pr-remediation`, `88-l4-local-autonomy`; surface profile
 "make pr only").
 
+One declared exception lives in `ops/config/publish-authority.json`, Governance-side:
+when the workspace's origin is declared there as a native route (today
+`github.com/cryptoxdog/ib-odoo_19` → its own `make pr`, base `Staging`,
+CANONICAL_LAW §13), `l9 pr` still runs the governance `pr` target, which delegates
+to that consumer target exactly once (`ops/scripts/run_native_publish.sh`;
+`OPEN_PR=0` maps to the declared check target). The registry is the only place a
+native route can be declared — never a consumer marker or an environment variable —
+and every other consumer still needs **no** local `pr` target.
+
 Exit status is propagated from `make`. A missing Governance runtime clone, or a
 Makefile that cannot report its allowlist, is fail-closed (exit 3): the
 dispatcher never guesses a target list.

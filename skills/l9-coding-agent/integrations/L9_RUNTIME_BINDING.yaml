@@ -1,6 +1,6 @@
 integration:
   id: L9.CODING_AGENT.L9_BINDING.001
-  version: 1.4.0
+  version: 1.5.1
 modes:
   STANDALONE:
     default: true
@@ -150,5 +150,30 @@ canonical_invariant_binding:
     contract_conflict: A verified invariant that conflicts with a locked execution contract or local rule is an
       AUTHORITY_CONFLICT escalation under runtime/MANIFEST.yaml authority_precedence. Neither side is applied
       silently, there is no mutation until it is resolved, and scope never widens implicitly.
-  enforcement_scope: Instructional. The skill requires the worker to invoke the verifier; no host hook or sandbox
-    enforces that invocation. Claim only what an observed verifier run establishes.
+  run_state_files:
+    purpose: The host-side contract a mechanical gate reads. Written by the run at intake, in the workspace being
+      mutated; removed at convergence. Absent files mean no coding-agent run is active, so nothing is gated.
+    run: .l9/coding-agent/run.json
+    run_schema: l9.coding-agent-run/v1
+    run_fields:
+      schema: l9.coding-agent-run/v1
+      started_at: ISO-8601 UTC
+      binding_record: binding.json
+      authority_root: the exact Quantum-L9/.github checkout the binding used, so a host gate can re-verify
+    record: .l9/coding-agent/binding.json, exactly the binding record scripts/verify_canonical_binding.py printed
+    reauthorization: "L9_CODING_BINDING_REAUTHORIZED=<the user's current instruction verbatim> in the hook
+      environment, set by the operator; a field in a file the run can write is not a grant"
+    rule: Write run.json before the verifier runs and binding.json from its output; never author or edit a record by
+      hand. Carry a reauthorization into the receipt verbatim. Delete run.json from the shell when the run ends so
+      later work is not gated by a stale run.
+  enforcement_scope:
+    claude_code: Mechanical. Quantum-L9/Cursor-Governance registers ops/autonomy/coding_agent_binding_gate.py as a
+      PreToolUse gate on Edit, Write, MultiEdit and NotebookEdit (governance/authority-bindings/coding-agent-execution.yaml
+      enforcement.coding_agent_mutation). While run.json is present the gate re-runs this pack's verifier on
+      binding.json, the bundle it names and authority_root, and allows only a live CURRENT verdict; a self-labeled
+      BOUND record, a changed bundle, a moved or absent authority, a malformed event, run or record, or a verifier that
+      cannot run is denied, and file-tool writes under .l9/coding-agent/ are refused during the run. Only the operator
+      reauthorization above or the breakglass L9_CODING_BINDING_AUTHORIZED=<reason> (human/ops only) carries a run
+      past an Unknown.
+    other_hosts: Instructional. The skill requires the worker to invoke the verifier and write the state files; no
+      hook enforces it there. Claim only what an observed verifier run establishes, and name which scope applied.

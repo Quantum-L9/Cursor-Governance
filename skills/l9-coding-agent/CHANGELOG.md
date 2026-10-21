@@ -9,6 +9,24 @@
 - `skills/l9-global-architect/scripts/verify_architecture_intelligence.py` consumes this module instead of duplicating it.
 - `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
 
+## 1.4.5 - 2026-10-21
+
+The host gate trusts no writable label (re-audit findings R769-01 and R769-02).
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.5.1: `run.json` names `authority_root`; the reauthorization is `L9_CODING_BINDING_REAUTHORIZED=<verbatim>` in the operator-controlled hook environment, not a field in `run.json`; `enforcement_scope.claude_code` states the re-verification.
+- `Quantum-L9/Cursor-Governance` `ops/autonomy/coding_agent_binding_gate.py`: a `BOUND`/`CURRENT` record is admitted only when the pack verifier, re-run by the gate on the record, the bundle it names and `authority_root` (`--prior-binding`), answers `CURRENT`; file-tool writes under `.l9/coding-agent/` are refused during a run; a malformed PreToolUse event, run or record, an absent authority checkout and a verifier that cannot run are denied; the Claude adapter denies when the surface detector cannot be imported.
+- `RUNBOOK.md` step 4 and Finish step 5, CA-E58/CA-E59 reworded.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
+## 1.4.4 - 2026-10-21
+
+Canonical-binding enforcement becomes mechanical where the host can enforce it (closes F-04 on Claude Code under `Quantum-L9/Cursor-Governance`). The bootstrap already required binding before mutation; the governance binding now says so truthfully instead of `report_only` / `blocks_mutation: false`.
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.5.0 adds `run_state_files`: the run writes `<workspace>/.l9/coding-agent/run.json` (`l9.coding-agent-run/v1`) at intake, saves the verifier's printed record unchanged as `binding.json`, records an explicit user reauthorization verbatim as `reauthorized_unknown.instruction`, and deletes `run.json` at convergence. `enforcement_scope` is now two-valued: `claude_code` mechanical, `other_hosts` instructional.
+- `Quantum-L9/Cursor-Governance` registers `ops/autonomy/coding_agent_binding_gate.py` as a PreToolUse gate on `Edit`, `Write`, `MultiEdit` and `NotebookEdit`: while `run.json` is present, a file mutation is denied unless `binding.json` is `BOUND` or `CURRENT` from this pack's verifier or the reauthorization is recorded; a malformed run or record is denied; the operator breakglass is `L9_CODING_BINDING_AUTHORIZED=<reason>` (a bare flag is refused). Nothing is gated when no run is active. `governance/authority-bindings/coding-agent-execution.yaml` 3.1.0 declares `enforcement.coding_agent_mutation` (`enforced`, `blocks_mutation: true`) beside the unchanged `status_surface` (`report_only`).
+- `RUNBOOK.md` step 4 opens the run and saves the record; Finish step 5 closes it. `evals/BEHAVIOR_CONFORMANCE.yaml` CA-E52 names the applied scope, and CA-E58/CA-E59 cover opening the run and a denied mutation (runtime alignment covers 59 cases).
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.3 - 2026-10-21
 
 The binding consumes the consumer-committed projection bundle (`Quantum-L9/.github` ADR-021, v3.24.0 candidate) and covers every source class the profile declares.

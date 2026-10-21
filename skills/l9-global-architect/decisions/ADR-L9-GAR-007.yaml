@@ -63,7 +63,7 @@ amendments:
       - An admitted bundle is re-verified against the authority tip with verify_profile_bundle before ADMITTED_AND_CURRENT is returned (canonical origin, HEAD at the tip, clean semantics/, hash-checked commit objects, producer role from semantics/vocabulary.yaml, upstream receipt schema).
       - The binding records the owner's decision for both candidates at Quantum-L9/.github main 7252e3b43c75ad0eab9483feb1552ba504ecbcec. CI's admitted-mode step now requires ADMITTED_AND_CURRENT.
     preserved:
-      - Profile, composition and payload-schema pins; the transitional lock schema until the next bundle refresh; candidate mode; every no-fallback rule (AIB-002); contracts/L9_ARCHITECTURE_PROFILE.yaml in its boot position.
+      - Profile, composition and payload-schema pins; candidate mode; the single lock schema l9.projection-bundle/v1 (the transitional architecture-only id retired with the lock re-cut in Quantum-L9/Cursor-Governance#769, on which this change stacks); every no-fallback rule (AIB-002); contracts/L9_ARCHITECTURE_PROFILE.yaml in its boot position.
       - AIB-006: neither status attests compiler production; the trusted replay does.
     supersedes:
       - The 2026-10-15 amendment's escalated item (admission decision record undefined; ADMITTED_AND_CURRENT unreachable).

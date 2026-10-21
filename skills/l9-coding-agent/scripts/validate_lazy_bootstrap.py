@@ -43,6 +43,7 @@ CANONICAL_BINDING_KEYS = {
     "outcomes",
     "invalidation",
     "unknown_handling",
+    "run_state_files",
     "enforcement_scope",
 }
 
@@ -89,8 +90,25 @@ def check_canonical_binding(root: Path, bootstrap_doc: dict, inventory: set[str]
         errors.append("canonical binding verifier differs from the intake route")
     if not (binding.get("unknown_handling") or {}).get("no_fallback"):
         errors.append("canonical binding lacks an explicit no-fallback rule for Unknown")
-    if "Instructional" not in str(binding.get("enforcement_scope", "")):
-        errors.append("canonical binding must state that its enforcement is instructional")
+    # Enforcement is stated per host, never as one word for every host: the gate
+    # exists only where governance registers it, and the pack must not overclaim.
+    scope = binding.get("enforcement_scope")
+    if not isinstance(scope, dict) or set(scope) != {"claude_code", "other_hosts"}:
+        errors.append("canonical binding enforcement_scope must name claude_code and other_hosts")
+    else:
+        if "Mechanical" not in str(scope["claude_code"]) or "gate" not in str(scope["claude_code"]):
+            errors.append("canonical binding must name the mechanical gate for claude_code")
+        if "Instructional" not in str(scope["other_hosts"]):
+            errors.append("canonical binding must state that other hosts are instructional")
+    state = binding.get("run_state_files") or {}
+    run_ok = state.get("run") == ".l9/coding-agent/run.json"
+    if not run_ok or state.get("run_schema") != "l9.coding-agent-run/v1":
+        errors.append(
+            "canonical binding run_state_files must name .l9/coding-agent/run.json "
+            "with schema l9.coding-agent-run/v1"
+        )
+    if not str(state.get("record", "")).startswith(".l9/coding-agent/binding.json"):
+        errors.append("canonical binding run_state_files must name .l9/coding-agent/binding.json")
     if {"statement", "statements"} & _keys(binding):
         errors.append("canonical binding restates upstream law text instead of referencing it")
     return errors

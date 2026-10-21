@@ -64,7 +64,10 @@ On every surface, `make pr` runs the **governance** Makefile's
 `pr` target regardless of the workspace repo or its Makefile — reach it
 with `l9 pr` / `make -C "$GOV" pr WS="$PWD"` from a consumer checkout
 with no local `pr` target. A consumer needs no additional local target;
-there is no raw-push fallback where one is absent.
+there is no raw-push fallback where one is absent. A repository declared
+native in `ops/config/publish-authority.json` (its own integration-branch
+ceremony, CANONICAL_LAW §13) is delegated by that same governance `pr` target
+to its own `make pr` exactly once.
 
 7. Do **not** merge from the `make pr` path. Its end state is green +
    merge-ready. Merge happens on the `/l9-pr-remediation` path, and only under
