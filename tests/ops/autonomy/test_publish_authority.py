@@ -14,6 +14,7 @@ is declared Governance-side and delegated to exactly once. These tests pin:
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import re
@@ -319,7 +320,13 @@ def test_preflight_stops_native_repo_with_route_drift(tmp_path: Path) -> None:
 
 
 KERNEL = "scripts/make_push_pipeline.sh"
-GOV_RECEIPT = REPO_ROOT / ".l9" / "pr" / "publish-route.json"
+
+
+def _gov_receipt(repo: Path) -> Path:
+    """The runner's receipt for *repo*: in the governance clone, keyed per workspace so
+    concurrent publications (and parallel test workers) never share one file."""
+    key = hashlib.sha256(str(repo).encode()).hexdigest()[:16]
+    return REPO_ROOT / ".l9" / "pr" / "native" / f"publish-route.{key}.json"
 
 
 def _stub_consumer(
@@ -401,7 +408,7 @@ def test_native_runner_runs_consumer_pr_once_scrubbed(tmp_path: Path) -> None:
         ).stdout
         == ""
     )
-    receipt = json.loads(GOV_RECEIPT.read_text(encoding="utf-8"))
+    receipt = json.loads(_gov_receipt(repo).read_text(encoding="utf-8"))
     assert receipt["schema"] == "l9.publish_route.v1"
     assert receipt["origin"] == ODOO_KEY
     assert receipt["workspace"] == str(repo)
@@ -417,17 +424,16 @@ def test_native_runner_open_pr_zero_maps_to_check_target(tmp_path: Path) -> None
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "NATIVE_CHECK base=Staging" in proc.stdout
     assert "NATIVE_PR" not in proc.stdout
-    receipt = json.loads(GOV_RECEIPT.read_text(encoding="utf-8"))
+    receipt = json.loads(_gov_receipt(repo).read_text(encoding="utf-8"))
     assert receipt["target"] == "pr-check" and receipt["open_pr"] is False
 
 
 def test_native_runner_refuses_missing_consumer_target(tmp_path: Path) -> None:
     repo = _stub_consumer(tmp_path, check_target=False)
-    GOV_RECEIPT.unlink(missing_ok=True)
     proc = _runner(repo, OPEN_PR="0")
     assert proc.returncode == 2
     assert "NATIVE_TARGET_MISSING" in proc.stderr
-    assert not GOV_RECEIPT.exists()
+    assert not _gov_receipt(repo).exists()
     assert not (repo / ".l9").exists()
 
 
@@ -453,7 +459,21 @@ def test_a_copied_origin_without_the_ceremony_is_not_the_native_route(
 def test_kernel_without_the_pinned_guards_is_not_the_ceremony(tmp_path: Path) -> None:
     repo = _stub_consumer(tmp_path)
     (repo / KERNEL).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
-    subprocess.run(["git", "-C", str(repo), "commit", "-qam", "strip"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "-qam",
+            "s",
+        ],
+        check=True,
+    )
     proc = _runner(repo, OPEN_PR="1")
     assert proc.returncode == 2
     assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr and "lacks guard" in proc.stderr

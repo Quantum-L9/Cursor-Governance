@@ -69,11 +69,14 @@ if ! grep -q "^${target}:" <<<"$targets"; then
 fi
 
 # The receipt is governance evidence; it is written beside the governance gate's
-# own receipts, never into the consumer worktree.
-receipt_dir="$GOV_ROOT/.l9/pr"
+# own receipts, never into the consumer worktree, one file per consumer
+# workspace so concurrent publications of different consumers never share one.
+receipt_dir="$GOV_ROOT/.l9/pr/native"
 mkdir -p "$receipt_dir"
+ws_key="$(printf '%s' "$WS" | "$PY" -c 'import hashlib,sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:16])')"
+receipt="$receipt_dir/publish-route.$ws_key.json"
 head_sha="$(git -C "$WS" rev-parse HEAD 2>/dev/null || echo "")"
-"$PY" - "$receipt_dir/publish-route.json" "$origin" "$target" "$declared_base" "$head_sha" "$OPEN_PR" "$WS" <<'PY'
+"$PY" - "$receipt" "$origin" "$target" "$declared_base" "$head_sha" "$OPEN_PR" "$WS" <<'PY'
 import datetime as dt
 import json
 import sys
