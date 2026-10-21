@@ -105,5 +105,5 @@ Run [validation-checklist.md](references/validation-checklist.md) before deliver
 | Downstream | When |
 |------------|------|
 | `l9-skill-compiler` | User wants violations fixed by rebuilding a skill pack |
-| `l9-gmp-protocol` | Corrections require phased, locked repo execution |
+| `/gmp` (`commands/gmp.md`) | Corrections require phased, locked repo execution |
 | `l9-ynp` | After report; single highest-leverage next action |

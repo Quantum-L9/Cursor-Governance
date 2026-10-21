@@ -78,5 +78,5 @@ Refactor-sweep MUST NOT write code. Dry-run MUST NOT write state files, reports,
 
 ## Failure Handling
 
-Protected file in migrate/wire path → escalate to `l9-gmp-protocol`.
+Protected file in migrate/wire path → escalate to `/gmp` (`commands/gmp.md`).
 Sweep non-mechanical or protected → Governance Decision = GMP REQUIRED; STOP.
