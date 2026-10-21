@@ -81,7 +81,7 @@ esac
 # being wrong is silent.
 l9_required_class() {
   case "$1" in
-    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate.py|session_debt_wrap.py)
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py)
       printf 'gate' ;;
     *) printf '' ;;
   esac
@@ -174,7 +174,7 @@ if [ "${L9_SURFACE_GUARD:-1}" != "0" ]; then
         claude-code|claude-code-remote|unknown) : ;;
         *)
           case "$HOOK_NAME" in
-            local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate.py)
+            local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py)
               printf 'l9-hook: gate %s skipped (surface=%s; Claude-only gate)\n' \
                 "$HOOK_NAME" "$_L9_SURFACE" >&2
               unset _L9_SURFACE _L9_SD_LIB _L9_WALK _L9_HOOK_DIR

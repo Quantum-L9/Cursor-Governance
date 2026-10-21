@@ -72,7 +72,7 @@ enforcement:
     mode: enforced
     blocks_mutation: true
     enforced_by: ops/autonomy/coding_agent_binding_gate.py
-    hook: environment/agents/adapters/claude-code/hooks/coding_agent_binding_gate.py
+    hook: environment/agents/adapters/claude-code/hooks/coding_agent_binding_gate_wrap.py
     hook_event: PreToolUse
     tools: [Edit, Write, MultiEdit, NotebookEdit]
     activation: .l9/coding-agent/run.json   # schema l9.coding-agent-run/v1, written at intake

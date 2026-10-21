@@ -3,7 +3,9 @@
 
 Thin adapter: when a Claude runtime is present (never Cursor), forward the hook
 event to ``ops/autonomy/coding_agent_binding_gate.py``, the one brain that
-decides whether an active ``l9-coding-agent`` run may mutate files. The brain
+decides whether an active ``l9-coding-agent`` run may mutate files. Named
+``*_wrap`` like the other adapters so the brain's module name is never shadowed
+by this file when it imports it. The brain
 denies only while a run is active (``.l9/coding-agent/run.json``) and its
 canonical binding is neither BOUND/CURRENT nor explicitly reauthorized by the
 user. Exit 0 always: a denial is the JSON decision on stdout; a brain that

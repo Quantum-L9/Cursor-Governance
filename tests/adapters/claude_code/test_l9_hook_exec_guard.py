@@ -144,7 +144,7 @@ def test_claude_gate_decision_reaches_the_host() -> None:
         cleaned.pop("L9_CODING_BINDING_AUTHORIZED", None)
         cleaned.update({"HOME": _home_for_this_checkout(), "CLAUDECODE": "1"})
         proc = subprocess.run(
-            ["bash", str(HOOK), "--class", "gate", "coding_agent_binding_gate.py"],
+            ["bash", str(HOOK), "--class", "gate", "coding_agent_binding_gate_wrap.py"],
             cwd=str(ROOT),
             env=cleaned,
             capture_output=True,

@@ -214,7 +214,7 @@ def test_shipped_binding_is_a_report_only_bundle_consumer() -> None:
         hook["command"]
         for entry in settings["hooks"]["PreToolUse"]
         for hook in entry["hooks"]
-        if "coding_agent_binding_gate.py" in hook["command"]
+        if "coding_agent_binding_gate_wrap.py" in hook["command"]
     ]
     assert len(registered) == 1 and "--class gate" in registered[0]
     assert Path(binding["bundle"]["path"]) == consumer.BUNDLE_PATH
