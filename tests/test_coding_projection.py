@@ -63,6 +63,14 @@ def make_workspace(tmp_path: Path, authority: Path, bundle: Path | None) -> Path
         p for p in catalog["projection_profiles"] if p["id"] == pack.verifier.PROFILE_REF
     )
     binding["upstream"]["profile_digest"] = pack.verifier.content_digest(profile)
+    # The owner's decision for the fixture profile, at the fixture authority's main.
+    binding["admission"]["decisions"] = [
+        {
+            **binding["admission"]["decisions"][0],
+            "candidate_digest": binding["upstream"]["profile_digest"],
+            "admitted_revision": pack.head(authority),
+        }
+    ]
     (repo / status.BINDING_PATH).write_text(yaml.safe_dump(binding, sort_keys=False))
     (repo / "skills").symlink_to(REPO / "skills", target_is_directory=True)
     if bundle is not None:
@@ -212,6 +220,50 @@ def test_shipped_binding_is_a_report_only_bundle_consumer() -> None:
     text = (REPO / "tools/authority/verify_coding_projection.py").read_text()
     for retired in ("projections-index", "refs/remotes/origin/projections", "index.json"):
         assert retired not in text, retired
+
+
+def _rewrite_binding(repo: Path, change: Any) -> None:
+    binding = yaml.safe_load((repo / status.BINDING_PATH).read_text())
+    change(binding)
+    (repo / status.BINDING_PATH).write_text(yaml.safe_dump(binding, sort_keys=False))
+
+
+def test_admission_is_judged_by_the_shared_resolver(tmp_path: Path) -> None:
+    authority = make_authority(tmp_path)
+    repo = make_workspace(tmp_path, authority, pack.build_bundle(authority, tmp_path / "bundle"))
+    result = classify(repo, authority)
+    assert result["status"] == "BOUND", result
+    assert result["admission"] == {"status": "ADMITTED_AND_CURRENT", "reason": "ADMITTED"}
+
+
+def test_no_admission_decision_is_unverified(tmp_path: Path) -> None:
+    authority = make_authority(tmp_path)
+    repo = make_workspace(tmp_path, authority, pack.build_bundle(authority, tmp_path / "bundle"))
+    _rewrite_binding(repo, lambda b: b["admission"].update(decisions=[]))
+    result = classify(repo, authority)
+    assert result["status"] == "UNVERIFIED" and "no admission decision" in result["detail"]
+    assert result["admission"]["reason"] == "ADMISSION_DECISION_RECORD_ABSENT"
+
+
+def test_a_decision_for_another_digest_is_blocked(tmp_path: Path) -> None:
+    authority = make_authority(tmp_path)
+    repo = make_workspace(tmp_path, authority, pack.build_bundle(authority, tmp_path / "bundle"))
+    _rewrite_binding(
+        repo,
+        lambda b: b["admission"]["decisions"][0].update(candidate_digest="sha256:" + "0" * 64),
+    )
+    result = classify(repo, authority)
+    assert result["status"] == "BLOCKED" and "not admitted" in result["detail"], result
+    assert result["admission"]["reason"] == "ADMISSION_DECISION_SUBJECT_MISMATCH"
+
+
+def test_shipped_admission_decision_binds_the_pinned_profile() -> None:
+    binding = yaml.safe_load(BINDING.read_text())
+    (decision,) = binding["admission"]["decisions"]
+    assert decision["candidate_ref"] == binding["upstream"]["profile_ref"]
+    assert decision["candidate_digest"] == binding["upstream"]["profile_digest"]
+    assert decision["admitted_revision"] == binding["upstream"]["admitted_revision"]
+    assert decision["decision"] == "admit" and decision["authority_ref"]
 
 
 def test_status_cli_is_report_only_by_default(tmp_path: Path) -> None:

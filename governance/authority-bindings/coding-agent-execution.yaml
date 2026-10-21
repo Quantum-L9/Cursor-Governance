@@ -5,7 +5,7 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 3.0.0
+#   version: 3.1.0
 #   updated: 2026-10-21
 schema: l9.cursor-governance.coding-projection-binding/v3
 artifact_id: l9.cursor-governance/coding-projection-binding@1
@@ -56,6 +56,26 @@ verification:
     receipt_digest; subject and output <profile_ref>#<source_ref>. The
     delegator defines no convention of its own.
   producer_authentication: unauthenticated_unkeyed_receipt
+admission:
+  # One admission policy for every projection consumer: the status reader judges this record
+  # with the shared resolver GAR's architecture-intelligence binding is judged by.
+  resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  decision_record:
+    required_by: Quantum-L9/.github semantics/authority_model.yaml#admission_rules.global_requirements.explicit_decision_record
+    canonical_form: >
+      The AdmissionDecisionPacket semantics of Quantum-L9/.github
+      semantics/packet_catalog.yaml#admission_decision (candidate_ref,
+      candidate_digest, decision, authority_ref) plus the admitted_revision of
+      the owner at which the candidate resolves to that digest.
+  decisions:
+    - candidate_ref: l9.projection/coding-agent-execution@1
+      candidate_digest: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
+      decision: admit
+      admitted_revision: 69134217267626182ac95182a56d1d9bc296135e
+      authority_ref: >
+        Quantum-L9/.github#179, merged as 69134217267626182ac95182a56d1d9bc296135e;
+        commit 70adcc1 "feat(semantics): admit candidate
+        l9.projection/coding-agent-execution@1 (v3.20.0)".
 enforcement:
   mode: report_only
   statuses: [CURRENT, BOUND, STALE, UNVERIFIED, BLOCKED]
