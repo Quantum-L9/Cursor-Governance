@@ -253,10 +253,187 @@ def reconcile_scope(
     return result
 
 
+#: Directory under a discovery root where Claude Code downloads the skills
+#: enabled on the claude.ai account (surfaced as `anthropic-skills:<name>`).
+#: Claude Code owns it; the census only reads it.
+SYNCED_DIR_NAME = "synced"
+ARCHIVE_REL = Path("skills") / "_archived"
+
+
+def _entry_resolves_to(entry: Path, source: Path) -> bool:
+    """True when `entry` is the canonical source and its SKILL.md is readable."""
+    try:
+        if entry.resolve(strict=False) != source.resolve(strict=False):
+            return False
+        with (entry / "SKILL.md").open("rb") as handle:
+            handle.read(1)
+    except OSError:
+        return False
+    return True
+
+
+def _read_user_settings(path: Path | None) -> dict[str, Any] | None:
+    if path is None or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def coverage_census(
+    root: Path,
+    registry: dict[str, Any],
+    discovery_dirs: list[Path],
+    *,
+    synced_root: Path | None = None,
+    user_settings: Path | None = None,
+) -> dict[str, Any]:
+    """Unique canonical coverage across Claude discovery directories.
+
+    Counts each canonical identity once, however many discovery paths carry it:
+    the SessionStart banner used to add `SKILL.md` files across the user and
+    project paths, so 57 skills read as "114 loadable" (issue #690). Read-only,
+    stdlib-only and bounded by the registry size, so SessionStart can afford it.
+
+    This is projection evidence: a link that resolves to a readable canonical
+    `SKILL.md`. It is not proof that Claude Code loaded the skill.
+    """
+    records = [r for r in registry.get("skills", []) if isinstance(r, dict) and r.get("name")]
+    canonical = {str(r["name"]): root / str(r["path"]) for r in records}
+    tiers: dict[str, int] = {}
+    for record in records:
+        tier = str(record.get("invocation") or "unknown")
+        tiers[tier] = tiers.get(tier, 0) + 1
+
+    seen_dirs: list[Path] = []
+    for raw in discovery_dirs:
+        resolved = raw.resolve(strict=False)
+        if raw.is_dir() and resolved not in {d.resolve(strict=False) for d in seen_dirs}:
+            seen_dirs.append(raw)
+
+    covered: set[str] = set()
+    wrong_target: list[str] = []
+    unexpected: list[str] = []
+    for directory in seen_dirs:
+        for name, source in canonical.items():
+            entry = directory / name
+            if not (entry.exists() or entry.is_symlink()):
+                continue
+            if _entry_resolves_to(entry, source):
+                covered.add(name)
+            else:
+                wrong_target.append(str(entry))
+        try:
+            present = sorted(p.name for p in directory.iterdir())
+        except OSError:
+            present = []
+        unexpected.extend(
+            str(directory / name)
+            for name in present
+            if name.startswith("l9-") and name not in canonical
+        )
+
+    archived = set()
+    archive_dir = root / ARCHIVE_REL
+    if archive_dir.is_dir():
+        archived = {p.name for p in archive_dir.iterdir() if p.is_dir()}
+    synced: list[dict[str, str]] = []
+    if synced_root is not None and synced_root.is_dir():
+        for account in sorted(p for p in synced_root.iterdir() if p.is_dir()):
+            for skill in sorted(p for p in account.iterdir() if p.is_dir()):
+                if not skill.name.startswith("l9-") or not (skill / "SKILL.md").is_file():
+                    continue
+                if skill.name in canonical:
+                    klass = "shadows_canonical"
+                elif skill.name in archived:
+                    klass = "archived"
+                else:
+                    klass = "unmanaged"
+                synced.append({"name": skill.name, "class": klass, "path": str(skill)})
+
+    settings = _read_user_settings(user_settings)
+    policy = None if settings is None else settings.get("syncClaudeAiSkills")
+    overrides = (settings or {}).get("skillOverrides") or {}
+    tier_override_missing = (
+        []
+        if settings is None
+        else sorted(
+            str(r["name"])
+            for r in records
+            if r.get("invocation") == "explicit_only"
+            and overrides.get(str(r["name"])) != "user-invocable-only"
+        )
+    )
+
+    missing = sorted(set(canonical) - covered)
+    complete = not missing and not wrong_target and not tier_override_missing
+    return {
+        "canonical_count": len(canonical),
+        "tiers": dict(sorted(tiers.items())),
+        "discovery_paths": [str(d) for d in seen_dirs],
+        "covered_count": len(covered),
+        "missing": missing,
+        "wrong_target": sorted(wrong_target),
+        "unexpected": sorted(unexpected),
+        "tier_override_missing": tier_override_missing,
+        "account_sync_policy": policy,
+        "account_synced_l9": synced,
+        "status": "complete" if complete else "incomplete",
+    }
+
+
+def coverage_banner(census: dict[str, Any]) -> list[str]:
+    """SessionStart lines for a census. Never claims the runtime loaded anything."""
+    tiers = census["tiers"]
+    lines = [
+        f"skills canonical: {census['canonical_count']} "
+        f"({tiers.get('model_allowed', 0)} model-allowed, "
+        f"{tiers.get('explicit_only', 0)} explicit-only)",
+        f"skills projected: {census['covered_count']}/{census['canonical_count']} unique "
+        f"canonical across {len(census['discovery_paths'])} discovery path(s) — "
+        f"{census['status']}; projection evidence, runtime load not verified",
+    ]
+    if census["missing"]:
+        lines.append(f"skills missing: {', '.join(census['missing'])}")
+    if census["wrong_target"]:
+        lines.append(f"skills wrong-target: {', '.join(census['wrong_target'])}")
+    if census["tier_override_missing"]:
+        lines.append(
+            "skills tier override missing in user settings: "
+            + ", ".join(census["tier_override_missing"])
+        )
+    if census["unexpected"]:
+        lines.append(f"skills unexpected (non-canonical l9-*): {', '.join(census['unexpected'])}")
+    policy = census["account_sync_policy"]
+    policy_text = "unset" if policy is None else json.dumps(policy)
+    synced = census["account_synced_l9"]
+    if synced:
+        names = ", ".join(f"{item['name']}[{item['class']}]" for item in synced)
+        lines.append(
+            f"claude.ai synced skills: {len(synced)} l9-* account copies on disk ({names}); "
+            f"user syncClaudeAiSkills={policy_text} — isolation UNVERIFIED (Claude Code reads "
+            "the key at start; server-managed settings are the hosted first-start channel)"
+        )
+    else:
+        lines.append(
+            f"claude.ai synced skills: no l9-* account copies on disk; "
+            f"user syncClaudeAiSkills={policy_text}"
+        )
+    return lines
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path.home() / ".cursor-governance")
-    parser.add_argument("--scope", action="append", choices=("user", "project"), required=True)
+    parser.add_argument("--scope", action="append", choices=("user", "project"))
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="read-only unique canonical coverage census across Claude discovery paths",
+    )
+    parser.add_argument("--json", action="store_true", help="with --coverage: emit JSON")
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     parser.add_argument("--mode", choices=("symlink", "copy"), default="symlink")
     parser.add_argument("--target", type=Path, default=None, help="Override discovery directory")
@@ -275,6 +452,22 @@ def main() -> int:
         print(f"ERROR: registry missing: {registry_path}", file=sys.stderr)
         return 2
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    if args.coverage:
+        user_skills = Path.home() / ".claude" / "skills"
+        census = coverage_census(
+            root,
+            registry,
+            [args.workspace.resolve() / ".claude" / "skills", user_skills],
+            synced_root=user_skills / SYNCED_DIR_NAME,
+            user_settings=Path.home() / ".claude" / "settings.json",
+        )
+        if args.json:
+            print(json.dumps(census, indent=2, sort_keys=True))
+        else:
+            print("\n".join(coverage_banner(census)))
+        return 0 if census["status"] == "complete" else 1
+    if not args.scope:
+        parser.error("--scope is required unless --coverage is given")
     results = [
         reconcile_scope(
             root,

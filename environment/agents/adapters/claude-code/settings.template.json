@@ -58,7 +58,15 @@
     "transcribes; a subagent (agent_id on its events) never does.",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
     "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
-    "remain forbidden by policy."
+    "remain forbidden by policy.",
+    "syncClaudeAiSkills=false stops Claude Code loading and downloading the skills enabled on",
+    "the claude.ai account (~/.claude/skills/synced/, surfaced as anthropic-skills:<name>), so the",
+    "repository skills/ corpus is the only L9 skill source. Claude Code honours a false only from",
+    "managed settings, --settings, ~/.claude/settings.json or .claude/settings.local.json; a false",
+    "in a shared .claude/settings.json is ignored. reconcile_claude_settings.py therefore projects",
+    "it to user scope and settings.local.json and omits it from committed project settings. It is",
+    "read at Claude Code start: a hosted session whose container did not carry it at start needs",
+    "the same key in the organisation's server-managed settings."
   ],
   "hooks": {
     "SessionStart": [
@@ -393,5 +401,6 @@
     "l9-setting-up-terraform": "user-invocable-only",
     "l9-ui-operator": "user-invocable-only"
   },
-  "workflowSizeGuideline": "unrestricted"
+  "workflowSizeGuideline": "unrestricted",
+  "syncClaudeAiSkills": false
 }
