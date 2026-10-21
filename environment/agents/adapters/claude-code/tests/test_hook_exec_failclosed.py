@@ -38,12 +38,14 @@ GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
+    "coding_agent_binding_gate_wrap.py",
     "session_debt_wrap.py",
 )
 REGISTERED_GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
+    "coding_agent_binding_gate_wrap.py",
 )
 OBSERVERS = (
     "skill_usage_logger.py",

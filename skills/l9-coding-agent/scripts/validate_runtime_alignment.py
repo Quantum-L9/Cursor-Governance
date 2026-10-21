@@ -14,7 +14,7 @@ except Exception as exc:
     raise SystemExit(f"PyYAML is required: {exc}")
 
 
-CANONICAL_BINDING_CASES = tuple(f"CA-E{n}" for n in range(41, 58))
+CANONICAL_BINDING_CASES = tuple(f"CA-E{n}" for n in range(41, 60))
 
 
 def flatten(groups: dict) -> set[str]:

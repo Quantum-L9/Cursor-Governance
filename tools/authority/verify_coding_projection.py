@@ -214,3 +214,54 @@ def material_change(root: Path, main: str, lock: dict[str, Any]) -> list[str]:
     if len(entries) != 1 or _canonical_digest(entries[0]) != pin.get("digest"):
         changed.append("profile")
     return changed
+
+
+def resolve_admission(
+    root: Path,
+    main: str,
+    lock: dict[str, Any],
+    binding: dict[str, Any],
+    repo_root: Path = REPO_ROOT,
+) -> dict[str, Any]:
+    """Judge the binding's admission record with the coding agent's shared resolver.
+
+    The same policy the architecture-intelligence binding is judged by: integration into
+    *main*, currency there (``material_change`` at each revision the resolver names), and an
+    explicit decision bound to the exact profile digest. ``BLOCKED`` is Unknown
+    (``Unobserved``); ``REJECTED`` and ``STALE`` are contradictions (``Rejected``).
+    """
+    verifier = load_verifier(repo_root)
+    pin = lock.get("projection_profile") or {}
+    decisions = (binding.get("admission") or {}).get("decisions")
+    # A decision naming a revision this checkout has not fetched is Unknown here, not a refusal.
+    for decision in decisions if isinstance(decisions, list) else []:
+        at = decision.get("admitted_revision") if isinstance(decision, dict) else None
+        if isinstance(at, str) and _SHA.match(at) and resolve(root, at) is None:
+            raise Unobserved(f"admitted revision {at[:12]} is not fetched in {root}")
+
+    def currency(at: str) -> None:
+        changed = material_change(root, at, lock)
+        if changed:
+            raise verifier.Outcome("STALE", "MATERIAL_CHANGE", changed=changed)
+
+    try:
+        return verifier.resolve_admission(
+            root,
+            revision=lock["authority"]["revision"],
+            main_tip=main,
+            subjects=[
+                {
+                    "ref": pin.get("ref"),
+                    "digest": pin.get("digest"),
+                    "catalog": PROFILES_PATH,
+                    "collection": "projection_profiles",
+                }
+            ],
+            decisions=decisions,
+            currency=currency,
+        )
+    except verifier.Outcome as outcome:
+        detail = f"{outcome.status} {outcome.reason}"
+        if outcome.status == "BLOCKED":
+            raise Unobserved(detail) from outcome
+        raise Rejected(detail) from outcome

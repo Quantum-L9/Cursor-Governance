@@ -11,18 +11,21 @@ never writes the repository, and never blocks.
 Status, each only with the proof named:
 
 * ``CURRENT``    the committed bundle verifies at the revision its lock names,
-                 nothing material changed on ``main``, and ``main`` equals an
-                 independent record passed with ``--expect-main`` (CI passes
-                 its fresh checkout).
+                 nothing material changed on ``main``, the binding's admission
+                 decision admits the exact profile digest (the shared resolver
+                 GAR is judged by), and ``main`` equals an independent record
+                 passed with ``--expect-main`` (CI passes its fresh checkout).
 * ``BOUND``      as CURRENT, judged against the checkout's local
                  ``origin/main`` ref with no independent record (SessionStart).
 * ``STALE``      the pinned profile or a bundled source changed on ``main``, or
                  the verifier reports STALE.
 * ``UNVERIFIED`` proof is not available: no verified Quantum-L9/.github
                  checkout, no ``origin/main``, no committed bundle, the bundle
-                 revision not fetched, or the verifier reports BLOCKED (Unknown).
+                 revision not fetched, no admission decision for the profile,
+                 or the verifier reports BLOCKED (Unknown).
 * ``BLOCKED``    the binding is unreadable, the bundle revision is off ``main``,
-                 or the verifier reports REJECTED (tamper, forgery, wrong
+                 the admission decision does not admit this exact profile, or
+                 the verifier reports REJECTED (tamper, forgery, wrong
                  producer role, unbound receipt).
 """
 
@@ -51,6 +54,7 @@ from tools.authority.verify_coding_projection import (  # noqa: E402
     pinned_checkout,
     read_lock,
     resolve,
+    resolve_admission,
     verify_authority,
     verify_bundle,
 )
@@ -119,6 +123,9 @@ def classify(
         "schema": "l9.coding-projection-status/v3",
         "enforcement": "report_only",
         "role": "consumer_verifier",
+        # Reporting never blocks. Coding-agent mutation is gated separately, while a
+        # run is active, by the PreToolUse gate the governance binding names.
+        "mutation_gate": "ops/autonomy/coding_agent_binding_gate.py",
     }
 
     def done(status: str, detail: str) -> dict[str, Any]:
@@ -186,6 +193,21 @@ def classify(
         return done("STALE", f"{exc}")
     if changed:
         return done("STALE", f"changed on {where} since the bundle: {changed}")
+
+    try:
+        admission = resolve_admission(root, main, lock, binding, repo_root)
+    except Unobserved as exc:
+        return done("UNVERIFIED", f"admission unresolved: {exc}")
+    except Rejected as exc:
+        status = "STALE" if str(exc).startswith("STALE ") else "BLOCKED"
+        return done(status, f"admission refused: {exc}")
+    result["admission"] = {"status": admission["status"], "reason": admission["reason"]}
+    if admission["status"] == "ADMISSION_UNRESOLVED":
+        return done(
+            "UNVERIFIED", f"no admission decision for {admission.get('undecided')} in the binding"
+        )
+    if admission["status"] != "ADMITTED_AND_CURRENT":
+        return done("BLOCKED", f"{profile_ref} is not admitted: {admission['reason']}")
     if expect_main is not None:
         if expect_main != main:
             return done("STALE", f"independent main record @{expect_main[:12]} is not {where}")

@@ -31,8 +31,9 @@ import json
 import os
 import re
 import subprocess
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, NamedTuple
 
 try:
     import yaml
@@ -71,7 +72,31 @@ EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
 BUNDLE_LOCK = "bundle.lock.json"
 LOCK_SCHEMA = "l9.projection-bundle/v1"
 PAYLOAD_SCHEMA_CRITERION = "payload_schema"
+# Envelope identities checked when no authority checkout is at hand (structural candidate
+# inspection). With a pinned tree the upstream schemas' own `const` fields are checked instead.
+ARTIFACT_SCHEMA_ID = "l9.projection-artifact/v1"
+RECEIPT_SCHEMA_ID = "l9.compiler-receipt/v1"
+RECEIPT_TYPE = "l9.receipt/compilation@1"
 _SHA1 = re.compile(r"[0-9a-f]{40}")
+AUTHORITY_MAIN_REF = "refs/remotes/origin/main"
+
+
+class ProfileSpec(NamedTuple):
+    """The coordinates one consumer binds; every bundle check is shared, these only select.
+
+    ``payload_schema`` is the consumer's pin for a profile that declares no ``output.schema``;
+    a profile that declares one must agree with it. ``reselect`` names the one source class
+    re-selected record for record from the pinned ledger (Coding Agent's ``invariants``)."""
+
+    ref: str
+    profile_class: str
+    consumer: str
+    lock_schemas: tuple[str, ...] = (LOCK_SCHEMA,)
+    payload_schema: str | None = None
+    reselect: str | None = None
+
+
+CODING_AGENT = ProfileSpec(PROFILE_REF, PROFILE_CLASS, PROFILE_CONSUMER, reselect=SOURCE_CLASS)
 # Exact host and repository; a suffix match would accept any path ending in it.
 _ORIGIN = re.compile(
     r"(?:https://(?:[^@/\s]+@)?github\.com/|ssh://git@github\.com/|git@github\.com:)"
@@ -276,6 +301,43 @@ class PinnedTree:
             raise Outcome("REJECTED", f"{what}_MALFORMED", path=rel, error=str(exc)) from exc
 
 
+def resolve_profile(tree: PinnedTree, spec: ProfileSpec) -> dict[str, Any]:
+    """Resolve *spec*'s profile, its current digest, and the catalog and registry maps every
+    declared source class needs, at the pinned revision."""
+    registry = tree.load(SOURCES_PATH, "SOURCE_REGISTRY")
+    catalog = tree.load(PROFILES_PATH, "PROFILE_CATALOG")
+    profiles = [
+        p
+        for p in (catalog or {}).get("projection_profiles", [])
+        if isinstance(p, dict) and p.get("id") == spec.ref
+    ]
+    if len(profiles) != 1:
+        raise Outcome("BLOCKED", "PROFILE_UNRESOLVED", profile_ref=spec.ref, matches=len(profiles))
+    profile = profiles[0]
+    if profile.get("class") != spec.profile_class or profile.get("consumer") != spec.consumer:
+        raise Outcome(
+            "BLOCKED",
+            "PROFILE_CONSUMER_MISMATCH",
+            profile_ref=spec.ref,
+            expected={"class": spec.profile_class, "consumer": spec.consumer},
+            observed={"class": profile.get("class"), "consumer": profile.get("consumer")},
+        )
+    return {
+        "profile": {"ref": spec.ref, "digest": content_digest(profile)},
+        "profile_record": profile,
+        "source_classes": catalog.get("source_classes") or {},
+        "registry": {
+            str(s.get("id")): str(s.get("path"))
+            for s in (registry or {}).get("sources", [])
+            if isinstance(s, dict)
+            and s.get("id")
+            and s.get("path")
+            and s.get("canonical") is True
+            and s.get("projection_allowed") is True
+        },
+    }
+
+
 def resolve_law(tree: PinnedTree) -> dict[str, Any]:
     """Resolve source, profile, and current digests at the pinned revision."""
     registry = tree.load(SOURCES_PATH, "SOURCE_REGISTRY")
@@ -292,25 +354,8 @@ def resolve_law(tree: PinnedTree) -> dict[str, Any]:
     if source.get("canonical") is not True or source.get("projection_allowed") is not True:
         raise Outcome("BLOCKED", "CANONICAL_SOURCE_NOT_PROJECTABLE", source_ref=SOURCE_REF)
 
-    catalog = tree.load(PROFILES_PATH, "PROFILE_CATALOG")
-    profiles = [
-        p
-        for p in (catalog or {}).get("projection_profiles", [])
-        if isinstance(p, dict) and p.get("id") == PROFILE_REF
-    ]
-    if len(profiles) != 1:
-        raise Outcome(
-            "BLOCKED", "PROFILE_UNRESOLVED", profile_ref=PROFILE_REF, matches=len(profiles)
-        )
-    profile = profiles[0]
-    if profile.get("class") != PROFILE_CLASS or profile.get("consumer") != PROFILE_CONSUMER:
-        raise Outcome(
-            "BLOCKED",
-            "PROFILE_CONSUMER_MISMATCH",
-            profile_ref=PROFILE_REF,
-            expected={"class": PROFILE_CLASS, "consumer": PROFILE_CONSUMER},
-            observed={"class": profile.get("class"), "consumer": profile.get("consumer")},
-        )
+    resolved = resolve_profile(tree, CODING_AGENT)
+    profile = resolved["profile_record"]
     selectors = ((profile.get("sources") or {}).get(SOURCE_CLASS) or {}).get("selectors") or []
     if not isinstance(selectors, list) or not selectors:
         raise Outcome("BLOCKED", "PROFILE_SELECTOR_COVERAGE_INCOMPLETE", source_class=SOURCE_CLASS)
@@ -329,9 +374,7 @@ def resolve_law(tree: PinnedTree) -> dict[str, Any]:
         selected_ids.append(match.group(1))
     if len(set(selected_ids)) != len(selected_ids):
         raise Outcome("BLOCKED", "PROFILE_SELECTOR_DUPLICATE_IDENTITY", ids=selected_ids)
-    class_artifact = ((catalog.get("source_classes") or {}).get(SOURCE_CLASS) or {}).get(
-        "canonical_artifact"
-    )
+    class_artifact = (resolved["source_classes"].get(SOURCE_CLASS) or {}).get("canonical_artifact")
     if Path(str(source.get("path"))).name != class_artifact:
         raise Outcome(
             "BLOCKED",
@@ -357,23 +400,12 @@ def resolve_law(tree: PinnedTree) -> dict[str, Any]:
     unresolved = sorted(set(selected_ids) - set(selected_entries))
     if unresolved:
         raise Outcome("BLOCKED", "CANONICAL_INVARIANT_UNRESOLVED", invariant_ids=unresolved)
+    # The whole profile record and the catalog maps a bundle verification needs to resolve
+    # every declared source class, not only the one re-selected here.
     return {
+        **resolved,
         "source": {"ref": SOURCE_REF, "path": str(source["path"]), "digest": bytes_digest(raw)},
-        "profile": {"ref": PROFILE_REF, "digest": content_digest(profile)},
         "selected_entries": selected_entries,
-        # The whole profile record and the catalog maps a bundle verification needs to
-        # resolve every declared source class, not only the one re-selected here.
-        "profile_record": profile,
-        "source_classes": catalog.get("source_classes") or {},
-        "registry": {
-            str(s.get("id")): str(s.get("path"))
-            for s in (registry or {}).get("sources", [])
-            if isinstance(s, dict)
-            and s.get("id")
-            and s.get("path")
-            and s.get("canonical") is True
-            and s.get("projection_allowed") is True
-        },
     }
 
 
@@ -682,7 +714,7 @@ def _profile_sources(law: dict[str, Any]) -> list[dict[str, str]]:
     profile = law["profile_record"]
     declared = profile.get("sources")
     if not isinstance(declared, dict) or not declared:
-        raise Outcome("BLOCKED", "PROFILE_SOURCES_UNRESOLVED", profile_ref=PROFILE_REF)
+        raise Outcome("BLOCKED", "PROFILE_SOURCES_UNRESOLVED", profile_ref=law["profile"]["ref"])
     by_file = {Path(p).name: ref for ref, p in law["registry"].items()}
     sources: list[dict[str, str]] = []
     for cls in declared:
@@ -694,15 +726,227 @@ def _profile_sources(law: dict[str, Any]) -> list[dict[str, str]]:
     return sources
 
 
-def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
-    """Verify a consumer-committed bundle: every declared class, its receipt, and the lock.
+def verify_receipt(
+    path: Path,
+    *,
+    tree: PinnedTree | None,
+    operation: str,
+    subject: str,
+    output_digest: str,
+    profile: dict[str, Any],
+    inputs: list[dict[str, Any]],
+    payload_schema: str,
+    revision: str,
+    source_class: str,
+) -> dict[str, Any]:
+    """One producer receipt, bound to exactly the output it claims to have produced.
 
-    Each component gets the bytes, envelope, provenance, currency and receipt checks the
-    architecture-intelligence consumer applies; the `invariants` component additionally gets
-    the record-level re-selection `verify_projection` performs. The lock is inventory, never
-    authority: the revision it names must equal the caller's independent pin.
+    It must be a passing *operation* with no unresolved criterion, prove *payload_schema*, name
+    *subject* and *output_digest*, carry *profile*, list every one of *inputs*, govern at
+    *revision* of the canonical owner, and digest to itself. With a pinned *tree* its shape is
+    checked against the upstream receipt schema; without one (structural inspection), against
+    the receipt identity only."""
+    receipt = _load(path, "RECEIPT")
+    if tree is not None:
+        _check_shape(receipt, tree, RECEIPT_SCHEMA_PATH, "RECEIPT")
+    elif not isinstance(receipt, dict):
+        raise Outcome("REJECTED", "RECEIPT_NOT_A_MAPPING", source_class=source_class)
+    elif receipt.get("schema") != RECEIPT_SCHEMA_ID or receipt.get("receipt_type") != RECEIPT_TYPE:
+        raise Outcome(
+            "REJECTED",
+            "RECEIPT_CONST_MISMATCH",
+            source_class=source_class,
+            observed={"schema": receipt.get("schema"), "receipt_type": receipt.get("receipt_type")},
+        )
+    basis = receipt.get("verification_basis") or {}
+    # A schema-valid receipt for another operation (derivation, rendering) proves nothing about
+    # the output being consumed.
+    if (
+        receipt.get("operation") != operation
+        or receipt.get("result") != "pass"
+        or (basis.get("unresolved_criteria") or []) != []
+    ):
+        raise Outcome(
+            "REJECTED",
+            f"RECEIPT_NOT_A_PASSING_{operation.upper()}",
+            source_class=source_class,
+            operation=receipt.get("operation"),
+            result=receipt.get("result"),
+            unresolved=basis.get("unresolved_criteria"),
+        )
+    criterion = (basis.get("criteria") or {}).get(PAYLOAD_SCHEMA_CRITERION) or {}
+    if criterion.get("status") != "pass" or criterion.get("schema") != payload_schema:
+        raise Outcome(
+            "REJECTED",
+            "RECEIPT_PAYLOAD_SCHEMA_MISMATCH",
+            source_class=source_class,
+            expected=payload_schema,
+            observed=criterion,
+        )
+    output = _mapping(receipt, "output", "RECEIPT")
+    if (
+        receipt.get("exact_subject_ref") != subject
+        or output.get("ref") != subject
+        or output.get("digest") != output_digest
+    ):
+        raise Outcome("REJECTED", "RECEIPT_OUTPUT_NOT_BOUND", source_class=source_class)
+    if receipt.get("profile") != profile:
+        raise Outcome("REJECTED", "RECEIPT_PROFILE_MISMATCH", source_class=source_class)
+    listed = [
+        {"ref": i.get("ref"), "digest": i.get("digest")}
+        for i in (receipt.get("inputs") or [])
+        if isinstance(i, dict)
+    ]
+    unbound = [i for i in inputs if i not in listed]
+    if unbound:
+        raise Outcome(
+            "REJECTED", "RECEIPT_INPUT_NOT_BOUND", source_class=source_class, missing=unbound
+        )
+    governing = _mapping(receipt, "governing_coordinates", "RECEIPT")
+    if governing.get("repository") != OWNER_REPOSITORY or governing.get("revision") != revision:
+        raise Outcome(
+            "REJECTED",
+            "RECEIPT_REVISION_MISMATCH",
+            source_class=source_class,
+            observed={
+                "repository": governing.get("repository"),
+                "revision": governing.get("revision"),
+            },
+        )
+    if receipt.get("receipt_digest") != content_digest(
+        {k: v for k, v in receipt.items() if k != "receipt_digest"}
+    ):
+        raise Outcome("REJECTED", "RECEIPT_DIGEST_MISMATCH", source_class=source_class)
+    _mapping(receipt, "producer_identity", "RECEIPT")
+    return receipt
+
+
+# Fields every structural check reads; with a pinned tree the upstream schema's `required` list
+# is checked instead.
+_ARTIFACT_FIELDS = (
+    "projection_profile_ref",
+    "projection_profile_digest",
+    "source_ref",
+    "source_digest",
+    "projection_digest",
+    "payload",
+)
+_LOCK_COMPONENT_FIELDS = (
+    "path",
+    "receipt",
+    "sha256",
+    "source_ref",
+    "source_digest",
+    "projection_digest",
+)
+
+
+def verify_component(
+    bundle: Path,
+    entry: dict[str, Any],
+    source: dict[str, Any],
+    *,
+    tree: PinnedTree | None,
+    profile: dict[str, Any],
+    payload_schema: str,
+    revision: str,
+    lock_producer: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """One bundle component: bytes, envelope, provenance, currency, receipt and producer.
+
+    *source* names the class and the source it must project. With a pinned *tree* the envelope
+    shape is checked against the upstream schema and the source must be byte-identical at the
+    pin (``source["path"]``); without one only the producer's own claims are cross-checked.
+    Returns the component record and the artifact."""
+    cls = source["source_class"]
+    for key in _LOCK_COMPONENT_FIELDS:
+        if not isinstance(entry.get(key), str):
+            raise Outcome("REJECTED", "LOCK_COMPONENT_MALFORMED", source_class=cls, field=key)
+    if entry["source_ref"] != source["source_ref"]:
+        raise Outcome(
+            "REJECTED",
+            "SOURCE_IDENTITY_MISMATCH",
+            source_class=cls,
+            observed=entry["source_ref"],
+            expected=source["source_ref"],
+        )
+    artifact_path = bundle / entry["path"]
+    try:
+        raw = artifact_path.read_bytes()
+    except OSError as exc:
+        raise Outcome("BLOCKED", "ARTIFACT_UNREADABLE", path=str(artifact_path)) from exc
+    if bytes_digest(raw) != entry["sha256"]:
+        raise Outcome("REJECTED", "BUNDLE_BYTES_MISMATCH", path=entry["path"])
+    artifact = _load(artifact_path, "ARTIFACT")
+    if tree is not None:
+        _check_shape(artifact, tree, ARTIFACT_SCHEMA_PATH, "ARTIFACT")
+    elif not isinstance(artifact, dict) or artifact.get("schema") != ARTIFACT_SCHEMA_ID:
+        raise Outcome("REJECTED", "ARTIFACT_CONST_MISMATCH", source_class=cls, field="schema")
+    elif missing := [k for k in _ARTIFACT_FIELDS if k not in artifact]:
+        raise Outcome(
+            "REJECTED", "ARTIFACT_MISSING_REQUIRED_FIELDS", source_class=cls, missing=missing
+        )
+    if {
+        "ref": artifact["projection_profile_ref"],
+        "digest": artifact["projection_profile_digest"],
+    } != profile:
+        raise Outcome("REJECTED", "COMPONENT_PROFILE_MISMATCH", source_class=cls)
+    if artifact["source_ref"] != source["source_ref"]:
+        raise Outcome("REJECTED", "SOURCE_IDENTITY_MISMATCH", source_class=cls)
+    current = bytes_digest(tree.read(source["path"], "CANONICAL_SOURCE")) if tree else None
+    if artifact["source_digest"] != entry["source_digest"]:
+        raise Outcome("REJECTED", "COMPONENT_PROVENANCE_MISMATCH", source_class=cls)
+    if current is not None and artifact["source_digest"] != current:
+        raise Outcome(
+            "STALE",
+            "SOURCE_DIGEST_NOT_CURRENT",
+            source_class=cls,
+            observed=artifact["source_digest"],
+            current=current,
+        )
+    if artifact["projection_digest"] != entry["projection_digest"] or artifact[
+        "projection_digest"
+    ] != content_digest({k: v for k, v in artifact.items() if k != "projection_digest"}):
+        raise Outcome("REJECTED", "PROJECTION_DIGEST_MISMATCH", source_class=cls)
+    receipt = verify_receipt(
+        bundle / entry["receipt"],
+        tree=tree,
+        operation="projection",
+        subject=f"{profile['ref']}#{source['source_ref']}",
+        output_digest=artifact["projection_digest"],
+        profile=profile,
+        inputs=[{"ref": source["source_ref"], "digest": artifact["source_digest"]}],
+        payload_schema=payload_schema,
+        revision=revision,
+        source_class=cls,
+    )
+    producer = receipt["producer_identity"]
+    if artifact.get("generated_by") != producer:
+        raise Outcome("REJECTED", "ARTIFACT_PRODUCER_MISMATCH", source_class=cls)
+    if producer.get("compiler") != lock_producer.get("compiler") or producer.get(
+        "version"
+    ) != lock_producer.get("version"):
+        raise Outcome("REJECTED", "LOCK_PRODUCER_MISMATCH", source_class=cls)
+    component = {
+        "source_class": cls,
+        "source_ref": source["source_ref"],
+        "source_digest": artifact["source_digest"],
+        "projection_digest": artifact["projection_digest"],
+        "receipt_identity": receipt.get("receipt_identity"),
+    }
+    return component, artifact
+
+
+def verify_profile_bundle(
+    root: Path, bundle: Path, expect_revision: str | None, spec: ProfileSpec
+) -> dict[str, Any]:
+    """Verify every component of *spec*'s consumer-committed bundle against an exact checkout.
+
+    The one bundle verification every consumer uses: lock identity, the authority checkout and
+    its pin, the profile and its current digest, the declared source set in order, the producer
+    role, and each component's bytes, envelope, provenance, currency and receipt. The lock is
+    inventory, never authority: the revision it names must lie in the caller's pinned history.
     """
-    bundle = Path(args.bundle)
     lock_path = bundle / BUNDLE_LOCK
     if not lock_path.is_file():
         raise Outcome(
@@ -712,15 +956,14 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
             bundle=str(bundle),
         )
     lock = _load(lock_path, "BUNDLE_LOCK")
-    if not isinstance(lock, dict) or lock.get("schema") != LOCK_SCHEMA:
-        raise Outcome("REJECTED", "LOCK_SCHEMA_MISMATCH", expected=LOCK_SCHEMA)
+    if not isinstance(lock, dict) or lock.get("schema") not in spec.lock_schemas:
+        raise Outcome("REJECTED", "LOCK_SCHEMA_MISMATCH", expected=list(spec.lock_schemas))
     authority = _mapping(lock, "authority", "LOCK")
     if authority.get("repository") != OWNER_REPOSITORY or not (
         isinstance(authority.get("revision"), str) and _SHA1.fullmatch(authority["revision"])
     ):
         raise Outcome("REJECTED", "LOCK_AUTHORITY_IDENTITY_MISMATCH", observed=authority)
-    root = Path(args.authority_root)
-    coordinates = authority_root(root, args.expect_revision)
+    coordinates = authority_root(root, expect_revision)
     # The bundle's bytes are bound to the revision its lock names; currency is judged at the
     # caller's pin. The lock revision must therefore lie in the pin's history, and every
     # source and the profile must be byte-identical at the pin (checked per component below).
@@ -737,9 +980,9 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
             pinned=coordinates["revision"],
         )
     tree = PinnedTree(root, coordinates["revision"])
-    law = resolve_law(tree)
+    law = resolve_profile(tree, spec)
     profile_pin = _mapping(lock, "projection_profile", "LOCK")
-    if profile_pin.get("ref") != PROFILE_REF:
+    if profile_pin.get("ref") != spec.ref:
         raise Outcome("REJECTED", "PROFILE_IDENTITY_MISMATCH", observed=profile_pin.get("ref"))
     if profile_pin.get("digest") != law["profile"]["digest"]:
         raise Outcome(
@@ -748,9 +991,18 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
             observed=profile_pin.get("digest"),
             current=law["profile"]["digest"],
         )
-    output_schema = (law["profile_record"].get("output") or {}).get("schema")
-    if not isinstance(output_schema, str) or not output_schema:
-        raise Outcome("BLOCKED", "PROFILE_OUTPUT_SCHEMA_UNRESOLVED", profile_ref=PROFILE_REF)
+    payload_schema = (law["profile_record"].get("output") or {}).get("schema")
+    if payload_schema and spec.payload_schema and payload_schema != spec.payload_schema:
+        raise Outcome(
+            "REJECTED",
+            "PAYLOAD_SCHEMA_PIN_MISMATCH",
+            profile_ref=spec.ref,
+            declared=payload_schema,
+            pinned=spec.payload_schema,
+        )
+    payload_schema = payload_schema or spec.payload_schema
+    if not isinstance(payload_schema, str) or not payload_schema:
+        raise Outcome("BLOCKED", "PROFILE_OUTPUT_SCHEMA_UNRESOLVED", profile_ref=spec.ref)
     declared = _profile_sources(law)
     listed = lock.get("components")
     if not isinstance(listed, list) or not all(isinstance(c, dict) for c in listed):
@@ -771,136 +1023,46 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
             observed=lock_producer.get("compiler"),
             assigned=producers,
         )
-
     components: list[dict[str, Any]] = []
-    invariants_entry: dict[str, Any] | None = None
+    entries: dict[str, dict[str, Any]] = {}
     for entry, source in zip(listed, declared):
-        cls = source["source_class"]
-        for key in (
-            "path",
-            "receipt",
-            "sha256",
-            "source_ref",
-            "source_digest",
-            "projection_digest",
-        ):
-            if not isinstance(entry.get(key), str):
-                raise Outcome("REJECTED", "LOCK_COMPONENT_MALFORMED", source_class=cls, field=key)
-        if entry["source_ref"] != source["source_ref"]:
-            raise Outcome(
-                "REJECTED",
-                "SOURCE_IDENTITY_MISMATCH",
-                source_class=cls,
-                observed=entry["source_ref"],
-                expected=source["source_ref"],
-            )
-        artifact_path, receipt_path = bundle / entry["path"], bundle / entry["receipt"]
-        try:
-            raw = artifact_path.read_bytes()
-        except OSError as exc:
-            raise Outcome("BLOCKED", "ARTIFACT_UNREADABLE", path=str(artifact_path)) from exc
-        if bytes_digest(raw) != entry["sha256"]:
-            raise Outcome("REJECTED", "BUNDLE_BYTES_MISMATCH", path=entry["path"])
-        artifact = _load(artifact_path, "ARTIFACT")
-        _check_shape(artifact, tree, ARTIFACT_SCHEMA_PATH, "ARTIFACT")
-        if (
-            artifact["projection_profile_ref"] != PROFILE_REF
-            or artifact["projection_profile_digest"] != law["profile"]["digest"]
-        ):
-            raise Outcome("REJECTED", "COMPONENT_PROFILE_MISMATCH", source_class=cls)
-        if artifact["source_ref"] != source["source_ref"]:
-            raise Outcome("REJECTED", "SOURCE_IDENTITY_MISMATCH", source_class=cls)
-        current = bytes_digest(tree.read(source["path"], "CANONICAL_SOURCE"))
-        if artifact["source_digest"] != entry["source_digest"]:
-            raise Outcome("REJECTED", "COMPONENT_PROVENANCE_MISMATCH", source_class=cls)
-        if artifact["source_digest"] != current:
-            raise Outcome(
-                "STALE",
-                "SOURCE_DIGEST_NOT_CURRENT",
-                source_class=cls,
-                observed=artifact["source_digest"],
-                current=current,
-            )
-        if artifact["projection_digest"] != entry["projection_digest"] or artifact[
-            "projection_digest"
-        ] != content_digest({k: v for k, v in artifact.items() if k != "projection_digest"}):
-            raise Outcome("REJECTED", "PROJECTION_DIGEST_MISMATCH", source_class=cls)
-        receipt = _load(receipt_path, "RECEIPT")
-        _check_shape(receipt, tree, RECEIPT_SCHEMA_PATH, "RECEIPT")
-        basis = receipt.get("verification_basis") or {}
-        if (
-            receipt.get("operation") != "projection"
-            or receipt.get("result") != "pass"
-            or (basis.get("unresolved_criteria") or []) != []
-        ):
-            raise Outcome(
-                "REJECTED",
-                "RECEIPT_NOT_A_PASSING_PROJECTION",
-                source_class=cls,
-                result=receipt.get("result"),
-                unresolved=basis.get("unresolved_criteria"),
-            )
-        criterion = (basis.get("criteria") or {}).get(PAYLOAD_SCHEMA_CRITERION) or {}
-        if criterion.get("status") != "pass" or criterion.get("schema") != output_schema:
-            raise Outcome(
-                "REJECTED",
-                "RECEIPT_PAYLOAD_SCHEMA_MISMATCH",
-                source_class=cls,
-                expected=output_schema,
-                observed=criterion,
-            )
-        subject = f"{PROFILE_REF}#{source['source_ref']}"
-        output = _mapping(receipt, "output", "RECEIPT")
-        if (
-            receipt.get("exact_subject_ref") != subject
-            or output.get("ref") != subject
-            or output.get("digest") != artifact["projection_digest"]
-        ):
-            raise Outcome("REJECTED", "RECEIPT_OUTPUT_NOT_BOUND", source_class=cls)
-        if receipt.get("profile") != {"ref": PROFILE_REF, "digest": law["profile"]["digest"]}:
-            raise Outcome("REJECTED", "RECEIPT_PROFILE_MISMATCH", source_class=cls)
-        if {"ref": source["source_ref"], "digest": artifact["source_digest"]} not in [
-            {"ref": i.get("ref"), "digest": i.get("digest")}
-            for i in (receipt.get("inputs") or [])
-            if isinstance(i, dict)
-        ]:
-            raise Outcome("REJECTED", "RECEIPT_INPUT_NOT_BOUND", source_class=cls)
-        governing = _mapping(receipt, "governing_coordinates", "RECEIPT")
-        if (
-            governing.get("repository") != OWNER_REPOSITORY
-            or governing.get("revision") != authority["revision"]
-        ):
-            raise Outcome(
-                "REJECTED",
-                "RECEIPT_REVISION_MISMATCH",
-                source_class=cls,
-                observed={
-                    "repository": governing.get("repository"),
-                    "revision": governing.get("revision"),
-                },
-            )
-        if receipt["receipt_digest"] != content_digest(
-            {k: v for k, v in receipt.items() if k != "receipt_digest"}
-        ):
-            raise Outcome("REJECTED", "RECEIPT_DIGEST_MISMATCH", source_class=cls)
-        producer = _mapping(receipt, "producer_identity", "RECEIPT")
-        if artifact.get("generated_by") != producer:
-            raise Outcome("REJECTED", "ARTIFACT_PRODUCER_MISMATCH", source_class=cls)
-        if producer.get("compiler") != lock_producer.get("compiler") or producer.get(
-            "version"
-        ) != lock_producer.get("version"):
-            raise Outcome("REJECTED", "LOCK_PRODUCER_MISMATCH", source_class=cls)
-        components.append(
-            {
-                "source_class": cls,
-                "source_ref": source["source_ref"],
-                "source_digest": artifact["source_digest"],
-                "projection_digest": artifact["projection_digest"],
-                "receipt_identity": receipt["receipt_identity"],
-            }
+        component, _ = verify_component(
+            bundle,
+            entry,
+            source,
+            tree=tree,
+            profile=law["profile"],
+            payload_schema=payload_schema,
+            revision=authority["revision"],
+            lock_producer=lock_producer,
         )
-        if cls == SOURCE_CLASS:
-            invariants_entry = entry
+        components.append(component)
+        entries[source["source_class"]] = entry
+    return {
+        "lock": lock,
+        "lock_path": lock_path,
+        "coordinates": coordinates,
+        "tree": tree,
+        "profile": law["profile"],
+        "payload_schema": payload_schema,
+        "producer": lock_producer,
+        "components": components,
+        "entries": entries,
+    }
+
+
+def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
+    """Verify Coding Agent's consumer-committed bundle: every declared class and the lock.
+
+    Every component goes through `verify_profile_bundle`, the one bundle verification the
+    architecture-intelligence consumer uses too; the `invariants` component additionally gets
+    the record-level re-selection `verify_projection` performs.
+    """
+    bundle = Path(args.bundle)
+    verified = verify_profile_bundle(
+        Path(args.authority_root), bundle, args.expect_revision, CODING_AGENT
+    )
+    invariants_entry = verified["entries"].get(SOURCE_CLASS)
     if invariants_entry is None:
         raise Outcome("REJECTED", "BUNDLE_COMPONENTS_MISMATCH", missing=SOURCE_CLASS)
 
@@ -913,13 +1075,154 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
         "reason": "PROJECTION_BUNDLE_VERIFIED",
         "bundle": {
             "path": str(bundle),
-            "lock_digest": bytes_digest(lock_path.read_bytes()),
-            "authority": {"repository": OWNER_REPOSITORY, "revision": authority["revision"]},
-            "producer": lock_producer,
+            "lock_digest": bytes_digest(verified["lock_path"].read_bytes()),
+            "authority": {
+                "repository": OWNER_REPOSITORY,
+                "revision": verified["lock"]["authority"]["revision"],
+            },
+            "producer": verified["producer"],
             "producer_authentication": "unauthenticated_unkeyed_receipt",
         },
-        "components": components,
+        "components": verified["components"],
     }
+
+
+def _integrated(root: Path, revision: Any, main_tip: str) -> bool:
+    return (
+        isinstance(revision, str)
+        and _SHA1.fullmatch(revision) is not None
+        and _git_raw(root, "cat-file", "-e", f"{revision}^{{commit}}")[0] == 0
+        and _git_raw(root, "merge-base", "--is-ancestor", revision, main_tip)[0] == 0
+    )
+
+
+def resolve_authority_main(root: Path, override: str | None = None) -> str:
+    """The tip of the authority's main, resolved from the authority checkout, never a lock."""
+    if not (root / ".git").exists():
+        raise Outcome("BLOCKED", "AUTHORITY_ROOT_ABSENT", root=str(root))
+    if override is not None:
+        if not _SHA1.fullmatch(override):
+            raise Outcome("BLOCKED", "AUTHORITY_PIN_MALFORMED", revision=override)
+        if _git_raw(root, "cat-file", "-e", f"{override}^{{commit}}")[0] != 0:
+            raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", revision=override)
+        return override
+    code, out, _ = _git_raw(
+        root, "rev-parse", "--verify", "--quiet", f"{AUTHORITY_MAIN_REF}^{{commit}}"
+    )
+    tip = out.decode("ascii", "replace").strip()
+    if code != 0 or not _SHA1.fullmatch(tip):
+        raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", ref=AUTHORITY_MAIN_REF)
+    return tip
+
+
+_DECISION_FIELDS = ("candidate_ref", "candidate_digest", "decision", "authority_ref")
+
+
+def resolve_admission(
+    root: Path,
+    *,
+    revision: str,
+    main_tip: str,
+    subjects: list[dict[str, str]],
+    decisions: Any,
+    currency: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Whether the authority *revision* a bundle names is admitted law, decided without its lock.
+
+    One policy for every consumer (Quantum-L9/.github semantics/authority_model.yaml
+    admission_rules and human_authority). The revision must be integrated into the
+    independently resolved *main_tip*, and its governing inputs current there (*currency*
+    raises an ``Outcome`` when they are not). Each of *subjects* (``ref``, ``digest``, and the
+    ``catalog`` and ``collection`` that define it) needs an explicit decision record carrying
+    the AdmissionDecisionPacket semantics of semantics/packet_catalog.yaml (``candidate_ref``,
+    ``candidate_digest``, ``decision``, ``authority_ref``) and the ``admitted_revision`` it was
+    decided at: decision ``admit``, digest exactly the subject's (a changed candidate needs a
+    new decision), the admitted revision integrated as well, and the subject resolving to that
+    digest there. Integration alone is never admission. The consumer holds the record; it never
+    authors the decision."""
+    state: dict[str, Any] = {"revision": revision, "authority_main": main_tip}
+
+    def refused(status: str, reason: str, **detail: Any) -> dict[str, Any]:
+        return {**state, "status": status, "reason": reason, **detail}
+
+    if not _integrated(root, revision, main_tip):
+        return refused("NOT_ADMITTED", "AUTHORITY_REVISION_NOT_INTEGRATED")
+    if currency is not None:
+        currency(revision)
+        if main_tip != revision:
+            try:
+                currency(main_tip)
+            except Outcome as outcome:
+                raise Outcome(
+                    "STALE",
+                    "NOT_CURRENT_AT_AUTHORITY_MAIN",
+                    authority_main=main_tip,
+                    cause=outcome.reason,
+                    **outcome.detail,
+                ) from None
+    state.update(integrated=True, current_at_authority_main=currency is not None)
+
+    if decisions is None:
+        decisions = []
+    if not isinstance(decisions, list):
+        raise Outcome("REJECTED", "ADMISSION_DECISIONS_MALFORMED", observed=repr(decisions))
+    records: dict[str, dict[str, Any]] = {}
+    for record in decisions:
+        if not isinstance(record, dict) or not all(
+            isinstance(record.get(f), str) and record[f] for f in _DECISION_FIELDS
+        ):
+            raise Outcome("REJECTED", "ADMISSION_DECISION_MALFORMED", record=record)
+        if record["candidate_ref"] in records:
+            raise Outcome(
+                "REJECTED", "ADMISSION_DECISION_DUPLICATE", candidate_ref=record["candidate_ref"]
+            )
+        records[record["candidate_ref"]] = record
+    undecided = [s["ref"] for s in subjects if s["ref"] not in records]
+    if undecided:
+        return refused(
+            "ADMISSION_UNRESOLVED", "ADMISSION_DECISION_RECORD_ABSENT", undecided=undecided
+        )
+    admitted: list[dict[str, Any]] = []
+    for subject in subjects:
+        record = records[subject["ref"]]
+        ref = subject["ref"]
+        if record["decision"] != "admit":
+            return refused(
+                "NOT_ADMITTED",
+                "ADMISSION_DECISION_NOT_ADMIT",
+                subject=ref,
+                decision=record["decision"],
+            )
+        if record["candidate_digest"] != subject["digest"]:
+            return refused(
+                "NOT_ADMITTED",
+                "ADMISSION_DECISION_SUBJECT_MISMATCH",
+                subject=ref,
+                decided=record["candidate_digest"],
+                bound=subject["digest"],
+            )
+        at = record.get("admitted_revision")
+        if not _integrated(root, at, main_tip):
+            return refused("NOT_ADMITTED", "ADMITTED_REVISION_NOT_INTEGRATED", subject=ref, at=at)
+        catalog = PinnedTree(root, str(at)).load(subject["catalog"], "ADMISSION_CATALOG")
+        entries = [
+            e
+            for e in (catalog or {}).get(subject["collection"], [])
+            if isinstance(e, dict) and e.get("id") == ref
+        ]
+        if len(entries) != 1 or content_digest(entries[0]) != record["candidate_digest"]:
+            return refused(
+                "NOT_ADMITTED", "ADMISSION_SUBJECT_NOT_AT_ADMITTED_REVISION", subject=ref, at=at
+            )
+        admitted.append(
+            {
+                "candidate_ref": ref,
+                "candidate_digest": record["candidate_digest"],
+                "admitted_revision": at,
+                "authority_ref": record["authority_ref"],
+            }
+        )
+    return {**state, "status": "ADMITTED_AND_CURRENT", "reason": "ADMITTED", "decisions": admitted}
 
 
 def main(argv: list[str] | None = None) -> int:
