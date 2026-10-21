@@ -14,7 +14,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[1]
 EXTRACTOR = REPO / "tools/authority/extract_bundle_data.py"
-TRUSTED = REPO / ".github/workflows/l9-architecture-intelligence-trusted-replay.yml"
+TRUSTED = REPO / ".github/workflows/l9-projection-bundle-trusted-replay.yml"
 ROOT = "generated/governance/architecture_intelligence"
 
 

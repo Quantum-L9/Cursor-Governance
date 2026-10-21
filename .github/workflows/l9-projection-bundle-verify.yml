@@ -1,46 +1,56 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: .github/workflows/l9-architecture-intelligence-bundle.yml
+#   path: .github/workflows/l9-projection-bundle-verify.yml
 #   layer: operations
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-10-15
-name: L9 Architecture Intelligence Bundle
+#   version: 2.0.0
+#   updated: 2026-10-21
+name: L9 Projection Bundle Verify
 on:
   pull_request:
     paths:
       - "generated/governance/architecture_intelligence/**"
+      - "generated/governance/coding_agent_execution/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
-      - "tools/authority/produce_architecture_intelligence.py"
-      - ".github/workflows/l9-architecture-intelligence-bundle.yml"
+      - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
+      - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
+      - "tools/authority/produce_projection_bundle.py"
+      - ".github/workflows/l9-projection-bundle-verify.yml"
   push:
     branches:
       - main
     paths:
       - "generated/governance/architecture_intelligence/**"
+      - "generated/governance/coding_agent_execution/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
-      - "tools/authority/produce_architecture_intelligence.py"
+      - "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"
+      - "skills/l9-coding-agent/scripts/verify_canonical_binding.py"
+      - "tools/authority/produce_projection_bundle.py"
 permissions:
   contents: read
 concurrency:
-  group: l9-architecture-intelligence-bundle
+  group: l9-projection-bundle-verify-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 jobs:
   verify:
-    # Consumer verification of the committed bundle: GAR's verifier and currentness against
-    # Quantum-L9/.github at the exact revision the bundle names, and admission against an
-    # independently checked-out .github main.
+    # Consumer verification of each committed bundle with its own skill verifier, against
+    # Quantum-L9/.github at the exact revision the bundle names; GAR additionally resolves
+    # admission against an independently checked-out .github main.
     # Runs pull-request code, so it holds no secret and never touches the private compiler.
     # Producer attestation (byte-for-byte replay with the pinned compiler) runs only in the
-    # trusted workflow l9-architecture-intelligence-trusted-replay.yml.
+    # trusted workflow l9-projection-bundle-trusted-replay.yml.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: [architecture_intelligence, coding_agent_execution]
     steps:
       - name: Checkout Cursor-Governance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -57,22 +67,33 @@ jobs:
         id: lock
         working-directory: governance
         shell: bash
+        env:
+          BUNDLE: ${{ matrix.bundle }}
         run: |
-          revision="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["authority"]["revision"])')"
-          compiler="$(python -c 'import json; print(json.load(open("generated/governance/architecture_intelligence/bundle.lock.json"))["producer"]["revision"])')"
+          lock="generated/governance/$BUNDLE/bundle.lock.json"
+          if [[ ! -f "$lock" ]]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "no $BUNDLE bundle in this tree; nothing to verify"
+            exit 0
+          fi
+          echo "present=true" >> "$GITHUB_OUTPUT"
+          revision="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["authority"]["revision"])' "$lock")"
+          compiler="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["producer"]["revision"])' "$lock")"
           for value in "$revision" "$compiler"; do
             [[ "$value" =~ ^[0-9a-f]{40}$ ]] || { echo "bundle.lock.json revisions must be full 40-hex SHAs"; exit 1; }
           done
           printf 'revision=%s\ncompiler=%s\n' "$revision" "$compiler" >> "$GITHUB_OUTPUT"
       - name: Checkout canonical Semantic Foundation at the bundle revision
+        if: steps.lock.outputs.present == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
           ref: ${{ steps.lock.outputs.revision }}
           path: org-authority
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
-      - name: Verify bundle at the revision it names (candidate mode)
+      - name: Verify the architecture-intelligence bundle at the revision it names (candidate mode)
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -87,11 +108,28 @@ jobs:
           code=$?
           # 5 = BUNDLE_VERIFIED: coherent and current at its revision. Anything else fails.
           [[ $code -eq 5 ]] || exit 1
+      - name: Verify the coding-agent-execution bundle at the revision it names
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'coding_agent_execution'
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          REVISION: ${{ steps.lock.outputs.revision }}
+        shell: bash
+        run: |
+          # The coding verifier binds law bytes to the pin from commit objects, requires the
+          # checkout's HEAD to be the pin (the checkout above is exactly that revision), and
+          # refuses a pin no fetched origin ref contains, so the canonical main is fetched first.
+          git -C ../org-authority fetch -q origin main
+          python skills/l9-coding-agent/scripts/verify_canonical_binding.py \
+            --authority-root ../org-authority \
+            --bundle generated/governance/coding_agent_execution \
+            --expect-revision "$REVISION"
       # Admission is resolved independently of bundle.lock.json: the verifier reads the tip of
       # Quantum-L9/.github main from its own checkout. Before admission the expected outcome is
       # BUNDLE_VERIFIED with authority status NOT_ADMITTED or ADMISSION_UNRESOLVED (exit 5),
       # which is reported, not hidden; REJECTED, BLOCKED and STALE fail the job.
       - name: Checkout Quantum-L9/.github main independently of the lock
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
@@ -100,6 +138,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Resolve admission against authority main (admitted mode)
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -113,3 +152,15 @@ jobs:
           set -e
           python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
           [[ $code -eq 0 || $code -eq 5 ]] || exit 1
+      - name: Report the coding projection status against authority main
+        if: steps.lock.outputs.present == 'true' && matrix.bundle == 'coding_agent_execution'
+        working-directory: governance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        shell: bash
+        run: |
+          git -C ../org-authority fetch -q origin main
+          main="$(git -C ../org-authority rev-parse refs/remotes/origin/main)"
+          python ops/scripts/coding_projection_status.py \
+            --authority-root ../org-authority --expect-main "$main" \
+            --format line --fail-on BLOCKED,REJECTED | tee -a "$GITHUB_STEP_SUMMARY"
