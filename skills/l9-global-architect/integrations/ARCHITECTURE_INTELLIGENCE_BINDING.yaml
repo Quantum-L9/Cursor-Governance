@@ -238,3 +238,10 @@ integration_invariants:
     rule: >-
       expected_source_classes equals, in order, the sources of the pinned projection profile
       at the authority revision; any divergence is REJECTED (EXPECTED_SOURCE_SET_MISMATCH).
+  - id: AIB-009
+    rule: >-
+      Verification and admission are the shared consumer verifier's
+      (skills/l9-coding-agent/scripts/verify_canonical_binding.py), the same policy the coding
+      projection binding is judged by; GAR holds no second bundle, receipt or admission check.
+      ADMITTED_AND_CURRENT requires an explicit owner decision bound to each exact candidate
+      digest, and a changed candidate needs a new decision.

@@ -48,3 +48,25 @@ amendments:
     validation:
       - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py covers the admitted and candidate modes, a valid candidate revision that is not admitted, an integrated revision whose admission is unresolved, staleness at authority main, source-set closure, a coherent forgery that passes hash checks but fails the producer replay, and a GAR session citing a namespaced fact.
       - scripts/validate_runtime_alignment.py checks the admission wiring and the non-authoritative candidate load.
+  - date: 2026-10-21
+    title: One shared verifier and admission policy; owner admission of architecture intelligence (GAR-CONVERGE-VERIFIER-001)
+    authorization: >-
+      Repository owner's explicit instruction, 2026-10-21: "Activate coding skill and execute the
+      compiled prompt above. Admission approved. Proceed. Fully activate gar".
+    context:
+      - scripts/verify_architecture_intelligence.py and skills/l9-coding-agent/scripts/verify_canonical_binding.py implemented the same bundle checks twice; the GAR copy was weaker (plain git show without object rehash or GIT_NO_REPLACE_OBJECTS, no canonical-origin or clean-semantics check, a hardcoded producer instead of the owner's projection role, receipt inputs and artifact producer unchecked) while it alone checked integration into authority main.
+      - The two consumers applied different admission standards to equivalent upstream evidence. Coding Agent imported admission from a hand-pinned admitted_revision; GAR required a decision record whose form it held undefined, although Quantum-L9/.github semantics/packet_catalog.yaml#admission_decision already defines the AdmissionDecisionPacket semantics.
+      - No owner admission act existed for l9.projection/architecture-intelligence@1 or l9.compose/architecture-intelligence@1 (v3.22.0 self-describes as a candidate). The repository owner then approved admission explicitly.
+    decision:
+      - The Coding Agent verifier is the one implementation, parameterized by ProfileSpec (resolve_profile, verify_receipt, verify_component, verify_profile_bundle). GAR's verifier loads it by path, as tools/authority/verify_coding_projection.py does, and keeps only the composed view, the run-state slot and citation.
+      - One admission resolver (verify_canonical_binding.py#resolve_admission) judges both bindings. Admission requires integration into the independently resolved main, currency there, and per exact candidate a decision record carrying the AdmissionDecisionPacket semantics (candidate_ref, candidate_digest, decision, authority_ref) plus the admitted_revision at which the candidate resolves to that digest. A changed candidate needs a new decision. The consumer records the owner's decision; it never authors one.
+      - An admitted bundle is re-verified against the authority tip with verify_profile_bundle before ADMITTED_AND_CURRENT is returned (canonical origin, HEAD at the tip, clean semantics/, hash-checked commit objects, producer role from semantics/vocabulary.yaml, upstream receipt schema).
+      - The binding records the owner's decision for both candidates at Quantum-L9/.github main 7252e3b43c75ad0eab9483feb1552ba504ecbcec. CI's admitted-mode step now requires ADMITTED_AND_CURRENT.
+    preserved:
+      - Profile, composition and payload-schema pins; the transitional lock schema until the next bundle refresh; candidate mode; every no-fallback rule (AIB-002); contracts/L9_ARCHITECTURE_PROFILE.yaml in its boot position.
+      - AIB-006: neither status attests compiler production; the trusted replay does.
+    supersedes:
+      - The 2026-10-15 amendment's escalated item (admission decision record undefined; ADMITTED_AND_CURRENT unreachable).
+    validation:
+      - "Live: admitted mode against Quantum-L9/.github main 7252e3b returns ADMITTED_AND_CURRENT, load_status LOADED, authoritative citations; candidate mode returns BUNDLE_VERIFIED; Coding Agent's status reader returns CURRENT with admission ADMITTED_AND_CURRENT."
+      - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py covers decision absent, exact decision admitted, changed candidate digest, reject decision, unintegrated admitted revision, candidate absent at the admitted revision, malformed decision, receipt input and producer binding, and the partial forgery the GAR-only verifier accepted.

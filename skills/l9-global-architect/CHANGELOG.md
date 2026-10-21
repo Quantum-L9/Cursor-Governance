@@ -2,6 +2,16 @@
 
 This file is historical and non-authoritative. Machine-readable semantic owners declared by `runtime/MANIFEST.yaml` govern runtime behavior.
 
+## Unreleased - 2026-10-21
+
+### One shared verifier; architecture intelligence admitted
+
+- `scripts/verify_architecture_intelligence.py` is a thin adapter over `skills/l9-coding-agent/scripts/verify_canonical_binding.py`: every component, receipt, authority and admission check is the shared one. GAR keeps only the composed view, the run-state slot and citation.
+- Strengthened by convergence: receipt inputs, artifact and lock producer, and the composition receipt's input binding are checked; currency reads hash-checked commit objects; an admitted bundle is re-verified against authority main (canonical origin, clean `semantics/`, producer role from `semantics/vocabulary.yaml`, upstream receipt schema).
+- Admission uses the shared `resolve_admission`: an explicit decision record per exact candidate digest (AdmissionDecisionPacket semantics). The binding records the owner's 2026-10-21 decision for both candidates at `.github` main `7252e3b`. Live result: `ADMITTED_AND_CURRENT`, `LOADED`, authoritative citations.
+- Reason codes for component and composition receipts are the shared verifier's (`RECEIPT_NOT_A_PASSING_PROJECTION`/`_COMPOSITION`, `RECEIPT_PAYLOAD_SCHEMA_MISMATCH`); an integrated revision without a decision is `ADMISSION_DECISION_RECORD_ABSENT`.
+- CI's admitted-mode step requires `ADMITTED_AND_CURRENT`. ADR-L9-GAR-007 amended; AIB-009 added.
+
 ## 0.8.4 - 2026-10-15
 
 ### Architecture intelligence authority separation (audit remediation)
