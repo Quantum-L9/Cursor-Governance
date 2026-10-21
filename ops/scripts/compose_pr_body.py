@@ -16,7 +16,6 @@ them survives every push. The same code serves ``make pr`` and the org
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import re
 import subprocess
@@ -25,6 +24,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+import org_dotgithub
 
 SCHEMA = "l9.pr_body_completion.v1"
 UNMEASURED = "not measured by open_pr_after_gate.sh — do not treat as verified"
@@ -115,7 +116,7 @@ EVIDENCE_HEAD_RE = re.compile(r"^composed at head ([0-9a-f]{7,40})$", re.M)
 EVIDENCE_STALE_PREFIX = "STALE:"
 
 
-class TemplateError(RuntimeError):
+class TemplateError(org_dotgithub.OrgFileError):
     """The canonical PR template could not be resolved or failed validation."""
 
 
@@ -1229,23 +1230,6 @@ def write_handoff(
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
-GhApi = Callable[[str], Any]
-
-
-def _gh_api(endpoint: str) -> Any:
-    proc = subprocess.run(
-        ["gh", "api", endpoint], capture_output=True, text=True, check=False, timeout=60
-    )
-    if proc.returncode != 0:
-        msg = f"gh api {endpoint} failed: {proc.stderr.strip() or proc.returncode}"
-        raise TemplateError(msg)
-    try:
-        return json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        msg = f"gh api {endpoint} returned non-JSON output"
-        raise TemplateError(msg) from exc
-
-
 def validate_template(text: str) -> list[str]:
     """Why a template cannot be the canonical one; empty when it can."""
     errors = [
@@ -1277,7 +1261,12 @@ class TemplateSource:
 
 
 def resolve_template(
-    workspace: Path, owner: str, name: str, *, gh: GhApi = _gh_api
+    workspace: Path,
+    owner: str,
+    name: str,
+    *,
+    gh: org_dotgithub.GhApi = org_dotgithub.gh_api,
+    git: org_dotgithub.GitRead = org_dotgithub.git_read,
 ) -> TemplateSource:
     """The organization's canonical PR template at one exact commit.
 
@@ -1297,22 +1286,11 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
-        repo = gh(f"repos/{owner}/.github")
-        branch = repo.get("default_branch") if isinstance(repo, dict) else None
-        if not branch:
-            msg = f"{owner}/.github has no default branch in the API response"
-            raise TemplateError(msg)
-        commit = gh(f"repos/{owner}/.github/commits/{branch}")
-        sha = commit.get("sha", "") if isinstance(commit, dict) else ""
-        if not re.fullmatch(r"[0-9a-f]{40}", sha):
-            msg = f"{owner}/.github@{branch} did not resolve to a commit"
-            raise TemplateError(msg)
-        doc = gh(f"repos/{owner}/.github/contents/{TEMPLATE_PATH}?ref={sha}")
-        is_file = isinstance(doc, dict) and doc.get("type") == "file"
-        if not is_file or doc.get("encoding") != "base64":
-            msg = f"{owner}/.github@{sha}:{TEMPLATE_PATH} is not a base64 file object"
-            raise TemplateError(msg)
-        text = base64.b64decode(doc.get("content", "")).decode("utf-8")
+        try:
+            org = org_dotgithub.read_org_file(owner, TEMPLATE_PATH, gh=gh, git=git)
+        except org_dotgithub.OrgFileError as exc:
+            raise TemplateError(str(exc)) from exc
+        sha, text = org.sha, org.text
     revision = f"{owner}/.github@{sha}"
     errors = validate_template(text)
     if errors:

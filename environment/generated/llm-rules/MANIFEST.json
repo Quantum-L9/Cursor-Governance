@@ -312,9 +312,9 @@
       "alias": null,
       "class": "always",
       "output": "62-github-openclaw-authority.md",
-      "output_sha256": "420cade2877938b2ea4e1b5954f9e6575c9dd2efe2f59bfc84a221054037365d",
+      "output_sha256": "4e0c1ea29faac87808d6aa2b665774ffa05ddc379d05bccf6b2771347408bdc8",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "974e7ffaf23227a0acbc2614a7921e35f292e740d0af5570a464ed6b8dbed31b",
+      "source_sha256": "f1966ca06ce98ca4a45260374e8320c1d177178372819fb1e0be026c71ac125e",
       "stem": "62-github-openclaw-authority"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "9235c4989b5483a47f41f681ba0c4aa25f1d4fce3956bea0d5c2584da507be44"
+  "tree_sha256": "5d6b7d258f285f6c7b13dd16d2c38008ed429acf9f6cf296995246395d9333e8"
 }
