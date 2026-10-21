@@ -134,3 +134,15 @@ collect_ignore = [
     # Local PE/PR worktrees must never enter root discovery (import collisions).
     ".l9",
 ]
+
+
+@pytest.fixture(autouse=True)
+def _merge_authority_strict(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the merge-authority switch to ``strict`` for every test.
+
+    ``ops/config/merge-authority.json`` ships ``disabled`` (CANONICAL_LAW
+    §6.2.16); the merge-gate, grant and recorder suites prove the strict system
+    unchanged. Gate subprocesses inherit the override. Tests of the switch
+    itself set their own mode.
+    """
+    monkeypatch.setenv("L9_MERGE_AUTHORITY_MODE", "strict")

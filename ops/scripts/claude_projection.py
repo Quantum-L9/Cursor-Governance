@@ -122,6 +122,32 @@ def project_skills(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     return outcome
 
 
+def attach_skill_coverage(outcome: DomainOutcome, root: Path, workspace: Path) -> None:
+    """Record unique canonical coverage on the skills outcome.
+
+    `projected` sums links across every adapter and mount root, so it is not a
+    skill count. The census is, carried in the existing free-form `detail` so
+    the receipt schema does not change. It reads the user settings (sync policy,
+    tier overrides), so `run` calls it after every domain has projected: taken
+    inside `project_skills`, it would record the settings the settings domain
+    was about to repair.
+    """
+    try:
+        from reconcile_claude_l9_skills import REGISTRY_REL, SYNCED_DIR_NAME, coverage_census
+
+        registry = json.loads((root / REGISTRY_REL).read_text(encoding="utf-8"))
+        user_skills = Path.home() / ".claude" / "skills"
+        outcome.detail["coverage"] = coverage_census(
+            root,
+            registry,
+            [workspace / ".claude" / "skills", user_skills],
+            synced_root=user_skills / SYNCED_DIR_NAME,
+            user_settings=Path.home() / ".claude" / "settings.json",
+        )
+    except Exception as exc:  # noqa: BLE001
+        outcome.detail["coverage"] = {"status": "unknown", "error": str(exc)}
+
+
 def project_commands(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     outcome = DomainOutcome("commands")
     try:
@@ -604,6 +630,9 @@ def run(
         outcomes.append(project_plugins(root, workspace, check))
     if "mcp" in wanted:
         outcomes.append(project_mcp(root, workspace, check))
+    for outcome in outcomes:
+        if outcome.name == "skills" and outcome.status != "error":
+            attach_skill_coverage(outcome, root, workspace)
 
     status = overall_status(outcomes)
     receipt = {

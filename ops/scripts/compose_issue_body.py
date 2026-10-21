@@ -15,7 +15,8 @@ Form resolution mirrors GitHub, and open_pr_after_gate.sh's template lookup:
 2. the workspace's own ``.github/ISSUE_TEMPLATE/`` — when that folder exists,
    GitHub shows none of the org defaults, so a form missing there is an error,
    not a fall-through;
-3. the org default in ``<owner>/.github`` (REST contents, base64);
+3. the org default in ``<owner>/.github`` at its default-branch head
+   (``org_dotgithub.read_org_file``: REST, then git);
 4. the governance fork's ``.github/ISSUE_TEMPLATE/``.
 
 Required fields are the reporter's judgment and are never invented. A missing
@@ -26,7 +27,6 @@ refuses to file an incomplete issue, as the web form would.
 from __future__ import annotations
 
 import argparse
-import base64
 import datetime as dt
 import json
 import re
@@ -36,6 +36,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import org_dotgithub
 import yaml
 
 SCHEMA = "l9.issue_body_completion.v1"
@@ -97,24 +98,10 @@ def repo_slug(workspace: Path) -> str | None:
 
 
 def _fetch_org_form(owner: str, file_name: str) -> str | None:
-    path = f"repos/{owner}/.github/contents/{FORM_DIR.as_posix()}/{file_name}"
     try:
-        out = subprocess.run(
-            [
-                "gh",
-                "api",
-                path,
-                "--jq",
-                'select(.type == "file" and .encoding == "base64") | .content',
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        ).stdout
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return org_dotgithub.read_org_file(owner, f"{FORM_DIR.as_posix()}/{file_name}").text
+    except org_dotgithub.OrgFileError:
         return None
-    return base64.b64decode(out).decode("utf-8") if out.strip() else None
 
 
 def resolve_form(

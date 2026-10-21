@@ -147,7 +147,7 @@ Validate before rendering. All downstream artifacts are deterministic projection
 
 ## 19. Build only from the bound census
 
-Validate and build with the exact deterministic ledger used during the audit, for example `python scripts/build_audit_bundle.py --audit audit.json --change-ledger pr-123-change-ledger.json --validate-only`, repeating `--change-ledger` for multi-PR audits. Bundle verification must prove that the packaged `change-ledger.json`, canonical audit binding, manifest hash, machine symbol rows, machine claim seeds, and machine falsification seeds all agree byte-for-byte/field-for-field where owned by deterministic code.
+Seed the machine-owned rows with `--materialize-machine-rows` and fill the derived post-judgment fields with `--derive` before validating; both are projections owned by the builder, so a hand-written copy of either rule is a competing contract. Validate and build with the exact deterministic ledger used during the audit, for example `python scripts/build_audit_bundle.py --audit audit.json --change-ledger pr-123-change-ledger.json --validate-only`, repeating `--change-ledger` for multi-PR audits. Bundle verification must prove that the packaged `change-ledger.json`, canonical audit binding, manifest hash, machine symbol rows, machine claim seeds, and machine falsification seeds all agree byte-for-byte/field-for-field where owned by deterministic code.
 
 ## 20. Deterministic closure completion
 

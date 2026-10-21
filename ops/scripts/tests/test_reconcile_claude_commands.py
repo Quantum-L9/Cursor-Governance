@@ -12,7 +12,14 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 
-from reconcile_claude_commands import STATE_NAME, reconcile  # noqa: E402
+from reconcile_claude_commands import (  # noqa: E402
+    STATE_NAME,
+    load_manifest,
+    reconcile,
+    reconcile_commands_scope,
+)
+
+GOV_ROOT = SCRIPTS.parent.parent
 
 
 def make_root(base: Path) -> Path:
@@ -140,6 +147,38 @@ class ReconcileClaudeCommandsTests(unittest.TestCase):
         payload = self.project()
         result = payload["results"][0]
         self.assertIn("duplicate-command:alpha", result["conflicts"])
+
+
+class LiveCommandParityTests(unittest.TestCase):
+    """Issue #690: every enabled command in the real manifest projects to its
+    canonical source; disabled and archived commands never do; no enabled
+    command shadows a skill that Claude Code already invokes by name."""
+
+    def test_every_enabled_command_resolves_to_its_canonical_source(self) -> None:
+        manifest = load_manifest(GOV_ROOT)
+        entries = [e for e in manifest.get("commands") or [] if isinstance(e, dict)]
+        enabled = {str(e["slash"]).lstrip("/"): e for e in entries if e.get("enabled", True)}
+        self.assertTrue(enabled, "the live manifest enables no command")
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "commands"
+            result = reconcile_commands_scope(
+                GOV_ROOT, manifest, "user", Path(tmp), False, target_override=target
+            )
+            self.assertEqual(result.conflicts, [])
+            self.assertEqual(result.collisions, [], "a command shares a skill's slash name")
+            self.assertEqual(sorted(result.created), sorted(enabled))
+            for name, entry in enabled.items():
+                link = target / f"{name}.md"
+                self.assertTrue(link.is_symlink(), name)
+                self.assertEqual(link.resolve(), (GOV_ROOT / str(entry["file"])).resolve())
+                self.assertNotIn("_archived", str(entry["file"]), name)
+            projected = {p.stem for p in target.glob("*.md")}
+            disabled = {str(e["slash"]).lstrip("/") for e in entries if not e.get("enabled", True)}
+            self.assertEqual(projected & disabled, set())
+            again = reconcile_commands_scope(
+                GOV_ROOT, manifest, "user", Path(tmp), True, target_override=target
+            )
+            self.assertEqual(again.drift + again.conflicts, [], "second run must be clean")
 
 
 if __name__ == "__main__":

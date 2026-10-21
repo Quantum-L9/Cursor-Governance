@@ -1,6 +1,6 @@
 ---
 id: l9.rule.l4.local-autonomy
-version: 1.1.1
+version: 1.2.0
 description: "L4 local autonomy - stacked local commits, exact-tree release authorization, then the single make pr publication ceremony."
 scope: global
 domain: git
@@ -10,6 +10,14 @@ alwaysApply: true
 ---
 
 # L4 Local Autonomy (no mid-execution push)
+
+> **Merge-authority switch (CANONICAL_LAW §6.2.16).** While
+> `ops/config/merge-authority.json` says `"enforcement": "disabled"` (the
+> shipped default), the merge statements below about human authorization and
+> MERGE_PENDING do not apply on any surface (Cursor and Claude Code alike): an
+> agent merges a ready PR when the operator asks or invokes
+> `/l9-pr-remediation`. `make pr` itself still never merges, and force-push,
+> admin-merge and hard reset stay forbidden.
 
 SSOT: `ops/autonomy/surface_profile.yaml` → `l4_local_autonomy` (CANONICAL_LAW §6.2,
 as amended by `PUBLISH_ASSURANCE_DECOUPLING_V1`).

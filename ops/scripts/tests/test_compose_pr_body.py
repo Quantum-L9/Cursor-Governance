@@ -1097,13 +1097,48 @@ class TemplateResolutionTests(unittest.TestCase):
         def down(endpoint: str) -> object:
             raise TemplateError(f"gh api {endpoint} failed: HTTP 502")
 
-        with self.assertRaises(TemplateError):
-            resolve_template(Path("."), "Quantum-L9", "consumer", gh=down)
+        def git_down(owner: str, path: str) -> tuple[str, str]:
+            raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
+
+        # Both transports unreachable: no template, no stale fallback.
+        with self.assertRaisesRegex(TemplateError, "git transport also failed"):
+            resolve_template(Path("."), "Quantum-L9", "consumer", gh=down, git=git_down)
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
             resolve_template(Path("."), "Quantum-L9", "consumer", gh=self._gh(broken, []))
         with self.assertRaises(TemplateError):
             resolve_template(Path("."), "", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []))
+
+    def test_rest_unreachable_reads_the_same_commit_over_git(self) -> None:
+        """A gateway that scopes REST to the session's repos still serves git for the org repo."""
+
+        def scoped(endpoint: str) -> object:
+            raise TemplateError(f"gh api {endpoint} failed: HTTP 403")
+
+        owners: list[str] = []
+
+        def git(owner: str, path: str) -> tuple[str, str]:
+            owners.append(f"{owner}:{path}")
+            return self.SHA, CANONICAL_TEMPLATE
+
+        source = resolve_template(Path("."), "Quantum-L9", "consumer", gh=scoped, git=git)
+        self.assertEqual(owners, ["Quantum-L9:.github/pull_request_template.md"])
+        self.assertEqual(source.text, CANONICAL_TEMPLATE)
+        self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
+        # Bytes read over git are validated exactly like bytes read over REST.
+        broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
+        with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
+            resolve_template(
+                Path("."), "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
+            )
+
+        # REST reachable: git is never consulted.
+        def no_git(owner: str, path: str) -> tuple[str, str]:
+            raise AssertionError("git transport used while REST answered")
+
+        resolve_template(
+            Path("."), "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []), git=no_git
+        )
 
     def test_org_repository_composes_from_its_own_head(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

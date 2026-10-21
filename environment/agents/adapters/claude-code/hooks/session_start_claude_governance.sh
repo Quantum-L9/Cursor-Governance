@@ -526,21 +526,23 @@ if GOV=$(resolve_governance_dir); then
   fi
   say "authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts"
   if [ -d "$GOV/skills" ]; then
-    n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-    # -L is load-bearing: every entry under .claude/skills is a SYMLINK to a
-    # directory in the governance clone. Without -L, find refuses to descend and
-    # the count reports the handful of real directories -- it printed
-    # "skills loadable: 1" against 54 resolvable skills, which is precisely the
-    # line an operator reads to conclude that skills failed to load.
-    loadable=0
-    for d in "$WORKSPACE/.claude/skills" "$HOME/.claude/skills"; do
-      if [ -d "$d" ]; then
-        c=$(find -L "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
-        loadable=$((loadable + c))
-      fi
-    done
-    say "skills available: $n l9-* skills under \$GOV/skills (invoke by name)"
-    say "skills loadable: $loadable SKILL.md under .claude/skills discovery paths"
+    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
+    # add `find -L` counts over the workspace and user discovery paths, so each
+    # skill projected into both read twice (a "loadable" count of 119 for 59
+    # skills, issue #690). The census counts each canonical identity once,
+    # names missing / wrong-target / non-canonical entries separately, and
+    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
+    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
+    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
+    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
+    _census_rc=$?
+    if [ -n "$_census_out" ]; then
+      while IFS= read -r _census_line; do
+        say "$_census_line"
+      done <<<"$_census_out"
+    else
+      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
+    fi
   fi
 
   # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
