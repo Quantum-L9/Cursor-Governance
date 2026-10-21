@@ -125,6 +125,7 @@ Validated on 2026-10-21 against a synthetic authority repository and the real `.
   - prior re-check at the same pin: `CURRENT UNCHANGED`;
   - the same tree receipted by the engine at `main` (`37e6758b`, no forbidden criterion): `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`;
   - the pin before the branch was published: `BLOCKED AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF`.
+- Re-validated after both upstream merges on 2026-10-21, with the producer at l9-semantic-compiler-engine `main` (`b9b4892`, PR #13 and PR #14 merged) and the authority at `.github` `main` (`7252e3b`, PR #193 merged): all three profile classes receipt `result: pass` with no unresolved criteria, the `invariants` artifact is byte-identical to the PR #13 output, and this verifier returns `BOUND` with 19 invariants at the admitted revision. Against `.github` `main` before #193 the same producer receipted every class `unknown` on the four forbidden-constraint criteria, which this verifier rejects.
 - Runtime alignment and lazy bootstrap validators pass unchanged.
 
 ## Known limitations
@@ -135,9 +136,10 @@ Validated on 2026-10-21 against a synthetic authority repository and the real `.
 - No projection publication mechanism is assumed operational. Until one supplies a verified artifact, receipt, and revision pin, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
 - The revision pin is caller-supplied. The verifier binds law bytes to it by recomputed hashes, and refuses absent, malformed, and local-only pins, but it cannot prove the pin is the published revision. That trust comes from the independent record. Origin URL and tracking refs are local state, so a deliberately forged `refs/remotes/origin/*` defeats the local-only check.
 - Upstream gaps that still bound the live canonical binding (1.4.2):
-  - a `pass` receipt for `l9.projection/coding-agent-execution@1` needs `.github` v3.23.0 (output schema and forbidden-constraint criteria, Quantum-L9/.github#193) and the forbidden-criterion engine (l9-semantic-compiler-engine PR #13); the engine at `main` receipts the same tree `unknown`, which this verifier rejects;
+  - closed on 2026-10-21: `.github` v3.23.0 (Quantum-L9/.github#193) and the forbidden-criterion engine (l9-semantic-compiler-engine PR #13, PR #14) are merged, so a `pass` receipt for `l9.projection/coding-agent-execution@1` is producible from the engine's `main` at the authority's `main`;
   - no `semantic_digest` canonicalization algorithm is declared upstream; the verifier recomputes the producer's canonical-JSON convention and fails closed on any other;
-  - no publication mechanism supplies the pair yet (`.github/docs/PROJECTION_PUBLICATION.md`, not activated); the live proof used a pair handed to the verifier by the operator;
+  - no publication mechanism supplies the pair yet (`.github/docs/PROJECTION_PUBLICATION.md`, not activated, and its payload-digest and profile-level-subject conventions do not match what the producer emits); the live proof used a pair handed to the verifier by the operator;
+  - this verifier consumes the `invariants` class only; the `contracts` and `authority-model` classes the profile declares are produced and receipted but not yet consumed;
   - the operating-plane profile remains unprojectable whole because `conformance_profiles` resolves outside `.github`; it is no longer the coding agent's binding profile.
 - Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook (F-04, outside this pack).

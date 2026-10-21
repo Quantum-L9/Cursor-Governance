@@ -13,6 +13,7 @@ Canonical invariant binding moves to the profile `.github` admits for coding age
   - the binding record reports `projected_invariant_count` (was `global_invariant_count`).
 - `tests/test_coding_agent_canonical_binding.py`: 37 cases (was 27), including the new rejection and Unknown paths above.
 - Live proof at `.github@2f8a20a` (Quantum-L9/.github#193, the v3.23.0 candidate that gives the profile its output schema and forbidden-constraint criteria) with the producer at l9-semantic-compiler-engine PR #13 (`7e516b6d`): the real `invariants` pair is `BOUND` with 19 invariants, the six governing refs select, a prior-binding re-check is `CURRENT`, and the `main` producer's `unknown` receipt for the same tree is `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`.
+- Re-proved after #193, engine PR #13 and PR #14 merged: the engine's `main` (`b9b4892`) at `.github` `main` (`7252e3b`) receipts all three classes `pass` and the `invariants` pair is `BOUND` at the admitted revision. No producer or publication pipeline is assumed operational beyond that proof (VALIDATION.md).
 - `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
 
 ## 1.4.1 - 2026-10-12
