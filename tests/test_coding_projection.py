@@ -190,11 +190,33 @@ def test_unreadable_binding_is_blocked(tmp_path: Path) -> None:
 def test_shipped_binding_is_a_report_only_bundle_consumer() -> None:
     binding = yaml.safe_load(BINDING.read_text())
     assert binding["schema"] == status.BINDING_SCHEMA
-    assert binding["enforcement"] == {
+    enforcement = binding["enforcement"]
+    # The status surface reports and never blocks.
+    assert enforcement["status_surface"] == {
         "mode": "report_only",
         "statuses": list(status.STATUSES),
-        "blocks_mutation": False,
     }
+    # Coding-agent mutation is gated mechanically, and the binding names the real gate.
+    gate = enforcement["coding_agent_mutation"]
+    assert gate["mode"] == "enforced" and gate["blocks_mutation"] is True
+    assert (REPO / gate["enforced_by"]).is_file() and (REPO / gate["hook"]).is_file()
+    assert gate["hook_event"] == "PreToolUse"
+    sys.path.insert(0, str(REPO / "ops" / "autonomy"))
+    import coding_agent_binding_gate as brain
+
+    assert set(gate["tools"]) == set(brain.MUTATING_TOOLS)
+    assert Path(gate["activation"]) == brain.RUN_DIR / brain.RUN_FILE
+    assert Path(gate["record"]) == brain.RUN_DIR / brain.RECORD_FILE
+    assert set(gate["allows"]) == set(brain.BOUND_STATUSES)
+    assert brain.BREAKGLASS_ENV in gate["breakglass"]
+    settings = json.loads((REPO / ".claude" / "settings.json").read_text())
+    registered = [
+        hook["command"]
+        for entry in settings["hooks"]["PreToolUse"]
+        for hook in entry["hooks"]
+        if "coding_agent_binding_gate.py" in hook["command"]
+    ]
+    assert len(registered) == 1 and "--class gate" in registered[0]
     assert Path(binding["bundle"]["path"]) == consumer.BUNDLE_PATH
     assert binding["bundle"]["lock_schema"] == pack.verifier.LOCK_SCHEMA
     assert Path(binding["verification"]["verifier"]) == consumer.VERIFIER_PATH
