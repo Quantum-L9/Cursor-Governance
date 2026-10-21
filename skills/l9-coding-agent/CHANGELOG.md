@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.2 - 2026-10-21
+
+Canonical invariant binding moves to the profile `.github` admits for coding agents and adopts the conventions the admitted producer emits. The binding is live: a real `l9-semantic-compiler` pair reaches `BOUND`.
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.3.0 binds `l9.projection/coding-agent-execution@1` (class `runtime`, consumer Cursor-Governance; v3.20.0, RC-028) instead of `l9.projection/cursor-governance-operating-plane@1`. The operating-plane profile declares `conformance_profiles`, a class owned outside `.github`, so no admitted producer can project it whole, and its `@1` entry is immutable upstream. The coding profile selects nineteen global invariants by exact id; the profile, not the invariant scope, decides what is bound.
+- `scripts/verify_canonical_binding.py` verifies what the producer emits, as the architecture-intelligence consumer already does, instead of a fixture convention no producer honored:
+  - `projection_digest` is the envelope digest (every artifact field but the digest), not the payload digest;
+  - the payload is record-preserving: one `invariants` section holding each selected source record whole, in source order (`PAYLOAD_NOT_IN_SOURCE_ORDER`, `PAYLOAD_SHAPE_UNRESOLVED` on any other shape);
+  - the receipt output must name `<profile>#<source>` and the artifact's `generated_by` must equal the receipt's `producer_identity` (`ARTIFACT_PRODUCER_MISMATCH`);
+  - only the exact-id selector form is re-selected; any other selector shape, a duplicate id, or an id the source does not declare is `BLOCKED` (`PROFILE_SELECTOR_FORM_UNRESOLVED`, `PROFILE_SELECTOR_DUPLICATE_IDENTITY`, `CANONICAL_INVARIANT_UNRESOLVED`);
+  - the binding record reports `projected_invariant_count` (was `global_invariant_count`).
+- `tests/test_coding_agent_canonical_binding.py`: 37 cases (was 27), including the new rejection and Unknown paths above.
+- Live proof at `.github@2f8a20a` (Quantum-L9/.github#193, the v3.23.0 candidate that gives the profile its output schema and forbidden-constraint criteria) with the producer at l9-semantic-compiler-engine PR #13 (`7e516b6d`): the real `invariants` pair is `BOUND` with 19 invariants, the six governing refs select, a prior-binding re-check is `CURRENT`, and the `main` producer's `unknown` receipt for the same tree is `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.1 - 2026-10-12
 
 Projection boundary correction. `.github` owns the law and profiles, a producer emits projections, an upstream publication mechanism supplies them, and this skill consumes them without running the producer.

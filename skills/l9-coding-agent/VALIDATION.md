@@ -115,6 +115,18 @@ Validated at Cursor-Governance base `2993930`, against a synthetic authority rep
   - prior re-check: `CURRENT`.
 - Lazy bootstrap closes 16 semantic owners and classifies 32 files. Runtime alignment covers 57 cases and four negative controls. `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
 
+## v1.4.2 coding-agent execution profile and producer-convention alignment
+
+Validated on 2026-10-21 against a synthetic authority repository and the real `.github` at `2f8a20a` (Quantum-L9/.github#193, v3.23.0 candidate). The producer was run once, separately, to obtain the pair; the verifier never invoked it.
+
+- `tests/test_coding_agent_canonical_binding.py`: 37/37 pass. The verifier issued only `git` commands.
+- Real pair for `l9.projection/coding-agent-execution@1` / `l9.source/invariants@1`, emitted by `l9-semantic-compiler` 0.9.3 at l9-semantic-compiler-engine PR #13 (`7e516b6d`, the forbidden-criterion engine): receipt `result: pass`, `unresolved_criteria: []`.
+  - pinned: `BOUND`, 19 projected invariants, all six governing refs select;
+  - prior re-check at the same pin: `CURRENT UNCHANGED`;
+  - the same tree receipted by the engine at `main` (`37e6758b`, no forbidden criterion): `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`;
+  - the pin before the branch was published: `BLOCKED AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF`.
+- Runtime alignment and lazy bootstrap validators pass unchanged.
+
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
@@ -122,12 +134,11 @@ Validated at Cursor-Governance base `2993930`, against a synthetic authority rep
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
 - No projection publication mechanism is assumed operational. Until one supplies a verified artifact, receipt, and revision pin, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
 - The revision pin is caller-supplied. The verifier binds law bytes to it by recomputed hashes, and refuses absent, malformed, and local-only pins, but it cannot prove the pin is the published revision. That trust comes from the independent record. Origin URL and tracking refs are local state, so a deliberately forged `refs/remotes/origin/*` defeats the local-only check.
-- Upstream gaps block a live canonical binding:
-  - no merged producer exists for `l9.projection/cursor-governance-operating-plane@1` (at l9-semantic-compiler-engine `a1c4104`, the revision observed for 1.4.1, `project` exists only on the #8 branch, for the `invariants` class);
-  - there is no `l9.projection.cursor-governance-operating-plane/v1` output schema;
-  - no `semantic_digest` canonicalization algorithm is declared;
-  - the profile has 9 source groups but the projection artifact is single-source, and no composition profile is declared;
-  - the `conformance_profiles` source resolves outside `.github`.
+- Upstream gaps that still bound the live canonical binding (1.4.2):
+  - a `pass` receipt for `l9.projection/coding-agent-execution@1` needs `.github` v3.23.0 (output schema and forbidden-constraint criteria, Quantum-L9/.github#193) and the forbidden-criterion engine (l9-semantic-compiler-engine PR #13); the engine at `main` receipts the same tree `unknown`, which this verifier rejects;
+  - no `semantic_digest` canonicalization algorithm is declared upstream; the verifier recomputes the producer's canonical-JSON convention and fails closed on any other;
+  - no publication mechanism supplies the pair yet (`.github/docs/PROJECTION_PUBLICATION.md`, not activated); the live proof used a pair handed to the verifier by the operator;
+  - the operating-plane profile remains unprojectable whole because `conformance_profiles` resolves outside `.github`; it is no longer the coding agent's binding profile.
 - Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook (F-04, outside this pack).
 - `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.

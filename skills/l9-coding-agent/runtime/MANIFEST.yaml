@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.CODING_AGENT.RUNTIME.001
   name: l9-coding-agent
-  version: 1.4.1
+  version: 1.4.2
   status: active
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md

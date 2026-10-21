@@ -45,11 +45,16 @@ except Exception as exc:  # wrong interpreter is Unknown, never a REJECTED-looki
     raise SystemExit(3) from exc
 
 OWNER_REPOSITORY = "Quantum-L9/.github"
-PROFILE_REF = "l9.projection/cursor-governance-operating-plane@1"
+PROFILE_REF = "l9.projection/coding-agent-execution@1"
+PROFILE_CLASS = "runtime"
 PROFILE_CONSUMER = "Cursor-Governance"
 SOURCE_CLASS = "invariants"
 SOURCE_REF = "l9.source/invariants@1"
-SELECTOR = '$.invariants[?(@.scope=="global")]'
+# The profile selects invariants by exact id, one l9.selector/v1 equality filter
+# per invariant. The consumer re-selects only that form; any other selector
+# shape is Unknown here, never approximated.
+ID_SELECTOR = re.compile(r'^\$\.invariants\[\?\(@\.id=="([^"\\]+)"\)\]$')
+PAYLOAD_SECTION = "invariants"
 PROFILES_PATH = "semantics/projection_profiles.yaml"
 SOURCES_PATH = "semantics/canonical_sources.yaml"
 ARTIFACT_SCHEMA_PATH = "semantics/projection_artifact.schema.yaml"
@@ -293,16 +298,32 @@ def resolve_law(tree: PinnedTree) -> dict[str, Any]:
             "BLOCKED", "PROFILE_UNRESOLVED", profile_ref=PROFILE_REF, matches=len(profiles)
         )
     profile = profiles[0]
-    if profile.get("class") != "consumer" or profile.get("consumer") != PROFILE_CONSUMER:
-        raise Outcome("BLOCKED", "PROFILE_CONSUMER_MISMATCH", profile_ref=PROFILE_REF)
-    selectors = ((profile.get("sources") or {}).get(SOURCE_CLASS) or {}).get("selectors") or []
-    if SELECTOR not in selectors:
+    if profile.get("class") != PROFILE_CLASS or profile.get("consumer") != PROFILE_CONSUMER:
         raise Outcome(
             "BLOCKED",
-            "PROFILE_SELECTOR_COVERAGE_INCOMPLETE",
-            source_class=SOURCE_CLASS,
-            selector=SELECTOR,
+            "PROFILE_CONSUMER_MISMATCH",
+            profile_ref=PROFILE_REF,
+            expected={"class": PROFILE_CLASS, "consumer": PROFILE_CONSUMER},
+            observed={"class": profile.get("class"), "consumer": profile.get("consumer")},
         )
+    selectors = ((profile.get("sources") or {}).get(SOURCE_CLASS) or {}).get("selectors") or []
+    if not isinstance(selectors, list) or not selectors:
+        raise Outcome("BLOCKED", "PROFILE_SELECTOR_COVERAGE_INCOMPLETE", source_class=SOURCE_CLASS)
+    selected_ids: list[str] = []
+    for selector in selectors:
+        match = ID_SELECTOR.fullmatch(str(selector))
+        if match is None:
+            # Only the exact-id form is re-selected here; anything else is Unknown.
+            raise Outcome(
+                "BLOCKED",
+                "PROFILE_SELECTOR_FORM_UNRESOLVED",
+                source_class=SOURCE_CLASS,
+                selector=selector,
+                supported='$.invariants[?(@.id=="<id>")]',
+            )
+        selected_ids.append(match.group(1))
+    if len(set(selected_ids)) != len(selected_ids):
+        raise Outcome("BLOCKED", "PROFILE_SELECTOR_DUPLICATE_IDENTITY", ids=selected_ids)
     class_artifact = ((catalog.get("source_classes") or {}).get(SOURCE_CLASS) or {}).get(
         "canonical_artifact"
     )
@@ -316,15 +337,25 @@ def resolve_law(tree: PinnedTree) -> dict[str, Any]:
 
     raw = tree.read(str(source["path"]), "CANONICAL_SOURCE")
     document = yaml.safe_load(raw)
-    global_entries = [
-        e
-        for e in (document or {}).get("invariants", [])
-        if isinstance(e, dict) and e.get("scope") == "global"
+    records = [
+        e for e in (document or {}).get("invariants", []) if isinstance(e, dict) and "id" in e
     ]
+    # Record-preserving selection: each selected invariant is the whole source
+    # record, in source order, and must resolve exactly once in the source.
+    selected_entries: dict[str, Any] = {}
+    for record in records:
+        rid = str(record.get("id"))
+        if rid in selected_ids:
+            if rid in selected_entries:
+                raise Outcome("REJECTED", "CANONICAL_INVARIANT_DECLARED_TWICE", invariant_id=rid)
+            selected_entries[rid] = record
+    unresolved = sorted(set(selected_ids) - set(selected_entries))
+    if unresolved:
+        raise Outcome("BLOCKED", "CANONICAL_INVARIANT_UNRESOLVED", invariant_ids=unresolved)
     return {
         "source": {"ref": SOURCE_REF, "path": str(source["path"]), "digest": bytes_digest(raw)},
         "profile": {"ref": PROFILE_REF, "digest": content_digest(profile)},
-        "global_entries": {str(e.get("id")): e for e in global_entries},
+        "selected_entries": selected_entries,
     }
 
 
@@ -427,26 +458,41 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
             observed=artifact["projection_profile_digest"],
             current=law["profile"]["digest"],
         )
+    # The producer digests the whole envelope minus its own digest field (the
+    # convention `l9-semantic-compiler` emits and the architecture-intelligence
+    # consumer verifies), so a change to any binding coordinate, not only the
+    # payload, refutes the digest.
     payload = artifact["payload"]
-    if artifact["projection_digest"] != content_digest(payload):
+    if artifact["projection_digest"] != content_digest(
+        {k: v for k, v in artifact.items() if k != "projection_digest"}
+    ):
         raise Outcome(
             "REJECTED", "PROJECTION_DIGEST_MISMATCH", observed=artifact["projection_digest"]
         )
 
     # Fidelity: digests are unkeyed, so the only anchor against a forged but
     # self-consistent artifact is the canonical source at the bound revision.
-    if not isinstance(payload, list) or not all(isinstance(e, dict) and "id" in e for e in payload):
+    # Selection is record-preserving: the payload carries the one selected
+    # section, holding each selected source record whole, in source order.
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != {PAYLOAD_SECTION}
+        or not isinstance(payload[PAYLOAD_SECTION], list)
+        or not all(isinstance(e, dict) and "id" in e for e in payload[PAYLOAD_SECTION])
+    ):
         raise Outcome(
             "BLOCKED",
             "PAYLOAD_SHAPE_UNRESOLVED",
-            expected="list of invariant entries selected by " + SELECTOR,
+            expected="mapping with exactly one '" + PAYLOAD_SECTION + "' list of invariant"
+            " records selected by exact id",
         )
-    if not all(isinstance(e["id"], str) for e in payload):
+    entries = payload[PAYLOAD_SECTION]
+    if not all(isinstance(e["id"], str) for e in entries):
         raise Outcome("REJECTED", "PAYLOAD_IDENTITY_NOT_A_STRING")
-    ids = [e["id"] for e in payload]
+    ids = [e["id"] for e in entries]
     if len(ids) != len(set(ids)):
         raise Outcome("REJECTED", "PAYLOAD_DUPLICATE_IDENTITY")
-    expected = law["global_entries"]
+    expected = law["selected_entries"]
     if set(ids) != set(expected):
         raise Outcome(
             "REJECTED",
@@ -454,8 +500,10 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
             missing=sorted(set(expected) - set(ids)),
             extra=sorted(set(ids) - set(expected)),
         )
+    if ids != list(expected):
+        raise Outcome("REJECTED", "PAYLOAD_NOT_IN_SOURCE_ORDER", observed=ids)
     altered = sorted(
-        i for i, e in zip(ids, payload) if content_digest(e) != content_digest(expected[i])
+        i for i, e in zip(ids, entries) if content_digest(e) != content_digest(expected[i])
     )
     if altered:
         raise Outcome("REJECTED", "PAYLOAD_NOT_FAITHFUL_TO_SOURCE", altered=altered)
@@ -482,7 +530,13 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
         {"ref": i.get("ref"), "digest": i.get("digest")} for i in inputs if isinstance(i, dict)
     ]:
         raise Outcome("REJECTED", "RECEIPT_INPUT_NOT_BOUND", inputs=inputs)
-    if _mapping(receipt, "output", "RECEIPT").get("digest") != artifact["projection_digest"]:
+    # The producer names its output `<profile>#<source>`; the receipt must bind
+    # exactly this artifact, not another source of the same profile.
+    output = _mapping(receipt, "output", "RECEIPT")
+    if (
+        output.get("ref") != f"{PROFILE_REF}#{SOURCE_REF}"
+        or output.get("digest") != artifact["projection_digest"]
+    ):
         raise Outcome("REJECTED", "RECEIPT_OUTPUT_NOT_BOUND", output=receipt.get("output"))
     if receipt["receipt_digest"] != content_digest(
         {k: v for k, v in receipt.items() if k != "receipt_digest"}
@@ -491,6 +545,17 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
     producer = _mapping(receipt, "producer_identity", "RECEIPT")
     if not producer.get("compiler") or not producer.get("version"):
         raise Outcome("REJECTED", "RECEIPT_PRODUCER_UNIDENTIFIED")
+    generated_by = artifact.get("generated_by")
+    if not isinstance(generated_by, dict) or {
+        "compiler": generated_by.get("compiler"),
+        "version": generated_by.get("version"),
+    } != {"compiler": producer.get("compiler"), "version": producer.get("version")}:
+        raise Outcome(
+            "REJECTED",
+            "ARTIFACT_PRODUCER_MISMATCH",
+            generated_by=generated_by,
+            producer_identity=producer,
+        )
     # Receipts are unkeyed: this narrows identity to the upstream-assigned
     # producer role but cannot authenticate it (an upstream signing gap).
     producers = projection_producers(tree)
@@ -527,7 +592,7 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
         "applicable_invariants": [
             {"id": i, "digest": content_digest(expected[i])} for i in applicable
         ],
-        "global_invariant_count": len(expected),
+        "projected_invariant_count": len(expected),
     }
 
 
@@ -563,7 +628,7 @@ def verify_prior(args: argparse.Namespace) -> dict[str, Any]:
     root = Path(args.authority_root)
     coordinates = authority_root(root, args.expect_revision)
     law = resolve_law(PinnedTree(root, coordinates["revision"]))
-    current = law["global_entries"]
+    current = law["selected_entries"]
     affected = sorted(
         i["id"]
         for i in bound

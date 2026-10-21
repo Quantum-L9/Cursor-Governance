@@ -2,8 +2,12 @@
 
 The authority root is a synthetic git repository whose origin names the
 canonical owner. Artifacts and receipts are built here in the shape the
-producer emits, so every case runs without invoking any producer. Upstream law
-in the fixture is illustrative, not a copy of `.github`.
+producer (`l9-semantic-compiler`) emits for one source of
+`l9.projection/coding-agent-execution@1`: a record-preserving payload under
+the selected section, an envelope digest over every field but the digest, and
+a receipt whose output names `<profile>#<source>`. Every case runs without
+invoking any producer. Upstream law in the fixture is illustrative, not a copy
+of `.github`.
 """
 
 from __future__ import annotations
@@ -26,15 +30,22 @@ assert _SPEC and _SPEC.loader
 verifier = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(verifier)
 
+
+def id_selector(invariant_id: str) -> str:
+    return f'$.invariants[?(@.id=="{invariant_id}")]'
+
+
+SELECTED = ["L9-FIXTURE-001", "L9-FIXTURE-002"]
 PROFILE = {
     "id": verifier.PROFILE_REF,
-    "class": "consumer",
+    "class": verifier.PROFILE_CLASS,
     "consumer": verifier.PROFILE_CONSUMER,
-    "sources": {"invariants": {"selectors": [verifier.SELECTOR]}},
+    "sources": {"invariants": {"selectors": [id_selector(i) for i in SELECTED]}},
 }
 INVARIANTS = {
     "invariants": [
         {"id": "L9-FIXTURE-001", "scope": "global", "rule": "fixture rule one"},
+        {"id": "L9-FIXTURE-UNSELECTED", "scope": "global", "rule": "global but not selected"},
         {"id": "L9-FIXTURE-002", "scope": "global", "rule": "fixture rule two"},
         {"id": "L9-FIXTURE-LOCAL", "scope": "repository", "rule": "not selected"},
     ]
@@ -89,6 +100,7 @@ SEMANTICS = {
     },
 }
 ORIGIN = "https://github.com/Quantum-L9/.github"
+PRODUCER = {"compiler": "l9-semantic-compiler", "version": "fixture"}
 
 
 def git(root: Path, *args: str) -> str:
@@ -110,12 +122,16 @@ def commit_all(root: Path, message: str, publish: bool = True) -> str:
     return head
 
 
+def write_semantics(root: Path, name: str, doc: Any) -> None:
+    (root / "semantics" / name).write_text(yaml.safe_dump(doc, sort_keys=False))
+
+
 @pytest.fixture
 def authority(tmp_path: Path) -> Path:
     root = tmp_path / "authority"
     (root / "semantics").mkdir(parents=True)
     for name, doc in SEMANTICS.items():
-        (root / "semantics" / name).write_text(yaml.safe_dump(doc, sort_keys=False))
+        write_semantics(root, name, doc)
     (root / "README.md").write_text("fixture\n")
     git(root, "init", "-q")
     git(root, "remote", "add", "origin", ORIGIN)
@@ -127,17 +143,24 @@ def head(root: Path) -> str:
     return git(root, "rev-parse", "HEAD")
 
 
+def envelope_digest(artifact: dict[str, Any]) -> str:
+    return verifier.content_digest({k: v for k, v in artifact.items() if k != "projection_digest"})
+
+
 def build_projection(
     root: Path,
     out: Path,
     *,
     source_bytes: bytes | None = None,
-    producer: str = "l9-semantic-compiler",
+    producer: dict[str, str] | None = None,
+    artifact_producer: dict[str, str] | None = None,
     result: str = "pass",
     payload_edit: Any = None,
     recompute: bool = True,
+    output_ref: str | None = None,
 ) -> tuple[Path, Path]:
     """Emit artifact + receipt in the producer's shape, as a publisher would supply them."""
+    producer = producer or PRODUCER
     raw = (
         source_bytes
         if source_bytes is not None
@@ -145,12 +168,18 @@ def build_projection(
     )
     catalog = yaml.safe_load((root / "semantics/projection_profiles.yaml").read_text())
     profile = next(p for p in catalog["projection_profiles"] if p["id"] == verifier.PROFILE_REF)
-    payload = [e for e in yaml.safe_load(raw)["invariants"] if e.get("scope") == "global"]
-    projection_digest = verifier.content_digest(payload)
+    # The fixture producer re-selects only the exact-id form; a profile carrying
+    # another selector shape is the verifier's to refuse, not the fixture's.
+    selected = [
+        match.group(1)
+        for s in profile["sources"]["invariants"]["selectors"]
+        if (match := verifier.ID_SELECTOR.fullmatch(s)) is not None
+    ]
+    payload = {
+        "invariants": [e for e in yaml.safe_load(raw)["invariants"] if e.get("id") in selected]
+    }
     if payload_edit is not None:
         payload_edit(payload)
-        if recompute:
-            projection_digest = verifier.content_digest(payload)
     artifact = {
         "schema": "l9.projection-artifact/v1",
         "source_ref": verifier.SOURCE_REF,
@@ -158,23 +187,41 @@ def build_projection(
         "projection_profile_ref": verifier.PROFILE_REF,
         "projection_profile_digest": verifier.content_digest(profile),
         "payload": payload,
-        "projection_digest": projection_digest,
-        "generated_by": {"compiler": producer, "version": "fixture"},
+        "generated_by": dict(artifact_producer or producer),
     }
+    artifact["projection_digest"] = envelope_digest(artifact)
+    if payload_edit is not None and not recompute:
+        untouched = dict(
+            artifact,
+            payload={
+                "invariants": [
+                    e for e in yaml.safe_load(raw)["invariants"] if e.get("id") in selected
+                ]
+            },
+        )
+        artifact["projection_digest"] = envelope_digest(untouched)
+    subject = f"{verifier.PROFILE_REF}#{verifier.SOURCE_REF}"
     receipt: dict[str, Any] = {
         "schema": "l9.compiler-receipt/v1",
-        "receipt_identity": "l9.receipt/fixture@1",
+        "receipt_identity": "l9.receipt-instance/fixture",
         "receipt_type": "l9.receipt/compilation@1",
-        "exact_subject_ref": verifier.PROFILE_REF,
+        "exact_subject_ref": subject,
         "claim": "fixture projection",
         "operation": "projection",
-        "inputs": [{"ref": verifier.SOURCE_REF, "digest": artifact["source_digest"]}],
+        "inputs": [
+            {
+                "ref": verifier.SOURCE_REF,
+                "digest": artifact["source_digest"],
+                "revision": head(root),
+                "path": "semantics/invariants.yaml",
+            }
+        ],
         "profile": {"ref": verifier.PROFILE_REF, "digest": artifact["projection_profile_digest"]},
-        "output": {"ref": verifier.PROFILE_REF + "#invariants", "digest": projection_digest},
-        "governing_coordinates": {"authority_revision_basis": "caller_asserted"},
+        "output": {"ref": output_ref or subject, "digest": artifact["projection_digest"]},
+        "governing_coordinates": {"repository": verifier.OWNER_REPOSITORY, "revision": head(root)},
         "result": result,
-        "verification_basis": {},
-        "producer_identity": {"compiler": producer, "version": "fixture"},
+        "verification_basis": {"coverage": "complete", "unresolved_criteria": []},
+        "producer_identity": dict(producer),
         "diagnostics": [],
     }
     receipt["receipt_digest"] = verifier.content_digest(receipt)
@@ -230,7 +277,8 @@ def test_supplied_projection_binds_without_running_a_producer(
     )
     assert (rc, record["status"], record["reason"]) == (0, "BOUND", "PROJECTION_VERIFIED")
     assert record["applicable_invariants"][0]["id"] == "L9-FIXTURE-001"
-    assert record["global_invariant_count"] == 2
+    assert record["projected_invariant_count"] == 2
+    assert record["profile"]["ref"] == "l9.projection/coding-agent-execution@1"
     assert record["authority_root"]["revision"] == head(authority)
     assert record["authority_root"]["revision_basis"] == "caller_pinned_not_authenticated"
     assert record["authority_root"]["content_basis"] == "pinned_commit_objects_hash_verified"
@@ -239,6 +287,22 @@ def test_supplied_projection_binds_without_running_a_producer(
     assert not any(
         "semantic_compiler" in part or "semantic-compiler" in part for c in calls for part in c
     )
+
+
+def test_default_selection_is_every_projected_invariant_in_source_order(
+    authority, tmp_path, capsys, monkeypatch
+):
+    artifact, receipt = build_projection(authority, tmp_path / "supplied")
+    rc, record, _ = run(
+        capsys,
+        monkeypatch,
+        *bind_args(authority, artifact, receipt, "--expect-revision", head(authority)),
+    )
+    assert rc == 0
+    assert [i["id"] for i in record["applicable_invariants"]] == SELECTED
+    # The unselected global invariant is not part of the binding: the profile,
+    # not the scope, decides what the coding agent binds.
+    assert "L9-FIXTURE-UNSELECTED" not in {i["id"] for i in record["applicable_invariants"]}
 
 
 # 2. An absent artifact is an explicit Unknown, reached without touching anything.
@@ -346,7 +410,7 @@ def test_prior_binding_recheck_requires_pin(authority, tmp_path, capsys, monkeyp
 # Local substitution beneath a trusted pin: the bytes read are the pinned bytes.
 def _tamper(authority: Path) -> bytes:
     forged = yaml.safe_load((authority / "semantics/invariants.yaml").read_text())
-    forged["invariants"][1]["rule"] = "substituted law"
+    forged["invariants"][2]["rule"] = "substituted law"
     return yaml.safe_dump(forged, sort_keys=False).encode()
 
 
@@ -417,8 +481,16 @@ def test_uncommitted_semantics_edit_is_blocked(authority, tmp_path, capsys, monk
 
 
 # 4. Tampered, stale, or mismatched evidence stays rejected.
-def _drop_rule(payload: list[dict[str, Any]]) -> None:
-    payload[0]["rule"] = "weakened"
+def _drop_rule(payload: dict[str, Any]) -> None:
+    payload["invariants"][0]["rule"] = "weakened"
+
+
+def _reorder(payload: dict[str, Any]) -> None:
+    payload["invariants"].reverse()
+
+
+def _flatten(payload: dict[str, Any]) -> None:
+    payload["flattened"] = payload.pop("invariants")
 
 
 def _edit_receipt(path: Path, change: Any, redigest: bool) -> None:
@@ -436,13 +508,18 @@ def _edit_receipt(path: Path, change: Any, redigest: bool) -> None:
     [
         ("payload_digest_not_recomputed", (1, "REJECTED", "PROJECTION_DIGEST_MISMATCH")),
         ("payload_altered_digests_recomputed", (1, "REJECTED", "PAYLOAD_NOT_FAITHFUL_TO_SOURCE")),
+        ("payload_reordered_digests_recomputed", (1, "REJECTED", "PAYLOAD_NOT_IN_SOURCE_ORDER")),
+        ("payload_section_renamed", (3, "BLOCKED", "PAYLOAD_SHAPE_UNRESOLVED")),
+        ("envelope_coordinate_edited_digest_kept", (1, "REJECTED", "PROJECTION_DIGEST_MISMATCH")),
         ("receipt_field_tampered", (1, "REJECTED", "RECEIPT_DIGEST_MISMATCH")),
         ("receipt_unpinned_production", (1, "REJECTED", "RECEIPT_NOT_A_PASSING_PROJECTION")),
         ("receipt_output_other_artifact", (1, "REJECTED", "RECEIPT_OUTPUT_NOT_BOUND")),
+        ("receipt_output_other_source", (1, "REJECTED", "RECEIPT_OUTPUT_NOT_BOUND")),
         (
             "producer_without_projection_role",
             (1, "REJECTED", "RECEIPT_PRODUCER_NOT_ASSIGNED_PROJECTION_ROLE"),
         ),
+        ("artifact_producer_differs_from_receipt", (1, "REJECTED", "ARTIFACT_PRODUCER_MISMATCH")),
         ("artifact_wrong_profile", (1, "REJECTED", "PROFILE_IDENTITY_MISMATCH")),
         ("invariant_not_projected", (3, "BLOCKED", "REQUIRED_INVARIANT_NOT_PROJECTED")),
     ],
@@ -458,13 +535,32 @@ def test_tampered_or_mismatched_evidence_is_rejected(
         )
     elif case == "payload_altered_digests_recomputed":
         artifact, receipt = build_projection(authority, out, payload_edit=_drop_rule)
+    elif case == "payload_reordered_digests_recomputed":
+        artifact, receipt = build_projection(authority, out, payload_edit=_reorder)
+    elif case == "payload_section_renamed":
+        artifact, receipt = build_projection(authority, out, payload_edit=_flatten)
     elif case == "receipt_unpinned_production":
         artifact, receipt = build_projection(authority, out, result="unknown")
+    elif case == "receipt_output_other_source":
+        artifact, receipt = build_projection(
+            authority, out, output_ref=verifier.PROFILE_REF + "#l9.source/contracts@1"
+        )
     elif case == "producer_without_projection_role":
-        artifact, receipt = build_projection(authority, out, producer="l9-bystander")
+        bystander = {"compiler": "l9-bystander", "version": "fixture"}
+        artifact, receipt = build_projection(authority, out, producer=bystander)
+    elif case == "artifact_producer_differs_from_receipt":
+        artifact, receipt = build_projection(
+            authority,
+            out,
+            artifact_producer={"compiler": "l9-semantic-compiler", "version": "other"},
+        )
     else:
         artifact, receipt = build_projection(authority, out)
-    if case == "receipt_field_tampered":
+    if case == "envelope_coordinate_edited_digest_kept":
+        doc = json.loads(artifact.read_text())
+        doc["generated_by"] = {"compiler": "l9-semantic-compiler", "version": "rewritten"}
+        artifact.write_text(json.dumps(doc))
+    elif case == "receipt_field_tampered":
         _edit_receipt(receipt, lambda r: r.update(claim="forged claim"), redigest=False)
     elif case == "receipt_output_other_artifact":
         _edit_receipt(
@@ -475,11 +571,46 @@ def test_tampered_or_mismatched_evidence_is_rejected(
         doc["projection_profile_ref"] = "l9.projection/other@1"
         artifact.write_text(json.dumps(doc))
     elif case == "invariant_not_projected":
-        extra = ["--require-invariant", "L9-FIXTURE-LOCAL"]
+        extra = ["--require-invariant", "L9-FIXTURE-UNSELECTED"]
     rc, record, _ = run(
         capsys,
         monkeypatch,
         *bind_args(authority, artifact, receipt, "--expect-revision", head(authority), *extra),
+    )
+    assert (rc, record["status"], record["reason"]) == expected
+
+
+# 5. Only the profile's exact-id selection form is re-selected; anything else is Unknown.
+@pytest.mark.parametrize(
+    ("mutate", "expected"),
+    [
+        (
+            lambda p: p["sources"]["invariants"]["selectors"].append(
+                '$.invariants[?(@.scope=="global")]'
+            ),
+            (3, "BLOCKED", "PROFILE_SELECTOR_FORM_UNRESOLVED"),
+        ),
+        (
+            lambda p: p["sources"]["invariants"]["selectors"].append(id_selector("L9-FIXTURE-001")),
+            (3, "BLOCKED", "PROFILE_SELECTOR_DUPLICATE_IDENTITY"),
+        ),
+        (
+            lambda p: p["sources"]["invariants"]["selectors"].append(id_selector("L9-NOWHERE")),
+            (3, "BLOCKED", "CANONICAL_INVARIANT_UNRESOLVED"),
+        ),
+        (lambda p: p.update(**{"class": "consumer"}), (3, "BLOCKED", "PROFILE_CONSUMER_MISMATCH")),
+    ],
+)
+def test_profile_shapes_the_consumer_cannot_reselect_are_unknown(
+    authority, tmp_path, capsys, monkeypatch, mutate, expected
+):
+    catalog = yaml.safe_load((authority / "semantics/projection_profiles.yaml").read_text())
+    mutate(catalog["projection_profiles"][0])
+    write_semantics(authority, "projection_profiles.yaml", catalog)
+    pin = commit_all(authority, "profile edit")
+    artifact, receipt = build_projection(authority, tmp_path / "supplied")
+    rc, record, _ = run(
+        capsys, monkeypatch, *bind_args(authority, artifact, receipt, "--expect-revision", pin)
     )
     assert (rc, record["status"], record["reason"]) == expected
 
