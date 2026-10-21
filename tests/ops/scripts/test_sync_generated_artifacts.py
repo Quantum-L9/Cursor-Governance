@@ -205,3 +205,63 @@ def test_skill_registry_names_its_generator_and_heal_command() -> None:
     assert registry["generator"] == "ops/scripts/build_claude_skill_registry.py"
     assert registry["regenerate"] == "make claude-skill-registry"
     assert makefile_has_target(repo, "claude-skill-registry")
+
+
+def test_user_scope_adapters_follow_only_the_ssot_clone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A sync run outside $HOME/.cursor-governance must not re-point ~/.claude/*.
+
+    Regression for the 2026-10-21 incident: `sync_generated_artifacts.py --force`
+    executed inside a scratch archive of PR #744 moved the live `~/.claude/rules`
+    and 56 of 58 `~/.claude/skills` links onto that archive.
+    """
+    from sync_generated_artifacts import user_scope_adapter_flags
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    ssot = tmp_path / ".cursor-governance"
+    ssot.mkdir()
+    other = tmp_path / "scratch" / "pr-744"
+    other.mkdir(parents=True)
+
+    warnings: list[str] = []
+    assert user_scope_adapter_flags(ssot, warnings) == []
+    assert warnings == []
+
+    assert user_scope_adapter_flags(other, warnings) == ["--skip-user"]
+    assert len(warnings) == 1
+    assert "not the governance SSOT clone" in warnings[0]
+
+    # The boundary is $HOME-derived only: a checkout that names itself through
+    # L9_GOVERNANCE_DIR does not become the SSOT (Codex P1 on #761).
+    monkeypatch.setenv("L9_GOVERNANCE_DIR", str(other))
+    assert user_scope_adapter_flags(other) == ["--skip-user"]
+    assert user_scope_adapter_flags(ssot) == []
+
+
+def test_skip_user_keeps_orphan_migration_off_the_account_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--skip-user` must also stop the orphan migrator from scanning ~/.claude."""
+    import reconcile_llm_skill_adapters as rsa
+
+    seen: list[list[str]] = []
+
+    class _Proc:
+        stdout = "{}"
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(
+        rsa.subprocess, "run", lambda cmd, **_kw: seen.append([str(c) for c in cmd]) or _Proc()
+    )
+    ws = tmp_path / "ws"
+    ws.mkdir()
+
+    rsa.run_orphan_migration(ws, check=True, quiet=True, skip_user=True)
+    argv = seen[-1]
+    assert "--claude-root" in argv
+    assert argv[argv.index("--claude-root") + 1] == str(ws / ".claude")
+
+    rsa.run_orphan_migration(ws, check=True, quiet=True)
+    assert "--claude-root" not in seen[-1]

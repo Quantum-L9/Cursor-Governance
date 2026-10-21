@@ -1,0 +1,32 @@
+schema: l9.schema-definition/v1
+artifact_id: l9.schema/projection-artifact@1
+canonical: true
+type: object
+required:
+  - schema
+  - source_ref
+  - source_digest
+  - projection_profile_ref
+  - projection_profile_digest
+  - payload
+  - projection_digest
+properties:
+  schema:
+    const: l9.projection-artifact/v1
+  source_ref:
+    type: semantic_ref
+  source_digest:
+    type: semantic_digest
+  projection_profile_ref:
+    type: semantic_ref
+  projection_profile_digest:
+    type: semantic_digest
+  payload:
+    type: any
+  projection_digest:
+    type: semantic_digest
+  generated_by:
+    type: object
+    required:
+      - compiler
+      - version

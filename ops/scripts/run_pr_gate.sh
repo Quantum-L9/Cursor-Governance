@@ -347,11 +347,16 @@ mkdir -p "$WS/.l9/pr"
 trap '_gate_on_exit' EXIT
 git status --porcelain >"$status_before"
 
+# $1: what the security wave proved for this receipt — "pass" (the blocking
+# wave ran and passed), "advisory" (PR_SECURITY_ADVISORY=1: findings did not
+# block) or "not_run" (nothing to gate). compose_pr_body.py ticks a security
+# Gate box only for "pass" on a receipt still bound to the tree it describes;
+# a receipt that cannot say which is never read as a clean scan.
 _gate_write_receipt() {
   _gate_failed=0
   rm -f "$_GATE_FAILURE"
   mkdir -p "$WS/.l9/pr"
-  python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
+  python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" "${1:-not_run}" "$(_gate_head_sha)" <<'PY'
 import json, sys
 from datetime import datetime, timezone
 
@@ -362,6 +367,8 @@ doc = {
     "paths_digest": paths,
     "content_digest": content,
     "pr_base": pr_base,
+    "security": sys.argv[3],
+    "head_sha": sys.argv[4],
     "passed_at": datetime.now(timezone.utc)
     .replace(microsecond=0)
     .isoformat()
@@ -538,7 +545,7 @@ PR_ALLOW_EMPTY=1 PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_f
   >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
 if [[ ! -s "$changed_file" ]]; then
   echo "OK: nothing to gate vs $PR_BASE (no committed or working-tree changes outside scratch)"
-  _gate_write_receipt
+  _gate_write_receipt not_run
   echo "RESULT: PASS — local PR gate clean (nothing to gate)"
   exit 0
 fi
@@ -1040,5 +1047,9 @@ if ! _scratch_hold_status; then
   exit 1
 fi
 
-_gate_write_receipt
+if [[ "$PR_SECURITY_ADVISORY" == "1" ]]; then
+  _gate_write_receipt advisory
+else
+  _gate_write_receipt pass
+fi
 echo "RESULT: PASS — local PR gate clean (changed files only)"
