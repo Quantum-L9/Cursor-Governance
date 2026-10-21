@@ -520,6 +520,10 @@ def _edit_receipt(path: Path, change: Any, redigest: bool) -> None:
             (1, "REJECTED", "RECEIPT_PRODUCER_NOT_ASSIGNED_PROJECTION_ROLE"),
         ),
         ("artifact_producer_differs_from_receipt", (1, "REJECTED", "ARTIFACT_PRODUCER_MISMATCH")),
+        (
+            "artifact_producer_carries_extra_coordinate",
+            (1, "REJECTED", "ARTIFACT_PRODUCER_MISMATCH"),
+        ),
         ("artifact_wrong_profile", (1, "REJECTED", "PROFILE_IDENTITY_MISMATCH")),
         ("invariant_not_projected", (3, "BLOCKED", "REQUIRED_INVARIANT_NOT_PROJECTED")),
     ],
@@ -553,6 +557,12 @@ def test_tampered_or_mismatched_evidence_is_rejected(
             authority,
             out,
             artifact_producer={"compiler": "l9-semantic-compiler", "version": "other"},
+        )
+    elif case == "artifact_producer_carries_extra_coordinate":
+        # Same compiler and version, but a build coordinate the receipt does not
+        # carry: the whole identity must agree, not only its two leading fields.
+        artifact, receipt = build_projection(
+            authority, out, artifact_producer={**PRODUCER, "revision": "deadbeef"}
         )
     else:
         artifact, receipt = build_projection(authority, out)

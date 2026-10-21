@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.4.1  
+**Release:** 1.4.2  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`

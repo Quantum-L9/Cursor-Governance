@@ -545,11 +545,11 @@ def verify_projection(args: argparse.Namespace) -> dict[str, Any]:
     producer = _mapping(receipt, "producer_identity", "RECEIPT")
     if not producer.get("compiler") or not producer.get("version"):
         raise Outcome("REJECTED", "RECEIPT_PRODUCER_UNIDENTIFIED")
+    # The artifact names its producer too; the whole identity must agree with the
+    # receipt's, not only the compiler and version, so differing build or
+    # revision coordinates cannot hide behind two self-consistent digests.
     generated_by = artifact.get("generated_by")
-    if not isinstance(generated_by, dict) or {
-        "compiler": generated_by.get("compiler"),
-        "version": generated_by.get("version"),
-    } != {"compiler": producer.get("compiler"), "version": producer.get("version")}:
+    if not isinstance(generated_by, dict) or generated_by != producer:
         raise Outcome(
             "REJECTED",
             "ARTIFACT_PRODUCER_MISMATCH",

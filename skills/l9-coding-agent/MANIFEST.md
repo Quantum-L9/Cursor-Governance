@@ -1,6 +1,6 @@
 # L9 Coding Agent Manifest
 
-**Release:** 1.4.1  
+**Release:** 1.4.2  
 **Runtime identity:** `l9-coding-agent`  
 **Distribution shape:** root `SKILL.md`, no wrapper directory
 
