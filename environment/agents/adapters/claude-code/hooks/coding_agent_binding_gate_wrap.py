@@ -44,8 +44,13 @@ def _deny(reason: str) -> int:
 def main() -> int:
     try:
         from surface_detect import claude_runtime_present, cursor_host_present
-    except ImportError:
-        return 0
+    except ImportError as exc:
+        # A gate registered on this surface that cannot tell which surface it is
+        # on has not evaluated; it does not pass.
+        return _deny(
+            f"coding-agent binding gate: surface detector unresolved ({exc}); failing closed. "
+            "Operator override: L9_CODING_BINDING_AUTHORIZED=<reason>."
+        )
     if cursor_host_present() or not claude_runtime_present():
         return 0
     try:

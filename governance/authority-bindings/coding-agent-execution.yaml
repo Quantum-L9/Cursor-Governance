@@ -5,7 +5,7 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 3.1.0
+#   version: 3.1.1
 #   updated: 2026-10-21
 schema: l9.cursor-governance.coding-projection-binding/v3
 artifact_id: l9.cursor-governance/coding-projection-binding@1
@@ -75,9 +75,12 @@ enforcement:
     hook: environment/agents/adapters/claude-code/hooks/coding_agent_binding_gate_wrap.py
     hook_event: PreToolUse
     tools: [Edit, Write, MultiEdit, NotebookEdit]
-    activation: .l9/coding-agent/run.json   # schema l9.coding-agent-run/v1, written at intake
-    record: .l9/coding-agent/binding.json   # the pack verifier's printed record
+    activation: .l9/coding-agent/run.json   # schema l9.coding-agent-run/v1, written at intake; names authority_root
+    record: .l9/coding-agent/binding.json   # the pack verifier's printed record, never hand-authored
     allows: [BOUND, CURRENT]
-    reauthorization: run.json reauthorized_unknown.instruction, the user's words verbatim
+    # No writable label is trusted: the gate re-runs the pack verifier (--prior-binding) on the
+    # record, the bundle it names and run.json's authority_root, and allows only a live CURRENT.
+    admission: live re-verification by skills/l9-coding-agent/scripts/verify_canonical_binding.py
+    reauthorization: L9_CODING_BINDING_REAUTHORIZED=<the user's words verbatim> in the hook environment (operator-set)
     breakglass: L9_CODING_BINDING_AUTHORIZED=<reason> (human/ops only; a bare flag is refused)
     outside_claude_code: instructional (the skill text still requires the verifier run)

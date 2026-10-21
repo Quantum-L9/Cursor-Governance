@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.5 - 2026-10-21
+
+The host gate trusts no writable label (re-audit findings R769-01 and R769-02).
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.5.1: `run.json` names `authority_root`; the reauthorization is `L9_CODING_BINDING_REAUTHORIZED=<verbatim>` in the operator-controlled hook environment, not a field in `run.json`; `enforcement_scope.claude_code` states the re-verification.
+- `Quantum-L9/Cursor-Governance` `ops/autonomy/coding_agent_binding_gate.py`: a `BOUND`/`CURRENT` record is admitted only when the pack verifier, re-run by the gate on the record, the bundle it names and `authority_root` (`--prior-binding`), answers `CURRENT`; file-tool writes under `.l9/coding-agent/` are refused during a run; a malformed PreToolUse event, run or record, an absent authority checkout and a verifier that cannot run are denied; the Claude adapter denies when the surface detector cannot be imported.
+- `RUNBOOK.md` step 4 and Finish step 5, CA-E58/CA-E59 reworded.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.4 - 2026-10-21
 
 Canonical-binding enforcement becomes mechanical where the host can enforce it (closes F-04 on Claude Code under `Quantum-L9/Cursor-Governance`). The bootstrap already required binding before mutation; the governance binding now says so truthfully instead of `report_only` / `blocks_mutation: false`.

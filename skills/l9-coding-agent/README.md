@@ -1,6 +1,6 @@
 # L9 Coding Agent
 
-**Version:** 1.4.4  
+**Version:** 1.4.5  
 **Tier:** exemplary  
 **Role:** architecture-faithful realization sibling to L9 Global Architect
 

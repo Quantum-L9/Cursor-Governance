@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.4.4  
+**Release:** 1.4.5  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`
@@ -137,11 +137,11 @@ Validated on 2026-10-21 against a synthetic three-class authority repository and
 - The repository-level consumer (`tools/authority/verify_coding_projection.py`, `ops/scripts/coding_projection_status.py`) delegates every check to this verifier in bundle mode and reports `BOUND` at SessionStart and `CURRENT` with an independent `main` record; 14/14 repository tests pass.
 - Runtime alignment and lazy bootstrap validators pass.
 
-## v1.4.4 mechanical binding gate
+## v1.4.4 / v1.4.5 mechanical binding gate
 
 Validated on 2026-10-21 in `Quantum-L9/Cursor-Governance`, where the gate is registered.
 
-- `tests/ops/autonomy/test_coding_agent_binding_gate.py` (repository suite, 19 cases): no run active allows everything; non-file tools are ignored; `BOUND` and `CURRENT` records allow; an active run without a record denies every file tool with the verifier invocation in the reason; `REJECTED`, `BLOCKED`, `STALE` and status-less records deny; a record from another verifier is not a binding; a non-empty verbatim reauthorization carries the run and an empty one does not; a malformed run fails closed; the run-state files stay writable; the run is found above a nested path and not in a sibling tree; the breakglass needs a reason; the CLI emits a PreToolUse deny decision and is silent when nothing is active.
+- `tests/ops/autonomy/test_coding_agent_binding_gate.py` (repository suite, 40 cases): no run active allows everything; non-file tools are ignored; a `BOUND` record allows only when the re-run verifier answers `CURRENT`, and `STALE`, `REJECTED`, `BLOCKED`, a stale `BOUND` and an empty verdict all deny; an active run without a record denies every file tool with the verifier invocation in the reason; `REJECTED`, `BLOCKED`, `STALE` and status-less records deny without re-verifying; a record from another verifier, a handed-pair record without a bundle, a run without `authority_root` and an absent authority checkout deny; malformed run and record fail closed; file-tool writes under `.l9/coding-agent/` are refused during a run while opening a run is not gated; a file-based reauthorization is not a grant; the operator environment reauthorization carries the run and bare flags do not; the breakglass needs a reason; the CLI emits a PreToolUse deny decision, is silent when nothing is active, and denies an unreadable event. End to end with the real verifier on a synthetic authority and bundle: the verifier's own record is admitted (`re-verified: UNCHANGED`) and the same record over a byte-changed bundle is denied `REJECTED BUNDLE_BYTES_MISMATCH`.
 - `environment/agents/adapters/claude-code/tests/test_hook_exec_failclosed.py`: the gate is named in the launcher's gate table, cannot be registered as an observer, and blocks when the launcher is missing.
 - `tests/test_coding_projection.py`: the governance binding names the gate, its hook, event, tools, state files and allowed statuses, all equal to the gate's constants, and the rendered Claude settings register it exactly once as `--class gate`.
 - Runtime alignment covers 59 cases; lazy bootstrap and the pack validators pass.
@@ -160,7 +160,7 @@ Validated on 2026-10-21 in `Quantum-L9/Cursor-Governance`, where the gate is reg
   - producer attestation is the trusted replay in the consumer repository, which passes only when the producer revision named in the lock is on the engine's protected `main`;
   - the operating-plane profile remains unprojectable whole because `conformance_profiles` resolves outside `.github`; it is no longer the coding agent's binding profile.
 - Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
-- Canonical-binding enforcement is mechanical only on Claude Code under `Quantum-L9/Cursor-Governance` (the PreToolUse gate above, keyed on the run-state files) and only for the file tools it names; shell-driven mutation and other hosts remain instructional (F-04 narrowed in 1.4.4, not closed everywhere).
+- Canonical-binding enforcement is mechanical only on Claude Code under `Quantum-L9/Cursor-Governance` (the PreToolUse gate above, keyed on the run-state files and a live re-verification) and only for the file tools it names; shell-driven mutation and other hosts remain instructional (F-04 narrowed in 1.4.4, not closed everywhere). The gate's inputs (`run.json`, `binding.json`, the bundle, the authority checkout) are agent-writable; what makes them useless to a forger is that the verifier recomputes every digest against the pinned commit objects and the committed bundle bytes, so a record that was not produced over genuine law and the real bundle cannot come back `CURRENT`. The pin remains caller-supplied (see above).
 - `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.
 - `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
 

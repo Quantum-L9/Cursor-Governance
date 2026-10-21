@@ -209,6 +209,8 @@ def test_shipped_binding_is_a_report_only_bundle_consumer() -> None:
     assert Path(gate["record"]) == brain.RUN_DIR / brain.RECORD_FILE
     assert set(gate["allows"]) == set(brain.BOUND_STATUSES)
     assert brain.BREAKGLASS_ENV in gate["breakglass"]
+    assert brain.REAUTHORIZED_ENV in gate["reauthorization"]
+    assert Path(gate["admission"].split()[-1]) == consumer.VERIFIER_PATH
     settings = json.loads((REPO / ".claude" / "settings.json").read_text())
     registered = [
         hook["command"]
