@@ -161,7 +161,9 @@ def reconcile_adapters(
     }
 
 
-def run_orphan_migration(workspace: Path, *, check: bool, quiet: bool) -> dict[str, Any] | None:
+def run_orphan_migration(
+    workspace: Path, *, check: bool, quiet: bool, skip_user: bool = False
+) -> dict[str, Any] | None:
     migrate = SCRIPT_DIR / "migrate_claude_orphan_skills.py"
     if not migrate.is_file():
         return None
@@ -172,6 +174,11 @@ def run_orphan_migration(workspace: Path, *, check: bool, quiet: bool) -> dict[s
         str(workspace),
         "--json",
     ]
+    if skip_user:
+        # Without an explicit --claude-root the migrator scans ~/.claude as well;
+        # a non-SSOT run must leave the account tree untouched, so scan only the
+        # workspace's own .claude (named twice is harmless: same resolved root).
+        cmd.extend(["--claude-root", str(workspace / ".claude")])
     if check:
         cmd.append("--check")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -213,7 +220,9 @@ def main() -> int:
     workspace = (args.workspace or Path.cwd()).resolve()
     migration = None
     if not args.skip_orphan_migration:
-        migration = run_orphan_migration(workspace, check=args.check, quiet=args.quiet)
+        migration = run_orphan_migration(
+            workspace, check=args.check, quiet=args.quiet, skip_user=args.skip_user
+        )
 
     try:
         payload = reconcile_adapters(

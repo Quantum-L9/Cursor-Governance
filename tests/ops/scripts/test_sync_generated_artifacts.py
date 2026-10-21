@@ -218,11 +218,11 @@ def test_user_scope_adapters_follow_only_the_ssot_clone(
     """
     from sync_generated_artifacts import user_scope_adapter_flags
 
-    ssot = tmp_path / "cursor-governance"
+    monkeypatch.setenv("HOME", str(tmp_path))
+    ssot = tmp_path / ".cursor-governance"
     ssot.mkdir()
     other = tmp_path / "scratch" / "pr-744"
     other.mkdir(parents=True)
-    monkeypatch.setenv("L9_GOVERNANCE_DIR", str(ssot))
 
     warnings: list[str] = []
     assert user_scope_adapter_flags(ssot, warnings) == []
@@ -232,10 +232,36 @@ def test_user_scope_adapters_follow_only_the_ssot_clone(
     assert len(warnings) == 1
     assert "not the governance SSOT clone" in warnings[0]
 
-    # Default resolution: $HOME/.cursor-governance when the env override is absent.
-    monkeypatch.delenv("L9_GOVERNANCE_DIR")
-    monkeypatch.setenv("HOME", str(tmp_path))
-    home_clone = tmp_path / ".cursor-governance"
-    home_clone.mkdir()
-    assert user_scope_adapter_flags(home_clone) == []
+    # The boundary is $HOME-derived only: a checkout that names itself through
+    # L9_GOVERNANCE_DIR does not become the SSOT (Codex P1 on #761).
+    monkeypatch.setenv("L9_GOVERNANCE_DIR", str(other))
     assert user_scope_adapter_flags(other) == ["--skip-user"]
+    assert user_scope_adapter_flags(ssot) == []
+
+
+def test_skip_user_keeps_orphan_migration_off_the_account_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--skip-user` must also stop the orphan migrator from scanning ~/.claude."""
+    import reconcile_llm_skill_adapters as rsa
+
+    seen: list[list[str]] = []
+
+    class _Proc:
+        stdout = "{}"
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(
+        rsa.subprocess, "run", lambda cmd, **_kw: seen.append([str(c) for c in cmd]) or _Proc()
+    )
+    ws = tmp_path / "ws"
+    ws.mkdir()
+
+    rsa.run_orphan_migration(ws, check=True, quiet=True, skip_user=True)
+    argv = seen[-1]
+    assert "--claude-root" in argv
+    assert argv[argv.index("--claude-root") + 1] == str(ws / ".claude")
+
+    rsa.run_orphan_migration(ws, check=True, quiet=True)
+    assert "--claude-root" not in seen[-1]

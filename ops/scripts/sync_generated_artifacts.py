@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -291,11 +290,13 @@ def project_llm_rules(root: Path, wrote: list[str]) -> None:
 def governance_ssot_root() -> Path:
     """The one clone whose generated tree may back the user-scope LLM adapters.
 
-    Rule 06 names ``$HOME/.cursor-governance`` as the sole governance root;
-    ``L9_GOVERNANCE_DIR`` is how a session points at it explicitly.
+    Rule 06 and AGENTS.md §11 name the live ``$HOME/.cursor-governance`` as the
+    only ``ssot`` workspace; every worktree or second clone is ``ssot_checkout``.
+    The boundary is derived from ``$HOME`` alone on purpose: an environment
+    variable can be set by the very checkout that must not win, so it is never
+    accepted as proof of SSOT identity.
     """
-    raw = os.environ.get("L9_GOVERNANCE_DIR") or str(Path.home() / ".cursor-governance")
-    return Path(raw).expanduser().resolve()
+    return (Path.home() / ".cursor-governance").resolve()
 
 
 def user_scope_adapter_flags(root: Path, warnings: list[str] | None = None) -> list[str]:
