@@ -1,0 +1,48 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec"
+  },
+  "components": [
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:0832ad89fdc7c88a6c7b6f835a3af07688553c935b0b60db89026b0b630882fc",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:8ffa92a1c7bc6cb22879b416ef4c867877d2de81990ffaf2da61138ee3e8f581",
+      "source_class": "invariants",
+      "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "path": "projections/contracts.projection.json",
+      "projection_digest": "sha256:f9ae8897731f3a47de1d6e1d331eb452f40927587e6389bb3aee0964e72627d2",
+      "receipt": "receipts/contracts.receipt.json",
+      "sha256": "sha256:217851d7c05a03deaabbe13c95bb00798d8f098281a563265c4cedf07769f125",
+      "source_class": "contracts",
+      "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "source_ref": "l9.source/contracts@1"
+    },
+    {
+      "path": "projections/authority_model.projection.json",
+      "projection_digest": "sha256:85d3fa331ace18a6192f5d6eb05523773c6fbe9b651dbb07b92d1dd7d453e88f",
+      "receipt": "receipts/authority_model.receipt.json",
+      "sha256": "sha256:946e8f3c7ae6894438bbd874199828726ae148a76a4b4514ae202926ca4ee40d",
+      "source_class": "authority_model",
+      "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+      "source_ref": "l9.source/authority-model@1"
+    }
+  ],
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "b9b4892c26b706cced32b398fca6eeec3ad86efc",
+    "revision_basis": "caller_asserted",
+    "version": "0.9.3"
+  },
+  "projection_profile": {
+    "digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
+    "ref": "l9.projection/coding-agent-execution@1"
+  },
+  "schema": "l9.projection-bundle/v1"
+}

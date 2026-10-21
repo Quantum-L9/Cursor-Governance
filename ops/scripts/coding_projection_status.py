@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
-"""Classify the coding projection for SessionStart and CI (report-only).
+"""Classify the coding projection bundle for SessionStart and CI (report-only).
 
-Cursor-Governance verifies ``l9.projection/coding-agent-execution@1``; it never
-produces it (Quantum-L9/.github ``docs/PROJECTION_PUBLICATION.md``). One
-classifier serves both surfaces: Claude prints ``--format line``, Cursor
-``--format markdown`` (SURFACE_BOOTSTRAP_CONTRACT: share the classifier, not
-the presentation). It never fetches, never writes, and never blocks.
+Cursor-Governance commits ``generated/governance/coding_agent_execution`` and
+verifies it with the coding agent's own verifier (Quantum-L9/.github ADR-021);
+it never produces it. One classifier serves both surfaces: Claude prints
+``--format line``, Cursor ``--format markdown`` (SURFACE_BOOTSTRAP_CONTRACT:
+share the classifier, not the presentation). It never fetches the network,
+never writes the repository, and never blocks.
 
 Status, each only with the proof named:
 
-* ``CURRENT``    every source class has a published ``l9-semantic-compiler``
-                 pair that verifies against the authority, nothing material
-                 changed on ``main``, and ``main`` equals an independent record
-                 passed with ``--expect-main`` (CI passes its fresh checkout).
+* ``CURRENT``    the committed bundle verifies at the revision its lock names,
+                 nothing material changed on ``main``, and ``main`` equals an
+                 independent record passed with ``--expect-main`` (CI passes
+                 its fresh checkout).
 * ``BOUND``      as CURRENT, judged against the checkout's local
                  ``origin/main`` ref with no independent record (SessionStart).
-* ``STALE``      the pinned profile changed on ``main``, or a published pair is
-                 genuine but ``main`` has since changed its source or profile.
+* ``STALE``      the pinned profile or a bundled source changed on ``main``, or
+                 the verifier reports STALE.
 * ``UNVERIFIED`` proof is not available: no verified Quantum-L9/.github
-                 checkout, no ``origin/main``, or no published pair. Never
-                 upgraded from cache age.
-* ``BLOCKED``    the binding is unreadable, or a published pair, its index or
-                 its authority inputs fail verification (tamper, forgery, wrong
-                 producer role, revision off ``main``).
+                 checkout, no ``origin/main``, no committed bundle, the bundle
+                 revision not fetched, or the verifier reports BLOCKED (Unknown).
+* ``BLOCKED``    the binding is unreadable, the bundle revision is off ``main``,
+                 or the verifier reports REJECTED (tamper, forgery, wrong
+                 producer role, unbound receipt).
 """
 
 from __future__ import annotations
@@ -42,16 +43,20 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.authority.verify_coding_projection import (  # noqa: E402
+    BUNDLE_PATH,
     Rejected,
     Unobserved,
-    compute_pins,
+    is_ancestor,
+    material_change,
+    pinned_checkout,
+    read_lock,
     resolve,
     verify_authority,
-    verify_published,
+    verify_bundle,
 )
 
 BINDING_PATH = Path("governance/authority-bindings/coding-agent-execution.yaml")
-BINDING_SCHEMA = "l9.cursor-governance.coding-projection-binding/v2"
+BINDING_SCHEMA = "l9.cursor-governance.coding-projection-binding/v3"
 ENV_AUTHORITY_ROOT = "L9_AUTHORITY_ROOT"
 STATUSES = ("CURRENT", "BOUND", "STALE", "UNVERIFIED", "BLOCKED")
 
@@ -64,15 +69,15 @@ def load_binding(path: Path) -> dict[str, Any]:
     if not isinstance(binding, dict) or binding.get("schema") != BINDING_SCHEMA:
         raise Rejected(f"binding schema is not {BINDING_SCHEMA}")
     upstream = binding.get("upstream") or {}
-    publication = binding.get("publication") or {}
+    bundle = binding.get("bundle") or {}
     for key in ("profile_ref", "profile_digest"):
         if not isinstance(upstream.get(key), str) or not upstream[key]:
             raise Rejected(f"binding.upstream.{key} is required")
     classes = upstream.get("source_classes")
     if not isinstance(classes, list) or not classes or not all(isinstance(c, str) for c in classes):
         raise Rejected("binding.upstream.source_classes must list the profile's classes")
-    if not isinstance(publication.get("ref"), str) or not publication["ref"]:
-        raise Rejected("binding.publication.ref is required")
+    if not isinstance(bundle.get("path"), str) or not bundle["path"]:
+        raise Rejected("binding.bundle.path is required")
     return binding
 
 
@@ -111,7 +116,7 @@ def classify(
     expect_main: str | None = None,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
-        "schema": "l9.coding-projection-status/v2",
+        "schema": "l9.coding-projection-status/v3",
         "enforcement": "report_only",
         "role": "consumer_verifier",
     }
@@ -124,9 +129,25 @@ def classify(
         binding = load_binding(repo_root / BINDING_PATH)
     except Rejected as exc:
         return done("BLOCKED", str(exc))
-    upstream, publication = binding["upstream"], binding["publication"]
+    upstream = binding["upstream"]
     profile_ref = upstream["profile_ref"]
     result["profile_ref"] = profile_ref
+    bundle = repo_root / binding["bundle"]["path"]
+    if bundle != repo_root / BUNDLE_PATH:
+        return done("BLOCKED", f"binding.bundle.path is not the committed bundle {BUNDLE_PATH}")
+
+    try:
+        lock = read_lock(bundle)
+    except Unobserved as exc:
+        return done("UNVERIFIED", f"no committed bundle: {exc}")
+    except Rejected as exc:
+        return done("BLOCKED", str(exc))
+    revision = lock["authority"]["revision"]
+    result["bundle_revision"] = revision
+    if (lock.get("projection_profile") or {}).get("digest") != upstream["profile_digest"]:
+        return done("STALE", f"the bundle's profile pin is not this binding's {profile_ref} digest")
+    if [c.get("source_class") for c in lock.get("components") or []] != upstream["source_classes"]:
+        return done("BLOCKED", "the bundle's components are not the binding's source classes")
 
     root, rejected = _authority(workspace, authority_root)
     if rejected:
@@ -143,42 +164,40 @@ def classify(
         return done("UNVERIFIED", f"{root} has no origin/main ref")
     result["observed_main"] = main
     where = f"local origin/main @{main[:12]}, {_fetch_age(root)}"
+    if resolve(root, revision) is None:
+        return done("UNVERIFIED", f"bundle revision {revision[:12]} is not fetched in {root}")
+    if not is_ancestor(root, revision, main):
+        return done("BLOCKED", f"bundle revision {revision[:12]} is not on {where}")
 
     try:
-        pins = compute_pins(root, main, profile_ref, upstream["source_classes"][0])
-    except Rejected as exc:
-        return done("STALE", f"{profile_ref} no longer resolves at {where}: {exc}")
-    if pins["profile_digest"] != upstream["profile_digest"]:
-        return done("STALE", f"{profile_ref} changed at {where}: rebind deliberately")
-
-    published = resolve(root, publication["ref"])
-    if published is None:
-        return done(
-            "UNVERIFIED",
-            f"no producer pair published ({publication['ref']} absent in this checkout; "
-            f"{publication.get('upstream_state', 'publisher state unknown')})",
-        )
-    result["publication_commit"] = published
-
-    outcomes: dict[str, Any] = {}
-    try:
-        for source_class in upstream["source_classes"]:
-            outcomes[source_class] = verify_published(
-                root, published, main, profile_ref, source_class
-            )
+        with pinned_checkout(root, revision) as holder:
+            record = verify_bundle(Path(holder) / "authority", bundle, revision, repo_root)
     except Unobserved as exc:
-        return done("UNVERIFIED", f"{exc} at {publication['ref']} @{published[:12]}")
+        return done("UNVERIFIED", f"{exc} at bundle revision {revision[:12]}")
     except Rejected as exc:
-        return done("BLOCKED", f"{exc} at {publication['ref']} @{published[:12]}")
-    result["pairs"] = outcomes
-    stale = sorted(c for c, o in outcomes.items() if not o["current"])
-    if stale:
-        return done("STALE", f"source changed since publication for {stale} at {where}")
+        status = "STALE" if str(exc).startswith("STALE ") else "BLOCKED"
+        return done(status, f"{exc} at bundle revision {revision[:12]}")
+    result["components"] = [c["source_class"] for c in record["components"]]
+    result["projected_invariant_count"] = record["projected_invariant_count"]
+
+    try:
+        changed = material_change(root, main, lock)
+    except Rejected as exc:
+        return done("STALE", f"{exc}")
+    if changed:
+        return done("STALE", f"changed on {where} since the bundle: {changed}")
     if expect_main is not None:
         if expect_main != main:
             return done("STALE", f"independent main record @{expect_main[:12]} is not {where}")
-        return done("CURRENT", f"all pairs verify at main @{main[:12]} (independently confirmed)")
-    return done("BOUND", f"all pairs verify at {where}; not independently confirmed")
+        return done(
+            "CURRENT",
+            f"bundle @{revision[:12]} verifies and is current at main @{main[:12]}"
+            " (independently confirmed)",
+        )
+    return done(
+        "BOUND",
+        f"bundle @{revision[:12]} verifies and is current at {where}; not independently confirmed",
+    )
 
 
 def render_line(result: dict[str, Any]) -> str:

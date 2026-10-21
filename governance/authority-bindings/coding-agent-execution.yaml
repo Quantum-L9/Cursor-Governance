@@ -5,9 +5,9 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 2.0.0
-#   updated: 2026-10-15
-schema: l9.cursor-governance.coding-projection-binding/v2
+#   version: 3.0.0
+#   updated: 2026-10-21
+schema: l9.cursor-governance.coding-projection-binding/v3
 artifact_id: l9.cursor-governance/coding-projection-binding@1
 canonical: true
 authority:
@@ -17,11 +17,12 @@ authority:
 purpose: >
   Bind the canonical coding-agent execution projection profile from
   Quantum-L9/.github into the Cursor-Governance operating plane at bootstrap,
-  as a consumer verifier. Cursor-Governance never produces the projection:
-  l9-semantic-compiler holds the projection role and its pairs are published
-  to the Quantum-L9/.github projections branch
-  (docs/PROJECTION_PUBLICATION.md). This binding grants no execution,
-  publication or merge authority and changes no grant.
+  as a consumer verifier of the committed projection bundle. Cursor-Governance
+  never produces the projection: l9-semantic-compiler holds the projection
+  role, tools/authority/produce_projection_bundle.py drives it at a pinned
+  revision, and the trusted replay attests the committed bytes
+  (Quantum-L9/.github ADR-021, docs/PROJECTION_PUBLICATION.md). This binding
+  grants no execution, publication or merge authority and changes no grant.
 upstream:
   repository: Quantum-L9/.github
   profile_ref: l9.projection/coding-agent-execution@1
@@ -30,23 +31,30 @@ upstream:
   # A different digest on main is STALE: rebind deliberately, never silently.
   profile_digest: sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346
   admitted_revision: 69134217267626182ac95182a56d1d9bc296135e
-  source_classes: [authority_model, contracts, invariants]
-publication:
+  # In the profile's declared order; the verifier derives the same list from the pinned
+  # profile and refuses a bundle whose components differ from it.
+  source_classes: [invariants, contracts, authority_model]
+bundle:
+  path: generated/governance/coding_agent_execution
+  lock: bundle.lock.json
+  lock_schema: l9.projection-bundle/v1
   producer: l9-semantic-compiler
-  branch: projections
-  ref: refs/remotes/origin/projections
-  index: index.json
-  upstream_state: >-
-    publisher implemented, not activated; multi-selector source classes are
-    UNSUPPORTED_SOURCE_CLASS upstream as of Quantum-L9/.github@d4397e5
+  driver: tools/authority/produce_projection_bundle.py
+  trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+  replay_status: l9/projection-bundle-trusted-replay/coding_agent_execution
+  ci: .github/workflows/l9-projection-bundle-verify.yml
 verification:
-  verifier: tools/authority/verify_coding_projection.py
+  verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+  mode: --bundle
+  delegator: tools/authority/verify_coding_projection.py
   status_reader: ops/scripts/coding_projection_status.py
   conventions: >
-    Mirrors Quantum-L9/.github scripts/publish-projection.py: sha256 of raw
-    source bytes; sha256 of canonical JSON (sorted keys, compact, UTF-8) for
-    payload, profile entry and receipt; schema rules read at the receipt's
-    asserted revision, which must be an ancestor of main.
+    Exactly the producer-emitted conventions Quantum-L9/.github declares in
+    semantics/projection_engine_contract.yaml binding_conventions (ADR-021):
+    sha256 of raw source bytes; sha256 of canonical JSON for the profile entry,
+    the artifact envelope minus projection_digest, and the receipt minus
+    receipt_digest; subject and output <profile_ref>#<source_ref>. The
+    delegator defines no convention of its own.
   producer_authentication: unauthenticated_unkeyed_receipt
 enforcement:
   mode: report_only
