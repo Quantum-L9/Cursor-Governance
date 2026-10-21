@@ -231,11 +231,11 @@
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
     "ref": "l9.compose/architecture-intelligence@1"
   },
-  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "generated_by": "tools/authority/produce_architecture_intelligence.py",
   "producer": {
     "compiler": "l9-semantic-compiler",
     "repository": "Quantum-L9/l9-semantic-compiler-engine",
-    "revision": "b9b4892c26b706cced32b398fca6eeec3ad86efc",
+    "revision": "159383e2052846295dee0bd133e637ac6e6f3107",
     "revision_basis": "caller_asserted",
     "version": "0.9.3"
   },
@@ -243,5 +243,5 @@
     "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
     "ref": "l9.projection/architecture-intelligence@1"
   },
-  "schema": "l9.projection-bundle/v1"
+  "schema": "l9.gar.architecture-intelligence-bundle/v1"
 }

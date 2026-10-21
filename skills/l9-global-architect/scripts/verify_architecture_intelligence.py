@@ -52,6 +52,11 @@ EXIT = {"ADMITTED_AND_CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUN
 AUTHORITY_MAIN_REF = "refs/remotes/origin/main"
 BINDING_REF = "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
 LOCK_SCHEMA = "l9.projection-bundle/v1"
+# The committed architecture lock was cut under the architecture-only driver's schema id.
+# It is re-cut under LOCK_SCHEMA by the first bundle refresh after the shared driver lands on
+# main, because trusted replay can only attest a lock the default-branch driver reproduces;
+# this transitional id is removed with that refresh.
+TRANSITIONAL_LOCK_SCHEMA = "l9.gar.architecture-intelligence-bundle/v1"
 PROJECTION_ENVELOPE = "l9.projection-artifact/v1"
 COMPOSED_ENVELOPE = "l9.composed-projection/v1"
 RECEIPT_SCHEMA = "l9.compiler-receipt/v1"
@@ -189,7 +194,10 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
     if not (bundle / "bundle.lock.json").is_file():
         raise Outcome("BLOCKED", "ARCHITECTURE_INTELLIGENCE_BUNDLE_ABSENT", bundle=str(bundle))
     _, lock = _read_json(bundle / "bundle.lock.json")
-    _expect(isinstance(lock, dict) and lock.get("schema") == LOCK_SCHEMA, "LOCK_SCHEMA_MISMATCH")
+    _expect(
+        isinstance(lock, dict) and lock.get("schema") in (LOCK_SCHEMA, TRANSITIONAL_LOCK_SCHEMA),
+        "LOCK_SCHEMA_MISMATCH",
+    )
     authority = lock.get("authority") or {}
     repository, revision = authority.get("repository"), authority.get("revision")
     if not (
