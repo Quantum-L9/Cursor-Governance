@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.3 - 2026-10-21
+
+The binding consumes the consumer-committed projection bundle (`Quantum-L9/.github` ADR-021, v3.24.0 candidate) and covers every source class the profile declares.
+
+- `scripts/verify_canonical_binding.py --bundle <dir>`: verifies `bundle.lock.json` (`l9.projection-bundle/v1`), every declared class in the profile's order (bytes against the lock, envelope digest, profile pin, provenance, source currency at the pin, receipt subject and output `<profile>#<source>`, `result: pass` with no unresolved criteria, the `payload_schema` criterion naming the profile's declared output schema, governing revision equal to the lock, producer identity and role), then re-selects the `invariants` component record for record as before. The lock revision must lie in the pin's history (`LOCK_REVISION_NOT_IN_PIN_HISTORY`); an unrelated upstream commit keeps a bundle `CURRENT`, a changed bundled source makes it `STALE`. `--prior-binding` re-checks a bundle too. The handed-pair form stays available.
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.4.0: the accepted input is the bundle, and digest conventions cite the law that now declares them (`projection_engine_contract.yaml` `binding_conventions`).
+- `tests/test_coding_agent_canonical_binding.py`: 48 cases (was 38); the fixture profile declares three classes like the admitted one.
+- Live proof: the committed bundle `generated/governance/coding_agent_execution` (engine `main` `b9b4892` at `.github` `main` `7252e3b`) is `BOUND` with 19 invariants and three components, `CURRENT` on re-check, `REJECTED BUNDLE_BYTES_MISMATCH` on a byte change to the contracts component, and `STALE` under a pin outside its history.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.2 - 2026-10-21
 
 Canonical invariant binding moves to the profile `.github` admits for coding agents and adopts the conventions the admitted producer emits. The binding is live: a real `l9-semantic-compiler` pair reaches `BOUND`.

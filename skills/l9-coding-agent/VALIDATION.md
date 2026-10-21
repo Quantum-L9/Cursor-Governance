@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.4.2  
+**Release:** 1.4.3  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`
@@ -128,18 +128,27 @@ Validated on 2026-10-21 against a synthetic authority repository and the real `.
 - Re-validated after both upstream merges on 2026-10-21, with the producer at l9-semantic-compiler-engine `main` (`b9b4892`, PR #13 and PR #14 merged) and the authority at `.github` `main` (`7252e3b`, PR #193 merged): all three profile classes receipt `result: pass` with no unresolved criteria, the `invariants` artifact is byte-identical to the PR #13 output, and this verifier returns `BOUND` with 19 invariants at the admitted revision. Against `.github` `main` before #193 the same producer receipted every class `unknown` on the four forbidden-constraint criteria, which this verifier rejects.
 - Runtime alignment and lazy bootstrap validators pass unchanged.
 
+## v1.4.3 consumer-committed bundle
+
+Validated on 2026-10-21 against a synthetic three-class authority repository and the committed bundle `generated/governance/coding_agent_execution`, cut by `tools/authority/produce_projection_bundle.py` with the producer at l9-semantic-compiler-engine `main` (`b9b4892`) at `.github` `main` (`7252e3b`). The verifier never invoked the producer.
+
+- `tests/test_coding_agent_canonical_binding.py`: 48/48 pass (10 bundle cases added: every class bound, missing class, byte change outside invariants, coherent forgery of a non-invariant class, unresolved criteria, wrong output schema criterion, foreign lock schema, pin outside the bundle's history, unrelated upstream commit stays `CURRENT`, changed non-invariant source goes `STALE`). The verifier issued only `git` commands.
+- Real bundle: `BOUND PROJECTION_BUNDLE_VERIFIED`, 19 projected invariants, components `invariants`, `contracts`, `authority_model`; prior re-check `CURRENT UNCHANGED`; a byte change to the contracts component `REJECTED BUNDLE_BYTES_MISMATCH`; the pin `5996b2a` (older than the bundle) `STALE`.
+- The repository-level consumer (`tools/authority/verify_coding_projection.py`, `ops/scripts/coding_projection_status.py`) delegates every check to this verifier in bundle mode and reports `BOUND` at SessionStart and `CURRENT` with an independent `main` record; 14/14 repository tests pass.
+- Runtime alignment and lazy bootstrap validators pass.
+
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
 - This release proof covers the pack as compiled. Its installation into `Quantum-L9/Cursor-Governance` is recorded in [CHANGELOG.md](CHANGELOG.md); that install adds exactly one frontmatter line (`disable-model-invocation: true`) and no runtime semantics.
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
-- No projection publication mechanism is assumed operational. Until one supplies a verified artifact, receipt, and revision pin, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
+- No producer or bundle is assumed operational. Until the consumer repository's committed bundle (or a handed pair) and an independent revision pin are available, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
 - The revision pin is caller-supplied. The verifier binds law bytes to it by recomputed hashes, and refuses absent, malformed, and local-only pins, but it cannot prove the pin is the published revision. That trust comes from the independent record. Origin URL and tracking refs are local state, so a deliberately forged `refs/remotes/origin/*` defeats the local-only check.
 - Upstream gaps that still bound the live canonical binding (1.4.2):
   - closed on 2026-10-21: `.github` v3.23.0 (Quantum-L9/.github#193) and the forbidden-criterion engine (l9-semantic-compiler-engine PR #13, PR #14) are merged, so a `pass` receipt for `l9.projection/coding-agent-execution@1` is producible from the engine's `main` at the authority's `main`;
   - no `semantic_digest` canonicalization algorithm is declared upstream; the verifier recomputes the producer's canonical-JSON convention and fails closed on any other;
-  - no publication mechanism supplies the pair yet (`.github/docs/PROJECTION_PUBLICATION.md`, not activated, and its payload-digest and profile-level-subject conventions do not match what the producer emits); the live proof used a pair handed to the verifier by the operator;
-  - this verifier consumes the `invariants` class only; the `contracts` and `authority-model` classes the profile declares are produced and receipted but not yet consumed;
+  - closed in 1.4.3: the consumer repository commits the bundle and the verifier consumes every declared class (`--bundle`); the retired `projections`-branch publisher and its payload-digest convention are removed upstream by ADR-021 (v3.24.0 candidate);
+  - producer attestation is the trusted replay in the consumer repository, which passes only when the producer revision named in the lock is on the engine's protected `main`;
   - the operating-plane profile remains unprojectable whole because `conformance_profiles` resolves outside `.github`; it is no longer the coding agent's binding profile.
 - Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
 - Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook (F-04, outside this pack).

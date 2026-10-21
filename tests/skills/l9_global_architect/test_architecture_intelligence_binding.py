@@ -20,7 +20,8 @@ PACK = REPO / "skills/l9-global-architect"
 VERIFIER = PACK / "scripts/verify_architecture_intelligence.py"
 BINDING = PACK / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
 BUNDLE = REPO / "generated/governance/architecture_intelligence"
-PRODUCER = REPO / "tools/authority/produce_architecture_intelligence.py"
+PRODUCER = REPO / "tools/authority/produce_projection_bundle.py"
+PROFILE_ARGS = ["--profile", "l9.projection/architecture-intelligence@1"]
 RUN_STATE = PACK / "runtime/RUN_STATE.yaml"
 OBSERVER = "l9.projection/gar-architecture-observer@1"
 ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
@@ -330,10 +331,39 @@ def _coherent_forgery(bundle: Bundle, source_class: str = "invariants") -> str:
 def _fixture_authority(tmp_path: Path) -> tuple[Path, str]:
     authority = tmp_path / "authority"
     (authority / "semantics").mkdir(parents=True)
-    # The driver re-derives the composition pin from the authority checkout; the fixture
-    # authority declares an entry, so the regenerated pin is checked by the driver itself.
+    # The driver re-derives the composition pin and the profile's source classes from the
+    # authority checkout's commit objects; the fixture authority declares both, derived from
+    # the committed lock, so the regenerated pin and class order are checked by the driver.
+    lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
     (authority / "semantics/composition_profiles.yaml").write_text(
         yaml.safe_dump({"profiles": [{"id": "l9.compose/architecture-intelligence@1"}]})
+    )
+    (authority / "semantics/projection_profiles.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "source_classes": {
+                    c["source_class"]: {"canonical_artifact": f"{c['source_class']}.yaml"}
+                    for c in lock["components"]
+                },
+                "projection_profiles": [
+                    {
+                        "id": lock["projection_profile"]["ref"],
+                        "sources": {c["source_class"]: {} for c in lock["components"]},
+                    }
+                ],
+            },
+            sort_keys=False,
+        )
+    )
+    (authority / "semantics/canonical_sources.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "sources": [
+                    {"id": c["source_ref"], "path": f"semantics/{c['source_class']}.yaml"}
+                    for c in lock["components"]
+                ]
+            }
+        )
     )
     _git(authority, "init", "-q")
     _git(authority, "add", "-A")
@@ -355,6 +385,7 @@ def _replay(tmp_path: Path, committed: Path) -> subprocess.CompletedProcess[str]
         [
             sys.executable,
             str(PRODUCER),
+            *PROFILE_ARGS,
             "--authority-root",
             str(authority),
             "--authority-revision",
@@ -403,23 +434,15 @@ def test_coherent_forgery_passes_hash_checks_but_fails_producer_replay(
 
 def _drift(completed: subprocess.CompletedProcess[str]) -> set[str]:
     lines = completed.stderr.splitlines()
-    assert lines and lines[0] == "stale architecture-intelligence bundle:", completed.stderr
+    assert lines and lines[0] == (
+        "stale projection bundle l9.projection/architecture-intelligence@1:"
+    ), completed.stderr
     return {line.strip() for line in lines[1:] if line.strip()}
 
 
 def test_producer_check_detects_drift(tmp_path: Path) -> None:
     lock = json.loads((BUNDLE / "bundle.lock.json").read_text())
-    authority = tmp_path / "authority"
-    (authority / "semantics").mkdir(parents=True)
-    # The driver re-derives the composition pin from the authority checkout; the fixture
-    # authority declares an entry, so the regenerated pin is checked by the driver itself.
-    (authority / "semantics/composition_profiles.yaml").write_text(
-        yaml.safe_dump({"profiles": [{"id": "l9.compose/architecture-intelligence@1"}]})
-    )
-    _git(authority, "init", "-q")
-    _git(authority, "add", "-A")
-    _git(authority, "commit", "-q", "-m", "fixture authority")
-    head = _git(authority, "rev-parse", "HEAD")
+    authority, head = _fixture_authority(tmp_path)
     stub = tmp_path / "stub_compiler.py"
     stub.write_text(STUB)
     compiler = f"{sys.executable} {stub} {BUNDLE}"
@@ -427,6 +450,7 @@ def test_producer_check_detects_drift(tmp_path: Path) -> None:
     args = [
         sys.executable,
         str(PRODUCER),
+        *PROFILE_ARGS,
         "--authority-root",
         str(authority),
         "--authority-revision",
@@ -812,7 +836,7 @@ def test_a_later_verdict_leaves_nothing_of_an_earlier_one(authority: Authority) 
 
 def test_generation_holds_no_repository_publication_authority() -> None:
     """The bundle workflow and driver generate and verify; they never publish a change."""
-    workflow_path = REPO / ".github/workflows/l9-architecture-intelligence-bundle.yml"
+    workflow_path = REPO / ".github/workflows/l9-projection-bundle-verify.yml"
     workflow = yaml.safe_load(workflow_path.read_text())
     triggers = workflow[True] if True in workflow else workflow["on"]
     assert set(triggers) == {"pull_request", "push"}

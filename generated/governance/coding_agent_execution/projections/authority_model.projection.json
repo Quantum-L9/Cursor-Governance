@@ -1,0 +1,48 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "admission_rules": {
+      "candidate_generation_is_not_admission": true,
+      "changed_material_subject_requires_new_decision_unless_compatibility_preserves_it": true,
+      "global_requirements": [
+        "exact_subject_identity",
+        "exact_subject_revision_or_digest_when_revisioned",
+        "target_semantic_or_authority_class",
+        "target_class_authority",
+        "explicit_decision_record",
+        "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+      ],
+      "self_admission_without_target_class_authority_forbidden": true
+    },
+    "agent_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "agent_must_not_self_expand_authority",
+        "bounded_autonomy_requires_explicit_scope",
+        "conformance_evidence_does_not_grant_authority"
+      ]
+    },
+    "escalation_rules": {
+      "authority_missing": "block",
+      "changed_candidate_after_decision": "require_new_decision",
+      "semantic_conflict": "block",
+      "unknown": "remain_unknown"
+    },
+    "human_authority": {
+      "rules": [
+        "authority_must_be_explicit",
+        "approval_binds_exact_candidate_digest",
+        "changed_candidate_requires_new_decision"
+      ]
+    }
+  },
+  "projection_digest": "sha256:85d3fa331ace18a6192f5d6eb05523773c6fbe9b651dbb07b92d1dd7d453e88f",
+  "projection_profile_digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
+  "projection_profile_ref": "l9.projection/coding-agent-execution@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+  "source_ref": "l9.source/authority-model@1"
+}

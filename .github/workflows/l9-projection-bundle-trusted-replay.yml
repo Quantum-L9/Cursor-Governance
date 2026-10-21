@@ -1,14 +1,16 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: .github/workflows/l9-architecture-intelligence-trusted-replay.yml
+#   path: .github/workflows/l9-projection-bundle-trusted-replay.yml
 #   layer: operations
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-10-16
+#   version: 2.0.0
+#   updated: 2026-10-21
 #
-# Trusted producer replay for the architecture-intelligence bundle (AIB-006).
+# Trusted producer replay for every consumer-committed projection bundle (Quantum-L9/.github
+# ADR-021; GAR AIB-006; coding-agent canonical binding). One definition, one driver
+# (tools/authority/produce_projection_bundle.py), one attestation per bundle.
 #
 # Trust model:
 # - pull_request_target and push to main run the definition on the default branch, so pull
@@ -19,7 +21,7 @@
 #   runs only here, only at a SHA reachable from its protected main, and its source never leaves
 #   the runner: nothing but the attestation JSON is uploaded.
 # - The verdict is posted as a commit status by a separate job that executes no code.
-name: L9 Architecture Intelligence Trusted Replay
+name: L9 Projection Bundle Trusted Replay
 on:
   # zizmor flags every pull_request_target. Here it is the point: the definition comes from the
   # default branch, no pull-request code is checked out or executed (the bundle is fetched as
@@ -29,12 +31,14 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "generated/governance/architecture_intelligence/**"
+      - "generated/governance/coding_agent_execution/**"
   push:
     branches:
       - main
     paths:
       - "generated/governance/architecture_intelligence/**"
-      - "tools/authority/produce_architecture_intelligence.py"
+      - "generated/governance/coding_agent_execution/**"
+      - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
       subject_pr:
@@ -42,7 +46,7 @@ on:
         required: true
 permissions: {}
 concurrency:
-  group: l9-architecture-intelligence-trusted-${{ github.event.pull_request.number || inputs.subject_pr || github.ref }}
+  group: l9-projection-bundle-trusted-${{ github.event.pull_request.number || inputs.subject_pr || github.ref }}
   cancel-in-progress: false
 jobs:
   replay:
@@ -53,13 +57,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    outputs:
-      verdict: ${{ steps.attest.outputs.verdict }}
-      reason: ${{ steps.attest.outputs.reason }}
-      subject_sha: ${{ steps.subject.outputs.sha }}
-      compiler: ${{ steps.pins.outputs.compiler }}
-      authority: ${{ steps.pins.outputs.authority }}
-      bundle_digest: ${{ steps.pins.outputs.bundle_digest }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - bundle: architecture_intelligence
+            profile: l9.projection/architecture-intelligence@1
+          - bundle: coding_agent_execution
+            profile: l9.projection/coding-agent-execution@1
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -94,24 +99,24 @@ jobs:
         env:
           SHA: ${{ steps.subject.outputs.sha }}
           URL: ${{ steps.subject.outputs.url }}
-          EVENT_NAME: ${{ github.event_name }}
+          BUNDLE: ${{ matrix.bundle }}
         run: |
           git init -q subject-git
           git -C subject-git fetch -q --no-tags --depth=1 "$URL" "$SHA"
-          # A push to main before any bundle exists (the bootstrap itself) has nothing to attest.
-          # Every other event without a bundle is refused by the extractor below.
-          if [[ "$EVENT_NAME" == "push" && -z "$(git -C subject-git ls-tree "$SHA" -- generated/governance/architecture_intelligence)" ]]; then
+          # A subject without this bundle has nothing to attest for it: the other bundle, or the
+          # bootstrap push before any bundle exists, is the event. A present bundle must replay.
+          if [[ -z "$(git -C subject-git ls-tree "$SHA" -- "generated/governance/$BUNDLE")" ]]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "present=true" >> "$GITHUB_OUTPUT"
-          bundle=subject/generated/governance/architecture_intelligence
+          bundle="subject/generated/governance/$BUNDLE"
           # The trusted extractor refuses symlinks, gitlinks, executable files and any other
           # non-regular entry before writing a single byte; only 100644 blobs are extracted.
           python3 trusted/tools/authority/extract_bundle_data.py \
             --git-dir subject-git \
             --commit "$SHA" \
-            --path generated/governance/architecture_intelligence \
+            --path "generated/governance/$BUNDLE" \
             --dest "$bundle"
           compiler="$(jq -r '.producer.revision' "$bundle/bundle.lock.json")"
           authority="$(jq -r '.authority.revision' "$bundle/bundle.lock.json")"
@@ -163,7 +168,7 @@ jobs:
             echo "authority_trusted=false" >> "$GITHUB_OUTPUT"
             echo "authority $AUTHORITY is not reachable from Quantum-L9/.github protected main"
           fi
-          if [[ -f trusted/tools/authority/produce_architecture_intelligence.py ]]; then
+          if [[ -f trusted/tools/authority/produce_projection_bundle.py ]]; then
             echo "driver=true" >> "$GITHUB_OUTPUT"
           else
             echo "driver=false" >> "$GITHUB_OUTPUT"
@@ -184,14 +189,17 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
           AUTHORITY: ${{ steps.pins.outputs.authority }}
           COMPILER: ${{ steps.pins.outputs.compiler }}
+          PROFILE: ${{ matrix.profile }}
+          BUNDLE: ${{ matrix.bundle }}
         run: |
           set +e
-          python trusted/tools/authority/produce_architecture_intelligence.py \
+          python trusted/tools/authority/produce_projection_bundle.py \
+            --profile "$PROFILE" \
             --authority-root authority \
             --authority-revision "$AUTHORITY" \
             --compiler-revision "$COMPILER" \
             --compiler l9-semantic-compiler \
-            --output subject/generated/governance/architecture_intelligence \
+            --output "subject/generated/governance/$BUNDLE" \
             --check
           echo "exit=$?" >> "$GITHUB_OUTPUT"
       - name: Write the attestation
@@ -209,8 +217,10 @@ jobs:
           AUTHORITY: ${{ steps.pins.outputs.authority }}
           DIGEST: ${{ steps.pins.outputs.bundle_digest }}
           DRIVER_REF: ${{ github.sha }}
+          BUNDLE: ${{ matrix.bundle }}
+          PROFILE: ${{ matrix.profile }}
         run: |
-          if [[ "$PRESENT" == "false" ]]; then verdict=NOT_APPLICABLE; reason=NO_BUNDLE_ON_MAIN
+          if [[ "$PRESENT" == "false" ]]; then verdict=NOT_APPLICABLE; reason=BUNDLE_ABSENT_IN_SUBJECT
           elif [[ "$TRUSTED" != "true" ]]; then verdict=FAIL; reason=COMPILER_NOT_ON_PROTECTED_MAIN
           elif [[ "$AUTHORITY_TRUSTED" != "true" ]]; then verdict=FAIL; reason=AUTHORITY_NOT_ON_PROTECTED_MAIN
           elif [[ "$DRIVER" != "true" ]]; then verdict=FAIL; reason=TRUSTED_DRIVER_ABSENT
@@ -223,8 +233,9 @@ jobs:
             --arg compiler "$COMPILER" --arg authority "$AUTHORITY" --arg digest "$DIGEST" \
             --arg driver "$DRIVER_REF" --arg compiler_main "${TRUSTED:-false}" \
             --arg authority_main "${AUTHORITY_TRUSTED:-false}" \
-            '{schema: "l9.gar.architecture-intelligence-replay-attestation/v1", verdict: $verdict,
-              reason: $reason, subject_sha: $subject, compiler_sha: $compiler,
+            --arg bundle "$BUNDLE" --arg profile "$PROFILE" \
+            '{schema: "l9.projection-bundle-replay-attestation/v1", bundle: $bundle, profile: $profile,
+              verdict: $verdict, reason: $reason, subject_sha: $subject, compiler_sha: $compiler,
               compiler_on_protected_main: ($compiler_main == "true"), authority_revision: $authority,
               authority_on_protected_main: ($authority_main == "true"), bundle_digest: $digest,
               trusted_driver_sha: $driver}' \
@@ -235,7 +246,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: architecture-intelligence-replay-attestation
+          name: projection-bundle-replay-attestation-${{ matrix.bundle }}
           path: ${{ runner.temp }}/attestation.json
           retention-days: 30
           if-no-files-found: error
@@ -244,32 +255,44 @@ jobs:
         shell: bash
         env:
           VERDICT: ${{ steps.attest.outputs.verdict }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: '[[ "$VERDICT" == "PASS" || ( "$VERDICT" == "NOT_APPLICABLE" && "$EVENT_NAME" == "push" ) ]]'
+        run: '[[ "$VERDICT" == "PASS" || "$VERDICT" == "NOT_APPLICABLE" ]]'
   status:
-    # Executes no code from any checkout: it only publishes the replay job's verdict on the
-    # exact subject commit, so a branch-protection rule can require it.
+    # Executes no code from any checkout: it only publishes each replay verdict on the exact
+    # subject commit, one commit status per bundle, so a branch-protection rule can require it.
     needs: replay
-    if: always() && needs.replay.outputs.subject_sha != '' && needs.replay.outputs.verdict != 'NOT_APPLICABLE'
+    if: always() && needs.replay.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
       statuses: write
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: [architecture_intelligence, coding_agent_execution]
     steps:
+      - name: Download this bundle's attestation
+        uses: actions/download-artifact@d8ab5d4a0ff4b9f2d4aa5f87b0f2e5b53ee6f9c9  # v7.0.0
+        with:
+          name: projection-bundle-replay-attestation-${{ matrix.bundle }}
+          path: ${{ runner.temp }}/attestation
       - name: Publish the attestation as a commit status
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          SUBJECT: ${{ needs.replay.outputs.subject_sha }}
-          VERDICT: ${{ needs.replay.outputs.verdict }}
-          REASON: ${{ needs.replay.outputs.reason }}
-          COMPILER: ${{ needs.replay.outputs.compiler }}
-          AUTHORITY: ${{ needs.replay.outputs.authority }}
+          BUNDLE: ${{ matrix.bundle }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          state=failure; [[ "$VERDICT" == "PASS" ]] && state=success
-          gh api --method POST "repos/$REPOSITORY/statuses/$SUBJECT" \
+          attestation="$RUNNER_TEMP/attestation/attestation.json"
+          verdict="$(jq -r '.verdict' "$attestation")"
+          [[ "$verdict" != "NOT_APPLICABLE" ]] || { echo "no $BUNDLE bundle in the subject; no status"; exit 0; }
+          subject="$(jq -r '.subject_sha' "$attestation")"
+          [[ "$subject" =~ ^[0-9a-f]{40}$ ]] || { echo "attestation names no subject"; exit 1; }
+          reason="$(jq -r '.reason' "$attestation")"
+          compiler="$(jq -r '.compiler_sha' "$attestation")"
+          authority="$(jq -r '.authority_revision' "$attestation")"
+          state=failure; [[ "$verdict" == "PASS" ]] && state=success
+          gh api --method POST "repos/$REPOSITORY/statuses/$subject" \
             -f state="$state" \
-            -f context="l9/architecture-intelligence-trusted-replay" \
+            -f context="l9/projection-bundle-trusted-replay/$BUNDLE" \
             -f target_url="$RUN_URL" \
-            -f description="${VERDICT:-FAIL} ${REASON:-UNRESOLVED} compiler ${COMPILER:0:12} authority ${AUTHORITY:0:12}"
+            -f description="${verdict:-FAIL} ${reason:-UNRESOLVED} compiler ${compiler:0:12} authority ${authority:0:12}"

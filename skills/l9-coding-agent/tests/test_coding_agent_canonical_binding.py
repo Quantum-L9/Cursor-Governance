@@ -36,11 +36,21 @@ def id_selector(invariant_id: str) -> str:
 
 
 SELECTED = ["L9-FIXTURE-001", "L9-FIXTURE-002"]
+OUTPUT_SCHEMA = "l9.projection.coding-agent-execution/v1"
+CONTRACTS_REF = "l9.source/contracts@1"
+AUTHORITY_MODEL_REF = "l9.source/authority-model@1"
 PROFILE = {
     "id": verifier.PROFILE_REF,
     "class": verifier.PROFILE_CLASS,
     "consumer": verifier.PROFILE_CONSUMER,
-    "sources": {"invariants": {"selectors": [id_selector(i) for i in SELECTED]}},
+    # Three classes like the admitted profile: only `invariants` is re-selected record for
+    # record; the other two are verified as bundle components (bytes, digests, receipts).
+    "sources": {
+        "invariants": {"selectors": [id_selector(i) for i in SELECTED]},
+        "contracts": {"selectors": ['$.contracts[?(@.id=="l9.contract/fixture@1")]']},
+        "authority_model": {"selectors": ["$.agent_authority"]},
+    },
+    "output": {"schema": OUTPUT_SCHEMA},
 }
 INVARIANTS = {
     "invariants": [
@@ -50,6 +60,16 @@ INVARIANTS = {
         {"id": "L9-FIXTURE-LOCAL", "scope": "repository", "rule": "not selected"},
     ]
 }
+CONTRACTS = {
+    "contracts": [
+        {"id": "l9.contract/fixture@1", "purpose": "fixture contract"},
+        {"id": "l9.contract/unselected@1", "purpose": "not selected"},
+    ]
+}
+AUTHORITY_MODEL = {
+    "agent_authority": {"rules": ["fixture agent rule"]},
+    "distribution_authority": {"rules": ["excluded sibling section"]},
+}
 SEMANTICS = {
     "canonical_sources.yaml": {
         "sources": [
@@ -58,14 +78,32 @@ SEMANTICS = {
                 "path": "semantics/invariants.yaml",
                 "canonical": True,
                 "projection_allowed": True,
-            }
+            },
+            {
+                "id": CONTRACTS_REF,
+                "path": "semantics/contracts.yaml",
+                "canonical": True,
+                "projection_allowed": True,
+            },
+            {
+                "id": AUTHORITY_MODEL_REF,
+                "path": "semantics/authority_model.yaml",
+                "canonical": True,
+                "projection_allowed": True,
+            },
         ]
     },
     "projection_profiles.yaml": {
-        "source_classes": {"invariants": {"canonical_artifact": "invariants.yaml"}},
+        "source_classes": {
+            "invariants": {"canonical_artifact": "invariants.yaml"},
+            "contracts": {"canonical_artifact": "contracts.yaml"},
+            "authority_model": {"canonical_artifact": "authority_model.yaml"},
+        },
         "projection_profiles": [PROFILE],
     },
     "invariants.yaml": INVARIANTS,
+    "contracts.yaml": CONTRACTS,
+    "authority_model.yaml": AUTHORITY_MODEL,
     "projection_artifact.schema.yaml": {
         "required": [
             "schema",
@@ -679,3 +717,267 @@ def test_unrelated_upstream_commit_keeps_binding_current(authority, tmp_path, ca
         "CURRENT",
         "UPSTREAM_REVISION_CHANGED_WITHOUT_DEPENDENCY_IMPACT",
     )
+
+
+# --- Bundle mode: the consumer-committed bundle (ADR-021) ---------------------------------
+
+CLASS_SOURCES = {
+    "invariants": (verifier.SOURCE_REF, "invariants.yaml"),
+    "contracts": (CONTRACTS_REF, "contracts.yaml"),
+    "authority_model": (AUTHORITY_MODEL_REF, "authority_model.yaml"),
+}
+
+
+def _class_payload(cls: str, document: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    """What the producer emits for each fixture class under the profile's selectors."""
+    if cls == "invariants":
+        selected = [
+            m.group(1)
+            for s in profile["sources"]["invariants"]["selectors"]
+            if (m := verifier.ID_SELECTOR.fullmatch(s)) is not None
+        ]
+        return {"invariants": [e for e in document["invariants"] if e.get("id") in selected]}
+    if cls == "contracts":
+        return {
+            "contracts": [e for e in document["contracts"] if e["id"] == "l9.contract/fixture@1"]
+        }
+    return {"agent_authority": document["agent_authority"]}
+
+
+def build_bundle(
+    root: Path,
+    out: Path,
+    *,
+    revision: str | None = None,
+    producer: dict[str, str] | None = None,
+    classes: list[str] | None = None,
+    lock_schema: str = verifier.LOCK_SCHEMA,
+    unresolved: list[str] | None = None,
+    payload_schema: str = OUTPUT_SCHEMA,
+) -> Path:
+    """Write a bundle in the driver's layout for every (or the given) profile class."""
+    producer = producer or PRODUCER
+    revision = revision or head(root)
+    catalog = yaml.safe_load((root / "semantics/projection_profiles.yaml").read_text())
+    profile = next(p for p in catalog["projection_profiles"] if p["id"] == verifier.PROFILE_REF)
+    profile_digest = verifier.content_digest(profile)
+    (out / "projections").mkdir(parents=True, exist_ok=True)
+    (out / "receipts").mkdir(parents=True, exist_ok=True)
+    components = []
+    for cls in classes or list(profile["sources"]):
+        ref, filename = CLASS_SOURCES[cls]
+        raw = (root / "semantics" / filename).read_bytes()
+        artifact = {
+            "schema": "l9.projection-artifact/v1",
+            "source_ref": ref,
+            "source_digest": verifier.bytes_digest(raw),
+            "projection_profile_ref": verifier.PROFILE_REF,
+            "projection_profile_digest": profile_digest,
+            "payload": _class_payload(cls, yaml.safe_load(raw), profile),
+            "generated_by": dict(producer),
+        }
+        artifact["projection_digest"] = envelope_digest(artifact)
+        subject = f"{verifier.PROFILE_REF}#{ref}"
+        receipt: dict[str, Any] = {
+            "schema": "l9.compiler-receipt/v1",
+            "receipt_identity": f"l9.receipt-instance/fixture-{cls}",
+            "receipt_type": "l9.receipt/compilation@1",
+            "exact_subject_ref": subject,
+            "claim": "fixture projection",
+            "operation": "projection",
+            "inputs": [{"ref": ref, "digest": artifact["source_digest"], "revision": revision}],
+            "profile": {"ref": verifier.PROFILE_REF, "digest": profile_digest},
+            "output": {"ref": subject, "digest": artifact["projection_digest"]},
+            "governing_coordinates": {
+                "repository": verifier.OWNER_REPOSITORY,
+                "revision": revision,
+            },
+            "result": "pass",
+            "verification_basis": {
+                "coverage": "complete",
+                "unresolved_criteria": list(unresolved or []),
+                "criteria": {"payload_schema": {"status": "pass", "schema": payload_schema}},
+            },
+            "producer_identity": dict(producer),
+            "diagnostics": [],
+        }
+        receipt["receipt_digest"] = verifier.content_digest(receipt)
+        path, receipt_path = f"projections/{cls}.projection.json", f"receipts/{cls}.receipt.json"
+        (out / path).write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+        (out / receipt_path).write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+        components.append(
+            {
+                "source_class": cls,
+                "source_ref": ref,
+                "source_digest": artifact["source_digest"],
+                "projection_digest": artifact["projection_digest"],
+                "path": path,
+                "sha256": verifier.bytes_digest((out / path).read_bytes()),
+                "receipt": receipt_path,
+            }
+        )
+    lock = {
+        "schema": lock_schema,
+        "authority": {"repository": verifier.OWNER_REPOSITORY, "revision": revision},
+        "producer": {**producer, "repository": "fixture/producer", "revision": "f" * 40},
+        "generated_by": "fixture",
+        "projection_profile": {"ref": verifier.PROFILE_REF, "digest": profile_digest},
+        "components": components,
+    }
+    (out / "bundle.lock.json").write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+    return out
+
+
+def bundle_args(root: Path, bundle: Path, *extra: str) -> list[str]:
+    return ["--authority-root", str(root), "--bundle", str(bundle), *extra]
+
+
+def test_bundle_binds_every_declared_class(authority, tmp_path, capsys, monkeypatch):
+    bundle = build_bundle(authority, tmp_path / "bundle")
+    rc, record, calls = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (0, "BOUND", "PROJECTION_BUNDLE_VERIFIED")
+    assert [c["source_class"] for c in record["components"]] == [
+        "invariants",
+        "contracts",
+        "authority_model",
+    ]
+    assert record["projected_invariant_count"] == 2
+    assert record["bundle"]["authority"]["revision"] == head(authority)
+    assert record["bundle"]["producer_authentication"] == "unauthenticated_unkeyed_receipt"
+    assert calls and all(c[0] == "git" for c in calls)
+
+
+def test_bundle_missing_a_declared_class_is_rejected(authority, tmp_path, capsys, monkeypatch):
+    bundle = build_bundle(authority, tmp_path / "bundle", classes=["invariants", "contracts"])
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (1, "REJECTED", "BUNDLE_COMPONENTS_MISMATCH")
+
+
+def test_bundle_byte_change_outside_invariants_is_rejected(
+    authority, tmp_path, capsys, monkeypatch
+):
+    bundle = build_bundle(authority, tmp_path / "bundle")
+    target = bundle / "projections/contracts.projection.json"
+    target.write_bytes(target.read_bytes() + b" ")
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (1, "REJECTED", "BUNDLE_BYTES_MISMATCH")
+    assert record["path"] == "projections/contracts.projection.json"
+
+
+def test_bundle_coherent_forgery_of_a_non_invariant_class_is_rejected(
+    authority, tmp_path, capsys, monkeypatch
+):
+    """Rehashed bytes, lock and receipt still fail: the receipt digest no longer covers them."""
+    bundle = build_bundle(authority, tmp_path / "bundle")
+    path = bundle / "projections/authority_model.projection.json"
+    artifact = json.loads(path.read_text())
+    artifact["payload"]["agent_authority"]["rules"].append("forged rule")
+    artifact["projection_digest"] = envelope_digest(artifact)
+    path.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+    lock = json.loads((bundle / "bundle.lock.json").read_text())
+    for component in lock["components"]:
+        if component["source_class"] == "authority_model":
+            component["sha256"] = verifier.bytes_digest(path.read_bytes())
+            component["projection_digest"] = artifact["projection_digest"]
+    (bundle / "bundle.lock.json").write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n")
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (1, "REJECTED", "RECEIPT_OUTPUT_NOT_BOUND")
+
+
+def test_bundle_receipt_with_unresolved_criteria_is_rejected(
+    authority, tmp_path, capsys, monkeypatch
+):
+    bundle = build_bundle(authority, tmp_path / "bundle", unresolved=["payload_schema"])
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (
+        1,
+        "REJECTED",
+        "RECEIPT_NOT_A_PASSING_PROJECTION",
+    )
+
+
+def test_bundle_receipt_must_prove_the_declared_output_schema(
+    authority, tmp_path, capsys, monkeypatch
+):
+    bundle = build_bundle(authority, tmp_path / "bundle", payload_schema="l9.projection.other/v1")
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (
+        1,
+        "REJECTED",
+        "RECEIPT_PAYLOAD_SCHEMA_MISMATCH",
+    )
+
+
+def test_bundle_with_another_lock_schema_is_rejected(authority, tmp_path, capsys, monkeypatch):
+    bundle = build_bundle(authority, tmp_path / "bundle", lock_schema="l9.other-bundle/v1")
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    assert (rc, record["status"], record["reason"]) == (1, "REJECTED", "LOCK_SCHEMA_MISMATCH")
+
+
+def test_bundle_revision_outside_the_pin_history_is_stale(authority, tmp_path, capsys, monkeypatch):
+    first = head(authority)
+    (authority / "README.md").write_text("later\n")
+    later = commit_all(authority, "later upstream commit")
+    bundle = build_bundle(authority, tmp_path / "bundle", revision=later)
+    # A pin older than the bundle's own revision cannot judge its currency.
+    rc, record, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", first)
+    )
+    assert (rc, record["status"], record["reason"]) == (4, "STALE", "AUTHORITY_REVISION_MISMATCH")
+
+
+def test_bundle_stays_current_across_an_unrelated_upstream_commit(
+    authority, tmp_path, capsys, monkeypatch
+):
+    bundle = build_bundle(authority, tmp_path / "bundle")
+    _, bound, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    prior = tmp_path / "binding.json"
+    prior.write_text(json.dumps(bound))
+    (authority / "README.md").write_text("unrelated\n")
+    new = commit_all(authority, "unrelated upstream commit")
+    rc, record, _ = run(
+        capsys,
+        monkeypatch,
+        *bundle_args(authority, bundle, "--prior-binding", str(prior), "--expect-revision", new),
+    )
+    assert (rc, record["status"], record["reason"]) == (
+        0,
+        "CURRENT",
+        "UPSTREAM_REVISION_CHANGED_WITHOUT_DEPENDENCY_IMPACT",
+    )
+
+
+def test_bundle_goes_stale_when_a_non_invariant_source_changes(
+    authority, tmp_path, capsys, monkeypatch
+):
+    bundle = build_bundle(authority, tmp_path / "bundle")
+    _, bound, _ = run(
+        capsys, monkeypatch, *bundle_args(authority, bundle, "--expect-revision", head(authority))
+    )
+    prior = tmp_path / "binding.json"
+    prior.write_text(json.dumps(bound))
+    write_semantics(authority, "contracts.yaml", {"contracts": CONTRACTS["contracts"][:1]})
+    new = commit_all(authority, "contracts ledger changed")
+    rc, record, _ = run(
+        capsys,
+        monkeypatch,
+        *bundle_args(authority, bundle, "--prior-binding", str(prior), "--expect-revision", new),
+    )
+    assert (rc, record["status"], record["reason"]) == (4, "STALE", "SOURCE_DIGEST_NOT_CURRENT")
+    assert record["source_class"] == "contracts"
