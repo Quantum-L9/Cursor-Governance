@@ -351,10 +351,18 @@ def changed_symbols_for_file(
 
 
 def _claim_seed(
-    pr: int, kind: str, subject: str, assertion: str, materiality: str = "MATERIAL"
+    pr: int,
+    kind: str,
+    subject: str,
+    assertion: str,
+    materiality: str = "MATERIAL",
+    discriminator: str | None = None,
 ) -> dict[str, Any]:
+    # A subject alone does not identify a CHANGED_SYMBOL claim: one path:name can be
+    # detected as two machine symbols (e.g. PATCH_REGEX and PUBLIC_SURFACE_STATIC).
+    parts = (pr, kind, subject) if discriminator is None else (pr, kind, subject, discriminator)
     return {
-        "claim_id": oid("CLM", pr, kind, subject),
+        "claim_id": oid("CLM", *parts),
         "pr_number": pr,
         "claim_kind": kind,
         "subject": subject,
@@ -564,6 +572,7 @@ def build(doc: dict[str, Any]) -> dict[str, Any]:
                 "CHANGED_SYMBOL",
                 subject,
                 f"Changed symbol {subject} is authorized, architecturally aligned, and sufficiently validated.",
+                discriminator=sym["symbol_id"],
             )
             claim["machine_symbol_id"] = sym["symbol_id"]
             claim_seeds.append(claim)

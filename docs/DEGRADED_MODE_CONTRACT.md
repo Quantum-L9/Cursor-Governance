@@ -428,3 +428,28 @@ bootstrap diverges by peer.
 | HTTP/1.1 Universal Auth login with a fake identity | `401 Invalid credentials` (the path reaches auth) |
 | Context7 through `vault_mcp_bridge` (no key) | `initialize` + `tools/list` answered |
 | `CONTEXT7_API_KEY` via `capability_bind --check` (no identity set) | `infisical-machine-absent` |
+
+## Org `.github` reads, 2026-10-21 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `adc654f`
+
+`make pr` could not open a PR from this surface: the body composer read the org
+PR template only over REST, and the gateway scopes REST to the session's own
+repositories. `add_repo` cannot widen that scope for `Quantum-L9/.github`
+(dot-named repositories are refused). Git is not scoped the same way.
+
+| Probe (this container, 2026-10-21) | Observed |
+|---|---|
+| `gh api repos/Quantum-L9/.github` | `403` — "GitHub access to this repository is not enabled for this session" |
+| `curl https://api.github.com/repos/Quantum-L9/.github` via proxy | `403`, same body |
+| `add_repo Quantum-L9/.github` (`access: push`) | refused: name begins with `.` |
+| `git ls-remote https://github.com/Quantum-L9/.github HEAD` | `c52b4f7f…` |
+| `raw.githubusercontent.com/Quantum-L9/.github/HEAD/.github/pull_request_template.md` | `200` |
+
+**Consequence.** Every read of `<owner>/.github` goes through
+`ops/scripts/org_dotgithub.read_org_file`: REST first, then the same path at the
+same default-branch head commit over git (`ls-remote` + shallow fetch into a
+throwaway bare repository). Both transports failing is still an error. Callers:
+`compose_pr_body.resolve_template` (PR template) and
+`compose_issue_body._fetch_org_form` (issue forms, which had silently fallen
+back to the governance fork's copy on this surface). The guard in
+`ops/scripts/tests/test_org_dotgithub.py` fails any other module that calls the
+REST route directly.
