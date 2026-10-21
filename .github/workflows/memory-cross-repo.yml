@@ -103,7 +103,7 @@ jobs:
           import re
           d = json.load(open("ops/config/memory-binding.json"))
           ev = d.get("release_evidence") or {}
-          missing = [k for k in ("memory_sha", "artifact_sha256", "source_date_epoch", "artifact") if k not in ev]
+          missing = [k for k in ("memory_sha", "artifact_sha256", "source_date_epoch", "artifact", "build_backend_constraint") if k not in ev]
           if missing:
               raise SystemExit(f"memory-binding.json release_evidence is missing {missing}")
           sha_re = re.compile(r"^[0-9a-f]{40}$")
@@ -121,6 +121,9 @@ jobs:
           print(f"artifact={ev['artifact']}")
           print(f"sha256={ev['artifact_sha256']}")
           print(f"epoch={ev['source_date_epoch']}")
+          if not re.match(r"^setuptools==\d+(\.\d+)*$", ev["build_backend_constraint"]):
+              raise SystemExit("release_evidence.build_backend_constraint must pin one exact setuptools version")
+          print(f"build_constraint={ev['build_backend_constraint']}")
           PY
 
       - name: Resolve the bound ref and clone the memory repository at that SHA
@@ -179,11 +182,17 @@ jobs:
           EXPECTED_SHA256: ${{ steps.binding.outputs.sha256 }}
           EXPECTED_ARTIFACT: ${{ steps.binding.outputs.artifact }}
           SOURCE_DATE_EPOCH: ${{ steps.binding.outputs.epoch }}
+          BUILD_CONSTRAINT: ${{ steps.binding.outputs.build_constraint }}
         run: |
           set -euo pipefail
           out="${RUNNER_TEMP}/memory-wheel"
           mkdir -p "${out}"
-          uv build --wheel --out-dir "${out}" "${RUNNER_TEMP}/memory-src"
+          # The isolated build env resolves the backend afresh; pin the one that
+          # produced the official wheel, or a new setuptools release changes bytes.
+          printf '%s\n' "${BUILD_CONSTRAINT}" > "${RUNNER_TEMP}/memory-build-constraints.txt"
+          uv build --wheel --out-dir "${out}" \
+            --build-constraint "${RUNNER_TEMP}/memory-build-constraints.txt" \
+            "${RUNNER_TEMP}/memory-src"
           wheel="${out}/${EXPECTED_ARTIFACT}"
           if [ ! -f "${wheel}" ]; then
             echo "::error::expected artifact ${EXPECTED_ARTIFACT} was not built; got: $(ls "${out}")"

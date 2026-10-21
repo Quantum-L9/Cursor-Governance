@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -48,6 +49,60 @@ FIX_PLACEHOLDER = (
 REVIEWER_PLACEHOLDER = (
     "<!-- Where to look hardest. Trade-offs accepted. Deferred follow-ups, with issue links. -->"
 )
+#: Reviewer focus is judgment about where a change is risky. Nothing the
+#: composer measures establishes it, so the field says so instead of pointing
+#: at another section and reading as answered.
+REVIEWER_UNRESOLVED = (
+    "_Unresolved — where to look hardest is the author's judgment; the composer "
+    "measures no basis for it. State it here; this text survives refresh._"
+)
+#: Paths that make the ``## Semantic change`` section applicable. Measured from
+#: the diff rows (both endpoints of a rename), never assumed. Two families:
+#: the organization's canonical semantic sources and release records live
+#: under these prefixes (Quantum-L9/.github ``semantics/``,
+#: ``docs/semantic-foundation/<version>/``) ...
+SEMANTIC_PREFIXES = ("semantics/", "docs/semantic-foundation/")
+#: ... and a product repository carries its authoritative product artifacts at
+#: exact paths: the ProductTopology (``l9.schema/product-topology@1``, the
+#: product contract), the derived ProductManifest
+#: (``l9.schema/product-manifest@1``) and the repository's release binding
+#: (ADR-094). Exact paths, not basenames: a scaffold or a copy elsewhere
+#: (``templates/semantic-authoring/product-topology.yaml``) is not the
+#: authoritative artifact and must not make the section applicable.
+SEMANTIC_ARTIFACTS = {
+    "product-topology.yaml": "ProductTopology",
+    "release-work/product-manifest.json": "ProductManifest",
+    "release-work/product-release-binding.yaml": "product release binding",
+}
+SEMANTIC_NA = (
+    "- [x] N/A — no canonical semantic artifact or release record changed "
+    "(measured: no `semantics/` or `docs/semantic-foundation/` path and no "
+    "`product-topology.yaml`, `release-work/product-manifest.json` or "
+    "`release-work/product-release-binding.yaml` in this diff)"
+)
+SEMANTIC_FIELD_UNRESOLVED = "_unresolved — the author states this; the composer cannot measure it_"
+SEMANTIC_FOUNDATION_FIELD = "Foundation / release candidate affected:"
+#: Type of Change is ticked from conventional-commit types in this branch's own
+#: commits (and docs-only / .github-only diffs). With no such evidence nothing
+#: is ticked: a guessed type is a fabricated claim.
+TYPE_NOT_INDICATED = "not indicated by this branch's commit types"
+TYPE_UNRESOLVED = (
+    "unresolved — no conventional-commit type (fix:, feat:, refactor:, docs:, ci:, build:) "
+    "in this branch's commits; author ticks one"
+)
+CONVENTIONAL_TYPES = {
+    "fix": "Bug fix",
+    "feat": "Feature / enhancement",
+    "refactor": "Refactor (no behavior change)",
+    "docs": "Documentation",
+    "ci": "CI / governance change",
+    "build": "CI / governance change",
+}
+CONVENTIONAL_RE = re.compile(r"^(?P<type>[a-z]+)(?:\([^)]*\))?(?P<bang>!)?:\s")
+RISK_NOTE = (
+    "_Risk tick: the composer's path-based default (High: an ALLOW-ROOT-DELETION marker; "
+    "Low: docs/ only; otherwise Medium), not an assessment — change it if it is wrong._"
+)
 DELETION_RE = re.compile(r"ALLOW-ROOT-DELETION:\s*(?P<path>\S+?)\s*(?:—|-)\s+(?P<reason>\S.*)")
 TYPE_LABELS = (
     "Bug fix",
@@ -63,15 +118,7 @@ RISK_LABELS = (
     "High — breaking change, migration, IAM/network, or irreversible",
 )
 
-GOV_PREFIXES = (
-    "commands/",
-    "rules/",
-    "skills/",
-    "ops/",
-    ".github/",
-    "environment/",
-)
-DOCS_PREFIXES = ("docs/", "docs/plans/")
+DOCS_PREFIXES = ("docs/",)
 
 COMPOSER_MARKER = "<!-- autonomous compile from open_pr_after_gate.sh -->"
 TEMPLATE_PATH = ".github/pull_request_template.md"
@@ -112,8 +159,25 @@ INTENT_PROVENANCE = (
     "entry, refreshed on every push. The text after a path is yours; it survives refresh. "
     "A new path starts from the subject of the newest commit that touched it. -->"
 )
+#: Visible once per region: a commit subject is context, not a per-file
+#: rationale, and the body must not let one read as the other.
+INTENT_NOTE = (
+    "_Text after each path is the subject of the newest commit in this branch that "
+    "touched it — commit context, not a verified per-file rationale. Replace it where "
+    "the purpose differs; your text survives refresh._"
+)
+NO_OWN_COMMIT = "_unresolved — no commit in this branch's own range touched this path_"
 EVIDENCE_HEAD_RE = re.compile(r"^composed at head ([0-9a-f]{7,40})$", re.M)
 EVIDENCE_STALE_PREFIX = "STALE:"
+EVIDENCE_UNVERIFIED_PREFIX = "UNVERIFIED:"
+#: Template sample lines inside the EVIDENCE region. They are an example of
+#: what evidence looks like, never a measurement, and must not survive into a
+#: refreshed body as if they were receipts.
+EVIDENCE_TEMPLATE_LINES = frozenset({"$ pytest -q", "$ ruff check . && pyright"})
+#: Receipt binding verdicts (``MechanicalFacts.gate_binding`` / ``l4_binding``).
+BOUND = "bound"
+STALE = "stale"
+UNVERIFIED = "unverified"
 
 
 class TemplateError(org_dotgithub.OrgFileError):
@@ -155,6 +219,24 @@ class MechanicalFacts:
     # False when no caller measured the range. An empty list then means "unknown",
     # not "none", and the Protected-root block must not claim otherwise.
     additive_only_measured: bool = True
+    # Whether each receipt still describes the tree being composed: BOUND,
+    # STALE or UNVERIFIED, plus the reason. "" means no caller checked, which
+    # reads as UNVERIFIED — presence of a receipt file is never proof.
+    gate_binding: str = ""
+    gate_binding_detail: str = ""
+    l4_binding: str = ""
+    l4_binding_detail: str = ""
+
+
+#: Completion status of one PR-body field in the handoff (``fields``):
+#: measured and bound to this head; measured not applicable; unverified but
+#: not the author's to supply (a composer default, an unbound receipt — a
+#: reviewer may tick it); or the author's to complete. ``needs_completion``
+#: lists exactly the last kind, so an unknown is never reported as done.
+COMPLETION_VERIFIED = "verified"
+COMPLETION_NOT_APPLICABLE = "not_applicable"
+COMPLETION_UNVERIFIED = "unverified"
+COMPLETION_NEEDS_AUTHOR = "needs_author"
 
 
 @dataclass
@@ -162,6 +244,8 @@ class ComposeResult:
     body: str
     needs_completion: list[str]
     mechanical_filled: list[str]
+    # field -> {"status": COMPLETION_*, "detail": why}; see completion_fields.
+    fields: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 def _run_git(workspace: Path, *args: str) -> str:
@@ -293,6 +377,72 @@ def _breakglass_path(workspace: Path) -> Path:
     return _l4_state_path(workspace, "breakglass_path", "breakglass.json")
 
 
+GATE_SCRIPT = Path(__file__).resolve().parent / "run_pr_gate.sh"
+
+
+def verify_gate_receipt(workspace: Path, receipt: dict[str, Any] | None) -> tuple[str, str]:
+    """(verdict, detail) for the local gate receipt against the tree now.
+
+    The digest is the gate's own, read through its single
+    ``run_pr_gate.sh --print-state-digest`` seam — never re-implemented here.
+    It is computed with the receipt's own ``pr_base`` so only paths and
+    contents are compared; a recorded ``head_sha`` must also equal HEAD,
+    because committing a hook rewrite moves HEAD over identical bytes.
+    """
+    if not receipt:
+        return "", ""
+    want = " ".join(
+        str(receipt.get(key) or "") for key in ("paths_digest", "content_digest", "pr_base")
+    )
+    if not receipt.get("content_digest"):
+        return UNVERIFIED, "receipt records no content digest"
+    env = {**os.environ, "WS": str(workspace), "PR_BASE": str(receipt.get("pr_base") or "")}
+    try:
+        proc = subprocess.run(
+            ["bash", str(GATE_SCRIPT), "--print-state-digest"],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return UNVERIFIED, f"gate state digest could not be computed: {exc}"
+    lines = proc.stdout.strip().splitlines()
+    current = lines[-1].strip() if lines else ""
+    if proc.returncode != 0 or not current or current.startswith("unreadable-"):
+        return UNVERIFIED, "gate state digest could not be computed"
+    if current != want:
+        return STALE, "the receipt's digest does not match this tree"
+    recorded = str(receipt.get("head_sha") or "")
+    head = _run_git(workspace, "rev-parse", "HEAD").strip()
+    if recorded and head and recorded != head:
+        return STALE, f"the receipt was written at {recorded[:12]}, HEAD is {head[:12]}"
+    return BOUND, "digest matches this tree" + (f" at {head[:12]}" if recorded else "")
+
+
+def verify_l4_receipt(workspace: Path, receipt: dict[str, Any] | None) -> tuple[str, str]:
+    """(verdict, detail) for the L4 release receipt, judged by l4_local itself."""
+    if not receipt:
+        return "", ""
+    # Broad by design; the handler below carries the reason.
+    # nosemgrep: l9.baseline.python.broad-except
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
+        import l4_local
+
+        decision = l4_local._allow_from_receipt(  # noqa: SLF001 — the one binding judge
+            workspace, receipt, None, l4_local.current_branch(workspace)
+        )
+    except Exception as exc:  # noqa: BLE001 — an unjudged receipt is UNVERIFIED, not BOUND
+        return UNVERIFIED, f"l4_local could not judge the receipt: {exc}"
+    if decision is None:
+        return UNVERIFIED, f"phase {receipt.get('phase')!r} is not release_authorized"
+    allowed, detail = decision
+    return (BOUND if allowed else STALE), detail
+
+
 def _issue_numbers(text: str) -> list[int]:
     found: list[int] = []
     patterns = (
@@ -392,6 +542,7 @@ def collect_mechanical(
     campaign_body: str = "",
     additive_only_paths: list[str] | None = None,
     additive_only_measured: bool = True,
+    verify: bool = True,
 ) -> MechanicalFacts:
     log = _run_git(
         workspace,
@@ -419,6 +570,10 @@ def collect_mechanical(
     for number in issue_closes:
         if number not in unique_issues:
             unique_issues.append(number)
+    gate_receipt = _load_json(workspace / ".l9" / "pr" / "gate-receipt.json")
+    l4_receipt = _load_json(_l4_receipt_path(workspace))
+    gate_binding, gate_detail = verify_gate_receipt(workspace, gate_receipt) if verify else ("", "")
+    l4_binding, l4_detail = verify_l4_receipt(workspace, l4_receipt) if verify else ("", "")
     return MechanicalFacts(
         commits=commits,
         commit_bodies=bodies,
@@ -426,8 +581,8 @@ def collect_mechanical(
         shortstat=shortstat,
         path_subjects=_collect_path_subjects(workspace, pr_base),
         issue_closes=unique_issues,
-        gate_receipt=_load_json(workspace / ".l9" / "pr" / "gate-receipt.json"),
-        l4_receipt=_load_json(_l4_receipt_path(workspace)),
+        gate_receipt=gate_receipt,
+        l4_receipt=l4_receipt,
         breakglass=_load_json(_breakglass_path(workspace)),
         head=_run_git(workspace, "rev-parse", "HEAD").strip(),
         campaign_body=campaign_body.strip(),
@@ -435,6 +590,10 @@ def collect_mechanical(
         additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],
         deletion_markers=markers,
         additive_only_measured=additive_only_measured,
+        gate_binding=gate_binding,
+        gate_binding_detail=gate_detail,
+        l4_binding=l4_binding,
+        l4_binding_detail=l4_detail,
     )
 
 
@@ -518,19 +677,44 @@ def range_fix(facts: MechanicalFacts) -> str:
 
 
 def path_why(facts: MechanicalFacts, path: str) -> str:
-    """Why this path changed: the subject of the commit that last touched it."""
-    return facts.path_subjects.get(path) or range_summary(facts)
+    """The subject of the newest own commit that touched this path.
+
+    Context, not a rationale: render_changes_by_intent says so once above the
+    list. A path no own commit touched gets an explicit unresolved marker, not
+    the range summary — that borrowed some other change's words for it.
+    """
+    return facts.path_subjects.get(path) or NO_OWN_COMMIT
 
 
-def infer_type_of_change(facts: MechanicalFacts) -> str:
-    paths = _changed_paths(facts)
+def infer_type_of_change(facts: MechanicalFacts) -> list[str]:
+    """Type labels this range shows evidence for, in template order.
+
+    Evidence is a conventional-commit type on one of this branch's own commits
+    (``fix:``, ``feat!:``, ...), a ``BREAKING CHANGE`` trailer or an
+    ALLOW-ROOT-DELETION marker, or a diff that is docs/-only or .github/-only.
+    No evidence returns ``[]``: the reader is told the type is unresolved
+    rather than handed a default.
+    """
+    chosen: set[str] = set()
+    for index, subject in enumerate(facts.commits):
+        match = CONVENTIONAL_RE.match(subject)
+        body = facts.commit_bodies[index] if index < len(facts.commit_bodies) else ""
+        if match:
+            label = CONVENTIONAL_TYPES.get(match.group("type"))
+            if label:
+                chosen.add(label)
+            if match.group("bang"):
+                chosen.add("Breaking change")
+        if re.search(r"^BREAKING[ -]CHANGE:", body, re.M):
+            chosen.add("Breaking change")
     if facts.deletion_markers:
-        return "Breaking change"
-    if paths and all(path.startswith(DOCS_PREFIXES) or path.startswith("docs/") for path in paths):
-        return "Documentation"
-    if paths and all(path.startswith(GOV_PREFIXES) or path.startswith("docs/") for path in paths):
-        return "CI / governance change"
-    return "Feature / enhancement"
+        chosen.add("Breaking change")
+    paths = _changed_paths(facts)
+    if paths and all(path.startswith(DOCS_PREFIXES) for path in paths):
+        chosen.add("Documentation")
+    if paths and all(path.startswith(".github/") for path in paths):
+        chosen.add("CI / governance change")
+    return [label for label in TYPE_LABELS if label in chosen]
 
 
 def infer_risk(facts: MechanicalFacts) -> str:
@@ -543,8 +727,16 @@ def infer_risk(facts: MechanicalFacts) -> str:
 
 
 def _security_passed(facts: MechanicalFacts) -> bool:
+    """True only for a receipt bound to this tree that records a passing scan.
+
+    The blocking security wave (gitleaks, semgrep, bandit, pip-audit on the
+    changed files) is what a ticked secrets/semgrep box claims. A receipt that
+    no longer describes the tree, or that does not say the wave ran blocking
+    and passed, proves nothing about this head — including a bare v2 receipt,
+    which used to tick the box by its schema name alone.
+    """
     receipt = facts.gate_receipt or {}
-    if not receipt:
+    if not receipt or facts.gate_binding != BOUND:
         return False
     if receipt.get("security") in {"pass", "passed", "ok", True}:
         return True
@@ -555,13 +747,127 @@ def _security_passed(facts: MechanicalFacts) -> bool:
             return True
         if isinstance(sec, dict) and sec.get("status") in {"pass", "passed"}:
             return True
-    return receipt.get("schema") == "l9.pr_gate_receipt.v2"
+    return False
 
 
-def _needs_completion(template: str | None) -> list[str]:
-    # Autonomous compile fills every heading the one template still carries.
-    del template
-    return []
+def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, str]]:
+    """Per-field completion status, read off the composed body itself.
+
+    The handoff and the rendered Markdown must tell one truth, so every
+    status here is derived from the marker the body carries (the unresolved
+    text, the ticked box, the receipt verdict), never from a parallel
+    bookkeeping of what the composer meant to write. A field the template
+    does not carry is absent, not "done".
+    """
+    fields: dict[str, dict[str, str]] = {}
+
+    def put(name: str, status: str, detail: str) -> None:
+        fields[name] = {"status": status, "detail": detail}
+
+    if THIN_PROBLEM_NOTE in body:
+        put(
+            "problem",
+            COMPLETION_NEEDS_AUTHOR,
+            "a commit subject only — the oldest commit has no body paragraph; rewrite it",
+        )
+    elif "## Problem" in body and NO_SUBJECT in body:
+        put("problem", COMPLETION_NEEDS_AUTHOR, "no own commit in this range — write it")
+    elif "## Problem" in body:
+        put("problem", COMPLETION_VERIFIED, "oldest own commit subject and its body paragraph")
+    if TYPE_UNRESOLVED in body:
+        put(
+            "type_of_change",
+            COMPLETION_NEEDS_AUTHOR,
+            "no box ticked — no conventional-commit type in this branch's commits; tick one",
+        )
+    elif "## Type of Change" in body:
+        put(
+            "type_of_change",
+            COMPLETION_VERIFIED,
+            "ticked from this branch's commit types: " + ", ".join(infer_type_of_change(facts)),
+        )
+    if RISK_NOTE in body:
+        put(
+            "risk",
+            COMPLETION_UNVERIFIED,
+            "the composer's path-based default, not an assessment; change it if it is wrong",
+        )
+    if facts.gate_receipt:
+        put(
+            "gate_receipt",
+            COMPLETION_VERIFIED if facts.gate_binding == BOUND else COMPLETION_UNVERIFIED,
+            facts.gate_binding_detail or "present; no caller checked its binding",
+        )
+    else:
+        put("gate_receipt", COMPLETION_UNVERIFIED, "gate-receipt.json absent — not measured here")
+    if facts.l4_receipt:
+        put(
+            "l4_receipt",
+            COMPLETION_VERIFIED if facts.l4_binding == BOUND else COMPLETION_UNVERIFIED,
+            facts.l4_binding_detail or "present; no caller checked its binding",
+        )
+    else:
+        put("l4_receipt", COMPLETION_UNVERIFIED, "L4 receipt absent — not measured here")
+    if "## Gates" in body:
+        if _security_passed(facts):
+            put(
+                "security_gates",
+                COMPLETION_VERIFIED,
+                "secrets and semgrep boxes ticked from a bound receipt whose security wave passed",
+            )
+        else:
+            put(
+                "security_gates",
+                COMPLETION_UNVERIFIED,
+                "no bound passing receipt; every Gate box is unticked and marked unverified",
+            )
+    if SEMANTIC_FIELD_UNRESOLVED in body:
+        put(
+            "semantic_change",
+            COMPLETION_NEEDS_AUTHOR,
+            "applicable — this diff changes "
+            + ", ".join(f"{path} ({semantic_kind(path)})" for path in semantic_paths(facts))
+            + "; release coordinates, dependents revalidation and admission are the author's",
+        )
+    elif SEMANTIC_NA in body:
+        put(
+            "semantic_change",
+            COMPLETION_NOT_APPLICABLE,
+            "no canonical semantic artifact or release record in the measured diff",
+        )
+    if REVIEWER_UNRESOLVED in body:
+        put(
+            "reviewer_focus",
+            COMPLETION_NEEDS_AUTHOR,
+            "where to look hardest is the author's judgment; the composer measures no basis",
+        )
+    if facts.additive_only_paths:
+        mode = _edit_mode_expected(facts)
+        put(
+            "protected_root",
+            COMPLETION_VERIFIED,
+            "measured additive_only paths: "
+            + ", ".join(facts.additive_only_paths)
+            + f"; edit mode {mode[0] if mode else 'unresolved'}",
+        )
+    elif facts.additive_only_measured:
+        put("protected_root", COMPLETION_NOT_APPLICABLE, "no additive_only root file in the diff")
+    else:
+        put(
+            "protected_root",
+            COMPLETION_UNVERIFIED,
+            "the additive_only range was not measured; the Root-file gate verdict is unknown",
+        )
+    return fields
+
+
+def _needs_completion(fields: dict[str, dict[str, str]]) -> list[str]:
+    """The fields only the author can complete, as the body reports them."""
+    return [
+        f"{name}: {entry['detail']}"
+        for name, entry in fields.items()
+        if entry["status"] == COMPLETION_NEEDS_AUTHOR
+    ]
 
 
 def _annotate_unchecked_boxes(text: str) -> str:
@@ -571,6 +877,11 @@ def _annotate_unchecked_boxes(text: str) -> str:
             re.match(r"^- \[ \] ", line)
             and UNMEASURED not in line
             and GATE_UNVERIFIED not in line
+            and TYPE_NOT_INDICATED not in line
+            and TYPE_UNRESOLVED not in line
+            and SEMANTIC_FIELD_UNRESOLVED not in line
+            and " — not applicable: this diff changes " not in line
+            and EDIT_MODE_STALE_PREFIX not in line
             and " — n/a" not in line
             and " — n/a —" not in line
         ):
@@ -597,20 +908,35 @@ def _receipt_binding(receipt: dict[str, Any]) -> str:
     return "binding=none recorded"
 
 
+def _binding_verdict(verdict: str, detail: str) -> str:
+    """The receipt's relation to this head, in words a reviewer can act on."""
+    if verdict == BOUND:
+        return f"BOUND ({detail}) — describes this head"
+    if verdict == STALE:
+        return f"STALE ({detail}) — does not describe this head; unverified"
+    reason = detail or "no caller checked its binding"
+    return f"UNVERIFIED ({reason}) — not evidence for this head"
+
+
 def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     evidence: list[str] = []
     if facts.gate_receipt:
+        security = facts.gate_receipt.get("security")
         evidence.append(
             f"gate-receipt.json present: schema={facts.gate_receipt.get('schema')} "
             f"{_receipt_binding(facts.gate_receipt)} "
             f"passed_at={facts.gate_receipt.get('passed_at')}"
+            + (f" security={security}" if security else " security=not recorded")
+            + " — "
+            + _binding_verdict(facts.gate_binding, facts.gate_binding_detail)
         )
     else:
         evidence.append("gate-receipt.json absent — local gate result not measured here")
     if facts.l4_receipt:
         evidence.append(
             f"L4 receipt present: phase={facts.l4_receipt.get('phase')} "
-            f"{_receipt_binding(facts.l4_receipt)}"
+            f"{_receipt_binding(facts.l4_receipt)} — "
+            + _binding_verdict(facts.l4_binding, facts.l4_binding_detail)
         )
     else:
         evidence.append("L4 receipt absent — release authorization not measured here")
@@ -644,15 +970,22 @@ def _check_box(text: str, label: str) -> str:
     return pattern.sub(r"- [x] \1", text, count=1)
 
 
-def _na_unchecked_in_section(text: str, heading: str, until: str | None, reason: str = NA) -> str:
-    start = text.find(heading)
-    if start < 0:
+def _heading_span(text: str, heading: str) -> tuple[int, int] | None:
+    """(start, end) of a heading line's section: up to the next heading of the
+    same or a higher level, so template order never decides where it stops."""
+    match = re.search(rf"^{re.escape(heading)}[^\n]*$", text, re.M)
+    if match is None:
+        return None
+    level = len(heading) - len(heading.lstrip("#"))
+    nxt = re.search(rf"^#{{1,{level}}} ", text[match.end() :], re.M)
+    return match.start(), match.end() + nxt.start() if nxt else len(text)
+
+
+def _na_unchecked_in_section(text: str, heading: str, reason: str = NA) -> str:
+    span = _heading_span(text, heading)
+    if span is None:
         return text
-    end = len(text)
-    if until:
-        nxt = text.find(until, start + len(heading))
-        if nxt >= 0:
-            end = nxt
+    start, end = span
     chunk = text[start:end]
     new_lines: list[str] = []
     for line in chunk.splitlines():
@@ -699,7 +1032,7 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
             citation,
             1,
         )
-        text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+        text = _na_unchecked_in_section(text, "### Edit mode")
         return text
     rewrite = any(path in facts.deletion_markers for path in paths)
     if rewrite:
@@ -721,7 +1054,7 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
             1,
         )
         proof = "append-only — none."
-    text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+    text = _na_unchecked_in_section(text, "### Edit mode")
     # Why a root file: the commits that actually touched the protected paths,
     # not whichever subject happens to sit at one end of the range.
     root_why = sorted({path_why(facts, path) for path in paths})
@@ -742,13 +1075,14 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
 
 def _fill_type_of_change(text: str, facts: MechanicalFacts) -> str:
     chosen = infer_type_of_change(facts)
+    reason = TYPE_NOT_INDICATED if chosen else TYPE_UNRESOLVED
     for label in TYPE_LABELS:
-        if label == chosen:
+        if label in chosen:
             text = _check_box(text, label)
         else:
             text = re.sub(
                 rf"^- \[ \] ([^\n]*{re.escape(label)}[^\n]*)$",
-                rf"- [ ] \1 — {NA}",
+                lambda m: f"- [ ] {m.group(1)} — {reason}",
                 text,
                 count=1,
                 flags=re.M,
@@ -852,7 +1186,10 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
     groups: dict[str, list[str]] = {"Added": [], "Modified": [], "Renamed": [], "Deleted": []}
     for row in _rows(facts):
         why = keep_why.get(row.key)
-        if not why:
+        # The composer's own unresolved marker is a measurement, not someone's
+        # words: it is remeasured every refresh, so an own commit that now
+        # touches the path replaces it instead of leaving a false "no commit".
+        if not why or why.startswith(NO_OWN_COMMIT):
             why = path_why(facts, row.path)
             if row.old_path:
                 why = f"{why} ({row.word})"
@@ -865,7 +1202,7 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
             groups["Deleted"].append(bullet)
         else:
             groups["Modified"].append(bullet)
-    block = [INTENT_PROVENANCE, ""]
+    block = [INTENT_PROVENANCE, INTENT_NOTE, ""]
     for heading, bullets in groups.items():
         # Renamed/copied is the one group the template never had; show it only
         # when it has rows so a rename-free body keeps the template's shape.
@@ -931,14 +1268,93 @@ def stale_evidence(existing: str, head: str) -> str:
     lines = [
         line
         for line in existing.strip().strip("`").strip("\n").splitlines()
-        if line.strip() and not line.startswith(EVIDENCE_STALE_PREFIX)
+        if line.strip()
+        and not line.startswith((EVIDENCE_STALE_PREFIX, EVIDENCE_UNVERIFIED_PREFIX))
+        and line.strip() not in EVIDENCE_TEMPLATE_LINES
+        and not re.fullmatch(r"_[^_]*_", line.strip())
     ]
+    if match is None and not any("receipt" in line for line in lines):
+        # Never composed by make pr: there are no receipts to call stale, and
+        # the template's sample commands are not evidence of anything.
+        notice = (
+            f"{EVIDENCE_UNVERIFIED_PREFIX} no make pr receipt was recorded for this PR; "
+            f"head {head} has no measured evidence — add yours below this block"
+        )
+        return "```\n" + "\n".join([notice, *lines]) + "\n```"
     recorded = match.group(1) if match else "an unrecorded head"
     notice = (
         f"{EVIDENCE_STALE_PREFIX} receipts below were composed at {recorded}; "
         f"PR head is now {head} and no local gate measured it — unverified for this head"
     )
     return "```\n" + "\n".join([notice, *lines]) + "\n```"
+
+
+PROTECTED_REMOTE_UNMEASURED = (
+    "- NOT MEASURED — the governance-pr refresh could not run "
+    "validate_root_file_protection.py for this head; make pr measures additive_only "
+    "paths, and the Root-file gate judges the diff either way"
+)
+#: Region line a remote refresh writes under the measured path list when the
+#: declarations below it (Edit mode, Why, Proof) were composed for another
+#: path set or edit mode. Deterministic in (head, old head): a repeated
+#: refresh of the same head rewrites nothing.
+PROTECTED_REMOTE_NOTICE_PREFIX = "- UNVERIFIED for head "
+#: Appended to every Edit mode box a remote refresh invalidates, after the
+#: box is unticked. Its presence also keeps the box out of the generic
+#: "not measured" annotation.
+EDIT_MODE_STALE_PREFIX = "STALE: composed for an earlier head"
+
+ROOT_PROTECT_SCRIPT = "ops/scripts/validate_root_file_protection.py"
+ROOT_PROTECT_CONFIG = "ops/config/root-file-protection.json"
+
+
+def measure_additive_only(workspace: Path, pr_base: str) -> tuple[list[str], bool]:
+    """(paths, measured): additive_only root files touched in ``pr_base..HEAD``.
+
+    Measured by the one owner of that rule — the workspace's own
+    ``validate_root_file_protection.py`` over its ``root-file-protection.json``
+    — never re-derived here. Mirrors open_pr_after_gate.sh: a workspace with
+    no policy file has no additive_only contract, so the empty list is a
+    measured answer; a policy file whose validator is absent or fails is an
+    unmeasured range, and the caller must say so rather than claim none.
+    """
+    config = workspace / ROOT_PROTECT_CONFIG
+    script = workspace / ROOT_PROTECT_SCRIPT
+    if not config.is_file():
+        return [], True
+    if not script.is_file():
+        return [], False
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--list-touched-additive-only",
+                "--base",
+                pr_base,
+                "--head",
+                "HEAD",
+                "--repo",
+                str(workspace),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return [], False
+    if proc.returncode != 0:
+        return [], False
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()], True
+
+
+def _is_placeholder(content: str | None) -> bool:
+    """A region still holding template text: ``- ` ``` or one ``_pending ..._`` line."""
+    if content is None:
+        return False
+    text = content.strip()
+    return text in {"- ` `", ""} or bool(re.fullmatch(r"_pending\b[^\n]*_", text))
 
 
 def render_protected_paths(facts: MechanicalFacts) -> str:
@@ -960,57 +1376,182 @@ def check_inventory(body: str, rows: list[DiffRow]) -> tuple[list[str], list[str
     return undeclared, phantom
 
 
+#: Gate boxes a bound, passing gate receipt is evidence for: its security wave
+#: ran gitleaks and semgrep (p/secrets plus the repo rules) on the changed files.
+SECURITY_GATE_BOXES = (
+    "No secrets, tokens, or customer data in code, tests, fixtures, or logs",
+    "`semgrep` clean, or findings triaged below",
+)
+
+
 def _fill_gates(text: str, facts: MechanicalFacts) -> str:
     if _security_passed(facts):
-        text = text.replace(
-            "- [ ] No secrets, tokens, or customer data in code, tests, fixtures, or logs",
-            "- [x] No secrets, tokens, or customer data in code, tests, fixtures, or logs",
-            1,
-        )
-    return _na_unchecked_in_section(text, "## Gates", "## Reviewer focus", GATE_UNVERIFIED)
+        for label in SECURITY_GATE_BOXES:
+            text = text.replace(f"- [ ] {label}", f"- [x] {label}", 1)
+    return _na_unchecked_in_section(text, "## Gates", GATE_UNVERIFIED)
+
+
+def semantic_kind(path: str) -> str:
+    """What a path is to the Semantic change section, or "" when nothing.
+
+    An exact authoritative artifact path names its kind; a path under a
+    canonical prefix names the family. Anything else — another YAML, a doc, a
+    scaffold under ``templates/`` — is not semantic, whatever its basename.
+    """
+    kind = SEMANTIC_ARTIFACTS.get(path)
+    if kind:
+        return kind
+    if path.startswith("docs/semantic-foundation/"):
+        return "semantic foundation release record"
+    if path.startswith("semantics/"):
+        return "canonical semantic source"
+    return ""
+
+
+def semantic_paths(facts: MechanicalFacts) -> list[str]:
+    """Diff paths (either end of a rename) that make Semantic change applicable."""
+    found: list[str] = []
+    for row in _rows(facts):
+        for path in (row.old_path, row.path):
+            if path and semantic_kind(path) and path not in found:
+                found.append(path)
+    return found
+
+
+def _foundation_versions(paths: list[str]) -> list[str]:
+    """Release-record version directories the diff touches, e.g. ``v3.21.0``."""
+    versions: list[str] = []
+    for path in paths:
+        match = re.match(r"^docs/semantic-foundation/(v\d+(?:\.\d+)*)/", path)
+        if match and match.group(1) not in versions:
+            versions.append(match.group(1))
+    return versions
+
+
+def _fill_semantic(text: str, facts: MechanicalFacts) -> str:
+    """Classify ``## Semantic change`` from the diff instead of leaving its labels.
+
+    Not applicable (the measured diff has no semantic path): the section is the
+    one ticked N/A line saying why. Applicable: the N/A line names what the
+    diff changes and the kind of each artifact, the Foundation field carries
+    the release-record version the diff establishes (when one is in it), and
+    every other field label and box is marked unresolved for the author —
+    the composer cannot know a release coordinate, a dependent's revalidation
+    or an admission decision, and an empty ``Foundation:`` reads like an
+    answered blank.
+    """
+    span = _heading_span(text, "## Semantic change")
+    if span is None:
+        return text
+    start, end = span
+    section = text[start:end]
+    heading, _, rest = section.partition("\n")
+    tail = "\n" if section.endswith("\n") else ""
+    paths = semantic_paths(facts)
+    if not paths:
+        return text[:start] + f"{heading}\n\n{SEMANTIC_NA}\n{tail}" + text[end:]
+    versions = _foundation_versions(paths)
+    lines: list[str] = []
+    for line in rest.splitlines():
+        if re.match(r"^- \[ \] N/A\b", line):
+            listed = ", ".join(f"`{path}` ({semantic_kind(path)})" for path in paths[:5])
+            more = f" (+{len(paths) - 5} more)" if len(paths) > 5 else ""
+            lines.append(f"{line} — not applicable: this diff changes {listed}{more}")
+        elif re.match(r"^- \[ \] ", line):
+            lines.append(f"{line} — {SEMANTIC_FIELD_UNRESOLVED}")
+        elif line.strip() == f"- {SEMANTIC_FOUNDATION_FIELD}" and versions:
+            measured = ", ".join(f"`docs/semantic-foundation/{v}/`" for v in versions)
+            lines.append(
+                f"{line.rstrip()} measured in this diff: {measured}; release candidate "
+                f"{SEMANTIC_FIELD_UNRESOLVED}"
+            )
+        elif re.match(r"^- [^\[][^\n]*:\s*$", line):
+            lines.append(f"{line.rstrip()} {SEMANTIC_FIELD_UNRESOLVED}")
+        else:
+            lines.append(line)
+    return text[:start] + heading + "\n" + "\n".join(lines) + tail + text[end:]
+
+
+_CLOSES_LINE = re.compile(r"\n+Closes #(?:<!-- issue number -->)?[ \t]*(?=\n|\Z)")
+
+
+def _fill_closes(text: str, facts: MechanicalFacts, problem: str | None) -> str:
+    """Closing keywords only for issues a commit names; never a dangling ``Closes #``.
+
+    The older template carried a bare ``Closes #`` line; it is filled or
+    removed. The canonical template carries none, so a measured issue list is
+    written at the end of the Problem text. ``problem`` is that text when the
+    composer wrote it; it is located here, at insertion time, because any
+    substitution made before this one (the Summary line, for instance) shifts
+    every offset computed earlier.
+    """
+    closes = ", ".join(f"#{n}" for n in facts.issue_closes)
+    if _CLOSES_LINE.search(text):
+        line = f"\n\nCloses {closes}" if closes else ""
+        return _CLOSES_LINE.sub(lambda _m: line, text, count=1)
+    if not closes or not problem:
+        return text
+    start, end = _heading_span(text, "## Problem") or (0, len(text))
+    at = text.find(problem, start, end)
+    if at < 0:
+        return text
+    problem_end = at + len(problem)
+    return text[:problem_end] + f"\n\nCloses {closes}" + text[problem_end:]
+
+
+ERROR_FENCE = (
+    "```\npaste the error / failing output here, or delete this block and describe the gap\n```"
+)
 
 
 def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = template
-    closes = ", ".join(f"#{n}" for n in facts.issue_closes) if facts.issue_closes else "#"
     problem = range_problem(facts)
     fix = range_fix(facts)
     text = _fill_protected_root(text, facts)
-    error_fence = (
-        "```\npaste the error / failing output here, or delete this block and describe the gap\n```"
-    )
-    text = text.replace(error_fence, problem, 1)
+    problem_written = False
+    at = text.find(ERROR_FENCE)
+    if at >= 0:
+        text = text[:at] + problem + text[at + len(ERROR_FENCE) :]
+        problem_written = True
     if "## Summary" in text:
         text = text.replace(
             "<!-- One-sentence description of what this PR does. -->",
             range_summary(facts),
             1,
         )
-    text = re.sub(r"Closes #<!-- issue number -->", f"Closes {closes}", text, count=1)
-    text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
+    text = _fill_closes(text, facts, problem if problem_written else None)
     text = _fill_type_of_change(text, facts)
     if "## Fix" in text:
         text = text.replace(FIX_PLACEHOLDER, fix, 1)
         text = text.replace("<!-- What you changed -->", fix, 1)
     text = _fill_risk(text, facts)
-    text = re.sub(r"(?m)^Rollback:\s*$", "Rollback: revert this PR", text, count=1)
+    rows = len(_rows(facts))
     text = re.sub(
-        r"(?m)^Blast radius:\s*$",
-        "Blast radius: measured paths in Changes by intent",
+        r"(?m)^Rollback:[ \t]*$",
+        "Rollback: revert this PR (composer default; not verified — state data, migration or "
+        "deployment steps here if a revert is not enough)",
         text,
         count=1,
     )
+    text = re.sub(
+        r"(?m)^Blast radius:[ \t]*$",
+        f"Blast radius: {rows} changed file{'' if rows == 1 else 's'} (Files touched); "
+        "dependents and callers not measured",
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r"(?m)^(Rollback:[^\n]*)$", lambda m: f"{m.group(1)}\n\n{RISK_NOTE}", text, count=1
+    )
     text = _put_region(text, REGION_EVIDENCE, render_evidence(facts), _EVIDENCE_PH)
     text = _put_region(text, REGION_FILES, render_files_touched(facts), _FILES_PH)
+    text = _fill_semantic(text, facts)
     text = _fill_gates(text, facts)
     if "## Reviewer focus" in text:
-        text = text.replace(
-            REVIEWER_PLACEHOLDER,
-            "See Changes by intent and Protected-root (if any additive_only path).",
-            1,
-        )
+        text = text.replace(REVIEWER_PLACEHOLDER, REVIEWER_UNRESOLVED, 1)
     text = _put_region(text, REGION_INTENT, render_changes_by_intent(facts), _INTENT_PH)
-    if facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized":
+    if facts.l4_binding == BOUND:
         text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
     return _annotate_unchecked_boxes(text)
 
@@ -1037,26 +1578,26 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
         if facts.additive_only_paths:
             filled.append("protected-root")
     else:
+        # Same visible order as the canonical template: inventory first.
         closes = ", ".join(f"#{n}" for n in facts.issue_closes)
+        problem = range_problem(facts) + (f"\n\nCloses {closes}" if closes else "")
         parts.extend(
             [
-                "## Problem",
+                "## Files touched",
                 "",
-                range_problem(facts),
-                "",
-                f"Closes {closes or '#'}",
-                "",
-                "## Evidence",
-                "",
-                wrap_region(REGION_EVIDENCE, render_evidence(facts)),
+                wrap_region(REGION_FILES, render_files_touched(facts)),
                 "",
                 "## Changes by intent",
                 "",
                 wrap_region(REGION_INTENT, render_changes_by_intent(facts)),
                 "",
-                "## Files touched",
+                "## Problem",
                 "",
-                wrap_region(REGION_FILES, render_files_touched(facts)),
+                problem,
+                "",
+                "## Evidence",
+                "",
+                wrap_region(REGION_EVIDENCE, render_evidence(facts)),
             ]
         )
     # No appended "## Commits" / "## Test plan" / "## Changed files": Fix lists
@@ -1066,10 +1607,13 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
         filled.append("gate receipt in Evidence")
     if facts.l4_receipt:
         filled.append("L4 receipt in Evidence")
+    body = "\n".join(parts).rstrip() + "\n"
+    fields = completion_fields(body, facts)
     return ComposeResult(
-        body="\n".join(parts).rstrip() + "\n",
-        needs_completion=_needs_completion(template),
+        body=body,
+        needs_completion=_needs_completion(fields),
         mechanical_filled=filled,
+        fields=fields,
     )
 
 
@@ -1116,13 +1660,132 @@ def refresh_body(
     if evidence is not None:
         fresh = stale_evidence(evidence, facts.head) if remote else render_evidence(facts)
         body = set_region(body, REGION_EVIDENCE, fresh)
-    if not remote and _region_span(body, REGION_PROTECTED_PATHS) is not None:
-        body = _refresh_protected_root(body, facts, template)
+    if _region_span(body, REGION_PROTECTED_PATHS) is not None:
+        if remote:
+            body = _refresh_protected_root_remote(body, facts)
+        else:
+            body = _refresh_protected_root(body, facts, template)
         if facts.additive_only_paths and PROTECTED_STAMP not in body:
             body = PROTECTED_STAMP + "\n" + body
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
+
+
+def _composed_head(body: str) -> str:
+    """The head make pr composed the body at, from its Evidence region, or ""."""
+    match = EVIDENCE_HEAD_RE.search(region_content(body, REGION_EVIDENCE) or "")
+    return match.group(1) if match else ""
+
+
+def _declared_protected_paths(region: str) -> str:
+    """The path lines of the Protected-root region, without a refresh notice."""
+    kept = [
+        line
+        for line in region.strip().splitlines()
+        if not line.startswith(PROTECTED_REMOTE_NOTICE_PREFIX)
+        and not line.startswith("- NOT MEASURED")
+    ]
+    return "\n".join(kept).strip()
+
+
+def _edit_mode_expected(facts: MechanicalFacts) -> tuple[str, ...]:
+    if not facts.additive_only_paths:
+        return ()
+    rewrite = any(path in facts.deletion_markers for path in facts.additive_only_paths)
+    return ("Justified rewrite",) if rewrite else ("Append-only",)
+
+
+_EDIT_MODE_LINE_RE = re.compile(
+    r"^- \[[ xX]\] (?P<rest>\*\*(?:Append-only|Justified rewrite)\*\*[^\n]*)$", re.M
+)
+_EDIT_MODE_SUFFIX_RE = re.compile(
+    rf"(?: — {re.escape(NA)}| — {re.escape(EDIT_MODE_STALE_PREFIX)}[^\n]*)+$"
+)
+
+
+def _invalidate_edit_mode(body: str, head: str) -> str:
+    """Untick every Edit mode box and say why: it described another head.
+
+    The boxes sit outside the machine-owned region but were ticked by the
+    composer, so they are its claims to withdraw. Why and Proof prose is
+    left exactly as written — a person's justification is not a measurement
+    to redo — and the region notice says it is unverified for this head.
+    """
+    span = _heading_span(body, "### Edit mode")
+    if span is None:
+        return body
+    start, end = span
+    chunk = body[start:end]
+
+    def untick(match: re.Match[str]) -> str:
+        rest = _EDIT_MODE_SUFFIX_RE.sub("", match.group("rest"))
+        return f"- [ ] {rest} — {EDIT_MODE_STALE_PREFIX}; not remeasured by make pr for {head}"
+
+    return body[:start] + _EDIT_MODE_LINE_RE.sub(untick, chunk) + body[end:]
+
+
+def _protected_remote_notice(facts: MechanicalFacts, old: str) -> str:
+    paths = facts.additive_only_paths
+    markers = [path for path in paths if path in facts.deletion_markers]
+    if not paths:
+        measured = "no additive_only root file in this diff"
+    elif markers:
+        measured = "ALLOW-ROOT-DELETION marker in this branch's commits for " + ", ".join(
+            f"`{path}`" for path in markers
+        )
+    else:
+        measured = "no ALLOW-ROOT-DELETION marker for these paths in this branch's commits"
+    return (
+        f"{PROTECTED_REMOTE_NOTICE_PREFIX}{facts.head}: the list above was measured by the "
+        f"governance-pr refresh ({measured}); Edit mode, Why and Proof below were composed by "
+        f"make pr at {old or 'an earlier head'} for a different path set or edit mode and "
+        "describe that head — make pr recomposes them"
+    )
+
+
+def _refresh_protected_root_remote(body: str, facts: MechanicalFacts) -> str:
+    """Protected-root on an event-driven refresh: remeasure, or withdraw.
+
+    The paths are remeasured by the repository's own validator (the caller
+    says whether that happened). Declarations that still describe the
+    measured set are left exactly as they are. When the set or the edit mode
+    moved — a root file newly touched, its change dropped, an
+    ALLOW-ROOT-DELETION marker added — the region takes the measured list and
+    every composer-ticked Edit mode box is withdrawn, because each of them was
+    verified for the head make pr measured, not this one. An unmeasured
+    moved head keeps no declaration as current truth either.
+    """
+    current = region_content(body, REGION_PROTECTED_PATHS)
+    if current is None:
+        return body
+    old = _composed_head(body)
+    moved = not old or not facts.head.startswith(old)
+    ticked = tuple(_EDIT_MODE_RE.findall(body))
+    if not facts.additive_only_measured:
+        if _is_placeholder(current):
+            return set_region(body, REGION_PROTECTED_PATHS, PROTECTED_REMOTE_UNMEASURED)
+        notice = (
+            f"{PROTECTED_REMOTE_UNMEASURED}; the declarations composed at "
+            f"{old or 'an earlier head'} are unverified for {facts.head}"
+        )
+        # Nothing moved, or nothing is left to withdraw: no rewrite.
+        if not moved or (current in (PROTECTED_REMOTE_UNMEASURED, notice) and not ticked):
+            return body
+        body = set_region(body, REGION_PROTECTED_PATHS, notice)
+        return _invalidate_edit_mode(body, facts.head)
+    fresh = render_protected_paths(facts).strip()
+    if _is_placeholder(current):
+        # Opened from the template, never composed: the measured list is a
+        # fact; the untouched boxes and placeholders below claim nothing.
+        return set_region(body, REGION_PROTECTED_PATHS, fresh)
+    declared = _declared_protected_paths(current)
+    already = PROTECTED_REMOTE_NOTICE_PREFIX in current
+    if declared == fresh and not already and ticked == _edit_mode_expected(facts):
+        return body
+    notice = _protected_remote_notice(facts, old)
+    body = set_region(body, REGION_PROTECTED_PATHS, f"{fresh}\n{notice}")
+    return _invalidate_edit_mode(body, facts.head)
 
 
 _EDIT_MODE_RE = re.compile(r"^- \[x\] \*\*(Append-only|Justified rewrite)\*\*", re.M)
@@ -1221,6 +1884,7 @@ def write_handoff(
         "template": facts.template_path,
         "template_revision": facts.template_revision,
         "needs_completion": result.needs_completion,
+        "fields": result.fields,
         "mechanical_filled": result.mechanical_filled,
         "thin_problem": THIN_PROBLEM_NOTE in result.body,
         "commit_count": len(facts.commits),
@@ -1241,6 +1905,13 @@ def validate_template(text: str) -> list[str]:
         f"missing region markers {region_markers(name)[0]} ... {region_markers(name)[1]}"
         for name in REQUIRED_TEMPLATE_REGIONS
         if _region_span(text, name) is None
+    )
+    # One region, one place: a second START marker would let a refresh fill one
+    # copy and leave the other as a duplicate, divergent inventory.
+    errors.extend(
+        f"region {name} is declared more than once"
+        for name in MACHINE_REGIONS
+        if text.count(region_markers(name)[0]) > 1 or text.count(region_markers(name)[1]) > 1
     )
     # Every other machine region needs its markers or the exact placeholder
     # the composer knows how to wrap; otherwise _put_region would insert
@@ -1378,7 +2049,7 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         # Same range the body is told from. open_pr_after_gate.sh used to run its
         # own `git log base..HEAD | head -1`, a second copy of the range rule
         # that titled PR #602 with a main commit.
-        facts = collect_mechanical(workspace, pr_base=args.pr_base)
+        facts = collect_mechanical(workspace, pr_base=args.pr_base, verify=False)
         print(range_title(facts))
         return 0
 
@@ -1398,12 +2069,21 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
     campaign = ""
     if args.campaign_body_file and args.campaign_body_file.is_file():
         campaign = args.campaign_body_file.read_text(encoding="utf-8")
+    additive_paths = _load_additive_only(args.additive_only_file)
+    additive_measured = not args.additive_only_unmeasured
+    if args.remote and args.additive_only_file is None and additive_measured:
+        # No caller measured the range on the runner. Measure it with the
+        # workspace's own validator, or say it is unmeasured — never let the
+        # empty default read as "no additive_only root files".
+        additive_paths, additive_measured = measure_additive_only(workspace, args.pr_base)
     facts = collect_mechanical(
         workspace,
         pr_base=args.pr_base,
         campaign_body=campaign,
-        additive_only_paths=_load_additive_only(args.additive_only_file),
-        additive_only_measured=not args.additive_only_unmeasured,
+        additive_only_paths=additive_paths,
+        additive_only_measured=additive_measured,
+        # A remote refresh drops every receipt below; judging them is wasted work.
+        verify=not args.remote,
     )
     if args.remote:
         # Whatever .l9 happens to hold on a runner describes no push of this PR.
