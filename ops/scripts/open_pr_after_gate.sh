@@ -278,6 +278,7 @@ _push_with_bounded_recover() {
     fi
     # The recovered HEAD is a new tree under an old attestation until this passes.
     _reattest_recovered_head "$prior_head" || return 1
+    _prove_template || return 1
     attempt=$((attempt + 1))
   done
   return 1
@@ -378,20 +379,30 @@ if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
   esac
 fi
 
+# Proven before the first push and again before any retry push: a recovery
+# merge moves HEAD, and in <owner>/.github itself the template is read from
+# that HEAD, so a merge can change or break it after the first proof.
+_template_required=0
+_prove_template() {
+  [[ "$_template_required" -eq 1 ]] || return 0
+  local python="$GOV_ROOT/.venv/bin/python" proof
+  [[ -x "$python" ]] || python="python3"
+  # Same resolver the body is composed with, through the same gh transport.
+  if ! proof="$("$python" "$SCRIPT_DIR/compose_pr_body.py" \
+      --workspace "$WS" --check-template --org-owner "$owner" --repo-name "$name")"; then
+    echo "FAIL: org PR template ${owner}/.github is unreadable (see the composer error above) — branch NOT pushed" >&2
+    return 1
+  fi
+  echo "OK: $proof"
+}
+
 if [[ "${PUSH_ONLY:-0}" != "1" && ( -z "$pr_url" || -z "$pr_number" ) ]]; then
   if [[ -z "$owner" || -z "$name" ]]; then
     echo "FAIL: cannot resolve owner/repo, so the org PR template has no source — branch NOT pushed" >&2
     exit 1
   fi
-  _template_python="$GOV_ROOT/.venv/bin/python"
-  [[ -x "$_template_python" ]] || _template_python="python3"
-  # Same resolver the body is composed with, through the same gh transport.
-  if ! _template_proof="$("$_template_python" "$SCRIPT_DIR/compose_pr_body.py" \
-      --workspace "$WS" --check-template --org-owner "$owner" --repo-name "$name")"; then
-    echo "FAIL: org PR template ${owner}/.github is unreadable (see the composer error above) — branch NOT pushed" >&2
-    exit 1
-  fi
-  echo "OK: $_template_proof"
+  _template_required=1
+  _prove_template || exit 1
 fi
 
 _push_with_bounded_recover

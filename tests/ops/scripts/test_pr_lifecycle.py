@@ -909,13 +909,22 @@ def test_the_org_template_is_proven_before_the_branch_is_pushed() -> None:
     proof applies only when a PR will be created (a refresh stays non-fatal)."""
     script = (ROOT / "ops" / "scripts" / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     push_call = script.index("\n_push_with_bounded_recover\n")
-    proof = script.index("--check-template")
-    assert script.index('repo="$(resolve_repo_slug)"') < proof < push_call
-    assert script.index('pr_url="$(gh_graphql pr view --json url -q .url || true)"') < proof
-    guard = script.rindex("\nif [[", 0, proof)
-    assert '-z "$pr_url" || -z "$pr_number"' in script[guard:proof]
-    assert "branch NOT pushed" in script[proof:push_call]
+    helper = script[script.index("_prove_template() {") :]
+    helper = helper[: helper.index("\n}\n")]
+    assert "--check-template" in helper and "branch NOT pushed" in helper
+    required = script.index("_template_required=1")
+    proof = script.index("_prove_template || exit 1")
+    assert script.index('repo="$(resolve_repo_slug)"') < required < proof < push_call
+    assert script.index('pr_url="$(gh_graphql pr view --json url -q .url || true)"') < required
+    guard = script.rindex("\nif [[", 0, required)
+    assert '-z "$pr_url" || -z "$pr_number"' in script[guard:required]
     assert "; nothing was sent" not in script
+    # A recovery merge moves HEAD before the retry push; the proof repeats there.
+    recover = script[script.index("_push_with_bounded_recover() {") :]
+    recover = recover[: recover.index("_push_with_bounded_recover\n")]
+    reattest_at = recover.index('_reattest_recovered_head "$prior_head" || return 1')
+    reprove_at = recover.index("_prove_template || return 1")
+    assert reattest_at < reprove_at < recover.index("attempt=$((attempt + 1))")
 
 
 def test_push_recovery_reattests_before_the_retry_push() -> None:
