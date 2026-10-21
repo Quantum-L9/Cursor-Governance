@@ -277,13 +277,30 @@ _consumer_ruff_pin() {
   done
   [[ -f "$WS/pyproject.toml" ]] || return 0
   python3 - "$WS/pyproject.toml" <<'PY' 2>/dev/null || true
+import re
 import sys
 import tomllib
 
 with open(sys.argv[1], "rb") as handle:
-    spec = str(tomllib.load(handle).get("tool", {}).get("ruff", {}).get("required-version", ""))
+    data = tomllib.load(handle)
+spec = str(data.get("tool", {}).get("ruff", {}).get("required-version", ""))
 if spec.startswith("==") and "," not in spec and "*" not in spec:
     print(spec[2:].strip())
+    raise SystemExit(0)
+# An exact pin declared as a dependency: PEP 621 dependencies and extras, and
+# PEP 735 dependency groups (a group's {include-group} entries are not
+# requirements and are skipped).
+project = data.get("project", {})
+requirements = list(project.get("dependencies", []))
+for group in (project.get("optional-dependencies", {}), data.get("dependency-groups", {})):
+    for entries in group.values():
+        requirements.extend(entry for entry in entries if isinstance(entry, str))
+pin = re.compile(r"^\s*ruff\s*==\s*([^\s;,]+)\s*(;.*)?$", re.IGNORECASE)
+for requirement in requirements:
+    match = pin.match(requirement)
+    if match and "*" not in match.group(1):
+        print(match.group(1))
+        break
 PY
 }
 
