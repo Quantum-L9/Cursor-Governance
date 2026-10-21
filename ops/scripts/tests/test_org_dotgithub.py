@@ -8,14 +8,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
-from unittest import mock
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 import org_dotgithub  # noqa: E402
-from org_dotgithub import OrgFileError, read_org_file  # noqa: E402
 
 SHA = "2" * 40
 PATH = ".github/pull_request_template.md"
@@ -32,13 +31,14 @@ def rest(text: str, calls: list[str]):
             return {"sha": SHA}
         if endpoint == f"repos/Quantum-L9/.github/contents/{PATH}?ref={SHA}":
             return {"type": "file", "encoding": "base64", "content": encoded}
-        raise OrgFileError(f"unexpected {endpoint}")
+        raise org_dotgithub.OrgFileError(f"unexpected {endpoint}")
 
     return gh
 
 
 def scoped(endpoint: str) -> object:
-    raise OrgFileError(f"gh api {endpoint} failed: not enabled for this session (HTTP 403)")
+    msg = f"gh api {endpoint} failed: not enabled for this session (HTTP 403)"
+    raise org_dotgithub.OrgFileError(msg)
 
 
 class ReadOrgFileTests(unittest.TestCase):
@@ -47,7 +47,7 @@ class ReadOrgFileTests(unittest.TestCase):
             raise AssertionError("git transport used while REST answered")
 
         calls: list[str] = []
-        got = read_org_file("Quantum-L9", PATH, gh=rest("body", calls), git=no_git)
+        got = org_dotgithub.read_org_file("Quantum-L9", PATH, gh=rest("body", calls), git=no_git)
         self.assertEqual((got.sha, got.text, got.transport), (SHA, "body", "rest"))
         self.assertIn(f"repos/Quantum-L9/.github/contents/{PATH}?ref={SHA}", calls)
 
@@ -58,16 +58,18 @@ class ReadOrgFileTests(unittest.TestCase):
             asked.append((owner, path))
             return SHA, "body"
 
-        got = read_org_file("Quantum-L9", PATH, gh=scoped, git=git)
+        got = org_dotgithub.read_org_file("Quantum-L9", PATH, gh=scoped, git=git)
         self.assertEqual(asked, [("Quantum-L9", PATH)])
         self.assertEqual((got.sha, got.text, got.transport), (SHA, "body", "git"))
 
     def test_both_transports_down_fails_closed_naming_both(self) -> None:
         def git_down(owner: str, path: str) -> tuple[str, str]:
-            raise OrgFileError("git ls-remote failed")
+            raise org_dotgithub.OrgFileError("git ls-remote failed")
 
-        with self.assertRaisesRegex(OrgFileError, r"HTTP 403.*git transport also failed"):
-            read_org_file("Quantum-L9", PATH, gh=scoped, git=git_down)
+        with self.assertRaisesRegex(
+            org_dotgithub.OrgFileError, r"HTTP 403.*git transport also failed"
+        ):
+            org_dotgithub.read_org_file("Quantum-L9", PATH, gh=scoped, git=git_down)
 
     def test_git_read_pins_the_head_commit_and_reads_that_commit(self) -> None:
         """git_read against a local bare 'org repo', with the github.com URL rewritten to it."""
@@ -97,7 +99,7 @@ class ReadOrgFileTests(unittest.TestCase):
                 f'[url "file://{root}/"]\n\tinsteadOf = https://github.com/\n'
                 '[protocol "file"]\n\tallow = always\n'
             )
-            with mock.patch.dict("os.environ", {"GIT_CONFIG_GLOBAL": str(config)}):
+            with unittest.mock.patch.dict("os.environ", {"GIT_CONFIG_GLOBAL": str(config)}):
                 sha, text = org_dotgithub.git_read("Quantum-L9", PATH)
         self.assertEqual((sha, text), (head, "pinned\n"))
 
