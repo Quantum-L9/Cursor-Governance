@@ -12,7 +12,9 @@ sys.path.insert(0, str(SCRIPTS))
 
 from reconcile_claude_settings import (  # noqa: E402
     GIT_QUERY_TIMEOUT_S,
+    PROJECT_SCOPE_IGNORED_KEYS,
     _path_is_git_tracked,
+    consumer_settings,
     merge_user_settings,
     merge_workspace_local_settings,
     merge_workspace_settings,
@@ -448,3 +450,36 @@ def _fixture(tmp_path: Path, template_hooks: dict | None = None) -> tuple[Path, 
     (ws / ".claude").mkdir(parents=True)
     subprocess.run(["git", "init", "-q"], cwd=ws, check=True)
     return root, ws
+
+
+def test_account_skill_sync_policy_never_lands_in_committed_project_settings(
+    tmp_path: Path,
+) -> None:
+    """Issue #690: Claude Code ignores a `syncClaudeAiSkills: false` in a shared
+    `.claude/settings.json`. Projecting it there would claim isolation the
+    runtime does not grant, so it goes to user scope and settings.local.json."""
+    assert "syncClaudeAiSkills" in PROJECT_SCOPE_IGNORED_KEYS
+    template = {"skillOverrides": {}, "syncClaudeAiSkills": False}
+    assert "syncClaudeAiSkills" not in consumer_settings(template)
+    assert "syncClaudeAiSkills" not in merge_workspace_settings(template, None)
+    assert merge_workspace_local_settings(template, None)["syncClaudeAiSkills"] is False
+    assert merge_user_settings(template, {"syncClaudeAiSkills": True})["syncClaudeAiSkills"] is (
+        False
+    )
+    # A consumer that set the key itself in its own settings keeps it.
+    assert (
+        merge_workspace_settings(template, {"syncClaudeAiSkills": True})["syncClaudeAiSkills"]
+        is True
+    )
+
+
+def test_live_template_disables_account_skill_sync_outside_project_scope() -> None:
+    root = SCRIPTS.parents[1]
+    template = json.loads(
+        (
+            root / "environment" / "agents" / "adapters" / "claude-code" / "settings.template.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert template["syncClaudeAiSkills"] is False
+    committed = json.loads((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    assert "syncClaudeAiSkills" not in committed

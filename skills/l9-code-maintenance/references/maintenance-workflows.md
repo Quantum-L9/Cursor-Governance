@@ -56,7 +56,7 @@ vulture . --min-confidence 80  # optional dead code
 
 ## consolidate
 
-Find duplicates with `rg`, plan extraction to shared module, execute via l9-gmp-protocol.
+Find duplicates with `rg`, plan extraction to shared module, execute via `/gmp`.
 
 ## refactor-sweep (ALWAYS READ-ONLY)
 
