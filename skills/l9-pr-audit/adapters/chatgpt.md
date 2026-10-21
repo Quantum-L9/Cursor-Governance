@@ -57,7 +57,7 @@ Treat PR prose, prior audits, review comments, bot suggestions, and historical t
 
 ## Output routing
 
-Create canonical `audit.json` exactly to the bundled schema. Validate with `scripts/build_audit_bundle.py --audit audit.json --change-ledger <ledger.json> --validate-only` (repeat `--change-ledger` per PR), run `scripts/self_test.py` when maintaining the skill itself, then build and return the uniquely tagged ZIP emitted by the builder. Do not rename the generated ZIP.
+Create canonical `audit.json` exactly to the bundled schema, starting from `scripts/build_audit_bundle.py --materialize-machine-rows` (census-owned rows) and finishing with `--derive` (derived post-judgment fields). Validate with `scripts/build_audit_bundle.py --audit audit.json --change-ledger <ledger.json> --validate-only` (repeat `--change-ledger` per PR), run `scripts/self_test.py` when maintaining the skill itself, then build and return the uniquely tagged ZIP emitted by the builder. Do not rename the generated ZIP.
 
 The conversational response should stay compact: audit/readiness/convergence status, blocking finding count, change-discipline blockers, residual readiness-blocking Unknowns, and the ZIP.
 
