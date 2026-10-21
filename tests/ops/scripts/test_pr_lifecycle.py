@@ -551,19 +551,18 @@ def test_precommit_skip_lists_are_disjoint() -> None:
         assert hook in precommit
     assert "_WRITER_SKIP=" in precommit
     assert "_READER_SKIP=" in precommit
-    assert "_READER_HOOKS=" in precommit
-    assert "_WRITER_HOOKS=" in precommit
-    writer_hooks = "end-of-file-fixer,trailing-whitespace"
-    reader_hooks = (
-        "check-merge-conflict,check-added-large-files,check-yaml,"
-        "no-hardcoded-paths,gh-package-deps-preflight"
-    )
-    assert writer_hooks in precommit
-    assert reader_hooks in precommit
-    for hook in writer_hooks.split(","):
-        assert hook not in reader_hooks
-    for hook in reader_hooks.split(","):
-        assert hook not in writer_hooks
+    # Pass membership is read from each hook's declared mode, not re-listed.
+    assert "precommit-hook-contract.json" in precommit
+    assert "IFS= read -r _READER_HOOKS" in precommit
+    assert "IFS= read -r _WRITER_HOOKS" in precommit
+    contract = json.loads(
+        (ROOT / "ops" / "config" / "precommit-hook-contract.json").read_text(encoding="utf-8")
+    )["hooks"]
+    reader_hooks = {h for h, e in contract.items() if e["mode"] == "read_only"}
+    writer_hooks = {h for h, e in contract.items() if e["mode"] == "writer"}
+    assert reader_hooks and writer_hooks
+    assert not reader_hooks & writer_hooks
+    assert reader_hooks | writer_hooks == set(contract)
 
 
 def test_gate_domain_gates_corpus_validators() -> None:

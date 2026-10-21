@@ -124,8 +124,36 @@ cd "$WS"
 # Corpus + generated heal + desktop wiring (gate owns check_governance_wiring.sh).
 # Pre-commit ruff/ruff-format are skipped: locked-venv ruff is the one writer.
 _CORPUS_SKIP="sync-generated-artifacts,repo-hygiene,legacy-doctrine-residue,rules-check,skills-check,symlinks-check,ruff,ruff-format,commit-verification-contract"
-_READER_HOOKS="check-merge-conflict,check-added-large-files,check-yaml,no-hardcoded-paths,gh-package-deps-preflight"
-_WRITER_HOOKS="end-of-file-fixer,trailing-whitespace"
+# Pass membership and locality are declared once per hook, in
+# ops/config/precommit-hook-contract.json (mode: read_only|writer, locality:
+# governance|any), and validate_precommit_hook_contract.py keeps that contract
+# in lockstep with .pre-commit-config.yaml. Read them; never re-list them here.
+# A hand-kept list left cursor-skill-projection, max-velocity and adr-identity
+# in neither pass list, so each ran in both passes, and left two
+# governance-local hooks out of the consumer skip. Unreadable contract: stop,
+# because an empty list would silently gate nothing.
+HOOK_CONTRACT="$GOV_ROOT/ops/config/precommit-hook-contract.json"
+if ! _hook_lists="$(python3 - "$HOOK_CONTRACT" <<'PY'
+import json
+import sys
+
+hooks = json.load(open(sys.argv[1], encoding="utf-8"))["hooks"]
+for want in (("mode", "read_only"), ("mode", "writer"), ("locality", "governance")):
+    print(",".join(sorted(h for h, e in hooks.items() if e.get(want[0]) == want[1])))
+PY
+)"; then
+  echo "FAIL: cannot read the hook contract at $HOOK_CONTRACT" >&2
+  exit 1
+fi
+{
+  IFS= read -r _READER_HOOKS
+  IFS= read -r _WRITER_HOOKS
+  IFS= read -r _GOV_ONLY_SKIP
+} <<<"$_hook_lists"
+if [[ -z "$_READER_HOOKS" || -z "$_WRITER_HOOKS" ]]; then
+  echo "FAIL: hook contract at $HOOK_CONTRACT declares no reader or no writer hooks" >&2
+  exit 1
+fi
 # Writer pass skips every reader. Reader pass skips every writer. Disjoint.
 _WRITER_SKIP="${_CORPUS_SKIP},${_READER_HOOKS}"
 _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
@@ -168,7 +196,11 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # Quantum-L9/.github it rejects that repository's accepted ADR-012..014 headings
 # and demands an index that repository does not have, so there is nothing for it
 # to check there. It stays enforced on the governance configuration.
-_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity,adr-identity"
+#
+# The list itself is every hook the contract declares `locality: governance`
+# (read above), which now also covers cursor-skill-projection (entry
+# environment/agents/adapters/cursor/validate_skill_projection.py, `files:`
+# matching any consumer `skills/` change) and no-hardcoded-paths.
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"

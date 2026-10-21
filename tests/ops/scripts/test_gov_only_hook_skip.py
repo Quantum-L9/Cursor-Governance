@@ -26,26 +26,59 @@ variable, so a refactor that keeps the name and loses the behavior still fails.
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 
 GOV_ONLY_HOOK = "gh-package-deps-preflight"
 
-#: hook id -> the governance-tree script its `entry:` resolves against.
-#: `max-velocity` is the harder case: no `files:` guard and
-#: `pass_filenames: false`, so it fires on every consumer `make pr` rather than
-#: only on a matching path. `adr-identity` is the same shape (no `files:` guard,
-#: `pass_filenames: false`) and checks governance ADR conventions only.
+#: Locality is declared once, per hook, in the contract the runner reads. The
+#: tests derive from the same declaration, so a hook added to the catalog with
+#: a governance-tree entry is covered here without anyone remembering to list
+#: it (`cursor-skill-projection` and `no-hardcoded-paths` were missed exactly
+#: that way while this file hardcoded three ids).
+CONTRACT = json.loads(
+    (ROOT / "ops" / "config" / "precommit-hook-contract.json").read_text(encoding="utf-8")
+)["hooks"]
+
+
+def _corpus_skip() -> set[str]:
+    script = (SCRIPTS / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    line = next(x for x in script.splitlines() if x.startswith('_CORPUS_SKIP="'))
+    return set(line.split('"', 2)[1].split(","))
+
+
+def _configured_entries() -> dict[str, str]:
+    config = yaml.safe_load((ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
+    return {
+        str(hook["id"]): str(hook.get("entry", ""))
+        for repo in config["repos"]
+        for hook in repo.get("hooks", [])
+    }
+
+
+def _governance_tree_path(entry: str) -> str | None:
+    return next((tok for tok in entry.split() if "/" in tok and (ROOT / tok).is_file()), None)
+
+
+GOVERNANCE_LOCAL = sorted(h for h, e in CONTRACT.items() if e.get("locality") == "governance")
+
+#: hook id -> the governance-tree script its `entry:` resolves against, for the
+#: governance-local hooks the corpus skip does not already remove. `max-velocity`
+#: is the harder case: no `files:` guard and `pass_filenames: false`, so it fires
+#: on every consumer `make pr` rather than only on a matching path.
 GOV_ONLY_HOOKS = {
-    "gh-package-deps-preflight": "ops/scripts/validate_gh_package_deps.py",
-    "max-velocity": "ops/scripts/validate_max_velocity.py",
-    "adr-identity": "ops/scripts/validate_adr_identity.py",
+    hook: path
+    for hook in GOVERNANCE_LOCAL
+    if hook not in _corpus_skip()
+    and (path := _governance_tree_path(_configured_entries().get(hook, "")))
 }
 
 #: A hook whose entry is NOT a governance-tree path. It must keep running in a
@@ -80,7 +113,7 @@ def _precommit_observer(tmp_path: Path) -> Path:
     return observer
 
 
-def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
+def _effective_skips(tmp_path: Path, workspace: Path, stage: str = "readers") -> list[str]:
     changed = tmp_path / "changed.txt"
     changed.write_text("package.json\n", encoding="utf-8")
     observer = _precommit_observer(tmp_path)
@@ -95,7 +128,8 @@ def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
             "WS": str(workspace),
             "PR_BASE": "main",
             "PR_CHANGED_FILE": str(changed),
-            "PR_PRECOMMIT_STAGE": "readers",
+            "PR_PRECOMMIT_STAGE": stage,
+            "PR_PRECOMMIT_DEFER_DIRTY_STOP": "1",
             "BASH_ENV": str(observer),
         },
     )
@@ -109,7 +143,7 @@ def _effective_skips(tmp_path: Path, workspace: Path) -> list[str]:
     ]
 
 
-@pytest.mark.parametrize("hook", sorted(GOV_ONLY_HOOKS))
+@pytest.mark.parametrize("hook", GOVERNANCE_LOCAL)
 def test_hook_is_skipped_in_a_consumer_workspace(tmp_path: Path, hook: str) -> None:
     """The regression. Without this the hook runs and dies on a missing file."""
     assert hook in _effective_skips(tmp_path, _consumer_repo(tmp_path))
@@ -170,10 +204,39 @@ def test_the_hook_entry_is_a_governance_tree_path(hook: str, entry: str) -> None
     If an entry ever becomes absolute or otherwise workspace-independent, the
     skip is dead weight for that hook and this test says so by failing.
     """
-    config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
-    assert f"- id: {hook}" in config
-    assert f"entry: python3 {entry}" in config
+    assert entry in _configured_entries()[hook]
     assert (ROOT / entry).is_file()
+
+
+def test_every_hook_declares_its_locality() -> None:
+    assert set(CONTRACT) == set(_configured_entries())
+    assert {e.get("locality") for e in CONTRACT.values()} <= {"governance", "any"}
+    assert all("locality" in e for e in CONTRACT.values())
+
+
+def test_newly_found_governance_local_hooks_are_declared() -> None:
+    """The two hooks the hand-kept list missed are governance-local."""
+    for hook in ("cursor-skill-projection", "no-hardcoded-paths"):
+        assert CONTRACT[hook]["locality"] == "governance"
+        assert hook in GOV_ONLY_HOOKS
+
+
+def test_each_hook_runs_in_exactly_one_pass(tmp_path: Path) -> None:
+    """The runner promises each hook id runs at most once per invocation.
+
+    A hook in neither the reader nor the writer list was skipped by neither
+    pass, so `cursor-skill-projection`, `max-velocity` and `adr-identity` ran
+    twice in the governance workspace. Pass membership now comes from each
+    hook's declared mode; every non-corpus hook runs in exactly one pass.
+    """
+    (tmp_path / "r").mkdir()
+    (tmp_path / "w").mkdir()
+    readers = set(_effective_skips(tmp_path / "r", ROOT, "readers"))
+    writers = set(_effective_skips(tmp_path / "w", ROOT, "writers"))
+    corpus = _corpus_skip()
+    for hook in _configured_entries():
+        passes = int(hook not in readers) + int(hook not in writers)
+        assert passes == (0 if hook in corpus else 1), (hook, passes)
 
 
 def test_max_velocity_has_no_files_guard() -> None:
