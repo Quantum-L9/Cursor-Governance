@@ -269,6 +269,11 @@ def evaluate(
         "remediation": receipt.get("remediation", ""),
         "reasons": receipt.get("reasons") if isinstance(receipt.get("reasons"), dict) else {},
         "probes": receipt.get("probes") if isinstance(receipt.get("probes"), dict) else {},
+        # Per-transport GitHub verdicts (CG-10). Carried, never rolled into
+        # the state: a REST-only gateway's GraphQL 403 is not a degraded session.
+        "github_capabilities": receipt.get("github_capabilities")
+        if isinstance(receipt.get("github_capabilities"), dict)
+        else {},
         "log_path": str(receipt.get("log_path") or ""),
         "bootstrap_id": str(receipt.get("bootstrap_id") or ""),
         "covered_roots": receipt.get("covered_roots")

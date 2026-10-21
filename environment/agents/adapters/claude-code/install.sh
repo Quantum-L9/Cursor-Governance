@@ -229,6 +229,33 @@ _receipt_reason() { # $1=status $2=recorded reason $3=STATUS_* name
 
 json_token() { printf '%s' "$1" | tr -d '\n\r\t"\\' | head -c 200; }
 
+# Per-transport GitHub capability (CG-10), probed once just before the final
+# receipt write. An early exit (the trap path) records none rather than probing
+# the network from a signal handler. Informational: it is not a COMPONENT, so a
+# GraphQL 403 on a REST-only gateway never rolls the session up to DEGRADED.
+GITHUB_CAPABILITIES_JSON="{}"
+probe_github_capabilities() {
+  local lib="$GOV_DIR/ops/scripts/lib/gh_auth_probe.sh" owner url line json="" sep=""
+  [ -f "$lib" ] || return 0
+  url="$(git -C "$GOV_DIR" remote get-url origin 2>/dev/null || true)"
+  url="${url%.git}"
+  case "$url" in
+    git@*:*) owner="${url#*:}" ;;
+    http://* | https://*) owner="$(printf '%s' "$url" | sed -E 's#^https?://[^/]+/##')" ;;
+    *) owner="" ;;
+  esac
+  owner="${owner%%/*}"
+  while IFS= read -r line; do
+    case "$line" in
+      *=OK | *=DENIED | *=UNKNOWN) ;;
+      *) continue ;;
+    esac
+    json="$json$sep\"$(json_token "${line%%=*}")\": \"$(json_token "${line#*=}")\""
+    sep=", "
+  done < <(bash -c 'source "$1"; gh_capability_probe "$2"' _ "$lib" "$owner" 2>/dev/null)
+  GITHUB_CAPABILITIES_JSON="{$json}"
+}
+
 write_receipt() {
   local state="$1" ts
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo 'unknown')"
@@ -276,6 +303,7 @@ write_receipt() {
     printf '    "mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MCP" "$REASON_MCP" STATUS_MCP)")"
     printf '    "plugins": "%s"\n' "$(json_token "$(_receipt_reason "$STATUS_PLUGINS" "$REASON_PLUGINS" STATUS_PLUGINS)")"
     printf '  },\n'
+    printf '  "github_capabilities": %s,\n' "$GITHUB_CAPABILITIES_JSON"
     printf '  "log_path": "%s",\n' "$(json_token "${L9_BOOTSTRAP_LOG_PATH:-}")"
     # Wall-clock seconds the run took, so a budget overrun is diagnosable from
     # the receipt alone rather than by re-running the installer under a clock.
@@ -691,6 +719,7 @@ stage "receipt"
 # Every stage ran, so an untouched READY is now a verdict rather than an initial
 # value and `_receipt_component` stops rewriting it to UNKNOWN.
 RECEIPT_COMPLETE=1
+probe_github_capabilities
 # Unconditional, and no longer gated on the locked interpreter. A missing
 # interpreter is now recorded IN the receipt rather than being the reason no
 # receipt exists — the old branch downgraded to BLOCKED and then wrote nothing,

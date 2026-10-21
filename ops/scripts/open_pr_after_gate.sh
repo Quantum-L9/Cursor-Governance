@@ -282,13 +282,12 @@ _push_with_bounded_recover() {
   done
   return 1
 }
-_push_with_bounded_recover
-
-if [[ "${PUSH_ONLY:-0}" == "1" ]]; then
-  echo "PUSH_ONLY=1 — pushed '$branch'; skipped GitHub PR open"
-  exit 0
-fi
-
+# Everything the PR open below depends on is resolved BEFORE the push: owner and
+# name, any PR already open for this branch, and -- when one will be created --
+# the canonical org PR template. Composing that template used to be the first
+# thing after a successful push, so a template the session could not read left
+# a pushed branch with no PR and a message claiming nothing was sent (CG-06).
+# Owner/name and the open-PR lookup need only the branch name and the remote.
 # `gh pr view/create/repo view --json` go through GitHub's GraphQL endpoint,
 # which some environments do not serve (restricted proxies, REST-scoped tokens).
 # `make pr` is the ONLY sanctioned publish path, so it must not depend on an
@@ -378,6 +377,30 @@ if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
       ;;
   esac
 fi
+
+if [[ "${PUSH_ONLY:-0}" != "1" && ( -z "$pr_url" || -z "$pr_number" ) ]]; then
+  if [[ -z "$owner" || -z "$name" ]]; then
+    echo "FAIL: cannot resolve owner/repo, so the org PR template has no source — branch NOT pushed" >&2
+    exit 1
+  fi
+  _template_python="$GOV_ROOT/.venv/bin/python"
+  [[ -x "$_template_python" ]] || _template_python="python3"
+  # Same resolver the body is composed with, through the same gh transport.
+  if ! _template_proof="$("$_template_python" "$SCRIPT_DIR/compose_pr_body.py" \
+      --workspace "$WS" --check-template --org-owner "$owner" --repo-name "$name")"; then
+    echo "FAIL: org PR template ${owner}/.github is unreadable (see the composer error above) — branch NOT pushed" >&2
+    exit 1
+  fi
+  echo "OK: $_template_proof"
+fi
+
+_push_with_bounded_recover
+
+if [[ "${PUSH_ONLY:-0}" == "1" ]]; then
+  echo "PUSH_ONLY=1 — pushed '$branch'; skipped GitHub PR open"
+  exit 0
+fi
+
 
 # Sets title, body, compose_python, compose_handoff, _touched_additive. Used
 # both to open a PR and, with --refresh, to recompose the machine-owned regions
@@ -491,7 +514,7 @@ _compose_title_and_body() {
       _refresh_blocked="the composer could not refresh it (see the error above)"
       return 0
     fi
-    echo "FAIL: could not compose the PR body (see the composer error above); nothing was sent" >&2
+    echo "FAIL: could not compose the PR body (see the composer error above); the branch is pushed but no PR was opened — re-run make pr" >&2
     exit 1
   fi
   if [[ "$_compose_refresh" -eq 1 ]] && grep -q '"status": "unmanaged"' "$WS/.l9/pr/pr-body-refresh.json" 2>/dev/null; then

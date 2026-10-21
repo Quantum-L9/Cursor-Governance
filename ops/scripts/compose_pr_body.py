@@ -1362,6 +1362,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Print only the PR title (this branch's oldest own commit subject) and exit",
     )
     parser.add_argument(
+        "--check-template",
+        action="store_true",
+        help="Resolve the canonical org template (--org-owner/--repo-name) and print "
+        "TEMPLATE_OK <revision>; exit 2 if it cannot be read. make pr runs this before "
+        "pushing, so an unreadable template never leaves a pushed branch with no PR",
+    )
+    parser.add_argument(
         "--refresh-body",
         type=Path,
         default=None,
@@ -1396,6 +1403,11 @@ def _write_status(path: Path | None, doc: dict[str, Any]) -> None:
 
 
 def _main(args: argparse.Namespace, workspace: Path) -> int:
+    if args.check_template:
+        source = resolve_template(workspace, args.org_owner, args.repo_name)
+        print(f"TEMPLATE_OK {source.revision}")
+        return 0
+
     if args.print_title:
         # Same range the body is told from. open_pr_after_gate.sh used to run its
         # own `git log base..HEAD | head -1`, a second copy of the range rule

@@ -877,6 +877,22 @@ def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-0}"' not in script
 
 
+def test_the_org_template_is_proven_before_the_branch_is_pushed() -> None:
+    """CG-06: the template was first read after a successful push, so an
+    unreadable one left a pushed branch with no PR. The proof, owner/name and
+    the open-PR lookup it depends on now all come before the push call, and the
+    proof applies only when a PR will be created (a refresh stays non-fatal)."""
+    script = (ROOT / "ops" / "scripts" / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    push_call = script.index("\n_push_with_bounded_recover\n")
+    proof = script.index("--check-template")
+    assert script.index('repo="$(resolve_repo_slug)"') < proof < push_call
+    assert script.index('pr_url="$(gh_graphql pr view --json url -q .url || true)"') < proof
+    guard = script.rindex("\nif [[", 0, proof)
+    assert '-z "$pr_url" || -z "$pr_number"' in script[guard:proof]
+    assert "branch NOT pushed" in script[proof:push_call]
+    assert "; nothing was sent" not in script
+
+
 def test_push_recovery_reattests_before_the_retry_push() -> None:
     """Audit R3: a recovery merge moves HEAD; the retry must not publish it unattested.
 
