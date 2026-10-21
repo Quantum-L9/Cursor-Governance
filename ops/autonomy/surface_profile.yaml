@@ -314,6 +314,13 @@ session_start_block: |
     `git push` fallback. A consumer repo needs **no** local `pr` target; do
     not add one. There is no "no pr target → fall back" branch: the
     governance Makefile is always present and exposes no secondary PR-gate target.
+    One declared exception, Governance-side only: when
+    `ops/config/publish-authority.json` names the workspace's origin as a
+    native route (today `github.com/cryptoxdog/ib-odoo_19` → its own `make pr`,
+    base `Staging`; CANONICAL_LAW §13), the governance `pr` target delegates to
+    that consumer target exactly once (`ops/scripts/run_native_publish.sh`,
+    receipt `.l9/pr/publish-route.json`). The registry is the only place such a
+    route can be declared; every other consumer still needs no local `pr` target.
   - After the PR is open, campaign/make-pr work ends green and merge-ready.
     Do **not** merge from the campaign path. `/l9-pr-remediation` converges
     **all open PRs** in the target repo to merge readiness and stops at

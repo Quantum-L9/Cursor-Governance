@@ -64,6 +64,17 @@ scratch-hold-status:
 	$(PYTHON) ops/scripts/scratch_hold.py \
 		--workspace "$(or $(WS),$(CURDIR))" \
 		status
+# publish-authority routing (ops/config/publish-authority.json).
+# Parse-time only picks the recipe; pr_preflight.sh / run_native_publish.sh
+# re-verify with real exit codes, so a silent resolver failure cannot widen
+# the publish plane. $(origin PR_BASE) matters: the root Makefile sets a
+# default, and only a caller-supplied base is forwarded to the native route.
+PUBLISH_AUTHORITY_PY := $(or $(wildcard $(PYTHON)),python3)
+PR_BASE_EXPLICIT := $(if $(filter-out default file undefined,$(firstword $(origin PR_BASE))),$(PR_BASE))
+ifneq (,$(filter pr PR Pr pR,$(MAKECMDGOALS)))
+PUBLISH_ROUTE_LINE := $(shell $(PUBLISH_AUTHORITY_PY) ops/autonomy/publish_authority.py --workspace "$(WS)" --format make 2>/dev/null)
+endif
+PUBLISH_ROUTE := $(patsubst route=%,%,$(filter route=%,$(PUBLISH_ROUTE_LINE)))
 # `make pr` is the one publication ceremony.
 #
 # Phase 1: preflight.
@@ -71,6 +82,7 @@ scratch-hold-status:
 # Phase 3: publish when OPEN_PR=1.
 #
 # OPEN_PR=0 executes phases 1+2 and stops before GitHub publication.
+ifneq ($(PUBLISH_ROUTE),native)
 pr: pr-preflight
 	PR_BASE="$(PR_BASE)" \
 	PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" \
@@ -88,6 +100,14 @@ pr: pr-preflight
 	else \
 		echo "OPEN_PR=0 — skipped GitHub PR open (gate already PASS)"; \
 	fi
+else
+# Declared native route: the consumer owns the ceremony; governance runs it once.
+pr:
+	OPEN_PR="$(OPEN_PR)" \
+	PR_BASE="$(PR_BASE_EXPLICIT)" \
+	WS="$(WS)" \
+		bash ops/scripts/run_native_publish.sh "$(WS)"
+endif
 # Complete two-letter case surface; no dynamic shell remapping required.
 PR Pr pR: pr
 # GNU Make 3.81 requires exported target-specific variables for recipe shells.

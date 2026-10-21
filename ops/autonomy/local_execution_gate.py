@@ -976,22 +976,12 @@ def _origin_identity(cwd: Path) -> str | None:
     them is ordinary, and judging the second against the first's receipt was a
     gate that could never authorize the tree the command actually ran in.
 
-    Normalized because one repository is spelled several ways:
-    `git@host:owner/name.git`, `https://host/owner/name`, `ssh://host/owner/name`.
+    The spelling normalization lives in `ops.autonomy.publish_authority.normalize_origin`
+    (one normalizer for the gate and the publish-route registry).
     """
-    url = _git_out(cwd, "config", "--get", "remote.origin.url")
-    if not url:
-        return None
-    text = url.strip()
-    for prefix in ("ssh://", "git://", "https://", "http://"):
-        if text.startswith(prefix):
-            text = text[len(prefix) :]
-            break
-    text = text.rsplit("@", 1)[-1]
-    text = text.replace(":", "/")
-    if text.endswith(".git"):
-        text = text[: -len(".git")]
-    return text.strip("/").lower() or None
+    from ops.autonomy.publish_authority import normalize_origin
+
+    return normalize_origin(_git_out(cwd, "config", "--get", "remote.origin.url"))
 
 
 def _cd_target(command: str, root: Path) -> Path | None:

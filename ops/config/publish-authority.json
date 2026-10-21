@@ -1,0 +1,14 @@
+{
+  "schema": "l9.publish-authority.v1",
+  "default_route": "governance",
+  "repositories": {
+    "github.com/cryptoxdog/ib-odoo_19": {
+      "route": "native",
+      "native_target": "pr",
+      "native_check_target": "pr-check",
+      "declared_base": "Staging",
+      "authority": "CANONICAL_LAW.md §13 (integration-branch-first); IB-Odoo_19 AGENTS.md 2026-10-07 correction (make pr is the sole publication SSOT)",
+      "reason": "Repository declares Staging as its integration branch and owns a publication kernel (scripts/make_push_pipeline.sh) that refuses any other base. Governance delegates the pr ceremony to it exactly once; the consumer never gets to declare this itself (ORG L9-ORG-006)."
+    }
+  }
+}

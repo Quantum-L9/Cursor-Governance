@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "4b621a7b94d46347f1f032c22ff65fd2caea73a2746f5ba2d0dec06ff972304d",
+      "output_sha256": "1c6622c811cf296a3c6c46767ff55ee9b45d5439678feb7bfe9e47ed0730c25f",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "eaca137be1d11d0d62e85ecadce51743be3a7861be5428c67bf6d0b6afd46ee7",
+      "source_sha256": "b9da95fc8777e6dc6e73ee0d4394b152d74d1064922193bd81d128c8cd07818a",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -519,9 +519,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "6a2802459481f1d0063042afc01769469460db9f6d37383df09dea42f6502c72",
+      "output_sha256": "8f43aad5659ec82d18c1902f89a0cd0de9a1e013891f6d153d75b180851c6e28",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "8a7358003bd651183c88bad4a3c0b1db8904523abb66b6c1a250468e3b72bb7a",
+      "source_sha256": "83dbe49136ba4310e7e7655e62db2500589c3bb92c6f6184fb00c7cc0337424b",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -629,7 +629,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "ceb1283a8d2dba934224c421afd27317303bc4d61678dea71292d9149e1ba3d8",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "f688c8e228140e7c7a20484a0016d7e993ee1a98f8304ea58f6d9e6ac39baa57",
+      "source_sha256": "c668927ff7a13f9a33dd5aad8cdc6df68f2179584d50abdc9807c86e479c4d0b",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "5d6b7d258f285f6c7b13dd16d2c38008ed429acf9f6cf296995246395d9333e8"
+  "tree_sha256": "9fffb8bf21f0c9bfcb5ae5bce35f58cee820e94f06eec33c34624aebdd0c6ee6"
 }
