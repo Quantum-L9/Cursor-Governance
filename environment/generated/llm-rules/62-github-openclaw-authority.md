@@ -47,6 +47,14 @@ description: Agents MUST use openclaw-igorbot/github#token for GitHub where the 
   **absent** from that library's guard list — it fails while looking allowed; the
   REST equivalent is `POST /repos/{o}/{r}/issues/{n}/comments`.
 
+- **A REST 403 on `<owner>/.github` is a transport swap too.** The session
+  gateway scopes REST to the session's own repositories (`… not enabled for this
+  session … (HTTP 403)`), and `add_repo` refuses dot-named repositories, but git
+  still serves `https://github.com/<owner>/.github`. Read that repository only
+  through `ops/scripts/org_dotgithub.read_org_file` (REST, then the same commit
+  over git); the guard in `ops/scripts/tests/test_org_dotgithub.py` fails any
+  other reader. Verified 2026-10-21 (`docs/DEGRADED_MODE_CONTRACT.md`).
+
 ## Surface transport (model-controlled surfaces)
 
 A `model-controlled` surface holds **no** credential of its own: no Infisical import,

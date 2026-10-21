@@ -1010,6 +1010,71 @@ def main() -> int:
     if errors:
         raise AssertionError("positive fixture failed:\n" + "\n".join(errors))
 
+    # derive_post_judgment fills exactly the derived fields the validator checks, and nothing else.
+    if bab.derive_post_judgment(copy.deepcopy(audit)):
+        raise AssertionError("derive_post_judgment must be a no-op on a valid audit")
+    drifted = copy.deepcopy(audit)
+    drifted["change_discipline"]["complexity_delta"][0]["files_modified"] += 3
+    drifted["per_pr_verdicts"][0]["blocking_finding_ids"] = []
+    finding = drifted["findings"][0]
+    reciprocal = finding["evidence_ids"][0]
+    next(e for e in drifted["shared_evidence_index"] if e["evidence_id"] == reciprocal)[
+        "findings_using_this_evidence"
+    ].remove(finding["finding_id"])
+    drifted["post_judgment_closure"]["severity_consistency"][0]["machine_floor"] = "Low"
+    drifted["post_judgment_closure"]["validation_run_coverage"] = []
+    mirrored = next(
+        c for c in drifted["claim_validation_matrix"] if bab.mirrored_claim_status(drifted, c)
+    )
+    mirrored["status"] = "NOT_APPLICABLE"
+    for needle in (
+        "complexity_delta file counts",
+        "blocking_finding_ids",
+        "missing reciprocal evidence finding reference",
+        "does not match deterministic bounds",
+        "validation_run_coverage must exactly cover",
+        "must mirror",
+    ):
+        assert_has(bab.validate_audit(drifted), needle)
+    judged = {
+        key: copy.deepcopy(drifted[key])
+        for key in ("falsification_ledger", "findings", "per_pr_verdicts", "residual_unknowns")
+    }
+    notes = bab.derive_post_judgment(drifted)
+    if not notes:
+        raise AssertionError("derive_post_judgment must report each field it derives")
+    # Findings may only gain reciprocal evidence references; probes and Unknowns are untouched.
+    for key in ("falsification_ledger", "residual_unknowns"):
+        if drifted[key] != judged[key]:
+            raise AssertionError(f"derive_post_judgment must not rewrite judged {key}")
+    if [f["severity"] for f in drifted["findings"]] != [f["severity"] for f in judged["findings"]]:
+        raise AssertionError("derive_post_judgment must not re-rate findings")
+    if [v["merge_readiness"] for v in drifted["per_pr_verdicts"]] != [
+        v["merge_readiness"] for v in judged["per_pr_verdicts"]
+    ]:
+        raise AssertionError("derive_post_judgment must not change readiness verdicts")
+    # Restored coverage rows start UNKNOWN; reapplying the fixture's own disposition is judgment.
+    drifted["post_judgment_closure"]["validation_run_coverage"] = copy.deepcopy(
+        audit["post_judgment_closure"]["validation_run_coverage"]
+    )
+    errors = bab.validate_audit(drifted)
+    if errors:
+        raise AssertionError("derive did not restore the derived fields:\n" + "\n".join(errors))
+    if bab.derive_post_judgment(drifted):
+        raise AssertionError("derive_post_judgment must be idempotent")
+    # A severity outside its machine bounds is surfaced, never silently passed as CONSISTENT.
+    out_of_bounds = copy.deepcopy(audit)
+    blocking = next(f for f in out_of_bounds["findings"] if f["merge_blocking"])
+    blocking["severity"] = "Low"
+    bab.derive_post_judgment(out_of_bounds)
+    row = next(
+        x
+        for x in out_of_bounds["post_judgment_closure"]["severity_consistency"]
+        if x["finding_id"] == blocking["finding_id"]
+    )
+    if row["status"] != "UNKNOWN" or row["actual_severity"] != "Low":
+        raise AssertionError("out-of-bounds severity must derive to an UNKNOWN consistency row")
+
     bad = copy.deepcopy(audit)
     bad["audit_coverage"]["artifact_inventory"] = [
         item
@@ -1548,6 +1613,91 @@ def main() -> int:
     kinds = {x["symbol_kind"] for x in rich["changed_symbols"]}
     if not {"CONSTANT", "API_ROUTE", "CONFIG_KEY"}.issubset(kinds):
         raise AssertionError(f"enhanced changed-symbol census missing expected kinds: {kinds}")
+    # One path:name detected by two methods is two machine symbols, so it needs two claims.
+    for key, rows in (
+        ("claim_id", rich["claim_seeds"]),
+        ("falsification_id", rich["falsification_seeds"]),
+    ):
+        ids = [x[key] for x in rows]
+        if len(ids) != len(set(ids)):
+            raise AssertionError(f"enhanced census emits duplicate {key} values")
+    # The materialized machine rows are the census, unadjudicated, and fit the audit schema.
+    rich_wrapper = {rich["pr_number"]: {"ledger": rich, "sha256": "0" * 64}}
+    rows = bab.materialize_machine_rows(rich_wrapper, "A-RED")
+    schema_props = bab.load_json(bab.schema_path())["properties"]
+    for key in (
+        "changed_symbol_ledger",
+        "claim_validation_matrix",
+        "falsification_ledger",
+        "audit_obligation_ledger",
+        "deterministic_closure_ledger",
+        "shared_evidence_index",
+    ):
+        validator = bab.Draft202012Validator(schema_props[key]["items"])
+        for row in rows[key]:
+            problems = [e.message for e in validator.iter_errors(row)]
+            if problems:
+                raise AssertionError(f"materialized {key} row rejected by audit schema: {problems}")
+    for key, seeds, ident, preserved in (
+        (
+            "changed_symbol_ledger",
+            rich["changed_symbols"],
+            "symbol_id",
+            (
+                "path",
+                "symbol_name",
+                "symbol_kind",
+                "change_type",
+                "detection_method",
+                "detection_confidence",
+            ),
+        ),
+        (
+            "claim_validation_matrix",
+            rich["claim_seeds"],
+            "claim_id",
+            ("claim_kind", "subject", "assertion", "materiality", "source"),
+        ),
+        (
+            "falsification_ledger",
+            rich["falsification_seeds"],
+            "falsification_id",
+            ("claim_id", "source", "attack_class", "hypothesis"),
+        ),
+        ("audit_obligation_ledger", rich["obligations"], "obligation_id", ("kind", "subject")),
+        (
+            "deterministic_closure_ledger",
+            rich["closure_seeds"],
+            "closure_id",
+            ("closure_kind", "subject", "seed_hash"),
+        ),
+    ):
+        seeded = {row[ident]: row for row in rows[key]}
+        if set(seeded) != {seed[ident] for seed in seeds} or len(seeded) != len(rows[key]):
+            raise AssertionError(f"materialized {key} does not enumerate the census exactly once")
+        for seed in seeds:
+            for field in preserved:
+                if seeded[seed[ident]][field] != seed[field]:
+                    raise AssertionError(
+                        f"materialized {key} {seed[ident]} rewrote census field {field}"
+                    )
+    if any(c["status"] != "UNKNOWN" for c in rows["claim_validation_matrix"]) or any(
+        f["result"] != "INCONCLUSIVE" for f in rows["falsification_ledger"]
+    ):
+        raise AssertionError("materialized machine rows must start unadjudicated")
+    census_emap = {e["evidence_id"]: e for e in rows["shared_evidence_index"]}
+    for claim in rows["claim_validation_matrix"]:
+        if claim["materiality"] == "MATERIAL" and not bab.evidence_discriminates(
+            claim["evidence_ids"], census_emap, f"claim:{claim['claim_id']}"
+        ):
+            raise AssertionError(f"materialized claim {claim['claim_id']} lacks census grounding")
+    if any(
+        p.startswith(("claim_validation:", "falsification:"))
+        for e in rows["shared_evidence_index"]
+        for p in e["properties_discriminated"]
+    ):
+        raise AssertionError("census grounding must never validate a claim or close a probe")
+
     if dc.code_token_present("src/x.py", "# gateway\nvalue='gateway'\n", "gateway"):
         raise AssertionError(
             "Python comments/strings must not satisfy bypass boundary token presence"
