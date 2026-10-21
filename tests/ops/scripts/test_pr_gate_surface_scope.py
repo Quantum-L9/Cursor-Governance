@@ -84,7 +84,11 @@ def test_predicate_has_exactly_one_definition() -> None:
 
 def test_every_cursor_host_gate_uses_the_shared_predicate() -> None:
     """Both known Cursor-host assertions must be gated, not just the PR gate."""
-    for name in ("run_pr_gate.sh", "validate_governance_symlinks.sh"):
+    for name in (
+        "run_pr_gate.sh",
+        "validate_governance_symlinks.sh",
+        "check_governance_wiring.sh",
+    ):
         body = (SCRIPTS / name).read_text(encoding="utf-8")
         assert "is_cursor_host_surface" in body, f"{name} asserts Cursor host state ungated"
 

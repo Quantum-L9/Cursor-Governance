@@ -215,6 +215,20 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertTrue(any(e.startswith("reviewer_focus:") for e in result.needs_completion))
         self.assertIn("protected-root", result.mechanical_filled)
 
+    def test_template_without_closes_placeholder_writes_measured_closes_only(self) -> None:
+        template = (
+            "## Problem\n\n"
+            "```\n"
+            "paste the error / failing output here, or delete this block and describe the gap\n"
+            "```\n\n"
+            "## Risk\n"
+        )
+        rows = ["M\tops/x.py"]
+        closing = MechanicalFacts(commits=["fix: x"], changed_files=rows, issue_closes=[9])
+        self.assertIn("Closes #9", _section(compose_pr_body(closing, template).body, "Problem"))
+        silent = MechanicalFacts(commits=["fix: x"], changed_files=rows)
+        self.assertNotIn("Closes", compose_pr_body(silent, template).body)
+
     def test_protected_rewrite_checks_justified(self) -> None:
         facts = MechanicalFacts(
             commits=["fix: rewrite agents fragment"],
@@ -1255,6 +1269,74 @@ class TemplateResolutionTests(unittest.TestCase):
         result = _run_org_validator("governance-pr.yml", body)
         self.assertEqual(result["failures"], [])
         self.assertEqual(result["findings"], [])
+
+
+class CheckTemplateTests(unittest.TestCase):
+    """CG-06: make pr pushed the branch before the composer read the org
+    template, so an unreadable template left a pushed branch and no PR. The
+    pre-push proof resolves through the same resolve_template the body uses."""
+
+    SHA = "2" * 40
+
+    def _run(self, gh, git) -> tuple[int, str, str]:
+        import contextlib
+        import io
+        from unittest import mock
+
+        import compose_pr_body as module
+
+        real = module.resolve_template
+        out, err = io.StringIO(), io.StringIO()
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            mock.patch.object(
+                module, "resolve_template", lambda ws, o, n: real(ws, o, n, gh=gh, git=git)
+            ),
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(err),
+        ):
+            rc = module.main(
+                [
+                    "--workspace",
+                    tmp,
+                    "--check-template",
+                    "--org-owner",
+                    "Quantum-L9",
+                    "--repo-name",
+                    "consumer",
+                ]
+            )
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_a_readable_template_is_proven_with_its_exact_revision(self) -> None:
+        encoded = __import__("base64").b64encode(CANONICAL_TEMPLATE.encode()).decode()
+
+        def gh(endpoint: str) -> object:
+            if endpoint == "repos/Quantum-L9/.github":
+                return {"default_branch": "main"}
+            if endpoint == "repos/Quantum-L9/.github/commits/main":
+                return {"sha": self.SHA}
+            return {"type": "file", "encoding": "base64", "content": encoded}
+
+        def no_git(owner: str, path: str) -> tuple[str, str]:
+            raise AssertionError("REST answered; the git transport must not be tried")
+
+        rc, out, _ = self._run(gh, no_git)
+        self.assertEqual(rc, 0)
+        self.assertEqual(out.strip(), f"TEMPLATE_OK Quantum-L9/.github@{self.SHA}")
+
+    def test_an_unreadable_template_fails_before_anything_is_sent(self) -> None:
+        def gh(endpoint: str) -> object:
+            raise TemplateError(f"HTTP 404 on {endpoint}")
+
+        def git_down(owner: str, path: str) -> tuple[str, str]:
+            raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
+
+        # Both transports refused: the proof fails, so nothing is pushed.
+        rc, out, err = self._run(gh, git_down)
+        self.assertEqual(rc, 2)
+        self.assertEqual(out, "")
+        self.assertIn("HTTP 404", err)
 
 
 class CliTests(unittest.TestCase):

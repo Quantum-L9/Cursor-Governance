@@ -109,10 +109,17 @@ file_hash() {
 
 fingerprint() {
   local repo="$1" stamp_input="" f
-  for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.json .pre-commit-config.yaml; do
+  for f in uv.lock pyproject.toml requirements.txt requirements.lock constraints.txt package.json pnpm-lock.yaml package-lock.json .pre-commit-config.yaml; do
     if [ -f "$repo/$f" ]; then
       stamp_input="$stamp_input|$f:$(file_hash "$repo/$f")"
     fi
+  done
+  # Every split pin set (requirements-dev.txt, -ci, -test, ...) decides what a
+  # pip repo's environment holds, so a change to any of them must invalidate
+  # the stamp. The glob expands in sorted order.
+  for f in "$repo"/requirements-*.txt; do
+    [ -f "$f" ] || continue
+    stamp_input="$stamp_input|${f##*/}:$(file_hash "$f")"
   done
   stamp_input="$stamp_input|uv:$(uv --version 2>/dev/null || echo none)"
   stamp_input="$stamp_input|node:$(node --version 2>/dev/null || echo none)"
@@ -128,7 +135,19 @@ fingerprint() {
 # recognised manifest is vacuously proven — there is nothing to apply.
 toolchain_proven() {
   local repo="$1" rc
-  if [ -f "$repo/uv.lock" ]; then
+  if [ -f "$repo/uv.lock" ] && [ -f "$repo/ops/scripts/ensure_uv_environment.sh" ]; then
+    # A governance checkout's .venv has one owner, and install_repo already
+    # applies through it. Its proof must come from the same owner: the memory
+    # seal it runs force-reinstalls the bound wheel with a PEP 610 direct URL,
+    # so a raw `uv sync --check` reports that venv outdated on every pass and
+    # the checkout could never be proven. `check` exits 0 only when the lock,
+    # pyproject, interpreter and uv fingerprint match and no install is in
+    # progress; every other code (1 outdated or interrupted, 2 uv/lock missing)
+    # is unproven — none may fall through to another resolution.
+    [ -x "$repo/.venv/bin/python" ] || return 1
+    bash "$repo/ops/scripts/ensure_uv_environment.sh" "$repo" check >/dev/null 2>&1 \
+      || return 1
+  elif [ -f "$repo/uv.lock" ]; then
     [ -x "$repo/.venv/bin/python" ] || return 1
     have uv || return 1
     # `--check` exit codes carry different meanings and must not be collapsed:
@@ -152,13 +171,107 @@ toolchain_proven() {
   if [ -f "$repo/package.json" ] && [ ! -d "$repo/node_modules" ]; then
     return 1
   fi
-  # Pip-managed repos have no uv.lock for `uv sync --check`. install_repo's pip
-  # path is best-effort (`|| true`), so a failed install must not stamp ready.
-  if { [ -f "$repo/pyproject.toml" ] || [ -f "$repo/requirements.txt" ]; } \
-      && [ ! -f "$repo/uv.lock" ]; then
+  # Pip-managed repos have no uv.lock for `uv sync --check`. Proven only when
+  # provision_pip_venv recorded the current fingerprint after a complete
+  # install, and the installed set is consistent.
+  if is_pip_repo "$repo"; then
     [ -x "$repo/.venv/bin/python" ] || return 1
+    [ "$(cat "$repo/.venv/$PIP_APPLIED_MARKER" 2>/dev/null)" = "$(fingerprint "$repo")" ] \
+      || return 1
+    if have uv; then
+      uv pip check --python "$repo/.venv/bin/python" >/dev/null 2>&1 || return 1
+    fi
   fi
   return 0
+}
+
+# A pip-managed repository is Python when it declares a manifest or ships
+# top-level modules. Its environment lives in <repo>/.venv like every other.
+is_pip_repo() {
+  local repo="$1" f
+  [ -f "$repo/uv.lock" ] && return 1
+  [ -f "$repo/pyproject.toml" ] && return 0
+  for f in "$repo"/requirements.txt "$repo"/requirements-*.txt "$repo"/*.py; do
+    [ -f "$f" ] && return 0
+  done
+  return 1
+}
+
+# Marker written into <repo>/.venv only after every declared pin set
+# installed, holding the fingerprint it installed. A fresh venv whose install
+# then failed exists but has no matching marker, so it is not proven.
+PIP_APPLIED_MARKER=".l9-pip-applied"
+
+# True when pyproject declares a `dev` optional-dependency extra. A pyproject
+# this host cannot parse answers True: installing a missing extra is a warning,
+# while skipping a declared one would install without its pins.
+pyproject_declares_dev_extra() {
+  local answer
+  answer="$(python3 - "$1" <<'PY' 2>/dev/null
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    extras = tomllib.load(handle).get("project", {}).get("optional-dependencies", {})
+print("yes" if "dev" in extras else "no")
+PY
+)"
+  [ "$answer" != "no" ]
+}
+
+# Provision <repo>/.venv for a pip-managed repository.
+# The repository's own bootstrap wins: a Makefile `venv:` target is how that
+# repository says its environment is built. Otherwise build an isolated venv
+# and install each declared pin set into it, never into the system interpreter.
+provision_pip_venv() {
+  local repo="$1"
+  if [ -f "$repo/Makefile" ] && grep -qE '^venv:' "$repo/Makefile"; then
+    ( cd "$repo" && make venv ) || return 1
+  else
+    # Everything below runs FROM the repository: uv discovers project and uv.toml
+    # configuration from its cwd, and the detached worker's cwd is the caller's
+    # (the workspace container, or a sibling repository whose `required-version`
+    # or index settings then decided this repository's install).
+    (
+      cd "$repo" || exit 1
+      installed=0
+      if [ ! -x .venv/bin/python ]; then
+        if have uv; then
+          uv venv .venv >/dev/null || exit 1
+        else
+          python3 -m venv .venv || exit 1
+        fi
+      fi
+      py="$PWD/.venv/bin/python"
+      for req in requirements.txt requirements-*.txt; do
+        [ -f "$req" ] || continue
+        if have uv; then
+          uv pip install --python "$py" -r "$req" || exit 1
+        else
+          "$py" -m pip install -r "$req" || exit 1
+        fi
+        installed=1
+      done
+      if [ -f pyproject.toml ] && grep -q '^\[project\]' pyproject.toml; then
+        # Install the dev extra exactly when it is declared. A failed declared
+        # extra is a failed install: retrying without it once succeeded with
+        # the test and lint pins absent and still stamped the repository ready.
+        target="."
+        if pyproject_declares_dev_extra pyproject.toml; then
+          target=".[dev]"
+        fi
+        if have uv; then
+          uv pip install --python "$py" -e "$target" || exit 1
+        else
+          "$py" -m pip install -e "$target" || exit 1
+        fi
+        installed=1
+      fi
+      [ "$installed" -eq 1 ] || echo "session-deps: $repo declares no pin set; empty .venv" >&2
+    ) || return 1
+  fi
+  [ -x "$repo/.venv/bin/python" ] || return 1
+  fingerprint "$repo" >"$repo/.venv/$PIP_APPLIED_MARKER"
 }
 
 # Import smoke on the resolved interpreter. toolchain_proven says the lock is
@@ -212,20 +325,10 @@ install_repo() {
       failed=1
       echo "WARN: $repo uv sync --locked failed" >&2
     fi
-  elif [ -f "$repo/pyproject.toml" ] || ls "$repo"/*.py >/dev/null 2>&1; then
-    python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
-    if [ -f "$repo/pyproject.toml" ]; then
-      # NOTE: `--only-binary :all:` is deliberately NOT paired with `-e .` — an
-      # editable install must build from source, so that combination can never
-      # succeed. Flat-layout multi-package repos cannot be installed editable at
-      # all; for those the fallback below is the expected path.
-      ( cd "$repo" && \
-        pip install --prefer-binary -e '.[dev,server]' 2>/dev/null \
-        || pip install --prefer-binary -e '.[dev]' 2>/dev/null \
-        || pip install --prefer-binary -r requirements.txt 2>/dev/null \
-        || pip install --only-binary :all: ruff mypy pytest build 2>/dev/null ) || true
-    else
-      pip install --only-binary :all: ruff mypy pytest 2>/dev/null || true
+  elif is_pip_repo "$repo"; then
+    if ! provision_pip_venv "$repo"; then
+      failed=1
+      echo "WARN: $repo pip environment provisioning failed — .venv not proven" >&2
     fi
   fi
   if [ -f "$repo/package.json" ]; then

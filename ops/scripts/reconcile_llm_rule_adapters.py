@@ -175,6 +175,7 @@ def reconcile_adapters(
     *,
     workspace: Path | None,
     check: bool = False,
+    skip_user: bool = False,
 ) -> dict[str, Any]:
     root = root.resolve()
     workspace = (workspace or Path.cwd()).resolve()
@@ -198,6 +199,10 @@ def reconcile_adapters(
             continue
         if kind == "project" and workspace is None:
             skipped.append({"id": adapter_id, "reason": "workspace-required"})
+            continue
+        if kind == "user" and skip_user:
+            # --root is not the governance SSOT clone: never re-point ~/.claude/rules.
+            skipped.append({"id": adapter_id, "reason": "user-scope-skipped"})
             continue
 
         target = expand_path(str(raw_path), workspace)
@@ -226,6 +231,12 @@ def main() -> int:
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--skip-user",
+        action="store_true",
+        help="Leave user-scope adapters (~/.claude/rules) untouched; "
+        "for a --root that is not the governance SSOT clone",
+    )
     args = parser.parse_args()
 
     try:
@@ -233,6 +244,7 @@ def main() -> int:
             args.root,
             workspace=(args.workspace or Path.cwd()).resolve(),
             check=args.check,
+            skip_user=args.skip_user,
         )
     except Exception as exc:  # noqa: BLE001
         print(f"ERROR: {exc}", file=sys.stderr)

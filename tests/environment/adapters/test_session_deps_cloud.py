@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def run(
     remote: str = "true",
     budget: str = "20",
     path_prefix: Path | None = None,
+    extra_env: dict[str, str] | None = None,
 ):
     env = {
         **os.environ,
@@ -53,6 +55,8 @@ def run(
     }
     if path_prefix is not None:
         env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         ["bash", str(HELPER), "--workspace", str(workspace)],
         capture_output=True,
@@ -256,3 +260,208 @@ def test_a_governance_checkout_syncs_through_its_locked_writer(tmp_path: Path) -
     lines = calls.read_text(encoding="utf-8").splitlines() if calls.exists() else []
     assert f"ensure {repo} apply" in lines, lines
     assert not [line for line in lines if line.startswith("uv sync --locked --extra dev")], lines
+
+
+def _governance_checkout(workspace: Path, calls: Path, check_rc: int) -> Path:
+    """A governance-shaped repo whose venv owner answers `check` with check_rc."""
+    repo = make_repo(workspace, "governance")
+    (repo / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+    (repo / "pyproject.toml").write_text('[project]\nname="g"\n', encoding="utf-8")
+    venv_bin = repo / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python").symlink_to(Path(os.environ.get("PYTHON", "/usr/bin/python3")))
+    ensure = repo / "ops" / "scripts" / "ensure_uv_environment.sh"
+    ensure.parent.mkdir(parents=True)
+    ensure.write_text(
+        f'#!/usr/bin/env bash\necho "ensure $*" >> "{calls}"\n'
+        f'[ "${{2:-}}" = "check" ] && exit {check_rc}\nexit 0\n',
+        encoding="utf-8",
+    )
+    return repo
+
+
+def _uv_shim_reporting_outdated(shims: Path, calls: Path) -> None:
+    """`uv sync --check` exits 1, as it does for a sealed governance venv."""
+    shims.mkdir()
+    (shims / "uv").write_text(
+        f'#!/usr/bin/env bash\necho "uv $*" >> "{calls}"\n'
+        '[ "${1:-}" = "--version" ] && { echo "uv 9.9.9"; exit 0; }\n'
+        'case " $* " in *" --check "*) exit 1 ;; esac\nexit 0\n',
+        encoding="utf-8",
+    )
+    (shims / "uv").chmod(0o755)
+
+
+def test_a_governance_checkout_is_proven_by_its_venv_owner(tmp_path: Path) -> None:
+    """The memory seal makes a raw `uv sync --check` report a governance venv
+    outdated forever. Proof must come from ensure_uv_environment.sh `check`,
+    the same owner install_repo applies through, or no stamp is ever written."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    calls = tmp_path / "calls.log"
+    repo = _governance_checkout(workspace, calls, check_rc=0)
+    shims = tmp_path / "bin"
+    _uv_shim_reporting_outdated(shims, calls)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="20", path_prefix=shims)
+    assert result.returncode == 0
+    combined = result.stdout + result.stderr
+    assert "UNPROVEN" not in combined, combined
+    lines = calls.read_text(encoding="utf-8").splitlines()
+    assert f"ensure {repo} check" in lines, lines
+    assert not [line for line in lines if line.startswith("uv sync --locked --extra dev --check")]
+    assert list((home / ".l9" / "claude").glob("deps-*.stamp")), "proven checkout must stamp"
+
+
+def test_a_governance_checkout_its_owner_rejects_is_never_stamped(tmp_path: Path) -> None:
+    """Negative control: when the owner says the venv is not applied, the
+    checkout stays unproven and no stamp is written."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    calls = tmp_path / "calls.log"
+    _governance_checkout(workspace, calls, check_rc=1)
+    shims = tmp_path / "bin"
+    _uv_shim_reporting_outdated(shims, calls)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="20", path_prefix=shims)
+    assert result.returncode == 0
+    assert "UNPROVEN" in result.stdout + result.stderr
+    assert list((home / ".l9" / "claude").glob("deps-*.stamp")) == []
+
+
+needs_uv = pytest.mark.skipif(
+    shutil.which("uv") is None,
+    reason="uv is the pip-repo provisioner; this case needs it installed",
+)
+
+
+def _pip_repo(workspace: Path, requirements: str) -> Path:
+    repo = make_repo(workspace, "pip-only")
+    (repo / "requirements.txt").write_text(requirements, encoding="utf-8")
+    (repo / "requirements-dev.txt").write_text("# dev pins\n", encoding="utf-8")
+    return repo
+
+
+def _stamps(home: Path) -> set[str]:
+    return {p.name for p in (home / ".l9" / "claude").glob("deps-*.stamp")}
+
+
+@needs_uv
+def test_a_pip_repository_gets_its_own_venv_and_a_stamp(tmp_path: Path) -> None:
+    """CG-04: pip installed into the system interpreter while the proof demanded
+    <repo>/.venv, so a pip repository could never be proven. It now gets an
+    isolated .venv, and the stamp follows a complete install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, combined
+    assert "UNPROVEN" not in combined, combined
+    assert (repo / ".venv" / "bin" / "python").exists()
+    assert (repo / ".venv" / ".l9-pip-applied").is_file()
+    assert _stamps(home)
+
+
+@needs_uv
+def test_a_changed_dev_pin_set_invalidates_the_stamp(tmp_path: Path) -> None:
+    """requirements-dev.txt was not fingerprinted, so a dev pin bump kept a
+    stale stamp. A changed split pin set must re-provision."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    home = tmp_path / "home"
+    run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    first = _stamps(home)
+    assert first
+    cached = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "cached and proven" in cached.stdout, cached.stdout + cached.stderr
+    (repo / "requirements-dev.txt").write_text("# dev pins, bumped\n", encoding="utf-8")
+    again = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "cached and proven" not in again.stdout, again.stdout
+    assert _stamps(home) - first, "a changed pin set must produce a new fingerprint"
+
+
+@needs_uv
+def test_a_failed_pip_install_is_never_stamped(tmp_path: Path) -> None:
+    """A venv created and then left half-installed must not read as proven."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "no-such-package-l9-test==1.0\n")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="120", extra_env={"UV_OFFLINE": "1"})
+    assert "UNPROVEN" in result.stdout + result.stderr
+    assert not (repo / ".venv" / ".l9-pip-applied").exists()
+    assert _stamps(home) == set()
+
+
+def _uv_provision_shim(shims: Path, calls: Path, *, fail_dev_extra: bool) -> None:
+    """A uv that records its cwd and arguments, builds a usable .venv, and
+    optionally refuses the `.[dev]` extra the way a failed resolve would."""
+    shims.mkdir()
+    fail = 'case "$*" in *".[dev]"*) exit 1 ;; esac\n' if fail_dev_extra else ""
+    (shims / "uv").write_text(
+        f'#!/usr/bin/env bash\necho "uv cwd=$PWD $*" >> "{calls}"\n'
+        '[ "${1:-}" = "--version" ] && { echo "uv 9.9.9"; exit 0; }\n'
+        'if [ "${1:-}" = "venv" ]; then mkdir -p "$2/bin" && '
+        'ln -sf "$(command -v python3)" "$2/bin/python"; exit 0; fi\n'
+        f"{fail}exit 0\n",
+        encoding="utf-8",
+    )
+    (shims / "uv").chmod(0o755)
+
+
+def test_pip_provisioning_runs_from_the_repository_not_the_caller(tmp_path: Path) -> None:
+    """uv discovers project and uv.toml settings from its cwd. Run from the
+    caller's directory, a sibling's configuration decided this install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = _pip_repo(workspace, "# no third-party pins\n")
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=False)
+    result = run(workspace, tmp_path / "home", budget="60", path_prefix=tmp_path / "bin")
+    assert result.returncode == 0, result.stdout + result.stderr
+    provisioning = [
+        line for line in calls.read_text(encoding="utf-8").splitlines() if " venv " in line
+    ]
+    assert provisioning, calls.read_text(encoding="utf-8")
+    assert all(line.startswith(f"uv cwd={repo} ") for line in provisioning), provisioning
+
+
+def test_a_failed_declared_dev_extra_is_not_downgraded_to_ready(tmp_path: Path) -> None:
+    """Retrying without a declared `dev` extra once succeeded with the test and
+    lint pins absent and stamped the repository proven."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "pip-only")
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "p"\nversion = "0"\n[project.optional-dependencies]\ndev = ["pytest"]\n',
+        encoding="utf-8",
+    )
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=True)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="60", path_prefix=tmp_path / "bin")
+    assert "UNPROVEN" in result.stdout + result.stderr
+    assert _stamps(home) == set()
+    log = calls.read_text(encoding="utf-8")
+    assert ".[dev]" in log
+    assert not [line for line in log.splitlines() if line.endswith(" -e .")], log
+
+
+def test_a_project_without_a_dev_extra_installs_itself(tmp_path: Path) -> None:
+    """Positive control: no declared extra means a plain editable install."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "pip-only")
+    (repo / "pyproject.toml").write_text('[project]\nname = "p"\nversion = "0"\n', encoding="utf-8")
+    calls = tmp_path / "calls.log"
+    _uv_provision_shim(tmp_path / "bin", calls, fail_dev_extra=True)
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="60", path_prefix=tmp_path / "bin")
+    assert "UNPROVEN" not in result.stdout + result.stderr, result.stdout + result.stderr
+    assert [
+        line for line in calls.read_text(encoding="utf-8").splitlines() if line.endswith(" -e .")
+    ]
+    assert _stamps(home)
