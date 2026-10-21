@@ -769,6 +769,8 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
             COMPLETION_NEEDS_AUTHOR,
             "a commit subject only — the oldest commit has no body paragraph; rewrite it",
         )
+    elif "## Problem" in body and NO_SUBJECT in body:
+        put("problem", COMPLETION_NEEDS_AUTHOR, "no own commit in this range — write it")
     elif "## Problem" in body:
         put("problem", COMPLETION_VERIFIED, "oldest own commit subject and its body paragraph")
     if TYPE_UNRESOLVED in body:
@@ -1183,7 +1185,10 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
     groups: dict[str, list[str]] = {"Added": [], "Modified": [], "Renamed": [], "Deleted": []}
     for row in _rows(facts):
         why = keep_why.get(row.key)
-        if not why:
+        # The composer's own unresolved marker is a measurement, not someone's
+        # words: it is remeasured every refresh, so an own commit that now
+        # touches the path replaces it instead of leaving a false "no commit".
+        if not why or why.startswith(NO_OWN_COMMIT):
             why = path_why(facts, row.path)
             if row.old_path:
                 why = f"{why} ({row.word})"
@@ -1469,20 +1474,28 @@ def _fill_semantic(text: str, facts: MechanicalFacts) -> str:
 _CLOSES_LINE = re.compile(r"\n+Closes #(?:<!-- issue number -->)?[ \t]*(?=\n|\Z)")
 
 
-def _fill_closes(text: str, facts: MechanicalFacts, problem_end: int | None) -> str:
+def _fill_closes(text: str, facts: MechanicalFacts, problem: str | None) -> str:
     """Closing keywords only for issues a commit names; never a dangling ``Closes #``.
 
     The older template carried a bare ``Closes #`` line; it is filled or
     removed. The canonical template carries none, so a measured issue list is
-    written at the end of the Problem text.
+    written at the end of the Problem text. ``problem`` is that text when the
+    composer wrote it; it is located here, at insertion time, because any
+    substitution made before this one (the Summary line, for instance) shifts
+    every offset computed earlier.
     """
     closes = ", ".join(f"#{n}" for n in facts.issue_closes)
     if _CLOSES_LINE.search(text):
         line = f"\n\nCloses {closes}" if closes else ""
         return _CLOSES_LINE.sub(lambda _m: line, text, count=1)
-    if closes and problem_end is not None:
-        return text[:problem_end] + f"\n\nCloses {closes}" + text[problem_end:]
-    return text
+    if not closes or not problem:
+        return text
+    start, end = _heading_span(text, "## Problem") or (0, len(text))
+    at = text.find(problem, start, end)
+    if at < 0:
+        return text
+    problem_end = at + len(problem)
+    return text[:problem_end] + f"\n\nCloses {closes}" + text[problem_end:]
 
 
 ERROR_FENCE = (
@@ -1495,18 +1508,18 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     problem = range_problem(facts)
     fix = range_fix(facts)
     text = _fill_protected_root(text, facts)
-    problem_end: int | None = None
+    problem_written = False
     at = text.find(ERROR_FENCE)
     if at >= 0:
         text = text[:at] + problem + text[at + len(ERROR_FENCE) :]
-        problem_end = at + len(problem)
+        problem_written = True
     if "## Summary" in text:
         text = text.replace(
             "<!-- One-sentence description of what this PR does. -->",
             range_summary(facts),
             1,
         )
-    text = _fill_closes(text, facts, problem_end)
+    text = _fill_closes(text, facts, problem if problem_written else None)
     text = _fill_type_of_change(text, facts)
     if "## Fix" in text:
         text = text.replace(FIX_PLACEHOLDER, fix, 1)

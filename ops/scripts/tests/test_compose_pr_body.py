@@ -23,7 +23,10 @@ from compose_pr_body import (  # noqa: E402
     COMPLETION_VERIFIED,
     COMPOSER_MARKER,
     EDIT_MODE_STALE_PREFIX,
+    ERROR_FENCE,
     GATE_UNVERIFIED,
+    NO_OWN_COMMIT,
+    NO_SUBJECT,
     PROTECTED_REMOTE_NOTICE_PREFIX,
     PROTECTED_REMOTE_UNMEASURED,
     PROTECTED_STAMP,
@@ -918,6 +921,38 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(status, "unchanged")
         self.assertEqual(remote_twice, remote_once)
 
+    def test_refresh_remeasures_the_composers_own_unresolved_marker(self) -> None:
+        """PR738-F1: NO_OWN_COMMIT is a measurement, not reviewer prose. Once an
+        own commit touches the path the bullet carries that subject; a why a
+        person wrote for another path still survives the same refresh."""
+        changed = ["M\tops/a.py", "M\tREADME.md", "R100\told/y.py\tnew/y.py"]
+        body = compose_pr_body(_facts(changed), CANONICAL_TEMPLATE).body
+        self.assertIn(f"- `README.md` — {NO_OWN_COMMIT}", body)
+        self.assertIn(f"- `old/y.py -> new/y.py` — {NO_OWN_COMMIT} (renamed)", body)
+        body = body.replace("- `ops/a.py` — feat: first", "- `ops/a.py` — hand-written why")
+        later = _facts(
+            changed,
+            head="b" * 40,
+            commits=["feat: first", "feat: second", "docs: touch readme"],
+            commit_bodies=["Why the work started.", "", ""],
+            path_subjects={
+                "ops/a.py": "feat: first",
+                "README.md": "docs: touch readme",
+                "new/y.py": "docs: touch readme",
+            },
+        )
+        for remote in (False, True):
+            with self.subTest(remote=remote):
+                refreshed, status = refresh_body(body, later, remote=remote)
+                self.assertEqual(status, "updated")
+                self.assertNotIn(NO_OWN_COMMIT, refreshed)
+                self.assertIn("- `README.md` — docs: touch readme", refreshed)
+                self.assertIn("- `old/y.py -> new/y.py` — docs: touch readme (renamed)", refreshed)
+                self.assertIn("- `ops/a.py` — hand-written why", refreshed)
+        # Still unmeasured on refresh: the marker stays, and stays exactly once.
+        same, _ = refresh_body(body, _facts(changed, head="b" * 40))
+        self.assertEqual(same.count(f"- `README.md` — {NO_OWN_COMMIT}"), 1)
+
     def test_unmanaged_body_is_never_edited(self) -> None:
         human = "## Problem\n\nWritten by a person, no template.\n"
         self.assertEqual(refresh_body(human, _facts(self.LATER)), (human, "unmanaged"))
@@ -1344,6 +1379,23 @@ class CanonicalCompletenessTests(unittest.TestCase):
         older = compose_pr_body(self._facts(), TEMPLATE).body
         self.assertIsNone(re.search(r"Closes #(?!\d)", older))
         self.assertIn("Closes #7", compose_pr_body(self._facts(issue_closes=[7]), TEMPLATE).body)
+
+    def test_closes_ends_the_problem_text_whatever_was_substituted_before_it(self) -> None:
+        """PR738-F2: a Summary placeholder ahead of Problem is replaced by text
+        of another length; Closes must still land on its own line at the end
+        of the Problem text, and no other line may be cut."""
+        risk = "- [ ] Low — additive, reversible, no data or contract change"
+        template = (
+            "## Summary\n\n<!-- One-sentence description of what this PR does. -->\n\n"
+            "## Problem\n\n" + ERROR_FENCE + "\n\n## Risk\n\n" + risk + "\n"
+        )
+        body = compose_pr_body(self._facts(issue_closes=[5]), template).body
+        self.assertEqual(body.count("Closes #5"), 1)
+        self.assertRegex(body, r"(?m)^Closes #5$")
+        self.assertTrue(_section(body, "Problem").rstrip().endswith("\n\nCloses #5"), body)
+        self.assertIn("The tool kept dropping rows on large inputs.\n\nCloses #5", body)
+        self.assertRegex(body, r"(?m)^- \[ \] Low — additive, reversible, no data or contract")
+        self.assertEqual(_section(body, "Summary").strip(), "chore: rework the tool (+1 more)")
 
     def test_type_of_change_is_evidence_or_explicitly_unresolved(self) -> None:
         body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
@@ -1975,6 +2027,15 @@ class CompletionHandoffTests(unittest.TestCase):
                 self.assertIn(marker, result.body)
                 self.assertEqual(result.fields[name]["status"], COMPLETION_NEEDS_AUTHOR)
                 self.assertTrue(any(e.startswith(f"{name}:") for e in result.needs_completion))
+
+    def test_empty_own_range_leaves_problem_to_the_author(self) -> None:
+        """PR738-F3: with no own commit there is no subject to verify, so the
+        handoff must not call Problem verified while the body says so."""
+        empty = self._complete_facts(commits=[], commit_bodies=[], path_subjects={})
+        result = compose_pr_body(empty, CANONICAL_TEMPLATE)
+        self.assertIn(NO_SUBJECT, _section(result.body, "Problem"))
+        self.assertEqual(result.fields["problem"]["status"], COMPLETION_NEEDS_AUTHOR)
+        self.assertTrue(any(e.startswith("problem:") for e in result.needs_completion))
 
     def test_verified_evidence_is_only_a_bound_receipt(self) -> None:
         bound = self._complete_facts(
