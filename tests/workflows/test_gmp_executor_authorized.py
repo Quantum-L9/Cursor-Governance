@@ -442,6 +442,31 @@ def test_no_git_toplevel_is_no_workspace(tmp_path: Path) -> None:
     assert not STATE.exists()
 
 
+def test_state_bound_elsewhere_prints_no_workspace(tmp_path: Path) -> None:
+    repo = _temp_repo(tmp_path)
+    other = (tmp_path / "other").resolve()
+    state_file = repo / ".l9" / "gmp" / "executor-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps(
+            {
+                "gmp_id": "GMP-001",
+                "tier": "RUNTIME",
+                "task": "t",
+                "started_at": "2026-01-01T00:00:00",
+                "current_step": "memory_read",
+                "work_root": str(other),
+            }
+        ),
+        encoding="utf-8",
+    )
+    proc = _start(repo)
+    assert proc.returncode == 2, proc.stderr + proc.stdout
+    # Old code exited 2 silently here; the documented token is the contract.
+    assert "NO_WORKSPACE" in proc.stdout
+    assert f"GMP state work root: {other}" in proc.stdout
+
+
 @pytest.mark.parametrize("todo_file", ["../escape.py", "/etc/hosts"])
 def test_todo_path_outside_work_root(tmp_path: Path, todo_file: str) -> None:
     repo = _temp_repo(tmp_path)

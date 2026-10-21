@@ -1492,6 +1492,7 @@ Examples:
         return
 
     if executor._load_state() and executor.state_bound_elsewhere():
+        print(NO_WORKSPACE)
         sys.exit(EXIT_NO_WORKSPACE)
     executor.state = None
 
