@@ -968,6 +968,34 @@ emit_account_drift() {
   fi
 }
 
+# --- Coding projection (report-only) ---------------------------------------
+# One line from the shared classifier (ops/scripts/coding_projection_status.py;
+# Cursor renders the same verdict as markdown). Cursor-Governance verifies
+# l9-semantic-compiler pairs published to Quantum-L9/.github and never produces
+# them. It never fetches or writes, and with no independent record of main its
+# best verdict is BOUND; no verified checkout or no published pair is UNVERIFIED.
+emit_coding_projection() {
+  local py="$1"
+  local reader="$GOV/ops/scripts/coding_projection_status.py"
+  [ -f "$reader" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out rc
+  out="$(_l9_bounded 2 "$py" "$reader" --workspace "$WORKSPACE" --format line 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
+    124) say "coding projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    *)
+      if [ -n "$out" ]; then
+        say "$out"
+      else
+        say "coding projection: UNVERIFIED — classifier printed nothing (report-only)"
+      fi
+      ;;
+  esac
+}
+
 # --- Capability plane readiness (authenticated; never a secret) -------------
 # Graphiti over HTTPS (CLI + MCP). Distinct reasons: connect vs 401 vs 403
 # allowlist. Empty hydrate is honest; memory never gates repository writes.
@@ -1067,6 +1095,7 @@ emit_readiness_receipt() {
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
+emit_coding_projection "$PY"
 emit_capability_readiness "$PY"
 
 # Context7 is rendered unconditionally (mcp.template.json) — never gated out,
