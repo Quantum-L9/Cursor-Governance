@@ -128,7 +128,19 @@ fingerprint() {
 # recognised manifest is vacuously proven — there is nothing to apply.
 toolchain_proven() {
   local repo="$1" rc
-  if [ -f "$repo/uv.lock" ]; then
+  if [ -f "$repo/uv.lock" ] && [ -f "$repo/ops/scripts/ensure_uv_environment.sh" ]; then
+    # A governance checkout's .venv has one owner, and install_repo already
+    # applies through it. Its proof must come from the same owner: the memory
+    # seal it runs force-reinstalls the bound wheel with a PEP 610 direct URL,
+    # so a raw `uv sync --check` reports that venv outdated on every pass and
+    # the checkout could never be proven. `check` exits 0 only when the lock,
+    # pyproject, interpreter and uv fingerprint match and no install is in
+    # progress; every other code (1 outdated or interrupted, 2 uv/lock missing)
+    # is unproven — none may fall through to another resolution.
+    [ -x "$repo/.venv/bin/python" ] || return 1
+    bash "$repo/ops/scripts/ensure_uv_environment.sh" "$repo" check >/dev/null 2>&1 \
+      || return 1
+  elif [ -f "$repo/uv.lock" ]; then
     [ -x "$repo/.venv/bin/python" ] || return 1
     have uv || return 1
     # `--check` exit codes carry different meanings and must not be collapsed:
