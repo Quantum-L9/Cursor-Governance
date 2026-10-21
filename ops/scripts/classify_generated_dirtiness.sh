@@ -19,7 +19,19 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-python3 - "$ROOT" "$BEFORE" "$AFTER" "$SCRIPT_DIR/lib" <<'PY'
+# The classifier imports sync_generated_artifacts, which needs PyYAML. Run it on
+# the governance tree's locked interpreter, as run_pr_precommit.sh runs its
+# hooks; a bare `python3` is whatever the host ships, and a host interpreter
+# without PyYAML (a CI runner's system python) failed every classification
+# with ModuleNotFoundError. The host interpreter stays the fallback for a tree
+# with no locked venv.
+CLASSIFY_PYTHON="$(cd "$SCRIPT_DIR/../.." && pwd)/.venv/bin/python"
+if [[ ! -x "$CLASSIFY_PYTHON" && -n "${GOV_TOOLCHAIN_ROOT:-}" ]]; then
+  CLASSIFY_PYTHON="$GOV_TOOLCHAIN_ROOT/.venv/bin/python"
+fi
+[[ -x "$CLASSIFY_PYTHON" ]] || CLASSIFY_PYTHON="python3"
+
+"$CLASSIFY_PYTHON" - "$ROOT" "$BEFORE" "$AFTER" "$SCRIPT_DIR/lib" <<'PY'
 import sys
 from pathlib import Path
 
