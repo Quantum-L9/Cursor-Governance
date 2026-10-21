@@ -453,4 +453,3 @@ throwaway bare repository). Both transports failing is still an error. Callers:
 back to the governance fork's copy on this surface). The guard in
 `ops/scripts/tests/test_org_dotgithub.py` fails any other module that calls the
 REST route directly.
-
