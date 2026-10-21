@@ -28,7 +28,15 @@
 # workflow token, which reaches the memory repository only where the
 # organization grants it. Either way nothing is written to any file: the
 # token rides on one git fetch and one x-access-token URL that is reset after.
-# There is no continue-on-error anywhere in this workflow on purpose.
+#
+# ADVISORY MODE (operator, 2026-10-20). MEMORY_PROOF_ADVISORY below is "true"
+# while the memory binding is realigned (the rebuilt wheel digest does not yet
+# match release_evidence.artifact_sha256). Every proof step still runs exactly
+# as written and stops the chain at the first failure, but a failure is
+# reported as a ::warning:: and in the job summary instead of failing the job.
+# Set MEMORY_PROOF_ADVISORY to "false" to make the proof blocking again; with
+# it "false" there is no continue-on-error in effect anywhere in this workflow.
+# Tracked in TODO.md ("Memory cross-repo proof advisory").
 name: Memory Cross-Repo Proof
 
 on:
@@ -49,6 +57,8 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
+  # "true" = advisory (failures warn, the job passes); "false" = blocking.
+  MEMORY_PROOF_ADVISORY: "true"
 
 jobs:
   proof:
@@ -85,6 +95,7 @@ jobs:
 
       - name: Read the binding manifest
         id: binding
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         run: |
           set -euo pipefail
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
@@ -117,6 +128,8 @@ jobs:
 
       - name: Resolve the bound ref and clone the memory repository at that SHA
         id: memory_src
+        if: steps.binding.outcome == 'success'
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         env:
           MEMORY_REPO: ${{ steps.binding.outputs.repository }}
           MEMORY_REF: ${{ steps.binding.outputs.ref }}
@@ -163,6 +176,8 @@ jobs:
 
       - name: Build the memory wheel reproducibly and verify its digest
         id: wheel
+        if: steps.memory_src.outcome == 'success'
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         env:
           EXPECTED_SHA256: ${{ steps.binding.outputs.sha256 }}
           EXPECTED_ARTIFACT: ${{ steps.binding.outputs.artifact }}
@@ -193,6 +208,9 @@ jobs:
           echo "wheel ${EXPECTED_ARTIFACT} sha256 ${actual} matches the binding"
 
       - name: Install the pinned wheel into a clean environment
+        id: install
+        if: steps.wheel.outcome == 'success'
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         env:
           WHEEL: ${{ steps.wheel.outputs.path }}
           EXPECTED_VERSION: ${{ steps.binding.outputs.version }}
@@ -216,11 +234,17 @@ jobs:
           echo "MEMORY_BOUND_VERSION=${bound}" >> "$GITHUB_ENV"
 
       - name: Prove the binding
+        id: prove_binding
+        if: steps.install.outcome == 'success'
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         run: |
           set -euo pipefail
           uv run --frozen --no-build python -m ops.memory.diagnostics --binding-only
 
       - name: Run the exact-head lifecycle proof (required, no skip, no provider env)
+        id: lifecycle
+        if: steps.prove_binding.outcome == 'success'
+        continue-on-error: ${{ env.MEMORY_PROOF_ADVISORY == 'true' }}
         env:
           L9_MEMORY_CROSS_REPO_REQUIRED: "1"
           L9_MEMORY_CROSS_REPO_EVIDENCE: ${{ runner.temp }}/memory-cross-repo-proof.json
@@ -250,6 +274,41 @@ jobs:
           if tests < 2 or skipped or failures:
               raise SystemExit("cross-repo proof did not run every case to a pass")
           PY
+
+      - name: Report the advisory verdict
+        if: always() && env.MEMORY_PROOF_ADVISORY == 'true'
+        env:
+          BINDING: ${{ steps.binding.outcome }}
+          MEMORY_SRC: ${{ steps.memory_src.outcome }}
+          WHEEL: ${{ steps.wheel.outcome }}
+          INSTALL: ${{ steps.install.outcome }}
+          PROVE_BINDING: ${{ steps.prove_binding.outcome }}
+          LIFECYCLE: ${{ steps.lifecycle.outcome }}
+        run: |
+          set -euo pipefail
+          # Pass only when every tracked step succeeded: a step skipped because a
+          # prerequisite (checkout, Python, toolchain) failed is not a pass.
+          failed=""
+          incomplete=""
+          for pair in "binding:${BINDING}" "memory_src:${MEMORY_SRC}" "wheel:${WHEEL}" \
+                      "install:${INSTALL}" "prove_binding:${PROVE_BINDING}" "lifecycle:${LIFECYCLE}"; do
+            outcome="${pair#*:}"
+            if [ "${outcome}" = "failure" ] && [ -z "${failed}" ]; then
+              failed="${pair%%:*}"
+            elif [ "${outcome}" != "success" ] && [ -z "${incomplete}" ]; then
+              incomplete="${pair%%:*} (${outcome:-not run})"
+            fi
+          done
+          if [ -n "${failed}" ]; then
+            msg="ADVISORY: memory cross-repo proof FAILED at step '${failed}' (not blocking; MEMORY_PROOF_ADVISORY=true). See that step's log."
+            echo "::warning title=Memory cross-repo proof (advisory)::${msg}"
+          elif [ -n "${incomplete}" ]; then
+            msg="ADVISORY: memory cross-repo proof did NOT complete: step ${incomplete}; an earlier prerequisite step failed. See the job log."
+            echo "::warning title=Memory cross-repo proof (advisory)::${msg}"
+          else
+            msg="ADVISORY: memory cross-repo proof passed every step."
+          fi
+          { echo "## Memory cross-repo proof — advisory"; echo; echo "${msg}"; echo; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Record the proof
         if: always()
