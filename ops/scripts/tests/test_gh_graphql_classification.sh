@@ -10,6 +10,13 @@
 # text, because the failure only exists on a surface we cannot ask CI to have.
 set -euo pipefail
 
+# The library pre-classifies a hosted session (CLAUDE_CODE_REMOTE=true) or an
+# explicit rest-only override as GraphQL-unsupported before any call. Every case
+# here classifies from a stubbed gh response, so the ambient surface must not
+# decide it: inherited, CLAUDE_CODE_REMOTE=true failed T3 in every Claude cloud
+# session while it passed everywhere else.
+unset CLAUDE_CODE_REMOTE L9_GITHUB_GRAPHQL_MODE GH_GRAPHQL_UNSUPPORTED
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LIB="$SCRIPTS_DIR/lib/gh_graphql.sh"
