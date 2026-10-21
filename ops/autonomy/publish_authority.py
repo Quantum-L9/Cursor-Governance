@@ -56,12 +56,24 @@ def normalize_origin(url: str | None) -> str | None:
     if not url:
         return None
     text = url.strip()
+    scheme = False
     for prefix in ("ssh://", "git://", "https://", "http://"):
         if text.startswith(prefix):
             text = text[len(prefix) :]
+            scheme = True
             break
-    text = text.rsplit("@", 1)[-1]
-    text = text.replace(":", "/")
+    if scheme:
+        # URL form: authority is everything before the first "/"; drop the
+        # userinfo and an optional ":port" (ssh://git@github.com:22/o/n).
+        authority, _, path = text.partition("/")
+        authority = authority.rsplit("@", 1)[-1]
+        host, _, port = authority.partition(":")
+        if port and not port.isdigit():
+            return None
+        text = f"{host}/{path}"
+    else:
+        # scp form: git@github.com:owner/name — the colon separates host and path.
+        text = text.rsplit("@", 1)[-1].replace(":", "/", 1)
     if text.endswith(".git"):
         text = text[: -len(".git")]
     return text.strip("/").lower() or None

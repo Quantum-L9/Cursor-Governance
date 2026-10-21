@@ -43,6 +43,8 @@ SPELLINGS = (
     "https://github.com/cryptoxdog/IB-Odoo_19.git",
     "ssh://git@github.com/cryptoxdog/ib-odoo_19.git",
     "git://github.com/Cryptoxdog/IB-Odoo_19",
+    "ssh://git@github.com:22/cryptoxdog/IB-Odoo_19.git",
+    "https://github.com:443/cryptoxdog/IB-Odoo_19",
 )
 
 
@@ -93,6 +95,13 @@ def test_normalize_origin_matches_gate_identity(tmp_path: Path, spelling: str) -
 def test_normalize_origin_empty_is_none() -> None:
     assert pa.normalize_origin("") is None
     assert pa.normalize_origin(None) is None
+
+
+def test_normalize_origin_keeps_path_colons_and_rejects_bad_port() -> None:
+    # scp form converts only the host/path separator
+    assert pa.normalize_origin("git@github.com:owner/na:me.git") == "github.com/owner/na:me"
+    # a non-numeric "port" is not an authority we can key on
+    assert pa.normalize_origin("ssh://git@github.com:abc/owner/name") is None
 
 
 # --- registry + resolve ---------------------------------------------------------------
