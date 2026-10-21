@@ -18,9 +18,11 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1246,6 +1248,43 @@ def _gh_api(endpoint: str) -> Any:
         raise TemplateError(msg) from exc
 
 
+GitTemplate = Callable[[str], tuple[str, str]]
+
+
+def _git_template(owner: str) -> tuple[str, str]:
+    """(commit, template text) of ``<owner>/.github`` at its default-branch head, over git.
+
+    The same bytes at the same exact commit the REST route reads. Some session
+    gateways scope the REST API to the session's own repositories while still
+    serving git for others, so this is a transport swap, not another source.
+    """
+    url = f"https://github.com/{owner}/.github"
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+    def git(*args: str) -> str:
+        try:
+            proc = subprocess.run(
+                ["git", *args], capture_output=True, text=True, check=False, timeout=60, env=env
+            )
+        except subprocess.TimeoutExpired as exc:
+            msg = f"git {args[0]} {url} timed out"
+            raise TemplateError(msg) from exc
+        if proc.returncode != 0:
+            msg = f"git {args[0]} {url} failed: {proc.stderr.strip() or proc.returncode}"
+            raise TemplateError(msg)
+        return proc.stdout
+
+    heads = [line.split("\t") for line in git("ls-remote", url, "HEAD").splitlines()]
+    sha = next((row[0] for row in heads if len(row) == 2 and row[1] == "HEAD"), "")
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        msg = f"{url} HEAD did not resolve to a commit over git"
+        raise TemplateError(msg)
+    with tempfile.TemporaryDirectory() as tmp:
+        git("init", "--bare", "-q", tmp)
+        git("-C", tmp, "fetch", "-q", "--depth=1", url, sha)
+        return sha, git("-C", tmp, "show", f"{sha}:{TEMPLATE_PATH}")
+
+
 def validate_template(text: str) -> list[str]:
     """Why a template cannot be the canonical one; empty when it can."""
     errors = [
@@ -1276,8 +1315,32 @@ class TemplateSource:
     revision: str
 
 
+def _rest_template(owner: str, gh: GhApi) -> tuple[str, str]:
+    repo = gh(f"repos/{owner}/.github")
+    branch = repo.get("default_branch") if isinstance(repo, dict) else None
+    if not branch:
+        msg = f"{owner}/.github has no default branch in the API response"
+        raise TemplateError(msg)
+    commit = gh(f"repos/{owner}/.github/commits/{branch}")
+    sha = commit.get("sha", "") if isinstance(commit, dict) else ""
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        msg = f"{owner}/.github@{branch} did not resolve to a commit"
+        raise TemplateError(msg)
+    doc = gh(f"repos/{owner}/.github/contents/{TEMPLATE_PATH}?ref={sha}")
+    is_file = isinstance(doc, dict) and doc.get("type") == "file"
+    if not is_file or doc.get("encoding") != "base64":
+        msg = f"{owner}/.github@{sha}:{TEMPLATE_PATH} is not a base64 file object"
+        raise TemplateError(msg)
+    return sha, base64.b64decode(doc.get("content", "")).decode("utf-8")
+
+
 def resolve_template(
-    workspace: Path, owner: str, name: str, *, gh: GhApi = _gh_api
+    workspace: Path,
+    owner: str,
+    name: str,
+    *,
+    gh: GhApi = _gh_api,
+    git: GitTemplate = _git_template,
 ) -> TemplateSource:
     """The organization's canonical PR template at one exact commit.
 
@@ -1297,22 +1360,15 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
-        repo = gh(f"repos/{owner}/.github")
-        branch = repo.get("default_branch") if isinstance(repo, dict) else None
-        if not branch:
-            msg = f"{owner}/.github has no default branch in the API response"
-            raise TemplateError(msg)
-        commit = gh(f"repos/{owner}/.github/commits/{branch}")
-        sha = commit.get("sha", "") if isinstance(commit, dict) else ""
-        if not re.fullmatch(r"[0-9a-f]{40}", sha):
-            msg = f"{owner}/.github@{branch} did not resolve to a commit"
-            raise TemplateError(msg)
-        doc = gh(f"repos/{owner}/.github/contents/{TEMPLATE_PATH}?ref={sha}")
-        is_file = isinstance(doc, dict) and doc.get("type") == "file"
-        if not is_file or doc.get("encoding") != "base64":
-            msg = f"{owner}/.github@{sha}:{TEMPLATE_PATH} is not a base64 file object"
-            raise TemplateError(msg)
-        text = base64.b64decode(doc.get("content", "")).decode("utf-8")
+        try:
+            sha, text = _rest_template(owner, gh)
+        except TemplateError as rest_error:
+            # REST unreachable is a transport failure; read the same commit over git.
+            try:
+                sha, text = git(owner)
+            except TemplateError as git_error:
+                msg = f"{rest_error}; git transport also failed: {git_error}"
+                raise TemplateError(msg) from git_error
     revision = f"{owner}/.github@{sha}"
     errors = validate_template(text)
     if errors:
