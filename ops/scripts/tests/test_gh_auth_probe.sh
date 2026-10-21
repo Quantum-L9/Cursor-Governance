@@ -73,4 +73,42 @@ if grep -q 'gh auth status 2>/dev/null || echo' "$SETUP"; then
 fi
 pass "setup.sh uses the capability probe"
 
+# T6 — CG-10: one verdict per transport. The split that hid an unreadable PR
+# template: REST user works, the org template read is refused, GraphQL 403s.
+cat > "$TMP_ROOT/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+case "$*" in
+  "api user") exit 0 ;;
+  "api repos/Quantum-L9/.github/contents/.github/pull_request_template.md") exit 1 ;;
+  "api graphql -f query={viewer{login}}") exit 1 ;;
+esac
+exit 1
+STUB
+chmod +x "$TMP_ROOT/bin/gh"
+cat > "$TMP_ROOT/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+header="$(cat)"
+case "$header" in "Authorization: Bearer proxy-injected") printf '200' ;; *) printf '401' ;; esac
+STUB
+chmod +x "$TMP_ROOT/bin/curl"
+caps="$(PATH="$TMP_ROOT/bin:$PATH" GH_TOKEN=proxy-injected bash -c "source '$LIB'; gh_capability_probe Quantum-L9")"
+for want in rest_user=OK org_template_read=DENIED graphql=DENIED direct_api=OK; do
+  grep -qx "$want" <<<"$caps" || fail "expected $want; got: $caps"
+done
+pass "each GitHub transport gets its own verdict"
+
+# T7 — what cannot be asked is UNKNOWN, never OK: no owner, no token, no gh.
+caps="$(PATH="$TMP_ROOT/empty" GH_TOKEN="" GITHUB_TOKEN="" /bin/bash -c "source '$LIB'; gh_capability_probe")"
+for want in rest_user=UNKNOWN org_template_read=UNKNOWN graphql=UNKNOWN direct_api=UNKNOWN; do
+  grep -qx "$want" <<<"$caps" || fail "expected $want; got: $caps"
+done
+pass "an unaskable capability is UNKNOWN, not OK"
+
+# T8 — the token never reaches curl's argv.
+grep -q 'H @-' "$LIB" || fail "direct_api must pass its header on stdin"
+if grep -Eq 'curl[^|]*Bearer' "$LIB"; then
+  fail "the bearer token is on a curl command line"
+fi
+pass "the direct API probe keeps the token out of argv"
+
 echo "OK: $PASS assertions"

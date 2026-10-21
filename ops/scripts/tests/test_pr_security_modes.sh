@@ -114,4 +114,31 @@ grep -Fq 'env -u UV_LOCKED uv export --frozen' "$SECURITY" \
   || fail "uv.lock export must drop the gate's UV_LOCKED before --frozen"
 pass "uv.lock export runs under the gate's UV_LOCKED=1"
 
+# T9 — CG-08: the bootstrap installs gitleaks into ~/.local/bin and puts that
+# directory on PATH only for its own process. A gate shell whose PATH lacks it
+# must still find the installed binary, not report it NOT INSTALLED.
+mkdir -p "$TMP_ROOT/.local/bin"
+cat >"$TMP_ROOT/.local/bin/gitleaks" <<'SH'
+#!/bin/sh
+case "$1" in
+  version) echo "gitleaks version 8.24.3" ;;
+  dir) [ "${2:-}" = "--help" ] && exit 0; exit 0 ;;
+esac
+exit 0
+SH
+chmod +x "$TMP_ROOT/.local/bin/gitleaks"
+set +e
+found_out="$(run_mode gate)"
+set -e
+if grep -q "gitleaks is NOT INSTALLED" <<<"$found_out"; then
+  fail "an installed ~/.local/bin/gitleaks was reported missing on a bare PATH"
+fi
+grep -q "PASS: gitleaks" <<<"$found_out" \
+  || fail "the ~/.local/bin gitleaks did not run"
+if grep -q "WARN: gitleaks" <<<"$found_out"; then
+  fail "the bootstrap pin was not read: a pinned 8.24.3 drew a version warning"
+fi
+rm -f "$TMP_ROOT/.local/bin/gitleaks"
+pass "gitleaks in ~/.local/bin is found on a bare PATH and checked against the bootstrap pin"
+
 echo "OK: $PASS assertions"

@@ -124,6 +124,27 @@ def remove_managed(path: Path) -> None:
         shutil.rmtree(path)
 
 
+def path_is_tracked(path: Path) -> bool:
+    """True when git owns ``path`` in the repository that contains it.
+
+    A consumer may track its own ``.claude/skills`` links and manifest; those
+    are repository objects, not projection state, and SessionStart must never
+    rewrite them. Reuses the settings reconciler's probe (one implementation of
+    tracked-ness; a git timeout answers True). Probing from the entry's own
+    parent resolves the repository that actually contains it, whichever mount
+    root the adapter fanned out to. An unanswerable question takes the branch
+    that destroys nothing.
+    """
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        from reconcile_claude_settings import _path_is_git_tracked
+    except Exception:  # noqa: BLE001
+        return True
+    return _path_is_git_tracked(path.parent, path.name)
+
+
 def is_l9_duplicate(name: str, destination: Path) -> bool:
     """True when an L9 registry skill exists as a real directory (forbidden copy)."""
     if not name.startswith("l9-"):
@@ -183,6 +204,8 @@ def reconcile_scope(
             ):
                 if check:
                     result.drift.append(f"symlink-outside-ssot:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -192,6 +215,8 @@ def reconcile_scope(
             if replace_l9_duplicates and mode == "symlink" and is_l9_duplicate(name, destination):
                 if check:
                     result.drift.append(f"l9-duplicate:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -202,6 +227,8 @@ def reconcile_scope(
             if mode == "symlink" and name.startswith("l9-") and destination.is_symlink():
                 if check:
                     result.drift.append(f"wrong-ssot-target:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -210,6 +237,8 @@ def reconcile_scope(
             if name in previous:
                 if check:
                     result.drift.append(f"stale-managed:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -228,6 +257,8 @@ def reconcile_scope(
         if check:
             if stale_path.exists() or stale_path.is_symlink():
                 result.drift.append(f"obsolete:{stale}")
+        elif (stale_path.exists() or stale_path.is_symlink()) and path_is_tracked(stale_path):
+            result.conflicts.append(f"tracked-owned:{stale}")
         else:
             remove_managed(stale_path)
             result.removed.append(stale)
@@ -239,6 +270,10 @@ def reconcile_scope(
         # list, which silently stopped the obsolete sweep above from ever
         # reclaiming removed skills for the entire scope.
         conflicted = {entry.split(":", 1)[1] for entry in result.conflicts if ":" in entry}
+        if path_is_tracked(state_path):
+            # The consumer committed its manifest: it is theirs, not ours.
+            result.drift.append(f"tracked-manifest:{STATE_NAME}")
+            return result
         atomic_json(
             state_path,
             {

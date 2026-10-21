@@ -124,8 +124,36 @@ cd "$WS"
 # Corpus + generated heal + desktop wiring (gate owns check_governance_wiring.sh).
 # Pre-commit ruff/ruff-format are skipped: locked-venv ruff is the one writer.
 _CORPUS_SKIP="sync-generated-artifacts,repo-hygiene,legacy-doctrine-residue,rules-check,skills-check,symlinks-check,ruff,ruff-format,commit-verification-contract"
-_READER_HOOKS="check-merge-conflict,check-added-large-files,check-yaml,no-hardcoded-paths,gh-package-deps-preflight"
-_WRITER_HOOKS="end-of-file-fixer,trailing-whitespace"
+# Pass membership and locality are declared once per hook, in
+# ops/config/precommit-hook-contract.json (mode: read_only|writer, locality:
+# governance|any), and validate_precommit_hook_contract.py keeps that contract
+# in lockstep with .pre-commit-config.yaml. Read them; never re-list them here.
+# A hand-kept list left cursor-skill-projection, max-velocity and adr-identity
+# in neither pass list, so each ran in both passes, and left two
+# governance-local hooks out of the consumer skip. Unreadable contract: stop,
+# because an empty list would silently gate nothing.
+HOOK_CONTRACT="$GOV_ROOT/ops/config/precommit-hook-contract.json"
+if ! _hook_lists="$(python3 - "$HOOK_CONTRACT" <<'PY'
+import json
+import sys
+
+hooks = json.load(open(sys.argv[1], encoding="utf-8"))["hooks"]
+for want in (("mode", "read_only"), ("mode", "writer"), ("locality", "governance")):
+    print(",".join(sorted(h for h, e in hooks.items() if e.get(want[0]) == want[1])))
+PY
+)"; then
+  echo "FAIL: cannot read the hook contract at $HOOK_CONTRACT" >&2
+  exit 1
+fi
+{
+  IFS= read -r _READER_HOOKS
+  IFS= read -r _WRITER_HOOKS
+  IFS= read -r _GOV_ONLY_SKIP
+} <<<"$_hook_lists"
+if [[ -z "$_READER_HOOKS" || -z "$_WRITER_HOOKS" ]]; then
+  echo "FAIL: hook contract at $HOOK_CONTRACT declares no reader or no writer hooks" >&2
+  exit 1
+fi
 # Writer pass skips every reader. Reader pass skips every writer. Disjoint.
 _WRITER_SKIP="${_CORPUS_SKIP},${_READER_HOOKS}"
 _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
@@ -168,7 +196,11 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # Quantum-L9/.github it rejects that repository's accepted ADR-012..014 headings
 # and demands an index that repository does not have, so there is nothing for it
 # to check there. It stays enforced on the governance configuration.
-_GOV_ONLY_SKIP="gh-package-deps-preflight,max-velocity,adr-identity"
+#
+# The list itself is every hook the contract declares `locality: governance`
+# (read above), which now also covers cursor-skill-projection (entry
+# environment/agents/adapters/cursor/validate_skill_projection.py, `files:`
+# matching any consumer `skills/` change) and no-hardcoded-paths.
 if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
@@ -217,6 +249,86 @@ _run_locked_ruff_writer() {
     return 0
   fi
   echo "ruff (changed): $(grep -c . "$py_list") file(s)"
+  if [[ ${#RUFF_CMD[@]} -eq 0 ]]; then
+    _resolve_ruff || return $?
+  fi
+  xargs "${RUFF_CMD[@]}" check --fix <"$py_list"
+  xargs "${RUFF_CMD[@]}" format <"$py_list"
+}
+
+# The ruff that formats a workspace is the one that workspace pins. Governance's
+# own .venv ruff is not a compatible fallback merely because it exists: run
+# against a consumer pinning 0.16.0 it applied 0.16.1, so the gate rewrote files
+# the consumer's CI then disagreed with. An exact pin (`ruff==X` in
+# requirements*.txt, or [tool.ruff] required-version "==X") is satisfied by the
+# workspace .venv when its version matches, else by `uv tool run --from
+# ruff==X`; otherwise the gate stops BEFORE any writer, naming the missing
+# prerequisite. A workspace that pins nothing keeps the existing order.
+RUFF_CMD=()
+_consumer_ruff_pin() {
+  local f pin
+  for f in "$WS"/requirements*.txt; do
+    [[ -f "$f" ]] || continue
+    pin="$(sed -nE 's/^[[:space:]]*ruff[[:space:]]*==[[:space:]]*([^[:space:];#,]+).*/\1/p' "$f" | head -1)"
+    if [[ -n "$pin" ]]; then
+      printf '%s\n' "$pin"
+      return 0
+    fi
+  done
+  [[ -f "$WS/pyproject.toml" ]] || return 0
+  python3 - "$WS/pyproject.toml" <<'PY' 2>/dev/null || true
+import re
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    data = tomllib.load(handle)
+spec = str(data.get("tool", {}).get("ruff", {}).get("required-version", ""))
+if spec.startswith("==") and "," not in spec and "*" not in spec:
+    print(spec[2:].strip())
+    raise SystemExit(0)
+# An exact pin declared as a dependency: PEP 621 dependencies and extras, and
+# PEP 735 dependency groups (a group's {include-group} entries are not
+# requirements and are skipped).
+project = data.get("project", {})
+requirements = list(project.get("dependencies", []))
+for group in (project.get("optional-dependencies", {}), data.get("dependency-groups", {})):
+    for entries in group.values():
+        requirements.extend(entry for entry in entries if isinstance(entry, str))
+pin = re.compile(r"^\s*ruff\s*==\s*([^\s;,]+)\s*(;.*)?$", re.IGNORECASE)
+for requirement in requirements:
+    match = pin.match(requirement)
+    if match and "*" not in match.group(1):
+        print(match.group(1))
+        break
+PY
+}
+
+_ruff_version() {
+  "$@" --version 2>/dev/null | awk 'NR == 1 {print $2}'
+}
+
+_resolve_ruff() {
+  local pin=""
+  if [[ "$WS" != "$GOV_ROOT" ]]; then
+    pin="$(_consumer_ruff_pin)"
+  fi
+  if [[ -n "$pin" ]]; then
+    if [[ -x "$WS/.venv/bin/ruff" && "$(_ruff_version "$WS/.venv/bin/ruff")" == "$pin" ]]; then
+      RUFF_CMD=("$WS/.venv/bin/ruff")
+    elif command -v uv >/dev/null 2>&1 \
+      && [[ "$(_ruff_version uv tool run --from "ruff==$pin" ruff)" == "$pin" ]]; then
+      RUFF_CMD=(uv tool run --from "ruff==$pin" ruff)
+    else
+      echo "FAIL: TOOLCHAIN_UNAVAILABLE ruff==$pin — $WS pins ruff $pin; neither" >&2
+      echo "      $WS/.venv/bin/ruff nor 'uv tool run --from ruff==$pin' provides it." >&2
+      echo "      Governance's ruff is never substituted. Provision the workspace .venv," >&2
+      echo "      or let uv fetch ruff (allowlist pypi.org / files.pythonhosted.org)." >&2
+      return 1
+    fi
+    echo "ruff: ${RUFF_CMD[*]} (workspace pin ruff==$pin)"
+    return 0
+  fi
   local _ruff="$WS/.venv/bin/ruff"
   if [[ ! -x "$_ruff" ]]; then
     _ruff="$GOV_ROOT/.venv/bin/ruff"
@@ -228,8 +340,10 @@ _run_locked_ruff_writer() {
     echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)" >&2
     return 1
   fi
-  xargs "$_ruff" check --fix <"$py_list"
-  xargs "$_ruff" format <"$py_list"
+  RUFF_CMD=("$_ruff")
+  if [[ "$WS" != "$GOV_ROOT" ]]; then
+    echo "NOTE: $WS pins no ruff; using $_ruff $(_ruff_version "$_ruff")"
+  fi
 }
 
 _hard_stop_tracked_dirt() {
@@ -262,6 +376,12 @@ if [[ "$STAGE" == "readers" ]]; then
 fi
 
 # writers or unset (standalone): run deterministic writer hooks before readers.
+
+# Resolve the pinned ruff before any writer touches the tree, so a missing
+# toolchain fails on a clean worktree instead of after the writer pass.
+if grep -qE '\.(py|pyi)$' "$tmp"; then
+  _resolve_ruff || exit $?
+fi
 
 echo "--- pre-commit writers (once) ---"
 _run_hooks "$_WRITER_SKIP" && pc_rc=0 || pc_rc=$?
