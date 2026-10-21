@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - 2026-10-21
+
+`scripts/verify_canonical_binding.py` is now the one projection-bundle verifier for every consumer, and holds the one admission resolver.
+
+- `ProfileSpec` parameterizes profile identity, accepted lock schemas, the payload-schema pin and record-level re-selection. `resolve_profile`, `verify_receipt`, `verify_component` and `verify_profile_bundle` carry the bundle checks; Coding Agent's `--bundle` mode runs through them unchanged (its 48 cases pass as before).
+- `resolve_authority_main` and `resolve_admission`: integration into the independently resolved main, currency there, and an explicit decision per exact candidate digest. `governance/authority-bindings/coding-agent-execution.yaml` records its decision (`.github#179`) and `ops/scripts/coding_projection_status.py` judges it; the live status stays `CURRENT`.
+- `skills/l9-global-architect/scripts/verify_architecture_intelligence.py` consumes this module instead of duplicating it.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.5 - 2026-10-21
 
 The host gate trusts no writable label (re-audit findings R769-01 and R769-02).

@@ -2,22 +2,26 @@
 """Verify the producer-emitted architecture-intelligence bundle GAR consumes.
 
 GAR is the consumer here, never the producer. This verifier executes no selector, merges or
-places no payload, and authors no schema. It checks only what the producer already claimed:
-file bytes against the bundle lock, envelope digests, profile and schema pins against
-``integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml``, exact source coverage, that each
-namespace of the composed view is byte-for-byte its component's payload (the contract's
-placement invariant), the producer's receipts, and the authority status of the revision the bundle names.
+places no payload, and authors no schema. It holds no bundle verification of its own: every
+component (bytes, envelope, provenance, currency, receipt, producer), the authority checkout,
+and the admission decision are checked by the one consumer verifier Coding Agent uses,
+``skills/l9-coding-agent/scripts/verify_canonical_binding.py``, parameterized by this binding.
+What stays here is what only GAR consumes: the composed view (its envelope, components, the
+contract's placement invariant that each namespace is byte-for-byte its component's payload,
+and its composition receipt), the run-state slot, and citation.
 
-Two questions are kept apart. BUNDLE_VERIFIED answers "is this the coherent, current output
-the bundle claims to be?". ADMITTED_AND_CURRENT additionally answers "is that revision admitted
-global law?", and is resolved independently of the bundle lock: integration into the
-independently resolved tip of the authority's main, content currency at that tip, and an
-admission decision record bound to the exact revision. The verifier's digests are recomputable,
-so neither status attests that the canonical compiler produced the bytes; production is proven
-by the CI replay the binding names (AIB-006).
+Two questions are kept apart. BUNDLE_VERIFIED answers "is this the coherent output the bundle
+claims to be?". ADMITTED_AND_CURRENT additionally answers "is that revision admitted global
+law?", resolved independently of the bundle lock by the shared admission resolver: integration
+into the independently resolved tip of the authority's main, content currency at that tip, an
+explicit decision record bound to each exact candidate digest, and then the bundle re-verified
+against that tip with every law byte read from hash-checked commit objects. The digests are
+recomputable, so neither status attests that the canonical compiler produced the bytes;
+production is proven by the CI replay the binding names (AIB-006).
 
-Modes: ``admitted`` (default) loads only ADMITTED_AND_CURRENT and requires an authority checkout;
-``candidate`` permits non-authoritative inspection of a BUNDLE_VERIFIED bundle.
+Modes: ``admitted`` (default) loads only ADMITTED_AND_CURRENT and requires an authority checkout
+whose HEAD is its main; ``candidate`` permits non-authoritative inspection of a BUNDLE_VERIFIED
+bundle.
 
 Outcomes: ADMITTED_AND_CURRENT (0), REJECTED (1), BLOCKED (3), STALE (4), BUNDLE_VERIFIED (5);
 2 is a usage error. There is no fallback to the historical observer projection or to any other
@@ -27,12 +31,11 @@ input.
 from __future__ import annotations
 
 import argparse
-import hashlib
+import importlib.util
 import json
-import re
-import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 try:
@@ -48,37 +51,44 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
 PACK = Path(__file__).resolve().parents[1]
 REPO = PACK.parents[1]
 DEFAULT_BINDING = PACK / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+CORE_PATH = PACK.parent / "l9-coding-agent/scripts/verify_canonical_binding.py"
 EXIT = {"ADMITTED_AND_CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUNDLE_VERIFIED": 5}
-AUTHORITY_MAIN_REF = "refs/remotes/origin/main"
 BINDING_REF = "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
-LOCK_SCHEMA = "l9.projection-bundle/v1"
-PROJECTION_ENVELOPE = "l9.projection-artifact/v1"
 COMPOSED_ENVELOPE = "l9.composed-projection/v1"
-RECEIPT_SCHEMA = "l9.compiler-receipt/v1"
-RECEIPT_TYPE = "l9.receipt/compilation@1"
-PRODUCER = "l9-semantic-compiler"
-_SHA = re.compile(r"^[0-9a-f]{40}$")
+PROFILES_PATH = "semantics/projection_profiles.yaml"
+COMPOSITIONS_PATH = "semantics/composition_profiles.yaml"
 
 
-class Outcome(Exception):
-    def __init__(self, status: str, reason: str, **detail: Any) -> None:
-        super().__init__(reason)
-        self.status = status
-        self.reason = reason
-        self.detail = detail
+def _load_core() -> ModuleType:
+    """The shared consumer verifier, loaded by path as tools/authority/verify_coding_projection.py
+    loads it. The pack forbids residue directories, so the import writes no bytecode."""
+    spec = importlib.util.spec_from_file_location("l9_projection_verifier_core", CORE_PATH)
+    if spec is None or spec.loader is None or not CORE_PATH.is_file():
+        print(
+            json.dumps(
+                {"status": "BLOCKED", "reason": "VERIFIER_CORE_UNRESOLVED", "path": str(CORE_PATH)},
+                sort_keys=True,
+            )
+        )
+        sys.exit(3)
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
 
 
-def content_digest(value: Any) -> str:
-    """sha256 of canonical JSON (sorted keys, compact separators, UTF-8): the producer's
-    published digest convention for envelopes and receipts."""
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
-        "utf-8"
-    )
-    return "sha256:" + hashlib.sha256(encoded).hexdigest()
-
-
-def bytes_digest(raw: bytes) -> str:
-    return "sha256:" + hashlib.sha256(raw).hexdigest()
+core = _load_core()
+Outcome = core.Outcome
+content_digest = core.content_digest
+bytes_digest = core.bytes_digest
+resolve_authority_main = core.resolve_authority_main
+# The architecture lock is cut under the shared lock schema (the transitional
+# architecture-only id retired with the re-cut lock).
+LOCK_SCHEMAS = (core.LOCK_SCHEMA,)
 
 
 def _without(document: dict[str, Any], field: str) -> dict[str, Any]:
@@ -106,107 +116,83 @@ def load_binding(path: Path) -> dict[str, Any]:
     return binding
 
 
+def profile_spec(binding: dict[str, Any]) -> Any:
+    """The binding's coordinates for the shared verifier; it selects, it adds no check."""
+    pins = binding["input"]["authority"]
+    return core.ProfileSpec(
+        ref=pins["projection_profile_ref"],
+        profile_class=pins["projection_profile_class"],
+        consumer=pins["projection_profile_consumer"],
+        lock_schemas=LOCK_SCHEMAS,
+        payload_schema=pins["projection_payload_schema"],
+    )
+
+
 def _expect(condition: bool, reason: str, **detail: Any) -> None:
     if not condition:
         raise Outcome("REJECTED", reason, **detail)
 
 
-def _receipt(
+def _pins(binding: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]:
+    pins = binding["input"]["authority"]
+    return (
+        {"ref": pins["projection_profile_ref"], "digest": pins["projection_profile_digest"]},
+        {"ref": pins["composition_profile_ref"], "digest": pins["composition_profile_digest"]},
+    )
+
+
+def _composed_receipt(
     bundle: Path,
-    rel: str,
-    subject: str,
-    output_digest: str,
-    profile: dict[str, str],
-    revision: str,
-    repository: str,
-    operation: str,
-) -> dict[str, Any]:
-    _, receipt = _read_json(bundle / rel)
-    _expect(
-        isinstance(receipt, dict)
-        and receipt.get("schema") == RECEIPT_SCHEMA
-        and receipt.get("receipt_type") == RECEIPT_TYPE,
-        "RECEIPT_SCHEMA_MISMATCH",
-        receipt=rel,
+    lock: dict[str, Any],
+    composed: dict[str, Any],
+    binding: dict[str, Any],
+    tree: Any = None,
+) -> None:
+    """The composition receipt, through the shared receipt check, bound to every component."""
+    projection_pin, composition_pin = _pins(binding)
+    entry = lock["composed"]
+    receipt = core.verify_receipt(
+        bundle / entry["receipt"],
+        tree=tree,
+        operation="composition",
+        subject=f"{composition_pin['ref']}#{projection_pin['ref']}",
+        output_digest=composed["composition_digest"],
+        profile=composition_pin,
+        inputs=[
+            {"ref": c["projection_ref"], "digest": c["projection_digest"]}
+            for c in composed["components"]
+        ],
+        payload_schema=binding["input"]["authority"]["composed_payload_schema"],
+        revision=lock["authority"]["revision"],
+        source_class="composed",
     )
-    # A schema-valid receipt for another operation (derivation, rendering) proves nothing
-    # about the projection or composition being consumed.
-    _expect(
-        receipt.get("operation") == operation,
-        "RECEIPT_OPERATION_MISMATCH",
-        receipt=rel,
-        expected=operation,
-        observed=receipt.get("operation"),
-    )
-    _expect(
-        receipt.get("receipt_digest") == content_digest(_without(receipt, "receipt_digest")),
-        "RECEIPT_DIGEST_MISMATCH",
-        receipt=rel,
-    )
-    _expect(
-        (receipt.get("producer_identity") or {}).get("compiler") == PRODUCER,
-        "RECEIPT_PRODUCER_MISMATCH",
-        receipt=rel,
-    )
-    _expect(receipt.get("exact_subject_ref") == subject, "RECEIPT_SUBJECT_MISMATCH", receipt=rel)
-    _expect(
-        (receipt.get("output") or {}).get("digest") == output_digest,
-        "RECEIPT_OUTPUT_MISMATCH",
-        receipt=rel,
-    )
-    _expect(receipt.get("profile") == profile, "RECEIPT_PROFILE_MISMATCH", receipt=rel)
-    governing = receipt.get("governing_coordinates") or {}
-    _expect(
-        governing.get("repository") == repository and governing.get("revision") == revision,
-        "RECEIPT_REVISION_MISMATCH",
-        receipt=rel,
-    )
-    _expect(
-        receipt.get("result") == "pass",
-        "RECEIPT_RESULT_NOT_PASS",
-        receipt=rel,
-        result=receipt.get("result"),
-        unresolved=(receipt.get("verification_basis") or {}).get("unresolved_criteria"),
-    )
-    return receipt
-
-
-def _payload_schema(receipt: dict[str, Any], expected: str, rel: str) -> None:
-    criterion = ((receipt.get("verification_basis") or {}).get("criteria") or {}).get(
-        "payload_schema"
-    ) or {}
-    _expect(
-        criterion.get("status") == "pass" and criterion.get("schema") == expected,
-        "PAYLOAD_SCHEMA_MISMATCH",
-        receipt=rel,
-        expected=expected,
-        observed=criterion.get("schema"),
-    )
+    producer, lock_producer = receipt["producer_identity"], lock["producer"]
+    if producer.get("compiler") != lock_producer.get("compiler") or producer.get(
+        "version"
+    ) != lock_producer.get("version"):
+        raise Outcome("REJECTED", "LOCK_PRODUCER_MISMATCH", source_class="composed")
 
 
 def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
+    """Structural verification: the bundle is the coherent output it claims to be.
+
+    Every component goes through the shared ``verify_component`` without an authority checkout;
+    the composed view is GAR's own consumption and is checked here."""
     pins = binding["input"]["authority"]
     if not (bundle / "bundle.lock.json").is_file():
         raise Outcome("BLOCKED", "ARCHITECTURE_INTELLIGENCE_BUNDLE_ABSENT", bundle=str(bundle))
     _, lock = _read_json(bundle / "bundle.lock.json")
-    _expect(isinstance(lock, dict) and lock.get("schema") == LOCK_SCHEMA, "LOCK_SCHEMA_MISMATCH")
+    _expect(isinstance(lock, dict) and lock.get("schema") in LOCK_SCHEMAS, "LOCK_SCHEMA_MISMATCH")
     authority = lock.get("authority") or {}
     repository, revision = authority.get("repository"), authority.get("revision")
     if not (
         isinstance(repository, str)
         and repository == pins["repository"]
         and isinstance(revision, str)
-        and _SHA.match(revision)
+        and core._SHA1.fullmatch(revision)
     ):
         raise Outcome("REJECTED", "AUTHORITY_IDENTITY_MISMATCH", observed=authority)
-    projection_pin = {
-        "ref": pins["projection_profile_ref"],
-        "digest": pins["projection_profile_digest"],
-    }
-    composition_pin = {
-        "ref": pins["composition_profile_ref"],
-        "digest": pins["composition_profile_digest"],
-    }
+    projection_pin, composition_pin = _pins(binding)
     _expect(
         lock.get("projection_profile") == projection_pin,
         "PROJECTION_PROFILE_MISMATCH",
@@ -219,6 +205,18 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
         expected=composition_pin,
         observed=lock.get("composition_profile"),
     )
+    # Without an authority checkout the producer role cannot be read from the owner's
+    # vocabulary; the binding's named producer stands in, and admitted mode checks the role.
+    lock_producer = lock.get("producer")
+    named = binding["input"]["producer"]["compiler"]
+    if not isinstance(lock_producer, dict) or lock_producer.get("compiler") != named:
+        raise Outcome(
+            "REJECTED",
+            "LOCK_PRODUCER_NOT_ASSIGNED_PROJECTION_ROLE",
+            observed=lock_producer,
+            assigned=[named],
+            basis="binding",
+        )
 
     expected_classes = list(pins["expected_source_classes"])
     listed = lock.get("components")
@@ -236,51 +234,16 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
     projections: dict[str, dict[str, Any]] = {}
     for entry in components:
         cls = entry["source_class"]
-        raw, artifact = _read_json(bundle / entry["path"])
-        _expect(
-            bytes_digest(raw) == entry.get("sha256"), "BUNDLE_BYTES_MISMATCH", path=entry["path"]
-        )
-        _expect(
-            isinstance(artifact, dict) and artifact.get("schema") == PROJECTION_ENVELOPE,
-            "WRONG_ENVELOPE_SCHEMA",
-            path=entry["path"],
-            observed=artifact.get("schema") if isinstance(artifact, dict) else None,
-        )
-        _expect(
-            artifact.get("projection_digest")
-            == content_digest(_without(artifact, "projection_digest")),
-            "PROJECTION_DIGEST_MISMATCH",
-            path=entry["path"],
-        )
-        _expect(
-            {
-                "ref": artifact.get("projection_profile_ref"),
-                "digest": artifact.get("projection_profile_digest"),
-            }
-            == projection_pin,
-            "PROJECTION_PROFILE_MISMATCH",
-            path=entry["path"],
-        )
-        _expect(
-            artifact.get("source_ref") == entry.get("source_ref")
-            and artifact.get("source_digest") == entry.get("source_digest")
-            and artifact.get("projection_digest") == entry.get("projection_digest"),
-            "COMPONENT_PROVENANCE_MISMATCH",
-            path=entry["path"],
-        )
-        subject = f"{projection_pin['ref']}#{artifact['source_ref']}"
-        receipt = _receipt(
+        _, projections[cls] = core.verify_component(
             bundle,
-            entry["receipt"],
-            subject,
-            artifact["projection_digest"],
-            projection_pin,
-            revision,
-            repository,
-            "projection",
+            entry,
+            {"source_class": cls, "source_ref": entry.get("source_ref")},
+            tree=None,
+            profile=projection_pin,
+            payload_schema=pins["projection_payload_schema"],
+            revision=revision,
+            lock_producer=lock_producer,
         )
-        _payload_schema(receipt, pins["projection_payload_schema"], entry["receipt"])
-        projections[cls] = artifact
 
     composed_entry = lock.get("composed") or {}
     raw, composed = _read_json(bundle / str(composed_entry.get("path")))
@@ -329,41 +292,14 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
         if content_digest(payload[cls]) != content_digest(projections[cls]["payload"])
     ]
     _expect(not diverged, "NAMESPACE_PAYLOAD_DIVERGENCE", source_classes=diverged)
-    composed_subject = f"{composition_pin['ref']}#{projection_pin['ref']}"
-    receipt = _receipt(
-        bundle,
-        composed_entry["receipt"],
-        composed_subject,
-        composed["composition_digest"],
-        composition_pin,
-        revision,
-        repository,
-        "composition",
-    )
-    _payload_schema(receipt, pins["composed_payload_schema"], composed_entry["receipt"])
+    _composed_receipt(bundle, lock, composed, binding)
     return {
         "lock": lock,
         "composition_digest": composed["composition_digest"],
+        "composed": composed,
         "composed_path": composed_entry["path"],
         "component_digests": {c["source_class"]: c["projection_digest"] for c in components},
     }
-
-
-def _git_bytes(root: Path, revision: str, path: str) -> bytes:
-    completed = subprocess.run(
-        ["git", "-C", str(root), "show", f"{revision}:{path}"],
-        capture_output=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise Outcome("BLOCKED", "AUTHORITY_OBJECT_UNRESOLVED", revision=revision, path=path)
-    return completed.stdout
-
-
-def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", "-C", str(root), *args], capture_output=True, text=True, check=False
-    )
 
 
 def _require_root(root: Path) -> None:
@@ -375,7 +311,7 @@ def verify_currentness(
     root: Path, expect_revision: str, lock: dict[str, Any], binding: dict[str, Any]
 ) -> None:
     """The bundle is current at *expect_revision*: same revision, same source and profile bytes."""
-    if not _SHA.match(expect_revision):
+    if not core._SHA1.fullmatch(expect_revision):
         raise Outcome("BLOCKED", "AUTHORITY_PIN_MALFORMED", revision=expect_revision)
     _require_root(root)
     observed = lock["authority"]["revision"]
@@ -390,14 +326,16 @@ def verify_content_at(
     root: Path, expect_revision: str, lock: dict[str, Any], binding: dict[str, Any]
 ) -> None:
     """Every source and profile the bundle was produced from is byte-identical at *expect_revision*,
-    and the binding's expected source classes are exactly that profile's sources."""
-    registry = yaml.safe_load(_git_bytes(root, expect_revision, "semantics/canonical_sources.yaml"))
-    paths = {s["id"]: s["path"] for s in registry.get("sources", []) if isinstance(s, dict)}
+    and the binding's expected source classes are exactly that profile's sources. Law bytes are
+    read from hash-checked commit objects (the shared ``PinnedTree``)."""
+    tree = core.PinnedTree(root, expect_revision)
+    registry = tree.load(core.SOURCES_PATH, "SOURCE_REGISTRY")
+    paths = {s["id"]: s["path"] for s in (registry or {}).get("sources", []) if isinstance(s, dict)}
     for component in lock["components"]:
         path = paths.get(component["source_ref"])
         if path is None:
             raise Outcome("STALE", "SOURCE_UNREGISTERED", source_ref=component["source_ref"])
-        current = bytes_digest(_git_bytes(root, expect_revision, path))
+        current = bytes_digest(tree.read(path, "CANONICAL_SOURCE"))
         if current != component["source_digest"]:
             raise Outcome(
                 "STALE",
@@ -409,21 +347,23 @@ def verify_content_at(
     pins = binding["input"]["authority"]
     for catalog_path, collection, ref, pinned in (
         (
-            "semantics/projection_profiles.yaml",
+            PROFILES_PATH,
             "projection_profiles",
             pins["projection_profile_ref"],
             pins["projection_profile_digest"],
         ),
         (
-            "semantics/composition_profiles.yaml",
+            COMPOSITIONS_PATH,
             "profiles",
             pins["composition_profile_ref"],
             pins["composition_profile_digest"],
         ),
     ):
-        catalog = yaml.safe_load(_git_bytes(root, expect_revision, catalog_path))
+        catalog = tree.load(catalog_path, "PROFILE_CATALOG")
         entries = [
-            p for p in catalog.get(collection, []) if isinstance(p, dict) and p.get("id") == ref
+            p
+            for p in (catalog or {}).get(collection, [])
+            if isinstance(p, dict) and p.get("id") == ref
         ]
         if len(entries) != 1:
             raise Outcome("STALE", "PROFILE_NOT_RESOLVABLE", ref=ref, matches=len(entries))
@@ -449,61 +389,42 @@ def verify_content_at(
             )
 
 
-def resolve_authority_main(root: Path, override: str | None) -> str:
-    """The tip of the authority's main, resolved from the authority checkout, never the lock."""
-    _require_root(root)
-    if override is not None:
-        if not _SHA.match(override):
-            raise Outcome("BLOCKED", "AUTHORITY_PIN_MALFORMED", revision=override)
-        if _git(root, "cat-file", "-e", f"{override}^{{commit}}").returncode != 0:
-            raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", revision=override)
-        return override
-    resolved = _git(root, "rev-parse", "--verify", "--quiet", f"{AUTHORITY_MAIN_REF}^{{commit}}")
-    if resolved.returncode != 0 or not _SHA.match(resolved.stdout.strip()):
-        raise Outcome("BLOCKED", "AUTHORITY_MAIN_UNRESOLVED", ref=AUTHORITY_MAIN_REF)
-    return resolved.stdout.strip()
-
-
 def resolve_admission(
     root: Path, revision: str, main_tip: str, lock: dict[str, Any], binding: dict[str, Any]
 ) -> dict[str, Any]:
-    """Whether *revision* is admitted global law, decided without the bundle lock.
-
-    Integration: *revision* is *main_tip* or an ancestor of it. Currency: every governing input
-    is byte-identical at *main_tip* (otherwise STALE). Decision: an admission decision record
-    bound to the exact revision (authority_model.yaml#admission_rules). The semantic owner
-    defines no such record yet, so a revision that passes the first two remains
-    ADMISSION_UNRESOLVED: integration alone is not admission."""
-    rule = (binding.get("admission") or {}).get("decision_record") or {}
-    base = {"revision": revision, "authority_main": main_tip}
-    if _git(root, "cat-file", "-e", f"{revision}^{{commit}}").returncode != 0 or (
-        _git(root, "merge-base", "--is-ancestor", revision, main_tip).returncode != 0
-    ):
-        return {
-            **base,
-            "status": "NOT_ADMITTED",
-            "reason": "AUTHORITY_REVISION_NOT_INTEGRATED",
-        }
-    verify_content_at(root, revision, lock, binding)
-    if main_tip != revision:
-        try:
-            verify_content_at(root, main_tip, lock, binding)
-        except Outcome as outcome:
-            raise Outcome(
-                "STALE",
-                "NOT_CURRENT_AT_AUTHORITY_MAIN",
-                authority_main=main_tip,
-                cause=outcome.reason,
-                **outcome.detail,
-            ) from None
+    """Whether *revision* is admitted global law, decided without the bundle lock by the shared
+    admission resolver: integration into *main_tip*, currency there, and the binding's explicit
+    decision record for each exact candidate (the projection and the composition profile)."""
+    projection_pin, composition_pin = _pins(binding)
+    admission = binding.get("admission") or {}
+    result = core.resolve_admission(
+        root,
+        revision=revision,
+        main_tip=main_tip,
+        subjects=[
+            {**projection_pin, "catalog": PROFILES_PATH, "collection": "projection_profiles"},
+            {**composition_pin, "catalog": COMPOSITIONS_PATH, "collection": "profiles"},
+        ],
+        decisions=admission.get("decisions"),
+        currency=lambda at: verify_content_at(root, at, lock, binding),
+    )
     return {
-        **base,
-        "status": "ADMISSION_UNRESOLVED",
-        "reason": "ADMISSION_DECISION_RECORD_UNDEFINED",
-        "integrated": True,
-        "current_at_authority_main": True,
-        "decision_record_required_by": rule.get("required_by"),
+        **result,
+        "decision_record_required_by": (admission.get("decision_record") or {}).get("required_by"),
     }
+
+
+def anchor(
+    root: Path, bundle: Path, main_tip: str, result: dict[str, Any], binding: dict[str, Any]
+) -> dict[str, Any]:
+    """Re-verify an admitted bundle against the authority tip with the shared verifier.
+
+    Every law byte comes from hash-checked commit objects of *main_tip*; the checkout's origin,
+    HEAD and clean ``semantics/`` are observed; the producer role is read from the owner's
+    vocabulary; and the composed receipt is shape-checked against the upstream schema."""
+    anchored = core.verify_profile_bundle(root, bundle, main_tip, profile_spec(binding))
+    _composed_receipt(bundle, result["lock"], result["composed"], binding, anchored["tree"])
+    return anchored["coordinates"]
 
 
 def _slot(**fields: Any) -> dict[str, Any]:
@@ -621,7 +542,8 @@ def cite(bundle: Path, result: dict[str, Any], record: dict[str, Any], target: s
     }
 
 
-def _refusal(outcome: Outcome, mode: str) -> dict[str, Any]:
+def _refusal(outcome: Any, mode: str) -> dict[str, Any]:
+    """The slot for a refused verdict; *outcome* is the shared verifier's ``Outcome``."""
     return _slot(
         mode=mode,
         status="UNAVAILABLE" if outcome.status == "BLOCKED" else outcome.status,
@@ -643,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--expect-revision is candidate-mode only; admitted mode resolves main")
     if args.mode == "candidate" and args.expect_revision and args.authority_root is None:
         parser.error("--expect-revision needs --authority-root")
-    report: dict[str, Any] = {"verifier": "gar.architecture-intelligence/v2", "mode": args.mode}
+    report: dict[str, Any] = {"verifier": "gar.architecture-intelligence/v3", "mode": args.mode}
     try:
         binding = load_binding(args.binding)
         bundle = args.bundle or REPO / binding["input"]["bundle"]["path"]
@@ -656,6 +578,9 @@ def main(argv: list[str] | None = None) -> int:
             admission = resolve_admission(
                 args.authority_root, lock["authority"]["revision"], main_tip, lock, binding
             )
+            if admission["status"] == "ADMITTED_AND_CURRENT":
+                coordinates = anchor(args.authority_root, bundle, main_tip, result, binding)
+                admission = {**admission, "authority_root": coordinates}
             currentness: dict[str, Any] = {"checked_against": main_tip, "basis": "authority_main"}
         else:
             if args.authority_root is not None and args.expect_revision is not None:
@@ -693,12 +618,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.cite is not None:
             report["citation"] = {"refused": "CITATION_REFUSED_NOT_LOADED"}
     except (KeyError, TypeError, ValueError) as exc:
-        refused = Outcome("REJECTED", "BUNDLE_STRUCTURE_INVALID")
+        invalid = Outcome("REJECTED", "BUNDLE_STRUCTURE_INVALID")
         report.update(
             status="REJECTED",
             reason="BUNDLE_STRUCTURE_INVALID",
             detail={"error": f"{type(exc).__name__}: {exc}"},
-            architecture_intelligence=_refusal(refused, args.mode),
+            architecture_intelligence=_refusal(invalid, args.mode),
         )
     print(json.dumps(report, indent=2, sort_keys=True))
     return EXIT[report["status"]]

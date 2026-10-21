@@ -159,7 +159,9 @@ def test_wrong_payload_schema_is_rejected(bundle: Bundle) -> None:
     )
     receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
     bundle.write(rel, receipt)
-    _refused(bundle.verify(), "REJECTED", "PAYLOAD_SCHEMA_MISMATCH")
+    report = _refused(bundle.verify(), "REJECTED", "RECEIPT_PAYLOAD_SCHEMA_MISMATCH")
+    assert report["detail"]["source_class"] == "composed"
+    assert report["detail"]["expected"] == "l9.composed-projection.architecture-intelligence/v1"
 
 
 def test_missing_component_is_rejected(bundle: Bundle) -> None:
@@ -201,7 +203,9 @@ def test_receipt_that_is_not_pass_is_rejected(bundle: Bundle) -> None:
     receipt["result"] = "unknown"
     receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
     bundle.write(rel, receipt)
-    _refused(bundle.verify(), "REJECTED", "RECEIPT_RESULT_NOT_PASS")
+    # The shared verifier's reason (Coding Agent's established code) names the failed claim.
+    report = _refused(bundle.verify(), "REJECTED", "RECEIPT_NOT_A_PASSING_PROJECTION")
+    assert (report["detail"]["result"], report["detail"]["operation"]) == ("unknown", "projection")
 
 
 @pytest.mark.parametrize("operation", ["derivation", "composition"])
@@ -211,7 +215,8 @@ def test_receipt_for_another_operation_is_rejected(bundle: Bundle, operation: st
     receipt["operation"] = operation
     receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
     bundle.write(rel, receipt)
-    _refused(bundle.verify(), "REJECTED", "RECEIPT_OPERATION_MISMATCH")
+    report = _refused(bundle.verify(), "REJECTED", "RECEIPT_NOT_A_PASSING_PROJECTION")
+    assert (report["detail"]["operation"], report["detail"]["result"]) == (operation, "pass")
 
 
 def test_composed_receipt_must_claim_a_composition(bundle: Bundle) -> None:
@@ -220,7 +225,43 @@ def test_composed_receipt_must_claim_a_composition(bundle: Bundle) -> None:
     receipt["operation"] = "projection"
     receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
     bundle.write(rel, receipt)
-    _refused(bundle.verify(), "REJECTED", "RECEIPT_OPERATION_MISMATCH")
+    report = _refused(bundle.verify(), "REJECTED", "RECEIPT_NOT_A_PASSING_COMPOSITION")
+    assert report["detail"]["operation"] == "projection"
+
+
+def test_receipt_input_not_bound_to_the_source_is_rejected(bundle: Bundle) -> None:
+    # Strengthened by the shared verifier: a receipt must list the exact source it projected.
+    rel = bundle.lock()["components"][0]["receipt"]
+    receipt = bundle.read(rel)
+    receipt["inputs"][0]["digest"] = "sha256:" + "0" * 64
+    receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
+    bundle.write(rel, receipt)
+    _refused(bundle.verify(), "REJECTED", "RECEIPT_INPUT_NOT_BOUND")
+
+
+def test_artifact_producer_must_be_the_receipt_producer(bundle: Bundle) -> None:
+    entry = bundle.lock()["components"][0]
+    artifact = bundle.read(entry["path"])
+    artifact["generated_by"] = {"compiler": "l9-semantic-compiler", "version": "9.9.9"}
+    artifact["projection_digest"] = _digest(
+        {k: v for k, v in artifact.items() if k != "projection_digest"}
+    )
+    bundle.write(entry["path"], artifact)
+    lock = bundle.lock()
+    lock["components"][0]["projection_digest"] = artifact["projection_digest"]
+    bundle.save_lock(lock)
+    receipt = bundle.read(entry["receipt"])
+    receipt["output"]["digest"] = artifact["projection_digest"]
+    receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
+    bundle.write(entry["receipt"], receipt)
+    _refused(bundle.verify(), "REJECTED", "ARTIFACT_PRODUCER_MISMATCH")
+
+
+def test_lock_producer_other_than_the_bound_producer_is_rejected(bundle: Bundle) -> None:
+    lock = bundle.lock()
+    lock["producer"]["compiler"] = "some-other-compiler"
+    bundle.save_lock(lock)
+    _refused(bundle.verify(), "REJECTED", "LOCK_PRODUCER_NOT_ASSIGNED_PROJECTION_ROLE")
 
 
 def test_bundle_from_another_authority_revision_is_stale(tmp_path: Path) -> None:
@@ -300,12 +341,15 @@ STUB = textwrap.dedent(
 )
 
 
-def _coherent_forgery(bundle: Bundle, source_class: str = "invariants") -> str:
+def _coherent_forgery(
+    bundle: Bundle, source_class: str = "invariants", *, bind_composed_inputs: bool = True
+) -> str:
     """Rewrite one canonical fact and recompute every digest a hash-only check can see.
 
     The projection payload, its projection digest, its receipt (output digest and receipt
     digest), the composed namespace, the composed component list, the composition digest, the
-    composed receipt and every lock hash are all made mutually consistent. Source digests are
+    composed receipt (including its input binding) and every lock hash are all made mutually
+    consistent. Source digests are
     untouched, so currentness against the authority checkout still holds. Returns the forged
     statement."""
     forged = "FORGED: this invariant was never admitted"
@@ -332,6 +376,11 @@ def _coherent_forgery(bundle: Bundle, source_class: str = "invariants") -> str:
     bundle.write("composed.json", composed)
     composed_receipt = bundle.read(lock["composed"]["receipt"])
     composed_receipt["output"]["digest"] = composed["composition_digest"]
+    if bind_composed_inputs:
+        subject = f"{artifact['projection_profile_ref']}#{artifact['source_ref']}"
+        for item in composed_receipt["inputs"]:
+            if item["ref"] == subject:
+                item["digest"] = artifact["projection_digest"]
     composed_receipt["receipt_digest"] = _digest(
         {k: v for k, v in composed_receipt.items() if k != "receipt_digest"}
     )
@@ -345,6 +394,15 @@ def _coherent_forgery(bundle: Bundle, source_class: str = "invariants") -> str:
     lock["composed"]["composition_digest"] = composed["composition_digest"]
     bundle.save_lock(lock)
     return forged
+
+
+def test_forgery_leaving_the_composition_inputs_unbound_is_rejected(bundle: Bundle) -> None:
+    # Regression: the GAR-only verifier never read the composition receipt's inputs, so a
+    # forgery that left them naming the original projection digest verified. The shared
+    # receipt check binds every component projection the composition claims to consume.
+    _coherent_forgery(bundle, bind_composed_inputs=False)
+    report = _refused(bundle.verify("--mode", "candidate"), "REJECTED", "RECEIPT_INPUT_NOT_BOUND")
+    assert report["detail"]["source_class"] == "composed"
 
 
 def _fixture_authority(tmp_path: Path) -> tuple[Path, str]:
@@ -610,17 +668,135 @@ def test_valid_candidate_revision_that_is_not_admitted(authority: Authority) -> 
 
 
 def test_integrated_revision_stays_admission_unresolved(authority: Authority) -> None:
-    # Integration into main is necessary, not sufficient: no admission decision record exists.
+    # Integration into main is necessary, not sufficient: without a decision record for each
+    # exact candidate, the revision is not admitted.
     module = _module()
     head = _git(authority.root, "rev-parse", "HEAD")
     lock, binding = authority.lock_and_binding(head)
+    binding["admission"]["decisions"] = []
     admission = module.resolve_admission(authority.root, head, head, lock, binding)
     assert (admission["status"], admission["reason"]) == (
         "ADMISSION_UNRESOLVED",
-        "ADMISSION_DECISION_RECORD_UNDEFINED",
+        "ADMISSION_DECISION_RECORD_ABSENT",
     )
+    assert admission["undecided"] == [Authority.PROFILE, Authority.COMPOSITION]
     assert admission["integrated"] is True and admission["current_at_authority_main"] is True
     assert "explicit_decision_record" in admission["decision_record_required_by"]
+
+
+def _decide(binding: dict, revision: str, **override: object) -> None:
+    """Record an owner decision for both candidates, bound to their exact pinned digests."""
+    pins = binding["input"]["authority"]
+    binding["admission"]["decisions"] = [
+        {
+            "candidate_ref": pins[f"{kind}_profile_ref"],
+            "candidate_digest": pins[f"{kind}_profile_digest"],
+            "decision": "admit",
+            "admitted_revision": revision,
+            "authority_ref": "fixture owner decision",
+            **override,
+        }
+        for kind in ("projection", "composition")
+    ]
+
+
+def test_integrated_revision_with_an_exact_decision_is_admitted(authority: Authority) -> None:
+    module = _module()
+    head = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    _decide(binding, head)
+    admission = module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (admission["status"], admission["reason"]) == ("ADMITTED_AND_CURRENT", "ADMITTED")
+    assert [d["candidate_ref"] for d in admission["decisions"]] == [
+        Authority.PROFILE,
+        Authority.COMPOSITION,
+    ]
+
+
+def test_a_decision_for_another_digest_does_not_admit_a_changed_candidate(
+    authority: Authority,
+) -> None:
+    # approval_binds_exact_candidate_digest: the profile changed after the decision.
+    module = _module()
+    decided = _git(authority.root, "rev-parse", "HEAD")
+    _, old = authority.lock_and_binding(decided)
+    _decide(old, decided)
+    authority.write_sources(("alpha", "beta", "gamma"))
+    head = authority.commit("profile gains gamma")
+    lock, binding = authority.lock_and_binding(head)
+    assert (
+        binding["input"]["authority"]["projection_profile_digest"]
+        != old["input"]["authority"]["projection_profile_digest"]
+    )
+    binding["admission"]["decisions"] = old["admission"]["decisions"]
+    admission = module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (admission["status"], admission["reason"], admission["subject"]) == (
+        "NOT_ADMITTED",
+        "ADMISSION_DECISION_SUBJECT_MISMATCH",
+        Authority.PROFILE,
+    )
+
+
+@pytest.mark.parametrize(
+    ("override", "reason"),
+    [
+        ({"decision": "reject"}, "ADMISSION_DECISION_NOT_ADMIT"),
+        ({"admitted_revision": "0" * 40}, "ADMITTED_REVISION_NOT_INTEGRATED"),
+    ],
+)
+def test_a_decision_that_does_not_admit_is_refused(
+    authority: Authority, override: dict, reason: str
+) -> None:
+    module = _module()
+    head = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    _decide(binding, head, **override)
+    admission = module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (admission["status"], admission["reason"]) == ("NOT_ADMITTED", reason)
+
+
+def test_a_decision_naming_a_revision_where_the_candidate_differs_is_refused(
+    authority: Authority,
+) -> None:
+    # The decision must point at an owner revision where the candidate has the decided digest.
+    module = _module()
+    before = _git(authority.root, "rev-parse", "HEAD")
+    authority.write_sources(("alpha", "beta", "gamma"))
+    head = authority.commit("profile gains gamma")
+    _git(authority.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    _decide(binding, before)
+    admission = module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (admission["status"], admission["reason"], admission["subject"]) == (
+        "NOT_ADMITTED",
+        "ADMISSION_SUBJECT_NOT_AT_ADMITTED_REVISION",
+        Authority.PROFILE,
+    )
+
+
+def test_a_malformed_decision_record_is_rejected(authority: Authority) -> None:
+    module = _module()
+    head = _git(authority.root, "rev-parse", "HEAD")
+    lock, binding = authority.lock_and_binding(head)
+    _decide(binding, head)
+    del binding["admission"]["decisions"][0]["authority_ref"]
+    with pytest.raises(module.Outcome) as caught:
+        module.resolve_admission(authority.root, head, head, lock, binding)
+    assert (caught.value.status, caught.value.reason) == (
+        "REJECTED",
+        "ADMISSION_DECISION_MALFORMED",
+    )
+
+
+def test_committed_binding_records_an_exact_owner_decision_for_each_candidate() -> None:
+    binding = yaml.safe_load(BINDING.read_text())
+    pins = binding["input"]["authority"]
+    decisions = {d["candidate_ref"]: d for d in binding["admission"]["decisions"]}
+    for kind in ("projection", "composition"):
+        decision = decisions[pins[f"{kind}_profile_ref"]]
+        assert decision["candidate_digest"] == pins[f"{kind}_profile_digest"]
+        assert decision["decision"] == "admit" and decision["authority_ref"]
+        assert len(decision["admitted_revision"]) == 40
 
 
 def test_integrated_revision_whose_sources_changed_on_main_is_stale(
