@@ -116,6 +116,53 @@ def test_registry_declares_odoo_native_route() -> None:
     assert entry["declared_base"] == "Staging"
     assert "CANONICAL_LAW.md" in entry["authority"]
     assert document["default_route"] == "governance"
+    # The origin is never the only basis: the ceremony is pinned Governance-side.
+    assert entry["ceremony"]["kernel"] == "scripts/make_push_pipeline.sh"
+    assert "git status --porcelain" in entry["ceremony"]["kernel_requires"]
+
+
+def test_missing_registry_parse_governance_run_invalid(tmp_path: Path) -> None:
+    """A clone that lost the registry has no policy, not an empty one."""
+    repo = _repo(tmp_path, "odoo", SPELLINGS[1])
+    missing = tmp_path / "absent.json"
+    parse = _resolver("--workspace", str(repo), "--registry", str(missing), "--format", "make")
+    assert parse.returncode == 0 and parse.stdout.strip() == "route=governance"
+    for expect in ("native", "governance"):
+        run = _resolver(
+            "--workspace",
+            str(repo),
+            "--registry",
+            str(missing),
+            "--format",
+            "json",
+            "--expect",
+            expect,
+        )
+        assert run.returncode == 3, expect
+        assert "PUBLISH_REGISTRY_INVALID" in run.stderr and "registry missing" in run.stderr
+
+
+def test_native_route_requires_a_declared_ceremony(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        json.dumps(
+            {
+                "schema": pa.SCHEMA,
+                "default_route": "governance",
+                "repositories": {
+                    ODOO_KEY: {
+                        "route": "native",
+                        "native_target": "pr",
+                        "declared_base": "Staging",
+                        "authority": "x",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(pa.RegistryError, match="ceremony"):
+        pa.load_registry(bad)
 
 
 def test_listed_origin_resolves_native(tmp_path: Path) -> None:
@@ -271,10 +318,20 @@ def test_preflight_stops_native_repo_with_route_drift(tmp_path: Path) -> None:
     assert "PUBLISH_ROUTE_DRIFT" in proc.stderr
 
 
-def _stub_consumer(tmp_path: Path, *, check_target: bool = True) -> Path:
+KERNEL = "scripts/make_push_pipeline.sh"
+GOV_RECEIPT = REPO_ROOT / ".l9" / "pr" / "publish-route.json"
+
+
+def _stub_consumer(
+    tmp_path: Path, *, check_target: bool = True, kernel: bool = True, invokes_kernel: bool = True
+) -> Path:
+    """A repository spelling the Odoo origin, with (by default) its real ceremony shape:
+    a `pr` recipe that invokes the pinned kernel, and a kernel carrying the pinned guards."""
     repo = _repo(tmp_path, "odoo", SPELLINGS[0])
+    call = f"@bash {KERNEL} '' '' $(base) 1 0\n" if invokes_kernel else ""
     recipe = (
         "pr:\n"
+        f"\t{call}"
         "\t@echo NATIVE_PR base=$(base) PYTHON=[$$PYTHON] WS=[$$WS]"
         " MAKEOVERRIDES=[$$MAKEOVERRIDES] EARLY=[$$PR_EARLY_OVERLAP]"
         " OPEN_PR=[$$OPEN_PR] PR_BASE=[$$PR_BASE]\n"
@@ -282,6 +339,23 @@ def _stub_consumer(tmp_path: Path, *, check_target: bool = True) -> Path:
     if check_target:
         recipe += "pr-check:\n\t@echo NATIVE_CHECK base=$(base)\n"
     (repo / "Makefile").write_text(recipe, encoding="utf-8")
+    if kernel:
+        (repo / KERNEL).parent.mkdir(parents=True)
+        (repo / KERNEL).write_text(
+            "#!/usr/bin/env bash\n"
+            'BASE="${3:-Staging}"\n'
+            '[[ "$BASE" == "Staging" ]] || refuse "destination must be Staging (got $BASE)"\n'
+            'status="$(git status --porcelain)"\n'
+            "exit 0\n",
+            encoding="utf-8",
+        )
+    # The consumer ceremony refuses an unclean tree; the fixture commits so the
+    # runner's "untouched worktree" proof is meaningful.
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "f"],
+        check=True,
+    )
     return repo
 
 
@@ -318,12 +392,23 @@ def test_native_runner_runs_consumer_pr_once_scrubbed(tmp_path: Path) -> None:
     assert "NATIVE_PR base=Staging PYTHON=[] WS=[] MAKEOVERRIDES=[" in proc.stdout
     assert "EARLY=[] OPEN_PR=[] PR_BASE=[]" in proc.stdout
     assert "/leaked" not in proc.stdout
-    receipt = json.loads((repo / ".l9" / "pr" / "publish-route.json").read_text(encoding="utf-8"))
+    # The receipt is governance evidence and never lands in the consumer worktree,
+    # whose own ceremony refuses any untracked file (.l9/pr is not in its .gitignore).
+    assert not (repo / ".l9").exists()
+    assert (
+        subprocess.run(
+            ["git", "-C", str(repo), "status", "--porcelain"], capture_output=True, text=True
+        ).stdout
+        == ""
+    )
+    receipt = json.loads(GOV_RECEIPT.read_text(encoding="utf-8"))
     assert receipt["schema"] == "l9.publish_route.v1"
     assert receipt["origin"] == ODOO_KEY
+    assert receipt["workspace"] == str(repo)
     assert receipt["target"] == "pr"
     assert receipt["declared_base"] == "Staging"
     assert receipt["open_pr"] is True
+    assert receipt["ceremony_verified"] is True
 
 
 def test_native_runner_open_pr_zero_maps_to_check_target(tmp_path: Path) -> None:
@@ -332,16 +417,46 @@ def test_native_runner_open_pr_zero_maps_to_check_target(tmp_path: Path) -> None
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "NATIVE_CHECK base=Staging" in proc.stdout
     assert "NATIVE_PR" not in proc.stdout
-    receipt = json.loads((repo / ".l9" / "pr" / "publish-route.json").read_text(encoding="utf-8"))
+    receipt = json.loads(GOV_RECEIPT.read_text(encoding="utf-8"))
     assert receipt["target"] == "pr-check" and receipt["open_pr"] is False
 
 
 def test_native_runner_refuses_missing_consumer_target(tmp_path: Path) -> None:
     repo = _stub_consumer(tmp_path, check_target=False)
+    GOV_RECEIPT.unlink(missing_ok=True)
     proc = _runner(repo, OPEN_PR="0")
     assert proc.returncode == 2
     assert "NATIVE_TARGET_MISSING" in proc.stderr
-    assert not (repo / ".l9" / "pr" / "publish-route.json").exists()
+    assert not GOV_RECEIPT.exists()
+    assert not (repo / ".l9").exists()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "problem"),
+    [
+        ({"kernel": False}, "unreadable"),
+        ({"invokes_kernel": False}, "does not invoke"),
+    ],
+)
+def test_a_copied_origin_without_the_ceremony_is_not_the_native_route(
+    tmp_path: Path, kwargs: dict, problem: str
+) -> None:
+    """The origin URL is consumer-editable; a workspace that merely spells it
+    does not get to run an arbitrary local `pr` target in governance's name."""
+    repo = _stub_consumer(tmp_path, **kwargs)
+    proc = _runner(repo, OPEN_PR="1")
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr and problem in proc.stderr
+    assert "NATIVE_PR" not in proc.stdout
+
+
+def test_kernel_without_the_pinned_guards_is_not_the_ceremony(tmp_path: Path) -> None:
+    repo = _stub_consumer(tmp_path)
+    (repo / KERNEL).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "commit", "-qam", "strip"], check=True)
+    proc = _runner(repo, OPEN_PR="1")
+    assert proc.returncode == 2
+    assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr and "lacks guard" in proc.stderr
 
 
 def test_native_runner_refuses_other_base_before_running_anything(tmp_path: Path) -> None:

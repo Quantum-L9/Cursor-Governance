@@ -108,6 +108,7 @@ class Decision:
     declared_base: str | None = None
     reason: str = ""
     registry_error: str | None = None
+    ceremony: dict | None = None
 
     def make_line(self) -> str:
         if self.route != "native":
@@ -123,10 +124,13 @@ class Decision:
 
 
 def load_registry(path: Path) -> dict:
+    # A missing registry is not an empty policy: the run-time check must surface
+    # it as PUBLISH_REGISTRY_INVALID, or an Odoo workspace that should route
+    # native would pass `--expect governance` on a clone that lost the file.
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {"schema": SCHEMA, "default_route": "governance", "repositories": {}}
+    except FileNotFoundError as exc:
+        raise RegistryError(f"{path}: registry missing") from exc
     except (OSError, ValueError) as exc:
         raise RegistryError(f"{path}: {exc}") from exc
     if not isinstance(document, dict) or document.get("schema") != SCHEMA:
@@ -145,7 +149,83 @@ def load_registry(path: Path) -> dict:
             for field in ("native_target", "declared_base", "authority"):
                 if not isinstance(entry.get(field), str) or not entry[field].strip():
                     raise RegistryError(f"{path}: {key}: native route requires {field!r}")
+            ceremony = entry.get("ceremony")
+            if not isinstance(ceremony, dict):
+                raise RegistryError(f"{path}: {key}: native route requires 'ceremony'")
+            kernel = ceremony.get("kernel")
+            if not isinstance(kernel, str) or not kernel.strip() or kernel.startswith("/"):
+                raise RegistryError(f"{path}: {key}: ceremony.kernel must be a relative path")
+            requires = ceremony.get("kernel_requires")
+            if (
+                not isinstance(requires, list)
+                or not requires
+                or not all(isinstance(s, str) and s.strip() for s in requires)
+            ):
+                raise RegistryError(
+                    f"{path}: {key}: ceremony.kernel_requires must list the kernel's guards"
+                )
     return document
+
+
+CEREMONY_UNVERIFIED = "PUBLISH_CEREMONY_UNVERIFIED"
+
+
+def _recipe_of(workspace: Path, target: str) -> str | None:
+    """The recipe lines Make would run for *target* in *workspace*, or None if undeclared."""
+    try:
+        out = subprocess.run(
+            ["make", "-C", str(workspace), "--no-print-directory", "-rRpn", "help"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = out.stdout.splitlines()
+    for index, line in enumerate(lines):
+        if line == f"{target}:" or line.startswith(f"{target}: "):
+            recipe: list[str] = []
+            for follow in lines[index + 1 :]:
+                if follow.startswith("\t"):
+                    recipe.append(follow)
+                elif follow.startswith("#"):
+                    continue
+                else:
+                    break
+            return "\n".join(recipe)
+    return None
+
+
+def verify_ceremony(workspace: Path, decision: Decision) -> list[str]:
+    """Why *workspace* does not run the ceremony the registry declares, if it does not.
+
+    The origin URL is consumer-editable, so it is never the only basis for the
+    native route. The registry also pins the publication kernel the consumer
+    must own and the guards that kernel must carry; the declared target's recipe
+    must invoke that kernel. A workspace that merely spells the right origin
+    does not reach the consumer's `pr` target, and a target that does not run
+    the approved kernel is not the approved ceremony.
+    """
+    if decision.route != "native" or not decision.ceremony:
+        return ["no native ceremony declared"]
+    problems: list[str] = []
+    kernel = workspace / decision.ceremony["kernel"]
+    try:
+        body = kernel.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"publication kernel {decision.ceremony['kernel']} unreadable: {exc}"]
+    for guard in decision.ceremony["kernel_requires"]:
+        if guard not in body:
+            problems.append(f"kernel {decision.ceremony['kernel']} lacks guard {guard!r}")
+    recipe = _recipe_of(workspace, str(decision.native_target))
+    if recipe is None:
+        problems.append(f"Makefile declares no {decision.native_target!r} target")
+    elif decision.ceremony["kernel"] not in recipe:
+        problems.append(
+            f"{decision.native_target!r} recipe does not invoke {decision.ceremony['kernel']}"
+        )
+    return problems
 
 
 def resolve(workspace: Path, registry: Path = DEFAULT_REGISTRY) -> Decision:
@@ -168,6 +248,7 @@ def resolve(workspace: Path, registry: Path = DEFAULT_REGISTRY) -> Decision:
         native_check_target=entry.get("native_check_target") or None,
         declared_base=entry["declared_base"],
         reason=entry.get("reason", ""),
+        ceremony=entry["ceremony"],
     )
 
 
@@ -183,6 +264,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pr-base", default="", help="an explicitly requested PR_BASE")
     parser.add_argument("--expect", choices=ROUTES, help="fail with exit 2 when the route differs")
     parser.add_argument("--format", choices=("make", "json"), default="make")
+    parser.add_argument(
+        "--verify-ceremony",
+        action="store_true",
+        help="json mode: also prove the workspace runs the declared native ceremony (exit 2)",
+    )
     args = parser.parse_args(argv)
 
     decision = resolve(Path(args.workspace).expanduser(), args.registry)
@@ -215,6 +301,18 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"{BASE_MISMATCH}: {decision.origin} declares base {decision.declared_base!r};"
                 f" PR_BASE={args.pr_base!r} is refused",
+                file=sys.stderr,
+            )
+            return EXIT_DRIFT
+    if decision.route == "native" and args.verify_ceremony:
+        problems = verify_ceremony(Path(args.workspace).expanduser(), decision)
+        if problems:
+            payload["verdict"] = CEREMONY_UNVERIFIED
+            payload["problems"] = problems
+            print(json.dumps(payload))
+            print(
+                f"{CEREMONY_UNVERIFIED}: {args.workspace} spells origin {decision.origin} but does"
+                f" not run its declared publication ceremony: {'; '.join(problems)}",
                 file=sys.stderr,
             )
             return EXIT_DRIFT

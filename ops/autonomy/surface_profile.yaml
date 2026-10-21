@@ -319,8 +319,12 @@ session_start_block: |
     native route (today `github.com/cryptoxdog/ib-odoo_19` → its own `make pr`,
     base `Staging`; CANONICAL_LAW §13), the governance `pr` target delegates to
     that consumer target exactly once (`ops/scripts/run_native_publish.sh`,
-    receipt `.l9/pr/publish-route.json`). The registry is the only place such a
-    route can be declared; every other consumer still needs no local `pr` target.
+    receipt in the governance clone's `.l9/pr/publish-route.json`, never in the
+    consumer worktree, which must reach its own clean-tree check untouched).
+    The origin alone never selects the route: the registry also pins the
+    consumer's publication kernel and its guards, and the runner proves the
+    declared target invokes it. The registry is the only place such a route
+    can be declared; every other consumer still needs no local `pr` target.
   - After the PR is open, campaign/make-pr work ends green and merge-ready.
     Do **not** merge from the campaign path. `/l9-pr-remediation` converges
     **all open PRs** in the target repo to merge readiness and stops at

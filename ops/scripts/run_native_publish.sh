@@ -7,6 +7,15 @@
 # target exactly once. The resolver is re-run here with a real exit code, so a
 # parse-time mis-resolution in publish.mk can never widen the publish plane.
 #
+# Two things this runner never does:
+#   * trust the origin URL alone — the registry pins the consumer's publication
+#     kernel and its guards, and the resolver proves (--verify-ceremony) that the
+#     declared target really invokes that kernel in this worktree;
+#   * touch the consumer worktree — its receipt lives in the governance clone's
+#     .l9/pr/, and the worktree's `git status` is proven unchanged by this runner
+#     right before delegation, because the consumer ceremony refuses any
+#     untracked file and its .gitignore is not ours to edit.
+#
 #   run_native_publish.sh <WS>     env: OPEN_PR (1|0), PR_BASE (explicit only)
 set -euo pipefail
 
@@ -25,7 +34,11 @@ else
   PY="$(command -v python3)"
 fi
 
-resolver=("$PY" "$GOV_ROOT/ops/autonomy/publish_authority.py" --workspace "$WS" --format json --expect native)
+# Snapshot the consumer worktree before anything runs; it must be identical at
+# the moment of delegation (the consumer's own clean-tree check follows).
+status_before="$(git -C "$WS" status --porcelain 2>/dev/null || echo "NOT_A_REPO")"
+
+resolver=("$PY" "$GOV_ROOT/ops/autonomy/publish_authority.py" --workspace "$WS" --format json --expect native --verify-ceremony)
 if [[ -n "$PR_BASE" ]]; then
   resolver+=(--pr-base "$PR_BASE")
 fi
@@ -55,31 +68,43 @@ if ! grep -q "^${target}:" <<<"$targets"; then
   exit 2
 fi
 
-mkdir -p "$WS/.l9/pr"
+# The receipt is governance evidence; it is written beside the governance gate's
+# own receipts, never into the consumer worktree.
+receipt_dir="$GOV_ROOT/.l9/pr"
+mkdir -p "$receipt_dir"
 head_sha="$(git -C "$WS" rev-parse HEAD 2>/dev/null || echo "")"
-"$PY" - "$WS/.l9/pr/publish-route.json" "$origin" "$target" "$declared_base" "$head_sha" "$OPEN_PR" <<'PY'
+"$PY" - "$receipt_dir/publish-route.json" "$origin" "$target" "$declared_base" "$head_sha" "$OPEN_PR" "$WS" <<'PY'
 import datetime as dt
 import json
 import sys
 
-out, origin, target, base, head, open_pr = sys.argv[1:7]
+out, origin, target, base, head, open_pr, workspace = sys.argv[1:8]
 with open(out, "w", encoding="utf-8") as handle:
     json.dump(
         {
             "schema": "l9.publish_route.v1",
             "route": "native",
             "origin": origin,
+            "workspace": workspace,
             "target": target,
             "declared_base": base,
             "head": head,
             "open_pr": open_pr == "1",
             "registry": "ops/config/publish-authority.json",
+            "ceremony_verified": True,
             "recorded_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         },
         handle,
         indent=2,
     )
 PY
+
+status_after="$(git -C "$WS" status --porcelain 2>/dev/null || echo "NOT_A_REPO")"
+if [[ "$status_before" != "$status_after" ]]; then
+  echo "NATIVE_WORKSPACE_DIRTIED: this runner changed the consumer worktree before delegation; refusing to hand it a tree its own clean-tree check will reject" >&2
+  diff <(printf '%s\n' "$status_before") <(printf '%s\n' "$status_after") >&2 || true
+  exit 2
+fi
 
 echo "publish-authority: $origin → native make $target (base $declared_base) in $WS"
 # Scrub governance make state so the consumer recipe runs exactly as a human's
