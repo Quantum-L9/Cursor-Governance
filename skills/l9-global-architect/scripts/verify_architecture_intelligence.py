@@ -119,6 +119,7 @@ def _receipt(
     profile: dict[str, str],
     revision: str,
     repository: str,
+    operation: str,
 ) -> dict[str, Any]:
     _, receipt = _read_json(bundle / rel)
     _expect(
@@ -127,6 +128,15 @@ def _receipt(
         and receipt.get("receipt_type") == RECEIPT_TYPE,
         "RECEIPT_SCHEMA_MISMATCH",
         receipt=rel,
+    )
+    # A schema-valid receipt for another operation (derivation, rendering) proves nothing
+    # about the projection or composition being consumed.
+    _expect(
+        receipt.get("operation") == operation,
+        "RECEIPT_OPERATION_MISMATCH",
+        receipt=rel,
+        expected=operation,
+        observed=receipt.get("operation"),
     )
     _expect(
         receipt.get("receipt_digest") == content_digest(_without(receipt, "receipt_digest")),
@@ -267,6 +277,7 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
             projection_pin,
             revision,
             repository,
+            "projection",
         )
         _payload_schema(receipt, pins["projection_payload_schema"], entry["receipt"])
         projections[cls] = artifact
@@ -327,6 +338,7 @@ def verify_bundle(bundle: Path, binding: dict[str, Any]) -> dict[str, Any]:
         composition_pin,
         revision,
         repository,
+        "composition",
     )
     _payload_schema(receipt, pins["composed_payload_schema"], composed_entry["receipt"])
     return {

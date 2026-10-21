@@ -204,6 +204,25 @@ def test_receipt_that_is_not_pass_is_rejected(bundle: Bundle) -> None:
     _refused(bundle.verify(), "REJECTED", "RECEIPT_RESULT_NOT_PASS")
 
 
+@pytest.mark.parametrize("operation", ["derivation", "composition"])
+def test_receipt_for_another_operation_is_rejected(bundle: Bundle, operation: str) -> None:
+    rel = bundle.lock()["components"][0]["receipt"]
+    receipt = bundle.read(rel)
+    receipt["operation"] = operation
+    receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
+    bundle.write(rel, receipt)
+    _refused(bundle.verify(), "REJECTED", "RECEIPT_OPERATION_MISMATCH")
+
+
+def test_composed_receipt_must_claim_a_composition(bundle: Bundle) -> None:
+    rel = bundle.lock()["composed"]["receipt"]
+    receipt = bundle.read(rel)
+    receipt["operation"] = "projection"
+    receipt["receipt_digest"] = _digest({k: v for k, v in receipt.items() if k != "receipt_digest"})
+    bundle.write(rel, receipt)
+    _refused(bundle.verify(), "REJECTED", "RECEIPT_OPERATION_MISMATCH")
+
+
 def test_bundle_from_another_authority_revision_is_stale(tmp_path: Path) -> None:
     authority = tmp_path / "authority"
     authority.mkdir()
