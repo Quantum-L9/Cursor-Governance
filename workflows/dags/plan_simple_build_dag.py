@@ -162,6 +162,8 @@ PLAN_SIMPLE_BUILD_NODES = [
             "ir_kind": "deterministic",
             "domain_owner": "commands/gmp.md",
             "argv": [
+                "--workspace",
+                "<work_root>",
                 "--authorized-by",
                 "slash-gmp",
                 "--mode",
@@ -197,7 +199,14 @@ PLAN_SIMPLE_BUILD_NODES = [
         metadata={
             "ir_kind": "deterministic",
             "domain_owner": "commands/gmp.md",
-            "argv": ["--resume", "--mode", "finalize", "--commit-when-done"],
+            "argv": [
+                "--workspace",
+                "<work_root>",
+                "--resume",
+                "--mode",
+                "finalize",
+                "--commit-when-done",
+            ],
         },
     ),
     SessionNode(
