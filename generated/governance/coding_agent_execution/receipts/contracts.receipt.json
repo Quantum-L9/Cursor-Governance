@@ -1,0 +1,205 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.projection/coding-agent-execution@1#l9.source/contracts@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+      "path": "semantics/projection_artifact.schema.yaml",
+      "ref": "l9.schema/projection-artifact@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:4b7eaae5ad128e7ae485dffa5d106edf0488a31d3370d58fed15c01595ca634f",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:fe5d79a65acd7e2587337136d4874b04399d9166d2b652accefd2309fc986be2",
+      "path": "semantics/projection_engine_contract.yaml",
+      "ref": "l9.compiler/projection-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:fdb565beab18f1e794b0b90caa264679e769af84eb9573e2e0356f8c2d013d63",
+      "path": "semantics/projection_profiles.yaml",
+      "ref": "l9.projection-profile-catalog/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec",
+    "selector_model": {
+      "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
+      "path": "semantics/selector_model.yaml",
+      "ref": "l9.selector-model/global@1"
+    },
+    "source_registry": {
+      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "path": "semantics/contracts.yaml",
+      "ref": "l9.source/contracts@1",
+      "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec"
+    }
+  ],
+  "operation": "projection",
+  "output": {
+    "digest": "sha256:f9ae8897731f3a47de1d6e1d331eb452f40927587e6389bb3aee0964e72627d2",
+    "ref": "l9.projection/coding-agent-execution@1#l9.source/contracts@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "profile": {
+    "digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
+    "ref": "l9.projection/coding-agent-execution@1"
+  },
+  "receipt_digest": "sha256:66fa8973bc48f3763604b61668be749176cf75f45dfbaf7e4c4e4b40d4aeb6fc",
+  "receipt_identity": "l9.receipt-instance/d4891b441ab1c10d654ca9c32ca13f9554e341ff732d3c2848115922f3b8aa89",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "coverage": "complete",
+    "criteria": {
+      "declared_constraint:forbidden:adapter_host_or_surface_specific_semantics": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+        "criterion": "source_authority",
+        "owner": "Quantum-L9/.github",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:skill_command_or_routing_semantics": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:217851d7c05a03deaabbe13c95bb00798d8f098281a563265c4cedf07769f125",
+        "path": "l9.projection_coding-agent-execution_1/l9.source_contracts_1.projection.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+          "path": "semantics/projection_artifact.schema.yaml",
+          "ref": "l9.schema/projection-artifact@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "schema": "l9.projection.coding-agent-execution/v1",
+        "schema_artifact": {
+          "digest": "sha256:e7496890780422d6993f1e6763c8bc738ab6d2e18614473858e5a6d37c014d12",
+          "path": "semantics/coding_agent_execution_projection.schema.yaml",
+          "ref": "l9.schema/coding-agent-execution-projection@1"
+        },
+        "status": "pass"
+      },
+      "profile_currentness": {
+        "digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
+        "ref": "l9.projection/coding-agent-execution@1",
+        "status": "pass"
+      },
+      "projection_digest": {
+        "digest": "sha256:f9ae8897731f3a47de1d6e1d331eb452f40927587e6389bb3aee0964e72627d2",
+        "status": "pass"
+      },
+      "selection_equivalence": {
+        "selectors": 10,
+        "status": "pass"
+      },
+      "source_currentness": {
+        "digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+        "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec",
+        "status": "pass"
+      },
+      "source_identity": {
+        "path": "semantics/contracts.yaml",
+        "ref": "l9.source/contracts@1",
+        "source_class": "contracts",
+        "status": "pass"
+      }
+    },
+    "selection_coverage": [
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/authority-boundary@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/monotonic-subordination@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/admission-and-promotion@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/derived-artifact@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/evidence-and-receipt@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/assurance-and-verification@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/unknown-and-degradation@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/provenance-and-coordinate@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/projection@1\")]",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.contracts[?(@.id==\"l9.contract/validation-and-correctness@1\")]",
+        "status": "resolved"
+      }
+    ],
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

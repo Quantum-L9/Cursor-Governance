@@ -58,9 +58,9 @@ input:
     composed_view: composed.json
   producer:
     compiler: l9-semantic-compiler
-    driver: tools/authority/produce_architecture_intelligence.py
-    ci: .github/workflows/l9-architecture-intelligence-bundle.yml
-    trusted_replay: .github/workflows/l9-architecture-intelligence-trusted-replay.yml
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
     gar_produces: false
     publication: >-
       Generation is separate from publication. The driver writes only to its output directory
@@ -74,7 +74,8 @@ input:
       reproduces the bundle byte for byte with the compiler revision named in bundle.lock.json,
       only when that revision is on the compiler's protected main, and publishes a PASS/FAIL
       attestation bound to the subject commit, compiler SHA, authority revision and bundle
-      digest as the commit status l9/architecture-intelligence-trusted-replay. It fails closed.
+      digest as the commit status l9/projection-bundle-trusted-replay/architecture_intelligence.
+      It fails closed.
       Pull-request-controlled jobs never receive the private compiler or its credential. The
       verifier's digests are recomputable: they prove integrity and currentness, not production.
   verifier: scripts/verify_architecture_intelligence.py
@@ -181,7 +182,7 @@ integration_invariants:
   - id: AIB-002
     rule: A refused outcome never falls back to the historical observer projection or any other input.
   - id: AIB-003
-    rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is BOUND.
+    rule: contracts/L9_ARCHITECTURE_PROFILE.yaml remains loaded and authoritative for its role whether or not this input is ADMITTED_AND_CURRENT or BUNDLE_VERIFIED.
   - id: AIB-004
     rule: The bundle is produced only by the canonical compiler; GAR verifies and never regenerates it.
   - id: AIB-005
