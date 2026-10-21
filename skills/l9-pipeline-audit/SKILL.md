@@ -28,7 +28,7 @@ campaigns are not scanned. `--archive-spent` is opt-in on that CLI.
 | Plans live-queue | this pack `scripts/audit_plans.py` | a second plans scanner |
 | Harvest | `l9-intelligence-harvest` bind + inventory + qualify + validate | `l9-harvest-pipeline`, inventing `l9-intelligence-harvest` |
 | Emit | this pack `scripts/run_intelligence_harvest.py` | a Program Execution controller |
-| Execute packet | `/gmp` (`l9-gmp-protocol`) | `make campaign` |
+| Execute packet | `/gmp` (`commands/gmp.md`) | `make campaign` |
 
 `l9-global-architect` stays STANDALONE if invoked. Repository presence does not
 flip it to PE-integrated mode.

@@ -84,6 +84,28 @@ def test_reprobe_attaches_reason_and_log_path() -> None:
     assert "DEGRADED" in probed["reasons"]["mcp"]
 
 
+def test_github_capabilities_are_carried_and_never_degrade_the_session() -> None:
+    """CG-10: per-transport GitHub verdicts are evidence, not components. A
+    REST-only gateway refuses GraphQL on every session; that must be visible
+    without turning a READY bootstrap DEGRADED."""
+    payload = make()
+    payload["github_capabilities"] = {
+        "rest_user": "OK",
+        "org_template_read": "OK",
+        "graphql": "DENIED",
+        "direct_api": "OK",
+    }
+    result = receipt.evaluate(payload, now=NOW, governance_revision="a" * 40)
+    assert result["state"] == receipt.READY
+    assert result["github_capabilities"]["graphql"] == "DENIED"
+    assert result["github_capabilities"]["org_template_read"] == "OK"
+
+
+def test_a_receipt_without_github_capabilities_reads_as_none_recorded() -> None:
+    result = receipt.evaluate(make(), now=NOW, governance_revision="a" * 40)
+    assert result["github_capabilities"] == {}
+
+
 def test_missing_receipt_is_never_ran_not_ready(tmp_path: Path) -> None:
     result = receipt.read(tmp_path / "absent.json", now=NOW, governance_revision="a" * 40)
     assert result["state"] == receipt.NEVER_RAN

@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
@@ -80,3 +82,25 @@ def test_is_tracked_detects_committed_path(tmp_path: Path) -> None:
     assert rr.is_tracked(ws / ".claude" / "rules" / "00-local.md") is True
     # A path outside any repo is not tracked (git unavailable / no repo).
     assert rr.is_tracked(tmp_path / "nowhere" / "x.md") is False
+
+
+def test_skip_user_leaves_the_account_rules_mount_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--skip-user` must not touch ~/.claude/rules even in check mode."""
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    foreign = tmp_path / "foreign-generated"
+    foreign.mkdir()
+    (home / ".claude" / "rules").symlink_to(foreign, target_is_directory=True)
+    monkeypatch.setenv("HOME", str(home))
+    ws = _init_workspace(tmp_path, track_rules=False)
+
+    payload = rr.reconcile_adapters(REPO, workspace=ws, check=True, skip_user=True)
+
+    skipped = {entry["id"]: entry["reason"] for entry in payload["skipped"]}
+    assert "claude-code-user" in skipped
+    assert skipped["claude-code-user"] == "user-scope-skipped"
+    assert all(result.get("kind") != "user" for result in payload["results"])
+    # The account mount still points at the foreign tree: nothing resolved it.
+    assert (home / ".claude" / "rules").resolve() == foreign.resolve()

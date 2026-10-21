@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Fail closed when a pre-commit hook is not declared read_only or writer.
 
+Each hook also declares its locality. ops/scripts/run_pr_precommit.sh runs the
+GOVERNANCE catalog with a consumer workspace as cwd, so a hook whose entry is a
+governance-tree path dies on a missing file there. ``governance`` marks such a
+hook (the runner skips it in consumers); ``any`` marks a hook that runs in every
+workspace. A local hook whose entry resolves under this root but is declared
+``any`` fails here, so a newly added governance-local hook cannot ship without
+a consumer decision.
+
 pre-commit attributes "files were modified by this hook" to whichever hook was
 running when the tracked worktree changed, regardless of who actually wrote
 (pre_commit/commands/run.py ``_run_single_hook``). Without a declaration there
@@ -20,6 +28,7 @@ from typing import Any
 import yaml
 
 VALID_MODES = {"read_only", "writer"}
+VALID_LOCALITIES = {"governance", "any"}
 
 
 def load_configured_hook_ids(config_path: Path) -> list[str]:
@@ -31,6 +40,27 @@ def load_configured_hook_ids(config_path: Path) -> list[str]:
             if hook_id:
                 ids.append(str(hook_id))
     return ids
+
+
+def load_local_hook_entries(config_path: Path) -> dict[str, str]:
+    """hook id -> ``entry`` for hooks of ``repo: local``."""
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    entries: dict[str, str] = {}
+    for repo in data.get("repos", []) or []:
+        if repo.get("repo") != "local":
+            continue
+        for hook in repo.get("hooks", []) or []:
+            if hook.get("id"):
+                entries[str(hook["id"])] = str(hook.get("entry", ""))
+    return entries
+
+
+def governance_tree_path(root: Path, entry: str) -> str | None:
+    """The first relative entry token that names a file under ``root``."""
+    for token in entry.split():
+        if "/" in token and not token.startswith("/") and (root / token).is_file():
+            return token
+    return None
 
 
 def validate(root: Path) -> list[str]:
@@ -46,6 +76,7 @@ def validate(root: Path) -> list[str]:
     contract: dict[str, Any] = json.loads(contract_path.read_text(encoding="utf-8"))
     declared: dict[str, Any] = contract.get("hooks") or {}
     configured = load_configured_hook_ids(config_path)
+    local_entries = load_local_hook_entries(config_path)
 
     for hook_id in configured:
         entry = declared.get(hook_id)
@@ -63,6 +94,20 @@ def validate(root: Path) -> list[str]:
             continue
         if mode == "writer" and not isinstance(entry.get("output_prefixes"), list):
             errors.append(f"writer hook '{hook_id}' must declare an output_prefixes list")
+        locality = entry.get("locality")
+        if locality not in VALID_LOCALITIES:
+            errors.append(
+                f"hook '{hook_id}' has locality {locality!r}; expected one of "
+                f"{sorted(VALID_LOCALITIES)}"
+            )
+            continue
+        local_path = governance_tree_path(root, local_entries.get(hook_id, ""))
+        if locality == "any" and local_path is not None:
+            errors.append(
+                f"hook '{hook_id}' entry resolves against the governance tree ({local_path}) "
+                "but is declared locality 'any' — it cannot run in a consumer workspace; "
+                "declare it 'governance'"
+            )
 
     for hook_id in declared:
         if hook_id not in configured:
@@ -85,7 +130,7 @@ def main() -> int:
         for error in errors:
             print(f"  {error}")
         return 1
-    print("OK: every pre-commit hook is declared read_only or writer")
+    print("OK: every pre-commit hook declares its mode and locality")
     return 0
 
 

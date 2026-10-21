@@ -1,0 +1,50 @@
+adr:
+  id: ADR-L9-GAR-007
+  title: Architecture intelligence as a separate, producer-emitted, consumer-verified GAR input
+  status: accepted
+  date: 2026-10-15
+  decision_scope: l9-global-architect v0.8.3 runtime integration binding
+  normative: false
+authorization: repository_owner_approved_compiler_produced_consumer_verified_binding_2026_10_15
+context:
+  - GAR consumed no canonical projection; contracts/L9_ARCHITECTURE_PROFILE.yaml is GAR-owned law, not a projection.
+  - Quantum-L9/.github v3.22.0 candidate defines l9.projection/architecture-intelligence@1 and l9.compose/architecture-intelligence@1.
+  - l9-semantic-compiler produces one PASS artifact per source and a source-namespaced composed view with PASS receipts.
+decision:
+  - Add integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml as a separate input with exact profile, composition, schema, and source-class pins.
+  - The bundle is produced only by the compiler via tools/authority/produce_architecture_intelligence.py and CI; GAR never produces it.
+  - scripts/verify_architecture_intelligence.py checks bytes, envelope digests, pins, receipts, exact source coverage, namespace byte-equivalence, and optional currentness; it executes no selector or composition semantics.
+  - Load only on the optional_load trigger and only when the verifier returns BOUND; record provenance in $.architecture_intelligence (RS-034).
+  - BLOCKED, REJECTED, and STALE never fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
+preserved:
+  - contracts/L9_ARCHITECTURE_PROFILE.yaml unchanged and loaded in its existing boot position.
+  - Every other semantic owner, eval, and transition unchanged.
+validation:
+  - scripts/validate_runtime_alignment.py checks the binding pins, fallbacks, manifest wiring, run-state slot, and RS-034.
+  - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py exercises BOUND and every refusal path.
+
+amendments:
+  - date: 2026-10-15
+    title: Authority separation, source-set closure, and fact citation (audit remediation, pack v0.8.4)
+    authorization: repository_owner_audit_remediation_request_2026_10_15
+    context:
+      - Audit F1. BOUND could be returned without any authority check (currentness NOT_CHECKED), and CI took its expected revision from the bundle's own lock, so a structurally verified bundle could be read as admitted law.
+      - Audit F2. Receipt and lock digests are recomputable; a coherent rewrite satisfies them, so the verifier cannot attest compiler production.
+      - Audit F3. expected_source_classes was a second declaration that could drift from the canonical profile's sources.
+      - Audit F4. No executable path read a namespaced fact with its exact source provenance.
+      - Quantum-L9/.github defines no machine-readable admission decision record; every release record self-describes as a candidate (authority_model.yaml#admission_rules requires an explicit decision record bound to the exact revision).
+    decision:
+      - Split the verifier's verdict. BUNDLE_VERIFIED means coherent and current at the revision the bundle names. ADMITTED_AND_CURRENT additionally requires admission resolved independently of bundle.lock.json, and is the only state readable as admitted law.
+      - Mode admitted (default) requires an authority checkout and resolves the tip of refs/remotes/origin/main itself. The bundle revision must be integrated into it, the governing inputs must be byte-identical at that tip, and an admission decision record must exist. Because the semantic owner defines no such record, an integrated revision is ADMISSION_UNRESOLVED; integration is not treated as admission and no record format is invented.
+      - Mode candidate permits non-authoritative inspection of a BUNDLE_VERIFIED bundle; every citation carries authoritative false.
+      - verify_content_at derives the source set from the pinned profile at the authority revision; a binding whose expected_source_classes differ (membership or order) is REJECTED with EXPECTED_SOURCE_SET_MISMATCH.
+      - "--cite SOURCE_CLASS:/POINTER reads one value by JSON pointer after the provenance record exists and records source_class, namespace pointer, source_ref, source_digest, projection_digest, composition_digest and authority revision. Reading by pointer is not selection or composition."
+      - The record carries production_attested_by_verifier false and the binding's assurance_limitations, including unrelated_domain_payloads lacking independent restrictive power (Quantum-L9/.github ADR-019).
+    preserved:
+      - Projection profile, composition profile, payload schemas, namespacing, and every ADR-L9-GAR-007 refusal and no-fallback rule.
+      - contracts/L9_ARCHITECTURE_PROFILE.yaml unchanged and loaded in its existing boot position.
+    escalated:
+      - The admission decision record (schema and location) belongs to Quantum-L9/.github. Until it exists, ADMITTED_AND_CURRENT is unreachable and GAR reads architecture intelligence only as a candidate.
+    validation:
+      - tests/skills/l9_global_architect/test_architecture_intelligence_binding.py covers the admitted and candidate modes, a valid candidate revision that is not admitted, an integrated revision whose admission is unresolved, staleness at authority main, source-set closure, a coherent forgery that passes hash checks but fails the producer replay, and a GAR session citing a namespaced fact.
+      - scripts/validate_runtime_alignment.py checks the admission wiring and the non-authoritative candidate load.
