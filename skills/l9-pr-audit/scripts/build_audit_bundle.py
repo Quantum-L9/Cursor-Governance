@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.util
 import json
 import re
 import shutil
@@ -19,6 +20,7 @@ from collections import defaultdict, deque
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
+from types import ModuleType
 from typing import Any
 from uuid import uuid4
 
@@ -41,9 +43,24 @@ CANONICAL_AUTHORITY_ID = re.compile(r"^(L9-[A-Z]+-\d{3}|l9\.contract/[a-z0-9-]+@
 # names must exist in the named namespace, so an id that merely matches the
 # canonical shape cannot pass as bound law. CANONICAL_BUNDLE_ROOT overrides the
 # bundle directory (CLI --canonical-bundle; the self-test points it at a fixture).
+# Either way the view is read only through the pack's canonical-authority verifier,
+# which authenticates the composed bytes; a digest field inside them proves nothing.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 COMPOSED_VIEW_NAME = "composed.json"
 CANONICAL_BUNDLE_ROOT: Path | None = None
+CANONICAL_VERIFIER_PATH = Path(__file__).resolve().with_name("verify_canonical_authority.py")
+# The bundle identity a canonical_authority_binding records; the verified bundle must
+# reproduce each field exactly before its composed view is used.
+CANONICAL_BUNDLE_IDENTITY_FIELDS = (
+    "bundle_ref",
+    "authority_repository",
+    "authority_revision",
+    "projection_profile",
+    "composition_profile",
+    "composition_digest",
+    "component_digests",
+    "component_sources",
+)
 
 
 def canonical_bundle_root(audit: dict[str, Any]) -> Path | None:
@@ -56,20 +73,63 @@ def canonical_bundle_root(audit: dict[str, Any]) -> Path | None:
     return REPO_ROOT / bundle_ref
 
 
-def load_canonical_view(audit: dict[str, Any]) -> dict[str, Any] | None:
-    """Load the composed view of the bundle the audit's binding names, or None when absent."""
-    root = canonical_bundle_root(audit)
-    if root is None:
+def canonical_verifier() -> ModuleType | None:
+    """The pack's canonical-authority verifier, loaded by path without bytecode, or None."""
+    name = "l9_pr_audit_verify_canonical_authority"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, CANONICAL_VERIFIER_PATH)
+    if spec is None or spec.loader is None:
         return None
-    path = root / COMPOSED_VIEW_NAME
-    if not path.is_file():
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    except (ImportError, OSError, SystemExit):
+        return None
+    finally:
+        sys.dont_write_bytecode = previous
+    sys.modules[name] = module
+    return module
+
+
+def load_canonical_view(audit: dict[str, Any]) -> dict[str, Any] | None:
+    """The authenticated composed view of the bundle the audit's binding names, or None.
+
+    The bytes are authenticated by ``verify_canonical_authority.verify_bundle`` (lock sha256,
+    recomputed composition digest, components, namespaces, composition receipt), and the
+    verified bundle must reproduce every identity field the binding records. The returned
+    view is the verifier's own parse of the bytes it checked. Absent, unverifiable, or
+    mismatched bundles return None: fail closed. Admission is the binding status's
+    separate question; bundle integrity never implies it."""
+    root = canonical_bundle_root(audit)
+    binding = audit.get("canonical_authority_binding")
+    verifier = canonical_verifier()
+    if root is None or not isinstance(binding, dict) or verifier is None:
         return None
     try:
-        with path.open(encoding="utf-8") as handle:
-            data = json.load(handle)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        pins = verifier.load_binding(verifier.DEFAULT_BINDING)
+        result = verifier.verify_bundle(root, pins)
+        recorded = verifier.state_record(
+            result, pins, mode="admitted", status="BUNDLE_VERIFIED", admission={}
+        )
+    except (verifier.Outcome, KeyError, TypeError, ValueError, OSError):
         return None
-    return data if isinstance(data, dict) else None
+    if any(recorded[field] != binding.get(field) for field in CANONICAL_BUNDLE_IDENTITY_FIELDS):
+        return None
+    composed = result["composed"]
+    return composed if isinstance(composed, dict) else None
+
+
+def authenticated_canonical_view(
+    audit: dict[str, Any], supplied: dict[str, Any] | None = None
+) -> dict[str, Any] | None:
+    """The authenticated view; a caller-supplied view counts only when it is that view."""
+    view = load_canonical_view(audit)
+    if supplied is not None and supplied != view:
+        return None
+    return view
 
 
 def load_canonical_binding(path: Path) -> dict[str, Any]:
@@ -568,7 +628,9 @@ def materialize_machine_rows(
     names, every bound global invariant is also seeded as one CANONICAL_INVARIANT
     obligation per PR, grounded by one ``E-CANON`` evidence record that attests the
     bound invariant set (never a PR's compliance with it). Any other binding status
-    seeds nothing: the global layer is then a typed Unknown, not recalled law.
+    seeds nothing: the global layer is then a typed Unknown, not recalled law. The
+    seeded invariants are read from the authenticated bundle, and ``canonical_view``
+    must be exactly that view, or nothing is seeded and this raises.
     """
     out: dict[str, Any] = {
         "deterministic_census_binding": {
@@ -713,12 +775,16 @@ def materialize_machine_rows(
         and canonical_binding.get("status") == "ADMITTED_AND_CURRENT"
         and canonical_view is not None
     ):
-        if canonical_view.get("composition_digest") != canonical_binding.get("composition_digest"):
+        verified_view = authenticated_canonical_view(
+            {"canonical_authority_binding": canonical_binding}, canonical_view
+        )
+        if verified_view is None:
             raise ValueError(
-                "canonical composed view composition_digest does not match the "
+                "canonical composed view does not authenticate against the bound bundle "
+                f"({canonical_binding.get('bundle_ref')}/{COMPOSED_VIEW_NAME}) recorded by the "
                 "canonical_authority_binding; refusing to seed canonical invariants"
             )
-        invariant_ids = canonical_invariant_ids(canonical_view)
+        invariant_ids = canonical_invariant_ids(verified_view)
         out["shared_evidence_index"].append(
             {
                 "evidence_id": CANONICAL_INVARIANT_EVIDENCE_ID,
@@ -1883,8 +1949,9 @@ def validate_semantics(
 ) -> list[str]:
     """Validate cross-field invariants that JSON Schema cannot express cleanly.
 
-    ``canonical_view`` is the composed view of the bound canonical bundle; when
-    None it is loaded from the bundle the audit's binding names. Every
+    The composed view of the bound canonical bundle is always the authenticated one
+    loaded from the bundle the audit's binding names; a supplied ``canonical_view``
+    counts only when it is exactly that view, else the view is unavailable. Every
     CANONICAL_LAW authority source must resolve to a record in that view."""
     errors: list[str] = []
     if audit.get("schema_version") != SCHEMA_VERSION:
@@ -1896,8 +1963,7 @@ def validate_semantics(
     baseline = repo["audited_default_branch_sha"].lower()
     binding = audit["canonical_authority_binding"]
     admitted = binding["status"] == "ADMITTED_AND_CURRENT"
-    if canonical_view is None:
-        canonical_view = load_canonical_view(audit)
+    canonical_view = authenticated_canonical_view(audit, canonical_view)
 
     # Identity uniqueness.
     pnums = [p["pr_number"] for p in audit["pr_bindings"]]
@@ -2207,7 +2273,8 @@ def validate_semantics(
     elif canonical_view is None:
         errors.append(
             "CANONICAL_INVARIANT obligations cannot be checked: the bound bundle composed view "
-            f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable"
+            f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable or does not "
+            "authenticate against canonical_authority_binding"
         )
     elif canonical_view.get("composition_digest") != binding["composition_digest"]:
         errors.append(
@@ -2506,7 +2573,8 @@ def validate_semantics(
                 elif canonical_view is None:
                     errors.append(
                         f"authority {aid} cannot be resolved: the bound bundle composed view "
-                        f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable"
+                        f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable or does "
+                        "not authenticate against canonical_authority_binding"
                     )
                 elif canonical_view.get("composition_digest") != ref["composition_digest"]:
                     errors.append(
@@ -4507,6 +4575,10 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        # The override applies to every mode and is authenticated like the default bundle.
+        if args.canonical_bundle is not None:
+            global CANONICAL_BUNDLE_ROOT
+            CANONICAL_BUNDLE_ROOT = args.canonical_bundle
         if args.materialize_machine_rows:
             if not args.change_ledger:
                 parser.error("--materialize-machine-rows requires at least one --change-ledger")
@@ -4521,8 +4593,9 @@ def main() -> int:
                 )
                 if canonical_view is None:
                     parser.error(
-                        "--canonical-binding names a bundle whose composed view is unavailable; "
-                        "pass --canonical-bundle or cut the bundle first"
+                        "--canonical-binding names a bundle whose composed view is unavailable "
+                        "or does not authenticate against that binding; pass --canonical-bundle "
+                        "or cut the bundle first"
                     )
             rows = materialize_machine_rows(
                 load_change_ledger_paths(args.change_ledger),
@@ -4550,9 +4623,6 @@ def main() -> int:
                 return 1
             print("PASS: bundle verification passed")
             return 0
-        if args.canonical_bundle is not None:
-            global CANONICAL_BUNDLE_ROOT
-            CANONICAL_BUNDLE_ROOT = args.canonical_bundle
         if not args.audit:
             parser.error("--audit is required unless --verify-bundle is used")
         if not args.change_ledger:

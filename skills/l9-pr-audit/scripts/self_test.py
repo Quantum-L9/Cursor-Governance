@@ -6,10 +6,12 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 sys.dont_write_bytecode = True
 
@@ -33,32 +35,39 @@ A = "a" * 40
 B = "b" * 40
 C = "c" * 40
 
-# The fixture audit binds a synthetic canonical bundle: its composed view carries the
-# composition digest the fixture binding names and exactly one invariants record, so a
-# CANONICAL_LAW source resolves only to L9-EVIDENCE-001 in namespace invariants.
-CANONICAL_COMPOSITION_DIGEST = "sha256:" + "6" * 64
-CANONICAL_VIEW: dict[str, object] = {
-    "schema": "l9.composed-projection/v1",
-    "composition_digest": CANONICAL_COMPOSITION_DIGEST,
-    "payload": {
-        "invariants": {
-            "invariants": [
-                {
-                    "id": "L9-EVIDENCE-001",
-                    "owner": "Quantum-L9/.github",
-                    "scope": "global",
-                    "statement": "Evidence and receipts confer no authority.",
-                }
-            ]
-        },
-        "contracts": {"contracts": []},
-    },
-}
+# The fixture audit binds a disposable copy of the committed canonical bundle. The builder
+# authenticates composed bytes through the pack's verifier, so the fixture binding is that
+# verifier's own record of the bundle, recorded as admitted (admission is the binding's
+# separate claim). A CANONICAL_LAW source resolves to L9-EVIDENCE-001 in namespace invariants.
+CANONICAL_BUNDLE_SOURCE = bab.REPO_ROOT / "generated/governance/pr_audit"
+_VERIFIER = bab.canonical_verifier()
+assert _VERIFIER is not None, "the canonical-authority verifier must load"
+_PINS = _VERIFIER.load_binding(_VERIFIER.DEFAULT_BINDING)
+_VERIFIED = _VERIFIER.verify_bundle(CANONICAL_BUNDLE_SOURCE, _PINS)
+CANONICAL_VIEW = _VERIFIED["composed"]
+CANONICAL_RECORD = _VERIFIER.state_record(
+    _VERIFIED,
+    _PINS,
+    mode="admitted",
+    status="ADMITTED_AND_CURRENT",
+    admission={"status": "ADMITTED_AND_CURRENT", "reason": "ADMITTED"},
+)
+CANONICAL_INVARIANTS = bab.canonical_invariant_ids(CANONICAL_VIEW)
+CANONICAL_INVARIANT_SOURCE = CANONICAL_RECORD["component_sources"]["invariants"]
+assert "L9-EVIDENCE-001" in CANONICAL_INVARIANTS
 
 
-def write_canonical_bundle(root: Path, view: dict[str, object]) -> Path:
-    root.mkdir(parents=True, exist_ok=True)
-    (root / bab.COMPOSED_VIEW_NAME).write_text(json.dumps(view, indent=2), encoding="utf-8")
+def copy_canonical_bundle(root: Path, forged_invariant: str | None = None) -> Path:
+    """Copy the committed bundle to *root*; optionally append one invariant to its composed
+    view in place, leaving the declared composition_digest, the lock and the binding unchanged."""
+    shutil.copytree(CANONICAL_BUNDLE_SOURCE, root)
+    if forged_invariant is not None:
+        path = root / bab.COMPOSED_VIEW_NAME
+        view = json.loads(path.read_text(encoding="utf-8"))
+        view["payload"]["invariants"]["invariants"].append(
+            {"id": forged_invariant, "owner": "Quantum-L9/.github", "scope": "global"}
+        )
+        path.write_text(json.dumps(view, indent=2), encoding="utf-8")
     return root
 
 
@@ -299,9 +308,9 @@ def base_audit() -> dict[str, object]:
             **evidence(
                 "E-CANON",
                 "INVARIANT",
-                "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
-                "The admitted canonical bundle binds one global invariant (L9-EVIDENCE-001); this attests the bound set only.",
-                ["canonical_invariant_set", "invariant:L9-EVIDENCE-001"],
+                CANONICAL_RECORD["authority_revision"],
+                f"The admitted canonical bundle binds {len(CANONICAL_INVARIANTS)} global invariants; this attests the bound set only.",
+                ["canonical_invariant_set"] + [f"invariant:{i}" for i in CANONICAL_INVARIANTS],
             ),
             # Canonical evidence is anchored to the authority repository, not the audited one.
             "repository": "Quantum-L9/.github",
@@ -517,40 +526,11 @@ def base_audit() -> dict[str, object]:
             ],
         },
         "canonical_authority_binding": {
-            "binding_ref": "integrations/CANONICAL_AUTHORITY_BINDING.yaml",
-            "mode": "admitted",
-            "status": "ADMITTED_AND_CURRENT",
-            "bundle_status": "BUNDLE_VERIFIED",
-            "authority_status": {"status": "ADMITTED_AND_CURRENT", "reason": "ADMITTED"},
-            "authoritative": True,
-            "load_status": "LOADED",
-            "bundle_ref": "generated/governance/pr_audit",
-            "authority_repository": "Quantum-L9/.github",
-            "authority_revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
-            "projection_profile": {
-                "ref": "l9.projection/pr-audit@1",
-                "digest": "sha256:" + "f" * 64,
-            },
-            "composition_profile": {"ref": "l9.compose/pr-audit@1", "digest": "sha256:" + "b" * 64},
-            "composition_digest": "sha256:" + "6" * 64,
-            "component_digests": {"invariants": "sha256:" + "1" * 64},
-            "component_sources": {
-                "invariants": {
-                    "source_ref": "l9.source/invariants@1",
-                    "source_digest": "sha256:" + "7" * 64,
-                    "projection_digest": "sha256:" + "1" * 64,
-                }
-            },
-            "producer": {"compiler": "l9-semantic-compiler", "version": "0.9.3"},
-            "production_attested_by_verifier": False,
-            "assurance_limitations": [],
-            "verifier": "scripts/verify_canonical_authority.py",
+            **copy.deepcopy(CANONICAL_RECORD),
             "currentness": {
-                "checked_against": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+                "checked_against": CANONICAL_RECORD["authority_revision"],
                 "basis": "authority_main",
             },
-            "refusal_reason": None,
-            "fallback_used": False,
         },
         "authority_resolution": {
             "status": "RESOLVED",
@@ -573,10 +553,10 @@ def base_audit() -> dict[str, object]:
                     "canonical_ref": {
                         "source_class": "invariants",
                         "record_id": "L9-EVIDENCE-001",
-                        "source_ref": "l9.source/invariants@1",
-                        "source_digest": "sha256:" + "7" * 64,
-                        "projection_digest": "sha256:" + "1" * 64,
-                        "composition_digest": "sha256:" + "6" * 64,
+                        "source_ref": CANONICAL_INVARIANT_SOURCE["source_ref"],
+                        "source_digest": CANONICAL_INVARIANT_SOURCE["source_digest"],
+                        "projection_digest": CANONICAL_INVARIANT_SOURCE["projection_digest"],
+                        "composition_digest": CANONICAL_RECORD["composition_digest"],
                     },
                 },
                 {
@@ -1025,15 +1005,18 @@ def base_audit() -> dict[str, object]:
             "evidence_ids": ["E-TEST"],
             "finding_ids": ["F1"],
         },
-        {
-            "obligation_id": "OB-CANON-1-L9-EVIDENCE-001",
-            "pr_number": 1,
-            "kind": "CANONICAL_INVARIANT",
-            "subject": "L9-EVIDENCE-001",
-            "status": "PASS",
-            "evidence_ids": ["E-CANON", "E-AUTH"],
-            "finding_ids": [],
-        },
+        *(
+            {
+                "obligation_id": f"OB-CANON-1-{invariant_id}",
+                "pr_number": 1,
+                "kind": "CANONICAL_INVARIANT",
+                "subject": invariant_id,
+                "status": "PASS",
+                "evidence_ids": ["E-CANON", "E-AUTH"],
+                "finding_ids": [],
+            }
+            for invariant_id in CANONICAL_INVARIANTS
+        ),
     ]
     for symbol in audit["changed_symbol_ledger"]:
         audit["audit_obligation_ledger"].append(
@@ -1106,7 +1089,7 @@ def main() -> int:
         )
 
     canonical_td = tempfile.TemporaryDirectory(prefix="l9-pr-audit-canonical-")
-    canonical_root = write_canonical_bundle(Path(canonical_td.name) / "bound", CANONICAL_VIEW)
+    canonical_root = copy_canonical_bundle(Path(canonical_td.name) / "bound")
     bab.CANONICAL_BUNDLE_ROOT = canonical_root
 
     audit = base_audit()
@@ -2192,37 +2175,66 @@ def main() -> int:
         "authority L9-FOO-999 does not exist in bound namespace invariants of the composed view",
     )
 
+    # No cross-namespace fallback: the record must exist in the namespace the ref names.
     bad = copy.deepcopy(audit)
     bad["authority_resolution"]["sources"][1]["canonical_ref"]["source_class"] = "contracts"
     errors = bab.validate_audit(bad)
-    assert_has(errors, "canonical_ref source_class contracts is not a bound source class")
+    assert_has(
+        errors, "canonical_ref projection_digest does not match the bound contracts component"
+    )
     assert_has(errors, "does not exist in bound namespace contracts of the composed view")
+    unbound: Any = copy.deepcopy(bad)
+    unbound["authority_resolution"]["sources"][1]["canonical_ref"]["source_class"] = "unbound"
+    errors = bab.validate_audit(unbound)
+    assert_has(errors, "canonical_ref source_class unbound is not a bound source class")
+    assert_has(errors, "does not exist in bound namespace unbound of the composed view")
 
     bad = copy.deepcopy(audit)
     del bad["authority_resolution"]["sources"][1]["canonical_ref"]["record_id"]
     assert bab.validate_audit(bad), "canonical_ref without record_id must fail schema validation"
 
-    # Resolution reads the composed view on disk: an absent view or one whose composition
-    # digest differs from the reference fails closed rather than trusting the reference.
+    # Resolution reads only the authenticated composed view. An absent bundle, or a copy whose
+    # composed.json gained a record while its declared composition_digest, lock and binding
+    # stayed unchanged, fails closed for both law resolution and invariant coverage, and a
+    # caller-supplied copy of that forged view is no substitute for the bundle's bytes.
+    forged_root = copy_canonical_bundle(Path(canonical_td.name) / "forged", "L9-FOO-999")
+    forged_view = json.loads((forged_root / bab.COMPOSED_VIEW_NAME).read_text(encoding="utf-8"))
+    forged: Any = copy.deepcopy(audit)
+    forged["authority_resolution"]["sources"][1]["authority_id"] = "L9-FOO-999"
+    forged["authority_resolution"]["sources"][1]["canonical_ref"]["record_id"] = "L9-FOO-999"
+    forged["audit_obligation_ledger"].append(
+        {
+            "obligation_id": "OB-CANON-1-L9-FOO-999",
+            "pr_number": 1,
+            "kind": "CANONICAL_INVARIANT",
+            "subject": "L9-FOO-999",
+            "status": "PASS",
+            "evidence_ids": ["E-CANON"],
+            "finding_ids": [],
+        }
+    )
+    forged["audit_passes"][-1]["observed_obligation_ids"].append("OB-CANON-1-L9-FOO-999")
+    unauthenticated = (
+        "cannot be resolved: the bound bundle composed view "
+        "(generated/governance/pr_audit/composed.json) is unavailable or does not authenticate"
+    )
     try:
         bab.CANONICAL_BUNDLE_ROOT = Path(canonical_td.name) / "missing"
-        assert_has(
-            bab.validate_audit(audit),
-            "cannot be resolved: the bound bundle composed view "
-            "(generated/governance/pr_audit/composed.json) is unavailable",
-        )
-        drifted_view = copy.deepcopy(CANONICAL_VIEW)
-        drifted_view["composition_digest"] = "sha256:" + "5" * 64
-        bab.CANONICAL_BUNDLE_ROOT = write_canonical_bundle(
-            Path(canonical_td.name) / "drifted", drifted_view
-        )
-        assert_has(
-            bab.validate_audit(audit),
-            "canonical_ref composition_digest does not match the composed view of the bound bundle",
-        )
+        assert_has(bab.validate_audit(audit), unauthenticated)
+        bab.CANONICAL_BUNDLE_ROOT = forged_root
+        assert bab.load_canonical_view(forged) is None, "a forged composed view must not load"
+        for candidate in (audit, forged):
+            errors = bab.validate_audit(candidate)
+            assert_has(errors, unauthenticated)
+            assert_has(errors, "CANONICAL_INVARIANT obligations cannot be checked")
+        bab.CANONICAL_BUNDLE_ROOT = canonical_root
+        errors = bab.validate_semantics(forged, canonical_view=forged_view)
+        assert_has(errors, f"authority L9-FOO-999 {unauthenticated}")
+        assert_has(errors, "CANONICAL_INVARIANT obligations cannot be checked")
     finally:
         bab.CANONICAL_BUNDLE_ROOT = canonical_root
     assert not bab.validate_audit(audit), "fixture must validate again against the bound view"
+    assert not bab.validate_semantics(audit, canonical_view=copy.deepcopy(CANONICAL_VIEW))
 
     # Canonical evidence may name the authority repository only at the admitted revision.
     bad = copy.deepcopy(audit)
@@ -2248,7 +2260,7 @@ def main() -> int:
     assert_has(
         bab.validate_audit(bad),
         "PR 1 CANONICAL_INVARIANT obligations must exactly match the bound invariants; "
-        "missing=['L9-EVIDENCE-001'] extra=[]",
+        f"missing={sorted(CANONICAL_INVARIANTS)} extra=[]",
     )
 
     bad = copy.deepcopy(audit)
@@ -2276,7 +2288,11 @@ def main() -> int:
     )
 
     bad = copy.deepcopy(audit)
-    row = next(o for o in bad["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT")
+    row = next(
+        o
+        for o in bad["audit_obligation_ledger"]
+        if o["obligation_id"] == "OB-CANON-1-L9-EVIDENCE-001"
+    )
     row["status"] = "FINDING"
     row["finding_ids"] = ["F1"]
     assert_has(
@@ -2296,11 +2312,15 @@ def main() -> int:
     canon_rows = [
         o for o in seeded["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT"
     ]
-    assert [o["obligation_id"] for o in canon_rows] == ["OB-CANON-7-L9-EVIDENCE-001"], canon_rows
-    assert canon_rows[0]["status"] == "UNKNOWN" and canon_rows[0]["evidence_ids"] == ["E-CANON"]
+    assert [o["obligation_id"] for o in canon_rows] == [
+        f"OB-CANON-7-{invariant_id}" for invariant_id in CANONICAL_INVARIANTS
+    ], canon_rows
+    assert all(o["status"] == "UNKNOWN" and o["evidence_ids"] == ["E-CANON"] for o in canon_rows)
     canon_evidence = [e for e in seeded["shared_evidence_index"] if e["evidence_id"] == "E-CANON"]
     assert len(canon_evidence) == 1 and canon_evidence[0]["evidence_type"] == "INVARIANT"
-    assert "invariant:L9-EVIDENCE-001" in canon_evidence[0]["properties_discriminated"]
+    assert canon_evidence[0]["properties_discriminated"] == ["canonical_invariant_set"] + [
+        f"invariant:{invariant_id}" for invariant_id in CANONICAL_INVARIANTS
+    ]
     schema_props = bab.load_json(bab.schema_path())["properties"]
     for key, items in (
         ("audit_obligation_ledger", canon_rows),
@@ -2309,26 +2329,71 @@ def main() -> int:
         validator = bab.Draft202012Validator(schema_props[key]["items"])
         problems = [e.message for item in items for e in validator.iter_errors(item)]
         assert not problems, f"seeded {key} row rejected by audit schema: {problems}"
-    unadmitted = copy.deepcopy(audit["canonical_authority_binding"])
-    unadmitted["status"] = "BUNDLE_VERIFIED"
-    bare = bab.materialize_machine_rows(
-        seed_wrapper, "A1", canonical_binding=unadmitted, canonical_view=CANONICAL_VIEW
-    )
-    assert not [o for o in bare["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT"]
-    assert not [e for e in bare["shared_evidence_index"] if e["evidence_id"] == "E-CANON"]
-    drifted_view = copy.deepcopy(CANONICAL_VIEW)
-    drifted_view["composition_digest"] = "sha256:" + "5" * 64
-    try:
-        bab.materialize_machine_rows(
-            seed_wrapper,
-            "A1",
-            canonical_binding=audit["canonical_authority_binding"],
-            canonical_view=drifted_view,
+    # Bundle integrity is not admission: a verified view under any other status seeds nothing.
+    for status in ("BUNDLE_VERIFIED", "STALE", "REJECTED", "UNAVAILABLE"):
+        unadmitted: Any = copy.deepcopy(audit["canonical_authority_binding"])
+        unadmitted["status"] = status
+        bare = bab.materialize_machine_rows(
+            seed_wrapper, "A1", canonical_binding=unadmitted, canonical_view=CANONICAL_VIEW
         )
-    except ValueError as exc:
-        assert "refusing to seed canonical invariants" in str(exc)
-    else:
-        raise AssertionError("materialize must refuse a composed view whose digest drifted")
+        assert not [
+            o for o in bare["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT"
+        ], status
+        assert not [e for e in bare["shared_evidence_index"] if e["evidence_id"] == "E-CANON"]
+    # A forged view never seeds, whether passed in directly or read from a forged bundle copy.
+    for root in (canonical_root, forged_root):
+        bab.CANONICAL_BUNDLE_ROOT = root
+        try:
+            bab.materialize_machine_rows(
+                seed_wrapper,
+                "A1",
+                canonical_binding=audit["canonical_authority_binding"],
+                canonical_view=forged_view,
+            )
+        except ValueError as exc:
+            assert "refusing to seed canonical invariants" in str(exc)
+        else:
+            raise AssertionError(f"materialize must refuse a forged composed view ({root.name})")
+    bab.CANONICAL_BUNDLE_ROOT = canonical_root
+
+    # The CLI's --canonical-bundle override is authenticated the same way.
+    seed_ledger = Path(canonical_td.name) / "ledger-7.json"
+    seed_ledger.write_text(json.dumps({**ledger, "pr_number": 7}), encoding="utf-8")
+
+    def materialize_cli(binding: dict[str, Any], bundle: Path) -> tuple[int, list[str] | None]:
+        binding_path = Path(canonical_td.name) / "binding.json"
+        binding_path.write_text(json.dumps({"canonical_authority_binding": binding}))
+        out = Path(canonical_td.name) / "rows.json"
+        out.unlink(missing_ok=True)
+        cp = subprocess.run(
+            [
+                sys.executable,
+                str(script_root / "build_audit_bundle.py"),
+                "--materialize-machine-rows",
+                str(out),
+                "--change-ledger",
+                str(seed_ledger),
+                "--authority-id",
+                "A1",
+                "--canonical-binding",
+                str(binding_path),
+                "--canonical-bundle",
+                str(bundle),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if not out.is_file():
+            return cp.returncode, None
+        rows = json.loads(out.read_text(encoding="utf-8"))["audit_obligation_ledger"]
+        return cp.returncode, [o["subject"] for o in rows if o["kind"] == "CANONICAL_INVARIANT"]
+
+    admitted_binding: Any = audit["canonical_authority_binding"]
+    stale_binding = {**admitted_binding, "status": "STALE"}
+    assert materialize_cli(admitted_binding, canonical_root) == (0, CANONICAL_INVARIANTS)
+    assert materialize_cli(admitted_binding, forged_root) == (2, None)
+    assert materialize_cli(stale_binding, canonical_root) == (0, [])
 
     bad = copy.deepcopy(audit)
     bad["canonical_authority_binding"]["fallback_used"] = True
