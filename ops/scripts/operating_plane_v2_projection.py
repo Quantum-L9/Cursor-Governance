@@ -208,6 +208,21 @@ def classify(
         return _status("BLOCKED", "VERIFICATION_UNRESOLVED", detail=f"{type(exc).__name__}: {exc}")
 
 
+def render_line(result: dict[str, Any]) -> str:
+    """One SessionStart line; the Claude hook prints it, the Cursor hook renders markdown."""
+    return f"operating-plane projection: {result['status']} — {result['reason']} (report-only)"
+
+
+def render_markdown(result: dict[str, Any]) -> str:
+    return "\n".join(
+        [
+            "### operating-plane projection",
+            f"- {result['status']}: {result['reason']}",
+            f"- profile: {PROFILE_REF} (consumer verifier; report-only)",
+        ]
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
@@ -223,16 +238,36 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("candidate", "admitted"), default="admitted")
     parser.add_argument("--source-class", choices=EXPECTED_CLASSES)
     parser.add_argument("--record-id", default=None)
-    args = parser.parse_args(argv)
-    result = classify(
-        repo_root=args.repo_root,
-        workspace=args.workspace,
-        authority_root=args.authority_root,
-        expect_main=args.expect_main,
-        mode=args.mode,
-        source_class=args.source_class,
-        record_id=args.record_id,
+    parser.add_argument(
+        "--format",
+        choices=("json", "line", "markdown"),
+        default="json",
+        help="json exits with the status code (CI); line/markdown are SessionStart report-only "
+        "renderings that never release payload and always exit 0",
     )
+    args = parser.parse_args(argv)
+    if args.format != "json" and (args.source_class or args.record_id):
+        parser.error("--format line/markdown is report-only; it never releases a source class")
+    try:
+        result = classify(
+            repo_root=args.repo_root,
+            workspace=args.workspace,
+            authority_root=args.authority_root,
+            expect_main=args.expect_main,
+            mode=args.mode,
+            source_class=args.source_class,
+            record_id=args.record_id,
+        )
+    except Exception as exc:  # noqa: BLE001 - a report-only line must always print
+        if args.format == "json":
+            raise
+        result = _status("BLOCKED", f"classifier error: {type(exc).__name__}: {exc}")
+    if args.format == "line":
+        print(render_line(result))
+        return 0
+    if args.format == "markdown":
+        print(render_markdown(result))
+        return 0
     print(json.dumps(result, indent=2, sort_keys=True))
     return EXIT.get(result["status"], 3)
 
