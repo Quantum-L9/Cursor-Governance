@@ -631,12 +631,16 @@ OPERATING_PLANE_PY="$GC/ops/scripts/operating_plane_v2_projection.py"
 if [ -f "$OPERATING_PLANE_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
   # shellcheck source=/dev/null
   source "$GC/ops/scripts/lib/run_with_timeout.sh"
-  _op_out="$(run_with_timeout 3 "$AUDIT_PY_BIN" "$OPERATING_PLANE_PY" \
+  # Admitted mode builds two shared clones of the authority (pinned revision and
+  # main) and verifies eight receipts: ~3 s on a warm checkout, so the 3 s budget
+  # the lighter coding-projection reader uses times out here (stage-4 e2e,
+  # 2026-10-22). 10 s is the bound; a timeout is still reported, not hidden.
+  _op_out="$(run_with_timeout 10 "$AUDIT_PY_BIN" "$OPERATING_PLANE_PY" \
     --mode admitted --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
   _op_rc=$?
   if [ "$_op_rc" = 124 ]; then
     OPERATING_PLANE_MD="### operating-plane projection
-- UNVERIFIED: TIMED OUT after 3 s (report-only)"
+- UNVERIFIED: TIMED OUT after 10 s (report-only)"
   elif [ -n "$_op_out" ]; then
     OPERATING_PLANE_MD="$_op_out"
   fi
