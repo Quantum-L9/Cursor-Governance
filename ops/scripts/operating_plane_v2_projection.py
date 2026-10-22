@@ -15,6 +15,7 @@ No network writes, selector evaluation, profile creation or automatic skill rout
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -90,7 +91,13 @@ def _payload(bundle: Path, verified: dict[str, Any], cls: str, record_id: str | 
     entry = verified["entries"].get(cls)
     if entry is None:
         raise Rejected(f"requested source class not in verified bundle: {cls}")
-    document = json.loads((bundle / entry["path"]).read_text(encoding="utf-8"))
+    # Release exactly the bytes the verifier authenticated: re-hash what is read
+    # against the verified lock entry, so a file swapped between verification
+    # and release is refused instead of returned as CURRENT.
+    data = (bundle / entry["path"]).read_bytes()
+    if "sha256:" + hashlib.sha256(data).hexdigest() != entry.get("sha256"):
+        raise Rejected(f"component bytes changed after verification: {cls}")
+    document = json.loads(data.decode("utf-8"))
     payload = document["payload"]
     if record_id is None:
         return payload
