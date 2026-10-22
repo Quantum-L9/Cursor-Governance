@@ -296,6 +296,13 @@ def base_audit() -> dict[str, object]:
             ],
         ),
         evidence(
+            "E-CANON",
+            "INVARIANT",
+            "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+            "The admitted canonical bundle binds one global invariant (L9-EVIDENCE-001); this attests the bound set only.",
+            ["canonical_invariant_set", "invariant:L9-EVIDENCE-001"],
+        ),
+        evidence(
             "E-GUARD",
             "CONTRACT",
             A,
@@ -1013,6 +1020,15 @@ def base_audit() -> dict[str, object]:
             "status": "FINDING",
             "evidence_ids": ["E-TEST"],
             "finding_ids": ["F1"],
+        },
+        {
+            "obligation_id": "OB-CANON-1-L9-EVIDENCE-001",
+            "pr_number": 1,
+            "kind": "CANONICAL_INVARIANT",
+            "subject": "L9-EVIDENCE-001",
+            "status": "PASS",
+            "evidence_ids": ["E-CANON", "E-AUTH"],
+            "finding_ids": [],
         },
     ]
     for symbol in audit["changed_symbol_ledger"]:
@@ -2203,6 +2219,96 @@ def main() -> int:
     finally:
         bab.CANONICAL_BUNDLE_ROOT = canonical_root
     assert not bab.validate_audit(audit), "fixture must validate again against the bound view"
+
+    # Phase 2: every bound invariant is an obligation per PR, and only under an admitted binding.
+    bad = copy.deepcopy(audit)
+    bad["audit_obligation_ledger"] = [
+        o for o in bad["audit_obligation_ledger"] if o["kind"] != "CANONICAL_INVARIANT"
+    ]
+    assert_has(
+        bab.validate_audit(bad),
+        "PR 1 CANONICAL_INVARIANT obligations must exactly match the bound invariants; "
+        "missing=['L9-EVIDENCE-001'] extra=[]",
+    )
+
+    bad = copy.deepcopy(audit)
+    bad["audit_obligation_ledger"].append(
+        {
+            "obligation_id": "OB-CANON-1-L9-FOO-999",
+            "pr_number": 1,
+            "kind": "CANONICAL_INVARIANT",
+            "subject": "L9-FOO-999",
+            "status": "PASS",
+            "evidence_ids": ["E-CANON"],
+            "finding_ids": [],
+        }
+    )
+    assert_has(bab.validate_audit(bad), "missing=[] extra=['L9-FOO-999']")
+
+    bad = copy.deepcopy(audit)
+    bad["canonical_authority_binding"]["status"] = "STALE"
+    bad["canonical_authority_binding"]["authoritative"] = False
+    bad["canonical_authority_binding"]["load_status"] = "NOT_LOADED"
+    assert_has(
+        bab.validate_audit(bad),
+        "CANONICAL_INVARIANT obligations require canonical_authority_binding ADMITTED_AND_CURRENT, "
+        "not STALE",
+    )
+
+    bad = copy.deepcopy(audit)
+    row = next(o for o in bad["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT")
+    row["status"] = "FINDING"
+    row["finding_ids"] = ["F1"]
+    assert_has(
+        bab.validate_audit(bad),
+        "obligation OB-CANON-1-L9-EVIDENCE-001 FINDING on canonical invariant L9-EVIDENCE-001: "
+        "finding F1 must be governed by that invariant as a CANONICAL_LAW authority source",
+    )
+
+    # The builder seeds those rows from the bound view, and nothing without an admitted binding.
+    seed_wrapper = {7: {"ledger": {**ledger, "pr_number": 7}, "sha256": "0" * 64}}
+    seeded = bab.materialize_machine_rows(
+        seed_wrapper,
+        "A1",
+        canonical_binding=audit["canonical_authority_binding"],
+        canonical_view=CANONICAL_VIEW,
+    )
+    canon_rows = [
+        o for o in seeded["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT"
+    ]
+    assert [o["obligation_id"] for o in canon_rows] == ["OB-CANON-7-L9-EVIDENCE-001"], canon_rows
+    assert canon_rows[0]["status"] == "UNKNOWN" and canon_rows[0]["evidence_ids"] == ["E-CANON"]
+    canon_evidence = [e for e in seeded["shared_evidence_index"] if e["evidence_id"] == "E-CANON"]
+    assert len(canon_evidence) == 1 and canon_evidence[0]["evidence_type"] == "INVARIANT"
+    assert "invariant:L9-EVIDENCE-001" in canon_evidence[0]["properties_discriminated"]
+    schema_props = bab.load_json(bab.schema_path())["properties"]
+    for key, items in (
+        ("audit_obligation_ledger", canon_rows),
+        ("shared_evidence_index", canon_evidence),
+    ):
+        validator = bab.Draft202012Validator(schema_props[key]["items"])
+        problems = [e.message for item in items for e in validator.iter_errors(item)]
+        assert not problems, f"seeded {key} row rejected by audit schema: {problems}"
+    unadmitted = copy.deepcopy(audit["canonical_authority_binding"])
+    unadmitted["status"] = "BUNDLE_VERIFIED"
+    bare = bab.materialize_machine_rows(
+        seed_wrapper, "A1", canonical_binding=unadmitted, canonical_view=CANONICAL_VIEW
+    )
+    assert not [o for o in bare["audit_obligation_ledger"] if o["kind"] == "CANONICAL_INVARIANT"]
+    assert not [e for e in bare["shared_evidence_index"] if e["evidence_id"] == "E-CANON"]
+    drifted_view = copy.deepcopy(CANONICAL_VIEW)
+    drifted_view["composition_digest"] = "sha256:" + "5" * 64
+    try:
+        bab.materialize_machine_rows(
+            seed_wrapper,
+            "A1",
+            canonical_binding=audit["canonical_authority_binding"],
+            canonical_view=drifted_view,
+        )
+    except ValueError as exc:
+        assert "refusing to seed canonical invariants" in str(exc)
+    else:
+        raise AssertionError("materialize must refuse a composed view whose digest drifted")
 
     bad = copy.deepcopy(audit)
     bad["canonical_authority_binding"]["fallback_used"] = True

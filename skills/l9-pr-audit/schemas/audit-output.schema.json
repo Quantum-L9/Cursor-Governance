@@ -2641,7 +2641,8 @@
               "TEST_DISCRIMINATION",
               "CONTROL_ADEQUACY",
               "CI_FAILURE",
-              "REVIEW_THREAD"
+              "REVIEW_THREAD",
+              "CANONICAL_INVARIANT"
             ]
           },
           "subject": {

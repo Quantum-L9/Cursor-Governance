@@ -72,6 +72,15 @@ def load_canonical_view(audit: dict[str, Any]) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def load_canonical_binding(path: Path) -> dict[str, Any]:
+    """Read a canonical_authority_binding object from the verifier report, an audit, or itself."""
+    data = load_json(path)
+    slot = data.get("canonical_authority_binding", data)
+    if not isinstance(slot, dict) or "status" not in slot or "bundle_ref" not in slot:
+        raise ValueError(f"{path} does not carry a canonical_authority_binding object")
+    return slot
+
+
 def canonical_record_exists(view: dict[str, Any], source_class: str, record_id: str) -> bool:
     """True when the named namespace of the composed view carries a record with that id.
 
@@ -94,6 +103,27 @@ def canonical_record_exists(view: dict[str, Any], source_class: str, record_id: 
         elif isinstance(node, list):
             pending.extend(node)
     return False
+
+
+CANONICAL_INVARIANT_EVIDENCE_ID = "E-CANON"
+
+
+def canonical_invariant_ids(view: dict[str, Any]) -> list[str]:
+    """The bound invariant ids of a composed view, in bundle order."""
+    payload = view.get("payload")
+    namespace = payload.get("invariants") if isinstance(payload, dict) else None
+    records = namespace.get("invariants") if isinstance(namespace, dict) else None
+    if not isinstance(records, list):
+        return []
+    return [
+        record["id"]
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("id"), str) and record["id"]
+    ]
+
+
+def canonical_invariant_obligation_id(pr_number: int, invariant_id: str) -> str:
+    return f"OB-CANON-{pr_number}-{invariant_id}"
 
 
 MANIFEST_VERSION = "l9.pr-audit.bundle-manifest.v2.0"
@@ -521,7 +551,10 @@ def mirrored_symbol_claim_status(symbol: dict[str, Any]) -> str:
 
 
 def materialize_machine_rows(
-    change_ledgers: dict[int, dict[str, Any]], authority_id: str
+    change_ledgers: dict[int, dict[str, Any]],
+    authority_id: str,
+    canonical_binding: dict[str, Any] | None = None,
+    canonical_view: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Project the bound census into the machine-owned audit rows, unadjudicated.
 
@@ -530,6 +563,12 @@ def materialize_machine_rows(
     closures UNKNOWN); the auditor adjudicates them, never deletes them. Each PR's
     census evidence record grounds that PR's machine claims (`claim:<id>`); it does
     not validate them, so it can never by itself close a claim as SUPPORTED.
+
+    With an ADMITTED_AND_CURRENT ``canonical_binding`` and the composed view it
+    names, every bound global invariant is also seeded as one CANONICAL_INVARIANT
+    obligation per PR, grounded by one ``E-CANON`` evidence record that attests the
+    bound invariant set (never a PR's compliance with it). Any other binding status
+    seeds nothing: the global layer is then a typed Unknown, not recalled law.
     """
     out: dict[str, Any] = {
         "deterministic_census_binding": {
@@ -669,6 +708,51 @@ def materialize_machine_rows(
                     "details": copy.deepcopy(UNADJUDICATED_CLOSURE_DETAILS[seed["closure_kind"]]),
                 }
             )
+    if (
+        canonical_binding is not None
+        and canonical_binding.get("status") == "ADMITTED_AND_CURRENT"
+        and canonical_view is not None
+    ):
+        if canonical_view.get("composition_digest") != canonical_binding.get("composition_digest"):
+            raise ValueError(
+                "canonical composed view composition_digest does not match the "
+                "canonical_authority_binding; refusing to seed canonical invariants"
+            )
+        invariant_ids = canonical_invariant_ids(canonical_view)
+        out["shared_evidence_index"].append(
+            {
+                "evidence_id": CANONICAL_INVARIANT_EVIDENCE_ID,
+                "evidence_type": "INVARIANT",
+                "epistemic_state": "CONFIRMED",
+                "repository": canonical_binding["authority_repository"],
+                "revision": canonical_binding["authority_revision"],
+                "path_or_check": f"{canonical_binding['bundle_ref']}/{COMPOSED_VIEW_NAME}",
+                "locator": f"composition_digest {canonical_binding['composition_digest']}",
+                "fact_proven": (
+                    f"The admitted canonical bundle ({canonical_binding['projection_profile']['ref']}) "
+                    f"at authority revision {canonical_binding['authority_revision']} binds "
+                    f"{len(invariant_ids)} global invariants; this record attests the bound set, "
+                    "never any PR's compliance with it."
+                ),
+                "properties_discriminated": ["canonical_invariant_set"]
+                + [f"invariant:{invariant_id}" for invariant_id in invariant_ids],
+                "redaction_state": "NOT_APPLICABLE",
+                "findings_using_this_evidence": [],
+            }
+        )
+        for pr in sorted(change_ledgers):
+            for invariant_id in invariant_ids:
+                out["audit_obligation_ledger"].append(
+                    {
+                        "obligation_id": canonical_invariant_obligation_id(pr, invariant_id),
+                        "pr_number": pr,
+                        "kind": "CANONICAL_INVARIANT",
+                        "subject": invariant_id,
+                        "status": "UNKNOWN",
+                        "evidence_ids": [CANONICAL_INVARIANT_EVIDENCE_ID],
+                        "finding_ids": [],
+                    }
+                )
     return out
 
 
@@ -1810,6 +1894,10 @@ def validate_semantics(
     repo = audit["repository_binding"]
     repo_name = repo["repository"]
     baseline = repo["audited_default_branch_sha"].lower()
+    binding = audit["canonical_authority_binding"]
+    admitted = binding["status"] == "ADMITTED_AND_CURRENT"
+    if canonical_view is None:
+        canonical_view = load_canonical_view(audit)
 
     # Identity uniqueness.
     pnums = [p["pr_number"] for p in audit["pr_bindings"]]
@@ -2099,6 +2187,45 @@ def validate_semantics(
         errors.append(
             f"audit obligation ledger missing OBJECTIVE obligations: {sorted(missing_objective_obligations)}"
         )
+    # Canonical invariants are audited per PR from the bound bundle, never recalled.
+    canonical_rows = [item for item in obligations if item["kind"] == "CANONICAL_INVARIANT"]
+    if not admitted:
+        if canonical_rows:
+            errors.append(
+                "CANONICAL_INVARIANT obligations require canonical_authority_binding "
+                f"ADMITTED_AND_CURRENT, not {binding['status']}; the global layer is a typed Unknown"
+            )
+    elif canonical_view is None:
+        errors.append(
+            "CANONICAL_INVARIANT obligations cannot be checked: the bound bundle composed view "
+            f"({binding['bundle_ref']}/{COMPOSED_VIEW_NAME}) is unavailable"
+        )
+    elif canonical_view.get("composition_digest") != binding["composition_digest"]:
+        errors.append(
+            "the bound bundle composed view composition_digest does not match "
+            "canonical_authority_binding.composition_digest"
+        )
+    else:
+        bound_invariants = set(canonical_invariant_ids(canonical_view))
+        for num in pr_by_num:
+            subjects = {item["subject"] for item in obs_by_kind_pr[("CANONICAL_INVARIANT", num)]}
+            if subjects != bound_invariants:
+                errors.append(
+                    f"PR {num} CANONICAL_INVARIANT obligations must exactly match the bound "
+                    f"invariants; missing={sorted(bound_invariants - subjects)} "
+                    f"extra={sorted(subjects - bound_invariants)}"
+                )
+        for item in canonical_rows:
+            if item["status"] != "FINDING":
+                continue
+            for fid in item["finding_ids"]:
+                governing = fmap.get(fid, {}).get("governing_authority", {}).get("authority_id")
+                if fid in fmap and governing != item["subject"]:
+                    errors.append(
+                        f"obligation {item['obligation_id']} FINDING on canonical invariant "
+                        f"{item['subject']}: finding {fid} must be governed by that invariant as "
+                        "a CANONICAL_LAW authority source"
+                    )
     for num, pr in pr_by_num.items():
         changed_subjects = {item["subject"] for item in obs_by_kind_pr[("CHANGED_SURFACE", num)]}
         expected_changed = {item["path"] for item in pr["changed_files"]}
@@ -2311,10 +2438,6 @@ def validate_semantics(
             errors.append("authority_resolution RESOLVED cannot retain UNKNOWN/BLOCKING conflicts")
 
     # Canonical authority binding: global law is bound, not recalled.
-    binding = audit["canonical_authority_binding"]
-    admitted = binding["status"] == "ADMITTED_AND_CURRENT"
-    if canonical_view is None:
-        canonical_view = load_canonical_view(audit)
     if admitted and not (binding["authoritative"] and binding["load_status"] == "LOADED"):
         errors.append(
             "canonical_authority_binding ADMITTED_AND_CURRENT requires authoritative=true and load_status LOADED"
@@ -4357,6 +4480,16 @@ def main() -> int:
         help="authority_id the materialized machine claims cite (with --materialize-machine-rows)",
     )
     parser.add_argument(
+        "--canonical-binding",
+        type=Path,
+        help=(
+            "with --materialize-machine-rows: the canonical_authority_binding object printed by "
+            "scripts/verify_canonical_authority.py (its report, an audit.json, or the object "
+            "itself); when ADMITTED_AND_CURRENT, one CANONICAL_INVARIANT obligation per bound "
+            "invariant per PR is seeded from the bound composed view"
+        ),
+    )
+    parser.add_argument(
         "--derive",
         type=Path,
         metavar="OUT",
@@ -4370,8 +4503,23 @@ def main() -> int:
                 parser.error("--materialize-machine-rows requires at least one --change-ledger")
             if not args.authority_id:
                 parser.error("--materialize-machine-rows requires --authority-id")
+            canonical_binding = None
+            canonical_view = None
+            if args.canonical_binding is not None:
+                canonical_binding = load_canonical_binding(args.canonical_binding)
+                canonical_view = load_canonical_view(
+                    {"canonical_authority_binding": canonical_binding}
+                )
+                if canonical_view is None:
+                    parser.error(
+                        "--canonical-binding names a bundle whose composed view is unavailable; "
+                        "pass --canonical-bundle or cut the bundle first"
+                    )
             rows = materialize_machine_rows(
-                load_change_ledger_paths(args.change_ledger), args.authority_id
+                load_change_ledger_paths(args.change_ledger),
+                args.authority_id,
+                canonical_binding=canonical_binding,
+                canonical_view=canonical_view,
             )
             args.materialize_machine_rows.write_text(json.dumps(rows, indent=2) + "\n")
             print(args.materialize_machine_rows)
