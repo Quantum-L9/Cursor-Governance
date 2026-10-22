@@ -1,0 +1,100 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "errors": {
+      "binding": {
+        "conflicting_capability_facts": {
+          "result": "INVALID"
+        },
+        "insufficient_capabilities": {
+          "result": "FAIL"
+        },
+        "no_registered_binding": {
+          "result": "FAIL"
+        },
+        "unknown_capability": {
+          "result": "UNKNOWN"
+        }
+      },
+      "compiler": {
+        "INVALID_OUTPUT": {
+          "result": "INVALID"
+        },
+        "INVALID_SOURCE": {
+          "result": "INVALID"
+        },
+        "PROFILE_DIGEST_MISMATCH": {
+          "result": "INVALID"
+        },
+        "STALE_SOURCE": {
+          "result": "INVALID"
+        },
+        "UNKNOWN": {
+          "result": "UNKNOWN"
+        },
+        "UNKNOWN_PROFILE": {
+          "result": "INVALID"
+        },
+        "UNSUPPORTED_OPERATION": {
+          "result": "INVALID"
+        }
+      },
+      "conformance": {
+        "REJECTED": {
+          "meaning": "mechanically fails admission"
+        },
+        "UNRESOLVED": {
+          "meaning": "source semantics insufficient"
+        },
+        "authority_missing": {},
+        "capability_unavailable": {},
+        "context_required": {},
+        "contract_incompatible": {},
+        "operation_conflict": {},
+        "unknown_outcome": {
+          "rule": "must_not_be_collapsed_to_success_or_failure_without authoritative reconciliation"
+        }
+      },
+      "semantic": {
+        "AUTHORITY_VIOLATION": {
+          "result": "INVALID"
+        },
+        "SEMANTIC_CONFLICT": {
+          "result": "INVALID"
+        },
+        "UNRESOLVED_SEMANTICS": {
+          "result": "UNKNOWN"
+        },
+        "UNSAT": {
+          "result": "UNSAT"
+        }
+      }
+    },
+    "result_domains": {
+      "fixture_admission": [
+        "ADMITTED_DOMAIN",
+        "ADMITTED_GLOBAL",
+        "ADMITTED_MIXED",
+        "PROPOSE_GLOBAL_LAW",
+        "UNRESOLVED",
+        "REJECTED"
+      ],
+      "validation": [
+        "PASS",
+        "FAIL",
+        "UNSAT",
+        "INVALID",
+        "UNKNOWN"
+      ]
+    }
+  },
+  "projection_digest": "sha256:545a4c172aab3c5e77dc6ec5ca2cbcdc238010eb093c5538aff010646b4a8972",
+  "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
+  "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:6a8439c6560685661f0fb0ea93c9befd867b5d3d09168df90560d6e046598c97",
+  "source_ref": "l9.source/error-taxonomy@1"
+}

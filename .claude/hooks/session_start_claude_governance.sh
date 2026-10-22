@@ -996,6 +996,34 @@ emit_coding_projection() {
   esac
 }
 
+# --- Operating-plane projection (report-only) --------------------------------
+# One line from the consumer adapter for l9.projection/cursor-governance-
+# operating-plane@2 (ops/scripts/operating_plane_v2_projection.py; Cursor renders
+# the same verdict as markdown). Admitted mode against the checkout's own
+# origin/main record; it never releases payload here, never fetches or writes.
+# No committed bundle or binding is UNVERIFIED, never a claim.
+emit_operating_plane_projection() {
+  local py="$1"
+  local adapter="$GOV/ops/scripts/operating_plane_v2_projection.py"
+  [ -f "$adapter" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out rc
+  out="$(_l9_bounded 2 "$py" "$adapter" --mode admitted --workspace "$WORKSPACE" --format line 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125) say "operating-plane projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
+    124) say "operating-plane projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    *)
+      if [ -n "$out" ]; then
+        say "$out"
+      else
+        say "operating-plane projection: UNVERIFIED — adapter printed nothing (report-only)"
+      fi
+      ;;
+  esac
+}
+
 # --- Capability plane readiness (authenticated; never a secret) -------------
 # Graphiti over HTTPS (CLI + MCP). Distinct reasons: connect vs 401 vs 403
 # allowlist. Empty hydrate is honest; memory never gates repository writes.
@@ -1096,6 +1124,7 @@ emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
 emit_coding_projection "$PY"
+emit_operating_plane_projection "$PY"
 emit_capability_readiness "$PY"
 
 # Context7 is rendered unconditionally (mcp.template.json) — never gated out,

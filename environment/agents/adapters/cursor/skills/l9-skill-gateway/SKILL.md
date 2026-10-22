@@ -30,6 +30,8 @@ capability: it owns no routing, no scoring, and no inventory.
 
 ## Normal operation — consume the scoped route receipt
 
+When a routed skill needs canonical operating-plane semantics, it may request an exact verified class or invariant/contract ID from `ops/scripts/operating_plane_v2_projection.py --mode admitted`. A non-CURRENT result is Unknown; the route receipt still decides which skill executes.
+
 Every prompt writes one receipt for **this conversation** (the sessionStart
 banner `### Route locator` names the path; it is
 `~/.cursor/l9/routes/<conversation-key>/current.json`). Read it first.

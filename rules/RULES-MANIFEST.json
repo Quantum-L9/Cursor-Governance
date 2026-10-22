@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-10-21T13:03:50Z",
+  "generated_utc": "2026-10-22T19:08:32Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:17cf2ce418f45831726158641e300b00ceb23f3d280fdde9e46d56d1a4eeda55",
+  "source_tree_digest": "sha256:6d32160253e3e79fe4756944437517c2760d6fe65f531b596e5493a82a97cd5e",
   "summary": {
     "total_mdc_files": 69,
     "always_apply_true": 36,
@@ -533,7 +533,7 @@
       "first_heading": "Pre-Action Verification",
       "has_yaml_frontmatter": true,
       "line_count": 111,
-      "content_digest": "sha256:84c1397899175d8dd96706b0e401943c84e2b79a170b888941c1ad3bdf4f4820",
+      "content_digest": "sha256:6012003b2d54a0ecb85a89b4eed024c1fa0f3f9268a143a86268ccbca16e4d68",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,
