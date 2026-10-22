@@ -1,0 +1,53 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "capability_state_dimensions": {
+      "admitted": {
+        "authority_source": "applicable_admission_authority",
+        "definition": "The exact capability declaration has been accepted by the applicable admission authority for the relevant semantic scope.\n",
+        "implies": []
+      },
+      "authorized": {
+        "authority_source": "governing_authority",
+        "definition": "The governing authority permits the subject to invoke the capability within the declared scope and context.\n",
+        "implies": []
+      },
+      "available": {
+        "authority_source": "applicable_availability_fact_source",
+        "definition": "A realization is reported as currently usable at the relevant runtime coordinates. Availability is a runtime fact and does not itself establish authorization, conformance, or semantic ownership.\n",
+        "implies": []
+      },
+      "declared": {
+        "authority_source": "semantic_owner",
+        "definition": "The semantic owner has explicitly defined the capability identity and its semantic definition at an exact version or revision.\n",
+        "implies": []
+      },
+      "invocable": {
+        "authority_source": "derived_contract_evaluation",
+        "definition": "A derived evaluation that all capability states, requirements, authority, and preconditions required by the applicable canonical contracts are satisfied for a specific invocation attempt.\n",
+        "derived": true,
+        "implies": []
+      }
+    },
+    "state_dimension_rules": [
+      "dimensions_are_independently_evaluated",
+      "declaration_does_not_imply_admission",
+      "admission_does_not_imply_availability",
+      "availability_does_not_imply_authorization",
+      "authorization_does_not_imply_availability",
+      "no_single_dimension_implies_invocability",
+      "invocability_does_not_create_missing_admission_or_authorization",
+      "dimensions_do_not_define_a_lifecycle_state_machine",
+      "no_transition_order_is_defined_here"
+    ]
+  },
+  "projection_digest": "sha256:49e4934944852b18c0170b2d349bcbf614674517c6f7ea9e5f0d72fdaef6a3bd",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+  "source_ref": "l9.source/capabilities@1"
+}

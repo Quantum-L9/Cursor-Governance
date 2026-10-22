@@ -49,6 +49,10 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": None,
         "output": Path("generated/governance/coding_agent_execution"),
     },
+    "l9.projection/pr-audit@1": {
+        "composition_profile": "l9.compose/pr-audit@1",
+        "output": Path("generated/governance/pr_audit"),
+    },
 }
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 

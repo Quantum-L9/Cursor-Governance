@@ -1,0 +1,24 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "invalidation_rules": {
+      "affected_expression": "Affected(change) = TransitiveDependents(changed_semantics)",
+      "historical_artifacts_are_immutable": true,
+      "profile_digest_change": "mark_profile_dependents_stale",
+      "repair_default": "repair_current_stage_when_upstream_assumptions_remain_valid",
+      "silent_consumption_of_stale_input_forbidden": true,
+      "source_digest_change": "mark_transitive_dependents_stale",
+      "upstream_conflict": "create_new_upstream_revision_then_invalidate_transitive_dependents",
+      "upstream_revision_change": "evaluate_dependency_impact"
+    }
+  },
+  "projection_digest": "sha256:bdd41a354202a23ddea48be2fc33a0def29f9315e83b33edb55e200c81b3c04a",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+  "source_ref": "l9.source/semantic-dependency-model@1"
+}
