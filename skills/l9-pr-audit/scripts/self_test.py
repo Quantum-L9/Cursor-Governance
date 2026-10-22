@@ -295,13 +295,17 @@ def base_audit() -> dict[str, object]:
                 "audit_domain:CHANGE_DISCIPLINE",
             ],
         ),
-        evidence(
-            "E-CANON",
-            "INVARIANT",
-            "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
-            "The admitted canonical bundle binds one global invariant (L9-EVIDENCE-001); this attests the bound set only.",
-            ["canonical_invariant_set", "invariant:L9-EVIDENCE-001"],
-        ),
+        {
+            **evidence(
+                "E-CANON",
+                "INVARIANT",
+                "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+                "The admitted canonical bundle binds one global invariant (L9-EVIDENCE-001); this attests the bound set only.",
+                ["canonical_invariant_set", "invariant:L9-EVIDENCE-001"],
+            ),
+            # Canonical evidence is anchored to the authority repository, not the audited one.
+            "repository": "Quantum-L9/.github",
+        },
         evidence(
             "E-GUARD",
             "CONTRACT",
@@ -2219,6 +2223,22 @@ def main() -> int:
     finally:
         bab.CANONICAL_BUNDLE_ROOT = canonical_root
     assert not bab.validate_audit(audit), "fixture must validate again against the bound view"
+
+    # Canonical evidence may name the authority repository only at the admitted revision.
+    bad = copy.deepcopy(audit)
+    canon_ev = next(e for e in bad["shared_evidence_index"] if e["evidence_id"] == "E-CANON")
+    canon_ev["revision"] = "c" * 40
+    assert_has(
+        bab.validate_audit(bad),
+        "evidence E-CANON repository 'Quantum-L9/.github' != canonical 'Quantum-L9/example'",
+    )
+    bad = copy.deepcopy(audit)
+    next(e for e in bad["shared_evidence_index"] if e["evidence_id"] == "E-AUTH")["repository"] = (
+        "Quantum-L9/.github"
+    )
+    assert_has(
+        bab.validate_audit(bad), "evidence E-AUTH repository 'Quantum-L9/.github' != canonical"
+    )
 
     # Phase 2: every bound invariant is an obligation per PR, and only under an admitted binding.
     bad = copy.deepcopy(audit)

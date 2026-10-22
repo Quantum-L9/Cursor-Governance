@@ -1926,8 +1926,17 @@ def validate_semantics(
     heads = {num: item["head_sha"].lower() for num, item in pr_by_num.items()}
 
     # Evidence integrity, execution revision identity, and secret-safe repository binding.
+    # Canonical-law evidence (the seeded E-CANON record and INVARIANT citations of the
+    # bound bundle) is anchored to the authority repository the binding names, never
+    # to the audited repository.
+    canonical_repository = binding.get("authority_repository")
     for eid, item in emap.items():
-        if item["repository"] != repo_name:
+        if item["repository"] != repo_name and not (
+            item["evidence_type"] == "INVARIANT"
+            and admitted
+            and item["repository"] == canonical_repository
+            and item["revision"] == binding.get("authority_revision")
+        ):
             errors.append(
                 f"evidence {eid} repository {item['repository']!r} != canonical {repo_name!r}"
             )
