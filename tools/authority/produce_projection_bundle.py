@@ -49,6 +49,10 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": None,
         "output": Path("generated/governance/coding_agent_execution"),
     },
+    "l9.projection/cursor-governance-operating-plane@2": {
+        "composition_profile": None,
+        "output": Path("generated/governance/operating_plane_v2"),
+    },
     "l9.projection/pr-audit@1": {
         "composition_profile": "l9.compose/pr-audit@1",
         "output": Path("generated/governance/pr_audit"),

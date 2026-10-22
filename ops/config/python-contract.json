@@ -24,7 +24,8 @@
         "environment/agents/adapters/claude-code/tests/test_session_start_hosted_truth.py",
         "environment/agents/adapters/claude-code/tests/test_session_start_partial_emit.py",
         "ops/scripts/tests/test_governance_refresh_receipt.py",
-        "ops/scripts/tests/test_session_start_runtime_report.py"
+        "ops/scripts/tests/test_session_start_runtime_report.py",
+        "tests/test_operating_plane_v2_projection.py"
       ],
       "environment/agents/adapters/claude-code/settings.template.json": [
         "tests/ops/scripts/test_reconcile_claude_settings.py",
