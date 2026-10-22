@@ -45,7 +45,7 @@ dev = [
     # jsonschema ships no inline types; the Program Execution validators
     # (environment/program-execution/core) type-check against Draft202012Validator.
     # Pinned to the live l9-ci-sdk requirements-ci.txt stub version.
-    "types-jsonschema==4.26.0.20260518",
+    "types-jsonschema==4.26.0.20261006",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     # CI-only test plugins — the canonical suite runner uses -n auto (xdist) and
