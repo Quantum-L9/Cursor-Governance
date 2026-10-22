@@ -1,0 +1,126 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "capabilities": [],
+    "capability_entry_contract": {
+      "field_semantics": {
+        "authorization_requirements": "Explicit authority conditions that apply to invocation. These requirements do not themselves constitute an authorization decision.\n",
+        "effect_class": "Explicit semantic classification of the kind of governed effect the capability may produce. The class must resolve within the capability's semantic scope. Effect class informs applicable contracts and policy but does not itself grant authority or imply global scope.\n",
+        "id": "Stable semantic capability identity. Provider, implementation, transport, or storage identity must not define this identity.\n",
+        "purpose": "Bounded description of the semantic function exposed by the capability.\n",
+        "requires": "Explicit semantic capability dependencies and global contract dependencies that must be satisfied for applicable use.\n",
+        "semantic_owner": "Authority that owns the capability meaning. Registration in this global catalog does not transfer that ownership to the catalog owner.\n",
+        "semantic_scope": "Scope within which the capability meaning is authoritative. Global registration does not imply global semantic scope.\n"
+      },
+      "prohibited_fields": [
+        "provider_as_semantic_owner",
+        "implicit_authorization",
+        "implicit_availability",
+        "implicit_admission",
+        "inline_provider_implementation"
+      ],
+      "required_fields": [
+        "id",
+        "semantic_owner",
+        "semantic_scope",
+        "purpose",
+        "effect_class",
+        "requires",
+        "authorization_requirements"
+      ]
+    },
+    "capability_relations": {
+      "compatible_with": {
+        "authority_implication": "none",
+        "object": "semantic_capability",
+        "semantics": "Capability compatibility exists only when an applicable declared compatibility contract establishes it. Similarity or successful execution is insufficient. Compatibility among concrete realizations is outside this relation and remains owned by binding_catalog.yaml.\n",
+        "subject": "semantic_capability"
+      },
+      "realized_by": {
+        "authority_implication": "none",
+        "object": "provider_binding",
+        "ownership_implication": "none",
+        "semantics": "A provider binding realizes the semantic capability without changing the capability identity or semantic owner.\n",
+        "subject": "semantic_capability"
+      },
+      "requires": {
+        "authority_implication": "none",
+        "object": "semantic_capability",
+        "semantics": "The subject capability depends on the object capability being satisfied according to the subject capability's applicable contracts.\n",
+        "state_implication": "none",
+        "subject": "semantic_capability"
+      }
+    },
+    "capability_state_dimensions": {
+      "admitted": {
+        "authority_source": "applicable_admission_authority",
+        "definition": "The exact capability declaration has been accepted by the applicable admission authority for the relevant semantic scope.\n",
+        "implies": []
+      },
+      "authorized": {
+        "authority_source": "governing_authority",
+        "definition": "The governing authority permits the subject to invoke the capability within the declared scope and context.\n",
+        "implies": []
+      },
+      "available": {
+        "authority_source": "applicable_availability_fact_source",
+        "definition": "A realization is reported as currently usable at the relevant runtime coordinates. Availability is a runtime fact and does not itself establish authorization, conformance, or semantic ownership.\n",
+        "implies": []
+      },
+      "declared": {
+        "authority_source": "semantic_owner",
+        "definition": "The semantic owner has explicitly defined the capability identity and its semantic definition at an exact version or revision.\n",
+        "implies": []
+      },
+      "invocable": {
+        "authority_source": "derived_contract_evaluation",
+        "definition": "A derived evaluation that all capability states, requirements, authority, and preconditions required by the applicable canonical contracts are satisfied for a specific invocation attempt.\n",
+        "derived": true,
+        "implies": []
+      }
+    },
+    "catalog_status": {
+      "admitted_capability_count": 0,
+      "reason": "The approved global invariants and contracts establish the capability model and state semantics but do not, by themselves, admit any component-local capability identity as global semantic law. Component capabilities remain with their semantic owners until explicitly proposed and admitted.\n"
+    },
+    "global_rules": {
+      "capability_identity_is_not_provider_identity": true,
+      "capability_identity_is_semantic": true,
+      "catalog_registration_does_not_expand_authority": true,
+      "component_capabilities_are_not_globalized_by_recurrence": true,
+      "declaration_admission_availability_authorization_and_invocability_are_distinct": true,
+      "effect_class_does_not_grant_authority": true,
+      "effect_class_must_be_explicit": true,
+      "invocability_is_derived_not_self_granted": true,
+      "provider_realization_does_not_transfer_semantic_ownership": true,
+      "provider_realization_is_separate_from_semantic_capability_identity": true,
+      "requirements_must_be_declared": true,
+      "semantic_owner_must_be_explicit": true,
+      "semantic_scope_must_be_explicit": true,
+      "state_dimensions_do_not_imply_a_lifecycle_order": true,
+      "technology_registration_does_not_authorize_capability_use": true,
+      "unknown_state_must_remain_explicit": true
+    },
+    "invocability_contract": {
+      "forbidden": [
+        "self_authorization",
+        "inference_from_declaration_only",
+        "inference_from_availability_only",
+        "inference_from_provider_presence",
+        "inference_from_previous_success",
+        "inference_from_unknown_or_unresolved_state"
+      ],
+      "kind": "derived_predicate",
+      "rule": "A capability is invocable only when every state dimension required by its applicable canonical contracts is satisfied, all declared semantic requirements and applicable authorization requirements are satisfied for the invocation scope, and no applicable hard constraint is unresolved or violated.\n"
+    }
+  },
+  "projection_digest": "sha256:986af7a7b9c4b8a8568a2efb753ce60a17307f71685458284e8910432fc35f43",
+  "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
+  "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+  "source_ref": "l9.source/capabilities@1"
+}
