@@ -234,6 +234,7 @@ package_validation_refs:
   runtime_alignment: scripts/validate_runtime_alignment.py
   product_architecture_decision: scripts/validate_product_architecture_decision.py
   architecture_intelligence: scripts/verify_architecture_intelligence.py
+  coding_delegation: scripts/verify_coding_delegation.py
   rule: >-
     Package validators verify shipped cross-file wiring, schema integrity, decision-artifact behavior,
     final-state hygiene, and reproducible package readiness; they do not become runtime semantic owners.

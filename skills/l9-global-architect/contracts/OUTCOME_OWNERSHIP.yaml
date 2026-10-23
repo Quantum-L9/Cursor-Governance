@@ -381,6 +381,21 @@ coding_delegation_policy:
     it, and GAR accepts only after independent verification. This section
     owns GAR's issuance and acceptance obligations and redefines nothing the
     payload owner declares.
+  executor:
+    program: scripts/verify_coding_delegation.py
+    subcommands:
+      resolve: payload.resolution
+      issue: payload, freeze, blocking_conditions
+      accept: result_requirements, acceptance, rework
+      carriage: transport
+      self-test: every GAR-DELEG check, positive and negative
+    role: >
+      Executes this policy's mechanically decidable checks and enforces that
+      the rest carry a GAR adjudication. It holds no Coding Agent semantics:
+      it resolves the sibling contract, schemas, and validator live through
+      payload.resolution and runs them. Its output is acceptance evidence for
+      $.delegation, never a substitute for GAR's adjudication of forbidden
+      actions, locked invariants, and acceptance criteria.
   sibling_relation:
     sibling: l9-coding-agent
     relationship: sibling_twins_not_identical

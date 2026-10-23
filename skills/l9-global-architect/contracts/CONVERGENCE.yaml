@@ -357,6 +357,7 @@ convergence_gate:
       applicability_ref: APP-CODING-DELEGATION
       evidence_ref: $.delegation
       contract_ref: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
+      executor_ref: scripts/verify_coding_delegation.py accept
       satisfied_when:
         - $.delegation.frozen_contract_digest is populated
         - $.delegation.schema_validation_ref is populated

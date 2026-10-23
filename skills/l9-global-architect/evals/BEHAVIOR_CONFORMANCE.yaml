@@ -1283,6 +1283,11 @@ delegation_boundary_checks:
     independently of the GAR-EVAL case sequence and promotion-blocking through
     promotion_gate.delegation_boundary_requires.
   policy_ref: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
+  executor: scripts/verify_coding_delegation.py
+  executable_suite: python scripts/verify_coding_delegation.py self-test
+  suite_law: >
+    The self-test must exercise every check_id below, each with at least one
+    case, and every case must pass; an unexercised check fails the suite.
   convergence_ref: contracts/CONVERGENCE.yaml#CV-016-CODING-DELEGATION-ACCEPTED
   checks:
     - check_id: GAR-DELEG-001
