@@ -7,6 +7,7 @@ audit-wide FAIL domain owned by another PR's finding is not this PR's defect.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -345,8 +346,17 @@ def test_failing_required_workflow_withholds_ready(run_dir: Path) -> None:
 
 
 def test_approvals_count_distinct_reviewers_latest_state() -> None:
-    sys.path.insert(0, str(SCRIPTS))
-    import collect_snapshot
+    # Load without writing bytecode: the skill self-test rejects __pycache__ in the pack.
+    spec = importlib.util.spec_from_file_location(
+        "collect_snapshot", SCRIPTS / "collect_snapshot.py"
+    )
+    assert spec is not None and spec.loader is not None
+    collect_snapshot = importlib.util.module_from_spec(spec)
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(collect_snapshot)
+    finally:
+        sys.dont_write_bytecode = previous
 
     def review(login: str, state: str, at: str, commit: str = "h") -> dict:
         return {
