@@ -4,7 +4,9 @@
   prepare   collect snapshots -> build change ledgers -> bind canonical authority
             -> materialize machine rows -> write lanes.plan.json
   (lanes)   run one semantic lane per planned group (references/semantic-lane.md);
-            each writes lanes/<lane>.json; the parent writes judgment.json
+            each writes lanes/<lane>.json; then one independent verifier lane reproduces
+            every merge-blocking finding into lanes/verify-<lane>.json; the parent writes
+            judgment.json
   finalize  validate lanes + judgment -> assemble audit.json -> derive -> validate
             -> build the bundle -> verify the bundle
 
@@ -48,7 +50,8 @@ def ledger_args(run: Path) -> list[str]:
 
 
 def lane_plan(frozen: dict) -> list[dict]:
-    """Group PRs into lanes: a stack is one lane; dependency-bot PRs share one lane; the rest run alone."""
+    """Group PRs into lanes: a stack or a set of overlapping PRs is one lane (its merged tree must
+    be tested together); dependency-bot PRs share one lane; the rest run alone."""
     parent = {p["pr"]: p["pr"] for p in frozen["prs"]}
 
     def root(n: int) -> int:
@@ -57,8 +60,9 @@ def lane_plan(frozen: dict) -> list[dict]:
         return n
 
     for p in frozen["prs"]:
-        if p.get("stacked_on") in parent:
-            parent[root(p["pr"])] = root(p["stacked_on"])
+        for other in [p.get("stacked_on"), *(p.get("overlaps_with") or [])]:
+            if other in parent and root(other) != root(p["pr"]):
+                parent[root(p["pr"])] = root(other)
     groups: dict[str, list[int]] = defaultdict(list)
     for p in frozen["prs"]:
         snap_author = p.get("author", "")
@@ -126,11 +130,17 @@ def prepare(args: argparse.Namespace) -> None:
         *seed,
         *ledger_args(run),
     )
-    plan = lane_plan(frozen)
+    plan = {
+        "lanes": lane_plan(frozen),
+        "verify": "After the lanes: one verifier lane that authored none of the findings reproduces "
+        "every merge_blocking finding on the exact head and writes lanes/verify-<verifier>.json "
+        "(schemas/finding-verification.schema.json).",
+    }
     (run / "lanes.plan.json").write_text(json.dumps(plan, indent=1))
     print(json.dumps(plan, indent=1))
     print(
         f"\nNext: run one semantic lane per group (references/semantic-lane.md) writing {run}/lanes/<lane>.json,\n"
+        f"then the independent verifier lane writing {run}/lanes/verify-<verifier>.json,\n"
         f"write {run}/judgment.json (schemas/judgment.schema.json, authority_id {args.authority_id} must be declared),\n"
         f"then: run_audit.py finalize --run-dir {run}"
     )
@@ -188,6 +198,21 @@ def finalize(args: argparse.Namespace) -> None:
     print(f"\nPASS: {zip_path}\n{verdict['summary']}\nconvergence: {verdict['convergence_status']}")
     for v in audit["per_pr_verdicts"]:
         print(f"  #{v['pr_number']}: {v['merge_readiness']} {v['blocking_finding_ids'] or ''}")
+    caught_only = [
+        f["finding_id"]
+        for f in audit["findings"]
+        if f["detection"]["ci"] != "CAUGHT" and f["detection"]["bot_review"] != "CAUGHT"
+    ]
+    print(
+        f"caught only by audit: {len(caught_only)} of {len(audit['findings'])} {caught_only or ''}"
+    )
+    gaps = [
+        u["unknown_id"]
+        for u in audit["residual_unknowns"]
+        if u["unknown_id"].startswith(("U-PROBE-", "U-VERIFY-", "U-OBJECTIVE-"))
+    ]
+    if gaps:
+        print(f"method gaps: {', '.join(gaps)}")
 
 
 def main() -> int:

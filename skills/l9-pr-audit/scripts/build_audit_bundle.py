@@ -215,7 +215,7 @@ AUDIT_DOMAINS = {
     "CHANGE_DISCIPLINE",
 }
 CHANGE_LEDGER_SCHEMA = "l9.pr-audit.change-ledger.v1.4"
-CHANGE_LEDGER_GENERATOR_VERSION = "1.4.1"
+CHANGE_LEDGER_GENERATOR_VERSION = "1.4.2"
 CHANGE_LEDGER_SET_SCHEMA = "l9.pr-audit.change-ledger-set.v1.0"
 
 # High-confidence packaging tripwire, not a substitute for repository secret scanning.
@@ -3976,8 +3976,14 @@ def render_audit_md(audit: dict[str, Any]) -> str:
             f"Impact: {finding['impact']}",
             f"Closure: {finding['behavioral_closure_condition']}",
             f"Evidence IDs: {', '.join(finding['evidence_ids'])}",
-            "",
         ]
+        if "detection" in finding:
+            detection = finding["detection"]
+            lines.append(
+                f"Existing signals: CI `{detection['ci']}` | bot review `{detection['bot_review']}` - "
+                f"{detection['evidence']}"
+            )
+        lines.append("")
 
     lines += ["## Preservation obligations", ""]
     if audit["preservation_obligations"]:

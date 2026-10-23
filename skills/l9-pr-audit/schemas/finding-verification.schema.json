@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.pr-audit.finding-verification.v1",
+  "title": "l9-pr-audit independent finding verification",
+  "description": "Written by a verifier lane that did not author the findings it checks. Every merge-blocking finding needs a REPRODUCED verdict here before it can block a merge in the assembled audit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verifier_lane", "verifications"],
+  "properties": {
+    "verifier_lane": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "verifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding_id", "verdict", "evidence", "rationale"],
+        "properties": {
+          "finding_id": { "type": "string", "pattern": "^F-[A-Za-z0-9]+-[0-9]+$" },
+          "verdict": { "enum": ["REPRODUCED", "NOT_REPRODUCED", "INCONCLUSIVE"] },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "what was re-run or re-read on the exact head, with the observed result"
+          },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

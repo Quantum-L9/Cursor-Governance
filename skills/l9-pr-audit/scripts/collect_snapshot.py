@@ -18,12 +18,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 MAX_CONTENT_BYTES = 400_000
+MAX_ISSUE_BODY = 8_000
+# GitHub's closing keywords, same-repository references only ("Closes #12").
+CLOSING_REF = re.compile(
+    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+#(\d+)\b", re.IGNORECASE
+)
 FAILED_CONCLUSIONS = {"failure", "timed_out", "cancelled", "action_required", "startup_failure"}
 
 
@@ -71,6 +77,28 @@ def effective_approvals(reviews: list[dict[str, Any]], head: str) -> list[dict[s
     ]
 
 
+def linked_issues(repo: str, body: str) -> list[dict[str, Any]]:
+    """Issues the PR body closes: the requester's ask, when one was recorded."""
+    out = []
+    for number in sorted({int(n) for n in CLOSING_REF.findall(body or "")}):
+        try:
+            issue = gh(f"repos/{repo}/issues/{number}")
+        except subprocess.CalledProcessError:
+            out.append({"number": number, "state": "UNAVAILABLE", "title": "", "body": ""})
+            continue
+        if issue.get("pull_request"):
+            continue  # a PR reference, not an issue
+        out.append(
+            {
+                "number": number,
+                "state": issue["state"],
+                "title": issue["title"],
+                "body": (issue.get("body") or "")[:MAX_ISSUE_BODY],
+            }
+        )
+    return out
+
+
 def git(clone: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(["git", "-C", str(clone), *args], capture_output=True)
 
@@ -109,6 +137,7 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
     runs = gh(f"repos/{repo}/commits/{head}/check-runs?per_page=100").get("check_runs", [])
     threads = gh(f"repos/{repo}/pulls/{n}/ccr/review_threads")
     reviews = gh(f"repos/{repo}/pulls/{n}/reviews?per_page=100")
+    issues = linked_issues(repo, pr.get("body") or "")
     workflow_runs = gh(f"repos/{repo}/actions/runs?head_sha={head}&per_page=100").get(
         "workflow_runs", []
     )
@@ -124,9 +153,10 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
         "draft": pr["draft"],
         "author": pr["user"]["login"],
         "intent": {
-            "source_kind": "PR_BODY",
+            "source_kind": "ISSUE" if issues else "PR_BODY",
             "original_pr_prompt_available": False,
             "pr_body": pr.get("body") or "",
+            "linked_issues": issues,
         },
         "files": files,
         "check_runs": [
@@ -244,15 +274,22 @@ def main() -> int:
     snap_dir.mkdir(parents=True, exist_ok=True)
     heads_by_ref = {open_prs[n]["head"]["ref"]: n for n in selected}
     frozen = []
+    snaps = {}
     for n in selected:
-        snap = snapshot(args.repo, args.clone, open_prs[n])
+        snap = snaps[n] = snapshot(args.repo, args.clone, open_prs[n])
         (snap_dir / f"pr-{n}.json").write_text(json.dumps(snap, indent=1))
+    paths = {n: {f["path"] for f in snaps[n]["files"]} for n in selected}
+    for n in selected:
+        snap = snaps[n]
         frozen.append(
             {
                 "pr": n,
                 "head_sha": snap["head_sha"],
                 "base_ref": snap["base_ref"],
                 "stacked_on": heads_by_ref.get(snap["base_ref"]),
+                # PRs changing at least one of the same paths: their combined tree must be tested.
+                "overlaps_with": sorted(m for m in selected if m != n and paths[m] & paths[n]),
+                "linked_issues": [i["number"] for i in snap["intent"]["linked_issues"]],
                 "files": len(snap["files"]),
                 "ci_failures": [c["name"] for c in snap["ci_failures"]],
                 "unresolved_threads": sum(not t["is_resolved"] for t in snap["review_threads"]),
