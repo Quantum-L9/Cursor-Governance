@@ -113,7 +113,7 @@ Structural growth is evidence, not automatic failure. `UNJUSTIFIED`, `SCOPE_EXTE
 
 `audit_obligation_ledger` is the coverage governor. Each obligation records ID, PR, kind, subject, disposition, evidence IDs, and related finding IDs.
 
-Required kinds cover active objectives, every changed surface, every machine changed symbol, architecture-growth candidates, material supersession, material failure paths, test-discrimination obligations, in-scope CI failures, and every unresolved review thread discovered at the audited head.
+Required kinds cover every bound canonical invariant per PR (`CANONICAL_INVARIANT`, seeded by the builder from the bound composed view only under an `ADMITTED_AND_CURRENT` binding and grounded by `E-CANON`, which attests the bound set rather than compliance; a `FINDING` must be governed by that invariant as a `CANONICAL_LAW` source), active objectives, every changed surface, every machine changed symbol, architecture-growth candidates, material supersession, material failure paths, test-discrimination obligations, in-scope CI failures, and every unresolved review thread discovered at the audited head.
 
 The model may add obligations but may not remove deterministic obligations. Audit convergence requires complete disposition as `PASS`, `FINDING`, `NOT_APPLICABLE`, or `UNKNOWN`. A `FINDING` is compatible with a converged audit; an unrepresented Unknown is not.
 

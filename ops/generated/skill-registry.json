@@ -1,5 +1,5 @@
 {
-  "generation_id": "94902f650f6630b38732e5668871d7aa80275cfbac09c01281eb4b1cfad1b68f",
+  "generation_id": "e58c089fb8ba24f3d6d20d96701155020cbcefe684b402b3d7dc7cced7e0d7bc",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1281,7 +1281,7 @@
       "path": "skills/l9-pr-audit",
       "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-audit/SKILL.md",
-      "skill_sha256": "aaa807db79f2224d6347fbf6e70cf795fcf0e618e1d9af471d9b89318d64deff",
+      "skill_sha256": "8e3eef71a9f6c2db0493d050e05ae2c0f9697d29b661641c615a3e3b392fa56b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1509,5 +1509,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "db7ee70dc3248aa2974094e7771a6f9938ec03004536e6280553876a24278ac5",
-  "source_skill_corpus_sha256": "f9bb0b03b3065c0acb50eee5d7c51833995409e46ff8085f5aef2cda151fe8ce"
+  "source_skill_corpus_sha256": "6ff4951163909c50f16d15d68476bef16b57a099a83f34d7488f81f9bc80c3d2"
 }
