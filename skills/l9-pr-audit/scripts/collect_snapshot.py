@@ -49,6 +49,47 @@ def gh(path: str) -> Any:
     return merged
 
 
+def gh_status(path: str) -> tuple[int, Any]:
+    """GET ``path``; return (HTTP status, body). 200 on success, the error status otherwise."""
+    done = subprocess.run(
+        ["gh", "api", "--method", "GET", "--include", path], capture_output=True, text=True
+    )
+    head, _, body = done.stdout.partition("\r\n\r\n")
+    if not body:
+        head, _, body = done.stdout.partition("\n\n")
+    status_line = head.splitlines()[0] if head else ""
+    try:
+        status = int(status_line.split()[1])
+    except (IndexError, ValueError):
+        status = 0
+    try:
+        return status, json.loads(body) if body.strip() else None
+    except json.JSONDecodeError:
+        return status, None
+
+
+def effective_approvals(reviews: list[dict[str, Any]], head: str) -> list[dict[str, Any]]:
+    """Distinct reviewers whose latest state-changing review is an approval of ``head``.
+
+    GitHub counts each reviewer once, by their most recent APPROVED / CHANGES_REQUESTED /
+    DISMISSED review; COMMENTED reviews do not change approval state.
+    """
+    latest: dict[str, dict[str, Any]] = {}
+    for review in sorted(reviews, key=lambda r: r.get("submitted_at") or ""):
+        if review["state"] in {"APPROVED", "CHANGES_REQUESTED", "DISMISSED"} and review.get("user"):
+            latest[review["user"]["login"]] = review
+    return [
+        {
+            "login": login,
+            "user_type": r["user"]["type"],
+            "commit_id": r["commit_id"],
+            "on_head": r["commit_id"] == head,
+        }
+        for login, r in sorted(latest.items())
+        if r["state"] == "APPROVED"
+    ]
+
+
 def git(clone: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(["git", "-C", str(clone), *args], capture_output=True)
 
@@ -87,6 +128,9 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
     runs = gh(f"repos/{repo}/commits/{head}/check-runs?per_page=100").get("check_runs", [])
     threads = gh(f"repos/{repo}/pulls/{n}/ccr/review_threads")
     reviews = gh(f"repos/{repo}/pulls/{n}/reviews?per_page=100")
+    workflow_runs = gh(f"repos/{repo}/actions/runs?head_sha={head}&per_page=100").get(
+        "workflow_runs", []
+    )
     return {
         "repository": repo,
         "pr_number": n,
@@ -130,23 +174,40 @@ def snapshot(repo: str, clone: Path, pr: dict[str, Any]) -> dict[str, Any]:
             for t in threads
             if t.get("comment_ids")
         ],
-        "approvals": [
+        "workflow_runs": [
             {
-                "login": r["user"]["login"],
-                "user_type": r["user"]["type"],
-                "commit_id": r["commit_id"],
-                "on_head": r["commit_id"] == head,
+                "path": w["path"],
+                "name": w["name"],
+                "status": w["status"],
+                "conclusion": w["conclusion"],
             }
-            for r in reviews
-            if r["state"] == "APPROVED"
+            for w in workflow_runs
         ],
+        "approvals": effective_approvals(reviews, head),
+        "merge_rules": merge_rules(repo, pr["base"]["ref"]),
     }
 
 
+_RULES_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
+
+
 def merge_rules(repo: str, branch: str) -> dict[str, Any]:
-    """Effective ruleset merge gates for ``branch`` (classic protection is not read: it 403s
-    on scoped tokens, which the audit records as a residual Unknown)."""
+    """Effective merge gates for ``branch``: rulesets unioned with classic branch protection.
+
+    ``classic_protection`` is READ (requirements merged in), NOT_PROTECTED (404) or
+    UNAVAILABLE (any other status, e.g. 403 on scoped tokens). UNAVAILABLE is kept, never
+    treated as empty, so readiness cannot be projected over gates nobody could read.
+    """
+    key = (repo, branch)
+    if key not in _RULES_CACHE:
+        _RULES_CACHE[key] = _merge_rules(repo, branch)
+    return _RULES_CACHE[key]
+
+
+def _merge_rules(repo: str, branch: str) -> dict[str, Any]:
     rules = {
+        "branch": branch,
+        "classic_protection": "UNAVAILABLE",
         "source": f"repos/{repo}/rules/branches/{branch}",
         "required_status_checks": [],
         "required_workflows": [],
@@ -174,6 +235,24 @@ def merge_rules(repo: str, branch: str) -> dict[str, Any]:
             rules["required_review_thread_resolution"] |= bool(
                 params.get("required_review_thread_resolution")
             )
+    status, classic = gh_status(f"repos/{repo}/branches/{branch}/protection")
+    if status == 404:
+        rules["classic_protection"] = "NOT_PROTECTED"
+    elif status == 200 and isinstance(classic, dict):
+        rules["classic_protection"] = "READ"
+        checks = classic.get("required_status_checks") or {}
+        rules["required_status_checks"] += list(checks.get("contexts") or [])
+        rules["required_status_checks"] += [c["context"] for c in checks.get("checks") or []]
+        reviews = classic.get("required_pull_request_reviews") or {}
+        rules["required_approving_review_count"] = max(
+            rules["required_approving_review_count"],
+            reviews.get("required_approving_review_count", 0),
+        )
+        rules["required_review_thread_resolution"] |= bool(
+            (classic.get("required_conversation_resolution") or {}).get("enabled")
+        )
+    rules["required_status_checks"] = sorted(set(rules["required_status_checks"]))
+    rules["required_workflows"] = sorted(set(rules["required_workflows"]))
     return rules
 
 
@@ -191,8 +270,9 @@ def main() -> int:
     if missing:
         print(f"FAIL: not open: {missing}", file=sys.stderr)
         return 2
+    default = gh(f"repos/{args.repo}")["default_branch"]
     refspecs = [f"refs/pull/{n}/head:refs/remotes/origin/pr/{n}" for n in selected]
-    fetch = git(args.clone, "fetch", "-q", "origin", "main", *refspecs)
+    fetch = git(args.clone, "fetch", "-q", "origin", default, *refspecs)
     if fetch.returncode != 0:
         print(f"FAIL: git fetch: {fetch.stderr.decode()[-500:]}", file=sys.stderr)
         return 2
@@ -216,7 +296,6 @@ def main() -> int:
                 "approvals_on_head": sum(a["on_head"] for a in snap["approvals"]),
             }
         )
-    default = gh(f"repos/{args.repo}")["default_branch"]
     default_sha = git(args.clone, "rev-parse", f"origin/{default}").stdout.decode().strip()
     (args.out / "frozen-pr-set.json").write_text(
         json.dumps(
@@ -224,7 +303,6 @@ def main() -> int:
                 "repository": args.repo,
                 "default_branch": default,
                 "default_branch_sha": default_sha,
-                "merge_rules": merge_rules(args.repo, default),
                 "prs": frozen,
             },
             indent=1,

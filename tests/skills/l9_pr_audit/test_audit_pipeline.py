@@ -21,6 +21,15 @@ ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
 MAIN = "a" * 40
 HEAD = {1: "b" * 40, 2: "c" * 40}
 REPO_NAME = "Quantum-L9/example"
+RULES = {
+    "branch": "main",
+    "classic_protection": "NOT_PROTECTED",
+    "source": "repos/x/rules/branches/main",
+    "required_status_checks": ["ci"],
+    "required_workflows": [".github/workflows/org-ci.yml"],
+    "required_approving_review_count": 0,
+    "required_review_thread_resolution": True,
+}
 
 
 def run(*args: object) -> subprocess.CompletedProcess[str]:
@@ -47,6 +56,15 @@ def snapshot(n: int, files: list[dict]) -> dict:
         "ci_failures": [],
         "review_threads": [],
         "approvals": [],
+        "workflow_runs": [
+            {
+                "path": ".github/workflows/org-ci.yml",
+                "name": "Org CI",
+                "status": "completed",
+                "conclusion": "success",
+            }
+        ],
+        "merge_rules": dict(RULES),
     }
 
 
@@ -144,13 +162,6 @@ def run_dir(tmp_path: Path) -> Path:
                 "repository": REPO_NAME,
                 "default_branch": "main",
                 "default_branch_sha": MAIN,
-                "merge_rules": {
-                    "source": "repos/x/rules/branches/main",
-                    "required_status_checks": ["ci"],
-                    "required_workflows": [],
-                    "required_approving_review_count": 0,
-                    "required_review_thread_resolution": True,
-                },
                 "prs": [
                     {"pr": n, "head_sha": HEAD[n], "base_ref": "main", "stacked_on": None}
                     for n in files
@@ -280,3 +291,78 @@ def test_undispositioned_changed_file_is_refused(run_dir: Path) -> None:
     (run_dir / "lanes" / "all.json").write_text(json.dumps(lane))
     done = run(SCRIPTS / "assemble_audit.py", "--run-dir", run_dir)
     assert done.returncode == 2 and "tests/test_a.py" in done.stdout
+
+
+def set_rules(run_dir: Path, pr: int, **changes: object) -> None:
+    path = run_dir / "snapshots" / f"pr-{pr}.json"
+    snap = json.loads(path.read_text())
+    snap["merge_rules"].update(changes)
+    path.write_text(json.dumps(snap))
+
+
+def readiness(run_dir: Path, pr: int) -> tuple[str, str]:
+    done = run(SCRIPTS / "assemble_audit.py", "--run-dir", run_dir)
+    assert done.returncode == 0, done.stdout
+    audit = json.loads((run_dir / "audit.json").read_text())
+    verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == pr)
+    why = next(
+        (
+            u["description"]
+            for u in audit["residual_unknowns"]
+            if u["unknown_id"] == f"U-READY-{pr}"
+        ),
+        "",
+    )
+    return verdict["merge_readiness"], why
+
+
+def test_empty_required_check_set_is_satisfied_vacuously(run_dir: Path) -> None:
+    set_rules(run_dir, 1, required_status_checks=[], required_workflows=[])
+    done = run(SCRIPTS / "run_audit.py", "finalize", "--run-dir", run_dir)
+    assert done.returncode == 0, done.stdout[-3000:] + done.stderr[-3000:]
+    audit = json.loads((run_dir / "audit.json").read_text())
+    binding = next(p for p in audit["pr_bindings"] if p["pr_number"] == 1)
+    assert binding["required_check_resolution"]["status"] == "NONE"
+    assert (
+        next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)["merge_readiness"]
+        == "READY"
+    )
+
+
+def test_unreadable_classic_protection_withholds_ready(run_dir: Path) -> None:
+    set_rules(run_dir, 1, classic_protection="UNAVAILABLE")
+    state, why = readiness(run_dir, 1)
+    assert state == "UNKNOWN" and "classic branch protection" in why
+
+
+def test_failing_required_workflow_withholds_ready(run_dir: Path) -> None:
+    path = run_dir / "snapshots" / "pr-1.json"
+    snap = json.loads(path.read_text())
+    snap["workflow_runs"][0]["conclusion"] = "failure"
+    path.write_text(json.dumps(snap))
+    state, why = readiness(run_dir, 1)
+    assert state == "UNKNOWN" and "required workflows" in why
+
+
+def test_approvals_count_distinct_reviewers_latest_state() -> None:
+    sys.path.insert(0, str(SCRIPTS))
+    import collect_snapshot
+
+    def review(login: str, state: str, at: str, commit: str = "h") -> dict:
+        return {
+            "state": state,
+            "user": {"login": login, "type": "User"},
+            "commit_id": commit,
+            "submitted_at": at,
+        }
+
+    reviews = [
+        review("a", "APPROVED", "1"),
+        review("a", "APPROVED", "2"),
+        review("a", "COMMENTED", "5"),
+        review("b", "APPROVED", "1"),
+        review("b", "CHANGES_REQUESTED", "3"),
+        review("c", "APPROVED", "1", commit="old"),
+    ]
+    approvals = collect_snapshot.effective_approvals(reviews, "h")
+    assert [(a["login"], a["on_head"]) for a in approvals] == [("a", True), ("c", False)]

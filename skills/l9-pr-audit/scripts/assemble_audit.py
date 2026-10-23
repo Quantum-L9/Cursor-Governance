@@ -105,7 +105,6 @@ def evidence(
 def assemble(run: Path) -> dict[str, Any]:
     frozen = load(run / "frozen-pr-set.json")
     repo, main_sha = frozen["repository"], frozen["default_branch_sha"]
-    rules = frozen.get("merge_rules") or {}
     snaps = {p["pr"]: load(run / "snapshots" / f"pr-{p['pr']}.json") for p in frozen["prs"]}
     ledgers = {n: load(run / "ledgers" / f"pr-{n}-ledger.json") for n in snaps}
     prs = sorted(snaps)
@@ -194,26 +193,31 @@ def assemble(run: Path) -> dict[str, Any]:
                 + (["validation_procedure"] if aid == judgment["validation_authority"] else []),
             )
         )
-    add(
-        evidence(
-            "E-MERGE-RULES",
-            "CONFIGURATION",
-            repo,
-            main_sha,
-            rules.get("source", "UNAVAILABLE"),
-            rules.get("source", "UNAVAILABLE"),
-            f"Ruleset merge gates: required checks {rules.get('required_status_checks')}, required workflows "
-            f"{rules.get('required_workflows')}, approvals {rules.get('required_approving_review_count')}, "
-            f"thread resolution {rules.get('required_review_thread_resolution')}.",
-            ["required_check_identity"],
-        )
-    )
-
-    # ---- per-PR bindings and evidence
-    required = list(rules.get("required_status_checks") or [])
+    # ---- per-PR bindings and evidence (merge gates are bound per PR base branch)
     bindings, anti_bypass, val_ids_by_pr, ready_pre = [], [], {}, {}
     for n in prs:
         s, lp, head = snaps[n], lane_pr[n], snaps[n]["head_sha"]
+        rules = s.get("merge_rules") or {
+            "source": "UNAVAILABLE",
+            "classic_protection": "UNAVAILABLE",
+        }
+        rules_known = rules.get("source") not in {None, "UNAVAILABLE"}
+        required = list(rules.get("required_status_checks") or [])
+        add(
+            evidence(
+                f"E-MERGE-RULES-{n}",
+                "CONFIGURATION",
+                repo,
+                s["base_ref_sha"],
+                rules.get("source", "UNAVAILABLE"),
+                f"{rules.get('source', 'UNAVAILABLE')} + branches/{s['base_ref']}/protection",
+                f"Merge gates for base '{s['base_ref']}': required checks {required}, required workflows "
+                f"{rules.get('required_workflows')}, approvals {rules.get('required_approving_review_count')}, "
+                f"thread resolution {rules.get('required_review_thread_resolution')}, classic protection "
+                f"{rules.get('classic_protection')}.",
+                ["required_check_identity"],
+            )
+        )
         add(
             evidence(
                 f"E-DIFF-{n}",
@@ -310,19 +314,29 @@ def assemble(run: Path) -> dict[str, Any]:
                 )
             )
         val_ids_by_pr[n] = vids
+        # An empty resolved requirement set is satisfied vacuously; unreadable rules never are.
         required_green = (
-            bool(required)
+            rules_known
             and len(check_ids) == len(required)
             and all(ev[c]["validation_result"] == "PASS" for c in check_ids)
         )
+        wf_runs = s.get("workflow_runs", [])
+        workflows_green = rules_known and all(
+            any(w["path"] == path and w["conclusion"] == "success" for w in wf_runs)
+            for path in rules.get("required_workflows") or []
+        )
         approvals = sum(a["on_head"] for a in s.get("approvals", []))
         ready_pre[n] = {
+            "merge rules readable for the base branch": rules_known,
+            "classic branch protection readable or absent": rules.get("classic_protection")
+            in {"READ", "NOT_PROTECTED"},
             "required checks green on head": required_green,
+            "required workflows green on head": workflows_green,
             "no merge conflict with base": lp["merge_conflict_with_main"] is False,
             "review threads resolved (ruleset)": not (
                 rules.get("required_review_thread_resolution") and unresolved
             ),
-            "approvals meet ruleset": approvals
+            "approvals meet merge rules (distinct reviewers on head)": approvals
             >= int(rules.get("required_approving_review_count") or 0),
             "passing validation on head": any(
                 "mandatory_validation" in ev[v]["properties_discriminated"]
@@ -354,11 +368,9 @@ def assemble(run: Path) -> dict[str, Any]:
                     for f in s["files"]
                 ],
                 "required_check_resolution": {
-                    "status": "RESOLVED"
-                    if rules.get("source") not in {None, "UNAVAILABLE"}
-                    else "UNKNOWN",
+                    "status": ("RESOLVED" if required else "NONE") if rules_known else "UNKNOWN",
                     "checks": required,
-                    "evidence_ids": ["E-MERGE-RULES"] + check_ids,
+                    "evidence_ids": [f"E-MERGE-RULES-{n}"] + check_ids,
                 },
                 "review_thread_coverage": {
                     "unresolved_discovered": len(unresolved),
@@ -576,25 +588,36 @@ def assemble(run: Path) -> dict[str, Any]:
             "Bind an ADMITTED_AND_CURRENT canonical bundle and re-run the audit.",
             "HUMAN",
         )
-    if rules.get("source") in {None, "UNAVAILABLE"}:
+    unread_rules = [
+        n for n in prs if (snaps[n].get("merge_rules") or {}).get("source") in {None, "UNAVAILABLE"}
+    ]
+    if unread_rules:
         unknown(
             "U-MERGE-RULES",
-            "Repository merge rules could not be read.",
-            prs,
+            "Ruleset merge gates could not be read for these PRs' base branches.",
+            unread_rules,
             "required-check identity",
             True,
-            "GET repos/<repo>/rules/branches/<default> with read access.",
+            "GET repos/<repo>/rules/branches/<base> with read access.",
             "HUMAN",
         )
-    unknown(
-        "U-CLASSIC-PROTECTION",
-        "Classic branch protection is not read (403 on scoped tokens); only rulesets were observed.",
-        prs,
-        "required-check completeness",
-        False,
-        "GET branches/<default>/protection with admin scope.",
-        "HUMAN",
-    )
+    unread_classic = [
+        n
+        for n in prs
+        if (snaps[n].get("merge_rules") or {}).get("classic_protection")
+        not in {"READ", "NOT_PROTECTED"}
+    ]
+    if unread_classic:
+        # Readiness is withheld through each PR's preconditions; this records the gap itself.
+        unknown(
+            "U-CLASSIC-PROTECTION",
+            "Classic branch protection could not be read for these PRs' base branches (e.g. 403 on scoped tokens).",
+            unread_classic,
+            "required-check and review-rule completeness",
+            False,
+            "GET repos/<repo>/branches/<base>/protection with a token that can read protection.",
+            "HUMAN",
+        )
     for lane in lanes:
         for i, u in enumerate(lane["unknowns"], 1):
             unknown(
@@ -1126,7 +1149,7 @@ def assemble(run: Path) -> dict[str, Any]:
                     "authority_ids": c["authority_ids"],
                     "evidence_ids": [f"E-{c['authority_ids'][0]}"]
                     if c["authority_ids"]
-                    else ["E-MERGE-RULES"],
+                    else [f"E-MERGE-RULES-{prs[0]}"],
                 }
                 for c in components
             ],
@@ -1145,7 +1168,7 @@ def assemble(run: Path) -> dict[str, Any]:
                 | {
                     "evidence_ids": [f"E-{b['authority_ids'][0]}"]
                     if b["authority_ids"]
-                    else ["E-MERGE-RULES"]
+                    else [f"E-MERGE-RULES-{prs[0]}"]
                 }
                 for b in judgment["boundaries"]
             ],
@@ -1341,7 +1364,7 @@ def assemble(run: Path) -> dict[str, Any]:
             "pass_number": 2,
             "pass_type": "VERIFICATION",
             "objective": "Re-verify findings, obligations and probes against the frozen heads.",
-            "evidence_ids": ["E-MERGE-RULES"] + [f"E-DIFF-{n}" for n in prs],
+            "evidence_ids": [f"E-MERGE-RULES-{n}" for n in prs] + [f"E-DIFF-{n}" for n in prs],
             "observed_finding_ids": fids,
             "observed_obligation_ids": obl,
             "observed_claim_ids": claims,
