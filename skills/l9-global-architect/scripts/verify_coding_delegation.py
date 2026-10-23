@@ -852,7 +852,7 @@ class Fixture:
 
     def commit(self, message: str) -> str:
         self.run("add", "-A")
-        self.run("commit", "-q", "--no-verify", "-m", message)
+        self.run("commit", "-q", "-m", message)
         return self.run("rev-parse", "HEAD")
 
     def contract(self, name: str = "contract.yaml", **changes: Any) -> Path:
