@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -104,7 +105,20 @@ def lane_pr(n: int, readiness: str, files: list[str]) -> dict:
         "pr": n,
         "head_sha": HEAD[n],
         "objective": f"objective of PR {n}",
-        "objective_closure": "ACHIEVED",
+        "objective_source": "USER",
+        "requirements": [
+            {"id": "R1", "text": f"PR {n} does what was asked", "status": "MET", "evidence": "diff"}
+        ],
+        "probes": {
+            "adversarial_input": {"status": "DONE", "evidence": "fed malformed payloads; rejected"},
+            "base_discrimination": {
+                "status": "DONE",
+                "evidence": "new tests fail on base revision",
+            },
+            "merged_tree": {"status": "NOT_APPLICABLE", "evidence": "no stack or overlap"},
+            "ci_causality": {"status": "NOT_APPLICABLE", "evidence": "no failing checks"},
+            "ingress_reachability": {"status": "DONE", "evidence": "traced from the public entry"},
+        },
         "scope_fidelity": [
             {
                 "path": p,
@@ -120,7 +134,6 @@ def lane_pr(n: int, readiness: str, files: list[str]) -> dict:
                 "command": "pytest -q",
                 "tested_revision": HEAD[n],
                 "result": "PASS",
-                "discriminates_against_base": True,
                 "properties_discriminated": "new tests fail on base",
             }
         ],
@@ -128,6 +141,27 @@ def lane_pr(n: int, readiness: str, files: list[str]) -> dict:
         "readiness": readiness,
         "readiness_basis": "lane verdict",
     }
+
+
+def write_verification(
+    run_dir: Path, verdict: str, verifier: str = "checker", head: str = HEAD[2]
+) -> None:
+    (run_dir / "lanes" / f"verify-{verifier}.json").write_text(
+        json.dumps(
+            {
+                "verifier_lane": verifier,
+                "verifications": [
+                    {
+                        "finding_id": "F-2-1",
+                        "pr_heads": [{"pr": 2, "head_sha": head}],
+                        "verdict": verdict,
+                        "evidence": ["re-ran the caller against b(x) on the head"],
+                        "rationale": "independent re-run",
+                    }
+                ],
+            }
+        )
+    )
 
 
 @pytest.fixture()
@@ -201,6 +235,11 @@ def run_dir(tmp_path: Path) -> Path:
         "closure_condition": "b() keeps its signature",
         "implementation_surfaces": ["src/b.py"],
         "closing_validation": {"kind": "COMMAND", "procedure": "pytest -q"},
+        "detection": {
+            "ci": "MISSED",
+            "bot_review": "MISSED",
+            "evidence": "CI green, no review thread",
+        },
     }
     (tmp_path / "lanes" / "all.json").write_text(
         json.dumps(
@@ -216,6 +255,7 @@ def run_dir(tmp_path: Path) -> Path:
             }
         )
     )
+    write_verification(tmp_path, "REPRODUCED")
     (tmp_path / "judgment.json").write_text(
         json.dumps(
             {
@@ -369,3 +409,156 @@ def test_approvals_count_distinct_reviewers_latest_state() -> None:
     ]
     approvals = collect_snapshot.effective_approvals(reviews, "h")
     assert [(a["login"], a["on_head"]) for a in approvals] == [("a", True), ("c", False)]
+
+
+def edit_lane(run_dir: Path, pr_index: int, **changes: object) -> None:
+    path = run_dir / "lanes" / "all.json"
+    lane = json.loads(path.read_text())
+    lane["prs"][pr_index].update(changes)
+    path.write_text(json.dumps(lane))
+
+
+def assembled(run_dir: Path) -> dict:
+    done = run(SCRIPTS / "assemble_audit.py", "--run-dir", run_dir)
+    assert done.returncode == 0, done.stdout
+    return json.loads((run_dir / "audit.json").read_text())
+
+
+def refused(run_dir: Path) -> str:
+    done = run(SCRIPTS / "assemble_audit.py", "--run-dir", run_dir)
+    assert done.returncode == 2, done.stdout
+    return done.stdout
+
+
+def test_missing_probe_withholds_ready_and_names_the_gap(run_dir: Path) -> None:
+    lane = json.loads((run_dir / "lanes" / "all.json").read_text())
+    probes = lane["prs"][0]["probes"]
+    probes["adversarial_input"] = {"status": "NOT_DONE", "evidence": "no time to probe"}
+    edit_lane(run_dir, 0, probes=probes)
+    audit = assembled(run_dir)
+    verdict = next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)
+    assert verdict["merge_readiness"] == "UNKNOWN"
+    assert "U-PROBE-1-adversarial_input" in {u["unknown_id"] for u in audit["residual_unknowns"]}
+
+
+def test_merged_tree_probe_required_for_stacked_pr(run_dir: Path) -> None:
+    frozen_path = run_dir / "frozen-pr-set.json"
+    frozen = json.loads(frozen_path.read_text())
+    frozen["prs"][1]["stacked_on"] = 1
+    frozen_path.write_text(json.dumps(frozen))
+    assert "merged_tree probe cannot be NOT_APPLICABLE" in refused(run_dir)
+
+
+def test_unmet_requirement_needs_a_completeness_finding(run_dir: Path) -> None:
+    edit_lane(
+        run_dir,
+        0,
+        requirements=[
+            {"id": "R1", "text": "handle empty input", "status": "NOT_MET", "evidence": "x"}
+        ],
+    )
+    assert "names no COMPLETENESS/SCOPE finding" in refused(run_dir)
+
+
+def test_linked_issue_must_be_the_objective_source(run_dir: Path) -> None:
+    path = run_dir / "snapshots" / "pr-1.json"
+    snap = json.loads(path.read_text())
+    snap["intent"]["linked_issues"] = [{"number": 7, "state": "open", "title": "t", "body": "b"}]
+    path.write_text(json.dumps(snap))
+    edit_lane(run_dir, 0, objective_source="PR_BODY")
+    assert "judge completeness against them" in refused(run_dir)
+
+
+def test_pr_body_objective_is_a_recorded_gap(run_dir: Path) -> None:
+    edit_lane(run_dir, 0, objective_source="PR_BODY")
+    audit = assembled(run_dir)
+    assert "U-OBJECTIVE-1" in {u["unknown_id"] for u in audit["residual_unknowns"]}
+
+
+def test_unverified_blocking_finding_is_a_gap(run_dir: Path) -> None:
+    (run_dir / "lanes" / "verify-checker.json").unlink()
+    audit = assembled(run_dir)
+    assert next(f for f in audit["findings"] if f["finding_id"] == "F-2-1")["merge_blocking"]
+    assert "U-VERIFY-F-2-1" in {u["unknown_id"] for u in audit["residual_unknowns"]}
+
+
+def test_not_reproduced_blocking_finding_stops_blocking(run_dir: Path) -> None:
+    write_verification(run_dir, "NOT_REPRODUCED")
+    audit = assembled(run_dir)
+    finding = next(f for f in audit["findings"] if f["finding_id"] == "F-2-1")
+    assert not finding["merge_blocking"]
+    assert "could not reproduce" in finding["merge_blocking_basis"]["rationale"]
+
+
+def test_author_lane_cannot_verify_its_own_finding(run_dir: Path) -> None:
+    (run_dir / "lanes" / "verify-checker.json").unlink()
+    write_verification(run_dir, "REPRODUCED", verifier="all")
+    assert "verified by its own author lane" in refused(run_dir)
+
+
+def test_summary_counts_findings_only_the_audit_caught(run_dir: Path) -> None:
+    audit = assembled(run_dir)
+    assert "1 of 1 were caught only by this audit" in audit["executive_verdict"]["summary"]
+    assert audit["findings"][0]["detection"]["ci"] == "MISSED"
+
+
+def test_test_and_private_symbols_are_not_material(run_dir: Path) -> None:
+    ledger = json.loads((run_dir / "ledgers" / "pr-1-ledger.json").read_text())
+    claims = {
+        c["subject"]: c["materiality"]
+        for c in ledger["claim_seeds"]
+        if c["claim_kind"] == "CHANGED_SYMBOL"
+    }
+    assert claims["tests/test_a.py:test_a"] == "NON_MATERIAL"
+    assert claims["src/a.py:a"] == "MATERIAL"
+
+
+def test_closing_keywords_find_linked_issues() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "collect_snapshot", SCRIPTS / "collect_snapshot.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    refs = module.CLOSING_REF.findall("Closes #12, fixes: #7 and resolved #3; see #9")
+    assert sorted(map(int, refs)) == [3, 7, 12]
+
+
+def load_script(name: str) -> types.ModuleType:
+    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
+def test_verification_bound_to_a_stale_head_is_refused(run_dir: Path) -> None:
+    write_verification(run_dir, "NOT_REPRODUCED", head="e" * 40)
+    assert "re-run the verifier" in refused(run_dir)
+
+
+def test_renamed_path_counts_as_touched_for_overlaps() -> None:
+    collect = load_script("collect_snapshot")
+    renamed = {"files": [{"path": "b.py", "previous_path": "a.py"}]}
+    assert collect.touched_paths(renamed) == {"a.py", "b.py"}
+
+
+def test_bot_pr_stays_in_its_overlap_lane() -> None:
+    run_audit = load_script("run_audit")
+    frozen = {
+        "prs": [
+            {"pr": 1, "author": "dev", "stacked_on": None, "overlaps_with": [2]},
+            {"pr": 2, "author": "dependabot[bot]", "stacked_on": None, "overlaps_with": [1]},
+            {"pr": 3, "author": "dependabot[bot]", "stacked_on": None, "overlaps_with": []},
+        ]
+    }
+    lanes = {lane["lane"]: lane["prs"] for lane in run_audit.lane_plan(frozen)}
+    assert lanes == {"pr-1": [1, 2], "deps": [3]}

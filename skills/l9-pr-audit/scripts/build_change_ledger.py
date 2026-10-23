@@ -41,7 +41,7 @@ from typing import Any
 import deterministic_closure as dc
 
 SCHEMA = "l9.pr-audit.change-ledger.v1.4"
-GENERATOR_VERSION = "1.4.1"
+GENERATOR_VERSION = "1.4.2"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 TEST_SUFFIXES = (".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java")
 ARCH_PATTERNS = {
@@ -361,6 +361,24 @@ def changed_symbols_for_file(
     return symbols
 
 
+def symbol_materiality(classification: str, symbol_name: str) -> str:
+    """Changed-symbol claims are material on interfaces others can depend on.
+
+    Test code and underscore-private source symbols are not: a defect there surfaces
+    through a material claim (its public caller, a contract, a failing test), so seeding
+    them as MATERIAL only multiplies unadjudicated rows. Config, schema and workflow keys
+    stay material because they are consumed outside the file.
+    """
+    if classification == "TEST":
+        return "NON_MATERIAL"
+    if classification == "SOURCE" and any(
+        part.startswith("_") and not (part.startswith("__") and part.endswith("__"))
+        for part in symbol_name.split(".")
+    ):
+        return "NON_MATERIAL"
+    return "MATERIAL"
+
+
 def _claim_seed(
     pr: int,
     kind: str,
@@ -583,6 +601,7 @@ def build(doc: dict[str, Any]) -> dict[str, Any]:
                 "CHANGED_SYMBOL",
                 subject,
                 f"Changed symbol {subject} is authorized, architecturally aligned, and sufficiently validated.",
+                materiality=symbol_materiality(classification, sym["symbol_name"]),
                 discriminator=sym["symbol_id"],
             )
             claim["machine_symbol_id"] = sym["symbol_id"]
