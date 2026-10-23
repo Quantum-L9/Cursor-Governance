@@ -50,7 +50,6 @@ SATISFIED, VIOLATED, UNKNOWN = "SATISFIED", "VIOLATED", "UNKNOWN"
 PASSING_VALIDATION = {"Passed", "NotApplicable"}
 PASSING_CRITERION = {"Satisfied", "Passed", "SATISFIED"}
 BARE_FLAGS = {"", "1", "true", "yes", "y", "on"}
-SELF_REPORTERS = {"l9-coding-agent", "coding-agent", "coding_agent"}
 
 
 # --------------------------------------------------------------------------- helpers
@@ -189,6 +188,9 @@ def issue(
         return blocked(
             f"competing semantic coding instructions present: {competing}", "PLAN_NOT_READY"
         )
+    if prior is not None and contract_path.is_file():
+        if prior.get("frozen_contract_digest") == digest(contract_path):
+            return rework_reissue(prior)
     resolution = resolve(sibling_root=sibling_root)
     if resolution["status"] != "RESOLVED":
         return resolution
@@ -255,6 +257,30 @@ def issue(
         "transport": {"mode": None, "owner": None, "carriage_status": "NOT_EVALUATED"},
         "evidence_refs": [str(Path(__file__).resolve())],
     }
+    return record
+
+
+def rework_reissue(prior: dict[str, Any]) -> dict[str, Any]:
+    """Rework on an unchanged payload keeps the issuance-time sibling resolution (RS-038).
+
+    The sibling may have published a newer contract since the freeze; that newer contract
+    applies only to a new freeze after an authorized material change, never to rework.
+    """
+    record = copy.deepcopy(prior)
+    rework = record.setdefault("rework", {})
+    rework["count"] = int(rework.get("count") or 0) + 1
+    rework["same_frozen_contract"] = True
+    rework.setdefault("reauthorization_refs", [])
+    record["status"] = "CONTRACT_FROZEN"
+    record["reissued_at"] = now()
+    record["result"] = {
+        "diff_ref": None,
+        "implementation_report_ref": None,
+        "execution_receipt_ref": None,
+        "delivered_revision": None,
+        "returned_at": None,
+    }
+    record["verification"] = {"status": "NOT_EVALUATED", "discrepancy_refs": []}
     return record
 
 
@@ -384,7 +410,7 @@ def accept(
     checks.append(scope_check(contract, paths, diff_check["result"]))
     checks.append(self_report_consistency(receipt, paths))
     checks.extend(obligation_checks(contract, receipt))
-    checks.extend(adjudication_checks(contract, adjudication))
+    checks.extend(adjudication_checks(contract, adjudication, record, delivered_revision))
     failing = [c for c in checks if c["result"] != SATISFIED]
     status = VIOLATED if any(c["result"] == VIOLATED for c in failing) else UNKNOWN
     status = SATISFIED if not failing else status
@@ -491,7 +517,36 @@ def diff_truth(
     if actual != claimed:
         detail = f"returned diff {sorted(claimed ^ actual)} differs from git {base}..{delivered}"
         return actual, check("GAR-DELEG-005", name, VIOLATED, detail)
-    return actual, check("GAR-DELEG-005", name, SATISFIED, f"{len(actual)} paths match git")
+    canonical = subprocess.run(
+        ["git", "-C", str(repo), "diff", "--no-color", "--no-ext-diff", base, delivered],
+        capture_output=True,
+        check=False,
+    )
+    want = patch_id(repo, canonical.stdout) if canonical.returncode == 0 else None
+    got = patch_id(repo, diff_path.read_bytes())
+    if want is None or got is None:
+        detail = f"patch-id unavailable (returned {got}, git {base}..{delivered} {want})"
+        return actual, check("GAR-DELEG-005", name, UNKNOWN, detail)
+    if want != got:
+        detail = (
+            f"returned patch content differs from git {base}..{delivered} "
+            f"(patch-id {got[:12]} != {want[:12]}); file names alone do not bind the diff"
+        )
+        return actual, check("GAR-DELEG-005", name, VIOLATED, detail)
+    detail = f"{len(actual)} paths and patch-id {want[:12]} match git {base}..{delivered}"
+    return actual, check("GAR-DELEG-005", name, SATISFIED, detail)
+
+
+def patch_id(repo: Path, patch: bytes) -> str | None:
+    """git's stable patch-id: content-bound, independent of line numbers and whitespace."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "patch-id", "--stable"],
+        input=patch,
+        capture_output=True,
+        check=False,
+    )
+    fields = proc.stdout.decode("utf-8", "replace").split()
+    return fields[0] if proc.returncode == 0 and fields else None
 
 
 def scope_check(contract: Any, paths: set[str], diff_result: str) -> dict[str, str]:
@@ -557,26 +612,64 @@ def obligation_checks(contract: Any, receipt: dict[str, Any]) -> list[dict[str, 
             )
         )
     actions = receipt.get("external_actions") or []
-    allowed = contract.get("external_action_permissions") or []
+    permitted = {norm(p) for p in contract.get("external_action_permissions") or []}
+    unmatched = [a for a in actions if action_name(a) not in permitted]
     out.append(
         check(
             "GAR-DELEG-007",
             "external_actions_authorized",
-            VIOLATED if actions and not allowed else SATISFIED,
-            f"actions {actions} permitted {allowed}",
+            VIOLATED if unmatched else SATISFIED,
+            f"unpermitted actions {unmatched}; permitted {sorted(permitted)}"
+            if unmatched
+            else f"{len(actions)} actions, each matched to a permission",
         )
     )
     return out
 
 
-def adjudication_checks(contract: Any, adjudication: dict[str, Any] | None) -> list[dict[str, str]]:
-    """GAR's own verdicts on what no diff can decide mechanically."""
+def action_name(action: Any) -> str:
+    """One external action's kind, matched exactly against one permission entry."""
+    if isinstance(action, dict):
+        return norm(action.get("action") or action.get("type") or action.get("name") or "")
+    return norm(action)
+
+
+def gar_identity(gar_root: Path = PACK) -> str:
+    """GAR's own declared identity, read from its manifest, never a constant or an alias."""
+    return norm(walk(load(gar_root / MANIFEST_FILE), "manifest.name") or "")
+
+
+def adjudication_checks(
+    contract: Any,
+    adjudication: dict[str, Any] | None,
+    record: dict[str, Any],
+    delivered: str,
+) -> list[dict[str, str]]:
+    """GAR's own verdicts on what no diff can decide mechanically.
+
+    The adjudicator must be exactly GAR's manifest identity (an allowlist, not a denylist of
+    known self-reporters), and the adjudication must name this freeze's contract digest and
+    the delivered revision, so a verdict written for another delegation cannot be replayed.
+    The identity is a declared field, not a signature; the pack holds no signing key.
+    """
+    name = "gar_adjudication"
     if adjudication is None:
-        return [check("GAR-DELEG-007", "gar_adjudication", UNKNOWN, "no GAR adjudication supplied")]
-    who = str(adjudication.get("adjudicator", "")).strip()
-    if not who or who in SELF_REPORTERS:
-        return [check("GAR-DELEG-007", "gar_adjudication", VIOLATED, f"adjudicator {who!r}")]
-    out: list[dict[str, str]] = []
+        return [check("GAR-DELEG-007", name, UNKNOWN, "no GAR adjudication supplied")]
+    who, gar = norm(adjudication.get("adjudicator", "")), gar_identity()
+    if not gar or who != gar:
+        detail = f"adjudicator {who!r} is not GAR ({gar!r})"
+        return [check("GAR-DELEG-007", name, VIOLATED, detail)]
+    bound_digest = adjudication.get("frozen_contract_digest")
+    if bound_digest != record.get("frozen_contract_digest"):
+        detail = f"adjudication names digest {bound_digest!r}, not this freeze"
+        return [check("GAR-DELEG-007", name, VIOLATED, detail)]
+    bound_revision = adjudication.get("delivered_revision")
+    if not same_revision(str(bound_revision or ""), delivered):
+        detail = f"adjudication names revision {bound_revision!r}, not delivered {delivered}"
+        return [check("GAR-DELEG-007", name, VIOLATED, detail)]
+    out: list[dict[str, str]] = [
+        check("GAR-DELEG-007", name, SATISFIED, f"{gar}, bound to digest and revision")
+    ]
     sections = {
         "acceptance_criteria": "acceptance_criteria",
         "forbidden_actions": "forbidden_actions",
@@ -608,24 +701,31 @@ def carriage(
     sib = record.get("sibling_resolution") or {}
     root = Path(str(record.get("sibling_root", "")))
     schema_id = (load(root / str(sib.get("contract_schema_ref"))) or {}).get("$id")
-    frozen = load(Path(str(record.get("frozen_contract_ref"))))
-    scanned = sorted((runtime_root / "contracts").glob("*.schema.json"))
+    frozen_ref = Path(str(record.get("frozen_contract_ref"))).resolve()
+    frozen = load(frozen_ref)
+    runtime = runtime_root.resolve()
+    scanned = sorted((runtime / "contracts").glob("*.schema.json"))
     slots = [
-        str(p.relative_to(runtime_root))
+        str(p.relative_to(runtime))
         for p in scanned
         if schema_id and schema_id in json.dumps(load(p))
     ]
-    hits = [str(p) for p in compiled if p.is_file() and contains(load(p), frozen)]
-    if hits:
+    admitted, refused = runtime_artifacts(compiled, runtime, frozen_ref)
+    hits = [str(p.relative_to(runtime)) for p in admitted if contains(load(p), frozen)]
+    if hits and slots:
         status, blocker = "CARRIED_VERBATIM", None
     elif slots:
         status = "NOT_EVALUATED"
-        blocker = f"{owner} declares a slot in {slots} but no compiled instance carries the payload"
+        blocker = (
+            f"{owner} declares a slot in {slots} but no compiled artifact of that runtime "
+            f"carries the payload; refused evidence {refused}"
+        )
     else:
         status = "NOT_CARRIABLE"
         blocker = (
-            f"{owner}: no contract schema under {runtime_root / 'contracts'} references the "
-            f"payload schema {schema_id!r}; scanned {[p.name for p in scanned]}"
+            f"{owner}: no contract schema under {runtime / 'contracts'} references the payload "
+            f"schema {schema_id!r}; scanned {[p.name for p in scanned]}"
+            + (f"; payload found in {hits} without a declared slot" if hits else "")
         )
     transport = {
         "mode": "L9_INTEGRATED",
@@ -633,16 +733,78 @@ def carriage(
         "carriage_status": status,
         "blocker_ref": blocker,
     }
-    out: dict[str, Any] = {"status": status, "transport": transport}
+    out: dict[str, Any] = {
+        "status": status,
+        "transport": transport,
+        "admitted_evidence": [str(p) for p in admitted],
+        "refused_evidence": refused,
+    }
     if status != "CARRIED_VERBATIM":
-        out["block_receipt"] = {
-            "block_type": "EXTERNAL_DEPENDENCY",
-            "reason_code": "EXTERNAL_DEPENDENCY_BLOCK",
-            "specific_required_action": f"{owner} must carry the frozen payload verbatim",
-            "evidence_refs": [str(p) for p in scanned] + [str(p) for p in compiled],
-            "integrated_coverage_claimed": False,
-        }
+        out["block_receipt"] = block_receipt(
+            record, owner, str(blocker), scanned, admitted, refused, schema_id
+        )
     return out
+
+
+def runtime_artifacts(
+    compiled: list[Path], runtime: Path, frozen_ref: Path
+) -> tuple[list[Path], list[str]]:
+    """Only files inside the runtime root, other than the frozen payload itself, are evidence."""
+    admitted: list[Path] = []
+    refused: list[str] = []
+    for raw in compiled:
+        path = raw.resolve()
+        if not path.is_file():
+            refused.append(f"{raw}: not a file")
+        elif path == frozen_ref:
+            refused.append(f"{raw}: the frozen payload itself, not a runtime artifact")
+        elif not path.is_relative_to(runtime):
+            refused.append(f"{raw}: outside the runtime root {runtime}")
+        else:
+            admitted.append(path)
+    return admitted, refused
+
+
+def block_receipt(
+    record: dict[str, Any],
+    owner: str,
+    blocker: str,
+    scanned: list[Path],
+    admitted: list[Path],
+    refused: list[str],
+    schema_id: Any,
+) -> dict[str, Any]:
+    """A shape-complete EXTERNAL_DEPENDENCY receipt per OUTCOME_OWNERSHIP block requirements."""
+    receipt: dict[str, Any] = {
+        "block_type": "EXTERNAL_DEPENDENCY",
+        "reason_code": "EXTERNAL_DEPENDENCY_BLOCK",
+        "specific_required_action": (
+            f"{owner} must declare a contract slot referencing {schema_id!r} and emit the "
+            "frozen payload verbatim in a compiled artifact"
+        ),
+        "evidence_refs": [str(p) for p in scanned] + [str(p) for p in admitted] + refused,
+        "completed_work_refs": [
+            str(record.get("frozen_contract_ref")),
+            f"frozen_contract_digest {record.get('frozen_contract_digest')}",
+            str(record.get("schema_validation_ref")),
+        ],
+        "remaining_action": (
+            f"deliver the frozen payload to the Coding Agent once {owner} carries it, or "
+            "obtain explicit release of integrated orchestration and deliver in STANDALONE mode"
+        ),
+        "legitimacy_evidence_refs": [
+            f"dependency necessary: integrated mode transfers transport to {owner} "
+            "(integrations/L9_RUNTIME_BINDING.yaml#coding_delegation_transport)",
+            f"no bounded substitute: GAR may not add fields to or fork {owner} contracts; "
+            f"scanned {[p.name for p in scanned]}, blocker: {blocker}",
+        ],
+        "integrated_coverage_claimed": False,
+    }
+    required = walk(load(PACK / POLICY_FILE), "block_receipt_requirements.required_fields") or []
+    missing = [f for f in required if not receipt.get(f)]
+    receipt["shape_complete"] = bool(required) and not missing
+    receipt["missing_required_fields"] = missing
+    return receipt
 
 
 def contains(node: Any, target: Any) -> bool:
@@ -754,12 +916,18 @@ class Fixture:
         return path
 
 
-ADJUDICATION: dict[str, Any] = {
-    "adjudicator": "l9-global-architect",
-    "acceptance_criteria": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["diff"]}],
-    "forbidden_actions": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["no remote"]}],
-    "locked_invariants": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["VALUE = 2"]}],
-}
+def adjudication_for(record: dict[str, Any], delivered: str, **changes: Any) -> dict[str, Any]:
+    """A GAR adjudication bound to one freeze and one delivered revision."""
+    body: dict[str, Any] = {
+        "adjudicator": "l9-global-architect",
+        "frozen_contract_digest": record.get("frozen_contract_digest"),
+        "delivered_revision": delivered,
+        "acceptance_criteria": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["diff"]}],
+        "forbidden_actions": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["no remote"]}],
+        "locked_invariants": [{"index": 0, "verdict": SATISFIED, "evidence_refs": ["VALUE = 2"]}],
+    }
+    body.update(changes)
+    return body
 
 
 def self_test() -> dict[str, Any]:
@@ -786,8 +954,7 @@ def self_test() -> dict[str, Any]:
             live.get("reason"),
         )
         sibling = Path(live["sibling_root"]) if live["status"] == "RESOLVED" else None
-        if sibling is not None:
-            sibling_cases(tmp, sibling, live, expect)
+        bumped = sibling_cases(tmp, sibling, live, expect) if sibling is not None else None
         good = fx.contract()
         record = issue(good, target_revision=fx.base)
         expect(
@@ -843,6 +1010,18 @@ def self_test() -> dict[str, Any]:
             reauth.get("status") == "CONTRACT_FROZEN",
             reauth.get("reason"),
         )
+        if bumped is not None:
+            frozen_version = record["sibling_resolution"]["contract_version"]
+            again = issue(good, prior=record, sibling_root=bumped)
+            expect(
+                "GAR-DELEG-003",
+                "rework keeps the issuance-time sibling resolution after a sibling bump",
+                again.get("status") == "CONTRACT_FROZEN"
+                and again["sibling_resolution"] == record["sibling_resolution"]
+                and again["sibling_resolution"]["contract_version"] == frozen_version
+                and again["rework"]["count"] == 1,
+                again.get("sibling_resolution", {}).get("contract_version"),
+            )
         acceptance_cases(fx, good, changed, record, expect)
         expect(
             "GAR-DELEG-008",
@@ -854,7 +1033,7 @@ def self_test() -> dict[str, Any]:
     return summary(results)
 
 
-def sibling_cases(tmp: Path, sibling: Path, live: dict[str, Any], expect: Any) -> None:
+def sibling_cases(tmp: Path, sibling: Path, live: dict[str, Any], expect: Any) -> Path:
     bumped, broken = tmp / "sibling-bumped", tmp / "sibling-broken"
     ignore = shutil.ignore_patterns("__pycache__")
     shutil.copytree(sibling, bumped, ignore=ignore)
@@ -878,6 +1057,7 @@ def sibling_cases(tmp: Path, sibling: Path, live: dict[str, Any], expect: Any) -
         gone["status"] == "BLOCKED",
         gone.get("reason"),
     )
+    return bumped
 
 
 def acceptance_cases(
@@ -885,8 +1065,9 @@ def acceptance_cases(
 ) -> None:
     report, diff = fx.report(), fx.diff(fx.delivered, "good.diff")
     receipt = fx.receipt(fx.delivered)
+    adjudication = adjudication_for(record, fx.delivered)
 
-    def run(**over: Any) -> dict[str, Any]:
+    def run(rec: dict[str, Any] = record, **over: Any) -> dict[str, Any]:
         args: dict[str, Any] = {
             "contract_path": good,
             "diff_path": diff,
@@ -894,10 +1075,10 @@ def acceptance_cases(
             "receipt_path": receipt,
             "delivered_revision": fx.delivered,
             "repo": fx.repo,
-            "adjudication": ADJUDICATION,
+            "adjudication": adjudication,
         }
         args.update(over)
-        return accept(record, **args)
+        return accept(rec, **args)
 
     def rejected(result: dict[str, Any], check_id: str) -> bool:
         failing = [c for c in result["verification"]["checks"] if c["result"] != SATISFIED]
@@ -962,12 +1143,61 @@ def acceptance_cases(
         rejected(run(adjudication=None), "GAR-DELEG-007"),
         "no adjudication",
     )
-    selfish = dict(ADJUDICATION, adjudicator="l9-coding-agent")
+    for alias in ("l9-coding-agent", "L9-Coding-Agent", "worker", "gar"):
+        forged = adjudication_for(record, fx.delivered, adjudicator=alias)
+        expect(
+            "GAR-DELEG-007",
+            f"adjudicator {alias!r} that is not GAR's manifest identity is rejected",
+            rejected(run(adjudication=forged), "GAR-DELEG-007"),
+            alias,
+        )
+    replayed = adjudication_for(record, fx.delivered, frozen_contract_digest="sha256:" + "0" * 64)
     expect(
         "GAR-DELEG-007",
-        "coding-agent self-adjudication is rejected",
-        rejected(run(adjudication=selfish), "GAR-DELEG-007"),
-        "self",
+        "adjudication bound to another freeze is rejected",
+        rejected(run(adjudication=replayed), "GAR-DELEG-007"),
+        "digest",
+    )
+    moved = adjudication_for(record, fx.base)
+    expect(
+        "GAR-DELEG-007",
+        "adjudication bound to another revision is rejected",
+        rejected(run(adjudication=moved), "GAR-DELEG-007"),
+        "revision",
+    )
+    permit = fx.contract("permit.yaml", external_action_permissions=["push"])
+    permit_record = issue(permit, target_revision=fx.base)
+    if permit_record.get("status") == "CONTRACT_FROZEN":
+        bound = adjudication_for(permit_record, fx.delivered)
+        merged = fx.receipt(fx.delivered, "merge.json", external_actions=["merge"])
+        expect(
+            "GAR-DELEG-007",
+            "external action outside the granted permission is rejected",
+            rejected(
+                run(permit_record, contract_path=permit, receipt_path=merged, adjudication=bound),
+                "GAR-DELEG-007",
+            ),
+            "merge vs push",
+        )
+        pushed = fx.receipt(fx.delivered, "push.json", external_actions=[{"action": "push"}])
+        allowed = run(permit_record, contract_path=permit, receipt_path=pushed, adjudication=bound)
+        expect(
+            "GAR-DELEG-007",
+            "external action matching its permission is accepted",
+            allowed["status"] == "ACCEPTED",
+            allowed["verification"]["discrepancy_refs"],
+        )
+    else:
+        expect("GAR-DELEG-007", "permission fixture freezes", False, permit_record)
+    forged_diff = fx.tmp / "forged.diff"
+    forged_diff.write_text(
+        diff.read_text(encoding="utf-8").replace("+VALUE = 2", "+VALUE = 3"), encoding="utf-8"
+    )
+    expect(
+        "GAR-DELEG-005",
+        "fabricated hunks under correct headers are rejected",
+        rejected(run(diff_path=forged_diff), "GAR-DELEG-005"),
+        "patch-id",
     )
     unknown = fx.receipt(
         fx.delivered, "unknown.json", validation=[{"obligation_index": 0, "result": "Unknown"}]
@@ -1000,9 +1230,13 @@ def carriage_cases(tmp: Path, record: dict[str, Any], expect: Any) -> None:
         json.dumps({"type": "object", "properties": {"payload": {"$ref": schema_id}}}),
         encoding="utf-8",
     )
-    compiled = tmp / "HANDOFF_CONTRACT.yaml"
     frozen = load(Path(record["frozen_contract_ref"]))
-    compiled.write_text(yaml.safe_dump({"payload": frozen}), encoding="utf-8")
+    payload = yaml.safe_dump({"payload": frozen})
+    compiled = slotted / "HANDOFF_CONTRACT.yaml"
+    outside = tmp / "HANDOFF_CONTRACT.yaml"
+    unslotted = bare / "HANDOFF_CONTRACT.yaml"
+    for path in (compiled, outside, unslotted):
+        path.write_text(payload, encoding="utf-8")
     no = carriage(record, bare, [], "l9-cognitive-runtime")
     expect(
         "GAR-DELEG-009",
@@ -1010,6 +1244,36 @@ def carriage_cases(tmp: Path, record: dict[str, Any], expect: Any) -> None:
         no["status"] == "NOT_CARRIABLE"
         and no["block_receipt"]["integrated_coverage_claimed"] is False,
         no["transport"]["blocker_ref"],
+    )
+    receipt = no["block_receipt"]
+    expect(
+        "GAR-DELEG-009",
+        "block receipt is shape-complete against OUTCOME_OWNERSHIP required_fields",
+        receipt["shape_complete"] is True and not receipt["missing_required_fields"],
+        receipt["missing_required_fields"],
+    )
+    stray = carriage(record, slotted, [outside], "l9-cognitive-runtime")
+    expect(
+        "GAR-DELEG-009",
+        "compiled evidence outside the runtime root is refused",
+        stray["status"] == "NOT_EVALUATED" and bool(stray["refused_evidence"]),
+        stray["refused_evidence"],
+    )
+    itself = carriage(
+        record, slotted, [Path(record["frozen_contract_ref"])], "l9-cognitive-runtime"
+    )
+    expect(
+        "GAR-DELEG-009",
+        "the frozen payload itself is not carriage evidence",
+        itself["status"] == "NOT_EVALUATED" and bool(itself["refused_evidence"]),
+        itself["refused_evidence"],
+    )
+    no_slot = carriage(record, bare, [unslotted], "l9-cognitive-runtime")
+    expect(
+        "GAR-DELEG-009",
+        "payload in a runtime without a declared slot is not carriage",
+        no_slot["status"] == "NOT_CARRIABLE",
+        no_slot["transport"]["blocker_ref"],
     )
     yes = carriage(record, slotted, [compiled], "l9-cognitive-runtime")
     expect(
