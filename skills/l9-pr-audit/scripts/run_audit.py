@@ -63,15 +63,17 @@ def lane_plan(frozen: dict) -> list[dict]:
         for other in [p.get("stacked_on"), *(p.get("overlaps_with") or [])]:
             if other in parent and root(other) != root(p["pr"]):
                 parent[root(p["pr"])] = root(other)
-    groups: dict[str, list[int]] = defaultdict(list)
+    components: dict[int, list[dict]] = defaultdict(list)
     for p in frozen["prs"]:
-        snap_author = p.get("author", "")
-        key = (
-            "deps"
-            if snap_author.endswith("[bot]") and root(p["pr"]) == p["pr"]
-            else f"pr-{root(p['pr'])}"
-        )
-        groups[key].append(p["pr"])
+        components[root(p["pr"])].append(p)
+    groups: dict[str, list[int]] = defaultdict(list)
+    for top, members in components.items():
+        # A stacked or overlapping component stays one lane even when it contains bot PRs;
+        # only stand-alone bot PRs are pooled into the shared dependency lane.
+        alone_bot = len(members) == 1 and members[0].get("author", "").endswith("[bot]")
+        groups["deps" if alone_bot else f"pr-{min(m['pr'] for m in members)}"] += [
+            m["pr"] for m in members
+        ]
     return [{"lane": k, "prs": sorted(v)} for k, v in sorted(groups.items())]
 
 

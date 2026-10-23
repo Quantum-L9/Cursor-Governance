@@ -466,6 +466,13 @@ def assemble(run: Path) -> dict[str, Any]:
                 raise InputError(
                     f"{v['finding_id']} was verified by its own author lane {doc['verifier_lane']}; use an independent verifier"
                 )
+            bound = {h["pr"]: h["head_sha"] for h in v["pr_heads"]}
+            expected = {p: snaps[p]["head_sha"] for p in raw[v["finding_id"]]["prs"]}
+            if bound != expected:
+                raise InputError(
+                    f"verification of {v['finding_id']} in verify-{doc['verifier_lane']} is bound to {bound}, "
+                    f"but the frozen heads are {expected}: re-run the verifier"
+                )
             verdicts_by_fid[v["finding_id"]].append({**v, "verifier_lane": doc["verifier_lane"]})
     unverified_blockers: list[tuple[str, list[int]]] = []
     findings, surfaces, dep_graph, regression, extra_paths = [], [], [], [], defaultdict(set)

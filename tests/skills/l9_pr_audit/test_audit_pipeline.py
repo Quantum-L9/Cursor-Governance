@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -142,7 +143,9 @@ def lane_pr(n: int, readiness: str, files: list[str]) -> dict:
     }
 
 
-def write_verification(run_dir: Path, verdict: str, verifier: str = "checker") -> None:
+def write_verification(
+    run_dir: Path, verdict: str, verifier: str = "checker", head: str = HEAD[2]
+) -> None:
     (run_dir / "lanes" / f"verify-{verifier}.json").write_text(
         json.dumps(
             {
@@ -150,6 +153,7 @@ def write_verification(run_dir: Path, verdict: str, verifier: str = "checker") -
                 "verifications": [
                     {
                         "finding_id": "F-2-1",
+                        "pr_heads": [{"pr": 2, "head_sha": head}],
                         "verdict": verdict,
                         "evidence": ["re-ran the caller against b(x) on the head"],
                         "rationale": "independent re-run",
@@ -522,3 +526,39 @@ def test_closing_keywords_find_linked_issues() -> None:
         sys.dont_write_bytecode = previous
     refs = module.CLOSING_REF.findall("Closes #12, fixes: #7 and resolved #3; see #9")
     assert sorted(map(int, refs)) == [3, 7, 12]
+
+
+def load_script(name: str) -> types.ModuleType:
+    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
+
+
+def test_verification_bound_to_a_stale_head_is_refused(run_dir: Path) -> None:
+    write_verification(run_dir, "NOT_REPRODUCED", head="e" * 40)
+    assert "re-run the verifier" in refused(run_dir)
+
+
+def test_renamed_path_counts_as_touched_for_overlaps() -> None:
+    collect = load_script("collect_snapshot")
+    renamed = {"files": [{"path": "b.py", "previous_path": "a.py"}]}
+    assert collect.touched_paths(renamed) == {"a.py", "b.py"}
+
+
+def test_bot_pr_stays_in_its_overlap_lane() -> None:
+    run_audit = load_script("run_audit")
+    frozen = {
+        "prs": [
+            {"pr": 1, "author": "dev", "stacked_on": None, "overlaps_with": [2]},
+            {"pr": 2, "author": "dependabot[bot]", "stacked_on": None, "overlaps_with": [1]},
+            {"pr": 3, "author": "dependabot[bot]", "stacked_on": None, "overlaps_with": []},
+        ]
+    }
+    lanes = {lane["lane"]: lane["prs"] for lane in run_audit.lane_plan(frozen)}
+    assert lanes == {"pr-1": [1, 2], "deps": [3]}

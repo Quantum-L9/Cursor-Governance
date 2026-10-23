@@ -99,6 +99,16 @@ def linked_issues(repo: str, body: str) -> list[dict[str, Any]]:
     return out
 
 
+def touched_paths(snap: dict[str, Any]) -> set[str]:
+    """Every path a PR changes, including the old side of a rename."""
+    out = set()
+    for f in snap["files"]:
+        out.add(f["path"])
+        if f.get("previous_path"):
+            out.add(f["previous_path"])
+    return out
+
+
 def git(clone: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(["git", "-C", str(clone), *args], capture_output=True)
 
@@ -278,7 +288,7 @@ def main() -> int:
     for n in selected:
         snap = snaps[n] = snapshot(args.repo, args.clone, open_prs[n])
         (snap_dir / f"pr-{n}.json").write_text(json.dumps(snap, indent=1))
-    paths = {n: {f["path"] for f in snaps[n]["files"]} for n in selected}
+    paths = {n: touched_paths(snaps[n]) for n in selected}
     for n in selected:
         snap = snaps[n]
         frozen.append(

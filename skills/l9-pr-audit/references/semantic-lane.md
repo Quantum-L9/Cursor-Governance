@@ -88,7 +88,8 @@ After the semantic lanes, launch one verifier that authored none of the findings
 
 > Reproduce each merge-blocking finding in `[RUN]/lanes/*.json` on the exact head from its
 > evidence alone: re-run the probe or test, re-read the cited lines. Write
-> `[RUN]/lanes/verify-[verifier].json` (`schemas/finding-verification.schema.json`): `REPRODUCED`,
+> `[RUN]/lanes/verify-[verifier].json` (`schemas/finding-verification.schema.json`), binding each
+> verdict to the exact head of every PR the finding affects (`pr_heads`): `REPRODUCED`,
 > `NOT_REPRODUCED` (the defect does not occur as described) or `INCONCLUSIVE`, each with what you
 > ran and saw. Do not add findings; report new defects to the parent in your reply.
 
