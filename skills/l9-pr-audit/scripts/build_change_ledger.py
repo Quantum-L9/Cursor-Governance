@@ -41,7 +41,7 @@ from typing import Any
 import deterministic_closure as dc
 
 SCHEMA = "l9.pr-audit.change-ledger.v1.4"
-GENERATOR_VERSION = "1.4.0"
+GENERATOR_VERSION = "1.4.1"
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
 TEST_SUFFIXES = (".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java")
 ARCH_PATTERNS = {
@@ -247,10 +247,15 @@ def _python_symbols(content: str) -> dict[tuple[str, str], str]:
     return out
 
 
-def _patch_named_symbols(text: str) -> set[tuple[str, str]]:
+def _patch_named_symbols(text: str, classification: str) -> set[tuple[str, str]]:
+    # Key/assignment lines are symbols only in configuration and schema files; in
+    # source and tests they are dict literals and locals, not changed interfaces.
+    keys_are_symbols = classification in {"CONFIGURATION", "SCHEMA"}
     out: set[tuple[str, str]] = set()
     for line in text.splitlines():
         for kind, pattern in PATCH_SYMBOL_PATTERNS:
+            if kind == "CONFIG_OR_SCHEMA_KEY" and not keys_are_symbols:
+                continue
             match = pattern.search(line)
             if match:
                 out.add((kind, match.group(1)))
@@ -266,6 +271,12 @@ def changed_symbols_for_file(
     patch = str(raw.get("patch") or "")
     base_content = raw.get("base_content")
     head_content = raw.get("head_content")
+    # An added file has no base and a deleted file no head: both are the empty
+    # module, so AST extraction still applies instead of the patch-regex fallback.
+    if status == "added" and base_content is None:
+        base_content = ""
+    if status in {"deleted", "removed"} and head_content is None:
+        head_content = ""
     symbols: list[dict[str, Any]] = []
 
     if (
@@ -309,8 +320,8 @@ def changed_symbols_for_file(
             pass
 
     if not symbols and classification in SEMANTIC_CLASSES:
-        added = _patch_named_symbols(added_lines(patch))
-        removed = _patch_named_symbols(removed_lines(patch))
+        added = _patch_named_symbols(added_lines(patch), classification)
+        removed = _patch_named_symbols(removed_lines(patch), classification)
         for kind, name in sorted(added | removed):
             if (kind, name) in added and (kind, name) in removed:
                 change = "MODIFIED"

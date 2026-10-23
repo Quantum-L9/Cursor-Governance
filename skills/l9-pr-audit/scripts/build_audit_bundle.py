@@ -215,7 +215,7 @@ AUDIT_DOMAINS = {
     "CHANGE_DISCIPLINE",
 }
 CHANGE_LEDGER_SCHEMA = "l9.pr-audit.change-ledger.v1.4"
-CHANGE_LEDGER_GENERATOR_VERSION = "1.4.0"
+CHANGE_LEDGER_GENERATOR_VERSION = "1.4.1"
 CHANGE_LEDGER_SET_SCHEMA = "l9.pr-audit.change-ledger-set.v1.0"
 
 # High-confidence packaging tripwire, not a substitute for repository secret scanning.
@@ -644,6 +644,9 @@ def materialize_machine_rows(
         "falsification_ledger": [],
         "audit_obligation_ledger": [],
         "deterministic_closure_ledger": [],
+        # Canonical change-discipline rows the validator requires to mirror machine
+        # closure seeds exactly; merge them into audit.json's change_discipline.
+        "change_discipline": {"failure_path_coverage": [], "architectural_economy": []},
     }
     for pr, wrapper in sorted(change_ledgers.items()):
         ledger = wrapper["ledger"]
@@ -770,6 +773,49 @@ def materialize_machine_rows(
                     "details": copy.deepcopy(UNADJUDICATED_CLOSURE_DETAILS[seed["closure_kind"]]),
                 }
             )
+            payload = seed.get("payload") or {}
+            if seed["closure_kind"] == "FAILURE_EDGE":
+                out["change_discipline"]["failure_path_coverage"].append(
+                    {
+                        "failure_path_id": seed["subject"],
+                        "pr_number": seed["pr_number"],
+                        "surface": f"{payload.get('path', 'UNKNOWN')}:{payload.get('line', '?')}",
+                        "failure_mode": str(payload.get("edge_kind") or "UNKNOWN"),
+                        "status": "UNKNOWN",
+                        "evidence_ids": [eid],
+                        "finding_ids": [],
+                    }
+                )
+                kind = "FAILURE_PATH"
+            elif seed["closure_kind"] == "ARCHITECTURE_ECONOMY":
+                out["change_discipline"]["architectural_economy"].append(
+                    {
+                        "candidate_id": seed["subject"],
+                        "pr_number": seed["pr_number"],
+                        "kind": payload.get("kind") or "OTHER",
+                        "path": payload.get("path") or "UNKNOWN",
+                        "symbol": None,
+                        "disposition": "UNKNOWN",
+                        "objective_ids": list(objective_ids),
+                        "existing_owner_considered": False,
+                        "evidence_ids": [eid],
+                        "finding_ids": [],
+                    }
+                )
+                kind = "ARCHITECTURAL_GROWTH"
+            else:
+                continue
+            out["audit_obligation_ledger"].append(
+                {
+                    "obligation_id": f"OB-{seed['subject']}",
+                    "pr_number": seed["pr_number"],
+                    "kind": kind,
+                    "subject": seed["subject"],
+                    "status": "UNKNOWN",
+                    "evidence_ids": [eid],
+                    "finding_ids": [],
+                }
+            )
     if (
         canonical_binding is not None
         and canonical_binding.get("status") == "ADMITTED_AND_CURRENT"
@@ -822,13 +868,118 @@ def materialize_machine_rows(
     return out
 
 
+DERIVED_REFUTATION_PREFIX = "E-DERIVED-REFUTE-"
+MIRRORED_REFUTABLE_KINDS = {"AUDIT_DOMAIN", "READINESS", "CONVERGENCE"}
+
+
+def derive_mirrored_refutations(audit: dict[str, Any]) -> list[str]:
+    """Record on one probe the refutation a mirrored REFUTED claim already carries.
+
+    AUDIT_DOMAIN, READINESS and CONVERGENCE claims mirror canonical verdicts. When
+    the mirror is REFUTED, the refuting judgment (a FAIL domain, a NOT_READY verdict,
+    a NOT_CONVERGED audit) was already made by the auditor; this writes it onto the
+    claim's first unadjudicated probe with one derived evidence record per PR naming
+    exactly those claims. Probes the auditor adjudicated are never touched, and a
+    derived refutation is withdrawn when its claim stops mirroring REFUTED.
+    """
+    notes: list[str] = []
+    fals = {f["falsification_id"]: f for f in audit["falsification_ledger"]}
+    domains = {d["domain"]: d for d in audit["audit_coverage"]["domain_assessments"]}
+    verdicts = {v["pr_number"]: v for v in audit["per_pr_verdicts"]}
+    claims_by_pr: dict[int, list[str]] = defaultdict(list)
+    basis_by_pr: dict[int, set[str]] = defaultdict(set)
+    for claim in audit["claim_validation_matrix"]:
+        if (
+            claim["claim_kind"] not in MIRRORED_REFUTABLE_KINDS
+            or claim["materiality"] != "MATERIAL"
+        ):
+            continue
+        probes = [fals[fid] for fid in claim["falsification_ids"] if fid in fals]
+        derived = [
+            p
+            for p in probes
+            if any(e.startswith(DERIVED_REFUTATION_PREFIX) for e in p["evidence_ids"])
+        ]
+        if claim["status"] != "REFUTED":
+            for probe in derived:
+                probe.update(
+                    result="INCONCLUSIVE",
+                    evidence_ids=[census_evidence_id(claim["pr_numbers"][0])],
+                    finding_ids=[],
+                    judgment_rationale=UNADJUDICATED_RATIONALE,
+                )
+                notes.append(
+                    f"falsification {probe['falsification_id']}: derived refutation withdrawn"
+                )
+            continue
+        pr = claim["pr_numbers"][0]
+        if claim["claim_kind"] == "AUDIT_DOMAIN":
+            basis = list(domains.get(claim["subject"], {}).get("finding_ids", []))
+            why = f"audit domain {claim['subject']} is FAIL"
+        elif claim["claim_kind"] == "READINESS":
+            basis = list(verdicts.get(pr, {}).get("blocking_finding_ids", []))
+            why = f"PR #{pr} is NOT_READY"
+        else:
+            basis = []
+            why = "the audit is NOT_CONVERGED"
+        target = (
+            derived[0]
+            if derived
+            else next((p for p in probes if p["result"] == "INCONCLUSIVE"), None)
+        )
+        if target is None and not derived:
+            continue
+        eid = f"{DERIVED_REFUTATION_PREFIX}{pr}"
+        target.update(
+            result="FALSIFIED",
+            evidence_ids=[eid],
+            finding_ids=basis,
+            judgment_rationale=f"Derived: the claim mirrors canonical audit state in which {why}.",
+        )
+        claims_by_pr[pr].append(claim["claim_id"])
+        basis_by_pr[pr].update(basis)
+        if not derived:
+            notes.append(f"falsification {target['falsification_id']}: derived refutation ({why})")
+    heads = {p["pr_number"]: p["head_sha"] for p in audit["pr_bindings"]}
+    kept = [
+        e
+        for e in audit["shared_evidence_index"]
+        if not e["evidence_id"].startswith(DERIVED_REFUTATION_PREFIX)
+    ]
+    for pr, cids in sorted(claims_by_pr.items()):
+        kept.append(
+            {
+                "evidence_id": f"{DERIVED_REFUTATION_PREFIX}{pr}",
+                "evidence_type": "DIFF",
+                "epistemic_state": "CONFIRMED",
+                "repository": audit["repository_binding"]["repository"],
+                "revision": heads.get(
+                    pr, audit["repository_binding"]["audited_default_branch_sha"]
+                ),
+                "path_or_check": "audit.json canonical verdicts",
+                "locator": f"per_pr_verdicts / domain_assessments / executive_verdict for PR #{pr}",
+                "fact_proven": (
+                    f"Canonical audit state refutes {len(cids)} mirrored claims for PR #{pr}; "
+                    f"basis findings: {sorted(basis_by_pr[pr]) or 'none (convergence state)'}."
+                ),
+                "properties_discriminated": sorted(f"falsification:{cid}" for cid in cids),
+                "redaction_state": "NOT_APPLICABLE",
+                "findings_using_this_evidence": [],
+            }
+        )
+    audit["shared_evidence_index"] = kept
+    return notes
+
+
 def derive_post_judgment(audit: dict[str, Any]) -> list[str]:
     """Fill every field that is a pure function of the judged audit; return what changed.
 
     Never decides anything: claim statuses only mirror the canonical store they
     mirror, a severity row is only CONSISTENT when the severity sits inside the
-    machine bounds, and every new pair or coverage row starts UNKNOWN. Probe results,
-    evidence, findings and verdicts are left exactly as the auditor wrote them.
+    machine bounds, and every new pair or coverage row starts UNKNOWN. Findings and
+    verdicts are left exactly as the auditor wrote them; the only probe results
+    written are derived refutations of mirrored REFUTED claims
+    (``derive_mirrored_refutations``), never an auditor-adjudicated probe.
     """
     notes: list[str] = []
     emap = evidence_map(audit)
@@ -890,6 +1041,8 @@ def derive_post_judgment(audit: dict[str, Any]) -> list[str]:
                 f"claim {claim['claim_id']}: status {claim['status']} -> {expected} (mirrors canonical state)"
             )
             claim["status"] = expected
+
+    notes.extend(derive_mirrored_refutations(audit))
 
     post = audit["post_judgment_closure"]
     existing_sev = {x["finding_id"]: x for x in post["severity_consistency"]}
@@ -3212,8 +3365,20 @@ def validate_semantics(
                 )
         readiness = verdict["merge_readiness"]
         if readiness in READY_STATES:
+            # Domain assessments are audit-wide. A FAIL blocks this PR only when it is
+            # unattributed or one of its findings affects this PR; a multi-PR audit must
+            # not hold a clean PR hostage to another PR's defects.
             domain_failures = [
-                item for item in coverage["domain_assessments"] if item["status"] == "FAIL"
+                item
+                for item in coverage["domain_assessments"]
+                if item["status"] == "FAIL"
+                and (
+                    not item["finding_ids"]
+                    or any(
+                        num in fmap.get(fid, {}).get("affected_prs", [])
+                        for fid in item["finding_ids"]
+                    )
+                )
             ]
             if readiness == "READY" and domain_failures:
                 errors.append(f"PR {num} READY requires all audit domains PASS or NOT_APPLICABLE")

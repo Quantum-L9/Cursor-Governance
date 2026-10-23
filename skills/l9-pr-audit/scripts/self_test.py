@@ -1759,8 +1759,22 @@ def main() -> int:
             ("closure_kind", "subject", "seed_hash"),
         ),
     ):
-        seeded = {row[ident]: row for row in rows[key]}
-        if set(seeded) != {seed[ident] for seed in seeds} or len(seeded) != len(rows[key]):
+        mirror_subjects = {
+            c["subject"]
+            for c in rich["closure_seeds"]
+            if c["closure_kind"] in {"FAILURE_EDGE", "ARCHITECTURE_ECONOMY"}
+        }
+        census_rows = [
+            row
+            for row in rows[key]
+            if not (
+                key == "audit_obligation_ledger"
+                and row["obligation_id"] == f"OB-{row['subject']}"
+                and row["subject"] in mirror_subjects
+            )
+        ]
+        seeded = {row[ident]: row for row in census_rows}
+        if set(seeded) != {seed[ident] for seed in seeds} or len(seeded) != len(census_rows):
             raise AssertionError(f"materialized {key} does not enumerate the census exactly once")
         for seed in seeds:
             for field in preserved:
@@ -1768,6 +1782,35 @@ def main() -> int:
                     raise AssertionError(
                         f"materialized {key} {seed[ident]} rewrote census field {field}"
                     )
+    # Change-discipline mirror rows cover the machine failure edges and architecture
+    # candidates exactly once, each with its obligation, all unadjudicated.
+    edges = {c["subject"] for c in rich["closure_seeds"] if c["closure_kind"] == "FAILURE_EDGE"}
+    arch = {
+        c["subject"] for c in rich["closure_seeds"] if c["closure_kind"] == "ARCHITECTURE_ECONOMY"
+    }
+    mirror = rows["change_discipline"]
+    if {r["failure_path_id"] for r in mirror["failure_path_coverage"]} != edges or {
+        r["candidate_id"] for r in mirror["architectural_economy"]
+    } != arch:
+        raise AssertionError(
+            "materialized change_discipline mirror rows must cover machine seeds exactly"
+        )
+    mirror_obligations = {
+        (o["kind"], o["subject"])
+        for o in rows["audit_obligation_ledger"]
+        if o["subject"] in edges | arch
+    }
+    if mirror_obligations != {("FAILURE_PATH", e) for e in edges} | {
+        ("ARCHITECTURAL_GROWTH", a) for a in arch
+    }:
+        raise AssertionError("materialized mirror rows must each carry their obligation")
+    cd_props = bab.load_json(bab.schema_path())["properties"]["change_discipline"]["properties"]
+    for key in ("failure_path_coverage", "architectural_economy"):
+        validator = bab.Draft202012Validator(cd_props[key]["items"])
+        for row in mirror[key]:
+            problems = [e.message for e in validator.iter_errors(row)]
+            if problems:
+                raise AssertionError(f"materialized {key} row rejected by audit schema: {problems}")
     if any(c["status"] != "UNKNOWN" for c in rows["claim_validation_matrix"]) or any(
         f["result"] != "INCONCLUSIVE" for f in rows["falsification_ledger"]
     ):
