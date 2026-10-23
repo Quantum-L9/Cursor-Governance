@@ -233,9 +233,22 @@ instance_template:
     observed_at:
   delegation:
     status: NONE
-    payload_contract_ref: skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001
-    payload_schema_ref: skills/l9-coding-agent/schemas/execution-contract.schema.json
-    result_receipt_schema_ref: skills/l9-coding-agent/schemas/execution-receipt.schema.json
+    sibling_resolution:
+      sibling: l9-coding-agent
+      sibling_manifest_ref: skills/l9-coding-agent/runtime/MANIFEST.yaml
+      sibling_pack_version:
+      sibling_source_revision:
+      contract_owner_path:
+      contract_id:
+      contract_version:
+      contract_digest:
+      contract_schema_ref:
+      contract_schema_digest:
+      contract_validator_ref:
+      receipt_schema_ref:
+      receipt_schema_digest:
+      resolved_at:
+      evidence_refs: []
     frozen_contract_ref:
     frozen_contract_id:
     frozen_contract_digest:
@@ -554,7 +567,7 @@ transition_invariants:
   - id: RS-034
     assertion: Architecture intelligence MUST NOT be read as admitted law unless $.architecture_intelligence.status == ADMITTED_AND_CURRENT with its verifier provenance recorded; BUNDLE_VERIFIED may be read only with load_status LOADED_AS_CANDIDATE and every citation marked authoritative false; each cited fact MUST record its source_class, namespace pointer, source_ref, source_digest, projection_digest and composition_digest; any refusal MUST NOT fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
   - id: RS-035
-    assertion: One GAR implementation delegation MUST carry exactly one frozen L9.CODING_AGENT.EXECUTION_CONTRACT.001 payload, recorded in $.delegation by reference, contract_id, and content digest; $.delegation.competing_instruction_refs MUST be empty whenever status is not NONE, and no GAR coding template, plan-as-contract, or ad hoc instruction set may serve as the delegation payload.
+    assertion: One GAR implementation delegation MUST carry exactly one frozen instance of the Coding Agent execution contract that is current in the sibling pack at issuance, resolved through the sibling's runtime/MANIFEST.yaml and recorded in $.delegation.sibling_resolution (contract id, version, schema and receipt-schema digests, sibling revision) and in $.delegation by reference, contract_id, and content digest; GAR never pins, copies, or remembers a sibling contract version, and a resolution that cannot be observed blocks issuance instead of falling back to a recorded one; $.delegation.competing_instruction_refs MUST be empty whenever status is not NONE, and no GAR coding template, plan-as-contract, or ad hoc instruction set may serve as the delegation payload.
   - id: RS-036
     assertion: $.delegation.status MUST NOT become CONTRACT_FROZEN or ISSUED while the exact target, base revision, authority, architecture, locked invariants, or scope the payload requires is Unknown or disputed, or while the payload fails its canonical schema; the run blocks on the typed reason instead of defaulting a field or substituting another contract.
   - id: RS-037
@@ -666,3 +679,4 @@ anti_drift:
   - role_hydration_MUST_preserve_current_evidence_requirements
   - architecture_profile_applicability_MUST_remain_distinct_from_integrated_runtime_activation
   - delegation_state_MUST_record_the_frozen_coding_agent_contract_by_reference_and_digest_and_never_restate_or_redefine_it
+  - delegation_state_MUST_resolve_the_sibling_contract_version_live_at_issuance_and_never_carry_a_pinned_default

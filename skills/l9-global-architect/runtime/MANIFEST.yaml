@@ -7,6 +7,19 @@ manifest:
   human_bootloader: ../SKILL.md
   role: principal_architect_engineer
   composition_owner: runtime/MANIFEST.yaml
+twin_relation:
+  sibling: l9-coding-agent
+  sibling_manifest: skills/l9-coding-agent/runtime/MANIFEST.yaml
+  relationship: sibling_twins_not_identical
+  division_of_labor: GAR changes the design; Coding Agent changes the code.
+  subordination: none_in_either_direction
+  version_coupling: >-
+    Each twin versions independently. GAR consumes the Coding Agent's
+    execution contract, schemas, validator, and receipt as the sibling
+    declares them at the moment of delegation, resolved through the sibling
+    manifest, and never pins, forks, or restates them. The sibling mirrors this
+    relation in its own runtime/MANIFEST.yaml mission.twin_relation and
+    integrations/GAR_HANDOFF.yaml.
 mission_ref:
   outcome_policy: contracts/OUTCOME_OWNERSHIP.yaml
   completion_definition: contracts/CONVERGENCE.yaml
@@ -60,7 +73,8 @@ semantic_owners:
   coding_delegation_policy:
     owner: contracts/OUTCOME_OWNERSHIP.yaml
     section: coding_delegation_policy
-    upstream_semantic_owner: skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001
+    upstream_semantic_owner: skills/l9-coding-agent/runtime/MANIFEST.yaml#semantic_owners.execution_contract
+    upstream_version_binding: live_at_issuance_never_pinned
     local_role: issuer_and_acceptor_never_redefiner
   coding_delegation_state:
     owner: runtime/RUN_STATE.yaml
@@ -249,6 +263,7 @@ composition_invariants:
 - architecture_intelligence_is_a_separate_verified_input_and_never_replaces_the_l9_architecture_profile
 - architecture_intelligence_has_no_fallback_to_the_historical_observer_projection_or_any_other_input
 - gar_coding_delegation_carries_exactly_one_frozen_canonical_coding_agent_execution_contract_and_no_competing_payload
+- gar_resolves_the_coding_agent_contract_version_live_through_the_sibling_manifest_at_each_issuance_and_pins_none
 - gar_accepts_delegated_implementation_results_only_after_independent_verification_against_the_frozen_contract
 - integrated_handoff_ownership_is_preserved_and_a_path_that_cannot_carry_the_canonical_payload_fails_closed
 historical_artifacts:

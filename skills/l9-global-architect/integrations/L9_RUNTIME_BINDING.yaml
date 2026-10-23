@@ -174,12 +174,13 @@ ownership_matrix:
     owner: L9 Reasoning Foursome Signal Leverage
     gar_may_redefine: false
   coding_implementation_delegation_payload:
-    owner: l9-coding-agent (skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001)
-    gar_role: freeze_and_issue_one_instance_then_accept_results_by_independent_verification
+    owner: l9-coding-agent (the execution contract its runtime/MANIFEST.yaml declares at issuance)
+    version_binding: live_at_issuance_never_pinned
+    gar_role: resolve_current_sibling_contract_freeze_and_issue_one_instance_then_accept_results_by_independent_verification
     gar_may_redefine: false
     external_runtime_may_redefine: false
   coding_implementation_execution_receipt:
-    owner: l9-coding-agent (skills/l9-coding-agent/schemas/execution-receipt.schema.json)
+    owner: l9-coding-agent (the receipt schema its runtime/MANIFEST.yaml declares, as resolved at issuance)
     gar_role: consume_as_evidence_never_as_acceptance
     gar_may_redefine: false
     external_runtime_may_redefine: false
@@ -318,7 +319,7 @@ runtime_contract_binding:
       - delivery_evidence_requirement
     compiler_owner: l9-cognitive-runtime
 coding_delegation_transport:
-  payload_owner: l9-coding-agent (L9.CODING_AGENT.EXECUTION_CONTRACT.001)
+  payload_owner: l9-coding-agent (current execution contract resolved at issuance, recorded in $.delegation.sibling_resolution)
   policy_owner: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
   state_target: $.delegation.transport
   STANDALONE:

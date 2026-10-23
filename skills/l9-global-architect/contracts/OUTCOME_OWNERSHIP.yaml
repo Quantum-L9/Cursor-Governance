@@ -381,10 +381,35 @@ coding_delegation_policy:
     it, and GAR accepts only after independent verification. This section
     owns GAR's issuance and acceptance obligations and redefines nothing the
     payload owner declares.
+  sibling_relation:
+    sibling: l9-coding-agent
+    relationship: sibling_twins_not_identical
+    rule: >
+      GAR and the Coding Agent are twins with independent versions and no
+      subordination. GAR owns the design and acceptance; the Coding Agent owns
+      its contract, schemas, validator, receipt, and the code change. Neither
+      redefines the other.
   payload:
-    canonical_contract: skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001
-    schema: skills/l9-coding-agent/schemas/execution-contract.schema.json
-    schema_validator: skills/l9-coding-agent/scripts/validate_execution_contract.py
+    resolution:
+      binding: live_at_issuance
+      resolve_through: skills/l9-coding-agent/runtime/MANIFEST.yaml
+      contract: semantic_owners.execution_contract.owner
+      contract_schema_and_validator: conditional_load_groups.structured_contract_validation
+      receipt_schema: conditional_load_groups.structured_receipt_validation
+      record: $.delegation.sibling_resolution
+      rule: >
+        At issuance GAR reads the sibling manifest in the exact sibling
+        revision being delegated against, resolves whatever execution
+        contract, schema, validator, and receipt schema the sibling currently
+        declares, and records their identity, version, and digests. GAR keeps
+        no pinned contract id, version, field list, or schema copy. Every
+        delegation resolves afresh, so a newer sibling contract is used
+        automatically from the next issuance on.
+      unresolvable: >
+        A missing sibling manifest owner, an unreadable or invalid contract or
+        schema, or an absent validator blocks issuance with
+        MATERIAL_ASSUMPTION_UNRESOLVED. GAR never falls back to a previously
+        recorded or remembered version.
     exclusivity: >
       One GAR implementation delegation equals exactly one frozen instance of
       the canonical contract. No GAR coding template, plan-as-contract, ad hoc
@@ -392,18 +417,19 @@ coding_delegation_policy:
       it. Host transport, admission, and adapter metadata may wrap the payload
       but are never a second implementation contract.
     required_fields_source: >
-      The canonical contract's own required_fields and schema. GAR adds,
-      removes, renames, or reinterprets none of them.
-    preserved:
-      - implementation_detail_sovereignty
-      - repository_access_header
-      - readiness_gate
-      - execution_receipt
+      The resolved sibling contract's own required fields and schema at
+      issuance. GAR adds, removes, renames, or reinterprets none of them, and
+      it preserves every sibling-owned element as the sibling declares it,
+      including implementation-detail sovereignty, any external
+      repository-access header, the readiness gate, and the execution
+      receipt.
   freeze:
     rule: >
-      The payload is frozen before issuance. GAR records its exact reference,
-      contract_id, content digest, schema-validation evidence, and target base
-      revision in $.delegation. The frozen objective, scope, locked
+      The payload is frozen before issuance as an instance of the sibling
+      contract resolved at that moment. GAR records the resolution, the
+      instance's exact reference, contract_id, content digest,
+      schema-validation evidence from the resolved validator, and the target
+      base revision in $.delegation. The frozen objective, scope, locked
       invariants, acceptance criteria, forbidden actions, validation
       obligations, and delivery mode are the acceptance standard for the whole
       delegation, rework included.
@@ -431,7 +457,7 @@ coding_delegation_policy:
     required_all:
       - actual_changed_code_or_diff_bound_to_the_delivered_revision
       - implementation_report
-      - execution_receipt_conforming_to_skills/l9-coding-agent/schemas/execution-receipt.schema.json
+      - execution_receipt_conforming_to_the_receipt_schema_recorded_in_$.delegation.sibling_resolution
     receipt_binding: >
       The receipt's validated_state and delivered_state name the delivered
       revision. A receipt for another revision is stale evidence.
@@ -443,7 +469,7 @@ coding_delegation_policy:
       or green CI alone never establishes acceptance.
     independent_checks_all:
       - frozen_contract_digest_unchanged
-      - receipt_validates_against_the_execution_receipt_schema
+      - receipt_validates_against_the_receipt_schema_resolved_at_issuance
       - changed_surfaces_lie_within_the_frozen_modification_scope
       - every_frozen_acceptance_criterion_has_bound_evidence_in_the_result
       - every_frozen_validation_obligation_is_observed_with_a_result_other_than_Unknown
@@ -462,10 +488,12 @@ coding_delegation_policy:
       - $.delegation.status
   rework:
     rule: >
-      Rework reuses the same frozen contract and digest. A material scope,
-      objective, or architecture change is not rework; it requires new
-      authorization recorded in $.delegation.rework.reauthorization_refs
-      before a new freeze.
+      Rework reuses the same frozen contract and digest, including the sibling
+      resolution recorded at issuance, even when the sibling has since
+      published a newer contract. A material scope, objective, or
+      architecture change is not rework; it requires new authorization
+      recorded in $.delegation.rework.reauthorization_refs before a new
+      freeze, and that new freeze resolves the sibling contract afresh.
   transport:
     rule: >
       In STANDALONE mode GAR hands the frozen payload to the Coding Agent
@@ -481,6 +509,7 @@ coding_delegation_policy:
     owners.
   prohibited:
     - alternate_coding_contract_receipt_framework_or_validator
+    - pinning_copying_or_remembering_a_sibling_contract_version_id_field_list_or_schema
     - restating_or_summarizing_the_frozen_contract_as_instructions
     - accepting_from_self_report_terminal_state_or_green_ci_alone
     - silently_absorbing_scope_or_architecture_change_into_rework
