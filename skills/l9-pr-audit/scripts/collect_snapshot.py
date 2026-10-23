@@ -49,25 +49,6 @@ def gh(path: str) -> Any:
     return merged
 
 
-def gh_status(path: str) -> tuple[int, Any]:
-    """GET ``path``; return (HTTP status, body). 200 on success, the error status otherwise."""
-    done = subprocess.run(
-        ["gh", "api", "--method", "GET", "--include", path], capture_output=True, text=True
-    )
-    head, _, body = done.stdout.partition("\r\n\r\n")
-    if not body:
-        head, _, body = done.stdout.partition("\n\n")
-    status_line = head.splitlines()[0] if head else ""
-    try:
-        status = int(status_line.split()[1])
-    except (IndexError, ValueError):
-        status = 0
-    try:
-        return status, json.loads(body) if body.strip() else None
-    except json.JSONDecodeError:
-        return status, None
-
-
 def effective_approvals(reviews: list[dict[str, Any]], head: str) -> list[dict[str, Any]]:
     """Distinct reviewers whose latest state-changing review is an approval of ``head``.
 
@@ -192,11 +173,10 @@ _RULES_CACHE: dict[tuple[str, str], dict[str, Any]] = {}
 
 
 def merge_rules(repo: str, branch: str) -> dict[str, Any]:
-    """Effective merge gates for ``branch``: rulesets unioned with classic branch protection.
+    """Effective ruleset merge gates for ``branch`` (cached per branch).
 
-    ``classic_protection`` is READ (requirements merged in), NOT_PROTECTED (404) or
-    UNAVAILABLE (any other status, e.g. 403 on scoped tokens). UNAVAILABLE is kept, never
-    treated as empty, so readiness cannot be projected over gates nobody could read.
+    Only repository rulesets are read. Classic branch protection is not probed: its endpoint
+    needs admin scope and is refused on the tokens this audit runs with.
     """
     key = (repo, branch)
     if key not in _RULES_CACHE:
@@ -207,7 +187,6 @@ def merge_rules(repo: str, branch: str) -> dict[str, Any]:
 def _merge_rules(repo: str, branch: str) -> dict[str, Any]:
     rules = {
         "branch": branch,
-        "classic_protection": "UNAVAILABLE",
         "source": f"repos/{repo}/rules/branches/{branch}",
         "required_status_checks": [],
         "required_workflows": [],
@@ -235,22 +214,6 @@ def _merge_rules(repo: str, branch: str) -> dict[str, Any]:
             rules["required_review_thread_resolution"] |= bool(
                 params.get("required_review_thread_resolution")
             )
-    status, classic = gh_status(f"repos/{repo}/branches/{branch}/protection")
-    if status == 404:
-        rules["classic_protection"] = "NOT_PROTECTED"
-    elif status == 200 and isinstance(classic, dict):
-        rules["classic_protection"] = "READ"
-        checks = classic.get("required_status_checks") or {}
-        rules["required_status_checks"] += list(checks.get("contexts") or [])
-        rules["required_status_checks"] += [c["context"] for c in checks.get("checks") or []]
-        reviews = classic.get("required_pull_request_reviews") or {}
-        rules["required_approving_review_count"] = max(
-            rules["required_approving_review_count"],
-            reviews.get("required_approving_review_count", 0),
-        )
-        rules["required_review_thread_resolution"] |= bool(
-            (classic.get("required_conversation_resolution") or {}).get("enabled")
-        )
     rules["required_status_checks"] = sorted(set(rules["required_status_checks"]))
     rules["required_workflows"] = sorted(set(rules["required_workflows"]))
     return rules

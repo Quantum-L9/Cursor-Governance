@@ -199,7 +199,6 @@ def assemble(run: Path) -> dict[str, Any]:
         s, lp, head = snaps[n], lane_pr[n], snaps[n]["head_sha"]
         rules = s.get("merge_rules") or {
             "source": "UNAVAILABLE",
-            "classic_protection": "UNAVAILABLE",
         }
         rules_known = rules.get("source") not in {None, "UNAVAILABLE"}
         required = list(rules.get("required_status_checks") or [])
@@ -210,11 +209,10 @@ def assemble(run: Path) -> dict[str, Any]:
                 repo,
                 s["base_ref_sha"],
                 rules.get("source", "UNAVAILABLE"),
-                f"{rules.get('source', 'UNAVAILABLE')} + branches/{s['base_ref']}/protection",
+                rules.get("source", "UNAVAILABLE"),
                 f"Merge gates for base '{s['base_ref']}': required checks {required}, required workflows "
                 f"{rules.get('required_workflows')}, approvals {rules.get('required_approving_review_count')}, "
-                f"thread resolution {rules.get('required_review_thread_resolution')}, classic protection "
-                f"{rules.get('classic_protection')}.",
+                f"thread resolution {rules.get('required_review_thread_resolution')}; rulesets only.",
                 ["required_check_identity"],
             )
         )
@@ -328,8 +326,6 @@ def assemble(run: Path) -> dict[str, Any]:
         approvals = sum(a["on_head"] for a in s.get("approvals", []))
         ready_pre[n] = {
             "merge rules readable for the base branch": rules_known,
-            "classic branch protection readable or absent": rules.get("classic_protection")
-            in {"READ", "NOT_PROTECTED"},
             "required checks green on head": required_green,
             "required workflows green on head": workflows_green,
             "no merge conflict with base": lp["merge_conflict_with_main"] is False,
@@ -599,23 +595,6 @@ def assemble(run: Path) -> dict[str, Any]:
             "required-check identity",
             True,
             "GET repos/<repo>/rules/branches/<base> with read access.",
-            "HUMAN",
-        )
-    unread_classic = [
-        n
-        for n in prs
-        if (snaps[n].get("merge_rules") or {}).get("classic_protection")
-        not in {"READ", "NOT_PROTECTED"}
-    ]
-    if unread_classic:
-        # Readiness is withheld through each PR's preconditions; this records the gap itself.
-        unknown(
-            "U-CLASSIC-PROTECTION",
-            "Classic branch protection could not be read for these PRs' base branches (e.g. 403 on scoped tokens).",
-            unread_classic,
-            "required-check and review-rule completeness",
-            False,
-            "GET repos/<repo>/branches/<base>/protection with a token that can read protection.",
             "HUMAN",
         )
     for lane in lanes:
@@ -1115,7 +1094,7 @@ def assemble(run: Path) -> dict[str, Any]:
                     "impact": "BLOCKS_CONVERGENCE",
                 }
                 for u in unknowns
-                if u["unknown_id"] in {"U-CANON", "U-CLASSIC-PROTECTION"}
+                if u["unknown_id"] in {"U-CANON"}
             ],
             "domain_assessments": domain_rows,
             "artifact_inventory": inventory,

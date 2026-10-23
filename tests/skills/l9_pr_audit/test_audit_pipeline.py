@@ -24,7 +24,6 @@ HEAD = {1: "b" * 40, 2: "c" * 40}
 REPO_NAME = "Quantum-L9/example"
 RULES = {
     "branch": "main",
-    "classic_protection": "NOT_PROTECTED",
     "source": "repos/x/rules/branches/main",
     "required_status_checks": ["ci"],
     "required_workflows": [".github/workflows/org-ci.yml"],
@@ -328,12 +327,6 @@ def test_empty_required_check_set_is_satisfied_vacuously(run_dir: Path) -> None:
         next(v for v in audit["per_pr_verdicts"] if v["pr_number"] == 1)["merge_readiness"]
         == "READY"
     )
-
-
-def test_unreadable_classic_protection_withholds_ready(run_dir: Path) -> None:
-    set_rules(run_dir, 1, classic_protection="UNAVAILABLE")
-    state, why = readiness(run_dir, 1)
-    assert state == "UNKNOWN" and "classic branch protection" in why
 
 
 def test_failing_required_workflow_withholds_ready(run_dir: Path) -> None:
