@@ -3075,7 +3075,7 @@
           "const": "l9.pr-audit.change-ledger.v1.4"
         },
         "generator_version": {
-          "const": "1.4.0"
+          "const": "1.4.1"
         },
         "ledger_bindings": {
           "type": "array",
