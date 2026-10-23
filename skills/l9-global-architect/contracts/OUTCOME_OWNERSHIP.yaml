@@ -1,6 +1,6 @@
 metadata:
   contract_id: L9.GAR.OUTCOME_OWNERSHIP.001
-  version: 0.4.0
+  version: 0.5.0
   kind: policy
   status: review
   title: GAR Outcome Accountability and Execution Obligation
@@ -30,6 +30,7 @@ scope:
     - execution
     - delivery
     - block_disposition
+    - coding_delegation
   resources:
     - run_objective
     - artifacts
@@ -67,6 +68,19 @@ normative_clauses:
     object: requested_deliverable
     conditions:
       - delivery_required == true
+  - clause_id: OO-DELEGATION-PAYLOAD
+    effect: require
+    subject: l9_global_architect
+    action: issue_exactly_one_frozen_canonical_coding_agent_execution_contract_as_the_sole_semantic_payload
+    object: coding_implementation_delegation
+    conditions:
+      - delegation_is_gar_owned
+      - payload_conforms_to_coding_delegation_policy
+  - clause_id: OO-DELEGATION-ACCEPTANCE
+    effect: require
+    subject: l9_global_architect
+    action: accept_delegated_result_only_after_independent_verification_against_the_frozen_contract
+    object: returned_diff_implementation_report_and_execution_receipt
 dependencies:
   requires_contracts:
     - L9.GAR.EPISTEMIC_DISCIPLINE.001
@@ -310,6 +324,7 @@ permission_model:
     - materially_expanded_objective
     - destructive_operation_not_implied_by_user_request
     - action_reserved_by_project_governance
+    - coding_delegation_objective_scope_or_architecture_change_after_freeze
 scope_policy:
   default: smallest_coherent_scope
   scope_expansion_allowed_when:
@@ -359,6 +374,117 @@ policy_compliance_evidence:
     - a_permit_decision_is_not_satisfaction_evidence
     - a_require_gate_decision_is_not_a_violation
     - obligations_are_fulfilled_by_observed_state_never_by_restated_intent
+coding_delegation_policy:
+  purpose: >
+    Govern every GAR-owned delegation of implementation work to the L9 Coding
+    Agent. GAR freezes one authorized objective, the Coding Agent implements
+    it, and GAR accepts only after independent verification. This section
+    owns GAR's issuance and acceptance obligations and redefines nothing the
+    payload owner declares.
+  payload:
+    canonical_contract: skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001
+    schema: skills/l9-coding-agent/schemas/execution-contract.schema.json
+    schema_validator: skills/l9-coding-agent/scripts/validate_execution_contract.py
+    exclusivity: >
+      One GAR implementation delegation equals exactly one frozen instance of
+      the canonical contract. No GAR coding template, plan-as-contract, ad hoc
+      instruction set, or second semantic envelope may accompany or replace
+      it. Host transport, admission, and adapter metadata may wrap the payload
+      but are never a second implementation contract.
+    required_fields_source: >
+      The canonical contract's own required_fields and schema. GAR adds,
+      removes, renames, or reinterprets none of them.
+    preserved:
+      - implementation_detail_sovereignty
+      - repository_access_header
+      - readiness_gate
+      - execution_receipt
+  freeze:
+    rule: >
+      The payload is frozen before issuance. GAR records its exact reference,
+      contract_id, content digest, schema-validation evidence, and target base
+      revision in $.delegation. The frozen objective, scope, locked
+      invariants, acceptance criteria, forbidden actions, validation
+      obligations, and delivery mode are the acceptance standard for the whole
+      delegation, rework included.
+    state_target: $.delegation
+    event: CODING_DELEGATION_CONTRACT_FROZEN
+  blocking_conditions:
+    rule: >
+      A missing or disputed input blocks issuance. GAR never invents a default
+      for it and never substitutes an alternate contract.
+    any_of:
+      - exact_target_or_base_revision_unknown
+      - architecture_or_locked_invariants_unresolved_or_disputed
+      - authority_refs_unresolved_or_in_conflict
+      - in_scope_or_modification_scope_unknown
+      - payload_fails_canonical_schema_validation
+      - competing_semantic_coding_instructions_present
+    disposition: require_gate
+    reason_codes:
+      - TARGET_BINDING_UNRESOLVED
+      - MATERIAL_ASSUMPTION_UNRESOLVED
+      - AUTHORITY_CONFLICT
+      - MUTATION_AUTHORITY_UNRESOLVED
+      - PLAN_NOT_READY
+  result_requirements:
+    required_all:
+      - actual_changed_code_or_diff_bound_to_the_delivered_revision
+      - implementation_report
+      - execution_receipt_conforming_to_skills/l9-coding-agent/schemas/execution-receipt.schema.json
+    receipt_binding: >
+      The receipt's validated_state and delivered_state name the delivered
+      revision. A receipt for another revision is stale evidence.
+    missing_any: REJECTED, naming the exact missing item against the same frozen contract
+  acceptance:
+    rule: >
+      GAR independently compares the returned diff, report, and receipt to the
+      frozen contract. Coding Agent self-report, a CONVERGED terminal state,
+      or green CI alone never establishes acceptance.
+    independent_checks_all:
+      - frozen_contract_digest_unchanged
+      - receipt_validates_against_the_execution_receipt_schema
+      - changed_surfaces_lie_within_the_frozen_modification_scope
+      - every_frozen_acceptance_criterion_has_bound_evidence_in_the_result
+      - every_frozen_validation_obligation_is_observed_with_a_result_other_than_Unknown
+      - no_frozen_forbidden_action_or_locked_invariant_is_violated
+      - delivered_revision_equals_the_revision_the_receipt_validated
+    fail_closed: >
+      Any check VIOLATED or UNKNOWN is REJECTED with precise discrepancy refs
+      returned against the same frozen contract.
+    reason_codes:
+      - UNSUPPORTED_VALIDATION_CLAIM
+      - SCOPE_EXPANSION_UNJUSTIFIED
+      - VALIDATION_INSUFFICIENT
+      - COMPLETION_NOT_PROVEN
+    state_targets:
+      - $.delegation.verification
+      - $.delegation.status
+  rework:
+    rule: >
+      Rework reuses the same frozen contract and digest. A material scope,
+      objective, or architecture change is not rework; it requires new
+      authorization recorded in $.delegation.rework.reauthorization_refs
+      before a new freeze.
+  transport:
+    rule: >
+      In STANDALONE mode GAR hands the frozen payload to the Coding Agent
+      directly. In L9_INTEGRATED mode the external handoff owner declared by
+      integrations/L9_RUNTIME_BINDING.yaml keeps ownership of transport and
+      admission, and GAR never overrides it. When that path cannot carry the
+      frozen payload verbatim under current authority, the delegation is
+      BLOCKED with the exact blocker and no integrated coverage is claimed.
+    state_target: $.delegation.transport
+  non_coding_handoffs: >
+    Unaffected. This policy binds only implementation delegations GAR owns;
+    analysis, decision, review, and reasoning-overlay handoffs keep their own
+    owners.
+  prohibited:
+    - alternate_coding_contract_receipt_framework_or_validator
+    - restating_or_summarizing_the_frozen_contract_as_instructions
+    - accepting_from_self_report_terminal_state_or_green_ci_alone
+    - silently_absorbing_scope_or_architecture_change_into_rework
+    - overriding_the_integrated_handoff_owner_to_force_carriage
 block_receipt_requirements:
   allowed_types:
     - AUTHORITY
@@ -420,7 +546,9 @@ semantic_boundary:
     - permission_policy
     - valid_block_receipt_requirements
     - policy_compliance_evidence_model
+    - coding_delegation_issuance_and_acceptance_policy
   does_not_own:
+    - canonical_coding_agent_contract_receipt_or_validation_semantics
     - objective_fact_derivation
     - realization_mode_derivation
     - delivery_mode_derivation

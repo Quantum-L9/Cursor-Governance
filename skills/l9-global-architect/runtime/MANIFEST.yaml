@@ -57,6 +57,14 @@ semantic_owners:
   architecture_intelligence_input:
     owner: integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
     runtime_loaded_by_default: false
+  coding_delegation_policy:
+    owner: contracts/OUTCOME_OWNERSHIP.yaml
+    section: coding_delegation_policy
+    upstream_semantic_owner: skills/l9-coding-agent/contracts/EXECUTION_CONTRACT.yaml#L9.CODING_AGENT.EXECUTION_CONTRACT.001
+    local_role: issuer_and_acceptor_never_redefiner
+  coding_delegation_state:
+    owner: runtime/RUN_STATE.yaml
+    projection: $.delegation
 load_order:
 - catalogs/REASON_CODES.yaml
 - runtime/EVALUATOR_REGISTRY.yaml
@@ -240,6 +248,9 @@ composition_invariants:
 - package_validation_is_reproducible_and_does_not_require_unrelated_semantic_owner_version_churn
 - architecture_intelligence_is_a_separate_verified_input_and_never_replaces_the_l9_architecture_profile
 - architecture_intelligence_has_no_fallback_to_the_historical_observer_projection_or_any_other_input
+- gar_coding_delegation_carries_exactly_one_frozen_canonical_coding_agent_execution_contract_and_no_competing_payload
+- gar_accepts_delegated_implementation_results_only_after_independent_verification_against_the_frozen_contract
+- integrated_handoff_ownership_is_preserved_and_a_path_that_cannot_carry_the_canonical_payload_fails_closed
 historical_artifacts:
   normative: false
   runtime_loaded_by_default: false
