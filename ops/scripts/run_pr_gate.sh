@@ -308,6 +308,10 @@ _gate_failed=1
 #: subsequent `make pr` was still refused, pointing at a log whose last line was
 #: a clean gate. Re-running is the correct action there, so no receipt is
 #: written and the block simply recurs while the condition holds.
+#:
+#: An overlap block is the same class: routing state about the base and other
+#: open PRs. Observed (Website-Bot, 2026-10-24): the receipt then refused the
+#: documented PR_OVERLAP=ignore re-run, and the receipt had to be deleted by hand.
 _gate_env_block=0
 _gate_on_exit() {
   if [[ -n "${_prefetch_pid:-}" ]]; then
@@ -316,7 +320,7 @@ _gate_on_exit() {
   fi
   _write_gate_timing || true
   if [[ "${_gate_env_block:-0}" = "1" ]]; then
-    echo "NOTE: environment-blocked (not a red tree) — no STOP LOOPING receipt written."
+    echo "NOTE: environment- or routing-blocked (not a red tree) — no STOP LOOPING receipt written."
   elif [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
@@ -735,11 +739,20 @@ if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
     --workspace "$WS" --base "$PR_BASE" \
     --write-receipt "$WS/.l9/pr/overlap-receipt.json" || _overlap_rc=$?
   if [[ "$_overlap_rc" -ne 0 ]]; then
-    # 3 = telemetry denied (pr_overlap_check.TELEMETRY_DENIED_EXIT): nothing in
-    # the tree to fix, so a digest-keyed STOP LOOPING receipt would outlive the
-    # outage. Publication is denied either way.
-    [[ "$_overlap_rc" -eq 3 ]] && _gate_env_block=1
-    echo "FAIL: early overlap blocked publish (PR_OVERLAP=${PR_OVERLAP:-block})"
+    # No overlap outcome is a red tree, so none may leave a digest-keyed STOP
+    # LOOPING receipt. 3 = telemetry denied (pr_overlap_check.TELEMETRY_DENIED_EXIT):
+    # an outage outside the tree. Any other non-zero is routing state about the
+    # base and other open PRs, resolved by the very options the block prints —
+    # PR_STACK=auto, PR_BASE=origin/<open-pr-head>, PR_OVERLAP=ignore — none of
+    # which move the tree digest, so a receipt refused every one of them.
+    # Publication is denied either way; the block recurs while that state holds.
+    _gate_env_block=1
+    if [[ "$_overlap_rc" -eq 3 ]]; then
+      echo "FAIL: early overlap blocked publish — telemetry unavailable, not a red tree (PR_OVERLAP=${PR_OVERLAP:-block})"
+    else
+      echo "FAIL: early overlap blocked publish — routing decision, not a red tree (PR_OVERLAP=${PR_OVERLAP:-block}, PR_STACK=${PR_STACK:-}, PR_BASE=${PR_BASE})"
+      echo "      Pick a routing option above and re-run make pr."
+    fi
     exit 1
   fi
 fi
