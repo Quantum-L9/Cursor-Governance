@@ -4,6 +4,10 @@ This file is historical and non-authoritative. Machine-readable semantic owners 
 
 ## Unreleased - 2026-10-21
 
+### Architectural integrity clauses at top level (2026-10-24)
+
+- `contracts/ARCHITECTURAL_INTEGRITY.yaml` 0.7.0 -> 0.7.1: core clauses AI-001..AI-005 were indented under `scope:` instead of the top-level `normative_clauses` the inherited governance-contract schema reads. They move to top level unchanged; `cross_rules` and everything else in the contract are untouched.
+
 ### One shared verifier; architecture intelligence admitted
 
 - `scripts/verify_architecture_intelligence.py` is a thin adapter over `skills/l9-coding-agent/scripts/verify_canonical_binding.py`: every component, receipt, authority and admission check is the shared one. GAR keeps only the composed view, the run-state slot and citation.
