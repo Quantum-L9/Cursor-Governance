@@ -120,6 +120,52 @@ def test_registry_declares_odoo_native_route() -> None:
     # The origin is never the only basis: the ceremony is pinned Governance-side.
     assert entry["ceremony"]["kernel"] == "scripts/make_push_pipeline.sh"
     assert "git status --porcelain" in entry["ceremony"]["kernel_requires"]
+    assert entry["required_git_hook_types"] == ["pre-push"]
+
+
+def _native_document(extra: dict) -> dict:
+    entry = {
+        "route": "native",
+        "native_target": "pr",
+        "declared_base": "Staging",
+        "authority": "x",
+        "ceremony": {
+            "kernel": "scripts/make_push_pipeline.sh",
+            "kernel_requires": ["git status --porcelain"],
+        },
+    }
+    entry.update(extra)
+    return {
+        "schema": pa.SCHEMA,
+        "default_route": "governance",
+        "repositories": {ODOO_KEY: entry},
+    }
+
+
+@pytest.mark.parametrize(
+    "types",
+    [["pre-commit"], ["pre-push", "pre-push"], [], "pre-push", ["post-commit"]],
+)
+def test_required_git_hook_types_reject_commit_stage_and_junk(
+    tmp_path: Path, types: object
+) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        json.dumps(_native_document({"required_git_hook_types": types})),
+        encoding="utf-8",
+    )
+    with pytest.raises(pa.RegistryError, match="required_git_hook_types"):
+        pa.load_registry(bad)
+
+
+def test_required_git_hook_types_accepts_pre_push_and_commit_msg(tmp_path: Path) -> None:
+    path = tmp_path / "ok.json"
+    path.write_text(
+        json.dumps(_native_document({"required_git_hook_types": ["commit-msg", "pre-push"]})),
+        encoding="utf-8",
+    )
+    entry = pa.load_registry(path)["repositories"][ODOO_KEY]
+    assert entry["required_git_hook_types"] == ["commit-msg", "pre-push"]
 
 
 def test_missing_registry_parse_governance_run_invalid(tmp_path: Path) -> None:

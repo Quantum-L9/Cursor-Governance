@@ -308,6 +308,99 @@ write_deps_stamp() {
   } >"$stamp"
 }
 
+# --- Consumer-declared git hooks -------------------------------------------
+# Commit-stage hooks stay forbidden: a raw `.git/hooks/pre-commit` runs the
+# catalog without the surface-aware SKIP list. A repository whose
+# publish-authority entry declares required_git_hook_types gets exactly those
+# hooks (pre-push or commit-msg), and only after `pre-commit install-hooks`
+# has succeeded. Anything else is a WARN named with the repo; the session
+# stays up.
+publish_authority_root() {
+  local dir
+  dir="$(cd "$(dirname "$0")" && pwd)"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/ops/config/publish-authority.json" ]; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  if [ -n "${L9_GOVERNANCE_DIR:-}" ] \
+    && [ -f "${L9_GOVERNANCE_DIR}/ops/config/publish-authority.json" ]; then
+    printf '%s\n' "$L9_GOVERNANCE_DIR"
+    return 0
+  fi
+  if [ -f "${HOME}/.cursor-governance/ops/config/publish-authority.json" ]; then
+    printf '%s\n' "${HOME}/.cursor-governance"
+    return 0
+  fi
+  return 1
+}
+
+declared_hook_types() {
+  local repo="$1" registry="$2"
+  python3 - "$repo" "$registry" <<'PY'
+import sys
+from pathlib import Path
+
+repo, registry = sys.argv[1], sys.argv[2]
+gov = str(Path(registry).resolve().parents[2])
+sys.path.insert(0, gov)
+from ops.autonomy.publish_authority import load_registry, origin_of
+
+try:
+    document = load_registry(Path(registry))
+except Exception as exc:
+    print(f"lookup failed: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+origin = origin_of(Path(repo))
+entry = (document.get("repositories") or {}).get(origin or "")
+if not isinstance(entry, dict):
+    raise SystemExit(0)
+types = entry.get("required_git_hook_types") or []
+if not isinstance(types, list):
+    print("required_git_hook_types is not a list", file=sys.stderr)
+    raise SystemExit(1)
+for hook_type in types:
+    if isinstance(hook_type, str) and hook_type.strip():
+        print(hook_type.strip())
+PY
+}
+
+install_declared_consumer_hooks() {
+  local repo="$1" gov types hook_type hook_rc
+  gov="$(publish_authority_root)" || {
+    echo "WARN: $repo declared git hook install skipped — publish-authority.json not found" >&2
+    return 0
+  }
+  types="$(declared_hook_types "$repo" "$gov/ops/config/publish-authority.json")" || {
+    echo "WARN: $repo declared git hook lookup failed" >&2
+    return 0
+  }
+  [ -n "$types" ] || return 0
+  while IFS= read -r hook_type; do
+    [ -n "$hook_type" ] || continue
+    case "$hook_type" in
+      pre-push|commit-msg)
+        (
+          cd "$repo" || exit 1
+          pre-commit install --hook-type "$hook_type"
+        )
+        hook_rc=$?
+        if [ "$hook_rc" -ne 0 ]; then
+          echo "WARN: $repo pre-commit install --hook-type $hook_type failed" >&2
+        fi
+        ;;
+      *)
+        echo "WARN: $repo refused git hook type '$hook_type' (allowed: pre-push, commit-msg)" >&2
+        ;;
+    esac
+  done <<EOF
+$types
+EOF
+  return 0
+}
+
 # --- Per-repository install -------------------------------------------------
 install_repo() {
   local repo="$1" failed=0
@@ -347,13 +440,15 @@ install_repo() {
         || { failed=1; echo "WARN: installing the pre-commit PACKAGE failed — 'make pr' will fail until it is present (allowlist pypi.org). This is pip, not 'pre-commit install', which stays forbidden here." >&2; }
     fi
     if have pre-commit; then
-      # Warm hook environments ONLY. Never `pre-commit install`: these repositories
-      # have no git commit hook (ops/scripts/run_pr_precommit.sh), and an installed
-      # hook runs the catalog without the surface-aware SKIP list, so `git commit`
-      # fails on every non-cursor surface via symlinks-check.
+      # Warm hook environments first. A bare `pre-commit install` stays forbidden:
+      # it writes the commit-stage hook, which runs the catalog without the
+      # surface-aware SKIP list. After a successful warm-up, install only the
+      # hook types this repository declares in publish-authority.json.
       if ! ( cd "$repo" && pre-commit install-hooks 2>/dev/null ); then
         failed=1
         echo "WARN: $repo pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)" >&2
+      else
+        install_declared_consumer_hooks "$repo"
       fi
     fi
   fi
