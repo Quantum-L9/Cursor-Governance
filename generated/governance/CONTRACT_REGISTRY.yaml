@@ -3,8 +3,8 @@
 metadata:
   registry_id: L9.GAR.CONTRACT_REGISTRY.001
   schema_ref: canonical.schema.contract_registry.v1
-  generated_at: '2026-10-24T03:18:53Z'
-  source_commit_sha: 4d348a712e45826df48646c5132ccae0999985ce
+  generated_at: '2026-10-24T03:34:29Z'
+  source_commit_sha: dd63dec7b02b151430e5c0fc76ff800890e0f152
 generation:
   generated: true
   hand_edit_allowed: false
@@ -19,7 +19,7 @@ contracts:
   kind: invariant
   status: review
   path: skills/l9-global-architect/contracts/ARCHITECTURAL_INTEGRITY.yaml
-  digest: sha256:3decaec7a57907441a53d3e738ed4e41be3fbdff6106adc7c6f1309a280eeead
+  digest: sha256:5a7ac7b737ba69644c46838bdfaa06ee14e8dbf97df1e7c976b81ac0d2ff6f15
   authority_tier: constitutional
   owner: l9-global-architect
   requires_contracts:
