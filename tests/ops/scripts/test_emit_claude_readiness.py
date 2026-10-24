@@ -731,6 +731,24 @@ def test_blocked_when_merge_authority_regresses(tmp_path: Path, monkeypatch) -> 
     assert any("merge_authority" in f for f in receipt["failures"])
 
 
+def test_ready_when_merge_authority_enforcement_is_disabled(tmp_path: Path, monkeypatch) -> None:
+    """§6.2.16: a disabled switch allows the merge. That is not the env-boolean regression."""
+    monkeypatch.delenv("L9_MERGE_AUTHORITY_MODE", raising=False)
+    gov = _init_fake_gov(tmp_path, merge_denies=False)
+    switch = gov / "ops" / "config"
+    switch.mkdir(parents=True)
+    (switch / "merge-authority.json").write_text(
+        json.dumps({"enforcement": "disabled"}),
+        encoding="utf-8",
+    )
+    home = _fake_home(tmp_path, mcp="READY")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["merge_authority_status"] == READY
+    assert receipt["notes"]["merge_authority_status"] == "switch disabled (§6.2.16)"
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
+    assert not any("merge_authority" in f for f in receipt["failures"])
+
+
 def test_degraded_when_interpreter_cannot_import(tmp_path: Path, monkeypatch) -> None:
     # CI-009: an environment whose interpreter cannot import core deps must not
     # report READY — the importability dimension is DEGRADED and drags overall.
