@@ -199,7 +199,11 @@ def build(ctx: Any, metadata: dict[str, str] | None, prior: dict[str, Any] | Non
         if deprecated_by:
             resolve(str(deprecated_by))
         dependencies[contract_id] = requires
-        supersession[contract_id] = supersedes + ([str(deprecated_by)] if deprecated_by else [])
+        # One direction, successor -> superseded: "B supersedes A" and "A deprecated_by B" are
+        # the same edge B -> A, so a reciprocal declaration is not a cycle.
+        supersession.setdefault(contract_id, []).extend(supersedes)
+        if deprecated_by:
+            supersession.setdefault(str(deprecated_by), []).append(contract_id)
         status = gen.as_map(source.document.get("metadata")).get("status")
         for other in gen.as_list(deps.get("conflicts_with")):
             peer = by_id.get(str(other))

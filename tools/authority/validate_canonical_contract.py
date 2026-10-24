@@ -590,7 +590,7 @@ def _workflow_references(doc: dict[str, Any], checker: _Checker) -> None:
         if state not in states:
             checker.fail("WF-CONTRACT-002", "$.workflow", f"state {state!r} is not declared")
     for i, transition in enumerate(_as_maps(doc.get("transitions"))):
-        for end in ("from", "to"):
+        for end in ("from", "to", "on_failure"):
             if str(transition.get(end)) not in states:
                 checker.fail(
                     "WF-CONTRACT-002",
@@ -685,6 +685,18 @@ def validate(
 
     for name, spec in sections.items():
         checker.check(doc.get(name, _ABSENT), spec, f"$.{name}")
+        # A schema section indented into another section's declared fields is misplaced, not
+        # extra detail: the schema reads it only at top level (e.g. scope.normative_clauses).
+        declared_fields = _as_map(_as_map(spec).get("fields"))
+        value = doc.get(name)
+        if declared_fields and isinstance(value, dict):
+            for key in cast(dict[str, Any], value):
+                if key in sections and key not in declared_fields:
+                    checker.fail(
+                        "SECTION-MISNESTED",
+                        f"$.{name}.{key}",
+                        f"section {key!r} belongs at top level, not inside {name!r}",
+                    )
     minimum = _as_list(
         _as_map(declared.get("minimum_viable_instance_requirements")).get("required")
     )

@@ -176,6 +176,41 @@ def test_dependency_cycle_is_refused(gov_repo: GovRepo) -> None:
     assert "REGISTRY-005" in result.stdout
 
 
+CONVERGENCE = f"{PACK}/contracts/CONVERGENCE.yaml"
+
+
+def _lifecycle(text: str, field: str, value: str) -> str:
+    """Set one lifecycle field (``supersedes: []`` or ``deprecated_by: null``)."""
+    if field == "supersedes":
+        old, new = "  supersedes: []\n", f"  supersedes:\n    - {value}\n"
+    else:
+        old, new = "  deprecated_by: null\n", f"  deprecated_by: {value}\n"
+    assert old in text, field
+    return text.replace(old, new, 1)
+
+
+def test_reciprocal_supersession_is_not_a_cycle(gov_repo: GovRepo) -> None:
+    """B supersedes A and A deprecated_by B are one edge seen from both ends."""
+    gov_repo.edit(
+        CONVERGENCE, lambda s: _lifecycle(s, "supersedes", "L9.GAR.EPISTEMIC_DISCIPLINE.001")
+    )
+    gov_repo.edit(EPISTEMIC, lambda s: _lifecycle(s, "deprecated_by", "L9.GAR.CONVERGENCE.001"))
+    gov_repo.commit("reciprocal lifecycle")
+    result = gov_repo.generate()
+    assert result.returncode == 0, result.stdout
+
+
+def test_supersession_cycle_is_refused(gov_repo: GovRepo) -> None:
+    gov_repo.edit(
+        CONVERGENCE, lambda s: _lifecycle(s, "supersedes", "L9.GAR.EPISTEMIC_DISCIPLINE.001")
+    )
+    gov_repo.edit(EPISTEMIC, lambda s: _lifecycle(s, "supersedes", "L9.GAR.CONVERGENCE.001"))
+    gov_repo.commit("supersession cycle")
+    result = gov_repo.generate()
+    assert result.returncode == 1
+    assert "GOV-CONTRACT-009" in result.stdout
+
+
 def test_unresolved_reference_is_refused(gov_repo: GovRepo) -> None:
     gov_repo.edit(
         EPISTEMIC,

@@ -103,6 +103,15 @@ def _ghost_transition(doc: dict[str, Any]) -> None:
     doc["transitions"][0]["to"] = "NO_SUCH_STATE"
 
 
+def _ghost_failure_route(doc: dict[str, Any]) -> None:
+    doc["transitions"][0]["on_failure"] = "NO_SUCH_STATE"
+
+
+def _clauses_indented_into_scope(doc: dict[str, Any]) -> None:
+    """The defect ARCHITECTURAL_INTEGRITY.yaml shipped with before 0.7.1."""
+    doc["scope"]["normative_clauses"] = doc.pop("normative_clauses")
+
+
 def _duplicate_priority_without_tiebreak(doc: dict[str, Any]) -> None:
     rules = doc["decision_model"]["rules"]
     rules[1]["priority"] = rules[0]["priority"]
@@ -125,6 +134,13 @@ CASES = [
     ("runtime/STATE_MACHINE.yaml", WORKFLOW, _set("normative_clauses", []), "MIN_ITEMS"),
     ("runtime/STATE_MACHINE.yaml", WORKFLOW, _dup_clause, "GOV-CONTRACT-003"),
     ("runtime/STATE_MACHINE.yaml", WORKFLOW, _ghost_transition, "WF-CONTRACT-002"),
+    ("runtime/STATE_MACHINE.yaml", WORKFLOW, _ghost_failure_route, "WF-CONTRACT-002"),
+    (
+        "contracts/ARCHITECTURAL_INTEGRITY.yaml",
+        INVARIANT,
+        _clauses_indented_into_scope,
+        "SECTION-MISNESTED",
+    ),
     (
         "runtime/STATE_MACHINE.yaml",
         WORKFLOW,
@@ -249,3 +265,11 @@ def test_unresolved_base_schema_is_blocked(tmp_path: Path) -> None:
 def test_without_the_binding_disposition_nothing_passes() -> None:
     result = v.validate(_doc("runtime/STATE_MACHINE.yaml"), WORKFLOW, schema_root=SCHEMAS)
     assert result.status == "BLOCKED"
+
+
+def test_architectural_integrity_core_clauses_are_top_level() -> None:
+    """AI-001..AI-005 are referenced by the kernel, workflow and evidence obligations."""
+    doc = _doc("contracts/ARCHITECTURAL_INTEGRITY.yaml")
+    ids = [c["clause_id"] for c in doc["normative_clauses"]]
+    assert ids[:5] == ["AI-001", "AI-002", "AI-003", "AI-004", "AI-005"]
+    assert "normative_clauses" not in doc["scope"]
