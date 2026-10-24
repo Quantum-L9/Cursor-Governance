@@ -174,15 +174,15 @@ def verify_bundle(
 
 
 def _canonical_digest(value: Any) -> str:
-    def normalize(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {str(k): normalize(v[k]) for k in sorted(v, key=str)}
-        if isinstance(v, (list, tuple)):
-            return [normalize(x) for x in v]
-        return v
-
-    raw = json.dumps(normalize(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    """The producer's semantic_digest, from the one shared implementation (ADR-021)."""
+    spec = importlib.util.spec_from_file_location(
+        "authority_canonical_json", Path(__file__).resolve().parent / "canonical_json.py"
+    )
+    if spec is None or spec.loader is None:
+        raise Unobserved("tools/authority/canonical_json.py is not importable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.semantic_digest(value)
 
 
 def material_change(root: Path, main: str, lock: dict[str, Any]) -> list[str]:

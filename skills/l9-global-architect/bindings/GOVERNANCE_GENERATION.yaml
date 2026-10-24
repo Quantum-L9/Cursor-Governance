@@ -1,14 +1,17 @@
 generation_spec:
   spec_id: L9.GAR.GOVERNANCE_GENERATION.001
-  version: 0.4.0
+  version: 0.5.0
   artifact_class: governance_generation_binding
-  status: dormant
+  status: active
   semantic_owner: bindings/GOVERNANCE_GENERATION.yaml
 purpose:
   assertion: >
-    Bind schema-aligned GAR governance contracts to external L9 registry and
-    projection-generation tooling when that tooling is actually available.
-    This file does not claim that a GAR-to-canonical compiler exists.
+    Bind schema-aligned GAR governance contracts to the L9 registry and
+    projection-generation tooling in tools/authority/. Activation is earned by
+    the tooling below existing and passing, never declared: every requirement
+    of the registration gate, the registry and the projection binding is
+    evaluated by that tooling, and anything it cannot evaluate is named in
+    validation_rule_disposition instead of being counted as passing.
 canonical_schema_refs:
   contract_registry:
     schema_id: canonical.schema.contract_registry.v1
@@ -32,6 +35,7 @@ source_authority:
   rule: >
     The listed GAR core contracts are authored directly in schema-aligned L9
     contract shapes. No intermediate rich-IR projection is required or claimed.
+    Alignment is verified by the schema validator, not assumed.
   registration_does_not_change_semantic_owner: true
 schema_aligned_sources:
   - path: contracts/ARCHITECTURAL_INTEGRITY.yaml
@@ -44,6 +48,15 @@ schema_aligned_sources:
     schema_ref: canonical.schema.evidence_contract.v1
   - path: runtime/STATE_MACHINE.yaml
     schema_ref: canonical.schema.workflow_contract.v1
+tooling:
+  rule: >
+    Paths are repository-relative. A capability is observed only when its file
+    exists; generation refuses with CAPABILITY_BLOCK otherwise.
+  canonical_schema_validator_available: tools/authority/validate_canonical_contract.py
+  contract_registry_generator_available: tools/authority/generate_contract_registry.py
+  digest_canonicalizer_available: tools/authority/canonical_json.py
+  projection_parity_validator_available: tools/authority/validate_projection_parity.py
+  projection_binding_generator: tools/authority/generate_projection_binding.py
 external_tooling_requirement:
   required_for_generation: true
   must_observe_all:
@@ -56,6 +69,108 @@ external_tooling_requirement:
     generation_allowed: false
     disposition: CAPABILITY_BLOCK
     reason_code: CAPABILITY_BLOCK
+schema_resolution:
+  schema_root: contracts/schemas
+  schema_file: <schema_id>.yaml
+  inheritance: >
+    A schema's required_sections are the union of its inheritance chain's,
+    the nearest schema winning; minimum_viable_instance_requirements of the
+    declared schema are required in addition.
+  type_resolution: >
+    Named types resolve from the single schema in the same schema_family that
+    declares a type_registry. Zero or several such schemas is BLOCKED.
+  abstract_roots:
+    - schema_id: canonical.knowledge_object.schema.v1
+      rationale: >
+        Named by inheritance.extends of the governance-contract, registry and
+        projection-binding schemas, but declared by no schema file in this
+        repository or in Quantum-L9/.github (checked at main 3dcdeaa). It
+        contributes no required_sections, so the chain stops there. Any other
+        unresolved base is BLOCKED.
+validation_rule_disposition:
+  rule: >
+    Every validation_rules id of every schema used is either evaluated by
+    tools/authority/validate_canonical_contract.py, delegated below to the tool
+    that holds the cross-document context it needs, or declared semantic
+    review with its rationale. An id in none of those is BLOCKED.
+  delegated:
+    tools/authority/generate_contract_registry.py:
+      - GOV-CONTRACT-002
+      - GOV-CONTRACT-007
+      - GOV-CONTRACT-009
+      - REGISTRY-001
+      - REGISTRY-002
+      - REGISTRY-003
+      - REGISTRY-004
+      - REGISTRY-005
+      - REGISTRY-006
+      - REGISTRY-007
+      - REGISTRY-008
+      - REGISTRY-009
+      - REGISTRY-010
+    tools/authority/validate_projection_parity.py:
+      - PROJECTION-001
+      - PROJECTION-002
+      - PROJECTION-003
+      - PROJECTION-004
+      - PROJECTION-005
+      - PROJECTION-006
+  semantic_review:
+    - rule: GOV-CONTRACT-006
+      rationale: Whether a lower-tier artifact redefines contract semantics is a meaning judgment; projection parity bounds the declared projections mechanically.
+    - rule: GOV-CONTRACT-010
+      rationale: Which unknowns are safety-relevant is a judgment; no registered contract is active, so promotion is not in play.
+    - rule: INV-CONTRACT-002
+      rationale: Absence of a default allow branch is a property of the invariant's meaning, not its shape.
+    - rule: INV-CONTRACT-003
+      rationale: Property evidence is owned by each contract's evidence_obligations; the validator checks they exist, not that they prove the property.
+    - rule: POLICY-CONTRACT-004
+      rationale: Detecting overlapping rule applicability needs evaluation of rule conditions, which are prose.
+    - rule: POLICY-CONTRACT-005
+      rationale: Whether a missing input silently permits depends on decision semantics, not shape.
+    - rule: POLICY-CONTRACT-006
+      rationale: Narrowing versus widening higher authority is a meaning comparison across contracts.
+    - rule: WF-CONTRACT-003
+      rationale: Whether an action creates authority is a meaning judgment.
+    - rule: WF-CONTRACT-006
+      rationale: Behavioral convergence versus command success is a property of the convergence predicates' meaning.
+    - rule: EVIDENCE-CONTRACT-003
+      rationale: Equating production with proof is a meaning judgment over the evidence model.
+    - rule: EVIDENCE-CONTRACT-005
+      rationale: Behavioral versus structural observation is a meaning judgment over the observation.
+reference_resolution:
+  rule: >
+    A requires_contracts, conflicts_with, supersedes or deprecated_by id
+    resolves to a registered contract, or else to the one artifact listed as a
+    semantic owner in runtime/MANIFEST.yaml whose first top-level mapping
+    declares that id under a key ending in _id. Such an artifact is a declared
+    pack semantic owner that is not itself schema-aligned: it is recorded in
+    the registry's reference_resolution and is a leaf of the dependency graph.
+    An id resolving to neither, or to more than one artifact, is unresolved.
+  pack_manifest: runtime/MANIFEST.yaml
+contract_digest:
+  canonicalization: >
+    deterministic_yaml_normalization_v1 (tools/authority/canonical_json.py
+    load_yaml), then canonical_json and semantic_digest exactly as
+    Quantum-L9/.github semantics/projection_engine_contract.yaml
+    binding_conventions defines them.
+  excludes:
+    - integrity.content_digest
+  exclusion_rationale: >
+    A contract may later carry its own digest; like projection_digest in the
+    binding conventions, the field that holds the digest is not hashed.
+generation_inputs:
+  rule: >
+    Generation reads these from the working tree and refuses while any is
+    uncommitted, so the recorded commit holds exactly the bytes digested.
+    Provenance verification compares each at the recorded commit.
+  pack_paths:
+    - bindings/GOVERNANCE_GENERATION.yaml
+    - runtime/MANIFEST.yaml
+    - SKILL.md
+  includes_schema_aligned_sources: true
+  includes_reference_resolution_targets: true
+  includes_used_schemas: true
 registration_gate:
   all_required:
     - source_file_exists
@@ -72,16 +187,18 @@ registration_gate:
     fail_closed: true
 contract_registry_output:
   path: generated/governance/CONTRACT_REGISTRY.yaml
+  registry_id: L9.GAR.CONTRACT_REGISTRY.001
   schema_ref: canonical.schema.contract_registry.v1
   generation:
     generated: true
     hand_edit_allowed: false
     deterministic: true
-    implementation_owner: external_l9_governance_tooling
+    implementation_owner: tools/authority/generate_contract_registry.py
   metadata_resolution:
     source_commit_sha:
       source: git_HEAD
       requirement: full_commit_sha
+      condition: every generation input is committed at HEAD
     generated_at:
       source: source_commit_timestamp_utc
   digest:
@@ -93,12 +210,21 @@ contract_registry_output:
     require_supersession_graph_acyclic: true
     unresolved_refs_allowed: false
     unresolved_conflicts_allowed: false
+  check:
+    content: >
+      Regenerate with the committed metadata and compare bytes. Needs no git
+      history, so it runs in depth-1 CI.
+    provenance: >
+      Compare every generation input's bytes at metadata.source_commit_sha with
+      the working tree and the commit's UTC timestamp with generated_at.
+      BLOCKED, never PASS, when the commit object is absent.
 projection_binding_generation:
   default_requested: false
   generate_only_when:
     - explicit_projection_work_requested
     - projection_target_exists
     - projection_parity_validator_available
+  requested_by: projection_targets
   output_root: generated/governance/projections
   schema_ref: canonical.schema.contract_projection_binding.v1
   contract_digest:
@@ -109,12 +235,39 @@ projection_binding_generation:
     source: actual_target_projection_content
     placeholders_allowed: false
   drift_policy: fail_closed
+projection_targets:
+  - binding_id: L9.GAR.PROJECTION.SKILL_BOOTLOADER.001
+    contract_id: L9.GAR.WORKFLOW.001
+    target:
+      type: skill
+      path: SKILL.md
+      projection_mode: reference_only
+    contract_reference: runtime/STATE_MACHINE.yaml
+    clause_anchors:
+      WF-TARGET-001:
+        - Bind the exact target identity
+        - inspection scope, correction scope
+      WF-ROUTING-001:
+        - Enter the runtime through `runtime/STATE_MACHINE.yaml`
+      WF-VERIFY-001:
+        - Continue until a declared terminal state is legally reached
+      WF-BLOCK-001:
+        - the convergence or block receipt
+    parity: >
+      reference_only parity: the target names the contract's path, every
+      anchor of every clause_ref is present verbatim, every clause_ref exists
+      in the pinned contract version, the pinned contract version and digest
+      equal the registry's, and the target's sha256 equals
+      projected_content_sha256. The target restates no clause; that it does
+      not is the semantic part parity cannot prove.
 current_pack_projection_state:
   normative_SKILL_projection_required: false
   rationale: >
     SKILL.md is intentionally a minimal bootloader and does not restate core
     contract law, so no normative contract-to-SKILL projection binding is
-    required for this pack state.
+    required. The one declared projection binds SKILL.md in reference_only
+    mode: it pins the workflow contract the bootloader points at, so a change
+    to either side fails parity until the binding is regenerated and reviewed.
 generation_order:
   - verify_external_tooling_capability
   - validate_schema_aligned_sources

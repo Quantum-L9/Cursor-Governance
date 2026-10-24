@@ -1,7 +1,7 @@
 manifest:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
   name: l9-global-architect
-  version: 0.8.4
+  version: 0.8.5
   status: experimental
   machine_readable_semantics: true
   human_bootloader: ../SKILL.md

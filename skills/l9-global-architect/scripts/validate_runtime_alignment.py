@@ -17,7 +17,7 @@ import yaml
 
 sys.dont_write_bytecode = True
 
-PACK_VERSION = "0.8.4"
+PACK_VERSION = "0.8.5"
 EXPECTED_EVAL_MAX = 61
 FORBIDDEN_DIR_NAMES = {"__pycache__", "__MACOSX", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 FORBIDDEN_FILE_NAMES = {".DS_Store", "Thumbs.db"}
