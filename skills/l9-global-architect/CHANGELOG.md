@@ -2,17 +2,13 @@
 
 This file is historical and non-authoritative. Machine-readable semantic owners declared by `runtime/MANIFEST.yaml` govern runtime behavior.
 
-## 0.8.5 - 2026-10-24
+## Unreleased - 2026-10-21
 
-### Governance generation active: contract registry and SKILL projection binding
+### Architectural integrity clauses at top level (2026-10-24)
 
-- `bindings/GOVERNANCE_GENERATION.yaml` 0.4.0 -> 0.5.0, `dormant` -> `active`. The tooling it required now exists in `tools/authority/`: `canonical_json.py` (the one canonical-JSON digest, exactly `Quantum-L9/.github` `projection_engine_contract.yaml` `binding_conventions`, plus `deterministic_yaml_normalization_v1`), `validate_canonical_contract.py` (interprets the `canonical.schema.*.v1` vocabulary, fails closed on anything outside it), `generate_contract_registry.py`, `generate_projection_binding.py` and `validate_projection_parity.py`.
-- The binding now declares, as reviewable data, every resolution rule the tooling needs that the schemas do not state: the abstract root `canonical.knowledge_object.schema.v1` (declared by no schema file), the disposition of every schema validation rule (evaluated, delegated, or semantic review with a rationale), reference resolution to pack semantic owners, the excluded digest field, and the generation inputs.
-- `generated/governance/CONTRACT_REGISTRY.yaml` registers the five schema-aligned contracts with real digests and acyclic graphs; `generated/governance/projections/L9.GAR.PROJECTION.SKILL_BOOTLOADER.001.yaml` binds this `SKILL.md` to `L9.GAR.WORKFLOW.001` in `reference_only` mode (WF-TARGET-001, WF-ROUTING-001, WF-VERIFY-001, WF-BLOCK-001).
-- `contracts/ARCHITECTURAL_INTEGRITY.yaml` 0.7.0 -> 0.7.1: its core clauses AI-001..AI-005 were indented under `scope:` instead of the top-level `normative_clauses` the inherited governance-contract schema reads; they move to top level unchanged, and nothing else in the contract changes. The validator now reports a schema section nested inside another section's fields as `SECTION-MISNESTED`.
-- `make contract-registry`, `make contract-registry-check` and `make projection-parity`.
+- `contracts/ARCHITECTURAL_INTEGRITY.yaml` 0.7.0 -> 0.7.1: core clauses AI-001..AI-005 were indented under `scope:` instead of the top-level `normative_clauses` the inherited governance-contract schema reads. They move to top level unchanged; `cross_rules` and everything else in the contract are untouched.
 
-### One shared verifier; architecture intelligence admitted (2026-10-21)
+### One shared verifier; architecture intelligence admitted
 
 - `scripts/verify_architecture_intelligence.py` is a thin adapter over `skills/l9-coding-agent/scripts/verify_canonical_binding.py`: every component, receipt, authority and admission check is the shared one. GAR keeps only the composed view, the run-state slot and citation.
 - Strengthened by convergence: receipt inputs, artifact and lock producer, and the composition receipt's input binding are checked; currency reads hash-checked commit objects; an admitted bundle is re-verified against authority main (canonical origin, clean `semantics/`, producer role from `semantics/vocabulary.yaml`, upstream receipt schema).

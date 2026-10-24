@@ -16,9 +16,6 @@ L9_TARGETS += \
 	claude-deepseek \
 	claude-deepseek-verify \
 	agents-env \
-	contract-registry \
-	contract-registry-check \
-	projection-parity \
 	ide-profile \
 	ide-profile-test \
 	ui-operator-sync \
@@ -127,15 +124,6 @@ claude-deepseek-verify:
 agents-env:
 	$(PYTHON) tools/assurance/check_canonical_identity_projection.py
 	$(PYTHON) environment/agents/tools/validate_agents.py
-# GAR governance generation (skills/l9-global-architect/bindings/GOVERNANCE_GENERATION.yaml):
-# the contract registry and its projection bindings. Generate after committing the inputs;
-# the check regenerates and compares bytes; parity re-checks every binding against its target.
-contract-registry:
-	$(PYTHON) tools/authority/generate_contract_registry.py
-contract-registry-check:
-	$(PYTHON) tools/authority/generate_contract_registry.py --check
-projection-parity:
-	$(PYTHON) tools/authority/validate_projection_parity.py
 ide-profile:
 	bash ops/scripts/install_ide_profile.sh "$(WS)"
 ide-profile-test:

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import re
 import shlex
@@ -81,18 +80,9 @@ def _sha256(path: Path) -> str:
 
 
 def _canonical_digest(value: Any) -> str:
-    """The producer's semantic_digest (projection_engine_contract binding_conventions).
-
-    Delegates to ``canonical_json.py`` so this repository carries one digest form (ADR-021).
-    """
-    spec = importlib.util.spec_from_file_location(
-        "authority_canonical_json", Path(__file__).resolve().parent / "canonical_json.py"
-    )
-    if spec is None or spec.loader is None:
-        raise ProductionError("tools/authority/canonical_json.py is not importable")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.semantic_digest(value)
+    """The producer's semantic_digest (projection_engine_contract binding_conventions)."""
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _git_head(root: Path) -> str:
