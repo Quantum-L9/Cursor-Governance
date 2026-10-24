@@ -23,6 +23,38 @@ def _status(result: subprocess.CompletedProcess[str]) -> str:
     return str(json.loads(result.stdout)["status"])
 
 
+# Literal paths on purpose: the PR test selector (ops/scripts/select_pr_pytest_paths.py) picks a
+# test file when it names a changed path, so a change to any generation input selects the live
+# checks here. The test below fails when this list and the registry's own record diverge.
+WATCHED_INPUTS = (
+    "contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml",
+    "contracts/schemas/canonical.schema.contract_registry.v1.yaml",
+    "contracts/schemas/canonical.schema.evidence_contract.v1.yaml",
+    "contracts/schemas/canonical.schema.governance_contract.v1.yaml",
+    "contracts/schemas/canonical.schema.invariant_contract.v1.yaml",
+    "contracts/schemas/canonical.schema.policy_contract.v1.yaml",
+    "contracts/schemas/canonical.schema.workflow_contract.v1.yaml",
+    "skills/l9-global-architect/SKILL.md",
+    "skills/l9-global-architect/bindings/GOVERNANCE_GENERATION.yaml",
+    "skills/l9-global-architect/contracts/ARCHITECTURAL_INTEGRITY.yaml",
+    "skills/l9-global-architect/contracts/CONVERGENCE.yaml",
+    "skills/l9-global-architect/contracts/EPISTEMIC_DISCIPLINE.yaml",
+    "skills/l9-global-architect/contracts/L9_ARCHITECTURE_PROFILE.yaml",
+    "skills/l9-global-architect/contracts/OBJECTIVE_DERIVATION.yaml",
+    "skills/l9-global-architect/contracts/OUTCOME_OWNERSHIP.yaml",
+    "skills/l9-global-architect/integrations/REASONING_FOURSOME_BINDING.yaml",
+    "skills/l9-global-architect/runtime/MANIFEST.yaml",
+    "skills/l9-global-architect/runtime/STATE_MACHINE.yaml",
+)
+
+
+def test_watched_inputs_are_the_registry_generation_inputs() -> None:
+    import yaml
+
+    registry = yaml.safe_load((REPO / REGISTRY).read_text(encoding="utf-8"))
+    assert list(WATCHED_INPUTS) == registry["generation_inputs"]
+
+
 def test_committed_registry_is_current_in_this_tree() -> None:
     """The live registry regenerates byte-for-byte; needs no git history (depth-1 CI)."""
     result = subprocess.run(
