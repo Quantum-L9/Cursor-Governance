@@ -557,12 +557,15 @@ PY="$GOV_DIR/.venv/bin/python3"
 [ -x "$PY" ] || cannot_run "locked interpreter missing under $GOV_DIR/.venv"
 
 # Hooks start in parallel with the SessionStart hook that may be installing
-# this very .venv; wait for it rather than import a half-replaced package.
-# Not a gate: a hook still runs after the bounded wait and decides for itself.
-if [ -f "$GOV_DIR/ops/scripts/lib/venv_ready.sh" ]; then
-  # shellcheck source=/dev/null
-  . "$GOV_DIR/ops/scripts/lib/venv_ready.sh"
-  venv_ready_wait "$GOV_DIR" || true
+# this very .venv. The wait and the exec are one critical section: a check
+# that returns and then execs lets a writer replace .venv in the gap.
+# A live writer is not ready. A missing or failed probe is not ready.
+# Gates block (exit 2). Observers record the skip and exit 0.
+if [ ! -f "$GOV_DIR/ops/scripts/lib/venv_ready.sh" ]; then
+  cannot_run "venv readiness probe missing at $GOV_DIR/ops/scripts/lib/venv_ready.sh"
 fi
-
-exec "$PY" "$HOOK_PATH"
+# shellcheck source=/dev/null
+. "$GOV_DIR/ops/scripts/lib/venv_ready.sh"
+_ready_rc=0
+venv_ready_exec "$GOV_DIR" "$PY" "$HOOK_PATH" || _ready_rc=$?
+cannot_run "governance venv is not safe to execute (venv_ready rc=${_ready_rc})"

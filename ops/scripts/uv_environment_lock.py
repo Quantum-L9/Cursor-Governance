@@ -9,6 +9,12 @@ kill the mutation or drop the lock early.
 The lock is taken on fd 8 before the child is spawned and inherited across
 ``start_new_session``. It is never unlocked explicitly: on this platform
 ``LOCK_UN`` releases the open-file-description lock the child is holding.
+
+``wait-shared`` and ``exec-shared`` are the reader side of the same lock.
+They do not create the lock file. ``exec-shared`` keeps the shared lock open
+across the replacement image so a writer cannot enter between the check and
+the exec. Its failure codes are 80, 81, and 82 so a hook's own 0 or 2 is
+never read as "did not run".
 """
 
 from __future__ import annotations
@@ -24,6 +30,11 @@ LOCK_FD = 8
 _POLL_S = 0.05
 _LOG_PREFIX = "uv-environment."
 _LOG_SUFFIX = ".log"
+# exec-shared did not replace the process. Outside the hook contract
+# (0 proceed, 2 block) so a completed hook is never classified as a probe.
+EXEC_BUSY = 80
+EXEC_INTERRUPTED = 81
+EXEC_PROBE = 82
 
 
 def _fail(message: str, code: int) -> int:
@@ -77,6 +88,83 @@ def _acquire(wait_s: int, lock_path: Path) -> int:
                     75,
                 )
             time.sleep(min(_POLL_S, max(0.0, deadline - time.monotonic())))
+
+
+def _classify_shared(lock_path: Path, wait_s: int, marker: Path | None) -> tuple[int, int | None]:
+    """Return ``(code, fd)``.
+
+    ``fd`` is open and holds ``LOCK_SH`` only when ``code`` is 0 and the lock
+    file already existed. The file is never created. Codes: 0 ready, 1 the
+    exclusive writer is still alive after the wait, 2 a marker with no writer,
+    3 the probe itself failed.
+    """
+    if wait_s < 0:
+        return 3, None
+    try:
+        fd = os.open(lock_path, os.O_RDONLY)
+    except FileNotFoundError:
+        if marker is not None and marker.exists():
+            return 2, None
+        return 0, None
+    except OSError:
+        return 3, None
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except InterruptedError:
+            continue
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                return 1, None
+            time.sleep(min(_POLL_S, max(0.0, deadline - time.monotonic())))
+            continue
+        except OSError:
+            os.close(fd)
+            return 3, None
+        break
+    if marker is not None and marker.exists():
+        os.close(fd)
+        return 2, None
+    return 0, fd
+
+
+def wait_shared(lock_path: Path, wait_s: int, marker: Path | None) -> int:
+    """Block for a shared lock, then release it. See ``_classify_shared``."""
+    code, fd = _classify_shared(lock_path, wait_s, marker)
+    if fd is not None:
+        os.close(fd)
+    return code
+
+
+def exec_shared(lock_path: Path, wait_s: int, marker: Path | None, command: list[str]) -> int:
+    """Replace this process only while the shared lock is held, or the lock is absent.
+
+    Failure returns ``EXEC_BUSY``, ``EXEC_INTERRUPTED``, or ``EXEC_PROBE``
+    and does not execute ``command``.
+    """
+    if not command or not command[0]:
+        return EXEC_PROBE
+    code, fd = _classify_shared(lock_path, wait_s, marker)
+    if code == 1:
+        return EXEC_BUSY
+    if code == 2:
+        return EXEC_INTERRUPTED
+    if code != 0:
+        return EXEC_PROBE
+    if fd is not None:
+        try:
+            os.set_inheritable(fd, True)
+        except OSError:
+            os.close(fd)
+            return EXEC_PROBE
+    try:
+        os.execv(command[0], command)
+    except OSError:
+        if fd is not None:
+            os.close(fd)
+        return EXEC_PROBE
 
 
 def probe_shared(lock_path: Path) -> int:
@@ -176,16 +264,41 @@ def _launch_main(args: list[str]) -> int:
     return launch(Path(raw_lock), int(raw_wait), Path(raw_log_dir), command)
 
 
+def _reader_main(args: list[str], *, replace: bool) -> int:
+    if replace and "--" not in args:
+        return EXEC_PROBE
+    if replace:
+        split = args.index("--")
+        options, command = args[:split], args[split + 1 :]
+    else:
+        options, command = args, []
+    raw_lock = _option(options, "--lock")
+    raw_wait = _option(options, "--wait")
+    raw_marker = _option(options, "--marker")
+    if raw_lock is None or raw_wait is None or not raw_wait.isdigit():
+        return EXEC_PROBE if replace else 3
+    marker = Path(raw_marker) if raw_marker else None
+    if replace:
+        return exec_shared(Path(raw_lock), int(raw_wait), marker, command)
+    return wait_shared(Path(raw_lock), int(raw_wait), marker)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if not args or args[0] not in {"probe-shared", "launch"}:
+    if not args or args[0] not in {"probe-shared", "launch", "wait-shared", "exec-shared"}:
         return _fail(
             "usage: uv_environment_lock.py probe-shared --lock PATH"
+            " | wait-shared --lock PATH --wait SECONDS [--marker PATH]"
+            " | exec-shared --lock PATH --wait SECONDS [--marker PATH] -- COMMAND..."
             " | launch --lock PATH --wait SECONDS --log-dir DIR -- COMMAND...",
             2,
         )
     if args[0] == "probe-shared":
         return _probe_main(args[1:])
+    if args[0] == "wait-shared":
+        return _reader_main(args[1:], replace=False)
+    if args[0] == "exec-shared":
+        return _reader_main(args[1:], replace=True)
     return _launch_main(args[1:])
 
 

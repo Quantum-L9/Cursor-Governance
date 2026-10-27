@@ -792,13 +792,31 @@ def test_a_caller_killed_while_waiting_leaves_no_orphan_sync(tmp_path: Path) -> 
 SHELL_READER = ROOT / "ops" / "scripts" / "lib" / "venv_ready.sh"
 
 
-def _shell_wait(root: Path, seconds: str) -> subprocess.CompletedProcess[str]:
+def _shell_wait(
+    root: Path, seconds: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", "-c", f'. "{SHELL_READER}"; venv_ready_wait "$1" "$2"', "_", str(root), seconds],
         capture_output=True,
         text=True,
         timeout=60,
+        env=env,
     )
+
+
+def _posix_reader_env(tmp_path: Path, **extra: str) -> dict[str, str]:
+    """PATH with neither flock nor setsid, so the shell reader uses fcntl."""
+    env = _without_util_linux(dict(os.environ), tmp_path)
+    env.pop("GITHUB_ACTIONS", None)
+    env.pop("CI", None)
+    env.update(extra)
+    return env
+
+
+def _executable(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o755)
 
 
 def test_shell_reader_is_ready_without_a_lock_and_writes_nothing(tmp_path: Path) -> None:
@@ -826,6 +844,298 @@ def test_shell_reader_refuses_an_interrupted_install(tmp_path: Path) -> None:
     broken = _shell_wait(root, "0")
     assert broken.returncode == 2
     assert "interrupted" in broken.stderr
+
+
+def test_shell_reader_without_flock_blocks_on_a_live_writer(tmp_path: Path) -> None:
+    """No util-linux flock or setsid: the shell reader still waits on fcntl."""
+    root = _gov(tmp_path)
+    env = _posix_reader_env(tmp_path)
+    with _held_exclusive(root):
+        started = time.monotonic()
+        held = _shell_wait(root, "1", env)
+    assert held.returncode == 1
+    assert time.monotonic() - started >= 0.9
+    assert "still in progress" in held.stderr
+    assert "interrupted" not in held.stderr
+    assert _shell_wait(root, "1", env).returncode == 0
+
+
+def test_shell_reader_without_flock_classifies_a_live_writer_not_the_marker(
+    tmp_path: Path,
+) -> None:
+    """A held lock is installing, before the marker exists and after it appears."""
+    root = _gov(tmp_path)
+    env = _posix_reader_env(tmp_path)
+    with _held_exclusive(root):
+        before = _shell_wait(root, "1", env)
+        (root / vr.IN_PROGRESS_REL).write_text("9 now\n", encoding="utf-8")
+        after = _shell_wait(root, "1", env)
+    assert before.returncode == 1
+    assert "still in progress" in before.stderr
+    assert "interrupted" not in before.stderr
+    assert after.returncode == 1
+    assert "still in progress" in after.stderr
+    assert "interrupted" not in after.stderr
+    stale = _shell_wait(root, "1", env)
+    assert stale.returncode == 2
+    assert "interrupted" in stale.stderr
+
+
+def test_shell_reader_without_flock_times_out_and_a_stale_marker_is_interrupted(
+    tmp_path: Path,
+) -> None:
+    root = _gov(tmp_path)
+    env = _posix_reader_env(tmp_path)
+    with _held_exclusive(root):
+        started = time.monotonic()
+        timed_out = _shell_wait(root, "1", env)
+    assert timed_out.returncode == 1
+    assert time.monotonic() - started >= 0.9
+    assert "still in progress" in timed_out.stderr
+    (root / vr.IN_PROGRESS_REL).write_text("dead\n", encoding="utf-8")
+    started = time.monotonic()
+    stale = _shell_wait(root, "5", env)
+    assert stale.returncode == 2
+    assert time.monotonic() - started < 2
+    assert "interrupted" in stale.stderr
+
+
+def test_shell_reader_without_flock_is_ready_and_writes_nothing(tmp_path: Path) -> None:
+    root = tmp_path / "gov"
+    root.mkdir()
+    env = _posix_reader_env(tmp_path)
+    ready = _shell_wait(root, "0", env)
+    assert ready.returncode == 0, ready.stderr
+    assert not (root / ".l9").exists()
+    assert list(root.iterdir()) == []
+
+
+def test_shell_reader_probe_failure_is_not_ready(tmp_path: Path) -> None:
+    root = _gov(tmp_path)
+    (root / vr.LOCK_REL).write_bytes(b"")
+    empty = tmp_path / "empty-path"
+    empty.mkdir()
+    (empty / "bash").symlink_to("/bin/bash")
+    env = dict(os.environ)
+    env["PATH"] = str(empty)
+    failed = _shell_wait(root, "1", env)
+    assert failed.returncode == 3
+    assert "lock probe failed" in failed.stderr
+    assert "still in progress" not in failed.stderr
+
+
+def test_shell_reader_keeps_the_util_linux_flock_path(tmp_path: Path) -> None:
+    """Simulated util-linux flock: the shell must call it and not the fcntl helper."""
+    root = _gov(tmp_path)
+    calls = tmp_path / "calls"
+    hold = tmp_path / "hold"
+    tools = tmp_path / "stub-tools"
+    _executable(
+        tools / "flock",
+        "#!/bin/bash\n"
+        'if [ "${1:-}" = "--version" ]; then echo "flock from util-linux 2.39.2"; exit 0; fi\n'
+        'printf "flock %s\\n" "$*" >> "$CALLS"\n'
+        'if [ -f "$HOLD" ]; then sleep "$3"; exit 1; fi\n'
+        "exit 0\n",
+    )
+    _executable(
+        tools / "python3",
+        '#!/bin/bash\nprintf "python3 %s\\n" "$*" >> "$CALLS"\nexit 99\n',
+    )
+    env = _posix_reader_env(tmp_path, CALLS=str(calls), HOLD=str(hold))
+    env["PATH"] = str(tools) + os.pathsep + env["PATH"]
+    (root / vr.LOCK_REL).write_bytes(b"")
+    ready = _shell_wait(root, "1", env)
+    assert ready.returncode == 0, ready.stderr
+    recorded = calls.read_text(encoding="utf-8")
+    assert "flock -s -w 1 " in recorded
+    assert "python3" not in recorded
+    calls.write_text("", encoding="utf-8")
+    hold.write_text("held\n", encoding="utf-8")
+    started = time.monotonic()
+    busy = _shell_wait(root, "1", env)
+    assert busy.returncode == 1
+    assert time.monotonic() - started >= 0.9
+    assert "still in progress" in busy.stderr
+    assert "python3" not in calls.read_text(encoding="utf-8")
+
+
+def test_exec_does_not_run_a_partial_interpreter_while_the_writer_holds_the_lock(
+    tmp_path: Path,
+) -> None:
+    root = _gov(tmp_path)
+    flag = tmp_path / "flag"
+    stamp = tmp_path / "stamp"
+    flag.write_text("PARTIAL\n", encoding="utf-8")
+    program = tmp_path / "python-under-test"
+    _executable(
+        program,
+        '#!/bin/bash\ncat "$FLAG" >> "$STAMP"\nexit 0\n',
+    )
+    script = tmp_path / "hook.py"
+    script.write_text("# dispatched as an argument\n", encoding="utf-8")
+    env = _posix_reader_env(tmp_path, FLAG=str(flag), STAMP=str(stamp))
+    with _held_exclusive(root):
+        started = subprocess.Popen(
+            [
+                "bash",
+                "-c",
+                f'. "{SHELL_READER}"; venv_ready_exec "$1" "$2" "$3" "$4"',
+                "_",
+                str(root),
+                str(program),
+                str(script),
+                "5",
+            ],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        assert _wait_for(lambda: started.poll() is None)
+        time.sleep(0.4)
+        assert started.poll() is None, "the reader executed while the writer held the lock"
+        assert not stamp.exists()
+        flag.write_text("COMPLETE\n", encoding="utf-8")
+    stdout, stderr = started.communicate(timeout=15)
+    assert started.returncode == 0, stderr
+    assert stamp.read_text(encoding="utf-8") == "COMPLETE\n"
+    assert "PARTIAL" not in stamp.read_text(encoding="utf-8")
+    assert stdout == ""
+
+
+def _hook_fixture(tmp_path: Path) -> tuple[Path, Path, Path, dict[str, str]]:
+    """A HOME whose governance tree is only the readiness seam under test."""
+    home = tmp_path / "home"
+    gov = home / ".cursor-governance"
+    lib = gov / "ops" / "scripts" / "lib"
+    lib.mkdir(parents=True)
+    (gov / "ops" / "scripts" / "uv_environment_lock.py").symlink_to(
+        ROOT / "ops" / "scripts" / "uv_environment_lock.py"
+    )
+    (lib / "venv_ready.sh").symlink_to(SHELL_READER)
+    (gov / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+    hook_dir = gov / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
+    hook_dir.mkdir(parents=True)
+    (hook_dir / "reader_probe.py").write_text("print('should-not-run')\n", encoding="utf-8")
+    stamp = tmp_path / "hook-stamp"
+    program = gov / ".venv" / "bin" / "python3"
+    _executable(program, '#!/bin/bash\nprintf "ran %s\\n" "$1" >> "$STAMP"\nexit 0\n')
+    skip_log = tmp_path / "hook-skips.log"
+    env = _posix_reader_env(
+        tmp_path,
+        HOME=str(home),
+        STAMP=str(stamp),
+        L9_SURFACE_GUARD="0",
+        L9_VENV_READY_WAIT_S="1",
+        L9_HOOK_SKIP_LOG=str(skip_log),
+    )
+    env.pop("CLAUDE_CODE_REMOTE", None)
+    env.pop("L9_GOVERNANCE_DIR", None)
+    return gov, stamp, skip_log, env
+
+
+def _run_hook(
+    tmp_path: Path, hook_class: str, env: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    launcher = (
+        ROOT / "environment" / "agents" / "adapters" / "claude-code" / "hooks" / "l9_hook_exec.sh"
+    )
+    return subprocess.run(
+        ["bash", str(launcher), "--class", hook_class, "reader_probe.py"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env=env,
+        cwd=str(tmp_path),
+    )
+
+
+def test_hook_executes_when_no_install_is_in_progress(tmp_path: Path) -> None:
+    _gov_unused, stamp, _skip_log, env = _hook_fixture(tmp_path)
+    ran = _run_hook(tmp_path, "gate", env)
+    assert ran.returncode == 0, ran.stderr
+    assert "BLOCKING" not in ran.stderr
+    assert "ran " in stamp.read_text(encoding="utf-8")
+
+
+def test_gate_fails_closed_and_observer_records_a_skip_when_the_venv_is_busy(
+    tmp_path: Path,
+) -> None:
+    gov, stamp, skip_log, env = _hook_fixture(tmp_path)
+    (gov / ".l9").mkdir()
+    with _held_exclusive(gov):
+        gate = _run_hook(tmp_path, "gate", env)
+        observer = _run_hook(tmp_path, "observer", env)
+    assert gate.returncode == 2, gate.stderr
+    assert "BLOCKING" in gate.stderr
+    assert "cannot evaluate" in gate.stderr
+    assert not stamp.exists()
+    assert observer.returncode == 0, observer.stderr
+    assert "did NOT run" in observer.stderr
+    assert skip_log.is_file()
+    assert "not safe to execute" in skip_log.read_text(encoding="utf-8")
+    assert not stamp.exists()
+
+
+def test_a_missing_readiness_probe_does_not_authorize_a_gate(tmp_path: Path) -> None:
+    gov, stamp, skip_log, env = _hook_fixture(tmp_path)
+    (gov / "ops" / "scripts" / "lib" / "venv_ready.sh").unlink()
+    gate = _run_hook(tmp_path, "gate", env)
+    observer = _run_hook(tmp_path, "observer", env)
+    assert gate.returncode == 2, gate.stderr
+    assert "probe missing" in gate.stderr
+    assert observer.returncode == 0, observer.stderr
+    assert "probe missing" in skip_log.read_text(encoding="utf-8")
+    assert not stamp.exists()
+
+
+def test_memory_launcher_refuses_a_live_or_interrupted_install(tmp_path: Path) -> None:
+    gov = tmp_path / "gov"
+    lib = gov / "ops" / "scripts" / "lib"
+    lib.mkdir(parents=True)
+    (gov / "ops" / "scripts" / "uv_environment_lock.py").symlink_to(
+        ROOT / "ops" / "scripts" / "uv_environment_lock.py"
+    )
+    (lib / "venv_ready.sh").symlink_to(SHELL_READER)
+    (lib / "bind_memory_interpreter.sh").write_text(
+        "# not sourced when readiness fails\n", encoding="utf-8"
+    )
+    (gov / "CANONICAL_LAW.md").write_text("law\n", encoding="utf-8")
+    (gov / ".l9").mkdir()
+    launcher = ROOT / "ops" / "memory" / "run_memory_mcp.sh"
+    env = dict(os.environ)
+    env.update(
+        {
+            "L9_GOVERNANCE_DIR": str(gov),
+            "L9_VENV_READY_WAIT_S": "1",
+        }
+    )
+    env.pop("CLAUDE_CODE_REMOTE", None)
+    with _held_exclusive(gov):
+        live = subprocess.run(
+            ["bash", str(launcher)],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            env=env,
+        )
+    assert live.returncode == 1, live.stderr
+    assert "not ready" in live.stderr
+    assert "still in progress" in live.stderr
+    assert "agent identity" not in live.stderr
+    (gov / vr.LOCK_REL).unlink()
+    (gov / vr.IN_PROGRESS_REL).write_text("dead\n", encoding="utf-8")
+    stale = subprocess.run(
+        ["bash", str(launcher)],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env=env,
+    )
+    assert stale.returncode == 1, stale.stderr
+    assert "interrupted" in stale.stderr
+    assert not (gov / vr.LOCK_REL).exists()
 
 
 # --- writer: the interpreter the locked environment is built for ------------
