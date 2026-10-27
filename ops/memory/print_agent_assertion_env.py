@@ -113,6 +113,32 @@ def _mapping(value: object, label: str) -> dict[str, Any]:
     return value
 
 
+def examined_consumer_pin(repo: Path) -> dict[str, str]:
+    """The bound package pin, recorded as examined and not a release ref.
+
+    ``l9.contract/product-release@1`` admits a ReleaseIdentity only from
+    release provenance. The consumer pin's version, git SHA, and wheel digest
+    are evidence that the pin was read. They are not that ref.
+    """
+
+    path = repo / "ops/config/memory-binding.json"
+    if not path.is_file():
+        return {"role": "not_a_release_identity", "status": "absent"}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {"role": "not_a_release_identity", "status": "absent"}
+    source = data.get("source") if isinstance(data.get("source"), dict) else {}
+    raw_evidence = data.get("release_evidence")
+    evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
+    return {
+        "role": "not_a_release_identity",
+        "distribution": str(data.get("distribution") or ""),
+        "expected_package_version": str(data.get("expected_package_version") or ""),
+        "source_ref": str(source.get("ref") or ""),
+        "artifact_sha256": str(evidence.get("artifact_sha256") or ""),
+    }
+
+
 def build_runtime_identity_assertion(
     env: Mapping[str, str] | None = None,
     *,
@@ -132,6 +158,9 @@ def build_runtime_identity_assertion(
 
     from ops.memory.agent_assertion import seal_identity_assertion
     from ops.memory.agent_identity import (
+        DEPENDENCY_IDENTITY_DIMENSIONS,
+        HOSTED_SERVICE_EXCEPTION_APPLIES_FROM,
+        HOSTED_SERVICE_EXCEPTION_REF,
         MEMORY_PRODUCT_REF,
         RUNTIME_RESOLVER_REF,
         IdentityResolutionError,
@@ -214,7 +243,6 @@ def build_runtime_identity_assertion(
         "resolved_dimensions": {
             "release_identity": "unknown",
             "runtime_identity": "unknown",
-            "constellation_identity": "unknown",
             "actor_identity": actor_ref,
             "surface_identity": surface_ref,
         },
@@ -233,11 +261,31 @@ def build_runtime_identity_assertion(
             )["digest"],
             "identity_binding_ref": binding_ref,
             "agent_bindings_ref": bindings_ref,
+            "applicable_identity_dimensions": list(DEPENDENCY_IDENTITY_DIMENSIONS),
+            "product_kind_exception_ref": HOSTED_SERVICE_EXCEPTION_REF,
+            "product_kind_exception_applies_from_release": HOSTED_SERVICE_EXCEPTION_APPLIES_FROM,
         },
         "result": "resolved",
-        "provenance": {"runtime_evidence_digest": runtime_evidence_digest(evidence)},
+        "provenance": {
+            "runtime_evidence_digest": runtime_evidence_digest(evidence),
+            "examined_consumer_pin": examined_consumer_pin(repo),
+        },
     }
     return seal_identity_assertion(assertion)
+
+
+def asserted_surface_fragment(
+    env: Mapping[str, str] | None = None,
+    *,
+    root: Path | None = None,
+) -> str:
+    """Canonical surface id this process may stamp, or "" when the surface is unknown."""
+
+    assertion = build_runtime_identity_assertion(env, root=root)
+    ref = assertion["resolved_dimensions"]["surface_identity"]
+    if not isinstance(ref, str) or ref == "unknown" or "#" not in ref:
+        return ""
+    return ref.rsplit("#", 1)[-1]
 
 
 def main(argv: list[str] | None = None) -> int:

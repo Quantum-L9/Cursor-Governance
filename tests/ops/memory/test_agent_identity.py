@@ -32,10 +32,14 @@ REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_regis
         ({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}, "claude-code"),
         # agents with no host markers are identified by their adapter's setting
         ({"L9_MEMORY_AGENT_ID": "manus"}, "manus"),
-        ({"L9_MEMORY_AGENT_ID": "perplexity"}, "perplexity"),
-        ({"L9_MEMORY_AGENT_ID": "perplexity-computer"}, "perplexity-computer"),
-        ({"L9_MEMORY_AGENT_ID": "l-cto"}, "l-cto"),
-        ({"L9_MEMORY_AGENT_ID": "igorbot"}, "igorbot"),
+        ({"L9_MEMORY_AGENT_ID": "codex"}, "codex"),
+        ({"L9_MEMORY_AGENT_ID": "gemini"}, "gemini"),
+        ({"L9_MEMORY_AGENT_ID": "perplexity"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "perplexity-computer"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "l-cto"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "igorbot"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "human"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "claude-code-desktop"}, ""),
         # ...and only when it is a registered identity
         ({"L9_MEMORY_AGENT_ID": "agent-b"}, ""),
         ({"L9_MEMORY_AGENT_ID": "IgorBot"}, ""),
@@ -88,8 +92,22 @@ def test_an_unidentifiable_surface_says_why() -> None:
     assert ai.unresolved_reason(MOBILE) == ""
 
 
+def test_surface_follows_evidence_and_does_not_default() -> None:
+    assert ai.resolve_agent_id(CLAUDE) == "claude-code"
+    assert ai.resolve_surface_id(CLAUDE) == ""
+    assert ai.resolve_surface_id({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "cli"}) == "claude-code-cli"
+    assert ai.resolve_surface_id(MOBILE) == "claude-code-mobile"
+    assert ai.resolve_surface_id({"CURSOR_AGENT": "1"}) == "cursor-ide"
+    assert ai.resolve_agent_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor"
+    assert ai.resolve_surface_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor-ide"
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "codex"}) == ""
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "manus"}) == ""
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "gemini"}) == ""
+
+
 def test_the_derived_authors_are_the_actors() -> None:
     assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code"}
+    assert ai.ADAPTER_IDENTITIES == {"manus", "codex", "gemini"}
     assert ai.RETIRED == {"claude-code-desktop", "claude-code-mobile"}
 
 
@@ -112,6 +130,7 @@ def test_registry_and_resolver_cannot_drift_apart() -> None:
     and no retired or unrequested Claude identity is registered."""
     agents = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["agents"]
     assert ai.DERIVED_IDENTITIES <= set(agents)
+    assert ai.ADAPTER_IDENTITIES <= set(agents)
     for agent_id in ai.DERIVED_IDENTITIES:
         entry = agents[agent_id]
         assert entry.get("binding_status") == "active" or entry.get("status") == "active"
