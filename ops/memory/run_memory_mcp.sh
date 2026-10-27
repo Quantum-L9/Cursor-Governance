@@ -151,6 +151,21 @@ if [[ "${#_door_missing[@]}" -ne 0 ]]; then
   fi
 fi
 
+# Dormant Memory 3.0 bridge (ADR-0053). Any value other than 1 keeps the
+# local stdio server. Opt-in never falls back to that server or to SQLite.
+if [[ "${L9_MEMORY_REMOTE_STDIO:-}" == "1" ]]; then
+  if [[ -z "${L9_MEMORY_REMOTE_URL:-}" ]]; then
+    echo "run_memory_mcp: L9_MEMORY_REMOTE_STDIO=1 but L9_MEMORY_REMOTE_URL is unset — refuse to launch; a local store is not a fallback" >&2
+    exit 1
+  fi
+  if [[ -z "${L9_MEMORY_REMOTE_SECRET_MAP:-}" && -z "${L9_MEMORY_REMOTE_KEY_NAME:-}" ]]; then
+    echo "run_memory_mcp: L9_MEMORY_REMOTE_STDIO=1 needs a durable per-agent key ref (L9_MEMORY_REMOTE_SECRET_MAP or L9_MEMORY_REMOTE_KEY_NAME); an ephemeral hosted key is not hosted parity — refuse to launch" >&2
+    exit 1
+  fi
+  export PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}"
+  exec "$L9_MEMORY_INTERPRETER" -m ops.memory.remote_stdio_bridge
+fi
+
 if [[ $# -gt 0 ]]; then
   exec "$L9_MEMORY_INTERPRETER" "$@"
 fi

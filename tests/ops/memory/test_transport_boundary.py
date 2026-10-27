@@ -46,11 +46,15 @@ ROOT = Path(__file__).resolve().parents[3]
 #: Production modules that carry memory bytes across the boundary. Tests and
 #: the OpenAI distiller helper (an LLM transport, not a memory provider, and
 #: fixed-host by construction) are outside this set on purpose.
+#: ADR-0053. The dormant remote bridge is the one memory-path module allowed
+#: to open HTTPS. It is excluded here and from the matching semgrep rule, and
+#: the test below pins that exclusion to this single file.
+REMOTE_STDIO_BRIDGE = "ops/memory/remote_stdio_bridge.py"
 MEMORY_PATH_MODULES: tuple[str, ...] = (
     *sorted(
         str(path.relative_to(ROOT))
         for path in (ROOT / "ops" / "memory").glob("*.py")
-        if not path.name.startswith("test_")
+        if not path.name.startswith("test_") and path.name != "remote_stdio_bridge.py"
     ),
     "ops/graphiti/hydration/close_session.py",
     "ops/graphiti/hydration/pickup_write.py",
@@ -155,6 +159,16 @@ def test_memory_path_modules_exist() -> None:
     missing = [rel for rel in MEMORY_PATH_MODULES if not (ROOT / rel).is_file()]
     assert not missing, missing
     assert len(MEMORY_PATH_MODULES) >= 15
+    assert REMOTE_STDIO_BRIDGE not in MEMORY_PATH_MODULES
+    assert (ROOT / REMOTE_STDIO_BRIDGE).is_file()
+
+
+def test_remote_stdio_bridge_is_the_only_direct_http_speaker() -> None:
+    bridge_roots = _import_roots(_module(REMOTE_STDIO_BRIDGE))
+    assert "urllib" in bridge_roots
+    assert "sqlite3" not in bridge_roots
+    for rel in MEMORY_PATH_MODULES:
+        assert "urllib" not in _import_roots(_module(rel)), rel
 
 
 @pytest.mark.parametrize("rel", MEMORY_PATH_MODULES)

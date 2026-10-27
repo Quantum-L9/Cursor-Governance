@@ -215,3 +215,57 @@ def test_without_local_maps_an_inherited_complete_door_still_launches(tmp_path: 
     result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR}, args=["-m", "x"])
     assert result.returncode == 0, result.stderr
     assert result.stdout.split() == ["LAUNCH", *DOOR_NAMES]
+
+
+def test_a_remote_url_without_opt_in_still_launches_the_local_server(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    env = {
+        "STUB_FALLBACK": str(launched),
+        **DOOR,
+        "L9_MEMORY_REMOTE_URL": "https://memory.example/mcp",
+    }
+    result = _run(gov, env, args=["-m", "l9_graphite_memory.server", "--transport", "stdio"])
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "LAUNCH -m l9_graphite_memory.server --transport stdio"
+    assert "remote_stdio_bridge" not in result.stdout
+
+
+def test_remote_opt_in_without_a_url_does_not_launch_a_local_server(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    result = _run(gov, {"STUB_FALLBACK": str(launched), **DOOR, "L9_MEMORY_REMOTE_STDIO": "1"})
+    assert result.returncode == 1
+    assert "LAUNCH" not in result.stdout
+    assert "local store is not a fallback" in result.stderr
+
+
+def test_remote_opt_in_without_a_durable_key_ref_does_not_launch(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    env = {
+        "STUB_FALLBACK": str(launched),
+        **DOOR,
+        "L9_MEMORY_REMOTE_STDIO": "1",
+        "L9_MEMORY_REMOTE_URL": "http://127.0.0.1:9/mcp",
+    }
+    result = _run(gov, env, args=["-m", "l9_graphite_memory.server", "--transport", "stdio"])
+    assert result.returncode == 1
+    assert "LAUNCH" not in result.stdout
+    assert "durable per-agent key ref" in result.stderr
+
+
+def test_remote_opt_in_execs_the_bridge_instead_of_the_local_server(tmp_path: Path) -> None:
+    gov = _stub_gov(tmp_path)
+    launched = _executable(tmp_path / "proven-python")
+    env = {
+        "STUB_FALLBACK": str(launched),
+        **DOOR,
+        "L9_MEMORY_REMOTE_STDIO": "1",
+        "L9_MEMORY_REMOTE_URL": "http://127.0.0.1:9/mcp",
+        "L9_MEMORY_REMOTE_SECRET_MAP": str(tmp_path / "keys.json"),
+    }
+    result = _run(gov, env, args=["-m", "l9_graphite_memory.server", "--transport", "stdio"])
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "LAUNCH -m ops.memory.remote_stdio_bridge"
+    assert "l9_graphite_memory.server" not in result.stdout

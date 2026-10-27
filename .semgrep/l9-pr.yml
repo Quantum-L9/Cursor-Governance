@@ -37,6 +37,9 @@ rules:
         - environment/agents/adapters/claude-code/memory/
       exclude:
         - "**/test_*.py"
+        # ADR-0053: the one trusted local stdio-to-remote speaker. Every other
+        # memory-path module stays on the bound stdio console script.
+        - ops/memory/remote_stdio_bridge.py
     pattern-either:
       - pattern: import urllib
       - pattern: import urllib.request

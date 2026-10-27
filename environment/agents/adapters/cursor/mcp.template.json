@@ -16,7 +16,10 @@
     "credentials (memory ADR-016). The legacy direct-provider front door",
     "(graphiti-memory over a provider URL) is retired (realignment stage C7)",
     "and the renderer drops it from every rendered file. The retired capability",
-    "broker URL is forbidden (CAPABILITY_BROKER_RETIRED_V1)."
+    "broker URL is forbidden (CAPABILITY_BROKER_RETIRED_V1).",
+    "ADR-0053: this entry stays local stdio. L9_MEMORY_REMOTE_STDIO is not set",
+    "here and no remote URL, bearer, or signing key is written into the",
+    "managed Cursor file."
   ],
   "mcpServers": {
     "l9-graphite-memory": {
