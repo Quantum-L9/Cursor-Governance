@@ -49,11 +49,8 @@ LEGACY_KEYS = frozenset({"graphiti-memory", "l9-shared-memory"})
 NATIVE_HTTP_TYPES = frozenset({"http", "streamable-http", "streamable_http"})
 RECEIPT_SCHEMA = "cursor.mcp-instantiation/v1"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
-#: Read by l9-graphite-memory 2.6.0 client_config. The value is an absolute
-#: executable path, never a secret, and is written as the managed command
-#: only — never as an env block. A missing file fails the install.
+#: Retired stdio launcher override. Never forward it to a native HTTP client.
 ENV_MCP_LAUNCHER = "L9_MEMORY_MCP_COMMAND"
-SIGNED_AGENT_LAUNCHER = _REPO_ROOT / "ops" / "memory" / "run_memory_mcp.sh"
 
 Runner = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -103,14 +100,18 @@ def classify_managed_config(config: Mapping[str, Any]) -> str:
 
 
 def render_machine_config(
-    master: Mapping[str, Any], existing: Mapping[str, Any] | None
+    master: Mapping[str, Any],
+    existing: Mapping[str, Any] | None,
+    *,
+    expected_native_memory: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, str], list[str]]:
     """Return ``(config, dropped-by-name, preserved unmanaged keys)``.
 
-    Managed servers take the master's definition (private ``_``-prefixed keys
-    stripped). The memory key is never copied from the master. An existing
-    memory entry is dropped regardless of shape; only a later package install
-    may write one. Legacy provider keys are removed unconditionally.
+    Non-memory servers follow the master. Memory is owned solely by its package:
+    keep an existing entry only if it matches the inspected native HTTP package
+    entry exactly. Shape alone never proves package ownership. The caller must
+    obtain ``expected_native_memory`` from the bound package, not the config.
+    All other Memory entries and legacy provider entries are removed.
     """
 
     managed = {
@@ -134,12 +135,20 @@ def render_machine_config(
             servers.pop(name)
             dropped[name] = "legacy direct-provider front door retired (stage C7)"
     if MEMORY_KEY in servers:
-        servers.pop(MEMORY_KEY, None)
-        dropped[MEMORY_KEY] = (
-            "dropping the existing Memory entry; only a package-owned native "
-            "Streamable HTTP install may write it"
+        trusted = (
+            expected_native_memory is not None
+            and classify_managed_config(expected_native_memory) == "native_http"
+            and servers[MEMORY_KEY] == dict(expected_native_memory)
         )
-    preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
+        if trusted:
+            dropped.pop(MEMORY_KEY, None)
+        else:
+            servers.pop(MEMORY_KEY, None)
+            dropped[MEMORY_KEY] = (
+                "dropping the existing Memory entry; only a package-owned native "
+                "Streamable HTTP install may write it"
+            )
+    preserved = sorted(name for name in servers if name not in managed and name != MEMORY_KEY)
     config: dict[str, Any] = {
         key: value
         for key, value in (existing or {}).items()
@@ -203,16 +212,14 @@ def _decode(stdout: str, stderr: str) -> dict[str, Any]:
 
 
 def package_install_env(base: Mapping[str, str] | None = None) -> dict[str, str]:
-    """Env for ``l9-memory client cursor install``.
+    """Environment for package inspect/install/verify, excluding stdio fallback.
 
-    A caller-supplied launcher path is dropped. Regeneration names this
-    repository's signed-agent wrapper, or it names nothing.
+    Neither ambient overrides nor a governance-local launcher may influence a
+    package-owned native HTTP entry. Authentication remains client-native.
     """
 
     env = dict(os.environ if base is None else base)
     env.pop(ENV_MCP_LAUNCHER, None)
-    if SIGNED_AGENT_LAUNCHER.is_file():
-        env[ENV_MCP_LAUNCHER] = str(SIGNED_AGENT_LAUNCHER)
     return env
 
 
@@ -240,6 +247,7 @@ def inspect_package_managed_entry(
         text=True,
         check=False,
         timeout=30,
+        env=package_install_env(),
     )
     if result.returncode != 0:
         return {
@@ -378,7 +386,45 @@ def instantiate(
 ) -> dict[str, Any]:
     master = json.loads(master_path.read_text(encoding="utf-8"))
     existing, link_target = read_existing(path)
-    config, dropped, preserved = render_machine_config(master, existing)
+
+    # Resolve the bound package *before* deciding whether its installed entry
+    # is current. Never trust an existing URL or type without this comparison.
+    binding: RuntimeBinding | None = None
+    binding_error: str | None = None
+    if not skip_memory and not interpreter:
+        resolver = binding_resolver or resolve_runtime_binding
+        # Unresolved binding is reported, never promoted to a trusted entry.
+        # nosemgrep: l9.baseline.python.broad-except
+        try:
+            binding = resolver()
+        except Exception as exc:  # noqa: BLE001
+            binding_error = f"{type(exc).__name__}: {exc}"
+
+    expected_native_memory: dict[str, Any] | None = None
+    existing_servers = (existing or {}).get("mcpServers")
+    existing_memory = (
+        existing_servers.get(MEMORY_KEY) if isinstance(existing_servers, dict) else None
+    )
+    if not skip_memory and link_target is None and isinstance(existing_memory, dict):
+        bound_interpreter: Path | None = None
+        if interpreter:
+            bound_interpreter = Path(interpreter).expanduser()
+        elif binding is not None and binding.ok and binding.interpreter and binding.memory_cli:
+            bound_interpreter = Path(binding.interpreter)
+        if (
+            bound_interpreter is not None
+            and bound_interpreter.is_file()
+            and (bound_interpreter.parent / "l9-memory").is_file()
+        ):
+            inspected = inspect_package_managed_entry(bound_interpreter, runner=runner)
+            if inspected.get("classification") == "native_http":
+                candidate = inspected.get("config")
+                if isinstance(candidate, dict):
+                    expected_native_memory = candidate
+
+    config, dropped, preserved = render_machine_config(
+        master, existing, expected_native_memory=expected_native_memory
+    )
     payload = json.dumps(config, indent=2) + "\n"
     current = path.read_text(encoding="utf-8") if path.is_file() else None
     # A symlink is never "current": the file must become a real file even
@@ -411,16 +457,8 @@ def instantiate(
     if skip_memory:
         receipt["memory"] = {"status": "skipped", "reason": "--skip-memory"}
     else:
-        binding: RuntimeBinding | None = None
-        if not interpreter:
-            resolver = binding_resolver or resolve_runtime_binding
-            # Broad by design: an unresolved binding is reported, never raised
-            # out of a config renderer.
-            # nosemgrep: l9.baseline.python.broad-except
-            try:
-                binding = resolver()
-            except Exception as exc:  # noqa: BLE001
-                receipt["binding_error"] = f"{type(exc).__name__}: {exc}"
+        if binding_error is not None:
+            receipt["binding_error"] = binding_error
         receipt["binding_status"] = binding.status if binding is not None else None
         if check and link_target is not None:
             receipt["memory"] = {

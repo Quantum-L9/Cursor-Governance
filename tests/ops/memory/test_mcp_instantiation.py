@@ -8,6 +8,7 @@ real file, because the configurator refuses symlinks by design.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -130,6 +131,39 @@ def test_existing_http_memory_entry_is_dropped_before_package_install() -> None:
     )
 
 
+def test_exact_native_memory_entry_is_preserved_only_with_package_evidence() -> None:
+    expected = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    existing = {"mcpServers": {inst.MEMORY_KEY: dict(expected)}}
+    config, dropped, preserved = inst.render_machine_config(
+        _master(), existing, expected_native_memory=expected
+    )
+    assert config["mcpServers"][inst.MEMORY_KEY] == expected
+    assert inst.MEMORY_KEY not in dropped
+    assert preserved == []  # Package-owned, never an unmanaged consumer server.
+
+    # HTTP-looking but not package-owned: reject without trying to infer provenance.
+    foreign = {
+        "mcpServers": {
+            inst.MEMORY_KEY: {
+                "type": "streamable-http",
+                "url": "https://graphiti.example/mcp",
+            }
+        }
+    }
+    config, dropped, preserved = inst.render_machine_config(
+        _master(), foreign, expected_native_memory=expected
+    )
+    assert inst.MEMORY_KEY not in config["mcpServers"]
+    assert inst.MEMORY_KEY in dropped
+    assert preserved == []
+
+    # An unverified expectation is not admissible even when structurally equal.
+    config, _, _ = inst.render_machine_config(
+        _master(), existing, expected_native_memory={"type": "stdio", "command": "/tmp/a"}
+    )
+    assert inst.MEMORY_KEY not in config["mcpServers"]
+
+
 def test_render_from_nothing_has_no_memory_entry_and_no_private_keys() -> None:
     config, dropped, preserved = inst.render_machine_config(
         _master(docs={"command": "tool", "_owner": "x"}), None
@@ -230,11 +264,71 @@ def test_memory_entry_is_delegated_to_the_bound_runtime(tmp_path: Path) -> None:
     assert install[1:4] == ["client", "cursor", "install"]
     assert install[install.index("--path") + 1] == str(target)
     assert install[install.index("--interpreter") + 1] == binding.interpreter
-    assert runner.envs[1].get(inst.ENV_MCP_LAUNCHER) == str(inst.SIGNED_AGENT_LAUNCHER)
-    assert runner.envs[1]["L9_MEMORY_MCP_COMMAND"] == runner.envs[2]["L9_MEMORY_MCP_COMMAND"]
+    assert all(inst.ENV_MCP_LAUNCHER not in env for env in runner.envs)
     assert verify[1:4] == ["client", "cursor", "verify"] and "--path" in verify
     assert receipt["binding_status"] == "exact"
     assert receipt["authority"] == "none" and receipt["schema"] == inst.RECEIPT_SCHEMA
+
+
+def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> None:
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master()), encoding="utf-8")
+    target = tmp_path / "mcp.json"
+    native = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    original = (
+        json.dumps(
+            {"mcpServers": {"mine": {"command": "/mine"}, inst.MEMORY_KEY: native}},
+            indent=2,
+        )
+        + "\n"
+    )
+    target.write_text(original, encoding="utf-8")
+    binding = _binding(tmp_path)
+    runner = _Runner(kind="http")
+
+    check = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        check=True,
+        binding_resolver=lambda: binding,
+        runner=runner,
+    )
+    assert check["status"] == "unchanged"
+    assert check["memory"]["status"] == "installed"
+    assert inst.exit_code(check) == 0
+    assert target.read_text(encoding="utf-8") == original
+
+    install = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        binding_resolver=lambda: binding,
+        runner=runner,
+    )
+    assert install["status"] == "unchanged"
+    assert install["memory"]["status"] == "installed"
+    assert install["preserved_unmanaged"] == ["mine"]
+    assert target.read_text(encoding="utf-8") == original
+
+
+def test_launcher_override_is_stripped_from_inspect_install_and_verify(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setenv(inst.ENV_MCP_LAUNCHER, "/tmp/legacy-launcher")
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master()), encoding="utf-8")
+    runner = _Runner(kind="http")
+    result = inst.instantiate(
+        path=tmp_path / "mcp.json",
+        master_path=master_path,
+        verify=True,
+        binding_resolver=lambda: _binding(tmp_path),
+        runner=runner,
+    )
+    assert result["memory"]["status"] == "verified"
+    assert len(runner.envs) == 3  # inspector + install + probe
+    assert all(inst.ENV_MCP_LAUNCHER not in env for env in runner.envs)
+    # Do not change the parent or leak its launcher into the managed client.
+    assert os.environ[inst.ENV_MCP_LAUNCHER] == "/tmp/legacy-launcher"
 
 
 def test_unbound_runtime_installs_nothing_and_says_why(tmp_path: Path) -> None:
