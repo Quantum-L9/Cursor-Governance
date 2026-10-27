@@ -752,9 +752,11 @@ if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
     # of which move the tree digest, so a receipt would refuse every one of
     # them. An own-base conflict is a red tree: the checker says to refresh and
     # resolve or close the branch, and that changes the digest, so the STOP
-    # LOOPING receipt stays. Publication is denied either way.
+    # LOOPING receipt stays. Publication is denied either way. Exit 3 is checked
+    # first: under PR_OVERLAP=warn the base text is printed and the run goes on,
+    # so a later telemetry denial would otherwise be latched as a red tree.
     _own_base=0
-    if grep -q "conflicts with its own base" "$_overlap_log"; then
+    if [[ "$_overlap_rc" -ne 3 ]] && grep -q "conflicts with its own base" "$_overlap_log"; then
       _own_base=1
     fi
     rm -f "$_overlap_log"

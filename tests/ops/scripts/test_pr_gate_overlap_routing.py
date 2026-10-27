@@ -27,7 +27,9 @@ GATE = ROOT / "ops" / "scripts" / "run_pr_gate.sh"
 _FAKE_GH = """#!/bin/sh
 [ "$1" = "--version" ] && { echo "gh fake"; exit 0; }
 case "$2" in
-  *pulls/7/files*) case "$2" in *page=1) echo shared.txt ;; esac ;;
+  *pulls/7/files*)
+    [ -n "${FAKE_GH_FILES_FAIL:-}" ] && exit 1
+    case "$2" in *page=1) echo shared.txt ;; esac ;;
   *pulls\\?state=open*) case "$2" in *page=1) printf '7\\tother\\tmain\\n' ;; esac ;;
 esac
 exit 0
@@ -153,6 +155,30 @@ def test_own_base_conflict_writes_stop_looping_receipt(tmp_path: Path) -> None:
     assert rerun.returncode == 2, out
     assert "STOP LOOPING" in out
     assert "=== reader wave" not in out
+
+
+def test_telemetry_denial_after_warned_base_conflict_writes_no_receipt(tmp_path: Path) -> None:
+    """Exit 3 wins over the own-base text a PR_OVERLAP=warn run already printed.
+
+    Under ``warn`` the base probe prints "conflicts with its own base" and
+    continues; a later open-PR file-list failure then denies on telemetry (3).
+    That is an outage, not a red tree, so no receipt may be written.
+    """
+    repo, bin_dir = _overlapping_workspace(tmp_path)
+    _git(repo, "checkout", "-q", "main")
+    (repo / "shared.txt").write_text("landed\n", encoding="utf-8")
+    _git(repo, "commit", "-qam", "landed on main")
+    _git(repo, "push", "-q", "origin", "main")
+    _git(repo, "checkout", "-q", "feat")
+    failure = repo / ".l9" / "pr" / "gate-failure.json"
+
+    blocked = _gate(repo, bin_dir, PR_OVERLAP="warn", FAKE_GH_FILES_FAIL="1")
+    out = blocked.stdout + blocked.stderr
+    assert blocked.returncode == 1, out
+    assert "conflicts with its own base" in out
+    assert "telemetry unavailable, not a red tree" in out
+    assert "no STOP LOOPING receipt written" in out
+    assert not failure.exists(), failure.read_text(encoding="utf-8")
 
 
 def test_receipt_suppression_is_confined_to_fetch_and_overlap() -> None:
