@@ -382,9 +382,7 @@
   "skillOverrides": {
     "l9-audit-plans": "user-invocable-only",
     "l9-bounded-autonomy": "user-invocable-only",
-    "l9-ci-ops": "user-invocable-only",
     "l9-claude-coding-contract-compiler": "user-invocable-only",
-    "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
     "l9-coding-agent": "user-invocable-only",
     "l9-dag-authoring": "user-invocable-only",
