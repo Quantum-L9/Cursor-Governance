@@ -588,6 +588,13 @@ _gate_run_sync() {
     echo "OK: skip generated heal (generated sources unchanged)"
     return 0
   fi
+  # Consumer repositories may have their own top-level skills/ or rules/ and
+  # carry none of the governance manifests the heal rewrites; the same guard
+  # gates the local-activation heal below.
+  if [[ ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip generated heal (no skills/AUTONOMY_MANIFEST.yaml in this workspace)"
+    return 0
+  fi
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
     --changed-file "$changed_file"
