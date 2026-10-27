@@ -382,12 +382,9 @@ def _memory_control_plane_health(levels: dict[str, str] | None) -> tuple[str, st
     return READY, "canonical store and service ready (health only; hydrate not probed)"
 
 
-#: Claude Code's projected command is the spawn wrapper. HOME is expanded by
-#: the client at load; readiness accepts the ${HOME} reference or the same
-#: path spelled out against the environ used for the probe.
+#: Interpreter name still used by the package probe and by tests. It is not
+#: proof that a project MCP server is the Memory transport.
 _MEMORY_INTERPRETER_ENV = "L9_MEMORY_INTERPRETER"
-_MEMORY_WRAPPER_REF = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
-_MEMORY_WRAPPER_REL = Path(".cursor-governance") / "ops" / "memory" / "run_memory_mcp.sh"
 
 #: Asked of the bound interpreter itself. ``find_spec`` on the top-level
 #: package imports nothing, so the probe proves the package is reachable from
@@ -416,11 +413,6 @@ def _interpreter_carries_memory_package(interpreter: Path) -> bool | None:
     except (OSError, subprocess.SubprocessError):
         return None
     return proc.returncode == 0
-
-
-def _memory_wrapper_path(environ: Mapping[str, str]) -> Path:
-    home = (environ.get("HOME") or "").strip() or str(Path.home())
-    return Path(home) / _MEMORY_WRAPPER_REL
 
 
 def _resolve_memory_interpreter(environ: Mapping[str, str]) -> str:
@@ -453,29 +445,18 @@ def _claude_mcp_health(
     gated_out: frozenset[str] = frozenset(),
     environ: Mapping[str, str] | None = None,
 ) -> tuple[str, str]:
-    """Claude project MCP is READY only when the rendered wrapper will actually run.
+    """Project ``.mcp.json`` must not carry a Memory server.
 
-    Diagnostics R4 is Cursor ``client cursor status`` (``~/.cursor/mcp.json``).
-    That is the wrong file on Claude Code, and structurally absent on Web and
-    Mobile (SESSION_START_SPEC hard constraint 4), so R4 is never read here.
-
-    READY requires the spawn wrapper in ``.mcp.json``, the wrapper file on
-    disk, and a proven interpreter that carries ``l9_graphite_memory``. The
-    parent does not have to export ``L9_MEMORY_INTERPRETER`` — that is the
-    desktop bind gap the wrapper closes. Named DEGRADED states:
-
-      not rendered     ``.mcp.json`` missing, unreadable, or without the server
-      not bound        the rendered command is not the spawn wrapper
-      wrapper missing  the HOME-relative wrapper path is not a file
-      not executable   the wrapper (or the bound interpreter) cannot execute
-      unbound          runtime_binding did not prove an interpreter
-      stale package    the interpreter runs but cannot find
-                       ``l9_graphite_memory``
-
-    A probe that cannot run is UNKNOWN — never PASS. ``gated_out`` only
-    annotates an absent server; it never upgrades a verdict.
+    The account-managed connector owns native Streamable HTTP. A present
+    ``l9-graphite-memory`` entry, stdio or otherwise, is a rejected duplicate.
+    Absence is source-conformant and is READY for this file check only.
+    Native Auth0, connector, and mobile proof stay on ``memory_native_activation``
+    and are UNKNOWN. ``gated_out`` annotates; it does not upgrade activation.
+    Cursor R4 is never read. ``environ`` is accepted so older callers keep
+    working; the file check does not treat a wrapper path as readiness.
     """
-    env = os.environ if environ is None else environ
+
+    del environ
     mcp_path = Path(workspace) / ".mcp.json"
     if not mcp_path.is_file():
         return DEGRADED, "workspace .mcp.json missing (blocker: mcp_config)"
@@ -484,45 +465,18 @@ def _claude_mcp_health(
     except (OSError, json.JSONDecodeError):
         return DEGRADED, "workspace .mcp.json unreadable (blocker: mcp_config)"
     servers = decoded.get("mcpServers") if isinstance(decoded, dict) else None
-    if not isinstance(servers, dict) or _MEMORY_MCP_SERVER not in servers:
-        gated = (
-            "; projection gated l9-graphite-memory out" if _MEMORY_MCP_SERVER in gated_out else ""
-        )
-        return DEGRADED, f"l9-graphite-memory absent from .mcp.json (blocker: mcp_config){gated}"
-    entry = servers.get(_MEMORY_MCP_SERVER)
-    command = str(entry.get("command") or "").strip() if isinstance(entry, dict) else ""
-    wrapper_path = _memory_wrapper_path(env)
-    if command not in {_MEMORY_WRAPPER_REF, str(wrapper_path)}:
+    if not isinstance(servers, dict):
+        return DEGRADED, "workspace .mcp.json has no mcpServers object (blocker: mcp_config)"
+    if _MEMORY_MCP_SERVER in servers:
         return DEGRADED, (
-            "l9-graphite-memory command is not the spawn wrapper "
-            f"(rendered {command or 'nothing'}) (blocker: mcp_config)"
+            "l9-graphite-memory in project .mcp.json is rejected; the account "
+            "connector owns native MCP and this file must not resurrect stdio "
+            "(blocker: mcp_config)"
         )
-    if not wrapper_path.is_file():
-        return DEGRADED, f"memory spawn wrapper is not a file: {wrapper_path} (blocker: mcp_config)"
-    if not os.access(wrapper_path, os.X_OK):
-        return DEGRADED, (
-            f"memory spawn wrapper not executable: {wrapper_path} (blocker: mcp_config)"
-        )
-    interp = _resolve_memory_interpreter(env)
-    if not interp:
-        return DEGRADED, (
-            "memory interpreter unbound — wrapper will fail closed (blocker: mcp_config)"
-        )
-    interp_path = Path(interp)
-    if not interp_path.is_file():
-        return DEGRADED, f"memory interpreter is not a file: {interp} (blocker: mcp_config)"
-    if not os.access(interp_path, os.X_OK):
-        return DEGRADED, f"memory interpreter not executable: {interp} (blocker: mcp_config)"
-    carries = _interpreter_carries_memory_package(interp_path)
-    if carries is None:
-        return UNKNOWN, "memory interpreter probe did not complete (blocker: mcp_config)"
-    if not carries:
-        return DEGRADED, (
-            "memory interpreter cannot find l9_graphite_memory — stale binding "
-            f"{interp} (blocker: mcp_config)"
-        )
+    gated = "; projection retired l9-graphite-memory" if _MEMORY_MCP_SERVER in gated_out else ""
     return READY, (
-        "claude mcp entry bound to the spawn wrapper and an interpreter carrying l9_graphite_memory"
+        "project .mcp.json has no Memory server; native account-connector "
+        f"activation is UNKNOWN{gated}"
     )
 
 
@@ -732,12 +686,11 @@ _SECRET_BOUNDARY_VOCAB = {
 }
 
 
-#: The memory transport this surface uses — a constant posture, not a probe.
-#: Since realignment stage C9 memory is the canonical l9-graphite-memory
-#: control plane over stdio, bound per checkout; there is no provider URL and
-#: no memory bearer on this surface, so there is nothing to measure as
-#: "authenticated": the runtime resolves its own credentials (memory ADR-016).
-MEMORY_TRANSPORT = "stdio-control-plane"
+#: Selected Memory MCP transport. This is source posture, not proof that Auth0,
+#: the account connector, or a live mobile client is up. Activation stays
+#: UNKNOWN until those are observed. A cached receipt cannot upgrade it.
+MEMORY_TRANSPORT = "native-mcp-streamable-http"
+MEMORY_NATIVE_ACTIVATION = UNKNOWN
 
 
 def _memory_transport() -> str:
@@ -926,9 +879,11 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         # Observation, not a dims entry — see _uv_version. Empty string means
         # "not observed", which is distinct from a version that is merely old.
         "uv_version": _uv_version(),
-        # Observation, not a dims entry — see MEMORY_TRANSPORT. The transport
-        # is a constant posture: stdio to the bound runtime, no URL, no bearer.
+        # Observations, not dims. Transport is the selected posture. Activation
+        # stays UNKNOWN until Auth0, the native client, and mobile are observed.
+        # A cached receipt must not be read as that proof.
         "memory_transport": _memory_transport(),
+        "memory_native_activation": MEMORY_NATIVE_ACTIVATION,
         "bootstrap_receipt": _bootstrap_binding(bootstrap),
     }
     receipt.update(dims)
@@ -1024,6 +979,12 @@ def reusable_receipt(
     current = _bootstrap_binding(_bootstrap_verdict(gov, workspace))
     if not current or str(existing.get("bootstrap_receipt") or "") != current:
         return None
+    # A receipt from the stdio consumer, or one that claims native activation
+    # passed, is not evidence. Reuse never promotes UNKNOWN to PASS.
+    if existing.get("memory_transport") != MEMORY_TRANSPORT:
+        return None
+    if existing.get("memory_native_activation") != UNKNOWN:
+        return None
     return existing
 
 
@@ -1042,6 +1003,7 @@ def _compact(receipt: dict[str, Any], *, source: str = REBUILT) -> str:
     lines.append(f"receipt_source={source}")
     lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
     lines.append(f"memory_transport={receipt.get('memory_transport', UNKNOWN)}")
+    lines.append(f"memory_native_activation={receipt.get('memory_native_activation', UNKNOWN)}")
     order = [
         "skill_projection_status",
         "command_projection_status",

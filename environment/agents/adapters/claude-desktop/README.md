@@ -31,7 +31,7 @@ menu in a new chat.
 | `env` with `${VAR}` for a non-credential variable | expanded from the invoking shell |
 | `env` naming a token / key / secret / password / DSN | server skipped: the Desktop file is secret-free (rules/61, ADR-016); carry the credential in a wrapper script the entry launches |
 | a server you added in Desktop yourself | preserved byte for byte |
-| `l9-graphite-memory` | never authored here; written by `l9-memory client cursor install --path <desktop config>` when `L9_MEMORY_INTERPRETER` is set |
+| `l9-graphite-memory` | removed. Claude's account-managed connector owns the Claude client. This renderer does not run `l9-memory client cursor install` |
 
 ## Adding an MCP server
 

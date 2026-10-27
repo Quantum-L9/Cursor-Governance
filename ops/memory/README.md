@@ -342,12 +342,11 @@ make memory-mcp-install                     # real file (replaces the old symlin
 MEMORY_VERIFY_MCP=1 make memory-mcp-install # + the package's own stdio handshake proof
 ```
 
-The master inventory never authors the memory entry. Every renderer (Cursor,
-Claude Desktop) hands it to `l9-memory client cursor install --path …` against
-the runtime `runtime_binding.py` proved, so the same atomic, digest-backed,
-secret-free entry lands on every surface; Claude Code's project template
-launches the same argv through `ops/memory/run_memory_mcp.sh` (HOME-expanded
-wrapper; the wrapper is the bind gate). The retired
+The master inventory never authors the memory entry. Cursor may write it only
+through `l9-memory client cursor install` when the package entry is native
+Streamable HTTP. Claude Desktop removes `l9-graphite-memory` and does not run
+that Cursor installer. An existing Cursor memory entry is dropped on render;
+shape is not package provenance. The retired
 `graphiti-memory` front door is dropped from every rendered file and rejected
 by `validate_claude_env.py`, `environment/agents/tools/validate_agents.py`, the
 repo hygiene check and the governance self-check.

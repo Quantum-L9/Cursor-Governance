@@ -162,7 +162,7 @@ memcli write \
 2. **Terse.** No "SESSION: 2026-02-16. WORK: ..." preamble. Just the fact.
 3. **Pre-classify.** Use the correct `--kind` (lesson, insight, note, rule, pattern, preference, decision, observation, pickup_context) — see the canonical list above. Not `error`.
 4. **No prose summaries.** The distiller exists to convert prose into facts — don't make it redo work you can do at write time.
-5. **Stamp identity.** The identity is DERIVED from host markers by `ops/memory/agent_identity.py`, never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`; adapter agents (Manus=`manus`, `codex`, `gemini`, and the reserved `perplexity`, `perplexity-computer`, `l-cto`, `igorbot`) by the registered id their adapter sets. The agent-write builder stamps it and refuses a different `--agent-id` as drift; the operator CLI takes `--agent-id`.
+5. **Stamp identity.** The identity is DERIVED from host markers by `ops/memory/agent_identity.py`, never configured: Cursor actor `l9.actor-registry/global@1#cursor` on surface `l9.surface-registry/global@1#cursor-ide`; Claude Code actor `l9.actor-registry/global@1#claude-code`, with surface `claude-code-cli` only for `CLAUDE_CODE_ENTRYPOINT=cli` and `claude-code-mobile` only for `CLAUDE_CODE_REMOTE=true` plus `CLAUDE_CODE_ENTRYPOINT=remote_mobile`. Any other entrypoint leaves the surface unknown and omits the surface tag. Adapter actors `codex`, `gemini`, and `manus` resolve from `L9_MEMORY_AGENT_ID` only when no host markers are present, and their surface stays unknown. `perplexity`, `perplexity-computer`, `l-cto`, and `igorbot` are not actors. The agent-write builder stamps it and refuses a different `--agent-id` as drift; the operator CLI takes `--agent-id`.
 
 ### Anti-pattern (NEVER do this)
 
@@ -234,5 +234,13 @@ Before committing, verify:
 | `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` | Machine form of the interactive write contract (`interactive_memory_write`) |
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
+
+## Native Cursor MCP (2026-10-26)
+
+The package owns the Cursor Memory MCP entry. This repo does not render a
+second one. Native transport is authenticated Streamable HTTP. If the
+installed package's Cursor entry is local stdio, report `UPSTREAM_BLOCKED`
+and do not install it. Unrelated user MCP servers stay. A public OAuth
+client id is not the Cursor actor.
 
 <!-- generated-from: rules/87-cursor-memory-kernel.mdc; do-not-edit -->

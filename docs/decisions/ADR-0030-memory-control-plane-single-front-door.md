@@ -195,3 +195,16 @@ memory traffic passes through Cursor-Governance* or name the governed pair as
    redacted excerpt to `l9-memory distill`.
 
 Items 5 and 9 (no provider entry) are unchanged. Law: CANONICAL_LAW §8.6.
+
+## Amendment (2026-10-26) — native MCP Streamable HTTP
+
+§8.2's stdio-only MCP sentence and the "agent HTTP sealed" consumer rule
+are superseded for Memory 3.0 by CANONICAL_LAW §8.10. The front door is
+still one `MemoryService`. The MCP transport is native authenticated
+Streamable HTTP. A project stdio server, `mcp-remote` shim, or local proxy
+is not that door. Raw Graphiti provider HTTP and `L9_MEMORY_HTTP_*` stay
+forbidden. Cursor's managed entry is written only by the memory package; a
+stdio-only package is `UPSTREAM_BLOCKED`. Claude uses the account-managed
+connector and does not keep a project Memory server. This amendment does
+not claim Auth0, mobile, or C1 HTTP readiness. Those stay UNKNOWN until
+observed. Closed PR #783 is not a predecessor.
