@@ -152,15 +152,9 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
         return CURSOR
     if _is_claude(source):
         return _claude_identity(source)
-    # A public client id, alone or stuffed into the free-form agent slot, is
-    # not evidence of an actor.
-    if oauth_public_client_claim(source):
-        explicit = _flag(source, "L9_MEMORY_AGENT_ID")
-        if not explicit or explicit == oauth_public_client_claim(source):
-            return ""
+    # A public OAuth client id is not an actor. It neither selects one nor
+    # denies a registered adapter whose marker happens to equal that string.
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
-    if explicit and explicit == oauth_public_client_claim(source):
-        return ""
     return explicit if explicit in ADAPTER_IDENTITIES else ""
 
 

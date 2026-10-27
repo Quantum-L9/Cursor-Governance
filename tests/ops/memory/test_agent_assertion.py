@@ -605,27 +605,71 @@ def test_forged_caller_claims_do_not_override_host_markers() -> None:
     assert "claude-code-desktop" not in encoded
 
 
-def test_stale_projection_receipt_refuses_the_mint(tmp_path: Path) -> None:
+def _copy_identity_fixture(tmp_path: Path) -> None:
     import shutil
-
-    import yaml
-
-    from ops.memory.agent_identity import IdentityResolutionError
 
     for rel in (
         "environment/agents/agent_registry.yaml",
         "generated/governance/canonical_identity.yaml",
         "generated/governance/canonical_identity.receipt.yaml",
+        "governance/authority-bindings/canonical-agent-identity.yaml",
         "ops/config/memory-binding.json",
     ):
         dest = tmp_path / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(helper._ROOT / rel, dest)
+
+
+def test_stale_projection_receipt_refuses_the_mint(tmp_path: Path) -> None:
+    import yaml
+
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
     receipt_path = tmp_path / "generated/governance/canonical_identity.receipt.yaml"
     receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
     receipt["projection"]["source_revision"] = "0" * 40
     receipt_path.write_text(yaml.safe_dump(receipt), encoding="utf-8")
     with pytest.raises(IdentityResolutionError, match="disagree"):
+        helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
+
+
+def test_same_revision_projection_byte_change_refuses_before_signing(tmp_path: Path) -> None:
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
+    projection_path = tmp_path / "generated/governance/canonical_identity.yaml"
+    text = projection_path.read_text(encoding="utf-8")
+    needle = "The Cursor agent actor."
+    assert needle in text
+    projection_path.write_text(
+        text.replace(needle, "The Cursor agent actor. tampered.", 1),
+        encoding="utf-8",
+    )
+    with pytest.raises(IdentityResolutionError, match="digest"):
+        helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
+
+
+def test_non_current_actor_refuses_when_the_digest_still_matches(tmp_path: Path) -> None:
+    import hashlib
+
+    import yaml
+
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
+    projection_path = tmp_path / "generated/governance/canonical_identity.yaml"
+    text = projection_path.read_text(encoding="utf-8")
+    needle = "- id: cursor\n  kind: agent\n  status: current\n"
+    assert needle in text
+    retired = needle.replace("current", "retired")
+    projection_path.write_text(text.replace(needle, retired, 1), encoding="utf-8")
+    receipt_path = tmp_path / "generated/governance/canonical_identity.receipt.yaml"
+    receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+    digest = hashlib.sha256(projection_path.read_bytes()).hexdigest()
+    receipt["output"]["digest"] = "sha256:" + digest
+    receipt_path.write_text(yaml.safe_dump(receipt), encoding="utf-8")
+    with pytest.raises(IdentityResolutionError, match="not current"):
         helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
 
 

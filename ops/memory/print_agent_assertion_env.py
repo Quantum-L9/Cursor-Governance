@@ -146,10 +146,11 @@ def build_runtime_identity_assertion(
 ) -> dict[str, Any]:
     """Resolve this process and build a sealed ``l9.identity-assertion/v1``.
 
-    Actor and surface refs come from ``agent_registry.yaml``. Digests come from
-    the canonical identity projection and its receipt. An unresolved actor
-    refuses rather than guessing. A surface the binding does not list stays
-    ``unknown`` and does not refuse the actor.
+    Actor and surface refs come from ``agent_registry.yaml``. The projection
+    file bytes must match the receipt digest, and the receipt must agree with
+    the projection and the governing binding, before any digest is sealed.
+    An unresolved actor refuses rather than guessing. A surface the binding
+    does not list stays ``unknown`` and does not refuse the actor.
     """
 
     if str(_ROOT) not in sys.path:
@@ -172,6 +173,7 @@ def build_runtime_identity_assertion(
         surface_ref_from_binding,
         unresolved_reason,
     )
+    from ops.memory.identity_projection import verify_identity_projection
 
     source = os.environ if env is None else env
     repo = _ROOT if root is None else root
@@ -193,10 +195,10 @@ def build_runtime_identity_assertion(
     surface_id = resolve_surface_id(source)
     surface_ref = surface_ref_from_binding(surface_id, binding)
 
+    projection_path = repo / "generated/governance/canonical_identity.yaml"
+    projection_bytes = projection_path.read_bytes()
     projection = _mapping(
-        yaml.safe_load(
-            (repo / "generated/governance/canonical_identity.yaml").read_text(encoding="utf-8")
-        ),
+        yaml.safe_load(projection_bytes.decode("utf-8")),
         "canonical identity projection",
     )
     receipt = _mapping(
@@ -207,28 +209,26 @@ def build_runtime_identity_assertion(
         ),
         "canonical identity receipt",
     )
-    projected_actors = {
-        item.get("id") for item in projection.get("actors", []) if isinstance(item, dict)
-    }
-    if actor_id not in projected_actors:
-        raise IdentityResolutionError(
-            f"resolved actor {actor_id} is not in the identity projection"
-        )
-    if surface_ref != "unknown":
-        projected_surfaces = {
-            item.get("id") for item in projection.get("surfaces", []) if isinstance(item, dict)
-        }
-        if surface_id not in projected_surfaces:
-            raise IdentityResolutionError(
-                f"resolved surface {surface_id} is not in the identity projection"
+    identity_binding = _mapping(
+        yaml.safe_load(
+            (repo / "governance/authority-bindings/canonical-agent-identity.yaml").read_text(
+                encoding="utf-8"
             )
+        ),
+        "canonical identity binding",
+    )
+    projection_failures = verify_identity_projection(
+        projection,
+        receipt,
+        projection_bytes,
+        identity_binding,
+        actor_id=actor_id,
+        surface_id=None if surface_ref == "unknown" else surface_id,
+    )
+    if projection_failures:
+        raise IdentityResolutionError(projection_failures[0])
 
-    projection_meta = _mapping(projection.get("projection"), "projection metadata")
     receipt_projection = _mapping(receipt.get("projection"), "receipt projection")
-    if projection_meta.get("source_revision") != receipt_projection.get("source_revision"):
-        raise IdentityResolutionError(
-            "canonical identity projection and receipt disagree on source revision"
-        )
     authority = _mapping(registry.get("identity_authority"), "identity authority")
     binding_ref = str(authority["binding_ref"])
     projection_ref = str(authority["projection_ref"])

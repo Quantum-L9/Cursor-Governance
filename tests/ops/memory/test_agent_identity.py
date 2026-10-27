@@ -69,6 +69,16 @@ def test_oauth_public_client_id_is_not_an_actor() -> None:
     assert ai.resolve_agent_id({"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "other"}) == (
         "manus"
     )
+    collided = {"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "manus"}
+    distinct = {"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "different-client"}
+    assert ai.resolve_agent_id(collided) == "manus"
+    assert ai.resolve_agent_id(distinct) == "manus"
+    assert ai.resolve_agent_id({"OAUTH_CLIENT_ID": "manus"}) == ""
+    left = ai.normalized_runtime_evidence(collided)
+    right = ai.normalized_runtime_evidence(distinct)
+    assert left == right
+    assert "different-client" not in str(left)
+    assert all("OAUTH" not in key for key in left)
     assert ai.resolve_surface_id({"L9_MEMORY_OAUTH_CLIENT_ID": "public-client"}) == ""
 
 
