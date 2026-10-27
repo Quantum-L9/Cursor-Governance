@@ -124,6 +124,37 @@ def test_overlap_block_writes_no_receipt_and_ignore_rerun_reaches_full_gate(
     assert "=== reader wave" in out
 
 
+def test_own_base_conflict_writes_stop_looping_receipt(tmp_path: Path) -> None:
+    """A conflict with the branch's own base is a red tree, not a routing choice.
+
+    ``pr_overlap_check.py`` returns 1 and tells the caller to refresh and
+    resolve. That changes the tree digest, so the STOP LOOPING receipt must be
+    written and an unchanged re-run must be refused. Open-PR overlap stays
+    receipt-free (see the sibling test).
+    """
+    repo, bin_dir = _overlapping_workspace(tmp_path)
+    _git(repo, "checkout", "-q", "main")
+    (repo / "shared.txt").write_text("landed\n", encoding="utf-8")
+    _git(repo, "commit", "-qam", "landed on main")
+    _git(repo, "push", "-q", "origin", "main")
+    _git(repo, "checkout", "-q", "feat")
+    failure = repo / ".l9" / "pr" / "gate-failure.json"
+
+    blocked = _gate(repo, bin_dir)
+    out = blocked.stdout + blocked.stderr
+    assert blocked.returncode == 1, out
+    assert "conflicts with its own base" in out
+    assert "red tree; STOP LOOPING receipt applies" in out
+    assert "no STOP LOOPING receipt written" not in out
+    assert failure.is_file(), out
+
+    rerun = _gate(repo, bin_dir)
+    out = rerun.stdout + rerun.stderr
+    assert rerun.returncode == 2, out
+    assert "STOP LOOPING" in out
+    assert "=== reader wave" not in out
+
+
 def test_receipt_suppression_is_confined_to_fetch_and_overlap() -> None:
     """A genuine red-tree failure must still write the STOP LOOPING receipt.
 
