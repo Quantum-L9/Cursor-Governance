@@ -69,6 +69,9 @@ ui-operator = [
 agent-sdk = [
     "claude-agent-sdk==0.2.168",
 ]
+# In-place minor/patch pin replacement (playwright 1.63.0 to 1.64.0,
+# claude-agent-sdk 0.2.163 to 0.2.168). The remediation commit message
+# carries ALLOW-ROOT-DELETION for this additive_only file.
 
 # Repo-root layout (rules/, skills/, commands/, ops/, ...) is not an installable
 # package — pyproject.toml exists only to pin the dependency/interpreter contract.
