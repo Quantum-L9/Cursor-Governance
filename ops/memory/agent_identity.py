@@ -86,6 +86,13 @@ ACTOR_REGISTRY_PREFIX: Final = "l9.actor-registry/global@1#"
 SURFACE_REGISTRY_PREFIX: Final = "l9.surface-registry/global@1#"
 UNKNOWN_IDENTITY: Final = "unknown"
 MEMORY_PRODUCT_REF: Final = "l9-graphiti-memory:product/l9-graphite-memory"
+#: Public OAuth client identifiers are not actors. They never select cursor
+#: or claude-code, including when no host marker is present.
+OAUTH_CLIENT_ENV_KEYS: Final = (
+    "L9_MEMORY_OAUTH_CLIENT_ID",
+    "AUTH0_CLIENT_ID",
+    "OAUTH_CLIENT_ID",
+)
 
 
 class IdentityResolutionError(ValueError):
@@ -109,9 +116,15 @@ def _is_claude(env: Mapping[str, str]) -> bool:
 
 
 def _claude_identity(env: Mapping[str, str]) -> str:
-    if _flag(env, "CLAUDE_CODE_REMOTE").lower() == "true":
-        if _flag(env, "CLAUDE_CODE_ENTRYPOINT").lower() not in REMOTE_ENTRYPOINTS:
-            return ""
+    """Claude Code is one actor. An unrecognized surface stays unknown elsewhere.
+
+    Desktop, CLI, web, and mobile share ``claude-code``. This function does
+    not read ``L9_MEMORY_AGENT_ID`` or an OAuth public client id, and it does
+    not relabel an unknown entrypoint as mobile.
+    """
+
+    if not _is_claude(env):
+        return ""
     return CLAUDE_ACTOR
 
 
@@ -125,6 +138,21 @@ def canonical_actor_id(value: str | None) -> str:
     return HISTORICAL_ACTOR_ALIASES.get(actor, actor)
 
 
+def oauth_public_client_claim(env: Mapping[str, str] | None = None) -> str:
+    """The first public OAuth client id in *env*, or "" when none is set.
+
+    The value is not an actor. Callers must not map it to ``cursor`` or
+    ``claude-code``.
+    """
+
+    source = os.environ if env is None else env
+    for name in OAUTH_CLIENT_ENV_KEYS:
+        claim = _flag(source, name)
+        if claim:
+            return claim
+    return ""
+
+
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
     """The writing agent's identity, derived from host markers; "" when unknown."""
     source = os.environ if env is None else env
@@ -132,7 +160,15 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
         return CURSOR
     if _is_claude(source):
         return _claude_identity(source)
+    # A public client id, alone or stuffed into the free-form agent slot, is
+    # not evidence of an actor.
+    if oauth_public_client_claim(source):
+        explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+        if not explicit or explicit == oauth_public_client_claim(source):
+            return ""
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
+    if explicit and explicit == oauth_public_client_claim(source):
+        return ""
     return explicit if explicit in ADAPTER_IDENTITIES else ""
 
 

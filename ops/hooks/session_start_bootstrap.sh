@@ -669,7 +669,7 @@ ${ROUTE_LOCATOR_MD}
 EOF
 )"
 
-# ADR-0031: mint signed agent assertion for MCP stdio (never human door secret).
+# ADR-0031: mint the signed agent assertion (never the human door secret).
 # Must run BEFORE exit — dead code after exit 0 never executes. Env is merged into
 # the sessionStart JSON `env` block so Cursor/Claude surfaces receive it.
 ASSERTION_ENV_JSON="{}"

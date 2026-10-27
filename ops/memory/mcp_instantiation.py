@@ -12,10 +12,11 @@ by design (memory ADR-064). This module renders a **real per-machine file**:
   for credentials, so no secret value is ever written here);
 - servers the user added on this machine are preserved;
 - the legacy ``graphiti-memory`` key is dropped wherever it appears;
-- the ``l9-graphite-memory`` entry is never authored here. It is delegated to
-  the memory package configurator against the runtime this checkout is bound
-  to (``ops/memory/runtime_binding.py``), and proven by the package's own
-  ``client cursor verify --path`` handshake when asked.
+- the ``l9-graphite-memory`` entry is never authored here. A package whose
+  managed entry is native authenticated Streamable HTTP may write it through
+  ``l9-memory client cursor install``. A package that only knows local stdio
+  is ``upstream_blocked`` and is not installed as a fallback. A stdio-shaped
+  entry already in the file is dropped rather than preserved.
 
 The receipt written beside the session state carries ``authority: none``:
 it records what was rendered and what memory reported, never a claim that
@@ -44,6 +45,7 @@ MASTER_PATH = _REPO_ROOT / "environment" / "mcp" / "master.mcp.json"
 MEMORY_KEY = "l9-graphite-memory"
 #: Legacy direct-provider front door keys, removed from every rendered file.
 LEGACY_KEYS = frozenset({"graphiti-memory", "l9-shared-memory"})
+NATIVE_HTTP_TYPES = frozenset({"http", "streamable-http", "streamable_http"})
 RECEIPT_SCHEMA = "cursor.mcp-instantiation/v1"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
 #: Read by l9-graphite-memory 2.6.0 client_config. The value is an absolute
@@ -68,15 +70,41 @@ def default_receipt_path() -> Path:
 # ---------------------------------------------------------------------------
 
 
+def classify_managed_config(config: Mapping[str, Any]) -> str:
+    """Classify a package-owned Memory MCP entry without writing one.
+
+    ``native_http`` is an authenticated Streamable HTTP client entry with no
+    env block and no headers. ``stdio_only`` is a local command. Anything else,
+    including a URL that carries secrets, is ``unknown`` and is not installed.
+    """
+
+    if not isinstance(config, Mapping):
+        return "unknown"
+    args = [str(item) for item in (config.get("args") or [])]
+    transport = ""
+    if "--transport" in args:
+        index = args.index("--transport")
+        if index + 1 < len(args):
+            transport = args[index + 1].lower()
+    declared = str(config.get("type") or config.get("transport") or transport).lower()
+    if "env" in config or "headers" in config:
+        return "unknown"
+    if declared in NATIVE_HTTP_TYPES and config.get("url") and not config.get("command"):
+        return "native_http"
+    if declared == "stdio" or config.get("command") or transport == "stdio":
+        return "stdio_only"
+    return "unknown"
+
+
 def render_machine_config(
     master: Mapping[str, Any], existing: Mapping[str, Any] | None
 ) -> tuple[dict[str, Any], dict[str, str], list[str]]:
     """Return ``(config, dropped-by-name, preserved unmanaged keys)``.
 
     Managed servers take the master's definition (private ``_``-prefixed keys
-    stripped). The memory key and the legacy front door are never rendered from
-    the master; the memory key is preserved when the configurator already
-    wrote it, the legacy key is removed unconditionally.
+    stripped). The memory key is never copied from the master. A native HTTP
+    entry already written by the package is preserved. A stdio-shaped memory
+    entry is dropped. Legacy provider keys are removed unconditionally.
     """
 
     managed = {
@@ -99,6 +127,15 @@ def render_machine_config(
         if name in servers:
             servers.pop(name)
             dropped[name] = "legacy direct-provider front door retired (stage C7)"
+    current_memory = servers.get(MEMORY_KEY)
+    if (
+        isinstance(current_memory, dict)
+        and classify_managed_config(current_memory) != "native_http"
+    ):
+        servers.pop(MEMORY_KEY, None)
+        dropped[MEMORY_KEY] = (
+            "refusing a non-native Memory MCP entry; the package must own Streamable HTTP"
+        )
     preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     config: dict[str, Any] = {
         key: value
@@ -176,6 +213,46 @@ def package_install_env(base: Mapping[str, str] | None = None) -> dict[str, str]
     return env
 
 
+_INSPECT_ENTRY = """
+import json, sys
+from l9_graphite_memory.client_config.cursor import managed_server_entry
+entry = managed_server_entry(sys.argv[1] if len(sys.argv) > 1 else None)
+config = entry.as_config()
+if not isinstance(config, dict):
+    config = {"command": entry.command, "args": list(entry.args)}
+json.dump(config, sys.stdout)
+"""
+
+
+def inspect_package_managed_entry(
+    interpreter: Path,
+    *,
+    runner: Runner = subprocess.run,
+) -> dict[str, Any]:
+    """Read the package-owned Cursor entry. Does not write a config file."""
+
+    result = runner(
+        [str(interpreter), "-c", _INSPECT_ENTRY, str(interpreter)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        return {
+            "classification": "unavailable",
+            "reason": "package managed entry could not be inspected",
+            "exit_code": result.returncode,
+        }
+    try:
+        config = json.loads(result.stdout or "")
+    except ValueError:
+        return {"classification": "unavailable", "reason": "package entry was not JSON"}
+    if not isinstance(config, dict):
+        return {"classification": "unavailable", "reason": "package entry was not an object"}
+    return {"classification": classify_managed_config(config), "config": config}
+
+
 def memory_entry(
     *,
     config_path: Path,
@@ -211,6 +288,27 @@ def memory_entry(
         return {"status": "unavailable", "reason": f"interpreter not found: {interpreter_path}"}
     if not cli.is_file():
         return {"status": "unavailable", "reason": f"l9-memory not installed beside {cli.parent}"}
+    inspected = inspect_package_managed_entry(interpreter_path, runner=runner)
+    kind = str(inspected.get("classification") or "unavailable")
+    if kind != "native_http":
+        reasons = {
+            "stdio_only": (
+                "UPSTREAM_BLOCKED: the memory package's Cursor entry is local stdio; "
+                "native Streamable HTTP is selected and this repo will not install a fallback"
+            ),
+            "unknown": (
+                "UPSTREAM_BLOCKED: the memory package entry is not native authenticated "
+                "Streamable HTTP"
+            ),
+            "unavailable": str(inspected.get("reason") or "memory package entry is unavailable"),
+        }
+        status = "unavailable" if kind == "unavailable" else "upstream_blocked"
+        return {
+            "status": status,
+            "reason": reasons.get(kind, reasons["unknown"]),
+            "classification": kind,
+            "interpreter_source": source,
+        }
     argv = [
         str(cli),
         "client",
@@ -350,7 +448,7 @@ def exit_code(receipt: Mapping[str, Any]) -> int:
     if receipt.get("status") == "drift":
         return 2
     memory_status = str((receipt.get("memory") or {}).get("status") or "")
-    return 1 if memory_status == "blocked" else 0
+    return 1 if memory_status in {"blocked", "upstream_blocked"} else 0
 
 
 def _render_text(receipt: Mapping[str, Any]) -> str:

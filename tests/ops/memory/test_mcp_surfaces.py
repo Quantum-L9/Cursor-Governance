@@ -1,12 +1,9 @@
 """MCP surfaces for the memory control plane: Claude Code template + Claude Desktop render.
 
-The memory package owns the argv of its MCP entry. Claude Code's project
-scope launches that argv through the bootstrap spawn wrapper
-(``${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh``) so a Dock
-session does not need ``L9_MEMORY_INTERPRETER`` in the parent env. Claude
-Desktop cannot expand variables at all, so a renderer derives its file from
-the master inventory under Desktop's constraints and hands the memory entry
-to the package's configurator.
+Claude Code's project MCP must not declare a Memory server. The account
+connector owns native Streamable HTTP. A previous stdio entry is retired
+so projection cannot preserve it. Claude Desktop does not keep a stdio
+Memory entry either. Unrelated servers stay.
 """
 
 from __future__ import annotations
@@ -62,27 +59,33 @@ desktop = _load("render_claude_desktop_config", RENDERER)
 # ---------------------------------------------------------------------------
 
 
-def test_template_memory_entry_matches_the_package_shape_and_is_secret_free() -> None:
+def test_template_declares_no_project_memory_server() -> None:
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    entry = template["mcpServers"]["l9-graphite-memory"]
-    assert entry["type"] == "stdio"
-    assert entry["command"] == MEMORY_WRAPPER
-    assert entry["args"] == MEMORY_ARGS
-    assert "L9_MEMORY_INTERPRETER" not in (entry.get("_requires_env") or [])
-    for forbidden in ("env", "url", "headers"):
-        assert forbidden not in entry
-    wrapper = ROOT / "ops" / "memory" / "run_memory_mcp.sh"
-    assert wrapper.is_file() and os.access(wrapper, os.X_OK)
+    assert "l9-graphite-memory" not in template["mcpServers"]
+    assert "l9-graphite-memory" in template["_retired_servers"]
+    context7 = template["mcpServers"]["context7"]
+    assert context7["args"] == ["context7"]
+    assert "env" not in context7 and "headers" not in context7
 
 
-def test_memory_entry_renders_without_a_parent_interpreter() -> None:
-    """The wrapper is the bind gate; desktop must still render the server."""
+def test_projection_does_not_resurrect_a_stdio_memory_server() -> None:
+    """Known-bad: an existing stdio Memory entry used to be preserved."""
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    rendered = projection.render_mcp(template, None, environ={"GRAPHITI_MCP_URL": "x"})
-    entry = rendered["mcpServers"]["l9-graphite-memory"]
-    assert entry["command"] == MEMORY_WRAPPER
-    assert entry["args"] == MEMORY_ARGS
-    assert not any(key.startswith("_") for key in entry)
+    existing = {
+        "mcpServers": {
+            "l9-graphite-memory": {
+                "type": "stdio",
+                "command": MEMORY_WRAPPER,
+                "args": MEMORY_ARGS,
+            },
+            "my-own": {"command": "/me/server"},
+        }
+    }
+    rendered = projection.render_mcp(template, existing, environ={})
+    servers = rendered["mcpServers"]
+    assert "l9-graphite-memory" not in servers
+    assert servers["my-own"] == {"command": "/me/server"}
+    assert servers["context7"]["args"] == ["context7"]
 
 
 def _committed_mcp_json() -> dict:
@@ -108,19 +111,19 @@ def _committed_mcp_json() -> dict:
 
 
 def test_committed_projection_is_current_for_an_unbound_environment() -> None:
-    """CI renders without L9_MEMORY_INTERPRETER; the wrapper entry still ships."""
+    """CI renders without a Memory server. context7 stays. Stdio is not preserved."""
 
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
-    committed = _committed_mcp_json()
+    on_disk = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
     environ = {
         k: v
         for k, v in os.environ.items()
         if k not in {"L9_MEMORY_INTERPRETER", "CONTEXT7_API_KEY"}
     }
-    environ.setdefault("GRAPHITI_MCP_URL", "https://example.invalid/mcp")
-    rendered = projection.render_mcp(template, committed, environ=environ)
-    assert rendered["mcpServers"] == committed["mcpServers"]
-    assert committed["mcpServers"]["l9-graphite-memory"]["command"] == MEMORY_WRAPPER
+    rendered = projection.render_mcp(template, on_disk, environ=environ)
+    assert "l9-graphite-memory" not in rendered["mcpServers"]
+    assert rendered["mcpServers"]["context7"]["args"] == ["context7"]
+    assert rendered["mcpServers"] == on_disk["mcpServers"]
 
 
 def test_template_argv_equals_the_packages_managed_entry() -> None:
@@ -143,6 +146,8 @@ def test_template_argv_equals_the_packages_managed_entry() -> None:
     shape = json.loads(out.stdout)
     assert shape["key"] == "l9-graphite-memory"
     assert shape["args"] == MEMORY_ARGS
+    template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
+    assert "l9-graphite-memory" not in template["mcpServers"]
 
 
 # ---------------------------------------------------------------------------
@@ -210,10 +215,10 @@ def test_desktop_user_servers_and_the_memory_entry_are_preserved(monkeypatch) ->
         _master(Playwright={"command": "npx", "args": ["@playwright/mcp@latest"]}), existing, {}
     )
     assert config["globalShortcut"] == "Cmd+Space"
-    assert preserved == ["l9-graphite-memory", "my-own"]
-    assert config["mcpServers"]["l9-graphite-memory"]["command"] == "/venv/bin/python"
-    assert config["mcpServers"]["Playwright"]["command"] == "/opt/npx"  # managed entry refreshed
-    assert skipped == {}
+    assert preserved == ["my-own"]
+    assert "l9-graphite-memory" not in config["mcpServers"]
+    assert config["mcpServers"]["Playwright"]["command"] == "/opt/npx"
+    assert "l9-graphite-memory" in skipped
 
 
 def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -> None:
@@ -228,7 +233,11 @@ def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -
         calls.append(argv)
         env = kwargs.get("env")
         envs.append(dict(env) if isinstance(env, dict) else {})
-        return subprocess.CompletedProcess(argv, 0, json.dumps({"status": "complete"}), "")
+        if "-c" in argv:
+            payload = {"url": "https://memory.example/mcp", "type": "streamable-http"}
+        else:
+            payload = {"status": "complete"}
+        return subprocess.CompletedProcess(argv, 0, json.dumps(payload), "")
 
     receipt = desktop._memory_entry(
         config_path=tmp_path / "claude_desktop_config.json",
@@ -238,11 +247,11 @@ def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -
         runner=runner,
     )
     assert receipt["status"] == "installed"
-    argv = calls[0]
+    argv = calls[1]
     assert argv[0] == str(venv / "l9-memory")
     assert argv[1:4] == ["client", "cursor", "install"]
     assert "--dry-run" in argv and "--path" in argv and "--interpreter" in argv
-    assert envs[0]["L9_MEMORY_MCP_COMMAND"].endswith("ops/memory/run_memory_mcp.sh")
+    assert envs[1]["L9_MEMORY_MCP_COMMAND"].endswith("ops/memory/run_memory_mcp.sh")
 
 
 def test_memory_entry_without_interpreter_is_skipped_not_invented(tmp_path: Path) -> None:
@@ -285,13 +294,13 @@ def test_real_master_renders_without_secrets(monkeypatch) -> None:
 
 
 def test_template_declares_no_legacy_provider_front_door() -> None:
-    """Stage C8: l9-graphite-memory is the only memory server Claude Code sees."""
+    """Project MCP has no Memory server. context7 is the remaining managed server."""
 
     template = json.loads(TEMPLATE.read_text(encoding="utf-8"))
     servers = template["mcpServers"]
     assert "graphiti-memory" not in servers
-    memory_servers = [name for name in servers if "memory" in name]
-    assert memory_servers == ["l9-graphite-memory"]
+    assert "l9-graphite-memory" not in servers
+    assert "l9-graphite-memory" in (template.get("_retired_servers") or [])
     functional = {
         name: {key: value for key, value in spec.items() if not key.startswith("_")}
         for name, spec in servers.items()

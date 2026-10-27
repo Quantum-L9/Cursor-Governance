@@ -235,4 +235,12 @@ Before committing, verify:
 | `ops/graphiti/MEMORY_BANK_POLICY.md` | Deprecated T0 policy — archival note |
 | `ops/graphiti/GATES-002-ACTIVATION.md` | Soak + gate flip runbook |
 
+## Native Cursor MCP (2026-10-26)
+
+The package owns the Cursor Memory MCP entry. This repo does not render a
+second one. Native transport is authenticated Streamable HTTP. If the
+installed package's Cursor entry is local stdio, report `UPSTREAM_BLOCKED`
+and do not install it. Unrelated user MCP servers stay. A public OAuth
+client id is not the Cursor actor.
+
 <!-- generated-from: rules/87-cursor-memory-kernel.mdc; do-not-edit -->

@@ -40,14 +40,32 @@ REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_regis
         ({"L9_MEMORY_AGENT_ID": "agent-b"}, ""),
         ({"L9_MEMORY_AGENT_ID": "IgorBot"}, ""),
         # no guessing
-        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}, ""),
-        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, ""),
+        (
+            {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"},
+            "claude-code",
+        ),
+        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, "claude-code"),
         ({"L9_MEMORY_AGENT_ID": "claude-code"}, ""),
         ({}, ""),
     ],
 )
 def test_the_identity_is_derived_from_host_markers(env: dict[str, str], expected: str) -> None:
     assert ai.resolve_agent_id(env) == expected
+
+
+def test_oauth_public_client_id_is_not_an_actor() -> None:
+    assert ai.resolve_agent_id({"L9_MEMORY_OAUTH_CLIENT_ID": "public-client"}) == ""
+    assert ai.resolve_agent_id({"AUTH0_CLIENT_ID": "public-client"}) == ""
+    assert (
+        ai.resolve_agent_id(
+            {"L9_MEMORY_AGENT_ID": "public-client", "OAUTH_CLIENT_ID": "public-client"}
+        )
+        == ""
+    )
+    assert ai.resolve_agent_id({"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "other"}) == (
+        "manus"
+    )
+    assert ai.resolve_surface_id({"L9_MEMORY_OAUTH_CLIENT_ID": "public-client"}) == ""
 
 
 def test_a_configured_value_that_disagrees_is_reported_as_drift() -> None:
@@ -61,10 +79,11 @@ def test_a_configured_value_that_disagrees_is_reported_as_drift() -> None:
 
 
 def test_an_unidentifiable_surface_says_why() -> None:
-    reason = ai.unresolved_reason(
-        {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}
-    )
-    assert "remote_web" in reason and "no registered memory identity" in reason
+    env = {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}
+    assert ai.resolve_agent_id(env) == "claude-code"
+    assert ai.resolve_surface_id(env) == ""
+    assert ai.resolve_surface_id(env) != "claude-code-mobile"
+    assert ai.unresolved_reason(env) == ""
     assert "retired" in ai.unresolved_reason({"L9_MEMORY_AGENT_ID": "claude-code-desktop"})
     assert ai.unresolved_reason(MOBILE) == ""
 

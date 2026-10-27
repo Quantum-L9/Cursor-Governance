@@ -116,3 +116,12 @@ memcli readiness --json
 ```
 
 Load skill: **`l9-graphiti-memory`**
+
+## Native MCP (2026-10-26)
+
+Memory 3.0 MCP is native authenticated Streamable HTTP to `MemoryService`.
+Do not add a project stdio Memory server or a bridge. Raw Graphiti provider
+HTTP stays forbidden. The `ops/memory` CLI above is the operator/hook lane,
+not a substitute MCP transport. A package that only knows stdio is
+`UPSTREAM_BLOCKED`. Live Auth0 and mobile proof stay UNKNOWN. Law:
+CANONICAL_LAW §8.10.

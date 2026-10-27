@@ -168,8 +168,17 @@ def render_config(
     # appended its key (or after Desktop added one) is byte-stable: managed
     # entries are refreshed in place, new ones appended, skipped ones removed.
     servers: dict[str, Any] = dict((existing or {}).get("mcpServers") or {})
-    preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     skipped: dict[str, str] = {}
+    current_memory = servers.get(MEMORY_KEY)
+    if isinstance(current_memory, dict):
+        from ops.memory.mcp_instantiation import classify_managed_config
+
+        if classify_managed_config(current_memory) != "native_http":
+            servers.pop(MEMORY_KEY, None)
+            skipped[MEMORY_KEY] = (
+                "refusing a non-native Memory MCP entry; the package must own Streamable HTTP"
+            )
+    preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     for name, spec in managed.items():
         entry, reason = render_server(name, spec, environ)
         if entry is None:
@@ -235,6 +244,22 @@ def _memory_entry(
         return {
             "status": "unavailable",
             "reason": f"l9-memory not installed beside {interpreter_path}",
+        }
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from ops.memory.mcp_instantiation import inspect_package_managed_entry
+
+    inspected = inspect_package_managed_entry(interpreter_path, runner=runner)
+    if inspected.get("classification") != "native_http":
+        kind = str(inspected.get("classification") or "unavailable")
+        status = "unavailable" if kind == "unavailable" else "upstream_blocked"
+        return {
+            "status": status,
+            "reason": (
+                "UPSTREAM_BLOCKED: package Cursor entry is not native Streamable HTTP; "
+                "stdio is not installed as a Memory fallback"
+            ),
+            "classification": kind,
         }
     argv = [
         str(cli),
@@ -361,7 +386,7 @@ def main(argv: list[str] | None = None) -> int:
     if status == "drift":
         return 2
     memory_status = (receipt.get("memory") or {}).get("status")
-    return 1 if memory_status == "blocked" else 0
+    return 1 if memory_status in {"blocked", "upstream_blocked"} else 0
 
 
 if __name__ == "__main__":

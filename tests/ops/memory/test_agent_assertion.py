@@ -333,9 +333,18 @@ def test_claude_remote_mobile_resolves_mobile_surface() -> None:
     assert "session-secret-must-not-leak" not in json.dumps(evidence)
 
 
-def test_unknown_claude_remote_entrypoint_refuses_identity() -> None:
-    with pytest.raises(Exception, match="no memory identity|no registered|ENTRYPOINT"):
-        _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_unknown"})
+def test_unknown_claude_remote_entrypoint_keeps_actor_and_unknown_surface() -> None:
+    assertion = _resolved(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_unknown",
+            "CLAUDECODE": "1",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "unknown"
+    assert "claude-code-mobile" not in dims["surface_identity"]
 
 
 def _full_principal(agent_id: str) -> dict[str, object]:
@@ -445,18 +454,19 @@ def test_remote_mobile_exports_claude_actor_and_a_legal_door_grant(
     assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
 
 
-def test_unknown_remote_entrypoint_refuses_export(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
-    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
-    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "remote_unknown")
-    monkeypatch.setenv("CLAUDECODE", "1")
-    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
-    assert helper.main(["--format", "json"]) == 2
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "remote_unknown" in captured.err
+def test_unknown_remote_entrypoint_does_not_relabel_mobile() -> None:
+    assertion = _resolved(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_unknown",
+            "CLAUDECODE": "1",
+            "L9_MEMORY_OAUTH_CLIENT_ID": "public-client-must-not-be-an-actor",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "unknown"
+    assert "public-client-must-not-be-an-actor" not in json.dumps(dims)
 
 
 def test_adapter_without_surface_evidence_is_unknown() -> None:
