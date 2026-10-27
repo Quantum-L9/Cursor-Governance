@@ -608,3 +608,47 @@ def test_failed_install_hooks_does_not_install_a_hook(tmp_path: Path) -> None:
     assert "install-hooks" in log, log
     assert "install --hook-type" not in log, log
     assert not (repo / ".git" / "hooks" / "pre-push").exists()
+
+
+@needs_pre_commit
+def test_cached_dependency_stamp_still_installs_missing_declared_hook(tmp_path: Path) -> None:
+    """A proven dependency stamp must not skip a missing declared pre-push hook.
+
+    The stamp is written even when hook install failed, and stamps from before
+    required_git_hook_types existed never enter install_repo again. The next
+    cached SessionStart reconciles the hook without a toolchain reinstall.
+    """
+    repo = _hook_repo(tmp_path, "IB-Odoo_19", _ODOO_ORIGIN)
+    home = tmp_path / "home"
+    precommit_bin = _precommit_path(tmp_path)
+    first = run(
+        repo,
+        home,
+        budget="60",
+        path_prefix=precommit_bin,
+        extra_env=_GIT_ISOLATION,
+    )
+    assert first.returncode == 0, first.stdout + first.stderr
+    hook = repo / ".git" / "hooks" / "pre-push"
+    assert hook.is_file(), first.stdout + first.stderr
+    assert _stamps(home)
+    hook.unlink()
+    second = run(
+        repo,
+        home,
+        budget="60",
+        path_prefix=precommit_bin,
+        extra_env=_GIT_ISOLATION,
+    )
+    combined = second.stdout + second.stderr
+    assert second.returncode == 0, combined
+    assert "cached and proven" in second.stdout, combined
+    assert "installing toolchain" not in combined, combined
+    assert "reconciling" in second.stderr, combined
+    assert hook.is_file(), combined
+    assert os.access(hook, os.X_OK)
+    lines = hook.read_text(encoding="utf-8").splitlines()
+    for expected in _PRE_PUSH_HOOK_LINES:
+        assert expected in lines, lines
+    assert not (repo / ".git" / "hooks" / "pre-commit").exists()
+    assert not (repo / ".git" / "hooks" / "commit-msg").exists()
