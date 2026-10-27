@@ -101,6 +101,35 @@ def test_render_copies_managed_servers_and_drops_the_legacy_front_door() -> None
     assert set(dropped) == {"graphiti-memory", "l9-graphite-memory"}
 
 
+def test_existing_http_memory_entry_is_dropped_before_package_install() -> None:
+    """Known-bad: a hand-written HTTP URL used to survive as native Memory."""
+
+    existing = {
+        "mcpServers": {
+            "my-own": {"command": "/me/server"},
+            "l9-graphite-memory": {
+                "type": "streamable-http",
+                "url": "https://user:secret@graphiti.example/mcp",
+            },
+        }
+    }
+    config, dropped, preserved = inst.render_machine_config(_master(), existing)
+    assert "l9-graphite-memory" not in config["mcpServers"]
+    assert config["mcpServers"]["my-own"] == {"command": "/me/server"}
+    assert preserved == ["my-own"]
+    assert "package-owned" in dropped["l9-graphite-memory"]
+    assert "secret" not in json.dumps(config)
+    assert (
+        inst.classify_managed_config(
+            {
+                "type": "streamable-http",
+                "url": "https://user:secret@graphiti.example/mcp",
+            }
+        )
+        == "unknown"
+    )
+
+
 def test_render_from_nothing_has_no_memory_entry_and_no_private_keys() -> None:
     config, dropped, preserved = inst.render_machine_config(
         _master(docs={"command": "tool", "_owner": "x"}), None

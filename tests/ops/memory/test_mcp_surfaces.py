@@ -201,13 +201,16 @@ def test_non_secret_env_expands_and_unset_env_skips(monkeypatch) -> None:
     assert "OTHER_ROOT" in skipped["other"]
 
 
-def test_desktop_user_servers_and_the_memory_entry_are_preserved(monkeypatch) -> None:
+def test_desktop_drops_stdio_and_http_memory_and_keeps_user_servers(monkeypatch) -> None:
     monkeypatch.setattr(desktop.shutil, "which", lambda name: f"/opt/{name}")
     existing = {
         "globalShortcut": "Cmd+Space",
         "mcpServers": {
             "my-own": {"command": "/me/server"},
-            "l9-graphite-memory": {"command": "/venv/bin/python", "args": MEMORY_ARGS},
+            "l9-graphite-memory": {
+                "type": "streamable-http",
+                "url": "https://user:secret@memory.example/mcp",
+            },
             "Playwright": {"command": "/stale/npx", "args": []},
         },
     }
@@ -217,41 +220,31 @@ def test_desktop_user_servers_and_the_memory_entry_are_preserved(monkeypatch) ->
     assert config["globalShortcut"] == "Cmd+Space"
     assert preserved == ["my-own"]
     assert "l9-graphite-memory" not in config["mcpServers"]
+    assert "secret" not in json.dumps(config)
     assert config["mcpServers"]["Playwright"]["command"] == "/opt/npx"
-    assert "l9-graphite-memory" in skipped
+    assert "account-managed connector" in skipped["l9-graphite-memory"]
 
 
-def test_memory_entry_is_delegated_to_the_package_configurator(tmp_path: Path) -> None:
-    venv = tmp_path / "venv" / "bin"
-    venv.mkdir(parents=True)
-    (venv / "python").write_text("", encoding="utf-8")
-    (venv / "l9-memory").write_text("", encoding="utf-8")
+def test_desktop_does_not_install_the_cursor_memory_client(tmp_path: Path) -> None:
+    """Known-bad: a native HTTP package entry used to trigger cursor install."""
+
     calls: list[list[str]] = []
-    envs: list[dict[str, str]] = []
 
     def runner(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        del kwargs
         calls.append(argv)
-        env = kwargs.get("env")
-        envs.append(dict(env) if isinstance(env, dict) else {})
-        if "-c" in argv:
-            payload = {"url": "https://memory.example/mcp", "type": "streamable-http"}
-        else:
-            payload = {"status": "complete"}
-        return subprocess.CompletedProcess(argv, 0, json.dumps(payload), "")
+        return subprocess.CompletedProcess(argv, 0, "{}", "")
 
     receipt = desktop._memory_entry(
         config_path=tmp_path / "claude_desktop_config.json",
-        interpreter=str(venv / "python"),
+        interpreter=str(tmp_path / "python"),
         check=True,
-        verify=False,
+        verify=True,
         runner=runner,
     )
-    assert receipt["status"] == "installed"
-    argv = calls[1]
-    assert argv[0] == str(venv / "l9-memory")
-    assert argv[1:4] == ["client", "cursor", "install"]
-    assert "--dry-run" in argv and "--path" in argv and "--interpreter" in argv
-    assert envs[1]["L9_MEMORY_MCP_COMMAND"].endswith("ops/memory/run_memory_mcp.sh")
+    assert receipt["status"] == "skipped"
+    assert "cursor install" in receipt["reason"]
+    assert calls == []
 
 
 def test_memory_entry_without_interpreter_is_skipped_not_invented(tmp_path: Path) -> None:

@@ -12,11 +12,12 @@ by design (memory ADR-064). This module renders a **real per-machine file**:
   for credentials, so no secret value is ever written here);
 - servers the user added on this machine are preserved;
 - the legacy ``graphiti-memory`` key is dropped wherever it appears;
-- the ``l9-graphite-memory`` entry is never authored here. A package whose
-  managed entry is native authenticated Streamable HTTP may write it through
-  ``l9-memory client cursor install``. A package that only knows local stdio
-  is ``upstream_blocked`` and is not installed as a fallback. A stdio-shaped
-  entry already in the file is dropped rather than preserved.
+- the ``l9-graphite-memory`` entry is never authored here, and an entry
+  already in the file is dropped. Shape alone is not package provenance.
+  A package whose managed entry is native authenticated Streamable HTTP may
+  write a new one through ``l9-memory client cursor install``. A package that
+  only knows local stdio is ``upstream_blocked`` and is not installed as a
+  fallback.
 
 The receipt written beside the session state carries ``authority: none``:
 it records what was rendered and what memory reported, never a claim that
@@ -89,7 +90,12 @@ def classify_managed_config(config: Mapping[str, Any]) -> str:
     declared = str(config.get("type") or config.get("transport") or transport).lower()
     if "env" in config or "headers" in config:
         return "unknown"
-    if declared in NATIVE_HTTP_TYPES and config.get("url") and not config.get("command"):
+    url = str(config.get("url") or "")
+    if "://" in url:
+        authority = url.split("://", 1)[1].split("/", 1)[0]
+        if "@" in authority:
+            return "unknown"
+    if declared in NATIVE_HTTP_TYPES and url and not config.get("command"):
         return "native_http"
     if declared == "stdio" or config.get("command") or transport == "stdio":
         return "stdio_only"
@@ -102,9 +108,9 @@ def render_machine_config(
     """Return ``(config, dropped-by-name, preserved unmanaged keys)``.
 
     Managed servers take the master's definition (private ``_``-prefixed keys
-    stripped). The memory key is never copied from the master. A native HTTP
-    entry already written by the package is preserved. A stdio-shaped memory
-    entry is dropped. Legacy provider keys are removed unconditionally.
+    stripped). The memory key is never copied from the master. An existing
+    memory entry is dropped regardless of shape; only a later package install
+    may write one. Legacy provider keys are removed unconditionally.
     """
 
     managed = {
@@ -127,14 +133,11 @@ def render_machine_config(
         if name in servers:
             servers.pop(name)
             dropped[name] = "legacy direct-provider front door retired (stage C7)"
-    current_memory = servers.get(MEMORY_KEY)
-    if (
-        isinstance(current_memory, dict)
-        and classify_managed_config(current_memory) != "native_http"
-    ):
+    if MEMORY_KEY in servers:
         servers.pop(MEMORY_KEY, None)
         dropped[MEMORY_KEY] = (
-            "refusing a non-native Memory MCP entry; the package must own Streamable HTTP"
+            "dropping the existing Memory entry; only a package-owned native "
+            "Streamable HTTP install may write it"
         )
     preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     config: dict[str, Any] = {
