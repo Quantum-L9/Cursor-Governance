@@ -100,8 +100,8 @@ confirm). Tests once belong to that Build. Then:
 "$GOV_PY" "$GOV_EXEC" --workspace "$WORK" --resume --mode finalize --commit-when-done
 ```
 
-Finalize already publishes on `claude-code`, `codex`, `gemini`, and `manus`.
-Do not publish again there. Cursor finalize stops before `make pr`; publish
+Finalize already publishes on `claude-code`, `codex`, `gemini`, and `manus`
+with `PR_REMEDIATE=0`. Do not publish again there. Cursor finalize stops before `make pr`; publish
 only on Cursor:
 
 ```bash
@@ -157,7 +157,7 @@ the governance imports.
 - L4 local commits; no mid-work push. Cursor finalize is `authorize-release`
   then `PR_REMEDIATE=0 make pr` / `l9 pr` (from a consumer, the
   `make -C "$GOV" pr WS="$WORK"` form above). Adapter surfaces publish inside
-  finalize; do not publish a second time.
+  finalize with `PR_REMEDIATE=0`; do not publish a second time.
 - Max 4 / 2 mutation Tasks. Admission via `autonomy/adapters/cursor/host_bridge.py`.
   If the lease is denied, serialize on the main agent. Do not ask.
 - No autonomous merge.

@@ -1294,11 +1294,11 @@ from {module_path} import ...
             return
         self._maybe_l4_release()
         argv = self._make_argv("pr")
-        self._record_subprocess("PR_REMEDIATE=1 " + " ".join(argv))
+        self._record_subprocess("PR_REMEDIATE=0 " + " ".join(argv))
         if dry_run():
             return
         env = os.environ.copy()
-        env["PR_REMEDIATE"] = "1"
+        env["PR_REMEDIATE"] = "0"
         result = subprocess.run(
             argv,
             cwd=GOV_ROOT,
