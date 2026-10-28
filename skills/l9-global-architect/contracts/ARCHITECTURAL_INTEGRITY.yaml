@@ -1,6 +1,6 @@
 metadata:
   contract_id: L9.GAR.ARCHITECTURAL_INTEGRITY.001
-  version: 0.7.0
+  version: 0.7.1
   kind: invariant
   status: review
   title: GAR Architectural Integrity
@@ -42,44 +42,44 @@ scope:
     - architecture_is_material
     - structural_change_is_material
     - build_fix_or_solution_is_proposed
-  normative_clauses:
-    - clause_id: AI-001
-      effect: require
-      subject: structural_complexity
-      action: be_earned_by_evidenced_responsibility
-      object: architecture
-      conditions:
-        - simpler_credible_alternative_is_considered
-    - clause_id: AI-002
-      effect: require
-      subject: authoritative_state_and_responsibility
-      action: have_explicit_canonical_ownership
-      object: architecture
-      conditions:
-        - multi_owner_semantics_require_explicit_coordination_contract
-    - clause_id: AI-003
-      effect: prohibit
-      subject: material_decision
-      action: depend_on_unsupported_assumption
-      object: architecture_plan_implementation_or_verification
-      conditions:
-        - assumption_can_change_material_outcome
-    - clause_id: AI-004
-      effect: require
-      subject: proposed_build_fix_or_solution
-      action: answer_required_architecture_questions_with_bound_evidence
-      object: architecture_direction_l9_alignment_and_intervention_fidelity
-      conditions:
-        - unanswered_is_blocking_unknown
-        - silent_yes_is_not_an_answer
-    - clause_id: AI-005
-      effect: require
-      subject: l9_governed_architecture
-      action: satisfy_applicable_L9_architecture_profile_without_treating_profile_as_live_inventory
-      object: architecture
-      conditions:
-        - profile_applicability_is_resolved_from_explicit_scope_or_current_target_evidence
-        - current_role_and_capability_claims_require_current_evidence
+normative_clauses:
+  - clause_id: AI-001
+    effect: require
+    subject: structural_complexity
+    action: be_earned_by_evidenced_responsibility
+    object: architecture
+    conditions:
+      - simpler_credible_alternative_is_considered
+  - clause_id: AI-002
+    effect: require
+    subject: authoritative_state_and_responsibility
+    action: have_explicit_canonical_ownership
+    object: architecture
+    conditions:
+      - multi_owner_semantics_require_explicit_coordination_contract
+  - clause_id: AI-003
+    effect: prohibit
+    subject: material_decision
+    action: depend_on_unsupported_assumption
+    object: architecture_plan_implementation_or_verification
+    conditions:
+      - assumption_can_change_material_outcome
+  - clause_id: AI-004
+    effect: require
+    subject: proposed_build_fix_or_solution
+    action: answer_required_architecture_questions_with_bound_evidence
+    object: architecture_direction_l9_alignment_and_intervention_fidelity
+    conditions:
+      - unanswered_is_blocking_unknown
+      - silent_yes_is_not_an_answer
+  - clause_id: AI-005
+    effect: require
+    subject: l9_governed_architecture
+    action: satisfy_applicable_L9_architecture_profile_without_treating_profile_as_live_inventory
+    object: architecture
+    conditions:
+      - profile_applicability_is_resolved_from_explicit_scope_or_current_target_evidence
+      - current_role_and_capability_claims_require_current_evidence
 dependencies:
   requires_contracts:
     - L9.GAR.EPISTEMIC_DISCIPLINE.001

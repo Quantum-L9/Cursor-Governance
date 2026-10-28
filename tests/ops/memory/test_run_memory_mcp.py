@@ -62,6 +62,7 @@ def _stub_gov(tmp_path: Path) -> Path:
     (memory / "__init__.py").write_text("", encoding="utf-8")
     (memory / "runtime_binding.py").write_text(_STUB, encoding="utf-8")
     shutil.copy(BINDER, lib / "bind_memory_interpreter.sh")
+    shutil.copy(REPO_ROOT / "ops" / "scripts" / "lib" / "venv_ready.sh", lib / "venv_ready.sh")
     shutil.copy(EXPORTER, memory / "export_agent_assertion_env.sh")
     shutil.copy(REPO_ROOT / "ops" / "memory" / "agent_identity.py", memory / "agent_identity.py")
     return gov

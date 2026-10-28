@@ -215,28 +215,44 @@ def _render_memory_server(workspace: Path, command: str = _WRAPPER_REF) -> None:
     )
 
 
+def _render_conforming_mcp(workspace: Path) -> None:
+    """Source-conformant project file: context7 only, no Memory server."""
+    (workspace / ".mcp.json").write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "context7": {
+                        "command": "${HOME}/.cursor-governance/ops/secrets/run_vault_mcp_bridge.sh",
+                        "args": ["context7"],
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _ready_mcp(workspace: Path, home: Path, monkeypatch) -> Path:
-    """Hermetic READY fixture: wrapper under HOME, rendered command, stub interp."""
+    """Source-conformant MCP file. Native activation stays UNKNOWN."""
     monkeypatch.setenv("HOME", str(home))
-    _install_spawn_wrapper(home)
     stub = _stub_interpreter(workspace)
     monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
-    _render_memory_server(workspace)
+    _render_conforming_mcp(workspace)
     return stub
 
 
 def test_ready_without_parent_interpreter_when_binding_resolves(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Desktop READY: wrapper on disk, parent did not export L9_MEMORY_INTERPRETER."""
+    """A project Memory server is rejected. A file without one is source-READY."""
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
-    _install_spawn_wrapper(home)
-    stub = _stub_interpreter(tmp_path)
-    monkeypatch.delenv("L9_MEMORY_INTERPRETER", raising=False)
-    monkeypatch.setattr(er, "_resolve_memory_interpreter", lambda _env: str(stub))
     _render_memory_server(tmp_path)
-    assert er._claude_mcp_health(tmp_path)[0] == READY
+    assert er._claude_mcp_health(tmp_path)[0] == DEGRADED
+    _render_conforming_mcp(tmp_path)
+    status, note = er._claude_mcp_health(tmp_path)
+    assert status == READY
+    assert "UNKNOWN" in note
 
 
 def test_resolve_memory_interpreter_forwards_environ(monkeypatch) -> None:
@@ -309,7 +325,7 @@ def test_memory_layers_map_to_three_dimensions(tmp_path: Path, monkeypatch) -> N
     assert status == DEGRADED and "mcp.json" in note
     _render_memory_server(tmp_path)
     status, note = er._claude_mcp_health(tmp_path)
-    assert status == DEGRADED and "spawn wrapper" in note
+    assert status == DEGRADED and "rejected" in note
     _ready_mcp(tmp_path, tmp_path / "home", monkeypatch)
     assert er._claude_mcp_health(tmp_path)[0] == READY
 
@@ -326,7 +342,7 @@ def test_nonexistent_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> No
     _render_memory_server(tmp_path)
     status, note = er._claude_mcp_health(tmp_path)
     assert status == DEGRADED
-    assert "not a file" in note and "mcp_config" in note
+    assert "rejected" in note and "mcp_config" in note
 
 
 def test_non_executable_interpreter_is_not_ready(tmp_path: Path, monkeypatch) -> None:
@@ -338,21 +354,18 @@ def test_non_executable_interpreter_is_not_ready(tmp_path: Path, monkeypatch) ->
     monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
     _render_memory_server(tmp_path)
     status, note = er._claude_mcp_health(tmp_path)
-    assert status == DEGRADED and "not executable" in note
+    assert status == DEGRADED and "rejected" in note
 
 
 def test_rendered_command_not_the_spawn_wrapper_is_not_ready(tmp_path: Path, monkeypatch) -> None:
-    """What Claude would launch must be the bootstrap wrapper."""
-    home = tmp_path / "home"
-    monkeypatch.setenv("HOME", str(home))
-    wrapper = _install_spawn_wrapper(home)
-    stub = _stub_interpreter(tmp_path)
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
+    """Any project Memory server is rejected, including the old wrapper command."""
     _render_memory_server(tmp_path, command="/usr/bin/python3")
     status, note = er._claude_mcp_health(tmp_path)
-    assert status == DEGRADED and "spawn wrapper" in note
-    _render_memory_server(tmp_path, command=str(wrapper))
-    assert er._claude_mcp_health(tmp_path)[0] == READY
+    assert status == DEGRADED and "rejected" in note
+    _render_memory_server(
+        tmp_path, command="${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
+    )
+    assert er._claude_mcp_health(tmp_path)[0] == DEGRADED
 
 
 def test_stale_interpreter_without_the_package_is_not_ready(tmp_path: Path, monkeypatch) -> None:
@@ -364,7 +377,7 @@ def test_stale_interpreter_without_the_package_is_not_ready(tmp_path: Path, monk
     monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(stub))
     _render_memory_server(tmp_path)
     status, note = er._claude_mcp_health(tmp_path)
-    assert status == DEGRADED and "stale binding" in note
+    assert status == DEGRADED and "rejected" in note
 
 
 def test_interpreter_probe_that_cannot_run_is_unknown_never_ready(
@@ -373,7 +386,7 @@ def test_interpreter_probe_that_cannot_run_is_unknown_never_ready(
     _ready_mcp(tmp_path, tmp_path / "home", monkeypatch)
     monkeypatch.setattr(er, "_interpreter_carries_memory_package", lambda _p: None)
     status, note = er._claude_mcp_health(tmp_path)
-    assert status == UNKNOWN and "did not complete" in note
+    assert status == READY and "UNKNOWN" in note
 
 
 def test_the_package_probe_asks_the_bound_interpreter_itself(tmp_path: Path) -> None:
@@ -443,16 +456,15 @@ def test_a_missing_memory_server_is_degraded_and_names_gating(tmp_path: Path, mo
     R4 asks the memory package for `client cursor status`, which reads
     `~/.cursor/mcp.json`; grading a Claude surface from a Cursor artifact was
     a permanent false DEGRADED on Web and Mobile, and R4 is no longer read.
-    An absent memory server is DEGRADED. ``gated_out`` only annotates that
-    fact; only `context7` (a platform-proxied credential) is an absence by
-    design.
+    An absent Memory server is source-conformant. ``gated_out`` only annotates.
+    Native activation stays UNKNOWN and is not an overall BLOCKED.
     """
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     (tmp_path / ".mcp.json").write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
     gated = frozenset({er._MEMORY_MCP_SERVER})
     status, note = er._claude_mcp_health(tmp_path, gated_out=gated)
-    assert status == DEGRADED
-    assert "absent" in note and "gated" in note
+    assert status == READY
+    assert "UNKNOWN" in note and "retired" in note
     _ready_mcp(tmp_path, tmp_path / "home", monkeypatch)
     assert er._claude_mcp_health(tmp_path, gated_out=gated)[0] == READY
     assert er._claude_mcp_health(tmp_path, gated_out=frozenset({"context7"}))[0] == READY
@@ -467,7 +479,7 @@ def test_r4_is_never_consulted_for_the_claude_mcp_verdict(tmp_path: Path, monkey
     assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == READY
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="pass"))
     monkeypatch.setattr(er, "_resolve_memory_interpreter", lambda _env: "")
-    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == DEGRADED
+    assert er.memory_probe(tmp_path, tmp_path)["mcp"]["status"] == READY
 
 
 def test_gated_out_servers_are_read_from_the_receipt_not_the_environment(monkeypatch) -> None:
@@ -492,7 +504,7 @@ def test_probe_without_a_projection_lets_r4_decide_alone() -> None:
 
 
 def test_gated_memory_entry_is_degraded_and_names_the_gating(tmp_path: Path, monkeypatch) -> None:
-    """An absent memory server is a binding that did not happen: DEGRADED, warned, legible."""
+    """An absent Memory server is source-conformant. Activation stays UNKNOWN."""
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY", gated_out=[er._MEMORY_MCP_SERVER, "context7"])
     monkeypatch.setenv("HOME", str(home))
@@ -500,9 +512,10 @@ def test_gated_memory_entry_is_degraded_and_names_the_gating(tmp_path: Path, mon
     monkeypatch.setattr(er, "_resolve_memory_interpreter", lambda _env: "")
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels(R4="fail"))
     receipt = _build_with_levels(gov, home, monkeypatch)
-    assert receipt["memory_mcp_status"] == DEGRADED
-    assert receipt["overall_readiness"] == DEGRADED
-    assert any("absent" in w and "gated" in w for w in receipt["warnings"])
+    assert receipt["memory_mcp_status"] == READY
+    assert receipt["memory_native_activation"] == er.UNKNOWN
+    assert receipt["overall_readiness"] != er.BLOCKED
+    assert "memory_native_activation" not in receipt.get("dims", {})
 
 
 def test_a_rendered_but_unbound_memory_entry_still_degrades(tmp_path: Path, monkeypatch) -> None:
@@ -517,24 +530,23 @@ def test_a_rendered_but_unbound_memory_entry_still_degrades(tmp_path: Path, monk
     receipt = _build_with_levels(gov, home, monkeypatch)
     assert receipt["memory_mcp_status"] == DEGRADED
     assert receipt["overall_readiness"] == DEGRADED
-    assert any("spawn wrapper" in w for w in receipt["warnings"])
+    assert any("rejected" in w for w in receipt["warnings"])
 
 
 def test_ready_requires_a_real_executable_binding_end_to_end(tmp_path: Path, monkeypatch) -> None:
-    """The full receipt: nonexistent interpreter is not READY; a real stub is."""
+    """A project Memory server is not READY. Removing it is source-READY."""
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY")
     monkeypatch.setenv("HOME", str(home))
-    _install_spawn_wrapper(home)
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", "/venv/bin/python")
     _render_memory_server(gov)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
     receipt = _build_with_levels(gov, home, monkeypatch)
     assert receipt["memory_mcp_status"] == DEGRADED
     assert receipt["overall_readiness"] != READY
-    monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path)))
+    _render_conforming_mcp(gov)
     receipt = _build_with_levels(gov, home, monkeypatch)
     assert receipt["memory_mcp_status"] == READY
+    assert receipt["memory_native_activation"] == er.UNKNOWN
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
 
 
@@ -648,8 +660,7 @@ def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("L9_MEMORY_INTERPRETER", str(_stub_interpreter(tmp_path_of(gov))))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    _install_spawn_wrapper(home)
-    _render_memory_server(gov)
+    _render_conforming_mcp(gov)
     for name in er._MEMORY_PROBE_SKIP_ENVS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(er, "_memory_levels", lambda _gov: _levels())
@@ -731,6 +742,24 @@ def test_blocked_when_merge_authority_regresses(tmp_path: Path, monkeypatch) -> 
     assert any("merge_authority" in f for f in receipt["failures"])
 
 
+def test_ready_when_merge_authority_enforcement_is_disabled(tmp_path: Path, monkeypatch) -> None:
+    """§6.2.16: a disabled switch allows the merge. That is not the env-boolean regression."""
+    monkeypatch.delenv("L9_MERGE_AUTHORITY_MODE", raising=False)
+    gov = _init_fake_gov(tmp_path, merge_denies=False)
+    switch = gov / "ops" / "config"
+    switch.mkdir(parents=True)
+    (switch / "merge-authority.json").write_text(
+        json.dumps({"enforcement": "disabled"}),
+        encoding="utf-8",
+    )
+    home = _fake_home(tmp_path, mcp="READY")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["merge_authority_status"] == READY
+    assert receipt["notes"]["merge_authority_status"] == "switch disabled (§6.2.16)"
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
+    assert not any("merge_authority" in f for f in receipt["failures"])
+
+
 def test_degraded_when_interpreter_cannot_import(tmp_path: Path, monkeypatch) -> None:
     # CI-009: an environment whose interpreter cannot import core deps must not
     # report READY — the importability dimension is DEGRADED and drags overall.
@@ -781,7 +810,7 @@ def test_stale_sha_prevents_ready(tmp_path: Path, monkeypatch) -> None:
 def test_memory_transport_is_a_posture_not_a_measured_credential(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """Stage C9: memory is stdio to the bound runtime; there is no bearer to measure.
+    """Selected transport is native HTTP. Activation is UNKNOWN, not a bearer probe.
 
     The receipt reports the transport as a constant observation and never a
     dimension, and the retired provider fields never come back under any
@@ -791,13 +820,15 @@ def test_memory_transport_is_a_posture_not_a_measured_credential(
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY")
     receipt = _build(gov, home, monkeypatch)
-    assert receipt["memory_transport"] == er.MEMORY_TRANSPORT == "stdio-control-plane"
+    assert receipt["memory_transport"] == er.MEMORY_TRANSPORT == "native-mcp-streamable-http"
+    assert receipt["memory_native_activation"] == er.UNKNOWN
     assert receipt["memory_control_plane_status"] == READY
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
 
     monkeypatch.setenv("GRAPHITI_MCP_TOKEN", "probe-only-not-a-real-token")
     again = _build(gov, home, monkeypatch)
-    assert again["memory_transport"] == "stdio-control-plane"
+    assert again["memory_transport"] == "native-mcp-streamable-http"
+    assert again["memory_native_activation"] == er.UNKNOWN
 
     for retired in (
         "Graphiti_reachability",
@@ -876,6 +907,8 @@ def _fresh_receipt(sha: str = "abc123", workspace: str = "/ws") -> dict:
         "workspace": workspace,
         "overall_readiness": READY,
         "governance_default_branch": "main",
+        "memory_transport": er.MEMORY_TRANSPORT,
+        "memory_native_activation": er.UNKNOWN,
     }
 
 
@@ -915,6 +948,11 @@ def test_reusable_receipt_requires_fresh_same_workspace_and_live_sha(
     # manufacture reuse out of a receipt that may describe another revision.
     monkeypatch.setattr(er, "_git", lambda _g, *a: "")
     assert er.reusable_receipt(receipt, gov=gov, workspace="/ws") is None
+    monkeypatch.setattr(er, "_git", lambda _g, *a: "abc123" if a == ("rev-parse", "HEAD") else "")
+    stdio = {**receipt, "memory_transport": "stdio-control-plane"}
+    claimed = {**receipt, "memory_native_activation": "READY"}
+    assert er.reusable_receipt(stdio, gov=gov, workspace="/ws") is None
+    assert er.reusable_receipt(claimed, gov=gov, workspace="/ws") is None
 
 
 def test_reusable_receipt_is_bound_to_the_bootstrap_receipt_on_disk(

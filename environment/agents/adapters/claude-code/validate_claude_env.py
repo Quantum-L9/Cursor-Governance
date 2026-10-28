@@ -17,21 +17,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-# The only memory server is the package-owned canonical stdio entry (stage C8).
-# The capability broker never shipped. Never register l9-shared-memory, and
-# never the retired direct-provider front door.
+# Project MCP must not declare a Memory server. Native Memory 3.0 is the
+# account-managed connector. l9-graphite-memory is retired from this template
+# so projection cannot preserve a stdio entry. Provider front doors stay retired.
 MEMORY_SERVER_KEY = "l9-graphite-memory"
-MEMORY_WRAPPER_REF = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
-MEMORY_WRAPPER_REL = Path("ops/memory/run_memory_mcp.sh")
-MEMORY_SERVER_ARGS = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
-RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory")
+RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory", "l9-graphite-memory")
 # Memory credential / transport names that must never reach functional MCP
 # config. Assembled from parts so this validator does not itself read as a
 # provider reference to the egress scanner it agrees with.
@@ -166,47 +162,27 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         return
     server = json.loads(path.read_text(encoding="utf-8"))
     servers = server.get("mcpServers", {})
+    retired_names = server.get("_retired_servers") or []
+    if MEMORY_SERVER_KEY not in retired_names:
+        _fail(
+            f"mcp.template.json must retire {MEMORY_SERVER_KEY} so projection "
+            "cannot preserve a project Memory stdio entry",
+            failures,
+        )
+    else:
+        print(f"  OK: {MEMORY_SERVER_KEY} is retired from the project MCP template")
     for retired in RETIRED_MEMORY_SERVER_KEYS:
         if retired in servers:
             _fail(
-                f"mcp.template.json must not register {retired}: the direct-provider "
-                f"front door is retired (stage C8); {MEMORY_SERVER_KEY} is the only memory server",
+                f"mcp.template.json must not register {retired}: project Memory "
+                "stdio and the direct-provider front door are retired",
                 failures,
             )
-    mem = servers.get(MEMORY_SERVER_KEY)
-    if not isinstance(mem, dict) or not mem:
-        _fail(f"mcp.template.json must define the {MEMORY_SERVER_KEY} stdio server", failures)
-        return
-    if mem.get("command") != MEMORY_WRAPPER_REF or list(mem.get("args") or []) != (
-        MEMORY_SERVER_ARGS
-    ):
-        _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must launch {MEMORY_WRAPPER_REF} "
-            f"{' '.join(MEMORY_SERVER_ARGS)} (spawn wrapper + package argv)",
-            failures,
-        )
+    context7 = servers.get("context7")
+    if not isinstance(context7, dict) or context7.get("args") != ["context7"]:
+        _fail("mcp.template.json must keep the context7 bridge unchanged", failures)
     else:
-        print(f"  OK: {MEMORY_SERVER_KEY} launches the spawn wrapper with the package argv")
-    if "L9_MEMORY_INTERPRETER" in (mem.get("_requires_env") or []):
-        _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must not _requires_env-gate on "
-            "L9_MEMORY_INTERPRETER: the spawn wrapper is the bind gate",
-            failures,
-        )
-    wrapper = _governance_root() / MEMORY_WRAPPER_REL
-    if not wrapper.is_file():
-        _fail(f"memory spawn wrapper missing: {MEMORY_WRAPPER_REL}", failures)
-    elif not os.access(wrapper, os.X_OK):
-        _fail(f"memory spawn wrapper is not executable: {MEMORY_WRAPPER_REL}", failures)
-    else:
-        print(f"  OK: {MEMORY_WRAPPER_REL} exists and is executable")
-    for forbidden in ("env", "url", "headers"):
-        if forbidden in mem:
-            _fail(
-                f"mcp.template.json {MEMORY_SERVER_KEY} must not carry {forbidden!r}: the "
-                "server resolves its own credentials (memory ADR-016)",
-                failures,
-            )
+        print("  OK: context7 bridge is unchanged")
     # Functional config must never carry a memory credential or provider URL; a
     # prohibition mention in the _comment block documents the contract and is
     # expected — and so is a ${VAR} reference under a private `_`-prefixed
@@ -377,41 +353,82 @@ def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
         print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
-def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
-    """The session-deps helper warms pre-commit environments; it never installs a hook.
+_DECLARED_HOOK_FIELD = "required_git_hook_types"
+_DECLARED_HOOK_TYPES = frozenset({"pre-push", "commit-msg"})
+_DECLARED_HOOK_CASE = re.compile(r"pre-push\|commit-msg|commit-msg\|pre-push")
+_HOOK_INSTALL_INVOCATION = re.compile(r"pre-commit install(?!-hooks)\b(.*)$")
+_HOOK_TYPE_ARG = re.compile(r"^\s+--hook-type\s+(\S+)\s*$")
+_HOOK_TYPE_VAR = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?\Z")
 
-    ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the whole
-    catalog without the surface-aware SKIP list that ``ops/scripts/run_pr_precommit.sh``
-    applies. On any non-cursor surface ``symlinks-check`` then fails and every
-    ``git commit`` is rejected. ``run_pr_precommit.sh`` states the rule in as many
-    words; nothing asserted it until this check.
+
+def _declared_hook_type(tail: str) -> str | None:
+    """The hook type on an install line, or None when the line is not that form."""
+    match = _HOOK_TYPE_ARG.match(tail)
+    if match is None:
+        return None
+    token = match.group(1)
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in {'"', "'"}:
+        token = token[1:-1]
+    return token
+
+
+def _declared_hook_type_allowed(token: str) -> bool:
+    return token in _DECLARED_HOOK_TYPES or _HOOK_TYPE_VAR.fullmatch(token) is not None
+
+
+def git_hook_install_offenders(text: str) -> list[str]:
+    """``pre-commit install`` lines that are not a consumer-declared hook.
+
+    Allowed only as ``pre-commit install --hook-type`` with ``pre-push``,
+    ``commit-msg``, or a shell variable, and only when the script reads
+    ``required_git_hook_types`` and case-limits the type to those two. A bare
+    install and ``--hook-type pre-commit`` write the commit-stage hook.
     """
-    helper = HERE / "hooks" / "session_deps_cloud.sh"
-    if not helper.is_file():
-        return
-    text = helper.read_text(encoding="utf-8")
-    # Match an INVOCATION, not the word inside a warning message: skip comments and
-    # anything appearing after an `echo` on the same line.
-    pattern = re.compile(r"pre-commit install(?!-hooks)\b")
-    offenders = []
-    for line in text.splitlines():
-        if line.lstrip().startswith("#"):
-            continue
-        match = pattern.search(line)
-        if not match:
+    code = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+    blob = "\n".join(code)
+    driven = _DECLARED_HOOK_FIELD in blob and _DECLARED_HOOK_CASE.search(blob) is not None
+    offenders: list[str] = []
+    for line in code:
+        match = _HOOK_INSTALL_INVOCATION.search(line)
+        if match is None:
             continue
         echo_at = line.find("echo")
         if echo_at != -1 and echo_at < match.start():
             continue
+        printf_at = line.find("printf")
+        if printf_at != -1 and printf_at < match.start():
+            continue
+        token = _declared_hook_type(match.group(1) or "")
+        if driven and token is not None and _declared_hook_type_allowed(token):
+            continue
         offenders.append(line.strip())
+    return offenders
+
+
+def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
+    """Warm hook environments; install only a declared pre-push or commit-msg hook.
+
+    A bare ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the
+    whole catalog without the surface-aware SKIP list that
+    ``ops/scripts/run_pr_precommit.sh`` applies. That commit-stage hook stays
+    forbidden. ``required_git_hook_types`` may name ``pre-push`` or ``commit-msg``;
+    the helper installs those after ``pre-commit install-hooks`` and nothing else.
+    """
+    helper = HERE / "hooks" / "session_deps_cloud.sh"
+    if not helper.is_file():
+        return
+    offenders = git_hook_install_offenders(helper.read_text(encoding="utf-8"))
     if offenders:
         _fail(
-            "session_deps_cloud.sh must not run 'pre-commit install' (installs a git "
-            f"commit hook this repo forbids); use 'pre-commit install-hooks': {offenders}",
+            "session_deps_cloud.sh must not install a commit-stage git hook. "
+            "Allowed only as 'pre-commit install --hook-type' (pre-push|commit-msg) "
+            f"driven by required_git_hook_types: {offenders}",
             failures,
         )
     else:
-        print("  OK: session_deps_cloud.sh warms hook environments without installing a git hook")
+        print(
+            "  OK: session_deps_cloud.sh installs only consumer-declared pre-push/commit-msg hooks"
+        )
 
 
 def check_dependency_policy(failures: list[str]) -> None:
