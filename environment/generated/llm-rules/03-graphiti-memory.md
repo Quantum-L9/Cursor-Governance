@@ -79,7 +79,7 @@ description: Agent memory SSOT (canonical l9-graphite-memory control plane) — 
 
 - Resume from the canonical continuation record by an on-demand `python -m ops.memory.cli hydrate` (SessionStart is health-only) — never treat `memory-bank/` or a Graphiti `inject` / PICKUP read as SSOT
 - Every memory request names its namespace from `python -m ops.memory.cli resolve` — a request memory authorizes, never a grant Cursor holds
-- Every write stamps `agent_id`, DERIVED at write time from host markers by `ops/memory/agent_identity.py` — never configured: Cursor=`cursor`, Claude Code Desktop=`claude-code-desktop`, Claude Code Mobile=`claude-code-mobile`; adapter agents (Manus=`manus`, `codex`, `gemini`; reserved and not yet wired: `perplexity`, `perplexity-computer`, `l-cto`, `igorbot`) by the id their adapter sets, only if registered. A configured `L9_MEMORY_AGENT_ID` is ignored on those surfaces (reported as drift); no derivable identity means the write is refused, never attributed to a surface that did not run
+- Every write stamps `agent_id`, DERIVED at write time from host markers by `ops/memory/agent_identity.py` — never configured: Cursor actor `l9.actor-registry/global@1#cursor` on surface `l9.surface-registry/global@1#cursor-ide`; Claude Code actor `l9.actor-registry/global@1#claude-code`, with surface `claude-code-cli` only for `CLAUDE_CODE_ENTRYPOINT=cli` and `claude-code-mobile` only for `CLAUDE_CODE_REMOTE=true` plus `CLAUDE_CODE_ENTRYPOINT=remote_mobile`. Any other entrypoint leaves the surface unknown and omits the surface tag. Adapter actors `codex`, `gemini`, and `manus` resolve from `L9_MEMORY_AGENT_ID` only when no host markers are present, and their surface stays unknown. `perplexity`, `perplexity-computer`, `l-cto`, and `igorbot` are not actors. A configured `L9_MEMORY_AGENT_ID` is ignored on those surfaces (reported as drift); no derivable identity means the write is refused, never attributed to a surface that did not run
 - Never write to `group_id=main` or `group_id=default`
 - Never use Cursor `update_memory` / native Memories for repo/code facts
 - Never use code-graph for episodic decisions (use canonical memory)
@@ -108,5 +108,14 @@ memcli readiness --json
 ```
 
 Load skill: **`l9-graphiti-memory`**
+
+## Native MCP (2026-10-26)
+
+Memory 3.0 MCP is native authenticated Streamable HTTP to `MemoryService`.
+Do not add a project stdio Memory server or a bridge. Raw Graphiti provider
+HTTP stays forbidden. The `ops/memory` CLI above is the operator/hook lane,
+not a substitute MCP transport. A package that only knows stdio is
+`UPSTREAM_BLOCKED`. Live Auth0 and mobile proof stay UNKNOWN. Law:
+CANONICAL_LAW §8.10.
 
 <!-- generated-from: rules/03-graphiti-memory.mdc; do-not-edit -->

@@ -71,10 +71,11 @@ def prefetch_agent_id(env: dict[str, str] | None = None) -> str:
     The hook is Claude-owned, but ``--session-id`` is a repair override that
     also runs on Cursor. Hard-coding ``claude-code`` stamped the wrong
     surface onto Cursor hydrate blocks (SESSION_START_SPEC: a Cursor session
-    contains zero ``agent_id=claude-code`` hydrate blocks). The identity is
-    DERIVED from host markers by ops/memory/agent_identity.py (cursor,
-    claude-code-desktop, claude-code-mobile); a configured value never
-    overrides it. "" when this process has no derivable identity.
+    contains zero ``agent_id=claude-code`` hydrate blocks).     The identity is
+    DERIVED from host markers by ops/memory/agent_identity.py (``cursor`` or
+    ``claude-code``). A missing or unrecognized entrypoint leaves the surface
+    unknown and does not clear the actor. A configured value never overrides
+    host evidence. "" when this process has no derivable actor.
     """
     return st.writer_identity(dict(os.environ if env is None else env))
 

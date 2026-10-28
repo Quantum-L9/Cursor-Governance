@@ -7,6 +7,9 @@
       "native_target": "pr",
       "native_check_target": "pr-check",
       "declared_base": "Staging",
+      "required_git_hook_types": [
+        "pre-push"
+      ],
       "ceremony": {
         "kernel": "scripts/make_push_pipeline.sh",
         "kernel_requires": [

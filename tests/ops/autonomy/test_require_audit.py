@@ -49,6 +49,48 @@ def _fleet(heads: dict[int, str]) -> dict:
     }
 
 
+def _pr_fleet_receipt(heads: dict[int, str]) -> dict:
+    """The shape ``ops/autonomy/pr_fleet.py plan`` writes to ``.l9/pr/fleet.json``."""
+    return {
+        "repo": REPO_SLUG,
+        "prs": [
+            {
+                "baseRefName": "main",
+                "board": "merge",
+                "createdAt": "2026-10-23T00:00:00Z",
+                "files": [f"ops/{n}.py"],
+                "headRefName": f"agent/claude-code/{n}",
+                "headRefOid": sha,
+                "independent": False,
+                "isDraft": False,
+                "number": n,
+                "title": f"PR {n}",
+            }
+            for n, sha in heads.items()
+        ],
+    }
+
+
+def test_fleet_heads_reads_every_receipt_shape() -> None:
+    assert require_audit.fleet_heads(_fleet({1: HEAD_A})) == {1: HEAD_A}
+    assert require_audit.fleet_heads(_pr_fleet_receipt({1: HEAD_A})) == {1: HEAD_A}
+    assert require_audit.fleet_heads({"prs": [{"number": 1, "head_sha": HEAD_A}]}) == {1: HEAD_A}
+
+
+def test_pr_fleet_receipt_same_head_holds_merge(tmp_path: Path) -> None:
+    """Regression: a pr_fleet ``headRefOid`` equal to the bound head is same-head, not stale."""
+    path = tmp_path / ".l9" / "pr" / "topic" / "remediation-handoff.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(_handoff()), encoding="utf-8")
+    receipt = require_audit.bind(
+        repo=REPO_SLUG, fleet=_pr_fleet_receipt({1: HEAD_A, 2: HEAD_A}), root=tmp_path
+    )
+    assert receipt["hold_merge"] is True
+    assert receipt["eligible_prs"] == [1, 2]
+    assert receipt["stale_prs"] == []
+    assert receipt["reason"] == "same_head_mutation_eligible"
+
+
 def test_missing_handoff_does_not_hold(tmp_path: Path) -> None:
     receipt = require_audit.bind(repo=REPO_SLUG, fleet=_fleet({1: HEAD_A}), root=tmp_path)
     assert receipt["hold_merge"] is False
