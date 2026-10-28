@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.pr-audit.judgment.v1",
+  "title": "l9-pr-audit run judgment",
+  "description": "The parent auditor's per-run judgment: repository law, boundary model and cross-lane reconciliation. Everything repository-specific lives here, never in scripts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_id",
+    "authorities",
+    "components",
+    "boundaries",
+    "validation_authority",
+    "reconcile",
+    "merge_order"
+  ],
+  "properties": {
+    "audit_id": { "type": "string", "minLength": 1 },
+    "authorities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["authority_id", "kind", "source", "scope", "precedence"],
+        "properties": {
+          "authority_id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": [
+              "USER",
+              "REPOSITORY_LAW",
+              "CONTRACT",
+              "SCHEMA",
+              "ADR",
+              "POLICY",
+              "GENERATOR",
+              "MUTATION_GUARD",
+              "ENFORCEMENT",
+              "EXTERNAL"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "description": "repository path (optionally #section) the rule lives in"
+          },
+          "scope": { "type": "string", "minLength": 1 },
+          "precedence": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "authority_conflicts": { "type": "array", "items": { "type": "object" } },
+    "validation_authority": {
+      "type": "string",
+      "minLength": 1,
+      "description": "authority_id whose source names the repository's validation commands"
+    },
+    "mutation_guard": {
+      "type": "string",
+      "description": "authority_id of kind MUTATION_GUARD; defaults to the first one"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["component_id", "responsibilities", "path_prefixes", "authority_ids"],
+        "properties": {
+          "component_id": { "type": "string", "minLength": 1 },
+          "responsibilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "path_prefixes": { "type": "array", "items": { "type": "string" } },
+          "authority_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "boundaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "boundary_id",
+          "kind",
+          "owner_component_id",
+          "subject",
+          "participants",
+          "authority_ids"
+        ],
+        "properties": {
+          "boundary_id": { "type": "string" },
+          "kind": {
+            "enum": [
+              "COMMUNICATION",
+              "ROUTING",
+              "ORCHESTRATION",
+              "DATA",
+              "CONFIGURATION",
+              "SECURITY",
+              "POLICY_ENFORCEMENT",
+              "VALIDATION",
+              "SOURCE_OF_TRUTH",
+              "GENERATED_RELATIONSHIP",
+              "OTHER"
+            ]
+          },
+          "owner_component_id": { "type": "string" },
+          "subject": { "type": "string" },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "authority_ids": { "type": "array", "items": { "type": "string" } },
+          "control": {
+            "type": "object",
+            "description": "for SECURITY/POLICY_ENFORCEMENT/VALIDATION/SOURCE_OF_TRUTH boundaries: the per-PR control adequacy judgment",
+            "additionalProperties": false,
+            "required": ["control_type", "requirement", "per_pr"],
+            "properties": {
+              "control_type": {
+                "enum": [
+                  "CONTRACT",
+                  "BOUNDARY",
+                  "SECURITY",
+                  "RELIABILITY",
+                  "OBSERVABILITY",
+                  "VALIDATION",
+                  "OWNERSHIP",
+                  "SOURCE_OF_TRUTH"
+                ]
+              },
+              "requirement": { "type": "string" },
+              "per_pr": {
+                "type": "object",
+                "additionalProperties": {
+                  "enum": ["ADEQUATE", "UNDERBUILT", "NOT_APPLICABLE", "UNKNOWN"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reconcile": {
+      "type": "object",
+      "description": "finding_id -> override of a lane's blocking verdict, with the cross-lane evidence that justifies it",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["merge_blocking", "rationale"],
+        "properties": {
+          "merge_blocking": { "type": "boolean" },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "parent_findings": {
+      "type": "array",
+      "description": "cross-lane findings in lane-findings finding shape",
+      "items": { "type": "object" }
+    },
+    "merge_order": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "uniqueItems": true
+    },
+    "unknowns": { "type": "array", "items": { "type": "object" } },
+    "minimum_safe_next_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "rationale", "expected_evidence"],
+      "properties": {
+        "action": { "type": "string" },
+        "rationale": { "type": "string" },
+        "expected_evidence": { "type": "string" }
+      }
+    }
+  }
+}
