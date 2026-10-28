@@ -50,7 +50,6 @@ def _identity(agent_id: str) -> dict:
             "surface_identity": "unknown",
             "release_identity": "unknown",
             "runtime_identity": "unknown",
-            "constellation_identity": "unknown",
         },
         "result": "resolved",
     }
@@ -240,8 +239,8 @@ def test_print_helper_skip_message_names_no_path(
 _PROJECTION_DIGEST = "sha256:9d7491d507b7204caeaa9892019ab39a5e459cf507c59fa192fa238e3a953c5c"
 _AUTHORITY = "9b27869dd893fcd28f76f99c9184a90435542c76"
 GOLDEN_KEY = "golden-identity-hmac-key"
-GOLDEN_DIGEST = "sha256:cf7b14bef03986dbabbb926267a470b0ea14d24154ae99e1d95dc4242de21ab4"
-GOLDEN_HMAC = "ae9a689df2cdd819fe8fa980b5474030e0d64ec333a31d2f641b7cb74f076108"
+GOLDEN_DIGEST = "sha256:ab7b8ccd3d632dc8b64110aca296db64bd762a6df86eb0360799101538fdbcdb"
+GOLDEN_HMAC = "15edcf010a99e4ff1c132c1b9c0828555a1fa042257a3474f2588ecc92707c15"
 
 
 def _golden_body() -> dict:
@@ -252,7 +251,6 @@ def _golden_body() -> dict:
         "product_ref": "l9-graphiti-memory:product/l9-graphite-memory",
         "resolved_dimensions": {
             "actor_identity": actor,
-            "constellation_identity": "unknown",
             "release_identity": "unknown",
             "runtime_identity": "unknown",
             "surface_identity": "l9.surface-registry/global@1#claude-code-cli",
@@ -279,12 +277,24 @@ def _golden_body() -> dict:
             "surface_registry_digest": (
                 "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988"
             ),
+            "applicable_identity_dimensions": ["product_identity", "release_identity"],
+            "product_kind_exception_ref": "l9.product-kind-exception/memory-hosted-service@1",
+            "product_kind_exception_applies_from_release": "3.0.0",
         },
         "result": "resolved",
         "provenance": {
             "runtime_evidence_digest": (
                 "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-            )
+            ),
+            "examined_consumer_pin": {
+                "role": "not_a_release_identity",
+                "distribution": "l9-graphite-memory",
+                "expected_package_version": "2.6.0",
+                "source_ref": "846f283f7dade101b324b87008ab4f5901f97074",
+                "artifact_sha256": (
+                    "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15"
+                ),
+            },
         },
     }
 
@@ -333,9 +343,18 @@ def test_claude_remote_mobile_resolves_mobile_surface() -> None:
     assert "session-secret-must-not-leak" not in json.dumps(evidence)
 
 
-def test_unknown_claude_remote_entrypoint_refuses_identity() -> None:
-    with pytest.raises(Exception, match="no memory identity|no registered|ENTRYPOINT"):
-        _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_unknown"})
+def test_unknown_claude_remote_entrypoint_keeps_actor_and_unknown_surface() -> None:
+    assertion = _resolved(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_unknown",
+            "CLAUDECODE": "1",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "unknown"
+    assert "claude-code-mobile" not in dims["surface_identity"]
 
 
 def _full_principal(agent_id: str) -> dict[str, object]:
@@ -445,18 +464,19 @@ def test_remote_mobile_exports_claude_actor_and_a_legal_door_grant(
     assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-mobile"
 
 
-def test_unknown_remote_entrypoint_refuses_export(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.delenv("CURSOR_AGENT", raising=False)
-    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "true")
-    monkeypatch.setenv("CLAUDE_CODE_ENTRYPOINT", "remote_unknown")
-    monkeypatch.setenv("CLAUDECODE", "1")
-    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
-    assert helper.main(["--format", "json"]) == 2
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "remote_unknown" in captured.err
+def test_unknown_remote_entrypoint_does_not_relabel_mobile() -> None:
+    assertion = _resolved(
+        {
+            "CLAUDE_CODE_REMOTE": "true",
+            "CLAUDE_CODE_ENTRYPOINT": "remote_unknown",
+            "CLAUDECODE": "1",
+            "L9_MEMORY_OAUTH_CLIENT_ID": "public-client-must-not-be-an-actor",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert dims["surface_identity"] == "unknown"
+    assert "public-client-must-not-be-an-actor" not in json.dumps(dims)
 
 
 def test_adapter_without_surface_evidence_is_unknown() -> None:
@@ -509,6 +529,148 @@ def test_assertion_digest_is_deterministic() -> None:
     second = _resolved({"CURSOR_AGENT": "1"})
     assert first["assertion_digest"] == second["assertion_digest"]
     assert first["assertion_digest"] == local_assertion_digest(first)
+
+
+def _assert_release_and_runtime_stay_unknown(assertion: dict) -> None:
+    dims = assertion["resolved_dimensions"]
+    assert "constellation_identity" not in dims
+    assert dims["release_identity"] == "unknown"
+    assert dims["runtime_identity"] == "unknown"
+    coords = assertion["governing_coordinates"]
+    assert coords["applicable_identity_dimensions"] == ["product_identity", "release_identity"]
+    assert (
+        coords["product_kind_exception_ref"] == "l9.product-kind-exception/memory-hosted-service@1"
+    )
+    assert coords["product_kind_exception_applies_from_release"] == "3.0.0"
+    pin = assertion["provenance"]["examined_consumer_pin"]
+    assert pin["role"] == "not_a_release_identity"
+    assert pin["expected_package_version"] == "2.6.0"
+    assert assertion["result"] == "resolved"
+
+
+def test_cursor_claude_cli_and_mobile_use_full_canonical_refs() -> None:
+    cursor = _resolved({"CURSOR_AGENT": "1"})
+    assert cursor["resolved_dimensions"]["actor_identity"] == "l9.actor-registry/global@1#cursor"
+    assert (
+        cursor["resolved_dimensions"]["surface_identity"]
+        == "l9.surface-registry/global@1#cursor-ide"
+    )
+    _assert_release_and_runtime_stay_unknown(cursor)
+    cli = _resolved({"CLAUDECODE": "1", "CLAUDE_CODE_ENTRYPOINT": "cli"})
+    assert cli["resolved_dimensions"]["actor_identity"] == "l9.actor-registry/global@1#claude-code"
+    assert (
+        cli["resolved_dimensions"]["surface_identity"]
+        == "l9.surface-registry/global@1#claude-code-cli"
+    )
+    mobile = _resolved({"CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"})
+    assert (
+        mobile["resolved_dimensions"]["surface_identity"]
+        == "l9.surface-registry/global@1#claude-code-mobile"
+    )
+    _assert_release_and_runtime_stay_unknown(mobile)
+
+
+def test_missing_entrypoint_and_adapter_id_leave_surface_unknown() -> None:
+    missing = _resolved({"CLAUDECODE": "1"})
+    assert missing["resolved_dimensions"]["surface_identity"] == "unknown"
+    assert missing["resolved_dimensions"]["actor_identity"].endswith("#claude-code")
+    _assert_release_and_runtime_stay_unknown(missing)
+    codex = _resolved({"L9_MEMORY_AGENT_ID": "codex"})
+    assert codex["resolved_dimensions"]["actor_identity"] == "l9.actor-registry/global@1#codex"
+    assert codex["resolved_dimensions"]["surface_identity"] == "unknown"
+    assert codex["result"] == "resolved"
+
+
+@pytest.mark.parametrize("agent_id", ["perplexity", "l-cto", "igorbot", "claude-code-desktop"])
+def test_names_absent_from_the_actor_registry_do_not_resolve(agent_id: str) -> None:
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    with pytest.raises(IdentityResolutionError):
+        _resolved({"L9_MEMORY_AGENT_ID": agent_id})
+
+
+def test_forged_caller_claims_do_not_override_host_markers() -> None:
+    assertion = _resolved(
+        {
+            "CURSOR_AGENT": "1",
+            "L9_MEMORY_AGENT_ID": "claude-code-desktop",
+            "L9_MEMORY_OAUTH_CLIENT_ID": "public-client",
+        }
+    )
+    dims = assertion["resolved_dimensions"]
+    assert dims["actor_identity"] == "l9.actor-registry/global@1#cursor"
+    assert dims["surface_identity"] == "l9.surface-registry/global@1#cursor-ide"
+    encoded = json.dumps(assertion)
+    assert "public-client" not in encoded
+    assert "claude-code-desktop" not in encoded
+
+
+def _copy_identity_fixture(tmp_path: Path) -> None:
+    import shutil
+
+    for rel in (
+        "environment/agents/agent_registry.yaml",
+        "generated/governance/canonical_identity.yaml",
+        "generated/governance/canonical_identity.receipt.yaml",
+        "governance/authority-bindings/canonical-agent-identity.yaml",
+        "ops/config/memory-binding.json",
+    ):
+        dest = tmp_path / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(helper._ROOT / rel, dest)
+
+
+def test_stale_projection_receipt_refuses_the_mint(tmp_path: Path) -> None:
+    import yaml
+
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
+    receipt_path = tmp_path / "generated/governance/canonical_identity.receipt.yaml"
+    receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+    receipt["projection"]["source_revision"] = "0" * 40
+    receipt_path.write_text(yaml.safe_dump(receipt), encoding="utf-8")
+    with pytest.raises(IdentityResolutionError, match="disagree"):
+        helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
+
+
+def test_same_revision_projection_byte_change_refuses_before_signing(tmp_path: Path) -> None:
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
+    projection_path = tmp_path / "generated/governance/canonical_identity.yaml"
+    text = projection_path.read_text(encoding="utf-8")
+    needle = "The Cursor agent actor."
+    assert needle in text
+    projection_path.write_text(
+        text.replace(needle, "The Cursor agent actor. tampered.", 1),
+        encoding="utf-8",
+    )
+    with pytest.raises(IdentityResolutionError, match="digest"):
+        helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
+
+
+def test_non_current_actor_refuses_when_the_digest_still_matches(tmp_path: Path) -> None:
+    import hashlib
+
+    import yaml
+
+    from ops.memory.agent_identity import IdentityResolutionError
+
+    _copy_identity_fixture(tmp_path)
+    projection_path = tmp_path / "generated/governance/canonical_identity.yaml"
+    text = projection_path.read_text(encoding="utf-8")
+    needle = "- id: cursor\n  kind: agent\n  status: current\n"
+    assert needle in text
+    retired = needle.replace("current", "retired")
+    projection_path.write_text(text.replace(needle, retired, 1), encoding="utf-8")
+    receipt_path = tmp_path / "generated/governance/canonical_identity.receipt.yaml"
+    receipt = yaml.safe_load(receipt_path.read_text(encoding="utf-8"))
+    digest = hashlib.sha256(projection_path.read_bytes()).hexdigest()
+    receipt["output"]["digest"] = "sha256:" + digest
+    receipt_path.write_text(yaml.safe_dump(receipt), encoding="utf-8")
+    with pytest.raises(IdentityResolutionError, match="not current"):
+        helper.build_runtime_identity_assertion({"CURSOR_AGENT": "1"}, root=tmp_path)
 
 
 def test_golden_identity_hmac_vector() -> None:

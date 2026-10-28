@@ -3131,8 +3131,8 @@ def _peer_identity() -> tuple[str, str, str | None]:
     # Claude Code is ONE peer (ActorIdentity claude-code) with several
     # execution surfaces; the surface is derived by the one resolver
     # (ops/memory/agent_identity.py) from the remaining host markers. An
-    # unrecognised cloud entrypoint has no surface and fails below rather than
-    # being labelled as any of them.
+    # entrypoint that does not select an assigned surface has no surface and
+    # fails below rather than being labelled desktop, web, or mobile.
     identity = _agent_identity_module()
     claude_actor = identity.CLAUDE_ACTOR
     claude_env = {k: v for k, v in os.environ.items() if k != "CURSOR_AGENT"}

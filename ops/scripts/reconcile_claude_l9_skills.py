@@ -307,14 +307,28 @@ def _entry_resolves_to(entry: Path, source: Path) -> bool:
     return True
 
 
-def _read_user_settings(path: Path | None) -> dict[str, Any] | None:
-    if path is None or not path.is_file():
-        return None
+def _read_user_settings(path: Path | None) -> tuple[dict[str, Any] | None, str | None]:
+    """Return ``(settings, unreadable_reason)``.
+
+    ``path is None`` means the caller did not request the tier-override check.
+    A path that is missing, unreadable, or not a JSON object is unresolved:
+    the reason names the path and why it could not be read.
+    """
+    if path is None:
+        return None, None
+    if not path.is_file():
+        return None, f"missing {path}"
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return data if isinstance(data, dict) else None
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None, f"unreadable {path}"
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None, f"invalid {path}"
+    if not isinstance(data, dict):
+        return None, f"invalid {path}"
+    return data, None
 
 
 def coverage_census(
@@ -388,9 +402,11 @@ def coverage_census(
                     klass = "unmanaged"
                 synced.append({"name": skill.name, "class": klass, "path": str(skill)})
 
-    settings = _read_user_settings(user_settings)
+    settings, settings_unreadable = _read_user_settings(user_settings)
     policy = None if settings is None else settings.get("syncClaudeAiSkills")
     overrides = (settings or {}).get("skillOverrides") or {}
+    # An unreadable file is not "no overrides missing". Leave the list empty
+    # and fail the census on settings_unreadable instead of inventing names.
     tier_override_missing = (
         []
         if settings is None
@@ -403,7 +419,12 @@ def coverage_census(
     )
 
     missing = sorted(set(canonical) - covered)
-    complete = not missing and not wrong_target and not tier_override_missing
+    complete = (
+        not missing
+        and not wrong_target
+        and not tier_override_missing
+        and settings_unreadable is None
+    )
     return {
         "canonical_count": len(canonical),
         "tiers": dict(sorted(tiers.items())),
@@ -413,6 +434,7 @@ def coverage_census(
         "wrong_target": sorted(wrong_target),
         "unexpected": sorted(unexpected),
         "tier_override_missing": tier_override_missing,
+        "settings_unreadable": settings_unreadable,
         "account_sync_policy": policy,
         "account_synced_l9": synced,
         "status": "complete" if complete else "incomplete",
@@ -439,6 +461,8 @@ def coverage_banner(census: dict[str, Any]) -> list[str]:
             "skills tier override missing in user settings: "
             + ", ".join(census["tier_override_missing"])
         )
+    if census.get("settings_unreadable"):
+        lines.append(f"user settings unreadable: {census['settings_unreadable']}")
     if census["unexpected"]:
         lines.append(f"skills unexpected (non-canonical l9-*): {', '.join(census['unexpected'])}")
     policy = census["account_sync_policy"]
