@@ -165,6 +165,7 @@ def exec_shared(lock_path: Path, wait_s: int, marker: Path | None, command: list
         if fd is not None:
             os.close(fd)
         return EXEC_PROBE
+    return EXEC_PROBE
 
 
 def probe_shared(lock_path: Path) -> int:
