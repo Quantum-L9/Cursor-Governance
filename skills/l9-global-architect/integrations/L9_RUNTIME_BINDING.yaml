@@ -1,6 +1,6 @@
 integration:
   integration_id: L9.GAR.L9_COGNITIVE_RUNTIME_BINDING.001
-  version: 0.8.0
+  version: 0.8.1
   artifact_class: runtime_integration_binding
   status: experimental
   semantic_owner: integrations/L9_RUNTIME_BINDING.yaml
@@ -173,6 +173,20 @@ ownership_matrix:
   signal_leverage_propagation_and_writeback:
     owner: L9 Reasoning Foursome Signal Leverage
     gar_may_redefine: false
+  coding_implementation_delegation_payload:
+    owner: l9-coding-agent (the execution contract its runtime/MANIFEST.yaml declares at issuance)
+    version_binding: live_at_issuance_never_pinned
+    gar_role: resolve_current_sibling_contract_freeze_and_issue_one_instance_then_accept_results_by_independent_verification
+    gar_may_redefine: false
+    external_runtime_may_redefine: false
+  coding_implementation_execution_receipt:
+    owner: l9-coding-agent (the receipt schema its runtime/MANIFEST.yaml declares, as resolved at issuance)
+    gar_role: consume_as_evidence_never_as_acceptance
+    gar_may_redefine: false
+    external_runtime_may_redefine: false
+  coding_delegation_acceptance:
+    owner: l9-global-architect (contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy)
+    transferred_to_external_runtime: false
 integrated_mode:
   activation_precondition: integration_activation == satisfied
   outer_orchestration:
@@ -285,6 +299,10 @@ runtime_contract_binding:
       - required_validation_properties
       - outcome_accountability_obligations
       - delivery_obligations
+      - coding_delegation_payload_by_exact_reference_and_digest_when_delegating_implementation
+    GAR_must_not:
+      - restate_summarize_or_fork_the_frozen_canonical_coding_agent_contract
+      - treat_the_compiled_execution_contract_as_the_coding_delegation_payload
     compiler_owner: l9-cognitive-runtime
   execution_graph:
     GAR_contributes:
@@ -300,6 +318,42 @@ runtime_contract_binding:
       - false_completion_checks
       - delivery_evidence_requirement
     compiler_owner: l9-cognitive-runtime
+coding_delegation_transport:
+  payload_owner: l9-coding-agent (current execution contract resolved at issuance, recorded in $.delegation.sibling_resolution)
+  policy_owner: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
+  state_target: $.delegation.transport
+  STANDALONE:
+    carrier: l9-global-architect
+    rule: >
+      GAR hands the frozen canonical payload to the Coding Agent directly,
+      whole and digest-preserved, through the Coding Agent's own handoff
+      contract (skills/l9-coding-agent/integrations/GAR_HANDOFF.yaml);
+      carriage_status is CARRIED_VERBATIM.
+  L9_INTEGRATED:
+    carrier: l9-cognitive-runtime (execution_contract_compilation, handoff_contract, and adapter_rendering owners above)
+    rule: >
+      The outer runtime keeps ownership of transport, admission, execution
+      graph, and adapter rendering. The frozen canonical payload must reach the
+      Coding Agent whole and digest-preserved; the universal execution
+      contract, handoff contract, execution graph, and rendered adapter packet
+      are host transport and admission metadata, never a second implementation
+      contract and never a restatement of the payload.
+    carriage_is_a_per_run_observation: >
+      Whether the active runtime carries the payload verbatim is recorded in
+      $.delegation.transport from current evidence of the bound runtime's own
+      contracts and compilers. Repository markers, a profile, a prior run, or
+      a schema that merely tolerates extra keys never prove carriage.
+    when_not_carriable: >
+      Fail closed. $.delegation.transport.carriage_status is NOT_CARRIABLE,
+      $.delegation.status is BLOCKED, a valid EXTERNAL_DEPENDENCY or
+      CAPABILITY block receipt names the exact owner, artifact, and missing
+      carriage, no integrated coverage is claimed, and no GAR-side field,
+      wrapper, compiler, or override is added to the owner's contracts.
+  forbidden:
+    - gar_adds_fields_to_or_forks_the_outer_runtime_contracts
+    - gar_restates_the_payload_as_runtime_instructions
+    - transport_or_admission_metadata_treated_as_the_delegation_payload
+    - integrated_coverage_claimed_for_a_path_that_did_not_carry_the_payload
 adapter_policy:
   adapters_are:
     - serializers
@@ -355,6 +409,8 @@ forbidden_duplication:
   - chatgpt_specific_architecture_brain
   - provider_specific_copy_of_architect_kernel
   - integration_local_defect_router
+  - gar_local_coding_delegation_template_or_plan_as_contract
+  - second_semantic_envelope_for_delegated_implementation
 integration_invariants:
   - id: L9B-001
     rule: GAR owns architectural cognition while an actively bound l9-cognitive-runtime owns outer
@@ -374,11 +430,20 @@ integration_invariants:
   - id: L9B-006
     rule: Transferred orchestration authority is hysteretic - it returns to GAR only through explicit release
       or revocation evidence, never through malfunction of the new authority.
+  - id: L9B-007
+    rule: A GAR implementation delegation carries exactly one frozen canonical Coding Agent execution
+      contract; host transport, admission, and adapter metadata never become a second implementation
+      contract, and a path that cannot carry the payload verbatim fails closed with the exact blocker.
+  - id: L9B-008
+    rule: Acceptance of a delegated implementation result stays with GAR through independent verification
+      against the frozen contract; the outer runtime, the Coding Agent self-report, and CI status cannot
+      grant it.
 anti_drift:
   external_runtime_paths_are_discovery_markers_not_activation_proof: true
   copied_compiler_logic_allowed: false
   copied_adapter_brain_allowed: false
   copied_defect_routing_allowed: false
+  canonical_coding_agent_payload_restated_locally_allowed: false
 reasoning_foursome_projection:
   semantic_owner: integrations/REASONING_FOURSOME_BINDING.yaml
   outer_runtime_may_orchestrate: true
