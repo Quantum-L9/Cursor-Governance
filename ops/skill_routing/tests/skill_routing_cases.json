@@ -50,16 +50,18 @@
     },
     {
       "prompt": "Set up GitHub Actions CI with lint, type checking, and tests",
-      "expected_primary": "l9-setting-up-ci",
-      "expected_supporting": [
-        "l9-structured-reasoning"
+      "expected_primary": null,
+      "forbidden": [
+        "l9-setting-up-ci",
+        "l9-ci-ops"
       ]
     },
     {
       "prompt": "Activate l9-ci-core and stamp biome.json, do not invent a ci.yml",
-      "expected_primary": "l9-setting-up-ci",
-      "expected_supporting": [
-        "l9-structured-reasoning"
+      "expected_primary": null,
+      "forbidden": [
+        "l9-setting-up-ci",
+        "l9-ci-ops"
       ]
     },
     {

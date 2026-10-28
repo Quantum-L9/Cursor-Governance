@@ -62,7 +62,7 @@ Examples — full list: `skills/` + `ops/generated/skill-registry.json`.
 | `l9-repo-sync` | `/ff` retired — invoke skill or `make ff` |
 | `l9-end-session` | skill name (force-retry close) |
 | `l9-forge` | skill name |
-| `l9-ci-ops` | `/ci` and `/ci-policy` retired |
+| `l9-ci-ops`, `l9-setting-up-ci`, `l9-cli-optimization` | archived under `skills/_archived/`; `/ci` and `/ci-policy` retired; no successor skill |
 | `l9-graphiti-memory` | `/mem` retired |
 
 Claude Code: every registered skill is symlinked under `~/.claude/skills/` and
