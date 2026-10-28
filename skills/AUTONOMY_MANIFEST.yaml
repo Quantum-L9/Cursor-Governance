@@ -61,8 +61,6 @@ tiers:
     use_when: designing or improving an LLM prompt, system message, or structured output schema
   - skill: l9-incident-response
     use_when: a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem
-  - skill: l9-setting-up-ci
-    use_when: bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json
   - skill: l9-graphiti-memory
     use_when: wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health
   - skill: l9-aws-secrets
@@ -86,8 +84,6 @@ tiers:
     reason: session lifecycle boundary
   - skill: l9-code-maintenance
     reason: lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate
-  - skill: l9-ci-ops
-    reason: CI/CD pipeline operations and gate authoring
   - skill: l9-dag-authoring
     reason: creates/updates DAGs — structural meta tooling
   - skill: l9-repo-index
@@ -102,8 +98,6 @@ tiers:
     reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
     reason: parallel Tasks and background PR-poll under an explicit authorization packet — high blast radius, explicit only
-  - skill: l9-cli-optimization
-    reason: activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) — high blast radius, explicit only
   - skill: l9-memory-consumer-rebind
     reason: pins a consumer onto one published memory release and publishes that pin through make pr — high blast radius, explicit only, hint_allowed so a matching rebind prompt surfaces Read/attach; hydrate, host deploy, retag, and live MCP cutover stay out
   - skill: l9-e2e-blocker-resolution
@@ -175,6 +169,12 @@ tiers:
     reason: Program Execution campaign front door retired with no replacement; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-nuggets/
     reason: Program Execution nugget extraction retired with the campaign front door; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-setting-up-ci/
+    reason: CI bootstrap procedure predates consumer-owned l9-lint-test.yml; archived out of live skills/ discovery — never auto-invoke or reconcile. No successor skill.
+  - item: skills/_archived/l9-ci-ops/
+    reason: PlasticOS ci.yml and make push triage retired; archived out of live skills/ discovery — never auto-invoke or reconcile. No successor skill.
+  - item: skills/_archived/l9-cli-optimization/
+    reason: explicit-only latent-capability pack archived without extraction to l9-tools; never auto-invoke or reconcile. No successor skill.
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:
@@ -216,7 +216,6 @@ claude_routing:
   - l9-auditing-security
   - l9-prompt-engineering
   - l9-incident-response
-  - l9-setting-up-ci
   - l9-graphiti-memory
   - l9-aws-secrets
   - l9-code-graph-rag-mcp
@@ -476,21 +475,6 @@ claude_routing:
     - endpoint returns 404
     - verify api health
     - smoke test api
-    supporting:
-    - l9-structured-reasoning
-  - id: ci_setup
-    primary: l9-setting-up-ci
-    signal_weight: 8
-    positive_signals:
-    - set up github actions ci
-    - bootstrap ci
-    - add lint type checking and tests
-    - add ci stages
-    - set up ci
-    - activate l9-ci-core
-    - add biome
-    - stamp biome.json
-    - seed l9-ci-pack
     supporting:
     - l9-structured-reasoning
   - id: incident_response

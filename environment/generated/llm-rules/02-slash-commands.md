@@ -78,7 +78,7 @@ Live commands match `commands/COMMANDS_MANIFEST.yaml` (**18** — skill wrappers
 | `/rules` | `commands/rules.md` | List governance rules |
 | `/update-command` | `commands/update-command.md` | Slash minimizer DAG (legacy) |
 
-Skill examples (no `commands/` file): `l9-issue-remediation`, `l9-pr-remediation`, `l9-plan`, `l9-pipeline-audit`, `l9-bounded-autonomy`, `l9-ynp`, `l9-code-analysis`, `l9-ci-ops`, `l9-forge`, `l9-repo-sync`, `l9-end-session`, … — full map in `ops/generated/skill-registry.json`.
+Skill examples (no `commands/` file): `l9-issue-remediation`, `l9-pr-remediation`, `l9-plan`, `l9-pipeline-audit`, `l9-bounded-autonomy`, `l9-ynp`, `l9-code-analysis`, `l9-forge`, `l9-repo-sync`, `l9-end-session`, … — full map in `ops/generated/skill-registry.json`.
 
 Full map: `commands/COMMANDS_MANIFEST.yaml`. Human index: `commands/commands-index.md`.
 

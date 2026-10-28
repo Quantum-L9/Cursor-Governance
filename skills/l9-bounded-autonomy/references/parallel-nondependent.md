@@ -28,7 +28,7 @@ blockers: [string]
 ```
 
 9. After returns: if file overlap or lock conflict appears, serialize merge of results; do not claim join success until resolved.
-10. For independent CI job failures, reuse `skills/l9-ci-ops/references/parallel-ci-triage.md` (one Task per independent job).
+10. For independent CI job failures, one Task per independent required check. Required context names live in `ops/scripts/test_required_contexts_report.py`. A red required check on an open PR is `l9-pr-remediation`.
 
 ## Lane budget
 
