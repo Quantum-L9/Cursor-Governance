@@ -308,6 +308,16 @@ _gate_failed=1
 #: subsequent `make pr` was still refused, pointing at a log whose last line was
 #: a clean gate. Re-running is the correct action there, so no receipt is
 #: written and the block simply recurs while the condition holds.
+#:
+#: An open-PR overlap block is the same class: routing state about the base and
+#: other open PRs. Observed (Website-Bot, 2026-10-24): the receipt then refused
+#: the documented PR_OVERLAP=ignore re-run, and the receipt had to be deleted
+#: by hand.
+#:
+#: A conflict with this branch's own base is not that class. The checker tells
+#: the caller to refresh and resolve or close the branch, which changes the
+#: tree digest, so the STOP LOOPING receipt is the right latch. Only telemetry
+#: denial and open-PR routing blocks set _gate_env_block.
 _gate_env_block=0
 _gate_on_exit() {
   if [[ -n "${_prefetch_pid:-}" ]]; then
@@ -316,7 +326,7 @@ _gate_on_exit() {
   fi
   _write_gate_timing || true
   if [[ "${_gate_env_block:-0}" = "1" ]]; then
-    echo "NOTE: environment-blocked (not a red tree) — no STOP LOOPING receipt written."
+    echo "NOTE: environment- or routing-blocked (not a red tree) — no STOP LOOPING receipt written."
   elif [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
@@ -737,18 +747,41 @@ if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
     fetch_receipt_write "$WS" "$_base_ref" "$_fetched_sha"
   fi
   mkdir -p "$WS/.l9/pr"
+  _overlap_log="$(mktemp)"
   _overlap_rc=0
   python3 "$SCRIPT_DIR/pr_overlap_check.py" \
     --workspace "$WS" --base "$PR_BASE" \
-    --write-receipt "$WS/.l9/pr/overlap-receipt.json" || _overlap_rc=$?
+    --write-receipt "$WS/.l9/pr/overlap-receipt.json" 2>&1 | tee "$_overlap_log" || _overlap_rc=$?
   if [[ "$_overlap_rc" -ne 0 ]]; then
-    # 3 = telemetry denied (pr_overlap_check.TELEMETRY_DENIED_EXIT): nothing in
-    # the tree to fix, so a digest-keyed STOP LOOPING receipt would outlive the
-    # outage. Publication is denied either way.
-    [[ "$_overlap_rc" -eq 3 ]] && _gate_env_block=1
-    echo "FAIL: early overlap blocked publish (PR_OVERLAP=${PR_OVERLAP:-block})"
+    # 3 = telemetry denied (pr_overlap_check.TELEMETRY_DENIED_EXIT): an outage
+    # outside the tree. Open-PR overlap is routing state, resolved by
+    # PR_STACK=auto, PR_BASE=origin/<open-pr-head>, or PR_OVERLAP=ignore — none
+    # of which move the tree digest, so a receipt would refuse every one of
+    # them. An own-base conflict is a red tree: the checker says to refresh and
+    # resolve or close the branch, and that changes the digest, so the STOP
+    # LOOPING receipt stays. Publication is denied either way. Exit 3 is checked
+    # first: under PR_OVERLAP=warn the base text is printed and the run goes on,
+    # so a later telemetry denial would otherwise be latched as a red tree.
+    _own_base=0
+    if [[ "$_overlap_rc" -ne 3 ]] && grep -q "conflicts with its own base" "$_overlap_log"; then
+      _own_base=1
+    fi
+    rm -f "$_overlap_log"
+    if [[ "$_own_base" -eq 0 ]]; then
+      _gate_env_block=1
+    fi
+    if [[ "$_overlap_rc" -eq 3 ]]; then
+      echo "FAIL: early overlap blocked publish — telemetry unavailable, not a red tree (PR_OVERLAP=${PR_OVERLAP:-block})"
+    elif [[ "$_own_base" -eq 1 ]]; then
+      echo "FAIL: early overlap blocked publish — branch conflicts with its own base (red tree; STOP LOOPING receipt applies) (PR_BASE=${PR_BASE})"
+      echo "      Refresh from the base and resolve, or close the branch."
+    else
+      echo "FAIL: early overlap blocked publish — routing decision, not a red tree (PR_OVERLAP=${PR_OVERLAP:-block}, PR_STACK=${PR_STACK:-}, PR_BASE=${PR_BASE})"
+      echo "      Pick a routing option above and re-run make pr."
+    fi
     exit 1
   fi
+  rm -f "$_overlap_log"
 fi
 
 # Stage 4 — one parallel read-only wave. Jobs do not call each other.
