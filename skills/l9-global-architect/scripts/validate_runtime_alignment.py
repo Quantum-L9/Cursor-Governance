@@ -17,7 +17,7 @@ import yaml
 
 sys.dont_write_bytecode = True
 
-PACK_VERSION = "0.8.2"
+PACK_VERSION = "0.8.4"
 EXPECTED_EVAL_MAX = 61
 FORBIDDEN_DIR_NAMES = {"__pycache__", "__MACOSX", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 FORBIDDEN_FILE_NAMES = {".DS_Store", "Thumbs.db"}
@@ -420,6 +420,7 @@ def main() -> None:
         root / "contracts/L9_ARCHITECTURE_PROFILE.yaml",
         root / "integrations/L9_RUNTIME_BINDING.yaml",
         root / "integrations/REASONING_FOURSOME_BINDING.yaml",
+        root / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
         root / "kernels/ARCHITECT_KERNEL.yaml",
     ]
     for path in current_files:
@@ -470,11 +471,65 @@ def main() -> None:
     unresolved["architecture"]["material_unknowns"] = ["fixture unresolved"]
     expect_decision_failure(decision_module, unresolved, "GAR_DECISION_UNRESOLVED")
 
+    # Architecture intelligence is a separate, verified, non-default input with no fallback.
+    binding = load_yaml(root / "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml")
+    ai_input = binding.get("input") or {}
+    pins = ai_input.get("authority") or {}
+    if pins.get("projection_profile_ref") != "l9.projection/architecture-intelligence@1":
+        fail("architecture intelligence binding must pin l9.projection/architecture-intelligence@1")
+    if pins.get("composition_profile_ref") != "l9.compose/architecture-intelligence@1":
+        fail("architecture intelligence binding must pin l9.compose/architecture-intelligence@1")
+    for key in ("projection_profile_digest", "composition_profile_digest"):
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", str(pins.get(key))):
+            fail(f"architecture intelligence binding {key} must be an exact sha256 digest")
+    classes = pins.get("expected_source_classes") or []
+    if not classes or len(classes) != len(set(classes)):
+        fail("architecture intelligence binding must list each expected source class once")
+    if ai_input.get("separate_from") != "contracts/L9_ARCHITECTURE_PROFILE.yaml":
+        fail("architecture intelligence must be declared separate from the L9 Architecture Profile")
+    fallback = (binding.get("failure_behavior") or {}).get("fallback") or {}
+    if set(fallback.values()) != {"forbidden"} or "historical_observer_projection" not in fallback:
+        fail(
+            "architecture intelligence fallback must forbid the historical observer and every substitute"
+        )
+    if (binding.get("load_condition") or {}).get("repository_presence_alone_loads") is not False:
+        fail("architecture intelligence must not load from repository presence alone")
+    ai_owner = manifest["semantic_owners"].get("architecture_intelligence_input") or {}
+    if (
+        ai_owner.get("owner") != "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
+        or ai_owner.get("runtime_loaded_by_default") is not False
+    ):
+        fail("manifest must own architecture intelligence as a non-default semantic owner")
+    if "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml" in manifest["load_order"]:
+        fail("architecture intelligence must not be in the required load_order")
+    ai_load = manifest["optional_load"].get("architecture_intelligence") or {}
+    if (
+        ai_load.get("fallback") != "none"
+        or ai_load.get("requires_verifier_status") != "ADMITTED_AND_CURRENT"
+        or (ai_load.get("candidate_inspection") or {}).get("authoritative") is not False
+    ):
+        fail(
+            "architecture intelligence optional load must require ADMITTED_AND_CURRENT, keep "
+            "candidate inspection non-authoritative, and declare no fallback"
+        )
+    if binding.get("admission", {}).get("resolved_independently_of") != "bundle.lock.json":
+        fail("architecture intelligence admission must be resolved independently of the lock")
+    ai_state = run_state["instance_template"].get("architecture_intelligence") or {}
+    if ai_state.get("status") != "NOT_REQUESTED" or ai_state.get("fallback_used") is not False:
+        fail("run state must carry an unrequested architecture_intelligence slot")
+    if not any(inv.get("id") == "RS-034" for inv in run_state["transition_invariants"]):
+        fail("run state must declare RS-034 for architecture intelligence")
+    if "contracts/L9_ARCHITECTURE_PROFILE.yaml" not in manifest["load_order"]:
+        fail("L9 Architecture Profile must stay in the required load_order")
+
     # Required current artifacts for this release must exist.
     for ref in (
         "references/reasoning-foursome/04_SIGNAL_LEVERAGE_KERNEL.md",
         "decisions/ADR-L9-GAR-005.yaml",
         "decisions/ADR-L9-GAR-006.yaml",
+        "decisions/ADR-L9-GAR-007.yaml",
+        "integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml",
+        "scripts/verify_architecture_intelligence.py",
     ):
         if not (root / ref).is_file():
             fail(f"required artifact missing: {ref}")
@@ -510,6 +565,7 @@ def main() -> None:
     print("signal_gate_boundary: PASS")
     print("security_contract_lenses: PASS")
     print("product_decision_positive_negative: PASS")
+    print("architecture_intelligence_binding: PASS")
     print("final_state_hygiene: PASS")
 
 

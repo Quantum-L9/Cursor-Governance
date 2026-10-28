@@ -43,7 +43,7 @@
       "template": "mcp.template.json",
       "cli": "user-scope MCP server via `claude mcp add-json`",
       "web_mobile": ".mcp.json (git-tracked; env-references only, no token)",
-      "memory": "l9-graphite-memory stdio only; canonical health/search/hydrate/conflicts/close plus memory.phase_lock -> memory.write_governed are the no-prompt agent lifecycle contract"
+      "memory": "account-managed native Streamable HTTP; no project stdio server. Canonical health/search/hydrate/conflicts/close plus memory.phase_lock -> memory.write_governed remain the no-prompt agent lifecycle contract. Live connector activation is UNKNOWN until observed"
     }
   },
   "tools": {

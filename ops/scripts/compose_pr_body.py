@@ -1556,23 +1556,6 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     return _annotate_unchecked_boxes(text)
 
 
-def _with_measured_closes(body: str, facts: MechanicalFacts) -> str:
-    """Keep measured closing keywords when the template has no ``Closes #`` line.
-
-    The org template no longer carries that placeholder, so ``_fill_template``
-    has nowhere to put them; write them at the end of Problem instead of
-    dropping them. Nothing is written when no issue was measured.
-    """
-    closes = ", ".join(f"#{n}" for n in facts.issue_closes)
-    if not closes or re.search(r"Closes #\d", body):
-        return body
-    problem = re.search(r"^## Problem[ \t]*\n[\s\S]*?(?=\n## |\Z)", body, re.M)
-    if not problem:
-        return body
-    end = problem.end()
-    return body[:end].rstrip("\n") + f"\n\nCloses {closes}\n" + body[end:]
-
-
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
     parts: list[str] = []
     filled = [
@@ -1591,7 +1574,7 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
     if facts.template_revision:
         parts.append(f"<!-- l9-pr-template: {facts.template_revision} -->")
     if template and template.strip():
-        parts.append(_with_measured_closes(_fill_template(template, facts), facts))
+        parts.append(_fill_template(template, facts))
         if facts.additive_only_paths:
             filled.append("protected-root")
     else:
@@ -2028,6 +2011,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Print only the PR title (this branch's oldest own commit subject) and exit",
     )
     parser.add_argument(
+        "--check-template",
+        action="store_true",
+        help="Resolve the canonical org template (--org-owner/--repo-name) and print "
+        "TEMPLATE_OK <revision>; exit 2 if it cannot be read. make pr runs this before "
+        "pushing, so an unreadable template never leaves a pushed branch with no PR",
+    )
+    parser.add_argument(
         "--refresh-body",
         type=Path,
         default=None,
@@ -2062,6 +2052,11 @@ def _write_status(path: Path | None, doc: dict[str, Any]) -> None:
 
 
 def _main(args: argparse.Namespace, workspace: Path) -> int:
+    if args.check_template:
+        source = resolve_template(workspace, args.org_owner, args.repo_name)
+        print(f"TEMPLATE_OK {source.revision}")
+        return 0
+
     if args.print_title:
         # Same range the body is told from. open_pr_after_gate.sh used to run its
         # own `git log base..HEAD | head -1`, a second copy of the range rule

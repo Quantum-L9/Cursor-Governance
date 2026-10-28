@@ -287,6 +287,33 @@ stand: they describe containers that were measured. The table above is a **dated
 counter-observation for a different container**, not a correction of theirs. In this
 one, `gh`, `gitleaks` and `pre-commit` are present and only `semgrep` is absent.
 
+### 2026-10-21 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `60aee3b`
+
+Measured with the new per-transport probe (`gh_capability_probe` in
+`ops/scripts/lib/gh_auth_probe.sh`), which now records each verdict in the Claude
+bootstrap receipt as `github_capabilities`. `GH_TOKEN` is the `proxy-injected`
+placeholder.
+
+| Probe | Result | vs. the rows above |
+|---|---|---|
+| `gh api user` (REST) | **works**, exit 0 — resolves `cryptoxdog` | same |
+| `gh api repos/Quantum-L9/.github/contents/.github/pull_request_template.md` | **works** — the org PR template `make pr` composes from is readable | new probe |
+| `gh api graphql -f 'query={viewer{login}}'` | **refused**, non-zero exit | same |
+| `curl https://api.github.com/user` with `Bearer $GH_TOKEN`, through `HTTPS_PROXY` | **200** | **contradicts** the "direct `api.github.com` with the literal string gets 401" note in `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` |
+| `gh auth status` | exit **1** while REST works | same (never a capability probe) |
+
+**The direct-API 401 is not universal.** A client that goes through the session
+proxy is authenticated by it even with the placeholder token. The 401 recorded for
+tools such as zizmor plausibly belongs to clients that bypass `HTTPS_PROXY`; that
+is unverified and is recorded as such, not asserted. The receipt's `direct_api`
+verdict is now measured per container rather than assumed.
+
+**"Authenticated" was never one fact.** In the same container `rest_user` and
+`org_template_read` are OK while `graphql` is refused, so a single boolean could
+report a session ready to publish whose template read had never been tried. `make
+pr` now proves the template read before pushing (`compose_pr_body.py
+--check-template`).
+
 ## The rule that does not bend
 
 A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is

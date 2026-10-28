@@ -1,0 +1,36 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "conformance_requirement_shape": {
+      "optional": [
+        "profile_hint",
+        "binding_constraints",
+        "evidence_requirements"
+      ],
+      "required": [
+        "id",
+        "subject_class",
+        "governing_refs",
+        "observable_semantics",
+        "verification_class"
+      ]
+    },
+    "global_rules": {
+      "conformance_evidence_does_not_grant_authority": true,
+      "every_conformance_requirement_traces_to_governing_semantics": true,
+      "fixture_or_test_must_not_invent_law": true,
+      "proof_obligations_preexist_candidate_implementation": true,
+      "system_under_test_must_not_define_expected_result": true,
+      "unresolved_semantics_do_not_compile_to_false_conformance": true
+    }
+  },
+  "projection_digest": "sha256:6aba0466c0d261709b15bad4862f53a5e02c78527f4e5b36cb5720ec5c77858b",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+  "source_ref": "l9.source/conformance-model@1"
+}

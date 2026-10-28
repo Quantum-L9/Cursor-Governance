@@ -1,5 +1,5 @@
 {
-  "generation_id": "30aeccf3b48975602f5fdc0c9f87f38b58e938f44b12365c91fc51394403b4ad",
+  "generation_id": "e58c089fb8ba24f3d6d20d96701155020cbcefe684b402b3d7dc7cced7e0d7bc",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1099,7 +1099,7 @@
       "path": "skills/l9-global-architect",
       "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load when the user explicitly invokes the global architect runtime, iterates on the pack, or when l9-plan-simple loads it as the required upstream planner; disable-model-invocation",
       "skill_md": "skills/l9-global-architect/SKILL.md",
-      "skill_sha256": "3f96b5735816b6965b6c10d35b40077243552021fea24363f62a52c239308bde",
+      "skill_sha256": "df2ffa2067ea338bf88fb5d75e84402c2f7e2502ffb8165284b1c70cb21b21a6",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1281,7 +1281,7 @@
       "path": "skills/l9-pr-audit",
       "reason": "deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-audit/SKILL.md",
-      "skill_sha256": "d71f83950ea5c94acc624e7b2e6838802abac08395a5582bd4aa870a3a7dbf05",
+      "skill_sha256": "8e3eef71a9f6c2db0493d050e05ae2c0f9697d29b661641c615a3e3b392fa56b",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1509,5 +1509,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "db7ee70dc3248aa2974094e7771a6f9938ec03004536e6280553876a24278ac5",
-  "source_skill_corpus_sha256": "11fdbf9e51eb41fc3e3b943d6287d515cd23afff1313b0bea342ad90994df7a3"
+  "source_skill_corpus_sha256": "6ff4951163909c50f16d15d68476bef16b57a099a83f34d7488f81f9bc80c3d2"
 }

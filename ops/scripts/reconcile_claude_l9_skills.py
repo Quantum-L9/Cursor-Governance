@@ -124,6 +124,27 @@ def remove_managed(path: Path) -> None:
         shutil.rmtree(path)
 
 
+def path_is_tracked(path: Path) -> bool:
+    """True when git owns ``path`` in the repository that contains it.
+
+    A consumer may track its own ``.claude/skills`` links and manifest; those
+    are repository objects, not projection state, and SessionStart must never
+    rewrite them. Reuses the settings reconciler's probe (one implementation of
+    tracked-ness; a git timeout answers True). Probing from the entry's own
+    parent resolves the repository that actually contains it, whichever mount
+    root the adapter fanned out to. An unanswerable question takes the branch
+    that destroys nothing.
+    """
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        from reconcile_claude_settings import _path_is_git_tracked
+    except Exception:  # noqa: BLE001
+        return True
+    return _path_is_git_tracked(path.parent, path.name)
+
+
 def is_l9_duplicate(name: str, destination: Path) -> bool:
     """True when an L9 registry skill exists as a real directory (forbidden copy)."""
     if not name.startswith("l9-"):
@@ -183,6 +204,8 @@ def reconcile_scope(
             ):
                 if check:
                     result.drift.append(f"symlink-outside-ssot:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -192,6 +215,8 @@ def reconcile_scope(
             if replace_l9_duplicates and mode == "symlink" and is_l9_duplicate(name, destination):
                 if check:
                     result.drift.append(f"l9-duplicate:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -202,6 +227,8 @@ def reconcile_scope(
             if mode == "symlink" and name.startswith("l9-") and destination.is_symlink():
                 if check:
                     result.drift.append(f"wrong-ssot-target:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -210,6 +237,8 @@ def reconcile_scope(
             if name in previous:
                 if check:
                     result.drift.append(f"stale-managed:{name}")
+                elif path_is_tracked(destination):
+                    result.conflicts.append(f"tracked-owned:{name}")
                 else:
                     remove_managed(destination)
                     install_entry(source, destination, mode)
@@ -228,6 +257,8 @@ def reconcile_scope(
         if check:
             if stale_path.exists() or stale_path.is_symlink():
                 result.drift.append(f"obsolete:{stale}")
+        elif (stale_path.exists() or stale_path.is_symlink()) and path_is_tracked(stale_path):
+            result.conflicts.append(f"tracked-owned:{stale}")
         else:
             remove_managed(stale_path)
             result.removed.append(stale)
@@ -239,6 +270,10 @@ def reconcile_scope(
         # list, which silently stopped the obsolete sweep above from ever
         # reclaiming removed skills for the entire scope.
         conflicted = {entry.split(":", 1)[1] for entry in result.conflicts if ":" in entry}
+        if path_is_tracked(state_path):
+            # The consumer committed its manifest: it is theirs, not ours.
+            result.drift.append(f"tracked-manifest:{STATE_NAME}")
+            return result
         atomic_json(
             state_path,
             {
@@ -272,14 +307,28 @@ def _entry_resolves_to(entry: Path, source: Path) -> bool:
     return True
 
 
-def _read_user_settings(path: Path | None) -> dict[str, Any] | None:
-    if path is None or not path.is_file():
-        return None
+def _read_user_settings(path: Path | None) -> tuple[dict[str, Any] | None, str | None]:
+    """Return ``(settings, unreadable_reason)``.
+
+    ``path is None`` means the caller did not request the tier-override check.
+    A path that is missing, unreadable, or not a JSON object is unresolved:
+    the reason names the path and why it could not be read.
+    """
+    if path is None:
+        return None, None
+    if not path.is_file():
+        return None, f"missing {path}"
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    return data if isinstance(data, dict) else None
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None, f"unreadable {path}"
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None, f"invalid {path}"
+    if not isinstance(data, dict):
+        return None, f"invalid {path}"
+    return data, None
 
 
 def coverage_census(
@@ -353,9 +402,11 @@ def coverage_census(
                     klass = "unmanaged"
                 synced.append({"name": skill.name, "class": klass, "path": str(skill)})
 
-    settings = _read_user_settings(user_settings)
+    settings, settings_unreadable = _read_user_settings(user_settings)
     policy = None if settings is None else settings.get("syncClaudeAiSkills")
     overrides = (settings or {}).get("skillOverrides") or {}
+    # An unreadable file is not "no overrides missing". Leave the list empty
+    # and fail the census on settings_unreadable instead of inventing names.
     tier_override_missing = (
         []
         if settings is None
@@ -368,7 +419,12 @@ def coverage_census(
     )
 
     missing = sorted(set(canonical) - covered)
-    complete = not missing and not wrong_target and not tier_override_missing
+    complete = (
+        not missing
+        and not wrong_target
+        and not tier_override_missing
+        and settings_unreadable is None
+    )
     return {
         "canonical_count": len(canonical),
         "tiers": dict(sorted(tiers.items())),
@@ -378,6 +434,7 @@ def coverage_census(
         "wrong_target": sorted(wrong_target),
         "unexpected": sorted(unexpected),
         "tier_override_missing": tier_override_missing,
+        "settings_unreadable": settings_unreadable,
         "account_sync_policy": policy,
         "account_synced_l9": synced,
         "status": "complete" if complete else "incomplete",
@@ -404,6 +461,8 @@ def coverage_banner(census: dict[str, Any]) -> list[str]:
             "skills tier override missing in user settings: "
             + ", ".join(census["tier_override_missing"])
         )
+    if census.get("settings_unreadable"):
+        lines.append(f"user settings unreadable: {census['settings_unreadable']}")
     if census["unexpected"]:
         lines.append(f"skills unexpected (non-canonical l9-*): {', '.join(census['unexpected'])}")
     policy = census["account_sync_policy"]

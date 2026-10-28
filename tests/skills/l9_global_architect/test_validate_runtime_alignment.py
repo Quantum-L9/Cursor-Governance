@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[3]
 PACK = REPO / "skills" / "l9-global-architect"
 VALIDATOR = PACK / "scripts" / "validate_runtime_alignment.py"
 REGISTRY = REPO / "ops" / "generated" / "skill-registry.json"
-PACK_VERSION = "0.8.2"
+PACK_VERSION = "0.8.4"
 
 
 def _run_validator(root: Path) -> subprocess.CompletedProcess[str]:
@@ -127,3 +127,14 @@ def test_registry_resolves_single_active_gar() -> None:
         and str(item.get("skill_md", "")).startswith("skills/l9-global-architect/")
     ]
     assert others == []
+
+
+def test_architectural_integrity_clauses_are_top_level() -> None:
+    # The inherited governance-contract schema reads normative_clauses at the
+    # contract root; nested under scope it is invisible to every reader.
+    contract = yaml.safe_load(
+        (PACK / "contracts" / "ARCHITECTURAL_INTEGRITY.yaml").read_text(encoding="utf-8")
+    )
+    assert "normative_clauses" not in contract["scope"]
+    clause_ids = [clause["clause_id"] for clause in contract["normative_clauses"]]
+    assert clause_ids == ["AI-001", "AI-002", "AI-003", "AI-004", "AI-005"]

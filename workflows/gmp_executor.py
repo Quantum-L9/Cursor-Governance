@@ -9,11 +9,11 @@ The DAG contains all steps, prompts, and enforcement.
 This executor just runs it.
 
 Usage:
-    python3 workflows/gmp_executor.py "task description" --tier RUNTIME
-    python3 workflows/gmp_executor.py --workspace /path/to/clone --resume
-    python3 workflows/gmp_executor.py --status
+    "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" "task description" --tier RUNTIME
+    "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" --resume
+    "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" --status
 
-The mutated clone is ``--workspace`` (else ``WS``, else the cwd), normalized to
+The mutated clone is ``--workspace`` (else the cwd; never ``WS``), normalized to
 its git toplevel. This checkout only supplies tools.
 
 The executor:
@@ -78,6 +78,7 @@ NO_PLAN = "NO_PLAN"
 NO_SCOPE = "NO_SCOPE"
 NO_TASK = "NO_TASK"
 NO_WORKSPACE = "NO_WORKSPACE"
+WORK_ROOT_SENTINEL = "WORK_ROOT_SENTINEL"
 OUT_OF_WORKSPACE = "OUT_OF_WORKSPACE"
 
 FILES_HEADING_RE = re.compile(r"^##\s+Files\b", re.I)
@@ -113,12 +114,14 @@ def adapter_publish_surface() -> bool:
 def resolve_work_root(explicit: str | None) -> tuple[Path, str | None] | None:
     """Return ``(git toplevel, owner/name or None)`` for the clone being mutated.
 
-    Candidate is ``explicit``, else a non-empty ``WS``, else the cwd. A subpath
-    normalizes to its toplevel. ``None`` means no git work tree: the caller
-    prints nothing more and exits ``NO_WORKSPACE``. Never falls back to
-    ``GOV_ROOT``.
+    Candidate is ``explicit``, else the cwd -- never the ambient ``WS``
+    environment variable (``make`` exports it, so an inherited value would
+    silently redirect the mutated tree). A subpath normalizes to its toplevel.
+    ``None`` means no git work tree or a hook-home toplevel: the caller prints
+    nothing more and exits ``NO_WORKSPACE`` / ``WORK_ROOT_SENTINEL``. Never
+    falls back to ``GOV_ROOT``.
     """
-    raw = (explicit or "").strip() or (os.environ.get("WS") or "").strip()
+    raw = (explicit or "").strip()
     candidate = Path(raw).expanduser().resolve() if raw else Path.cwd().resolve()
     # sys.path[0] is workflows/, so `ops` is importable only from GOV_ROOT.
     if str(GOV_ROOT) not in sys.path:
@@ -130,7 +133,14 @@ def resolve_work_root(explicit: str | None) -> tuple[Path, str | None] | None:
         print(f"No git work tree at {candidate}")
         print(NO_WORKSPACE)
         return None
-    return Path(git_root).resolve(), identity
+    from ops.autonomy.l4_local import hook_home_sentinels
+
+    work_root = Path(git_root).resolve()
+    if work_root in hook_home_sentinels():
+        print(f"Refusing hook-home toplevel as work root: {work_root}")
+        print(WORK_ROOT_SENTINEL)
+        return None
+    return work_root, identity
 
 
 def _confined(work_root: Path, rel: str) -> bool:
@@ -1205,7 +1215,7 @@ from {module_path} import ...
         """Show current status."""
         if not self._load_state():
             print("No active GMP. Start with:")
-            print('  python3 workflows/gmp_executor.py "task description"')
+            print('  "$GOV_PY" "$GOV/workflows/gmp_executor.py" --workspace "$WORK" "<task>"')
             return
 
         self._print_header(f"GMP STATUS: {self.state.gmp_id}")
@@ -1284,11 +1294,11 @@ from {module_path} import ...
             return
         self._maybe_l4_release()
         argv = self._make_argv("pr")
-        self._record_subprocess("PR_REMEDIATE=1 " + " ".join(argv))
+        self._record_subprocess("PR_REMEDIATE=0 " + " ".join(argv))
         if dry_run():
             return
         env = os.environ.copy()
-        env["PR_REMEDIATE"] = "1"
+        env["PR_REMEDIATE"] = "0"
         result = subprocess.run(
             argv,
             cwd=GOV_ROOT,
@@ -1418,7 +1428,10 @@ from {module_path} import ...
             else:
                 print(f"\nStep failed: {next_step.value}")
                 print(f"   Error: {result.error}")
-                print("\nResume with: python3 workflows/gmp_executor.py --resume")
+                print(
+                    '\nResume with: "$GOV_PY" "$GOV/workflows/gmp_executor.py"'
+                    ' --workspace "$WORK" --resume'
+                )
                 return False
 
         self._print_header("GMP COMPLETE")
@@ -1467,7 +1480,8 @@ Examples:
         "--workspace",
         default=None,
         help=(
-            "Clone to mutate (normalized to its git toplevel). Default: WS, else cwd. "
+            "Clone to mutate (normalized to its git toplevel). Default: the cwd; the WS "
+            "environment variable is never consulted. "
             "This checkout supplies tools only."
         ),
     )

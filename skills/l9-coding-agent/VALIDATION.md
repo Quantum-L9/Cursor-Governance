@@ -1,6 +1,6 @@
 # L9 Coding Agent Validation
 
-**Release:** 1.4.1  
+**Release:** 1.4.5  
 **Tier decision:** EXEMPLARY  
 **Compiler authority:** `Quantum-L9/Cursor-Governance` `l9-skill-compiler` v3.8.0  
 **Compiler source revision:** `a29657e8bafe07761a7cf6501864ffa77cdb9c56`
@@ -115,21 +115,52 @@ Validated at Cursor-Governance base `2993930`, against a synthetic authority rep
   - prior re-check: `CURRENT`.
 - Lazy bootstrap closes 16 semantic owners and classifies 32 files. Runtime alignment covers 57 cases and four negative controls. `validate_skill_pack.py` and `validate_exemplary_skill.py` pass.
 
+## v1.4.2 coding-agent execution profile and producer-convention alignment
+
+Validated on 2026-10-21 against a synthetic authority repository and the real `.github` at `2f8a20a` (Quantum-L9/.github#193, v3.23.0 candidate). The producer was run once, separately, to obtain the pair; the verifier never invoked it.
+
+- `tests/test_coding_agent_canonical_binding.py`: 37/37 pass. The verifier issued only `git` commands.
+- Real pair for `l9.projection/coding-agent-execution@1` / `l9.source/invariants@1`, emitted by `l9-semantic-compiler` 0.9.3 at l9-semantic-compiler-engine PR #13 (`7e516b6d`, the forbidden-criterion engine): receipt `result: pass`, `unresolved_criteria: []`.
+  - pinned: `BOUND`, 19 projected invariants, all six governing refs select;
+  - prior re-check at the same pin: `CURRENT UNCHANGED`;
+  - the same tree receipted by the engine at `main` (`37e6758b`, no forbidden criterion): `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`;
+  - the pin before the branch was published: `BLOCKED AUTHORITY_REVISION_NOT_ON_ORIGIN_TRACKING_REF`.
+- Re-validated after both upstream merges on 2026-10-21, with the producer at l9-semantic-compiler-engine `main` (`b9b4892`, PR #13 and PR #14 merged) and the authority at `.github` `main` (`7252e3b`, PR #193 merged): all three profile classes receipt `result: pass` with no unresolved criteria, the `invariants` artifact is byte-identical to the PR #13 output, and this verifier returns `BOUND` with 19 invariants at the admitted revision. Against `.github` `main` before #193 the same producer receipted every class `unknown` on the four forbidden-constraint criteria, which this verifier rejects.
+- Runtime alignment and lazy bootstrap validators pass unchanged.
+
+## v1.4.3 consumer-committed bundle
+
+Validated on 2026-10-21 against a synthetic three-class authority repository and the committed bundle `generated/governance/coding_agent_execution`, cut by `tools/authority/produce_projection_bundle.py` with the producer at l9-semantic-compiler-engine `main` (`b9b4892`) at `.github` `main` (`7252e3b`). The verifier never invoked the producer.
+
+- `tests/test_coding_agent_canonical_binding.py`: 48/48 pass (10 bundle cases added: every class bound, missing class, byte change outside invariants, coherent forgery of a non-invariant class, unresolved criteria, wrong output schema criterion, foreign lock schema, pin outside the bundle's history, unrelated upstream commit stays `CURRENT`, changed non-invariant source goes `STALE`). The verifier issued only `git` commands.
+- Real bundle: `BOUND PROJECTION_BUNDLE_VERIFIED`, 19 projected invariants, components `invariants`, `contracts`, `authority_model`; prior re-check `CURRENT UNCHANGED`; a byte change to the contracts component `REJECTED BUNDLE_BYTES_MISMATCH`; the pin `5996b2a` (older than the bundle) `STALE`.
+- The repository-level consumer (`tools/authority/verify_coding_projection.py`, `ops/scripts/coding_projection_status.py`) delegates every check to this verifier in bundle mode and reports `BOUND` at SessionStart and `CURRENT` with an independent `main` record; 14/14 repository tests pass.
+- Runtime alignment and lazy bootstrap validators pass.
+
+## v1.4.4 / v1.4.5 mechanical binding gate
+
+Validated on 2026-10-21 in `Quantum-L9/Cursor-Governance`, where the gate is registered.
+
+- `tests/ops/autonomy/test_coding_agent_binding_gate.py` (repository suite, 40 cases): no run active allows everything; non-file tools are ignored; a `BOUND` record allows only when the re-run verifier answers `CURRENT`, and `STALE`, `REJECTED`, `BLOCKED`, a stale `BOUND` and an empty verdict all deny; an active run without a record denies every file tool with the verifier invocation in the reason; `REJECTED`, `BLOCKED`, `STALE` and status-less records deny without re-verifying; a record from another verifier, a handed-pair record without a bundle, a run without `authority_root` and an absent authority checkout deny; malformed run and record fail closed; file-tool writes under `.l9/coding-agent/` are refused during a run while opening a run is not gated; a file-based reauthorization is not a grant; the operator environment reauthorization carries the run and bare flags do not; the breakglass needs a reason; the CLI emits a PreToolUse deny decision, is silent when nothing is active, and denies an unreadable event. End to end with the real verifier on a synthetic authority and bundle: the verifier's own record is admitted (`re-verified: UNCHANGED`) and the same record over a byte-changed bundle is denied `REJECTED BUNDLE_BYTES_MISMATCH`.
+- `environment/agents/adapters/claude-code/tests/test_hook_exec_failclosed.py`: the gate is named in the launcher's gate table, cannot be registered as an observer, and blocks when the launcher is missing.
+- `tests/test_coding_projection.py`: the governance binding names the gate, its hook, event, tools, state files and allowed statuses, all equal to the gate's constants, and the rendered Claude settings register it exactly once as `--class gate`.
+- Runtime alignment covers 59 cases; lazy bootstrap and the pack validators pass.
+
 ## Known limitations
 
 - Behavior conformance is deterministic declarative coverage, not production telemetry. No telemetry was invented.
 - This release proof covers the pack as compiled. Its installation into `Quantum-L9/Cursor-Governance` is recorded in [CHANGELOG.md](CHANGELOG.md); that install adds exactly one frontmatter line (`disable-model-invocation: true`) and no runtime semantics.
 - `agents/openai.yaml` is retained because ChatGPT remains an explicit supported target.
-- No projection publication mechanism is assumed operational. Until one supplies a verified artifact, receipt, and revision pin, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
+- No producer or bundle is assumed operational. Until the consumer repository's committed bundle (or a handed pair) and an independent revision pin are available, every run is `BLOCKED_UPSTREAM_PROJECTION_PRODUCER` unless the user explicitly reauthorizes the `Unknown`.
 - The revision pin is caller-supplied. The verifier binds law bytes to it by recomputed hashes, and refuses absent, malformed, and local-only pins, but it cannot prove the pin is the published revision. That trust comes from the independent record. Origin URL and tracking refs are local state, so a deliberately forged `refs/remotes/origin/*` defeats the local-only check.
-- Upstream gaps block a live canonical binding:
-  - no merged producer exists for `l9.projection/cursor-governance-operating-plane@1` (at l9-semantic-compiler-engine `a1c4104`, the revision observed for 1.4.1, `project` exists only on the #8 branch, for the `invariants` class);
-  - there is no `l9.projection.cursor-governance-operating-plane/v1` output schema;
-  - no `semantic_digest` canonicalization algorithm is declared;
-  - the profile has 9 source groups but the projection artifact is single-source, and no composition profile is declared;
-  - the `conformance_profiles` source resolves outside `.github`.
+- Upstream gaps that still bound the live canonical binding (1.4.2):
+  - closed on 2026-10-21: `.github` v3.23.0 (Quantum-L9/.github#193) and the forbidden-criterion engine (l9-semantic-compiler-engine PR #13, PR #14) are merged, so a `pass` receipt for `l9.projection/coding-agent-execution@1` is producible from the engine's `main` at the authority's `main`;
+  - no `semantic_digest` canonicalization algorithm is declared upstream; the verifier recomputes the producer's canonical-JSON convention and fails closed on any other;
+  - closed in 1.4.3: the consumer repository commits the bundle and the verifier consumes every declared class (`--bundle`); the retired `projections`-branch publisher and its payload-digest convention are removed upstream by ADR-021 (v3.24.0 candidate);
+  - producer attestation is the trusted replay in the consumer repository, which passes only when the producer revision named in the lock is on the engine's protected `main`;
+  - the operating-plane profile remains unprojectable whole because `conformance_profiles` resolves outside `.github`; it is no longer the coding agent's binding profile.
 - Receipts and projection digests are unkeyed (F-03). A forger who copies the source faithfully and claims the `l9-semantic-compiler` identity cannot be told apart from the real producer; authenticating the producer needs signed receipts upstream. Bindings say so (`producer_authentication: unauthenticated_unkeyed_receipt`).
-- Canonical-binding enforcement is instructional. Verifier invocation is required by the skill text, not enforced by a host hook (F-04, outside this pack).
+- Canonical-binding enforcement is mechanical only on Claude Code under `Quantum-L9/Cursor-Governance` (the PreToolUse gate above, keyed on the run-state files and a live re-verification) and only for the file tools it names; shell-driven mutation and other hosts remain instructional (F-04 narrowed in 1.4.4, not closed everywhere). The gate's inputs (`run.json`, `binding.json`, the bundle, the authority checkout) are agent-writable; what makes them useless to a forger is that the verifier recomputes every digest against the pinned commit objects and the committed bundle bytes, so a record that was not produced over genuine law and the real bundle cannot come back `CURRENT`. The pin remains caller-supplied (see above).
 - `SKILL.md` stays byte-identical to 1.3.0, so frontmatter `metadata.version` lags at 1.3.0. Generated skill registries outside the pack pin its `skill_sha256`, and regenerating them is outside this change's authorized path.
 - `skill_intelligence_report.yaml` and `expertise_model.yaml` remain 1.3.0 package evidence and were not recompiled.
 

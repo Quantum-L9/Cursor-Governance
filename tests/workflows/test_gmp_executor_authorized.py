@@ -183,7 +183,7 @@ def test_authorized_finalize_records_make_pr_not_merge() -> None:
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
     combined = proc.stdout + proc.stderr
-    assert "PR_REMEDIATE=1" in combined
+    assert "PR_REMEDIATE=0" in combined
     assert "make -C" in combined
     assert " pr " in combined
     assert "WS=" in combined
@@ -388,7 +388,7 @@ def test_consumer_adapter_publish_targets_work_root(tmp_path: Path) -> None:
     proc = _finalize(repo, **surface)
     combined = proc.stdout + proc.stderr
     assert proc.returncode == 0, combined
-    assert f"PR_REMEDIATE=1 make -C {ROOT} pr WS={repo}" in combined
+    assert f"PR_REMEDIATE=0 make -C {ROOT} pr WS={repo}" in combined
     assert f"--workspace {repo} authorize-release" in combined
     assert "gh pr merge" not in combined
 
@@ -508,3 +508,80 @@ def test_memory_argv_targets_work_root(tmp_path: Path, monkeypatch: pytest.Monke
     for call_argv, cwd in calls:
         assert cwd == module.GOV_ROOT
         assert call_argv[-2:] == ["--workspace", str(repo)]
+
+
+# --- work-root authorization residue (post-#744) ---------------------------------
+
+
+def test_ws_env_does_not_select_work_root(tmp_path: Path) -> None:
+    """An inherited ``WS`` (``make`` exports it) must never pick the mutated clone."""
+    repo = _temp_repo(tmp_path)
+    other = tmp_path / "other"
+    other.mkdir()
+    subprocess.run(["git", "init", "-q", str(other)], check=True)
+    proc = _run(
+        [
+            "--authorized-by",
+            "slash-gmp",
+            "--plan",
+            str(FIXTURE_PLAN),
+            "--mode",
+            "start",
+            "--tier",
+            "RUNTIME",
+            "t",
+        ],
+        env=_env(WS=str(other)),
+        cwd=repo,
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert f"Workspace: {repo}" in proc.stdout
+    assert str(other) not in proc.stdout
+    state = json.loads((repo / ".l9" / "gmp" / "executor-state.json").read_text(encoding="utf-8"))
+    assert state["work_root"] == str(repo)
+    assert not (other / ".l9").exists()
+
+
+def test_home_toplevel_is_refused(tmp_path: Path) -> None:
+    """A git toplevel at a hook home ($HOME, ~/.cursor, ~/.claude) is never WORK."""
+    home = tmp_path / "home"
+    home.mkdir()
+    subprocess.run(["git", "init", "-q", str(home)], check=True)
+    proc = _run(["--workspace", str(home), "--status"], env=_env(HOME=str(home)))
+    assert proc.returncode == 2, proc.stderr + proc.stdout
+    assert "WORK_ROOT_SENTINEL" in proc.stdout
+    assert not (home / ".l9").exists()
+
+
+def test_hook_home_sentinels_shared() -> None:
+    """The executor refuses exactly the hook homes l4_local declares (one set)."""
+    source = EXECUTOR.read_text(encoding="utf-8")
+    assert "from ops.autonomy.l4_local import hook_home_sentinels" in source
+    assert 'os.environ.get("WS")' not in source
+    sys.path.insert(0, str(ROOT))
+    executor = __import__("workflows.gmp_executor", fromlist=["WORK_ROOT_SENTINEL"])
+    l4_local = __import__("ops.autonomy.l4_local", fromlist=["hook_home_sentinels"])
+    assert executor.WORK_ROOT_SENTINEL == "WORK_ROOT_SENTINEL"
+    home = Path.home().resolve()
+    assert l4_local.hook_home_sentinels() == frozenset({home, home / ".cursor", home / ".claude"})
+    assert l4_local._hook_home_sentinels is l4_local.hook_home_sentinels
+
+
+def test_consumer_run_leaves_governance_untouched(tmp_path: Path) -> None:
+    repo = _temp_repo(tmp_path)
+    before = subprocess.run(
+        ["git", "-C", str(ROOT), "status", "--porcelain", "--", ".l9", "reports"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert _start(repo).returncode == 0
+    assert _finalize(repo).returncode == 0
+    after = subprocess.run(
+        ["git", "-C", str(ROOT), "status", "--porcelain", "--", ".l9", "reports"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert before == after
+    assert not STATE.exists()

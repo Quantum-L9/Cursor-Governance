@@ -38,7 +38,10 @@ preparation before an observational validation wave; it runs no kernel.
    The `pr` target is the **governance** Makefile's, always — reach it with
    `l9 pr` / `make -C "$GOV" pr WS="$PWD"` regardless of the workspace repo's
    own Makefile. A consumer repo needs **no** local `pr` target; do not add one, and do
-   not fall back to a raw `git push` where one is absent.
+   not fall back to a raw `git push` where one is absent. The one declared
+   exception is Governance-side data: `ops/config/publish-authority.json` names
+   the repositories whose own `make pr` (integration-branch-first,
+   CANONICAL_LAW §13) the governance `pr` target delegates to exactly once.
 2. Do **not** pin `PR_REMEDIATE` in the account or ambient environment.
    The standing finish path is `PR_REMEDIATE=0 make pr` at the **call site**
    (campaign / L4 authorize-release). Unset remediates is 1 only when that

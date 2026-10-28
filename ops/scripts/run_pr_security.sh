@@ -52,13 +52,16 @@ PR_SECURITY_ADVISORY="${PR_SECURITY_ADVISORY:-0}"
 PR_BASE="${PR_BASE:-}"
 GITLEAKS_CONFIG="${GITLEAKS_CONFIG:-$GOV_ROOT/.gitleaks.toml}"
 # Pins: Python tools from requirements.txt (sdk wins over core). gitleaks is a
-# machine CLI — only pinned in l9-ci-core security.yml (sdk has no gitleaks pin).
+# machine CLI pinned once, by the bootstrap that installs it
+# (bootstrap_agent_environment.sh, mirroring l9-ci-core security.yml). Read the
+# pin from there instead of keeping a second literal that can drift.
 REQ_FILE="${REQ_FILE:-$GOV_ROOT/requirements.txt}"
 pin_from_req() {
   local name="$1"
   awk -F== -v n="$name" '$1==n {print $2; exit}' "$REQ_FILE"
 }
-GITLEAKS_PIN="8.24.3"
+GITLEAKS_PIN="$(sed -nE 's/^GITLEAKS_PIN="([^"]+)".*/\1/p' \
+  "$SCRIPT_DIR/bootstrap_agent_environment.sh" 2>/dev/null | head -1)"
 BANDIT_PIN="$(pin_from_req bandit)"
 PIP_AUDIT_PIN="$(pin_from_req pip-audit)"
 BANDIT_PIN="${BANDIT_PIN:-1.8.6}"
@@ -213,16 +216,33 @@ fi
 # One process over a temp tree of the changed set. `gitleaks dir a b` ignores
 # extra args and can walk the cwd (measured: two files → 141 MB). Never default
 # `detect` without --no-git (that scans git history).
+# The bootstrap installs gitleaks into ~/.local/bin and puts that directory on
+# PATH only for its own process, so a later gate shell whose PATH lacks it
+# reported an installed binary as NOT INSTALLED. Resolve the install location
+# directly when PATH does not carry it.
+resolve_gitleaks() {
+  if have gitleaks; then
+    command -v gitleaks
+  elif [[ -x "$HOME/.local/bin/gitleaks" ]]; then
+    printf '%s\n' "$HOME/.local/bin/gitleaks"
+  else
+    return 1
+  fi
+}
+
 run_gitleaks() {
-  if ! have gitleaks; then
+  local gitleaks_bin
+  if ! gitleaks_bin="$(resolve_gitleaks)"; then
     missing_tool gitleaks "bash ops/scripts/bootstrap_agent_environment.sh --surface local"
     return 0
   fi
   local ver
   # Output looks like "gitleaks version 8.24.3" — take the last token, not a space-stripped blob.
-  ver="$(gitleaks version 2>/dev/null | head -1 | awk '{print $NF}' || true)"
-  if [[ -n "$ver" && "$ver" != "$GITLEAKS_PIN" ]]; then
-    note "WARN: gitleaks $ver on PATH (expected $GITLEAKS_PIN from l9-ci-core security.yml; sdk has no gitleaks pin)"
+  ver="$("$gitleaks_bin" version 2>/dev/null | head -1 | awk '{print $NF}' || true)"
+  if [[ -z "$GITLEAKS_PIN" ]]; then
+    note "WARN: gitleaks pin unreadable from bootstrap_agent_environment.sh; version $ver not checked"
+  elif [[ -n "$ver" && "$ver" != "$GITLEAKS_PIN" ]]; then
+    note "WARN: gitleaks $ver at $gitleaks_bin (expected $GITLEAKS_PIN, pinned in bootstrap_agent_environment.sh)"
   fi
   local cfg_args=()
   [[ -f "$GITLEAKS_CONFIG" ]] && cfg_args=(-c "$GITLEAKS_CONFIG")
@@ -239,12 +259,12 @@ run_gitleaks() {
   local -a extra=(--redact --exit-code=1)
   extra+=(--no-banner)
   extra+=("${cfg_args[@]}")
-  if gitleaks dir --help >/dev/null 2>&1; then
-    if ! gitleaks dir "${extra[@]}" "$_scan_tmp"; then
+  if "$gitleaks_bin" dir --help >/dev/null 2>&1; then
+    if ! "$gitleaks_bin" dir "${extra[@]}" "$_scan_tmp"; then
       status=1
     fi
   else
-    if ! gitleaks detect --no-git "${extra[@]}" --source "$_scan_tmp"; then
+    if ! "$gitleaks_bin" detect --no-git "${extra[@]}" --source "$_scan_tmp"; then
       status=1
     fi
   fi

@@ -132,6 +132,10 @@ class HookInterpreterBindingTests(unittest.TestCase):
         )
         surface_lib = gov / "ops" / "scripts" / "lib"
         surface_lib.mkdir(parents=True)
+        (surface_lib / "venv_ready.sh").write_text(
+            (REPO / "ops" / "scripts" / "lib" / "venv_ready.sh").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         (surface_lib / "surface_detect.sh").write_text(
             (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(encoding="utf-8"),
             encoding="utf-8",
@@ -251,7 +255,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
         """INV-1. The old inline form exited 0 here for gates too, which is how
         a memory gate, a merge gate and a publish-path gate all failed open."""
         gates = [c for _e, c in self.commands if "--class gate" in c]
-        self.assertEqual(len(gates), 3, "three gates must be registered")
+        self.assertEqual(len(gates), 4, "four gates must be registered")
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             self._synthetic_home(home, with_venv=False)

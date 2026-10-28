@@ -118,9 +118,50 @@ def test_cursor_merge_gate_is_not_added_to_the_claude_only_skip_table() -> None:
 
 
 def test_claude_gate_still_invoked() -> None:
+    # Not skipped on Claude. Since 691f0216 (CANONICAL_LAW §8.9, SessionStart is
+    # memory health-only) no governed write declares a memory precondition, so
+    # the invoked memory gate ALLOWS: no deny, no skip line, exit 0. The old
+    # assertion that it denied an unhydrated Edit encoded the retired contract.
     proc = _run("gate", GATE, {"CLAUDECODE": "1"})
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "skipped" not in proc.stderr.lower()
+    assert not _denied(proc), proc.stdout + proc.stderr
+    assert "Memory not hydrated" not in proc.stdout + proc.stderr
+
+
+def test_claude_gate_decision_reaches_the_host() -> None:
+    """A Claude-only gate that does deny proves the launcher runs gates, not
+    just declines to skip them: the coding-agent binding gate denies a file
+    mutation while a run is active without a verified binding."""
+    with tempfile.TemporaryDirectory() as tmp:
+        workspace = Path(tmp)
+        run_dir = workspace / ".l9" / "coding-agent"
+        run_dir.mkdir(parents=True)
+        (run_dir / "run.json").write_text(
+            json.dumps({"schema": "l9.coding-agent-run/v1", "binding_record": "binding.json"})
+        )
+        cleaned = {k: v for k, v in os.environ.items() if not k.startswith("CURSOR_")}
+        cleaned.pop("L9_CODING_BINDING_AUTHORIZED", None)
+        cleaned.update({"HOME": _home_for_this_checkout(), "CLAUDECODE": "1"})
+        proc = subprocess.run(
+            ["bash", str(HOOK), "--class", "gate", "coding_agent_binding_gate_wrap.py"],
+            cwd=str(ROOT),
+            env=cleaned,
+            capture_output=True,
+            text=True,
+            input=json.dumps(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": str(workspace / "src" / "app.py")},
+                    "cwd": str(workspace),
+                }
+            ),
+            check=False,
+        )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
     assert "skipped" not in proc.stderr.lower()
     assert _denied(proc), proc.stdout + proc.stderr
+    assert "coding-agent binding gate" in proc.stdout
 
 
 def test_kill_switch_disables_guard() -> None:

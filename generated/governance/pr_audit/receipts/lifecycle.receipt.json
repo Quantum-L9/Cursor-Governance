@@ -1,0 +1,170 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.projection/pr-audit@1#l9.source/lifecycle@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+      "path": "semantics/projection_artifact.schema.yaml",
+      "ref": "l9.schema/projection-artifact@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:b6e5eda82b391918218d95c9aab58fec6be8aaa8b9e85f6c5441f6fc93879606",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:fabe78189f47e7463b99da27b58da1b3d72561b8a8d3913ede06dd821f88e5f1",
+      "path": "semantics/projection_engine_contract.yaml",
+      "ref": "l9.compiler/projection-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:eb2de48bbf14fb44846bec31be432e5d48ab3208ebcb6a0b43e2c8989fa9ae5d",
+      "path": "semantics/projection_profiles.yaml",
+      "ref": "l9.projection-profile-catalog/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+    "selector_model": {
+      "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
+      "path": "semantics/selector_model.yaml",
+      "ref": "l9.selector-model/global@1"
+    },
+    "source_registry": {
+      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+      "path": "semantics/lifecycle.yaml",
+      "ref": "l9.source/lifecycle@1",
+      "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb"
+    }
+  ],
+  "operation": "projection",
+  "output": {
+    "digest": "sha256:a64b22928e80884791d2fa3af33c2d34086e89aa0ba113ff54432e4d1dbb1da0",
+    "ref": "l9.projection/pr-audit@1#l9.source/lifecycle@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "profile": {
+    "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+    "ref": "l9.projection/pr-audit@1"
+  },
+  "receipt_digest": "sha256:9628421dbe1877bd2f56156e6fef126bb4b94100d1f69752258a170601e2c638",
+  "receipt_identity": "l9.receipt-instance/1c4a232a8e0ce2e257e1fbdad89fdfb7c9b324bb1c4c82bfdde0040ab557d521",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "coverage": "complete",
+    "criteria": {
+      "declared_constraint:forbidden:adapter_host_or_surface_specific_semantics": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+        "criterion": "source_authority",
+        "owner": "Quantum-L9/.github",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "declared_constraint:forbidden:skill_command_or_routing_semantics": {
+        "applicable_selections": 0,
+        "criterion": "payload_excludes",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:55cabe3040f72ba6fe6d20e8c14d8a895e409ad8d550fc9792982cb97f647a5a",
+        "path": "l9.projection_pr-audit_1/l9.source_lifecycle_1.projection.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+          "path": "semantics/projection_artifact.schema.yaml",
+          "ref": "l9.schema/projection-artifact@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "schema": "l9.projection.pr-audit/v1",
+        "schema_artifact": {
+          "digest": "sha256:7992d47d2f0cb83b427ccfeab4037664816fe4775b595ea3ebbeb9f05382c5dd",
+          "path": "semantics/pr_audit_projection.schema.yaml",
+          "ref": "l9.schema/pr-audit-projection@1"
+        },
+        "status": "pass"
+      },
+      "profile_currentness": {
+        "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+        "ref": "l9.projection/pr-audit@1",
+        "status": "pass"
+      },
+      "projection_digest": {
+        "digest": "sha256:a64b22928e80884791d2fa3af33c2d34086e89aa0ba113ff54432e4d1dbb1da0",
+        "status": "pass"
+      },
+      "selection_equivalence": {
+        "selectors": 3,
+        "status": "pass"
+      },
+      "source_currentness": {
+        "digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+        "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+        "status": "pass"
+      },
+      "source_identity": {
+        "path": "semantics/lifecycle.yaml",
+        "ref": "l9.source/lifecycle@1",
+        "source_class": "lifecycle",
+        "status": "pass"
+      }
+    },
+    "selection_coverage": [
+      {
+        "records_lacking_selection": [],
+        "selector": "$.global_rules",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.state_semantics",
+        "status": "resolved"
+      },
+      {
+        "records_lacking_selection": [],
+        "selector": "$.lifecycles.published_artifact",
+        "status": "resolved"
+      }
+    ],
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

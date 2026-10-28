@@ -17,6 +17,10 @@ Treat the remediation executor as cold-started with only capabilities actually a
 
 When the operator explicitly invokes remediation, `PR_REMEDIATION_CONTRACT.md` is the execution contract, subordinate to the latest explicit user instruction and repository-local authority. `change-ledger.json` and the handoff's `adversarial_assurance` are audit provenance only: remediation must not rerun, reinterpret, delete, or override the audit's machine symbol/claim/falsification closure as a way to widen mutation scope.
 
+## Canonical authority currency
+
+The handoff carries `canonical_authority_binding` (status, `authority_revision`, profile and composition digests). Before mutation, compare that `authority_revision` with the revision the coding-agent binding (`skills/l9-coding-agent/scripts/verify_canonical_binding.py`) resolves for its own bundle. A different revision is stale-law Unknown: the executor records it, does not reinterpret the audit's `CANONICAL_LAW` citations, and does not proceed on them until the audit is rebound. A handoff whose binding status is not `ADMITTED_AND_CURRENT` carries no authoritative global-law citation.
+
 ## Primary mission and mandatory addenda
 
 The remediation contract has one primary mission:

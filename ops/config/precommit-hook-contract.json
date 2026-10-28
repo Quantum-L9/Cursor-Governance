@@ -1,55 +1,67 @@
 {
-  "$comment": "Declares, per pre-commit hook id, whether the hook may write into the repository. pre-commit reports 'files were modified by this hook' for any tree change inside that hook's wall-clock window (pre_commit/commands/run.py _run_single_hook), so a read_only declaration is what lets ops/scripts/attribute_tree_writers.sh exonerate a hook and look for the real writer. Validated by ops/scripts/validate_precommit_hook_contract.py against .pre-commit-config.yaml — every configured hook id must appear here.",
+  "$comment": "Declares, per pre-commit hook id, whether the hook may write into the repository. pre-commit reports 'files were modified by this hook' for any tree change inside that hook's wall-clock window (pre_commit/commands/run.py _run_single_hook), so a read_only declaration is what lets ops/scripts/attribute_tree_writers.sh exonerate a hook and look for the real writer. Validated by ops/scripts/validate_precommit_hook_contract.py against .pre-commit-config.yaml — every configured hook id must appear here. locality: 'governance' when the hook's entry resolves against the governance tree (it cannot run in a consumer workspace, so run_pr_precommit.sh skips it there); 'any' when it runs in every workspace. Mode and locality are read by run_pr_precommit.sh to build its pass and skip lists, so each hook is declared exactly once.",
   "version": 1,
   "hooks": {
     "check-merge-conflict": {
       "mode": "read_only",
+      "locality": "any",
       "note": "upstream pre-commit-hooks scanner"
     },
     "end-of-file-fixer": {
       "mode": "writer",
+      "locality": "any",
       "output_prefixes": [],
       "note": "ensures a trailing newline; may rewrite any passed text file"
     },
     "trailing-whitespace": {
       "mode": "writer",
+      "locality": "any",
       "output_prefixes": [],
       "note": "strips trailing whitespace; may rewrite any passed text file. Exception: --markdown-linebreak-ext=md,mdc preserves two-space Markdown hard line breaks, so generator-owned .md/.mdc bytes are not independently canonicalized (tests/ops/test_precommit_markdown_hardbreak.py)"
     },
     "check-added-large-files": {
       "mode": "read_only",
+      "locality": "any",
       "note": "rejects added files larger than --maxkb=1000"
     },
     "check-yaml": {
       "mode": "read_only",
+      "locality": "any",
       "note": "parses YAML (--allow-multiple-documents, no --unsafe)"
     },
     "no-hardcoded-paths": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_governance_no_hardcoded_paths.sh — greps only"
     },
     "symlinks-check": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_governance_symlinks.sh writes only $HOME/.cursor/plans, outside the repo. Widest window in the hook set, so it absorbs blame for concurrent writers."
     },
     "legacy-doctrine-residue": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_legacy_doctrine_residue.py — greps only"
     },
     "adr-identity": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_adr_identity.py — one number per decision; docs/decisions/README.md must match the files"
     },
     "max-velocity": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_max_velocity.py — reads committed profiles only"
     },
     "gh-package-deps-preflight": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_gh_package_deps.py — reads package files; optional live registry metadata check"
     },
     "sync-generated-artifacts": {
       "mode": "writer",
+      "locality": "governance",
       "output_prefixes": [
         "rules/RULES-MANIFEST.",
         "environment/generated/llm-rules/",
@@ -69,32 +81,39 @@
     },
     "rules-check": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "check_rules_standard.py ratchet — reports only"
     },
     "skills-check": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "check_skills_standard.py ratchet — reports only"
     },
     "repo-hygiene": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "tools/check_repo_hygiene.py — reports only"
     },
     "ruff": {
       "mode": "writer",
+      "locality": "any",
       "output_prefixes": [],
       "note": "runs with --fix; may rewrite any passed Python file"
     },
     "ruff-format": {
       "mode": "writer",
+      "locality": "any",
       "output_prefixes": [],
       "note": "reformats any passed Python file"
     },
     "commit-verification-contract": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_commit_verification_contract.py — parses the declaration, greps tracked executables, runs the gate in-process; writes nothing"
     },
     "cursor-skill-projection": {
       "mode": "read_only",
+      "locality": "governance",
       "note": "validate_skill_projection.py — Cursor virtual gateway cardinality; reports only"
     }
   }

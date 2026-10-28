@@ -1,0 +1,34 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "rules": [
+      {
+        "derive": {
+          "architecture_obligations": [
+            "canonical_source",
+            "projection_profiles",
+            "digest_bound_provenance"
+          ]
+        },
+        "id": "l9.arch-rule/canonical-source-multiple-views@1",
+        "source_refs": [
+          "L9-OWNER-001",
+          "L9-PROJECTION-001",
+          "L9-PROV-001"
+        ],
+        "when": {
+          "requirement": "multiple_consumer_views_of_same_semantics"
+        }
+      }
+    ]
+  },
+  "projection_digest": "sha256:c656267939ce3409cf94f3bece7823dc13fde7d22a6ff60885efb12f49e8ab66",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
+  "source_ref": "l9.source/architecture-rules@1"
+}

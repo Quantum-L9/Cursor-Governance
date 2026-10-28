@@ -8,6 +8,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 L4 = ROOT / "ops" / "autonomy" / "l4_local.py"
@@ -502,6 +504,87 @@ def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     assert "Do not auto-stage" in proc.stdout
 
 
+def _pinned_ruff_consumer(
+    tmp_path: Path, uv_body: str, *, pin_file: str = "requirements-dev.txt", pin_text: str = ""
+) -> tuple[Path, Path, dict[str, str]]:
+    """A consumer pinning ruff==0.16.0 with no .venv, a changed Python file, a
+    logging pre-commit stub and a `uv` stub with the given behaviour."""
+    repo = _init_repo(tmp_path, feature=True)
+    (repo / pin_file).write_text(pin_text or "ruff==0.16.0\n", encoding="utf-8")
+    (repo / "mod.py").write_text("x = 1\n", encoding="utf-8")
+    git_in(repo, "add", pin_file, "mod.py")
+    git_in(repo, "commit", "-m", "py")
+    listed = tmp_path / "changed.txt"
+    listed.write_text("mod.py\n", encoding="utf-8")
+    calls = tmp_path / "calls.log"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "pre-commit").write_text(
+        f'#!/bin/sh\necho "pre-commit $*" >> "{calls}"\nexit 0\n', encoding="utf-8"
+    )
+    (bin_dir / "uv").write_text(
+        f'#!/bin/sh\necho "uv $*" >> "{calls}"\n{uv_body}\n', encoding="utf-8"
+    )
+    for name in ("pre-commit", "uv"):
+        (bin_dir / name).chmod(0o755)
+    env = {
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "PR_CHANGED_FILE": str(listed),
+        "PR_PRECOMMIT_STAGE": "writers",
+        "PR_PRECOMMIT_DEFER_DIRTY_STOP": "1",
+        "PATH": f"{bin_dir}:/usr/bin:/bin",
+    }
+    return repo, calls, env
+
+
+def test_a_consumer_ruff_pin_is_honoured_not_replaced_by_governance_ruff(
+    tmp_path: Path,
+) -> None:
+    """CG-05: with no consumer .venv the writer fell back to governance ruff
+    0.16.1 against a repository pinning 0.16.0. The pinned version must run."""
+    uv_ok = 'case "$*" in *"--version"*) echo "ruff 0.16.0" ;; esac\nexit 0'
+    repo, calls, env = _pinned_ruff_consumer(tmp_path, uv_ok)
+    proc = _run(["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)], cwd=repo, env=env)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    log = calls.read_text(encoding="utf-8")
+    assert "uv tool run --from ruff==0.16.0 ruff check --fix" in log, log
+    assert "uv tool run --from ruff==0.16.0 ruff format" in log, log
+    assert ".venv/bin/ruff" not in proc.stdout
+
+
+@pytest.mark.parametrize(
+    "pyproject",
+    [
+        '[project]\nname = "c"\n[project.optional-dependencies]\ndev = ["ruff==0.16.0"]\n',
+        '[dependency-groups]\nlint = [{include-group = "base"}, "ruff == 0.16.0"]\nbase = []\n',
+    ],
+    ids=["pep621-extra", "pep735-group"],
+)
+def test_a_ruff_pin_declared_as_a_dependency_is_honoured(tmp_path: Path, pyproject: str) -> None:
+    """A pin that lives only in pyproject's dependency declarations is still the
+    consumer's pin; reading only [tool.ruff] required-version fell through to
+    governance ruff for these layouts."""
+    uv_ok = 'case "$*" in *"--version"*) echo "ruff 0.16.0" ;; esac\nexit 0'
+    repo, calls, env = _pinned_ruff_consumer(
+        tmp_path, uv_ok, pin_file="pyproject.toml", pin_text=pyproject
+    )
+    proc = _run(["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)], cwd=repo, env=env)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "uv tool run --from ruff==0.16.0 ruff check --fix" in calls.read_text(encoding="utf-8")
+
+
+def test_an_unavailable_pinned_ruff_stops_before_any_writer(tmp_path: Path) -> None:
+    """A missing pinned toolchain is a named prerequisite, not a substitution,
+    and it is reported before any writer hook touches the tree."""
+    repo, calls, env = _pinned_ruff_consumer(tmp_path, "exit 1")
+    proc = _run(["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)], cwd=repo, env=env)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "TOOLCHAIN_UNAVAILABLE ruff==0.16.0" in proc.stdout + proc.stderr
+    log = calls.read_text(encoding="utf-8") if calls.exists() else ""
+    assert "pre-commit run" not in log, log
+
+
 def test_pr_direct_gate_does_not_double_run_precommit_repo() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
@@ -551,19 +634,18 @@ def test_precommit_skip_lists_are_disjoint() -> None:
         assert hook in precommit
     assert "_WRITER_SKIP=" in precommit
     assert "_READER_SKIP=" in precommit
-    assert "_READER_HOOKS=" in precommit
-    assert "_WRITER_HOOKS=" in precommit
-    writer_hooks = "end-of-file-fixer,trailing-whitespace"
-    reader_hooks = (
-        "check-merge-conflict,check-added-large-files,check-yaml,"
-        "no-hardcoded-paths,gh-package-deps-preflight"
-    )
-    assert writer_hooks in precommit
-    assert reader_hooks in precommit
-    for hook in writer_hooks.split(","):
-        assert hook not in reader_hooks
-    for hook in reader_hooks.split(","):
-        assert hook not in writer_hooks
+    # Pass membership is read from each hook's declared mode, not re-listed.
+    assert "precommit-hook-contract.json" in precommit
+    assert "IFS= read -r _READER_HOOKS" in precommit
+    assert "IFS= read -r _WRITER_HOOKS" in precommit
+    contract = json.loads(
+        (ROOT / "ops" / "config" / "precommit-hook-contract.json").read_text(encoding="utf-8")
+    )["hooks"]
+    reader_hooks = {h for h, e in contract.items() if e["mode"] == "read_only"}
+    writer_hooks = {h for h, e in contract.items() if e["mode"] == "writer"}
+    assert reader_hooks and writer_hooks
+    assert not reader_hooks & writer_hooks
+    assert reader_hooks | writer_hooks == set(contract)
 
 
 def test_gate_domain_gates_corpus_validators() -> None:
@@ -820,6 +902,31 @@ def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
     assert 'PR_REMEDIATE="${PR_REMEDIATE:-0}"' not in script
 
 
+def test_the_org_template_is_proven_before_the_branch_is_pushed() -> None:
+    """CG-06: the template was first read after a successful push, so an
+    unreadable one left a pushed branch with no PR. The proof, owner/name and
+    the open-PR lookup it depends on now all come before the push call, and the
+    proof applies only when a PR will be created (a refresh stays non-fatal)."""
+    script = (ROOT / "ops" / "scripts" / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    push_call = script.index("\n_push_with_bounded_recover\n")
+    helper = script[script.index("_prove_template() {") :]
+    helper = helper[: helper.index("\n}\n")]
+    assert "--check-template" in helper and "branch NOT pushed" in helper
+    required = script.index("_template_required=1")
+    proof = script.index("_prove_template || exit 1")
+    assert script.index('repo="$(resolve_repo_slug)"') < required < proof < push_call
+    assert script.index('pr_url="$(gh_graphql pr view --json url -q .url || true)"') < required
+    guard = script.rindex("\nif [[", 0, required)
+    assert '-z "$pr_url" || -z "$pr_number"' in script[guard:required]
+    assert "; nothing was sent" not in script
+    # A recovery merge moves HEAD before the retry push; the proof repeats there.
+    recover = script[script.index("_push_with_bounded_recover() {") :]
+    recover = recover[: recover.index("_push_with_bounded_recover\n")]
+    reattest_at = recover.index('_reattest_recovered_head "$prior_head" || return 1')
+    reprove_at = recover.index("_prove_template || return 1")
+    assert reattest_at < reprove_at < recover.index("attempt=$((attempt + 1))")
+
+
 def test_push_recovery_reattests_before_the_retry_push() -> None:
     """Audit R3: a recovery merge moves HEAD; the retry must not publish it unattested.
 
@@ -858,3 +965,52 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     assert '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"' not in script
     assert "updateSubscription" in helper
     assert '-X PUT "repos/' not in helper
+
+
+def _gate_function(gate: str, name: str) -> str:
+    start = gate.index(f"{name}() {{")
+    end = gate.index("\n}\n", start) + 3
+    return gate[start:end]
+
+
+def test_generated_heal_skips_consumer_workspace_with_skills_dir(tmp_path: Path) -> None:
+    """A consumer repo touching its own skills/ must not run the governance heal.
+
+    The heal requires skills/AUTONOMY_MANIFEST.yaml, which only exists in a
+    governance checkout; before the guard, make pr failed with
+    "[Errno 2] No such file or directory: .../skills/AUTONOMY_MANIFEST.yaml".
+    """
+    gate = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    ws = tmp_path / "consumer"
+    (ws / "skills" / "demo").mkdir(parents=True)
+    (ws / "skills" / "demo" / "SKILL.md").write_text("---\nname: demo\n---\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("skills/demo/SKILL.md\n", encoding="utf-8")
+    fake_gov = tmp_path / "gov"
+    (fake_gov / "ops" / "scripts").mkdir(parents=True)
+    (fake_gov / "ops" / "scripts" / "sync_generated_artifacts.py").write_text(
+        "import sys\nprint('HEAL RAN')\nsys.exit(1)\n", encoding="utf-8"
+    )
+    script = "\n".join(
+        [
+            _gate_function(gate, "_generated_sources_changed"),
+            _gate_function(gate, "_gate_run_sync"),
+            "_gate_run_sync",
+        ]
+    )
+    env = {**os.environ, "WS": str(ws), "GOV_ROOT": str(fake_gov), "changed_file": str(changed)}
+
+    proc = subprocess.run(
+        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "OK: skip generated heal (no skills/AUTONOMY_MANIFEST.yaml" in proc.stdout
+    assert "HEAL RAN" not in proc.stdout
+
+    # A governance checkout (manifest present) still runs the heal.
+    (ws / "skills" / "AUTONOMY_MANIFEST.yaml").write_text("tiers: {}\n", encoding="utf-8")
+    proc = subprocess.run(
+        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False
+    )
+    assert "HEAL RAN" in proc.stdout

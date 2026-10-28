@@ -25,7 +25,10 @@
 #     their own toolchains via the repo's normal dev workflow).
 #   * Idempotent + fingerprint-cached PER REPOSITORY: a stamp under ~/.l9/claude/
 #     records the hash of that repository's dependency manifests; an unchanged
-#     fingerprint with a proven toolchain re-installs nothing.
+#     fingerprint with a proven toolchain does not reinstall the toolchain.
+#     Declared pre-push and commit-msg hooks are not part of that fingerprint.
+#     A cached SessionStart still reconciles them when the pre-commit hook
+#     file is missing, and only after `pre-commit install-hooks` succeeds.
 #   * Proof-gated: the stamp records APPLIED state, not attempted state. A
 #     repository is only reported ready when its lock is proven applied.
 #   * Fail-open: always exits 0; a dependency failure degrades the session,
@@ -109,10 +112,17 @@ file_hash() {
 
 fingerprint() {
   local repo="$1" stamp_input="" f
-  for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.json .pre-commit-config.yaml; do
+  for f in uv.lock pyproject.toml requirements.txt requirements.lock constraints.txt package.json pnpm-lock.yaml package-lock.json .pre-commit-config.yaml; do
     if [ -f "$repo/$f" ]; then
       stamp_input="$stamp_input|$f:$(file_hash "$repo/$f")"
     fi
+  done
+  # Every split pin set (requirements-dev.txt, -ci, -test, ...) decides what a
+  # pip repo's environment holds, so a change to any of them must invalidate
+  # the stamp. The glob expands in sorted order.
+  for f in "$repo"/requirements-*.txt; do
+    [ -f "$f" ] || continue
+    stamp_input="$stamp_input|${f##*/}:$(file_hash "$f")"
   done
   stamp_input="$stamp_input|uv:$(uv --version 2>/dev/null || echo none)"
   stamp_input="$stamp_input|node:$(node --version 2>/dev/null || echo none)"
@@ -128,7 +138,19 @@ fingerprint() {
 # recognised manifest is vacuously proven — there is nothing to apply.
 toolchain_proven() {
   local repo="$1" rc
-  if [ -f "$repo/uv.lock" ]; then
+  if [ -f "$repo/uv.lock" ] && [ -f "$repo/ops/scripts/ensure_uv_environment.sh" ]; then
+    # A governance checkout's .venv has one owner, and install_repo already
+    # applies through it. Its proof must come from the same owner: the memory
+    # seal it runs force-reinstalls the bound wheel with a PEP 610 direct URL,
+    # so a raw `uv sync --check` reports that venv outdated on every pass and
+    # the checkout could never be proven. `check` exits 0 only when the lock,
+    # pyproject, interpreter and uv fingerprint match and no install is in
+    # progress; every other code (1 outdated or interrupted, 2 uv/lock missing)
+    # is unproven — none may fall through to another resolution.
+    [ -x "$repo/.venv/bin/python" ] || return 1
+    bash "$repo/ops/scripts/ensure_uv_environment.sh" "$repo" check >/dev/null 2>&1 \
+      || return 1
+  elif [ -f "$repo/uv.lock" ]; then
     [ -x "$repo/.venv/bin/python" ] || return 1
     have uv || return 1
     # `--check` exit codes carry different meanings and must not be collapsed:
@@ -152,13 +174,107 @@ toolchain_proven() {
   if [ -f "$repo/package.json" ] && [ ! -d "$repo/node_modules" ]; then
     return 1
   fi
-  # Pip-managed repos have no uv.lock for `uv sync --check`. install_repo's pip
-  # path is best-effort (`|| true`), so a failed install must not stamp ready.
-  if { [ -f "$repo/pyproject.toml" ] || [ -f "$repo/requirements.txt" ]; } \
-      && [ ! -f "$repo/uv.lock" ]; then
+  # Pip-managed repos have no uv.lock for `uv sync --check`. Proven only when
+  # provision_pip_venv recorded the current fingerprint after a complete
+  # install, and the installed set is consistent.
+  if is_pip_repo "$repo"; then
     [ -x "$repo/.venv/bin/python" ] || return 1
+    [ "$(cat "$repo/.venv/$PIP_APPLIED_MARKER" 2>/dev/null)" = "$(fingerprint "$repo")" ] \
+      || return 1
+    if have uv; then
+      uv pip check --python "$repo/.venv/bin/python" >/dev/null 2>&1 || return 1
+    fi
   fi
   return 0
+}
+
+# A pip-managed repository is Python when it declares a manifest or ships
+# top-level modules. Its environment lives in <repo>/.venv like every other.
+is_pip_repo() {
+  local repo="$1" f
+  [ -f "$repo/uv.lock" ] && return 1
+  [ -f "$repo/pyproject.toml" ] && return 0
+  for f in "$repo"/requirements.txt "$repo"/requirements-*.txt "$repo"/*.py; do
+    [ -f "$f" ] && return 0
+  done
+  return 1
+}
+
+# Marker written into <repo>/.venv only after every declared pin set
+# installed, holding the fingerprint it installed. A fresh venv whose install
+# then failed exists but has no matching marker, so it is not proven.
+PIP_APPLIED_MARKER=".l9-pip-applied"
+
+# True when pyproject declares a `dev` optional-dependency extra. A pyproject
+# this host cannot parse answers True: installing a missing extra is a warning,
+# while skipping a declared one would install without its pins.
+pyproject_declares_dev_extra() {
+  local answer
+  answer="$(python3 - "$1" <<'PY' 2>/dev/null
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    extras = tomllib.load(handle).get("project", {}).get("optional-dependencies", {})
+print("yes" if "dev" in extras else "no")
+PY
+)"
+  [ "$answer" != "no" ]
+}
+
+# Provision <repo>/.venv for a pip-managed repository.
+# The repository's own bootstrap wins: a Makefile `venv:` target is how that
+# repository says its environment is built. Otherwise build an isolated venv
+# and install each declared pin set into it, never into the system interpreter.
+provision_pip_venv() {
+  local repo="$1"
+  if [ -f "$repo/Makefile" ] && grep -qE '^venv:' "$repo/Makefile"; then
+    ( cd "$repo" && make venv ) || return 1
+  else
+    # Everything below runs FROM the repository: uv discovers project and uv.toml
+    # configuration from its cwd, and the detached worker's cwd is the caller's
+    # (the workspace container, or a sibling repository whose `required-version`
+    # or index settings then decided this repository's install).
+    (
+      cd "$repo" || exit 1
+      installed=0
+      if [ ! -x .venv/bin/python ]; then
+        if have uv; then
+          uv venv .venv >/dev/null || exit 1
+        else
+          python3 -m venv .venv || exit 1
+        fi
+      fi
+      py="$PWD/.venv/bin/python"
+      for req in requirements.txt requirements-*.txt; do
+        [ -f "$req" ] || continue
+        if have uv; then
+          uv pip install --python "$py" -r "$req" || exit 1
+        else
+          "$py" -m pip install -r "$req" || exit 1
+        fi
+        installed=1
+      done
+      if [ -f pyproject.toml ] && grep -q '^\[project\]' pyproject.toml; then
+        # Install the dev extra exactly when it is declared. A failed declared
+        # extra is a failed install: retrying without it once succeeded with
+        # the test and lint pins absent and still stamped the repository ready.
+        target="."
+        if pyproject_declares_dev_extra pyproject.toml; then
+          target=".[dev]"
+        fi
+        if have uv; then
+          uv pip install --python "$py" -e "$target" || exit 1
+        else
+          "$py" -m pip install -e "$target" || exit 1
+        fi
+        installed=1
+      fi
+      [ "$installed" -eq 1 ] || echo "session-deps: $repo declares no pin set; empty .venv" >&2
+    ) || return 1
+  fi
+  [ -x "$repo/.venv/bin/python" ] || return 1
+  fingerprint "$repo" >"$repo/.venv/$PIP_APPLIED_MARKER"
 }
 
 # Import smoke on the resolved interpreter. toolchain_proven says the lock is
@@ -195,6 +311,160 @@ write_deps_stamp() {
   } >"$stamp"
 }
 
+# --- Consumer-declared git hooks -------------------------------------------
+# Commit-stage hooks stay forbidden: a raw `.git/hooks/pre-commit` runs the
+# catalog without the surface-aware SKIP list. A repository whose
+# publish-authority entry declares required_git_hook_types gets exactly those
+# hooks (pre-push or commit-msg), and only after `pre-commit install-hooks`
+# has succeeded. Anything else is a WARN named with the repo; the session
+# stays up.
+publish_authority_root() {
+  local dir
+  dir="$(cd "$(dirname "$0")" && pwd)"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/ops/config/publish-authority.json" ]; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  if [ -n "${L9_GOVERNANCE_DIR:-}" ] \
+    && [ -f "${L9_GOVERNANCE_DIR}/ops/config/publish-authority.json" ]; then
+    printf '%s\n' "$L9_GOVERNANCE_DIR"
+    return 0
+  fi
+  if [ -f "${HOME}/.cursor-governance/ops/config/publish-authority.json" ]; then
+    printf '%s\n' "${HOME}/.cursor-governance"
+    return 0
+  fi
+  return 1
+}
+
+declared_hook_types() {
+  local repo="$1" registry="$2"
+  python3 - "$repo" "$registry" <<'PY'
+import sys
+from pathlib import Path
+
+repo, registry = sys.argv[1], sys.argv[2]
+gov = str(Path(registry).resolve().parents[2])
+sys.path.insert(0, gov)
+from ops.autonomy.publish_authority import load_registry, origin_of
+
+try:
+    document = load_registry(Path(registry))
+except Exception as exc:
+    print(f"lookup failed: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+origin = origin_of(Path(repo))
+entry = (document.get("repositories") or {}).get(origin or "")
+if not isinstance(entry, dict):
+    raise SystemExit(0)
+types = entry.get("required_git_hook_types") or []
+if not isinstance(types, list):
+    print("required_git_hook_types is not a list", file=sys.stderr)
+    raise SystemExit(1)
+for hook_type in types:
+    if isinstance(hook_type, str) and hook_type.strip():
+        print(hook_type.strip())
+PY
+}
+
+install_declared_consumer_hooks() {
+  local repo="$1" gov types hook_type hook_rc
+  gov="$(publish_authority_root)" || {
+    echo "WARN: $repo declared git hook install skipped — publish-authority.json not found" >&2
+    return 0
+  }
+  types="$(declared_hook_types "$repo" "$gov/ops/config/publish-authority.json")" || {
+    echo "WARN: $repo declared git hook lookup failed" >&2
+    return 0
+  }
+  [ -n "$types" ] || return 0
+  while IFS= read -r hook_type; do
+    [ -n "$hook_type" ] || continue
+    case "$hook_type" in
+      pre-push|commit-msg)
+        (
+          cd "$repo" || exit 1
+          pre-commit install --hook-type "$hook_type"
+        )
+        hook_rc=$?
+        if [ "$hook_rc" -ne 0 ]; then
+          echo "WARN: $repo pre-commit install --hook-type $hook_type failed" >&2
+        fi
+        ;;
+      *)
+        echo "WARN: $repo refused git hook type '$hook_type' (allowed: pre-push, commit-msg)" >&2
+        ;;
+    esac
+  done <<EOF
+$types
+EOF
+  return 0
+}
+
+# True when every declared pre-push or commit-msg hook is the pre-commit
+# generated hook for that type. No declaration means there is nothing to
+# install, so the repository is current.
+declared_hooks_current() {
+  local repo="$1" gov types hook_type hook missing=0
+  gov="$(publish_authority_root)" || return 0
+  types="$(declared_hook_types "$repo" "$gov/ops/config/publish-authority.json")" || return 0
+  [ -n "$types" ] || return 0
+  while IFS= read -r hook_type; do
+    [ -n "$hook_type" ] || continue
+    case "$hook_type" in
+      pre-push|commit-msg)
+        hook="$repo/.git/hooks/$hook_type"
+        if [ ! -f "$hook" ] || [ ! -x "$hook" ] \
+          || ! grep -q "File generated by pre-commit" "$hook" \
+          || ! grep -q -- "--hook-type=${hook_type}" "$hook"; then
+          missing=1
+        fi
+        ;;
+    esac
+  done <<EOF
+$types
+EOF
+  [ "$missing" -eq 0 ]
+}
+
+# A dependency stamp does not record hook presence. A checkout proven before
+# required_git_hook_types existed, or one whose hook install failed after the
+# stamp was written, would otherwise stay hookless until a manifest changed.
+# Warm the hook environments first; a failed warm-up does not write the hook.
+reconcile_declared_hooks() {
+  local repo="$1"
+  declared_hooks_current "$repo" && return 0
+  echo "session-deps: $repo declared git hooks missing on a cached toolchain — reconciling" >&2
+  if [ ! -f "$repo/.pre-commit-config.yaml" ]; then
+    echo "WARN: $repo declared git hook reconcile skipped — .pre-commit-config.yaml is absent" >&2
+    return 0
+  fi
+  if ! have pre-commit; then
+    echo "WARN: $repo declared git hook reconcile skipped — pre-commit is not installed" >&2
+    return 0
+  fi
+  if ! ( cd "$repo" && pre-commit install-hooks >/dev/null 2>&1 ); then
+    echo "WARN: $repo declared git hook reconcile skipped — pre-commit install-hooks failed" >&2
+    return 0
+  fi
+  install_declared_consumer_hooks "$repo"
+}
+
+reconcile_cached_declared_hooks() {
+  local repo
+  while IFS= read -r repo; do
+    [ -n "$repo" ] || continue
+    if [ -f "$STAMP_DIR/deps-$(fingerprint "$repo").stamp" ] && toolchain_proven "$repo"; then
+      reconcile_declared_hooks "$repo"
+    fi
+  done <<EOF
+$ROOTS
+EOF
+}
+
 # --- Per-repository install -------------------------------------------------
 install_repo() {
   local repo="$1" failed=0
@@ -212,20 +482,10 @@ install_repo() {
       failed=1
       echo "WARN: $repo uv sync --locked failed" >&2
     fi
-  elif [ -f "$repo/pyproject.toml" ] || ls "$repo"/*.py >/dev/null 2>&1; then
-    python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
-    if [ -f "$repo/pyproject.toml" ]; then
-      # NOTE: `--only-binary :all:` is deliberately NOT paired with `-e .` — an
-      # editable install must build from source, so that combination can never
-      # succeed. Flat-layout multi-package repos cannot be installed editable at
-      # all; for those the fallback below is the expected path.
-      ( cd "$repo" && \
-        pip install --prefer-binary -e '.[dev,server]' 2>/dev/null \
-        || pip install --prefer-binary -e '.[dev]' 2>/dev/null \
-        || pip install --prefer-binary -r requirements.txt 2>/dev/null \
-        || pip install --only-binary :all: ruff mypy pytest build 2>/dev/null ) || true
-    else
-      pip install --only-binary :all: ruff mypy pytest 2>/dev/null || true
+  elif is_pip_repo "$repo"; then
+    if ! provision_pip_venv "$repo"; then
+      failed=1
+      echo "WARN: $repo pip environment provisioning failed — .venv not proven" >&2
     fi
   fi
   if [ -f "$repo/package.json" ]; then
@@ -244,13 +504,15 @@ install_repo() {
         || { failed=1; echo "WARN: installing the pre-commit PACKAGE failed — 'make pr' will fail until it is present (allowlist pypi.org). This is pip, not 'pre-commit install', which stays forbidden here." >&2; }
     fi
     if have pre-commit; then
-      # Warm hook environments ONLY. Never `pre-commit install`: these repositories
-      # have no git commit hook (ops/scripts/run_pr_precommit.sh), and an installed
-      # hook runs the catalog without the surface-aware SKIP list, so `git commit`
-      # fails on every non-cursor surface via symlinks-check.
+      # Warm hook environments first. A bare `pre-commit install` stays forbidden:
+      # it writes the commit-stage hook, which runs the catalog without the
+      # surface-aware SKIP list. After a successful warm-up, install only the
+      # hook types this repository declares in publish-authority.json.
       if ! ( cd "$repo" && pre-commit install-hooks 2>/dev/null ); then
         failed=1
         echo "WARN: $repo pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)" >&2
+      else
+        install_declared_consumer_hooks "$repo"
       fi
     fi
   fi
@@ -327,6 +589,9 @@ $ROOTS
 EOF
 
 if [ -z "$PENDING" ]; then
+  # Toolchain cache hits never enter install_repo. Declared hooks are reconciled
+  # here so a pre-existing stamp cannot leave the pre-push hook absent.
+  reconcile_cached_declared_hooks
   echo "session-deps: $CACHED/$TOTAL repositories cached and proven — nothing to install"
   exit 0
 fi
@@ -369,6 +634,10 @@ if [ ! -f "$DONE_FILE" ]; then
   fi
   exit 0
 fi
+
+# install_repo stamps a proven toolchain even when the hook step failed.
+# Retry that step once the worker has finished, without another toolchain install.
+reconcile_cached_declared_hooks
 
 # Re-report from proof, never from the fact that a pass ran.
 READY=""

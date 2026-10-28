@@ -1,0 +1,148 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb"
+  },
+  "components": [
+    {
+      "path": "projections/vocabulary.projection.json",
+      "projection_digest": "sha256:80b20babcef083ac4b510ae4519fe895caa2543e01e4686eb3200487ca984cfd",
+      "receipt": "receipts/vocabulary.receipt.json",
+      "sha256": "sha256:e7190f5d312adccf0af2c8602c1f260790ab86e949d42613cab5518568165f11",
+      "source_class": "vocabulary",
+      "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+      "source_ref": "l9.source/vocabulary@1"
+    },
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:985c94dcadd8effc06b85b81c6c0398c578d637555688189362add14a97796e2",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:58694c6bccedc1cb30cd1b037fc299de7ae375325093c89c6af19593b03f7d8f",
+      "source_class": "invariants",
+      "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "path": "projections/contracts.projection.json",
+      "projection_digest": "sha256:59b8d46e40e314534f444adaaa447afbcdb57f6ee69037f820d9d5f0956b62fc",
+      "receipt": "receipts/contracts.receipt.json",
+      "sha256": "sha256:69002d5fc4d62035800164bd5357d3fdf47fdcdd67e1f7c8559b3fa94bbd1b57",
+      "source_class": "contracts",
+      "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "source_ref": "l9.source/contracts@1"
+    },
+    {
+      "path": "projections/authority_model.projection.json",
+      "projection_digest": "sha256:7119ff477c22ab85f642eaf1d9c7bd2a9d1140193e8141ca9922da11d88a20cb",
+      "receipt": "receipts/authority_model.receipt.json",
+      "sha256": "sha256:87682f16e2b8dae273909d09aca8a204c848ac21a0869def7e5c323a18aa0511",
+      "source_class": "authority_model",
+      "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+      "source_ref": "l9.source/authority-model@1"
+    },
+    {
+      "path": "projections/artifact_model.projection.json",
+      "projection_digest": "sha256:015cccb4b6602dce6a3ec858b622418352fbf23805d0db516d85a8590237b82d",
+      "receipt": "receipts/artifact_model.receipt.json",
+      "sha256": "sha256:7fd85759de114062c0071a3d36b3df3e3582e989d0485f6d33a96d150d0b5873",
+      "source_class": "artifact_model",
+      "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+      "source_ref": "l9.source/artifact-model@1"
+    },
+    {
+      "path": "projections/architecture_rules.projection.json",
+      "projection_digest": "sha256:c656267939ce3409cf94f3bece7823dc13fde7d22a6ff60885efb12f49e8ab66",
+      "receipt": "receipts/architecture_rules.receipt.json",
+      "sha256": "sha256:b92b410bfd767eb206eae13bf9a0c60adb137466fd233b02fe88710b4bf26646",
+      "source_class": "architecture_rules",
+      "source_digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
+      "source_ref": "l9.source/architecture-rules@1"
+    },
+    {
+      "path": "projections/architecture_patterns.projection.json",
+      "projection_digest": "sha256:ecf244ab0b688a17f642d23e8d7d2ad711f8378c9f3b08706e6bde76c749fd47",
+      "receipt": "receipts/architecture_patterns.receipt.json",
+      "sha256": "sha256:b23950bf4cee944a7bc0f2b72feac6b8491da06ad19761c0ddea199fb8d50c9b",
+      "source_class": "architecture_patterns",
+      "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+      "source_ref": "l9.source/architecture-patterns@1"
+    },
+    {
+      "path": "projections/capabilities.projection.json",
+      "projection_digest": "sha256:49e4934944852b18c0170b2d349bcbf614674517c6f7ea9e5f0d72fdaef6a3bd",
+      "receipt": "receipts/capabilities.receipt.json",
+      "sha256": "sha256:17038083731e702e05cd11e3abe939a3e1a3e1bc33311e78711809a14acb9337",
+      "source_class": "capabilities",
+      "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+      "source_ref": "l9.source/capabilities@1"
+    },
+    {
+      "path": "projections/conformance_model.projection.json",
+      "projection_digest": "sha256:6aba0466c0d261709b15bad4862f53a5e02c78527f4e5b36cb5720ec5c77858b",
+      "receipt": "receipts/conformance_model.receipt.json",
+      "sha256": "sha256:0c607c43f944e8b1616eb615f9aafbbbfe6e091bee8dbbefeba2ac7f67e172c4",
+      "source_class": "conformance_model",
+      "source_digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+      "source_ref": "l9.source/conformance-model@1"
+    },
+    {
+      "path": "projections/receipt_catalog.projection.json",
+      "projection_digest": "sha256:8d981c90efa6586fcf9140f3c76d680128874f6df8b0222f58dad9d91196834a",
+      "receipt": "receipts/receipt_catalog.receipt.json",
+      "sha256": "sha256:6e2f0d1a879d584345d3c688fb397756d8e7950632390dfc92f5f47490a162cc",
+      "source_class": "receipt_catalog",
+      "source_digest": "sha256:0dc3a305a53cbd6f2f1e0cba440d21cf7b3c6b241285a15be8bdb185babc1c84",
+      "source_ref": "l9.source/receipt-catalog@1"
+    },
+    {
+      "path": "projections/lifecycle.projection.json",
+      "projection_digest": "sha256:a64b22928e80884791d2fa3af33c2d34086e89aa0ba113ff54432e4d1dbb1da0",
+      "receipt": "receipts/lifecycle.receipt.json",
+      "sha256": "sha256:55cabe3040f72ba6fe6d20e8c14d8a895e409ad8d550fc9792982cb97f647a5a",
+      "source_class": "lifecycle",
+      "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+      "source_ref": "l9.source/lifecycle@1"
+    },
+    {
+      "path": "projections/semantic_dependency_model.projection.json",
+      "projection_digest": "sha256:bdd41a354202a23ddea48be2fc33a0def29f9315e83b33edb55e200c81b3c04a",
+      "receipt": "receipts/semantic_dependency_model.receipt.json",
+      "sha256": "sha256:551d24d9af43d56a3e916064c973324fdc15490a4279a068f06cec5525e64294",
+      "source_class": "semantic_dependency_model",
+      "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+      "source_ref": "l9.source/semantic-dependency-model@1"
+    },
+    {
+      "path": "projections/error_taxonomy.projection.json",
+      "projection_digest": "sha256:31ebf1605f74733904e587884324b0ae090251b5149850b0fc3f6603e6977e4d",
+      "receipt": "receipts/error_taxonomy.receipt.json",
+      "sha256": "sha256:b70180807231c853847478ffa804644191be1cb3c6fd1be4b5b55c27efee865b",
+      "source_class": "error_taxonomy",
+      "source_digest": "sha256:6a8439c6560685661f0fb0ea93c9befd867b5d3d09168df90560d6e046598c97",
+      "source_ref": "l9.source/error-taxonomy@1"
+    }
+  ],
+  "composed": {
+    "composition_digest": "sha256:6731ada90b400b1d311857809ecd86539852454319e3734fd1e7b219d1354591",
+    "path": "composed.json",
+    "receipt": "receipts/composed.receipt.json",
+    "sha256": "sha256:1b82eef2311bef1f88684b415dd7bdcb2ef3163928c3c658edc47edcc9536541"
+  },
+  "composition_profile": {
+    "digest": "sha256:b5807ebc8cc2d4ddd918a42f527738fe16aff4eda9cfb1d46998a2a50297bb90",
+    "ref": "l9.compose/pr-audit@1"
+  },
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "8bbd882f6a84c55449b9706c39a62e98eec1057b",
+    "revision_basis": "caller_asserted",
+    "version": "0.9.3"
+  },
+  "projection_profile": {
+    "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+    "ref": "l9.projection/pr-audit@1"
+  },
+  "schema": "l9.projection-bundle/v1"
+}

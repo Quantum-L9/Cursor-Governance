@@ -61,10 +61,17 @@ def workspace_root(explicit: str | None = None) -> Path:
     return _validated_git_root(candidate)
 
 
-def _hook_home_sentinels() -> frozenset[Path]:
-    """Hook process dirs that are never a repo workspace (Cursor/Claude homes)."""
+def hook_home_sentinels() -> frozenset[Path]:
+    """Hook process dirs that are never a repo workspace (Cursor/Claude homes).
+
+    Shared with ``workflows/gmp_executor.py``: a git toplevel at one of these
+    paths is never an authorized WORK root.
+    """
     home = Path.home().resolve()
     return frozenset({home, home / ".cursor", home / ".claude"})
+
+
+_hook_home_sentinels = hook_home_sentinels
 
 
 def _cursor_project_slug(root: Path) -> str:

@@ -1,0 +1,567 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "governed_by": {
+      "contracts": [
+        "l9.contract/product-topology@1",
+        "l9.contract/product-kind@1",
+        "l9.contract/authority-boundary@1",
+        "l9.contract/hard-constraint@1",
+        "l9.contract/provenance-and-coordinate@1",
+        "l9.contract/identity-topology@1",
+        "l9.contract/identity-resolution@1"
+      ]
+    },
+    "kind_resolution": {
+      "admitted_kind_rule": "Declared kind must resolve to an admitted ProductKind before ProductManifest may pass the resolved-manifest gate.",
+      "archetype_rule": "Resolved archetype must come from the catalog bound by the resolved ProductKind.",
+      "canonical_source": "product_kinds.yaml",
+      "exception_catalog": "product_kinds.yaml#kind_exceptions",
+      "exception_rule": "Absent product.kind_exception_ref, declared consumption and deployment models must equal the resolved kind's models. A declared product.kind_exception_ref must resolve to an admitted entry of product_kinds.yaml#kind_exceptions whose kind, subject product, canonical repository, and archetype equal the declaration; the entry's effective models and enumerated departures then apply and every undisplaced obligation remains. Any unresolved, unadmitted, malformed, or unbound claim is invalid, never ignored and never coerced to the nearest kind. ProductTopology and ProductManifest are release-independent, so an exception's release floor (subject.applies_from_release) is a product-kind release obligation enforced at product release admission through l9.contract/product-release@1 (applicable_product_kind_requirements_are_resolved).",
+      "unknown_rule": "A product whose ProductKind or archetype is not yet admitted remains representable through explicit material Unknowns; the compiler must not guess or coerce a nearest kind."
+    },
+    "properties": {
+      "adapters": {
+        "fields": {
+          "forbidden": "semantic_ref_list",
+          "inbound": "adapter_requirement_list",
+          "integration": "adapter_requirement_list",
+          "outbound": "adapter_requirement_list",
+          "provider": "adapter_requirement_list"
+        },
+        "type": "object"
+      },
+      "admission": {
+        "fields": {
+          "admission_profile_ref": "semantic_ref",
+          "authority_ref": "semantic_ref",
+          "decision_ref": "semantic_ref_or_null",
+          "evidence_requirement_refs": "semantic_ref_list",
+          "kind_specific_requirements": "semantic_ref_or_string_list",
+          "requirements": "semantic_ref_or_string_list",
+          "subject": "semantic_ref_or_string"
+        },
+        "required": [
+          "subject",
+          "authority_ref",
+          "requirements"
+        ],
+        "type": "object"
+      },
+      "architecture": {
+        "fields": {
+          "composition_rules": "semantic_ref_list",
+          "forbidden_pattern_refs": "semantic_ref_list",
+          "layer_constraints": "semantic_ref_or_inline_constraint_list",
+          "optional_pattern_refs": "semantic_ref_list",
+          "required_pattern_refs": "semantic_ref_list",
+          "structural_constraints": "semantic_ref_or_inline_constraint_list"
+        },
+        "type": "object"
+      },
+      "bindings": {
+        "fields": {
+          "product_bindings": "binding_requirement_list",
+          "protocol_bindings": "binding_requirement_list",
+          "provider_bindings": "binding_requirement_list"
+        },
+        "type": "object"
+      },
+      "boundary": {
+        "fields": {
+          "authority_boundary_refs": "semantic_ref_list",
+          "does_not_own": "semantic_or_string_list",
+          "mutation_boundary_refs": "semantic_ref_list",
+          "owns": "semantic_or_string_list",
+          "semantic_boundary_refs": "semantic_ref_list",
+          "transaction_boundary_refs": "semantic_ref_list",
+          "trust_boundary_refs": "semantic_ref_list"
+        },
+        "required": [
+          "owns",
+          "does_not_own"
+        ],
+        "type": "object"
+      },
+      "build": {
+        "fields": {
+          "build_requirement_refs": "semantic_ref_list",
+          "compilation_profile_ref": "semantic_ref",
+          "generated_surfaces": "string_list",
+          "reproducibility_requirement_refs": "semantic_ref_list",
+          "source_owned_surfaces": "string_list",
+          "target_binding_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "capabilities": {
+        "fields": {
+          "degraded_without": "capability_requirement_list",
+          "forbidden": "semantic_ref_list",
+          "optional": "capability_requirement_list",
+          "provides": "capability_binding_list",
+          "requires": "capability_requirement_list"
+        },
+        "required": [
+          "provides",
+          "requires"
+        ],
+        "type": "object"
+      },
+      "communication": {
+        "fields": {
+          "constellation_boundary_required": "boolean",
+          "egress_contract_refs": "semantic_ref_list",
+          "forbidden_paths": "string_list",
+          "ingress_contract_refs": "semantic_ref_list",
+          "packet_refs": "semantic_ref_list",
+          "routing_authority_ref": "semantic_ref",
+          "transport_contract_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "compatibility": {
+        "fields": {
+          "breaking_change_policy_ref": "semantic_ref",
+          "consumer_compatibility_refs": "semantic_ref_list",
+          "provider_compatibility_refs": "semantic_ref_list",
+          "public_contract_policy_ref": "semantic_ref",
+          "runtime_compatibility_refs": "semantic_ref_list",
+          "semantic_compatibility_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "configuration": {
+        "fields": {
+          "contract_refs": "semantic_ref_list",
+          "forbidden": "string_list",
+          "namespaces": "string_list",
+          "optional": "string_list",
+          "precedence_model_ref": "semantic_ref",
+          "required": "string_list"
+        },
+        "type": "object"
+      },
+      "conformance": {
+        "fields": {
+          "final_conformance_required": "boolean",
+          "fixture_profile_refs": "semantic_ref_list",
+          "negative_proof_refs": "semantic_ref_list",
+          "profile_refs": "semantic_ref_list",
+          "provider_conformance_refs": "semantic_ref_list",
+          "required_classes": "string_list"
+        },
+        "required": [
+          "profile_refs"
+        ],
+        "type": "object"
+      },
+      "consumption": {
+        "fields": {
+          "consumer_requirements": "semantic_ref_or_inline_constraint_list",
+          "forbidden_consumption_modes": "string_list",
+          "invocation_contract_refs": "semantic_ref_list",
+          "model": "consumption_model",
+          "public_entry_modes": "string_list"
+        },
+        "required": [
+          "model"
+        ],
+        "type": "object"
+      },
+      "contracts": {
+        "fields": {
+          "canonicalization": "semantic_ref_list",
+          "compatibility": "semantic_ref_list",
+          "consumed": "semantic_ref_list",
+          "produced": "semantic_ref_list",
+          "public": "semantic_ref_list",
+          "required": "semantic_ref_list",
+          "schemas": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "deployment": {
+        "fields": {
+          "artifact_forms": "string_list",
+          "deployment_constraints": "semantic_ref_or_inline_constraint_list",
+          "deployment_unit": "string",
+          "failure_boundary": "string",
+          "model": "deployment_model",
+          "runtime_boundary": "string",
+          "scaling_boundary": "string",
+          "upgrade_boundary": "string"
+        },
+        "required": [
+          "model"
+        ],
+        "type": "object"
+      },
+      "distribution": {
+        "fields": {
+          "artifact_forms": "string_list",
+          "artifact_identity_refs": "semantic_ref_list",
+          "integrity_requirement_refs": "semantic_ref_list",
+          "publication_contract_refs": "semantic_ref_list",
+          "registry_refs": "semantic_ref_list",
+          "release_contract_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "effects": {
+        "fields": {
+          "consequential_operations": "semantic_ref_list",
+          "effect_classes": "semantic_ref_list",
+          "idempotency_contract_refs": "semantic_ref_list",
+          "reconciliation_contract_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "failure": {
+        "fields": {
+          "ambiguity_contract_refs": "semantic_ref_list",
+          "degradable_conditions": "semantic_ref_or_string_list",
+          "fail_closed_conditions": "semantic_ref_or_string_list",
+          "reconciliation_contract_refs": "semantic_ref_list",
+          "retry_authority_ref": "semantic_ref",
+          "retry_contract_refs": "semantic_ref_list",
+          "taxonomy_refs": "semantic_ref_list",
+          "unknown_outcome_rules": "semantic_ref_or_string_list"
+        },
+        "type": "object"
+      },
+      "governance": {
+        "fields": {
+          "autonomy_contract_refs": "semantic_ref_list",
+          "profile_refs": "semantic_ref_list",
+          "profile_selection_contract_refs": "semantic_ref_list",
+          "rules": "semantic_ref_or_string_list",
+          "selection_inputs": "string_list"
+        },
+        "type": "object"
+      },
+      "identity": {
+        "fields": {
+          "aliases": "semantic_ref_list",
+          "bindings": {
+            "type": "identity_binding_list"
+          },
+          "canonical_repository": "semantic_ref_or_string",
+          "dimensions": {
+            "fields": {
+              "actor": {
+                "type": "identity_dimension_declaration"
+              },
+              "constellation": {
+                "type": "identity_dimension_declaration"
+              },
+              "product": {
+                "type": "identity_dimension_declaration"
+              },
+              "release": {
+                "type": "identity_dimension_declaration"
+              },
+              "runtime": {
+                "type": "identity_dimension_declaration"
+              },
+              "surface": {
+                "type": "identity_dimension_declaration"
+              }
+            },
+            "type": "object"
+          },
+          "identity_contract_refs": "semantic_ref_list",
+          "predecessor_refs": "semantic_ref_list",
+          "resolution": {
+            "fields": {
+              "assertion_schema_ref": "semantic_ref",
+              "contract_ref": "semantic_ref",
+              "evidence_source_refs": "semantic_ref_list",
+              "resolver_ref": "semantic_ref_or_unknown",
+              "unknown_policy": "identity_unknown_policy"
+            },
+            "required": [
+              "contract_ref",
+              "unknown_policy"
+            ],
+            "type": "object"
+          },
+          "semantic_owner": "semantic_ref",
+          "semantic_scope": "semantic_ref_or_string",
+          "successor_refs": "semantic_ref_list",
+          "supersedes": "semantic_ref_list"
+        },
+        "required": [
+          "semantic_owner",
+          "semantic_scope",
+          "dimensions",
+          "resolution"
+        ],
+        "type": "object"
+      },
+      "interfaces": {
+        "fields": {
+          "actions": "interface_entry_list",
+          "command_surfaces": "interface_entry_list",
+          "event_surfaces": "interface_entry_list",
+          "public_programmatic_surfaces": "interface_entry_list"
+        },
+        "type": "object"
+      },
+      "lifecycle": {
+        "fields": {
+          "applicable_state_refs": "semantic_ref_list",
+          "family_ref": "semantic_ref",
+          "retirement_contract_ref": "semantic_ref",
+          "supersession_contract_ref": "semantic_ref",
+          "transition_contract_refs": "semantic_ref_list"
+        },
+        "required": [
+          "family_ref"
+        ],
+        "type": "object"
+      },
+      "observability": {
+        "fields": {
+          "audit_requirement_refs": "semantic_ref_list",
+          "capability_metrics": "semantic_ref_or_string_list",
+          "correlation_identity_refs": "semantic_ref_list",
+          "logging_contract_refs": "semantic_ref_list",
+          "provider_metrics": "semantic_ref_or_string_list",
+          "slo_refs": "semantic_ref_list",
+          "tracing_requirement_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "operations": {
+        "fields": {
+          "maintenance_contract_refs": "semantic_ref_list",
+          "migration_contract_refs": "semantic_ref_list",
+          "owner_ref": "semantic_ref",
+          "rollback_contract_refs": "semantic_ref_list",
+          "runbook_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "ports": {
+        "fields": {
+          "extension": "port_binding_list",
+          "forbidden": "semantic_ref_list",
+          "inbound": "port_binding_list",
+          "outbound": "port_binding_list"
+        },
+        "type": "object"
+      },
+      "product": {
+        "fields": {
+          "archetype_ref": "semantic_ref_or_explicit_unknown",
+          "id": "semantic_ref",
+          "kind": "product_kind_or_explicit_unknown",
+          "kind_exception_ref": "semantic_ref_or_null",
+          "name": "string",
+          "status": "semantic_ref_or_string",
+          "versioning_family": "semantic_ref_or_string"
+        },
+        "required": [
+          "id",
+          "kind",
+          "archetype_ref"
+        ],
+        "type": "object"
+      },
+      "provenance": {
+        "fields": {
+          "authority_ref": "semantic_ref",
+          "predecessor_topology_ref": "semantic_ref",
+          "source_refs": "semantic_ref_list",
+          "source_revision": "semantic_ref"
+        },
+        "required": [
+          "authority_ref",
+          "source_revision"
+        ],
+        "type": "object"
+      },
+      "providers": {
+        "fields": {
+          "allowed": "provider_requirement_list",
+          "prohibited": "semantic_ref_list",
+          "provider_independence_required": "boolean",
+          "substitution_contract_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "purpose": {
+        "fields": {
+          "capability_refs": "semantic_ref_list",
+          "non_goals": "string_list",
+          "objectives": "string_list",
+          "primary_responsibility": "string",
+          "statement": "string"
+        },
+        "required": [
+          "statement",
+          "capability_refs"
+        ],
+        "type": "object"
+      },
+      "receipts": {
+        "fields": {
+          "canonicalization_ref": "semantic_ref",
+          "consumes": "receipt_requirement_list",
+          "emits": "receipt_requirement_list",
+          "preservation_requirement_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "recovery": {
+        "fields": {
+          "compensation_semantics": "semantic_ref_or_string_list",
+          "disaster_recovery_requirement_refs": "semantic_ref_list",
+          "replay_semantics": "semantic_ref_or_string_list",
+          "restart_semantics": "semantic_ref_or_string_list",
+          "restore_contract_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "relationships": {
+        "fields": {
+          "forbidden_relationships": "product_relationship_list",
+          "products": "product_relationship_list",
+          "relationship_constraints": "semantic_ref_or_inline_constraint_list"
+        },
+        "required": [
+          "products"
+        ],
+        "type": "object"
+      },
+      "requirements": {
+        "fields": {
+          "conformance_requirements": "semantic_ref_list",
+          "contract_refs": "semantic_ref_list",
+          "hard_constraints": "semantic_ref_or_inline_constraint_list",
+          "invariant_refs": "semantic_ref_list",
+          "operational_requirements": "semantic_ref_or_inline_constraint_list",
+          "security_requirements": "semantic_ref_or_inline_constraint_list",
+          "soft_objectives": "semantic_ref_or_inline_objective_list"
+        },
+        "type": "object"
+      },
+      "runtime": {
+        "fields": {
+          "concurrency_model": "semantic_ref_or_string",
+          "degradation_contract_refs": "semantic_ref_list",
+          "health_contract_refs": "semantic_ref_list",
+          "participation_model": "semantic_ref_or_string",
+          "process_model": "semantic_ref_or_string",
+          "readiness_contract_refs": "semantic_ref_list",
+          "resource_model": "semantic_ref_or_string",
+          "shutdown_requirement_refs": "semantic_ref_list",
+          "startup_requirement_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "schema": {
+        "const": "l9.product-topology/v1"
+      },
+      "security": {
+        "fields": {
+          "authentication_contract_refs": "semantic_ref_list",
+          "authorization_contract_refs": "semantic_ref_list",
+          "credential_scope": "string_list",
+          "data_handling_contract_refs": "semantic_ref_list",
+          "identity_source_refs": "semantic_ref_list",
+          "isolation_requirement_refs": "semantic_ref_list",
+          "secret_contract_refs": "semantic_ref_list",
+          "trust_source_refs": "semantic_ref_list"
+        },
+        "type": "object"
+      },
+      "state": {
+        "fields": {
+          "cache_authority": "authority_class_or_none",
+          "consistency_requirement_refs": "semantic_ref_list",
+          "owns_authoritative_state": "boolean",
+          "persistence_ports": "semantic_ref_list",
+          "projection_refs": "semantic_ref_list",
+          "retention_contract_refs": "semantic_ref_list",
+          "revision_model_ref": "semantic_ref",
+          "state_semantic_refs": "semantic_ref_list",
+          "transaction_model_ref": "semantic_ref"
+        },
+        "type": "object"
+      },
+      "technology": {
+        "fields": {
+          "hard_constraints": "semantic_ref_or_inline_constraint_list",
+          "language_constraints": "semantic_ref_or_inline_constraint_list",
+          "platform_constraints": "semantic_ref_or_inline_constraint_list",
+          "preferences": "semantic_ref_or_inline_objective_list",
+          "runtime_requirements": "semantic_ref_or_inline_constraint_list"
+        },
+        "type": "object"
+      },
+      "unknowns": {
+        "fields": {
+          "material": "unknown_list",
+          "non_material": "unknown_list",
+          "resolution_requirement_refs": "semantic_ref_list"
+        },
+        "required": [
+          "material"
+        ],
+        "type": "object"
+      }
+    },
+    "purpose": "Define one authoritative product contract shape capable of expressing every L9 product through the same topology vocabulary while allowing ProductKind and archetype law to determine kind-specific obligations.\n",
+    "required": [
+      "schema",
+      "product",
+      "identity",
+      "purpose",
+      "boundary",
+      "requirements",
+      "capabilities",
+      "consumption",
+      "deployment",
+      "contracts",
+      "architecture",
+      "relationships",
+      "admission",
+      "lifecycle",
+      "conformance",
+      "provenance",
+      "unknowns"
+    ],
+    "semantic_rules": [
+      "product_topology_is_authoritative_product_contract",
+      "every_l9_product_uses_one_product_topology_vocabulary",
+      "product_kind_constrains_topology_without_creating_parallel_vocabulary",
+      "archetype_must_belong_to_declared_product_kind",
+      "declared_semantics_override_no_derived_guess",
+      "compiler_must_not_invent_product_purpose_boundary_or_authority",
+      "provider_identity_does_not_define_product_kind_or_capability_meaning",
+      "omitted_derivable_structure_is_not_a_schema_error",
+      "material_unknown_blocks_resolved_product_manifest",
+      "unadmitted_or_unresolved_kind_must_remain_explicit_unknown",
+      "unresolved_kind_or_archetype_blocks_resolved_product_manifest",
+      "topology_representation_does_not_require_kind_invention",
+      "identity_is_first_class_product_topology_primitive",
+      "identity_dimensions_must_not_be_collapsed",
+      "governance_profile_is_not_identity",
+      "dynamic_identity_is_resolved_into_identity_assertion_not_authored_as_static_session_fact",
+      "valid_identity_assertion_is_consumed_not_rederived",
+      "product_kind_exception_is_claimed_only_by_explicit_reference_and_exact_subject_binding"
+    ],
+    "type": "object"
+  },
+  "projection_digest": "sha256:e52c766b64a8fa7d31012d907455a95becbc57c079d62558dd4b70d77dd1f869",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:5ecf2e7a18eef93177230a7f379453dfcd444bedad9f74eba4d1504737bc6520",
+  "source_ref": "l9.source/product-topology-schema@1"
+}

@@ -1,0 +1,124 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "global_rules": {
+      "declared_observation_or_outcome_is_required": true,
+      "exact_subject_binding_is_required": true,
+      "material_subject_change_makes_prior_receipt_non_current_unless_compatibility_preserves_it": true,
+      "materially_governing_coordinates_must_be_bound": true,
+      "receipt_claim_scope_must_be_explicit": true,
+      "receipt_content_is_immutable_by_digest": true,
+      "receipt_digest_is_required": true,
+      "receipt_does_not_grant_execution_authority": true,
+      "receipt_does_not_grant_semantic_authority": true,
+      "receipt_family_registration_does_not_transfer_domain_semantic_ownership": true,
+      "receipt_is_evidence": true,
+      "receipt_lifecycle_is_defined_separately": true,
+      "receipt_presence_does_not_imply_capability_admission_availability_authorization_or_invocability": true,
+      "result_semantics_remain_owned_by_the_applicable_contract_or_taxonomy": true,
+      "verification_must_not_depend_only_on_the_recorded_verdict": true
+    },
+    "receipt_kernel": {
+      "authority": {
+        "class": "evidence",
+        "grants_execution_authority": false,
+        "grants_semantic_authority": false,
+        "may_replace_admission_decision": false
+      },
+      "currentness": {
+        "currentness_is_authority": false,
+        "rule": "Currentness is evaluated against the receipt's governing coordinates. A material coordinate or subject change makes the receipt non-current unless an explicit compatibility contract preserves applicability.\n"
+      },
+      "field_semantics": {
+        "claim": "Bounded assertion the receipt is evidence for. The claim must not exceed the observation, evaluation, or decision actually evidenced.\n",
+        "exact_subject_ref": "Exact artifact, operation, decision, implementation, repository revision, or other subject to which the receipt's claim applies.\n",
+        "governing_coordinates": "Revisions, digests, profiles, rulesets, bindings, source identities, or other coordinates material to the claim's validity.\n",
+        "observation_or_outcome": "The observation or outcome recorded under the applicable family contract. This field does not create a global result taxonomy.\n",
+        "producer_identity": "Identity of the component, authority, validator, or executor that emitted the receipt. Producer identity does not imply semantic ownership.\n",
+        "receipt_digest": "Deterministic content digest of the receipt under its applicable schema.\n",
+        "receipt_identity": "Stable identity of the emitted evidence artifact. Identity is distinct from the subject being evidenced.\n",
+        "receipt_type": "Versioned receipt-family identity registered in this catalog or in an explicitly owned domain extension.\n",
+        "verification_basis": "Evidence, criteria, references, proofs, or reproducible checks sufficient for an independent verifier to assess the receipt's bounded claim without relying only on the producer's recorded verdict.\n"
+      },
+      "forbidden": [
+        "ambient_head_phase_or_flag_as_only_subject_binding",
+        "producer_verdict_as_only_verification_basis",
+        "receipt_as_authorization",
+        "receipt_as_canonical_semantic_source",
+        "receipt_rebinding_to_materially_changed_subject",
+        "silent_result_semantic_reinterpretation"
+      ],
+      "required_semantics": [
+        "receipt_type",
+        "receipt_identity",
+        "exact_subject_ref",
+        "claim",
+        "governing_coordinates",
+        "observation_or_outcome",
+        "verification_basis",
+        "producer_identity",
+        "receipt_digest"
+      ]
+    },
+    "receipts": {
+      "admission": {
+        "additional_required_semantics": [
+          "candidate_or_subject_ref",
+          "candidate_or_subject_digest",
+          "target_semantic_or_authority_class",
+          "decision_ref",
+          "decision_authority_ref",
+          "decision_result"
+        ],
+        "family_id": "l9.receipt/admission@1",
+        "forbidden": [
+          "receipt_as_admission_authority",
+          "floating_approval_across_revisions",
+          "producer_self_admission_without_target_class_authority"
+        ],
+        "purpose": "Evidence that an admission or promotion decision was evaluated and issued for an exact subject under exact authority and decision coordinates.\n",
+        "result_semantics_source": "l9.contract/admission-and-promotion@1",
+        "rules": [
+          "admission_receipt_is_evidence_of_decision_not_the_decision_authority_itself",
+          "changed_subject_requires_new_decision_or_explicit_compatibility"
+        ],
+        "semantic_owner": "applicable_target_class_authority"
+      },
+      "validation": {
+        "additional_required_semantics": [
+          "candidate_ref",
+          "candidate_digest",
+          "validator_or_solver_ref",
+          "validator_or_solver_version",
+          "validation_profile_or_ruleset_digest",
+          "applicable_constraint_refs",
+          "result",
+          "evidence"
+        ],
+        "family_id": "l9.receipt/validation@1",
+        "forbidden": [
+          "validation_receipt_as_admission",
+          "validation_receipt_as_authorization",
+          "validation_repair_hidden_inside_receipt"
+        ],
+        "purpose": "Evidence that an exact candidate was mechanically evaluated against exact validation criteria and governing solver/profile coordinates.\n",
+        "result_semantics_source": "error_taxonomy.result_domains.validation",
+        "rules": [
+          "validation_receipt_is_observational_and_non_mutating",
+          "unknown_must_remain_explicit",
+          "compiler_validation_may_emit_a_compiler_receipt_conforming_to_this_family"
+        ],
+        "semantic_owner": "applicable_validation_semantic_owner"
+      }
+    }
+  },
+  "projection_digest": "sha256:8d981c90efa6586fcf9140f3c76d680128874f6df8b0222f58dad9d91196834a",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:0dc3a305a53cbd6f2f1e0cba440d21cf7b3c6b241285a15be8bdb185babc1c84",
+  "source_ref": "l9.source/receipt-catalog@1"
+}

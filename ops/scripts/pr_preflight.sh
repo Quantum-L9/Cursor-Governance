@@ -27,6 +27,11 @@ else
   PY="$(command -v python3)"
 fi
 
+# Route drift guard: a workspace whose origin declares a native publish route
+# (ops/config/publish-authority.json) must never reach the governance gate,
+# even if the parse-time resolver in publish.mk failed silently.
+"$PY" "$SCRIPT_DIR/../autonomy/publish_authority.py" --workspace "$WS" --format json --expect governance >/dev/null || exit $?
+
 echo "=== pr-preflight (INTERNAL; read-only) ==="
 
 branch="$(git rev-parse --abbrev-ref HEAD)"

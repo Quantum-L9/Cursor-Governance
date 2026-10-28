@@ -33,9 +33,9 @@
       "alias": null,
       "class": "always",
       "output": "03-graphiti-memory.md",
-      "output_sha256": "0bb23eb4ba5bd1b6ddab82cd3dc4c570bed3d0f4361ed5f9fe18fa9b691b3ad1",
+      "output_sha256": "956938365397a84f36b439a0179137c80a26aed5ce094aa1f134511f51563fc5",
       "source": "rules/03-graphiti-memory.mdc",
-      "source_sha256": "04187b094fd61c09f70fd8723a71079559eca741fa7a38700c98178e89291d76",
+      "source_sha256": "d0a29ce05d89fc17dcf27186a278f7f1a703f27c480e85e671fc71454bfcb649",
       "stem": "03-graphiti-memory"
     },
     {
@@ -186,9 +186,9 @@
       "alias": null,
       "class": "always",
       "output": "45-pre-action-verification.md",
-      "output_sha256": "f52ff9bad043148444d594da4dcccdce58dd1894327bd8f0a786332f05b54fa1",
+      "output_sha256": "c03d3597f76bbb9803e74283697093a9de754c04dd1177de4fb90de2f002b88e",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "84c1397899175d8dd96706b0e401943c84e2b79a170b888941c1ad3bdf4f4820",
+      "source_sha256": "6012003b2d54a0ecb85a89b4eed024c1fa0f3f9268a143a86268ccbca16e4d68",
       "stem": "45-pre-action-verification"
     },
     {
@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "4b621a7b94d46347f1f032c22ff65fd2caea73a2746f5ba2d0dec06ff972304d",
+      "output_sha256": "1c6622c811cf296a3c6c46767ff55ee9b45d5439678feb7bfe9e47ed0730c25f",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "eaca137be1d11d0d62e85ecadce51743be3a7861be5428c67bf6d0b6afd46ee7",
+      "source_sha256": "b9da95fc8777e6dc6e73ee0d4394b152d74d1064922193bd81d128c8cd07818a",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -330,9 +330,9 @@
       "alias": null,
       "class": "always",
       "output": "64-canonical-identity-authority.md",
-      "output_sha256": "d234fe22b37dcdfd7b6b987ef8062f6dd89e2ead8ca865cd67e913cb0419ecd6",
+      "output_sha256": "b1bef9f07225da29586e206daa369f83ebb5b2884f30f55ae1b306f3d6adb3fa",
       "source": "rules/64-canonical-identity-authority.mdc",
-      "source_sha256": "ad0c026c23221ace986d0315f3c5d0781eceb1d0a47fe40f5952f88709841823",
+      "source_sha256": "6da9dd821b19141394c008bbb49f6b49ed689bd59154ec9ef3cac1d9332f20cf",
       "stem": "64-canonical-identity-authority"
     },
     {
@@ -510,18 +510,18 @@
       "alias": null,
       "class": "always",
       "output": "87-cursor-memory-kernel.md",
-      "output_sha256": "d79c223c2b64eecd4337c85dbeeb2e89d77cb9a113f2c5ebca4e9f470a0eec55",
+      "output_sha256": "11274f3b3a9151525c3288b805d53faed84567e5d08c6b270dc88a6529c6306e",
       "source": "rules/87-cursor-memory-kernel.mdc",
-      "source_sha256": "19841608cbb05e29ccbd32cfe79e00a8d6d136407df777b19208a06189a13deb",
+      "source_sha256": "020c59e6f580ddf56e016c513f382e6cf4e27fd610b8a9cbf53b1e21e755990c",
       "stem": "87-cursor-memory-kernel"
     },
     {
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "6a2802459481f1d0063042afc01769469460db9f6d37383df09dea42f6502c72",
+      "output_sha256": "8f43aad5659ec82d18c1902f89a0cd0de9a1e013891f6d153d75b180851c6e28",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "8a7358003bd651183c88bad4a3c0b1db8904523abb66b6c1a250468e3b72bb7a",
+      "source_sha256": "83dbe49136ba4310e7e7655e62db2500589c3bb92c6f6184fb00c7cc0337424b",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -609,9 +609,9 @@
       "alias": null,
       "class": "always",
       "output": "98-graphiti-memory-gate.md",
-      "output_sha256": "81a2f6be7bce387229b9b2d9951b55cf1c050c0aec7a738f3c2e0cba8ef66e17",
+      "output_sha256": "dd3cba9e8829db422c13573d0150a325de16af4347f691107b8688679d269193",
       "source": "rules/98-graphiti-memory-gate.mdc",
-      "source_sha256": "cb225a2dbc600620d284e584ebf7babb245737737458c561bf05f78c3c5ca108",
+      "source_sha256": "0094e73a29324de4ffbfd8d189ee6babbd3c73b82f30254b69238080a11bd466",
       "stem": "98-graphiti-memory-gate"
     },
     {
@@ -629,7 +629,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "ceb1283a8d2dba934224c421afd27317303bc4d61678dea71292d9149e1ba3d8",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "f688c8e228140e7c7a20484a0016d7e993ee1a98f8304ea58f6d9e6ac39baa57",
+      "source_sha256": "f34b29c409e518ae8cfe84c525fbc4d94b928b87c6a9e9f30b650adc6f9744ff",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "5d6b7d258f285f6c7b13dd16d2c38008ed429acf9f6cf296995246395d9333e8"
+  "tree_sha256": "5ac0ac21857edfc42cdbb5e08986d09fa24a74ddc1b891ab97c291f818aba6d4"
 }

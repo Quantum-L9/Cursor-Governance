@@ -18,8 +18,8 @@
     "approved here because L9 PreToolUse gates still decide whether each effect may proceed;",
     "the vendor permission dialog is not an architectural safety boundary.",
     "Read-only git introspection and explicit gh api --method GET are likewise frictionless.",
-    "Durable agent memory is the package-owned l9-graphite-memory stdio MCP terminating at",
-    "MemoryService. Canonical reads, memory.close, memory.phase_lock, and",
+    "Durable agent memory is MemoryService. Native MCP is the account-managed Streamable HTTP connector, not a project stdio server.",
+    "Canonical reads, memory.close, memory.phase_lock, and",
     "memory.write_agent / memory.write_governed are pre-approved so the normal agent memory lifecycle does not",
     "require a vendor permission dialog. Cold path: memory.write_agent (no phase_lock). High-stakes: phase_lock then",
     "write_governed; close remains the canonical lifecycle close operation.",
@@ -170,6 +170,16 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate local_execution_gate_wrap.py'",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate coding_agent_binding_gate_wrap.py'",
+            "timeout": 12
           }
         ]
       },

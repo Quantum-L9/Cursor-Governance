@@ -1,5 +1,58 @@
 # Changelog
 
+## Unreleased - 2026-10-21
+
+`scripts/verify_canonical_binding.py` is now the one projection-bundle verifier for every consumer, and holds the one admission resolver.
+
+- `ProfileSpec` parameterizes profile identity, accepted lock schemas, the payload-schema pin and record-level re-selection. `resolve_profile`, `verify_receipt`, `verify_component` and `verify_profile_bundle` carry the bundle checks; Coding Agent's `--bundle` mode runs through them unchanged (its 48 cases pass as before).
+- `resolve_authority_main` and `resolve_admission`: integration into the independently resolved main, currency there, and an explicit decision per exact candidate digest. `governance/authority-bindings/coding-agent-execution.yaml` records its decision (`.github#179`) and `ops/scripts/coding_projection_status.py` judges it; the live status stays `CURRENT`.
+- `skills/l9-global-architect/scripts/verify_architecture_intelligence.py` consumes this module instead of duplicating it.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
+## 1.4.5 - 2026-10-21
+
+The host gate trusts no writable label (re-audit findings R769-01 and R769-02).
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.5.1: `run.json` names `authority_root`; the reauthorization is `L9_CODING_BINDING_REAUTHORIZED=<verbatim>` in the operator-controlled hook environment, not a field in `run.json`; `enforcement_scope.claude_code` states the re-verification.
+- `Quantum-L9/Cursor-Governance` `ops/autonomy/coding_agent_binding_gate.py`: a `BOUND`/`CURRENT` record is admitted only when the pack verifier, re-run by the gate on the record, the bundle it names and `authority_root` (`--prior-binding`), answers `CURRENT`; file-tool writes under `.l9/coding-agent/` are refused during a run; a malformed PreToolUse event, run or record, an absent authority checkout and a verifier that cannot run are denied; the Claude adapter denies when the surface detector cannot be imported.
+- `RUNBOOK.md` step 4 and Finish step 5, CA-E58/CA-E59 reworded.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
+## 1.4.4 - 2026-10-21
+
+Canonical-binding enforcement becomes mechanical where the host can enforce it (closes F-04 on Claude Code under `Quantum-L9/Cursor-Governance`). The bootstrap already required binding before mutation; the governance binding now says so truthfully instead of `report_only` / `blocks_mutation: false`.
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.5.0 adds `run_state_files`: the run writes `<workspace>/.l9/coding-agent/run.json` (`l9.coding-agent-run/v1`) at intake, saves the verifier's printed record unchanged as `binding.json`, records an explicit user reauthorization verbatim as `reauthorized_unknown.instruction`, and deletes `run.json` at convergence. `enforcement_scope` is now two-valued: `claude_code` mechanical, `other_hosts` instructional.
+- `Quantum-L9/Cursor-Governance` registers `ops/autonomy/coding_agent_binding_gate.py` as a PreToolUse gate on `Edit`, `Write`, `MultiEdit` and `NotebookEdit`: while `run.json` is present, a file mutation is denied unless `binding.json` is `BOUND` or `CURRENT` from this pack's verifier or the reauthorization is recorded; a malformed run or record is denied; the operator breakglass is `L9_CODING_BINDING_AUTHORIZED=<reason>` (a bare flag is refused). Nothing is gated when no run is active. `governance/authority-bindings/coding-agent-execution.yaml` 3.1.0 declares `enforcement.coding_agent_mutation` (`enforced`, `blocks_mutation: true`) beside the unchanged `status_surface` (`report_only`).
+- `RUNBOOK.md` step 4 opens the run and saves the record; Finish step 5 closes it. `evals/BEHAVIOR_CONFORMANCE.yaml` CA-E52 names the applied scope, and CA-E58/CA-E59 cover opening the run and a denied mutation (runtime alignment covers 59 cases).
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
+## 1.4.3 - 2026-10-21
+
+The binding consumes the consumer-committed projection bundle (`Quantum-L9/.github` ADR-021, v3.24.0 candidate) and covers every source class the profile declares.
+
+- `scripts/verify_canonical_binding.py --bundle <dir>`: verifies `bundle.lock.json` (`l9.projection-bundle/v1`), every declared class in the profile's order (bytes against the lock, envelope digest, profile pin, provenance, source currency at the pin, receipt subject and output `<profile>#<source>`, `result: pass` with no unresolved criteria, the `payload_schema` criterion naming the profile's declared output schema, governing revision equal to the lock, producer identity and role), then re-selects the `invariants` component record for record as before. The lock revision must lie in the pin's history (`LOCK_REVISION_NOT_IN_PIN_HISTORY`); an unrelated upstream commit keeps a bundle `CURRENT`, a changed bundled source makes it `STALE`. `--prior-binding` re-checks a bundle too. The handed-pair form stays available.
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.4.0: the accepted input is the bundle, and digest conventions cite the law that now declares them (`projection_engine_contract.yaml` `binding_conventions`).
+- `tests/test_coding_agent_canonical_binding.py`: 48 cases (was 38); the fixture profile declares three classes like the admitted one.
+- Live proof: the committed bundle `generated/governance/coding_agent_execution` (engine `main` `b9b4892` at `.github` `main` `7252e3b`) is `BOUND` with 19 invariants and three components, `CURRENT` on re-check, `REJECTED BUNDLE_BYTES_MISMATCH` on a byte change to the contracts component, and `STALE` under a pin outside its history.
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
+## 1.4.2 - 2026-10-21
+
+Canonical invariant binding moves to the profile `.github` admits for coding agents and adopts the conventions the admitted producer emits. The binding is live: a real `l9-semantic-compiler` pair reaches `BOUND`.
+
+- `integrations/L9_RUNTIME_BINDING.yaml` 1.3.0 binds `l9.projection/coding-agent-execution@1` (class `runtime`, consumer Cursor-Governance; v3.20.0, RC-028) instead of `l9.projection/cursor-governance-operating-plane@1`. The operating-plane profile declares `conformance_profiles`, a class owned outside `.github`, so no admitted producer can project it whole, and its `@1` entry is immutable upstream. The coding profile selects nineteen global invariants by exact id; the profile, not the invariant scope, decides what is bound.
+- `scripts/verify_canonical_binding.py` verifies what the producer emits, as the architecture-intelligence consumer already does, instead of a fixture convention no producer honored:
+  - `projection_digest` is the envelope digest (every artifact field but the digest), not the payload digest;
+  - the payload is record-preserving: one `invariants` section holding each selected source record whole, in source order (`PAYLOAD_NOT_IN_SOURCE_ORDER`, `PAYLOAD_SHAPE_UNRESOLVED` on any other shape);
+  - the receipt output must name `<profile>#<source>` and the artifact's `generated_by` must equal the receipt's `producer_identity` (`ARTIFACT_PRODUCER_MISMATCH`);
+  - only the exact-id selector form is re-selected; any other selector shape, a duplicate id, or an id the source does not declare is `BLOCKED` (`PROFILE_SELECTOR_FORM_UNRESOLVED`, `PROFILE_SELECTOR_DUPLICATE_IDENTITY`, `CANONICAL_INVARIANT_UNRESOLVED`);
+  - the binding record reports `projected_invariant_count` (was `global_invariant_count`).
+- `tests/test_coding_agent_canonical_binding.py`: 37 cases (was 27), including the new rejection and Unknown paths above.
+- Live proof at `.github@2f8a20a` (Quantum-L9/.github#193, the v3.23.0 candidate that gives the profile its output schema and forbidden-constraint criteria) with the producer at l9-semantic-compiler-engine PR #13 (`7e516b6d`): the real `invariants` pair is `BOUND` with 19 invariants, the six governing refs select, a prior-binding re-check is `CURRENT`, and the `main` producer's `unknown` receipt for the same tree is `REJECTED RECEIPT_NOT_A_PASSING_PROJECTION`.
+- Re-proved after #193, engine PR #13 and PR #14 merged: the engine's `main` (`b9b4892`) at `.github` `main` (`7252e3b`) receipts all three classes `pass` and the `invariants` pair is `BOUND` at the admitted revision. No producer or publication pipeline is assumed operational beyond that proof (VALIDATION.md).
+- `SKILL.md` stays byte-identical, for the registry-pin reason recorded under 1.4.0.
+
 ## 1.4.1 - 2026-10-12
 
 Projection boundary correction. `.github` owns the law and profiles, a producer emits projections, an upstream publication mechanism supplies them, and this skill consumes them without running the producer.

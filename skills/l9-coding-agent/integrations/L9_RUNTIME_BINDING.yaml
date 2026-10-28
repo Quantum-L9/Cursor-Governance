@@ -1,6 +1,6 @@
 integration:
   id: L9.CODING_AGENT.L9_BINDING.001
-  version: 1.2.0
+  version: 1.5.1
 modes:
   STANDALONE:
     default: true
@@ -34,9 +34,19 @@ canonical_invariant_binding:
     activation. It requires no Program Execution, Gate, State, Graphiti, or L-CTO runtime.
   upstream:
     semantic_owner: Quantum-L9/.github
-    profile_ref: l9.projection/cursor-governance-operating-plane@1
+    profile_ref: l9.projection/coding-agent-execution@1
+    profile_class: runtime
+    profile_consumer: Cursor-Governance
     source_class: invariants
     source_ref: l9.source/invariants@1
+    selection_form: one l9.selector/v1 equality filter per invariant ($.invariants[?(@.id=="<id>")]); the
+      consumer re-selects only that form and reports any other selector shape as BLOCKED
+      PROFILE_SELECTOR_FORM_UNRESOLVED. The profile, not the invariant scope, decides what is bound.
+    payload_shape: record-preserving, as the producer emits it; the one selected section (invariants) holding
+      each selected source record whole, in source order
+    bundle: the profile's other source classes (contracts, authority_model) are consumed as components of the
+      consumer-committed bundle (Quantum-L9/.github ADR-021) and verified by bytes, envelope digest, provenance,
+      receipt, output schema criterion, and currency at the pin; only invariants is re-selected record for record
     owner_artifacts:
       profile_catalog: semantics/projection_profiles.yaml
       source_registry: semantics/canonical_sources.yaml
@@ -54,10 +64,13 @@ canonical_invariant_binding:
       - L9-VALIDATION-001
     revision_policy: pin the exact authority revision per run; never hardcode one into this pack
   accepted_input:
-    supplied_by: an upstream publication mechanism that makes producer-emitted, verified artifacts available;
-      this pack does not assume that mechanism or any producer is operational
+    supplied_by: the consumer repository's committed projection bundle (Quantum-L9/.github ADR-021), cut by a
+      pinned producer revision and attested by trusted replay, or a producer-emitted pair handed to the run;
+      this pack does not assume that bundle or any producer is operational
     producer_execution: not a consumer step. The run never invokes a producer, Semantic Compiler, or publication
       pipeline to create the projection it binds; an absent projection stays BLOCKED_UPSTREAM_PROJECTION_PRODUCER
+    bundle: a directory holding bundle.lock.json (l9.projection-bundle/v1), one producer-emitted artifact and
+      receipt per declared source class, whose lock revision lies in the pinned revision's history
     artifact: producer-emitted l9.projection-artifact/v1 for the profile and source above
     receipt: producer-emitted l9.compiler-receipt/v1 with operation projection and result pass
     revision_pin: required 40-hex authority revision taken from an independent record of the published revision,
@@ -82,10 +95,11 @@ canonical_invariant_binding:
     script: scripts/verify_canonical_binding.py
     interpreter: $HOME/.cursor-governance/.venv/bin/python per AGENTS.md section 5; an interpreter without PyYAML
       returns BLOCKED VERIFIER_INTERPRETER_UNRESOLVED
-    invocation: <interpreter> scripts/verify_canonical_binding.py --authority-root <.github> --artifact <projection>
-      --receipt <receipt> --expect-revision <pin> [--require-invariant <id> ...]
+    invocation: <interpreter> scripts/verify_canonical_binding.py --authority-root <.github> --bundle <bundle dir>
+      --expect-revision <pin> [--require-invariant <id> ...]; a handed pair uses --artifact <projection>
+      --receipt <receipt> in place of --bundle
     freshness_invocation: <interpreter> scripts/verify_canonical_binding.py --authority-root <.github> --prior-binding
-      <binding.json> --artifact <projection> --receipt <receipt> --expect-revision <pin>
+      <binding.json> --bundle <bundle dir> --expect-revision <pin>
     pin_rule: The verifier binds every law byte to the pinned commit by recomputed object hashes, and records
       revision_basis caller_pinned_not_authenticated. It cannot prove the pin is the published revision; that
       trust comes from the independent record, so a pin chosen by the run being checked is not a binding.
@@ -93,10 +107,12 @@ canonical_invariant_binding:
       unkeyed, so this narrows identity but cannot authenticate it; authentication needs upstream signed receipts.
       Each binding records producer_authentication unauthenticated_unkeyed_receipt.
     exit_codes: {BOUND: 0, CURRENT: 0, REJECTED: 1, usage: 2, BLOCKED: 3, STALE: 4}
-    digest_conventions: Upstream defines semantic_digest without fixing an algorithm. The verifier recomputes
-      source digests as sha256 of raw source bytes (the convention .github ledgers record) and content digests as
-      sha256 of canonical JSON (the convention of the candidate producer l9-semantic-compiler-engine). A producer
-      using another canonicalization fails closed, never open.
+    digest_conventions: The verifier recomputes exactly the conventions Quantum-L9/.github declares as law in
+      semantics/projection_engine_contract.yaml binding_conventions (ADR-021), which are the ones the admitted
+      producer l9-semantic-compiler emits. Source digests are sha256 of raw source bytes; content digests are
+      sha256 of canonical JSON (sorted keys, compact separators, UTF-8); projection_digest is the envelope digest,
+      over every artifact field but projection_digest itself; the receipt subject and output name
+      <profile_ref>#<source_ref> and bind that digest. Any other convention fails closed, never open.
     emits: one binding record; it never emits, synthesizes, or repairs a projection
   selection:
     rule: Bind only the global invariants applicable to the bound execution contract, by id, passed as
@@ -134,5 +150,30 @@ canonical_invariant_binding:
     contract_conflict: A verified invariant that conflicts with a locked execution contract or local rule is an
       AUTHORITY_CONFLICT escalation under runtime/MANIFEST.yaml authority_precedence. Neither side is applied
       silently, there is no mutation until it is resolved, and scope never widens implicitly.
-  enforcement_scope: Instructional. The skill requires the worker to invoke the verifier; no host hook or sandbox
-    enforces that invocation. Claim only what an observed verifier run establishes.
+  run_state_files:
+    purpose: The host-side contract a mechanical gate reads. Written by the run at intake, in the workspace being
+      mutated; removed at convergence. Absent files mean no coding-agent run is active, so nothing is gated.
+    run: .l9/coding-agent/run.json
+    run_schema: l9.coding-agent-run/v1
+    run_fields:
+      schema: l9.coding-agent-run/v1
+      started_at: ISO-8601 UTC
+      binding_record: binding.json
+      authority_root: the exact Quantum-L9/.github checkout the binding used, so a host gate can re-verify
+    record: .l9/coding-agent/binding.json, exactly the binding record scripts/verify_canonical_binding.py printed
+    reauthorization: "L9_CODING_BINDING_REAUTHORIZED=<the user's current instruction verbatim> in the hook
+      environment, set by the operator; a field in a file the run can write is not a grant"
+    rule: Write run.json before the verifier runs and binding.json from its output; never author or edit a record by
+      hand. Carry a reauthorization into the receipt verbatim. Delete run.json from the shell when the run ends so
+      later work is not gated by a stale run.
+  enforcement_scope:
+    claude_code: Mechanical. Quantum-L9/Cursor-Governance registers ops/autonomy/coding_agent_binding_gate.py as a
+      PreToolUse gate on Edit, Write, MultiEdit and NotebookEdit (governance/authority-bindings/coding-agent-execution.yaml
+      enforcement.coding_agent_mutation). While run.json is present the gate re-runs this pack's verifier on
+      binding.json, the bundle it names and authority_root, and allows only a live CURRENT verdict; a self-labeled
+      BOUND record, a changed bundle, a moved or absent authority, a malformed event, run or record, or a verifier that
+      cannot run is denied, and file-tool writes under .l9/coding-agent/ are refused during the run. Only the operator
+      reauthorization above or the breakglass L9_CODING_BINDING_AUTHORIZED=<reason> (human/ops only) carries a run
+      past an Unknown.
+    other_hosts: Instructional. The skill requires the worker to invoke the verifier and write the state files; no
+      hook enforces it there. Claim only what an observed verifier run establishes, and name which scope applied.

@@ -2,6 +2,42 @@
 
 This file is historical and non-authoritative. Machine-readable semantic owners declared by `runtime/MANIFEST.yaml` govern runtime behavior.
 
+## Unreleased - 2026-10-21
+
+### Architectural integrity clauses at top level (2026-10-24)
+
+- `contracts/ARCHITECTURAL_INTEGRITY.yaml` 0.7.0 -> 0.7.1: core clauses AI-001..AI-005 were indented under `scope:` instead of the top-level `normative_clauses` the inherited governance-contract schema reads. They move to top level unchanged; `cross_rules` and everything else in the contract are untouched.
+
+### One shared verifier; architecture intelligence admitted
+
+- `scripts/verify_architecture_intelligence.py` is a thin adapter over `skills/l9-coding-agent/scripts/verify_canonical_binding.py`: every component, receipt, authority and admission check is the shared one. GAR keeps only the composed view, the run-state slot and citation.
+- Strengthened by convergence: receipt inputs, artifact and lock producer, and the composition receipt's input binding are checked; currency reads hash-checked commit objects; an admitted bundle is re-verified against authority main (canonical origin, clean `semantics/`, producer role from `semantics/vocabulary.yaml`, upstream receipt schema).
+- Admission uses the shared `resolve_admission`: an explicit decision record per exact candidate digest (AdmissionDecisionPacket semantics). The binding records the owner's 2026-10-21 decision for both candidates at `.github` main `7252e3b`. Live result: `ADMITTED_AND_CURRENT`, `LOADED`, authoritative citations.
+- Reason codes for component and composition receipts are the shared verifier's (`RECEIPT_NOT_A_PASSING_PROJECTION`/`_COMPOSITION`, `RECEIPT_PAYLOAD_SCHEMA_MISMATCH`); an integrated revision without a decision is `ADMISSION_DECISION_RECORD_ABSENT`.
+- CI's admitted-mode step requires `ADMITTED_AND_CURRENT`. ADR-L9-GAR-007 amended; AIB-009 added.
+
+## 0.8.4 - 2026-10-15
+
+### Architecture intelligence authority separation (audit remediation)
+
+- The verifier now distinguishes `BUNDLE_VERIFIED` (coherent and current at the revision the bundle names) from `ADMITTED_AND_CURRENT` (admission resolved independently of `bundle.lock.json`). Only the latter is read as admitted law. `BOUND` is retired.
+- Mode `admitted` (default) requires an authority checkout and resolves `refs/remotes/origin/main` itself. Mode `candidate` permits non-authoritative inspection only.
+- Admission needs integration into authority main, currency at its tip, and an admission decision record. `Quantum-L9/.github` defines no such record, so integrated revisions are `ADMISSION_UNRESOLVED`; nothing is invented.
+- Source-set closure: `expected_source_classes` must equal the pinned profile's sources at the authority revision (`EXPECTED_SOURCE_SET_MISMATCH`).
+- `--cite SOURCE_CLASS:/POINTER` reads one namespaced fact with its exact source provenance; run state gains `citations`, `component_sources`, `mode`, `authoritative` and `assurance_limitations`, and RS-034 is tightened.
+- Added a coherent-forgery regression: a bundle rewritten with every digest recomputed passes the hash checks but fails the canonical-producer replay.
+- Amended `decisions/ADR-L9-GAR-007.yaml` with the dated audit-remediation decision.
+
+## 0.8.3 - 2026-10-15
+
+### Architecture intelligence input
+
+- Added `integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml`: canonical architecture intelligence from `Quantum-L9/.github` (`l9.projection/architecture-intelligence@1` composed by `l9.compose/architecture-intelligence@1`) as a separate, explicitly loaded input, pinned by profile, composition, payload-schema, and source-class identity.
+- Added `scripts/verify_architecture_intelligence.py`, the consumer verifier (BOUND / REJECTED / BLOCKED / STALE). It checks the producer's claims and implements no selector or composition semantics.
+- Added the optional load `architecture_intelligence`, the run-state slot `$.architecture_intelligence`, its status enum and events, and RS-034. There is no fallback to the historical observer projection.
+- `contracts/L9_ARCHITECTURE_PROFILE.yaml` is unchanged and keeps its runtime role.
+- Added `decisions/ADR-L9-GAR-007.yaml`.
+
 ## 0.8.2 - 2026-09-27
 
 ### Validate & Repair hardening

@@ -1,0 +1,195 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "artifacts": {
+      "candidate_artifact": {
+        "authority_class": "candidate",
+        "required": [
+          "source_refs",
+          "source_digests",
+          "compilation_profile_ref",
+          "payload",
+          "artifact_digest"
+        ]
+      },
+      "canonical_artifact": {
+        "authority_class": "canonical",
+        "immutable_by_digest": true
+      },
+      "composed_projection": {
+        "authority_class": "derived",
+        "required": [
+          "component_projection_refs",
+          "component_projection_digests",
+          "composition_profile_ref",
+          "composition_profile_digest",
+          "payload",
+          "artifact_digest"
+        ]
+      },
+      "derived_artifact": {
+        "authority_class": "derived",
+        "required": [
+          "source_refs",
+          "source_digests",
+          "derivation_profile_ref",
+          "derivation_profile_digest",
+          "payload",
+          "artifact_digest"
+        ]
+      },
+      "distribution_packet": {
+        "authority_class": "derived",
+        "required": [
+          "profile_coordinates",
+          "digests",
+          "consumer_selectors",
+          "rollout_mode",
+          "distribution_metadata"
+        ]
+      },
+      "identity_assertion": {
+        "authority_class": "evidence",
+        "required": [
+          "subject_ref",
+          "product_ref",
+          "resolved_dimensions",
+          "evidence_refs",
+          "resolver_ref",
+          "governing_coordinates",
+          "result",
+          "assertion_digest"
+        ],
+        "rules": [
+          "identity_assertion_does_not_grant_authority",
+          "material_resolution_input_change_invalidates_currentness",
+          "consumer_must_not_silently_rewrite_asserted_identity"
+        ],
+        "schema_ref": "l9.schema/identity-assertion@1"
+      },
+      "product_manifest": {
+        "authority_class": "derived",
+        "required": [
+          "source_product_topology_ref",
+          "source_product_topology_digest",
+          "resolved_product_kind",
+          "resolved_product_archetype",
+          "resolved_requirement_closure",
+          "resolved_capability_closure",
+          "architecture",
+          "ports",
+          "adapters",
+          "relationships",
+          "provider_bindings",
+          "admission_requirements",
+          "conformance_requirements",
+          "compiler_profile_ref",
+          "provenance",
+          "manifest_digest"
+        ],
+        "rules": [
+          "product_manifest_is_non_owning",
+          "implementation_lowering_requires_resolved_manifest_gate",
+          "manifest_preserves_exact_source_topology_coordinates"
+        ],
+        "schema_ref": "l9.schema/product-manifest@1"
+      },
+      "product_topology": {
+        "authority_class": "candidate",
+        "required": [
+          "product_identity",
+          "identity_topology",
+          "product_kind",
+          "product_archetype",
+          "purpose",
+          "boundary",
+          "capability_refs",
+          "consumption_model",
+          "deployment_model",
+          "contracts",
+          "relationships",
+          "admission",
+          "lifecycle",
+          "conformance",
+          "source_coordinates",
+          "material_unknowns"
+        ],
+        "rules": [
+          "product_topology_is_authoritative_product_contract_when_admitted",
+          "candidate_revision_requires_admission_before_compilation_as_authoritative_input",
+          "product_kind_and_archetype_are_explicit",
+          "compiler_must_not_overwrite_declared_product_semantics"
+        ],
+        "schema_ref": "l9.schema/product-topology@1"
+      },
+      "projection_artifact": {
+        "authority_class": "derived",
+        "required": [
+          "source_ref",
+          "source_digest",
+          "projection_profile_ref",
+          "projection_profile_digest",
+          "payload",
+          "artifact_digest"
+        ]
+      },
+      "published_profile": {
+        "authority_class": "canonical",
+        "required": [
+          "profile_ref",
+          "version",
+          "digest",
+          "status"
+        ]
+      },
+      "receipt": {
+        "authority_class": "evidence",
+        "required": [
+          "receipt_type",
+          "exact_subject_ref",
+          "claim",
+          "governing_coordinates",
+          "observation_or_outcome",
+          "verification_basis",
+          "receipt_digest"
+        ],
+        "semantics_source": "receipt_catalog.yaml"
+      }
+    },
+    "authority_classes": {
+      "candidate": {
+        "authoritative": false,
+        "requires_validation_and_admission": true
+      },
+      "canonical": {
+        "authoritative": true,
+        "implicit_derivation": false
+      },
+      "derived": {
+        "authoritative": false,
+        "authority_expansion_allowed": false,
+        "implicit_promotion_forbidden": true
+      },
+      "evidence": {
+        "attests_declared_observation_or_outcome": true,
+        "authoritative": false,
+        "grants_authority": false
+      }
+    },
+    "derivation_rules": [
+      "artifact_digest_is_deterministic",
+      "derived_artifact_never_implicitly_becomes_canonical",
+      "provenance_must_be_complete",
+      "authority_must_not_expand"
+    ]
+  },
+  "projection_digest": "sha256:94c12b68b87b4c8e8622277a12eb7b4d26d5203bc69673292f8712d1ef338bd1",
+  "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
+  "projection_profile_ref": "l9.projection/architecture-intelligence@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+  "source_ref": "l9.source/artifact-model@1"
+}

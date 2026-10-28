@@ -271,3 +271,48 @@ def test_hook_contract_fails_closed_on_an_undeclared_hook(tmp_path: Path) -> Non
 
     assert result.returncode == 1
     assert "brand-new-hook" in result.stdout
+
+
+def _contract_fixture(tmp_path: Path, entry: str, locality: str | None) -> Path:
+    root = tmp_path / "repo"
+    (root / "ops" / "config").mkdir(parents=True)
+    (root / "ops" / "scripts").mkdir(parents=True)
+    (root / "ops" / "scripts" / "check_local.py").write_text("print('ok')\n", encoding="utf-8")
+    (root / ".pre-commit-config.yaml").write_text(
+        "repos:\n  - repo: local\n    hooks:\n"
+        f"      - id: local-check\n        entry: {entry}\n        language: system\n",
+        encoding="utf-8",
+    )
+    declaration: dict[str, str] = {"mode": "read_only"}
+    if locality is not None:
+        declaration["locality"] = locality
+    (root / "ops" / "config" / "precommit-hook-contract.json").write_text(
+        json.dumps({"version": 1, "hooks": {"local-check": declaration}}), encoding="utf-8"
+    )
+    return root
+
+
+def _validate(root: Path) -> subprocess.CompletedProcess[str]:
+    return run(
+        [sys.executable, str(SCRIPTS / "validate_precommit_hook_contract.py"), "--root", str(root)],
+        cwd=REPO_ROOT,
+    )
+
+
+def test_hook_contract_fails_closed_on_a_missing_locality(tmp_path: Path) -> None:
+    result = _validate(_contract_fixture(tmp_path, "python3 ops/scripts/check_local.py", None))
+    assert result.returncode == 1
+    assert "locality" in result.stdout
+
+
+def test_a_governance_tree_entry_cannot_be_declared_any(tmp_path: Path) -> None:
+    """CG-02: a governance-local hook declared consumer-safe fails policy."""
+    result = _validate(_contract_fixture(tmp_path, "python3 ops/scripts/check_local.py", "any"))
+    assert result.returncode == 1
+    assert "declare it 'governance'" in result.stdout
+
+
+def test_a_governance_tree_entry_declared_governance_passes(tmp_path: Path) -> None:
+    root = _contract_fixture(tmp_path, "python3 ops/scripts/check_local.py", "governance")
+    result = _validate(root)
+    assert result.returncode == 0, result.stdout

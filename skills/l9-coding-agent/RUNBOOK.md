@@ -5,10 +5,12 @@
 1. Activate the skill for a mutating coding request.
 2. Read `runtime/BOOTSTRAP.yaml` only.
 3. Load the intake group, bind the exact target/revision, resolve authority, and bind or derive one execution contract.
-4. Bind canonical invariants from **externally supplied** inputs. `.github` owns the law and profile, a producer emits the projection, and an upstream publication mechanism makes the verified artifact available. This skill only consumes it: never run the Semantic Compiler, a producer, or the publication pipeline to create the projection you are about to bind, and do not assume either is operational.
-   - Inputs: the producer-emitted artifact and receipt, the authority revision pin, and an exact `Quantum-L9/.github` checkout of that revision fetched from the canonical owner. The pin must come from an independent record of the published revision, never from the artifact, receipt, or checkout being checked.
-   - Run `"$HOME/.cursor-governance/.venv/bin/python" scripts/verify_canonical_binding.py --authority-root <checkout> --artifact <projection> --receipt <receipt> --expect-revision <pin> --require-invariant <id> ...` and record the printed binding in run state.
-   - Exit 1/3/4 (`REJECTED`/`BLOCKED`/`STALE`) blocks mutation. No supplied projection means `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, and a missing pin means `AUTHORITY_REVISION_PIN_ABSENT`; both stay `Unknown`, never produced locally. Only an explicit current user instruction may let the run proceed with that `Unknown` recorded in the receipt.
+4. Bind canonical invariants from **externally supplied** inputs. `.github` owns the law and profile, a producer emits the projection, and the consumer repository commits it as a bundle cut by a pinned producer revision and attested by trusted replay (`Quantum-L9/.github` ADR-021). This skill only consumes it: never run the Semantic Compiler, a producer, or the bundle driver to create the projection you are about to bind, and do not assume either is operational.
+   - Inputs: the committed bundle directory (`bundle.lock.json` plus one producer-emitted artifact and receipt per declared source class), or a handed artifact and receipt pair; the authority revision pin; and an exact `Quantum-L9/.github` checkout of that revision fetched from the canonical owner. The pin must come from an independent record of the published revision, never from the bundle, artifact, receipt, or checkout being checked.
+   - Open the run on the host: write `<workspace>/.l9/coding-agent/run.json` (`{"schema": "l9.coding-agent-run/v1", "started_at": "<UTC>", "binding_record": "binding.json", "authority_root": "<the exact .github checkout below>"}`; contract in `integrations/L9_RUNTIME_BINDING.yaml` `run_state_files`).
+   - Run `"$HOME/.cursor-governance/.venv/bin/python" scripts/verify_canonical_binding.py --authority-root <checkout> --bundle <bundle dir> --expect-revision <pin> --require-invariant <id> ... > <workspace>/.l9/coding-agent/binding.json` (a handed pair uses `--artifact <projection> --receipt <receipt>` in place of `--bundle`; the host gate re-verifies only bundle-bound records) and record the printed binding in run state. The record is the verifier's output, never authored or edited by hand.
+   - Exit 1/3/4 (`REJECTED`/`BLOCKED`/`STALE`) blocks mutation. No supplied projection means `BLOCKED_UPSTREAM_PROJECTION_PRODUCER`, and a missing pin means `AUTHORITY_REVISION_PIN_ABSENT`; both stay `Unknown`, never produced locally. Only an explicit current user instruction may let the run proceed with that `Unknown`: the operator sets `L9_CODING_BINDING_REAUTHORIZED="<the user's words verbatim>"` in the hook environment (a file the run can write is not a grant), and the receipt carries the same text.
+   - On Claude Code under `Quantum-L9/Cursor-Governance` this is enforced: while `run.json` exists, the PreToolUse gate `ops/autonomy/coding_agent_binding_gate.py` denies `Edit`/`Write`/`MultiEdit`/`NotebookEdit` unless the verifier, re-run by the gate on `binding.json`, the bundle and `authority_root`, answers `CURRENT`, or the operator reauthorization is set. A `BOUND` label in a writable file releases nothing. Elsewhere the same law is instructional; say which applied.
 5. Establish the semantic envelope before mutation.
 
 ## Execute
@@ -38,6 +40,7 @@
 2. Evaluate terminal state against observed evidence.
 3. Emit the execution receipt.
 4. Perform external delivery only when capability and authority are both observed.
+5. Close the run on the host: delete `<workspace>/.l9/coding-agent/run.json` from the shell (keep `binding.json` as evidence) so later, unrelated work is not gated by this run. While the run is active the gate refuses file-tool writes under `.l9/coding-agent/`.
 
 ## Escalate
 

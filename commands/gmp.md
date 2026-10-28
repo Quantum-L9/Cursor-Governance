@@ -47,12 +47,14 @@ The executor enforces the lock and the outcome tokens. The agent owns the rest.
    locks the repository.
 5. **Verify.** Before finalize, `git -C "$WORK" status --porcelain` and
    `git -C "$WORK" diff --name-only` must name only locked files, the plan's
-   tests, and `reports/`. Anything else: stop and report it.
+   tests, `reports/`, and the executor's own runtime state under `.l9/`
+   (consumers that do not ignore `.l9/` show `.l9/gmp/executor-state.json`).
+   Anything else: stop and report it.
 6. **Evidence.** The executor writes `$WORK/reports/<gmp_id>-<slug>.md`. The
    finish reply lists files changed, tests run with pass or fail, and the PR
    URL or the reason there is none.
 
-Outcome tokens (all exit `2`): `NO_WORKSPACE` (no git toplevel), `NO_PLAN`
+Outcome tokens (all exit `2`): `NO_WORKSPACE` (no git toplevel), `WORK_ROOT_SENTINEL` (the toplevel is `$HOME`, `~/.cursor` or `~/.claude`: a hook home, never a work root), `NO_PLAN`
 (the named plan is not a file), `NO_SCOPE` (no todos), `OUT_OF_WORKSPACE` (a
 todo escapes `$WORK`), `NO_TASK` (full mode with no task).
 
@@ -98,8 +100,8 @@ confirm). Tests once belong to that Build. Then:
 "$GOV_PY" "$GOV_EXEC" --workspace "$WORK" --resume --mode finalize --commit-when-done
 ```
 
-Finalize already publishes on `claude-code`, `codex`, `gemini`, and `manus`.
-Do not publish again there. Cursor finalize stops before `make pr`; publish
+Finalize already publishes on `claude-code`, `codex`, `gemini`, and `manus`
+with `PR_REMEDIATE=0`. Do not publish again there. Cursor finalize stops before `make pr`; publish
 only on Cursor:
 
 ```bash
@@ -155,7 +157,7 @@ the governance imports.
 - L4 local commits; no mid-work push. Cursor finalize is `authorize-release`
   then `PR_REMEDIATE=0 make pr` / `l9 pr` (from a consumer, the
   `make -C "$GOV" pr WS="$WORK"` form above). Adapter surfaces publish inside
-  finalize; do not publish a second time.
+  finalize with `PR_REMEDIATE=0`; do not publish a second time.
 - Max 4 / 2 mutation Tasks. Admission via `autonomy/adapters/cursor/host_bridge.py`.
   If the lease is denied, serialize on the main agent. Do not ask.
 - No autonomous merge.
