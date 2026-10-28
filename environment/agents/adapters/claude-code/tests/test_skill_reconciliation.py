@@ -282,7 +282,38 @@ class CoverageCensusTests(unittest.TestCase):
         )
         census = self.census(user_settings=settings)
         self.assertEqual("complete", census["status"])
+        self.assertIsNone(census["settings_unreadable"])
         self.assertIn("syncClaudeAiSkills=false", "\n".join(skills_mod.coverage_banner(census)))
+
+    def test_missing_user_settings_file_is_incomplete(self) -> None:
+        self.project(self.home_skills)
+        missing = self.home_skills.parent / "settings.json"
+        self.assertFalse(missing.exists())
+        census = self.census(user_settings=missing)
+        self.assertEqual("incomplete", census["status"])
+        self.assertEqual([], census["tier_override_missing"])
+        self.assertIn("missing", census["settings_unreadable"])
+        self.assertIn(str(missing), census["settings_unreadable"])
+        banner = "\n".join(skills_mod.coverage_banner(census))
+        self.assertIn("user settings unreadable:", banner)
+        self.assertIn(str(missing), banner)
+
+    def test_invalid_user_settings_file_is_incomplete(self) -> None:
+        self.project(self.home_skills)
+        settings = self.home_skills.parent / "settings.json"
+        settings.write_text("{not json", encoding="utf-8")
+        census = self.census(user_settings=settings)
+        self.assertEqual("incomplete", census["status"])
+        self.assertEqual([], census["tier_override_missing"])
+        self.assertIn("invalid", census["settings_unreadable"])
+        self.assertIn(str(settings), census["settings_unreadable"])
+        settings.write_text("[]", encoding="utf-8")
+        census = self.census(user_settings=settings)
+        self.assertEqual("incomplete", census["status"])
+        self.assertIn("invalid", census["settings_unreadable"])
+        banner = "\n".join(skills_mod.coverage_banner(census))
+        self.assertIn("user settings unreadable:", banner)
+        self.assertIn(str(settings), banner)
 
     def test_cli_coverage_mode_needs_no_scope(self) -> None:
         generated = self.root / "ops" / "generated"
@@ -305,8 +336,12 @@ class CoverageCensusTests(unittest.TestCase):
             check=False,
             env={"HOME": str(home), "PATH": "/usr/bin:/bin"},
         )
-        self.assertEqual(0, result.returncode, result.stderr)
+        settings = home / ".claude" / "settings.json"
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
         self.assertIn("skills projected: 2/2 unique canonical", result.stdout)
+        self.assertIn("incomplete", result.stdout)
+        self.assertIn("missing", result.stdout)
+        self.assertIn(str(settings), result.stdout)
         self.assertIn("runtime load not verified", result.stdout)
 
 
