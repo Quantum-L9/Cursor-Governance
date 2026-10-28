@@ -121,19 +121,12 @@ items:
 
   - id: CI-001
     subject:
-      - skills/l9-ci-ops
-      - skills/l9-setting-up-ci
-    disposition: CONSOLIDATE
-    result: skills/l9-ci
-    activation: lazy_by_concern
-    intended_routes:
-      - setup
-      - status
-      - diagnose_fix
-      - gates
-      - policy
-      - smoke_testing
-    note: root CI skill should remain small and load only requested concern material
+      - skills/_archived/l9-ci-ops
+      - skills/_archived/l9-setting-up-ci
+      - skills/_archived/l9-cli-optimization
+    disposition: ARCHIVED_NO_SUCCESSOR
+    result: none
+    note: archived 2026-10-27. Do not recreate skills/l9-ci. Live CI is the workflow files, make pr, and l9-pr-remediation.
 
   - id: CI-002
     subject: skills/l9-api-smoke-testing

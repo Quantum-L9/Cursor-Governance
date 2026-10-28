@@ -1,20 +1,23 @@
 ---
 name: l9-cli-optimization
-description: Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.
+description: "Deprecated — do not activate. Archived out of live skills/ discovery. Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  future_home: https://github.com/Quantum-L9/l9-tools
-  status: active
+  tags: [l9, cli, deprecated]
+  owner: igor_beylin
+  status: deprecated
+  version: 1.0.0
+  updated: 2026-10-27
 ---
 
 # Optimize CLI PR Pack
 
-## Future home
+## Archive status
 
-Marked for relocation to [`Quantum-L9/l9-tools`](https://github.com/Quantum-L9/l9-tools). **Do not move yet.** Remains an explicit-only L9 skill in Cursor-Governance until extracted.
+Deprecated. Do not activate. This copy lives under `skills/_archived/` and is outside live skill discovery. It was not extracted to [`Quantum-L9/l9-tools`](https://github.com/Quantum-L9/l9-tools). The contract below stays so the archived validators, including `scripts/validate_identity_lock.py`, still match this directory.
 
 ## Terminal Objective
 
