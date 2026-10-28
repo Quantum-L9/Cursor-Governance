@@ -965,3 +965,52 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     assert '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"' not in script
     assert "updateSubscription" in helper
     assert '-X PUT "repos/' not in helper
+
+
+def _gate_function(gate: str, name: str) -> str:
+    start = gate.index(f"{name}() {{")
+    end = gate.index("\n}\n", start) + 3
+    return gate[start:end]
+
+
+def test_generated_heal_skips_consumer_workspace_with_skills_dir(tmp_path: Path) -> None:
+    """A consumer repo touching its own skills/ must not run the governance heal.
+
+    The heal requires skills/AUTONOMY_MANIFEST.yaml, which only exists in a
+    governance checkout; before the guard, make pr failed with
+    "[Errno 2] No such file or directory: .../skills/AUTONOMY_MANIFEST.yaml".
+    """
+    gate = (SCRIPTS / "run_pr_gate.sh").read_text(encoding="utf-8")
+    ws = tmp_path / "consumer"
+    (ws / "skills" / "demo").mkdir(parents=True)
+    (ws / "skills" / "demo" / "SKILL.md").write_text("---\nname: demo\n---\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("skills/demo/SKILL.md\n", encoding="utf-8")
+    fake_gov = tmp_path / "gov"
+    (fake_gov / "ops" / "scripts").mkdir(parents=True)
+    (fake_gov / "ops" / "scripts" / "sync_generated_artifacts.py").write_text(
+        "import sys\nprint('HEAL RAN')\nsys.exit(1)\n", encoding="utf-8"
+    )
+    script = "\n".join(
+        [
+            _gate_function(gate, "_generated_sources_changed"),
+            _gate_function(gate, "_gate_run_sync"),
+            "_gate_run_sync",
+        ]
+    )
+    env = {**os.environ, "WS": str(ws), "GOV_ROOT": str(fake_gov), "changed_file": str(changed)}
+
+    proc = subprocess.run(
+        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "OK: skip generated heal (no skills/AUTONOMY_MANIFEST.yaml" in proc.stdout
+    assert "HEAL RAN" not in proc.stdout
+
+    # A governance checkout (manifest present) still runs the heal.
+    (ws / "skills" / "AUTONOMY_MANIFEST.yaml").write_text("tiers: {}\n", encoding="utf-8")
+    proc = subprocess.run(
+        ["bash", "-c", script], env=env, capture_output=True, text=True, check=False
+    )
+    assert "HEAL RAN" in proc.stdout
