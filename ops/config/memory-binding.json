@@ -34,7 +34,7 @@
     "kind": "git",
     "repository": "Quantum-L9/l9-graphiti-memory",
     "ref": "846f283f7dade101b324b87008ab4f5901f97074",
-    "ref_note": "Annotated tag v2.6.0 (object 9c1b37727b03d3c9754c379f2cb54d934c5f2e2b) peels to 846f283f7dade101b324b87008ab4f5901f97074. Pin is that full commit SHA. The official wheel is the PyPI upload from the Publish workflow (python -m build). uv build --wheel under the recorded SOURCE_DATE_EPOCH reproduces that digest, so the cross-repo job still rebuilds and refuses any other bytes."
+    "ref_note": "Annotated tag v2.6.0 (object 9c1b37727b03d3c9754c379f2cb54d934c5f2e2b) peels to 846f283f7dade101b324b87008ab4f5901f97074. Pin is that full commit SHA. The official wheel is the PyPI upload from the Publish workflow (python -m build). uv build --wheel --build-constraint memory-build-constraints.txt (that file contains build_backend_constraint setuptools==84.0.0) under the recorded SOURCE_DATE_EPOCH reproduces that digest, so the cross-repo job still rebuilds and refuses any other bytes."
   },
   "binding_policy": {
     "production": "exact release artifact locked in uv.lock; runtime_mode=pinned_environment",
@@ -64,14 +64,14 @@
     "default_timeout_seconds": 180
   },
   "release_evidence": {
-    "description": "Exact-head proof of the binding (audit P1-01/P2-02). artifact_sha256 is the official published wheel (PyPI and the Publish workflow artifact from python -m build on source.ref). uv build --wheel under the fixed SOURCE_DATE_EPOCH reproduces those bytes. .github/workflows/memory-cross-repo.yml resolves source.ref, rebuilds with that command, refuses any other digest, installs that wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
+    "description": "Exact-head proof of the binding (audit P1-01/P2-02). artifact_sha256 is the official published wheel (PyPI and the Publish workflow artifact from python -m build on source.ref). Writing release_evidence.build_backend_constraint (setuptools==84.0.0) into a requirements file and running uv build --wheel --build-constraint on that path under the fixed SOURCE_DATE_EPOCH reproduces those bytes. .github/workflows/memory-cross-repo.yml resolves source.ref, rebuilds with that command, refuses any other digest, installs that wheel into a clean environment, and runs tests/ops/memory/test_cross_repo_lifecycle.py with L9_MEMORY_CROSS_REPO_REQUIRED=1 (a skip is a failure) and no provider credential in the environment. A digest here without that job green on the same Cursor head is a claim, not a proof.",
     "memory_sha": "846f283f7dade101b324b87008ab4f5901f97074",
     "memory_tag": "v2.6.0",
     "memory_tag_object_sha": "9c1b37727b03d3c9754c379f2cb54d934c5f2e2b",
     "package_version": "2.6.0",
     "artifact": "l9_graphite_memory-2.6.0-py3-none-any.whl",
     "artifact_sha256": "d493573254cecedafb66ad3e1ccc380841ec8c617e9501adb5d993c989653d15",
-    "build": "published python -m build; reproduced by uv build --wheel (SOURCE_DATE_EPOCH=1784592000)",
+    "build": "published python -m build; reproduced by printf '%s\\n' 'setuptools==84.0.0' > memory-build-constraints.txt && SOURCE_DATE_EPOCH=1784592000 uv build --wheel --build-constraint memory-build-constraints.txt",
     "build_backend_constraint": "setuptools==84.0.0",
     "build_backend_note": "The source requires setuptools>=68, so an isolated uv build resolves the newest release: setuptools 84.2.1 (2026-10-20) builds 9021eebb..., not the official wheel. Built from the PyPI 2.6.0 sdist under SOURCE_DATE_EPOCH=1784592000, setuptools 84.0.0 reproduces artifact_sha256 exactly. Rebinding the release re-proves this pin.",
     "source_date_epoch": 1784592000,
