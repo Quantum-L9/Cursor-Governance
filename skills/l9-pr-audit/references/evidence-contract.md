@@ -52,6 +52,10 @@ This closes a model-variance gap: two auditors may reason differently, but neith
 
 `audit_coverage.domain_assessments` is the single source of truth for audit-domain disposition. Every canonical domain appears exactly once with `PASS`, `FAIL`, `NOT_APPLICABLE`, or `UNKNOWN`, evidence IDs, related finding IDs, and closing-validation text when needed. There is no separate completed/skipped domain ledger. `FAIL` means the audit conclusively found a domain defect; it does not mean the audit itself failed to converge.
 
+## Canonical authority binding
+
+`canonical_authority_binding` is the verbatim record printed by `scripts/verify_canonical_authority.py` (fields in `integrations/CANONICAL_AUTHORITY_BINDING.yaml#provenance.recorded_fields`; `fallback_used` is always `false`). An authority source of kind `CANONICAL_LAW` is `CONFIRMED` only when the binding is `ADMITTED_AND_CURRENT`, its `canonical_ref` matches the bound component (`source_class`, `source_ref`, `source_digest`, `projection_digest`, `composition_digest`), and its `record_id` equals the `authority_id` and resolves to a record in that namespace of the bound bundle's `composed.json` (whose `composition_digest` must equal the reference). The builder reads the composed view on disk to resolve it; an absent view fails closed. A candidate-mode binding (`BUNDLE_VERIFIED`, `LOADED_AS_CANDIDATE`) supports `INFERENCE` only. A canonical global id (`L9-*-NNN`, `l9.contract/*@N`) never appears under another kind.
+
 ## Architecture policy adapters
 
 `architecture_policy_adapters` records project-, platform-, regulatory-, organizational-, or domain-specific architecture law separately from ChatGPT/Fable execution adapters. Applied adapters require exact governing authority, scope, rule domains, validation methods, and confirmed evidence. `NOT_APPLICABLE` is explicit. Do not import an adapter from unrelated repositories by naming similarity.
@@ -109,7 +113,7 @@ Structural growth is evidence, not automatic failure. `UNJUSTIFIED`, `SCOPE_EXTE
 
 `audit_obligation_ledger` is the coverage governor. Each obligation records ID, PR, kind, subject, disposition, evidence IDs, and related finding IDs.
 
-Required kinds cover active objectives, every changed surface, every machine changed symbol, architecture-growth candidates, material supersession, material failure paths, test-discrimination obligations, in-scope CI failures, and every unresolved review thread discovered at the audited head.
+Required kinds cover every bound canonical invariant per PR (`CANONICAL_INVARIANT`, seeded by the builder from the bound composed view only under an `ADMITTED_AND_CURRENT` binding and grounded by `E-CANON`, which attests the bound set rather than compliance; a `FINDING` must be governed by that invariant as a `CANONICAL_LAW` source), active objectives, every changed surface, every machine changed symbol, architecture-growth candidates, material supersession, material failure paths, test-discrimination obligations, in-scope CI failures, and every unresolved review thread discovered at the audited head.
 
 The model may add obligations but may not remove deterministic obligations. Audit convergence requires complete disposition as `PASS`, `FINDING`, `NOT_APPLICABLE`, or `UNKNOWN`. A `FINDING` is compatible with a converged audit; an unrepresented Unknown is not.
 

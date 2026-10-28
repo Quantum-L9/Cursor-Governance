@@ -180,12 +180,22 @@ def bind_identity_env() -> str:
 
 
 def extract_writer_agent_id(event: dict[str, Any] | None) -> str:
+    """The derived actor. An event ``agent_id`` that disagrees is drift, not authorship."""
+    derived = writer_identity()
+    claimed = ""
     if event:
         for key in ("agent_id", "agentId"):
             value = str(event.get(key) or "").strip()
             if value:
-                return value
-    return writer_identity() or "unknown-agent"
+                claimed = value
+                break
+    if derived:
+        if claimed and claimed != derived:
+            raise ValueError(
+                f"identity drift: event agent_id {claimed!r} but this process is {derived!r}"
+            )
+        return derived
+    return "unknown-agent"
 
 
 def receipt_identity(

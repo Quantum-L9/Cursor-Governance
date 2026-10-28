@@ -26,7 +26,9 @@ Inspection scope and correction scope are different. Inspect directly coupled su
 
 ## 2. Resolve authority and original intent provenance
 
-Discover actual architecture law, scoped instructions, semantic owners, invariants, contracts, schemas, ADRs, policy, generators, mutation guards, and validation/merge enforcement.
+Bind canonical global law first (SKILL.md law 28). Run `scripts/verify_canonical_authority.py --authority-root <Quantum-L9/.github checkout>` and record its `canonical_authority_binding` object verbatim in `audit.json`. Only `ADMITTED_AND_CURRENT` permits an `authority_resolution.sources` entry of kind `CANONICAL_LAW`; each such entry carries a `canonical_ref` with the bound source class, the `record_id` (equal to the `authority_id`, and present in that namespace of the bound composed view), source and projection digests, and the composition digest. Any other status leaves the global layer a typed Unknown and `authority_resolution` short of `RESOLVED`.
+
+Then discover actual repository-local architecture law, scoped instructions, semantic owners, invariants, contracts, schemas, ADRs, policy, generators, mutation guards, and validation/merge enforcement.
 
 Recover the original prompt/task contract used to create the PR when available. Treat it as strong historical evidence for requested objective, explicit scope, non-goals, acceptance criteria, failure behavior, and expected validation. It does not override current repository law or newer user authority. Record absence rather than guessing.
 
@@ -147,7 +149,7 @@ Validate before rendering. All downstream artifacts are deterministic projection
 
 ## 19. Build only from the bound census
 
-Seed the machine-owned rows with `--materialize-machine-rows` and fill the derived post-judgment fields with `--derive` before validating; both are projections owned by the builder, so a hand-written copy of either rule is a competing contract. Validate and build with the exact deterministic ledger used during the audit, for example `python scripts/build_audit_bundle.py --audit audit.json --change-ledger pr-123-change-ledger.json --validate-only`, repeating `--change-ledger` for multi-PR audits. Bundle verification must prove that the packaged `change-ledger.json`, canonical audit binding, manifest hash, machine symbol rows, machine claim seeds, and machine falsification seeds all agree byte-for-byte/field-for-field where owned by deterministic code.
+Seed the machine-owned rows with `--materialize-machine-rows` (with `--canonical-binding` so the bound canonical invariants become `CANONICAL_INVARIANT` obligations per PR) and fill the derived post-judgment fields with `--derive` before validating; both are projections owned by the builder, so a hand-written copy of either rule is a competing contract. Validate and build with the exact deterministic ledger used during the audit, for example `python scripts/build_audit_bundle.py --audit audit.json --change-ledger pr-123-change-ledger.json --validate-only`, repeating `--change-ledger` for multi-PR audits. Bundle verification must prove that the packaged `change-ledger.json`, canonical audit binding, manifest hash, machine symbol rows, machine claim seeds, and machine falsification seeds all agree byte-for-byte/field-for-field where owned by deterministic code.
 
 ## 20. Deterministic closure completion
 

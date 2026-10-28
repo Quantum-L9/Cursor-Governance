@@ -620,6 +620,33 @@ if [ -f "$CODING_PROJECTION_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.
   unset _cp_out _cp_rc
 fi
 
+# Operating-plane projection (report-only): the same shape for
+# l9.projection/cursor-governance-operating-plane@2 through its consumer adapter
+# (ops/scripts/operating_plane_v2_projection.py --format markdown). Admitted mode
+# against the checkout's own origin/main record; it never releases payload here,
+# never fetches, never writes, and a timeout is reported, not hidden.
+OPERATING_PLANE_MD="### operating-plane projection
+- UNVERIFIED: adapter unavailable (report-only)"
+OPERATING_PLANE_PY="$GC/ops/scripts/operating_plane_v2_projection.py"
+if [ -f "$OPERATING_PLANE_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$GC/ops/scripts/lib/run_with_timeout.sh"
+  # Admitted mode builds two shared clones of the authority (pinned revision and
+  # main) and verifies eight receipts: ~3 s on a warm checkout, so the 3 s budget
+  # the lighter coding-projection reader uses times out here (stage-4 e2e,
+  # 2026-10-22). 10 s is the bound; a timeout is still reported, not hidden.
+  _op_out="$(run_with_timeout 10 "$AUDIT_PY_BIN" "$OPERATING_PLANE_PY" \
+    --mode admitted --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
+  _op_rc=$?
+  if [ "$_op_rc" = 124 ]; then
+    OPERATING_PLANE_MD="### operating-plane projection
+- UNVERIFIED: TIMED OUT after 10 s (report-only)"
+  elif [ -n "$_op_out" ]; then
+    OPERATING_PLANE_MD="$_op_out"
+  fi
+  unset _op_out _op_rc
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -637,11 +664,12 @@ ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
+${OPERATING_PLANE_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"
 
-# ADR-0031: mint signed agent assertion for MCP stdio (never human door secret).
+# ADR-0031: mint signed agent assertion (never the human door secret).
 # Must run BEFORE exit — dead code after exit 0 never executes. Env is merged into
 # the sessionStart JSON `env` block so Cursor/Claude surfaces receive it.
 ASSERTION_ENV_JSON="{}"

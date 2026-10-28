@@ -1,0 +1,31 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "result_domains": {
+      "fixture_admission": [
+        "ADMITTED_DOMAIN",
+        "ADMITTED_GLOBAL",
+        "ADMITTED_MIXED",
+        "PROPOSE_GLOBAL_LAW",
+        "UNRESOLVED",
+        "REJECTED"
+      ],
+      "validation": [
+        "PASS",
+        "FAIL",
+        "UNSAT",
+        "INVALID",
+        "UNKNOWN"
+      ]
+    }
+  },
+  "projection_digest": "sha256:31ebf1605f74733904e587884324b0ae090251b5149850b0fc3f6603e6977e4d",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:6a8439c6560685661f0fb0ea93c9befd867b5d3d09168df90560d6e046598c97",
+  "source_ref": "l9.source/error-taxonomy@1"
+}

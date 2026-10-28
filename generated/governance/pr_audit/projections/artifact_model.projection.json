@@ -1,0 +1,40 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "authority_classes": {
+      "candidate": {
+        "authoritative": false,
+        "requires_validation_and_admission": true
+      },
+      "canonical": {
+        "authoritative": true,
+        "implicit_derivation": false
+      },
+      "derived": {
+        "authoritative": false,
+        "authority_expansion_allowed": false,
+        "implicit_promotion_forbidden": true
+      },
+      "evidence": {
+        "attests_declared_observation_or_outcome": true,
+        "authoritative": false,
+        "grants_authority": false
+      }
+    },
+    "derivation_rules": [
+      "artifact_digest_is_deterministic",
+      "derived_artifact_never_implicitly_becomes_canonical",
+      "provenance_must_be_complete",
+      "authority_must_not_expand"
+    ]
+  },
+  "projection_digest": "sha256:015cccb4b6602dce6a3ec858b622418352fbf23805d0db516d85a8590237b82d",
+  "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
+  "projection_profile_ref": "l9.projection/pr-audit@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+  "source_ref": "l9.source/artifact-model@1"
+}

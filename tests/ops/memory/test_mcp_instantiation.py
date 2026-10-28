@@ -8,6 +8,7 @@ real file, because the configurator refuses symlinks by design.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -43,15 +44,31 @@ def _binding(tmp_path: Path, *, ok: bool = True) -> RuntimeBinding:
 
 
 class _Runner:
-    def __init__(self, rc: int = 0) -> None:
+    def __init__(self, rc: int = 0, kind: str = "stdio") -> None:
         self.calls: list[list[str]] = []
         self.envs: list[dict[str, str]] = []
         self.rc = rc
+        self.kind = kind
 
     def __call__(self, argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         self.calls.append(list(argv))
         env = kwargs.get("env")
         self.envs.append(dict(env) if isinstance(env, dict) else {})
+        if "-c" in argv:
+            if self.kind == "http":
+                payload: dict[str, Any] = {
+                    "url": "https://memory.example/mcp",
+                    "type": "streamable-http",
+                }
+            elif self.kind == "secret":
+                payload = {
+                    "url": "https://memory.example/mcp",
+                    "type": "streamable-http",
+                    "headers": {"Authorization": "Bearer literal-secret"},
+                }
+            else:
+                payload = {"command": "/tmp/python", "args": MEMORY_ARGS, "type": "stdio"}
+            return subprocess.CompletedProcess(argv, 0, json.dumps(payload), "")
         return subprocess.CompletedProcess(argv, self.rc, json.dumps({"status": "complete"}), "")
 
 
@@ -80,10 +97,71 @@ def test_render_copies_managed_servers_and_drops_the_legacy_front_door() -> None
     assert servers["Playwright"] == {"command": "npx", "args": ["@playwright/mcp@latest"]}
     assert "graphiti-memory" not in servers
     assert servers["my-own"] == {"command": "/me/server"}
-    # The configurator's entry survives; the master never authors it.
-    assert servers["l9-graphite-memory"]["command"] == "/venv/bin/python"
-    assert preserved == ["l9-graphite-memory", "my-own"]
+    assert "l9-graphite-memory" not in servers
+    assert preserved == ["my-own"]
     assert set(dropped) == {"graphiti-memory", "l9-graphite-memory"}
+
+
+def test_existing_http_memory_entry_is_dropped_before_package_install() -> None:
+    """Known-bad: a hand-written HTTP URL used to survive as native Memory."""
+
+    existing = {
+        "mcpServers": {
+            "my-own": {"command": "/me/server"},
+            "l9-graphite-memory": {
+                "type": "streamable-http",
+                "url": "https://user:secret@graphiti.example/mcp",
+            },
+        }
+    }
+    config, dropped, preserved = inst.render_machine_config(_master(), existing)
+    assert "l9-graphite-memory" not in config["mcpServers"]
+    assert config["mcpServers"]["my-own"] == {"command": "/me/server"}
+    assert preserved == ["my-own"]
+    assert "package-owned" in dropped["l9-graphite-memory"]
+    assert "secret" not in json.dumps(config)
+    assert (
+        inst.classify_managed_config(
+            {
+                "type": "streamable-http",
+                "url": "https://user:secret@graphiti.example/mcp",
+            }
+        )
+        == "unknown"
+    )
+
+
+def test_exact_native_memory_entry_is_preserved_only_with_package_evidence() -> None:
+    expected = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    existing = {"mcpServers": {inst.MEMORY_KEY: dict(expected)}}
+    config, dropped, preserved = inst.render_machine_config(
+        _master(), existing, expected_native_memory=expected
+    )
+    assert config["mcpServers"][inst.MEMORY_KEY] == expected
+    assert inst.MEMORY_KEY not in dropped
+    assert preserved == []  # Package-owned, never an unmanaged consumer server.
+
+    # HTTP-looking but not package-owned: reject without trying to infer provenance.
+    foreign = {
+        "mcpServers": {
+            inst.MEMORY_KEY: {
+                "type": "streamable-http",
+                "url": "https://graphiti.example/mcp",
+            }
+        }
+    }
+    config, dropped, preserved = inst.render_machine_config(
+        _master(), foreign, expected_native_memory=expected
+    )
+    assert inst.MEMORY_KEY not in config["mcpServers"]
+    assert inst.MEMORY_KEY in dropped
+    assert preserved == []
+
+    # An unverified expectation is not admissible even when structurally equal.
+    config, _, _ = inst.render_machine_config(
+        _master(), existing, expected_native_memory={"type": "stdio", "command": "/tmp/a"}
+    )
+    assert inst.MEMORY_KEY not in config["mcpServers"]
 
 
 def test_render_from_nothing_has_no_memory_entry_and_no_private_keys() -> None:
@@ -169,7 +247,7 @@ def test_memory_entry_is_delegated_to_the_bound_runtime(tmp_path: Path) -> None:
     master_path.write_text(json.dumps(_master()), encoding="utf-8")
     target = tmp_path / "mcp.json"
     binding = _binding(tmp_path)
-    runner = _Runner()
+    runner = _Runner(kind="http")
     receipt = inst.instantiate(
         path=target,
         master_path=master_path,
@@ -180,16 +258,77 @@ def test_memory_entry_is_delegated_to_the_bound_runtime(tmp_path: Path) -> None:
     memory = receipt["memory"]
     assert memory["status"] == "verified"
     assert memory["interpreter_source"] == "runtime_binding:pinned_environment"
-    install, verify = runner.calls
+    inspect_call, install, verify = runner.calls
+    assert "-c" in inspect_call
     assert install[0] == binding.memory_cli
     assert install[1:4] == ["client", "cursor", "install"]
     assert install[install.index("--path") + 1] == str(target)
     assert install[install.index("--interpreter") + 1] == binding.interpreter
-    assert runner.envs[0].get(inst.ENV_MCP_LAUNCHER) == str(inst.SIGNED_AGENT_LAUNCHER)
-    assert runner.envs[0]["L9_MEMORY_MCP_COMMAND"] == runner.envs[1]["L9_MEMORY_MCP_COMMAND"]
+    assert all(inst.ENV_MCP_LAUNCHER not in env for env in runner.envs)
     assert verify[1:4] == ["client", "cursor", "verify"] and "--path" in verify
     assert receipt["binding_status"] == "exact"
     assert receipt["authority"] == "none" and receipt["schema"] == inst.RECEIPT_SCHEMA
+
+
+def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> None:
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master()), encoding="utf-8")
+    target = tmp_path / "mcp.json"
+    native = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    original = (
+        json.dumps(
+            {"mcpServers": {"mine": {"command": "/mine"}, inst.MEMORY_KEY: native}},
+            indent=2,
+        )
+        + "\n"
+    )
+    target.write_text(original, encoding="utf-8")
+    binding = _binding(tmp_path)
+    runner = _Runner(kind="http")
+
+    check = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        check=True,
+        binding_resolver=lambda: binding,
+        runner=runner,
+    )
+    assert check["status"] == "unchanged"
+    assert check["memory"]["status"] == "installed"
+    assert inst.exit_code(check) == 0
+    assert target.read_text(encoding="utf-8") == original
+
+    install = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        binding_resolver=lambda: binding,
+        runner=runner,
+    )
+    assert install["status"] == "unchanged"
+    assert install["memory"]["status"] == "installed"
+    assert install["preserved_unmanaged"] == ["mine"]
+    assert target.read_text(encoding="utf-8") == original
+
+
+def test_launcher_override_is_stripped_from_inspect_install_and_verify(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setenv(inst.ENV_MCP_LAUNCHER, "/tmp/legacy-launcher")
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master()), encoding="utf-8")
+    runner = _Runner(kind="http")
+    result = inst.instantiate(
+        path=tmp_path / "mcp.json",
+        master_path=master_path,
+        verify=True,
+        binding_resolver=lambda: _binding(tmp_path),
+        runner=runner,
+    )
+    assert result["memory"]["status"] == "verified"
+    assert len(runner.envs) == 3  # inspector + install + probe
+    assert all(inst.ENV_MCP_LAUNCHER not in env for env in runner.envs)
+    # Do not change the parent or leak its launcher into the managed client.
+    assert os.environ[inst.ENV_MCP_LAUNCHER] == "/tmp/legacy-launcher"
 
 
 def test_unbound_runtime_installs_nothing_and_says_why(tmp_path: Path) -> None:
@@ -214,7 +353,7 @@ def test_blocked_install_is_a_failure_exit(tmp_path: Path) -> None:
         path=tmp_path / "mcp.json",
         master_path=master_path,
         binding_resolver=lambda: _binding(tmp_path),
-        runner=_Runner(rc=2),
+        runner=_Runner(rc=2, kind="http"),
     )
     assert receipt["memory"]["status"] == "blocked"
     assert inst.exit_code(receipt) == 1
@@ -282,13 +421,10 @@ def test_real_configurator_installs_and_verifies_into_the_rendered_file(
     target = tmp_path / "mcp.json"
     receipt = inst.instantiate(path=target, master_path=master_path, verify=True)
     assert receipt["binding_status"] in {"exact", "development_checkout"}, receipt
-    assert receipt["memory"]["status"] == "verified", receipt["memory"]
+    assert receipt["memory"]["status"] == "upstream_blocked", receipt["memory"]
     servers = json.loads(target.read_text(encoding="utf-8"))["mcpServers"]
-    entry = servers["l9-graphite-memory"]
-    assert entry["args"] == MEMORY_ARGS and "env" not in entry
-    assert entry["command"] == str(inst.SIGNED_AGENT_LAUNCHER)
+    assert "l9-graphite-memory" not in servers
     assert servers["Playwright"] == {"command": "npx"}
-    # A second run is byte-stable and keeps the configurator's entry.
     again = inst.instantiate(path=target, master_path=master_path, check=True, skip_memory=True)
     assert again["status"] == "unchanged"
-    assert again["preserved_unmanaged"] == ["l9-graphite-memory"]
+    assert again["preserved_unmanaged"] == []

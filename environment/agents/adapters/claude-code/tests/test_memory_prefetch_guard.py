@@ -117,13 +117,18 @@ class PrefetchRuntimeGuardTests(unittest.TestCase):
         )
         # No host marker, no identity: a governance-surface string is not evidence.
         self.assertEqual(prefetch.prefetch_agent_id({"L9_GOVERNANCE_SURFACE": "claude-code"}), "")
-        # A cloud session with an unadmitted entrypoint derives no actor: the
-        # identity owner's contract (tests/ops/memory/test_agent_identity.py,
-        # ``{**CLAUDE, "CLAUDE_CODE_REMOTE": "true"} -> ""``) is authoritative.
-        self.assertEqual(
-            prefetch.prefetch_agent_id({"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}),
-            "",
-        )
+        # An unrecognized remote entrypoint keeps the actor and leaves the
+        # surface unknown. The assertion is the same object the writer stamps.
+        remote = {"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true"}
+        self.assertEqual(prefetch.prefetch_agent_id(remote), "claude-code")
+        from ops.memory.agent_identity import resolve_surface_id
+        from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+
+        self.assertEqual(resolve_surface_id(remote), "")
+        dims = build_runtime_identity_assertion(remote)["resolved_dimensions"]
+        self.assertEqual(dims["actor_identity"], "l9.actor-registry/global@1#claude-code")
+        self.assertEqual(dims["surface_identity"], "unknown")
+        self.assertNotIn("constellation_identity", dims)
 
     def test_a_degraded_read_is_shown_to_the_user(self) -> None:
         """Degraded memory health is a user-visible systemMessage."""

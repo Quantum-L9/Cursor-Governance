@@ -1,0 +1,244 @@
+integration:
+  integration_id: L9.PR_AUDIT.CANONICAL_AUTHORITY_BINDING.001
+  version: 0.1.0
+  artifact_class: runtime_integration_binding
+  status: active
+  semantic_owner: integrations/CANONICAL_AUTHORITY_BINDING.yaml
+purpose:
+  assertion: >-
+    Bind the admitted global law a pull-request audit cites from Quantum-L9/.github into
+    l9-pr-audit as a separate, explicitly loaded input: a bundle the canonical compiler
+    produced and the audit only verifies. The audit executes no selector, composes no
+    payload, authors no schema, and never substitutes another input when this one is
+    unavailable. Repository-local law (CANONICAL_LAW.md, REVIEW.md, CLAUDE.md, ADRs, generators,
+    mutation guards) stays discovered per run under SKILL.md workflow step 2; this input is
+    the global layer only.
+input:
+  name: canonical_authority
+  separate_from: repository-local authority sources recorded in audit.json authority_resolution
+  relationship_to_repository_law: >-
+    Repository-local law keeps its runtime role unchanged: discovered, cited and resolved per
+    audit with its own evidence. Canonical authority is source-bound global law at an exact
+    authority revision. Neither replaces the other; a conflict between them is an authority
+    conflict recorded in authority_resolution.conflicts, never resolved silently.
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/pr-audit@1
+    projection_profile_digest: sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941
+    # Identity coordinates the shared verifier checks against the pinned profile entry.
+    projection_profile_class: consumer
+    projection_profile_consumer: l9-pr-audit
+    composition_profile_ref: l9.compose/pr-audit@1
+    composition_profile_digest: sha256:b5807ebc8cc2d4ddd918a42f527738fe16aff4eda9cfb1d46998a2a50297bb90
+    projection_payload_schema: l9.projection.pr-audit/v1
+    composed_payload_schema: l9.composed-projection.pr-audit/v1
+    expected_source_classes:
+      - vocabulary
+      - invariants
+      - contracts
+      - authority_model
+      - artifact_model
+      - architecture_rules
+      - architecture_patterns
+      - capabilities
+      - conformance_model
+      - receipt_catalog
+      - lifecycle
+      - semantic_dependency_model
+      - error_taxonomy
+  bundle:
+    path: generated/governance/pr_audit
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+    pr_audit_produces: false
+    publication: >-
+      Generation is separate from publication. The driver writes only to its output directory
+      and no workflow commits, pushes, or opens pull requests; a regenerated bundle reaches
+      the repository only through the existing Cursor-Governance publication authority
+      (CANONICAL_LAW.md §6.2 with its dated amendments, projected by
+      ops/autonomy/surface_profile.yaml).
+    production_attestation: >-
+      The trusted replay workflow reproduces the bundle byte for byte with the compiler
+      revision named in bundle.lock.json, only when that revision is on the compiler's
+      protected main, and publishes a PASS/FAIL attestation as the commit status
+      l9/projection-bundle-trusted-replay/pr_audit. It fails closed. The verifier's digests
+      are recomputable: they prove integrity and currentness, not production.
+  verifier: scripts/verify_canonical_authority.py
+  # The audit's verifier is a thin adapter: every component, authority and admission check
+  # runs in the one consumer verifier Coding Agent and GAR use, parameterized by this binding.
+  shared_verifier: ../l9-coding-agent/scripts/verify_canonical_binding.py
+admission:
+  # BUNDLE_VERIFIED (a coherent, current bundle) is never admitted global law by itself.
+  # ADMITTED_AND_CURRENT is resolved independently of bundle.lock.json by the shared
+  # resolve_admission, the same policy governance/authority-bindings/coding-agent-execution.yaml
+  # and GAR's architecture-intelligence binding are judged by.
+  resolved_independently_of: bundle.lock.json
+  resolver: ../l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  authority_main_ref: refs/remotes/origin/main
+  integration: the bundle revision is the independently resolved tip of the authority's main or an ancestor of it
+  currency: every governing source and profile is byte-identical at that tip
+  anchoring: >-
+    An admitted bundle is re-verified against that tip by the shared verify_profile_bundle:
+    canonical origin, HEAD equal to the tip, clean semantics/, law bytes from hash-checked
+    commit objects, the producer role from semantics/vocabulary.yaml, and every receipt against
+    the upstream receipt schema.
+  decision_record:
+    required_by: Quantum-L9/.github semantics/authority_model.yaml#admission_rules.global_requirements.explicit_decision_record
+    canonical_form: >-
+      The AdmissionDecisionPacket semantics of Quantum-L9/.github
+      semantics/packet_catalog.yaml#admission_decision (candidate_ref, candidate_digest,
+      decision, authority_ref) plus the admitted_revision of the owner at which the candidate
+      resolves to that digest. One record per candidate; a changed candidate digest needs a new
+      decision (authority_model.yaml#human_authority, approval_binds_exact_candidate_digest).
+    effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
+  decisions:
+    - candidate_ref: l9.projection/pr-audit@1
+      candidate_digest: sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941
+      decision: admit
+      admitted_revision: bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb
+      decided_at: "2026-10-21"
+      authority_ref: >-
+        Repository owner's explicit instruction, 2026-10-21, recorded verbatim: "Decision is
+        Admit!" (given for l9.projection/pr-audit@1 and l9.compose/pr-audit@1 after
+        "Yes and yes. Proceed with mutation exactly as described"), followed by the owner's
+        typed /l9-pr-remediation that merged Quantum-L9/.github#194 (ADR-021, v3.24.0) and
+        #195 (ADR-022, v3.25.0) into main at bd3a0cc.
+    - candidate_ref: l9.compose/pr-audit@1
+      candidate_digest: sha256:b5807ebc8cc2d4ddd918a42f527738fe16aff4eda9cfb1d46998a2a50297bb90
+      decision: admit
+      admitted_revision: bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb
+      decided_at: "2026-10-21"
+      authority_ref: >-
+        Repository owner's explicit instruction, 2026-10-21, recorded verbatim: "Decision is
+        Admit!" (given for l9.projection/pr-audit@1 and l9.compose/pr-audit@1 after
+        "Yes and yes. Proceed with mutation exactly as described"), followed by the owner's
+        typed /l9-pr-remediation that merged Quantum-L9/.github#194 (ADR-021, v3.24.0) and
+        #195 (ADR-022, v3.25.0) into main at bd3a0cc.
+assurance_limitations:
+  - forbidden_category: obligation_not_admitted_in_a_selected_source
+    criterion: source_authority
+    independent_restrictive_power: false
+    basis: >-
+      Quantum-L9/.github ADR-019, ADR-020 and ADR-022: the criterion duplicates the canonical
+      authority loader's ownership check and cannot fail on its own. It is not counted as
+      independent exclusion assurance.
+load_condition:
+  when:
+    - audit_workflow_step_2_resolve_authority
+    - any_finding_or_authority_source_cites_global_law
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+    - audit.json canonical_authority_binding recorded before the payload is read
+  candidate_inspection:
+    requires: verifier.status == BUNDLE_VERIFIED (mode candidate)
+    authoritative: false
+    rule: >-
+      Every claim citing a candidate-mode fact is labelled non-authoritative (evidence state
+      INFERENCE, never CONFIRMED) and is never treated as admitted global law, an admitted
+      contract, or a resolved Unknown.
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED:
+    meaning: >-
+      The bundle is coherent and current at the revision it names, but that revision is not
+      admitted global law (NOT_ADMITTED or ADMISSION_UNRESOLVED).
+    audit_json: {status: BUNDLE_VERIFIED, load_status: NOT_LOADED (admitted mode) or LOADED_AS_CANDIDATE (candidate mode)}
+    effect: Not admitted law. Admitted mode reads nothing; candidate mode reads non-authoritatively.
+  BLOCKED:
+    meaning: The bundle, binding, or authority object needed for verification is absent or unreadable.
+    audit_json: {status: UNAVAILABLE, load_status: NOT_LOADED}
+    effect: >-
+      Proceed without canonical authority. authority_resolution.status cannot be RESOLVED and a
+      claim that depends on global law is a typed Unknown in residual_unknowns.
+  REJECTED:
+    meaning: >-
+      A pin, digest, envelope schema, payload schema, receipt, source coverage, or namespace
+      byte-equivalence check failed.
+    audit_json: {status: REJECTED, load_status: NOT_LOADED}
+    effect: No part of the bundle may be read. Report the refusal reason as evidence.
+  STALE:
+    meaning: >-
+      The bundle was produced at a different authority revision, or a source or profile
+      changed since production.
+    audit_json: {status: STALE, load_status: NOT_LOADED}
+    effect: The bundle must not be treated as current. Regeneration belongs to the producer.
+  fallback:
+    repository_file_reads_of_global_law: forbidden
+    model_recall_of_invariant_or_contract_text: forbidden
+    harvested_invariants_reference_as_global_law: forbidden
+    partial_bundle: forbidden
+provenance:
+  state_target: audit.json canonical_authority_binding
+  recorded_fields:
+    - binding_ref
+    - status
+    - load_status
+    - bundle_ref
+    - authority_repository
+    - authority_revision
+    - projection_profile
+    - composition_profile
+    - composition_digest
+    - component_digests
+    - producer
+    - verifier
+    - currentness
+    - refusal_reason
+    - fallback_used
+  rule: >-
+    The verifier's canonical_authority_binding object is recorded verbatim in audit.json
+    before any authority source of kind CANONICAL_LAW or any finding cites the input. A
+    CANONICAL_LAW authority source names the composition digest and source class it relies on
+    through its canonical_ref.
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_the_audit
+  - payload_schema_authoring_or_reinterpretation
+  - cross_source_merge_or_reconciliation
+  - digest_convention_redefinition
+integration_invariants:
+  - id: CAB-001
+    rule: >-
+      Canonical authority is read as admitted law only after verify_canonical_authority.py
+      returns ADMITTED_AND_CURRENT; BUNDLE_VERIFIED permits only explicit, non-authoritative
+      candidate inspection.
+  - id: CAB-002
+    rule: A refused outcome never falls back to repository reads, model recall, or the harvested-invariants reference.
+  - id: CAB-003
+    rule: Repository-local law remains discovered and cited per audit whether or not this input is loaded.
+  - id: CAB-004
+    rule: The bundle is produced only by the canonical compiler; the audit verifies and never regenerates it.
+  - id: CAB-005
+    rule: Provenance is recorded in audit.json before the payload is read and is never inferred.
+  - id: CAB-006
+    rule: >-
+      A committed bundle is accepted only after CI reproduces it byte for byte with the pinned
+      compiler; BUNDLE_VERIFIED and ADMITTED_AND_CURRENT attest integrity, currentness and
+      authority status of those bytes and are never by themselves evidence of compiler
+      production.
+  - id: CAB-007
+    rule: >-
+      Admission is resolved independently of bundle.lock.json from the authority checkout's own
+      main; BUNDLE_VERIFIED never grants admitted-law status.
+  - id: CAB-008
+    rule: >-
+      expected_source_classes equals, in order, the sources of the pinned projection profile
+      at the authority revision; any divergence is REJECTED (EXPECTED_SOURCE_SET_MISMATCH).
+  - id: CAB-009
+    rule: >-
+      Verification and admission are the shared consumer verifier's
+      (skills/l9-coding-agent/scripts/verify_canonical_binding.py); the audit holds no second
+      bundle, receipt or admission check. ADMITTED_AND_CURRENT requires an explicit owner
+      decision bound to each exact candidate digest, and a changed candidate needs a new decision.
+  - id: CAB-010
+    rule: >-
+      A finding whose authority_id is a canonical global id (L9-*-NNN or l9.contract/*) resolves
+      to a bundled record through its authority source's canonical_ref when the binding is
+      ADMITTED_AND_CURRENT; otherwise that finding's governing-rule evidence is INFERENCE at
+      best and never CONFIRMED.

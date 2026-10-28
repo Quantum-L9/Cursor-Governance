@@ -1,0 +1,78 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/authority-bindings/operating-plane-v2.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-10-22
+# This is a local consumption binding, not authority to admit the profile.
+schema: l9.cursor-governance.operating-plane-v2-binding/v1
+artifact_id: l9.cursor-governance/operating-plane-v2-binding@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cursor_governance_operating_plane_v2_consumer_binding
+  authority_class: local_canonical_binding
+upstream:
+  repository: Quantum-L9/.github
+  profile_ref: l9.projection/cursor-governance-operating-plane@2
+  profile_class: consumer
+  profile_consumer: Cursor-Governance
+  # Canonical-JSON digest of the catalog entry at the admitted revision; the producer
+  # lock (generated/governance/operating_plane_v2/bundle.lock.json) pins the same value.
+  # A different digest on main is STALE: rebind deliberately, never silently.
+  profile_digest: 'sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8'
+  payload_schema: l9.projection.cursor-governance-operating-plane/v2
+  # Quantum-L9/.github#196, squash-merged to main as 3dcdeaae355b6de08562993f705084d7a3714bfd.
+  admitted_revision: '3dcdeaae355b6de08562993f705084d7a3714bfd'
+  source_classes:
+    - vocabulary
+    - capabilities
+    - authority_model
+    - lifecycle
+    - invariants
+    - contracts
+    - error_taxonomy
+    - receipt_catalog
+bundle:
+  path: generated/governance/operating_plane_v2
+  lock: bundle.lock.json
+  producer: l9-semantic-compiler
+  driver: tools/authority/produce_projection_bundle.py
+  trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+verification:
+  shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+  shared_admission_resolver: tools/authority/verify_coding_projection.py
+  selector: ops/scripts/operating_plane_v2_projection.py
+admission:
+  decisions:
+    - candidate_ref: l9.projection/cursor-governance-operating-plane@2
+      candidate_digest: 'sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8'
+      decision: admit
+      admitted_revision: '3dcdeaae355b6de08562993f705084d7a3714bfd'
+      authority_ref: >
+        Quantum-L9/.github#196, merged to main as 3dcdeaae355b6de08562993f705084d7a3714bfd
+        ("feat(semantics): admit candidate l9.projection/cursor-governance-operating-plane@2
+        with PROJECTION-014 declared break, payload schema, ADR-023 (v3.26.0 candidate)");
+        release record docs/semantic-foundation/v3.26.0 and ADR-023 at that revision; merged
+        2026-10-22 on the repository owner's recorded instruction (merge-authority switch
+        disabled, CANONICAL_LAW §6.2.16). RC-033 is not yet authored (ADR-023 records the gap).
+constraints:
+  upstream_canonical_content_is_read_only: true
+  conformance_profile_owner: Quantum-L9/l9-conformance
+  projection_is_derived_not_authority: true
+  missing_or_stale_evidence_does_not_grant_consumer_read: true
+  no_skill_router_or_safety_gate_change: true
+enforcement:
+  status_surface:
+    # SessionStart (ops/hooks/session_start_bootstrap.sh, the Claude hook) via
+    # ops/scripts/operating_plane_v2_projection.py --format markdown|line: report-only.
+    mode: report_only
+    statuses: [CURRENT, BOUND, STALE, UNVERIFIED, BLOCKED, REJECTED]
+  consumer_read:
+    # A verified source class or exact invariant/contract record is released only by
+    # --mode admitted after both shared verifiers prove admission and currency.
+    mode: admitted_only
+    releases_payload: --mode admitted --source-class [--record-id]

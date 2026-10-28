@@ -32,12 +32,16 @@ on:
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/operating_plane_v2/**"
+      - "generated/governance/pr_audit/**"
   push:
     branches:
       - main
     paths:
       - "generated/governance/architecture_intelligence/**"
       - "generated/governance/coding_agent_execution/**"
+      - "generated/governance/operating_plane_v2/**"
+      - "generated/governance/pr_audit/**"
       - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
@@ -65,6 +69,10 @@ jobs:
             profile: l9.projection/architecture-intelligence@1
           - bundle: coding_agent_execution
             profile: l9.projection/coding-agent-execution@1
+          - bundle: operating_plane_v2
+            profile: l9.projection/cursor-governance-operating-plane@2
+          - bundle: pr_audit
+            profile: l9.projection/pr-audit@1
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -268,7 +276,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bundle: [architecture_intelligence, coding_agent_execution]
+        bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)
         shell: bash

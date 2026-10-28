@@ -11,6 +11,7 @@
     "repository_binding",
     "audit_coverage",
     "authority_resolution_status",
+    "canonical_authority_binding",
     "architecture_policy_adapters",
     "boundary_map",
     "pr_bindings",
@@ -544,6 +545,69 @@
             "minLength": 1
           },
           "uniqueItems": true
+        }
+      }
+    },
+    "canonical_authority_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "load_status",
+        "authoritative",
+        "authority_repository",
+        "authority_revision",
+        "projection_profile",
+        "composition_digest",
+        "verifier"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "ADMITTED_AND_CURRENT",
+            "BUNDLE_VERIFIED",
+            "UNAVAILABLE",
+            "REJECTED",
+            "STALE",
+            "NOT_REQUESTED"
+          ]
+        },
+        "load_status": {
+          "enum": [
+            "NOT_LOADED",
+            "LOADED",
+            "LOADED_AS_CANDIDATE"
+          ]
+        },
+        "authoritative": {
+          "type": "boolean"
+        },
+        "authority_repository": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authority_revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "projection_profile": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "composition_digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verifier": {
+          "const": "scripts/verify_canonical_authority.py"
         }
       }
     }

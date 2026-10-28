@@ -1,0 +1,139 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.9.3"
+  },
+  "payload": {
+    "terms": {
+      "admission": {
+        "definition": "Deterministic evaluation and authorized state transition that determines whether a candidate semantic artifact becomes an admitted artifact within a declared scope.\n",
+        "hard_checks": [
+          "authority_valid",
+          "source_traceable",
+          "derivation_valid",
+          "deterministic",
+          "reproducible",
+          "non_vacuous",
+          "independent",
+          "executable",
+          "non_conflicting",
+          "version_valid"
+        ],
+        "semantic_class": "governance_operation"
+      },
+      "authority": {
+        "definition": "The recognized right to establish, admit, modify, approve, reject, or govern a semantic fact, artifact, operation, or state transition.\n",
+        "question": "Who is permitted to make this authoritative?",
+        "rules": [
+          "authority_must_be_explicit",
+          "derived_artifacts_do_not_gain_authority_automatically",
+          "conformance_does_not_grant_authority",
+          "agents_must_not_self_expand_authority"
+        ],
+        "semantic_class": "governance"
+      },
+      "bounded_autonomy": {
+        "definition": "Authorization for an agent or compiler to act independently within an explicitly constrained semantic, capability, fixture-backed, and authority-valid region.\n",
+        "principle": [
+          "semantic_freedom_decreases_as_safe_automation_increases",
+          "conformance_evidence_does_not_replace_authority"
+        ],
+        "semantic_class": "execution_policy"
+      },
+      "capability": {
+        "authority_rule": "Capability identity and functional ability do not grant governing authority, and provider realization does not transfer semantic ownership.\n",
+        "definition": "A stable provider-independent semantic function identity with an explicit semantic owner, semantic scope, effect class, requirements, and applicable authorization requirements. Declaration, admission, availability, authorization, and invocability remain distinct dimensions.\n",
+        "detailed_model": "capabilities.yaml",
+        "semantic_class": "semantic_function"
+      },
+      "conformance": {
+        "authority_rule": "Conformance produces evidence and does not independently grant execution or governance authority.\n",
+        "definition": "Mechanical evaluation of whether an implementation, provider, artifact, or system satisfies the applicable admitted fixture and contract requirements.\n",
+        "question": "Does this candidate satisfy the required observable semantics?",
+        "semantic_class": "verification"
+      },
+      "contract": {
+        "definition": "A machine-usable declaration of an operation, capability, interface, accepted inputs, outputs, outcomes, obligations, boundaries, or compatibility requirements.\n",
+        "question": "What behavior or interface is explicitly promised or required?",
+        "rules": [
+          "contracts_must_not_violate_applicable_invariants",
+          "contracts_must_have_explicit_scope",
+          "contract_compatibility_must_be_explicit"
+        ],
+        "semantic_class": "semantic_interface"
+      },
+      "invariant": {
+        "authority_rule": "An invariant is authoritative only when admitted by its semantic owner.\n",
+        "definition": "A property that must remain true across all admissible states, implementations, transitions, or representations within its scope.\n",
+        "produces": [
+          "law_candidates"
+        ],
+        "question": "What must always remain true?",
+        "semantic_class": "semantic_constraint"
+      },
+      "packet": {
+        "definition": "A bounded transferable unit containing semantic payload plus the metadata required for its declared L9 operation or workflow.\n",
+        "semantic_class": "transport_or_work_unit",
+        "vocabulary_rule": {
+          "envelope_synonym_allowed": false,
+          "preferred_l9_term": "packet"
+        }
+      },
+      "provenance": {
+        "definition": "Machine-readable lineage linking an artifact to the authoritative sources, revisions, transformations, bindings, validators, and decisions from which it originated.\n",
+        "rules": [
+          "provenance_must_survive_compilation",
+          "provenance_must_support_upstream_conflict_localization"
+        ],
+        "semantic_class": "lineage"
+      },
+      "provider": {
+        "definition": "A concrete implementation, service, framework, datastore, runtime, or technology that realizes an abstract semantic capability or port.\n",
+        "rules": [
+          "provider_does_not_become_semantic_owner",
+          "provider_is_replaceable_when_contract_and_conformance_hold"
+        ],
+        "semantic_class": "realization"
+      },
+      "receipt": {
+        "definition": "Immutable evidence recording what operation or validation occurred against which exact inputs, revisions, profiles, and digests and what result was observed.\n",
+        "rule": {
+          "receipt_proves_observed_result_not_authority": true
+        },
+        "semantic_class": "evidence"
+      },
+      "requirement": {
+        "definition": "Typed obligation or objective with explicit source, hardness, and satisfaction semantics used during semantic resolution.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "resolution": {
+        "definition": "Evidence-bound determination of whether a semantic subject is resolved, unresolved, incompatible, unsatisfiable, or ambiguous under governing coordinates.",
+        "semantic_owner": "Quantum-L9/.github"
+      },
+      "semantic_owner": {
+        "definition": "The authority responsible for defining and governing the semantics of a capability, domain, contract, or artifact.\n",
+        "rules": [
+          "semantic_owner_is_not_implied_by_provider",
+          "semantic_owner_is_not_implied_by_deployment_location"
+        ],
+        "semantic_class": "ownership"
+      },
+      "state_change": {
+        "definition": "Authorized append-only transition creating a new authoritative revision rather than mutating historical semantic state.\n",
+        "rules": [
+          "expected_revision_must_match",
+          "authority_must_be_valid",
+          "transition_must_be_allowed",
+          "required_evidence_must_be_present"
+        ],
+        "semantic_class": "authoritative_operation"
+      }
+    }
+  },
+  "projection_digest": "sha256:a729eeea69960b4a98b93ca527715292708a60392cea727de48629e2b21e8e0e",
+  "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
+  "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+  "source_ref": "l9.source/vocabulary@1"
+}

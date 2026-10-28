@@ -342,12 +342,11 @@ make memory-mcp-install                     # real file (replaces the old symlin
 MEMORY_VERIFY_MCP=1 make memory-mcp-install # + the package's own stdio handshake proof
 ```
 
-The master inventory never authors the memory entry. Every renderer (Cursor,
-Claude Desktop) hands it to `l9-memory client cursor install --path …` against
-the runtime `runtime_binding.py` proved, so the same atomic, digest-backed,
-secret-free entry lands on every surface; Claude Code's project template
-launches the same argv through `ops/memory/run_memory_mcp.sh` (HOME-expanded
-wrapper; the wrapper is the bind gate). The retired
+The master inventory never authors the memory entry. Cursor may write it only
+through `l9-memory client cursor install` when the package entry is native
+Streamable HTTP. Claude Desktop removes `l9-graphite-memory` and does not run
+that Cursor installer. An existing Cursor memory entry is dropped on render;
+shape is not package provenance. The retired
 `graphiti-memory` front door is dropped from every rendered file and rejected
 by `validate_claude_env.py`, `environment/agents/tools/validate_agents.py`, the
 repo hygiene check and the governance self-check.
@@ -420,8 +419,10 @@ non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
 `source.ref` on the memory remote (the `v2.3.1` release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
-the memory repository at that SHA, rebuilds the wheel reproducibly under
-the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
+the memory repository at that SHA, rebuilds the wheel by writing
+`release_evidence.build_backend_constraint` (`setuptools==84.0.0`) into a
+requirements file and passing that path to `uv build --wheel
+--build-constraint` under the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
 `release_evidence.artifact_sha256`, installs the wheel into a clean
 environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
