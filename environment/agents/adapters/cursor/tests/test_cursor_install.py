@@ -158,18 +158,13 @@ class ThinnessTests(unittest.TestCase):
                 if "_TOKEN" in line:
                     self.assertNotRegex(line, r"[A-Z_]+_TOKEN\s*=\s*\S")
 
-    def test_mcp_template_declares_only_the_canonical_memory_server(self) -> None:
-        """Stage C7: the memory package owns the entry; no provider front door."""
+    def test_mcp_template_does_not_author_a_memory_server(self) -> None:
+        """The package owns native HTTP. This template authors no stdio fallback."""
         data = json.loads((ADAPTER / "mcp.template.json").read_text(encoding="utf-8"))
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", json.dumps(data))
         self.assertNotIn("graphiti-memory", data["mcpServers"])
-        server = data["mcpServers"]["l9-graphite-memory"]
-        self.assertEqual(server["command"], "${L9_MEMORY_INTERPRETER}")
-        self.assertEqual(
-            server["args"], ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
-        )
-        for forbidden in ("env", "url", "headers"):
-            self.assertNotIn(forbidden, server)
+        self.assertNotIn("l9-graphite-memory", data["mcpServers"])
+        self.assertEqual(data["mcpServers"], {})
 
 
 if __name__ == "__main__":

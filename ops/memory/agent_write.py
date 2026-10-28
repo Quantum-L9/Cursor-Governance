@@ -38,8 +38,8 @@ from typing import Any
 
 from ops.memory.agent_identity import (
     HISTORICAL_ACTOR_ALIASES,
+    IdentityResolutionError,
     resolve_agent_id,
-    resolve_surface_id,
 )
 
 SCHEMA_ID = "l9.agent_memory_write.v1"
@@ -348,7 +348,14 @@ def main(argv: list[str] | None = None) -> int:
                 raise AgentWriteError(
                     "no memory identity for this process (ops/memory/agent_identity.py)"
                 )
-            surface = resolve_surface_id()
+            from ops.memory.print_agent_assertion_env import (  # noqa: PLC0415
+                asserted_surface_fragment,
+            )
+
+            try:
+                surface = asserted_surface_fragment()
+            except IdentityResolutionError as exc:
+                raise AgentWriteError(str(exc)) from exc
             chosen = [t for t in args.tag if t.startswith("surface:")]
             if chosen and chosen != [f"surface:{surface}"]:
                 raise AgentWriteError(
