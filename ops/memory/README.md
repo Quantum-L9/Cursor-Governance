@@ -419,8 +419,10 @@ non-skippable PR check (audit P2-02 / P1-01): it resolves `memory-binding.json`
 `source.ref` on the memory remote (the `v2.3.1` release tag is peeled with
 `git ls-remote`; a bare SHA is taken as is), refuses any commit other than
 `release_evidence.memory_sha` so a moved tag fails rather than rebinds, clones
-the memory repository at that SHA, rebuilds the wheel reproducibly under
-the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
+the memory repository at that SHA, rebuilds the wheel by writing
+`release_evidence.build_backend_constraint` (`setuptools==84.0.0`) into a
+requirements file and passing that path to `uv build --wheel
+--build-constraint` under the recorded `SOURCE_DATE_EPOCH`, refuses a digest that differs from
 `release_evidence.artifact_sha256`, installs the wheel into a clean
 environment bound through `L9_MEMORY_INTERPRETER`, runs the proof in required
 mode with `GRAPHITI_MCP_URL` / `GRAPHITI_MCP_TOKEN` unset, fails if any case
