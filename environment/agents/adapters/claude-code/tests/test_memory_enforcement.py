@@ -771,18 +771,20 @@ class MemoryDoesNotGateRepositoryWritesTests(unittest.TestCase):
             st.validate_requires({"id": "x", "requires": ["session_prefetch", "phase_lock"]})
         self.assertIn("non-conformant precondition", str(ctx.exception))
 
-    def test_receipt_id_is_not_session_id_and_isolates_agents(self) -> None:
+    def test_receipt_id_is_not_session_id_and_forged_event_ids_are_drift(self) -> None:
         same_chat = {"session_id": "sess-shared", "conversation_id": "chat-1"}
-        a = st.resolve_receipt_id(event={**same_chat, "agent_id": "agent-a"})
-        b = st.resolve_receipt_id(event={**same_chat, "agent_id": "agent-b"})
-        self.assertNotEqual(a, "sess-shared")
-        self.assertNotEqual(b, "sess-shared")
-        self.assertNotEqual(a, b)
+        derived = st.resolve_receipt_id(event=same_chat)
+        self.assertNotEqual(derived, "sess-shared")
+        self.assertTrue(derived.startswith("claude-code__"))
+        for forged in ("agent-a", "agent-b"):
+            with self.assertRaises(ValueError):
+                st.resolve_receipt_id(event={**same_chat, "agent_id": forged})
         st.write_receipt(
-            self.contract, a, {"namespaces": ["cursor-governance"], "session_id": "sess-shared"}
+            self.contract,
+            derived,
+            {"namespaces": ["cursor-governance"], "session_id": "sess-shared"},
         )
-        self.assertTrue(st.usable_receipt(self.contract, a))
-        self.assertFalse(st.usable_receipt(self.contract, b))
+        self.assertTrue(st.usable_receipt(self.contract, derived))
 
     def test_session_scoped_receipt_does_not_pass_the_write_gate(self) -> None:
         """A leftover SessionStart file named after session_id is not a pass."""

@@ -522,8 +522,10 @@ def main(argv: list[str] | None = None) -> int:
         print("              credential is never a workaround (contract S1/S2/S3)")
     for key in result["retired_transport_present"]:
         print(f"  RETIRED: {key} is set in this environment")
-        print("           it is leftover Graphiti HTTP transport; unset it. Memory")
-        print("           is the bound stdio control plane (L9_MEMORY_INTERPRETER).")
+        print("           it is leftover provider HTTP transport; unset it. Infisical")
+        print("           login is separate. Native Memory MCP activation is UNKNOWN")
+        print("           until the account connector is observed. A setup-script")
+        print("           revision match is not that proof.")
     if result["stub_drift"]:
         actual = result["stub_revision_actual"] or "<unrecorded>"
         print(

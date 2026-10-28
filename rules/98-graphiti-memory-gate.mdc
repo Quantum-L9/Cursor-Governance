@@ -79,3 +79,11 @@ remove the memory-side prerequisite of a governed write:
 
 <!-- ADR-0031 2026-09-13 -->
 <!-- Cold model write: MCP memory.write_agent (no phase_lock). High-stakes: phase_lock → write_governed. Agent HTTP sealed. Shared agents door + signed assertion; human door private. -->
+
+## Native MCP consumer (2026-10-26)
+
+The "agent HTTP sealed" sentence above is the raw provider side door.
+Memory 3.0's MCP transport is native authenticated Streamable HTTP.
+Project stdio is not the fallback. Write classes and hook bounds in this
+rule are unchanged. An unknown surface is not relabelled mobile. Law:
+CANONICAL_LAW §8.10.

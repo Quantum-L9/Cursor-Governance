@@ -70,8 +70,10 @@ that can reach a secret backend is one mistake away from using one.
 
 Broker egress allow-list (if a broker is ever deployed — it is **not** the
 Graphiti health plane): `app.infisical.com`, `sonarcloud.io`, `semgrep.dev`,
-plus any host a newly registered capability declares. The retired memory
-host is not on it: agent HTTP to the memory projection is sealed (ADR-0031).
+plus any host a newly registered capability declares. The retired Graphiti
+host is not on it. Native Memory Streamable HTTP is the selected transport,
+but its issuer and resource host are UNKNOWN until verified and must not be
+invented onto this list.
 
 ### Deliberately absent
 
@@ -84,8 +86,8 @@ host is not on it: agent HTTP to the memory projection is sealed (ADR-0031).
 ### Historical — not required, do not allowlist
 
 - `memory.quantumaipartners.com` — the retired HTTPS Graphiti projection
-  (`/graphiti/mcp`). Memory is the canonical `l9-graphite-memory` control plane
-  over **stdio** (ADR-0030); model writes are `memory.write_agent` or
-  `memory.phase_lock` → `memory.write_governed`, and agent HTTP side doors are
-  sealed (ADR-0031). Keep this host out of every agent allowlist; it appears
-  here only so an operator recognises it as historical.
+  (`/graphiti/mcp`). Keep this host out of every agent allowlist. It is not
+  the Memory 3.0 native MCP endpoint. Native Streamable HTTP's host is
+  UNKNOWN until verified (CANONICAL_LAW §8.10). Absence of a host here is
+  not proof that a stdio server needs no egress, and it is not a reason to
+  put stdio back. Raw provider HTTP stays forbidden.
