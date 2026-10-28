@@ -34,6 +34,20 @@ ANTI_BYPASS = sorted(bab.ANTI_BYPASS_KINDS)
 EXECUTION_TYPES = {"TEST", "CI", "RUNTIME"}
 CONTROL_KINDS = {"SECURITY", "POLICY_ENFORCEMENT", "VALIDATION", "SOURCE_OF_TRUTH"}
 CHANGE_DISCIPLINE_CLASSES = {"SCOPE", "PROPORTIONALITY", "SUPERSESSION"}
+PROBES = (
+    "adversarial_input",
+    "base_discrimination",
+    "merged_tree",
+    "ci_causality",
+    "ingress_reachability",
+)
+OBJECTIVE_SOURCE_KIND = {
+    "ISSUE": "ISSUE",
+    "ORIGINAL_PROMPT": "ORIGINAL_PR_PROMPT",
+    "USER": "LATEST_USER_INSTRUCTION",
+    "PR_BODY": "PR_BODY",
+}
+REQUIREMENT_GAP_CLASSES = {"COMPLETENESS", "SCOPE"}
 CLASS_DOMAIN = {
     "COMPLETENESS": "INTENT_SCOPE",
     "SCOPE": "INTENT_SCOPE",
@@ -113,11 +127,15 @@ def assemble(run: Path) -> dict[str, Any]:
     binding = binding.get("canonical_authority_binding", binding)
     judgment = load(run / "judgment.json")
     schema_check(judgment, "judgment.schema.json", "judgment.json")
-    lanes = []
+    lanes, verifications = [], []
     for path in sorted((run / "lanes").glob("*.json")):
-        lane = load(path)
-        schema_check(lane, "lane-findings.schema.json", f"lanes/{path.name}")
-        lanes.append(lane)
+        doc = load(path)
+        if path.name.startswith("verify-"):
+            schema_check(doc, "finding-verification.schema.json", f"lanes/{path.name}")
+            verifications.append(doc)
+        else:
+            schema_check(doc, "lane-findings.schema.json", f"lanes/{path.name}")
+            lanes.append(doc)
     if not lanes:
         raise InputError("no lane outputs in lanes/; run the semantic lanes first")
 
@@ -143,14 +161,34 @@ def assemble(run: Path) -> dict[str, Any]:
                     cur[k] = cur.get(k, []) + [x for x in v if x not in cur.get(k, [])]
                 elif k == "readiness" and cur.get(k) in {"NOT_READY", "UNKNOWN"}:
                     continue
-                elif k == "objective_closure" and cur.get(k) in {"NOT_ACHIEVED", "PARTIAL"}:
-                    continue
-                elif k not in cur or k in {
-                    "readiness",
-                    "objective_closure",
-                    "merge_conflict_with_main",
-                }:
+                elif k not in cur or k in {"readiness", "merge_conflict_with_main"}:
                     cur[k] = v
+
+    # Beyond-CI probes: the method that finds what CI and bot review miss. merged_tree
+    # applicability is machine-checked from stack and overlap edges; the rest are judged.
+    frozen_by_pr = {p["pr"]: p for p in frozen["prs"]}
+    stacked_under = defaultdict(list)
+    for p in frozen["prs"]:
+        if p.get("stacked_on"):
+            stacked_under[p["stacked_on"]].append(p["pr"])
+    probe_gaps: dict[int, list[str]] = {}
+    for n in prs:
+        probes = lane_pr[n]["probes"]
+        related = (
+            ([frozen_by_pr[n]["stacked_on"]] if frozen_by_pr[n].get("stacked_on") else [])
+            + list(frozen_by_pr[n].get("overlaps_with") or [])
+            + stacked_under[n]
+        )
+        if related and probes["merged_tree"]["status"] == "NOT_APPLICABLE":
+            raise InputError(
+                f"PR #{n} merged_tree probe cannot be NOT_APPLICABLE: it is stacked on or overlaps {sorted(set(related))}"
+            )
+        probe_gaps[n] = [k for k in PROBES if probes[k]["status"] == "NOT_DONE"]
+        if snaps[n]["intent"].get("linked_issues") and lane_pr[n]["objective_source"] == "PR_BODY":
+            raise InputError(
+                f"PR #{n} links issues {[i['number'] for i in snaps[n]['intent']['linked_issues']]}: "
+                "judge completeness against them (objective_source ISSUE), not the PR body"
+            )
 
     authorities = {a["authority_id"]: a for a in judgment["authorities"]}
     guard = judgment.get("mutation_guard") or next(
@@ -324,7 +362,28 @@ def assemble(run: Path) -> dict[str, Any]:
             for path in rules.get("required_workflows") or []
         )
         approvals = sum(a["on_head"] for a in s.get("approvals", []))
+        add(
+            evidence(
+                f"E-PROBES-{n}",
+                "TEST",
+                repo,
+                head,
+                f"PR #{n} beyond-CI probes",
+                f"lane probes for #{n}",
+                "; ".join(
+                    f"{k}={lp['probes'][k]['status']}: {lp['probes'][k]['evidence']}"
+                    for k in PROBES
+                )[:2000],
+                ["closure_property"],
+                source_head_sha=head,
+                tested_revision_sha=head,
+                validation_result="NOT_EXECUTED" if probe_gaps[n] else "PASS",
+            )
+        )
         ready_pre[n] = {
+            "beyond-CI probes complete ("
+            + ", ".join(probe_gaps[n] or ["all done"])
+            + ")": not probe_gaps[n],
             "merge rules readable for the base branch": rules_known,
             "required checks green on head": required_green,
             "required workflows green on head": workflows_green,
@@ -389,11 +448,33 @@ def assemble(run: Path) -> dict[str, Any]:
 
     # ---- findings
     raw = {f["id"]: f for lane in lanes for f in lane["findings"]}
+    author = {f["id"]: lane["lane"] for lane in lanes for f in lane["findings"]}
+    lane_schema = load(SKILL / "schemas" / "lane-findings.schema.json")
+    finding_schema = {**lane_schema["$defs"]["finding"], "$defs": lane_schema["$defs"]}
     for pf in judgment.get("parent_findings", []):
-        Draft202012Validator(
-            load(SKILL / "schemas" / "lane-findings.schema.json")["$defs"]["finding"]
-        ).validate(pf)
+        Draft202012Validator(finding_schema).validate(pf)
         raw[pf["id"]] = pf
+        author[pf["id"]] = "parent"
+    verdicts_by_fid: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for doc in verifications:
+        for v in doc["verifications"]:
+            if v["finding_id"] not in raw:
+                raise InputError(
+                    f"verification of unknown finding {v['finding_id']} in verify-{doc['verifier_lane']}"
+                )
+            if author[v["finding_id"]] == doc["verifier_lane"]:
+                raise InputError(
+                    f"{v['finding_id']} was verified by its own author lane {doc['verifier_lane']}; use an independent verifier"
+                )
+            bound = {h["pr"]: h["head_sha"] for h in v["pr_heads"]}
+            expected = {p: snaps[p]["head_sha"] for p in raw[v["finding_id"]]["prs"]}
+            if bound != expected:
+                raise InputError(
+                    f"verification of {v['finding_id']} in verify-{doc['verifier_lane']} is bound to {bound}, "
+                    f"but the frozen heads are {expected}: re-run the verifier"
+                )
+            verdicts_by_fid[v["finding_id"]].append({**v, "verifier_lane": doc["verifier_lane"]})
+    unverified_blockers: list[tuple[str, list[int]]] = []
     findings, surfaces, dep_graph, regression, extra_paths = [], [], [], [], defaultdict(set)
     for fid, f in sorted(raw.items()):
         if f["authority"] not in authorities:
@@ -433,6 +514,36 @@ def assemble(run: Path) -> dict[str, Any]:
             )
         override = judgment["reconcile"].get(fid)
         blocking = override["merge_blocking"] if override else f["merge_blocking"]
+        verification_note = None
+        if blocking:
+            # A finding blocks a merge only after an independent lane reproduced it.
+            seen = verdicts_by_fid.get(fid, [])
+            for i, v in enumerate(seen, 1):
+                eids.append(
+                    add(
+                        evidence(
+                            f"E-VERIFY-{fid}-{i}",
+                            "TEST",
+                            repo,
+                            head,
+                            f"independent verification by {v['verifier_lane']}",
+                            "; ".join(v["evidence"])[:500],
+                            f"{v['verdict']}: {v['rationale']}",
+                            ["behavior_mismatch", "finding_origin"],
+                            source_head_sha=head,
+                            tested_revision_sha=head,
+                            validation_result="FAIL" if v["verdict"] == "REPRODUCED" else "UNKNOWN",
+                        )
+                    )
+                )
+            verdict_set = {v["verdict"] for v in seen}
+            if "NOT_REPRODUCED" in verdict_set and "REPRODUCED" not in verdict_set:
+                blocking = False
+                verification_note = "Independent verification could not reproduce it: " + "; ".join(
+                    f"{v['verifier_lane']}: {v['rationale']}" for v in seen
+                )
+            elif "REPRODUCED" not in verdict_set:
+                unverified_blockers.append((fid, f["prs"]))
         aid = f["authority"]
         impl = f["implementation_surfaces"]
         for p in impl:
@@ -488,7 +599,8 @@ def assemble(run: Path) -> dict[str, Any]:
                 "merge_blocking_basis": {
                     "status": "BLOCKING" if blocking else "NON_BLOCKING",
                     "authority_id": aid if blocking else None,
-                    "rationale": (override or {}).get("rationale")
+                    "rationale": verification_note
+                    or (override or {}).get("rationale")
                     or f.get("merge_blocking_basis")
                     or (
                         "Blocking per lane judgment."
@@ -498,6 +610,7 @@ def assemble(run: Path) -> dict[str, Any]:
                     "evidence_ids": ([f"E-{aid}"] if blocking else []) + eids[:1],
                 },
                 "merge_blocking": blocking,
+                "detection": f["detection"],
             }
         )
         auth_path = authorities[aid]["source"].split("#")[0].strip()
@@ -596,6 +709,37 @@ def assemble(run: Path) -> dict[str, Any]:
             True,
             "GET repos/<repo>/rules/branches/<base> with read access.",
             "HUMAN",
+        )
+    for n in prs:
+        for k in probe_gaps[n]:
+            unknown(
+                f"U-PROBE-{n}-{k}",
+                f"PR #{n}: the {k} probe was not done: {lane_pr[n]['probes'][k]['evidence']}",
+                [n],
+                "correctness beyond CI and bot review",
+                False,
+                f"Run the {k} probe on the exact head (references/semantic-lane.md) and record its evidence.",
+                "VALIDATION_ONLY",
+            )
+        if lane_pr[n]["objective_source"] == "PR_BODY":
+            unknown(
+                f"U-OBJECTIVE-{n}",
+                f"PR #{n}: completeness was judged against the PR's own description; no linked issue or recorded requester ask exists.",
+                [n],
+                "objective completeness",
+                False,
+                "Link the originating issue or record the requester's ask, then re-judge the requirements.",
+                "HUMAN",
+            )
+    for fid, affected in unverified_blockers:
+        unknown(
+            f"U-VERIFY-{fid}",
+            f"Merge-blocking finding {fid} has not been reproduced by an independent verifier lane.",
+            affected,
+            "merge-blocking finding precision",
+            False,
+            "Run a verifier lane (not the author) and record REPRODUCED or NOT_REPRODUCED in lanes/verify-<lane>.json.",
+            "VALIDATION_ONLY",
         )
     for lane in lanes:
         for i, u in enumerate(lane["unknowns"], 1):
@@ -834,22 +978,32 @@ def assemble(run: Path) -> dict[str, Any]:
                 }
             )
 
-    closure = {
-        "ACHIEVED": "SATISFIED",
-        "PARTIAL": "UNPROVEN",
-        "NOT_ACHIEVED": "NOT_IMPLEMENTED",
-        "UNKNOWN": "UNPROVEN",
-    }
     objective_rows, td_rows, control_rows = [], [], []
     for n in prs:
-        scope_f = [
-            f["finding_id"]
-            for f in findings
-            if n in f["affected_prs"] and f["finding_class"] in {"COMPLETENESS", "SCOPE"}
-        ]
-        status = closure[lane_pr[n]["objective_closure"]]
-        if status == "NOT_IMPLEMENTED" and not scope_f:
-            status = "UNPROVEN"
+        # Completeness is the requester's requirements, each MET or backed by a finding.
+        scope_f = []
+        for r in lane_pr[n]["requirements"]:
+            if r["status"] in {"NOT_MET", "PARTIAL"}:
+                named = [
+                    fid
+                    for fid in r.get("finding_ids", [])
+                    if fid in fmap
+                    and n in fmap[fid]["affected_prs"]
+                    and fmap[fid]["finding_class"] in REQUIREMENT_GAP_CLASSES
+                ]
+                if not named:
+                    raise InputError(
+                        f"PR #{n} requirement {r['id']} is {r['status']} but names no COMPLETENESS/SCOPE finding for this PR"
+                    )
+                scope_f += [x for x in named if x not in scope_f]
+        statuses = {r["status"] for r in lane_pr[n]["requirements"]}
+        status = (
+            "NOT_IMPLEMENTED"
+            if statuses & {"NOT_MET", "PARTIAL"}
+            else "UNPROVEN"
+            if "UNKNOWN" in statuses
+            else "SATISFIED"
+        )
         objective_rows.append(
             {
                 "objective_id": f"O-{n}",
@@ -882,9 +1036,7 @@ def assemble(run: Path) -> dict[str, Any]:
             for a in ledgers[n].get("artifact_inventory", [])
             if a.get("classification") == "TEST"
         ]
-        discriminating = any(
-            r.get("discriminates_against_base") for r in lane_pr[n]["validation_runs"]
-        )
+        discriminating = lane_pr[n]["probes"]["base_discrimination"]["status"] == "DONE"
         td_status = (
             "DISCRIMINATING"
             if discriminating
@@ -901,7 +1053,7 @@ def assemble(run: Path) -> dict[str, Any]:
                 "test_surface": ", ".join(test_files)[:500] or None,
                 "status": td_status,
                 "objective_ids": [f"O-{n}"],
-                "evidence_ids": val_ids_by_pr[n] or [f"E-DIFF-{n}"],
+                "evidence_ids": [f"E-PROBES-{n}"] + val_ids_by_pr[n],
                 "finding_ids": [],
             }
         )
@@ -1061,6 +1213,11 @@ def assemble(run: Path) -> dict[str, Any]:
     any_block = any(f["merge_blocking"] for f in findings)
     combined = "READY" if len(ready_prs) == len(prs) else "NOT_READY" if any_block else "UNKNOWN"
     ready_note = f"Ready: {sorted(ready_prs) or 'none'}." if ready_prs else "No PR is ready."
+    caught_only = [
+        f["finding_id"]
+        for f in findings
+        if f["detection"]["ci"] != "CAUGHT" and f["detection"]["bot_review"] != "CAUGHT"
+    ]
     next_action = judgment.get("minimum_safe_next_action") or (
         {
             "action": f"Merge #{next(n for n in judgment['merge_order'] if n in ready_prs)}.",
@@ -1162,7 +1319,8 @@ def assemble(run: Path) -> dict[str, Any]:
             else "UNKNOWN",
             "convergence_status": "NOT_CONVERGED" if convergence_blocked else "CONVERGED",
             "summary": f"{len(prs)} PRs audited at frozen heads; {sum(f['merge_blocking'] for f in findings)} merge-blocking "
-            f"of {len(findings)} findings. {ready_note}",
+            f"of {len(findings)} findings; {len(caught_only)} of {len(findings)} were caught only by this audit "
+            f"(missed by CI and bot review). {ready_note}",
             "minimum_safe_next_action": next_action,
         },
         "per_pr_verdicts": verdicts,
@@ -1186,8 +1344,13 @@ def assemble(run: Path) -> dict[str, Any]:
             "sources": [
                 {
                     "source_id": f"I-{n}",
-                    "kind": "PR_BODY",
-                    "locator": f"PR #{n} body",
+                    "kind": OBJECTIVE_SOURCE_KIND[lane_pr[n]["objective_source"]],
+                    "locator": (
+                        "issues "
+                        + ", ".join(f"#{i['number']}" for i in snaps[n]["intent"]["linked_issues"])
+                        if lane_pr[n]["objective_source"] == "ISSUE"
+                        else f"PR #{n} {lane_pr[n]['objective_source'].lower()}"
+                    ),
                     "scope": snaps[n]["title"][:300],
                     "evidence_ids": [f"E-DIFF-{n}"],
                 }
@@ -1201,7 +1364,9 @@ def assemble(run: Path) -> dict[str, Any]:
                     "status": "ACTIVE",
                     "explicit_scope": [],
                     "explicit_non_goals": [],
-                    "acceptance_criteria": [],
+                    "acceptance_criteria": [
+                        f"{r['id']}: {r['text']}" for r in lane_pr[n]["requirements"]
+                    ],
                 }
                 for n in prs
             ],

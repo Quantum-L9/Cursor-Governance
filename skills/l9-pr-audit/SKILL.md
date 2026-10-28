@@ -94,15 +94,26 @@ python $S/run_audit.py prepare --repo OWNER/NAME --clone PATH --run-dir RUN [--p
     [--authority-root <Quantum-L9/.github checkout>]
 #   -> snapshots, change ledgers, canonical binding, machine rows, lanes.plan.json
 # Launch one read-only semantic lane per planned group in one batch (references/semantic-lane.md);
-# each writes RUN/lanes/<lane>.json (schemas/lane-findings.schema.json). Then write
-# RUN/judgment.json (schemas/judgment.schema.json): authorities, boundary model, reconciliation.
+# each runs the five beyond-CI probes, judges the requester's requirements, and writes
+# RUN/lanes/<lane>.json (schemas/lane-findings.schema.json). Then one independent verifier lane
+# reproduces every merge-blocking finding into RUN/lanes/verify-<verifier>.json
+# (schemas/finding-verification.schema.json). Then write RUN/judgment.json
+# (schemas/judgment.schema.json): authorities, boundary model, reconciliation.
 python $S/run_audit.py finalize --run-dir RUN
-#   -> assemble -> derive -> validate -> bundle -> verify; prints per-PR readiness
+#   -> assemble -> derive -> validate -> bundle -> verify; prints per-PR readiness, the
+#      findings only the audit caught, and any probe / objective / verification gaps
 ```
 
 Unadjudicated machine rows and an unadmitted canonical binding become residual Unknowns, so a
 first run is honestly `NOT_CONVERGED`; readiness is still projected per PR from that PR's own
 findings and the ruleset gates observed on its head.
+
+Correctness and completeness are enforced, not requested: a PR cannot project READY while any
+applicable probe (`adversarial_input`, `base_discrimination`, `merged_tree`, `ci_causality`,
+`ingress_reachability`) is `NOT_DONE`; `merged_tree` cannot be waived for a stacked or
+overlapping PR; a requirement that is not `MET` must be backed by a finding; a lane cannot ignore
+a linked issue in favor of the PR body; and a merge-blocking finding blocks only after a different
+lane reproduces it.
 
 ## Mutation eligibility for Fable
 
@@ -135,6 +146,7 @@ Load only what the current stage needs:
 - Pipeline entry point: [scripts/run_audit.py](scripts/run_audit.py) (`prepare` / `finalize`)
 - Read-only PR collector: [scripts/collect_snapshot.py](scripts/collect_snapshot.py)
 - Semantic lane contract: [references/semantic-lane.md](references/semantic-lane.md) + [schemas/lane-findings.schema.json](schemas/lane-findings.schema.json)
+- Independent verification of merge-blocking findings: [schemas/finding-verification.schema.json](schemas/finding-verification.schema.json)
 - Run judgment (repository-specific law, boundaries, reconciliation): [schemas/judgment.schema.json](schemas/judgment.schema.json)
 - Projection into `audit.json`: [scripts/assemble_audit.py](scripts/assemble_audit.py)
 - Deterministic change census: [scripts/build_change_ledger.py](scripts/build_change_ledger.py)
