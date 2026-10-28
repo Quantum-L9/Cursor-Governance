@@ -265,17 +265,13 @@ class FrontDoorTests(unittest.TestCase):
         servers = _template().get("mcpServers") or {}
         self.assertNotIn("l9-shared-memory", servers)
         self.assertNotIn("graphiti-memory", servers)
-        memory = servers["l9-graphite-memory"]
-        self.assertEqual(memory["type"], "stdio")
-        self.assertEqual(
-            memory["command"],
-            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
-        )
-        self.assertEqual(memory["args"], MEMORY_ARGS)
-        self.assertNotIn("L9_MEMORY_INTERPRETER", memory.get("_requires_env") or [])
-        for forbidden in ("env", "url", "headers"):
-            self.assertNotIn(forbidden, memory)
+        self.assertNotIn("l9-graphite-memory", servers)
+        self.assertIn("l9-graphite-memory", _template().get("_retired_servers") or [])
         self.assertIn("graphiti-memory", _template().get("_retired_servers") or [])
+        context7 = servers["context7"]
+        self.assertEqual(context7["args"], ["context7"])
+        self.assertNotIn("env", context7)
+        self.assertNotIn("headers", context7)
 
     def test_mcp_template_holds_no_literal_credential(self) -> None:
         """Contract S3/§12: no credential VALUE, in the template or the render.
@@ -315,12 +311,13 @@ class FrontDoorTests(unittest.TestCase):
 
         template = _template()
         stale = {"mcpServers": {"graphiti-memory": {"type": "http", "url": "${LEGACY}"}}}
+        stale["mcpServers"]["l9-graphite-memory"] = {
+            "type": "stdio",
+            "command": "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
+            "args": MEMORY_ARGS,
+        }
         unbound = cp.render_mcp(template, stale, environ={})["mcpServers"]
-        self.assertIn("l9-graphite-memory", unbound, "wrapper is the bind gate, not _requires_env")
-        self.assertEqual(
-            unbound["l9-graphite-memory"]["command"],
-            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
-        )
+        self.assertNotIn("l9-graphite-memory", unbound)
         self.assertNotIn("graphiti-memory", unbound, "retired keys are removed, not preserved")
         self.assertIn("context7", unbound, "context7 is never gated out")
         self.assertEqual(
@@ -338,12 +335,7 @@ class FrontDoorTests(unittest.TestCase):
             None,
             environ={"L9_MEMORY_INTERPRETER": "/venv/bin/python", "CONTEXT7_API_KEY": "proxied"},
         )["mcpServers"]
-        self.assertEqual(
-            bound["l9-graphite-memory"]["command"],
-            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
-        )
-        self.assertEqual(bound["l9-graphite-memory"]["args"], MEMORY_ARGS)
-        self.assertNotIn("env", bound["l9-graphite-memory"])
+        self.assertNotIn("l9-graphite-memory", bound)
         self.assertEqual(bound["context7"], unbound["context7"], "the key never reaches the render")
 
     # -- validator agrees with the design ------------------------------------
@@ -392,14 +384,19 @@ class FrontDoorTests(unittest.TestCase):
         import validate_claude_env as v
 
         template = _template()
-        template["mcpServers"]["l9-graphite-memory"]["env"] = {"X": "${X}"}
+        template["mcpServers"]["l9-graphite-memory"] = {
+            "type": "stdio",
+            "command": "python",
+            "args": MEMORY_ARGS,
+            "env": {"X": "${X}"},
+        }
         with tempfile.TemporaryDirectory() as tmp:
             planted = Path(tmp)
             (planted / "mcp.template.json").write_text(json.dumps(template), encoding="utf-8")
             failures: list[str] = []
             with mock.patch.object(v, "HERE", planted):
                 v.check_mcp_uses_env_refs(failures)
-        self.assertTrue([f for f in failures if "env" in f], failures)
+        self.assertTrue([f for f in failures if "l9-graphite-memory" in f], failures)
 
     def test_environment_template_exports_no_credentials(self) -> None:
         """The cloud variables field is plaintext and model-readable: no
@@ -412,9 +409,9 @@ class FrontDoorTests(unittest.TestCase):
         """PR 570: SessionStart must not bind a machine interpreter into the
         tracked .mcp.json of an ssot / ssot_checkout.
 
-        The committed file ships the HOME spawn wrapper (machine-agnostic).
-        Unbinding L9_MEMORY_INTERPRETER on ssot still prevents a bound
-        projection from writing an absolute interpreter path.
+        The committed file must not contain a project Memory server or an
+        absolute user path. Unbinding L9_MEMORY_INTERPRETER on ssot still
+        prevents a bound projection from writing a machine interpreter.
         """
         hook = (HOOKS / "session_start_claude_governance.sh").read_text(encoding="utf-8")
         copy = (REPO / ".claude" / "hooks" / "session_start_claude_governance.sh").read_text(
@@ -428,11 +425,7 @@ class FrontDoorTests(unittest.TestCase):
         # at projection time could only re-teach the silent absence.
         self.assertNotIn("-u CONTEXT7_API_KEY", hook)
         committed = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))
-        memory = (committed.get("mcpServers") or {}).get("l9-graphite-memory") or {}
-        self.assertEqual(
-            memory.get("command"),
-            "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh",
-        )
+        self.assertNotIn("l9-graphite-memory", committed.get("mcpServers") or {})
         self.assertNotIn("/Users/", json.dumps(committed))
 
 

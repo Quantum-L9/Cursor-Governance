@@ -1803,3 +1803,36 @@ whole chain behind one reversible switch.
    (merge on the operator's request), not a mechanism. Tracked in `TODO.md`
    ("Merge authority disabled") with the recorder defects to fix before the
    chain is re-enabled.
+
+### 8.10 Memory 3.0 native MCP consumer (2026-10-26)
+
+This section supersedes §8.2's "MCP stdio is the only front door" and §8.5
+item 4's "agent HTTP sealed" for the Memory 3.0 consumer. It does not
+authorize raw Graphiti provider HTTP, `L9_MEMORY_HTTP_*`, `l9-shared-memory`,
+or a local stdio-to-HTTP bridge.
+
+1. One C1 Memory 3.0 service. `MemoryService` remains the only memory
+   authority. The authorized MCP transport is native authenticated
+   Streamable HTTP. Stdio and any bridge are not that transport.
+2. `.github` owns actor and surface names. The committed identity projection
+   is derived provenance. Registration grants no credential, role, or
+   namespace. Cursor's actor is `cursor`. Every Claude Code surface shares
+   actor `claude-code`. An unrecognized surface stays `unknown`.
+3. A public OAuth client id or a free-form `L9_MEMORY_AGENT_ID` does not
+   select `cursor` or `claude-code`. Auth0 is the selected issuer only when
+   client binding is actually proven. This repository does not invent an
+   issuer, client id, URL, or secret.
+4. Claude's account-managed connector owns the Claude MCP client. Cursor's
+   entry is owned by the memory package. A package that only knows local
+   stdio is `UPSTREAM_BLOCKED` and is not installed as a fallback. Unrelated
+   MCP servers stay as they are.
+5. Infisical remains the secret authority. The hosted machine identity
+   (`L9_INFISICAL_CLIENT_ID` / `L9_INFISICAL_CLIENT_SECRET`) is unchanged.
+   No Memory or OAuth secret is written into `.mcp.json` or account-variable
+   files.
+6. Memory failing closed does not make the rest of the coding session
+   unusable. Live Auth0, the native client, and mobile proof stay UNKNOWN
+   until observed. A cached setup receipt is not that proof.
+7. The operator CLI `python -m ops.memory.cli` is not the agent MCP
+   transport. Hook envelopes stay bounded. SessionEnd does not emulate
+   admin distill over HTTP.
