@@ -131,10 +131,26 @@ print(h.hexdigest())
 PY
 }
 
+# Shared probe for the in-progress marker. util-linux flock when that binary
+# is on PATH; otherwise the same fcntl.flock the memory reader uses. Missing
+# the probe is not treated as a held lock.
+_writer_lock_busy() {
+  local rc=0
+  [ -e "$LOCK_FILE" ] || return 1
+  if command -v flock >/dev/null 2>&1; then
+    if flock -n -s "$LOCK_FILE" true 2>/dev/null; then
+      return 1
+    fi
+    return 0
+  fi
+  python3 "$SCRIPT_DIR/uv_environment_lock.py" probe-shared --lock "$LOCK_FILE" \
+    >/dev/null 2>&1 || rc=$?
+  [ "$rc" -eq 1 ]
+}
+
 if [ "$MODE" = "check" ] && [ -e "$IN_PROGRESS" ]; then
   # A marker under a HELD lock is an install still running, not a dead one.
-  if command -v flock >/dev/null 2>&1 && [ -e "$LOCK_FILE" ] \
-     && ! flock -n -s "$LOCK_FILE" true 2>/dev/null; then
+  if _writer_lock_busy; then
     echo "UV: install in progress ($LOCK_FILE held); synchronization required" >&2
   else
     echo "UV: previous install did not complete ($IN_PROGRESS); synchronization required" >&2
@@ -195,7 +211,17 @@ if [ "$MODE" != "check" ] && [ -z "${_L9_UV_ENV_LOCKED:-}" ]; then
     rm -f "$_log"
     exit "$_rc"
   fi
-  echo "UV: flock/setsid unavailable; synchronizing without the environment lock" >&2
+  # Darwin and any other host without util-linux --wait/--version flock still
+  # take this lock. The adapter is process control only: it acquires
+  # uv-environment.lock, then re-executes this script in a new session with
+  # the fd inherited. There is no unlocked sync.
+  _rc=0
+  python3 "$SCRIPT_DIR/uv_environment_lock.py" launch \
+    --lock "$LOCK_FILE" \
+    --wait "$_lock_wait" \
+    --log-dir "$GOV_ROOT/.l9" \
+    -- "$SCRIPT_PATH" "$GOV_ROOT" "$MODE" || _rc=$?
+  exit "$_rc"
 fi
 
 _verify_environment() {
