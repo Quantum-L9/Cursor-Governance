@@ -183,7 +183,7 @@ def test_authorized_finalize_records_make_pr_not_merge() -> None:
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
     combined = proc.stdout + proc.stderr
-    assert "PR_REMEDIATE=1" in combined
+    assert "PR_REMEDIATE=0" in combined
     assert "make -C" in combined
     assert " pr " in combined
     assert "WS=" in combined
@@ -388,7 +388,7 @@ def test_consumer_adapter_publish_targets_work_root(tmp_path: Path) -> None:
     proc = _finalize(repo, **surface)
     combined = proc.stdout + proc.stderr
     assert proc.returncode == 0, combined
-    assert f"PR_REMEDIATE=1 make -C {ROOT} pr WS={repo}" in combined
+    assert f"PR_REMEDIATE=0 make -C {ROOT} pr WS={repo}" in combined
     assert f"--workspace {repo} authorize-release" in combined
     assert "gh pr merge" not in combined
 

@@ -75,7 +75,9 @@ def fleet_heads(fleet: dict[str, Any]) -> dict[int, str]:
             continue
         number = int(pr["number"])
         head = pr.get("head") if isinstance(pr.get("head"), dict) else {}
-        sha = str(head.get("sha") or pr.get("head_sha") or "")
+        # ``pr_fleet.py plan`` writes the flat GraphQL-style ``headRefOid``;
+        # the nested ``head.sha`` / ``head_sha`` forms are the REST shapes.
+        sha = str(head.get("sha") or pr.get("headRefOid") or pr.get("head_sha") or "")
         out[number] = sha
     return out
 

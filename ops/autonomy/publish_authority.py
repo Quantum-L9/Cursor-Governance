@@ -44,6 +44,10 @@ ROUTE_DRIFT = "PUBLISH_ROUTE_DRIFT"
 BASE_MISMATCH = "PUBLISH_BASE_MISMATCH"
 REGISTRY_INVALID = "PUBLISH_REGISTRY_INVALID"
 
+#: Hooks the bootstrap may install for a consumer that declares them.
+#: `pre-commit` is the commit-stage hook and is never allowed here.
+ALLOWED_GIT_HOOK_TYPES = ("pre-push", "commit-msg")
+
 
 def normalize_origin(url: str | None) -> str | None:
     """``host/owner/name`` (lowercase) for any spelling of one remote, else None.
@@ -164,7 +168,31 @@ def load_registry(path: Path) -> dict:
                 raise RegistryError(
                     f"{path}: {key}: ceremony.kernel_requires must list the kernel's guards"
                 )
+        _check_required_git_hooks(path, key, entry)
     return document
+
+
+def _check_required_git_hooks(path: Path, key: str, entry: dict) -> None:
+    """``required_git_hook_types`` is optional; when present it is an allowlist.
+
+    Absent means the bootstrap installs no git hook. Present means exactly
+    those types, and only ``pre-push`` or ``commit-msg`` — never the
+    commit-stage ``pre-commit`` hook.
+    """
+    if "required_git_hook_types" not in entry:
+        return
+    types = entry["required_git_hook_types"]
+    allowed = set(ALLOWED_GIT_HOOK_TYPES)
+    if (
+        not isinstance(types, list)
+        or not types
+        or len(types) != len(set(types))
+        or not all(isinstance(item, str) and item in allowed for item in types)
+    ):
+        raise RegistryError(
+            f"{path}: {key}: required_git_hook_types must be a list of "
+            f"{ALLOWED_GIT_HOOK_TYPES} with no duplicates"
+        )
 
 
 CEREMONY_UNVERIFIED = "PUBLISH_CEREMONY_UNVERIFIED"

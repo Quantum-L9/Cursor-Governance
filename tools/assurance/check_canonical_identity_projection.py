@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -121,28 +120,18 @@ def _validate_receipt(
     receipt: Mapping[str, Any],
     failures: list[str],
 ) -> None:
-    if receipt.get("schema") != "l9.projection-receipt/v1":
-        failures.append("invalid identity projection receipt schema")
-        return
-    generated = _mapping(binding.get("generated_projection"))
-    projected = _mapping(projection.get("projection"))
-    receipt_projection = _mapping(receipt.get("projection"))
-    if receipt_projection.get("artifact_ref") != generated.get("artifact_ref"):
-        failures.append("receipt artifact reference disagrees with binding")
-    for key in (
-        "profile_ref",
-        "profile_digest",
-        "source_repository",
-        "source_revision",
-    ):
-        if receipt_projection.get(key) != projected.get(key):
-            failures.append(f"receipt {key} disagrees with projection")
-    if receipt_projection.get("sources") != projected.get("sources"):
-        failures.append("receipt source coordinates disagree with projection")
-    output = _mapping(receipt.get("output"))
-    actual_digest = "sha256:" + hashlib.sha256(PROJECTION_PATH.read_bytes()).hexdigest()
-    if output.get("digest") != actual_digest:
-        failures.append("identity projection output digest does not match receipt")
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from ops.memory.identity_projection import verify_identity_projection
+
+    failures.extend(
+        verify_identity_projection(
+            projection,
+            receipt,
+            PROJECTION_PATH.read_bytes(),
+            binding,
+        )
+    )
 
 
 def _validate_agent_registry(
