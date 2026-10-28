@@ -391,6 +391,12 @@ session_start_block: |
     `run_pr_precommit.sh --staged`, keeping the SKIP list a raw
     `pre-commit install` would drop. That is the supported way to close the
     window; installing a raw hook is still forbidden.
+  - **Consumer-declared hooks (amendment).** The ban covers commit-stage
+    hooks. Hooks a consumer declares are installed by the bootstrap:
+    `required_git_hook_types` in `ops/config/publish-authority.json`
+    (`pre-push` or `commit-msg` only) is what `session_deps_cloud.sh`
+    installs after `pre-commit install-hooks`. A bare `pre-commit install`
+    and `--hook-type pre-commit` stay forbidden, including in this clone.
   - **Merge-authority switch (CANONICAL_LAW §6.2.16).** While
     `ops/config/merge-authority.json` says `"enforcement": "disabled"` (the
     shipped default), merge authorization is not checked on any surface —
