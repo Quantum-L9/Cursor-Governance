@@ -32,22 +32,54 @@ REGISTRY = Path(__file__).resolve().parents[3] / "environment/agents/agent_regis
         ({**MOBILE, "L9_MEMORY_AGENT_ID": "claude-code-desktop"}, "claude-code"),
         # agents with no host markers are identified by their adapter's setting
         ({"L9_MEMORY_AGENT_ID": "manus"}, "manus"),
-        ({"L9_MEMORY_AGENT_ID": "perplexity"}, "perplexity"),
-        ({"L9_MEMORY_AGENT_ID": "perplexity-computer"}, "perplexity-computer"),
-        ({"L9_MEMORY_AGENT_ID": "l-cto"}, "l-cto"),
-        ({"L9_MEMORY_AGENT_ID": "igorbot"}, "igorbot"),
+        ({"L9_MEMORY_AGENT_ID": "codex"}, "codex"),
+        ({"L9_MEMORY_AGENT_ID": "gemini"}, "gemini"),
+        ({"L9_MEMORY_AGENT_ID": "perplexity"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "perplexity-computer"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "l-cto"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "igorbot"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "human"}, ""),
+        ({"L9_MEMORY_AGENT_ID": "claude-code-desktop"}, ""),
         # ...and only when it is a registered identity
         ({"L9_MEMORY_AGENT_ID": "agent-b"}, ""),
         ({"L9_MEMORY_AGENT_ID": "IgorBot"}, ""),
         # no guessing
-        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}, ""),
-        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, ""),
+        (
+            {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"},
+            "claude-code",
+        ),
+        ({**CLAUDE, "CLAUDE_CODE_REMOTE": "true"}, "claude-code"),
         ({"L9_MEMORY_AGENT_ID": "claude-code"}, ""),
         ({}, ""),
     ],
 )
 def test_the_identity_is_derived_from_host_markers(env: dict[str, str], expected: str) -> None:
     assert ai.resolve_agent_id(env) == expected
+
+
+def test_oauth_public_client_id_is_not_an_actor() -> None:
+    assert ai.resolve_agent_id({"L9_MEMORY_OAUTH_CLIENT_ID": "public-client"}) == ""
+    assert ai.resolve_agent_id({"AUTH0_CLIENT_ID": "public-client"}) == ""
+    assert (
+        ai.resolve_agent_id(
+            {"L9_MEMORY_AGENT_ID": "public-client", "OAUTH_CLIENT_ID": "public-client"}
+        )
+        == ""
+    )
+    assert ai.resolve_agent_id({"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "other"}) == (
+        "manus"
+    )
+    collided = {"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "manus"}
+    distinct = {"L9_MEMORY_AGENT_ID": "manus", "OAUTH_CLIENT_ID": "different-client"}
+    assert ai.resolve_agent_id(collided) == "manus"
+    assert ai.resolve_agent_id(distinct) == "manus"
+    assert ai.resolve_agent_id({"OAUTH_CLIENT_ID": "manus"}) == ""
+    left = ai.normalized_runtime_evidence(collided)
+    right = ai.normalized_runtime_evidence(distinct)
+    assert left == right
+    assert "different-client" not in str(left)
+    assert all("OAUTH" not in key for key in left)
+    assert ai.resolve_surface_id({"L9_MEMORY_OAUTH_CLIENT_ID": "public-client"}) == ""
 
 
 def test_a_configured_value_that_disagrees_is_reported_as_drift() -> None:
@@ -61,16 +93,31 @@ def test_a_configured_value_that_disagrees_is_reported_as_drift() -> None:
 
 
 def test_an_unidentifiable_surface_says_why() -> None:
-    reason = ai.unresolved_reason(
-        {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}
-    )
-    assert "remote_web" in reason and "no registered memory identity" in reason
+    env = {**CLAUDE, "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_web"}
+    assert ai.resolve_agent_id(env) == "claude-code"
+    assert ai.resolve_surface_id(env) == ""
+    assert ai.resolve_surface_id(env) != "claude-code-mobile"
+    assert ai.unresolved_reason(env) == ""
     assert "retired" in ai.unresolved_reason({"L9_MEMORY_AGENT_ID": "claude-code-desktop"})
     assert ai.unresolved_reason(MOBILE) == ""
 
 
+def test_surface_follows_evidence_and_does_not_default() -> None:
+    assert ai.resolve_agent_id(CLAUDE) == "claude-code"
+    assert ai.resolve_surface_id(CLAUDE) == ""
+    assert ai.resolve_surface_id({**CLAUDE, "CLAUDE_CODE_ENTRYPOINT": "cli"}) == "claude-code-cli"
+    assert ai.resolve_surface_id(MOBILE) == "claude-code-mobile"
+    assert ai.resolve_surface_id({"CURSOR_AGENT": "1"}) == "cursor-ide"
+    assert ai.resolve_agent_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor"
+    assert ai.resolve_surface_id({"CURSOR_AGENT": "1", **CLAUDE}) == "cursor-ide"
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "codex"}) == ""
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "manus"}) == ""
+    assert ai.resolve_surface_id({"L9_MEMORY_AGENT_ID": "gemini"}) == ""
+
+
 def test_the_derived_authors_are_the_actors() -> None:
     assert ai.DERIVED_IDENTITIES == {"cursor", "claude-code"}
+    assert ai.ADAPTER_IDENTITIES == {"manus", "codex", "gemini"}
     assert ai.RETIRED == {"claude-code-desktop", "claude-code-mobile"}
 
 
@@ -93,6 +140,7 @@ def test_registry_and_resolver_cannot_drift_apart() -> None:
     and no retired or unrequested Claude identity is registered."""
     agents = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))["agents"]
     assert ai.DERIVED_IDENTITIES <= set(agents)
+    assert ai.ADAPTER_IDENTITIES <= set(agents)
     for agent_id in ai.DERIVED_IDENTITIES:
         entry = agents[agent_id]
         assert entry.get("binding_status") == "active" or entry.get("status") == "active"

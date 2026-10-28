@@ -628,6 +628,8 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 if key not in {"L9_PE_AGENT_REF", "L9_PE_SURFACE", "L9_PE_PROVIDER_REF"}
             }
             env["L9_GOVERNANCE_SURFACE"] = "claude-code"
+            env["CLAUDE_CODE_ENTRYPOINT"] = "cli"
+            env["CLAUDE_CODE_REMOTE"] = ""
             # Hide every real claude executable. Filtering on the directory
             # *name* misses an install such as /opt/node22/bin/claude, so drop
             # exactly the entries `shutil.which` would resolve from.

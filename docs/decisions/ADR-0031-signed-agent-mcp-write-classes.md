@@ -98,3 +98,13 @@ Memory must verify the assertion, recompute the digest, check the HMAC with the 
 - ADR-0030 item 7's implication that **every** model-authored durable fact
   must take `phase_lock` → `write_governed` (high-stakes path remains; cold
   path is `write_agent`).
+
+## Amendment (2026-10-26)
+
+"HTTP stays sealed" in the context of this ADR means raw provider HTTP and
+the retired `l9-shared-memory` side door. It does not forbid native
+authenticated MCP Streamable HTTP to `MemoryService`. Write classes,
+namespace authorization, and the signed assertion are unchanged. An OAuth
+public client id is not an actor. An unknown Claude surface stays unknown
+and is not relabelled `claude-code-mobile`. See CANONICAL_LAW §8.10 and the
+ADR-0030 amendment of the same date.

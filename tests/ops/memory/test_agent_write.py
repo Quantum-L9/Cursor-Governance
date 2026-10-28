@@ -65,7 +65,7 @@ def test_refusals_explain_themselves(extra: dict, message: str) -> None:
 
 
 def _desktop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The builder stamps the DERIVED identity; state the surface (Claude Code Desktop)."""
+    """Claude markers with no entrypoint: actor claude-code, surface unknown."""
     for name in (
         "CURSOR_AGENT",
         "CLAUDE_CODE_REMOTE",
@@ -100,9 +100,9 @@ def test_the_cli_prints_tool_and_arguments(
     assert out["tool"] == aw.WRITE_TOOL
     assert out["arguments"]["tags"] == [
         "agent:claude-code",
-        "surface:claude-code-desktop",
         "claude-settings",
     ]
+    assert not any(tag.startswith("surface:") for tag in out["arguments"]["tags"])
 
 
 def test_the_cli_refuses_loudly(capsys: pytest.CaptureFixture[str], tmp_path) -> None:
@@ -137,6 +137,7 @@ def test_the_module_does_no_memory_io() -> None:
         "pathlib",
         "typing",
         "ops.memory.agent_identity",  # pure resolver, no I/O
+        "ops.memory.print_agent_assertion_env",  # the one assertion the CLI stamps from
         "l9_graphite_memory.contracts.class_vocabulary",  # class table, not a client
     }, sorted(imported)
 
