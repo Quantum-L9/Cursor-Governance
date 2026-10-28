@@ -1,6 +1,6 @@
 metadata:
   contract_id: L9.GAR.WORKFLOW.001
-  version: 0.8.1
+  version: 0.8.2
   kind: workflow
   status: review
   title: GAR Principal Architect Engineer Workflow
@@ -30,6 +30,7 @@ scope:
     - deliver
     - converge
     - block
+    - delegate
   resources:
     - GAR_RUN_STATE
     - repository_or_artifact_target
@@ -65,6 +66,11 @@ normative_clauses:
     subject: verification_to_convergence_transition
     action: prove_all_required_obligations_evaluated_and_no_blocking_result
     object: CONVERGENCE_CHECK
+  - clause_id: WF-DELEGATION-001
+    effect: require
+    subject: coding_implementation_delegation
+    action: route_through_EXECUTE_with_one_frozen_canonical_payload_and_through_VERIFY_with_independent_acceptance
+    object: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
 dependencies:
   requires_contracts:
     - L9.GAR.EPISTEMIC_DISCIPLINE.001
@@ -105,6 +111,16 @@ evidence_obligations:
     proof: BLOCKED entry references a valid block receipt satisfying OUTCOME_OWNERSHIP.
     blocking: true
     negative_proof_required: true
+  - property_id: WF-DELEGATION-ACCEPTED
+    evidence_contract_ref:
+    proof: >
+      When $.delegation.status is not NONE, EXECUTE exit records the returned
+      diff, implementation report, and execution receipt refs, and VERIFY
+      records an independent comparison against the frozen contract digest
+      before CONVERGENCE_CHECK; a self-report, terminal state, or CI status
+      alone is not that comparison.
+    blocking: true
+    negative_proof_required: true
 projections:
   binding_refs: []
 provenance:
@@ -137,6 +153,9 @@ workflow:
   explicit_cycle_rules:
     - Repair recursion is permitted only with material progress; the same material defect fingerprint without
       progress may repeat at most twice before a NO_PROGRESS block receipt is required.
+    - Coding-delegation rework after REJECTED routes VERIFY -> EXECUTE as an IMPLEMENTATION_DEFECT under the
+      same frozen contract digest; a changed objective, scope, or architecture is a PLAN_DEFECT or
+      ARCHITECTURE_DEFECT that requires new authorization before a new freeze.
 states:
   - state_id: INTAKE
     purpose: Bind the exact target and authorized scopes, normalize objective, derive realization mode, and discover host constraints
@@ -203,6 +222,7 @@ states:
     exit_properties:
       - realization_attempted
       - actual_realization_state_known
+      - coding_delegation_result_refs_recorded_or_not_delegated
   - state_id: VERIFY
     purpose: Positively evaluate every required verification obligation and search for false success
     entry_requirements:
@@ -210,6 +230,7 @@ states:
     exit_properties:
       - all_required_verification_obligations_evaluated
       - verification_result_classified
+      - coding_delegation_independently_verified_or_not_delegated
   - state_id: CONVERGENCE_CHECK
     purpose: Evaluate the sole success contract without activity-based shortcuts
     entry_requirements:
@@ -484,6 +505,7 @@ transitions:
       - realization_attempted == true
       - actual_realization_state_known == true
       - reasoning_overlay_post_execution_closed_or_not_applicable
+      - coding_delegation_result_refs_recorded_or_not_delegated
     actions:
       - ACT-VERIFY
     on_failure: EXECUTE
@@ -494,6 +516,7 @@ transitions:
     gates:
       - defect_class == IMPLEMENTATION_DEFECT
       - execution_obligation_active
+      - coding_delegation_rework_reuses_frozen_contract_or_not_delegated
     actions:
       - ACT-EXECUTE
     on_failure: VERIFY
@@ -553,6 +576,7 @@ transitions:
       - all_required_verification_obligations_evaluated == true
       - no_blocking_evaluation_result == true
       - reasoning_overlay_closure_satisfied_or_not_applicable
+      - coding_delegation_accepted_or_not_delegated
     actions:
       - ACT-CONVERGENCE
     on_failure: VERIFY
@@ -875,6 +899,8 @@ actions:
     side_effects:
       - mutate_authorized_target
       - record_observed_mutation_receipts
+      - freeze_and_issue_exactly_one_canonical_coding_agent_execution_contract_when_delegating_implementation
+      - record_returned_diff_implementation_report_and_execution_receipt_refs_when_delegated
     idempotency: unsafe_blind_repeat
     retry: manual_only
     compensation: use_plan_defined_rollback_or_forward_repair
@@ -891,6 +917,7 @@ actions:
       - evaluate_required_verification_obligations
       - adjudicate_available_discriminating_evidence
       - record_validation_and_negative_evidence
+      - independently_verify_delegated_diff_report_and_receipt_against_the_frozen_contract_when_delegated
     idempotency: safe_to_repeat
     retry: bounded_retry
     retry_bound: 2
@@ -980,6 +1007,7 @@ state_bindings:
   block: $.block
   convergence: $.convergence
   reasoning: $.reasoning
+  delegation: $.delegation
 realization_model:
   source: contracts/OUTCOME_OWNERSHIP.yaml#realization_mode
   values:
@@ -1052,6 +1080,22 @@ defect_routing:
     VALIDATION_DEFECT: VERIFY
     AUTHORITY_DEFECT: BLOCKED_when_VALID_BLOCK_RECEIPT
     CAPABILITY_DEFECT: BLOCKED_when_VALID_BLOCK_RECEIPT
+delegation_routing:
+  owner: runtime/STATE_MACHINE.yaml
+  policy_ref: contracts/OUTCOME_OWNERSHIP.yaml#coding_delegation_policy
+  map:
+    delegation_result_REJECTED_for_implementation_discrepancy: IMPLEMENTATION_DEFECT
+    delegation_result_REJECTED_for_scope_drift_or_changed_objective: PLAN_DEFECT
+    delegation_requires_architecture_or_locked_invariant_change: ARCHITECTURE_DEFECT
+    delegation_payload_fails_schema_or_carries_competing_instructions: PLAN_DEFECT
+    delegation_inputs_unknown_or_disputed: EVIDENCE_DEFECT
+    delegation_authority_unresolved_or_denied: AUTHORITY_DEFECT
+    integrated_path_cannot_carry_frozen_payload: BLOCKED_when_VALID_BLOCK_RECEIPT
+  rule: >
+    These rows reuse the defect classes and edges above. No delegation-specific
+    state, transition, or reason code exists; rework re-enters EXECUTE under the
+    same frozen contract digest and an uncarriable integrated path blocks with an
+    EXTERNAL_DEPENDENCY or CAPABILITY receipt naming the exact owner and artifact.
 progress_control:
   progress_indicators:
     - new_discriminating_evidence
@@ -1071,6 +1115,7 @@ progress_control:
     - intervention_fidelity_restored
     - reasoning_overlay_receipt_bound
     - realized_leverage_learning_recorded
+    - coding_delegation_discrepancy_resolved
   same_material_defect_without_progress_limit: 2
   on_limit:
     block_type: NO_PROGRESS
@@ -1104,6 +1149,7 @@ semantic_boundary:
     - leverage_scoring
     - l9_architecture_profile_semantics
     - current_constellation_inventory
+    - canonical_coding_agent_contract_semantics
 depth_profiles:
   RAPID:
     use_when_all:
