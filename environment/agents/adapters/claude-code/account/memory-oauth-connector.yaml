@@ -1,0 +1,16 @@
+schema: l9.claude-account-memory-connector/v1
+placement: claude_account_connectors
+project_mcp_entry: false
+hosted_credential_injection: false
+issuer_vendor: auth0
+registration: claude-account-connector
+client_type: public
+pkce: S256
+redirect_uris:
+  - https://claude.ai/api/mcp/auth_callback
+scopes:
+  - memory.read
+  - memory.write
+client_id: null
+resource_identifier: null
+secret_fields: []

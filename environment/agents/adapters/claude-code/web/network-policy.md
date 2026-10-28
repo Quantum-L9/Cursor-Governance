@@ -50,7 +50,7 @@ the CI-parity scanners add `sonarcloud.io` (read-only) and `api.osv.dev`.
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| _(none for memory)_ | Since realignment stage C9/C11 memory is the canonical `l9-graphite-memory` control plane over **stdio** to the bound runtime (`ops/memory`); the session opens no memory HTTPS egress and holds no memory bearer. `memory.quantumaipartners.com` is no longer required (ADR-0030) |
+| _(none for memory)_ | Memory 3.0 is native OAuth. Auth0 is the issuer and Memory is the resource server. Cursor's client and the Claude account connector perform that flow outside this sandbox. The hosted agent still opens no memory HTTPS egress and holds no bearer, client secret, or access token. The issuer host and resource host stay off this list until verified. A stdio-only package is `UPSTREAM_BLOCKED` and is not a substitute. `memory.quantumaipartners.com` stays retired (ADR-0030) |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep registry rulesets (`p/python`, `p/secrets`) for CE, and the org policy for the Semgrep Pro `semgrep ci --dry-run` lane (`ops/secrets/capability_exec.py`; no scan is created) |
 | `app.infisical.com` | Machine-identity login + in-process secret binds (`capability_bind.py`, `vault_mcp_bridge.py`) |
 | `mcp.context7.com` | Context7 docs through the vault-bound stdio bridge |

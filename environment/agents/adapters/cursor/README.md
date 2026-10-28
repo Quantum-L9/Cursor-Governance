@@ -14,7 +14,7 @@ setup.bootstrap chain. Activation is the standing wiring:
 | SessionStart | `~/.cursor/hooks.json` → `~/.cursor/hooks/session-start-bootstrap.sh` (installed from [`ops/hooks/session_start_bootstrap.sh`](../../../../ops/hooks/session_start_bootstrap.sh)) |
 | Rules / skills / commands | `l9-governance` local plugin at `~/.cursor/plugins/local/l9-governance` |
 | Reference plane | workspace `.cursor-commands` → `$HOME/.cursor-governance` (consumers only) |
-| Memory | Graphiti front door (`GRAPHITI_MCP_URL`) — see [`mcp.template.json`](mcp.template.json) |
+| Memory | Package-owned native Auth0 OAuth via [`ops/memory/mcp_instantiation.py`](../../../../ops/memory/mcp_instantiation.py). A stdio-only package is `UPSTREAM_BLOCKED`. Tenant domain, resource URL, and client ids stay unbound until Memory publishes them. |
 | Receipt | `~/.l9/cursor/bootstrap-state.json` (schema `l9.cursor-bootstrap.v2`; reader still accepts v1), written on every SessionStart / `make start` / `/start-session` |
 
 ## Install / verify
