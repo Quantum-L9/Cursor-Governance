@@ -10,7 +10,6 @@ Authority split SSOT: Rule 23 (three layers). Do not invent a fourth policy here
 2. **Supporting:** at most **two** of:
    - `l9-pr-remediation` — remediation loop inside poll workers
    - `l9-structured-reasoning` — plan/trade-off support
-   - `l9-cli-optimization` — dormant-capability lanes when that is the lane’s job
 3. Prefer the most specific supporting skill; do not stack redundant ones.
 
 ## Explicit-only + hint_allowed
