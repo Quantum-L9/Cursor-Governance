@@ -17,22 +17,19 @@ the host's own markers are the only evidence, so a pasted surface author
 
 Agents with no host markers of their own are identified by the
 ``L9_MEMORY_AGENT_ID`` their ADAPTER sets (never an operator's pasted value),
-and only when it names a registered identity — see ADAPTER_IDENTITIES:
+and only when it names one of ``manus``, ``codex``, or ``gemini``. Surface
+stays unknown: an adapter id is actor evidence, not surface evidence.
 
-    manus                Manus (adapters/manus sets and enforces it)
-    codex, gemini        existing adapters
-    human                the operator's private entrance
-    perplexity           Perplexity                 reserved — not yet wired
-    perplexity-computer  Perplexity Computer        reserved — not yet wired
-    l-cto                L CTO                      reserved — not yet wired
-    igorbot              IgorBot                    reserved — not yet wired
+``perplexity``, ``perplexity-computer``, ``l-cto``, and ``igorbot`` are not
+actors in the canonical registry. ``human`` is canonical and has no agent
+binding here. None of those names resolve.
 
-Any other value is not an identity.
-
-No guessing: a Claude Code cloud session whose entrypoint is not recognised
-resolves to NO identity (""), and every memory writer refuses to write rather
-than record an inaccurate author. ``claude-code-desktop`` and
-``claude-code-mobile`` are retired surface authors, not registry agents.
+No guessing: Claude host markers prove the actor ``claude-code``. The
+entrypoint proves a surface only when it selects ``claude-code-cli`` or
+``claude-code-mobile``. Every other entrypoint, including a missing one,
+leaves the surface unknown. ``claude-code-desktop`` and ``claude-code-mobile``
+are historical actor aliases of ``claude-code``; the same strings are current
+surface ids and are not authors.
 
 Pure: reads the mapping it is given, no I/O. ``python -m ops.memory.agent_identity``
 prints the identity for the current process (exit 1 and a reason when none).
@@ -52,20 +49,10 @@ CLAUDE_ACTOR: Final = "claude-code"
 #: Every identity this resolver derives from host markers.
 DERIVED_IDENTITIES: Final = frozenset({CURSOR, CLAUDE_ACTOR})
 CLAUDE_IDENTITIES: Final = frozenset({CLAUDE_ACTOR})
-#: Identities set by an agent's own adapter (no host markers to derive from).
-ADAPTER_IDENTITIES: Final = frozenset(
-    {
-        "manus",
-        "codex",
-        "gemini",
-        "human",
-        "perplexity",
-        "perplexity-computer",
-        "l-cto",
-        "igorbot",
-    }
-)
-#: Every memory identity there is; equal to the registry's agents.
+#: Adapter actors this plane resolves from ``L9_MEMORY_AGENT_ID`` when no host
+#: marker is present. Surface stays unknown. ``human`` is canonical and unbound.
+ADAPTER_IDENTITIES: Final = frozenset({"manus", "codex", "gemini"})
+#: Actors this resolver emits. Role rows in the agent registry are not actors.
 ALL_IDENTITIES: Final = DERIVED_IDENTITIES | ADAPTER_IDENTITIES
 #: Retired surface authors. They name a surface of ``claude-code``, not an agent.
 RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
@@ -73,7 +60,6 @@ RETIRED: Final = frozenset({"claude-code-desktop", "claude-code-mobile"})
 #: A new write still refuses these names; see ``agent_write``.
 HISTORICAL_ACTOR_ALIASES: Final = {name: CLAUDE_ACTOR for name in sorted(RETIRED)}
 CURSOR_SURFACE: Final = "cursor-ide"
-CLAUDE_DESKTOP_SURFACE: Final = "claude-code-desktop"
 CLAUDE_CLI_SURFACE: Final = "claude-code-cli"
 CLAUDE_MOBILE_SURFACE: Final = "claude-code-mobile"
 LOCAL_ENTRYPOINTS: Final = {"cli": CLAUDE_CLI_SURFACE}
@@ -86,6 +72,19 @@ ACTOR_REGISTRY_PREFIX: Final = "l9.actor-registry/global@1#"
 SURFACE_REGISTRY_PREFIX: Final = "l9.surface-registry/global@1#"
 UNKNOWN_IDENTITY: Final = "unknown"
 MEMORY_PRODUCT_REF: Final = "l9-graphiti-memory:product/l9-graphite-memory"
+#: Dependency-kind dimensions for the bound l9-graphite-memory 2.6.0 consumer.
+#: The hosted-service exception adds runtime only from release 3.0.0 and does
+#: not apply here. Constellation is outside both lists, so the key is omitted.
+DEPENDENCY_IDENTITY_DIMENSIONS: Final = ("product_identity", "release_identity")
+HOSTED_SERVICE_EXCEPTION_REF: Final = "l9.product-kind-exception/memory-hosted-service@1"
+HOSTED_SERVICE_EXCEPTION_APPLIES_FROM: Final = "3.0.0"
+#: Public OAuth client identifiers are not actors. They never select cursor
+#: or claude-code, including when no host marker is present.
+OAUTH_CLIENT_ENV_KEYS: Final = (
+    "L9_MEMORY_OAUTH_CLIENT_ID",
+    "AUTH0_CLIENT_ID",
+    "OAUTH_CLIENT_ID",
+)
 
 
 class IdentityResolutionError(ValueError):
@@ -109,9 +108,15 @@ def _is_claude(env: Mapping[str, str]) -> bool:
 
 
 def _claude_identity(env: Mapping[str, str]) -> str:
-    if _flag(env, "CLAUDE_CODE_REMOTE").lower() == "true":
-        if _flag(env, "CLAUDE_CODE_ENTRYPOINT").lower() not in REMOTE_ENTRYPOINTS:
-            return ""
+    """Claude Code is one actor. An unrecognized surface stays unknown elsewhere.
+
+    Desktop, CLI, web, and mobile share ``claude-code``. This function does
+    not read ``L9_MEMORY_AGENT_ID`` or an OAuth public client id, and it does
+    not relabel an unknown entrypoint as mobile.
+    """
+
+    if not _is_claude(env):
+        return ""
     return CLAUDE_ACTOR
 
 
@@ -125,6 +130,21 @@ def canonical_actor_id(value: str | None) -> str:
     return HISTORICAL_ACTOR_ALIASES.get(actor, actor)
 
 
+def oauth_public_client_claim(env: Mapping[str, str] | None = None) -> str:
+    """The first public OAuth client id in *env*, or "" when none is set.
+
+    The value is not an actor. Callers must not map it to ``cursor`` or
+    ``claude-code``.
+    """
+
+    source = os.environ if env is None else env
+    for name in OAUTH_CLIENT_ENV_KEYS:
+        claim = _flag(source, name)
+        if claim:
+            return claim
+    return ""
+
+
 def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
     """The writing agent's identity, derived from host markers; "" when unknown."""
     source = os.environ if env is None else env
@@ -132,6 +152,8 @@ def resolve_agent_id(env: Mapping[str, str] | None = None) -> str:
         return CURSOR
     if _is_claude(source):
         return _claude_identity(source)
+    # A public OAuth client id is not an actor. It neither selects one nor
+    # denies a registered adapter whose marker happens to equal that string.
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     return explicit if explicit in ADAPTER_IDENTITIES else ""
 
@@ -146,7 +168,7 @@ def resolve_surface_id(env: Mapping[str, str] | None = None) -> str:
     entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT").lower()
     if _flag(source, "CLAUDE_CODE_REMOTE").lower() == "true":
         return REMOTE_SURFACE_BY_ENTRYPOINT.get(entry, "")
-    return LOCAL_ENTRYPOINTS.get(entry, CLAUDE_DESKTOP_SURFACE)
+    return LOCAL_ENTRYPOINTS.get(entry, "")
 
 
 def static_drift(env: Mapping[str, str] | None = None) -> str:
@@ -163,12 +185,6 @@ def unresolved_reason(env: Mapping[str, str] | None = None) -> str:
     source = os.environ if env is None else env
     if resolve_agent_id(source):
         return ""
-    if _is_claude(source):
-        entry = _flag(source, "CLAUDE_CODE_ENTRYPOINT") or "unset"
-        return (
-            f"Claude Code cloud session with CLAUDE_CODE_ENTRYPOINT={entry} has no registered "
-            f"memory identity (known: {', '.join(sorted(REMOTE_ENTRYPOINTS))})"
-        )
     explicit = _flag(source, "L9_MEMORY_AGENT_ID")
     if explicit in DERIVED_IDENTITIES:
         return f"L9_MEMORY_AGENT_ID={explicit} is derived from host markers, never configured"
