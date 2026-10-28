@@ -43,6 +43,28 @@ def _binding(tmp_path: Path, *, ok: bool = True) -> RuntimeBinding:
     )
 
 
+def _authorized_onboarding() -> dict[str, Any]:
+    from ops.memory.auth0_native_oauth import load_onboarding
+
+    document = load_onboarding()
+    document["issuer"]["domain"] = "tenant.example.invalid"
+    document["issuer"]["issuer_url"] = "https://tenant.example.invalid/"
+    document["resource"]["identifier"] = "https://memory.example/mcp"
+    document["clients"]["cursor-native"]["client_id"] = "synthetic-cursor-public"
+    document["clients"]["claude-account-connector"]["client_id"] = "synthetic-claude-public"
+    return document
+
+
+NATIVE_HTTP = {
+    "type": "streamable-http",
+    "url": "https://memory.example/mcp",
+    "auth": {
+        "CLIENT_ID": "synthetic-cursor-public",
+        "scopes": ["memory.read", "memory.write"],
+    },
+}
+
+
 class _Runner:
     def __init__(self, rc: int = 0, kind: str = "stdio") -> None:
         self.calls: list[list[str]] = []
@@ -56,10 +78,7 @@ class _Runner:
         self.envs.append(dict(env) if isinstance(env, dict) else {})
         if "-c" in argv:
             if self.kind == "http":
-                payload: dict[str, Any] = {
-                    "url": "https://memory.example/mcp",
-                    "type": "streamable-http",
-                }
+                payload: dict[str, Any] = dict(NATIVE_HTTP)
             elif self.kind == "secret":
                 payload = {
                     "url": "https://memory.example/mcp",
@@ -132,7 +151,7 @@ def test_existing_http_memory_entry_is_dropped_before_package_install() -> None:
 
 
 def test_exact_native_memory_entry_is_preserved_only_with_package_evidence() -> None:
-    expected = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    expected = dict(NATIVE_HTTP)
     existing = {"mcpServers": {inst.MEMORY_KEY: dict(expected)}}
     config, dropped, preserved = inst.render_machine_config(
         _master(), existing, expected_native_memory=expected
@@ -254,6 +273,7 @@ def test_memory_entry_is_delegated_to_the_bound_runtime(tmp_path: Path) -> None:
         verify=True,
         binding_resolver=lambda: binding,
         runner=runner,
+        onboarding=_authorized_onboarding(),
     )
     memory = receipt["memory"]
     assert memory["status"] == "verified"
@@ -274,7 +294,7 @@ def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> 
     master_path = tmp_path / "master.json"
     master_path.write_text(json.dumps(_master()), encoding="utf-8")
     target = tmp_path / "mcp.json"
-    native = {"type": "streamable-http", "url": "https://memory.example/mcp"}
+    native = dict(NATIVE_HTTP)
     original = (
         json.dumps(
             {"mcpServers": {"mine": {"command": "/mine"}, inst.MEMORY_KEY: native}},
@@ -292,6 +312,7 @@ def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> 
         check=True,
         binding_resolver=lambda: binding,
         runner=runner,
+        onboarding=_authorized_onboarding(),
     )
     assert check["status"] == "unchanged"
     assert check["memory"]["status"] == "installed"
@@ -303,11 +324,45 @@ def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> 
         master_path=master_path,
         binding_resolver=lambda: binding,
         runner=runner,
+        onboarding=_authorized_onboarding(),
     )
     assert install["status"] == "unchanged"
     assert install["memory"]["status"] == "installed"
     assert install["preserved_unmanaged"] == ["mine"]
     assert target.read_text(encoding="utf-8") == original
+
+
+def test_rejected_native_entry_is_removed_instead_of_preserved(tmp_path: Path) -> None:
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master(Playwright={"command": "npx"})), encoding="utf-8")
+    target = tmp_path / "mcp.json"
+    native = dict(NATIVE_HTTP)
+    target.write_text(
+        json.dumps(
+            {"mcpServers": {inst.MEMORY_KEY: native, "mine": {"command": "/mine"}}},
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    document = _authorized_onboarding()
+    document["issuer"]["domain"] = None
+    document["issuer"]["issuer_url"] = None
+    runner = _Runner(kind="http")
+    receipt = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        binding_resolver=lambda: _binding(tmp_path),
+        runner=runner,
+        onboarding=document,
+    )
+    servers = json.loads(target.read_text(encoding="utf-8"))["mcpServers"]
+    assert inst.MEMORY_KEY not in servers
+    assert servers["mine"] == {"command": "/mine"}
+    assert servers["Playwright"] == {"command": "npx"}
+    assert receipt["memory"]["status"] == "unbound_issuer"
+    assert inst.exit_code(receipt) == 1
+    assert all("install" not in call for call in runner.calls)
 
 
 def test_launcher_override_is_stripped_from_inspect_install_and_verify(
@@ -323,6 +378,7 @@ def test_launcher_override_is_stripped_from_inspect_install_and_verify(
         verify=True,
         binding_resolver=lambda: _binding(tmp_path),
         runner=runner,
+        onboarding=_authorized_onboarding(),
     )
     assert result["memory"]["status"] == "verified"
     assert len(runner.envs) == 3  # inspector + install + probe
@@ -354,6 +410,7 @@ def test_blocked_install_is_a_failure_exit(tmp_path: Path) -> None:
         master_path=master_path,
         binding_resolver=lambda: _binding(tmp_path),
         runner=_Runner(rc=2, kind="http"),
+        onboarding=_authorized_onboarding(),
     )
     assert receipt["memory"]["status"] == "blocked"
     assert inst.exit_code(receipt) == 1

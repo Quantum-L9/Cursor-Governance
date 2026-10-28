@@ -38,6 +38,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ops.memory.auth0_native_oauth import INSTALL_FAILURE_STATUSES
 from ops.memory.runtime_binding import RuntimeBinding, resolve_runtime_binding
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -110,7 +111,8 @@ def render_machine_config(
     Non-memory servers follow the master. Memory is owned solely by its package:
     keep an existing entry only if it matches the inspected native HTTP package
     entry exactly. Shape alone never proves package ownership. The caller must
-    obtain ``expected_native_memory`` from the bound package, not the config.
+    obtain ``expected_native_memory`` from the bound package, and only after
+    Auth0 authorization returns install.
     All other Memory entries and legacy provider entries are removed.
     """
 
@@ -272,6 +274,7 @@ def memory_entry(
     check: bool,
     verify: bool,
     runner: Runner = subprocess.run,
+    onboarding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Install (and optionally verify) the managed entry through the package.
 
@@ -319,6 +322,21 @@ def memory_entry(
             "reason": reasons.get(kind, reasons["unknown"]),
             "classification": kind,
             "interpreter_source": source,
+        }
+    from ops.memory.auth0_native_oauth import authorize_cursor_package_entry
+
+    package_config = inspected.get("config")
+    decision = authorize_cursor_package_entry(
+        package_config if isinstance(package_config, dict) else {},
+        onboarding,
+    )
+    if decision.get("install") is not True:
+        return {
+            "status": str(decision.get("status") or "malformed"),
+            "reason": str(decision.get("reason") or "native OAuth onboarding rejected the entry"),
+            "classification": kind,
+            "interpreter_source": source,
+            "onboarding_status": decision.get("status"),
         }
     argv = [
         str(cli),
@@ -383,6 +401,7 @@ def instantiate(
     verify: bool = False,
     binding_resolver: Callable[[], RuntimeBinding] | None = None,
     runner: Runner = subprocess.run,
+    onboarding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     master = json.loads(master_path.read_text(encoding="utf-8"))
     existing, link_target = read_existing(path)
@@ -420,7 +439,11 @@ def instantiate(
             if inspected.get("classification") == "native_http":
                 candidate = inspected.get("config")
                 if isinstance(candidate, dict):
-                    expected_native_memory = candidate
+                    from ops.memory.auth0_native_oauth import authorize_cursor_package_entry
+
+                    decision = authorize_cursor_package_entry(candidate, onboarding)
+                    if decision.get("install") is True:
+                        expected_native_memory = candidate
 
     config, dropped, preserved = render_machine_config(
         master, existing, expected_native_memory=expected_native_memory
@@ -473,6 +496,7 @@ def instantiate(
                 check=check,
                 verify=verify,
                 runner=runner,
+                onboarding=onboarding,
             )
     return receipt
 
@@ -489,7 +513,7 @@ def exit_code(receipt: Mapping[str, Any]) -> int:
     if receipt.get("status") == "drift":
         return 2
     memory_status = str((receipt.get("memory") or {}).get("status") or "")
-    return 1 if memory_status in {"blocked", "upstream_blocked"} else 0
+    return 1 if memory_status in INSTALL_FAILURE_STATUSES else 0
 
 
 def _render_text(receipt: Mapping[str, Any]) -> str:
