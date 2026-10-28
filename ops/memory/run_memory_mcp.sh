@@ -58,18 +58,22 @@ fi
 
 # The MCP server is started in parallel with the SessionStart hook that may be
 # installing this .venv. Wait for the install before binding (which imports the
-# package) and before exec; a half-installed venv is refused by name rather
-# than crashing on import. Lazy imports after a LATER reinstall are not covered:
-# the server is long-lived and holds no lock across its lifetime.
-if [[ -f "$GOV/ops/scripts/lib/venv_ready.sh" ]]; then
-  # shellcheck source=/dev/null
-  . "$GOV/ops/scripts/lib/venv_ready.sh"
-  _ready_rc=0
-  venv_ready_wait "$GOV" || _ready_rc=$?
-  if [[ "$_ready_rc" -eq 2 ]]; then
-    echo "run_memory_mcp: refuse to launch on a half-installed governance venv" >&2
-    exit 1
-  fi
+# package) and before exec. Any non-zero readiness result refuses the launch:
+# still installing, interrupted, or a probe that could not be read. A later
+# reinstall is not covered: the server is long-lived and holds no lock across
+# its lifetime. The confirm immediately before exec is the last check; it does
+# not stay held.
+if [[ ! -f "$GOV/ops/scripts/lib/venv_ready.sh" ]]; then
+  echo "run_memory_mcp: venv readiness probe missing; refuse to launch" >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+. "$GOV/ops/scripts/lib/venv_ready.sh"
+_ready_rc=0
+venv_ready_wait "$GOV" || _ready_rc=$?
+if [[ "$_ready_rc" -ne 0 ]]; then
+  echo "run_memory_mcp: refuse to launch; governance venv is not ready (rc=${_ready_rc})" >&2
+  exit 1
 fi
 
 # shellcheck source=/dev/null
@@ -151,6 +155,12 @@ if [[ "${#_door_missing[@]}" -ne 0 ]]; then
   fi
 fi
 
+_ready_rc=0
+venv_ready_confirm "$GOV" || _ready_rc=$?
+if [[ "$_ready_rc" -ne 0 ]]; then
+  echo "run_memory_mcp: refuse to launch; governance venv is not ready (rc=${_ready_rc})" >&2
+  exit 1
+fi
 if [[ $# -gt 0 ]]; then
   exec "$L9_MEMORY_INTERPRETER" "$@"
 fi

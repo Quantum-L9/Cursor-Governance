@@ -132,6 +132,10 @@ class HookInterpreterBindingTests(unittest.TestCase):
         )
         surface_lib = gov / "ops" / "scripts" / "lib"
         surface_lib.mkdir(parents=True)
+        (surface_lib / "venv_ready.sh").write_text(
+            (REPO / "ops" / "scripts" / "lib" / "venv_ready.sh").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         (surface_lib / "surface_detect.sh").write_text(
             (REPO / "ops" / "scripts" / "lib" / "surface_detect.sh").read_text(encoding="utf-8"),
             encoding="utf-8",

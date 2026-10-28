@@ -72,6 +72,9 @@ class HookExecFailClosedTests(unittest.TestCase):
     def _materialize_governance(self) -> None:
         """A governance tree that is complete except for whatever a test breaks."""
         (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+        lib = self.gov / "ops" / "scripts" / "lib"
+        lib.mkdir(parents=True, exist_ok=True)
+        shutil.copy(REPO / "ops" / "scripts" / "lib" / "venv_ready.sh", lib / "venv_ready.sh")
         for name in GATES + OBSERVERS:
             (self.gov / HOOKS_REL / name).write_text(
                 "#!/usr/bin/env python3\nraise SystemExit(0)\n", encoding="utf-8"
@@ -499,6 +502,9 @@ class GovernanceDirIsNotRedirectableTests(unittest.TestCase):
         for tree, exit_code in ((self.canonical, 0), (self.foreign, 3)):
             (tree / HOOKS_REL).mkdir(parents=True)
             (tree / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
+            lib = tree / "ops" / "scripts" / "lib"
+            lib.mkdir(parents=True)
+            shutil.copy(REPO / "ops" / "scripts" / "lib" / "venv_ready.sh", lib / "venv_ready.sh")
             venv_bin = tree / ".venv" / "bin"
             venv_bin.mkdir(parents=True)
             (venv_bin / "python3").write_text(f"#!/bin/sh\nexit {exit_code}\n", encoding="utf-8")
