@@ -36,7 +36,7 @@ conform.
 | `namespace` | **Required.** The repository namespace: the write hint from `python -m ops.memory.cli resolve`. It must be a lowercase slug. It must never be `main`, `master`, `default`, `test`, or the shared `l9-workspace`. |
 | `content` | **Required.** One fact on one line, 12–600 characters. No `SESSION:` / `WORK:`-style preamble, no prose summary, never a credential. |
 | `memory_class` | **Required.** A canonical class from the bound package's agent-lane allowlist (every class except `identity`), in canonical form. |
-| `tags` | **Required.** 2–12 unique lowercase tags. Exactly one is `agent:<id>` (`claude-code`, `cursor`, …); at least one is a topic tag. The builder also stamps at most one `surface:<id>` — the derived SurfaceIdentity (`claude-code-desktop`, `cursor-ide`, …), never chosen by the caller. |
+| `tags` | **Required.** 2–12 unique lowercase tags. Exactly one is `agent:<id>` (`claude-code`, `cursor`, …); at least one is a topic tag. The builder also stamps at most one `surface:<id>` — the derived SurfaceIdentity (`cursor-ide`, `claude-code-cli`, `claude-code-mobile`), never chosen by the caller. An unknown surface omits the tag. |
 | `idempotency_key` | **Required.** The builder's default is `agent:<namespace>:<sha256(class, normalized content)[:16]>`, so the same fact written twice is one record, not two. |
 | `source_id` | Evidence: a PR, commit, ADR or file path. |
 | `subject`, `predicate`, `object` | An assertion triple, all three given together or none. |
@@ -95,17 +95,15 @@ from the upstream registries pinned in `environment/agents/agent_registry.yaml`
 
 | ActorIdentity | SurfaceIdentity | Derived from |
 |---|---|---|
-| `cursor` | `cursor-ide` | `CURSOR_AGENT` |
-| `claude-code` | `claude-code-cli` | Claude Code markers, `CLAUDE_CODE_REMOTE` unset, `CLAUDE_CODE_ENTRYPOINT=cli` |
-| `claude-code` | `claude-code-desktop` | Claude Code markers, `CLAUDE_CODE_REMOTE` unset, no more specific entrypoint |
-| `claude-code` | `claude-code-ide` | an execution surface of the same actor (no separate marker yet) |
-| `claude-code` | `claude-code-mobile` | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
-| `manus` | `manus-cloud` | the `L9_MEMORY_AGENT_ID` its adapter sets and enforces (`adapters/manus`) |
-| `codex`, `gemini` | `codex-cloud`, `gemini-cli` | the `L9_MEMORY_AGENT_ID` their adapters set |
-| `perplexity` | — | reserved, not yet wired (planned, never a runtime writer) |
-| `perplexity-computer` | — | reserved, not yet wired (planned, never a runtime writer) |
-| `l-cto` | — | reserved, not yet wired (planned, never a runtime writer) |
-| `igorbot` | — | reserved, not yet wired (planned, never a runtime writer) |
+| `l9.actor-registry/global@1#cursor` | `l9.surface-registry/global@1#cursor-ide` | `CURSOR_AGENT`. Cursor wins when Claude markers are also present. |
+| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-cli` | Claude markers and local `CLAUDE_CODE_ENTRYPOINT=cli` |
+| `l9.actor-registry/global@1#claude-code` | `l9.surface-registry/global@1#claude-code-mobile` | `CLAUDE_CODE_REMOTE=true` and `CLAUDE_CODE_ENTRYPOINT=remote_mobile` |
+| `l9.actor-registry/global@1#claude-code` | `unknown` | Claude markers with any other entrypoint, including empty, `remote_web`, and `remote_unknown`. The `surface:` tag is omitted. |
+| `l9.actor-registry/global@1#codex` | `unknown` | `L9_MEMORY_AGENT_ID=codex` and no host markers |
+| `l9.actor-registry/global@1#gemini` | `unknown` | `L9_MEMORY_AGENT_ID=gemini` and no host markers |
+| `l9.actor-registry/global@1#manus` | `unknown` | `L9_MEMORY_AGENT_ID=manus` and no host markers |
+
+`claude-code-desktop` and `claude-code-ide` are canonical surfaces this plane does not assign. Missing evidence does not select them. `claude-code-web` is assigned and has no host marker, so it is not filled in. `perplexity`, `perplexity-computer`, `l-cto`, and `igorbot` are not actors. `human` is canonical and has no agent binding here.
 
 `claude-code-desktop` and `claude-code-mobile` are also **historical
 ActorIdentity aliases** of `claude-code`. Stored memories and receipts that
@@ -113,23 +111,33 @@ carry them stay readable and are never rewritten, but a new write never uses
 them as its author (`agent:claude-code-desktop` is refused).
 
 Agents without host markers are identified only by the `L9_MEMORY_AGENT_ID`
-their own adapter sets, and only when it names an active adapter identity. Any
-other value is refused. The resolver's set and `environment/agents/agent_registry.yaml`
-are held equal by `tests/ops/memory/test_agent_identity.py`. A reserved identity
-becomes writable when its adapter lands and its registry entry gains a writing
-role, `assigned_groups` and `status: active`.
+their own adapter sets, and only when it names `manus`, `codex`, or `gemini`.
+Any other value is refused. Those three actors, plus `cursor` and
+`claude-code`, are the resolver's set and are active rows in
+`environment/agents/agent_registry.yaml`.
 
 - **Configured values are ignored.** On these surfaces a configured
   `L9_MEMORY_AGENT_ID` or `USER_ID` is ignored, and SessionStart reports it as
   drift. `USER_ID` is always derived from the identity, for example
   `claude_code_agent`. Only agents without host markers of their own
-  (manus, codex, gemini, an operator shell) are identified by
-  `L9_MEMORY_AGENT_ID`, which their adapters set.
-- **No guessing.** A Claude Code cloud session with an unrecognized entrypoint
-  is still the `claude-code` actor, but its surface is unknown; the resolver
-  never guesses a surface. A process with no host markers and no admitted
-  adapter identity has **no** actor, and every writer refuses to write and
-  says why, rather than recording an author that did not run.
+  (manus, codex, gemini) are identified by `L9_MEMORY_AGENT_ID`, which their
+  adapters set. That id does not select a surface.
+- **No guessing.** Claude host markers prove the actor `claude-code`. The
+  entrypoint proves a surface only for `cli` and `remote_mobile`. Every other
+  entrypoint leaves `surface_identity: unknown` and omits the `surface:` tag.
+  A process with no host markers and no admitted adapter identity has **no**
+  actor, and every writer refuses to write and says why.
+- **Release and runtime stay unknown on this binding.** The consumer pin is
+  `l9-graphite-memory` 2.6.0. `release_identity` stays `unknown` until Memory
+  publishes a digest-verified ReleaseIdentity under `l9.contract/product-release@1`.
+  The pin's version, git SHA, and wheel digest are examined in provenance and
+  are not that ref. `runtime_identity` stays `unknown`: the 2.6.0 rule points
+  at the consumer runtime, and this process has no admitted runtime ref. A
+  service RuntimeIdentity exists only for an admitted deployment at or after
+  3.0.0 under `l9.product-kind-exception/memory-hosted-service@1`. That
+  exception does not apply here. `constellation_identity` is omitted because
+  it is outside both dimension lists. Package version, actor, surface, and
+  hostname are not runtime identity. OAuth client ids are not identity.
 - **Drift is refused.** When a caller names an identity that disagrees with the
   running surface (an explicit `agent_id`, or the builder's `--agent-id`), the
   write is refused as drift.

@@ -168,25 +168,24 @@ echo "$L9_GOVERNANCE_DIR"                         # must be an expanded path, no
 
 ## Shared memory (required for governed Mobile/Web)
 
-Cloud sessions reach the **same** canonical memory as Cursor: the
-`l9-graphite-memory` control plane (`MemoryService`, `memory-control-plane/v1`),
-bound per checkout by `ops/config/memory-binding.json` and proven by
-`ops/memory/runtime_binding.py`. The session hooks (`memory_prefetch.py`,
-`memory_writeback.py`) hydrate and close through `ops/memory`; the only MCP
-memory server `mcp.template.json` declares is the package-owned stdio entry,
-rendered when `L9_MEMORY_INTERPRETER` names a Python carrying the pinned
-package. The direct-provider front door (`graphiti-memory` over a provider URL)
-was retired at realignment stage C8; the capability broker never shipped; the
-`L9_MEMORY_HTTP_*` side door is retired (ADR-0006).
+Cloud sessions reach the **same** `MemoryService` as Cursor. Native MCP is
+the account-managed OAuth connector (authenticated Streamable HTTP).
+`mcp.template.json` does not declare a Memory server. Projection retires
+`l9-graphite-memory` so an old stdio entry is not preserved. Session hooks
+still hydrate and close through `ops/memory`. Raw provider HTTP and
+`L9_MEMORY_HTTP_*` stay forbidden.
 
-**Honest posture:** there is no memory credential to paste. A memory bearer in
-the variables field is a contract violation, not a configuration.
+**Honest posture:** there is no memory credential to paste. A memory bearer
+in the variables field is a contract violation. A cached setup receipt is
+not proof that the native connector, Auth0, or mobile MCP is ready. Those
+stay UNKNOWN until observed. Infisical login is a separate check.
 
-**Identity (shared namespace, distinct author).** The repository namespace is
-shared with Cursor; the writing identity is not, and it is **derived**, never
-configured. A Mobile session is `claude-code-mobile`, from the host's own
-markers (`ops/memory/agent_identity.py`). Do not set `L9_MEMORY_AGENT_ID`,
-`USER_ID` or `L9_MEMORY_SOURCE` here: they are ignored and reported as drift.
+**Identity (shared namespace, distinct author).** The actor for every Claude
+Code surface is `claude-code`, derived from host markers
+(`ops/memory/agent_identity.py`). The surface is `claude-code-mobile` only
+when those markers prove `remote_mobile`. Any other remote entrypoint stays
+`unknown` and is not relabelled mobile. Do not set `L9_MEMORY_AGENT_ID`,
+an OAuth public client id, `USER_ID`, or `L9_MEMORY_SOURCE` as the actor.
 
 **Signed door (every memory names its author).** Setup mints the container's
 own signing key into `~/.config/l9-memory`, and the memory launcher does the

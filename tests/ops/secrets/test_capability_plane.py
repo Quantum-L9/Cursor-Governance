@@ -258,16 +258,14 @@ def test_mcp_config_carries_no_bearer() -> None:
 
 
 def test_no_adapter_mcp_template_carries_a_provider_transport_or_bearer() -> None:
-    """Stage C9: every adapter carrier declares the canonical stdio memory server or none.
+    """No adapter carrier declares a project Memory server.
 
-    No in-file bearer, no broker URL, no provider URL. The memory entry, when
-    present, is the package-owned ``l9-graphite-memory`` stdio argv with no
-    ``env``/``url``/``headers`` (memory ADR-016).
+    No in-file bearer, no broker URL, no provider URL. A ``l9-graphite-memory``
+    mcpServers entry is the rejected stdio posture.
     """
     adapters = REPO_ROOT / "environment" / "agents" / "adapters"
     offenders: list[str] = []
     checked = 0
-    memory_args = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
     for path in sorted(adapters.rglob("*.json")):
         try:
             config = json.loads(path.read_text(encoding="utf-8"))
@@ -290,13 +288,8 @@ def test_no_adapter_mcp_template_carries_a_provider_transport_or_bearer() -> Non
         servers = wiring.get("mcpServers") or {}
         if "graphiti-memory" in servers:
             offenders.append(f"{rel}: retired graphiti-memory front door")
-        memory = servers.get("l9-graphite-memory")
-        if isinstance(memory, dict):
-            if list(memory.get("args") or []) != memory_args:
-                offenders.append(f"{rel}: memory argv is not the package's managed entry")
-            for forbidden in ("env", "url", "headers"):
-                if forbidden in memory:
-                    offenders.append(f"{rel}: memory entry carries {forbidden}")
+        if "l9-graphite-memory" in servers:
+            offenders.append(f"{rel}: project Memory server must not be declared")
     assert checked >= 5, f"adapter template discovery found only {checked} configs"
     assert offenders == [], offenders
 
