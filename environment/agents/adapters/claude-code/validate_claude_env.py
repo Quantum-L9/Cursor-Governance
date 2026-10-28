@@ -353,41 +353,82 @@ def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
         print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
-def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
-    """The session-deps helper warms pre-commit environments; it never installs a hook.
+_DECLARED_HOOK_FIELD = "required_git_hook_types"
+_DECLARED_HOOK_TYPES = frozenset({"pre-push", "commit-msg"})
+_DECLARED_HOOK_CASE = re.compile(r"pre-push\|commit-msg|commit-msg\|pre-push")
+_HOOK_INSTALL_INVOCATION = re.compile(r"pre-commit install(?!-hooks)\b(.*)$")
+_HOOK_TYPE_ARG = re.compile(r"^\s+--hook-type\s+(\S+)\s*$")
+_HOOK_TYPE_VAR = re.compile(r"\$\{?[A-Za-z_][A-Za-z0-9_]*\}?\Z")
 
-    ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the whole
-    catalog without the surface-aware SKIP list that ``ops/scripts/run_pr_precommit.sh``
-    applies. On any non-cursor surface ``symlinks-check`` then fails and every
-    ``git commit`` is rejected. ``run_pr_precommit.sh`` states the rule in as many
-    words; nothing asserted it until this check.
+
+def _declared_hook_type(tail: str) -> str | None:
+    """The hook type on an install line, or None when the line is not that form."""
+    match = _HOOK_TYPE_ARG.match(tail)
+    if match is None:
+        return None
+    token = match.group(1)
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in {'"', "'"}:
+        token = token[1:-1]
+    return token
+
+
+def _declared_hook_type_allowed(token: str) -> bool:
+    return token in _DECLARED_HOOK_TYPES or _HOOK_TYPE_VAR.fullmatch(token) is not None
+
+
+def git_hook_install_offenders(text: str) -> list[str]:
+    """``pre-commit install`` lines that are not a consumer-declared hook.
+
+    Allowed only as ``pre-commit install --hook-type`` with ``pre-push``,
+    ``commit-msg``, or a shell variable, and only when the script reads
+    ``required_git_hook_types`` and case-limits the type to those two. A bare
+    install and ``--hook-type pre-commit`` write the commit-stage hook.
     """
-    helper = HERE / "hooks" / "session_deps_cloud.sh"
-    if not helper.is_file():
-        return
-    text = helper.read_text(encoding="utf-8")
-    # Match an INVOCATION, not the word inside a warning message: skip comments and
-    # anything appearing after an `echo` on the same line.
-    pattern = re.compile(r"pre-commit install(?!-hooks)\b")
-    offenders = []
-    for line in text.splitlines():
-        if line.lstrip().startswith("#"):
-            continue
-        match = pattern.search(line)
-        if not match:
+    code = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+    blob = "\n".join(code)
+    driven = _DECLARED_HOOK_FIELD in blob and _DECLARED_HOOK_CASE.search(blob) is not None
+    offenders: list[str] = []
+    for line in code:
+        match = _HOOK_INSTALL_INVOCATION.search(line)
+        if match is None:
             continue
         echo_at = line.find("echo")
         if echo_at != -1 and echo_at < match.start():
             continue
+        printf_at = line.find("printf")
+        if printf_at != -1 and printf_at < match.start():
+            continue
+        token = _declared_hook_type(match.group(1) or "")
+        if driven and token is not None and _declared_hook_type_allowed(token):
+            continue
         offenders.append(line.strip())
+    return offenders
+
+
+def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
+    """Warm hook environments; install only a declared pre-push or commit-msg hook.
+
+    A bare ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the
+    whole catalog without the surface-aware SKIP list that
+    ``ops/scripts/run_pr_precommit.sh`` applies. That commit-stage hook stays
+    forbidden. ``required_git_hook_types`` may name ``pre-push`` or ``commit-msg``;
+    the helper installs those after ``pre-commit install-hooks`` and nothing else.
+    """
+    helper = HERE / "hooks" / "session_deps_cloud.sh"
+    if not helper.is_file():
+        return
+    offenders = git_hook_install_offenders(helper.read_text(encoding="utf-8"))
     if offenders:
         _fail(
-            "session_deps_cloud.sh must not run 'pre-commit install' (installs a git "
-            f"commit hook this repo forbids); use 'pre-commit install-hooks': {offenders}",
+            "session_deps_cloud.sh must not install a commit-stage git hook. "
+            "Allowed only as 'pre-commit install --hook-type' (pre-push|commit-msg) "
+            f"driven by required_git_hook_types: {offenders}",
             failures,
         )
     else:
-        print("  OK: session_deps_cloud.sh warms hook environments without installing a git hook")
+        print(
+            "  OK: session_deps_cloud.sh installs only consumer-declared pre-push/commit-msg hooks"
+        )
 
 
 def check_dependency_policy(failures: list[str]) -> None:
