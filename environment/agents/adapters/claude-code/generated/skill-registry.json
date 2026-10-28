@@ -1,5 +1,5 @@
 {
-  "generation_id": "776b1a962cd1e92a90542a36116d8e92593ce360757a9d2fc3187ec2a965b4f3",
+  "generation_id": "06ee2c104901435cb6444c7a71000b4c0cbdbdf36c7db5c1b9ec01934c06c297",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -22,7 +22,6 @@
       "l9-auditing-security",
       "l9-prompt-engineering",
       "l9-incident-response",
-      "l9-setting-up-ci",
       "l9-graphiti-memory",
       "l9-aws-secrets",
       "l9-code-graph-rag-mcp",
@@ -310,25 +309,6 @@
           "smoke test api"
         ],
         "primary": "l9-api-smoke-testing",
-        "signal_weight": 8,
-        "supporting": [
-          "l9-structured-reasoning"
-        ]
-      },
-      {
-        "id": "ci_setup",
-        "positive_signals": [
-          "set up github actions ci",
-          "bootstrap ci",
-          "add lint type checking and tests",
-          "add ci stages",
-          "set up ci",
-          "activate l9-ci-core",
-          "add biome",
-          "stamp biome.json",
-          "seed l9-ci-pack"
-        ],
-        "primary": "l9-setting-up-ci",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -884,19 +864,6 @@
     },
     {
       "composition_role": "general",
-      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, OPEN_PR=0 make pr fails, or adding an enforceable ci gate.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-ci-ops",
-      "path": "skills/l9-ci-ops",
-      "reason": "CI/CD pipeline operations and gate authoring",
-      "skill_md": "skills/l9-ci-ops/SKILL.md",
-      "skill_sha256": "1bf9a93aa9d039f66a23b178247a288806d3198c3aa328f58f522b0cd9cd65b1",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
       "description": "wire Claude Code in a consumer clone to DeepSeek (not Anthropic billing). use when opening Claude Code in a new Cursor tab, hydrating DEEPSEEK_API_KEY, or repeating the Website-Bot DeepSeek setup in another repo.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -918,19 +885,6 @@
       "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
       "skill_md": "skills/l9-claude-coding-contract-compiler/SKILL.md",
       "skill_sha256": "a7b3e74847c7b04efc5acc95e6ddd9ff1a01c1d96fe01ccd0a78236491163e59",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-cli-optimization",
-      "path": "skills/l9-cli-optimization",
-      "reason": "activates dormant/miswired capability and flips off-by-default flags into review-required PR packs (full-throttle mode) \u2014 high blast radius, explicit only",
-      "skill_md": "skills/l9-cli-optimization/SKILL.md",
-      "skill_sha256": "1dcc7a03079e5316984b1dab8982908cc6b1e7cb86da9cd54ac713c0fa9746b9",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1403,19 +1357,6 @@
       "when_to_use": ""
     },
     {
-      "composition_role": "primary",
-      "description": "activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json. use when bootstrapping CI, activating l9-ci-core, adding Biome, or adding lint/test/type-check stages.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-setting-up-ci",
-      "path": "skills/l9-setting-up-ci",
-      "reason": "",
-      "skill_md": "skills/l9-setting-up-ci/SKILL.md",
-      "skill_sha256": "dde4b83d6e667e67b41df268ec9e687e053c4224b243cd2c297f9076bee89739",
-      "user_invocable": true,
-      "when_to_use": "bootstrapping CI, activating l9-ci-core / Biome, or adding lint/test/type-check stages without inventing ci.yml or biome.json"
-    },
-    {
       "composition_role": "general",
       "description": "set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.",
       "disable_model_invocation": true,
@@ -1508,6 +1449,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "db7ee70dc3248aa2974094e7771a6f9938ec03004536e6280553876a24278ac5",
-  "source_skill_corpus_sha256": "10947f26a30469a27f0faa151ff044d818e6acd20ecd5a341023ac6e87d70709"
+  "source_manifest_sha256": "e8498c2d5a930b445323cea1e1ae1c16876df9ebefbcee17f96d35b29b274bb7",
+  "source_skill_corpus_sha256": "8843508b0f4fd888f9ac33e06ddf356da4663172d4e60231af3620f925f31ba2"
 }
