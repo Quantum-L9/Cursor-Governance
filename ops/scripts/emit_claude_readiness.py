@@ -629,6 +629,29 @@ def _load_merge_gate(gov: Path):
     return module
 
 
+_MERGE_AUTHORITY_MODES = {"disabled", "strict"}
+
+
+def _merge_authority_switch_disabled(gov: Path) -> bool:
+    """Whether this clone's merge-authority switch is off (§6.2.16).
+
+    Same precedence as ``merge_authority_switch.mode``: ``L9_MERGE_AUTHORITY_MODE``
+    when it names a known mode, otherwise ``ops/config/merge-authority.json`` in
+    *gov*. A missing or unreadable file is not disabled, so the probe still runs.
+    """
+    override = os.environ.get("L9_MERGE_AUTHORITY_MODE", "").strip().lower()
+    if override in _MERGE_AUTHORITY_MODES:
+        return override == "disabled"
+    path = gov / "ops" / "config" / "merge-authority.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    return str(payload.get("enforcement") or "").strip().lower() == "disabled"
+
+
 def _merge_authority_status(gov: Path) -> tuple[str, str]:
     """Live probe: the retired env boolean must not authorize a merge.
 
@@ -638,7 +661,13 @@ def _merge_authority_status(gov: Path) -> tuple[str, str]:
     the authorization file is pointed at a nonexistent path, so a DENY proves the
     flag alone authorizes nothing. A probe that cannot run is UNKNOWN, never a
     false BLOCKED.
+
+    While enforcement is disabled the switch already returns no denial for an
+    ordinary merge. That is the shipped posture, not the env-boolean regression,
+    so the probe is not run and the status is READY.
     """
+    if _merge_authority_switch_disabled(gov):
+        return READY, "switch disabled (§6.2.16)"
     try:
         gate = _load_merge_gate(gov)
     except Exception as exc:  # noqa: BLE001 - a probe never crashes the emitter
