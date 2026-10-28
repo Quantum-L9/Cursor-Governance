@@ -96,7 +96,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-09-11.1"
+L9_STUB_REVISION="2026-10-27.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -132,13 +132,21 @@ if [ -n "${L9_GOVERNANCE_SURFACE:-}" ] && [ "$L9_GOVERNANCE_SURFACE" != "claude-
 fi
 export L9_GOVERNANCE_SURFACE="claude-code"
 
-# ADR-0006: the HTTP memory side door is retired; Cursor Graphiti is the only
-# front door. Unsetting cleans this process — deleting the vars from the account
-# field is the real fix. The durable env below also unsets them for in-session Bash.
+# ADR-0006: the static HTTP memory side door is retired. Memory 3.0 OAuth is
+# the account connector and the Cursor native client, not this process.
+# Unsetting cleans this process — deleting the vars from the account field is
+# the real fix. The durable env below also unsets them for in-session Bash.
 for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
   if [ -n "${!retired:-}" ]; then
     warn "$retired is set — retired ADR-0006 side door; delete it from the variables field"
     unset "$retired"
+  fi
+done
+for oauth_secret in AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET \
+  L9_MEMORY_OAUTH_ACCESS_TOKEN L9_MEMORY_OAUTH_REFRESH_TOKEN; do
+  if [ -n "${!oauth_secret:-}" ]; then
+    warn "$oauth_secret is set — Memory OAuth credentials stay out of hosted sessions; unsetting"
+    unset "$oauth_secret"
   fi
 done
 
@@ -155,9 +163,9 @@ done
 # references it as ${VAR}, so a proxied value reaches the MCP client and
 # nothing else; with no value proxied the (always rendered) Context7 server
 # fails to authenticate — a failure fixed by populating the secret. Memory holds
-# no transport credential on this surface at all: the only memory server is
-# the canonical l9-graphite-memory stdio entry (memory-control-plane/v1), which
-# resolves its own credentials (memory ADR-016).
+# no transport credential on this surface at all: Memory 3.0 is the
+# account-managed OAuth connector, not a project MCP entry and not a secret
+# in this environment (memory ADR-016).
 # L9_INFISICAL_CLIENT_SECRET (+ the non-secret L9_INFISICAL_CLIENT_ID) is
 # deliberately NOT swept, here or in the unset list below: it is the one
 # sanctioned bootstrap secret, this surface's Infisical machine identity, from
@@ -279,6 +287,8 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   # login shell — disabling the proxying rather than removing a secret.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
   echo "unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN"
+  echo "unset AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET"
+  echo "unset L9_MEMORY_OAUTH_ACCESS_TOKEN L9_MEMORY_OAUTH_REFRESH_TOKEN"
   echo "unset INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
   echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
@@ -314,10 +324,10 @@ fi
 # --- 4) Memory control plane (report, never block) --------------------------
 # Capability broker retired 2026-08-29 (never shipped). Do not probe it.
 # The only memory plane is the canonical l9-graphite-memory server
-# (memory-control-plane/v1), bound per checkout by ops/memory/runtime_binding.py
-# and rendered into .mcp.json only when L9_MEMORY_INTERPRETER names a Python
-# carrying the pinned package. There is no provider URL and no memory bearer on
-# this surface. Do NOT paste CONTEXT7_API_KEY or an Infisical UA into the
+# (memory-control-plane/v1). This hosted process does not receive a project
+# Memory MCP entry, an Auth0 client secret, or an access token. Native OAuth
+# belongs to the Claude account connector. A stdio package is not installed
+# from here. Do NOT paste CONTEXT7_API_KEY or an Infisical UA into the
 # variables field: the Context7 credential is proxied (mcp.template.json
 # references it as ${VAR}), never pasted.
 note "memory control plane: l9-graphite-memory (interpreter: ${L9_MEMORY_INTERPRETER:-unbound; make memory-readiness})"

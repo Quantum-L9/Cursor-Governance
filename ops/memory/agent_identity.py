@@ -130,6 +130,37 @@ def canonical_actor_id(value: str | None) -> str:
     return HISTORICAL_ACTOR_ALIASES.get(actor, actor)
 
 
+def resolve_identity_coordinates(
+    env: Mapping[str, str] | None = None,
+    oauth_claims: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Actor, surface, release, and runtime, each from its own evidence.
+
+    An OAuth subject, client id, or audience is ignored. It cannot fill any
+    coordinate. Release and runtime stay ``unknown`` until their owners publish
+    a ref; this resolver does not mint one from a token.
+    """
+
+    source = os.environ if env is None else env
+    claims = oauth_claims or {}
+    ignored = sorted(
+        key
+        for key in claims
+        if key in {"sub", "client_id", "azp", "aud", "release_identity", "runtime_identity"}
+    )
+    actor = resolve_agent_id(source)
+    surface = resolve_surface_id(source)
+    return {
+        "actor_identity": actor or UNKNOWN_IDENTITY,
+        "surface_identity": surface or UNKNOWN_IDENTITY,
+        "release_identity": UNKNOWN_IDENTITY,
+        "runtime_identity": UNKNOWN_IDENTITY,
+        "ignored_oauth_claims": ignored,
+        "oauth_subject_used": False,
+        "oauth_client_id_used": False,
+    }
+
+
 def oauth_public_client_claim(env: Mapping[str, str] | None = None) -> str:
     """The first public OAuth client id in *env*, or "" when none is set.
 
