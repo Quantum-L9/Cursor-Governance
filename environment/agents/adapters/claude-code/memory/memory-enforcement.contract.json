@@ -3,7 +3,7 @@
   "contract": "l9.claude-code.memory-enforcement",
   "version": "3.2.0",
   "status": "enforced",
-  "summary": "Memory hydration is a precondition for governed *repository* writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state. Single front door: package-owned l9-graphite-memory MCP stdio (memory-control-plane/v1). Agent HTTP / provider clients are sealed side doors (ADR-0030/0031). Model durable writes: cold path memory.write_agent (no phase_lock); high-stakes path memory.phase_lock -> memory.write_governed. generic memory.ingest is not a model bypass. Operator breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS.",
+  "summary": "Memory hydration is a precondition for governed *repository* writes on the Claude Code surface. Repository-write authority comes from Git (dedicated worktree + branch + merge analysis), NOT from memory state. Single front door: MemoryService. Native MCP is authenticated Streamable HTTP (CANONICAL_LAW §8.10). Project stdio is not that door. Raw provider HTTP stays forbidden (ADR-0030/0031). Model durable writes: cold path memory.write_agent (no phase_lock); high-stakes path memory.phase_lock -> memory.write_governed. generic memory.ingest is not a model bypass. Operator breakglass: L9_MEMORY_ENFORCEMENT_BREAKGLASS.",
   "memory": {
     "front_door": "ops/memory/control_plane_client.py",
     "bridge": "environment/agents/adapters/claude-code/memory/memory_bridge.py",

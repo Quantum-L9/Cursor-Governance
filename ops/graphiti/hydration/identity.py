@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 
@@ -14,46 +13,41 @@ def resolve_write_identity(
     *,
     explicit_agent_id: str | None = None,
     explicit_user_id: str | None = None,
-    surface: str = "cursor",
+    surface: str = "",
 ) -> dict[str, str]:
     """agent_id / user_id for a memory write — DERIVED, never configured (no drift).
 
-    ``ops/memory/agent_identity.py`` is the one source: on a Cursor or Claude
-    Code surface the identity comes from the host's own markers (``cursor``
-    or ``claude-code``). Desktop and mobile are surfaces, not authors. An
-    explicit id that disagrees with the running process is refused as drift.
-    Only a process with no host markers (manus, codex, gemini, an operator
-    shell) is identified by its explicit id. A pasted ``cursor`` or
-    ``claude-code``, and the retired surface authors, are refused.
-    ``user_id`` is always derived from ``agent_id``.
+    ``ops/memory/agent_identity.py`` is the one source. The returned ``surface``
+    is the resolved SurfaceIdentity id, and the key is omitted when that
+    surface is unknown. ``surface`` on the call is a coarse cross-surface
+    gate (``cursor`` / ``claude-code``), not the identity value.
     """
     del explicit_user_id  # derived from agent_id; a configured value could drift
     from ops.memory.agent_identity import (  # noqa: PLC0415
-        DERIVED_IDENTITIES,
-        RETIRED,
         resolve_agent_id,
+        resolve_surface_id,
         unresolved_reason,
         user_id_for,
     )
 
     derived = resolve_agent_id()
     explicit = (explicit_agent_id or "").strip()
-    if derived:
-        if explicit and explicit != derived:
-            raise IdentityError(
-                f"memory write denied: identity drift — caller says {explicit!r} but this "
-                f"process is {derived!r} (ops/memory/agent_identity.py)"
-            )
-        agent_id = derived
-    else:
-        agent_id = explicit or os.environ.get("L9_MEMORY_AGENT_ID", "").strip()
-        if not agent_id or agent_id in RETIRED or agent_id in DERIVED_IDENTITIES:
-            raise IdentityError(f"memory write denied: no memory identity ({unresolved_reason()})")
-    if surface == "claude-code" and agent_id == "cursor":
+    if not derived:
+        raise IdentityError(f"memory write denied: no memory identity ({unresolved_reason()})")
+    if explicit and explicit != derived:
+        raise IdentityError(
+            f"memory write denied: identity drift — caller says {explicit!r} but this "
+            f"process is {derived!r} (ops/memory/agent_identity.py)"
+        )
+    if surface == "claude-code" and derived == "cursor":
         raise IdentityError(
             "memory write denied: a Claude surface cannot stamp the Cursor identity"
         )
-    return {"agent_id": agent_id, "user_id": user_id_for(agent_id), "surface": surface}
+    identity = {"agent_id": derived, "user_id": user_id_for(derived)}
+    fine = resolve_surface_id()
+    if fine:
+        identity["surface"] = fine
+    return identity
 
 
 def stamp_source_description(agent_id: str, kind: str) -> str:

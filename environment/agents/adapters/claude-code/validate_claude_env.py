@@ -17,21 +17,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-# The only memory server is the package-owned canonical stdio entry (stage C8).
-# The capability broker never shipped. Never register l9-shared-memory, and
-# never the retired direct-provider front door.
+# Project MCP must not declare a Memory server. Native Memory 3.0 is the
+# account-managed connector. l9-graphite-memory is retired from this template
+# so projection cannot preserve a stdio entry. Provider front doors stay retired.
 MEMORY_SERVER_KEY = "l9-graphite-memory"
-MEMORY_WRAPPER_REF = "${HOME}/.cursor-governance/ops/memory/run_memory_mcp.sh"
-MEMORY_WRAPPER_REL = Path("ops/memory/run_memory_mcp.sh")
-MEMORY_SERVER_ARGS = ["-m", "l9_graphite_memory.server", "--transport", "stdio"]
-RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory")
+RETIRED_MEMORY_SERVER_KEYS = ("graphiti-memory", "l9-shared-memory", "l9-graphite-memory")
 # Memory credential / transport names that must never reach functional MCP
 # config. Assembled from parts so this validator does not itself read as a
 # provider reference to the egress scanner it agrees with.
@@ -166,47 +162,27 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         return
     server = json.loads(path.read_text(encoding="utf-8"))
     servers = server.get("mcpServers", {})
+    retired_names = server.get("_retired_servers") or []
+    if MEMORY_SERVER_KEY not in retired_names:
+        _fail(
+            f"mcp.template.json must retire {MEMORY_SERVER_KEY} so projection "
+            "cannot preserve a project Memory stdio entry",
+            failures,
+        )
+    else:
+        print(f"  OK: {MEMORY_SERVER_KEY} is retired from the project MCP template")
     for retired in RETIRED_MEMORY_SERVER_KEYS:
         if retired in servers:
             _fail(
-                f"mcp.template.json must not register {retired}: the direct-provider "
-                f"front door is retired (stage C8); {MEMORY_SERVER_KEY} is the only memory server",
+                f"mcp.template.json must not register {retired}: project Memory "
+                "stdio and the direct-provider front door are retired",
                 failures,
             )
-    mem = servers.get(MEMORY_SERVER_KEY)
-    if not isinstance(mem, dict) or not mem:
-        _fail(f"mcp.template.json must define the {MEMORY_SERVER_KEY} stdio server", failures)
-        return
-    if mem.get("command") != MEMORY_WRAPPER_REF or list(mem.get("args") or []) != (
-        MEMORY_SERVER_ARGS
-    ):
-        _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must launch {MEMORY_WRAPPER_REF} "
-            f"{' '.join(MEMORY_SERVER_ARGS)} (spawn wrapper + package argv)",
-            failures,
-        )
+    context7 = servers.get("context7")
+    if not isinstance(context7, dict) or context7.get("args") != ["context7"]:
+        _fail("mcp.template.json must keep the context7 bridge unchanged", failures)
     else:
-        print(f"  OK: {MEMORY_SERVER_KEY} launches the spawn wrapper with the package argv")
-    if "L9_MEMORY_INTERPRETER" in (mem.get("_requires_env") or []):
-        _fail(
-            f"mcp.template.json {MEMORY_SERVER_KEY} must not _requires_env-gate on "
-            "L9_MEMORY_INTERPRETER: the spawn wrapper is the bind gate",
-            failures,
-        )
-    wrapper = _governance_root() / MEMORY_WRAPPER_REL
-    if not wrapper.is_file():
-        _fail(f"memory spawn wrapper missing: {MEMORY_WRAPPER_REL}", failures)
-    elif not os.access(wrapper, os.X_OK):
-        _fail(f"memory spawn wrapper is not executable: {MEMORY_WRAPPER_REL}", failures)
-    else:
-        print(f"  OK: {MEMORY_WRAPPER_REL} exists and is executable")
-    for forbidden in ("env", "url", "headers"):
-        if forbidden in mem:
-            _fail(
-                f"mcp.template.json {MEMORY_SERVER_KEY} must not carry {forbidden!r}: the "
-                "server resolves its own credentials (memory ADR-016)",
-                failures,
-            )
+        print("  OK: context7 bridge is unchanged")
     # Functional config must never carry a memory credential or provider URL; a
     # prohibition mention in the _comment block documents the contract and is
     # expected — and so is a ${VAR} reference under a private `_`-prefixed
