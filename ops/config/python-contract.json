@@ -36,7 +36,6 @@
   },
   "skill_self_test_roots": [
     "skills/l9-audit-plans",
-    "skills/l9-cli-optimization",
     "skills/l9-code-maintenance",
     "skills/l9-dag-authoring",
     "skills/l9-git-work-preserve",
@@ -83,8 +82,8 @@
       "reason": "Not a pytest test: a DAG module (a 'test pipeline' workflow) that only matches the test_*.py naming convention. Its import chain hits the documented-but-unimplemented tools.validation.validate_external_code gap (2026-07-19 decision: leave broken, do not stub). Ignored via pyproject addopts so root collection does not fail on a dormant path."
     },
     {
-      "path": "skills/l9-cli-optimization/scripts/self_test.py",
-      "reason": "Not a pytest test: a self-check script for the l9-cli-optimization skill that matches *_test.py-adjacent discovery patterns. Ignored via pyproject addopts."
+      "path": "skills/_archived/l9-cli-optimization/scripts/self_test.py",
+      "reason": "Not a pytest test: archived l9-cli-optimization self-check script. Ignored via conftest collect_ignore. The pyproject addopts entry for the old live path is left in place."
     },
     {
       "path": "skills/_archived/l9-plan/scripts/self_test.py",
