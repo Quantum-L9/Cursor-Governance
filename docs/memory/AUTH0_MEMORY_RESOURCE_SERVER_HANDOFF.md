@@ -53,5 +53,8 @@ and no client was registered by this change.
    runs are blocked until the tenant, resource server, and package entry exist.
    A local onboarding fixture is not that proof.
 
-Until steps 1–4 are true, `ops/memory/mcp_instantiation.py` reports
-`unbound_resource` or `upstream_blocked` and writes no Memory MCP entry.
+Until the issuer domain, resource identifier, and cursor-native client id are
+bound together, and steps 1–4 are true, the installer reports
+`unbound_issuer`, `unbound_resource`, or `upstream_blocked`. A package entry
+that fails that authorization is removed from the machine config. Matching
+the inspector does not keep it.

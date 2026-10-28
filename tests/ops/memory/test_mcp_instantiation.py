@@ -332,6 +332,39 @@ def test_verified_native_memory_survives_check_and_reinstall(tmp_path: Path) -> 
     assert target.read_text(encoding="utf-8") == original
 
 
+def test_rejected_native_entry_is_removed_instead_of_preserved(tmp_path: Path) -> None:
+    master_path = tmp_path / "master.json"
+    master_path.write_text(json.dumps(_master(Playwright={"command": "npx"})), encoding="utf-8")
+    target = tmp_path / "mcp.json"
+    native = dict(NATIVE_HTTP)
+    target.write_text(
+        json.dumps(
+            {"mcpServers": {inst.MEMORY_KEY: native, "mine": {"command": "/mine"}}},
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    document = _authorized_onboarding()
+    document["issuer"]["domain"] = None
+    document["issuer"]["issuer_url"] = None
+    runner = _Runner(kind="http")
+    receipt = inst.instantiate(
+        path=target,
+        master_path=master_path,
+        binding_resolver=lambda: _binding(tmp_path),
+        runner=runner,
+        onboarding=document,
+    )
+    servers = json.loads(target.read_text(encoding="utf-8"))["mcpServers"]
+    assert inst.MEMORY_KEY not in servers
+    assert servers["mine"] == {"command": "/mine"}
+    assert servers["Playwright"] == {"command": "npx"}
+    assert receipt["memory"]["status"] == "unbound_issuer"
+    assert inst.exit_code(receipt) == 1
+    assert all("install" not in call for call in runner.calls)
+
+
 def test_launcher_override_is_stripped_from_inspect_install_and_verify(
     tmp_path: Path, monkeypatch: Any
 ) -> None:

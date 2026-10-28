@@ -72,6 +72,22 @@ def test_bound_fixture_authorizes_only_the_approved_cursor_client() -> None:
     assert denied["install"] is False
 
 
+def test_resource_and_client_without_a_bound_issuer_do_not_authorize() -> None:
+    document = _bound()
+    document["issuer"]["domain"] = None
+    document["issuer"]["issuer_url"] = None
+    missing = oauth.authorize_cursor_package_entry(_entry(), document)
+    assert missing["status"] == "unbound_issuer"
+    assert missing["install"] is False
+
+    inconsistent = _bound()
+    inconsistent["clients"]["claude-account-connector"]["client_id"] = None
+    inconsistent["issuer"]["issuer_url"] = "https://other.example.invalid/"
+    mismatched = oauth.authorize_cursor_package_entry(_entry(), inconsistent)
+    assert mismatched["status"] == "malformed"
+    assert mismatched["install"] is False
+
+
 def test_malformed_onboarding_and_package_entry_fail_closed() -> None:
     document = _bound()
     document["pkce"]["method"] = "plain"

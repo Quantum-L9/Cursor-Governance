@@ -56,6 +56,7 @@ INSTALL_FAILURE_STATUSES = frozenset(
         "blocked",
         "upstream_blocked",
         "unbound_resource",
+        "unbound_issuer",
         "unbound_client",
         "unauthorized_client",
         "audience_mismatch",
@@ -325,12 +326,37 @@ def authorize_cursor_package_entry(
             "wrote": False,
             "install": False,
         }
+    issuer_block = _issuer_install_block(onboarding, list(shape["binding_gaps"]))
+    if issuer_block is not None:
+        return issuer_block
     return {
         "status": "authorized",
         "reason": "package entry matches the bound Auth0 onboarding contract",
         "wrote": False,
         "install": True,
     }
+
+
+def _issuer_install_block(onboarding: Mapping[str, Any], gaps: list[str]) -> dict[str, Any] | None:
+    """A resource and client id do not prove the Auth0 tenant."""
+
+    issuer = onboarding.get("issuer") if isinstance(onboarding.get("issuer"), dict) else {}
+    if "issuer.domain" in gaps or _blank(issuer.get("domain")):
+        return {
+            "status": "unbound_issuer",
+            "reason": "Auth0 issuer domain is unbound",
+            "wrote": False,
+            "install": False,
+        }
+    expected = f"https://{issuer['domain']}/"
+    if issuer.get("issuer_url") != expected:
+        return {
+            "status": "malformed",
+            "reason": "issuer_url does not match the Auth0 domain",
+            "wrote": False,
+            "install": False,
+        }
+    return None
 
 
 def audience_matches(audience: object, resource: str) -> bool:

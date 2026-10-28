@@ -111,7 +111,8 @@ def render_machine_config(
     Non-memory servers follow the master. Memory is owned solely by its package:
     keep an existing entry only if it matches the inspected native HTTP package
     entry exactly. Shape alone never proves package ownership. The caller must
-    obtain ``expected_native_memory`` from the bound package, not the config.
+    obtain ``expected_native_memory`` from the bound package, and only after
+    Auth0 authorization returns install.
     All other Memory entries and legacy provider entries are removed.
     """
 
@@ -438,7 +439,11 @@ def instantiate(
             if inspected.get("classification") == "native_http":
                 candidate = inspected.get("config")
                 if isinstance(candidate, dict):
-                    expected_native_memory = candidate
+                    from ops.memory.auth0_native_oauth import authorize_cursor_package_entry
+
+                    decision = authorize_cursor_package_entry(candidate, onboarding)
+                    if decision.get("install") is True:
+                        expected_native_memory = candidate
 
     config, dropped, preserved = render_machine_config(
         master, existing, expected_native_memory=expected_native_memory
