@@ -104,6 +104,7 @@ collect_ignore = [
     # Skill self-check scripts share basename `self_test.py` and collide under
     # pytest prepend import mode. They are invoked by skill tooling, not root CI.
     "skills/l9-cli-optimization/scripts/self_test.py",
+    "skills/_archived/l9-cli-optimization/scripts/self_test.py",
     "skills/l9-repository-renovation/scripts/self_test.py",
     "skills/l9-structured-reasoning/scripts/self_test.py",
     "skills/l9-audit-plans/scripts/self_test.py",

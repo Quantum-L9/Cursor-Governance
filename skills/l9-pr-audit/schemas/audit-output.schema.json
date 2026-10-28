@@ -1112,6 +1112,36 @@
               "minLength": 1
             },
             "uniqueItems": true
+          },
+          "detection": {
+            "type": "object",
+            "description": "Whether the PR's existing signals (CI, bot review) already caught this defect on the audited head.",
+            "additionalProperties": false,
+            "required": [
+              "ci",
+              "bot_review",
+              "evidence"
+            ],
+            "properties": {
+              "ci": {
+                "enum": [
+                  "CAUGHT",
+                  "MISSED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "bot_review": {
+                "enum": [
+                  "CAUGHT",
+                  "MISSED",
+                  "NOT_APPLICABLE"
+                ]
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           }
         }
       }
@@ -3075,7 +3105,7 @@
           "const": "l9.pr-audit.change-ledger.v1.4"
         },
         "generator_version": {
-          "const": "1.4.0"
+          "const": "1.4.2"
         },
         "ledger_bindings": {
           "type": "array",

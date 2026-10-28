@@ -83,6 +83,38 @@ Higher authority wins. An index or pointer is navigation evidence, not a replace
 - The bundle records the `autoremediate` value in `remediation-handoff.json` and `MANIFEST.json` so verification cannot silently change the run mode.
 - Publication authority in the remediation contract is limited to validated fixes on the existing affected PR branches through the canonical SSOT Makefile `make pr` surface. The target repository Makefile is never the publication authority.
 
+## Quickstart
+
+One run directory holds every artifact; the audited repository is only read (PR head refs are
+fetched into the given clone).
+
+```bash
+S=skills/l9-pr-audit/scripts
+python $S/run_audit.py prepare --repo OWNER/NAME --clone PATH --run-dir RUN [--pr N ...] \
+    [--authority-root <Quantum-L9/.github checkout>]
+#   -> snapshots, change ledgers, canonical binding, machine rows, lanes.plan.json
+# Launch one read-only semantic lane per planned group in one batch (references/semantic-lane.md);
+# each runs the five beyond-CI probes, judges the requester's requirements, and writes
+# RUN/lanes/<lane>.json (schemas/lane-findings.schema.json). Then one independent verifier lane
+# reproduces every merge-blocking finding into RUN/lanes/verify-<verifier>.json
+# (schemas/finding-verification.schema.json). Then write RUN/judgment.json
+# (schemas/judgment.schema.json): authorities, boundary model, reconciliation.
+python $S/run_audit.py finalize --run-dir RUN
+#   -> assemble -> derive -> validate -> bundle -> verify; prints per-PR readiness, the
+#      findings only the audit caught, and any probe / objective / verification gaps
+```
+
+Unadjudicated machine rows and an unadmitted canonical binding become residual Unknowns, so a
+first run is honestly `NOT_CONVERGED`; readiness is still projected per PR from that PR's own
+findings and the ruleset gates observed on its head.
+
+Correctness and completeness are enforced, not requested: a PR cannot project READY while any
+applicable probe (`adversarial_input`, `base_discrimination`, `merged_tree`, `ci_causality`,
+`ingress_reachability`) is `NOT_DONE`; `merged_tree` cannot be waived for a stacked or
+overlapping PR; a requirement that is not `MET` must be backed by a finding; a lane cannot ignore
+a linked issue in favor of the PR body; and a merge-blocking finding blocks only after a different
+lane reproduces it.
+
 ## Mutation eligibility for Fable
 
 A work unit receives `mutation_eligible: true` only when all are true:
@@ -111,6 +143,12 @@ Load only what the current stage needs:
 - Canonical audit schema: [schemas/audit-output.schema.json](schemas/audit-output.schema.json)
 - Derived handoff schema: [schemas/remediation-handoff.schema.json](schemas/remediation-handoff.schema.json)
 - Bundle manifest schema: [schemas/bundle-manifest.schema.json](schemas/bundle-manifest.schema.json)
+- Pipeline entry point: [scripts/run_audit.py](scripts/run_audit.py) (`prepare` / `finalize`)
+- Read-only PR collector: [scripts/collect_snapshot.py](scripts/collect_snapshot.py)
+- Semantic lane contract: [references/semantic-lane.md](references/semantic-lane.md) + [schemas/lane-findings.schema.json](schemas/lane-findings.schema.json)
+- Independent verification of merge-blocking findings: [schemas/finding-verification.schema.json](schemas/finding-verification.schema.json)
+- Run judgment (repository-specific law, boundaries, reconciliation): [schemas/judgment.schema.json](schemas/judgment.schema.json)
+- Projection into `audit.json`: [scripts/assemble_audit.py](scripts/assemble_audit.py)
 - Deterministic change census: [scripts/build_change_ledger.py](scripts/build_change_ledger.py)
 - Deterministic adversarial red-team contract: [references/adversarial-red-team.md](references/adversarial-red-team.md)
 - Deterministic closure contract: [references/deterministic-closure.md](references/deterministic-closure.md)
@@ -121,7 +159,7 @@ Load only what the current stage needs:
 
 ## Audit workflow
 
-1. **Bind target and audit coverage.** Resolve exact repository/default branch/default-branch SHA, frozen PR set, inspection scope, excluded/inaccessible surfaces, applicable audit domains, and exact changed-file inventory per PR. `CHANGE_DISCIPLINE` is always applicable.
+1. **Bind target and audit coverage.** `run_audit.py prepare` freezes the PR set with `collect_snapshot.py` (heads, files, checks, threads, approvals, ruleset merge gates, stack edges). Resolve exact repository/default branch/default-branch SHA, frozen PR set, inspection scope, excluded/inaccessible surfaces, applicable audit domains, and exact changed-file inventory per PR. `CHANGE_DISCIPLINE` is always applicable.
 2. **Resolve authority and intent provenance.** First bind canonical global law: run `scripts/verify_canonical_authority.py --authority-root <Quantum-L9/.github checkout>` and record `canonical_authority_binding` in `audit.json` (law 28). Then discover repository-local law, semantic owners, invariants, contracts, schemas, ADRs, generators, mutation guards, and merge/validation enforcement. Recover the original PR-generation prompt/task contract when available and record its provenance; do not block solely because it is unavailable.
 3. **Bind PRs.** For each PR bind exact base SHA, source head SHA, branches, commits, changed files, draft/state, mergeability, required-check resolution, review-thread discovered/classified/remaining counts, and canonical evidence IDs supporting mandatory validation.
 4. **Run and bind the deterministic census.** For every audited PR, run `scripts/build_change_ledger.py` against normalized exact-head evidence. Preserve the canonical ledger hash in `deterministic_census_binding`; bundle construction requires the ledger bytes. Enumerate every changed surface, changed symbol, current CI failure, unresolved review thread, patch-detectable architecture-growth candidate, material failure-path candidate, test-discrimination obligation, machine claim seed, and machine falsification seed before semantic grading.
@@ -142,10 +180,10 @@ Load only what the current stage needs:
 18. **Gate findings and repair surfaces.** Retain no correctness/architecture/scope/proportionality finding without governing authority plus direct evidence. Bind each finding to exact heads, owner axes, root-cause state, closure condition, and evidence-backed implementation/coupled surfaces.
 19. **Assess preservation and bypass.** Require explicit proof when public/data/release behavior or validation surfaces move. Every selected PR must cover every anti-bypass class exactly once.
 20. **Close the obligation ledger.** The audit cannot converge while any deterministic or semantic obligation lacks a disposition. Known defects may remain as `FINDING`; uncertainty remains explicit as `UNKNOWN` and must flow to `residual_unknowns`.
-21. **Assess readiness and convergence separately.** Merge readiness concerns the proposed code state. Audit convergence concerns whether the audit itself has complete scope/authority/evidence/change-discipline/obligation reconciliation. A NotReady PR may still have a Converged audit.
+21. **Assess readiness and convergence separately.** Merge readiness concerns the proposed code state. Audit convergence concerns whether the audit itself has complete scope/authority/evidence/change-discipline/obligation reconciliation. A NotReady PR may still have a Converged audit. Domain assessments are audit-wide; in a multi-PR audit a FAIL domain blocks a PR's readiness only when it is unattributed or one of its findings affects that PR.
 22. **Run recursive audit verification.** Record `audit_passes`. The first pass is `DISCOVERY`; the final pass is `VERIFICATION`. Recheck every retained finding, every obligation, every material claim, and every falsification probe against exact current evidence. If verification discovers any new material finding, obligation, contradiction, or Unknown, do not declare convergence: reconcile it and run another verification pass.
-23. **Write canonical audit.** Create `audit.json` exactly to [schemas/audit-output.schema.json](schemas/audit-output.schema.json). Do not add ad hoc fields.
-24. **Derive, validate and build.** Run `python scripts/build_audit_bundle.py --audit <audit.json> --derive <audit.json>` to fill the fields that are pure functions of the judged audit (mirrored claim statuses, per-PR blocking IDs, complexity file counts, evidence/finding reciprocity, severity bounds, root-cause candidate pairs, validation-run coverage rows); it prints each field it changed and decides nothing — new rows start `UNKNOWN`, and an out-of-bounds severity becomes `UNKNOWN`, never `CONSISTENT`. Then run `python scripts/build_audit_bundle.py --audit <audit.json> --change-ledger <pr-ledger.json> [--change-ledger <next-pr-ledger.json> ...] --validate-only`, then build the ZIP with the same bound ledgers. Derived handoff and manifest must pass their own schemas.
+23. **Write canonical audit.** `scripts/assemble_audit.py` projects the lanes and `judgment.json` into `audit.json`; it decides nothing a lane or the judgment did not state. Create `audit.json` exactly to [schemas/audit-output.schema.json](schemas/audit-output.schema.json). Do not add ad hoc fields.
+24. **Derive, validate and build.** `run_audit.py finalize` runs all of the following. Run `python scripts/build_audit_bundle.py --audit <audit.json> --derive <audit.json>` to fill the fields that are pure functions of the judged audit (mirrored claim statuses, per-PR blocking IDs, complexity file counts, evidence/finding reciprocity, severity bounds, root-cause candidate pairs, validation-run coverage rows); it also records, on one probe, the refutation every mirrored REFUTED domain/readiness/convergence claim already carries; it prints each field it changed and decides nothing — new rows start `UNKNOWN`, and an out-of-bounds severity becomes `UNKNOWN`, never `CONSISTENT`. Then run `python scripts/build_audit_bundle.py --audit <audit.json> --change-ledger <pr-ledger.json> [--change-ledger <next-pr-ledger.json> ...] --validate-only`, then build the ZIP with the same bound ledgers. Derived handoff and manifest must pass their own schemas.
 
 ## Finding doctrine
 
