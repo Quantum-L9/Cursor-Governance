@@ -5,9 +5,10 @@ JWT verification, namespace authorization, and storage. This module owns the
 consumer requirements: resource and audience equality, scopes, the two
 approved public-client registrations, PKCE, and redirect URIs.
 
-Tenant domain, resource identifier, and client ids stay unbound until Memory
-publishes them. This module does not invent those values, write a secret, or
-substitute a stdio package for native OAuth.
+The resource identifier is the value Memory published. Tenant domain and
+client ids stay unbound until they are registered. This module does not
+invent those values, write a secret, or substitute a stdio package for
+native OAuth.
 """
 
 from __future__ import annotations

@@ -24,37 +24,47 @@ the resource server. This repository did not change Memory, Auth0, or `.github`.
 - OAuth `sub` and client id do not establish actor, surface, release, or
   runtime identity.
 
+## Resource identifier
+
+Memory published `https://memory.quantumaipartners.com/mcp` as
+`MEMORY_RESOURCE_IDENTIFIER` in `src/l9_graphite_memory/version.py` and in
+ADR-100 (Quantum-L9/l9-graphiti-memory#106). This consumer records that
+string. The host alone is not the audience. The Graphiti route
+`https://memory.quantumaipartners.com/graphiti/mcp` is not this identifier.
+
 ## Still unbound (do not treat as passed)
 
-`issuer.domain`, `resource.identifier`, `clients.cursor-native.client_id`, and
+`issuer.domain`, `clients.cursor-native.client_id`, and
 `clients.claude-account-connector.client_id` are null. No tenant was created
-and no client was registered by this change.
+and no client was registered by this change. ADR-100 does not contain a live
+PKCE receipt. The installed package entry is still the stdio command.
 
 ## Memory-owned work that unblocks installation
 
-1. Publish one canonical MCP resource identifier (HTTPS, no userinfo, query, or
-   fragment). The access-token `aud` claim must equal that identifier exactly.
-   Put the same value in `resource.identifier` and use it as the Auth0 API
-   audience. Do not point it at the retired Graphiti host.
-2. Serve MCP Streamable HTTP on that identifier for protocol versions
-   `2025-11-25` and `2025-06-18`. Verify Auth0-issued JWTs (signature, issuer,
-   audience, expiry). Enforce `memory.read` and `memory.write`. Keep namespace
-   authorization and canonical storage inside Memory.
-3. Pre-register two public PKCE clients with the redirect URIs above. Return
-   the client ids to the consumer onboarding file. Do not enable a client
-   secret, a static bearer, or dynamic registration as a substitute.
-4. Change `l9_graphite_memory.client_config.cursor.managed_server_entry` so the
+1. Serve MCP Streamable HTTP on `https://memory.quantumaipartners.com/mcp`
+   for protocol versions `2025-11-25` and `2025-06-18`. Verify Auth0-issued
+   JWTs (signature, issuer, audience, expiry). The access-token `aud` claim
+   must equal that identifier exactly. Enforce `memory.read` and
+   `memory.write`. Keep namespace authorization and canonical storage inside
+   Memory.
+2. Pre-register two public PKCE clients with the redirect URIs above. Return
+   the issuer domain and the client ids to the consumer onboarding file. Do
+   not enable a client secret, a static bearer, or dynamic registration as a
+   substitute. A live PKCE receipt is still required.
+3. Change `l9_graphite_memory.client_config.cursor.managed_server_entry` so the
    Cursor entry is native Streamable HTTP: `url` equal to the resource
    identifier, `auth.CLIENT_ID` equal to the cursor-native client id,
    `auth.scopes` exactly `memory.read` and `memory.write`, and no
    `CLIENT_SECRET`, `env`, `headers`, or stdio command.
-5. Hosted proof still required after that package exists: Cursor desktop
+4. Hosted proof still required after that package exists: Cursor desktop
    authorization, Claude account-connector authorization, and mobile. Those
    runs are blocked until the tenant, resource server, and package entry exist.
    A local onboarding fixture is not that proof.
 
-Until the issuer domain, resource identifier, and cursor-native client id are
-bound together, and steps 1–4 are true, the installer reports
-`unbound_issuer`, `unbound_resource`, or `upstream_blocked`. A package entry
-that fails that authorization is removed from the machine config. Matching
-the inspector does not keep it.
+Until the issuer domain and both public client ids are registered, a native
+entry whose URL equals the published identifier returns `unbound_client`, and
+returns `unbound_issuer` once the client id is present and the domain is not.
+The current package entry is stdio, so a real install returns
+`upstream_blocked` before those checks. A package entry that fails
+authorization is removed from the machine config. Matching the inspector
+does not keep it.

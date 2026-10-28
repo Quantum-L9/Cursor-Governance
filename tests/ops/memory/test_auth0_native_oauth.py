@@ -17,6 +17,7 @@ TEMPLATE = ROOT / "environment/agents/adapters/claude-code/mcp.template.json"
 BOOTSTRAP = ROOT / "environment/agents/adapters/claude-code/web/setup.bootstrap.sh"
 POLICY = ROOT / "environment/agents/adapters/claude-code/web/network-policy.md"
 RESOURCE = "https://memory.example.invalid/mcp"
+PUBLISHED_RESOURCE = "https://memory.quantumaipartners.com/mcp"
 CURSOR_CLIENT = "synthetic-cursor-public"
 CLAUDE_CLIENT = "synthetic-claude-public"
 
@@ -47,14 +48,27 @@ def test_shipped_onboarding_is_structural_and_unbound() -> None:
     assert verdict["status"] == "unbound"
     assert verdict["errors"] == []
     assert "issuer.domain" in verdict["binding_gaps"]
-    assert "resource.identifier" in verdict["binding_gaps"]
+    assert "clients.cursor-native.client_id" in verdict["binding_gaps"]
+    assert "clients.claude-account-connector.client_id" in verdict["binding_gaps"]
+    assert "resource.identifier" not in verdict["binding_gaps"]
     assert document["issuer"]["domain"] is None
-    assert document["resource"]["identifier"] is None
+    assert document["resource"]["identifier"] == PUBLISHED_RESOURCE
     assert document["clients"]["cursor-native"]["client_id"] is None
     assert document["pkce"] == {"required": True, "method": "S256", "plain_forbidden": True}
     assert document["scopes"] == ["memory.read", "memory.write"]
     assert oauth.contains_secret(document) is False
     assert verdict["wrote"] is False
+    host_only = oauth.authorize_cursor_package_entry(
+        _entry(url="https://memory.quantumaipartners.com"), document
+    )
+    graphiti = oauth.authorize_cursor_package_entry(
+        _entry(url="https://memory.quantumaipartners.com/graphiti/mcp"), document
+    )
+    matching = oauth.authorize_cursor_package_entry(_entry(url=PUBLISHED_RESOURCE), document)
+    assert host_only["status"] == "audience_mismatch"
+    assert graphiti["status"] == "audience_mismatch"
+    assert matching["status"] == "unbound_client"
+    assert matching["install"] is False
 
 
 def test_bound_fixture_authorizes_only_the_approved_cursor_client() -> None:
@@ -140,9 +154,12 @@ def test_secret_material_is_rejected_and_not_stored_in_source() -> None:
     assert connector["hosted_credential_injection"] is False
     assert connector["redirect_uris"] == [oauth.CLAUDE_ACCOUNT_REDIRECT_URI]
     assert connector["client_id"] is None
+    assert connector["resource_identifier"] == PUBLISHED_RESOURCE
     assert oauth.contains_secret(connector) is False
     onboarding_text = oauth.ONBOARDING_PATH.read_text(encoding="utf-8")
     connector_text = oauth.CONNECTOR_PATH.read_text(encoding="utf-8")
+    assert PUBLISHED_RESOURCE in onboarding_text
+    assert PUBLISHED_RESOURCE in connector_text
     assert "synthetic-secret" not in onboarding_text
     assert "synthetic-secret" not in connector_text
     bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
@@ -201,7 +218,7 @@ def test_unbound_native_package_is_not_installed(tmp_path: Path) -> None:
     def runner(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append(list(argv))
         if "-c" in argv:
-            payload = json.dumps(_entry())
+            payload = json.dumps(_entry(url=PUBLISHED_RESOURCE))
             return subprocess.CompletedProcess(argv, 0, payload, "")
         raise AssertionError(argv)
 
@@ -224,6 +241,6 @@ def test_unbound_native_package_is_not_installed(tmp_path: Path) -> None:
         verify=False,
         runner=runner,
     )
-    assert receipt["status"] == "unbound_resource"
+    assert receipt["status"] == "unbound_client"
     assert all("cursor" not in " ".join(call) or "-c" in call for call in calls)
     assert inst.exit_code({"status": "written", "memory": receipt}) == 1

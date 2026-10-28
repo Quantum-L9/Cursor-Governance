@@ -12,5 +12,5 @@ scopes:
   - memory.read
   - memory.write
 client_id: null
-resource_identifier: null
+resource_identifier: https://memory.quantumaipartners.com/mcp
 secret_fields: []

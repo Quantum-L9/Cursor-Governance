@@ -14,9 +14,10 @@ issuer:
     - sqlite_fallback
 resource:
   owner: Quantum-L9/l9-graphiti-memory
-  # Canonical MCP resource indicator. The access-token audience must equal it.
-  # Memory publishes the identifier. This file does not invent one.
-  identifier: null
+  # Published by Quantum-L9/l9-graphiti-memory as MEMORY_RESOURCE_IDENTIFIER
+  # (ADR-100). The path is part of the audience. The host alone and the
+  # Graphiti route are not this identifier.
+  identifier: https://memory.quantumaipartners.com/mcp
   audience_equals_resource: true
 pkce:
   required: true

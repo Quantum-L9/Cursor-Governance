@@ -50,7 +50,7 @@ the CI-parity scanners add `sonarcloud.io` (read-only) and `api.osv.dev`.
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| _(none for memory)_ | Memory 3.0 is native OAuth. Auth0 is the issuer and Memory is the resource server. Cursor's client and the Claude account connector perform that flow outside this sandbox. The hosted agent still opens no memory HTTPS egress and holds no bearer, client secret, or access token. The issuer host and resource host stay off this list until verified. A stdio-only package is `UPSTREAM_BLOCKED` and is not a substitute. `memory.quantumaipartners.com` stays retired (ADR-0030) |
+| _(none for memory)_ | Memory 3.0 is native OAuth. Auth0 is the issuer and Memory is the resource server. The published resource identifier is `https://memory.quantumaipartners.com/mcp`. Cursor's client and the Claude account connector perform that flow outside this sandbox. The hosted agent still opens no memory HTTPS egress and holds no bearer, client secret, or access token. The issuer host stays off this list. A stdio-only package is `UPSTREAM_BLOCKED` and is not a substitute. |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep registry rulesets (`p/python`, `p/secrets`) for CE, and the org policy for the Semgrep Pro `semgrep ci --dry-run` lane (`ops/secrets/capability_exec.py`; no scan is created) |
 | `app.infisical.com` | Machine-identity login + in-process secret binds (`capability_bind.py`, `vault_mcp_bridge.py`) |
 | `mcp.context7.com` | Context7 docs through the vault-bound stdio bridge |
@@ -71,9 +71,9 @@ that can reach a secret backend is one mistake away from using one.
 Broker egress allow-list (if a broker is ever deployed — it is **not** the
 Graphiti health plane): `app.infisical.com`, `sonarcloud.io`, `semgrep.dev`,
 plus any host a newly registered capability declares. The retired Graphiti
-host is not on it. Native Memory Streamable HTTP is the selected transport,
-but its issuer and resource host are UNKNOWN until verified and must not be
-invented onto this list.
+route is not on it. Native Memory Streamable HTTP is the selected transport.
+Its resource identifier is published; its Auth0 issuer host is not. Neither
+host is added to this list.
 
 ### Deliberately absent
 
@@ -85,9 +85,9 @@ invented onto this list.
 
 ### Historical — not required, do not allowlist
 
-- `memory.quantumaipartners.com` — the retired HTTPS Graphiti projection
-  (`/graphiti/mcp`). Keep this host out of every agent allowlist. It is not
-  the Memory 3.0 native MCP endpoint. Native Streamable HTTP's host is
-  UNKNOWN until verified (CANONICAL_LAW §8.10). Absence of a host here is
-  not proof that a stdio server needs no egress, and it is not a reason to
+- `https://memory.quantumaipartners.com/graphiti/mcp` — the retired Graphiti
+  route. It is not the Memory resource identifier. The published identifier
+  is `https://memory.quantumaipartners.com/mcp`. Keep this host out of the
+  hosted-agent allowlist: account OAuth happens outside the sandbox, and
+  ADR-100 still has no live PKCE receipt. Absence here is not a reason to
   put stdio back. Raw provider HTTP stays forbidden.
