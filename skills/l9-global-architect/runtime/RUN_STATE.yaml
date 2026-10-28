@@ -1,6 +1,6 @@
 run_state_model:
   model_id: L9.GAR.RUN_STATE.001
-  version: 0.8.4
+  version: 0.8.5
   artifact_class: runtime_state_template
   status: experimental
   semantic_owner: runtime/RUN_STATE.yaml
@@ -231,6 +231,54 @@ instance_template:
     artifact_refs: []
     receipt_ref:
     observed_at:
+  delegation:
+    status: NONE
+    sibling_resolution:
+      sibling: l9-coding-agent
+      sibling_manifest_ref: skills/l9-coding-agent/runtime/MANIFEST.yaml
+      sibling_pack_version:
+      sibling_source_revision:
+      contract_owner_path:
+      contract_id:
+      contract_version:
+      contract_digest:
+      contract_schema_ref:
+      contract_schema_digest:
+      contract_validator_ref:
+      receipt_schema_ref:
+      receipt_schema_digest:
+      resolved_at:
+      evidence_refs: []
+    frozen_contract_ref:
+    frozen_contract_id:
+    frozen_contract_digest:
+    frozen_target_revision:
+    schema_validation_ref:
+    competing_instruction_refs: []
+    issued_at:
+    result:
+      diff_ref:
+      implementation_report_ref:
+      execution_receipt_ref:
+      delivered_revision:
+      returned_at:
+    verification:
+      status: NOT_EVALUATED
+      independent_of_coding_agent_self_report: false
+      evaluation_ref:
+      compared_against_frozen_contract_digest:
+      discrepancy_refs: []
+      evidence_refs: []
+    rework:
+      count: 0
+      same_frozen_contract: true
+      reauthorization_refs: []
+    transport:
+      mode:
+      owner:
+      carriage_status: NOT_EVALUATED
+      blocker_ref:
+    evidence_refs: []
   policy_compliance:
     outcome_policy:
       decision_ref:
@@ -326,6 +374,9 @@ state_enums:
   convergence_status: [NOT_EVALUATED, NOT_CONVERGED, CONVERGED, BLOCKED, ABORTED]
   architecture_profile_applicability: [APPLICABLE, NOT_APPLICABLE, UNKNOWN]
   architecture_profile_status: [NOT_EVALUATED, SATISFIED, VIOLATED, UNKNOWN, NOT_APPLICABLE]
+  coding_delegation_status: [NONE, CONTRACT_FROZEN, ISSUED, RETURNED, ACCEPTED, REJECTED, BLOCKED]
+  coding_delegation_verification_status: [NOT_EVALUATED, SATISFIED, VIOLATED, UNKNOWN]
+  coding_delegation_carriage_status: [NOT_EVALUATED, CARRIED_VERBATIM, NOT_CARRIABLE, NOT_APPLICABLE]
   reasoning_overlay_status:
     - UNBOUND
     - BOUND
@@ -427,6 +478,13 @@ event_model:
     - SIGNAL_PROPAGATION_GAP_RECORDED
     - VALIDATED_SHARED_GAIN_RECORDED
     - LEARNING_WRITEBACK_RECORDED
+    - CODING_DELEGATION_CONTRACT_FROZEN
+    - CODING_DELEGATION_ISSUED
+    - CODING_DELEGATION_RESULT_RETURNED
+    - CODING_DELEGATION_VERIFIED
+    - CODING_DELEGATION_ACCEPTED
+    - CODING_DELEGATION_REJECTED
+    - CODING_DELEGATION_BLOCKED
 transition_invariants:
   - id: RS-001
     assertion: current_state changes only through a legal transition declared by runtime/STATE_MACHINE.yaml
@@ -508,6 +566,16 @@ transition_invariants:
     assertion: A similarly named repository, file, branch, package, archive, or workspace MUST NOT satisfy target binding without evidence that it is the requested target.
   - id: RS-034
     assertion: Architecture intelligence MUST NOT be read as admitted law unless $.architecture_intelligence.status == ADMITTED_AND_CURRENT with its verifier provenance recorded; BUNDLE_VERIFIED may be read only with load_status LOADED_AS_CANDIDATE and every citation marked authoritative false; each cited fact MUST record its source_class, namespace pointer, source_ref, source_digest, projection_digest and composition_digest; any refusal MUST NOT fall back to the historical observer projection, the L9 Architecture Profile, or any other input.
+  - id: RS-035
+    assertion: One GAR implementation delegation MUST carry exactly one frozen instance of the Coding Agent execution contract that is current in the sibling pack at issuance, resolved through the sibling's runtime/MANIFEST.yaml and recorded in $.delegation.sibling_resolution (contract id, version, schema and receipt-schema digests, sibling revision) and in $.delegation by reference, contract_id, and content digest; GAR never pins, copies, or remembers a sibling contract version, and a resolution that cannot be observed blocks issuance instead of falling back to a recorded one; $.delegation.competing_instruction_refs MUST be empty whenever status is not NONE, and no GAR coding template, plan-as-contract, or ad hoc instruction set may serve as the delegation payload.
+  - id: RS-036
+    assertion: $.delegation.status MUST NOT become CONTRACT_FROZEN or ISSUED while the exact target, base revision, authority, architecture, locked invariants, or scope the payload requires is Unknown or disputed, or while the payload fails its canonical schema; the run blocks on the typed reason instead of defaulting a field or substituting another contract.
+  - id: RS-037
+    assertion: $.delegation.status MUST NOT become ACCEPTED unless $.delegation.result names an actual diff, an implementation report, and an execution receipt bound to the delivered revision, and $.delegation.verification.status == SATISFIED from a GAR comparison against the frozen contract digest that is independent of the Coding Agent self-report, its terminal state, and CI status alone.
+  - id: RS-038
+    assertion: Rework after REJECTED MUST reuse the same frozen contract digest with $.delegation.rework.same_frozen_contract == true; a changed objective, scope, or architecture MUST NOT be absorbed into the delegation and requires a new authorization recorded in $.delegation.rework.reauthorization_refs before a new freeze.
+  - id: RS-039
+    assertion: $.delegation.transport MUST record the handoff owner and its carriage observation from current-run evidence; a path that cannot carry the frozen payload verbatim is BLOCKED with the exact blocker_ref and MUST NOT be reported as integrated coverage.
 material_progress:
   accepted_kinds:
     - new_discriminating_evidence
@@ -531,6 +599,7 @@ material_progress:
     - intervention_fidelity_restored
     - reasoning_overlay_receipt_bound
     - realized_leverage_learning_recorded
+    - coding_delegation_discrepancy_resolved
   non_progress:
     - repeat_same_reasoning_without_new_input
     - rerun_same_validation_without_state_change
@@ -596,6 +665,9 @@ convergence_receipt_model:
     blocked_reason:
       required_when:
         - terminal_state == BLOCKED
+    coding_delegation_status:
+      required_when:
+        - $.delegation.status != NONE
 anti_drift:
   - live_run_state_MUST_NOT_become_source_of_architectural_law
   - state_records_evidence_and_decisions_but_does_not_redefine_contracts
@@ -606,3 +678,5 @@ anti_drift:
   - architecture_profile_MUST_constrain_L9_architecture_without_becoming_live_asset_inventory
   - role_hydration_MUST_preserve_current_evidence_requirements
   - architecture_profile_applicability_MUST_remain_distinct_from_integrated_runtime_activation
+  - delegation_state_MUST_record_the_frozen_coding_agent_contract_by_reference_and_digest_and_never_restate_or_redefine_it
+  - delegation_state_MUST_resolve_the_sibling_contract_version_live_at_issuance_and_never_carry_a_pinned_default
