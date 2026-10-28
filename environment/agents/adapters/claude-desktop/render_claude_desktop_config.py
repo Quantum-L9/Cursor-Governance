@@ -16,11 +16,9 @@ symlinks) and applies those constraints instead of symlinking:
   secret, or password is skipped, because the Desktop file is secret-free by
   policy (rules/61, ADR-016) and a wrapper script is the right carrier;
 - servers Desktop users added themselves are preserved byte for byte;
-- the ``l9-graphite-memory`` entry is never authored here. When
-  ``L9_MEMORY_INTERPRETER`` names an interpreter carrying the pinned package,
-  the memory package's own configurator writes it
-  (``l9-memory client cursor install --path <desktop config>``), so the same
-  atomic, digest-backed, secret-free entry lands on every surface.
+- ``l9-graphite-memory`` is removed and never installed here. Claude's
+  account-managed connector owns the Claude MCP client. This renderer does
+  not run ``l9-memory client cursor install``.
 
 Usage:
     render_claude_desktop_config.py [--check] [--json] [--path FILE] [--master FILE]
@@ -46,8 +44,6 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 MASTER_PATH = REPO_ROOT / "environment" / "mcp" / "master.mcp.json"
 MEMORY_KEY = "l9-graphite-memory"
 ENV_MEMORY_INTERPRETER = "L9_MEMORY_INTERPRETER"
-ENV_MCP_LAUNCHER = "L9_MEMORY_MCP_COMMAND"
-SIGNED_AGENT_LAUNCHER = REPO_ROOT / "ops" / "memory" / "run_memory_mcp.sh"
 
 _VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 _SECRET_MARKERS = ("TOKEN", "KEY", "SECRET", "PASSWORD", "CREDENTIAL", "DSN")
@@ -110,7 +106,10 @@ def render_server(
     if not isinstance(spec, dict):
         return None, "not an object"
     if name == MEMORY_KEY:
-        return None, "owned by the memory package configurator"
+        return None, (
+            "Claude's account-managed connector owns this client; "
+            "Desktop does not install the Cursor Memory entry"
+        )
     if spec.get("url") or spec.get("type") in {"http", "sse", "streamable-http", "ws"}:
         return None, "remote server: add it through Claude Desktop → Settings → Connectors"
     command = spec.get("command")
@@ -160,16 +159,23 @@ def render_config(
     """Merge managed servers over the existing Desktop config.
 
     Returns (config, skipped-by-name, preserved unmanaged keys). Keys the
-    master does not define — including the memory entry — are preserved.
+    master does not define are preserved. Any ``l9-graphite-memory`` entry is
+    removed: Claude Desktop does not keep a Cursor Memory client.
     """
 
     managed = master.get("mcpServers") or {}
-    # Start from the existing order so a re-render after the memory configurator
-    # appended its key (or after Desktop added one) is byte-stable: managed
-    # entries are refreshed in place, new ones appended, skipped ones removed.
+    # Start from the existing order so a re-render after Desktop added a key
+    # is byte-stable: managed entries are refreshed in place, new ones
+    # appended, skipped ones removed.
     servers: dict[str, Any] = dict((existing or {}).get("mcpServers") or {})
-    preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     skipped: dict[str, str] = {}
+    if MEMORY_KEY in servers:
+        servers.pop(MEMORY_KEY, None)
+        skipped[MEMORY_KEY] = (
+            "Claude's account-managed connector owns this client; "
+            "Desktop does not install the Cursor Memory entry"
+        )
+    preserved = sorted(name for name in servers if name not in managed or name == MEMORY_KEY)
     for name, spec in managed.items():
         entry, reason = render_server(name, spec, environ)
         if entry is None:
@@ -205,16 +211,6 @@ def _atomic_write(path: Path, payload: str) -> str | None:
     return backup
 
 
-def _package_install_env() -> dict[str, str]:
-    """Same launcher contract as Cursor instantiation. A caller override is dropped."""
-
-    env = dict(os.environ)
-    env.pop(ENV_MCP_LAUNCHER, None)
-    if SIGNED_AGENT_LAUNCHER.is_file():
-        env[ENV_MCP_LAUNCHER] = str(SIGNED_AGENT_LAUNCHER)
-    return env
-
-
 def _memory_entry(
     *,
     config_path: Path,
@@ -223,71 +219,21 @@ def _memory_entry(
     verify: bool,
     runner: Any = subprocess.run,
 ) -> dict[str, Any]:
-    """Delegate the memory entry to the package's own configurator."""
+    """Do not install a Cursor Memory client into Claude Desktop.
 
-    if not interpreter:
-        return {"status": "skipped", "reason": f"{ENV_MEMORY_INTERPRETER} unset"}
-    interpreter_path = Path(interpreter).expanduser()
-    cli = interpreter_path.parent / "l9-memory"
-    if not interpreter_path.is_file():
-        return {"status": "unavailable", "reason": f"interpreter not found: {interpreter_path}"}
-    if not cli.is_file():
-        return {
-            "status": "unavailable",
-            "reason": f"l9-memory not installed beside {interpreter_path}",
-        }
-    argv = [
-        str(cli),
-        "client",
-        "cursor",
-        "install",
-        "--path",
-        str(config_path),
-        "--interpreter",
-        str(interpreter_path),
-    ]
-    if check:
-        argv.append("--dry-run")
-    result = runner(
-        argv, capture_output=True, text=True, check=False, timeout=60, env=_package_install_env()
-    )
-    receipt: dict[str, Any] = {"argv": argv, "exit_code": result.returncode}
-    try:
-        receipt["install"] = json.loads(result.stdout)
-    except ValueError:
-        receipt["install"] = {
-            "raw": (result.stdout or "")[:400],
-            "stderr": (result.stderr or "")[-400:],
-        }
-    receipt["status"] = "installed" if result.returncode == 0 else "blocked"
-    if verify and result.returncode == 0 and not check:
-        probe = runner(
-            [
-                str(cli),
-                "client",
-                "cursor",
-                "verify",
-                "--path",
-                str(config_path),
-                "--interpreter",
-                str(interpreter_path),
-                "--timeout",
-                "60",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=90,
-            env=_package_install_env(),
-        )
-        try:
-            receipt["verify"] = json.loads(probe.stdout)
-        except ValueError:
-            receipt["verify"] = {"raw": (probe.stdout or "")[:400]}
-        receipt["verify_exit_code"] = probe.returncode
-        if probe.returncode != 0:
-            receipt["status"] = "installed_unverified"
-    return receipt
+    The account-managed connector owns Claude. ``config_path``,
+    ``interpreter``, ``check``, ``verify``, and ``runner`` stay in the
+    signature so a caller cannot route this function into ``cursor install``.
+    """
+
+    del config_path, interpreter, check, verify, runner
+    return {
+        "status": "skipped",
+        "reason": (
+            "Claude's account-managed connector owns the Claude MCP client; "
+            "this renderer does not run l9-memory client cursor install"
+        ),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -361,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     if status == "drift":
         return 2
     memory_status = (receipt.get("memory") or {}).get("status")
-    return 1 if memory_status == "blocked" else 0
+    return 1 if memory_status in {"blocked", "upstream_blocked"} else 0
 
 
 if __name__ == "__main__":
