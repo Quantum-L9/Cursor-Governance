@@ -240,6 +240,10 @@ def test_audit_write_surfaces_reach_claims_and_assignment(tmp_path: Path, monkey
         write_surfaces=[surface],
     )
     assert surface in packet["allowed_paths"]
+    # A granted surface outside the PR diff cannot ship by in-place push
+    # (ADR-0052), so the lane objective must name the stacked-child route too.
+    assert "`git push` of this already-open PR branch" in packet["objective"]
+    assert "PR_STACK=auto PR_REMEDIATE=0 make pr" in packet["objective"]
     recon = pr_fleet.build_assignment(
         TARGET, pr1, kind="recon", run_id="run1", graph_id="abcd", write_surfaces=[surface]
     )

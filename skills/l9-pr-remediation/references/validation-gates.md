@@ -38,7 +38,8 @@ gate_registry:
   makefile: true
   public:
     verify: "make precommit-repo"
-    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
+    publish: "git push"
+    publish_scope_expansion: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"   # optional
   leftover_workflow_run: []   # only when makefile precommit-repo is absent
 ```

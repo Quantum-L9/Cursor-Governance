@@ -96,7 +96,7 @@ remediation_plan:
 
   commit_policy:
     commits: 1
-    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"   # stacked remediation PR via make pr
+    publish: "git push"   # or "PR_STACK=auto PR_REMEDIATE=0 make pr" when a file outside the PR diff is touched
     no_verify: false
 ```
 

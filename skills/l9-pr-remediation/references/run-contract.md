@@ -43,7 +43,8 @@ This host (Cursor-Governance / Makefile capability graph):
 
 - verify: `make precommit-repo` (pre-commit local verify before staging)
 - kernels (optional): `make improve`
-- publish: `PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked child remediation PR)
+- publish: `git push` of the open PR branch when every touched file is already in the PR diff
+- publish_scope_expansion: `PR_STACK=auto PR_REMEDIATE=0 make pr` (stacked child remediation PR) when the fix touches a file outside the PR diff
 - fleet: `ops/autonomy/pr_fleet.py plan --repo {owner}/{repo} --board --json` (read-only; writes `.l9/pr/fleet.json`; never edits or merges) — waves, assignments, acceptance: [fleet-waves.md](fleet-waves.md)
 - board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
 - merge: `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run` (absolute: lanes may run in a consumer worktree) (method chosen in code; oldest `createdAt` first; only under human authorization (a grant the parent transcribed, or a GitHub record) for that head, else MERGE_PENDING)
@@ -59,7 +60,7 @@ Forbidden during Converge (this skill):
 - `git reset --hard`
 - `--no-verify`
 
-All remediation must be published via `PR_STACK=auto PR_REMEDIATE=0 make pr` as a new stacked PR. Once a PR exists, the only way to fix it is with another PR — not another commit to the same existing PR.
+Every remediation publishes once, by scope (CANONICAL_LAW §6.2.10, ADR-0052): a fix whose touched files are all in the PR diff is one more commit on that PR, published with `git push`; a fix that touches any file outside the PR diff is a new stacked PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`, never another commit on the existing PR.
 
 Poll workers never merge. Assigned `--kind merge` lanes merge via `stack_safe_merge.py --head-sha {sha} --run`, which merges only under human authorization (a grant the parent transcribed, or a GitHub record) and otherwise returns MERGE_PENDING (exit 3). Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge. The remediator must poll remediating and waiting PRs until `open_prs=0`.
 
@@ -152,7 +153,8 @@ A companion miss is a plan-gate failure, not a remote-CI discovery.
 run_contract:
   command_surface:
     verify: "make precommit-repo"
-    publish: "PR_STACK=auto PR_REMEDIATE=0 make pr"
+    publish: "git push"
+    publish_scope_expansion: "PR_STACK=auto PR_REMEDIATE=0 make pr"
     improve: "make improve"
     board: "ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json"
     merge: '"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/stack_safe_merge.py" --repo {owner}/{repo} --pr {n} --head-sha {sha} --run'  # human authorization (a grant the parent transcribed, or a GitHub record) required
