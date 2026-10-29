@@ -18,6 +18,7 @@ from select_pr_pytest_paths import (  # noqa: E402
     root_addopts_ignores,
     root_collect_ignores,
     select_pr_pytest_paths,
+    skill_mirror_tests,
 )
 
 PE = "environment/program-execution/peer_execution/autonomy/tests"
@@ -450,3 +451,41 @@ class CommandSuiteOwnershipTests(unittest.TestCase):
     def test_live_registry_never_selects_the_archived_test(self) -> None:
         selected = select_pr_pytest_paths(["skills/AUTONOMY_MANIFEST.yaml", self.ARCHIVED])
         self.assertNotIn(self.ARCHIVED, selected)
+
+
+class SkillMirrorTestsTests(unittest.TestCase):
+    """A skill script change selects that skill's `tests/skills/<name>/` tree.
+
+    `skills/l9-pr-remediation/scripts/protocol.py` used to select only the
+    skill-contracts `skills` target, so PR #688 merged a publish-route constant
+    that broke four tests in `tests/skills/l9_pr_remediation/` unseen. These use
+    the real registry because the mirror tree is this repository's topology.
+    """
+
+    PROTOCOL = "skills/l9-pr-remediation/scripts/protocol.py"
+    MIRROR = "tests/skills/l9_pr_remediation"
+
+    def test_skill_script_change_selects_its_mirror_tests(self) -> None:
+        self.assertIn(self.MIRROR, select_pr_pytest_paths([self.PROTOCOL]))
+
+    def test_mirror_is_added_on_top_of_the_existing_selection(self) -> None:
+        self.assertIn("skills", select_pr_pytest_paths([self.PROTOCOL]))
+
+    def test_a_changed_mirror_test_collapses_into_the_directory(self) -> None:
+        selected = select_pr_pytest_paths(
+            [self.PROTOCOL, f"{self.MIRROR}/test_protocol.py"],
+        )
+        self.assertIn(self.MIRROR, selected)
+        self.assertNotIn(f"{self.MIRROR}/test_protocol.py", selected)
+
+    def test_skill_without_a_mirror_tree_selects_none(self) -> None:
+        self.assertIsNone(skill_mirror_tests("skills/l9-ynp/scripts/no_such_module.py"))
+
+    def test_only_skill_scripts_map_to_the_mirror(self) -> None:
+        self.assertIsNone(skill_mirror_tests("skills/l9-pr-remediation/SKILL.md"))
+        self.assertIsNone(skill_mirror_tests("skills/l9-pr-remediation/references/x.py"))
+        self.assertIsNone(skill_mirror_tests("ops/scripts/protocol.py"))
+        self.assertEqual(
+            skill_mirror_tests("skills/l9-pr-remediation/scripts/lib/helper.py"),
+            self.MIRROR,
+        )

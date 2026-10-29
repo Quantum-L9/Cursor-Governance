@@ -119,6 +119,22 @@ def path_under(path: str, root: str) -> bool:
     return path == root or path.startswith(root.rstrip("/") + "/")
 
 
+def skill_mirror_tests(changed: str, *, repo_root: Path = REPO_ROOT) -> str | None:
+    """`tests/skills/<name>/` for a change under `skills/<name>/scripts/`.
+
+    Skill tests live in a mirror tree whose directory spells the skill name with
+    underscores, so stem inference never finds them. A change to
+    `skills/l9-pr-remediation/scripts/protocol.py` selected only the
+    skill-contracts `skills` target, and PR #688 merged a constant that broke
+    four tests in `tests/skills/l9_pr_remediation/` without running them.
+    """
+    parts = Path(changed).parts
+    if len(parts) < 4 or parts[0] != "skills" or parts[2] != "scripts":
+        return None
+    mirror = Path("tests") / "skills" / parts[1].replace("-", "_")
+    return mirror.as_posix() if (repo_root / mirror).is_dir() else None
+
+
 def infer_test_path(changed: str, *, repo_root: Path = REPO_ROOT) -> str | None:
     name = Path(changed).name
     if not changed.endswith(".py"):
@@ -382,6 +398,11 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             # Fixture module, not a collectable test. Passing it as an explicit
             # target collides with tests/**/conftest.py (import file mismatch).
             continue
+        # Added on top of every other selection: the branches below each end
+        # in `continue` and know nothing of the mirror tree.
+        mirror = skill_mirror_tests(path)
+        if mirror and mirror not in selected:
+            selected.append(mirror)
         inferred = infer_test_path(path)
         if inferred:
             if inferred not in selected:
