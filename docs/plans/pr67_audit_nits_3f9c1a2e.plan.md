@@ -36,7 +36,7 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-10-29T15:52:00Z
-    body_sha256: "5bab77a5c77efe046beaa4c57fa75fd18623cb447923ad54c04307f36106d710"
+    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
     deltas:
       - "T4 anchored to context_closure.py:218 with its test placed beside test_an_unbound_selected_item_is_detected_by_closure, reusing the _context/_plan/_requirement/law helpers"
       - "Success criterion 5 states that T2 fails on base by construction (pack= is absent at b87a5e79) instead of implying a behavioural fail-before"
@@ -44,7 +44,7 @@ kernel_pass:
   recursive_alignment:
     kernel: kernels/Recursive Alignment.md
     ran_at: 2026-10-29T15:54:00Z
-    body_sha256: "5bab77a5c77efe046beaa4c57fa75fd18623cb447923ad54c04307f36106d710"
+    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
     deltas:
       - "Out-of-scope reason for the liveness twin aligned to evidence: validate_runtime_semantic_liveness (liveness.py:101) takes no requirement_plan"
       - "Preserved contract added: check name every_selected_item_has_relevance_binding stays in REQUIRED_CHECKS (context_closure.py:72), so a closure receipt is unchanged"
@@ -52,7 +52,7 @@ kernel_pass:
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-10-29T15:56:00Z
-    body_sha256: "5bab77a5c77efe046beaa4c57fa75fd18623cb447923ad54c04307f36106d710"
+    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
     deltas:
       - "Repaired PLAN_DOCUMENT unknowns to the schema object shape (G_SCHEMA failure on first validation)"
       - "Validated: validate_plan_document.py PASS and section receipt PASS after re-render"
@@ -561,4 +561,3 @@ todos:
     content: <todo_content>
     status: pending
 ```
-

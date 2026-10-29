@@ -1,11 +1,11 @@
 {
   "schema_version": "1.0.0",
   "kind": "simple_plan_section_receipt",
-  "generated_at": "2026-10-29T15:46:20.085856+00:00",
+  "generated_at": "2026-10-29T15:57:01.606789+00:00",
   "plan_json_path": "docs/plans/pr67_audit_nits_3f9c1a2e.plan.json",
   "plan_md_path": "docs/plans/pr67_audit_nits_3f9c1a2e.plan.md",
   "plan_json_sha256": "b73fda377c0e0cf2943f3dc8510f1a9160125577c2862201b6bb7b971d5425a2",
-  "plan_md_sha256": "6c76abd031bd01678ecb981b3e614d4d066173a4a3cead15c2430f9f6c676965",
+  "plan_md_sha256": "34c3293776fbc7383cc681f45a413c2ec91469042984d358a00a3eb86e168c06",
   "section_schema_ref": "skills/_archived/l9-plan/schemas/plan-document.schema.json",
   "template_ref": "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",
   "handoff_mode": "cursor-build",
