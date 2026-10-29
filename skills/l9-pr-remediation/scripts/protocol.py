@@ -114,7 +114,12 @@ FINDING_REQUIRED = (
 )
 PLAN_FINDING_REQUIRED = FINDING_REQUIRED
 VERIFY_COMMAND = "make precommit-repo"
-PUBLISH_COMMAND = "PR_STACK=auto PR_REMEDIATE=0 make pr"
+# CANONICAL_LAW §6.2.10 (2026-10-04) / ADR-0052 File-Scope Invariant: two sanctioned routes.
+# Scope (are all touched files already in the PR?) is enforced at push time by
+# ops/autonomy/first_publication_gate.py, which alone knows the PR file list.
+PUBLISH_IN_SCOPE = "git push"
+PUBLISH_SCOPE_EXPANSION = "PR_STACK=auto PR_REMEDIATE=0 make pr"
+PUBLISH_COMMANDS = (PUBLISH_IN_SCOPE, PUBLISH_SCOPE_EXPANSION)
 IMPROVE_COMMAND = "make improve"
 FORBIDDEN_VERIFY = (
     "make pr",
@@ -270,7 +275,8 @@ def discover_gate_registry(cwd: Path | None = None) -> dict[str, Any]:
         "makefile": makefile,
         "public": {
             "verify": VERIFY_COMMAND,
-            "publish": PUBLISH_COMMAND,
+            "publish": PUBLISH_IN_SCOPE,
+            "publish_scope_expansion": PUBLISH_SCOPE_EXPANSION,
             "improve": IMPROVE_COMMAND,
         },
         "leftover_workflow_run": leftover if not makefile else [],
@@ -292,9 +298,13 @@ def validate_gate_registry(registry: dict[str, Any] | None) -> list[str]:
     public = registry.get("public") or {}
     if public.get("verify") != VERIFY_COMMAND:
         errors.append(f"verify must be {VERIFY_COMMAND!r}")
-    if public.get("publish") != PUBLISH_COMMAND:
-        errors.append(f"publish must be {PUBLISH_COMMAND!r}")
-    leftover = registry.get("leftover_workflow_run") or []
+    if public.get("publish") not in PUBLISH_COMMANDS:
+        errors.append(f"publish must be one of {list(PUBLISH_COMMANDS)!r}")
+    if "publish_scope_expansion" in public and (
+        public["publish_scope_expansion"] != PUBLISH_SCOPE_EXPANSION
+    ):
+        errors.append(f"publish_scope_expansion must be {PUBLISH_SCOPE_EXPANSION!r}")
+    leftover =registry.get("leftover_workflow_run") or []
     if registry.get("makefile") and leftover:
         errors.append("leftover_workflow_run must be empty when Makefile exists")
     return errors
@@ -375,8 +385,8 @@ def validate_plan(plan: dict[str, Any], findings: list[dict[str, Any]] | None = 
     policy = body.get("commit_policy") or {}
     if policy.get("commits") != 1:
         errors.append("commit_policy.commits must be 1")
-    if policy.get("publish") != PUBLISH_COMMAND:
-        errors.append(f"commit_policy.publish must be {PUBLISH_COMMAND!r}")
+    if policy.get("publish") not in PUBLISH_COMMANDS:
+        errors.append(f"commit_policy.publish must be one of {list(PUBLISH_COMMANDS)!r}")
     if policy.get("no_verify") is True:
         errors.append("commit_policy.no_verify must be false")
 
@@ -487,8 +497,8 @@ def validate_gate(
             errors.append("push_record.commit_sha must be 40-char hex")
         if record.get("publish_count_this_cycle") != 1:
             errors.append("publish_count_this_cycle must be 1")
-        if record.get("publish_command") != PUBLISH_COMMAND:
-            errors.append(f"publish_command must be {PUBLISH_COMMAND!r}")
+        if record.get("publish_command") not in PUBLISH_COMMANDS:
+            errors.append(f"publish_command must be one of {list(PUBLISH_COMMANDS)!r}")
         base_sha = str(record.get("base_sha") or receipt.get("base_sha") or "")
         workspace = Path(str(record.get("workspace") or receipt.get("workspace") or Path.cwd()))
         if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
