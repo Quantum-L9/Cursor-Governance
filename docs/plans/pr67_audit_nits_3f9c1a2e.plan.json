@@ -1,0 +1,305 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Close the PR #67 audit nits in l9-cognitive-runtime",
+  "objective": "Fix the three non-blocking audit findings on PR #67 that need no owner decision: route MCP pack resources and adapter templates through manifest-verified reads, fail closed on malformed adapter placeholder markers, and bind closure relevance to planned requirements",
+  "success_criteria": [
+    "MCP kernels/{id} and schemas/{name} resources read through RuntimePack.read_verified: a post-load tampered or unlisted file raises instead of being served",
+    "AdapterRenderer(pack=RuntimePack) renders listed templates through read_verified; a tampered listed template or an unlisted on-disk template fails closed; pack_root mode is unchanged",
+    "A template containing a brace-bearing token such as {{a{b}}} fails closed with 'adapter template left placeholders unresolved'; every shipped template still renders",
+    "ContextClosureValidator check every_selected_item_has_relevance_binding fails when an item's selected_because names a requirement id absent from requirement_plan",
+    "Each new regression test fails on b87a5e79 sources (T2 fails by construction: pack= does not exist on base) and passes after the fix",
+    "ruff check, ruff format --check, mypy strict, and the full pytest suite pass in the worktree"
+  ],
+  "scope": {
+    "in": [
+      "src/l9_cognitive_runtime/mcp/__init__.py _read_pack_file",
+      "src/l9_cognitive_runtime/compiler/adapters.py AdapterRenderer template read and placeholder residue check",
+      "src/l9_cognitive_runtime/compiler/context_closure.py check 4",
+      "regression tests in tests/test_mcp_stdio.py, tests/test_gar_adapter_packet.py, tests/test_context_compiler.py"
+    ],
+    "out": [
+      "Audit nit 3 (CLI raw-size pre-read bound): conflicts with the RU-16 documented rule that file formatting neither admits nor refuses a payload; owner decision required",
+      "liveness.py check 19 twin of the relevance binding: validate_runtime_semantic_liveness (liveness.py:101) receives no requirement_plan, so plan membership cannot be checked there",
+      "l9-pr-digest tooling defects in Cursor-Governance",
+      "CONTEXT_COMPILER_SEMANTICS_VERSION bump (compiled output is unchanged)",
+      "Edits to PR #67 branch history"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind worktree /home/user/l9-cr-pr67-nits on branch agent/claude-code/pr67-audit-nits at b87a5e79 (PR #67 head, the unique open-PR chain owning these paths)",
+      "pass_criteria": "git log -1 = b87a5e7",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "build a sealed deployment pack and list provenance.file_digests",
+      "pass_criteria": "schemas/*, kernels/*, runtime/contract_compiler/adapters/*.md are manifest-listed",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "grep shipped adapter templates for brace tokens",
+      "pass_criteria": "only the 17 known {{token}} keys appear",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "uv sync --extra dev --frozen --no-install-project --no-build",
+      "pass_criteria": "environment synced from frozen lock",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Serve MCP schema and kernel resources through pack.read_verified and add tamper and unlisted-file regression tests",
+      "files": [
+        "src/l9_cognitive_runtime/mcp/__init__.py",
+        "tests/test_mcp_stdio.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_read_pack_file in build_server",
+      "leverage_rank": 1,
+      "shared_root_cause": "semantic pack files read outside the verified-read path"
+    },
+    {
+      "id": "T2",
+      "task": "Add AdapterRenderer pack= verified mode: listed template via read_verified, unlisted on-disk template fails closed, absent template uses DEFAULT_TEMPLATE; pack and pack_root are mutually exclusive",
+      "files": [
+        "src/l9_cognitive_runtime/compiler/adapters.py",
+        "tests/test_gar_adapter_packet.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Wrap",
+      "anchor": "AdapterRenderer.__init__ and _render_template template read",
+      "leverage_rank": 2,
+      "shared_root_cause": "semantic pack files read outside the verified-read path"
+    },
+    {
+      "id": "T3",
+      "task": "Fail closed when template text still carries a {{ or }} marker after known tokens are removed; regression test with {{a{b}}}",
+      "files": [
+        "src/l9_cognitive_runtime/compiler/adapters.py",
+        "tests/test_gar_adapter_packet.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Insert",
+      "anchor": "unresolved computation in _render_template",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T4",
+      "task": "Extend closure check 4 so selected_because must be a non-empty subset of planned requirement ids; regression test with a forged unplanned binding",
+      "files": [
+        "src/l9_cognitive_runtime/compiler/context_closure.py",
+        "tests/test_context_compiler.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "# 4. Nothing is in the context without a reason it is there. (context_closure.py:218); test beside test_an_unbound_selected_item_is_detected_by_closure using _context/_plan/_requirement/law helpers",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T5",
+      "task": "Run the CLAUDE.md verify block and prove each new test fails on b87a5e79 sources",
+      "files": [
+        "tests/"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "operation": "Create",
+      "anchor": "verification only",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "T2",
+    "T3",
+    "T5"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "verified-read path covers MCP resources and adapter templates",
+      "unlocks": "T3 placeholder hardening on the same render path"
+    },
+    {
+      "id": "M2",
+      "outcome": "all three fixes land with fail-before regression tests and a green local gate",
+      "unlocks": "stacked PR publication on PR #67"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "tests/test_mcp_stdio.py and tests/test_gar_adapter_packet.py pass; tests/test_deployment_pack.py still passes",
+      "no_go_action": "stop; a sealed-pack resource no longer resolving means the manifest does not cover it, re-scope T1"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "ruff, ruff format, mypy strict, full pytest green; new tests red against b87a5e79 src",
+      "no_go_action": "block publication and repair"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "fixes narrow existing INV-CTX-031 projection fidelity and verified-read behaviour; no invariant text changes"
+    },
+    {
+      "surface": "AGENTS.md / CLAUDE.md",
+      "action": "n_a",
+      "reason": "no operating instruction or verify command changes"
+    },
+    {
+      "surface": "ADAPTER_RENDER.md",
+      "action": "n_a",
+      "reason": "adapter projection content is unchanged; the pack= mode is an additive constructor option documented in the class docstring"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any sealed or fixture pack serve a schema or kernel resource that its manifest does not list?",
+      "Does any shipped or default template contain a literal {{ or }} outside a known token?",
+      "Does the compiler ever emit selected_because ids that are not requirement_plan ids, for example memory or kernel bindings?",
+      "Does an external host already pass a verified pack root as pack_root and expect silent default fallback?"
+    ],
+    "assumed_false_ifs": [
+      "tests/test_deployment_pack.py fails after T1",
+      "any existing adapter render test fails after T3",
+      "any existing compile test fails closure after T4"
+    ],
+    "blast_radius": "MCP resource reads, adapter projection for hosts, and context closure for every compile; a wrong T4 would fail every compile closed",
+    "rollback": "revert the stacked PR or the individual unit commit; no data, migration, or external state"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5"
+    ],
+    "shared_causes": [
+      "semantic pack files read outside RuntimePack.read_verified"
+    ],
+    "deletions_or_consolidations": [
+      "none; reuse RuntimePack.read_verified rather than a second verified reader"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "T4 rejects a compiler-built context whose selected_because carries a non-requirement reason",
+      "mitigation": "full pytest suite plus integration compiles must stay green; inspect task_context selection.reasons source"
+    },
+    {
+      "risk": "T1 breaks an MCP resource for a file present in the pack but omitted from the manifest",
+      "mitigation": "sealed deployment pack lists schemas and kernels (P1); deployment pack tests cover both resources"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-01",
+      "question": "Should the CLI apply a raw file-size bound before reading a snapshot (audit nit 3), given RU-16 documents that file formatting neither admits nor refuses a payload?",
+      "decision_effect": "Excluded from this plan; a raw bound would add a non-canonical ceiling under INV-CTX-007",
+      "resolution": "ask"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "uv run --no-sync --no-build ruff check src tests && uv run --no-sync --no-build ruff format --check src tests",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "uv run --no-sync --no-build mypy src tests",
+      "pass_criteria": "no issues",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "uv run --no-sync --no-build python -m pytest -q",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "repo has no pre-commit config; pr-check.yml gates mirrored by V1-V3",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "UNK-01"
+    ],
+    "next_skill": "l9-pr-remediation",
+    "stop_reason": "plan validated; UNK-01 is excluded scope awaiting owner decision"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "src/l9_cognitive_runtime/mcp/__init__.py",
+      "src/l9_cognitive_runtime/compiler/adapters.py",
+      "src/l9_cognitive_runtime/compiler/context_closure.py",
+      "tests/test_mcp_stdio.py",
+      "tests/test_gar_adapter_packet.py",
+      "tests/test_context_compiler.py"
+    ],
+    "must_not_modify": [
+      "src/l9_cognitive_runtime/cli.py",
+      "src/l9_cognitive_runtime/models/context.py",
+      "runtime/",
+      "MANIFEST.json",
+      "uv.lock"
+    ],
+    "preserved_contracts": [
+      "INV-CTX-007 formatting-neutral canonical ingress bound",
+      "INV-CTX-031 projection fidelity",
+      "pack_root adapter mode behaviour and compile_from_root unverified label",
+      "closure check names unchanged",
+      "check name every_selected_item_has_relevance_binding stays in REQUIRED_CHECKS (context_closure.py:72)"
+    ],
+    "validation_commands": [
+      "uv run --no-sync --no-build ruff check src tests",
+      "uv run --no-sync --no-build ruff format --check src tests",
+      "uv run --no-sync --no-build mypy src tests",
+      "uv run --no-sync --no-build python -m pytest -q"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "verified MCP resource reads",
+    "verified adapter template reads",
+    "malformed placeholder fail-closed",
+    "closure relevance bound to plan",
+    "local gate green"
+  ],
+  "estimate": "1 GMP"
+}
