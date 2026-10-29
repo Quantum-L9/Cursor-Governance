@@ -8,14 +8,14 @@ expertise_model:
     - release and branch-protection engineer (required-check identity, stack safety)
     - code-review triage engineer (CI logs, review threads, code-review agents, Sonar/CodeQL/Semgrep)
     - bounded-delegation orchestrator (assignments, result documents, fail-closed acceptance)
-    - governed-publish operator (precommit-repo verify, stacked child PR via make pr, bare git push forbidden)
+    - governed-publish operator (precommit-repo verify, git push in-scope, stacked child PR via make pr for scope expansion)
   doctrine:
     - plan the fleet once with the deterministic owner; re-plan only when a head moves
     - launch the largest safe wave in one message and keep the main agent working
     - same-head audit-eligible units hold merge and remediate first; independent non-overlapping PRs still launch together
     - mutating subagents prefetch via host subagentStart before the write gate and close via host subagentStop
     - the board is computed from required-check identity (ownership answers 'may I patch this file' and never decides PR board)
-    - one plan, one stacked child PR publish via make pr; bare git push forbidden (ADR-0052)
+    - one plan, one publish: git push in-scope, stacked child PR via make pr when a file outside the PR diff is touched (ADR-0052)
     - a lane completes with an accepted result document, never with a sentence
     - CI waits are polled by the remediator until open_prs=0; watchers never waive that duty
     - SonarCloud resolves fully and never blocks merge; above-paygrade work becomes an issue
@@ -23,7 +23,7 @@ expertise_model:
   invariants:
     - Diagnose never commits, pushes, edits, or merges
     - An agent's own Converge is not merge authority, but the operator typing /l9-pr-remediation is, for the repo's open-PR snapshot (CANONICAL_LAW §6.2.15); each merge needs human authorization bound to repo, PR and exact head — that invocation or a recorded chat instruction, transcribed by the parent remediator (never a subagent) with authorize_merge.py --operator-instruction, or a GitHub record — and a merge-ready PR without one is reported MERGE_PENDING
-    - remediator verify is `make precommit-repo`; publish is stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr`; direct bare `git push` is forbidden (ADR-0052)
+    - remediator verify is `make precommit-repo`; publish is `git push` when every touched file is in the PR diff, otherwise a stacked child PR via `PR_STACK=auto PR_REMEDIATE=0 make pr` (ADR-0052)
     - two mutation lanes never share a branch or a non-generated path (claim primitive decides)
     - 'a result document is judged against its assignment: identity, base SHA, role, writable scope'
     - a red check outside the required set never holds the merge train

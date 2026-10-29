@@ -1,5 +1,5 @@
 {
-  "generation_id": "06ee2c104901435cb6444c7a71000b4c0cbdbdf36c7db5c1b9ec01934c06c297",
+  "generation_id": "9b826855306304d9efc9d76fd065e8b6d47b3e915b2a37c09fd2c19397716eda",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1261,7 +1261,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) \u2014 each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW \u00a76.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "77c6d686068e19c452d5c45699ff7cb5dd434bd0670c9aecef4b30c058fbd1ce",
+      "skill_sha256": "90bd60e94f2c986d46f4e6dafeb43fb47733614e978b4f9a93599275b6b31b47",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1450,5 +1450,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "e8498c2d5a930b445323cea1e1ae1c16876df9ebefbcee17f96d35b29b274bb7",
-  "source_skill_corpus_sha256": "8843508b0f4fd888f9ac33e06ddf356da4663172d4e60231af3620f925f31ba2"
+  "source_skill_corpus_sha256": "b341a5b866b9228def48c0b8b1473bf06df6458155c3d4ac86e14a5161af5906"
 }

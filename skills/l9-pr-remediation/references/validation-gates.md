@@ -44,8 +44,8 @@ gate_registry:
 ```
 
 Validation:
-- [ ] `verify` is `make precommit-repo` and remediator `publish` is `PR_STACK=auto PR_REMEDIATE=0 make pr`
-- [ ] Bare `git push` to an existing open PR branch is forbidden (ADR-0052)
+- [ ] `verify` is `make precommit-repo`; remediator `publish` is `git push` (in-scope) and `publish_scope_expansion` is `PR_STACK=auto PR_REMEDIATE=0 make pr`
+- [ ] In-place `git push` of a fix that touches a file outside the PR diff is forbidden (ADR-0052)
 - [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
 - [ ] Workflow `run:` leftover is empty when `precommit-repo` exists
 
@@ -134,7 +134,7 @@ Validation:
 
 ## Gate E: Single Commit, Single Publish
 
-**After commit + stacked publish via `make pr`**
+**After commit + scope-invariant publish**
 
 Required artifact:
 ```yaml
@@ -143,7 +143,7 @@ push_record:
   commit_message: "fix(pr-remediation): resolve {count} findings"
   files_in_commit: {integer}
   publish_count_this_cycle: 1
-  publish_command: "PR_STACK=auto PR_REMEDIATE=0 make pr"
+  publish_command: "git push"  # or "PR_STACK=auto PR_REMEDIATE=0 make pr" for scope expansion
   branch: "{branch_name}"
   published_at: "{ISO timestamp}"
 ```
@@ -153,7 +153,7 @@ Validation:
 - [ ] `commit_sha` is a valid 40-char hex string
 - [ ] Commit message follows `fix(pr-remediation): resolve {count} findings` plus `Remediation-Cycle:` trailer
 - [ ] `git log --oneline HEAD~1..HEAD` returns exactly 1 line
-- [ ] Publish was stacked remediation `PR_STACK=auto PR_REMEDIATE=0 make pr`, bare `git push` forbidden
+- [ ] Publish was `git push` with every touched file already in the PR diff, or a stacked remediation `PR_STACK=auto PR_REMEDIATE=0 make pr`
 
 **STOP if:** Publish failed → check auth, remote, branch protection. Ask user if needed.
 
