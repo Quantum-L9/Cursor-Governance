@@ -36,7 +36,7 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-10-29T15:52:00Z
-    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
+    body_sha256: "8d22e08466e439b764d5db17b3eb2d6769f77627e90166ae8042efe4d46620f9"
     deltas:
       - "T4 anchored to context_closure.py:218 with its test placed beside test_an_unbound_selected_item_is_detected_by_closure, reusing the _context/_plan/_requirement/law helpers"
       - "Success criterion 5 states that T2 fails on base by construction (pack= is absent at b87a5e79) instead of implying a behavioural fail-before"
@@ -44,7 +44,7 @@ kernel_pass:
   recursive_alignment:
     kernel: kernels/Recursive Alignment.md
     ran_at: 2026-10-29T15:54:00Z
-    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
+    body_sha256: "8d22e08466e439b764d5db17b3eb2d6769f77627e90166ae8042efe4d46620f9"
     deltas:
       - "Out-of-scope reason for the liveness twin aligned to evidence: validate_runtime_semantic_liveness (liveness.py:101) takes no requirement_plan"
       - "Preserved contract added: check name every_selected_item_has_relevance_binding stays in REQUIRED_CHECKS (context_closure.py:72), so a closure receipt is unchanged"
@@ -52,7 +52,7 @@ kernel_pass:
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-10-29T15:56:00Z
-    body_sha256: "790c5013093e24cc0e236973038952c814b9c2ef4e4e86a67d4ebb34f6fe30ab"
+    body_sha256: "8d22e08466e439b764d5db17b3eb2d6769f77627e90166ae8042efe4d46620f9"
     deltas:
       - "Repaired PLAN_DOCUMENT unknowns to the schema object shape (G_SCHEMA failure on first validation)"
       - "Validated: validate_plan_document.py PASS and section receipt PASS after re-render"
@@ -139,15 +139,15 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 
 | Field | Value |
 |-------|-------|
-| plan_id | `plan.<domain>.<slug>.v1` |
+| plan_id | `plan.l9-cognitive-runtime.pr67-audit-nits.v1` |
 | name | *(same as frontmatter `name`)* |
 | overview | *(same as frontmatter `overview`)* |
 | schema_version | `1.0.0` |
-| status | `n/a` — `draft` \| `preflight_blocked` \| `executable` \| `in_progress` \| `validation_failed` \| `converged` \| `superseded` |
+| status | `in_progress` — `draft` \| `preflight_blocked` \| `executable` \| `in_progress` \| `validation_failed` \| `converged` \| `superseded` |
 | is_project | *(frontmatter `isProject`)* |
-| owner | `n/a` |
-| created_at | `n/a` |
-| updated_at | `n/a` |
+| owner | `claude-code` |
+| created_at | `2026-10-29T15:40:00Z` |
+| updated_at | `2026-10-29T16:05:00Z` |
 
 ## Architect framing
 
@@ -229,15 +229,15 @@ Mutations outside this envelope are forbidden (PLAN-SCHEMA-004).
 
 ### Commands
 
-- **allow:** `uv run --no-sync --no-build ruff|mypy|pytest; scoped git add/commit; make pr`
+- **allow:** `uv run --no-sync --no-build ruff|mypy|pytest; scoped git add/commit; gmp_executor.py start|finalize; l4_local.py begin|authorize-release; PR_REMEDIATE=0 make pr`
 - **deny:** `history rewrite, branch switching in the primary clone, any Program Execution campaign target`
 
 ### Network
 
 | Field | Value |
 |-------|-------|
-| mode | `read_only` — `none` \| `read_only` \| `named_services_only` \| `existing_tunnel_only` \| `bounded_external_write` |
-| allowed_services | `api.github.com via gh api (read)` |
+| mode | `bounded_external_write` — `none` \| `read_only` \| `named_services_only` \| `existing_tunnel_only` \| `bounded_external_write` |
+| allowed_services | `github.com Quantum-L9/l9-cognitive-runtime only: git push of agent/claude-code/pr67-audit-nits and one PR open/update via make pr; gh api reads` |
 
 ### Secrets
 
@@ -249,7 +249,7 @@ Mutations outside this envelope are forbidden (PLAN-SCHEMA-004).
 ### Autonomous merge
 
 `autonomous_merge:` `false` always in packet + PE `COMPATIBILITY.yaml` (forbidden).
-**Merge for this plan** only after PE verify/handoff path + [@autonomy](commands/autonomy.md) join on this L4 plan/PE stack, green+mergeable (see Execute section). Outside that stack → denied.
+**Merge for this plan:** never from Build or `make pr`. The stacked PR merges only after its parent PR #67, green and mergeable, through the human-authorized merge path (`rules/48-make-pr-remediation`, `rules/88-l4-local-autonomy`). Program Execution is retired and is not a prerequisite.
 
 ## Side effects and idempotency
 
@@ -380,11 +380,11 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 
 | evidence_id | claim_id / SP | evidence_kind | method | command | expected_positive | status |
 |-------------|---------------|---------------|--------|---------|-------------------|--------|
-| E1 | SP1 | runtime_behavior_evidence | pytest | pytest tests/test_mcp_stdio.py | pass on head, fail on b87a5e79 src | not_run |
-| E2 | SP2 | runtime_behavior_evidence | pytest | pytest tests/test_gar_adapter_packet.py | pass on head, fail on b87a5e79 src | not_run |
-| E3 | SP3 | runtime_behavior_evidence | pytest | pytest tests/test_gar_adapter_packet.py | pass on head, fail on b87a5e79 src | not_run |
-| E4 | SP4 | runtime_behavior_evidence | pytest | pytest tests/test_context_compiler.py | pass on head, fail on b87a5e79 src | not_run |
-| E5 | SP5 | quality_gate_evidence | CLAUDE.md verify block | ruff/mypy/pytest | exit 0 | not_run |
+| E1 | SP1 | runtime_behavior_evidence | pytest | pytest tests/test_mcp_stdio.py | pass on head, fail on b87a5e79 src | passed |
+| E2 | SP2 | runtime_behavior_evidence | pytest | pytest tests/test_gar_adapter_packet.py | pass on head, fail on b87a5e79 src | passed |
+| E3 | SP3 | runtime_behavior_evidence | pytest | pytest tests/test_gar_adapter_packet.py | pass on head, fail on b87a5e79 src | passed |
+| E4 | SP4 | runtime_behavior_evidence | pytest | pytest tests/test_context_compiler.py | pass on head, fail on b87a5e79 src | passed |
+| E5 | SP5 | quality_gate_evidence | CLAUDE.md verify block | ruff/mypy/pytest | exit 0 | passed |
 
 `evidence_kind` ∈ `repository_state_evidence` | `property_evidence` | `structural_evidence` | `runtime_behavior_evidence` | `quality_gate_evidence`
 
@@ -436,7 +436,7 @@ Convergence requires all blocking evidence + gates (PLAN-SCHEMA-015).
 |-------|-------|
 | convergence_id | `conv.pr67_audit_nits_3f9c1a2e` |
 | source_ref | `pr67_audit_nits_3f9c1a2e` |
-| current_state | `execution_ready` — `draft` \| `preflight_blocked` \| `execution_ready` \| `executing` \| `validation_failed` \| `partial` \| `converged` |
+| current_state | `partial` — `draft` \| `preflight_blocked` \| `execution_ready` \| `executing` \| `validation_failed` \| `partial` \| `converged` |
 | implementation_ready | `true` |
 
 ### Gates
@@ -460,8 +460,8 @@ Convergence requires all blocking evidence + gates (PLAN-SCHEMA-015).
 ### Evidence
 
 - **required_evidence_refs:** `E1-E5`
-- **observed_evidence_refs:** `none yet`
-- **missing_evidence:** `E1-E5`
+- **observed_evidence_refs:** `E1-E5 passed on 7c9f676 (Quantum-L9/l9-cognitive-runtime#68): 495 passed; 8 new tests fail on b87a5e79 src`
+- **missing_evidence:** `merge of parent #67, then #68`
 
 ### Blockers / unknowns
 
