@@ -304,7 +304,7 @@ def validate_gate_registry(registry: dict[str, Any] | None) -> list[str]:
         public["publish_scope_expansion"] != PUBLISH_SCOPE_EXPANSION
     ):
         errors.append(f"publish_scope_expansion must be {PUBLISH_SCOPE_EXPANSION!r}")
-    leftover =registry.get("leftover_workflow_run") or []
+    leftover = registry.get("leftover_workflow_run") or []
     if registry.get("makefile") and leftover:
         errors.append("leftover_workflow_run must be empty when Makefile exists")
     return errors
