@@ -1,0 +1,352 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Claude Code bootstrap friction fixes (EIE C1 governance handoff)",
+  "objective": "Remove the five Claude Code bootstrap frictions recorded in the EIE PR #259 governance handoff: worktree setup writing into consumer AGENTS.md/CLAUDE.md, the L4 gate refusing WS=\"$PWD\" and make -n pr, session-deps overlaying requirements files onto venvs it does not own, the PR composer leaving human sections unfilled with no input for them, and conformance receipts pinned to an old .github revision.",
+  "success_criteria": [
+    "worktree_add_wired.sh on a consumer repo with tracked AGENTS.md/CLAUDE.md leaves git status --porcelain empty in the new worktree (new test red on 774acf2, green after)",
+    "local_execution_gate does not classify make -n/--dry-run/--just-print/--recon/-q/--question pr as publication; MAKEFLAGS=n stays classified (tests red then green)",
+    "make -C <dir> pr WS=\"$PWD\" resolves the receipt workspace to the hook cwd (or a preceding literal cd); any other unresolvable WS= on make pr is denied with a message naming the fix (tests red then green); test_make_ws_does_not_expand_env stays green",
+    "session_deps_cloud.sh never installs into an existing .venv it did not create (no owner marker and no prior .l9-pip-applied); it reports that repo owner-managed without a stamp (test red then green)",
+    "compose_pr_body.py accepts an agent-authored .l9/pr/pr-intent.json bound to HEAD that supplies title, Problem and Reviewer focus; a stale head is ignored with WARN; open_pr_after_gate.sh passes it and, on an already-open PR, replaces only the composer's own unresolved markers and PATCHes the title only when intent.title is present (tests red then green)",
+    "generated/governance/coding_agent_execution is pinned to .github@3dcdeaae355b6de08562993f705084d7a3714bfd; produce_projection_bundle.py --check exits 0; coding_projection_status.py --expect-main 3dcdeaa reports CURRENT; verify_canonical_binding.py exits 0 BOUND",
+    "all touched test modules pass and make pr gate passes"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/worktree_add_wired.sh",
+      "ops/autonomy/local_execution_gate.py",
+      "ops/autonomy/command_parse.py",
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+      "ops/scripts/compose_pr_body.py",
+      "ops/scripts/open_pr_after_gate.sh",
+      "generated/governance/coding_agent_execution/",
+      "rules/48-make-pr-remediation.mdc and its generated projections",
+      "tests for each of the above"
+    ],
+    "out": [
+      "agentdocs.sh behaviour on sessionStart and make ide-profile (intended consumer formatter block stays)",
+      "workspace_roots.py discovery semantics (shared with memory hydration)",
+      "removal of already-installed stale packages from existing venvs",
+      "a fail-closed PR_REQUIRE_INTENT switch",
+      "architecture_intelligence and other projection bundles",
+      "scheduled regeneration workflow for the coding-agent bundle (needs GH_TOKEN for the private compiler)",
+      "consumer repository edits (EIE)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind worktree /root/.l9/gov-worktrees/claude-code__bootstrap-friction-fixes on agent/claude-code/bootstrap-friction-fixes from origin/main@774acf2 via agent_worktree_start.sh",
+      "pass_criteria": "clean tree, base_sha recorded in .l9/agent-tasks",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "open PR board for Quantum-L9/Cursor-Governance (gh api pulls?state=open)",
+      "pass_criteria": "empty board, so origin/main is a legal base",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "plan_memory_prefetch.py (MEMORY_PREFETCH namespace=cursor-governance, snapshot 5cba9752, 1 record = EIE governance handoff, 0 conflicts)",
+      "pass_criteria": "state HIT, conflicts 0",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "five read-only research reports with file:line root causes (agentdocs path, gate tokenizer, session-deps pip path, composer inputs, projection bundle freshness)",
+      "pass_criteria": "each defect has a cited root cause and named existing tests",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": ".pre-commit-config.yaml is the hook catalog; make pr runs the changed-file gate",
+      "pass_criteria": "named",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Regenerate the coding-agent-execution projection bundle at .github@3dcdeaa with the compiler at its protected-main HEAD e07a143, then replay-check and verify",
+      "files": [
+        "generated/governance/coding_agent_execution/bundle.lock.json",
+        "generated/governance/coding_agent_execution/receipts/authority_model.receipt.json",
+        "generated/governance/coding_agent_execution/receipts/contracts.receipt.json",
+        "generated/governance/coding_agent_execution/receipts/invariants.receipt.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "tools/authority/produce_projection_bundle.py --profile l9.projection/coding-agent-execution@1",
+      "leverage_rank": 5,
+      "shared_root_cause": "no workflow re-cuts this bundle when .github moves"
+    },
+    {
+      "id": "T2",
+      "task": "Run ensure_workspace_wired.sh links-only from worktree_add_wired.sh so worktree creation never reaches install_ide_profile/agentdocs; add a regression test on a fixture consumer repo with tracked AGENTS.md and CLAUDE.md",
+      "files": [
+        "ops/scripts/worktree_add_wired.sh",
+        "tests/ops/scripts/test_worktree_add_wired_clean.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "worktree_add_wired.sh:50 bash \"$SCRIPT_DIR/ensure_workspace_wired.sh\" \"$path\"",
+      "leverage_rank": 1,
+      "shared_root_cause": "worktree creation ran the full IDE reconciler instead of the links-only path every other worktree creator uses"
+    },
+    {
+      "id": "T3",
+      "task": "Exempt GNU make dry-run/question flags (-n, --just-print, --dry-run, --recon, -q, --question, short groups containing n or q) from make pr publication classification using the same scan as make_goals; add a test that the pr dependency chain has no + or $(MAKE) recipe lines",
+      "files": [
+        "ops/autonomy/local_execution_gate.py",
+        "tests/ops/autonomy/test_publish_path_gate.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "local_execution_gate.py _make_gate_only",
+      "leverage_rank": 2,
+      "shared_root_cause": "gate tokenizer treats every option as inert"
+    },
+    {
+      "id": "T4",
+      "task": "Resolve WS=$PWD / ${PWD} / $(pwd) / `pwd` (whole dequoted value only) to the shell cwd (preceding literal cd, else hook payload cwd) in effective_root and extract_named_roots; skip make -C as a named root whenever WS= is present; deny make pr with an unresolvable WS= with a message naming the literal-path fix",
+      "files": [
+        "ops/autonomy/local_execution_gate.py",
+        "ops/autonomy/command_parse.py",
+        "tests/ops/autonomy/test_effective_root.py",
+        "tests/ops/autonomy/test_command_parse.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "_resolve_named_workspace / extract_named_roots skip_make_dash_c",
+      "leverage_rank": 3,
+      "shared_root_cause": "gate tokenizer treats every option as inert"
+    },
+    {
+      "id": "T5",
+      "task": "session_deps_cloud.sh writes .venv/.l9-pip-owner when it creates a venv; an existing .venv with neither that marker nor .l9-pip-applied is reported owner-managed with no install and no stamp",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "tests/environment/adapters/test_session_deps_cloud.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "provision_pip_venv existing .venv/bin/python branch",
+      "leverage_rank": 4,
+      "shared_root_cause": "helper did not track who built a venv"
+    },
+    {
+      "id": "T6",
+      "task": "Add --intent-file (l9.pr_intent.v1: title, problem, reviewer_focus, head) to compose_pr_body.py for title, Problem and Reviewer focus; open_pr_after_gate.sh passes .l9/pr/pr-intent.json when present and on an already-open PR PATCHes title only when intent.title exists; document in rule 48 and regenerate projections",
+      "files": [
+        "ops/scripts/compose_pr_body.py",
+        "ops/scripts/open_pr_after_gate.sh",
+        "ops/scripts/tests/test_compose_pr_body.py",
+        "tests/ops/scripts/test_pr_lifecycle.py",
+        "rules/48-make-pr-remediation.mdc"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "compose_pr_body.py _fill_template / --print-title; open_pr_after_gate.sh compose call and reopen PATCH",
+      "leverage_rank": 6,
+      "shared_root_cause": "composer had no input for author prose"
+    }
+  ],
+  "critical_path": [
+    "T3",
+    "T4"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "receipts current and worktree setup clean (T1, T2)",
+      "unlocks": "gate work"
+    },
+    {
+      "id": "M2",
+      "outcome": "L4 gate fixes green (T3, T4)",
+      "unlocks": "deps and composer work"
+    },
+    {
+      "id": "M3",
+      "outcome": "session-deps and composer fixes green (T5, T6)",
+      "unlocks": "publication"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "bundle --check exit 0, status CURRENT, new worktree test red on base then green",
+      "no_go_action": "stop and diagnose before touching the gate"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "tests/ops/autonomy full module set green; new tests red on base",
+      "no_go_action": "block; the gate fails closed for every surface"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "test_session_deps_cloud.py, test_compose_pr_body.py, test_pr_lifecycle.py green",
+      "no_go_action": "block publication"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "no operating instruction changes; root files are append-only and untouched"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "publication path, merge authority and L4 receipt semantics unchanged"
+    },
+    {
+      "surface": "rules/48-make-pr-remediation.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T6"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does make -n pr execute any recipe that pushes (lines with + or $(MAKE))?",
+      "Can $PWD expansion redirect the receipt check to a workspace the shell is not in?",
+      "Does skipping the IDE reconciler in worktree setup lose a needed link or hook?",
+      "Does leaving an unowned venv alone strand a repo with no environment at all?",
+      "Can a stale pr-intent.json from an earlier branch leak into a new PR?",
+      "Is the old bundle actually stale, or already current?"
+    ],
+    "assumed_false_ifs": [
+      "the pr recipe gains a $(MAKE) or + line (guarded by T3 test)",
+      "a session venv is built only by the helper (then T5 is moot but harmless)"
+    ],
+    "blast_radius": "the L4 gate runs on every Claude and Cursor shell command; a wrong classification can block all publication, and the opposite error lets a real publish through without a receipt",
+    "rollback": "revert the single PR; each todo is an independent commit so any one can be reverted alone"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T1",
+      "T6"
+    ],
+    "shared_causes": [
+      "gate tokenizer treats every option as inert",
+      "setup helpers mutate state they do not own"
+    ],
+    "deletions_or_consolidations": [
+      "reuse L9_WIRE_LINKS_ONLY instead of a new agentdocs opt-out"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "PWD expansion trusts the hook payload cwd",
+      "mitigation": "expand only when the whole value is exactly a PWD form; other expansions keep failing closed; existing no-expand tests stay"
+    },
+    {
+      "risk": "venvs built by an older helper lack the owner marker",
+      "mitigation": "adopt a venv that already carries .l9-pip-applied"
+    },
+    {
+      "risk": "intent text could overwrite human edits on refresh",
+      "mitigation": "replace only the composer's own unresolved markers"
+    },
+    {
+      "risk": "regenerated receipts use a compiler revision different from the old pin",
+      "mitigation": "compiler e07a143 is the protected-main HEAD; trusted replay re-runs it in CI; projections byte-identical"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python -m pytest tests/ops/autonomy tests/ops/scripts/test_worktree_add_wired_clean.py tests/environment/adapters/test_session_deps_cloud.py ops/scripts/tests/test_compose_pr_body.py tests/ops/scripts/test_pr_lifecycle.py tests/test_coding_projection.py -q",
+      "pass_criteria": "0 failed",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python tools/authority/produce_projection_bundle.py --profile l9.projection/coding-agent-execution@1 --authority-root <dotgithub@3dcdeaa> --authority-revision 3dcdeaae355b6de08562993f705084d7a3714bfd --compiler-revision e07a143a7c1c642c8c3c4cba57897292a40a78f7 --compiler l9-semantic-compiler --check",
+      "pass_criteria": "exit 0",
+      "status": "passed"
+    },
+    {
+      "id": "V3",
+      "command": ".pre-commit-config.yaml via PR_REMEDIATE=0 make pr",
+      "pass_criteria": "gate PASS and PR opened",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated; T1 executed during investigation, T2-T6 pending Build"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/worktree_add_wired.sh",
+      "ops/autonomy/local_execution_gate.py",
+      "ops/autonomy/command_parse.py",
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+      "ops/scripts/compose_pr_body.py",
+      "ops/scripts/open_pr_after_gate.sh",
+      "generated/governance/coding_agent_execution/",
+      "rules/48-make-pr-remediation.mdc",
+      "environment/generated/llm-rules/",
+      "tests/",
+      "ops/scripts/tests/"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Makefile",
+      "ops/scripts/adapters/agentdocs.sh",
+      "ops/scripts/lib/workspace_roots.py"
+    ],
+    "preserved_contracts": [
+      "make pr is the only publication path",
+      "L4 release receipt bound to tree digest",
+      "unresolvable shell expansions fail closed except exact PWD forms",
+      "agentdocs still runs on sessionStart and make ide-profile"
+    ],
+    "validation_commands": [
+      "python -m pytest tests/ops/autonomy -q",
+      "python -m pytest tests/environment/adapters/test_session_deps_cloud.py ops/scripts/tests/test_compose_pr_body.py tests/ops/scripts/test_pr_lifecycle.py -q",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "receipts",
+    "worktree",
+    "gate dry-run",
+    "gate PWD",
+    "session-deps",
+    "composer intent"
+  ],
+  "estimate": "1 GMP"
+}
