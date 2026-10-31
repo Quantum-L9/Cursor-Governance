@@ -162,9 +162,9 @@ and leaves Reviewer focus unresolved. Before `make pr`, write
 
 It is read only when `head` names the current HEAD (7+ characters), so rewrite
 it after any new commit. A missing field keeps the composer's default for that
-field. On an already-open PR, `make pr` replaces only the composer's own
-unresolved markers with it and retitles the PR only from `title`; text a person
-wrote stays. Do not PATCH the title or body over REST instead.
+field. On an already-open PR, `make pr` replaces only text the composer wrote
+(a commit-derived Problem, an unresolved Reviewer focus) and retitles the PR
+only from `title`; text a person wrote stays. Do not PATCH the title or body over REST instead.
 
 ## Report what the publish shipped (MUST, every `make pr`)
 

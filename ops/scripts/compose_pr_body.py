@@ -1737,16 +1737,41 @@ def refresh_body(
             body = _refresh_protected_root(body, facts, template)
         if facts.additive_only_paths and PROTECTED_STAMP not in body:
             body = PROTECTED_STAMP + "\n" + body
-    # The author's intent answers only the composer's own unresolved markers;
-    # text a person already wrote in those sections is theirs and stays.
+    # The author's intent replaces only text the composer itself wrote; text a
+    # person already wrote in those sections is theirs and stays.
     if facts.intent is not None:
-        if facts.intent.problem and THIN_PROBLEM_NOTE in body:
-            body = body.replace(THIN_PROBLEM_NOTE, facts.intent.problem, 1)
+        if facts.intent.problem:
+            body = _replace_composed_problem(body, facts, facts.intent.problem)
         if facts.intent.reviewer_focus and REVIEWER_UNRESOLVED in body:
             body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
+
+
+def _replace_composed_problem(body: str, facts: MechanicalFacts, problem: str) -> str:
+    """Swap the Problem the composer derived from commits for the author's text.
+
+    Matches only the exact text range_problem writes for this branch's oldest
+    commit (its subject, any "(+N more commits below)" count, then its first
+    body paragraph or THIN_PROBLEM_NOTE). The count is free because the branch
+    grows between pushes; anything else a person edited there is left alone.
+    """
+    if not facts.commits:
+        return body
+    span = _heading_span(body, "## Problem")
+    if span is None:
+        return body
+    start, end = span
+    oldest = facts.commit_bodies[0] if facts.commit_bodies else ""
+    tail = _first_paragraph(oldest) or THIN_PROBLEM_NOTE
+    composed = re.compile(
+        re.escape(facts.commits[0]) + r"(?: \(\+\d+ more commits? below\))?\n\n" + re.escape(tail)
+    )
+    match = composed.search(body, start, end)
+    if match is None:
+        return body
+    return body[: match.start()] + problem + body[match.end() :]
 
 
 def _composed_head(body: str) -> str:

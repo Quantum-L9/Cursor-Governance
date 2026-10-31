@@ -2297,6 +2297,34 @@ class AuthorIntentTests(unittest.TestCase):
         self.assertIn("Reviewer wrote this.", body)
         self.assertNotIn(self.INTENT["reviewer_focus"], body)
 
+    def test_refresh_replaces_a_commit_derived_problem_on_a_grown_branch(self) -> None:
+        """PR #798 itself: opened with no intent, its Problem was the oldest commit's
+        message with "(+5 more commits below)". That text is the composer's, not a
+        person's, so a later intent replaces it even though the count has moved."""
+        opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
+        self.assertIn("feat: first (+1 more commit below)", _section(opened, "Problem"))
+        later = _facts(
+            ["M\tops/a.py"],
+            commits=["feat: first", "feat: second", "feat: third"],
+            commit_bodies=["Why the work started.", "", ""],
+            head=self.HEAD,
+            intent=self._intent(),
+        )
+        body, status = refresh_body(opened, later)
+        self.assertEqual(status, "updated")
+        problem = _section(body, "Problem")
+        self.assertIn(self.INTENT["problem"], problem)
+        self.assertNotIn("Why the work started.", problem)
+        self.assertNotIn("more commit", problem)
+
+    def test_refresh_keeps_a_problem_a_person_edited(self) -> None:
+        opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
+        edited = opened.replace("Why the work started.", "A person explained it better.")
+        later = _facts(["M\tops/a.py"], head=self.HEAD, intent=self._intent())
+        body, _ = refresh_body(edited, later)
+        self.assertIn("A person explained it better.", _section(body, "Problem"))
+        self.assertNotIn(self.INTENT["problem"], body)
+
     def test_cli_print_title_reads_the_intent_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = _Repo(Path(tmp) / "repo")
