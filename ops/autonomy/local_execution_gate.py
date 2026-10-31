@@ -58,6 +58,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -747,6 +748,9 @@ def _evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str 
             return None
         if not command_has_make_remote(command):
             return None
+        unresolved = unresolved_publish_workspace(command)
+        if unresolved is not None:
+            return _unresolved_workspace_reason(unresolved)
         named_roots = extract_named_roots(command)
         if named_roots:
             resolved = [_repo_root_from_path(path) for path in named_roots]
@@ -814,7 +818,7 @@ def _guardrail_from_payload(raw: str) -> str | None:
     try:
         root = workspace_from_event(event)
         if root is not None:
-            root = effective_root(command, root)
+            root = effective_root(resolve_pwd_workspace(command, event), root)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict
         root = None
     return command_requires_human(command, root=root)
@@ -857,7 +861,7 @@ def _first_publication_from_payload(raw: str) -> str | None:
         event = json.loads(raw)
         root: Path | None = workspace_from_event(event) if isinstance(event, dict) else None
         if root is not None:
-            root = effective_root(command, root)
+            root = effective_root(resolve_pwd_workspace(command, event), root)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is undeterminable state
         root = None
     try:
@@ -963,7 +967,13 @@ def main_claude() -> int:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         root = workspace_from_event(event)
         if command:
-            root = effective_root(command, root)
+            # The gate judges `WS="$PWD"` as the literal cwd; the shell still
+            # runs the original command.
+            resolved = resolve_pwd_workspace(command, event)
+            if resolved != command:
+                key = "command" if tool_input.get("command") else "cmd"
+                tool_input = {**tool_input, key: resolved}
+            root = effective_root(resolved, root)
         reason = evaluate(tool_name, tool_input, root=root)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
         # Workspace resolution, policy loading and command evaluation all land
@@ -1067,6 +1077,101 @@ def _same_repository(root: Path, candidate: Path) -> bool:
     return identity is not None and identity == _origin_identity(candidate)
 
 
+# A make `WS=` whose whole value is the shell's working directory. The hook
+# payload reports that directory, so these exact forms can be read literally;
+# every other expansion (including a single-quoted '$PWD', which the shell
+# never expands) stays unresolvable. No nested repetition: linear time.
+_PWD_WORKSPACE = re.compile(
+    r"(?<![\w-])(?P<key>WS|L9_L4_WORKSPACE)="
+    r"(?:\"\$PWD\"|\$PWD|\"\$\{PWD\}\"|\$\{PWD\}|\"\$\(pwd\)\"|\$\(pwd\)|\"`pwd`\"|`pwd`)"
+    r"(?=[\s;&|)]|$)"
+)
+_DIR_CHANGERS = frozenset({"cd", "pushd", "popd"})
+# Characters that make a WS= value something only the shell can resolve.
+_DYNAMIC_PATH_CHARS = "$`()*?[]{}~"
+
+
+def _event_cwd(event: dict[str, Any]) -> Path | None:
+    """The shell's working directory as the hook payload reports it."""
+    tool_input = event.get("tool_input") or {}
+    for source in (tool_input if isinstance(tool_input, dict) else {}, event):
+        raw = source.get("cwd")
+        if not raw:
+            continue
+        try:
+            path = Path(str(raw)).resolve()
+        except OSError:
+            continue
+        if path.is_dir():
+            return path
+    return None
+
+
+def _shell_cwd(command: str, event: dict[str, Any]) -> Path | None:
+    """Where `$PWD` points when the command's make segment runs, or None.
+
+    Only a leading `cd` is followed. Any other directory change (a later `cd`,
+    `pushd`, `popd`, a subshell `cd`) makes `$PWD` unknowable here.
+    """
+    base = _event_cwd(event) or workspace_from_event(event)
+    movers = [
+        index
+        for index, segment in enumerate(split_segments(strip_heredoc_bodies(command)))
+        if (segment.split() or [""])[0].lstrip("({") in _DIR_CHANGERS
+    ]
+    if not movers:
+        return base
+    if movers == [0]:
+        return _cd_target(command, base)
+    return None
+
+
+def resolve_pwd_workspace(command: str, event: dict[str, Any]) -> str:
+    """Rewrite `WS="$PWD"` (and its exact equivalents) to the literal shell cwd.
+
+    `make -C "$GOV" pr WS="$PWD"` is the documented consumer publish form
+    (rules/48). Without this the gate could not read the workspace, fell back
+    to the -C checkout, and judged the governance clone's release receipt
+    instead of the consumer's. The rewritten command is only what the gate
+    evaluates; the shell still runs the original.
+    """
+    if not _PWD_WORKSPACE.search(command):
+        return command
+    cwd = _shell_cwd(command, event)
+    if cwd is None:
+        return command
+    literal = shlex.quote(str(cwd))
+    return _PWD_WORKSPACE.sub(lambda match: f"{match.group('key')}={literal}", command)
+
+
+def unresolved_publish_workspace(command: str) -> str | None:
+    """A publishing make segment's WS= value this gate cannot resolve, or None.
+
+    The receipt that authorizes a publish must belong to the tree the Makefile
+    acts on. When WS= is dynamic that tree is unknown, and falling back to the
+    -C directory or the session root would consult some other checkout's
+    receipt, so the caller refuses instead.
+    """
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        for text in (segment, *wrapper_subcommands(segment)):
+            goals = make_goals(text)
+            if "push" not in goals and ("pr" not in goals or _make_gate_only(text)):
+                continue
+            raw = make_workspace_raw(text)
+            if raw is not None and any(ch in raw for ch in _DYNAMIC_PATH_CHARS):
+                return raw
+    return None
+
+
+def _unresolved_workspace_reason(raw: str) -> str:
+    return (
+        f"L4: make names WS={raw}, which this gate cannot resolve to a checkout, so it "
+        "cannot tell whose release receipt authorizes the publish. Pass a literal path "
+        '(WS=/abs/path/to/repo) or WS="$PWD" from that checkout (a leading `cd <repo> &&` '
+        "is followed; a later cd is not)."
+    )
+
+
 def effective_root(command: str, root: Path) -> Path:
     """The checkout the command will actually run in.
 
@@ -1141,7 +1246,9 @@ def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
     if not isinstance(event, dict):
         return "allow", None
     try:
-        command = str(event.get("command") or event.get("full_command") or "")
+        command = resolve_pwd_workspace(
+            str(event.get("command") or event.get("full_command") or ""), event
+        )
         root = effective_root(command, workspace_from_event(event))
         guardrail = command_requires_human(command, root=root)
         if guardrail:
@@ -1163,6 +1270,9 @@ def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
             return "allow", None
         if not command_has_make_remote(command):
             return "allow", None
+        unresolved = unresolved_publish_workspace(command)
+        if unresolved is not None:
+            return "deny", _unresolved_workspace_reason(unresolved)
         allowed, reason = release_allows_remote(root, record=True)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
         _fail_closed_note(exc)
