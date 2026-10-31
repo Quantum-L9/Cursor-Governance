@@ -280,9 +280,55 @@ def command_make_directory(command: str, root: Path) -> Path | None:
     return None
 
 
+# GNU make options that run no ordinary recipe: `-n` prints recipes, `-q` only
+# reports whether targets are current. A recipe line starting with `+` or
+# containing $(MAKE) would still run under both; the `pr` chain has neither
+# (pinned by tests/ops/autonomy/test_publish_path_gate.py).
+_MAKE_NO_EXEC_LONG = frozenset({"--just-print", "--dry-run", "--recon", "--question"})
+_MAKE_NO_EXEC_SHORT = frozenset("nq")
+# Short options whose argument may be attached (`-C/path`, `-j4`): the rest of a
+# short-option group after one of these is that argument, not more flags.
+_MAKE_SHORT_WITH_ARG = frozenset("CfIjloWE")
+
+
+def _make_runs_no_recipes(segment: str) -> bool:
+    """True when a `make` segment carries a dry-run or question option.
+
+    Uses the same token scan as `make_goals`, so a word consumed by `-C`/`-f`
+    is never read as a flag. `MAKEFLAGS=n` is deliberately not honoured: an
+    environment-supplied flag is invisible to a reviewer and fails closed.
+    """
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
+        index += 1
+    if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
+        return False
+    index += 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _MAKE_OPTS_WITH_ARG:
+            index += 2
+            continue
+        if token in _MAKE_NO_EXEC_LONG:
+            return True
+        if token.startswith("-") and not token.startswith("--"):
+            for flag in token[1:]:
+                if flag in _MAKE_NO_EXEC_SHORT:
+                    return True
+                if flag in _MAKE_SHORT_WITH_ARG:
+                    break
+        index += 1
+    return False
+
+
 def _make_gate_only(segment: str) -> bool:
-    """True when a Make invocation deliberately suppresses publication."""
-    return any(token == "OPEN_PR=0" for token in segment.split())
+    """True when a Make invocation deliberately suppresses publication.
+
+    `OPEN_PR=0` stops before GitHub; `-n` / `-q` and their long forms run no
+    recipe at all, so neither publishes.
+    """
+    return any(token == "OPEN_PR=0" for token in segment.split()) or _make_runs_no_recipes(segment)
 
 
 def is_make_pr(segment: str) -> bool:
