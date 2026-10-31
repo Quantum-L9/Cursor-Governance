@@ -110,7 +110,7 @@ git fetch origin
 git rebase --onto origin/main <old-parent-tip> <child-branch>
 ```
 
-Then publish the child with `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` is forbidden across all surfaces.
+Then publish the child with `PR_STACK=auto PR_REMEDIATE=0 make pr`. Do not `git push` the rebased branch in place: that needs a force push, which stays forbidden.
 
 ## Local merge when GitHub merge is infra-blocked
 
@@ -122,7 +122,7 @@ there — `make pr` refuses `main`/`master`.
 # stay on a feature branch; do not publish from main
 ```
 
-Remediation publish is `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git push` is forbidden.
+Remediation publish is `git push` (in-scope) or `PR_STACK=auto PR_REMEDIATE=0 make pr` (scope expansion), never from `main`.
 
 ## Forbidden
 
@@ -137,5 +137,5 @@ Remediation publish is `PR_STACK=auto PR_REMEDIATE=0 make pr`. Direct bare `git 
 - Merge before FIRST_MERGE_GATE
 - Squash/rebase a head that is the base of another open PR
 - `gh pr update-branch` after squash-merging a parent
-- Bare `git push` to an existing PR branch (remediation is published as a stacked PR via `make pr` — ADR-0052)
+- In-place `git push` to an existing PR branch of a fix that touches a file outside its PR diff (publish that as a stacked PR via `make pr` — ADR-0052)
 - Publish from the default branch (`make pr` refuses `main`/`master`)

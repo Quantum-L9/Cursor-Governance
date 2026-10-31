@@ -537,6 +537,39 @@ def test_cycle_two_accepts_fresh_only_ids() -> None:
     assert not any("cycle 2 rejected" in item for item in errors), errors
 
 
+@pytest.mark.parametrize("publish", list(protocol.PUBLISH_COMMANDS))
+def test_plan_accepts_both_sanctioned_publish_routes(publish: str) -> None:
+    """CANONICAL_LAW §6.2.10: in-scope fixes push; scope expansion opens a stacked PR."""
+    plan = _cycle_two_plan(["ci-2"])
+    plan["cycle"] = 1
+    plan["commit_policy"]["publish"] = publish
+    errors = protocol.validate_plan(plan, [{"id": "ci-2"}])
+    assert not any("commit_policy.publish" in item for item in errors), errors
+
+
+@pytest.mark.parametrize("publish", ["make push", "gh pr create", "make pr", ""])
+def test_plan_rejects_unsanctioned_publish_routes(publish: str) -> None:
+    plan = _cycle_two_plan(["ci-2"])
+    plan["cycle"] = 1
+    plan["commit_policy"]["publish"] = publish
+    errors = protocol.validate_plan(plan, [{"id": "ci-2"}])
+    assert any("commit_policy.publish" in item for item in errors), errors
+
+
+def test_discovered_registry_names_both_routes_and_validates() -> None:
+    registry = protocol.discover_gate_registry()
+    assert registry["public"]["publish"] == protocol.PUBLISH_IN_SCOPE
+    assert registry["public"]["publish_scope_expansion"] == protocol.PUBLISH_SCOPE_EXPANSION
+    assert protocol.validate_gate_registry(registry) == []
+
+
+def test_registry_rejects_a_rewritten_scope_expansion_route() -> None:
+    registry = protocol.discover_gate_registry()
+    registry["public"]["publish_scope_expansion"] = "make pr"
+    errors = protocol.validate_gate_registry(registry)
+    assert any("publish_scope_expansion" in item for item in errors), errors
+
+
 def test_gate_e_measures_git_log(tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)

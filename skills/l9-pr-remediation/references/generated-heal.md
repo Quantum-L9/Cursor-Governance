@@ -12,7 +12,7 @@ updated: 2026-08-28
 
 # Generated-artifact heal
 
-Same remediator publish path as source fixes: `make precommit-repo`, commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden across all surfaces (ADR-0052). Not a second protocol.
+Same remediator publish path as source fixes: `make precommit-repo`, commit, and publish via `git push` when every touched file is already in the PR diff, or via `PR_STACK=auto PR_REMEDIATE=0 make pr` when the heal touches a file outside it (ADR-0052). Not a second protocol.
 
 Never `git merge origin/main` to "fix" a failing required check. After the oldest ready PR merges, remaining heads may catch up only to heal generated companions, then regen. Do not file-audit generated paths.
 
@@ -31,8 +31,8 @@ File-by-file architecture audit is forbidden unless
 "$PWD/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --root . --force
 ```
 
-Then `PR_BASE=origin/main make precommit-repo`, one commit, and publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. An unexpected Program Execution manifest is not a generated artifact this skill regenerates.
+Then `PR_BASE=origin/main make precommit-repo`, one commit, and publish by the same scope rule. An unexpected Program Execution manifest is not a generated artifact this skill regenerates.
 
 ## Fail closed
 
-A non-generated unresolved path is a real conflict. Diagnose that file. Still publish via `PR_STACK=auto PR_REMEDIATE=0 make pr`. Bare `git push` is forbidden.
+A non-generated unresolved path is a real conflict. Diagnose that file. Publish by the same scope rule.
