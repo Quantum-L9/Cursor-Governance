@@ -308,6 +308,10 @@ def _make_runs_no_recipes(segment: str) -> bool:
     index += 1
     while index < len(tokens):
         token = tokens[index]
+        if token == "--":
+            # GNU make reads every later word as a target or variable: a `-n`
+            # after `--` is a goal named "-n", and the recipes still run.
+            return False
         if token in _MAKE_OPTS_WITH_ARG:
             index += 2
             continue

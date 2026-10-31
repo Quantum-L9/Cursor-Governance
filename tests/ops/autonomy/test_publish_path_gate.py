@@ -230,6 +230,10 @@ class TestMakeDryRunIsNotPublication:
             "MAKEFLAGS=n make pr",
             "make pr MAKEFLAGS=n",
             "make --no-print-directory pr",
+            # After `--` GNU make reads `-n` as a target, so `pr` runs (Codex P1, #798).
+            "make pr -- -n",
+            "make -- -n pr",
+            "make -C /tmp/repo pr -- --dry-run",
         ],
     )
     def test_look_alikes_still_publish(self, command: str) -> None:
