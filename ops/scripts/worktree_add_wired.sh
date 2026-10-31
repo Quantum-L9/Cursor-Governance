@@ -47,7 +47,13 @@ if [ ! -d "$path" ]; then
   exit 1
 fi
 
-bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
+# Links only, like every other programmatic worktree creator. The full
+# reconciler reaches install_ide_profile.sh -> agentdocs.sh, which writes the
+# formatter block into a consumer's tracked AGENTS.md / CLAUDE.md, so a new
+# worktree would start dirty in governed documents. Machine-wide setup already
+# ran for the parent checkout; sessionStart and `make ide-profile` still
+# reconcile the IDE profile deliberately.
+L9_WIRE_LINKS_ONLY=1 bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
 
 # Real locked venv in this tree. A symlink to another checkout's .venv fails
 # ensure_gov_python.sh (sys.prefix != this path). Consumer repos without
