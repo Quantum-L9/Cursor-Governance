@@ -2215,5 +2215,158 @@ class CompletionHandoffTests(unittest.TestCase):
         )
 
 
+class AuthorIntentTests(unittest.TestCase):
+    """The author's prose has a sanctioned input: .l9/pr/pr-intent.json, bound to HEAD.
+
+    The composer's only prose sources were commit subjects and the oldest
+    commit's first body paragraph. A 24-commit contract branch therefore opened
+    titled with its first commit, with that commit's message as Problem and
+    Reviewer focus unresolved, and the agent had to PATCH both over REST (EIE
+    PR #259 governance handoff). Re-running make pr could not fix it: refresh
+    never touches those sections.
+    """
+
+    HEAD = "c" * 40
+    INTENT = {
+        "schema": "l9.pr_intent.v1",
+        "head": HEAD,
+        "title": "EIE C1: developer gates, convergence correctness, side-effect foundations",
+        "problem": "Thirteen audited work units were broken at baseline; see the contract.",
+        "reviewer_focus": "Look hardest at the side-effect key precedence in WU-01.",
+    }
+
+    def _intent(self, doc: dict[str, object] | None = None, head: str | None = None):  # noqa: ANN202
+        from compose_pr_body import load_intent
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pr-intent.json"
+            path.write_text(json.dumps(doc or self.INTENT), encoding="utf-8")
+            return load_intent(path, head or self.HEAD)
+
+    def test_intent_supplies_title_problem_and_reviewer_focus(self) -> None:
+        intent = self._intent()
+        self.assertIsNotNone(intent)
+        facts = _facts(["M\tops/a.py"], head=self.HEAD, intent=intent)
+        self.assertEqual(range_title(facts), self.INTENT["title"])
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertIn(self.INTENT["problem"], _section(result.body, "Problem"))
+        focus = _section(result.body, "Reviewer focus")
+        self.assertIn(self.INTENT["reviewer_focus"], focus)
+        self.assertNotIn(REVIEWER_UNRESOLVED, focus)
+        self.assertNotIn("problem", result.needs_completion)
+        self.assertNotIn("reviewer_focus", result.needs_completion)
+        self.assertIn("pr-intent", result.fields["problem"]["detail"])
+        self.assertIn("pr-intent", result.fields["reviewer_focus"]["detail"])
+
+    def test_intent_for_another_head_is_ignored(self) -> None:
+        self.assertIsNone(self._intent(head="d" * 40))
+
+    def test_intent_head_may_be_an_abbreviation_of_head(self) -> None:
+        self.assertIsNotNone(self._intent({**self.INTENT, "head": self.HEAD[:12]}))
+
+    def test_intent_with_the_wrong_schema_is_ignored(self) -> None:
+        self.assertIsNone(self._intent({**self.INTENT, "schema": "something-else"}))
+
+    def test_partial_intent_keeps_the_composer_floor_for_the_rest(self) -> None:
+        intent = self._intent({"schema": "l9.pr_intent.v1", "head": self.HEAD, "title": "T"})
+        facts = _facts(["M\tops/a.py"], head=self.HEAD, intent=intent)
+        self.assertEqual(range_title(facts), "T")
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertIn(REVIEWER_UNRESOLVED, _section(result.body, "Reviewer focus"))
+        self.assertIn("Why the work started.", _section(result.body, "Problem"))
+
+    def test_refresh_replaces_only_the_composers_unresolved_markers(self) -> None:
+        thin = _facts(["M\tops/a.py"], commit_bodies=["", ""], head="b" * 40)
+        opened = compose_pr_body(thin, CANONICAL_TEMPLATE).body
+        self.assertIn(THIN_PROBLEM_NOTE, opened)
+        self.assertIn(REVIEWER_UNRESOLVED, opened)
+        intent = self._intent()
+        later = _facts(["M\tops/a.py"], commit_bodies=["", ""], head=self.HEAD, intent=intent)
+        body, status = refresh_body(opened, later)
+        self.assertEqual(status, "updated")
+        self.assertNotIn(THIN_PROBLEM_NOTE, body)
+        self.assertNotIn(REVIEWER_UNRESOLVED, body)
+        self.assertIn(self.INTENT["problem"], _section(body, "Problem"))
+        self.assertIn(self.INTENT["reviewer_focus"], _section(body, "Reviewer focus"))
+
+    def test_refresh_never_overwrites_text_a_person_wrote(self) -> None:
+        opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
+        reviewed = opened.replace(REVIEWER_UNRESOLVED, "Reviewer wrote this.")
+        later = _facts(["M\tops/a.py"], head=self.HEAD, intent=self._intent())
+        body, _ = refresh_body(reviewed, later)
+        self.assertIn("Reviewer wrote this.", body)
+        self.assertNotIn(self.INTENT["reviewer_focus"], body)
+
+    def test_refresh_replaces_a_commit_derived_problem_on_a_grown_branch(self) -> None:
+        """PR #798 itself: opened with no intent, its Problem was the oldest commit's
+        message with "(+5 more commits below)". That text is the composer's, not a
+        person's, so a later intent replaces it even though the count has moved."""
+        opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
+        self.assertIn("feat: first (+1 more commit below)", _section(opened, "Problem"))
+        later = _facts(
+            ["M\tops/a.py"],
+            commits=["feat: first", "feat: second", "feat: third"],
+            commit_bodies=["Why the work started.", "", ""],
+            head=self.HEAD,
+            intent=self._intent(),
+        )
+        body, status = refresh_body(opened, later)
+        self.assertEqual(status, "updated")
+        problem = _section(body, "Problem")
+        self.assertIn(self.INTENT["problem"], problem)
+        self.assertNotIn("Why the work started.", problem)
+        self.assertNotIn("more commit", problem)
+
+    def test_refresh_keeps_a_problem_a_person_edited(self) -> None:
+        opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
+        edited = opened.replace("Why the work started.", "A person explained it better.")
+        later = _facts(["M\tops/a.py"], head=self.HEAD, intent=self._intent())
+        body, _ = refresh_body(edited, later)
+        self.assertIn("A person explained it better.", _section(body, "Problem"))
+        self.assertNotIn(self.INTENT["problem"], body)
+
+    def test_cli_print_title_reads_the_intent_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp) / "repo")
+            repo.write("a.py", "a\n")
+            repo.commit("base")
+            repo.git("checkout", "-q", "-b", "feat")
+            repo.write("b.py", "b\n")
+            repo.commit("feat: add b")
+            head = repo.git("rev-parse", "HEAD").strip()
+            intent_file = Path(tmp) / "pr-intent.json"
+            intent_file.write_text(json.dumps({**self.INTENT, "head": head}), encoding="utf-8")
+
+            def title(*extra: str) -> str:
+                return subprocess.run(
+                    [
+                        sys.executable,
+                        str(COMPOSER),
+                        "--workspace",
+                        str(repo.root),
+                        "--pr-base",
+                        "main",
+                        *extra,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    env=repo.env,
+                ).stdout.strip()
+
+            self.assertEqual(title("--print-title"), "feat: add b")
+            self.assertEqual(
+                title("--print-title", "--intent-file", str(intent_file)), self.INTENT["title"]
+            )
+            self.assertEqual(
+                title("--print-intent-title", "--intent-file", str(intent_file)),
+                self.INTENT["title"],
+            )
+            self.assertEqual(
+                title("--print-intent-title", "--intent-file", str(Path(tmp) / "absent.json")),
+                "",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

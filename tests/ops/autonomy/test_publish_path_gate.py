@@ -194,6 +194,103 @@ class TestMakeGoalsAreExactTokens:
         assert gate.make_goals("") == ()
 
 
+class TestMakeDryRunIsNotPublication:
+    """`make -n pr` prints the ceremony; it runs no recipe, so it publishes nothing.
+
+    The gate used to treat every option as inert and refused `make -n pr` as a
+    mid-execution publish (EIE PR #259 governance handoff).
+    """
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            "make -n pr",
+            "make --dry-run pr",
+            "make --just-print pr",
+            "make --recon pr",
+            "make -q pr",
+            "make --question pr",
+            "make -sn pr",
+            "make -C /root/.cursor-governance -n pr WS=/home/user/repo",
+            "PR_REMEDIATE=0 make -n -C /tmp/repo pr",
+        ],
+    )
+    def test_dry_run_forms_are_not_publication(self, command: str) -> None:
+        assert gate.is_make_pr(command) is False
+        assert gate.command_is_remote_mutation(command) is False
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            # `-C n` is a directory argument, not the dry-run flag.
+            "make -C n pr",
+            "make -Cn pr",
+            "make -j4 pr",
+            # An environment-supplied flag is invisible here: fail closed.
+            "MAKEFLAGS=n make pr",
+            "make pr MAKEFLAGS=n",
+            "make --no-print-directory pr",
+            # After `--` GNU make reads `-n` as a target, so `pr` runs (Codex P1, #798).
+            "make pr -- -n",
+            "make -- -n pr",
+            "make -C /tmp/repo pr -- --dry-run",
+        ],
+    )
+    def test_look_alikes_still_publish(self, command: str) -> None:
+        assert gate.is_make_pr(command) is True
+        assert gate.command_is_remote_mutation(command) is True
+
+    def test_dry_run_pr_passes_the_gate_without_a_release_receipt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+        monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+        monkeypatch.setattr(gate, "release_allows_remote", _release(False, "L4 denied"))
+        assert gate.evaluate("Bash", {"command": "make -n pr"}, root=tmp_path) is None
+
+
+def _recipe_blocks(makefile: Path) -> dict[str, list[tuple[list[str], list[str]]]]:
+    """Every rule in *makefile*: target -> [(prerequisites, recipe lines)]."""
+    rules: dict[str, list[tuple[list[str], list[str]]]] = {}
+    current: list[str] | None = None
+    for line in makefile.read_text(encoding="utf-8").splitlines():
+        if line.startswith("\t"):
+            if current is not None:
+                current.append(line[1:])
+            continue
+        current = None
+        head, sep, rest = line.partition(":")
+        if not sep or rest.startswith("=") or head.startswith(("#", " ")) or "=" in head:
+            continue
+        prereqs = rest.split("#", 1)[0].split()
+        if prereqs[:1] == ["export"]:
+            continue
+        recipe: list[str] = []
+        for target in head.split():
+            rules.setdefault(target, []).append((prereqs, recipe))
+        current = recipe
+    return rules
+
+
+def test_pr_chain_has_no_line_that_runs_under_dry_run() -> None:
+    """GNU make still runs `+` lines and $(MAKE) lines under -n / -q.
+
+    The dry-run exemption above is sound only while the `pr` chain has neither.
+    If a prerequisite or one of those lines is added, this test fails and the
+    exemption must be re-justified.
+    """
+    rules = _recipe_blocks(REPO_ROOT / "ops" / "make" / "publish.mk")
+    assert rules.get("pr"), "pr rule not found in ops/make/publish.mk"
+    prereqs = {p for prereq_list, _ in rules["pr"] for p in prereq_list}
+    assert prereqs == {"pr-preflight"}, prereqs
+    for target in ("pr", "pr-preflight"):
+        for _, recipe in rules[target]:
+            for line in recipe:
+                stripped = line.lstrip("@- ")
+                assert not stripped.startswith("+"), (target, line)
+                assert "$(MAKE)" not in line and "${MAKE}" not in line, (target, line)
+
+
 def test_publish_matcher_is_linear_not_exponential() -> None:
     """Regression: CodeQL py/redos on PR #168.
 
