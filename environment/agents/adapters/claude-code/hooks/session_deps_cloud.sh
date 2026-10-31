@@ -176,11 +176,15 @@ toolchain_proven() {
   fi
   # Pip-managed repos have no uv.lock for `uv sync --check`. Proven only when
   # provision_pip_venv recorded the current fingerprint after a complete
-  # install, and the installed set is consistent.
+  # install, and the installed set is consistent. An owner-managed venv has no
+  # fingerprint of ours to match: it is the owner's, and only its consistency
+  # is reported.
   if is_pip_repo "$repo"; then
     [ -x "$repo/.venv/bin/python" ] || return 1
-    [ "$(cat "$repo/.venv/$PIP_APPLIED_MARKER" 2>/dev/null)" = "$(fingerprint "$repo")" ] \
-      || return 1
+    if ! pip_venv_owner_managed "$repo"; then
+      [ "$(cat "$repo/.venv/$PIP_APPLIED_MARKER" 2>/dev/null)" = "$(fingerprint "$repo")" ] \
+        || return 1
+    fi
     if have uv; then
       uv pip check --python "$repo/.venv/bin/python" >/dev/null 2>&1 || return 1
     fi
@@ -205,6 +209,24 @@ is_pip_repo() {
 # then failed exists but has no matching marker, so it is not proven.
 PIP_APPLIED_MARKER=".l9-pip-applied"
 
+# Marker written into <repo>/.venv when this helper creates (or adopts) it.
+# A .venv with neither marker was built by someone else — an agent's
+# `pip install -e .[dev]` in a worktree, a developer's own bootstrap — and is
+# left exactly as it is: installing pin sets on top of it overlays packages the
+# owner never chose, and installs only add, so a pin dropped later lingers.
+PIP_OWNER_MARKER=".l9-pip-owner"
+
+# True when <repo>/.venv exists and this helper neither built nor provisioned
+# it. A venv carrying the applied marker predates the owner marker and is
+# adopted rather than abandoned.
+pip_venv_owner_managed() {
+  local venv="$1/.venv"
+  [ -x "$venv/bin/python" ] || return 1
+  [ -f "$venv/$PIP_OWNER_MARKER" ] && return 1
+  [ -f "$venv/$PIP_APPLIED_MARKER" ] && return 1
+  return 0
+}
+
 # True when pyproject declares a `dev` optional-dependency extra. A pyproject
 # this host cannot parse answers True: installing a missing extra is a warning,
 # while skipping a declared one would install without its pins.
@@ -227,9 +249,20 @@ PY
 # repository says its environment is built. Otherwise build an isolated venv
 # and install each declared pin set into it, never into the system interpreter.
 provision_pip_venv() {
-  local repo="$1"
+  local repo="$1" made_venv=0 rc=0
+  if pip_venv_owner_managed "$repo"; then
+    echo "session-deps: $repo/.venv was built outside this helper — owner-managed, left as is" >&2
+    return 0
+  fi
   if [ -f "$repo/Makefile" ] && grep -qE '^venv:' "$repo/Makefile"; then
-    ( cd "$repo" && make venv ) || return 1
+    [ -x "$repo/.venv/bin/python" ] || made_venv=1
+    ( cd "$repo" && make venv ) || rc=1
+    # Claim a venv this run created even when its install then failed, so the
+    # next session repairs it instead of mistaking it for the owner's.
+    if [ "$made_venv" -eq 1 ] && [ -x "$repo/.venv/bin/python" ]; then
+      : >"$repo/.venv/$PIP_OWNER_MARKER"
+    fi
+    [ "$rc" -eq 0 ] || return 1
   else
     # Everything below runs FROM the repository: uv discovers project and uv.toml
     # configuration from its cwd, and the detached worker's cwd is the caller's
@@ -244,6 +277,7 @@ provision_pip_venv() {
         else
           python3 -m venv .venv || exit 1
         fi
+        : >".venv/$PIP_OWNER_MARKER"
       fi
       py="$PWD/.venv/bin/python"
       for req in requirements.txt requirements-*.txt; do
@@ -274,6 +308,8 @@ provision_pip_venv() {
     ) || return 1
   fi
   [ -x "$repo/.venv/bin/python" ] || return 1
+  # Adopt a venv an earlier helper version provisioned (applied marker only).
+  : >"$repo/.venv/$PIP_OWNER_MARKER"
   fingerprint "$repo" >"$repo/.venv/$PIP_APPLIED_MARKER"
 }
 
