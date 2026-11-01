@@ -1,0 +1,74 @@
+skill_intelligence_report:
+  activation_model:
+    specificity_score: 5
+    false_positive_risk_score: 1
+    positive_signals:
+      - Docker-based actual combined PR testing
+      - Baseline-versus-merge adversarial correctness evaluation
+    reject_signals:
+      - Ordinary static PR audit without execution
+      - CI status reporting only
+      - Authorization to merge, push, deploy or touch production
+  authority_model:
+    ranking: [explicit_user_scope, target_repository_law, immutable_pr_and_base_refs, confirmed_runtime_evidence, independent_source_review, labeled_inference, UNKNOWN]
+    ownership_boundary: l9-pr-audit owns deep repository-wide PR audit; this skill owns disposable combined-code integration evidence only.
+    compiler: Quantum-L9/Cursor-Governance@774acf2c178284f90472be1a7fedd81a73a4ef34/skills/l9-skill-compiler, v3.8.0
+  expert_heuristics:
+    - condition: Two PRs each pass and the combined candidate fails with baseline green.
+      judgment: The failure is integration-only if actual tested revisions and procedures are comparable.
+      action: Retain full Git/test provenance and investigate shared semantic cause.
+    - condition: Baseline and combined both fail without comparable failure identities.
+      judgment: Regression attribution is unknown.
+      action: Preserve failed logs and block readiness until differential proof exists.
+    - condition: Selected deliberate wrong behavior survives a target test.
+      judgment: This test does not discriminate the selected obligation; do not claim global test invalidity.
+      action: Add an oracle-backed negative test and rerun exact merged candidate.
+    - condition: Docker or required service is absent.
+      judgment: Host-only tests are not equivalent integration witnesses.
+      action: Return BLOCKED with fixture coverage labeled separately.
+    - condition: Git merges cleanly despite overlap or architecture boundary movement.
+      judgment: Source ownership, contracts and activation remain unproven.
+      action: Demand independent exact-tree review and targeted producer-consumer witness.
+  doctrine:
+    - Green CI and clean merge are evidence inputs, not conclusive proof.
+    - No consequential side effects beyond authorized disposable test scope.
+  invariants:
+    - All integration conclusions are exact-revision-bound.
+    - Every readiness claim has a discriminating executable witness and independent source assessment.
+    - UNKNOWN stays UNKNOWN.
+  adapter_map:
+    core: Generic revision-bound Git and Docker execution, fail-closed.
+    fixture_validated: [Git, Python-unittest, Node-test]
+    unverified: [Docker-runtime, real-GitHub-PR-execution, Odoo-with-PostgreSQL, Odoo-Enterprise, multi-service]
+  failure_modes:
+    - False green from weak assertions, proven by negative fixture.
+    - Python bytecode cache mutating source without test changes, caught and corrected in builder witness.
+    - Missing Docker not conflated with successful local fixture test.
+  leverage_points:
+    - Shared reconstructed merge result is the minimal integration truth source.
+    - Negative witnesses challenge test quality at the property being claimed.
+    - Sealed evidence permits independent replay and defect-specific remediation.
+  evidence_hierarchy:
+    - Executed exact-source Git/test fixture receipts
+    - Compiler structure and script validation receipts
+    - Independently assessed combined source and target contracts
+    - Unverified operational capabilities, explicitly withheld
+  self_improvement_hook:
+    trigger: Missed integration defect, surviving negative mutation, false-ready claim, or observed isolation failure.
+    action: Attach exact SHA and failing witness; repair smallest responsible source; rerun positive and adversarial fixtures; rebuild the candidate.
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates:
+      status: blocked
+      reason: Docker binary and daemon unavailable; no real Docker execution witness.
+    skill_intelligence_report: pass
+  tier_decision:
+    tier: strong
+    reason: Complete runnable source and locally executed Git/test fixtures; official structural compiler gates pending final execution; Docker runtime and real target conformance not proven.
