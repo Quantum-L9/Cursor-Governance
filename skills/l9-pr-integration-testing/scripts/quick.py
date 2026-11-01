@@ -249,13 +249,15 @@ def dependency_layer(sandbox: dict, repo: str, base_sha: str) -> str:
             ["tar", "-x", "-C", str(ctx / "src")], input=archive.stdout, check=True, timeout=120
         )
         shutil.rmtree(store)
+        # The trust bundle reaches the build only as a BuildKit secret mount; the
+        # Dockerfile carries the mount flag text, never the bundle.
         ca = sandbox.get("runner_ca_bundle")
-        secret = "--mount=type=secret,id=ca " if ca else ""
-        cert = "PIP_CERT=/run/secrets/ca " if ca else ""
+        ca_mount = "--mount=type=secret,id=ca " if ca else ""
+        ca_env = "PIP_CERT=/run/secrets/ca " if ca else ""
         (ctx / "Dockerfile").write_text(
             f"FROM {sandbox['image_tag']}\n"
-            f"RUN {secret}--mount=type=bind,source=src,target=/src,rw \\\n"
-            f"    cd /src && {cert}make setup\n"
+            f"RUN {ca_mount}--mount=type=bind,source=src,target=/src,rw \\\n"
+            f"    cd /src && {ca_env}make setup\n"
             f'LABEL org.l9.repo="{repo}" org.l9.base-sha="{base_sha}"\n'
         )
         args = ["docker", "build", "--quiet", "--tag", tag]
