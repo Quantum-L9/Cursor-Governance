@@ -39,16 +39,19 @@ skill_intelligence_report:
   adapter_map:
     core: Generic revision-bound Git and Docker execution, fail-closed.
     fixture_validated: [Git, Python-unittest, Node-test]
-    unverified: [Docker-runtime, real-GitHub-PR-execution, Odoo-with-PostgreSQL, Odoo-Enterprise, multi-service]
+    docker_validated: [Docker-runtime, real-GitHub-PR-execution, Repository-Execution-V2-make-v1]
+    unverified: [real-multi-PR-execution, Node-in-Docker, Odoo-with-PostgreSQL, Odoo-Enterprise, multi-service]
   failure_modes:
     - False green from weak assertions, proven by negative fixture.
     - Python bytecode cache mutating source without test changes, caught and corrected in builder witness.
     - Missing Docker not conflated with successful local fixture test.
+    - Sandbox profile defects (bare rw bind, noexec /tmp, runner Git isolation leaking into tests) made a green baseline red; fixed and pinned by offline argv tests.
   leverage_points:
     - Shared reconstructed merge result is the minimal integration truth source.
     - Negative witnesses challenge test quality at the property being claimed.
     - Sealed evidence permits independent replay and defect-specific remediation.
   evidence_hierarchy:
+    - Executed exact-revision Docker receipts on a real GitHub PR (Quantum-L9/l9-ci-core#220, base 89c9bc4e, Docker 29.9.1)
     - Executed exact-source Git/test fixture receipts
     - Compiler structure and script validation receipts
     - Independently assessed combined source and target contracts
@@ -66,9 +69,17 @@ skill_intelligence_report:
     leverage_model: pass
     self_improvement_hook: pass
     compiler_enforcement_gates:
-      status: blocked
-      reason: Docker binary and daemon unavailable; no real Docker execution witness.
+      status: pass
+      reason: >-
+        validate_skill_pack.py passes; offline regression tests in
+        tests/skills/l9_pr_integration_testing; real Docker witness on Quantum-L9/l9-ci-core#220
+        (baseline 821/821, PR and combined 822/822, yaml-suffix revert probe KILLED, sealed
+        evidence verified by validate_evidence.py). Earlier block was the absent Docker daemon.
     skill_intelligence_report: pass
   tier_decision:
-    tier: strong
-    reason: Complete runnable source and locally executed Git/test fixtures; official structural compiler gates pending final execution; Docker runtime and real target conformance not proven.
+    tier: exemplary
+    reason: >-
+      Every gate has an executed witness: structural validators, offline regression tests,
+      and a real-PR Docker run through the governance sandbox and the quick path. The
+      adapter_map keeps multi-PR, Node-in-Docker, Odoo and multi-service work unverified;
+      the tier covers the validated adapters only.

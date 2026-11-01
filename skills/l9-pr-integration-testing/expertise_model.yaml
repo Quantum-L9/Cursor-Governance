@@ -56,10 +56,15 @@ expertise_model:
       prevention: Independently inspect assertions and inject known-wrong mutations with oracle-backed checks.
     - cause: Cached Python bytecode hides changes
       prevention: Strip copied bytecode caches during mutation tests and include a regression witness.
-    - cause: Unsafe Docker runtime or missing service
-      prevention: Enforce least-privilege image/network/mount gate and report BLOCKED, never simulate.
-    - cause: Red baseline misread as introduced regression
-      prevention: Bind failure identifiers and mark unknown attribution as unverified.
+    - cause: Unsafe, missing or incompatible Docker runtime (incl. a flag the engine rejects, such as a bare rw in --mount)
+      prevention: >-
+        Enforce the least-privilege image/network/mount gate, report BLOCKED rather than simulate,
+        and pin runner flags with offline argv tests plus one real Docker witness per release.
+    - cause: Red baseline misread as introduced regression, or a sandbox profile that differs from the target's CI
+      prevention: >-
+        Bind failure identifiers, mark unknown attribution unverified, and diagnose a red baseline as
+        a profile defect first (l9-ci-core#220 went from 22 failures to 821/821 once /tmp allowed exec
+        and the runner's GIT_CONFIG_GLOBAL stopped leaking into test procedures).
   leverage_points:
     - rank: 1
       intervention: Reconstruct actual combined commits, not independent diffs.

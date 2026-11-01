@@ -3,13 +3,48 @@ schema: 1
 parent: l9-pr-integration-testing
 layer: reference
 role: repository-adapter-selection
-version: 0.1.0
+version: 0.2.0
 status: active
 -->
 
 # Repository adapters, selected from observed files
 
 This skill's core only knows Git, Docker, immutable source evidence and argv-based validation. `detect_adapters()` suggests categories; it never invents test commands or declares a runtime ready. Adapter selection requires a frozen source-tree census and positive evidence of applicable tests.
+
+## Hosted session environment (owned by governance, not by this skill)
+
+The sandbox is `ops/scripts/docker_sandbox.py` in Cursor-Governance. Cloud SessionStart
+warms it in the background; `scripts/quick.py` runs the same idempotent `ensure` when no
+READY receipt exists. Do not reimplement any of it here. It provides, with a receipt at
+`~/.l9/docker-sandbox/receipt.json`:
+
+| Need | Why the runner needs it | Provided by |
+|---|---|---|
+| A running Docker daemon | hosted containers ship the CLI but no daemon | `ensure` starts `dockerd` when the session is root |
+| A non-root runner in the `docker` group | `DockerSandbox` refuses UID 0 | user `l9sandbox` (`L9_DOCKER_SANDBOX_USER`) |
+| The session TLS trust bundle, readable by that user | host-side `git fetch` goes through a TLS-intercepting proxy; the original bundle is root-only | copied from `PIP_CERT` / `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` / `CURL_CA_BUNDLE` |
+| A pinned image with Git, `make` and the test runtime | merges, checkouts and tests all run inside a no-network container | `l9-ci-toolchain:core-<sha12>`, built from Quantum-L9/l9-ci-core `toolchain-lock.json` and `requirements-consumer-ci.txt` at an exact Core commit and verified tool-by-tool; `--with-semgrep` adds Core's hash-locked semgrep; Biome is excluded |
+
+Repository dependencies cannot be installed during a no-network test, so the quick path
+layers the repository's own `make setup` output, run at the **base** SHA, onto that image.
+A PR that changes dependency manifests is reported as such, because that layer cannot
+reflect it.
+
+## Repository Execution V2 (`make-v1` facade)
+
+A repository whose `.l9/repo-workflow.json` declares `l9.repo-execution/v2` with facade
+`make-v1` names its own phases (`setup`, `validate`, `check`, `test`). `scripts/quick.py`
+turns only declared phases into argv `["make", "<phase>"]`, sourced from that file at the
+base SHA with its sha256 and the phase literal as anchor. A repository without that
+contract is BLOCKED by the quick path; build the manifest by hand from its verified CI
+instead.
+
+**Docker witness:** Quantum-L9/l9-ci-core#220 on base `89c9bc4e` — `make test` 821/821 on
+the baseline and 822/822 for the PR and the combined candidate in the Core-locked image,
+and the yaml-suffix revert probe KILLED. The first attempt failed 22 tests on the baseline
+too: `/tmp` was `noexec` and the runner's `GIT_CONFIG_GLOBAL=/dev/null` hid the suite's own
+`~/.gitconfig`. A red baseline is a profile defect to diagnose first, not a property of the
+target.
 
 ## Python applications
 
@@ -21,7 +56,7 @@ Detect via `pyproject.toml`, Python source, packaging or test configuration. Ver
 
 Detect via a parsed `package.json`, JS/TS source, lockfile, CI and actual tests. Confirm whether the project uses Node built-in tests, Jest, Vitest or another framework and resolve the verified command. Do not run `npm install` from unpinned live dependencies by default. `node --test` and an actual `node:test` fixture have been executed locally. `failure_parser=node-test` is applicable to compatible TAP-style output, not arbitrary JS test runners. Static TypeScript compilation is a separate verified check if required.
 
-**Fixture witness:** a committed Node repository passes `node --test` in a disposable local fixture checkout. Docker behavior remains unproven.
+**Fixture witness:** a committed Node repository passes `node --test` in a disposable local fixture checkout. Node inside the Docker profile remains unproven: the toolchain image carries no Node runtime.
 
 ## Containerized and multi-service systems
 

@@ -1,6 +1,7 @@
 ---
 name: l9-pr-integration-testing
 description: Build and falsify a revision-bound combined pull-request candidate inside disposable Docker isolation, with differential tests, Git merge provenance, semantic overlap review and targeted false-green probes. Use when testing one or more actual GitHub PRs together before integration, especially when green CI or clean merges may hide defects. Do not use for CI status alone, static-only PR review, production deployment, or authorizing a merge.
+disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,7 +9,7 @@ metadata:
   tags: [l9, github, integration, docker, adversarial-testing]
   owner: repository-agnostic-integration-execution
   status: active
-  version: "0.1.0"
+  version: "0.2.0"
   updated: "2026-11-01"
   license: Proprietary
 ---
@@ -31,6 +32,22 @@ Source preference: latest explicit user scope; current governing repository cont
 6. **Converge findings.** Distinguish `PR_DEFECT`, `INTEGRATION_ONLY`, `BASELINE_FAILURE`, `FALSE_GREEN`, `ENVIRONMENT`, `AUTHORITY`, and `UNVERIFIED`. Retain exact source/tested SHAs, steps, logs, root-cause confidence, evidence and affected consumers. Each material finding needs a correction owner and discriminating regression criterion. Prioritize a shared upstream cause over symptom patches.
 7. **Validate verdict.** After inspecting the combined-source diff and applicable owners, supply a revision-bound independent review to `scripts/apply_review.py`. Then use `scripts/validate_evidence.py` and [evidence contract](references/evidence-contract.md). Choose `INTEGRATION_READY`, `NOT_INTEGRATION_READY`, `INCOMPLETE_EVIDENCE`, or `BLOCKED`. Never claim ready from green CI, clean Git, or absent source audit. A ready state requires proven merged execution, adequate domain validation and adversarial coverage, resolved material authority and no blocking issues.
 8. **Preserve and stop.** Preserve JSON, logs, source coordinates, mutation results, invocation, image digest, tool versions, environment and cleanup evidence before removing the disposable workspace. Stop without upstream mutation.
+
+## Quick path (hosted sessions, Claude Code Mobile)
+
+For a repository that declares Repository Execution V2 (`.l9/repo-workflow.json`, facade `make-v1`), one command does steps 1–4 and prints a phone-sized summary:
+
+```text
+python3 scripts/quick.py --repo OWNER/REPO --pr 12 --authority "operator request, <where/when>"
+#   several PRs: --pr 12 --pr 13 --order-basis EXPLICIT_APPROVED
+#   more phases: --phase test --phase check      false-green probes: --probes probes.json
+```
+
+It takes the governance sandbox receipt (running `ensure` itself if none is READY), binds the PRs, derives procedures **only** from the declared phases at the base SHA, layers the repository's own `make setup` output onto the Core-locked toolchain image, and runs `integrate.py` as the non-root sandbox user. A repository without that contract is `BLOCKED`, never guessed. The quick path stops at `INCOMPLETE_EVIDENCE`: steps 5–7 (adversarial review, `apply_review.py`, `validate_evidence.py`) remain judgment, and the review must be honest about its independence.
+
+## Environment (owned by governance)
+
+Docker daemon, non-root runner, TLS trust bundle and the toolchain image belong to Cursor-Governance `ops/scripts/docker_sandbox.py`, warmed by cloud SessionStart (`L9_DOCKER_SANDBOX=0` opts out). The image follows Quantum-L9/l9-ci-core `toolchain-lock.json` at an exact Core commit and is verified tool-by-tool. This skill never starts daemons, creates users or builds toolchains itself. Check with `python3 ops/scripts/docker_sandbox.py status`; see [adapters](references/adapters.md).
 
 ## Runtime invocation
 
