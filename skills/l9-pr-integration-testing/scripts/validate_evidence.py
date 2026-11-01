@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Validate revision-bound evidence references and independently hash-seal a bundle."""
+
 from __future__ import annotations
 
 import argparse
@@ -9,7 +10,12 @@ import re
 import sys
 from pathlib import Path
 
-REQUIRED = ("integration_manifest.json", "integration_findings.json", "integration_evidence.json", "integration_verdict.json")
+REQUIRED = (
+    "integration_manifest.json",
+    "integration_findings.json",
+    "integration_evidence.json",
+    "integration_verdict.json",
+)
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 STATES = {"INTEGRATION_READY", "NOT_INTEGRATION_READY", "INCOMPLETE_EVIDENCE", "BLOCKED"}
@@ -35,7 +41,9 @@ def seal_bundle(root: Path):
         raise ValueError("cannot seal incomplete evidence")
     files = files_for_index(root)
     index = {"schema": "l9.integration.index/v1", "files_sha256": files}
-    (root / "evidence-index.json").write_text(json.dumps(index, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    (root / "evidence-index.json").write_text(
+        json.dumps(index, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
     return index
 
 
@@ -54,7 +62,16 @@ def validate(root: Path) -> list[str]:
     if len(data) < len(REQUIRED):
         return errors
     m, f, e, v = (data[p] for p in REQUIRED)
-    for name, obj, schema in zip(REQUIRED, (m, f, e, v), ("l9.integration.manifest/v1", "l9.integration.findings/v1", "l9.integration.evidence/v1", "l9.integration.verdict/v1")):
+    for name, obj, schema in zip(
+        REQUIRED,
+        (m, f, e, v),
+        (
+            "l9.integration.manifest/v1",
+            "l9.integration.findings/v1",
+            "l9.integration.evidence/v1",
+            "l9.integration.verdict/v1",
+        ),
+    ):
         if obj.get("schema") != schema:
             errors.append(f"invalid schema {name}")
     repo = m.get("repository", {})
@@ -82,7 +99,12 @@ def validate(root: Path) -> list[str]:
         ids.append(rid)
         if "log_path" in r:
             rel = r["log_path"]
-            if not isinstance(rel, str) or Path(rel).is_absolute() or ".." in Path(rel).parts or not rel.startswith("logs/"):
+            if (
+                not isinstance(rel, str)
+                or Path(rel).is_absolute()
+                or ".." in Path(rel).parts
+                or not rel.startswith("logs/")
+            ):
                 errors.append("invalid log locator: " + rid)
                 continue
             p = root / rel
@@ -110,10 +132,24 @@ def validate(root: Path) -> list[str]:
         errors.append("verdict refers to missing findings")
     status = v.get("execution", {})
     if v.get("state") == "INTEGRATION_READY":
-        if m.get("execution_mode") != "DOCKER_ONLY" or not all(status.get(x) is True for x in ("docker_executed", "combined_tests_pass", "negative_probe_killed", "source_review_verified", "required_contracts_verified")):
+        if m.get("execution_mode") != "DOCKER_ONLY" or not all(
+            status.get(x) is True
+            for x in (
+                "docker_executed",
+                "combined_tests_pass",
+                "negative_probe_killed",
+                "source_review_verified",
+                "required_contracts_verified",
+            )
+        ):
             errors.append("ready without required Docker, review or adversarial proof")
         combined = next((s for s in states if s.get("name") == "combined"), None)
-        if not combined or not combined.get("revision") or not combined.get("tests") or any(t.get("status") != "PASS" for t in combined["tests"]):
+        if (
+            not combined
+            or not combined.get("revision")
+            or not combined.get("tests")
+            or any(t.get("status") != "PASS" for t in combined["tests"])
+        ):
             errors.append("ready without successful combined integration tests")
         if f.get("findings"):
             blocking = [x for x in f["findings"] if x.get("severity") in ("CRITICAL", "HIGH")]
@@ -125,7 +161,9 @@ def validate(root: Path) -> list[str]:
     else:
         try:
             index = json.loads(index_path.read_text(encoding="utf-8"))
-            if index.get("schema") != "l9.integration.index/v1" or index.get("files_sha256") != files_for_index(root):
+            if index.get("schema") != "l9.integration.index/v1" or index.get(
+                "files_sha256"
+            ) != files_for_index(root):
                 errors.append("evidence index mismatch or unsealed post-hoc mutation")
         except (ValueError, OSError):
             errors.append("invalid evidence index")
@@ -135,7 +173,9 @@ def validate(root: Path) -> list[str]:
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("evidence_dir", type=Path)
-    ap.add_argument("--seal", action="store_true", help="hash-seal an already completed evidence bundle")
+    ap.add_argument(
+        "--seal", action="store_true", help="hash-seal an already completed evidence bundle"
+    )
     args = ap.parse_args()
     try:
         if args.seal:

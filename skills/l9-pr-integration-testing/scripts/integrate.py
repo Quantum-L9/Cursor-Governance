@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Revision-bound, fail-closed Docker integration runner. No upstream mutations."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,8 +14,11 @@ import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
+# Sibling modules (validate_evidence) resolve even under `python -I`.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 IMAGE = re.compile(r"^(?:sha256:[0-9a-f]{64}|[a-zA-Z0-9][a-zA-Z0-9_./:-]*@sha256:[0-9a-f]{64})$")
@@ -28,7 +32,7 @@ class SafetyError(RuntimeError):
 
 
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def sha(data: bytes) -> str:
@@ -42,7 +46,13 @@ def assert_sha(value, label):
 
 def bounded_relative(path: str) -> bool:
     p = Path(path)
-    return bool(path) and not p.is_absolute() and ".." not in p.parts and ".git" not in p.parts and not any(x in path for x in ("\\", "\x00"))
+    return (
+        bool(path)
+        and not p.is_absolute()
+        and ".." not in p.parts
+        and ".git" not in p.parts
+        and not any(x in path for x in ("\\", "\x00"))
+    )
 
 
 def validate_plan(m: dict):
@@ -85,10 +95,16 @@ def validate_plan(m: dict):
     order = m.get("integration_order", [])
     if sorted(order) != sorted(ids):
         raise SafetyError("integration_order must enumerate each selected PR exactly once")
-    if len(prs) > 1 and m.get("order_basis") not in {"EXPLICIT_APPROVED", "VERIFIED_DEPENDENCY", "ORDER_PROBED"}:
+    if len(prs) > 1 and m.get("order_basis") not in {
+        "EXPLICIT_APPROVED",
+        "VERIFIED_DEPENDENCY",
+        "ORDER_PROBED",
+    }:
         raise SafetyError("multi-PR integration requires justified order_basis")
     if m.get("network", "none") != "none":
-        raise SafetyError("network access requires a separately reviewed runner, not this safe profile")
+        raise SafetyError(
+            "network access requires a separately reviewed runner, not this safe profile"
+        )
     if not isinstance(m.get("image"), str) or not IMAGE.fullmatch(m.get("image")):
         raise SafetyError("locally available Docker image must be pinned by sha256 digest")
     tests = m.get("test_procedures", [])
@@ -96,12 +112,20 @@ def validate_plan(m: dict):
         raise SafetyError("at least one verified test procedure is required")
     for p in tests:
         argv = p.get("argv")
-        if not isinstance(argv, list) or not argv or any(not isinstance(s, str) or not s or "\x00" in s for s in argv):
+        if (
+            not isinstance(argv, list)
+            or not argv
+            or any(not isinstance(s, str) or not s or "\x00" in s for s in argv)
+        ):
             raise SafetyError("test procedures must be nonempty argv arrays (no shell)")
         if argv[0] in {"sh", "bash", "dash", "zsh", "cmd", "powershell", "sudo", "env"}:
             raise SafetyError("shell, sudo and env wrappers are not approved test commands")
         origin = p.get("source", {})
-        if not bounded_relative(origin.get("path", "")) or not re.fullmatch(r"[0-9a-f]{64}", origin.get("sha256", "")) or not isinstance(origin.get("anchor"), str):
+        if (
+            not bounded_relative(origin.get("path", ""))
+            or not re.fullmatch(r"[0-9a-f]{64}", origin.get("sha256", ""))
+            or not isinstance(origin.get("anchor"), str)
+        ):
             raise SafetyError("every test command needs verified baseline file path + sha256")
         if p.get("timeout_seconds", 300) > 1800 or p.get("timeout_seconds", 300) < 1:
             raise SafetyError("timeout must be 1-1800 seconds")
@@ -111,7 +135,11 @@ def validate_plan(m: dict):
     for probe in m.get("negative_probes", []):
         if not bounded_relative(probe.get("path", "")):
             raise SafetyError("probe path must remain inside disposable worktree")
-        if not isinstance(probe.get("from"), str) or not probe["from"] or not isinstance(probe.get("to"), str):
+        if (
+            not isinstance(probe.get("from"), str)
+            or not probe["from"]
+            or not isinstance(probe.get("to"), str)
+        ):
             raise SafetyError("probe requires exact nonempty from and to text")
         if probe["from"] == probe["to"] or len(probe["from"]) > 8000 or len(probe["to"]) > 8000:
             raise SafetyError("probe must materially change bounded exact text")
@@ -120,12 +148,44 @@ def validate_plan(m: dict):
     return True
 
 
+# Markers of a failure in the runtime or transport, not in binding or authority.
+# A TLS or network error on `git fetch` says nothing about who may run what.
+ENVIRONMENT_MARKERS = (
+    "docker_unavailable",
+    "container",
+    "image",
+    "disposable baseline checkout failed",
+    "unable to access",
+    "ssl",
+    "certificate",
+    "could not resolve host",
+    "failed to connect",
+    "connection timed out",
+    "connection refused",
+    "network is unreachable",
+)
+
+
+def blocker_kind(reason: str) -> str:
+    lowered = reason.lower()
+    return (
+        "ENVIRONMENT" if any(marker in lowered for marker in ENVIRONMENT_MARKERS) else "AUTHORITY"
+    )
+
+
 def git_env():
     e = dict(os.environ)
     for key in list(e):
         if key.startswith("GIT_CONFIG_") or key == "GIT_SSH_COMMAND":
             e.pop(key, None)
-    e.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0", "GIT_LFS_SKIP_SMUDGE": "1"})
+    e.update(
+        {
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_LFS_SKIP_SMUDGE": "1",
+        }
+    )
     return e
 
 
@@ -142,22 +202,53 @@ def local_bind_git_objects(m: dict, workdir: Path):
     store = workdir / "objects.git"
     git(["init", "--bare", str(store)])
     remote = m["repository"]["url"]
-    git(["--git-dir", str(store), "fetch", "--no-tags", remote, m["repository"]["base_ref"]], timeout=300)
+    git(
+        ["--git-dir", str(store), "fetch", "--no-tags", remote, m["repository"]["base_ref"]],
+        timeout=300,
+    )
     actual = git(["--git-dir", str(store), "rev-parse", "FETCH_HEAD"]).stdout.strip()
     if actual != m["repository"]["base_sha"]:
-        raise SafetyError("target base branch moved since binding: expected SHA differs from fetched SHA")
-    git(["--git-dir", str(store), "update-ref", "refs/heads/l9-baseline", m["repository"]["base_sha"]])
+        raise SafetyError(
+            "target base branch moved since binding: expected SHA differs from fetched SHA"
+        )
+    git(
+        [
+            "--git-dir",
+            str(store),
+            "update-ref",
+            "refs/heads/l9-baseline",
+            m["repository"]["base_sha"],
+        ]
+    )
     for pr in m["prs"]:
-        git(["--git-dir", str(store), "fetch", "--no-tags", pr["fetch_url"], pr["fetch_ref"]], timeout=300)
+        git(
+            ["--git-dir", str(store), "fetch", "--no-tags", pr["fetch_url"], pr["fetch_ref"]],
+            timeout=300,
+        )
         actual = git(["--git-dir", str(store), "rev-parse", "FETCH_HEAD"]).stdout.strip()
         if actual != pr["head_sha"]:
-            raise SafetyError(f"PR #{pr['number']} moved since binding: expected SHA differs from fetched SHA")
-        git(["--git-dir", str(store), "update-ref", f"refs/heads/l9-pr-{pr['number']}", pr["head_sha"]])
+            raise SafetyError(
+                f"PR #{pr['number']} moved since binding: expected SHA differs from fetched SHA"
+            )
+        git(
+            [
+                "--git-dir",
+                str(store),
+                "update-ref",
+                f"refs/heads/l9-pr-{pr['number']}",
+                pr["head_sha"],
+            ]
+        )
     return store
 
 
 def git_blob(store: Path, revision: str, path: str) -> bytes:
-    raw = subprocess.run(["git", "--git-dir", str(store), "show", f"{revision}:{path}"], capture_output=True, env=git_env(), timeout=60)
+    raw = subprocess.run(
+        ["git", "--git-dir", str(store), "show", f"{revision}:{path}"],
+        capture_output=True,
+        env=git_env(),
+        timeout=60,
+    )
     if raw.returncode:
         raise SafetyError(f"source authority file {path} missing at baseline {revision}")
     return raw.stdout
@@ -169,19 +260,29 @@ def verify_commands(m, store):
         s = procedure["source"]
         actual = sha(git_blob(store, base, s["path"]))
         if actual != s["sha256"]:
-            raise SafetyError(f"test procedure source {s['path']} does not match pinned trusted baseline")
+            raise SafetyError(
+                f"test procedure source {s['path']} does not match pinned trusted baseline"
+            )
         if not s.get("anchor") or s["anchor"].encode() not in git_blob(store, base, s["path"]):
-            raise SafetyError(f"test command lacks verifiable invocation anchor in trusted file {s['path']}")
+            raise SafetyError(
+                f"test command lacks verifiable invocation anchor in trusted file {s['path']}"
+            )
 
 
 def detect_adapters(files: list[str]) -> list[str]:
     names = set(files)
     types = set()
-    if any(x in names for x in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt")) or any(x.endswith(".py") for x in names):
+    if any(
+        x in names for x in ("pyproject.toml", "setup.py", "setup.cfg", "requirements.txt")
+    ) or any(x.endswith(".py") for x in names):
         types.add("PYTHON")
     if "package.json" in names or any(x.endswith((".ts", ".tsx", ".js")) for x in names):
         types.add("NODE")
-    if any(x.endswith(("/__manifest__.py", "/__openerp__.py")) or x in ("__manifest__.py", "__openerp__.py") for x in names):
+    if any(
+        x.endswith(("/__manifest__.py", "/__openerp__.py"))
+        or x in ("__manifest__.py", "__openerp__.py")
+        for x in names
+    ):
         types.add("ODOO")
     if any(x.endswith("Dockerfile") or x in ("compose.yaml", "docker-compose.yml") for x in names):
         types.add("CONTAINER")
@@ -200,7 +301,10 @@ def list_tree(store, base):
 
 
 def detect_overlap(store, m):
-    per_pr = {str(p["number"]): changed_files(store, m["repository"]["base_sha"], p["head_sha"]) for p in m["prs"]}
+    per_pr = {
+        str(p["number"]): changed_files(store, m["repository"]["base_sha"], p["head_sha"])
+        for p in m["prs"]
+    }
     index = {}
     for pid, files in per_pr.items():
         for f in files:
@@ -216,11 +320,16 @@ def dependency_order(store, m):
         for b in order:
             if a == b:
                 continue
-            p = git(["--git-dir", str(store), "merge-base", "--is-ancestor", heads[a], heads[b]], check=False)
+            p = git(
+                ["--git-dir", str(store), "merge-base", "--is-ancestor", heads[a], heads[b]],
+                check=False,
+            )
             if p.returncode == 0:
                 deps.append({"ancestor_pr": a, "descendant_pr": b})
                 if order.index(a) > order.index(b):
-                    raise SafetyError(f"dependency order contradicts Git ancestry: PR {a} must precede {b}")
+                    raise SafetyError(
+                        f"dependency order contradicts Git ancestry: PR {a} must precede {b}"
+                    )
             elif p.returncode != 1:
                 raise SafetyError("could not establish merge ancestry")
     if m.get("order_basis") == "VERIFIED_DEPENDENCY" and len(order) > 1 and not deps:
@@ -241,14 +350,28 @@ def inspect_weak_tests(store, heads, per_pr):
             except SafetyError:
                 continue
             body = b.decode("utf-8", "replace")
-            for needle, label in (("assert True", "constant_true_assertion"), ("@pytest.mark.skip", "skipped_test"), ("@pytest.mark.xfail", "expected_failure"), ("assert 1 == 1", "tautological_assertion"), ("expect(true).toBe(true)", "tautological_assertion")):
+            for needle, label in (
+                ("assert True", "constant_true_assertion"),
+                ("@pytest.mark.skip", "skipped_test"),
+                ("@pytest.mark.xfail", "expected_failure"),
+                ("assert 1 == 1", "tautological_assertion"),
+                ("expect(true).toBe(true)", "tautological_assertion"),
+            ):
                 if needle in body:
-                    cues.append({"pr": int(prnum), "path": path, "signal": label, "status": "REVIEW_REQUIRED_NOT_CONFIRMED"})
+                    cues.append(
+                        {
+                            "pr": int(prnum),
+                            "path": path,
+                            "signal": label,
+                            "status": "REVIEW_REQUIRED_NOT_CONFIRMED",
+                        }
+                    )
     return cues
 
 
 class DockerSandbox:
     """Allowlisted docker run flags only; no networks, host socket, root or privilege."""
+
     def __init__(self, image, run_id, uid=None, gid=None):
         if not IMAGE.fullmatch(image):
             raise SafetyError("image digest not pinned")
@@ -257,18 +380,25 @@ class DockerSandbox:
         self.uid = os.getuid() if uid is None else uid
         self.gid = os.getgid() if gid is None else gid
         if self.uid == 0:
-            raise SafetyError("DOCKER_UNAVAILABLE: root host UID requires a verified nonroot workspace policy")
+            raise SafetyError(
+                "DOCKER_UNAVAILABLE: root host UID requires a verified nonroot workspace policy"
+            )
         self.call_number = 0
 
     def preflight(self):
         if shutil.which("docker") is None:
             raise SafetyError("DOCKER_UNAVAILABLE: Docker CLI not installed")
         provenance = {}
-        for name, args in (("docker_server", ["docker", "info", "--format", "{{.ServerVersion}}"]),
-                           ("image_id", ["docker", "image", "inspect", "--format", "{{.Id}}", self.image])):
+        for name, args in (
+            ("docker_server", ["docker", "info", "--format", "{{.ServerVersion}}"]),
+            ("image_id", ["docker", "image", "inspect", "--format", "{{.Id}}", self.image]),
+        ):
             p = subprocess.run(args, capture_output=True, text=True, timeout=20)
             if p.returncode:
-                raise SafetyError("DOCKER_UNAVAILABLE: Docker daemon or pinned local image unavailable: " + p.stderr[-300:])
+                raise SafetyError(
+                    "DOCKER_UNAVAILABLE: Docker daemon or pinned local image unavailable: "
+                    + p.stderr[-300:]
+                )
             provenance[name] = p.stdout.strip()
         return provenance
 
@@ -277,24 +407,78 @@ class DockerSandbox:
         name = f"l9-pr-{self.run_id}-{self.call_number}"
         if not argv or any(not isinstance(s, str) or "\x00" in s for s in argv):
             raise SafetyError("container command requires clean argv")
-        args = ["docker", "run", "--rm", "--pull", "never", "--name", name,
-                "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-                "--pids-limit", "128", "--memory", "1024m", "--cpus", "2", "--ulimit", "nofile=1024:1024",
-                "--user", f"{self.uid}:{self.gid}", "--workdir", "/workspace",
-                "--mount", f"type=bind,src={case_dir.resolve()},dst=/workspace,rw",
-                "--tmpfs", "/tmp:rw,nosuid,nodev,size=128m", "-e", "HOME=/tmp", "-e", "GIT_CONFIG_GLOBAL=/dev/null",
-                "-e", "GIT_CONFIG_NOSYSTEM=1", "-e", "GIT_TERMINAL_PROMPT=0", "-e", "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00", "-e", "PYTHONDONTWRITEBYTECODE=1",
-                "--entrypoint", argv[0], self.image, *argv[1:]]
+        args = [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--name",
+            name,
+            "--network",
+            "none",
+            "--read-only",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges",
+            "--pids-limit",
+            "128",
+            "--memory",
+            "1024m",
+            "--cpus",
+            "2",
+            "--ulimit",
+            "nofile=1024:1024",
+            "--user",
+            f"{self.uid}:{self.gid}",
+            "--workdir",
+            "/workspace",
+            "--mount",
+            f"type=bind,src={case_dir.resolve()},dst=/workspace",
+            "--tmpfs",
+            "/tmp:rw,nosuid,nodev,size=128m",
+            "-e",
+            "HOME=/tmp",
+            "-e",
+            "GIT_CONFIG_GLOBAL=/dev/null",
+            "-e",
+            "GIT_CONFIG_NOSYSTEM=1",
+            "-e",
+            "GIT_TERMINAL_PROMPT=0",
+            "-e",
+            "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00",
+            "-e",
+            "PYTHONDONTWRITEBYTECODE=1",
+            "--entrypoint",
+            argv[0],
+            self.image,
+            *argv[1:],
+        ]
         started = time.monotonic()
         try:
-            p = subprocess.run(args, capture_output=True, text=True, errors="replace", timeout=seconds)
+            p = subprocess.run(
+                args, capture_output=True, text=True, errors="replace", timeout=seconds
+            )
             stdout = (p.stdout or "")[-200000:]
             stderr = (p.stderr or "")[-100000:]
-            return {"returncode": p.returncode, "stdout": stdout, "stderr": stderr, "elapsed_ms": int((time.monotonic()-started)*1000), "timed_out": False}
+            return {
+                "returncode": p.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+                "elapsed_ms": int((time.monotonic() - started) * 1000),
+                "timed_out": False,
+            }
         except subprocess.TimeoutExpired:
             # Docker client timeout can leave a daemon-side container; remove by exact name.
             subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=20)
-            return {"returncode": None, "stdout": "", "stderr": "container command timed out; daemon-side cleanup requested", "elapsed_ms": int((time.monotonic()-started)*1000), "timed_out": True}
+            return {
+                "returncode": None,
+                "stdout": "",
+                "stderr": "container command timed out; daemon-side cleanup requested",
+                "elapsed_ms": int((time.monotonic() - started) * 1000),
+                "timed_out": True,
+            }
 
 
 class EvidenceWriter:
@@ -308,7 +492,13 @@ class EvidenceWriter:
     def record(self, subject, kind, status, details=None, log=None):
         idx = len(self.records) + 1
         rid = f"E{idx:05d}"
-        record = {"id": rid, "subject": subject, "kind": kind, "status": status, "details": details or {}}
+        record = {
+            "id": rid,
+            "subject": subject,
+            "kind": kind,
+            "status": status,
+            "details": details or {},
+        }
         if log is not None:
             rel = f"logs/{rid}.txt"
             (self.output / rel).write_text(log, encoding="utf-8")
@@ -317,24 +507,71 @@ class EvidenceWriter:
         self.records.append(record)
         return rid
 
-    def finding(self, category, severity, reason, evidence_ids, scope="combined", root_cause="UNKNOWN", action="Reproduce and correct the authoritative owner"):
+    def finding(
+        self,
+        category,
+        severity,
+        reason,
+        evidence_ids,
+        scope="combined",
+        root_cause="UNKNOWN",
+        action="Reproduce and correct the authoritative owner",
+    ):
         identity = f"{category}|{scope}|{reason}"
         fid = "F-" + sha(identity.encode())[:12]
         if fid in self.seen_findings:
             return fid
         self.seen_findings.add(fid)
-        self.findings.append({"id": fid, "classification": category, "severity": severity,
-                              "reason": reason, "scope": scope, "evidence_ids": list(evidence_ids),
-                              "root_cause": root_cause, "corrective_obligation": action})
+        self.findings.append(
+            {
+                "id": fid,
+                "classification": category,
+                "severity": severity,
+                "reason": reason,
+                "scope": scope,
+                "evidence_ids": list(evidence_ids),
+                "root_cause": root_cause,
+                "corrective_obligation": action,
+            }
+        )
         return fid
 
     def log_command(self, subject, kind, argv, result):
-        body = f"$ argv: {json.dumps(argv)}\nreturncode={result['returncode']} elapsed_ms={result['elapsed_ms']} timed_out={result['timed_out']}\n" + result["stdout"] + "\nSTDERR:\n" + result["stderr"]
-        return self.record(subject, kind, "TIMEOUT" if result["timed_out"] else "PASS" if result["returncode"] == 0 else "FAIL", {"argv": argv, "returncode": result["returncode"], "elapsed_ms": result["elapsed_ms"], "timed_out": result["timed_out"]}, log=body)
+        body = (
+            f"$ argv: {json.dumps(argv)}\nreturncode={result['returncode']} elapsed_ms={result['elapsed_ms']} timed_out={result['timed_out']}\n"
+            + result["stdout"]
+            + "\nSTDERR:\n"
+            + result["stderr"]
+        )
+        return self.record(
+            subject,
+            kind,
+            "TIMEOUT" if result["timed_out"] else "PASS" if result["returncode"] == 0 else "FAIL",
+            {
+                "argv": argv,
+                "returncode": result["returncode"],
+                "elapsed_ms": result["elapsed_ms"],
+                "timed_out": result["timed_out"],
+            },
+            log=body,
+        )
 
 
 def docker_git(sandbox: DockerSandbox, path: Path, args, seconds=90):
-    argv = ["git", "-c", "safe.directory=/workspace", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "user.name=L9 Test", "-c", "user.email=integration@example.invalid", *args]
+    argv = [
+        "git",
+        "-c",
+        "safe.directory=/workspace",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "user.name=L9 Test",
+        "-c",
+        "user.email=integration@example.invalid",
+        *args,
+    ]
     return argv, sandbox.command(path, argv, seconds)
 
 
@@ -349,7 +586,13 @@ def prepare_case(store, name, workdir, sandbox, writer, base_sha, heads):
     for pr in heads:
         argv, result = docker_git(sandbox, path, ["merge", "--no-ff", "--no-edit", pr["head_sha"]])
         eid = writer.log_command(name, "MERGE", argv, result)
-        merge_records.append({"pr": pr["number"], "evidence_id": eid, "status": "PASS" if result["returncode"] == 0 else "CONFLICT"})
+        merge_records.append(
+            {
+                "pr": pr["number"],
+                "evidence_id": eid,
+                "status": "PASS" if result["returncode"] == 0 else "CONFLICT",
+            }
+        )
         if result["returncode"] != 0:
             return path, merge_records, None
     argv, rev = docker_git(sandbox, path, ["rev-parse", "HEAD"])
@@ -364,8 +607,22 @@ def tests_case(sandbox, path, name, tests, writer):
     for p in tests:
         result = sandbox.command(path, p["argv"], int(p.get("timeout_seconds", 300)))
         eid = writer.log_command(name, "TEST", p["argv"], result)
-        fids = parse_failure_ids(result["stdout"] + "\n" + result["stderr"], p.get("failure_parser", ""))
-        results.append({"evidence_id": eid, "status": "TIMEOUT" if result["timed_out"] else "PASS" if result["returncode"] == 0 else "FAIL", "procedure": p.get("id", "test"), "returncode": result["returncode"], "failure_ids": fids})
+        fids = parse_failure_ids(
+            result["stdout"] + "\n" + result["stderr"], p.get("failure_parser", "")
+        )
+        results.append(
+            {
+                "evidence_id": eid,
+                "status": "TIMEOUT"
+                if result["timed_out"]
+                else "PASS"
+                if result["returncode"] == 0
+                else "FAIL",
+                "procedure": p.get("id", "test"),
+                "returncode": result["returncode"],
+                "failure_ids": fids,
+            }
+        )
     return results
 
 
@@ -394,7 +651,11 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
             pyc.unlink()
     raw_target = proof / p["path"]
     target = raw_target.resolve()
-    if raw_target.is_symlink() or not target.is_relative_to(proof.resolve()) or not target.is_file():
+    if (
+        raw_target.is_symlink()
+        or not target.is_relative_to(proof.resolve())
+        or not target.is_file()
+    ):
         raise SafetyError("mutation target escaped disposable copy or is not regular file")
     raw = target.read_text(encoding="utf-8")
     if raw.count(p["from"]) != 1:
@@ -405,17 +666,38 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
         status = "INCONCLUSIVE"
     else:
         status = "KILLED" if any(x["status"] == "FAIL" for x in results) else "SURVIVED"
-    return {"index": index, "path": p["path"], "name": p.get("name", f"probe-{index}"),
-            "from_sha256": sha(p["from"].encode()), "to_sha256": sha(p["to"].encode()),
-            "status": status, "test_evidence_ids": [x["evidence_id"] for x in results]}
+    return {
+        "index": index,
+        "path": p["path"],
+        "name": p.get("name", f"probe-{index}"),
+        "from_sha256": sha(p["from"].encode()),
+        "to_sha256": sha(p["to"].encode()),
+        "status": status,
+        "test_evidence_ids": [x["evidence_id"] for x in results],
+    }
 
 
 def verdict_for(execution, findings, m):
     if any(f["classification"] == "ENVIRONMENT" for f in findings):
         return "BLOCKED"
-    if any(f["severity"] in ("CRITICAL", "HIGH") and f["classification"] in {"INTEGRATION_ONLY", "PR_DEFECT", "REGRESSION", "FALSE_GREEN", "MERGE_CONFLICT", "ORDER_SENSITIVITY"} for f in findings):
+    if any(
+        f["severity"] in ("CRITICAL", "HIGH")
+        and f["classification"]
+        in {
+            "INTEGRATION_ONLY",
+            "PR_DEFECT",
+            "REGRESSION",
+            "FALSE_GREEN",
+            "MERGE_CONFLICT",
+            "ORDER_SENSITIVITY",
+        }
+        for f in findings
+    ):
         return "NOT_INTEGRATION_READY"
-    if execution.get("docker_executed") is not True or execution.get("combined_tests_pass") is not True:
+    if (
+        execution.get("docker_executed") is not True
+        or execution.get("combined_tests_pass") is not True
+    ):
         return "INCOMPLETE_EVIDENCE"
     if not execution.get("negative_probe_killed") or not execution.get("source_review_verified"):
         return "INCOMPLETE_EVIDENCE"
@@ -428,14 +710,34 @@ def verdict_for(execution, findings, m):
 
 def write_bundle(out, m, manifest, writer, execution):
     state = verdict_for(execution, writer.findings, m)
-    summary = {"schema": "l9.integration.verdict/v1", "state": state, "revision_bound": True,
-               "readiness_scope": "disposable Git/Docker integration only; not production readiness or merge authorization",
-               "blocking_findings": [f["id"] for f in writer.findings if f["severity"] in ("CRITICAL", "HIGH")],
-               "unverified": [f["reason"] for f in writer.findings if f["classification"] in {"UNVERIFIED", "AUTHORITY", "ENVIRONMENT"}],
-               "execution": execution, "generated_at": now()}
-    docs = {"integration_manifest.json": manifest, "integration_findings.json": {"schema": "l9.integration.findings/v1", "findings": writer.findings},
-            "integration_evidence.json": {"schema": "l9.integration.evidence/v1", "records": writer.records},
-            "integration_verdict.json": summary}
+    summary = {
+        "schema": "l9.integration.verdict/v1",
+        "state": state,
+        "revision_bound": True,
+        "readiness_scope": "disposable Git/Docker integration only; not production readiness or merge authorization",
+        "blocking_findings": [
+            f["id"] for f in writer.findings if f["severity"] in ("CRITICAL", "HIGH")
+        ],
+        "unverified": [
+            f["reason"]
+            for f in writer.findings
+            if f["classification"] in {"UNVERIFIED", "AUTHORITY", "ENVIRONMENT"}
+        ],
+        "execution": execution,
+        "generated_at": now(),
+    }
+    docs = {
+        "integration_manifest.json": manifest,
+        "integration_findings.json": {
+            "schema": "l9.integration.findings/v1",
+            "findings": writer.findings,
+        },
+        "integration_evidence.json": {
+            "schema": "l9.integration.evidence/v1",
+            "records": writer.records,
+        },
+        "integration_verdict.json": summary,
+    }
     for name, body in docs.items():
         (out / name).write_text(json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return summary
@@ -449,12 +751,27 @@ def run(m: dict, out: Path):
     writer = EvidenceWriter(out)
     stamp = now()
     run_id = uuid.uuid4().hex[:10]
-    manifest = {"schema": "l9.integration.manifest/v1", "repository": m.get("repository", {}), "prs": m.get("prs", []),
-                "integration_order": m.get("integration_order", []), "order_basis": m.get("order_basis", "UNKNOWN"),
-                "docker_image": m.get("image", "UNKNOWN"), "network": "none", "run_id": run_id,
-                "started_at": stamp, "states": [], "cleanup": "NOT_STARTED", "execution_mode": "DOCKER_ONLY"}
-    execution = {"docker_executed": False, "combined_tests_pass": False, "negative_probe_killed": False,
-                 "source_review_verified": False, "required_contracts_verified": False}
+    manifest = {
+        "schema": "l9.integration.manifest/v1",
+        "repository": m.get("repository", {}),
+        "prs": m.get("prs", []),
+        "integration_order": m.get("integration_order", []),
+        "order_basis": m.get("order_basis", "UNKNOWN"),
+        "docker_image": m.get("image", "UNKNOWN"),
+        "network": "none",
+        "run_id": run_id,
+        "started_at": stamp,
+        "states": [],
+        "cleanup": "NOT_STARTED",
+        "execution_mode": "DOCKER_ONLY",
+    }
+    execution = {
+        "docker_executed": False,
+        "combined_tests_pass": False,
+        "negative_probe_killed": False,
+        "source_review_verified": False,
+        "required_contracts_verified": False,
+    }
     work_path = None
     try:
         validate_plan(m)
@@ -475,112 +792,360 @@ def run(m: dict, out: Path):
                 manifest["overlaps"] = overlap
                 for x in overlap:
                     writer.record(x["path"], "OVERLAP_CANDIDATE", "REVIEW_REQUIRED", x)
-                for sig in inspect_weak_tests(store, {p["number"]: p["head_sha"] for p in m["prs"]}, per_pr):
+                for sig in inspect_weak_tests(
+                    store, {p["number"]: p["head_sha"] for p in m["prs"]}, per_pr
+                ):
                     writer.record(sig["path"], "TEST_QUALITY_SIGNAL", "REVIEW_REQUIRED", sig)
                 # Source review runs after the candidate has an actual combined SHA.
                 # Never trust a pre-execution PASS claim against an unseen synthetic merge.
-                eid = writer.record("source audit", "UNCERTAINTY", "UNVERIFIED", {"reason": "independent source review must be bound after combined revision exists"})
-                writer.finding("UNVERIFIED", "MEDIUM", "Independent exact-revision adversarial source review not yet attached", [eid])
-                eid = writer.record("authority", "UNCERTAINTY", "UNVERIFIED", {"reason": "independent contract closure must be verified against combined candidate"})
-                writer.finding("UNVERIFIED", "MEDIUM", "Applicable domain obligation closure not yet reviewed", [eid])
-                ordered = [next(p for p in m["prs"] if p["number"] == pid) for pid in m["integration_order"]]
-                phases = [("baseline", [])] + [(f"pr-{p['number']}", [p]) for p in ordered] + [("combined", ordered)]
+                eid = writer.record(
+                    "source audit",
+                    "UNCERTAINTY",
+                    "UNVERIFIED",
+                    {
+                        "reason": "independent source review must be bound after combined revision exists"
+                    },
+                )
+                writer.finding(
+                    "UNVERIFIED",
+                    "MEDIUM",
+                    "Independent exact-revision adversarial source review not yet attached",
+                    [eid],
+                )
+                eid = writer.record(
+                    "authority",
+                    "UNCERTAINTY",
+                    "UNVERIFIED",
+                    {
+                        "reason": "independent contract closure must be verified against combined candidate"
+                    },
+                )
+                writer.finding(
+                    "UNVERIFIED",
+                    "MEDIUM",
+                    "Applicable domain obligation closure not yet reviewed",
+                    [eid],
+                )
+                ordered = [
+                    next(p for p in m["prs"] if p["number"] == pid)
+                    for pid in m["integration_order"]
+                ]
+                phases = (
+                    [("baseline", [])]
+                    + [(f"pr-{p['number']}", [p]) for p in ordered]
+                    + [("combined", ordered)]
+                )
                 statuses = {}
                 combined_path = None
                 for name, heads in phases:
-                    case, merges, rev = prepare_case(store, name, work, sandbox, writer, m["repository"]["base_sha"], heads)
+                    case, merges, rev = prepare_case(
+                        store, name, work, sandbox, writer, m["repository"]["base_sha"], heads
+                    )
                     row = {"name": name, "merges": merges, "revision": rev}
                     if rev is None:
                         statuses[name] = "CONFLICT"
                         eid = merges[-1]["evidence_id"]
-                        writer.finding("MERGE_CONFLICT", "HIGH", f"Textual merge conflict in {name}", [eid], scope=name,
-                                       action="Resolve conflict by updating authoritative PR; rerun exact-bound simulation")
+                        writer.finding(
+                            "MERGE_CONFLICT",
+                            "HIGH",
+                            f"Textual merge conflict in {name}",
+                            [eid],
+                            scope=name,
+                            action="Resolve conflict by updating authoritative PR; rerun exact-bound simulation",
+                        )
                     else:
                         tests = tests_case(sandbox, case, name, m["test_procedures"], writer)
                         row["tests"] = tests
-                        statuses[name] = "PASS" if all(t["status"] == "PASS" for t in tests) else "FAIL"
+                        statuses[name] = (
+                            "PASS" if all(t["status"] == "PASS" for t in tests) else "FAIL"
+                        )
                         if name == "combined":
                             combined_path = case
                         execution["docker_executed"] = True
                     manifest["states"].append(row)
                 if combined_path:
-                    diff = git(["-C", str(combined_path), "diff", "--no-ext-diff", "--binary", m["repository"]["base_sha"] + "..HEAD"], timeout=150)
+                    diff = git(
+                        [
+                            "-C",
+                            str(combined_path),
+                            "diff",
+                            "--no-ext-diff",
+                            "--binary",
+                            m["repository"]["base_sha"] + "..HEAD",
+                        ],
+                        timeout=150,
+                    )
                     if len(diff.stdout.encode("utf-8", "replace")) > 2_000_000:
-                        eid = writer.record("combined source", "SOURCE_DIFF", "TRUNCATED", {"reason": "diff exceeds 2MB evidence cap; inspect exact repository checkout for full review"}, log=diff.stdout[:2_000_000])
-                        writer.finding("UNVERIFIED", "MEDIUM", "Combined diff truncated; independent source review must inspect full checkout", [eid])
+                        eid = writer.record(
+                            "combined source",
+                            "SOURCE_DIFF",
+                            "TRUNCATED",
+                            {
+                                "reason": "diff exceeds 2MB evidence cap; inspect exact repository checkout for full review"
+                            },
+                            log=diff.stdout[:2_000_000],
+                        )
+                        writer.finding(
+                            "UNVERIFIED",
+                            "MEDIUM",
+                            "Combined diff truncated; independent source review must inspect full checkout",
+                            [eid],
+                        )
                     else:
-                        writer.record("combined source", "SOURCE_DIFF", "CAPTURED", {"baseline": m["repository"]["base_sha"], "integrated": next((c["revision"]["sha"] for c in manifest["states"] if c["name"] == "combined" and c.get("revision")), None)}, log=diff.stdout)
+                        writer.record(
+                            "combined source",
+                            "SOURCE_DIFF",
+                            "CAPTURED",
+                            {
+                                "baseline": m["repository"]["base_sha"],
+                                "integrated": next(
+                                    (
+                                        c["revision"]["sha"]
+                                        for c in manifest["states"]
+                                        if c["name"] == "combined" and c.get("revision")
+                                    ),
+                                    None,
+                                ),
+                            },
+                            log=diff.stdout,
+                        )
                 if statuses.get("combined") == "PASS":
                     execution["combined_tests_pass"] = True
                 if statuses.get("baseline") == "PASS" and statuses.get("combined") == "FAIL":
                     individually = [statuses[f"pr-{p['number']}"] for p in ordered]
-                    evs = [t["evidence_id"] for c in manifest["states"] if c["name"] == "combined" for t in c.get("tests", []) if t["status"] != "PASS"]
-                    label = "INTEGRATION_ONLY" if len(ordered) > 1 and all(s == "PASS" for s in individually) else "REGRESSION"
-                    writer.finding(label, "HIGH", "Combined candidate introduced failure relative to passing baseline", evs,
-                                   root_cause="UNKNOWN", action="Trace failing test through combined producer-consumer paths; add regression witness")
+                    evs = [
+                        t["evidence_id"]
+                        for c in manifest["states"]
+                        if c["name"] == "combined"
+                        for t in c.get("tests", [])
+                        if t["status"] != "PASS"
+                    ]
+                    label = (
+                        "INTEGRATION_ONLY"
+                        if len(ordered) > 1 and all(s == "PASS" for s in individually)
+                        else "REGRESSION"
+                    )
+                    writer.finding(
+                        label,
+                        "HIGH",
+                        "Combined candidate introduced failure relative to passing baseline",
+                        evs,
+                        root_cause="UNKNOWN",
+                        action="Trace failing test through combined producer-consumer paths; add regression witness",
+                    )
                 elif statuses.get("baseline") == "FAIL" and statuses.get("combined") == "FAIL":
-                    base_tests = next((c.get("tests", []) for c in manifest["states"] if c["name"] == "baseline"), [])
-                    merged_tests = next((c.get("tests", []) for c in manifest["states"] if c["name"] == "combined"), [])
-                    if base_tests and len(base_tests) == len(merged_tests) and all(a["failure_ids"] is not None and b["failure_ids"] is not None and (a["status"] == "PASS" or a["failure_ids"]) and (b["status"] == "PASS" or b["failure_ids"]) for a, b in zip(base_tests, merged_tests)):
-                        introduced = sorted({x for a, b in zip(base_tests, merged_tests) for x in set(b["failure_ids"]) - set(a["failure_ids"])})
-                        eid = writer.record("baseline differential", "FAILURE_IDENTITIES", "OBSERVED", {"introduced_ids": introduced, "baseline_ids": [t["failure_ids"] for t in base_tests], "combined_ids": [t["failure_ids"] for t in merged_tests]})
+                    base_tests = next(
+                        (c.get("tests", []) for c in manifest["states"] if c["name"] == "baseline"),
+                        [],
+                    )
+                    merged_tests = next(
+                        (c.get("tests", []) for c in manifest["states"] if c["name"] == "combined"),
+                        [],
+                    )
+                    if (
+                        base_tests
+                        and len(base_tests) == len(merged_tests)
+                        and all(
+                            a["failure_ids"] is not None
+                            and b["failure_ids"] is not None
+                            and (a["status"] == "PASS" or a["failure_ids"])
+                            and (b["status"] == "PASS" or b["failure_ids"])
+                            for a, b in zip(base_tests, merged_tests)
+                        )
+                    ):
+                        introduced = sorted(
+                            {
+                                x
+                                for a, b in zip(base_tests, merged_tests)
+                                for x in set(b["failure_ids"]) - set(a["failure_ids"])
+                            }
+                        )
+                        eid = writer.record(
+                            "baseline differential",
+                            "FAILURE_IDENTITIES",
+                            "OBSERVED",
+                            {
+                                "introduced_ids": introduced,
+                                "baseline_ids": [t["failure_ids"] for t in base_tests],
+                                "combined_ids": [t["failure_ids"] for t in merged_tests],
+                            },
+                        )
                         if introduced:
-                            writer.finding("REGRESSION", "HIGH", "New test failure identity appeared against red baseline: " + ", ".join(introduced), [eid], action="Repair introduced regression without hiding pre-existing baseline failures")
+                            writer.finding(
+                                "REGRESSION",
+                                "HIGH",
+                                "New test failure identity appeared against red baseline: "
+                                + ", ".join(introduced),
+                                [eid],
+                                action="Repair introduced regression without hiding pre-existing baseline failures",
+                            )
                         else:
-                            writer.finding("UNVERIFIED", "MEDIUM", "Pre-existing baseline failures remain; required disposition and passing witness are absent", [eid], action="Disposition existing failures and reverify integration obligations")
+                            writer.finding(
+                                "UNVERIFIED",
+                                "MEDIUM",
+                                "Pre-existing baseline failures remain; required disposition and passing witness are absent",
+                                [eid],
+                                action="Disposition existing failures and reverify integration obligations",
+                            )
                     else:
-                        eid = writer.record("baseline differential", "UNCERTAINTY", "UNKNOWN", {"reason": "baseline and combined failing; missing verified failure identity comparison"})
-                        writer.finding("UNVERIFIED", "HIGH", "Baseline-failing and combined-failing test attribution unresolved", [eid], action="Compare verified failure identities")
+                        eid = writer.record(
+                            "baseline differential",
+                            "UNCERTAINTY",
+                            "UNKNOWN",
+                            {
+                                "reason": "baseline and combined failing; missing verified failure identity comparison"
+                            },
+                        )
+                        writer.finding(
+                            "UNVERIFIED",
+                            "HIGH",
+                            "Baseline-failing and combined-failing test attribution unresolved",
+                            [eid],
+                            action="Compare verified failure identities",
+                        )
                 elif statuses.get("combined") == "FAIL":
-                    eid = writer.record("combined", "UNCERTAINTY", "UNKNOWN", {"reason": "not attributable without clean baseline and individual tests"})
-                    writer.finding("UNVERIFIED", "HIGH", "Combined failure could not be assigned to a proven cause", [eid])
+                    eid = writer.record(
+                        "combined",
+                        "UNCERTAINTY",
+                        "UNKNOWN",
+                        {"reason": "not attributable without clean baseline and individual tests"},
+                    )
+                    writer.finding(
+                        "UNVERIFIED",
+                        "HIGH",
+                        "Combined failure could not be assigned to a proven cause",
+                        [eid],
+                    )
                 if len(ordered) == 2 and not deps:
-                    alt_path, alt_merges, alt_rev = prepare_case(store, "order-reversed", work, sandbox, writer, m["repository"]["base_sha"], list(reversed(ordered)))
-                    alt_record = {"name": "order-reversed", "merges": alt_merges, "revision": alt_rev}
+                    alt_path, alt_merges, alt_rev = prepare_case(
+                        store,
+                        "order-reversed",
+                        work,
+                        sandbox,
+                        writer,
+                        m["repository"]["base_sha"],
+                        list(reversed(ordered)),
+                    )
+                    alt_record = {
+                        "name": "order-reversed",
+                        "merges": alt_merges,
+                        "revision": alt_rev,
+                    }
                     if alt_rev is None:
                         eid = alt_merges[-1]["evidence_id"]
-                        writer.finding("ORDER_SENSITIVITY", "HIGH", "Reverse integration order produces a Git conflict", [eid], scope="order-reversed")
+                        writer.finding(
+                            "ORDER_SENSITIVITY",
+                            "HIGH",
+                            "Reverse integration order produces a Git conflict",
+                            [eid],
+                            scope="order-reversed",
+                        )
                     else:
-                        alt_tests = tests_case(sandbox, alt_path, "order-reversed", m["test_procedures"], writer)
+                        alt_tests = tests_case(
+                            sandbox, alt_path, "order-reversed", m["test_procedures"], writer
+                        )
                         alt_record["tests"] = alt_tests
-                        if any(t["status"] != "PASS" for t in alt_tests) and statuses.get("combined") == "PASS":
-                            writer.finding("ORDER_SENSITIVITY", "HIGH", "Reverse integration order fails while forward integration passes", [t["evidence_id"] for t in alt_tests if t["status"] != "PASS"])
+                        if (
+                            any(t["status"] != "PASS" for t in alt_tests)
+                            and statuses.get("combined") == "PASS"
+                        ):
+                            writer.finding(
+                                "ORDER_SENSITIVITY",
+                                "HIGH",
+                                "Reverse integration order fails while forward integration passes",
+                                [t["evidence_id"] for t in alt_tests if t["status"] != "PASS"],
+                            )
                         argv, tree_b = docker_git(sandbox, alt_path, ["rev-parse", "HEAD^{tree}"])
                         writer.log_command("order-reversed", "TREE", argv, tree_b)
-                        argv, tree_a = docker_git(sandbox, combined_path, ["rev-parse", "HEAD^{tree}"]) if combined_path else (None, None)
+                        argv, tree_a = (
+                            docker_git(sandbox, combined_path, ["rev-parse", "HEAD^{tree}"])
+                            if combined_path
+                            else (None, None)
+                        )
                         if tree_a:
                             writer.log_command("combined", "TREE", argv, tree_a)
-                        if tree_a and tree_a["returncode"] == 0 and tree_b["returncode"] == 0 and tree_a["stdout"].strip() != tree_b["stdout"].strip():
-                            eid = writer.record("ordering", "TREE_COMPARISON", "DIFFERENT", {"forward_tree": tree_a["stdout"].strip(), "reverse_tree": tree_b["stdout"].strip()})
-                            writer.finding("ORDER_SENSITIVITY", "HIGH", "Reverse integration produces different source tree", [eid], action="Resolve justified integration sequence and add order-specific proof")
+                        if (
+                            tree_a
+                            and tree_a["returncode"] == 0
+                            and tree_b["returncode"] == 0
+                            and tree_a["stdout"].strip() != tree_b["stdout"].strip()
+                        ):
+                            eid = writer.record(
+                                "ordering",
+                                "TREE_COMPARISON",
+                                "DIFFERENT",
+                                {
+                                    "forward_tree": tree_a["stdout"].strip(),
+                                    "reverse_tree": tree_b["stdout"].strip(),
+                                },
+                            )
+                            writer.finding(
+                                "ORDER_SENSITIVITY",
+                                "HIGH",
+                                "Reverse integration produces different source tree",
+                                [eid],
+                                action="Resolve justified integration sequence and add order-specific proof",
+                            )
                     manifest["states"].append(alt_record)
                 probe_results = []
                 if combined_path and statuses.get("combined") == "PASS":
                     for i, probe in enumerate(m.get("negative_probes", []), 1):
-                        result = negative_probe(sandbox, combined_path, i, probe, m["test_procedures"], writer, work)
+                        result = negative_probe(
+                            sandbox, combined_path, i, probe, m["test_procedures"], writer, work
+                        )
                         probe_results.append(result)
                         if result["status"] == "SURVIVED":
-                            writer.finding("FALSE_GREEN", "HIGH", f"Known negative case {result['name']} survived tests", result["test_evidence_ids"],
-                                           root_cause="CONFIRMED_FOR_PROBE", action="Strengthen assertions against verified expected behavior; kill mutant")
+                            writer.finding(
+                                "FALSE_GREEN",
+                                "HIGH",
+                                f"Known negative case {result['name']} survived tests",
+                                result["test_evidence_ids"],
+                                root_cause="CONFIRMED_FOR_PROBE",
+                                action="Strengthen assertions against verified expected behavior; kill mutant",
+                            )
                         if result["status"] == "INCONCLUSIVE":
-                            writer.finding("UNVERIFIED", "MEDIUM", f"Mutation probe {result['name']} timed out", result["test_evidence_ids"])
+                            writer.finding(
+                                "UNVERIFIED",
+                                "MEDIUM",
+                                f"Mutation probe {result['name']} timed out",
+                                result["test_evidence_ids"],
+                            )
                 manifest["negative_probes"] = probe_results
-                execution["negative_probe_killed"] = bool(probe_results) and all(p["status"] == "KILLED" for p in probe_results)
+                execution["negative_probe_killed"] = bool(probe_results) and all(
+                    p["status"] == "KILLED" for p in probe_results
+                )
             finally:
                 pass
     except (SafetyError, OSError, subprocess.TimeoutExpired) as exc:
         reason = str(exc)
-        kind = "ENVIRONMENT" if "DOCKER_UNAVAILABLE" in reason or "container" in reason.lower() or "image" in reason.lower() or "disposable baseline checkout failed" in reason.lower() else "AUTHORITY"
+        kind = blocker_kind(reason)
         eid = writer.record("execution blocker", "BLOCKER", "BLOCKED", {"error": reason})
-        writer.finding(kind, "HIGH", reason, [eid], action="Resolve exact missing environment/binding/authority before executing")
+        writer.finding(
+            kind,
+            "HIGH",
+            reason,
+            [eid],
+            action="Resolve exact missing environment/binding/authority before executing",
+        )
     manifest["completed_at"] = now()
-    manifest["cleanup"] = ("NO_DISPOSABLE_WORKSPACE_CREATED" if work_path is None
-                           else "REMOVED" if not work_path.exists() else "RESIDUAL_WORKSPACE_BLOCKER")
+    manifest["cleanup"] = (
+        "NO_DISPOSABLE_WORKSPACE_CREATED"
+        if work_path is None
+        else "REMOVED"
+        if not work_path.exists()
+        else "RESIDUAL_WORKSPACE_BLOCKER"
+    )
     if manifest["cleanup"] == "RESIDUAL_WORKSPACE_BLOCKER":
-        eid = writer.record("cleanup", "BLOCKER", "BLOCKED", {"reason": "disposable workspace remains; operator cleanup required"})
+        eid = writer.record(
+            "cleanup",
+            "BLOCKER",
+            "BLOCKED",
+            {"reason": "disposable workspace remains; operator cleanup required"},
+        )
         writer.finding("ENVIRONMENT", "HIGH", "Unremoved disposable workspace", [eid])
     verdict = write_bundle(out, m, manifest, writer, execution)
     from validate_evidence import seal_bundle
+
     seal_bundle(out)
     return verdict
 
