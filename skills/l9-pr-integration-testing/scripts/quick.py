@@ -16,7 +16,8 @@ What it decides for you, and from what evidence:
   gets BLOCKED, never a guessed command;
 * the image    — the Core-locked toolchain image plus one layer holding the
   repository's own `make setup` output at the base SHA, because tests run with
-  no network. A PR that changes dependency manifests is reported, not hidden;
+  no network. A PR that changes a dependency input is BLOCKED, never tested
+  against that stale layer;
 * the runner   — the sandbox's non-root user, with the session trust bundle.
 
 It still stops where judgment starts: the verdict stays INCOMPLETE_EVIDENCE
@@ -94,6 +95,7 @@ def procedures_from_contract(raw: bytes, phases: list[str], timeout: int) -> lis
             raise QuickError(f"{CONTRACT_PATH} lacks the literal anchor {anchor}")
         procedures.append(
             {
+                "id": f"make-{phase}",
                 "name": f"make {phase}",
                 "argv": ["make", phase],
                 "timeout_seconds": timeout,
@@ -114,6 +116,17 @@ def dependency_changes(changed_files_by_pr: dict[str, list[str]]) -> list[str]:
             ):
                 hits.add(path)
     return sorted(hits)
+
+
+def refuse_dependency_changes(changed_files_by_pr: dict[str, list[str]]) -> None:
+    changed = dependency_changes(changed_files_by_pr)
+    if changed:
+        raise QuickError(
+            "PR changes dependency inputs the base-SHA layer cannot represent ("
+            + ", ".join(changed)
+            + "); build the manifest by hand with an image provisioned from the "
+            "combined revision"
+        )
 
 
 def summarize(evidence: Path) -> dict:
@@ -155,7 +168,7 @@ def summarize(evidence: Path) -> dict:
     }
 
 
-def render(summary: dict, extras: list[str]) -> str:
+def render(summary: dict) -> str:
     lines = [f"PR integration: {summary['verdict']}"]
     for state in summary["states"]:
         merge = f" merge={'/'.join(state['merges'])}" if state["merges"] else ""
@@ -165,7 +178,6 @@ def render(summary: dict, extras: list[str]) -> str:
         lines.append(f"  probe {probe['name']}: {probe['status']}")
     for finding in summary["findings"]:
         lines.append(f"  [{finding['classification']} {finding['severity']}] {finding['reason']}")
-    lines += [f"  note: {extra}" for extra in extras]
     lines.append(f"  evidence: {summary['evidence']}")
     if summary["verdict"] == "INCOMPLETE_EVIDENCE" and summary["execution"].get("docker_executed"):
         lines.append(
@@ -175,6 +187,18 @@ def render(summary: dict, extras: list[str]) -> str:
 
 
 # --- Host side ---------------------------------------------------------------
+
+
+def pr_changed_files(repo: str, number: int) -> list[str]:
+    proc = subprocess.run(
+        ["gh", "api", "--paginate", f"repos/{repo}/pulls/{number}/files", "--jq", ".[].filename"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if proc.returncode:
+        raise QuickError(f"cannot list files of {repo}#{number}: {proc.stderr.strip()[-200:]}")
+    return [line for line in proc.stdout.splitlines() if line]
 
 
 def gh_raw(repo: str, path: str, ref: str) -> bytes:
@@ -344,6 +368,11 @@ def main(argv: list[str] | None = None) -> int:
         run(bind, timeout=180)
         manifest = json.loads(binding.read_text())
         base_sha = manifest["repository"]["base_sha"]
+        # The dependency layer is built at the base SHA. A PR that changes a
+        # dependency input would be tested against stale dependencies, so the
+        # quick path refuses it instead of producing evidence that could be
+        # promoted to INTEGRATION_READY.
+        refuse_dependency_changes({str(n): pr_changed_files(args.repo, n) for n in args.pr})
         contract = gh_raw(args.repo, CONTRACT_PATH, base_sha)
         manifest["test_procedures"] = procedures_from_contract(contract, phases, args.timeout)
         manifest["image"] = dependency_layer(sandbox, args.repo, base_sha)
@@ -402,23 +431,11 @@ def main(argv: list[str] | None = None) -> int:
         if not (evidence / "integration_verdict.json").exists():
             raise QuickError(f"integrate.py produced no verdict; see {run_dir}")
         summary = summarize(evidence)
-        extras = []
-        changed = dependency_changes(
-            json.loads((evidence / "integration_manifest.json").read_text()).get(
-                "changed_files_by_pr", {}
-            )
-        )
-        if changed:
-            extras.append(
-                "PR changes dependency manifests the base-SHA layer cannot reflect: "
-                + ", ".join(changed)
-            )
-        summary["notes"] = extras
     except (QuickError, OSError, subprocess.SubprocessError, KeyError, json.JSONDecodeError) as exc:
         summary = {"verdict": "BLOCKED", "reason": str(exc)}
         print(json.dumps(summary, indent=2) if args.json else f"PR integration: BLOCKED — {exc}")
         return 1
-    print(json.dumps(summary, indent=2) if args.json else render(summary, summary["notes"]))
+    print(json.dumps(summary, indent=2) if args.json else render(summary))
     return 0 if summary["verdict"] != "BLOCKED" else 1
 
 

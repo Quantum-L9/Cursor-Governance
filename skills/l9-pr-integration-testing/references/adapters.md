@@ -27,8 +27,9 @@ READY receipt exists. Do not reimplement any of it here. It provides, with a rec
 
 Repository dependencies cannot be installed during a no-network test, so the quick path
 layers the repository's own `make setup` output, run at the **base** SHA, onto that image.
-A PR that changes dependency manifests is reported as such, because that layer cannot
-reflect it.
+A PR that changes a dependency input (manifests, lockfiles, `requirements*.txt`, `Makefile`,
+`Repo.mk`) is BLOCKED by the quick path, because that layer would test it against stale
+dependencies; build such a manifest by hand with an image provisioned from the combined revision.
 
 ## Repository Execution V2 (`make-v1` facade)
 

@@ -110,6 +110,11 @@ def validate_plan(m: dict):
     tests = m.get("test_procedures", [])
     if not isinstance(tests, list) or not tests:
         raise SafetyError("at least one verified test procedure is required")
+    procedure_ids = [p.get("id") for p in tests if isinstance(p, dict)]
+    if any(not isinstance(i, str) or not i for i in procedure_ids) or len(
+        set(procedure_ids)
+    ) != len(tests):
+        raise SafetyError("every test procedure needs a unique nonempty id")
     for p in tests:
         argv = p.get("argv")
         if (
@@ -298,6 +303,18 @@ def changed_files(store, base, head):
 
 def list_tree(store, base):
     return git(["--git-dir", str(store), "ls-tree", "-r", "--name-only", base]).stdout.splitlines()
+
+
+def adapter_census(store, m):
+    """Adapters across every tree the run tests, not only the base.
+
+    A PR that adds an Odoo manifest or a migration must trip the
+    stateful-adapter guard in apply_review.py as well.
+    """
+    files = set(list_tree(store, m["repository"]["base_sha"]))
+    for pr in m["prs"]:
+        files.update(list_tree(store, pr["head_sha"]))
+    return detect_adapters(sorted(files))
 
 
 def detect_overlap(store, m):
@@ -631,7 +648,7 @@ def tests_case(sandbox, path, name, tests, writer):
                 else "PASS"
                 if result["returncode"] == 0
                 else "FAIL",
-                "procedure": p.get("id", "test"),
+                "procedure": p["id"],
                 "returncode": result["returncode"],
                 "failure_ids": fids,
             }
@@ -798,8 +815,7 @@ def run(m: dict, out: Path):
                 verify_commands(m, store)
                 per_pr, overlap = detect_overlap(store, m)
                 deps = dependency_order(store, m)
-                files = list_tree(store, m["repository"]["base_sha"])
-                manifest["adapters_detected"] = detect_adapters(files)
+                manifest["adapters_detected"] = adapter_census(store, m)
                 manifest["dependencies"] = deps
                 manifest["changed_files_by_pr"] = per_pr
                 manifest["overlaps"] = overlap

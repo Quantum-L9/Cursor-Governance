@@ -1,5 +1,5 @@
 {
-  "generation_id": "a852cb7fce1abecdc552fee5f955612658cd61708b2bc15312a6f546b6788074",
+  "generation_id": "916d56093d1d277c212c03b2e9274cef8b0ad10975cb7f1e7754de6ddd94f562",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1261,7 +1261,7 @@
       "path": "skills/l9-pr-integration-testing",
       "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
-      "skill_sha256": "aa0a85bf28bd70077e0fa2ec19599d0693712e1fda97c23bf3b16a13655bd586",
+      "skill_sha256": "e6e491460c0fe5253f18578a51e069c23e7feea1bcbbb480b8fcfd302800d055",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1463,5 +1463,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
-  "source_skill_corpus_sha256": "f1a24c79f6f9f2b5456df5bbc0aef6bfb17698a1fd84bb32053fdfc2daa5f027"
+  "source_skill_corpus_sha256": "9dadaf0a3ebf282542ecb1627e6d5414e4a50ec90a16565fbd35114b929d3032"
 }

@@ -43,7 +43,7 @@ python3 scripts/quick.py --repo OWNER/REPO --pr 12 --authority "operator request
 #   more phases: --phase test --phase check      false-green probes: --probes probes.json
 ```
 
-It takes the governance sandbox receipt (running `ensure` itself if none is READY), binds the PRs, derives procedures **only** from the declared phases at the base SHA, layers the repository's own `make setup` output onto the Core-locked toolchain image, and runs `integrate.py` as the non-root sandbox user. A repository without that contract is `BLOCKED`, never guessed. The quick path stops at `INCOMPLETE_EVIDENCE`: steps 5–7 (adversarial review, `apply_review.py`, `validate_evidence.py`) remain judgment, and the review must be honest about its independence.
+It takes the governance sandbox receipt (running `ensure` itself if none is READY), binds the PRs, derives procedures **only** from the declared phases at the base SHA, layers the repository's own `make setup` output onto the Core-locked toolchain image (a PR that changes a dependency input is `BLOCKED`, since that layer is built at the base SHA), and runs `integrate.py` as the non-root sandbox user. A repository without that contract is `BLOCKED`, never guessed. The quick path stops at `INCOMPLETE_EVIDENCE`: steps 5–7 (adversarial review, `apply_review.py`, `validate_evidence.py`) remain judgment, and the review must be honest about its independence.
 
 ## Environment (owned by governance)
 

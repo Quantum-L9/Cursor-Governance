@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -83,7 +84,7 @@ def test_profile_hardening_is_unchanged(monkeypatch: pytest.MonkeyPatch, tmp_pat
     "reason",
     [
         "Git failed (128): fatal: unable to access 'https://github.com/o/r.git/': "
-        "Problem with the SSL CA cert (path? access rights?)",
+        + "Problem with the SSL CA cert (path? access rights?)",
         "Git failed (128): fatal: unable to access 'x': Could not resolve host: github.com",
         "DOCKER_UNAVAILABLE: Docker daemon or pinned local image unavailable",
     ],
@@ -169,3 +170,82 @@ def test_quick_reports_dependency_manifests_a_base_layer_cannot_reflect() -> Non
         "13": ["sub/pyproject.toml", "README.md"],
     }
     assert quick.dependency_changes(changed) == ["requirements-ci.txt", "sub/pyproject.toml"]
+
+
+def test_quick_procedures_have_unique_ids() -> None:
+    procedures = quick.procedures_from_contract(CONTRACT, ["test", "check"], 600)
+    assert [p["id"] for p in procedures] == ["make-test", "make-check"]
+
+
+def _plan_with(procedures: list[dict]) -> dict:
+    return {
+        "repository": {
+            "full_name": "o/r",
+            "base_ref": "main",
+            "base_sha": "a" * 40,
+            "url": "https://github.com/o/r.git",
+        },
+        "prs": [
+            {
+                "number": 1,
+                "head_sha": "b" * 40,
+                "base_ref": "main",
+                "fetch_url": "https://github.com/o/r.git",
+                "fetch_ref": "refs/pull/1/head",
+            }
+        ],
+        "integration_order": [1],
+        "image": "sha256:" + "c" * 64,
+        "test_procedures": procedures,
+        "execution_authority": {"scope": "DISPOSABLE_DOCKER_ONLY", "source": "operator"},
+    }
+
+
+@pytest.mark.parametrize("ids", [[None], ["", "x"], ["make-test", "make-test"]])
+def test_runner_refuses_procedures_without_unique_ids(ids: list[str | None]) -> None:
+    template = quick.procedures_from_contract(CONTRACT, ["test"], 600)[0]
+    procedures = []
+    for index, identifier in enumerate(ids):
+        procedure = {**template, "argv": ["make", f"t{index}"]}
+        procedure.pop("id")
+        if identifier is not None:
+            procedure["id"] = identifier
+        procedures.append(procedure)
+    with pytest.raises(integrate.SafetyError, match="unique nonempty id"):
+        integrate.validate_plan(_plan_with(procedures))
+
+
+def test_adapter_census_covers_paths_a_pr_adds(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+
+    def git(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    repo.mkdir()
+    git("init", "--quiet")
+    (repo / "app.py").write_text("print(1)\n")
+    git("add", "app.py")
+    git("commit", "--quiet", "-m", "base")
+    base = git("rev-parse", "HEAD")
+    (repo / "addon").mkdir()
+    (repo / "addon" / "__manifest__.py").write_text("{'name': 'x', 'depends': ['base']}\n")
+    git("add", "addon/__manifest__.py")
+    git("commit", "--quiet", "-m", "pr adds an Odoo addon")
+    head = git("rev-parse", "HEAD")
+    plan = {"repository": {"base_sha": base}, "prs": [{"number": 1, "head_sha": head}]}
+    store = repo / ".git"
+    assert "ODOO" not in integrate.detect_adapters(integrate.list_tree(store, base))
+    assert "ODOO" in integrate.adapter_census(store, plan)
+
+
+def test_quick_refuses_a_pr_that_changes_dependency_inputs() -> None:
+    quick.refuse_dependency_changes({"12": ["src/app.py", "README.md"]})
+    with pytest.raises(quick.QuickError, match="dependency inputs"):
+        quick.refuse_dependency_changes({"12": ["src/app.py"], "13": ["uv.lock"]})
+    with pytest.raises(quick.QuickError, match="Repo.mk"):
+        quick.refuse_dependency_changes({"12": ["Repo.mk"]})
