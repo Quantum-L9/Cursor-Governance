@@ -402,7 +402,7 @@ class DockerSandbox:
             provenance[name] = p.stdout.strip()
         return provenance
 
-    def command(self, case_dir: Path, argv: list[str], seconds=300):
+    def command(self, case_dir: Path, argv: list[str], seconds=300, isolate_git=False):
         self.call_number += 1
         name = f"l9-pr-{self.run_id}-{self.call_number}"
         if not argv or any(not isinstance(s, str) or "\x00" in s for s in argv):
@@ -436,20 +436,33 @@ class DockerSandbox:
             "/workspace",
             "--mount",
             f"type=bind,src={case_dir.resolve()},dst=/workspace",
+            # Docker mounts a --tmpfs noexec unless told otherwise, which fails
+            # every test that runs a stub binary from a temp directory. exec here
+            # grants nothing new: /workspace is already writable and executable.
             "--tmpfs",
-            "/tmp:rw,nosuid,nodev,size=128m",
+            "/tmp:rw,exec,nosuid,nodev,size=128m",
             "-e",
             "HOME=/tmp",
             "-e",
-            "GIT_CONFIG_GLOBAL=/dev/null",
-            "-e",
-            "GIT_CONFIG_NOSYSTEM=1",
-            "-e",
             "GIT_TERMINAL_PROMPT=0",
             "-e",
-            "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00",
-            "-e",
             "PYTHONDONTWRITEBYTECODE=1",
+            # The runner's own Git steps ignore global/system config and pin the
+            # commit date. Test procedures must not inherit that: a suite that
+            # writes $HOME/.gitconfig (url.insteadOf, identity) would otherwise
+            # run differently here than in its own CI.
+            *(
+                [
+                    "-e",
+                    "GIT_CONFIG_GLOBAL=/dev/null",
+                    "-e",
+                    "GIT_CONFIG_NOSYSTEM=1",
+                    "-e",
+                    "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00",
+                ]
+                if isolate_git
+                else []
+            ),
             "--entrypoint",
             argv[0],
             self.image,
@@ -572,7 +585,7 @@ def docker_git(sandbox: DockerSandbox, path: Path, args, seconds=90):
         "user.email=integration@example.invalid",
         *args,
     ]
-    return argv, sandbox.command(path, argv, seconds)
+    return argv, sandbox.command(path, argv, seconds, isolate_git=True)
 
 
 def prepare_case(store, name, workdir, sandbox, writer, base_sha, heads):
