@@ -1,5 +1,5 @@
 {
-  "generation_id": "c75eb1e7c7840f761d4605275627dd79809a53c848b1c904e034af38583a3268",
+  "generation_id": "22de3e93c797d20e3a3baf0c3c483aa808a209b3a4af277232b7cdaa55634f46",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -403,7 +403,10 @@
           "sync_secrets_registry",
           "resolve_secret",
           "aws secrets manager ref",
-          "infisical",
+          "bind from infisical",
+          "infisical bind",
+          "infisical secret",
+          "capability_bind",
           "infisical-cursor-governance",
           "cursor-governance project",
           "hydrate infisical",
@@ -1462,6 +1465,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
+  "source_manifest_sha256": "bc5952119821985bac7ac9839b9301698b836df01f7ec344e8ebc3a9d4067ee9",
   "source_skill_corpus_sha256": "8d95afbc4b35c4590df82e7f2f45ba88d2e2974b2653490c66b897caf093a9d6"
 }
