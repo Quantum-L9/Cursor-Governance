@@ -29,7 +29,7 @@ alwaysApply: true
 
 ```bash
 # 1. Find highest existing GMP number
-ls reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1
+ls reports/gmp/GMP*.md reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1
 
 # 2. Use: highest + 1, zero-padded to 3 digits
 # Example: if highest is 96 → use 097
@@ -77,7 +77,7 @@ date +%Y-%m-%d
 ## MANDATORY: Post-Report Validation
 
 ```bash
-python3 scripts/validate_gmp_report.py reports/GMP-Report-###-Description.md
+python3 scripts/validate_gmp_report.py reports/gmp/GMP-Report-###-Description.md
 ```
 
 **Must return 0 errors before DECLARATION.**
@@ -124,12 +124,12 @@ GMP-Report-{###}-{Description}.md
 
 ```bash
 # Get next GMP ID
-NEXT_ID=$(printf "%03d" $(($(ls reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1) + 1)))
+NEXT_ID=$(printf "%03d" $(($(ls reports/gmp/GMP*.md reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1) + 1)))
 echo "Next GMP ID: $NEXT_ID"
 
 # Get today's date
 date +%Y-%m-%d
 
 # Validate report
-python3 scripts/validate_gmp_report.py reports/GMP-Report-$NEXT_ID-Description.md
+python3 scripts/validate_gmp_report.py reports/gmp/GMP-Report-$NEXT_ID-Description.md
 ```

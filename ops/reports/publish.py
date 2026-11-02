@@ -1,0 +1,469 @@
+"""Publish L9 reports into the work clone's ``reports/`` tree and onto its open PR.
+
+One owner for the report layout, so the GMP executor and the end-session
+handoff hooks cannot drift apart:
+
+    reports/
+      gmp/                              GMP execution reports
+      end-session/
+        session-handoff/                repository handoff (l9.session_handoff.v1)
+        governance-handoff/             governance handoff (l9.governance_handoff.v1)
+
+Every subfolder is created on first write; none has to exist beforehand.
+
+Publication commits ONLY the report paths it was handed (``git commit -- <paths>``
+after ``git add -f -- <paths>``: ``reports/`` is commonly gitignored as local
+scratch, and these reports are deliberately published) and pushes the current
+branch to the PR's head branch without force. It refuses, and says why, when the
+checkout is not on that branch, is detached, or is on a default branch. It never
+rewrites history and never touches a path it was not given.
+
+``L9_REPORT_PUBLISH`` selects how far it goes: ``push`` (default), ``commit``
+(commit locally, no push) or ``write`` / ``0`` (write the file only).
+
+CLI (any surface, e.g. Cursor or a manual ``/end-session``)::
+
+    python -m ops.reports.publish dirs --workspace <repo>
+    python -m ops.reports.publish handoffs --workspace <repo>
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import fcntl
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from collections.abc import Iterable, Iterator, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from pathlib import Path
+from typing import Any
+
+REPORTS_DIR = Path("reports")
+PR_SUMMARY_REL = Path(".l9") / "pr" / "pr-summary.json"
+DEFAULT_BRANCHES = frozenset({"main", "master", "develop", "trunk"})
+PUBLISH_ENV = "L9_REPORT_PUBLISH"
+#: Per git call. The callers are Stop hooks with 60-90 s timeouts, so a hung
+#: remote must fail fast and be reported, never stall the hook into a kill.
+GIT_TIMEOUT_S = float(os.environ.get("L9_REPORT_GIT_TIMEOUT") or 20)
+PUSH_ATTEMPTS = 2
+
+
+class ReportKind(StrEnum):
+    GMP = "gmp"
+    SESSION_HANDOFF = "session-handoff"
+    GOVERNANCE_HANDOFF = "governance-handoff"
+
+
+#: The only place the layout is spelled.
+SUBDIRS: dict[ReportKind, Path] = {
+    ReportKind.GMP: REPORTS_DIR / "gmp",
+    ReportKind.SESSION_HANDOFF: REPORTS_DIR / "end-session" / "session-handoff",
+    ReportKind.GOVERNANCE_HANDOFF: REPORTS_DIR / "end-session" / "governance-handoff",
+}
+
+TITLES: dict[ReportKind, str] = {
+    ReportKind.GMP: "GMP report",
+    ReportKind.SESSION_HANDOFF: "Session handoff",
+    ReportKind.GOVERNANCE_HANDOFF: "Governance handoff",
+}
+
+
+# --- Layout --------------------------------------------------------------------
+
+
+def report_dir(root: Path, kind: ReportKind) -> Path:
+    """``<root>/reports/<subdir>`` for ``kind``, created when absent."""
+    path = Path(root) / SUBDIRS[kind]
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def ensure_layout(root: Path) -> list[Path]:
+    return [report_dir(root, kind) for kind in ReportKind]
+
+
+def slugify(text: str, limit: int = 40) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower())[:limit].strip("-")
+
+
+def handoff_filename(pr_number: int, head_sha: str, when: datetime | None = None) -> str:
+    """``<YYYY-MM-DD>-pr<N>-<sha12>.md`` — one file per publication."""
+    stamp = (when or datetime.now(UTC)).strftime("%Y-%m-%d")
+    sha = re.sub(r"[^0-9a-f]", "", head_sha.lower())[:12] or "nohead"
+    return f"{stamp}-pr{int(pr_number)}-{sha}.md"
+
+
+def clean_markdown(text: str) -> str:
+    """No trailing whitespace, exactly one final newline (formatter-stable)."""
+    lines = [line.rstrip() for line in text.splitlines()]
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines) + "\n"
+
+
+def write_report(root: Path, kind: ReportKind, filename: str, text: str) -> Path:
+    if Path(filename).name != filename or not filename.endswith(".md"):
+        raise ValueError(f"report filename must be a bare *.md name, got {filename!r}")
+    path = report_dir(root, kind) / filename
+    path.write_text(clean_markdown(text), encoding="utf-8")
+    return path
+
+
+# --- Rendering -----------------------------------------------------------------
+
+
+_KEY = re.compile(r"[A-Za-z][A-Za-z _-]{0,39}")
+
+
+def lines_to_markdown(lines: Iterable[str]) -> list[str]:
+    """Convert the handoff renderers' ``key: value`` / ``key:`` + ``  - item`` text.
+
+    The renderers in ``ops/memory`` stay the single source of the content; this
+    only changes its typography so it reads as markdown on GitHub.
+    """
+    out: list[str] = []
+    for raw in lines:
+        line = raw.rstrip()
+        stripped = line.lstrip()
+        if not stripped:
+            continue
+        if stripped.startswith("- "):
+            out.append(stripped)
+            continue
+        head, sep, value = stripped.partition(":")
+        if sep and not value.strip():
+            out += ["", f"## {head.strip().capitalize()}", ""]
+        elif sep and _KEY.fullmatch(head.strip()):
+            out += ["", f"**{head.strip()}:** {value.strip()}"]
+        else:
+            out += ["", stripped]
+    return out
+
+
+def render_report(
+    kind: ReportKind,
+    *,
+    subject: str,
+    meta: dict[str, Any],
+    body_lines: Iterable[str],
+) -> str:
+    """A complete markdown report: title, metadata table, converted body."""
+    lines = [f"# {TITLES[kind]} — {subject}", "", "| Field | Value |", "|---|---|"]
+    for key, value in meta.items():
+        if value in (None, ""):
+            continue
+        cell = str(value).replace("|", "\\|").replace("\n", " ")
+        lines.append(f"| {key} | {cell} |")
+    lines += lines_to_markdown(body_lines)
+    return clean_markdown("\n".join(lines))
+
+
+# --- Publication ---------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PublishResult:
+    status: str  # pushed | committed | unchanged | written | skipped | failed
+    detail: str = ""
+    commit: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.status in {"pushed", "committed", "unchanged", "written"}
+
+    def line(self, paths: Sequence[Path], root: Path) -> str:
+        rels = ", ".join(_rel(p, root) for p in paths)
+        tail = f" ({self.detail})" if self.detail else ""
+        sha = f" @ {self.commit[:12]}" if self.commit else ""
+        return f"report {self.status}{sha}: {rels}{tail}"
+
+
+def _rel(path: Path, root: Path) -> str:
+    try:
+        return str(Path(path).resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _git(
+    root: Path, *args: str, timeout: float = GIT_TIMEOUT_S
+) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    return subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=env,
+        check=False,
+    )
+
+
+def _first_line(proc: subprocess.CompletedProcess[str]) -> str:
+    """The first meaningful output line (git prints its ``hint:`` lines last)."""
+    text = [
+        line.strip()
+        for line in (proc.stderr or proc.stdout or "").splitlines()
+        if line.strip() and not line.lstrip().startswith("hint:")
+    ]
+    return text[0][:240] if text else f"exit {proc.returncode}"
+
+
+@contextlib.contextmanager
+def _publish_lock(root: Path) -> Iterator[None]:
+    """Serialize publishers in one clone (the two Stop hooks run in parallel)."""
+    proc = _git(root, "rev-parse", "--git-path", "l9-report-publish.lock")
+    lock_path = Path(proc.stdout.strip() or ".git/l9-report-publish.lock")
+    if not lock_path.is_absolute():
+        lock_path = Path(root) / lock_path
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "a+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def publish_mode() -> str:
+    raw = (os.environ.get(PUBLISH_ENV) or "push").strip().lower()
+    if raw in {"0", "false", "no", "off", "write"}:
+        return "write"
+    return "commit" if raw == "commit" else "push"
+
+
+def publish(
+    root: Path,
+    paths: Sequence[Path],
+    *,
+    message: str,
+    expected_branch: str = "",
+    remote: str = "origin",
+) -> PublishResult:
+    """Commit exactly ``paths`` and push to ``expected_branch`` (the PR head)."""
+    root = Path(root)
+    if not paths:
+        return PublishResult("skipped", "no report paths")
+    mode = publish_mode()
+    if mode == "write":
+        return PublishResult("written", f"{PUBLISH_ENV}=write: not committed")
+    try:
+        inside = _git(root, "rev-parse", "--is-inside-work-tree")
+        if inside.returncode != 0 or inside.stdout.strip() != "true":
+            return PublishResult("skipped", "not a git work tree")
+        branch = _git(root, "symbolic-ref", "--quiet", "--short", "HEAD").stdout.strip()
+        if not branch:
+            return PublishResult("skipped", "detached HEAD: no PR branch to publish to")
+        if branch in DEFAULT_BRANCHES:
+            return PublishResult("skipped", f"on default branch {branch}: never pushed")
+        if expected_branch and branch != expected_branch:
+            return PublishResult(
+                "skipped", f"checkout is on {branch}, PR head is {expected_branch}"
+            )
+        rels = [_rel(p, root) for p in paths]
+        with _publish_lock(root):
+            added = _git(root, "add", "-f", "--", *rels)
+            if added.returncode != 0:
+                return PublishResult("failed", f"git add: {_first_line(added)}")
+            staged = _git(root, "diff", "--cached", "--quiet", "--", *rels)
+            if staged.returncode == 0:
+                return PublishResult("unchanged", "already committed")
+            # Pathspec commit: only these files, whatever else is staged.
+            committed = _git(root, "commit", "-m", message, "--", *rels)
+            if committed.returncode != 0:
+                return PublishResult("failed", f"git commit: {_first_line(committed)}")
+            sha = _git(root, "rev-parse", "HEAD").stdout.strip()
+            if mode == "commit":
+                return PublishResult("committed", f"{PUBLISH_ENV}=commit: not pushed", sha)
+            return _push(root, branch, remote, sha)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return PublishResult("failed", f"{type(exc).__name__}: {str(exc)[:200]}")
+
+
+def _push(root: Path, branch: str, remote: str, sha: str) -> PublishResult:
+    last = ""
+    for attempt in range(PUSH_ATTEMPTS):
+        pushed = _git(root, "push", remote, f"HEAD:refs/heads/{branch}")
+        if pushed.returncode == 0:
+            return PublishResult("pushed", f"{remote}/{branch}", sha)
+        last = _first_line(pushed)
+        full = f"{pushed.stderr}\n{pushed.stdout}"
+        if any(m in full for m in ("[rejected]", "non-fast-forward", "fetch first")):
+            return PublishResult(
+                "committed",
+                f"push rejected, remote {branch} moved; commit kept locally — "
+                "fast-forward and push again (never force)",
+                sha,
+            )
+        time.sleep(2**attempt)
+    return PublishResult("committed", f"push failed: {last}; commit kept locally", sha)
+
+
+# --- Publication receipt -------------------------------------------------------
+
+
+def pr_summary(root: Path) -> dict[str, Any] | None:
+    try:
+        data = json.loads((Path(root) / PR_SUMMARY_REL).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) and data.get("number") else None
+
+
+# --- End-session handoffs ------------------------------------------------------
+
+
+def publish_session_handoff(
+    root: Path,
+    pub: dict[str, Any],
+    body_lines: Iterable[str],
+    *,
+    session_id: str = "",
+    agent_id: str = "",
+) -> tuple[Path, PublishResult]:
+    """Write ``reports/end-session/session-handoff/<file>.md`` and publish it."""
+    return _publish_handoff(
+        ReportKind.SESSION_HANDOFF, root, pub, body_lines, session_id=session_id, agent_id=agent_id
+    )
+
+
+def publish_governance_handoff(
+    root: Path,
+    pub: dict[str, Any],
+    body_lines: Iterable[str],
+    *,
+    session_id: str = "",
+    agent_id: str = "",
+) -> tuple[Path, PublishResult]:
+    """Write ``reports/end-session/governance-handoff/<file>.md`` and publish it."""
+    return _publish_handoff(
+        ReportKind.GOVERNANCE_HANDOFF,
+        root,
+        pub,
+        body_lines,
+        session_id=session_id,
+        agent_id=agent_id,
+    )
+
+
+def _publish_handoff(
+    kind: ReportKind,
+    root: Path,
+    pub: dict[str, Any],
+    body_lines: Iterable[str],
+    *,
+    session_id: str,
+    agent_id: str,
+) -> tuple[Path, PublishResult]:
+    number = int(pub["number"])
+    head_sha = str(pub.get("head_sha") or "")
+    label = str(pub.get("label") or f"{pub.get('repo', '')}#{number}")
+    text = render_report(
+        kind,
+        subject=label,
+        meta={
+            "Publication": label,
+            "PR": pub.get("url") or "",
+            "Head branch": pub.get("head") or "",
+            "Head SHA": head_sha,
+            "Session": session_id,
+            "Agent": agent_id,
+            "Written": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
+        body_lines=body_lines,
+    )
+    path = write_report(root, kind, handoff_filename(number, head_sha), text)
+    result = publish(
+        root,
+        [path],
+        message=f"docs(reports): {TITLES[kind].lower()} for {label}",
+        expected_branch=str(pub.get("head") or ""),
+    )
+    return path, result
+
+
+def _publication_from_summary(root: Path) -> dict[str, Any]:
+    summary = pr_summary(root)
+    if summary is None:
+        raise SystemExit(f"no publication receipt at {Path(root) / PR_SUMMARY_REL}; run make pr")
+    number = int(summary["number"])
+    repo = str(summary.get("repo") or "")
+    return {
+        "repo": repo,
+        "number": number,
+        "url": str(summary.get("url") or ""),
+        "head": str(summary.get("head") or ""),
+        "head_sha": str(summary.get("head_sha") or ""),
+        "label": f"{repo}#{number}",
+    }
+
+
+def _cli_handoffs(root: Path, session_id: str, agent_id: str) -> int:
+    from ops.memory import governance_handoff, session_handoff
+
+    pub = _publication_from_summary(root)
+    rc = 0
+    published = False
+    try:
+        brief = session_handoff.load(root, pr_number=pub["number"])
+    except session_handoff.HandoffError as exc:
+        print(f"session handoff: not published ({exc})")
+    else:
+        path, result = publish_session_handoff(
+            root,
+            pub,
+            session_handoff.render(brief).splitlines(),
+            session_id=session_id,
+            agent_id=agent_id,
+        )
+        print(result.line([path], root))
+        rc |= 0 if result.ok else 1
+        published = True
+    try:
+        gbrief = governance_handoff.load(root, pr_number=pub["number"])
+    except governance_handoff.HandoffError as exc:
+        print(f"governance handoff: not published ({exc})")
+    else:
+        path, result = publish_governance_handoff(
+            root,
+            pub,
+            governance_handoff.render_sections(gbrief),
+            session_id=session_id,
+            agent_id=agent_id,
+        )
+        print(result.line([path], root))
+        rc |= 0 if result.ok else 1
+        published = True
+    return rc if published else 2
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m ops.reports.publish", description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    for name, help_text in (
+        ("dirs", "create reports/gmp and reports/end-session/{session,governance}-handoff"),
+        ("handoffs", "publish .l9/memory handoff briefs to reports/end-session/ on the PR"),
+    ):
+        cmd = sub.add_parser(name, help=help_text)
+        cmd.add_argument("--workspace", default=os.getcwd(), help="the work clone")
+        if name == "handoffs":
+            cmd.add_argument("--session-id", default=os.environ.get("CLAUDE_SESSION_ID", ""))
+            cmd.add_argument("--agent-id", default=os.environ.get("L9_MEMORY_AGENT_ID", ""))
+    args = parser.parse_args(argv)
+    root = Path(args.workspace).resolve()
+    if args.command == "dirs":
+        for path in ensure_layout(root):
+            print(_rel(path, root))
+        return 0
+    return _cli_handoffs(root, args.session_id, args.agent_id)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

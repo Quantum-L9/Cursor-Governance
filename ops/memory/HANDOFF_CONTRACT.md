@@ -110,7 +110,18 @@ As a result, a degraded bootstrap is recorded even when the agent wrote no brief
      closes without it and says so.
    - The governance hook writes its record, or reports what is missing.
    - Both hooks run in parallel, and each announces its own outcome.
-4. **After that.** Nothing more for that publication. Each hook keeps its own
+4. **Published report.** In the same Stop, each hook renders its brief as
+   markdown into the clone and pushes it to the PR head branch
+   (`ops/reports/publish.py`; folders created when absent):
+   - repository handoff → `reports/end-session/session-handoff/<date>-pr<N>-<sha12>.md`
+   - governance handoff → `reports/end-session/governance-handoff/<date>-pr<N>-<sha12>.md`
+
+   Only that file is committed (`git commit -- <path>`), never force-pushed, and
+   never to a branch other than the PR head. `L9_REPORT_PUBLISH=commit|write`
+   stops short of the push / the commit. The outcome is a line in the hook's
+   announcement. On a surface without these Stop hooks (Cursor, manual
+   `/end-session`) run `python -m ops.reports.publish handoffs --workspace <repo>`.
+5. **After that.** Nothing more for that publication. Each hook keeps its own
    ledger: `.l9/memory/handoffs/` and `.l9/memory/governance-handoffs/`.
 
 A subagent or background Stop never closes or hands off. A **degraded**

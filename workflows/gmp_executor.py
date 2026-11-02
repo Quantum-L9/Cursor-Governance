@@ -1062,9 +1062,11 @@ from {module_path} import ...
     # =========================================================================
     def _write_local_report(self) -> Path:
         assert self.state is not None
-        reports = self.work_root / "reports"
-        reports.mkdir(parents=True, exist_ok=True)
-        slug = re.sub(r"[^a-z0-9]+", "-", self.state.task.lower())[:40].strip("-") or "gmp"
+        from ops.reports.publish import ReportKind, report_dir, slugify
+
+        # reports/gmp/ — created when absent (ops/reports/publish.py owns the layout).
+        reports = report_dir(self.work_root, ReportKind.GMP)
+        slug = slugify(self.state.task) or "gmp"
         path = reports / f"{self.state.gmp_id}-{slug}.md"
         lines = [
             f"# {self.state.gmp_id}",
@@ -1166,8 +1168,14 @@ from {module_path} import ...
                     report_rel = report_rel[idx:]
                 paths.append(report_rel.split()[0])
             commit_msg = f"{self.state.gmp_id}: {self.state.task}"
-            add_argv = ["git", "add", "--"] + paths
-            self._run_argv(add_argv, cwd=self.work_root)
+            report_paths = [p for p in paths if p.startswith("reports/")]
+            source_paths = [p for p in paths if not p.startswith("reports/")]
+            if source_paths:
+                self._run_argv(["git", "add", "--"] + source_paths, cwd=self.work_root)
+            if report_paths:
+                # reports/ is commonly gitignored scratch; the GMP report is
+                # published with the PR, so it is force-added by exact path.
+                self._run_argv(["git", "add", "-f", "--"] + report_paths, cwd=self.work_root)
             code, stdout, stderr = self._run_argv(
                 ["git", "commit", "-m", commit_msg], cwd=self.work_root
             )
@@ -1234,7 +1242,11 @@ from {module_path} import ...
 
     def _next_gmp_id(self) -> str:
         gmp_num = 129
-        reports_dirs = [self.work_root / "reports" / "GMP Reports", self.work_root / "reports"]
+        reports_dirs = [
+            self.work_root / "reports" / "gmp",
+            self.work_root / "reports" / "GMP Reports",
+            self.work_root / "reports",
+        ]
         for reports_dir in reports_dirs:
             if not reports_dir.is_dir():
                 continue
