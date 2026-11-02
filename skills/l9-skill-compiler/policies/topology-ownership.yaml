@@ -1,4 +1,4 @@
-# Ownership rules applied at SCAN_SKILL_TOPOLOGY, before family classification.
+# Ownership rules applied at SCAN_SKILL_TOPOLOGY (SKILL.md workflow step 4), before Gate C.
 # Creation is never the default outcome; these rules say when it is wrong outright.
 version: 1
 
