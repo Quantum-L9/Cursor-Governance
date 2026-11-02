@@ -1062,12 +1062,14 @@ from {module_path} import ...
     # =========================================================================
     def _write_local_report(self) -> Path:
         assert self.state is not None
-        from ops.reports.publish import ReportKind, report_dir, slugify
+        from ops.reports.gmp import report_name
+        from ops.reports.publish import ReportKind, report_dir
 
-        # reports/gmp/ — created when absent (ops/reports/publish.py owns the layout).
+        # reports/gmp/GMP-Report-<NNN>-<Description>.md — the one location and
+        # name pattern for GMP reports (rules/81-gmp-audit.mdc).
         reports = report_dir(self.work_root, ReportKind.GMP)
-        slug = slugify(self.state.task) or "gmp"
-        path = reports / f"{self.state.gmp_id}-{slug}.md"
+        number = int(self.state.gmp_id.rsplit("-", 1)[-1])
+        path = reports / report_name(number, self.state.task)
         lines = [
             f"# {self.state.gmp_id}",
             "",

@@ -1,14 +1,14 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-02T22:44:11Z'
+generated_utc: '2026-11-02T22:54:13Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:0284d2b48317c078dab5f082f4fc2608b6a5833731fef2b53d09c9fe1653fcd8
+source_tree_digest: sha256:08deb30816834560cf36cd47026db910f49b892967ec1d51d81a1dfb2f98b351
 summary:
-  total_mdc_files: 69
-  always_apply_true: 36
+  total_mdc_files: 68
+  always_apply_true: 35
   always_apply_false: 33
   no_boolean_always_apply: 0
-  explicit_rule_ids: 67
+  explicit_rule_ids: 66
   derived_rule_ids: 2
   deprecated_rules: 0
 rules:
@@ -1195,8 +1195,8 @@ rules:
 - file: 81-gmp-audit.mdc
   id: l9.rule.81.gmp.audit
   id_source: explicit
-  version: 1.0.0
-  description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
+  version: 2.0.0
+  description: GMP audit and verification rules, and where optional GMP reports are saved (reports/gmp/) and how they are named. Absorbs the retired rule 83.
   scope: global
   domain: governance
   activation: agent_requested
@@ -1205,8 +1205,8 @@ rules:
   globs: null
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
-  line_count: 90
-  content_digest: sha256:67b2db89fb571a88104e3082feb8e6081cc868eb538adf4f3c9cd68404d88406
+  line_count: 93
+  content_digest: sha256:5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1236,28 +1236,6 @@ rules:
   content_digest: sha256:b57f632b093ece624e9a8a83684f4180235eaa03736bf45ab0e78e9ccf166e48
   authority: canonical_global
   context_cost: minimal
-  deprecated: false
-  replacement: null
-  removal_plan: null
-  extends: null
-  classification_source: mixed_or_derived
-- file: 83-gmp-contracts.mdc
-  id: l9.rule.83.gmp.contracts
-  id_source: explicit
-  version: 2.0.0
-  description: 'GMP report contract: reports/gmp/ location, sequential GMP IDs, ISO dates, validation, and publication with the PR (never local-only).'
-  scope: global
-  domain: governance
-  activation: always
-  activation_source: explicit
-  always_apply: true
-  globs: null
-  first_heading: GMP Report Contract (L9)
-  has_yaml_frontmatter: true
-  line_count: 87
-  content_digest: sha256:2f6120897e0765da1a1b92c096f447a7ced676ab86423d9128b7fd90c2940101
-  authority: canonical_global
-  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null

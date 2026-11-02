@@ -215,7 +215,7 @@ def test_gmp_executor_writes_into_reports_gmp(tmp_path: Path) -> None:
         todo_plan=[{"id": "T1", "file": "a.py", "action": "Replace", "description": "x"}],
     )
     path = gmp._write_local_report()
-    assert path == tmp_path / "reports" / "gmp" / "GMP-130-route-reports-into-folders.md"
+    assert path == tmp_path / "reports" / "gmp" / "GMP-Report-130-Route-reports-into-folders.md"
     assert path.read_text(encoding="utf-8").startswith("# GMP-130\n")
     # The next id sees reports/gmp/.
     assert gmp._next_gmp_id() == "GMP-131"
@@ -290,24 +290,22 @@ def test_push_refused_when_non_report_commit_is_ahead_of_pr_head(clone: Path) ->
     assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
 
 
-def test_invalid_gmp_report_is_refused_and_left_in_place(clone: Path, tmp_path: Path) -> None:
-    bad = tmp_path / "GMP-Report-002-Bad.md"
-    bad.write_text("**ID:** GMP-002 | **Task:** x\n\n## TODO PLAN\n", encoding="utf-8")
+def test_misnamed_gmp_report_is_refused_and_left_in_place(clone: Path, tmp_path: Path) -> None:
+    bad = tmp_path / "GMP_report_two.md"
+    bad.write_text("any content is fine\n", encoding="utf-8")
     assert rp.main(["gmp", "--workspace", str(clone), str(bad)]) == 2
     assert not (clone / "reports" / "gmp" / bad.name).exists()
-    assert rp.main(["validate-gmp", str(bad)]) == 1
 
 
-def test_gmp_contract_validator(tmp_path: Path) -> None:
+def test_content_is_free_only_the_name_is_checked(clone: Path, tmp_path: Path) -> None:
     from ops.reports import gmp
 
-    good = _report(tmp_path)
-    assert gmp.validate(good) == []
-    mismatched = tmp_path / "GMP-Report-007-X.md"
-    mismatched.write_text(VALID_GMP.replace("## NEXT", "") + "## NEXT STEPS\n", "utf-8")
-    errors = gmp.validate(mismatched)
-    assert any("does not match file name" in e for e in errors)
-    assert any("NEXT STEPS" in e for e in errors)
+    free = tmp_path / gmp.report_name(3, "Free form notes!")
+    assert free.name == "GMP-Report-003-Free-form-notes.md"
+    free.write_text("no header, no sections\n", encoding="utf-8")
+    assert gmp.name_error(free) == ""
+    assert rp.main(["gmp", "--workspace", str(clone), str(free)]) == 0
+    assert (clone / "reports" / "gmp" / free.name).is_file()
 
 
 def test_next_gmp_id_is_shared_by_rule_and_executor(tmp_path: Path, capsys) -> None:  # noqa: ANN001

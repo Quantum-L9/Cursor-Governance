@@ -458,7 +458,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/81-gmp-audit.mdc",
-      "source_sha256": "67b2db89fb571a88104e3082feb8e6081cc868eb538adf4f3c9cd68404d88406",
+      "source_sha256": "5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f",
       "stem": "81-gmp-audit"
     },
     {
@@ -469,15 +469,6 @@
       "source": "rules/82-deployment-manifest.mdc",
       "source_sha256": "b57f632b093ece624e9a8a83684f4180235eaa03736bf45ab0e78e9ccf166e48",
       "stem": "82-deployment-manifest"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "83-gmp-contracts.md",
-      "output_sha256": "76c16bc8134822ffc9ab20e960d0583fc23d41c216564018a3d73667d9197c29",
-      "source": "rules/83-gmp-contracts.mdc",
-      "source_sha256": "2f6120897e0765da1a1b92c096f447a7ced676ab86423d9128b7fd90c2940101",
-      "stem": "83-gmp-contracts"
     },
     {
       "alias": null,
@@ -637,9 +628,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 54,
+    "projected": 53,
     "skipped_agent_requested": 15,
-    "source_mdc": 69
+    "source_mdc": 68
   },
-  "tree_sha256": "bb6330ca276684c5e853015f9e08ed79f1596820058dd123cfc413aa393d5781"
+  "tree_sha256": "239fd880b61f220db3afe5e2fefb8f0d19315454b8d554f90ce4af5cb703c500"
 }

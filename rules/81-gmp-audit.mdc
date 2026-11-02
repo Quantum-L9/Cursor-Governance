@@ -1,8 +1,8 @@
 ---
 id: l9.rule.81.gmp.audit
-version: 1.0.0
-description: 'GMP audit and verification rules: canonical and guide prompts mapped
-  to L9 PRs and workspaces.'
+version: 2.0.0
+description: 'GMP audit and verification rules, and where optional GMP reports are
+  saved (reports/gmp/) and how they are named. Absorbs the retired rule 83.'
 scope: global
 activation: agent_requested
 authority: canonical_global
@@ -60,31 +60,34 @@ Each audit must answer, in the prompt or notes:
 
 ---
 
-## GMP report generation protocol
+## GMP reports (optional)
 
-### Rule: Generate Production Report After Every GMP Run
+A GMP report is **optional** — never required, never forbidden. When one is
+written, it follows one location and one name so reports stay consistent and
+findable across every repository:
 
-After completing any GMP execution (partial or full), you MUST:
+| | |
+|---|---|
+| **Where** | `reports/gmp/` in the **work clone** (created when absent) |
+| **Name** | `GMP-Report-<NNN>-<Description>.md` |
+| `<NNN>` | next sequential number in that clone, zero-padded to 3 digits |
+| `<Description>` | letters, digits and hyphens, e.g. `GAR-Projection-Binding` |
 
-1. **Generate a production report** to the contract in
-   `83-gmp-contracts.mdc` (the single owner of the report format, location
-   `reports/gmp/`, IDs, validation and publication).
-2. **Validate and publish it with the PR** (`ops.reports.publish validate-gmp`,
-   then `ops.reports.publish gmp`) — never local-only.
-3. **Status** — `✅ COMPLETE`, or `PARTIAL` when phases remain (see table).
+The `/gmp` executor writes its own report to the same place and pattern.
+Content and sections are the author's choice. Dates, when written, are ISO
+8601 (`YYYY-MM-DD`).
 
-### When to Generate Reports
+Tooling (`ops/reports/`, run from the governance venv):
 
-| Scenario | Action |
-|----------|--------|
-| Full GMP execution (all phases) | ✅ Generate full report |
-| Partial GMP completion | ✅ Generate report with "PARTIAL" status |
-| GMP verification audit | ✅ Generate audit report |
-| Quick fix (< 3 files, no GMP) | ❌ No report needed |
+```bash
+GOV="${HOME}/.cursor-governance"
+rp() { (cd "$GOV" && PYTHONPATH="$GOV" "$GOV/.venv/bin/python" -m ops.reports.publish "$@"); }
+rp next-gmp-id --workspace "$WS"                 # GMP-NNN for this clone
+rp gmp --workspace "$WS" <GMP-Report-NNN-Description.md>
+```
 
-### Report format
-
-The header line, the seven required sections and the forbidden sections are
-defined once, in rule 83.
-
-**Rationale:** Reports provide audit trail and document changes for future reference.
+`rp gmp` checks the name, places a report written elsewhere (a scratchpad) in
+`reports/gmp/`, and commits only that file even when `reports/` is gitignored.
+With no PR open it rides the next `make pr`; with a PR open it pushes only when
+everything ahead of the PR head is under `reports/`. When a report is written,
+publish it this way so it rides the PR rather than staying in a scratchpad.

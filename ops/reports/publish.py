@@ -26,7 +26,6 @@ CLI (any surface, e.g. Cursor or a manual ``/end-session``)::
     python -m ops.reports.publish dirs --workspace <repo>
     python -m ops.reports.publish handoffs --workspace <repo>
     python -m ops.reports.publish next-gmp-id --workspace <repo>
-    python -m ops.reports.publish validate-gmp <GMP-Report-NNN-Name.md>...
     python -m ops.reports.publish gmp --workspace <repo> <GMP-Report-NNN-Name.md>...
 """
 
@@ -455,9 +454,9 @@ def publish_gmp_report(root: Path, sources: Sequence[Path]) -> tuple[list[Path],
     for src in resolved:
         if not src.is_file() or src.suffix != ".md" or not src.name.upper().startswith("GMP"):
             raise ValueError(f"not a GMP markdown report: {src}")
-        errors = gmp.validate(src) if gmp.is_contract_report(src) else []
-        if errors:
-            raise ValueError(f"{src.name} violates rule 83: " + "; ".join(errors))
+        error = gmp.name_error(src)
+        if error:
+            raise ValueError(f"{src.name}: {error} (rules/81-gmp-audit.mdc)")
     target_dir = report_dir(root, ReportKind.GMP)
     placed: list[Path] = []
     for src in resolved:
@@ -547,11 +546,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         ("handoffs", "publish .l9/memory handoff briefs to reports/end-session/ on the PR"),
         ("gmp", "validate, place in reports/gmp/ and commit GMP report(s); push if a PR is open"),
         ("next-gmp-id", "print the next GMP id for this clone (GMP-NNN)"),
-        ("validate-gmp", "check GMP report(s) against the rule 83 contract"),
     ):
         cmd = sub.add_parser(name, help=help_text)
         cmd.add_argument("--workspace", default=os.getcwd(), help="the work clone")
-        if name in {"gmp", "validate-gmp"}:
+        if name == "gmp":
             cmd.add_argument("reports", nargs="+", type=Path, help="GMP report .md file(s)")
         if name == "handoffs":
             cmd.add_argument("--session-id", default=os.environ.get("CLAUDE_SESSION_ID", ""))
@@ -567,17 +565,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         print(gmp.format_gmp_id(gmp.next_gmp_number(root)))
         return 0
-    if args.command == "validate-gmp":
-        from ops.reports import gmp
-
-        failed = 0
-        for report in args.reports:
-            errors = gmp.validate(report)
-            print(f"{report}: {'OK' if not errors else 'FAIL'}")
-            for error in errors:
-                print(f"  - {error}")
-            failed += bool(errors)
-        return 1 if failed else 0
     if args.command == "gmp":
         try:
             paths, result = publish_gmp_report(root, args.reports)

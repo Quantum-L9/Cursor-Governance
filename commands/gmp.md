@@ -50,8 +50,8 @@ The executor enforces the lock and the outcome tokens. The agent owns the rest.
    tests, `reports/`, and the executor's own runtime state under `.l9/`
    (consumers that do not ignore `.l9/` show `.l9/gmp/executor-state.json`).
    Anything else: stop and report it.
-6. **Evidence.** The executor writes `$WORK/reports/gmp/<gmp_id>-<slug>.md`
-   (folder created when absent; layout owned by `ops/reports/publish.py`) and
+6. **Evidence.** The executor writes `$WORK/reports/gmp/GMP-Report-<NNN>-<Description>.md`
+   (folder created when absent; location and name per `rules/81-gmp-audit.mdc`) and
    commits it with the work, so `make pr` publishes it on the PR. The
    finish reply lists files changed, tests run with pass or fail, and the PR
    URL or the reason there is none.
