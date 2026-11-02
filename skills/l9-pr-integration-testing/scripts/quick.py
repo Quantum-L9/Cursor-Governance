@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -224,10 +225,67 @@ def run(args: list[str], *, timeout: int, **kwargs) -> subprocess.CompletedProce
     return proc
 
 
+# Bump when the layer recipe changes, so an image cached from an older recipe
+# is never reused under the new one.
+LAYER_RECIPE = "r2"
+WHEELHOUSE = "/opt/l9-wheelhouse"
+# pip's PEP 517 fallback for a setuptools project with no [build-system] table.
+SETUPTOOLS_FALLBACK = "setuptools>=40.8.0"
+
+
+def build_requirements(pyproject: str | None, has_setup_py: bool) -> list[str]:
+    """The PEP 517 build requirements an isolated build will try to install.
+
+    Tests run with no network, so ``python -m build`` (and any pip install of
+    the project) can only resolve its build backend from a wheelhouse prepared
+    while the image is built.
+    """
+    if pyproject is not None:
+        try:
+            table = tomllib.loads(pyproject).get("build-system", {})
+        except tomllib.TOMLDecodeError as exc:
+            raise QuickError(f"pyproject.toml is not valid TOML: {exc}") from exc
+        requires = table.get("requires")
+        if requires is not None:
+            if not isinstance(requires, list) or not all(isinstance(r, str) for r in requires):
+                raise QuickError("pyproject.toml [build-system].requires must be a list of strings")
+            return requires
+    return [SETUPTOOLS_FALLBACK] if (pyproject is not None or has_setup_py) else []
+
+
+def render_dependency_dockerfile(
+    image_tag: str, repo: str, base_sha: str, build_requires: list[str], *, with_ca: bool
+) -> str:
+    """Toolchain image + `make setup` + an offline wheelhouse for PEP 517 builds."""
+    ca_mount = "--mount=type=secret,id=ca " if with_ca else ""
+    ca_env = "PIP_CERT=/run/secrets/ca " if with_ca else ""
+    lines = [
+        f"FROM {image_tag}",
+        f"RUN {ca_mount}--mount=type=bind,source=src,target=/src,rw \\",
+        f"    cd /src && {ca_env}make setup",
+        f"RUN mkdir -p {WHEELHOUSE}",
+    ]
+    if build_requires:
+        lines += [
+            f"RUN {ca_mount}--mount=type=bind,source=build-requirements.txt,"
+            "target=/tmp/l9/build-requirements.txt \\",
+            f"    {ca_env}python -m pip download --no-cache-dir --dest {WHEELHOUSE} \\",
+            "    -r /tmp/l9/build-requirements.txt",
+        ]
+    lines += [
+        # Set after `make setup`, so only the offline test run is pointed at
+        # the wheelhouse. With no network the index can never answer anyway.
+        f"ENV PIP_FIND_LINKS={WHEELHOUSE} PIP_NO_INDEX=1",
+        f'LABEL org.l9.repo="{repo}" org.l9.base-sha="{base_sha}" '
+        f'org.l9.layer-recipe="{LAYER_RECIPE}"',
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def dependency_layer(sandbox: dict, repo: str, base_sha: str) -> str:
     """Toolchain image + the repository's own `make setup`, at the base SHA."""
     safe = repo.lower().replace("/", "__")
-    tag = f"l9-pr-deps/{safe}:{base_sha[:12]}-core{sandbox['core_sha'][:12]}"
+    tag = f"l9-pr-deps/{safe}:{base_sha[:12]}-core{sandbox['core_sha'][:12]}-{LAYER_RECIPE}"
     proc = subprocess.run(
         ["docker", "image", "inspect", "--format", "{{.Id}}", tag], capture_output=True, text=True
     )
@@ -276,13 +334,17 @@ def dependency_layer(sandbox: dict, repo: str, base_sha: str) -> str:
         # The trust bundle reaches the build only as a BuildKit secret mount; the
         # Dockerfile carries the mount flag text, never the bundle.
         ca = sandbox.get("runner_ca_bundle")
-        ca_mount = "--mount=type=secret,id=ca " if ca else ""
-        ca_env = "PIP_CERT=/run/secrets/ca " if ca else ""
+        src = ctx / "src"
+        pyproject = src / "pyproject.toml"
+        requires = build_requirements(
+            pyproject.read_text(encoding="utf-8") if pyproject.is_file() else None,
+            (src / "setup.py").is_file(),
+        )
+        (ctx / "build-requirements.txt").write_text("".join(f"{r}\n" for r in requires))
         (ctx / "Dockerfile").write_text(
-            f"FROM {sandbox['image_tag']}\n"
-            f"RUN {ca_mount}--mount=type=bind,source=src,target=/src,rw \\\n"
-            f"    cd /src && {ca_env}make setup\n"
-            f'LABEL org.l9.repo="{repo}" org.l9.base-sha="{base_sha}"\n'
+            render_dependency_dockerfile(
+                sandbox["image_tag"], repo, base_sha, requires, with_ca=bool(ca)
+            )
         )
         args = ["docker", "build", "--quiet", "--tag", tag]
         if ca:
@@ -336,6 +398,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--timeout", type=int, default=900, help="seconds per phase (max 1800)")
     parser.add_argument("--json", action="store_true", help="print the summary as JSON")
+    parser.add_argument(
+        "--image-only",
+        action="store_true",
+        help="build the pinned dependency image and print its id (for a hand-written manifest)",
+    )
     args = parser.parse_args(argv)
     phases = args.phase or ["test"]
     try:
@@ -376,6 +443,9 @@ def main(argv: list[str] | None = None) -> int:
         contract = gh_raw(args.repo, CONTRACT_PATH, base_sha)
         manifest["test_procedures"] = procedures_from_contract(contract, phases, args.timeout)
         manifest["image"] = dependency_layer(sandbox, args.repo, base_sha)
+        if args.image_only:
+            print(manifest["image"])
+            return 0
         manifest["execution_authority"] = {
             "scope": "DISPOSABLE_DOCKER_ONLY",
             "source": args.authority,

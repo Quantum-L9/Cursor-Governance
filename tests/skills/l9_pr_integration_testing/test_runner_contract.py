@@ -249,3 +249,41 @@ def test_quick_refuses_a_pr_that_changes_dependency_inputs() -> None:
         quick.refuse_dependency_changes({"12": ["src/app.py"], "13": ["uv.lock"]})
     with pytest.raises(quick.QuickError, match="Repo.mk"):
         quick.refuse_dependency_changes({"12": ["Repo.mk"]})
+
+
+# --- Offline PEP 517 builds: the dependency layer carries a wheelhouse -------
+
+
+def test_build_requirements_follow_pyproject_then_pip_fallback() -> None:
+    declared = '[build-system]\nrequires = ["hatchling>=1.25"]\nbuild-backend = "hatchling.build"\n'
+    assert quick.build_requirements(declared, False) == ["hatchling>=1.25"]
+    assert quick.build_requirements('[project]\nname = "x"\n', False) == [quick.SETUPTOOLS_FALLBACK]
+    assert quick.build_requirements(None, True) == [quick.SETUPTOOLS_FALLBACK]
+    assert quick.build_requirements(None, False) == []
+
+
+@pytest.mark.parametrize(
+    "pyproject",
+    ['[build-system\nrequires = ["x"]', '[build-system]\nrequires = "setuptools"\n'],
+)
+def test_build_requirements_refuse_an_unreadable_declaration(pyproject: str) -> None:
+    with pytest.raises(quick.QuickError):
+        quick.build_requirements(pyproject, False)
+
+
+def test_dependency_layer_prepares_an_offline_wheelhouse_after_setup() -> None:
+    text = quick.render_dependency_dockerfile(
+        "l9-ci-toolchain:core-x", "o/r", "a" * 40, ["setuptools>=68"], with_ca=True
+    )
+    setup, download, env = (
+        text.index("make setup"),
+        text.index("pip download"),
+        text.index("ENV PIP_FIND_LINKS"),
+    )
+    assert setup < download < env, "setup keeps the network; only the test run is offline"
+    assert f"--dest {quick.WHEELHOUSE}" in text
+    assert f"ENV PIP_FIND_LINKS={quick.WHEELHOUSE} PIP_NO_INDEX=1" in text
+    assert f'org.l9.layer-recipe="{quick.LAYER_RECIPE}"' in text
+    assert "COPY" not in text
+    bare = quick.render_dependency_dockerfile("img", "o/r", "a" * 40, [], with_ca=False)
+    assert "pip download" not in bare and "secret" not in bare

@@ -3,7 +3,7 @@ schema: 1
 parent: l9-pr-integration-testing
 layer: reference
 role: repository-adapter-selection
-version: 0.2.0
+version: 0.3.0
 status: active
 -->
 
@@ -24,9 +24,19 @@ READY receipt exists. Do not reimplement any of it here. It provides, with a rec
 | A non-root runner in the `docker` group | `DockerSandbox` refuses UID 0 | user `l9sandbox` (`L9_DOCKER_SANDBOX_USER`) |
 | The session TLS trust bundle, readable by that user | host-side `git fetch` goes through a TLS-intercepting proxy; the original bundle is root-only | copied from `PIP_CERT` / `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` / `CURL_CA_BUNDLE` |
 | A pinned image with Git, `make` and the test runtime | merges, checkouts and tests all run inside a no-network container | `l9-ci-toolchain:core-<sha12>`, built from Quantum-L9/l9-ci-core `toolchain-lock.json` and `requirements-consumer-ci.txt` at an exact Core commit and verified tool-by-tool; `--with-semgrep` adds Core's hash-locked semgrep; Biome is excluded |
+| The official python base, despite Docker Hub rate limits | hosted sessions share outbound IPs, so anonymous Docker Hub pulls return HTTP 429 | a local copy first, then Docker Hub, then `mirror.gcr.io` (`L9_DOCKER_SANDBOX_MIRRORS`); `ensure` also starts `dockerd` with those mirrors. The base is pinned by content digest either way, which the mirror serves unchanged; the receipt records it as `base_image` |
 
 Repository dependencies cannot be installed during a no-network test, so the quick path
 layers the repository's own `make setup` output, run at the **base** SHA, onto that image.
+Isolated PEP 517 builds (`python -m build`, `pip install .`) resolve their build backend at
+test time, which a no-network container cannot do. The layer therefore pre-downloads the
+repository's `[build-system].requires` (or `setuptools>=40.8.0`, pip's fallback for a
+setuptools project without that table) into `/opt/l9-wheelhouse` after `make setup`, and
+sets `PIP_FIND_LINKS` to it and `PIP_NO_INDEX=1` for the test run. A test that needs any
+other package at run time still fails offline, and that failure is correct: declare the
+package in the repository's own setup. For a hand-written manifest, `quick.py --image-only`
+builds this layer and prints its pinned image id.
+
 A PR that changes a dependency input (manifests, lockfiles, `requirements*.txt`, `Makefile`,
 `Repo.mk`) is BLOCKED by the quick path, because that layer would test it against stale
 dependencies; build such a manifest by hand with an image provisioned from the combined revision.
