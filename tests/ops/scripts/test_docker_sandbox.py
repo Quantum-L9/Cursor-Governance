@@ -254,3 +254,37 @@ def test_a_service_image_is_pinned_through_the_mirror(monkeypatch: pytest.Monkey
     fake = FakeDocker()
     monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
     assert docker_sandbox.pin_image("redis:7") == f"mirror.gcr.io/library/redis@{DIGEST}"
+
+
+@pytest.mark.parametrize(
+    ("ref", "repository"),
+    [
+        ("postgres:16", "postgres"),
+        ("mirror.gcr.io/library/redis:7", "mirror.gcr.io/library/redis"),
+        ("localhost:5000/svc:1", "localhost:5000/svc"),
+        ("postgres@sha256:" + "a" * 64, "postgres"),
+    ],
+)
+def test_repository_of_drops_only_the_tag(ref: str, repository: str) -> None:
+    assert docker_sandbox.repository_of(ref) == repository
+
+
+def test_a_pinned_digest_is_pulled_by_digest_never_by_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker()
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    digest = "sha256:" + "b" * 64
+    assert (
+        docker_sandbox.pin_image("redis:7", digest=digest)
+        == f"mirror.gcr.io/library/redis@{digest}"
+    )
+    pulls = [call[-1] for call in fake.calls if call[:2] == ["docker", "pull"]]
+    assert pulls == [f"redis@{digest}", f"mirror.gcr.io/library/redis@{digest}"]
+    assert not any(":7" in ref for ref in pulls), "a floating tag must not be resolved"
+
+
+def test_a_malformed_pinned_digest_is_refused() -> None:
+    with pytest.raises(SandboxError, match="sha256"):
+        docker_sandbox.pin_image("redis:7", digest="sha256:short")

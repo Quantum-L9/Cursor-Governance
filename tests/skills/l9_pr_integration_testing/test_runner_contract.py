@@ -538,3 +538,67 @@ def test_an_unhealthy_service_blocks_and_is_still_removed(
             pytest.fail("tests must not run beside an unhealthy service")
     assert integrate.blocker_kind(str(caught.value)) == "ENVIRONMENT"
     assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]
+
+
+def test_vendored_service_pins_cover_the_graphiti_memory_ci_images() -> None:
+    """The pins are a snapshot read from this skill; no upstream fetch happens."""
+    pins = quick.load_service_pins()
+    assert set(pins) >= {"postgres:16", "redis:7", "neo4j:5.26.31"}
+    document = json.loads(quick.SERVICE_PINS.read_text(encoding="utf-8"))
+    assert document["source"]["repository"] == "Quantum-L9/l9-graphiti-memory"
+    assert len(document["source"]["commit"]) == 40
+
+
+@pytest.mark.parametrize(
+    ("image", "tag"),
+    [
+        ("postgres:16", "postgres:16"),
+        ("docker.io/library/postgres:16", "postgres:16"),
+        ("library/redis:7", "redis:7"),
+        ("ghcr.io/o/svc:1", "ghcr.io/o/svc:1"),
+    ],
+)
+def test_service_images_are_looked_up_by_canonical_tag(image: str, tag: str) -> None:
+    assert quick.canonical_tag(image) == tag
+
+
+@pytest.mark.parametrize(
+    "images",
+    [
+        {"postgres:16": {"digest": "sha256:short"}},
+        {"postgres@sha256:" + "a" * 64: {"digest": "sha256:" + "a" * 64}},
+        {"docker.io/library/postgres:16": {"digest": "sha256:" + "a" * 64}},
+    ],
+    ids=["bad digest", "digest key", "prefixed key"],
+)
+def test_a_malformed_pin_file_is_refused(tmp_path: Path, images: dict) -> None:
+    path = tmp_path / "pins.json"
+    path.write_text(json.dumps({"schema": quick.SERVICE_PINS_SCHEMA, "images": images}))
+    with pytest.raises(quick.QuickError):
+        quick.load_service_pins(path)
+
+
+class FakePinner:
+    class SandboxError(Exception):
+        pass
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str | None]] = []
+
+    def pin_image(self, image: str, digest: str | None = None) -> str:
+        self.calls.append((image, digest))
+        return f"{image.split(':')[0]}@{digest or 'sha256:' + 'f' * 64}"
+
+
+def test_ci_services_run_listed_images_at_their_pinned_digest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workflow = CI_WORKFLOW.replace(b"image: redis:7", b"image: redis:8")
+    monkeypatch.setattr(quick, "gh_raw", lambda repo, path, ref: workflow)
+    pinner = FakePinner()
+    derived = quick.ci_services("o/r", "a" * 40, "ci.yml:validate", pinner)
+    pins = quick.load_service_pins()
+    assert pinner.calls == [("postgres:16", pins["postgres:16"]["digest"]), ("redis:8", None)]
+    postgres, redis = derived["services"]
+    assert postgres["pinned"] is True and redis["pinned"] is False
+    assert any("redis:8 is not in service-images.json" in w for w in derived["service_warnings"])

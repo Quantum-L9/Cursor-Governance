@@ -346,26 +346,46 @@ def local_digests(ref: str) -> list[str]:
     return json.loads(proc.stdout) if proc.returncode == 0 and proc.stdout.strip() else []
 
 
-def pin_image(image: str) -> str:
+def repository_of(ref: str) -> str:
+    """``ref`` without its tag or digest; a registry ``host:port`` is kept."""
+    head, _, last = ref.split("@", 1)[0].rpartition("/")
+    last = last.split(":", 1)[0]
+    return f"{head}/{last}" if head else last
+
+
+def pin_image(image: str, digest: str | None = None) -> str:
     """``image`` pinned by registry digest, pulling it if no local copy exists.
 
     A local copy under any known name is used first: Docker Hub rate-limits
     even a HEAD on an already-present tag, so a warm run must not depend on a
     registry answering. Otherwise Docker Hub is pulled, then each mirror; the
     first that answers wins and every failure is reported if none does.
+
+    With ``digest`` the tag is never resolved: each registry is asked for
+    exactly that content, so a moved floating tag cannot change what runs.
     """
+    if digest is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        raise SandboxError(f"pinned digest for {image} is not sha256:<64 hex>")
     refs = image_refs(image, registry_mirrors())
-    for ref in refs:
-        digest = digest_for(ref, local_digests(ref))
-        if digest:
-            return digest
+    if digest is not None:
+        refs = [f"{repository_of(ref)}@{digest}" for ref in refs]
+        for ref in refs:
+            if local_digests(ref):
+                return ref
+    else:
+        for ref in refs:
+            found = digest_for(ref, local_digests(ref))
+            if found:
+                return found
     failures = []
     for ref in refs:
         proc = run(["docker", "pull", "--quiet", ref], timeout=600, check=False)
         if proc.returncode == 0:
-            digest = digest_for(ref, local_digests(ref))
-            if digest:
-                return digest
+            if digest is not None:
+                return ref
+            found = digest_for(ref, local_digests(ref))
+            if found:
+                return found
             failures.append(f"{ref}: pulled but has no registry digest to pin")
             continue
         failures.append(f"{ref}: {(proc.stderr or proc.stdout).strip()[-200:]}")

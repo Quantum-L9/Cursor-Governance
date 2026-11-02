@@ -371,13 +371,54 @@ def ci_services(repo: str, base_sha: str, spec: str, docker_sandbox) -> dict:
         raise QuickError("--ci-job must be WORKFLOW:JOB, e.g. ci.yml:validate")
     raw = gh_raw(repo, f".github/workflows/{workflow}", base_sha)
     derived = services_from_workflow(raw, workflow, job)
+    pins = load_service_pins()
     for service in derived["services"]:
+        tag = canonical_tag(service["image"])
+        pin = pins.get(tag)
+        if pin is None:
+            derived["service_warnings"].append(
+                f"{service['name']}: {tag} is not in {SERVICE_PINS.name}; "
+                "its digest was resolved from the floating tag at run time"
+            )
         try:
-            service["image"] = docker_sandbox.pin_image(service["image"])
+            service["image"] = docker_sandbox.pin_image(tag, digest=pin["digest"] if pin else None)
         except docker_sandbox.SandboxError as exc:
             raise QuickError(f"service {service['name']}: {exc}") from exc
+        service["pinned"] = pin is not None
     derived["service_source"] = {**derived.pop("source"), "sha": base_sha}
     return derived
+
+
+SERVICE_PINS = HERE.parent / "references" / "service-images.json"
+SERVICE_PINS_SCHEMA = "l9.pr-integration.service-images/v1"
+DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def canonical_tag(image: str) -> str:
+    """A Docker Hub name as the pin file keys it: no docker.io/ or library/ prefix."""
+    for prefix in ("docker.io/", "index.docker.io/"):
+        if image.startswith(prefix):
+            image = image[len(prefix) :]
+    return image[len("library/") :] if image.startswith("library/") else image
+
+
+def load_service_pins(path: Path = SERVICE_PINS) -> dict:
+    """The vendored digest pins, validated. Read from this skill only, never fetched."""
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise QuickError(f"{path.name} is unreadable: {exc}") from exc
+    if document.get("schema") != SERVICE_PINS_SCHEMA:
+        raise QuickError(f"{path.name} must declare schema {SERVICE_PINS_SCHEMA}")
+    images = document.get("images")
+    if not isinstance(images, dict):
+        raise QuickError(f"{path.name} has no images table")
+    for tag, pin in images.items():
+        if ":" not in tag or "@" in tag or canonical_tag(tag) != tag:
+            raise QuickError(f"{path.name} key {tag!r} must be a bare Docker Hub name:tag")
+        if not isinstance(pin, dict) or not DIGEST.fullmatch(str(pin.get("digest", ""))):
+            raise QuickError(f"{path.name} pin for {tag} needs a sha256 digest")
+    return images
 
 
 def pr_changed_files(repo: str, number: int) -> list[str]:

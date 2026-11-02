@@ -1,0 +1,31 @@
+{
+  "schema": "l9.pr-integration.service-images/v1",
+  "purpose": "Digest pins for CI service images. A service whose image tag is listed runs at exactly this digest; any other tag is resolved at run time and reported as unpinned. This file is a vendored snapshot: nothing reads the source repository at run time.",
+  "source": {
+    "repository": "Quantum-L9/l9-graphiti-memory",
+    "commit": "606d59a7b480afd7e031686ebe7c2f70cfc81ad3",
+    "paths": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/graph-qualification.yml",
+      ".github/workflows/publish.yml"
+    ]
+  },
+  "resolved_at": "2026-11-02",
+  "images": {
+    "postgres:16": {
+      "digest": "sha256:5db6dac2ef5dcff512f4f00a009c3c332b9f2f28f24277175bf3e4a3d02ef83a",
+      "version": "16.15",
+      "verified": "same image id from Docker Hub and mirror.gcr.io; healthy under the sidecar profile"
+    },
+    "redis:7": {
+      "digest": "sha256:b6b6e3dc0c0952737748e55d5d885272840c7e42ba41ab1d5489f693419882f5",
+      "version": "7.4.12",
+      "verified": "pulled from mirror.gcr.io (Docker Hub 429); healthy under the sidecar profile"
+    },
+    "neo4j:5.26.31": {
+      "digest": "sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069",
+      "version": "5.26.31 community",
+      "verified": "pulled from mirror.gcr.io (Docker Hub 429); healthy under the sidecar profile, bolt reachable; NEO4J_PLUGINS cannot download offline"
+    }
+  }
+}
