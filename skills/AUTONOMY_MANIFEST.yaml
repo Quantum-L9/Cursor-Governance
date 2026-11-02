@@ -552,7 +552,10 @@ claude_routing:
     - sync_secrets_registry
     - resolve_secret
     - aws secrets manager ref
-    - infisical
+    - bind from infisical
+    - infisical bind
+    - infisical secret
+    - capability_bind
     - infisical-cursor-governance
     - cursor-governance project
     - hydrate infisical

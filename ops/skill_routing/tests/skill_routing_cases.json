@@ -241,6 +241,27 @@
         "l9-idea-execute",
         "l9-repo-birth"
       ]
+    },
+    {
+      "prompt": "Infisical should be the primary secret store, not AWS. New secrets for context 7, sonarcloud and semgrep go there.",
+      "expected_primary": null,
+      "forbidden": [
+        "l9-aws-secrets"
+      ]
+    },
+    {
+      "prompt": "Agent report: I checked the project files. The audit does not need any credentials or secret values; the registry check passed without changes.",
+      "expected_primary": null,
+      "forbidden": [
+        "l9-aws-secrets"
+      ]
+    },
+    {
+      "prompt": "Bind the SONAR_TOKEN from Infisical with capability_bind before running the scan",
+      "expected_primary": "l9-aws-secrets",
+      "expected_supporting": [
+        "l9-structured-reasoning"
+      ]
     }
   ]
 }

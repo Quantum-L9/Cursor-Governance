@@ -170,3 +170,15 @@ def test_generation_is_byte_deterministic():
         check=False,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_live_registry_has_no_single_word_force_signal_on_auto_skills() -> None:
+    reg.validate_registry(json.loads(LIVE.read_text(encoding="utf-8")))
+
+
+def test_single_word_force_signal_on_auto_skill_is_rejected() -> None:
+    data = json.loads(LIVE.read_text(encoding="utf-8"))
+    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-aws-secrets")
+    route["positive_signals"].append("infisical")
+    with pytest.raises(reg.RegistryError, match="single-word signal"):
+        reg.validate_registry(data)
