@@ -28,6 +28,20 @@ only as an append-only `AGENTS.md` amendment (INFISICAL_MACHINE_IDENTITY_V1,
 - A legacy ref resolved only through the AWS resolver; the ref → Infisical
   name map lived inside the one-way port script.
 
+## Options Considered
+
+1. **Infisical as the store on every surface; AWS stays Cursor's bootstrap
+   (chosen).** Matches the code and how secrets are added today; leaves the
+   working Cursor bootstrap untouched; the law changes by one surgical
+   paragraph.
+2. **Keep AWS Secrets Manager as the documented SSOT, Infisical as a mirror.**
+   No doctrine change, but every new secret would need an AWS-first step the
+   operator no longer performs, and agents following the law keep landing on
+   an AWS-only resolver.
+3. **Retire AWS entirely, Cursor included.** One store with no exception, but
+   it rewrites Cursor's bootstrap, which uses AWS in place of a `.env`;
+   rejected by the operator (2026-11-02).
+
 ## Decision
 
 1. Infisical project `cursor-governance` is the single store for agent secrets
