@@ -7,7 +7,12 @@
 > Claude obtains that identity from the environment with no AWS; Cursor / operator
 > machines keep the AWS login seed (2026-09-24; `AGENTS.md` → INFISICAL_MACHINE_IDENTITY_V1).
 
-This directory owns the **openclaw-igorbot/\*** inventory for Quantum-L9 coding
+**Store:** Infisical project `cursor-governance` is the secret store (ADR-0053,
+`CANONICAL_LAW.md` §14.1). Add a secret there, then its name to `root_env_keys`
+in `infisical-cursor-governance.yaml`. AWS `openclaw-igorbot/*` is legacy — the
+Cursor / operator login seed only.
+
+This directory also owns the legacy **openclaw-igorbot/\*** inventory for Quantum-L9 coding
 workspaces. Other repos consume refs from here — they do not supply the
 manifest back into Governance.
 
@@ -21,7 +26,8 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 
 | Path | Role |
 |---|---|
-| `openclaw-igorbot.registry.yaml` | Operator AWS inventory (IDs + JSON key names + annotations only) |
+| `openclaw-igorbot.registry.yaml` | Legacy operator AWS inventory (IDs + JSON key names + annotations only) |
+| `legacy_refs.py` | Legacy ref → Infisical name map (`openclaw-igorbot/<svc>#<key>` → `NAME`); used by `capability_bind.py` and the port tool |
 | `infisical-login.registry.yaml` | Cursor / operator AWS login-seed inventory (SM name in `login_registry.py`); Claude never reads it |
 | `session_start_secrets.py` | SessionStart owner: Claude — environment identity, no AWS; Cursor / operator — AWS preflight → profile / seed. Then Infisical bind `--check` |
 | `infisical_cli_login.py` | This surface's machine identity: environment, else the operator profile file |
@@ -75,8 +81,9 @@ model can spawn cannot promote itself.
 make capability-check REQUIRE=sonar.read_issues,graphiti.query   # status only (UNAVAILABLE)
 make capability-contract-validate                                # regression barrier
 # capability-broker-preflight / broker-serve — retired (exit 2)
-make secrets-sync          # AWS → local registry (operator)
-make secrets-check REF='openclaw-igorbot/github#token'
+make secrets-check NAME=GITHUB_TOKEN          # Infisical bind check (legacy ref accepted)
+make secrets-aws-sync                          # legacy: AWS → local registry (operator)
+make secrets-aws-check REF='openclaw-igorbot/github#token'   # legacy AWS check (operator)
 # or:
 .venv/bin/python ops/secrets/sync_secrets_registry.py
 .venv/bin/python ops/secrets/resolve_secret.py --ref 'openclaw-igorbot/github#token' --check
@@ -96,8 +103,8 @@ make secrets-check REF='openclaw-igorbot/github#token'
 - Adding an integration = register a capability against an existing ref. It must
   never mean adding a token to an adapter env file, or changing every adapter
 - No macOS Keychain / Chrome Safe Storage as primary auth
-- Diagnose before mutating vault contents; prefer append of new secrets via AWS console/CLI then `secrets-sync`
-- Skill: `l9-aws-secrets`
+- Diagnose before mutating vault contents; add new secrets in Infisical (`cursor-governance`, `prod`, `/`) and their names to `root_env_keys` — never AWS first
+- Skill: `l9-secrets`
 - **GitHub PAT SSOT:** `openclaw-igorbot/github#token` — sole agent GitHub
   credential (CANONICAL_LAW.md §14). Do not add a second PAT. Agents must use
   this ref and must not ask humans to click GitHub UI for operable API tasks.

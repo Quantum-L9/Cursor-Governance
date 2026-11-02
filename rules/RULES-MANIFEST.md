@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-02T22:54:13Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-02T23:02:35Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -52,14 +52,14 @@ Generated: `2026-11-02T22:54:13Z`. Source: `rules/*.mdc`.
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
-| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 104 | `f1966ca06ce9` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 108 | `eba4ff09b7d7` |
 | `63-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | general | auto_attached | 42 | `369e0ab6d90f` |
 | `64-canonical-identity-authority.mdc` | `l9.rule.64.canonical.identity.authority` | global | general | always | 90 | `6da9dd821b19` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | agent_requested | 43 | `888c5c4b9057` |
 | `69-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | general | agent_requested | 49 | `2bc076e7c46c` |
 | `70-tool-efficiency.mdc` | `l9.rule.70.tool.efficiency` | global | governance | agent_requested | 190 | `80a4344c4649` |
 | `71-ci-cd-pipeline.mdc` | `l9.rule.71.ci.cd.pipeline` | global | ci | agent_requested | 39 | `760adb0709d8` |
-| `72-review-ergonomics.mdc` | `l9.rule.72.review.ergonomics` | global | output | agent_requested | 168 | `64a18349f4bf` |
+| `72-review-ergonomics.mdc` | `l9.rule.72.review.ergonomics` | global | output | agent_requested | 145 | `e31fd8743dbc` |
 | `73-prompts-and-evals.mdc` | `l9.rule.73.prompts.and.evals` | global | general | agent_requested | 37 | `e9cb31a41b5a` |
 | `74-ai-safety-policy.mdc` | `l9.rule.74.ai.safety.policy` | global | security | agent_requested | 44 | `30dafdd1c06c` |
 | `75-bounded-session-autonomy.mdc` | `l9.rule.75.bounded.session.autonomy` | global | execution | agent_requested | 25 | `0127f988d59b` |

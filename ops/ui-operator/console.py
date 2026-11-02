@@ -7,7 +7,7 @@ Modes:
   run       — execute journey (requires --approve, Playwright, provisioned session)
 
 Never logs or writes secret values. Receipts record ref ids only.
-Loads l9-aws-secrets resolve via ops/secrets/resolve_secret.py.
+Loads l9-secrets resolve via ops/secrets/resolve_secret.py.
 """
 
 from __future__ import annotations

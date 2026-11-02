@@ -312,9 +312,9 @@
       "alias": null,
       "class": "always",
       "output": "62-github-openclaw-authority.md",
-      "output_sha256": "4e0c1ea29faac87808d6aa2b665774ffa05ddc379d05bccf6b2771347408bdc8",
+      "output_sha256": "87fc7ec5ca46f3cce6df10e76eaca4ffbb5edc64e4df319ac3171856f0f5ffa0",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "f1966ca06ce98ca4a45260374e8320c1d177178372819fb1e0be026c71ac125e",
+      "source_sha256": "eba4ff09b7d7019927fddf16d54e8d159ec9d263a0ffeda1754ab2faac8fbbd9",
       "stem": "62-github-openclaw-authority"
     },
     {
@@ -375,9 +375,9 @@
       "alias": null,
       "class": "paths",
       "output": "72-review-ergonomics.md",
-      "output_sha256": "8c4d2364fe5972cdb52bd99e11e5cd05f993904aa0a4bd73e53206e5c9adca10",
+      "output_sha256": "0692f7ea80bad2e582e23b79d09672fb75251ebe192582829aee00cd6ab1545c",
       "source": "rules/72-review-ergonomics.mdc",
-      "source_sha256": "64a18349f4bf5b1a52290baca13203fdb2876bcd32a58800ba542bf1647696f7",
+      "source_sha256": "e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239",
       "stem": "72-review-ergonomics"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "239fd880b61f220db3afe5e2fefb8f0d19315454b8d554f90ce4af5cb703c500"
+  "tree_sha256": "7037d49d65d291deceaf7df184a9dde73e0580a1ffbb0251c7c70a7f41a0aed8"
 }

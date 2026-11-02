@@ -1,8 +1,8 @@
 ---
 id: l9.rule.62.github.openclaw.authority
-version: 1.2.0
-description: Agents MUST use openclaw-igorbot/github#token for GitHub where the surface
-  holds credentials; on a model-controlled surface the REST `gh api` route and the
+version: 1.3.0
+description: Agents MUST use the one GitHub PAT, Infisical GITHUB_TOKEN (legacy ref
+  openclaw-igorbot/github#token), for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the
   mcp__github__* tools are the sanctioned capability, by observation and without a
   mechanism asserted. MUST NOT ask humans to operate github.com UI.
 scope: global
@@ -11,24 +11,28 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# GitHub Openclaw PAT authority (CANONICAL_LAW §14)
+# GitHub Openclaw PAT authority (CANONICAL_LAW §14, §14.1)
 
-- **Sole PAT:** resolve `openclaw-igorbot/github#token` via `ops/secrets` /
-  `l9-aws-secrets`. Export as `GH_TOKEN` / `GITHUB_TOKEN` for `gh` and GitHub API.
+- **Sole PAT:** Infisical `GITHUB_TOKEN` in project `cursor-governance` (legacy
+  ref `openclaw-igorbot/github#token` names the same secret), bound through
+  `ops/secrets/capability_bind.py` / skill `l9-secrets`. Use it as `GH_TOKEN` /
+  `GITHUB_TOKEN` for `gh` and the GitHub API.
   **Applies where the surface holds credentials.** See the surface-transport
   section below before reaching for it.
-- **No second PAT** in AWS while that ref works. Rotate in place if scopes change.
+- **No second PAT** in any store. Rotate `GITHUB_TOKEN` in Infisical if scopes
+  change. AWS Secrets Manager is legacy (Cursor login seed only), never where a
+  secret is added.
 - **No human GitHub UI:** do not ask the operator to click Installations,
   permission accepts, settings toggles, or Actions secret paste when the PAT
   (or already-wired App env secrets) can complete the same outcome via API.
 - **App vs PAT:** Actions seeder may use `GOVERNANCE_APP_*` on env
   `governance-distribution`. Interactive/agent `gh` work still uses the openclaw PAT.
-- **Ask-human only** after `resolve_secret.py --check` fails, **the surface can hold
-  that credential**, and no sanctioned transport below reaches the outcome — or for
+- **Ask-human only** after `capability_bind.py --check GITHUB_TOKEN` reports it
+  unbound, **the surface can hold that credential**, and no sanctioned transport below reaches the outcome — or for
   true non-API human factors (name the failing ref).
 - **REST `gh api` is the same PAT, not a second secret.** GraphQL (`gh pr view
   --json`, `gh repo view --json`) may 403 on restricted gateways. `gh api
-  repos/...` is a sanctioned route for the same `openclaw-igorbot/github#token`.
+  repos/...` is a sanctioned route for the same PAT.
   Do not provision another GitHub credential to "fix" a GraphQL 403.
 
 - **A GraphQL 403 is a transport swap, not a lost capability.** The operations

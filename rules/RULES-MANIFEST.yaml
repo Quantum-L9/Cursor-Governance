@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-02T22:54:13Z'
+generated_utc: '2026-11-02T23:02:35Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:08deb30816834560cf36cd47026db910f49b892967ec1d51d81a1dfb2f98b351
+source_tree_digest: sha256:6584264d894d408d68c482a298f6d9317aad6403274537f8502209b8ba5bafa6
 summary:
   total_mdc_files: 68
   always_apply_true: 35
@@ -813,18 +813,18 @@ rules:
 - file: 62-github-openclaw-authority.mdc
   id: l9.rule.62.github.openclaw.authority
   id_source: explicit
-  version: 1.2.0
-  description: Agents MUST use openclaw-igorbot/github#token for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the mcp__github__* tools are the sanctioned capability, by observation and without a mechanism asserted. MUST NOT ask humans to operate github.com UI.
+  version: 1.3.0
+  description: Agents MUST use the one GitHub PAT, Infisical GITHUB_TOKEN (legacy ref openclaw-igorbot/github#token), for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the mcp__github__* tools are the sanctioned capability, by observation and without a mechanism asserted. MUST NOT ask humans to operate github.com UI.
   scope: global
   domain: git
   activation: always
   activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
+  first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14, §14.1)
   has_yaml_frontmatter: true
-  line_count: 104
-  content_digest: sha256:f1966ca06ce98ca4a45260374e8320c1d177178372819fb1e0be026c71ac125e
+  line_count: 108
+  content_digest: sha256:eba4ff09b7d7019927fddf16d54e8d159ec9d263a0ffeda1754ab2faac8fbbd9
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -982,7 +982,7 @@ rules:
 - file: 72-review-ergonomics.mdc
   id: l9.rule.72.review.ergonomics
   id_source: explicit
-  version: 1.0.0
+  version: 1.1.0
   description: Review ergonomics, PR size guidance, and checklists for L9.
   scope: global
   domain: output
@@ -995,8 +995,8 @@ rules:
   - '**/*.md'
   first_heading: Review ergonomics (L9)
   has_yaml_frontmatter: true
-  line_count: 168
-  content_digest: sha256:64a18349f4bf5b1a52290baca13203fdb2876bcd32a58800ba542bf1647696f7
+  line_count: 145
+  content_digest: sha256:e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239
   authority: canonical_global
   context_cost: moderate
   deprecated: false
