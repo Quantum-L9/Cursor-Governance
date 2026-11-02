@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-28T01:14:58Z'
+generated_utc: '2026-11-02T23:16:40Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:fa71fddf0fce4a5573110be97e7624e8ee13cf75c58e6da93b1f0fa87efbf206
+source_tree_digest: sha256:72c920e1beb2e95fb70a1d73e0947d4df38acc2b48fd7bd57b950bc5e487b93f
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -813,18 +813,18 @@ rules:
 - file: 62-github-openclaw-authority.mdc
   id: l9.rule.62.github.openclaw.authority
   id_source: explicit
-  version: 1.2.0
-  description: Agents MUST use openclaw-igorbot/github#token for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the mcp__github__* tools are the sanctioned capability, by observation and without a mechanism asserted. MUST NOT ask humans to operate github.com UI.
+  version: 1.3.0
+  description: Agents MUST use the one GitHub PAT, Infisical GITHUB_TOKEN (legacy ref openclaw-igorbot/github#token), for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the mcp__github__* tools are the sanctioned capability, by observation and without a mechanism asserted. MUST NOT ask humans to operate github.com UI.
   scope: global
   domain: git
   activation: always
   activation_source: explicit
   always_apply: true
   globs: null
-  first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
+  first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14, §14.1)
   has_yaml_frontmatter: true
-  line_count: 104
-  content_digest: sha256:f1966ca06ce98ca4a45260374e8320c1d177178372819fb1e0be026c71ac125e
+  line_count: 108
+  content_digest: sha256:eba4ff09b7d7019927fddf16d54e8d159ec9d263a0ffeda1754ab2faac8fbbd9
   authority: canonical_global
   context_cost: moderate
   deprecated: false
