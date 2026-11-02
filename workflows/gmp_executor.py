@@ -1241,24 +1241,11 @@ from {module_path} import ...
                 self._print_step(step, "pending")
 
     def _next_gmp_id(self) -> str:
-        gmp_num = 129
-        reports_dirs = [
-            self.work_root / "reports" / "gmp",
-            self.work_root / "reports" / "GMP Reports",
-            self.work_root / "reports",
-        ]
-        for reports_dir in reports_dirs:
-            if not reports_dir.is_dir():
-                continue
-            for path in reports_dir.glob("GMP-Report-*.md"):
-                match = re.search(r"GMP-Report-(\d+)", path.name)
-                if match:
-                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
-            for path in reports_dir.glob("GMP-*.md"):
-                match = re.search(r"GMP-(\d+)", path.name)
-                if match:
-                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
-        return f"GMP-{gmp_num}"
+        from ops.reports.gmp import next_gmp_number
+
+        # One scanner for executor and hand-authored reports (rules/83); the
+        # executor keeps its historical floor.
+        return f"GMP-{next_gmp_number(self.work_root, floor=129)}"
 
     def _init_state(self, task: str, tier: str) -> None:
         self.state = GMPState(

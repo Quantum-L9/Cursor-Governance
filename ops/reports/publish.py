@@ -25,6 +25,8 @@ CLI (any surface, e.g. Cursor or a manual ``/end-session``)::
 
     python -m ops.reports.publish dirs --workspace <repo>
     python -m ops.reports.publish handoffs --workspace <repo>
+    python -m ops.reports.publish next-gmp-id --workspace <repo>
+    python -m ops.reports.publish validate-gmp <GMP-Report-NNN-Name.md>...
     python -m ops.reports.publish gmp --workspace <repo> <GMP-Report-NNN-Name.md>...
 """
 
@@ -297,7 +299,35 @@ def publish(
         return PublishResult("failed", f"{type(exc).__name__}: {str(exc)[:200]}")
 
 
+def _push_blocker(root: Path, branch: str, remote: str) -> str:
+    """Why pushing HEAD would publish something other than reports, or "".
+
+    The PR head was validated by ``make pr``. A report push may advance it only
+    by report files: every path between the remote head and HEAD must sit under
+    ``reports/``. Anything else waits for ``make pr`` (PR #806 review).
+    """
+    listed = _git(root, "ls-remote", remote, f"refs/heads/{branch}")
+    if listed.returncode != 0:
+        return f"cannot read {remote}/{branch}: {_first_line(listed)}"
+    remote_sha = listed.stdout.split()[0] if listed.stdout.strip() else ""
+    if not remote_sha:
+        return f"{remote}/{branch} does not exist: make pr publishes the branch first"
+    if _git(root, "merge-base", "--is-ancestor", remote_sha, "HEAD").returncode != 0:
+        return f"{remote}/{branch} moved; fast-forward first (never force)"
+    changed = _git(root, "diff", "--name-only", remote_sha, "HEAD").stdout.splitlines()
+    others = [p for p in changed if p and not p.startswith(f"{REPORTS_DIR.as_posix()}/")]
+    if others:
+        return (
+            f"{len(others)} non-report path(s) ahead of the PR head (e.g. {others[0]}): "
+            "make pr publishes them with the report"
+        )
+    return ""
+
+
 def _push(root: Path, branch: str, remote: str, sha: str) -> PublishResult:
+    blocker = _push_blocker(root, branch, remote)
+    if blocker:
+        return PublishResult("committed", f"not pushed — {blocker}", sha)
     last = ""
     for attempt in range(PUSH_ATTEMPTS):
         pushed = _git(root, "push", remote, f"HEAD:refs/heads/{branch}")
@@ -418,13 +448,19 @@ def publish_gmp_report(root: Path, sources: Sequence[Path]) -> tuple[list[Path],
     an open PR (``.l9/pr/pr-summary.json`` names it as head); otherwise the
     commit rides the next ``make pr``.
     """
+    from ops.reports import gmp
+
     root = Path(root).resolve()
+    resolved = [Path(s).expanduser().resolve() for s in sources]
+    for src in resolved:
+        if not src.is_file() or src.suffix != ".md" or not src.name.upper().startswith("GMP"):
+            raise ValueError(f"not a GMP markdown report: {src}")
+        errors = gmp.validate(src) if gmp.is_contract_report(src) else []
+        if errors:
+            raise ValueError(f"{src.name} violates rule 83: " + "; ".join(errors))
     target_dir = report_dir(root, ReportKind.GMP)
     placed: list[Path] = []
-    for source in sources:
-        src = Path(source).expanduser().resolve()
-        if not src.is_file() or src.suffix != ".md" or not src.name.upper().startswith("GMP"):
-            raise ValueError(f"not a GMP markdown report: {source}")
+    for src in resolved:
         dest = target_dir / src.name
         if src != dest:
             dest.write_text(clean_markdown(src.read_text(encoding="utf-8")), encoding="utf-8")
@@ -509,11 +545,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     for name, help_text in (
         ("dirs", "create reports/gmp and reports/end-session/{session,governance}-handoff"),
         ("handoffs", "publish .l9/memory handoff briefs to reports/end-session/ on the PR"),
-        ("gmp", "place GMP report(s) in reports/gmp/ and commit them (push if a PR is open)"),
+        ("gmp", "validate, place in reports/gmp/ and commit GMP report(s); push if a PR is open"),
+        ("next-gmp-id", "print the next GMP id for this clone (GMP-NNN)"),
+        ("validate-gmp", "check GMP report(s) against the rule 83 contract"),
     ):
         cmd = sub.add_parser(name, help=help_text)
         cmd.add_argument("--workspace", default=os.getcwd(), help="the work clone")
-        if name == "gmp":
+        if name in {"gmp", "validate-gmp"}:
             cmd.add_argument("reports", nargs="+", type=Path, help="GMP report .md file(s)")
         if name == "handoffs":
             cmd.add_argument("--session-id", default=os.environ.get("CLAUDE_SESSION_ID", ""))
@@ -524,6 +562,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         for path in ensure_layout(root):
             print(_rel(path, root))
         return 0
+    if args.command == "next-gmp-id":
+        from ops.reports import gmp
+
+        print(gmp.format_gmp_id(gmp.next_gmp_number(root)))
+        return 0
+    if args.command == "validate-gmp":
+        from ops.reports import gmp
+
+        failed = 0
+        for report in args.reports:
+            errors = gmp.validate(report)
+            print(f"{report}: {'OK' if not errors else 'FAIL'}")
+            for error in errors:
+                print(f"  - {error}")
+            failed += bool(errors)
+        return 1 if failed else 0
     if args.command == "gmp":
         try:
             paths, result = publish_gmp_report(root, args.reports)

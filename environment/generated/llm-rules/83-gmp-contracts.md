@@ -1,123 +1,75 @@
 ---
-description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
+description: 'GMP report contract: reports/gmp/ location, sequential GMP IDs, ISO dates, validation, and publication with the PR (never local-only).'
 ---
 
-# GMP Contract Enforcement (L9)
+# GMP Report Contract (L9)
 
-## Contract Files (SOURCE OF TRUTH)
+This rule is the contract. `ops/reports/gmp.py` is its only checker and
+`ops/reports/publish.py` owns where reports live — the rule and the code are
+held to each other by `tests/ops/reports/`. Rule 81 says *when* a report is due;
+this rule says *what* it is and *how it ships*.
 
-| Contract | Path |
-|----------|------|
-| Phase Execution | `agents/cursor/gmp_protocol/gmp-contract.yaml` |
-| Report Structure | `agents/cursor/gmp_protocol/gmp-report-contract.yaml` |
-| Report Template | `agents/cursor/gmp_protocol/gmp-report-template.md` |
+Two report kinds:
 
-**Contracts are BINDING.** Violations = STOP.
+| Kind | Written by | Name | Held to this contract |
+|---|---|---|---|
+| Executor receipt | `/gmp` executor (`commands/gmp.md`) | `GMP-<n>-<slug>.md` | no — the executor writes and commits it itself |
+| Hand-authored report | the agent | `GMP-Report-<NNN>-<Description>.md` | yes |
 
----
+Both live in the **work clone** at `reports/gmp/` (created when absent) and are
+**committed and published with the PR** — even when the repo's `.gitignore`
+treats `reports/` as local-only.
 
-## 🔴 CRITICAL: GMP ID Assignment
+## Workflow (MUST, in order)
 
-**BEFORE creating ANY GMP report:**
-
-```bash
-# 1. Find highest existing GMP number
-ls reports/gmp/GMP*.md reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1
-
-# 2. Use: highest + 1, zero-padded to 3 digits
-# Example: if highest is 96 → use 097
-```
-
-**RULES:**
-- ❌ NEVER reuse an existing GMP number
-- ❌ NEVER guess the number
-- ✅ ALWAYS check first, then increment
-- ✅ ALWAYS zero-pad to 3 digits (097, 098, 099, 100)
-
----
-
-## 🔴 CRITICAL: Date Format
-
-**Header date MUST be ISO 8601:**
-
-```
-Format: YYYY-MM-DD
-Example: 2026-01-18
-```
-
-**Get today's date:**
-```bash
-date +%Y-%m-%d
-```
-
----
-
-## MANDATORY: Pre-Report Generation
-
-**BEFORE writing ANY GMP report:**
-
-```
-1. CHECK highest GMP ID (command above)
-2. ASSIGN next sequential ID
-3. GET today's date in ISO format
-4. READ: agents/cursor/gmp_protocol/gmp-report-contract.yaml
-5. READ: agents/cursor/gmp_protocol/gmp-report-template.md
-6. GENERATE report following contract
-```
-
----
-
-## MANDATORY: Post-Report Validation
-
-```bash
-python3 scripts/validate_gmp_report.py reports/gmp/GMP-Report-###-Description.md
-```
-
-**Must return 0 errors before DECLARATION.**
-
----
-
-## MANDATORY: Publish the report with the PR
-
-A GMP report lives in the **work clone** at `reports/gmp/` (created when absent)
-and is **committed and published with the PR** — even when the repo's
-`.gitignore` treats `reports/` as local-only. Never leave it in a scratchpad,
-never substitute the PR description for it, never report "it stayed local".
+Every command runs from the governance venv against the work clone `$WS`:
 
 ```bash
 GOV="${HOME}/.cursor-governance"
-(cd "$GOV" && PYTHONPATH="$GOV" "$GOV/.venv/bin/python" -m ops.reports.publish gmp \
-  --workspace "$WS" reports/gmp/GMP-Report-###-Description.md)
+rp() { (cd "$GOV" && PYTHONPATH="$GOV" "$GOV/.venv/bin/python" -m ops.reports.publish "$@"); }
 ```
 
-It copies a report written elsewhere into `reports/gmp/`, force-adds it by exact
-path, and commits only that file. With no open PR yet, run it **before**
-`authorize-release` / `make pr` so the commit rides the publication. With a PR
-already open for the branch it also pushes to that PR (never force).
+1. **ID** — `rp next-gmp-id --workspace "$WS"` prints the next `GMP-NNN`
+   (highest number already in `reports/gmp/`, `reports/GMP Reports/` or
+   `reports/`, plus one; 3-digit zero-padded). Never guess, never reuse.
+2. **Date** — `date +%Y-%m-%d` (ISO 8601).
+3. **Write** `reports/gmp/GMP-Report-NNN-Description.md` in `$WS` to the format
+   below. Writing it elsewhere (a scratchpad) is allowed; step 5 moves it.
+4. **Validate** — `rp validate-gmp <report>` must print `OK` before the
+   DECLARATION is claimed.
+5. **Publish** — `rp gmp --workspace "$WS" <report>`. It re-validates, places
+   the report in `reports/gmp/`, force-adds it by exact path, and commits only
+   that file.
+   - No PR open yet for the branch → run it **before** `l4_local.py
+     authorize-release` / `make pr`; the commit rides the publication.
+   - PR already open → it also pushes, but only when every path between the PR
+     head and `HEAD` is under `reports/`. Otherwise it commits and says so;
+     `make pr` publishes it with the rest. Never force.
 
----
+## MUST NOT
 
-## Report Format Summary
+- Leave a GMP report local-only, in a scratchpad, or untracked because
+  `reports/` is gitignored.
+- Substitute the PR description or chat for the report file.
+- Claim DECLARATION with `validate-gmp` failing.
 
-### Naming
+## Format (hand-authored)
 
-```
-GMP-Report-{###}-{Description}.md
-         ↑
-    3-digit zero-padded, NEXT SEQUENTIAL
-```
+**Name:** `GMP-Report-{NNN}-{Description}.md` — NNN from step 1.
 
-### Header (Single Line)
+**Header** — the first non-blank line, exactly one line:
 
 ```markdown
-**ID:** GMP-### | **Task:** ... | **Tier:** ..._TIER | **Date:** YYYY-MM-DD | **Status:** ✅ COMPLETE
+**ID:** GMP-NNN | **Task:** ... | **Tier:** ..._TIER | **Date:** YYYY-MM-DD | **Status:** ✅ COMPLETE
 ```
 
-### Required Sections (7)
+The header ID must equal the file name's NNN.
+
+**Required sections**, as `## ` headings, in this order:
 
 ```markdown
 ## TODO PLAN
-## PHASES  
+## PHASES
 ## CHANGES
 ## TODO → CHANGE MAP
 ## VALIDATION
@@ -125,26 +77,6 @@ GMP-Report-{###}-{Description}.md
 ## DECLARATION
 ```
 
-### Forbidden
-
-- `## YNP RECOMMENDATION`
-- `## NEXT STEPS`
-- Verbose prose
-
----
-
-## Quick Commands
-
-```bash
-# Get next GMP ID
-NEXT_ID=$(printf "%03d" $(($(ls reports/gmp/GMP*.md reports/GMP-Report-*.md reports/'GMP Reports'/GMP*Report*.md 2>/dev/null | grep -oE '[0-9]+' | sort -n | tail -1) + 1)))
-echo "Next GMP ID: $NEXT_ID"
-
-# Get today's date
-date +%Y-%m-%d
-
-# Validate report
-python3 scripts/validate_gmp_report.py reports/gmp/GMP-Report-$NEXT_ID-Description.md
-```
+**Forbidden sections:** `## YNP RECOMMENDATION`, `## NEXT STEPS`. No verbose prose.
 
 <!-- generated-from: rules/83-gmp-contracts.mdc; do-not-edit -->

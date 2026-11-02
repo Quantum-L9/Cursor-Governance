@@ -66,17 +66,12 @@ Each audit must answer, in the prompt or notes:
 
 After completing any GMP execution (partial or full), you MUST:
 
-1. **Generate a production report** following canonical structure
-2. **Save to `reports/gmp/`** (created when absent) and commit it with the PR via `python -m ops.reports.publish gmp` (see rule 83 — never local-only), with naming: `GMP-Report-<GMP-ID>.md`
-3. **Include required sections:**
-   - Header (GMP ID, Title, Tier, Date, Status)
-   - TODO Plan (locked)
-   - Scope Boundaries
-   - Files Modified + Line Ranges
-   - Validation Results (test output)
-   - Phase 5 Recursive Verification
-   - Outstanding Items
-   - Final Declaration
+1. **Generate a production report** to the contract in
+   `83-gmp-contracts.mdc` (the single owner of the report format, location
+   `reports/gmp/`, IDs, validation and publication).
+2. **Validate and publish it with the PR** (`ops.reports.publish validate-gmp`,
+   then `ops.reports.publish gmp`) — never local-only.
+3. **Status** — `✅ COMPLETE`, or `PARTIAL` when phases remain (see table).
 
 ### When to Generate Reports
 
@@ -87,10 +82,9 @@ After completing any GMP execution (partial or full), you MUST:
 | GMP verification audit | ✅ Generate audit report |
 | Quick fix (< 3 files, no GMP) | ❌ No report needed |
 
-### Report Template Reference
+### Report format
 
-Use existing reports as templates:
-- `reports/GMP-Report-111-Example-Description.md` — Full execution example
-- `reports/GMP-Report-116-Example-Description.md` — Closed-loop learning example
+The header line, the seven required sections and the forbidden sections are
+defined once, in rule 83.
 
 **Rationale:** Reports provide audit trail and document changes for future reference.

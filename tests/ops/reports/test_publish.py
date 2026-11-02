@@ -224,10 +224,28 @@ def test_gmp_executor_writes_into_reports_gmp(tmp_path: Path) -> None:
 # --- Agent-authored GMP reports ---------------------------------------------------
 
 
+VALID_GMP = (
+    "**ID:** GMP-001 | **Task:** GAR projection binding | **Tier:** RUNTIME_TIER | "
+    "**Date:** 2026-11-02 | **Status:** ✅ COMPLETE\n\n"
+    + "".join(
+        f"## {s}\n\nx\n\n"
+        for s in (
+            "TODO PLAN",
+            "PHASES",
+            "CHANGES",
+            "TODO → CHANGE MAP",
+            "VALIDATION",
+            "VERIFICATION",
+            "DECLARATION",
+        )
+    )
+)
+
+
 def _report(where: Path, name: str = "GMP-Report-001-GAR-Projection-Binding.md") -> Path:
     where.mkdir(parents=True, exist_ok=True)
     path = where / name
-    path.write_text("**ID:** GMP-001 | **Task:** x\n\n## TODO PLAN\n", encoding="utf-8")
+    path.write_text(VALID_GMP, encoding="utf-8")
     return path
 
 
@@ -260,3 +278,44 @@ def test_gmp_cli_refuses_non_gmp_markdown(clone: Path, tmp_path: Path) -> None:
     other = tmp_path / "notes.md"
     other.write_text("x\n", encoding="utf-8")
     assert rp.main(["gmp", "--workspace", str(clone), str(other)]) == 2
+
+
+def test_push_refused_when_non_report_commit_is_ahead_of_pr_head(clone: Path) -> None:
+    (clone / "feature.py").write_text("x = 1\n", encoding="utf-8")
+    _git(clone, "add", "--", "feature.py")
+    _git(clone, "commit", "-q", "-m", "unpublished work")
+    _, result = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+    assert result.status == "committed"
+    assert "non-report path(s) ahead of the PR head (e.g. feature.py)" in result.detail
+    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
+
+
+def test_invalid_gmp_report_is_refused_and_left_in_place(clone: Path, tmp_path: Path) -> None:
+    bad = tmp_path / "GMP-Report-002-Bad.md"
+    bad.write_text("**ID:** GMP-002 | **Task:** x\n\n## TODO PLAN\n", encoding="utf-8")
+    assert rp.main(["gmp", "--workspace", str(clone), str(bad)]) == 2
+    assert not (clone / "reports" / "gmp" / bad.name).exists()
+    assert rp.main(["validate-gmp", str(bad)]) == 1
+
+
+def test_gmp_contract_validator(tmp_path: Path) -> None:
+    from ops.reports import gmp
+
+    good = _report(tmp_path)
+    assert gmp.validate(good) == []
+    mismatched = tmp_path / "GMP-Report-007-X.md"
+    mismatched.write_text(VALID_GMP.replace("## NEXT", "") + "## NEXT STEPS\n", "utf-8")
+    errors = gmp.validate(mismatched)
+    assert any("does not match file name" in e for e in errors)
+    assert any("NEXT STEPS" in e for e in errors)
+
+
+def test_next_gmp_id_is_shared_by_rule_and_executor(tmp_path: Path, capsys) -> None:  # noqa: ANN001
+    from ops.reports import gmp
+
+    assert gmp.next_gmp_number(tmp_path) == 1
+    _report(tmp_path / "reports" / "gmp")  # GMP-Report-001
+    (tmp_path / "reports" / "GMP-140-legacy.md").write_text("x\n", encoding="utf-8")
+    assert rp.main(["next-gmp-id", "--workspace", str(tmp_path)]) == 0
+    assert capsys.readouterr().out.strip() == "GMP-141"
+    assert gmp.next_gmp_number(tmp_path, floor=129) == 141
