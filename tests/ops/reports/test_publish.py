@@ -317,3 +317,13 @@ def test_next_gmp_id_is_shared_by_rule_and_executor(tmp_path: Path, capsys) -> N
     assert rp.main(["next-gmp-id", "--workspace", str(tmp_path)]) == 0
     assert capsys.readouterr().out.strip() == "GMP-141"
     assert gmp.next_gmp_number(tmp_path, floor=129) == 141
+
+
+@pytest.mark.parametrize("bad", ["README.md", "reports", "reports/../README.md", "/etc/hostname"])
+def test_publish_refuses_anything_but_a_report_file(clone: Path, bad: str) -> None:
+    (clone / "reports").mkdir(exist_ok=True)
+    head = _git(clone, "rev-parse", "HEAD")
+    result = rp.publish(clone, [Path(bad)], message="x", expected_branch=BRANCH)
+    assert result.status == "failed" and "not a report file under reports/" in result.detail
+    assert _git(clone, "rev-parse", "HEAD") == head
+    assert _git(clone, "diff", "--cached", "--name-only") == ""

@@ -234,6 +234,13 @@ def _publish_lock(root: Path) -> Iterator[None]:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
+def _is_report_file(root: Path, path: Path) -> bool:
+    reports = (Path(root) / REPORTS_DIR).resolve()
+    target = Path(path) if Path(path).is_absolute() else Path(root) / path
+    target = target.resolve()
+    return target.is_file() and target.is_relative_to(reports)
+
+
 def publish_mode() -> str:
     raw = (os.environ.get(PUBLISH_ENV) or "push").strip().lower()
     if raw in {"0", "false", "no", "off", "write"}:
@@ -258,6 +265,11 @@ def publish(
     root = Path(root)
     if not paths:
         return PublishResult("skipped", "no report paths")
+    outside = [str(p) for p in paths if not _is_report_file(root, p)]
+    if outside:
+        # Only report files under <root>/reports/ are ever force-added: a
+        # directory or any other path could stage ignored content.
+        return PublishResult("failed", f"not a report file under reports/: {', '.join(outside)}")
     mode = publish_mode()
     if mode == "write":
         return PublishResult("written", f"{PUBLISH_ENV}=write: not committed")
