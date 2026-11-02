@@ -1,5 +1,5 @@
 {
-  "generation_id": "916d56093d1d277c212c03b2e9274cef8b0ad10975cb7f1e7754de6ddd94f562",
+  "generation_id": "ad3e60d18fa2aaeb6c0aa450b1faf32d516caff95daa7c092132d8f8c57f7d34",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1391,7 +1391,7 @@
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "skill_md": "skills/l9-skill-compiler/SKILL.md",
-      "skill_sha256": "54abe7f653d951ff5808df5129e6972539b822c36d5fc0a1b3e40c4df180b5ad",
+      "skill_sha256": "08e1a9438382a8b55502b60cfba8dcb7473f969ecc44c1ad24a9704a79a9c371",
       "user_invocable": true,
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
@@ -1463,5 +1463,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
-  "source_skill_corpus_sha256": "9dadaf0a3ebf282542ecb1627e6d5414e4a50ec90a16565fbd35114b929d3032"
+  "source_skill_corpus_sha256": "fc847d8a568a5c2f9d139707f421cef3725ad51e482f40c146866cbc970769f2"
 }
