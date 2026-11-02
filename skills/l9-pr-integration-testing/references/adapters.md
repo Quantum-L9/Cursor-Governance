@@ -3,7 +3,7 @@ schema: 1
 parent: l9-pr-integration-testing
 layer: reference
 role: repository-adapter-selection
-version: 0.3.0
+version: 0.4.0
 status: active
 -->
 
@@ -71,7 +71,15 @@ Detect via a parsed `package.json`, JS/TS source, lockfile, CI and actual tests.
 
 ## Containerized and multi-service systems
 
-A Dockerfile or Compose file does not authorize using its runtime environment. Require a reviewed, locally present pinned image containing Git and the required test runtime. Docker runs with no network, no privileged mode, no host mounts beyond the disposable worktree, read-only root filesystem and explicit UID. Stateful dependencies and inter-container networking are **unsupported by the basic safe runner**. If required, record `BLOCKED`/`INCOMPLETE_EVIDENCE` and extend the adapter with reviewed, isolated provisioning plus executable witnesses. Do not point tests at production databases or accounts.
+A Dockerfile or Compose file does not authorize using its runtime environment. Require a reviewed, locally present pinned image containing Git and the required test runtime. Docker runs with no network, no privileged mode, no host mounts beyond the disposable worktree, read-only root filesystem and explicit UID. Do not point tests at production databases or accounts.
+
+### Service sidecars (Postgres, Redis, Neo4j, …)
+
+A manifest may declare `services` (each `name`, digest-pinned `image`, literal `env`, `ports`, and a required `health` check: `cmd`, `interval`, `timeout`, `retries`, `start_period`) and `test_env` (literal variables for the test procedures). For every case the runner starts a holder container with `--network none`, then joins the services and the test container to that holder's namespace (`--network container:<holder>`). Its only interface is loopback, so tests reach `localhost:5432` exactly as a CI job does and nothing has a route out. Each case gets fresh services; no state crosses from one candidate to the next. Services keep `--cap-drop ALL` plus only `CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID` (what an official image's entrypoint needs to drop to its service user), `no-new-privileges`, and memory/pid limits. Tests wait for Docker's own health status; a service that exits or turns unhealthy is an `ENVIRONMENT` blocker carrying its log tail, and every container is removed either way. Two services on one port are refused.
+
+`quick.py --ci-job WORKFLOW:JOB` derives these from the repository's own CI job at the base SHA (for example `--ci-job ci.yml:validate`). Service images are pinned through the same Docker Hub → mirror fallback as the toolchain base. Only `--health-*` options are accepted; any other option, `credentials`, `volumes`, a remapped port (`15432:5432`) or a workflow expression in a service's env is refused by name. `${{ github.run_id }}`-style run contexts become a fixed local literal. Job and workflow `env` travels to the tests; values that are expressions (secrets, variables) are omitted and listed as *not reproduced*. A PR that edits that workflow is refused, since its services would be stale. `--print-services` prints the pinned services and env as JSON for a hand-written manifest — it needs no V2 contract.
+
+The holder's hostname is `localhost`: under `--network none` a container's own hostname does not resolve, and a server that looks itself up (Neo4j's JVM) refuses to start. Every service's log is captured into the evidence bundle. What still cannot be reproduced: anything a service downloads at startup. Neo4j with `NEO4J_PLUGINS` turns healthy but logs that the plugin "will not be loaded" (verified live with `graph-data-science`), so tests that need it fail for an environment reason; `quick.py` names such settings as *not reproduced* before the run, and the service log shows it. Test procedures declaring a `failure_parser` also report their skipped-test count, so a suite that skips its database tests is visible rather than green.
 
 ## Odoo addons and PostgreSQL
 
@@ -79,7 +87,7 @@ Detect active Odoo addon manifests from source, distinguish comments from actual
 
 ## Database-backed repositories
 
-Verify migrations, isolation, DB version, schema state and fixture lifecycles from target repo evidence. The basic runner disallows external networks; a DB-dependent test cannot be replaced by mocks and marked integration-proven. Develop a separate adapter only when its service isolation and cleanup have real positive/adversarial Docker witnesses.
+Verify migrations, isolation, DB version, schema state and fixture lifecycles from target repo evidence. The runner disallows external networks; database services run as loopback-only sidecars (above). A DB-dependent test cannot be replaced by mocks and marked integration-proven.
 
 ## Common executable procedure contract
 

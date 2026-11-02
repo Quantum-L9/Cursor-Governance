@@ -234,3 +234,23 @@ def test_a_local_copy_is_used_without_any_pull(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
     assert docker_sandbox.pinned_base("3.12.14") == f"mirror.gcr.io/library/python@{DIGEST}"
     assert not [call for call in fake.calls if call[:2] == ["docker", "pull"]]
+
+
+@pytest.mark.parametrize(
+    ("image", "refs"),
+    [
+        ("postgres:16", ["postgres:16", "mirror.gcr.io/library/postgres:16"]),
+        ("bitnami/redis:7", ["bitnami/redis:7", "mirror.gcr.io/bitnami/redis:7"]),
+        ("ghcr.io/o/svc:1", ["ghcr.io/o/svc:1"]),
+        ("localhost:5000/svc:1", ["localhost:5000/svc:1"]),
+    ],
+)
+def test_only_docker_hub_images_fall_through_to_a_mirror(image: str, refs: list[str]) -> None:
+    assert docker_sandbox.image_refs(image, ["mirror.gcr.io"]) == refs
+
+
+def test_a_service_image_is_pinned_through_the_mirror(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker()
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    assert docker_sandbox.pin_image("redis:7") == f"mirror.gcr.io/library/redis@{DIGEST}"

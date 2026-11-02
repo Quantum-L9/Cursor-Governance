@@ -248,10 +248,22 @@ def dockerd_argv(mirrors: list[str]) -> list[str]:
     return ["dockerd", *(f"--registry-mirror=https://{host}" for host in mirrors)]
 
 
+def image_refs(image: str, mirrors: list[str]) -> list[str]:
+    """Where a Docker Hub image may be pulled from, in order of preference.
+
+    Only Docker Hub names fall through to a mirror: an image already naming a
+    registry host (``ghcr.io/...``) is pulled from that host alone.
+    """
+    first = image.split("/", 1)[0]
+    if "/" in image and ("." in first or ":" in first or first == "localhost"):
+        return [image]
+    path = image if "/" in image else f"library/{image}"
+    return [image, *(f"{host}/{path}" for host in mirrors)]
+
+
 def base_refs(python_version: str, mirrors: list[str]) -> list[str]:
     """Where the official python base may be pulled from, in order of preference."""
-    tag = f"python:{python_version}-slim"
-    return [tag, *(f"{host}/library/{tag}" for host in mirrors)]
+    return image_refs(f"python:{python_version}-slim", mirrors)
 
 
 def digest_for(ref: str, digests: list[str]) -> str | None:
@@ -334,15 +346,15 @@ def local_digests(ref: str) -> list[str]:
     return json.loads(proc.stdout) if proc.returncode == 0 and proc.stdout.strip() else []
 
 
-def pinned_base(python_version: str) -> str:
-    """The official python base, pinned by registry digest.
+def pin_image(image: str) -> str:
+    """``image`` pinned by registry digest, pulling it if no local copy exists.
 
     A local copy under any known name is used first: Docker Hub rate-limits
-    even a HEAD on an already-present tag, so a warm rebuild must not depend on
-    a registry answering. Otherwise Docker Hub is pulled, then each mirror; the
+    even a HEAD on an already-present tag, so a warm run must not depend on a
+    registry answering. Otherwise Docker Hub is pulled, then each mirror; the
     first that answers wins and every failure is reported if none does.
     """
-    refs = base_refs(python_version, registry_mirrors())
+    refs = image_refs(image, registry_mirrors())
     for ref in refs:
         digest = digest_for(ref, local_digests(ref))
         if digest:
@@ -357,7 +369,12 @@ def pinned_base(python_version: str) -> str:
             failures.append(f"{ref}: pulled but has no registry digest to pin")
             continue
         failures.append(f"{ref}: {(proc.stderr or proc.stdout).strip()[-200:]}")
-    raise SandboxError("cannot pull the python base image: " + "; ".join(failures))
+    raise SandboxError(f"cannot pull {image}: " + "; ".join(failures))
+
+
+def pinned_base(python_version: str) -> str:
+    """The official python base, pinned by registry digest (see pin_image)."""
+    return pin_image(f"python:{python_version}-slim")
 
 
 def image_id(ref: str) -> str | None:

@@ -61,11 +61,15 @@ def test_test_procedures_keep_their_own_git_config(
 ) -> None:
     joined = " ".join(docker_args(monkeypatch, tmp_path, isolate_git=False))
     assert "GIT_CONFIG_GLOBAL" not in joined and "GIT_COMMITTER_DATE" not in joined
+    assert "GIT_AUTHOR_DATE" not in joined
 
 
 def test_runner_git_steps_stay_isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     joined = " ".join(docker_args(monkeypatch, tmp_path, isolate_git=True))
     assert "GIT_CONFIG_GLOBAL=/dev/null" in joined and "GIT_CONFIG_NOSYSTEM=1" in joined
+    # Author and committer date both pinned: a merge of the same inputs is the same commit.
+    assert "GIT_AUTHOR_DATE=2000-01-01T00:00:00+00:00" in joined
+    assert "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00" in joined
 
 
 def test_profile_hardening_is_unchanged(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -349,3 +353,188 @@ def test_quick_procedures_carry_the_declared_failure_parser() -> None:
     assert "failure_parser" not in quick.procedures_from_contract(CONTRACT, ["test"], 600)[0]
     with pytest.raises(quick.QuickError):
         quick.procedures_from_contract(CONTRACT, ["test"], 600, "jest")
+
+
+CI_WORKFLOW = b"""
+env:
+  SHARED: one
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      DSN: host=localhost port=5432 user=postgres dbname=t
+      TOKEN: ${{ secrets.TOKEN }}
+      DB_PASSWORD: l9-ci-${{ github.run_id }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_PASSWORD: l9-ci-${{ github.run_id }}
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 10s --health-retries 5
+      redis_cache:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: --health-cmd="redis-cli ping" --health-timeout 5s
+"""
+
+
+def test_ci_job_yields_services_and_literal_test_env() -> None:
+    derived = quick.services_from_workflow(CI_WORKFLOW, "ci.yml", "validate")
+    postgres, redis = derived["services"]
+    assert postgres["image"] == "postgres:16" and postgres["ports"] == [5432]
+    assert postgres["health"] == {"cmd": "pg_isready -U postgres", "interval": "10s", "retries": 5}
+    assert postgres["env"]["POSTGRES_PASSWORD"] == f"l9-ci-{quick.LOCAL_RUN_VALUE}"
+    assert redis["name"] == "redis-cache" and redis["health"]["cmd"] == "redis-cli ping"
+    assert derived["test_env"] == {
+        "SHARED": "one",
+        "DSN": "host=localhost port=5432 user=postgres dbname=t",
+        "DB_PASSWORD": f"l9-ci-{quick.LOCAL_RUN_VALUE}",
+    }
+    assert derived["test_env_omitted"] == ["TOKEN"], "a secret is named, never filled in"
+    assert derived["service_warnings"] == []
+
+
+def test_a_startup_plugin_download_is_named_as_not_reproduced() -> None:
+    workflow = CI_WORKFLOW.replace(
+        b"POSTGRES_HOST_AUTH_METHOD: trust",
+        b"POSTGRES_HOST_AUTH_METHOD: trust\n          NEO4J_PLUGINS: '[\"graph-data-science\"]'",
+    )
+    derived = quick.services_from_workflow(workflow, "ci.yml", "validate")
+    assert derived["service_warnings"] == [
+        "postgres: NEO4J_PLUGINS downloads at startup; with no network it is not loaded"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        (b'pg_isready -U postgres" --health', b'pg_isready -U postgres" --privileged --health'),
+        (b'["5432:5432"]', b'["15432:5432"]'),
+        (b"POSTGRES_HOST_AUTH_METHOD: trust", b"POSTGRES_HOST_AUTH_METHOD: ${{ secrets.X }}"),
+        (b'["6379:6379"]', b'["5432:5432"]'),
+        (b'--health-cmd="redis-cli ping" --health-timeout 5s', b"--health-timeout 5s"),
+    ],
+    ids=["non-health option", "port remap", "secret in service env", "port clash", "no health"],
+)
+def test_ci_job_refuses_what_cannot_be_reproduced_offline(patch: bytes, message: bytes) -> None:
+    with pytest.raises(quick.QuickError):
+        quick.services_from_workflow(CI_WORKFLOW.replace(patch, message), "ci.yml", "validate")
+
+
+def test_ci_job_must_exist() -> None:
+    with pytest.raises(quick.QuickError, match="no job"):
+        quick.services_from_workflow(CI_WORKFLOW, "ci.yml", "missing")
+
+
+def _service(**overrides: object) -> dict:
+    service = {
+        "name": "postgres",
+        "image": "postgres@sha256:" + "a" * 64,
+        "env": {"POSTGRES_HOST_AUTH_METHOD": "trust"},
+        "ports": [5432],
+        "health": {"cmd": "pg_isready", "interval": "1s", "retries": 5},
+    }
+    service.update(overrides)
+    return service
+
+
+def test_runner_accepts_a_pinned_health_checked_service() -> None:
+    assert integrate.validate_services([_service()]) == [_service()]
+
+
+@pytest.mark.parametrize(
+    "service",
+    [
+        _service(image="postgres:16"),
+        _service(health=None),
+        _service(health={"cmd": "x", "interval": "soon"}),
+        _service(env={"PASSWORD": "${{ secrets.X }}"}),
+        _service(name="Bad Name"),
+    ],
+    ids=["unpinned", "no health", "bad duration", "expression env", "bad name"],
+)
+def test_runner_refuses_an_unsafe_service(service: dict) -> None:
+    with pytest.raises(integrate.SafetyError):
+        integrate.validate_services([service])
+
+
+def test_runner_refuses_two_services_on_one_port() -> None:
+    with pytest.raises(integrate.SafetyError, match="port 5432"):
+        integrate.validate_services([_service(), _service(name="other")])
+
+
+def test_tests_join_only_their_own_loopback_namespace(tmp_path: Path) -> None:
+    sandbox = integrate.DockerSandbox("sha256:" + "a" * 64, "abc123", uid=1000, gid=1000)
+    with pytest.raises(integrate.SafetyError, match="loopback namespace"):
+        sandbox.command(tmp_path, ["true"], network="host")
+    with pytest.raises(integrate.SafetyError, match="loopback namespace"):
+        sandbox.command(tmp_path, ["true"], network="container:someone-elses-db")
+
+
+@pytest.mark.parametrize(
+    ("parser", "body", "count"),
+    [
+        ("pytest", "== 10 passed, 263 skipped in 3.2s ==", 263),
+        ("unittest", "OK (skipped=4)", 4),
+        ("pytest", "== 3 passed in 0.1s ==", 0),
+        ("", "== 1 skipped ==", None),
+    ],
+)
+def test_skipped_tests_are_counted_for_known_runners(
+    parser: str, body: str, count: int | None
+) -> None:
+    assert integrate.parse_skipped(body, parser) == count
+
+
+class FakeServiceDocker:
+    """docker for services_up: every container starts; health is scripted."""
+
+    def __init__(self, health: str) -> None:
+        self.health = health
+        self.calls: list[list[str]] = []
+
+    def __call__(self, args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        self.calls.append(args)
+        out = f"running {self.health}" if args[1] == "inspect" else "id"
+        return subprocess.CompletedProcess(args, 0, out, "")
+
+    def removed(self) -> list[str]:
+        return [call[-1] for call in self.calls if call[:3] == ["docker", "rm", "-f"]]
+
+
+def _service_sandbox() -> integrate.DockerSandbox:
+    return integrate.DockerSandbox(
+        "sha256:" + "a" * 64, "abc123", uid=1000, gid=1000, services=[_service()]
+    )
+
+
+def test_services_share_a_network_less_namespace_and_are_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = FakeServiceDocker("healthy")
+    monkeypatch.setattr(integrate.subprocess, "run", fake)
+    sandbox = _service_sandbox()
+    with sandbox.services_up(integrate.EvidenceWriter(tmp_path), "combined") as network:
+        assert network == "container:l9-pr-abc123-net-1"
+    holder, service = (c for c in fake.calls if c[:3] == ["docker", "run", "-d"])
+    assert holder[holder.index("--network") + 1] == "none"
+    assert holder[holder.index("--hostname") + 1] == "localhost", "a JVM service resolves itself"
+    assert service[service.index("--network") + 1] == network
+    assert "--privileged" not in service and service.count("--cap-add") == 5
+    assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]
+    logged = [c[-1] for c in fake.calls if c[:2] == ["docker", "logs"]]
+    assert logged == ["l9-pr-abc123-net-1-postgres"], "the service log becomes evidence"
+
+
+def test_an_unhealthy_service_blocks_and_is_still_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = FakeServiceDocker("unhealthy")
+    monkeypatch.setattr(integrate.subprocess, "run", fake)
+    with pytest.raises(integrate.SafetyError, match="did not become healthy") as caught:
+        with _service_sandbox().services_up(integrate.EvidenceWriter(tmp_path), "combined"):
+            pytest.fail("tests must not run beside an unhealthy service")
+    assert integrate.blocker_kind(str(caught.value)) == "ENVIRONMENT"
+    assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]

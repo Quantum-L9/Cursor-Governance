@@ -32,6 +32,8 @@ import base64
 import hashlib
 import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -153,12 +155,14 @@ def summarize(evidence: Path) -> dict:
     for state in manifest.get("states", []):
         tests = [t["status"] for t in state.get("tests", [])]
         merges = [m["status"] for m in state.get("merges", [])]
+        skips = [t["skipped"] for t in state.get("tests", []) if t.get("skipped") is not None]
         states.append(
             {
                 "name": state["name"],
                 "revision": (state.get("revision") or {}).get("sha", "")[:12],
                 "merges": merges,
                 "tests": tests,
+                "skipped": sum(skips) if skips else None,
             }
         )
     return {
@@ -177,6 +181,9 @@ def summarize(evidence: Path) -> dict:
             }
             for f in findings
         ],
+        "services": [x.get("name") for x in manifest.get("services") or []],
+        "test_env_omitted": manifest.get("test_env_omitted", []),
+        "service_warnings": manifest.get("service_warnings", []),
         "cleanup": manifest.get("cleanup"),
         "runner_scripts": manifest.get("runner_scripts", {}),
         "evidence": str(evidence),
@@ -188,7 +195,14 @@ def render(summary: dict) -> str:
     for state in summary["states"]:
         merge = f" merge={'/'.join(state['merges'])}" if state["merges"] else ""
         tests = "/".join(state["tests"]) or "none"
-        lines.append(f"  {state['name']:<10} {state['revision']:<12}{merge} tests={tests}")
+        skipped = "" if state.get("skipped") is None else f" skipped={state['skipped']}"
+        lines.append(f"  {state['name']:<10} {state['revision']:<12}{merge} tests={tests}{skipped}")
+    if summary.get("services"):
+        lines.append(f"  services: {', '.join(summary['services'])} (loopback only)")
+    for warning in summary.get("service_warnings", []):
+        lines.append(f"  not reproduced: {warning}")
+    if summary.get("test_env_omitted"):
+        lines.append("  not reproduced (CI expressions): " + ", ".join(summary["test_env_omitted"]))
     for probe in summary["probes"]:
         lines.append(f"  probe {probe['name']}: {probe['status']}")
         if probe["status"] != "KILLED":
@@ -203,7 +217,167 @@ def render(summary: dict) -> str:
     return "\n".join(lines)
 
 
+# Health flags a CI service may declare. Any other docker option (volumes,
+# privileges, entrypoints, networks) changes what the sidecar is and is refused.
+HEALTH_FLAGS = {
+    "--health-cmd": "cmd",
+    "--health-interval": "interval",
+    "--health-timeout": "timeout",
+    "--health-retries": "retries",
+    "--health-start-period": "start_period",
+}
+# Non-secret run contexts a CI file may interpolate into a disposable value
+# (a throwaway database password, say). Replaced by a fixed local literal.
+RUN_CONTEXT = re.compile(r"\$\{\{\s*github\.(?:run_id|run_number|run_attempt)\s*\}\}")
+LOCAL_RUN_VALUE = "l9local"
+# Service settings an official image's entrypoint fetches from the internet at
+# startup. The service still turns healthy without them (Neo4j logs "will
+# continue to start"), so they are named up front rather than discovered later.
+STARTUP_DOWNLOADS = {"NEO4J_PLUGINS"}
+
+
+def _literal(value: object) -> str | None:
+    """A committed literal with run contexts resolved; None for any other expression."""
+    text = str(value).lower() if isinstance(value, bool) else str(value)
+    text = RUN_CONTEXT.sub(LOCAL_RUN_VALUE, text)
+    return None if "${{" in text else text
+
+
+def parse_health(options: str, service: str) -> dict:
+    health: dict = {}
+    words = shlex.split(options or "")
+    i = 0
+    while i < len(words):
+        flag, _, inline = words[i].partition("=")
+        if flag not in HEALTH_FLAGS:
+            raise QuickError(
+                f"service {service} declares option {flag!r}; only health checks are supported"
+            )
+        if inline:
+            value = inline
+        elif i + 1 < len(words):
+            i += 1
+            value = words[i]
+        else:
+            raise QuickError(f"service {service} option {flag} has no value")
+        key = HEALTH_FLAGS[flag]
+        health[key] = int(value) if key == "retries" else value
+        i += 1
+    if "cmd" not in health:
+        raise QuickError(
+            f"service {service} declares no --health-cmd; tests would race its startup"
+        )
+    return health
+
+
+def services_from_workflow(raw: bytes, workflow: str, job: str) -> dict:
+    """The service sidecars and test environment one CI job declares.
+
+    Service images are returned as written; the caller pins them by digest.
+    Job and workflow environment travels to the tests; a value that is a
+    workflow expression (a secret, a variable) is omitted and named, never
+    filled in, and a service whose own environment needs one is refused.
+    """
+    import yaml
+
+    try:
+        document = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        raise QuickError(f"{workflow} is not YAML: {exc}") from exc
+    jobs = (document or {}).get("jobs") or {}
+    if job not in jobs:
+        raise QuickError(f"{workflow} has no job {job!r} (jobs: {', '.join(sorted(jobs))})")
+    definition = jobs[job] or {}
+    if definition.get("container"):
+        raise QuickError(f"{workflow}:{job} runs in a job container; only host jobs are supported")
+    services, ports_seen = [], set()
+    for name, spec in (definition.get("services") or {}).items():
+        spec = spec or {}
+        if not isinstance(spec, dict) or not isinstance(spec.get("image"), str):
+            raise QuickError(f"service {name} has no image")
+        for key in ("credentials", "volumes"):
+            if spec.get(key):
+                raise QuickError(f"service {name} declares {key}; not supported offline")
+        image = _literal(spec["image"])
+        if not image:
+            raise QuickError(f"service {name} image is a workflow expression")
+        env = {}
+        for key, value in (spec.get("env") or {}).items():
+            literal = _literal(value)
+            if literal is None:
+                raise QuickError(
+                    f"service {name} env {key} is a workflow expression; "
+                    "the service cannot be reproduced without it"
+                )
+            env[str(key)] = literal
+        ports = []
+        for mapping in spec.get("ports") or []:
+            parts = str(mapping).split(":")
+            if not all(part.isdigit() for part in parts) or len(parts) > 2:
+                raise QuickError(f"service {name} port {mapping!r} is not HOST:CONTAINER")
+            if len(parts) == 2 and parts[0] != parts[1]:
+                raise QuickError(
+                    f"service {name} maps host port {parts[0]} to {parts[1]}; tests here reach "
+                    "services on their own port, so the mapping must be identical"
+                )
+            port = int(parts[-1])
+            if port in ports_seen:
+                raise QuickError(f"two services listen on port {port}")
+            ports_seen.add(port)
+            ports.append(port)
+        services.append(
+            {
+                "name": str(name).lower().replace("_", "-"),
+                "image": image,
+                "env": env,
+                "ports": ports,
+                "health": parse_health(spec.get("options", ""), str(name)),
+            }
+        )
+    test_env, omitted = {}, []
+    for scope in ((document or {}).get("env") or {}, definition.get("env") or {}):
+        for key, value in scope.items():
+            literal = _literal(value)
+            if literal is None:
+                omitted.append(str(key))
+                test_env.pop(str(key), None)
+            else:
+                test_env[str(key)] = literal
+    warnings = [
+        f"{x['name']}: {key} downloads at startup; with no network it is not loaded"
+        for x in services
+        for key in x["env"]
+        if key in STARTUP_DOWNLOADS
+    ]
+    return {
+        "source": {"workflow": workflow, "job": job},
+        "services": services,
+        "service_warnings": warnings,
+        "test_env": test_env,
+        "test_env_omitted": sorted(set(omitted) - set(test_env)),
+    }
+
+
 # --- Host side ---------------------------------------------------------------
+
+
+WORKFLOW_FILE = re.compile(r"^[A-Za-z0-9_.-]+\.ya?ml$")
+
+
+def ci_services(repo: str, base_sha: str, spec: str, docker_sandbox) -> dict:
+    """Services from ``WORKFLOW:JOB`` at the base SHA, each image pinned by digest."""
+    workflow, sep, job = spec.partition(":")
+    if not sep or not job or not WORKFLOW_FILE.fullmatch(workflow):
+        raise QuickError("--ci-job must be WORKFLOW:JOB, e.g. ci.yml:validate")
+    raw = gh_raw(repo, f".github/workflows/{workflow}", base_sha)
+    derived = services_from_workflow(raw, workflow, job)
+    for service in derived["services"]:
+        try:
+            service["image"] = docker_sandbox.pin_image(service["image"])
+        except docker_sandbox.SandboxError as exc:
+            raise QuickError(f"service {service['name']}: {exc}") from exc
+    derived["service_source"] = {**derived.pop("source"), "sha": base_sha}
+    return derived
 
 
 def pr_changed_files(repo: str, number: int) -> list[str]:
@@ -413,6 +587,16 @@ def main(argv: list[str] | None = None) -> int:
         "--probes", type=Path, help="JSON list of negative probes (path/from/to/name)"
     )
     parser.add_argument(
+        "--ci-job",
+        metavar="WORKFLOW:JOB",
+        help="run the tests beside the services this CI job declares, e.g. ci.yml:validate",
+    )
+    parser.add_argument(
+        "--print-services",
+        action="store_true",
+        help="with --ci-job: print the pinned services and test env as JSON, then exit",
+    )
+    parser.add_argument(
         "--failure-parser",
         choices=FAILURE_PARSERS,
         help="test runner the phases print (lets probes judge an already-red candidate)",
@@ -460,7 +644,33 @@ def main(argv: list[str] | None = None) -> int:
         # dependency input would be tested against stale dependencies, so the
         # quick path refuses it instead of producing evidence that could be
         # promoted to INTEGRATION_READY.
-        refuse_dependency_changes({str(n): pr_changed_files(args.repo, n) for n in args.pr})
+        changed = {str(n): pr_changed_files(args.repo, n) for n in args.pr}
+        refuse_dependency_changes(changed)
+        if args.ci_job:
+            # Services come from the workflow at the base SHA, like the
+            # dependency layer; a PR that edits that workflow would be tested
+            # beside the wrong services.
+            workflow = f".github/workflows/{args.ci_job.partition(':')[0]}"
+            editing = sorted(pr for pr, files in changed.items() if workflow in files)
+            if editing:
+                raise QuickError(
+                    f"PR {', '.join(editing)} changes {workflow}; its services would be stale here"
+                )
+            # Before the contract, so --print-services also serves a repository
+            # with no V2 contract (its services feed a hand-written manifest).
+            manifest.update(ci_services(args.repo, base_sha, args.ci_job, docker_sandbox))
+            if args.print_services:
+                keys = (
+                    "service_source",
+                    "services",
+                    "service_warnings",
+                    "test_env",
+                    "test_env_omitted",
+                )
+                print(json.dumps({k: manifest[k] for k in keys}, indent=2))
+                return 0
+        elif args.print_services:
+            raise QuickError("--print-services needs --ci-job WORKFLOW:JOB")
         contract = gh_raw(args.repo, CONTRACT_PATH, base_sha)
         manifest["test_procedures"] = procedures_from_contract(
             contract, phases, args.timeout, args.failure_parser
