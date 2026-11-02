@@ -667,7 +667,50 @@ def parse_failure_ids(body: str, parser: str):
     return None
 
 
-def negative_probe(sandbox, path, index, p, tests, writer, workdir):
+def judge_probe(reference, mutated):
+    """Decide whether a mutation was caught, relative to the unmutated candidate.
+
+    A failure only counts as catching the mutation when it is a failure the
+    unmutated candidate did not already have: a passing procedure that now
+    fails, or an already-failing procedure that gains failure identities it did
+    not have before. Anything that cannot be told apart from the pre-existing
+    failure is INCONCLUSIVE, never KILLED.
+    """
+    before = {r["procedure"]: r for r in reference}
+    caught, unjudged = [], []
+    for result in mutated:
+        pid = result["procedure"]
+        ref = before.get(pid)
+        if result["status"] == "TIMEOUT":
+            unjudged.append(f"{pid}: timed out under the mutation")
+        elif ref is None:
+            unjudged.append(f"{pid}: no unmutated result to compare against")
+        elif ref["status"] == "PASS":
+            if result["status"] == "FAIL":
+                caught.append(f"{pid}: passed unmutated, fails under the mutation")
+        elif ref["status"] == "TIMEOUT":
+            unjudged.append(f"{pid}: timed out on the unmutated candidate")
+        elif result["status"] == "PASS":
+            continue
+        elif ref.get("failure_ids") is None or result.get("failure_ids") is None:
+            unjudged.append(
+                f"{pid}: already failing unmutated and has no failure parser, "
+                "so a failure under the mutation cannot be told apart"
+            )
+        elif not result["failure_ids"]:
+            unjudged.append(f"{pid}: failure under the mutation named no test identities")
+        else:
+            new = sorted(set(result["failure_ids"]) - set(ref["failure_ids"]))
+            if new:
+                caught.append(f"{pid}: new failures {', '.join(new[:5])}")
+    if caught:
+        return "KILLED", caught
+    if unjudged:
+        return "INCONCLUSIVE", unjudged
+    return "SURVIVED", ["no procedure gained a failure under the mutation"]
+
+
+def negative_probe(sandbox, path, index, p, tests, writer, workdir, reference):
     proof = workdir / f"mutation-{index}"
     # Source mutation never touches authoritative case; only a disposable copy.
     shutil.copytree(path, proof, symlinks=True)
@@ -692,10 +735,7 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
         raise SafetyError("mutation target must match exactly once; no guessed replacement")
     target.write_text(raw.replace(p["from"], p["to"], 1), encoding="utf-8")
     results = tests_case(sandbox, proof, f"fault-probe-{index}", tests, writer)
-    if any(x["status"] == "TIMEOUT" for x in results):
-        status = "INCONCLUSIVE"
-    else:
-        status = "KILLED" if any(x["status"] == "FAIL" for x in results) else "SURVIVED"
+    status, basis = judge_probe(reference, results)
     return {
         "index": index,
         "path": p["path"],
@@ -703,6 +743,7 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
         "from_sha256": sha(p["from"].encode()),
         "to_sha256": sha(p["to"].encode()),
         "status": status,
+        "basis": basis,
         "test_evidence_ids": [x["evidence_id"] for x in results],
     }
 
@@ -866,6 +907,7 @@ def run(m: dict, out: Path):
                 )
                 statuses = {}
                 combined_path = None
+                combined_tests = []
                 for name, heads in phases:
                     case, merges, rev = prepare_case(
                         store, name, work, sandbox, writer, m["repository"]["base_sha"], heads
@@ -890,6 +932,7 @@ def run(m: dict, out: Path):
                         )
                         if name == "combined":
                             combined_path = case
+                            combined_tests = tests
                         execution["docker_executed"] = True
                     manifest["states"].append(row)
                 if combined_path:
@@ -1117,10 +1160,32 @@ def run(m: dict, out: Path):
                             )
                     manifest["states"].append(alt_record)
                 probe_results = []
-                if combined_path and statuses.get("combined") == "PASS":
-                    for i, probe in enumerate(m.get("negative_probes", []), 1):
+                requested = m.get("negative_probes", [])
+                if requested and not combined_path:
+                    eid = writer.record(
+                        "negative probes",
+                        "PROBE_SKIPPED",
+                        "NOT_RUN",
+                        {"reason": "no combined candidate to mutate", "requested": len(requested)},
+                    )
+                    writer.finding(
+                        "UNVERIFIED",
+                        "MEDIUM",
+                        "Mutation probes not run: the combined candidate did not merge",
+                        [eid],
+                        action="Resolve the merge conflict, then rerun the probes",
+                    )
+                if combined_path:
+                    for i, probe in enumerate(requested, 1):
                         result = negative_probe(
-                            sandbox, combined_path, i, probe, m["test_procedures"], writer, work
+                            sandbox,
+                            combined_path,
+                            i,
+                            probe,
+                            m["test_procedures"],
+                            writer,
+                            work,
+                            combined_tests,
                         )
                         probe_results.append(result)
                         if result["status"] == "SURVIVED":
@@ -1136,8 +1201,11 @@ def run(m: dict, out: Path):
                             writer.finding(
                                 "UNVERIFIED",
                                 "MEDIUM",
-                                f"Mutation probe {result['name']} timed out",
+                                f"Mutation probe {result['name']} inconclusive: "
+                                + "; ".join(result["basis"]),
                                 result["test_evidence_ids"],
+                                action="Declare a failure_parser for the procedure, or fix the "
+                                "pre-existing failure, so the probe can be judged",
                             )
                 manifest["negative_probes"] = probe_results
                 execution["negative_probe_killed"] = bool(probe_results) and all(

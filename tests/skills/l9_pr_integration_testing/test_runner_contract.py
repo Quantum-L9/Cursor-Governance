@@ -287,3 +287,65 @@ def test_dependency_layer_prepares_an_offline_wheelhouse_after_setup() -> None:
     assert "COPY" not in text
     bare = quick.render_dependency_dockerfile("img", "o/r", "a" * 40, [], with_ca=False)
     assert "pip download" not in bare and "secret" not in bare
+
+
+def _result(procedure: str, status: str, ids: list[str] | None = None) -> dict:
+    return {"procedure": procedure, "status": status, "failure_ids": ids}
+
+
+def test_probe_is_killed_when_a_passing_procedure_fails() -> None:
+    status, basis = integrate.judge_probe([_result("t", "PASS", [])], [_result("t", "FAIL", [])])
+    assert status == "KILLED" and "passed unmutated" in basis[0]
+
+
+def test_probe_survives_when_nothing_new_fails() -> None:
+    reference = [_result("t", "PASS", []), _result("u", "FAIL", ["a"])]
+    mutated = [_result("t", "PASS", []), _result("u", "FAIL", ["a"])]
+    assert integrate.judge_probe(reference, mutated)[0] == "SURVIVED"
+
+
+def test_a_pre_existing_failure_is_not_counted_as_a_caught_probe() -> None:
+    """The defect: any FAIL on a red candidate used to count as KILLED."""
+    status, basis = integrate.judge_probe(
+        [_result("t", "FAIL", None)], [_result("t", "FAIL", None)]
+    )
+    assert status == "INCONCLUSIVE"
+    assert "no failure parser" in basis[0]
+
+
+def test_new_failure_identities_on_a_red_candidate_kill_the_probe() -> None:
+    status, basis = integrate.judge_probe(
+        [_result("t", "FAIL", ["tests/a.py::x"])],
+        [_result("t", "FAIL", ["tests/a.py::x", "tests/b.py::y"])],
+    )
+    assert status == "KILLED" and "tests/b.py::y" in basis[0]
+
+
+@pytest.mark.parametrize(
+    ("reference", "mutated", "reason"),
+    [
+        ([_result("t", "PASS", [])], [_result("t", "TIMEOUT", [])], "timed out under"),
+        ([_result("t", "TIMEOUT", [])], [_result("t", "FAIL", [])], "timed out on the unmutated"),
+        ([_result("t", "FAIL", ["a"])], [_result("t", "FAIL", [])], "named no test identities"),
+        ([], [_result("t", "FAIL", [])], "no unmutated result"),
+    ],
+)
+def test_probe_that_cannot_be_judged_is_inconclusive(
+    reference: list[dict], mutated: list[dict], reason: str
+) -> None:
+    status, basis = integrate.judge_probe(reference, mutated)
+    assert status == "INCONCLUSIVE" and reason in basis[0]
+
+
+def test_one_caught_procedure_outweighs_an_unjudgeable_one() -> None:
+    reference = [_result("t", "PASS", []), _result("u", "FAIL", None)]
+    mutated = [_result("t", "FAIL", []), _result("u", "FAIL", None)]
+    assert integrate.judge_probe(reference, mutated)[0] == "KILLED"
+
+
+def test_quick_procedures_carry_the_declared_failure_parser() -> None:
+    procedures = quick.procedures_from_contract(CONTRACT, ["test"], 600, "pytest")
+    assert procedures[0]["failure_parser"] == "pytest"
+    assert "failure_parser" not in quick.procedures_from_contract(CONTRACT, ["test"], 600)[0]
+    with pytest.raises(quick.QuickError):
+        quick.procedures_from_contract(CONTRACT, ["test"], 600, "jest")

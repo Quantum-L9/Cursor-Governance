@@ -74,8 +74,21 @@ class QuickError(RuntimeError):
     """A precondition is missing; the message says which."""
 
 
-def procedures_from_contract(raw: bytes, phases: list[str], timeout: int) -> list[dict]:
-    """Turn the repository's declared V2 phases into anchored test procedures."""
+FAILURE_PARSERS = ("pytest", "unittest", "node-test")
+
+
+def procedures_from_contract(
+    raw: bytes, phases: list[str], timeout: int, failure_parser: str | None = None
+) -> list[dict]:
+    """Turn the repository's declared V2 phases into anchored test procedures.
+
+    ``failure_parser`` names the test runner whose output the phase prints. It
+    is what lets a mutation probe be judged on a candidate that is already red:
+    without failure identities a pre-existing failure cannot be told apart from
+    one the mutation caused.
+    """
+    if failure_parser is not None and failure_parser not in FAILURE_PARSERS:
+        raise QuickError(f"unknown failure parser {failure_parser!r}")
     try:
         contract = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -94,15 +107,16 @@ def procedures_from_contract(raw: bytes, phases: list[str], timeout: int) -> lis
         anchor = f'"{phase}"'
         if anchor.encode() not in raw:
             raise QuickError(f"{CONTRACT_PATH} lacks the literal anchor {anchor}")
-        procedures.append(
-            {
-                "id": f"make-{phase}",
-                "name": f"make {phase}",
-                "argv": ["make", phase],
-                "timeout_seconds": timeout,
-                "source": {"path": CONTRACT_PATH, "sha256": digest, "anchor": anchor},
-            }
-        )
+        procedure = {
+            "id": f"make-{phase}",
+            "name": f"make {phase}",
+            "argv": ["make", phase],
+            "timeout_seconds": timeout,
+            "source": {"path": CONTRACT_PATH, "sha256": digest, "anchor": anchor},
+        }
+        if failure_parser:
+            procedure["failure_parser"] = failure_parser
+        procedures.append(procedure)
     return procedures
 
 
@@ -152,7 +166,7 @@ def summarize(evidence: Path) -> dict:
         "execution": verdict["execution"],
         "states": states,
         "probes": [
-            {"name": p.get("name"), "status": p.get("status")}
+            {"name": p.get("name"), "status": p.get("status"), "basis": p.get("basis", [])}
             for p in manifest.get("negative_probes") or []
         ],
         "findings": [
@@ -177,6 +191,8 @@ def render(summary: dict) -> str:
         lines.append(f"  {state['name']:<10} {state['revision']:<12}{merge} tests={tests}")
     for probe in summary["probes"]:
         lines.append(f"  probe {probe['name']}: {probe['status']}")
+        if probe["status"] != "KILLED":
+            lines += [f"    {why}" for why in probe.get("basis", [])[:3]]
     for finding in summary["findings"]:
         lines.append(f"  [{finding['classification']} {finding['severity']}] {finding['reason']}")
     lines.append(f"  evidence: {summary['evidence']}")
@@ -396,6 +412,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--probes", type=Path, help="JSON list of negative probes (path/from/to/name)"
     )
+    parser.add_argument(
+        "--failure-parser",
+        choices=FAILURE_PARSERS,
+        help="test runner the phases print (lets probes judge an already-red candidate)",
+    )
     parser.add_argument("--timeout", type=int, default=900, help="seconds per phase (max 1800)")
     parser.add_argument("--json", action="store_true", help="print the summary as JSON")
     parser.add_argument(
@@ -441,7 +462,9 @@ def main(argv: list[str] | None = None) -> int:
         # promoted to INTEGRATION_READY.
         refuse_dependency_changes({str(n): pr_changed_files(args.repo, n) for n in args.pr})
         contract = gh_raw(args.repo, CONTRACT_PATH, base_sha)
-        manifest["test_procedures"] = procedures_from_contract(contract, phases, args.timeout)
+        manifest["test_procedures"] = procedures_from_contract(
+            contract, phases, args.timeout, args.failure_parser
+        )
         manifest["image"] = dependency_layer(sandbox, args.repo, base_sha)
         if args.image_only:
             print(manifest["image"])
