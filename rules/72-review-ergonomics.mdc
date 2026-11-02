@@ -1,6 +1,6 @@
 ---
 id: l9.rule.72.review.ergonomics
-version: 1.0.0
+version: 1.1.0
 description: Review ergonomics, PR size guidance, and checklists for L9.
 scope: global
 activation: agent_requested
@@ -55,33 +55,10 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): 
 
 ---
 
-## GMP Report naming convention
+## GMP reports
 
-**MANDATORY:** All GMP reports must follow this naming pattern:
-
-```
-GMP-Report-XXX-Description-Here.md
-```
-
-**Components:**
-- `GMP-Report-` — Fixed prefix (required)
-- `XXX` — GMP ID number (e.g., 129, AUDIT)
-- `-Description-Here` — Kebab-case description of the GMP
-- `.md` — Markdown extension
-
-**Examples:**
-- ✅ `GMP-Report-129-Memory-Pipeline-Governance.md`
-- ✅ `GMP-Report-128-Adapt-Mcp-Tools-Enhancements.md`
-- ✅ `GMP-Report-AUDIT-Combined-Orchestrators.md`
-
-**Anti-patterns:**
-- ❌ `Report_GMP-129-...` (reversed, underscore)
-- ❌ `GMP_Report_129-...` (underscores)
-- ❌ `gmp-report-129-...` (lowercase)
-
-**Path:** All reports stored in `/reports/`
-
-**CI Enforcement:** `ci/check_report_naming.py` validates naming convention.
+Optional — never required, never forbidden. Location (`reports/gmp/`) and name
+(`GMP-Report-<NNN>-<Description>.md`) are defined once in `81-gmp-audit.mdc`.
 
 ---
 
@@ -95,12 +72,12 @@ GMP-Report-XXX-Description-Here.md
 - Status snapshots during exploration
 - Temporary reference docs during debugging
 
-**When NOT to create a brief (use GMP report instead):**
-- Any change that modifies code — use `/reports/GMP-Report-##-Description.md`
+**When a GMP report fits better than a brief (reports are optional):**
+- Any change that modifies code — `reports/gmp/GMP-Report-<NNN>-<Description>.md`
 - Any execution with TODO plan — use GMP report
 - Post-deployment verification — use GMP report
 
-**NEVER CREATE BOTH:** If a GMP runs, produce a report. If exploring, produce a brief. Never both.
+**NEVER CREATE BOTH:** for one piece of work, a GMP report or a brief, not both.
 
 **Anti-patterns:**
 - ❌ Saving briefs to `/docs/` root (contaminates user docs)
