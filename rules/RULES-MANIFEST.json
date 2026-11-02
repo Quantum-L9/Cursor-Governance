@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-11-02T23:16:40Z",
+  "generated_utc": "2026-11-02T23:17:47Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:72c920e1beb2e95fb70a1d73e0947d4df38acc2b48fd7bd57b950bc5e487b93f",
+  "source_tree_digest": "sha256:b53499331886cb19374c7a89e49ba38dae6599eb31b2828ee72d47e7b10e619f",
   "summary": {
     "total_mdc_files": 69,
     "always_apply_true": 36,
@@ -905,7 +905,7 @@
       "first_heading": "GitHub Openclaw PAT authority (CANONICAL_LAW §14, §14.1)",
       "has_yaml_frontmatter": true,
       "line_count": 108,
-      "content_digest": "sha256:eba4ff09b7d7019927fddf16d54e8d159ec9d263a0ffeda1754ab2faac8fbbd9",
+      "content_digest": "sha256:d72efbd4064492f6ac14b91fec6595cde4f20da7c34c693ff5e035c2f719b027",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

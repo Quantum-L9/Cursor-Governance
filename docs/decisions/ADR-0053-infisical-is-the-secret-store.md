@@ -1,4 +1,4 @@
-# ADR-0053: Infisical is the secret store; AWS Secrets Manager is the Cursor login seed only
+# ADR-0053: Infisical is the secret store; AWS Secrets Manager stays Cursor's bootstrap
 
 ## Status
 
@@ -32,9 +32,10 @@ only as an append-only `AGENTS.md` amendment (INFISICAL_MACHINE_IDENTITY_V1,
 
 1. Infisical project `cursor-governance` is the single store for agent secrets
    on every surface (`CANONICAL_LAW.md` §14.1, `AGENTS.md`
-   SECRETS_INFISICAL_STORE_V1). New secrets go there and into `root_env_keys`.
-2. AWS Secrets Manager stays only as the Cursor / operator login seed for the
-   Infisical machine identity. No secret is added to AWS; no object is deleted.
+   SECRETS_INFISICAL_STORE_V1), Cursor included. New secrets go there and into
+   `root_env_keys`.
+2. AWS Secrets Manager stays Cursor's bootstrap credential source (in place of a `.env`),
+   unchanged. No new secret is added to AWS; no object is deleted.
 3. The skill is renamed `l9-secrets`, with an action-scoped description and
    route.
 4. `ops/secrets/legacy_refs.py` owns the legacy ref → Infisical name map;
@@ -44,7 +45,7 @@ only as an append-only `AGENTS.md` amendment (INFISICAL_MACHINE_IDENTITY_V1,
 ## Consequences
 
 - Agents following a ref or the law land on Infisical, not AWS.
-- Cursor SessionStart still needs AWS for its login seed until a Cursor-native
-  Infisical login replaces it (out of scope; operator decision 2026-11-02).
+- Cursor's AWS bootstrap is intentional and untouched (operator decision
+  2026-11-02): it supplies Cursor's credentials instead of a `.env`.
 - `CANONICAL_LAW.md` §12/§14 and `AGENTS.md` §8 remain as history; §14.1 and
   SECRETS_INFISICAL_STORE_V1 supersede them.

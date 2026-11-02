@@ -11,8 +11,8 @@ description: Agents MUST use the one GitHub PAT, Infisical GITHUB_TOKEN (legacy 
   **Applies where the surface holds credentials.** See the surface-transport
   section below before reaching for it.
 - **No second PAT** in any store. Rotate `GITHUB_TOKEN` in Infisical if scopes
-  change. AWS Secrets Manager is legacy (Cursor login seed only), never where a
-  secret is added.
+  change. AWS Secrets Manager is Cursor's bootstrap (in place of a `.env`), never
+  where a secret is added.
 - **No human GitHub UI:** do not ask the operator to click Installations,
   permission accepts, settings toggles, or Actions secret paste when the PAT
   (or already-wired App env secrets) can complete the same outcome via API.

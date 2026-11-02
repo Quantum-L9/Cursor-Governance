@@ -9,10 +9,11 @@
 
 **Store:** Infisical project `cursor-governance` is the secret store (ADR-0053,
 `CANONICAL_LAW.md` §14.1). Add a secret there, then its name to `root_env_keys`
-in `infisical-cursor-governance.yaml`. AWS `openclaw-igorbot/*` is legacy — the
-Cursor / operator login seed only.
+in `infisical-cursor-governance.yaml`. AWS `openclaw-igorbot/*` stays Cursor's
+bootstrap credential source (in place of a `.env`), unchanged — never where a
+new secret is added.
 
-This directory also owns the legacy **openclaw-igorbot/\*** inventory for Quantum-L9 coding
+This directory also owns the **openclaw-igorbot/\*** (Cursor bootstrap) inventory for Quantum-L9 coding
 workspaces. Other repos consume refs from here — they do not supply the
 manifest back into Governance.
 
@@ -26,7 +27,7 @@ environment; Cursor / operator from the profile seeded by the AWS login seed. Se
 
 | Path | Role |
 |---|---|
-| `openclaw-igorbot.registry.yaml` | Legacy operator AWS inventory (IDs + JSON key names + annotations only) |
+| `openclaw-igorbot.registry.yaml` | Cursor-bootstrap / operator AWS inventory (IDs + JSON key names + annotations only) |
 | `legacy_refs.py` | Legacy ref → Infisical name map (`openclaw-igorbot/<svc>#<key>` → `NAME`); used by `capability_bind.py` and the port tool |
 | `infisical-login.registry.yaml` | Cursor / operator AWS login-seed inventory (SM name in `login_registry.py`); Claude never reads it |
 | `session_start_secrets.py` | SessionStart owner: Claude — environment identity, no AWS; Cursor / operator — AWS preflight → profile / seed. Then Infisical bind `--check` |
@@ -82,8 +83,8 @@ make capability-check REQUIRE=sonar.read_issues,graphiti.query   # status only (
 make capability-contract-validate                                # regression barrier
 # capability-broker-preflight / broker-serve — retired (exit 2)
 make secrets-check NAME=GITHUB_TOKEN          # Infisical bind check (legacy ref accepted)
-make secrets-aws-sync                          # legacy: AWS → local registry (operator)
-make secrets-aws-check REF='openclaw-igorbot/github#token'   # legacy AWS check (operator)
+make secrets-aws-sync                          # AWS → local registry (Cursor bootstrap / operator)
+make secrets-aws-check REF='openclaw-igorbot/github#token'   # AWS check (Cursor bootstrap / operator)
 # or:
 .venv/bin/python ops/secrets/sync_secrets_registry.py
 .venv/bin/python ops/secrets/resolve_secret.py --ref 'openclaw-igorbot/github#token' --check

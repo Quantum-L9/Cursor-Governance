@@ -2375,7 +2375,7 @@ current.
   unchanged.
 
 <!-- SECRETS_INFISICAL_STORE_V1 -->
-## Infisical is the secret store; AWS is the Cursor login seed only (2026-11-02) — supersedes §8's "AWS name-inventory SSOT" and "Infisical (long-term values)" paragraphs and its GitHub-authority ref
+## Infisical is the secret store; AWS stays Cursor's bootstrap (2026-11-02) — supersedes §8's "AWS name-inventory SSOT" and "Infisical (long-term values)" paragraphs and its GitHub-authority ref
 
 Append-only. Law: `CANONICAL_LAW.md` §14.1; decision: ADR-0053.
 
@@ -2387,6 +2387,7 @@ Append-only. Law: `CANONICAL_LAW.md` §14.1; decision: ADR-0053.
   `ops/secrets/legacy_refs.py`). `make secrets-check NAME=…` runs the same
   check. Skill: `l9-secrets` (was `l9-aws-secrets`).
 - **GitHub (§14):** the one PAT is Infisical `GITHUB_TOKEN`.
-- **AWS (`openclaw-igorbot/*`):** legacy, Cursor / operator login seed only.
+- **AWS (`openclaw-igorbot/*`):** Cursor's bootstrap credential source (in place of a `.env`), unchanged —
+  never where a new secret is added.
   `make secrets-aws-sync` / `make secrets-aws-check REF=…` keep the old
   operator tools reachable under names that say what they are.

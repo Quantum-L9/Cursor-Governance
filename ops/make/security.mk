@@ -17,7 +17,7 @@ L9_TARGETS += \
 secrets-check:
 	@$(MAKE) venv
 	$(PYTHON) ops/secrets/capability_bind.py --check "$(or $(NAME),$(REF))"
-# Legacy AWS tools — Cursor / operator login seed only, never an agent path.
+# AWS tools — Cursor's bootstrap (in place of a .env) and operators; never an agent path.
 secrets-aws-sync:
 	@$(MAKE) venv
 	$(PYTHON) ops/secrets/sync_secrets_registry.py
@@ -26,9 +26,7 @@ secrets-aws-check:
 	$(PYTHON) ops/secrets/resolve_secret.py \
 		--ref "$(REF)" \
 		--check
-secrets-sync:
-	@echo "secrets-sync is deprecated: AWS is legacy (ADR-0053); running secrets-aws-sync"
-	@$(MAKE) secrets-aws-sync
+secrets-sync: secrets-aws-sync
 capability-contract-validate:
 	$(PYTHON) ops/secrets/validate_capability_contract.py
 capability-check:

@@ -1839,33 +1839,10 @@ or a local stdio-to-HTTP bridge.
 
 ---
 
-## 14.1 Infisical is the secret store; AWS is Cursor's login seed only (2026-11-02) — supersedes §14's "registered AWS secret ref" wording and its "Single PAT", "Secrets SSOT" and "Ask-human exception" rows, and the AWS clause of §12's Keychain anti-pattern
+## 14.1 Secret store (2026-11-02) — amends §12 and §14
 
-Recorded in `docs/decisions/ADR-0053-infisical-is-the-secret-store.md`. The
-authority of §14 (one PAT, no human GitHub UI, prefer the API outcome) is
-unchanged; only where the credential lives and how it is named change.
-
-1. **Store.** Infisical project `cursor-governance` (env `prod`, path `/`) is
-   the single store for every agent secret on every surface. A new secret is
-   created there under a bare env-var name and added to `root_env_keys` in
-   `ops/secrets/infisical-cursor-governance.yaml`, the bind name gate. A secret
-   is never added to AWS first.
-2. **Binding.** `ops/secrets/capability_bind.py` binds a name in-process as the
-   surface's Infisical machine identity and never prints or exports it.
-   SessionStart binds `GITHUB_TOKEN`, `SEMGREP_APP_TOKEN`, `SONAR_TOKEN` and
-   `CONTEXT7_API_KEY`; a remote MCP key is bound by the vault bridge.
-3. **The GitHub PAT.** The one agent PAT of §14 is Infisical `GITHUB_TOKEN`
-   (`GH_TOKEN`). The legacy ref `openclaw-igorbot/github#token` names the same
-   secret; `capability_bind.py --check` accepts it and checks `GITHUB_TOKEN`
-   (map: `ops/secrets/legacy_refs.py`). No second GitHub PAT in any store;
-   rotate it in Infisical.
-4. **AWS Secrets Manager** (`openclaw-igorbot/*`, `us-east-1`) is legacy. It is
-   read only by the Cursor / operator login seed that obtains the Infisical
-   machine identity (`AGENTS.md` INFISICAL_MACHINE_IDENTITY_V1). Claude surfaces
-   never touch it. `resolve_secret.py` and the AWS registry sync are operator
-   tools, not an agent path. AWS objects are not deleted.
-5. **Ask-human exception.** Only after `capability_bind.py --check <NAME>`
-   reports the name unbound on a surface that holds its machine identity, or
-   for a true non-API human factor. Name the failing Infisical name.
-6. **Skill.** `l9-secrets` (renamed from `l9-aws-secrets`). Every "via
-   `l9-aws-secrets`" or "AWS secret ref" pointer above reads as this section.
+Infisical project `cursor-governance` is the secret store on every surface;
+new secrets are added there. Where §12 or §14 says AWS Secrets Manager or
+`l9-aws-secrets`, read Infisical and `l9-secrets`: §14's PAT is Infisical
+`GITHUB_TOKEN`. AWS Secrets Manager remains Cursor's bootstrap credential
+source (in place of a `.env`), unchanged. ADR-0053.
