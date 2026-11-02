@@ -2,7 +2,7 @@
 
 Configure SaaS admin dashboards when API/CLI is insufficient. Driven by skill
 `l9-ui-operator` and playbook `saas-dashboard-when-api-insufficient`. Auth refs
-come from `ops/secrets` via `l9-secrets`.
+come from `ops/secrets` via `l9-aws-secrets`.
 
 ## Install (optional — not required for validate/dry_run)
 

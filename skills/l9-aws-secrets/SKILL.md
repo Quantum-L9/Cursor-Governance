@@ -1,18 +1,18 @@
 ---
-name: l9-secrets
-description: bind a named credential (api key, token, password) from Infisical project cursor-governance as this surface's machine identity, in-process and never printed. use when a command must bind or check a credential, add a new secret, or translate a legacy openclaw-igorbot/* ref to its Infisical name. not for discussing secrets policy.
+name: l9-aws-secrets
+description: bind credentials from Infisical project cursor-governance at will, as this surface's machine identity (Claude — no AWS; Cursor — AWS login seed) — use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, infisical, secrets, capability-bind, fail-closed, ssot]
+  tags: [l9, aws, infisical, secrets, openclaw-igorbot, registry, fail-closed, ssot]
   owner: igor_beylin
   status: active
-  version: 2.0.0
-  updated: 2026-11-02
+  version: 1.6.0
+  updated: 2026-09-24
 ---
 
-# l9-secrets
+# l9-aws-secrets
 
 ## Purpose
 
@@ -28,12 +28,7 @@ surface.
 |---|---|
 | **Infisical** project `Cursor-Governance` (`prod`, path `/`) | App-key grant. Bind names (`GITHUB_TOKEN`, `SEMGREP_APP_TOKEN`, …). |
 | **Machine identity** (the one bootstrap secret) | `L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET` in the environment settings (or an operator's `~/.infisical/l9-machine.json`). One dedicated, least-privilege identity per surface. Not AWS. |
-| **AWS Secrets Manager** | Legacy. Kept only as the Cursor / operator login seed that writes `~/.infisical/l9-machine.json` (`login_registry.py`). No new secret goes to AWS. Claude never uses AWS. Do not delete AWS SM objects. |
-
-**Adding a secret:** create it in Infisical project `cursor-governance` (`prod`,
-path `/`) under a bare env-var name, then add that name to `root_env_keys` in
-`ops/secrets/infisical-cursor-governance.yaml` (the bind name gate). Never AWS
-first (`CANONICAL_LAW.md` §14.1).
+| **AWS Secrets Manager** | Cursor / operator only: the login seed that writes `~/.infisical/l9-machine.json` (`login_registry.py`), and operator refs in `openclaw-igorbot.registry.yaml`. Claude never uses AWS. Do not delete AWS SM objects. |
 
 SessionStart owns the plane (`session_start_secrets.py`). The reporter is a
 derived view. There is no Makefile `secrets-bind` target.
@@ -68,9 +63,8 @@ MUST bind the Infisical name **before** asking the human.
 | OpenRouter / Perplexity / PageSpeed / SEO-Bot / DataForSEO | `openclaw-igorbot/<name>#apikey` → matching `*_API_KEY` in Infisical `/` |
 | PostHog | `openclaw-igorbot/posthog#personal_api_key` / `#project_api_key` |
 
-**CANONICAL_LAW.md §14 / §14.1:** Infisical `GITHUB_TOKEN` (legacy ref
-`openclaw-igorbot/github#token`) is the **sole** agent GitHub PAT. Do **not**
-create a second PAT in any store; rotate it in Infisical.
+**CANONICAL_LAW.md §14:** `openclaw-igorbot/github#token` is the **sole** agent
+GitHub PAT. Export `GH_TOKEN` / `GITHUB_TOKEN`. Do **not** create a second PAT.
 Do **not** ask the human to click `github.com` UI when this PAT can finish the job.
 
 ## npm / GitHub Packages auth
@@ -97,6 +91,11 @@ scoped registry unless an `.npmrc` line maps it. A committed
 `_authToken=${NODE_AUTH_TOKEN}` line 401s when that env is empty — drop it;
 CI should keep `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` with `packages: read`.
 
+Or inline, without persisting auth anywhere:
+
+```bash
+npm ci "--//npm.pkg.github.com/:_authToken=$(resolve_secret.py --ref 'openclaw-igorbot/github#token')"
+```
 
 ## Interpreter
 
@@ -112,8 +111,7 @@ SECRETS="${GOV}/ops/secrets"
 
 **Bind (every surface):**
 
-1. `"$PY" "$SECRETS/capability_bind.py" --check NAME` — name and source only, never the value.
-   A legacy ref works too: `--check 'openclaw-igorbot/github#token'` checks `GITHUB_TOKEN`.
+1. `"$PY" "$SECRETS/capability_bind.py" --check NAME` — name and source only, never the value
 2. In code: `capability_bind.bind("NAME")` / `bind_first(...)` — held in-process, never exported
 3. `source=infisical-machine-absent` means this surface has no machine identity:
    the operator sets `L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET` once in the
@@ -121,29 +119,29 @@ SECRETS="${GOV}/ops/secrets"
 4. A remote MCP server that needs a key is a vault bridge
    (`ops/secrets/vault_mcp_bridge.py`, `vault-mcp-bridges.json`) — never a `${VAR}` header.
 
-**Legacy AWS tools (Cursor / operator only, never an agent path):**
-`resolve_secret.py --ref … --check`, `make secrets-aws-sync`,
-`port_aws_to_infisical.py --dry-run`.
+**Cursor / operator AWS tools (unchanged):** `resolve_secret.py --ref … --check`,
+`sync_secrets_registry.py`, `port_aws_to_infisical.py --dry-run`.
 
 See [references/infisical-protocol.md](references/infisical-protocol.md).
 
 ## Behavior rules
 
-- Infisical key names at `/` match process env vars; `root_env_keys` is the gate.
-- Legacy ref → name map: `ops/secrets/legacy_refs.py` (`openclaw-igorbot/<svc>#<key>` → `NAME`).
-- Structured legacy copies live under `/aws/openclaw-igorbot/<suffix>/` (bootstrap seeds only).
+- AWS ref format: `secret_id#json_key` (or bare `secret_id` for whole SecretString).
+- Default AWS gate: ref must appear enabled in `ops/secrets/openclaw-igorbot.registry.yaml`.
+- Infisical key names at `/` match process env vars. Structured copies live under `/aws/openclaw-igorbot/<suffix>/`.
 - Do not store any machine identity's `client_secret` inside Infisical `/`; each identity's secret lives only where that surface starts (environment settings or the operator's profile file).
-- UI session overlays (`ui-session-*`) ship `provisioned: false` until provisioned.
+- New AWS secrets under `openclaw-igorbot/` are auto-added on sync; local annotations are preserved.
+- UI session overlays (`ui-session-*`) ship `provisioned: false` until humans create the AWS secret.
 - No macOS Keychain. No Chrome Safe Storage / cookie decrypt.
 - Never commit `.env` secret values or Playwright `storage_state` blobs.
 
 ## Resource map
 
+- [references/resolver-protocol.md](references/resolver-protocol.md) — AWS ID format, CLI flags, error codes
 - [references/infisical-protocol.md](references/infisical-protocol.md) — Cursor-Governance Infisical project, hydrate, layout
-- [references/resolver-protocol.md](references/resolver-protocol.md) — legacy AWS resolver (Cursor / operator only)
-- Runtime: `ops/secrets/capability_bind.py`, `ops/secrets/legacy_refs.py`
-- Infisical inventory + name gate (IDs/keys only): `ops/secrets/infisical-cursor-governance.yaml`
-- Legacy AWS inventory (operator): `ops/secrets/openclaw-igorbot.registry.yaml`
+- Runtime: `ops/secrets/sync_secrets_registry.py`, `ops/secrets/resolve_secret.py`, `ops/secrets/port_aws_to_infisical.py`
+- AWS registry SSOT: `ops/secrets/openclaw-igorbot.registry.yaml`
+- Infisical inventory (IDs/keys only): `ops/secrets/infisical-cursor-governance.yaml`
 - Overlays: `ops/secrets/registry.overlays.yaml`
 - Child-env exec for tools that read their own credential (Semgrep Pro):
   `ops/secrets/capability_exec.py` + `capability-exec.json` — registered entries
@@ -152,7 +150,7 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 
 ## Validation
 
-- `capability_bind.py --check NAME` reports `bound` (no secret value on stdout)
+- `resolve_secret.py --ref … --check` exits 0 (no secret value on stdout)
 - Infisical inventory YAML contains project id/slug/key **names** only — never values
 - Unit tests: `ops/secrets/test_aws_secrets.py` (mocked AWS)
 - Registry `source.authority: cursor-governance`
@@ -161,8 +159,8 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 
 | Code | Meaning | Next action |
 |---|---|---|
-| `<not-in-inventory>` | Name (or legacy ref) not in `root_env_keys` | Add the secret in Infisical and its name to `root_env_keys`; do not invent names |
-| `unbound` | In the inventory but absent from the vault | Create it in Infisical project `cursor-governance` |
+| UNREGISTERED | Ref not in enabled AWS registry | Run AWS sync; do not invent IDs |
+| NOT_PROVISIONED | Overlay stub; AWS secret missing | Human provisions secret, re-sync |
 | `infisical-machine-absent` | No machine identity on this surface | Operator sets `L9_INFISICAL_CLIENT_ID` + `L9_INFISICAL_CLIENT_SECRET` |
 | `LOGIN_REFUSED` | Infisical refused the identity (revoked, wrong secret) or unreachable | Rotate the identity's client secret in Infisical; re-set it |
 | NOT_FOUND / RESOLUTION_ERROR | (Cursor / operator AWS tools) | Check `aws sts get-caller-identity`; prefer the Infisical name |

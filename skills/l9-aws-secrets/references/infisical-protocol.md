@@ -1,6 +1,6 @@
 <!-- L9_META
 l9_schema: 1
-parent: l9-secrets
+parent: l9-aws-secrets
 layer: reference
 role: protocol
 tags: [infisical, secrets, cursor-governance, openclaw-igorbot, ssot]

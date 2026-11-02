@@ -1,6 +1,6 @@
 ---
 name: l9-ui-operator
-description: portable saas dashboard ui operator — use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-secrets for refs without keychain.
+description: portable saas dashboard ui operator — use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -17,7 +17,7 @@ metadata:
 
 ## Purpose
 
-Discoverable control plane for configuring SaaS dashboards when API/CLI is insufficient. Loads **`l9-secrets`** for refs. Owns the operating playbook and drives `ops/ui-operator/console.py` with site **cartridges** (data only).
+Discoverable control plane for configuring SaaS dashboards when API/CLI is insufficient. Loads **`l9-aws-secrets`** for refs. Owns the operating playbook and drives `ops/ui-operator/console.py` with site **cartridges** (data only).
 
 ## Interpreter
 
@@ -38,7 +38,7 @@ uv sync --extra ui-operator && playwright install
 ## Compact workflow
 
 1. Read playbook: [playbooks/saas-dashboard-when-api-insufficient.md](playbooks/saas-dashboard-when-api-insufficient.md)
-2. Load `l9-secrets`; sync/check required refs
+2. Load `l9-aws-secrets`; sync/check required refs
 3. Prefer API; only then UI
 4. Cartridge: use shipped YAML under `ops/ui-operator/cartridges/` or JIT-draft → human approve
 5. Console:
@@ -60,7 +60,7 @@ uv sync --extra ui-operator && playwright install
 - Runtime: `ops/ui-operator/console.py`, `jit_drafter.py`
 - Schemas: `ops/ui-operator/schemas/`
 - First cartridge: `ops/ui-operator/cartridges/github-packages-actions-access.yaml`
-- Secrets: skill `l9-secrets` → `ops/secrets/`
+- Secrets: skill `l9-aws-secrets` → `ops/secrets/`
 
 ## Validation
 

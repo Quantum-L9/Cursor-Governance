@@ -45,7 +45,7 @@ journey:
   - step: bind_goal
     description: Confirm cartridge goal and mutation allowlist
   - step: resolve_secrets
-    description: Fail-closed resolve/check auth refs via l9-secrets
+    description: Fail-closed resolve/check auth refs via l9-aws-secrets
   - step: prefer_api
     description: Attempt GitHub API verification first; record why UI is required
   - step: load_session
