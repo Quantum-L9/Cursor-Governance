@@ -116,7 +116,7 @@
     "adr": "4ce72547b0b201a61338e1ed8a47ec6f6f32e59b6a8b9255afc278b8917510e6",
     "api_smoke": "208674e16af051334d2f8ab431fc8a6300a139f087f620d49c8901afd7a789ce",
     "audit_plans_shelf": "3cdb448b67f5a40dbf8fe9bec9b2a4f040ccdfc6f79558c55a9bd5726bc0a74a",
-    "aws_secrets": "48412f9c7846a0aa0edd60ba700d9ff51d3d0233c97d615c7a237bb659f16bc0",
+    "aws_secrets": "24bfdcec0aa15bfb7572a4467464b13caa2cab6d9530de46841753c3e4529c34",
     "bounded_autonomy": "4be1400dc1223b05e26223446fb1864e146ccdfa3d94b2e95fd5f36a0b5b9aa8",
     "code_analysis": "ed8ad1ec4c14531b5026f95eb55d0cbef3bfe50c0aaa69f77d930f31644c8e0b",
     "code_graph": "6e2f81e2c028455473919249898e4de7d69c4ffa25a52adc96a19474c5872ffe",
