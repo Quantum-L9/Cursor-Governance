@@ -723,23 +723,39 @@ class DockerSandbox:
             # Each service's own log travels with the evidence: a service can be
             # healthy yet degraded (a plugin it could not download), and that
             # must be attributable rather than read as a defect in the PR.
-            for name in started[1:]:
-                logs = subprocess.run(
-                    ["docker", "logs", "--tail", "200", name],
-                    capture_output=True,
-                    text=True,
-                    errors="replace",
-                    timeout=30,
-                )
-                writer.record(
-                    case,
-                    "SERVICE_LOG",
-                    "CAPTURED" if logs.returncode == 0 else "UNAVAILABLE",
-                    {"container": name},
-                    log=(logs.stdout or "") + (logs.stderr or ""),
-                )
-            for name in reversed(started):
-                subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=60)
+            # Capture is best-effort; removal is not. A capture that times out
+            # or cannot be written must never skip the removal below.
+            try:
+                for name in started[1:]:
+                    self._capture_service_log(writer, case, name)
+            finally:
+                for name in reversed(started):
+                    try:
+                        subprocess.run(
+                            ["docker", "rm", "-f", name], capture_output=True, timeout=60
+                        )
+                    except subprocess.TimeoutExpired:
+                        continue
+
+    def _capture_service_log(self, writer, case, name):
+        try:
+            logs = subprocess.run(
+                ["docker", "logs", "--tail", "200", name],
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=30,
+            )
+            status, body = (
+                "CAPTURED" if logs.returncode == 0 else "UNAVAILABLE",
+                (logs.stdout or "") + (logs.stderr or ""),
+            )
+        except subprocess.TimeoutExpired:
+            status, body = "UNAVAILABLE", "docker logs timed out"
+        try:
+            writer.record(case, "SERVICE_LOG", status, {"container": name}, log=body)
+        except OSError:
+            writer.record(case, "SERVICE_LOG", "UNAVAILABLE", {"container": name})
 
     def _docker_run_detached(self, args):
         p = subprocess.run(

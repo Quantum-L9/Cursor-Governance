@@ -628,3 +628,23 @@ def test_image_only_needs_no_execution_contract(
     monkeypatch.setattr(quick, "dependency_layer", lambda sb, repo, sha: "sha256:" + "c" * 64)
     code = quick.main(["--repo", "o/r", "--pr", "1", "--authority", "test", "--image-only"])
     assert (code, capsys.readouterr().out.strip()) == (0, "sha256:" + "c" * 64)
+
+
+def test_a_hung_log_capture_never_skips_container_removal(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = FakeServiceDocker("healthy")
+
+    def run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if args[:2] == ["docker", "logs"]:
+            fake.calls.append(args)
+            raise subprocess.TimeoutExpired(args, 30)
+        return fake(args, **kwargs)
+
+    monkeypatch.setattr(integrate.subprocess, "run", run)
+    writer = integrate.EvidenceWriter(tmp_path)
+    with _service_sandbox().services_up(writer, "combined"):
+        pass
+    assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]
+    logs = [r for r in writer.records if r["kind"] == "SERVICE_LOG"]
+    assert [r["status"] for r in logs] == ["UNAVAILABLE"]
