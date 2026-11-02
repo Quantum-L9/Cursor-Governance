@@ -131,6 +131,9 @@ select = ["E", "F", "I", "UP"]
 # text as literal strings; wrapping them corrupts the emitted artifact. Same
 # rationale as the skill packs above — F/I/UP stay on.
 "skills/l9-pr-audit/scripts/**" = ["E501"]
+# PR integration-testing scripts emit evidence records and finding prose as
+# literal strings, for the same reason — F/I/UP stay on.
+"skills/l9-pr-integration-testing/scripts/**" = ["E501"]
 # GAR pack validators carry pack-owned failure/evidence messages as literal
 # strings; the pack is vendored from its release, so wrapping them would fork
 # it. Same rationale as the skill packs above — F/I/UP stay on.
