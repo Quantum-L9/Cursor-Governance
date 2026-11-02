@@ -23,6 +23,7 @@ from plan_sections import (
     json_section_presence,
     md_section_presence,
     receipt_status,
+    unfilled_parameters,
 )
 
 RECEIPT_KIND = "simple_plan_section_receipt"
@@ -55,6 +56,7 @@ def build_receipt(
     frontmatter = frontmatter_presence(md_text)
     execute_swap = execute_swap_presence(md_text)
     mode = handoff_mode(md_text)
+    unfilled = unfilled_parameters(md_text, plan)
     return {
         "schema_version": "1.0.0",
         "kind": RECEIPT_KIND,
@@ -75,12 +77,14 @@ def build_receipt(
         "md_sections": md_sections,
         "frontmatter": frontmatter,
         "execute_swap": execute_swap,
+        "unfilled_parameters": unfilled,
         "status": receipt_status(
             json_sections,
             md_sections,
             frontmatter,
             execute_swap,
             gar_invoked,
+            unfilled,
         ),
     }
 
