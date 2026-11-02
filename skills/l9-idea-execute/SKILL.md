@@ -226,7 +226,7 @@ Do **not** invoke `l9-repo-birth` automatically. Add birth stages only when
 IdeaOS, then validate source commit/tree, all upstream receipts, and current
 factory capability evidence before invoking the explicit-only birth skill.
 Both birth stages are implemented by `l9-repo-template`: `birth_handoff` by its
-packager (`scripts/birth-runner/package_birth_handoff.py`), reached through the
+packager (`l9-repo-template:scripts/birth-runner/package_birth_handoff.py`), reached through the
 `l9-repo-birth` control surface, and `birth` by its `make birth` front door.
 Authorization for `birth_handoff` never authorizes `birth`.
 

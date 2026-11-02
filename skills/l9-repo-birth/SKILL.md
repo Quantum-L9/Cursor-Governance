@@ -23,10 +23,10 @@ implementation or schema. A successful PEC receipt is not an activation trigger.
 
 | Concern | Owner |
 |---|---|
-| Packaging (`birth-payload.json`, `birth-contract.json`, `product-birth-binding.json`) | `l9-repo-template` — `scripts/birth-runner/package_birth_handoff.py` |
-| `l9.repo-birth-contract/v1` schema | `l9-repo-template` — `scripts/birth-runner/schemas/birth-contract.schema.json` |
-| Admission of the bundle | `l9-repo-template` — `scripts/birth-runner/l9_birth_adapter.py` |
-| Remote repository birth | `l9-repo-template` — `make birth` (`scripts/birth-runner/birth_frontdoor.py`) |
+| Packaging (`birth-payload.json`, `birth-contract.json`, `product-birth-binding.json`) | `l9-repo-template:scripts/birth-runner/package_birth_handoff.py` |
+| `l9.repo-birth-contract/v1` schema | `l9-repo-template:scripts/birth-runner/schemas/birth-contract.schema.json` |
+| Admission of the bundle | `l9-repo-template:scripts/birth-runner/l9_birth_adapter.py` |
+| Remote repository birth | `l9-repo-template` — `make birth` (`l9-repo-template:scripts/birth-runner/birth_frontdoor.py`) |
 | When a handoff is legal | this skill and `l9-idea-execute` (`birth_handoff` stage) |
 
 The factory documents the packager in `docs/ops/REPO_BIRTH.md` ("Packaging the

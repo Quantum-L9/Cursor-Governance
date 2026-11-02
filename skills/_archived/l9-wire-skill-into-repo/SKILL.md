@@ -138,7 +138,7 @@ Report `Validation: FAIL` if any mandatory checklist item applies.
 - Missing `SKILL.md` or empty pack → FAIL; do not register.
 - Duplicate registry row → dedupe before reporting PASS.
 - Ambiguous layout → load layout-detection ref; ask user if still ambiguous.
-- `agents/openai.yaml` present → rename to `agents/meta.yaml`; wire via this skill only.
+- `<pack>/agents/openai.yaml` present → rename to `<pack>/agents/meta.yaml`; wire via this skill only.
 - Skill pack under `.claude/` but not under `.claude/skills/` → move/symlink into `.claude/skills/{name}/` then re-reconcile.
 - Deprecated pack still at live `skills/<name>/` → mandatory unwire; do not “fix” by docs-only edits.
 - Sync reports live deprecated skills → archive + deregister before any other skill work.
