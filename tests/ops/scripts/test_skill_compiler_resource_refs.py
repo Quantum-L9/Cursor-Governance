@@ -141,3 +141,43 @@ def test_cli_reports_the_missing_file(tmp_path: Path) -> None:
     )
     assert proc.returncode == 1
     assert "references a pack file that does not exist: references/gone.md" in proc.stderr
+
+
+def test_pack_specific_top_level_directories_are_checked(tmp_path: Path) -> None:
+    """A pack's own `contracts/`, `runtime/`, ... count, not only the conventional names."""
+    root = _pack(
+        tmp_path,
+        "- `contracts/AUTHORITY.yaml`\n- `runtime/MANIFEST.yaml`",
+        files=("contracts/AUTHORITY.yaml", "runtime/OTHER.yaml"),
+    )
+    assert _missing(validator.validate(root)) == ["runtime/MANIFEST.yaml"]
+
+
+def test_unknown_directory_the_pack_does_not_have_is_not_a_pack_path(tmp_path: Path) -> None:
+    root = _pack(tmp_path, "Upstream keeps `contracts/AUTHORITY.yaml`.")
+    assert _missing(validator.validate(root)) == []
+
+
+def test_later_prohibition_does_not_exempt_required_paths(tmp_path: Path) -> None:
+    """skills/l9-intelligence-harvest/SKILL.md:37 shape: requirements, then 'Never ...'."""
+    body = (
+        "Run `scripts/a.py` and `scripts/b.py` for their owned operations. "
+        "Never substitute model judgment for file existence."
+    )
+    root = _pack(tmp_path, body, files=("scripts/a.py",))
+    assert _missing(validator.validate(root)) == ["scripts/b.py"]
+
+
+def test_prohibition_exempts_only_paths_in_its_own_clause(tmp_path: Path) -> None:
+    body = "Ship `references/kept.md`; do not include `agents/openai.yaml` unless asked."
+    root = _pack(tmp_path, body)
+    assert _missing(validator.validate(root)) == ["references/kept.md"]
+
+
+def test_symbol_suffix_names_the_file(tmp_path: Path) -> None:
+    root = _pack(
+        tmp_path,
+        "See `scripts/policy.py::validate_root` and `scripts/gone.py::helper`.",
+        files=("scripts/policy.py",),
+    )
+    assert _missing(validator.validate(root)) == ["scripts/gone.py"]

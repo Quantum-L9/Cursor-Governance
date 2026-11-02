@@ -20,7 +20,7 @@ status: active
 - `adapters/claude-code.md` writes a tool restriction as `metadata.allowed-tools` in a governed repository, uses top-level `allowed-tools` only under the explicit `agent-skills` profile, and states that the nested key is not enforced by Claude Code.
 
 ### Added
-- `validate_skill_pack.py` fails when `SKILL.md` names a backticked pack file (under a pack resource directory, or a pack root release file) that does not exist. Fenced code, prohibition lines, globs, templates, bare directory names and paths that exist in the host repository are exempt.
+- `validate_skill_pack.py` fails when `SKILL.md` names a backticked pack file that does not exist. A pack file is one under a conventional resource directory or any top-level directory the pack has, or a pack root release file; `file.py::symbol` is checked as `file.py`. Fenced code, paths inside a prohibition clause ("do not include ..."), globs, templates, bare directory names and paths that exist in the host repository are exempt.
 - `scan_skill_topology.py` has a real `--help`, and a missing, unparseable or mis-shaped request exits `2` with the reason instead of a traceback.
 - Tests: `tests/test_topology_cli.py` in the pack and `tests/ops/scripts/test_skill_compiler_resource_refs.py` in the repository.
 

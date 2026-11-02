@@ -33,7 +33,7 @@ Every row below was executed on 2026-11-02 against this pack in
 | Draft 2020-12 metaschema check of `schemas/*.yaml` | PASS, 7 gate schemas |
 | Byte-compile `scripts/*.py` | PASS, 6 scripts |
 | `python -m pytest tests -q` | PASS, 22 tests (`test_topology_decision.py`, `test_topology_cli.py`) |
-| `pytest tests/ops/scripts/test_skill_compiler_resource_refs.py tests/ops/scripts/test_skill_compiler_frontmatter_contract.py` (repository root) | PASS, 23 tests |
+| `pytest tests/ops/scripts/test_skill_compiler_resource_refs.py tests/ops/scripts/test_skill_compiler_frontmatter_contract.py` (repository root) | PASS, 28 tests |
 | `python scripts/package_skill.py . <out>` | PASS; 50 entries, `SKILL.md` first, no wrapper directory, no `tests/` entries |
 | `python scripts/scan_skill_topology.py --help` | PASS; prints usage and the request shape, exit 0 |
 
@@ -48,7 +48,7 @@ Every row below was executed on 2026-11-02 against this pack in
 
 ## Known limitations
 
-- The backticked-path check cannot tell a pack file from a path in a different repository. Run across this repository's skills, it flags 4 packs that mention scripts in other repositories in prose (`l9-code-graph-rag-mcp`, `l9-idea-execute`, `l9-repo-birth`, `l9-repo-index`), 1 pack with a genuinely missing file (`l9-claude-coding-contract-compiler`: `scripts/validate_exemplary_skill.py`), and 2 archived packs. Paths that exist in the host repository are already exempt.
+- The backticked-path check cannot tell a pack file from an unqualified path in a different repository or another pack. Run across this repository's skills, it flags 4 packs that mention scripts in other repositories in prose (`l9-code-graph-rag-mcp`, `l9-idea-execute`, `l9-repo-birth`, `l9-repo-index`), 1 pack that names the compiler's `scripts/validate_exemplary_skill.py` without its `skills/l9-skill-compiler/` prefix (`l9-claude-coding-contract-compiler`), and 3 archived packs (`l9-idea-foundry`, `l9-pr-remediation-deprecated`, `l9-wire-skill-into-repo`). Paths that exist in the host repository are already exempt.
 - Installation paths remain environment-specific and are intentionally not invented.
 - Repository wiring is not performed unless a repository target is supplied.
 - Target-agent tool permissions must be bound by the active platform adapter.
