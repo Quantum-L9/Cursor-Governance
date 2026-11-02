@@ -56,7 +56,7 @@ def build_receipt(
     frontmatter = frontmatter_presence(md_text)
     execute_swap = execute_swap_presence(md_text)
     mode = handoff_mode(md_text)
-    unfilled = unfilled_parameters(md_text)
+    unfilled = unfilled_parameters(md_text, plan)
     return {
         "schema_version": "1.0.0",
         "kind": RECEIPT_KIND,

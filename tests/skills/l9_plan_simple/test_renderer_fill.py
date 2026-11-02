@@ -138,3 +138,100 @@ def test_unfilled_parameter_fails_the_receipt() -> None:
 def test_quoted_slot_in_a_prohibition_is_not_unfilled() -> None:
     assert unfilled_parameters("- Do not write `Lock: origin/main = <sha>`.") == []
     assert unfilled_parameters("| commit_sha | `<commit_sha>` |") == ["commit_sha"]
+
+
+def _render_plan(tmp_path: Path, plan: dict, mode: str = "cursor-build") -> str:
+    path = tmp_path / "plan.json"
+    path.write_text(json.dumps(plan), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(RENDERER), "plan.json", f"--execute-via={mode}"],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout
+
+
+def _row(out: str, field: str) -> str:
+    return next(line for line in out.splitlines() if line.startswith(f"| {field} |"))
+
+
+def _converged_plan() -> dict:
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    plan["convergence"]["status"] = "converged"
+    plan["convergence"]["remaining_unknown_ids"] = []
+    return plan
+
+
+def test_converged_plan_with_unprovable_property_is_not_ready(tmp_path: Path) -> None:
+    out = _render_plan(tmp_path, _converged_plan())  # SP-02 names no validation
+    assert "`draft`" in _row(out, "status")
+    assert "unprovable success properties: SP-02" in _row(out, "status")
+    assert _row(out, "implementation_ready") == "| implementation_ready | `false` |"
+    assert _row(out, "current_state") == "| current_state | `draft` |"
+    assert "| `open_blocker` | SP-02 |" in out
+
+
+def test_property_proved_only_by_not_applicable_validation_is_not_ready(tmp_path: Path) -> None:
+    plan = _converged_plan()
+    plan["success_criteria"] = ["self_test.py PASS", "hook catalog clean per V2"]
+    out = _render_plan(tmp_path, plan)  # V2 is not_applicable
+    assert "unprovable success properties: SP-02" in _row(out, "status")
+    assert _row(out, "implementation_ready") == "| implementation_ready | `false` |"
+
+
+def test_converged_plan_with_runnable_proofs_is_executable(tmp_path: Path) -> None:
+    plan = _converged_plan()
+    plan["success_criteria"] = ["self_test.py PASS"]
+    out = _render_plan(tmp_path, plan)
+    assert _row(out, "status") == (
+        "| status | `executable` — every readiness gate in PLAN_DOCUMENT holds |"
+    )
+    assert _row(out, "implementation_ready") == "| implementation_ready | `true` |"
+    assert _row(out, "current_state") == "| current_state | `execution_ready` |"
+    assert _row(out, "next_convergence_gate") == "| next_convergence_gate | `complete_when` |"
+
+
+def test_blocking_unknown_keeps_plan_out_of_executable(tmp_path: Path) -> None:
+    plan = _converged_plan()
+    plan["success_criteria"] = ["self_test.py PASS"]
+    plan["unknowns"] = [
+        {"id": "U1", "question": "q", "decision_effect": "e", "resolution": "block"}
+    ]
+    out = _render_plan(tmp_path, plan)
+    assert "blocking unknowns: U1" in _row(out, "status")
+    assert _row(out, "implementation_ready") == "| implementation_ready | `false` |"
+
+
+def test_irreversible_todo_activates_the_gated_write_pipeline(tmp_path: Path) -> None:
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    plan["todos"][1]["risk"] = "irreversible"
+    out = _render_plan(tmp_path, plan)
+    section = out.split("## Gated write pipeline", 1)[1].split("\n## ")[0]
+    assert "Activated — irreversible todo(s): T2." in section
+    assert "human approval recorded for T2" in section
+    assert "- **receipt_required:** `true`" in section
+    assert "- **bounded_write_count:** `1`" in section
+    assert "Not activated" not in section
+
+
+def test_reversible_plan_leaves_the_gated_write_pipeline_inactive() -> None:
+    section = _render("cursor-build").split("## Gated write pipeline", 1)[1].split("\n## ")[0]
+    assert "Not activated" in section
+
+
+def test_angle_tokens_projected_from_the_plan_are_not_unfilled(tmp_path: Path) -> None:
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    plan["objective"] = "Replace every <parameter> value the old renderer left behind"
+    plan["final_validation"][0]["command"] = "python3 scripts/self_test.py --branch <branch>"
+    out = _render_plan(tmp_path, plan)
+    assert "<parameter>" in out and "<branch>" in out
+    assert unfilled_parameters(out, plan) == []
+    # The same tokens without the plan as provenance are template slots.
+    assert unfilled_parameters(out) == ["branch", "parameter"]
+
+
+def test_non_template_angle_token_is_ordinary_content() -> None:
+    assert unfilled_parameters("run `tool <not_a_template_slot_xyz>`") == []

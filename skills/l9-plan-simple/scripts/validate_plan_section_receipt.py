@@ -130,7 +130,7 @@ def check_receipt(path: Path) -> list[str]:
     observed_md = md_section_presence(md_text)
     observed_fm = frontmatter_presence(md_text)
     observed_swap = execute_swap_presence(md_text)
-    observed_unfilled = unfilled_parameters(md_text)
+    observed_unfilled = unfilled_parameters(md_text, plan)
     gar_invoked = bool((receipt.get("gar_upstream") or {}).get("invoked"))
 
     if receipt.get("json_sections") != observed_json:

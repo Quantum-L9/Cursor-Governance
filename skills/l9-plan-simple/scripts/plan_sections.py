@@ -42,9 +42,6 @@ HEADING_RE = re.compile(r"^## +(.+)$", re.M)
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.S)
 # A template instance slot such as `<todo_id>` left in a delivered plan.
 PARAMETER_RE = re.compile(r"<([a-z][a-z0-9_]*)>")
-HTML_TAGS = frozenset(
-    {"b", "br", "code", "details", "hr", "i", "kbd", "p", "sub", "summary", "sup"}
-)
 
 try:
     import yaml
@@ -159,18 +156,38 @@ def live_make_campaign(text: str) -> bool:
     return False
 
 
-def unfilled_parameters(text: str) -> list[str]:
+def template_slots(template_text: str | None = None) -> frozenset[str]:
+    """Every `<parameter>` slot the canonical executable-plan template declares."""
+    text = (
+        template_text if template_text is not None else template_path().read_text(encoding="utf-8")
+    )
+    return frozenset(PARAMETER_RE.findall(text))
+
+
+def unfilled_parameters(
+    text: str,
+    plan: dict[str, Any] | None = None,
+    template_text: str | None = None,
+) -> list[str]:
     """Template `<parameter>` slots still present in the projection.
 
-    A prohibition sentence that quotes a slot (`Do not write ... = <sha>`) is
-    not an unfilled instance.
+    Only names the template declares count, so an angle-bracket token that is
+    not a template slot is ordinary content. A token that PLAN_DOCUMENT itself
+    carries (an objective about `<parameter>` values, a command taking
+    `<branch>`) was projected from the plan, not left over from the template,
+    and is excluded. A prohibition sentence that quotes a slot
+    (`Do not write ... = <sha>`) is not an unfilled instance either.
     """
+    slots = template_slots(template_text)
+    projected: set[str] = set()
+    if plan is not None:
+        projected = set(PARAMETER_RE.findall(json.dumps(plan, ensure_ascii=False)))
     found: set[str] = set()
     for line in text.splitlines():
         if NEGATION_RE.search(line):
             continue
         for name in PARAMETER_RE.findall(line):
-            if name not in HTML_TAGS:
+            if name in slots and name not in projected:
                 found.add(name)
     return sorted(found)
 

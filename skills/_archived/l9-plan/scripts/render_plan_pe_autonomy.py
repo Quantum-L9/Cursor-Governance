@@ -205,17 +205,21 @@ _RISK_LEVEL = {"low": "low", "medium": "medium", "high": "high", "irreversible":
 _LEVELS = ("low", "medium", "high", "critical")
 # PLAN_DOCUMENT convergence is *planning* convergence; map it onto the
 # template's execution lifecycle without claiming execution happened.
-_PLAN_STATUS = {"converged": "executable", "partial": "draft", "blocked": "preflight_blocked"}
+# Readiness is derived, never copied: planning convergence alone does not make
+# a plan executable while a success property cannot be proved or an unknown
+# still blocks (see _Ctx.readiness_blockers).
 _CONVERGENCE_STATE = {
-    "converged": "execution_ready",
-    "partial": "draft",
-    "blocked": "preflight_blocked",
+    "executable": "execution_ready",
+    "draft": "draft",
+    "preflight_blocked": "preflight_blocked",
 }
 _NEXT_GATE = {
-    "converged": "complete_when",
-    "partial": "executable_when",
-    "blocked": "blocking_conditions",
+    "executable": "complete_when",
+    "draft": "executable_when",
+    "preflight_blocked": "blocking_conditions",
 }
+_UNRUNNABLE = {"skipped", "not_applicable"}
+_BLOCKING_RESOLUTIONS = {"block", "ask"}
 
 
 def projection_for(execute_via: str) -> _Projection:
@@ -485,6 +489,41 @@ class _Ctx:
     def conv_status(self) -> str:
         return str(self.conv.get("status") or "partial")
 
+    def unprovable_properties(self) -> list[str]:
+        """Properties with no proving validation, or only skipped / not_applicable ones."""
+        out: list[str] = []
+        for prop in self.properties:
+            statuses = {str(self.validation(v).get("status") or "") for v in prop.validation_ids}
+            if not prop.validation_ids or statuses <= _UNRUNNABLE:
+                out.append(prop.sp_id)
+        return out
+
+    def readiness_blockers(self) -> list[str]:
+        """Why the plan may not become `executable`; empty means it may."""
+        out: list[str] = []
+        if self.conv_status != "converged":
+            out.append(f"planning convergence is `{self.conv_status}`")
+        remaining = [str(x) for x in self.conv.get("remaining_unknown_ids") or []]
+        if remaining:
+            out.append("remaining unknowns: " + ", ".join(remaining))
+        blocking = [
+            str(u.get("id"))
+            for u in self.plan.get("unknowns") or []
+            if u.get("resolution") in _BLOCKING_RESOLUTIONS
+        ]
+        if blocking:
+            out.append("blocking unknowns: " + ", ".join(blocking))
+        unprovable = self.unprovable_properties()
+        if unprovable:
+            out.append("unprovable success properties: " + ", ".join(unprovable))
+        return out
+
+    @property
+    def plan_status(self) -> str:
+        if self.conv_status == "blocked":
+            return "preflight_blocked"
+        return "draft" if self.readiness_blockers() else "executable"
+
     def baseline_value(self, key: str) -> str:
         if self.baseline is None:
             return UNBOUND
@@ -500,8 +539,11 @@ def _sec_metadata(c: _Ctx) -> list[str]:
         f"| name | {_cell(c.title)} |",
         f"| overview | {_cell(c.plan.get('objective') or c.title)} |",
         f"| schema_version | `{_cell(c.plan.get('schema_version') or '1.0.0')}` |",
-        f"| status | `{_PLAN_STATUS.get(c.conv_status, 'draft')}` — from PLAN_DOCUMENT "
-        f"convergence `{_cell(c.conv_status)}` |",
+        (
+            f"| status | `{c.plan_status}` — "
+            + ("; ".join(c.readiness_blockers()) or "every readiness gate in PLAN_DOCUMENT holds")
+            + " |"
+        ),
         "| is_project | `false` |",
         f"| owner | {NOT_DECLARED} |",
         f"| created_at | {created} |",
@@ -554,9 +596,11 @@ def _sec_objective(c: _Ctx) -> list[str]:
         "",
         "### Success properties",
         "",
-        "Each property's proof is the `final_validation` entry it names (by id or by "
-        "script/file). A property with no proving validation is `unbound` and blocks "
-        "`executable`.",
+        (
+            "Each property's proof is the `final_validation` entry it names (by id or by "
+            "script/file). A property with no proving validation, or only skipped / "
+            "not_applicable ones, blocks `executable`."
+        ),
         "",
         "| id | property | evidence_type | proof | blocking |",
         "|----|----------|---------------|-------|----------|",
@@ -737,7 +781,7 @@ def _sec_rollback(c: _Ctx) -> list[str]:
     deletes = _todo_files(c, "Delete")
     checkpoints = [
         f"{_cell(cp.get('id'))} fails ({_cell(cp.get('evidence_required'))}) → "
-        f"{_cell(cp.get('no_go_action'))}"
+        + f"{_cell(cp.get('no_go_action'))}"
         for cp in c.plan.get("checkpoints") or []
     ]
     code_mode = "git_restore_scoped_paths" if _todo_files(c) else "none"
@@ -800,6 +844,27 @@ def _not_activated(what: str) -> list[str]:
     return [f"Not activated — PLAN_DOCUMENT declares no {what}."]
 
 
+def _sec_gated_write(c: _Ctx) -> list[str]:
+    irreversible = [str(t.get("id")) for t in c.todos if t.get("risk") == "irreversible"]
+    if not irreversible:
+        return _not_activated("irreversible or external write")
+    ids = ", ".join(irreversible)
+    return [
+        f"Activated — irreversible todo(s): {ids}.",
+        "",
+        "- **gates (ordered):**",
+        f"  1. human approval recorded for {ids} before any of them runs",
+        "  2. every blocking capability probe and earlier checkpoint has passed",
+        "  3. the exact write is previewed (dry run or diff) and reviewed",
+        "  4. the write executes once",
+        "  5. a receipt of the write is recorded before the next todo starts",
+        "- **dedupe_before_non_idempotent_write:** `true`",
+        f"- **bounded_write_count:** `{len(irreversible)}` — one attempt per irreversible "
+        + "todo; retry is `manual_only`",
+        "- **receipt_required:** `true`",
+    ]
+
+
 def _sec_dag(c: _Ctx) -> list[str]:
     lev = c.plan.get("leverage") or {}
     lines = [
@@ -849,7 +914,7 @@ def _sec_dag(c: _Ctx) -> list[str]:
         "|----|-------|-------------------|--------------|",
         *[
             f"| {_cell(cp.get('id'))} | {_cell(cp.get('after'))} | "
-            f"{_cell(cp.get('evidence_required'))} | {_cell(cp.get('no_go_action'))} |"
+            + f"{_cell(cp.get('evidence_required'))} | {_cell(cp.get('no_go_action'))} |"
             for cp in c.plan.get("checkpoints") or []
         ],
         "",
@@ -857,8 +922,8 @@ def _sec_dag(c: _Ctx) -> list[str]:
         "",
         f"- **Ranked todos:** {_join(lev.get('ranked_todo_ids') or [], NOT_DECLARED)}",
         f"- **Shared causes:** {'; '.join(str(x) for x in lev.get('shared_causes') or []) or 'none declared'}",
-        f"- **Deletions / consolidations:** "
-        f"{'; '.join(str(x) for x in lev.get('deletions_or_consolidations') or []) or 'none declared'}",
+        "- **Deletions / consolidations:** "
+        + f"{'; '.join(str(x) for x in lev.get('deletions_or_consolidations') or []) or 'none declared'}",
         "",
         "### Doc / root surface impact",
         "",
@@ -866,7 +931,7 @@ def _sec_dag(c: _Ctx) -> list[str]:
         "|---------|--------|----------|--------|",
         *[
             f"| {_cell(d.get('surface'))} | `{_cell(d.get('action'))}` | "
-            f"{_join(d.get('todo_ids') or [], '—')} | {_cell(d.get('reason') or '—')} |"
+            + f"{_join(d.get('todo_ids') or [], '—')} | {_cell(d.get('reason') or '—')} |"
             for d in c.plan.get("doc_root_surface_impact") or []
         ],
     ]
@@ -960,12 +1025,16 @@ def _sec_convergence(c: _Ctx) -> list[str]:
     observed = [eid for eid, _, v in evidence if v.get("status") == "passed"]
     missing = [eid for eid in required if eid not in observed]
     missing += [f"{p.sp_id} (unbound)" for p in c.properties if not p.validation_ids]
-    remaining = [str(x) for x in c.conv.get("remaining_unknown_ids") or []]
-    ready = c.conv_status == "converged" and not remaining
+    ready = not c.readiness_blockers()
     blockers = [
         f"| `unknown` | {_cell(u.get('id'))} | {_cell(u.get('question'))} — "
-        f"{_cell(u.get('decision_effect'))} | `{_cell(u.get('resolution'))}` |"
+        + f"{_cell(u.get('decision_effect'))} | `{_cell(u.get('resolution'))}` |"
         for u in c.plan.get("unknowns") or []
+    ]
+    blockers += [
+        f"| `open_blocker` | {sp} | success property has no runnable proving validation | "
+        + "name a `final_validation` entry that can run |"
+        for sp in c.unprovable_properties()
     ]
     if c.conv_status != "converged" and c.conv.get("stop_reason"):
         blockers.append(
@@ -986,7 +1055,7 @@ def _sec_convergence(c: _Ctx) -> list[str]:
         "|-------|-------|",
         f"| convergence_id | `conv.{c.plan_id}` |",
         f"| source_ref | `{c.plan_id}` |",
-        f"| current_state | `{_CONVERGENCE_STATE.get(c.conv_status, 'draft')}` |",
+        f"| current_state | `{_CONVERGENCE_STATE[c.plan_status]}` |",
         f"| implementation_ready | `{'true' if ready else 'false'}` |",
         "",
         *_template_gates(c),
@@ -1007,7 +1076,7 @@ def _sec_convergence(c: _Ctx) -> list[str]:
         "",
         "| Field | Value |",
         "|-------|-------|",
-        f"| next_convergence_gate | `{_NEXT_GATE.get(c.conv_status, 'executable_when')}` |",
+        f"| next_convergence_gate | `{_NEXT_GATE[c.plan_status]}` |",
         c.prof.next_action_row or _PE_NEXT_ACTION,
         c.prof.convergence_via_row or _PE_CONVERGENCE_VIA,
         f"| next_skill | {_cell(next_skill)} |",
@@ -1059,7 +1128,7 @@ def _sec_machine_stub(c: _Ctx, body_after_swap: str) -> list[str]:
             "plan_id": c.plan_id,
             "name": c.title,
             "overview": str(c.plan.get("objective") or c.title),
-            "status": _PLAN_STATUS.get(c.conv_status, "draft"),
+            "status": c.plan_status,
             "is_project": False,
         },
         "architect_framing": {
@@ -1151,7 +1220,7 @@ _SECTION_BUILDERS = {
     "Inventory and classification": lambda _c: _not_activated(
         "retire / migrate / replace inventory"
     ),
-    "Gated write pipeline": lambda _c: _not_activated("irreversible or external write"),
+    "Gated write pipeline": _sec_gated_write,
     "Regeneration extinguishment": lambda _c: _not_activated("retirement or deprecation"),
     "Execution DAG": _sec_dag,
     "Property evidence matrix": _sec_evidence,
@@ -1269,9 +1338,7 @@ def main() -> int:
             template_path = safe_cli_path(str(TEMPLATE_REL))
     template_text = template_path.read_text(encoding="utf-8")
     baseline = bind_workspace(safe_cli_path(args.workspace)) if args.workspace else None
-    sys.stdout.write(
-        render(plan, template_text, execute_via=args.execute_via, baseline=baseline)
-    )
+    sys.stdout.write(render(plan, template_text, execute_via=args.execute_via, baseline=baseline))
     return 0
 
 
