@@ -40,6 +40,11 @@ NEGATION_RE = re.compile(r"(?i)\b(do not|don't|never|not a|not the|must not|forb
 OPTIONAL_HEADING_RE = re.compile(r"\*+\(optional", re.I)
 HEADING_RE = re.compile(r"^## +(.+)$", re.M)
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.S)
+# A template instance slot such as `<todo_id>` left in a delivered plan.
+PARAMETER_RE = re.compile(r"<([a-z][a-z0-9_]*)>")
+HTML_TAGS = frozenset(
+    {"b", "br", "code", "details", "hr", "i", "kbd", "p", "sub", "summary", "sup"}
+)
 
 try:
     import yaml
@@ -154,6 +159,22 @@ def live_make_campaign(text: str) -> bool:
     return False
 
 
+def unfilled_parameters(text: str) -> list[str]:
+    """Template `<parameter>` slots still present in the projection.
+
+    A prohibition sentence that quotes a slot (`Do not write ... = <sha>`) is
+    not an unfilled instance.
+    """
+    found: set[str] = set()
+    for line in text.splitlines():
+        if NEGATION_RE.search(line):
+            continue
+        for name in PARAMETER_RE.findall(line):
+            if name not in HTML_TAGS:
+                found.add(name)
+    return sorted(found)
+
+
 def json_section_presence(plan: dict[str, Any]) -> dict[str, bool]:
     return {key: key in plan for key in json_required_keys()}
 
@@ -178,8 +199,11 @@ def receipt_status(
     frontmatter: dict[str, bool],
     execute_swap: dict[str, bool],
     gar_invoked: bool,
+    unfilled: list[str] | tuple[str, ...] = (),
 ) -> str:
     if not gar_invoked:
+        return "fail"
+    if unfilled:
         return "fail"
     if not all(json_sections.values()):
         return "fail"
@@ -200,10 +224,16 @@ def missing_labels(
     frontmatter: dict[str, bool],
     execute_swap: dict[str, bool],
     gar_invoked: bool,
+    unfilled: list[str] | tuple[str, ...] = (),
 ) -> list[str]:
     errors: list[str] = []
     if not gar_invoked:
         errors.append("G_GAR_UPSTREAM: l9-global-architect was not recorded as invoked")
+    if unfilled:
+        errors.append(
+            "G_UNFILLED_PARAMETER: template parameters left unfilled: "
+            + ", ".join(f"<{name}>" for name in unfilled)
+        )
     for key, ok in json_sections.items():
         if not ok:
             errors.append(f"G_JSON_SECTION: missing PLAN_DOCUMENT key {key}")

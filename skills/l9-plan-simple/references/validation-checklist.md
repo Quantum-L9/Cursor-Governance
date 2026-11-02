@@ -6,8 +6,8 @@ role: validation_checklist
 tags: [plan, validation, cursor-build, embedded, gar, section-receipt]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-09-02
+version: 1.4.0
+updated: 2026-11-02
 /L9_META -->
 
 # Validation Checklist
@@ -32,6 +32,9 @@ updated: 2026-09-02
 - [ ] Receipt `handoff_mode` matches the frontmatter `execute_via`
 - [ ] Handoff mode was selected explicitly, not inferred from missing capabilities
 - [ ] `.plan.md` projected with the mode's `--execute-via` (or hand-filled with that mode's execute swap)
+- [ ] No template `<parameter>` slot remains (receipt `unfilled_parameters: []`)
+- [ ] Every success property names its proving `final_validation` entry (no `unbound` proof row)
+- [ ] Baseline bound with `--workspace .` (`cursor-build`), or `unbound` accepted with reverify at execution start
 - [ ] Frontmatter has `kind: simple`, the selected `execute_via`, and `status: current` (never `status: harvested`)
 - [ ] Stress-test and leverage pass present (no mode skips it)
 - [ ] Baseline records the current workspace; no `Lock: origin/main = <sha>`
