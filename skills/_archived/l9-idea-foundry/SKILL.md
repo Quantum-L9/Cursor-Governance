@@ -383,7 +383,7 @@ python3 scripts/self_test.py
 python3 scripts/test_factory_qualification.py
 ```
 
-During compiler-time exemplary validation, also run the Skill Compiler's `scripts/validate_exemplary_skill.py <skill-folder>`. Do not claim deterministic Foundry gates or `tier: exemplary` when any required test or `exemplary_gate` fails.
+During compiler-time exemplary validation, also run `skills/l9-skill-compiler/scripts/validate_exemplary_skill.py <skill-folder>`. Do not claim deterministic Foundry gates or `tier: exemplary` when any required test or `exemplary_gate` fails.
 
 The factory qualification tests prove Foundry's orchestration boundary with a deterministic interface fixture. A real product run must still probe and invoke the real current factory before `BIRTH_READY`; fixture success never substitutes for live factory evidence.
 

@@ -193,8 +193,8 @@ deliverable-with-path; split forbidden into `forbidden_paths` (→ preserved) vs
 compiler decides fit); never hand-author IDs/seams/digest; DPK owner + rollback + readiness
 categories required; DPK prohibited behaviors adopted verbatim.
 
-The exemplary claim is gated deterministically by `scripts/validate_exemplary_skill.py`
-(l9-skill-compiler). Any failing or Unknown gate downgrades the tier to `strong` — never a
+The exemplary claim is gated deterministically by
+`skills/l9-skill-compiler/scripts/validate_exemplary_skill.py`. Any failing or Unknown gate downgrades the tier to `strong` — never a
 fabricated pass. Repo-registry wiring (`l9-wire-into-repo`) is `not_applicable` in
 environments where that global skill is absent.
 

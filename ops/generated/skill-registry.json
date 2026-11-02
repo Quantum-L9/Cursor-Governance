@@ -1,5 +1,5 @@
 {
-  "generation_id": "ad3e60d18fa2aaeb6c0aa450b1faf32d516caff95daa7c092132d8f8c57f7d34",
+  "generation_id": "ebe3c1d04ba6d73192a815301ed5275443ad35a6b304c2a3650a7c9c633814ed",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -884,7 +884,7 @@
       "path": "skills/l9-claude-coding-contract-compiler",
       "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
       "skill_md": "skills/l9-claude-coding-contract-compiler/SKILL.md",
-      "skill_sha256": "a7b3e74847c7b04efc5acc95e6ddd9ff1a01c1d96fe01ccd0a78236491163e59",
+      "skill_sha256": "9d44c4b97b1800274f3b78699c7c39a87e957a23056bd8ff5210a727a4cbf69f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -910,7 +910,7 @@
       "path": "skills/l9-code-graph-rag-mcp",
       "reason": "",
       "skill_md": "skills/l9-code-graph-rag-mcp/SKILL.md",
-      "skill_sha256": "9dd9849fcf57cded3c26a5f505f919b8b9c52321afe9686316f5edda4d2c1ca3",
+      "skill_sha256": "9cd502db19c14d08e0978bb0d7e627ce02ba76dcf38f18f94437623dc1d67fcd",
       "user_invocable": true,
       "when_to_use": "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
     },
@@ -1092,7 +1092,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "f99421f1ed0887dc336faf7eca3c4a51206b50959abe62a9ae9517097ad3c4de",
+      "skill_sha256": "e0ca32d20009fd5594c5cf9507d2f0ec4f70bf3cf0e81133d07243bf44335d65",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1326,7 +1326,7 @@
       "path": "skills/l9-repo-birth",
       "reason": "control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "4b33dafa7abd9b51a47e85dd469614c89dea6646e52488986598e798e1537f5a",
+      "skill_sha256": "ae6dba475dd3b1fd7a4d8054957fecbfa6e42e0393a199e0660bee4c9d614353",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1339,7 +1339,7 @@
       "path": "skills/l9-repo-index",
       "reason": "repo index export \u2014 on-demand only",
       "skill_md": "skills/l9-repo-index/SKILL.md",
-      "skill_sha256": "dde056ee1ee3bf45793a787c726cc743870bcda6ce19fb6b34d6400ee6833907",
+      "skill_sha256": "e486ef3d38b134a47978314dee576386e814932e2f0d1e1444c060098ddeef77",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1463,5 +1463,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
-  "source_skill_corpus_sha256": "fc847d8a568a5c2f9d139707f421cef3725ad51e482f40c146866cbc970769f2"
+  "source_skill_corpus_sha256": "dfcb9086fe05d09defd19c64336de9746139f673fcbd6fabc401c7cb533f390d"
 }

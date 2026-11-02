@@ -23,6 +23,7 @@ status: active
 - `validate_skill_pack.py` fails when `SKILL.md` names a backticked pack file that does not exist. A pack file is one under a conventional resource directory or any top-level directory the pack has, or a pack root release file; `file.py::symbol` is checked as `file.py`. Fenced code, paths inside a prohibition clause ("do not include ..."), globs, templates, bare directory names and paths that exist in the host repository are exempt.
 - `scan_skill_topology.py` has a real `--help`, and a missing, unparseable or mis-shaped request exits `2` with the reason instead of a traceback.
 - Tests: `tests/test_topology_cli.py` in the pack and `tests/ops/scripts/test_skill_compiler_resource_refs.py` in the repository.
+- `references/meta-standard.md` states how `SKILL.md` names a file outside the pack: a host-repository path (`skills/l9-other/...`), `<repo>:path` for a different repository, or a `<pack>/...` template. Eight packs in this repository were rewritten to that form, and `tests/ops/scripts/test_skill_path_references.py` holds every pack to it.
 
 ### Corrected
 - `MANIFEST.md`, `README.md` and `VALIDATION.md` are rebuilt from the files present and the checks actually run. The 3.8.0 `VALIDATION.md` reported a `tests/test_validators.py` run that does not exist and zero unlinked references while five listed policies were missing.

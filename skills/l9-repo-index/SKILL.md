@@ -31,7 +31,7 @@ Generate or update repo index files under `reports/repo-index/` for fast codebas
 ## Authority Order
 
 1. `.cursor/workflows-synced/scripts/export_repo_indexes.py` — synced generator (preferred)
-2. `scripts/repo_generators/export_repo_indexes.py` — repo-local generator
+2. `<consumer-repo>:scripts/repo_generators/export_repo_indexes.py` — repo-local generator
 3. [`references/index-export-protocol.md`](references/index-export-protocol.md) — manual generation and usage
 4. `reports/repo-index/` — output location (repo root)
 
@@ -62,7 +62,7 @@ See [`references/index-export-protocol.md`](references/index-export-protocol.md)
 
 - [`references/index-export-protocol.md`](references/index-export-protocol.md) — index files, manual generation, usage examples
 - `.cursor/workflows-synced/scripts/export_repo_indexes.py` — synced generator
-- `scripts/repo_generators/export_repo_indexes.py` — repo-local generator
+- `<consumer-repo>:scripts/repo_generators/export_repo_indexes.py` — repo-local generator
 - `reports/repo-index/` — output directory
 
 ## Validation
