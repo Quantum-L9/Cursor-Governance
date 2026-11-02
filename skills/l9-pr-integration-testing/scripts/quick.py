@@ -712,14 +712,17 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
         elif args.print_services:
             raise QuickError("--print-services needs --ci-job WORKFLOW:JOB")
+        manifest["image"] = dependency_layer(sandbox, args.repo, base_sha)
+        if args.image_only:
+            # The layer needs only the repository's `make setup`, not the V2
+            # contract: --image-only serves the repositories that lack one and
+            # so need a hand-written manifest.
+            print(manifest["image"])
+            return 0
         contract = gh_raw(args.repo, CONTRACT_PATH, base_sha)
         manifest["test_procedures"] = procedures_from_contract(
             contract, phases, args.timeout, args.failure_parser
         )
-        manifest["image"] = dependency_layer(sandbox, args.repo, base_sha)
-        if args.image_only:
-            print(manifest["image"])
-            return 0
         manifest["execution_authority"] = {
             "scope": "DISPOSABLE_DOCKER_ONLY",
             "source": args.authority,

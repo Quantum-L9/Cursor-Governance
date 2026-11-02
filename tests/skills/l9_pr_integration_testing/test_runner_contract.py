@@ -602,3 +602,29 @@ def test_ci_services_run_listed_images_at_their_pinned_digest(
     postgres, redis = derived["services"]
     assert postgres["pinned"] is True and redis["pinned"] is False
     assert any("redis:8 is not in service-images.json" in w for w in derived["service_warnings"])
+
+
+def test_image_only_needs_no_execution_contract(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """--image-only serves repositories without .l9/repo-workflow.json."""
+    import types
+
+    sandbox = {"status": "READY", "runner": {"home": str(tmp_path), "user": "runner"}}
+    monkeypatch.setitem(
+        sys.modules, "docker_sandbox", types.SimpleNamespace(status=lambda: sandbox)
+    )
+
+    def bind(args: list[str], **_kwargs: object) -> None:
+        out = Path(args[args.index("--out") + 1])
+        out.write_text(json.dumps({"repository": {"base_sha": "a" * 40}, "prs": []}))
+
+    def no_contract(repo: str, path: str, ref: str) -> bytes:
+        raise quick.QuickError(f"{repo} has no readable {path}")
+
+    monkeypatch.setattr(quick, "run", bind)
+    monkeypatch.setattr(quick, "pr_changed_files", lambda repo, n: [])
+    monkeypatch.setattr(quick, "gh_raw", no_contract)
+    monkeypatch.setattr(quick, "dependency_layer", lambda sb, repo, sha: "sha256:" + "c" * 64)
+    code = quick.main(["--repo", "o/r", "--pr", "1", "--authority", "test", "--image-only"])
+    assert (code, capsys.readouterr().out.strip()) == (0, "sha256:" + "c" * 64)
