@@ -74,13 +74,51 @@ ENV_MAP: dict[tuple[str, str], str] = {
 _REF_RE = re.compile(r"^" + re.escape(LEGACY_NAMESPACE) + r"/([A-Za-z0-9._-]+)#([A-Za-z0-9._-]+)$")
 
 
+_SECRET_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def sanitize_key(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    if cleaned and cleaned[0].isdigit():
+        cleaned = f"K_{cleaned}"
+    if not cleaned:
+        cleaned = "VALUE"
+    if not _SECRET_NAME_RE.match(cleaned):
+        cleaned = "VALUE"
+    return cleaned
+
+
+def env_name(suffix: str, json_key: str) -> str:
+    """The Infisical name the port tool gave ``<suffix>#<json_key>``.
+
+    Explicit ``ENV_MAP`` entries first, then the same deterministic fallback
+    the port applied (``<SUFFIX>_API_KEY`` / ``<SUFFIX>_TOKEN`` /
+    ``<SUFFIX>_<KEY>``), so every ported ref translates the way it was ported.
+    """
+    mapped = ENV_MAP.get((suffix, json_key))
+    if mapped:
+        return mapped
+    suffix_u = sanitize_key(suffix.replace("-", "_")).upper()
+    key_u = sanitize_key(json_key).upper()
+    if key_u in {"APIKEY", "API_KEY"}:
+        return f"{suffix_u}_API_KEY"
+    if key_u in {"TOKEN", "APITOKEN", "API_TOKEN"}:
+        return f"{suffix_u}_TOKEN"
+    return f"{suffix_u}_{key_u}"
+
+
 def is_legacy_ref(text: str) -> bool:
     return bool(_REF_RE.match(text.strip()))
 
 
 def infisical_name(ref: str) -> str | None:
-    """The Infisical name a legacy ``openclaw-igorbot/<svc>#<key>`` ref means."""
+    """The Infisical name a legacy ``openclaw-igorbot/<svc>#<key>`` ref means.
+
+    The caller still gates the result: ``capability_bind`` only binds names in
+    ``root_env_keys``, so a translated name that was never ported checks as
+    ``<not-in-inventory>``.
+    """
     match = _REF_RE.match(ref.strip())
     if not match:
         return None
-    return ENV_MAP.get((match.group(1), match.group(2)))
+    return env_name(match.group(1), match.group(2))

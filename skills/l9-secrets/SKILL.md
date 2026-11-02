@@ -154,7 +154,7 @@ See [references/infisical-protocol.md](references/infisical-protocol.md).
 
 - `capability_bind.py --check NAME` reports `bound` (no secret value on stdout)
 - Infisical inventory YAML contains project id/slug/key **names** only — never values
-- Unit tests: `ops/secrets/test_aws_secrets.py` (mocked AWS)
+- Unit tests: `tests/ops/secrets/test_capability_bind.py` (Infisical bind, legacy-ref translation); `ops/secrets/test_aws_secrets.py` covers the Cursor AWS bootstrap tools (mocked AWS)
 - Registry `source.authority: cursor-governance`
 
 ## Failure handling

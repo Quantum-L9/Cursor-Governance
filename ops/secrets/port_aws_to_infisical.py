@@ -43,7 +43,8 @@ STRUCTURED_ROOT = "/aws/openclaw-igorbot"
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
-from legacy_refs import ENV_MAP  # noqa: E402
+# ENV_MAP, sanitize_key and env_name: one translation for the port and the bind check.
+from legacy_refs import ENV_MAP, env_name, sanitize_key  # noqa: E402
 
 # Bootstrap secrets stay under /aws/... only — do not flatten to `/` (chicken-egg).
 SKIP_ROOT_PREFIXES = (
@@ -158,30 +159,6 @@ def parse_secret_payload(raw: str) -> dict[str, str]:
                 out[str(k)] = json.dumps(v, separators=(",", ":"))
         return out
     return {"value": raw}
-
-
-def sanitize_key(name: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", name)
-    if cleaned and cleaned[0].isdigit():
-        cleaned = f"K_{cleaned}"
-    if not cleaned:
-        cleaned = "VALUE"
-    if not SECRET_NAME_RE.match(cleaned):
-        cleaned = "VALUE"
-    return cleaned
-
-
-def env_name(suffix: str, json_key: str) -> str:
-    mapped = ENV_MAP.get((suffix, json_key))
-    if mapped:
-        return mapped
-    suffix_u = sanitize_key(suffix.replace("-", "_")).upper()
-    key_u = sanitize_key(json_key).upper()
-    if key_u in {"APIKEY", "API_KEY"}:
-        return f"{suffix_u}_API_KEY"
-    if key_u in {"TOKEN", "APITOKEN", "API_TOKEN"}:
-        return f"{suffix_u}_TOKEN"
-    return f"{suffix_u}_{key_u}"
 
 
 # The Infisical transport lives in infisical_http (re-exported for callers).

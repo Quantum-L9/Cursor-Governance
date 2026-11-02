@@ -174,6 +174,13 @@ def test_legacy_ref_map_is_the_port_tools_map() -> None:
     assert legacy_refs.infisical_name("openclaw-igorbot/sonarcloud#token") == "SONAR_TOKEN"
     assert legacy_refs.infisical_name("openclaw-igorbot/context7#apikey") == "CONTEXT7_API_KEY"
     assert legacy_refs.infisical_name("GITHUB_TOKEN") is None
+    # Refs the port named through its generic fallback translate the same way.
+    assert port_aws_to_infisical.env_name is legacy_refs.env_name
+    assert (
+        legacy_refs.infisical_name("openclaw-igorbot/google-service-account#private_key")
+        == "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"
+    )
+    assert "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY" in cb.allowed_names()
     # Every mapped name an agent binds must pass the bind name gate.
     for name in ("GITHUB_TOKEN", "SONAR_TOKEN", "SEMGREP_APP_TOKEN", "CONTEXT7_API_KEY"):
         assert name in cb.allowed_names()
