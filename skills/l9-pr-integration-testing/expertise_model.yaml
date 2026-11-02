@@ -1,0 +1,83 @@
+expertise_model:
+  experts:
+    - role: Git integration investigator
+      contribution: Pin base and PR heads, preserve ancestry, and execute actual merges including stacked and reverse-order variants.
+    - role: Container execution security engineer
+      contribution: Require network-isolated, nonprivileged, disposable Docker code execution with no production mounts.
+    - role: Differential testing engineer
+      contribution: Compare baseline, each PR, and combined candidate with failure identity and test-procedure provenance.
+    - role: Adversarial test and source reviewer
+      contribution: Challenge assertions, contracts, reachable behavior, cross-PR interfaces and mutation survival.
+    - role: Evidence auditor
+      contribution: Bind every positive claim to a specific immutable candidate and tamper-evident logs.
+  doctrine:
+    - Clean Git merging establishes textual compatibility, not semantic correctness.
+    - Green CI establishes only the tested properties and cannot replace combined execution.
+    - Baseline failures are not new regressions without an evidenced differential.
+    - Known-wrong mutation survival invalidates only the targeted test discrimination claim.
+    - Target repository authority chooses commands, adapters and expected behavior.
+    - External side effects and upstream publication remain outside this skill.
+  invariants:
+    - Preserve exact base/head SHA and synthetic tested SHA as different identities.
+    - Execute untrusted test code only inside verified disposable Docker with no production resources.
+    - Do not invent images, services, authority, dependencies or integration order.
+    - Distinguish execution, inspection, and inference in evidence.
+    - Required Docker or service unavailability blocks corresponding readiness.
+    - A positive verdict requires independent source and test-oracle inspection.
+  authority_hierarchy:
+    - User's selected repository, PR set, explicit permissions and constraints.
+    - Resolved current target repository governing law and owners.
+    - Immutable GitHub base and PR metadata with verified dependency order.
+    - Verified baseline procedure source and Docker runtime receipts.
+    - Confirmed exact-revision source inspection and negative witnesses.
+    - Labeled inference, then UNKNOWN.
+  activation_signals:
+    - User wants real combined PR integration tested before merging.
+    - Individually green PRs may break one another.
+    - User requests revision-bound Docker integration and adversarial false-green proof.
+  reject_signals:
+    - CI status lookup or ordinary static-only PR review.
+    - Upstream publication, merging, deployment, or production migration.
+    - Undefined PR heads, unsafe Docker settings, unsupported test infrastructure, or unverified authority.
+  adapters:
+    - category: Generic Git and Docker core
+      condition: Verified repository refs, pinned local image and trusted test argv exist.
+      action: Run pinned baseline, individual and combined Git states only in disposable container.
+    - category: Python and Node test procedures
+      condition: Actual repository test command and runner are verified.
+      action: Run argv tests with failure parser and targeted assertion probes; fixture evidence exists for both categories.
+    - category: Odoo and database systems
+      condition: Observed installed addons, Odoo edition, PostgreSQL fixtures, migration and isolated services are verified.
+      action: Block readiness until separately validated service-aware adapter; category detection is not execution proof.
+  failure_modes:
+    - cause: Head or base moved after planning
+      prevention: Fetch exact commit identities and reject mismatched heads.
+    - cause: Green tests ignore incorrect behavior
+      prevention: Independently inspect assertions and inject known-wrong mutations with oracle-backed checks.
+    - cause: Cached Python bytecode hides changes
+      prevention: Strip copied bytecode caches during mutation tests and include a regression witness.
+    - cause: Unsafe, missing or incompatible Docker runtime (incl. a flag the engine rejects, such as a bare rw in --mount)
+      prevention: >-
+        Enforce the least-privilege image/network/mount gate, report BLOCKED rather than simulate,
+        and pin runner flags with offline argv tests plus one real Docker witness per release.
+    - cause: Red baseline misread as introduced regression, or a sandbox profile that differs from the target's CI
+      prevention: >-
+        Bind failure identifiers, mark unknown attribution unverified, and diagnose a red baseline as
+        a profile defect first (l9-ci-core#220 went from 22 failures to 821/821 once /tmp allowed exec
+        and the runner's GIT_CONFIG_GLOBAL stopped leaking into test procedures).
+  leverage_points:
+    - rank: 1
+      intervention: Reconstruct actual combined commits, not independent diffs.
+      payoff: Detects joint behavior failures invisible to single-PR CI.
+    - rank: 2
+      intervention: Compare a pinned known baseline and PR variants.
+      payoff: Separates prior defects, individual changes, and interaction regressions.
+    - rank: 3
+      intervention: Check whether relevant tests reject deliberately incorrect behavior.
+      payoff: Exposes false-green success without requiring broad mutation campaigns.
+    - rank: 4
+      intervention: Gate executable tests behind verified Docker isolation.
+      payoff: Keeps experiments away from authoritative and production resources.
+    - rank: 5
+      intervention: Produce sealed evidence and exact source-review receipts.
+      payoff: Enables independent downstream revision-bound decisions.

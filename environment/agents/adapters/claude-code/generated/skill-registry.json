@@ -1,5 +1,5 @@
 {
-  "generation_id": "9b826855306304d9efc9d76fd065e8b6d47b3e915b2a37c09fd2c19397716eda",
+  "generation_id": "c75eb1e7c7840f761d4605275627dd79809a53c848b1c904e034af38583a3268",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -884,7 +884,7 @@
       "path": "skills/l9-claude-coding-contract-compiler",
       "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
       "skill_md": "skills/l9-claude-coding-contract-compiler/SKILL.md",
-      "skill_sha256": "a7b3e74847c7b04efc5acc95e6ddd9ff1a01c1d96fe01ccd0a78236491163e59",
+      "skill_sha256": "9d44c4b97b1800274f3b78699c7c39a87e957a23056bd8ff5210a727a4cbf69f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -910,7 +910,7 @@
       "path": "skills/l9-code-graph-rag-mcp",
       "reason": "",
       "skill_md": "skills/l9-code-graph-rag-mcp/SKILL.md",
-      "skill_sha256": "9dd9849fcf57cded3c26a5f505f919b8b9c52321afe9686316f5edda4d2c1ca3",
+      "skill_sha256": "9cd502db19c14d08e0978bb0d7e627ce02ba76dcf38f18f94437623dc1d67fcd",
       "user_invocable": true,
       "when_to_use": "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
     },
@@ -1092,7 +1092,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "f99421f1ed0887dc336faf7eca3c4a51206b50959abe62a9ae9517097ad3c4de",
+      "skill_sha256": "e0ca32d20009fd5594c5cf9507d2f0ec4f70bf3cf0e81133d07243bf44335d65",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1222,7 +1222,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "c3c5e567d0dcff79aa09c71271c9b230a6b139793d0e65de4f6c691dee5789e8",
+      "skill_sha256": "f14c30a9bab15c4da0a409fb64acb2290eb087b09a64cc2be7da068952642612",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1251,6 +1251,19 @@
       "skill_sha256": "dbf2a75af57d63bef34f58436fbe9ebcf1625b1f02ff25188ac0a6535336dc87",
       "user_invocable": true,
       "when_to_use": "judging one PR's scope, evidence, expansion, and architecture impact before remediation \u2014 the skill never mutates the PR"
+    },
+    {
+      "composition_role": "general",
+      "description": "Build and falsify a revision-bound combined pull-request candidate inside disposable Docker isolation, with differential tests, Git merge provenance, semantic overlap review and targeted false-green probes. Use when testing one or more actual GitHub PRs together before integration, especially when green CI or clean merges may hide defects. Do not use for CI status alone, static-only PR review, production deployment, or authorizing a merge.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pr-integration-testing",
+      "path": "skills/l9-pr-integration-testing",
+      "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
+      "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
+      "skill_sha256": "e6e491460c0fe5253f18578a51e069c23e7feea1bcbbb480b8fcfd302800d055",
+      "user_invocable": true,
+      "when_to_use": ""
     },
     {
       "composition_role": "general",
@@ -1313,7 +1326,7 @@
       "path": "skills/l9-repo-birth",
       "reason": "control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "4b33dafa7abd9b51a47e85dd469614c89dea6646e52488986598e798e1537f5a",
+      "skill_sha256": "ae6dba475dd3b1fd7a4d8054957fecbfa6e42e0393a199e0660bee4c9d614353",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1326,7 +1339,7 @@
       "path": "skills/l9-repo-index",
       "reason": "repo index export \u2014 on-demand only",
       "skill_md": "skills/l9-repo-index/SKILL.md",
-      "skill_sha256": "dde056ee1ee3bf45793a787c726cc743870bcda6ce19fb6b34d6400ee6833907",
+      "skill_sha256": "e486ef3d38b134a47978314dee576386e814932e2f0d1e1444c060098ddeef77",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1378,7 +1391,7 @@
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "skill_md": "skills/l9-skill-compiler/SKILL.md",
-      "skill_sha256": "54abe7f653d951ff5808df5129e6972539b822c36d5fc0a1b3e40c4df180b5ad",
+      "skill_sha256": "08e1a9438382a8b55502b60cfba8dcb7473f969ecc44c1ad24a9704a79a9c371",
       "user_invocable": true,
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
@@ -1449,6 +1462,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "e8498c2d5a930b445323cea1e1ae1c16876df9ebefbcee17f96d35b29b274bb7",
-  "source_skill_corpus_sha256": "b341a5b866b9228def48c0b8b1473bf06df6458155c3d4ac86e14a5161af5906"
+  "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
+  "source_skill_corpus_sha256": "8d95afbc4b35c4590df82e7f2f45ba88d2e2974b2653490c66b897caf093a9d6"
 }

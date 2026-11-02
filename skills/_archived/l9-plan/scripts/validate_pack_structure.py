@@ -131,10 +131,13 @@ def _doctrine_errors(root: Path, skill: str) -> list[str]:
 
 def _ssot_errors(root: Path) -> list[str]:
     """Require first-class executable plan template SSOT in the governance repo."""
-    repo_root = root.resolve().parents[1] if root.name == "l9-plan" else root.resolve()
-    # When invoked as `python3 scripts/validate_pack_structure.py .` from skill root:
-    if (root / SKILL_MD).is_file():
-        repo_root = root.resolve().parents[1]
+    resolved = root.resolve()
+    repo_root = resolved
+    # Skill root (skills/l9-plan or skills/_archived/l9-plan): the repo root is
+    # the parent of the nearest `skills/` ancestor.
+    if resolved.name == "l9-plan" or (root / SKILL_MD).is_file():
+        skills_dir = next((p for p in resolved.parents if p.name == "skills"), None)
+        repo_root = skills_dir.parent if skills_dir else resolved.parents[1]
     ssot = (
         repo_root
         / "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"

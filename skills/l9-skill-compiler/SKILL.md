@@ -8,8 +8,8 @@ metadata:
   tags: [l9, compiler, skill, exemplary, portability, packaging]
   owner: igor_beylin
   status: active
-  version: "3.8.0"
-  updated: "2026-08-28"
+  version: "3.9.0"
+  updated: "2026-11-02"
   license: Proprietary
   supersedes: l9-skill-compiler v2.0.0 (skill-compiler-v2 DAG runtime)
   targets: [claude-code, manus, cursor, agent-skills]
@@ -51,7 +51,7 @@ Use this skill for creation, conversion, audit, rebuild, hardening, validation, 
 1. Load `references/binding-runtime-directives.md` and record activated directives.
 2. Parse the source and produce Gate A using `schemas/gate-a-source-parse.schema.yaml`.
 3. For exemplary work, extract and compress expertise before designing files. Produce `expertise_model.yaml` and Gate B.
-4. Select the minimum high-leverage structure. Produce Gate C and lock files in scope.
+4. Select the minimum high-leverage structure. When the request would create a new pack, first run `scripts/scan_skill_topology.py <request.json>` (input and decisions: `references/topology-scan.md`) and follow its decision: `REPLACE_EXISTING` or `EXTEND_EXISTING` routes the work into the named skill, `REJECT_NEW_SKILL` stops creation, `ESCALATE_TO_BOUNDED_LLM` requires a recorded judgment over the listed candidates, and only `CREATE_NEW` permits a new pack. Produce Gate C and lock files in scope.
 5. Build complete files only. Produce Gate D with zero stubs, TODOs, placeholders, or unverified pass claims. Write `SKILL.md` frontmatter to the five permitted top-level keys in `references/meta-standard.md` — `name`, `description`, `paths`, `disable-model-invocation`, `metadata` — with everything else nested under `metadata:`. A pack that emits `license` or `allowed-tools` at top level is rejected by the install gate of every governed repository and has to be repaired by hand before it can be wired.
 6. Validate structural, contract, execution, evidence, operator, and regression classes. Produce Gate E. `scripts/validate_skill_pack.py <pack>` is a required gate here, not an optional check: it is the executable form of the frontmatter contract and fails the build on a non-native top-level key, a name that does not match the pack directory, a description outside 150-500 characters or with no trigger clause, an empty `paths`, or an archived pack that is not `disable-model-invocation: true`.
 7. Create platform adapters only when they change installation, tool binding, activation, or output routing. Produce Gate F when wiring is in scope.
@@ -110,9 +110,9 @@ If any required gate is missing, failed, blocked, or `Unknown`, downgrade honest
 - `CHANGELOG.md`
 - `VALIDATION.md`
 
-Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
-`policies/capability-closure.yaml`, `policies/target-profiles.yaml`,
-`policies/behavior-evals.yaml`, `policies/topology-ownership.yaml`
+### Topology ownership
+- `policies/topology-ownership.yaml`
+- `references/topology-scan.md`
 
 ### Core contracts
 - `references/skill-pack-contract.md`
@@ -151,18 +151,16 @@ Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
 - `adapters/cursor.md`
 - `adapters/l9-platform.md`
 
-- Source material compiles into Skill IR first. Files render only from validated IR.
+### Compiler invariants
 - Deterministic work is executable code. LLM nodes are explicit, bounded, schema-constrained.
-- One primary family plus orthogonal traits determines runtime, validation, and required evals.
-- A platform convention belongs to a target profile, never to universal Skill semantics.
-- Every required capability is closed, or explicitly runtime-bound with probe and failure behavior.
+- A platform convention belongs to its adapter under `adapters/`, never to universal skill semantics.
 - **The existence of a DAG does not justify a Skill.** Skills represent capabilities;
   DAGs represent execution graphs. Create or retain a DAG-named Skill only when the
   capability itself is DAG authoring, validation, registration, or lifecycle
   management. Otherwise the DAG is a runtime artifact of the owning capability, the
   owning Skill references it, and no sibling DAG-specific Skill is created.
-  Enforced deterministically at `SCAN_SKILL_TOPOLOGY` by
-  `policies/topology-ownership.yaml`.
+  Enforced deterministically by `scripts/scan_skill_topology.py` (stage
+  `SCAN_SKILL_TOPOLOGY`, workflow step 4) against `policies/topology-ownership.yaml`.
 - Fail closed on material UNKNOWN. Never downgrade a blocking failure to success.
 
 ### Gate schemas
@@ -178,6 +176,7 @@ Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
 - `scripts/validate_skill_pack.py`
 - `scripts/validate_exemplary_skill.py`
 - `scripts/validate_smart_exemplary_spec.py`
+- `scripts/scan_skill_topology.py` (shared helpers: `scripts/_common.py`)
 - `scripts/package_skill.py`
 
 ## Failure Handling

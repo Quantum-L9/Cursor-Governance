@@ -51,6 +51,9 @@ def run(
         # environment named a governance checkout — as `make pr` does — and
         # a pytest run filled the session disk (ENOSPC in unrelated tests).
         "L9_CI_PARITY": "0",
+        # Same reason: left on, a case could start dockerd and build the
+        # Core-locked toolchain image (~500 MB) on the session disk.
+        "L9_DOCKER_SANDBOX": "0",
     }
     if path_prefix is not None:
         env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
@@ -731,3 +734,63 @@ def test_cached_dependency_stamp_still_installs_missing_declared_hook(tmp_path: 
         assert expected in lines, lines
     assert not (repo / ".git" / "hooks" / "pre-commit").exists()
     assert not (repo / ".git" / "hooks" / "commit-msg").exists()
+
+
+def _sandbox_stub(home: Path) -> tuple[Path, Path]:
+    """A governance checkout whose docker_sandbox.py only records how it was called."""
+    marker = home / "sandbox-calls.txt"
+    script = home / ".cursor-governance" / "ops" / "scripts" / "docker_sandbox.py"
+    script.parent.mkdir(parents=True)
+    script.write_text(
+        "import sys\n"
+        f"open({str(marker)!r}, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "sys.exit(1 if sys.argv[1] == 'status' else 0)\n"
+    )
+    stub_bin = home / "bin"
+    stub_bin.mkdir()
+    docker = stub_bin / "docker"
+    docker.write_text("#!/bin/sh\nexit 0\n")
+    docker.chmod(0o755)
+    return marker, stub_bin
+
+
+def _wait_for(path: Path, text: str, seconds: float = 10.0) -> bool:
+    import time
+
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.exists() and text in path.read_text():
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def test_unready_docker_sandbox_warms_in_the_background(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    marker, stub_bin = _sandbox_stub(home)
+    proc = run(
+        make_repo(tmp_path, "solo"),
+        home,
+        path_prefix=stub_bin,
+        extra_env={"L9_DOCKER_SANDBOX": "1", "L9_GOVERNANCE_DIR": str(home / ".cursor-governance")},
+    )
+    assert proc.returncode == 0
+    assert "docker sandbox not ready — warming in background" in proc.stdout
+    assert _wait_for(marker, "ensure"), marker.read_text() if marker.exists() else "no calls"
+    assert marker.read_text().splitlines()[0] == "status"
+
+
+def test_docker_sandbox_warm_is_opt_out(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    marker, stub_bin = _sandbox_stub(home)
+    proc = run(
+        make_repo(tmp_path, "solo"),
+        home,
+        path_prefix=stub_bin,
+        extra_env={"L9_DOCKER_SANDBOX": "0", "L9_GOVERNANCE_DIR": str(home / ".cursor-governance")},
+    )
+    assert proc.returncode == 0
+    assert "docker sandbox" not in proc.stdout
+    assert not marker.exists()

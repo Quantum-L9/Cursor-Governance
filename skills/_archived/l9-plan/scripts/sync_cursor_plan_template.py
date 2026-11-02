@@ -24,9 +24,12 @@ MIRROR_REL_PARTS = (".cursor", "plans", "_TEMPLATE.plan.md")
 
 
 def _repo_root_from_skill(skill_root: Path) -> Path:
-    # skills/l9-plan -> repo root
-    if skill_root.name == "l9-plan" and skill_root.parent.name == "skills":
-        return skill_root.parent.parent
+    # skills/l9-plan or skills/_archived/l9-plan -> repo root
+    parent = skill_root.parent
+    if parent.name == "_archived" and parent.parent.name == "skills":
+        parent = parent.parent
+    if skill_root.name == "l9-plan" and parent.name == "skills":
+        return parent.parent
     return skill_root.resolve()
 
 

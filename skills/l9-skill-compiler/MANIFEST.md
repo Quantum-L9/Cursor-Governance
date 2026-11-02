@@ -3,7 +3,7 @@ schema: 1
 parent: l9-skill-compiler
 layer: release
 role: manifest
-version: 3.8.0
+version: 3.9.0
 status: active
 -->
 
@@ -12,10 +12,10 @@ status: active
 ## Release
 
 - Name: `l9-skill-compiler`
-- Version: `3.8.0`
+- Version: `3.9.0`
 - Tier: `exemplary`
 - Canonical baseline: v3.3.0
-- Release date: 2026-08-13
+- Release date: 2026-11-02
 
 ## Source archives
 
@@ -36,11 +36,11 @@ status: active
 - Package runtime distributions as exact `skill.zip` with `SKILL.md` at archive root and no wrapper directory.
 - Keep source regression tests out of runtime ZIPs by default.
 - Keep `validate_*.py` scripts only when the runtime control plane explicitly references them.
+- 3.9.0: drop the v2 runtime references (deleted policies, Skill IR, family and capability-closure rules); keep and wire the v2 topology scan, which still enforces DAG ownership.
 
 ## Runtime distribution inventory
 
-The runtime ZIP contains the files below except source-only development files listed afterward.
-
+The runtime `skill.zip` built by `scripts/package_skill.py` contains exactly these 50 files (read from the archive built on 2026-11-02):
 
 - `CHANGELOG.md`
 - `MANIFEST.md`
@@ -53,6 +53,7 @@ The runtime ZIP contains the files below except source-only development files li
 - `adapters/l9-platform.md`
 - `adapters/manus.md`
 - `expertise_model.yaml`
+- `policies/topology-ownership.yaml`
 - `references/binding-runtime-directives.md`
 - `references/build_execution_contract.md`
 - `references/canonical-smart-exemplary-spec.yaml`
@@ -76,6 +77,7 @@ The runtime ZIP contains the files below except source-only development files li
 - `references/platform-portability.md`
 - `references/skill-pack-contract.md`
 - `references/smart-exemplary-skill-contract.md`
+- `references/topology-scan.md`
 - `schemas/gate-a-source-parse.schema.yaml`
 - `schemas/gate-b-expertise-model.schema.yaml`
 - `schemas/gate-c-file-tree.schema.yaml`
@@ -83,7 +85,9 @@ The runtime ZIP contains the files below except source-only development files li
 - `schemas/gate-e-validation-report.schema.yaml`
 - `schemas/gate-f-wiring-report.schema.yaml`
 - `schemas/gate-g-package-record.schema.yaml`
+- `scripts/_common.py`
 - `scripts/package_skill.py`
+- `scripts/scan_skill_topology.py`
 - `scripts/validate_exemplary_skill.py`
 - `scripts/validate_skill_pack.py`
 - `scripts/validate_smart_exemplary_spec.py`
@@ -91,4 +95,11 @@ The runtime ZIP contains the files below except source-only development files li
 
 ## Source-only development files
 
-- `tests/test_validators.py`
+Excluded from the runtime ZIP by default; included only with `--include-tests`:
+
+- `tests/fixtures/repo/skills/l9-dag-authoring/SKILL.md`
+- `tests/fixtures/repo/skills/l9-skill-compiler/SKILL.md`
+- `tests/fixtures/repo/skills/l9-structured-reasoning/SKILL.md`
+- `tests/fixtures/repo/skills/l9-wire-into-repo/SKILL.md`
+- `tests/test_topology_cli.py`
+- `tests/test_topology_decision.py`

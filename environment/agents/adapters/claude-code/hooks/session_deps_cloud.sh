@@ -606,6 +606,24 @@ if [ "${L9_CI_PARITY:-1}" != "0" ] && [ -f "$_CI_PARITY_INSTALL" ] && have setsi
   fi
 fi
 
+# --- Disposable Docker sandbox (ops/scripts/docker_sandbox.py) ---------------
+# Skills that test inside disposable containers (l9-pr-integration-testing)
+# need a daemon, a non-root runner and the Core-locked toolchain image. A cold
+# build takes about a minute, so it warms in a detached worker; a skill that
+# finds no READY receipt runs the same idempotent, single-flight ensure itself.
+# `status` reads the receipt only. Opt out with L9_DOCKER_SANDBOX=0.
+_SANDBOX_GOV="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+_SANDBOX="$_SANDBOX_GOV/ops/scripts/docker_sandbox.py"
+if [ "${L9_DOCKER_SANDBOX:-1}" != "0" ] && [ -f "$_SANDBOX" ] && have docker && have setsid; then
+  _SANDBOX_PY="$_SANDBOX_GOV/.venv/bin/python"
+  [ -x "$_SANDBOX_PY" ] || _SANDBOX_PY="python3"
+  if ! "$_SANDBOX_PY" "$_SANDBOX" status >/dev/null 2>&1; then
+    setsid "$_SANDBOX_PY" "$_SANDBOX" ensure \
+      >"$STAMP_DIR/docker-sandbox.log" 2>&1 </dev/null &
+    echo "session-deps: docker sandbox not ready — warming in background (see $STAMP_DIR/docker-sandbox.log)"
+  fi
+fi
+
 # --- Synchronous entry: report per repository, work only where needed -------
 ROOTS="$(resolve_roots)"
 PENDING=""

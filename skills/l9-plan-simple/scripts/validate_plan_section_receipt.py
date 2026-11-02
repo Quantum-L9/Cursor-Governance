@@ -24,6 +24,7 @@ from plan_sections import (
     md_section_presence,
     missing_labels,
     receipt_status,
+    unfilled_parameters,
 )
 
 RECEIPT_SCHEMA = SKILL_ROOT / "schemas" / "plan-section-receipt.schema.json"
@@ -129,6 +130,7 @@ def check_receipt(path: Path) -> list[str]:
     observed_md = md_section_presence(md_text)
     observed_fm = frontmatter_presence(md_text)
     observed_swap = execute_swap_presence(md_text)
+    observed_unfilled = unfilled_parameters(md_text, plan)
     gar_invoked = bool((receipt.get("gar_upstream") or {}).get("invoked"))
 
     if receipt.get("json_sections") != observed_json:
@@ -139,16 +141,25 @@ def check_receipt(path: Path) -> list[str]:
         errors.append("G_RECEIPT_STALE: frontmatter does not match current .plan.md")
     if receipt.get("execute_swap") != observed_swap:
         errors.append("G_RECEIPT_STALE: execute_swap does not match current .plan.md")
+    if "unfilled_parameters" in receipt and receipt["unfilled_parameters"] != observed_unfilled:
+        errors.append("G_RECEIPT_STALE: unfilled_parameters does not match current .plan.md")
 
     observed_status = receipt_status(
-        observed_json, observed_md, observed_fm, observed_swap, gar_invoked
+        observed_json, observed_md, observed_fm, observed_swap, gar_invoked, observed_unfilled
     )
     if receipt.get("status") != observed_status:
         errors.append(
             f"G_RECEIPT_STATUS: claimed {receipt.get('status')!r} != observed {observed_status!r}"
         )
     errors.extend(
-        missing_labels(observed_json, observed_md, observed_fm, observed_swap, gar_invoked)
+        missing_labels(
+            observed_json,
+            observed_md,
+            observed_fm,
+            observed_swap,
+            gar_invoked,
+            observed_unfilled,
+        )
     )
 
     out: list[str] = []
