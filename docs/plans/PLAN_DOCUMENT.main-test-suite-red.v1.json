@@ -1,0 +1,286 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Fix five Test Suite failures on main",
+  "objective": "Make the full Test Suite green on main (23dc060e) by repairing the root cause of each of the five failures that have been red since at least 8b62bfb3, without weakening any gate, skipping any test, or loosening any assertion.",
+  "success_criteria": [
+    "V1: no module outside ops/scripts/org_dotgithub.py calls the <owner>/.github REST route, and the org_template_read probe still reports a REST-only per-transport verdict",
+    "V2: test_egress_boundary.py passes because the two Memory 3.0 OAuth audience files are allowlisted with a CANONICAL_LAW §8.10 reason, not because a forbidden token was removed from the scanner",
+    "V3: test_commit_verification_validator.py passes because integrate.py no longer emits core.hooksPath=/dev/null, with the integration skill's own tests still green",
+    "V4: test_resolve_changed_files_merge_base.py passes on a checkout with zero commits ahead of origin/main and still proves a real change set resolves to `comparison`",
+    "V5: run_python_test_suites.py --profile ci reports 0 failed"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/org_dotgithub.py and ops/scripts/lib/gh_auth_probe.sh (REST probe ownership)",
+      "ops/config/memory-egress-allowlist.json (two allowlist entries)",
+      "skills/l9-pr-integration-testing/scripts/integrate.py (two redundant hook-disable flags)",
+      "tests/ops/scripts/test_resolve_changed_files_merge_base.py (live-checkout assumption)",
+      "tests for each change"
+    ],
+    "out": [
+      "Changing ops/scripts/validate_memory_egress_boundary.py forbidden tokens or enforce mode",
+      "Changing the commit-verification contract or adding a breakglass",
+      "Changing resolve_changed_files.sh behavior",
+      "Open PRs #798 and #801",
+      "The stale ~/.claude/skills and ~/.cursor/plans symlinks into old task worktrees"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": ".venv/bin/python -m pytest the five failing node ids on a worktree at origin/main 23dc060e",
+      "pass_criteria": "same five failures reproduce locally with the CI messages",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "read Test Suite logs for 8b62bfb3, a6c139a6, 5871bf8c, 23dc060e",
+      "pass_criteria": "the same five failures exist before #800/#802/#803",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "bind workspace: agent/claude-code/main-test-suite-red at origin/main 23dc060e; hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "clean worktree on the current main head",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Move the REST-only org template probe into org_dotgithub.py (rest_probe + `probe-rest <owner> <path>` CLI, exit 0 OK / 1 DENIED) and call it from gh_auth_probe.sh, keeping org_template_read a REST-only verdict",
+      "files": [
+        "ops/scripts/org_dotgithub.py",
+        "ops/scripts/lib/gh_auth_probe.sh",
+        "ops/scripts/tests/test_org_dotgithub.py",
+        "ops/scripts/tests/test_gh_auth_probe.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "gh_auth_probe.sh gh_capability_probe org_template_read call; org_dotgithub.py after read_org_file",
+      "leverage_rank": 2,
+      "shared_root_cause": "a second module talking to <owner>/.github over REST"
+    },
+    {
+      "id": "T2",
+      "task": "Allowlist the Memory 3.0 OAuth resource identifier in memory-oauth-connector.yaml and memory-auth0-onboarding.yaml, citing CANONICAL_LAW §8.10 and ADR-100",
+      "files": ["ops/config/memory-egress-allowlist.json"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "entries[] in ops/config/memory-egress-allowlist.json",
+      "leverage_rank": 1,
+      "shared_root_cause": "#791 added sanctioned native-MCP audience config without an allowlist row"
+    },
+    {
+      "id": "T3",
+      "task": "Remove the redundant core.hooksPath=/dev/null from integrate.py git() and docker_git(); the scratch repos are fresh init/clone with GIT_CONFIG_GLOBAL=/dev/null and GIT_CONFIG_NOSYSTEM=1, so no hook is configured",
+      "files": [
+        "skills/l9-pr-integration-testing/scripts/integrate.py",
+        "tests/skills/l9_pr_integration_testing/test_runner_contract.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "integrate.py:198 git() and :596 docker_git()",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T4",
+      "task": "Make the live-repo resolver test correct for a checkout with no commits ahead (expect SOURCE:empty) and add a temp-repo test proving a branch with a commit ahead resolves to `comparison`",
+      "files": ["tests/ops/scripts/test_resolve_changed_files_merge_base.py"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "test_live_repo_resolves_a_real_change_set",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T5",
+      "task": "Run the full CI test profile, then close session-debt item main-test-suite-5-failures with the run as evidence",
+      "files": [".l9/autonomy/session-debt.json"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T1", "T2", "T3", "T4"],
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": ["T2", "T1", "T3", "T4", "T5"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "each of the five tests passes in isolation",
+      "unlocks": "full-suite run"
+    },
+    {
+      "id": "M2",
+      "outcome": "full CI profile reports 0 failed",
+      "unlocks": "publish via make pr"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "V1, V2, V3, V4 pass; integration skill tests pass; test_gh_auth_probe.sh passes",
+      "no_go_action": "stop and re-diagnose the failing item; do not loosen the assertion"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "V5 passes",
+      "no_go_action": "classify any new failure (product/test/fixture/environment/flake) before touching it"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "docs/DEGRADED_MODE_CONTRACT.md",
+      "action": "n_a",
+      "reason": "the org_template_read probe keeps its REST-only meaning; only the module that issues the call moves"
+    },
+    {
+      "surface": "AGENTS.md / CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "no law changes; the allowlist reason cites existing §8.10"
+    },
+    {
+      "surface": "skills/l9-pr-integration-testing/SKILL.md",
+      "action": "n_a",
+      "reason": "scratch-repo isolation behavior is unchanged; only a redundant flag is removed"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is memory.quantumaipartners.com/mcp a raw provider route that §8.10 still forbids, rather than the native MCP audience it authorizes?",
+      "Could a hook fire in integrate.py's scratch repos once the flag is gone (templateDir, repo-local config, docker image config)?",
+      "Does anything read org_template_read as 'template readable by any transport' rather than 'REST works'?",
+      "Is SOURCE:empty on a zero-ahead checkout the resolver's correct answer, or the false-PASS regression the test guards?"
+    ],
+    "assumed_false_ifs": [
+      "the egress validator flags memory.quantumaipartners.com because §8.10 does not cover OAuth audiences",
+      "git clone into a fresh dir applies hooks from a template directory despite GIT_CONFIG_GLOBAL=/dev/null",
+      "a merge-base failure on the CI checkout is being reported as empty"
+    ],
+    "blast_radius": "governance gates that run on every PR and on main; a wrong allowlist entry or probe change misreports egress or GitHub capability on every surface",
+    "rollback": "revert the single fix commit; each todo touches disjoint files"
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T2", "T1", "T3", "T4", "T5"],
+    "shared_causes": [
+      "gates on main were red before these merges and PR CI runs only changed-file subsets, so the full-suite failures never blocked a PR"
+    ],
+    "deletions_or_consolidations": [
+      "remove the duplicated <owner>/.github REST call from gh_auth_probe.sh",
+      "remove two redundant core.hooksPath flags"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "allowlisting a forbidden token hides a real provider side door",
+      "mitigation": "entry is path-scoped to the two audience files, cites §8.10 and ADR-100, and leaves the token forbidden everywhere else"
+    },
+    {
+      "risk": "the probe change alters what install.sh records in the bootstrap receipt",
+      "mitigation": "keep REST-only semantics and the OK/DENIED/UNKNOWN vocabulary; test_gh_auth_probe.sh T6/T7 and test_claude_bootstrap_receipt_revision.py must stay green"
+    },
+    {
+      "risk": "removing the hook flag lets a hook run against untrusted PR code",
+      "mitigation": "verify before editing that the scratch repos carry no hooksPath and no non-sample hooks; add a test asserting none"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does org_dotgithub.gh_api shell out to `gh api` so the stubbed gh in test_gh_auth_probe.sh still controls the probe?",
+      "decision_effect": "if not, T1's shell test needs a different stub",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Does the l9-pr-integration-testing Docker image set a system or global core.hooksPath?",
+      "decision_effect": "if it does, removing the flag in docker_git() needs an isolation fix instead",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest -q ops/scripts/tests/test_org_dotgithub.py && bash ops/scripts/tests/test_gh_auth_probe.sh && .venv/bin/python -m pytest -q tests/ops/scripts/test_claude_bootstrap_receipt_revision.py",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python -m pytest -q tests/ops/memory/test_egress_boundary.py && .venv/bin/python ops/scripts/validate_memory_egress_boundary.py --enforce",
+      "pass_criteria": "all pass; findings_unlisted == 0",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": ".venv/bin/python -m pytest -q tests/ops/scripts/test_commit_verification_validator.py tests/skills/l9_pr_integration_testing",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": ".venv/bin/python -m pytest -q tests/ops/scripts/test_resolve_changed_files_merge_base.py",
+      "pass_criteria": "all pass on a zero-ahead checkout and on a branch with commits ahead",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": ".venv/bin/python ops/scripts/run_python_test_suites.py --profile ci",
+      "pass_criteria": "0 failed",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "changed-file hooks PASS in the make pr gate",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "Build then stacked make pr",
+    "stop_reason": "plan validated; root causes reproduced and located; implementation and validations V1-V6 not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/org_dotgithub.py",
+      "ops/scripts/lib/gh_auth_probe.sh",
+      "ops/scripts/tests/test_org_dotgithub.py",
+      "ops/scripts/tests/test_gh_auth_probe.sh",
+      "ops/config/memory-egress-allowlist.json",
+      "skills/l9-pr-integration-testing/scripts/integrate.py",
+      "tests/skills/l9_pr_integration_testing/test_runner_contract.py",
+      "tests/ops/scripts/test_resolve_changed_files_merge_base.py"
+    ],
+    "must_not_modify": [
+      "ops/scripts/validate_memory_egress_boundary.py",
+      "ops/config/commit-verification-contract.json",
+      "ops/scripts/resolve_changed_files.sh",
+      ".github/workflows/"
+    ],
+    "preserved_contracts": [
+      "CANONICAL_LAW §8.10 memory egress boundary",
+      "l9-commit-verification-integrity contract",
+      "org_dotgithub single-reader rule",
+      "per-transport GitHub capability verdicts (DEGRADED_MODE_CONTRACT)"
+    ],
+    "validation_commands": [
+      ".venv/bin/python ops/scripts/run_python_test_suites.py --profile ci",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard",
+  "estimate": "1 PR"
+}
