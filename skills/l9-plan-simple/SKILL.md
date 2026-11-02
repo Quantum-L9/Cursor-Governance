@@ -22,8 +22,8 @@ metadata:
   - validation
   owner: igor_beylin
   status: active
-  version: 1.3.0
-  updated: 2026-09-02
+  version: 1.4.0
+  updated: 2026-11-02
 ---
 
 # Execution Planning (Cursor Build · Embedded)
@@ -105,12 +105,14 @@ Steps 0–9 are **identical in both modes**.
 
    ```bash
    # from the repository root
-   python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build   # default
+   python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace .   # default
    python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded       # caller-owned
    ```
 
+   The renderer fills **every** template section from PLAN_DOCUMENT — there is no seed head and no appended "fill guide". `--workspace .` binds the immutable baseline (repository, branch, HEAD, dirty) with read-only git probes; without it the baseline renders `unbound`. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name); a property naming none renders `unbound`. A value PLAN_DOCUMENT does not carry renders `unknown — …`. Resolve `unbound`/`unknown` values in PLAN_DOCUMENT and re-render — do not hand-edit the projection.
+
    Write to `.cursor/plans/<slug>_<8hex>.plan.md` in `cursor-build`; in `embedded`, return the projection to the caller (a path only if the caller asked for one). Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
-11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings. FAIL → not ready:
+11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings, and records `unfilled_parameters`: any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready:
 
     ```bash
     # from the repository root
