@@ -84,6 +84,26 @@ python3 scripts/validate_gmp_report.py reports/gmp/GMP-Report-###-Description.md
 
 ---
 
+## MANDATORY: Publish the report with the PR
+
+A GMP report lives in the **work clone** at `reports/gmp/` (created when absent)
+and is **committed and published with the PR** — even when the repo's
+`.gitignore` treats `reports/` as local-only. Never leave it in a scratchpad,
+never substitute the PR description for it, never report "it stayed local".
+
+```bash
+GOV="${HOME}/.cursor-governance"
+(cd "$GOV" && PYTHONPATH="$GOV" "$GOV/.venv/bin/python" -m ops.reports.publish gmp \
+  --workspace "$WS" reports/gmp/GMP-Report-###-Description.md)
+```
+
+It copies a report written elsewhere into `reports/gmp/`, force-adds it by exact
+path, and commits only that file. With no open PR yet, run it **before**
+`authorize-release` / `make pr` so the commit rides the publication. With a PR
+already open for the branch it also pushes to that PR (never force).
+
+---
+
 ## Report Format Summary
 
 ### Naming

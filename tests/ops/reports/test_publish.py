@@ -6,6 +6,7 @@ Real git, no mocks: a work clone with a bare ``origin``, on a PR branch, with
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -218,3 +219,44 @@ def test_gmp_executor_writes_into_reports_gmp(tmp_path: Path) -> None:
     assert path.read_text(encoding="utf-8").startswith("# GMP-130\n")
     # The next id sees reports/gmp/.
     assert gmp._next_gmp_id() == "GMP-131"
+
+
+# --- Agent-authored GMP reports ---------------------------------------------------
+
+
+def _report(where: Path, name: str = "GMP-Report-001-GAR-Projection-Binding.md") -> Path:
+    where.mkdir(parents=True, exist_ok=True)
+    path = where / name
+    path.write_text("**ID:** GMP-001 | **Task:** x\n\n## TODO PLAN\n", encoding="utf-8")
+    return path
+
+
+def test_scratch_gmp_report_is_placed_and_committed_without_open_pr(
+    clone: Path, tmp_path: Path
+) -> None:
+    scratch = _report(tmp_path / "scratchpad")
+    assert rp.main(["gmp", "--workspace", str(clone), str(scratch)]) == 0
+    dest = clone / "reports" / "gmp" / scratch.name
+    assert dest.is_file() and scratch.is_file()  # scratch outside the clone is left alone
+    rel = f"reports/gmp/{scratch.name}"
+    assert _git(clone, "show", "--name-only", "--format=", "HEAD") == rel
+    # No open PR for this branch: committed, never a first-publication push.
+    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
+
+
+def test_gmp_report_is_pushed_when_branch_has_open_pr(clone: Path) -> None:
+    summary = clone / ".l9" / "pr" / "pr-summary.json"
+    summary.parent.mkdir(parents=True)
+    summary.write_text(json.dumps({"number": 9, "repo": "Org/work", "head": BRANCH}), "utf-8")
+    legacy = _report(clone / "reports")  # legacy root location inside the clone
+    paths, result = rp.publish_gmp_report(clone, [legacy])
+    assert result.status == "pushed", result
+    assert paths == [clone / "reports" / "gmp" / legacy.name]
+    assert not legacy.exists()  # no second, untracked copy left in the clone
+    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "HEAD")
+
+
+def test_gmp_cli_refuses_non_gmp_markdown(clone: Path, tmp_path: Path) -> None:
+    other = tmp_path / "notes.md"
+    other.write_text("x\n", encoding="utf-8")
+    assert rp.main(["gmp", "--workspace", str(clone), str(other)]) == 2

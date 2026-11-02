@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-02T22:34:23Z'
+generated_utc: '2026-11-02T22:39:28Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:35fc636e19e4219638a28565246754bc4d379b4c3fde483bb281c72f078d8172
+source_tree_digest: sha256:b1074767901a3b8f9f364fdea2aabffcbbd43d83b2b60df2dbb5baca06f815de
 summary:
   total_mdc_files: 69
   always_apply_true: 36
@@ -1206,7 +1206,7 @@ rules:
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
   line_count: 96
-  content_digest: sha256:da4986bb9ce7dec71891b40b89f955559629032455c16351fa70e9f317b19f5d
+  content_digest: sha256:3f4b95217fc26b3b0c177e56538808711ac8fae49896b530e60605202cc38a10
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1254,8 +1254,8 @@ rules:
   globs: null
   first_heading: GMP Contract Enforcement (L9)
   has_yaml_frontmatter: true
-  line_count: 135
-  content_digest: sha256:335d5cfec36e89a79236ad67aec9e85251e334fa94e6c41e0c577617ec190611
+  line_count: 155
+  content_digest: sha256:8af2d6b4488fd4029877d1657b05f454d3ede3b2d4aeddba14216fc9feb6d1e2
   authority: canonical_global
   context_cost: moderate
   deprecated: false

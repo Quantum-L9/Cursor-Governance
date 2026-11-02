@@ -25,6 +25,7 @@ CLI (any surface, e.g. Cursor or a manual ``/end-session``)::
 
     python -m ops.reports.publish dirs --workspace <repo>
     python -m ops.reports.publish handoffs --workspace <repo>
+    python -m ops.reports.publish gmp --workspace <repo> <GMP-Report-NNN-Name.md>...
 """
 
 from __future__ import annotations
@@ -246,8 +247,13 @@ def publish(
     message: str,
     expected_branch: str = "",
     remote: str = "origin",
+    allow_push: bool = True,
 ) -> PublishResult:
-    """Commit exactly ``paths`` and push to ``expected_branch`` (the PR head)."""
+    """Commit exactly ``paths`` and push to ``expected_branch`` (the PR head).
+
+    ``allow_push=False`` commits only: a branch with no open PR is first
+    published by ``make pr`` (CANONICAL_LAW §6.2.8), never by this module.
+    """
     root = Path(root)
     if not paths:
         return PublishResult("skipped", "no report paths")
@@ -282,6 +288,10 @@ def publish(
             sha = _git(root, "rev-parse", "HEAD").stdout.strip()
             if mode == "commit":
                 return PublishResult("committed", f"{PUBLISH_ENV}=commit: not pushed", sha)
+            if not allow_push:
+                return PublishResult(
+                    "committed", f"no open PR for {branch}: make pr publishes it", sha
+                )
             return _push(root, branch, remote, sha)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return PublishResult("failed", f"{type(exc).__name__}: {str(exc)[:200]}")
@@ -389,6 +399,55 @@ def _publish_handoff(
     return path, result
 
 
+# --- GMP reports ---------------------------------------------------------------
+
+
+def current_branch(root: Path) -> str:
+    try:
+        return _git(root, "symbolic-ref", "--quiet", "--short", "HEAD").stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def publish_gmp_report(root: Path, sources: Sequence[Path]) -> tuple[list[Path], PublishResult]:
+    """Place GMP reports in ``reports/gmp/`` and commit them with the work.
+
+    A report written anywhere (scratchpad, repo root, legacy ``reports/``) is
+    copied into ``reports/gmp/`` under its own name. It is committed even when
+    ``reports/`` is gitignored. It is pushed only when this branch already has
+    an open PR (``.l9/pr/pr-summary.json`` names it as head); otherwise the
+    commit rides the next ``make pr``.
+    """
+    root = Path(root).resolve()
+    target_dir = report_dir(root, ReportKind.GMP)
+    placed: list[Path] = []
+    for source in sources:
+        src = Path(source).expanduser().resolve()
+        if not src.is_file() or src.suffix != ".md" or not src.name.upper().startswith("GMP"):
+            raise ValueError(f"not a GMP markdown report: {source}")
+        dest = target_dir / src.name
+        if src != dest:
+            dest.write_text(clean_markdown(src.read_text(encoding="utf-8")), encoding="utf-8")
+            with contextlib.suppress(ValueError):
+                # A copy left in the clone (legacy reports/ root) would be a
+                # second, untracked SSOT; scratch outside the clone is left alone.
+                src.relative_to(root)
+                src.unlink()
+        placed.append(dest)
+    branch = current_branch(root)
+    summary = pr_summary(root) or {}
+    open_pr = bool(branch) and str(summary.get("head") or "") == branch
+    names = ", ".join(p.name for p in placed)
+    result = publish(
+        root,
+        placed,
+        message=f"docs(reports): GMP report {names}",
+        expected_branch=branch if open_pr else "",
+        allow_push=open_pr,
+    )
+    return placed, result
+
+
 def _publication_from_summary(root: Path) -> dict[str, Any]:
     summary = pr_summary(root)
     if summary is None:
@@ -450,9 +509,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     for name, help_text in (
         ("dirs", "create reports/gmp and reports/end-session/{session,governance}-handoff"),
         ("handoffs", "publish .l9/memory handoff briefs to reports/end-session/ on the PR"),
+        ("gmp", "place GMP report(s) in reports/gmp/ and commit them (push if a PR is open)"),
     ):
         cmd = sub.add_parser(name, help=help_text)
         cmd.add_argument("--workspace", default=os.getcwd(), help="the work clone")
+        if name == "gmp":
+            cmd.add_argument("reports", nargs="+", type=Path, help="GMP report .md file(s)")
         if name == "handoffs":
             cmd.add_argument("--session-id", default=os.environ.get("CLAUDE_SESSION_ID", ""))
             cmd.add_argument("--agent-id", default=os.environ.get("L9_MEMORY_AGENT_ID", ""))
@@ -462,6 +524,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         for path in ensure_layout(root):
             print(_rel(path, root))
         return 0
+    if args.command == "gmp":
+        try:
+            paths, result = publish_gmp_report(root, args.reports)
+        except ValueError as exc:
+            print(f"gmp report: not published ({exc})")
+            return 2
+        print(result.line(paths, root))
+        return 0 if result.ok else 1
     return _cli_handoffs(root, args.session_id, args.agent_id)
 
 

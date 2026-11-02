@@ -458,7 +458,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/81-gmp-audit.mdc",
-      "source_sha256": "da4986bb9ce7dec71891b40b89f955559629032455c16351fa70e9f317b19f5d",
+      "source_sha256": "3f4b95217fc26b3b0c177e56538808711ac8fae49896b530e60605202cc38a10",
       "stem": "81-gmp-audit"
     },
     {
@@ -474,9 +474,9 @@
       "alias": null,
       "class": "always",
       "output": "83-gmp-contracts.md",
-      "output_sha256": "422c93210ad06219a19b16d4600b8a575fc033fd04af77afef77ccf4b7312984",
+      "output_sha256": "46ceef151dbab3dff722da49c3fb63b661459f939a29599c0589f76a1d8939a6",
       "source": "rules/83-gmp-contracts.mdc",
-      "source_sha256": "335d5cfec36e89a79236ad67aec9e85251e334fa94e6c41e0c577617ec190611",
+      "source_sha256": "8af2d6b4488fd4029877d1657b05f454d3ede3b2d4aeddba14216fc9feb6d1e2",
       "stem": "83-gmp-contracts"
     },
     {
@@ -641,5 +641,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 69
   },
-  "tree_sha256": "8431ce8c456a135ab9abd50313d2c1d9d5d10f6ccab66da7c7c6ef79a23232e0"
+  "tree_sha256": "930aeaa3897beed7ef8e59d82f3ab7820354681e9a4e3cb3db215e7c54d80aa0"
 }
