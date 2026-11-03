@@ -456,58 +456,113 @@ def test_claude_stop_wrapper_scopes_the_gate_to_the_session_roots(tmp_path: Path
     ]
 
 
-# --- Handoff: one end-of-session record -------------------------------------
+# --- Handoff: what is still to do, and environment friction ------------------
+
+GOVERNANCE_URL = "https://github.com/Quantum-L9/Cursor-Governance.git"
 
 
-def test_handoff_reports_each_workspace_with_the_gates_own_publish_verdict(
-    origin: Path, tmp_path: Path
+def as_governance(root: Path) -> Path:
+    """Point a test clone's origin URL at Cursor-Governance (pushes still go to
+    the local bare origin through pushurl)."""
+    bare = git(root, "config", "--get", "remote.origin.url")
+    git(root, "config", "remote.origin.pushurl", bare)
+    git(root, "config", "remote.origin.url", GOVERNANCE_URL)
+    git(root, "config", "url." + bare + ".insteadOf", GOVERNANCE_URL)
+    return root
+
+
+@pytest.mark.parametrize(
+    ("url", "governed"),
+    [
+        ("https://github.com/Quantum-L9/Cursor-Governance.git", True),
+        ("git@github.com:quantum-l9/cursor-governance.git", True),
+        ("http://proxy@127.0.0.1:1/git/Quantum-L9/Cursor-Governance", True),
+        ("https://github.com/Quantum-L9/l9-ci-core", False),
+        ("https://github.com/someone/not-cursor-governance.git", False),
+    ],
+)
+def test_governance_workspace_is_recognised_by_origin(
+    clone: Path, url: str, governed: bool
 ) -> None:
-    pushed = make_clone(origin, tmp_path / "pushed")
-    commit_on_branch(pushed, "feat/pushed")
-    git(pushed, "push", "-q", "-u", "origin", "feat/pushed")
-    # A second clone of the seeded origin: make_clone would re-seed an
-    # identical base commit, which git refuses as empty.
-    unpushed = tmp_path / "unpushed"
-    subprocess.run(["git", "clone", "-q", str(origin), str(unpushed)], check=True)
-    git(unpushed, "config", "user.email", "t@example.com")
-    git(unpushed, "config", "user.name", "t")
-    # Distinct content: an identical tree, parent, author and second would give
-    # the same SHA as the pushed commit, which origin genuinely has.
-    git(unpushed, "checkout", "-q", "-b", "feat/local")
-    (unpushed / "local.txt").write_text("local only", encoding="utf-8")
-    git(unpushed, "add", "-A")
-    git(unpushed, "commit", "-q", "-m", "local work")
-    doc = session_debt.build_handoff([pushed, unpushed], [])
-    publish = {Path(ws["workspace"]).name: ws["publish"] for ws in doc["workspaces"]}
-    assert publish == {"pushed": "published", "unpushed": "unpushed"}
-    assert doc["clean"] is False and doc["publish_debt"][0]["branch"] == "feat/local"
+    git(clone, "config", "remote.origin.url", url)
+    assert session_debt.is_governance_workspace(clone) is governed
 
 
-def test_handoff_names_uncommitted_paths_without_judging_them(clone: Path) -> None:
+def test_handoff_covers_only_cursor_governance_workspaces(origin: Path, tmp_path: Path) -> None:
+    governance = as_governance(make_clone(origin, tmp_path / "gov"))
+    other = tmp_path / "other"
+    subprocess.run(["git", "clone", "-q", str(origin), str(other)], check=True)
+    git(other, "config", "user.email", "t@example.com")
+    git(other, "config", "user.name", "t")
+    git(other, "checkout", "-q", "-b", "feat/elsewhere")
+    (other / "x.txt").write_text("x", encoding="utf-8")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "unpushed elsewhere")
+    doc = session_debt.build_handoff([governance, other], [])
+    assert doc["workspaces"] == [str(governance.resolve())]
+    assert doc["todo"]["unpushed"] == [], "another repository's debt is not this handoff's"
+
+
+def test_handoff_lists_unpushed_work_as_a_todo(clone: Path) -> None:
+    commit_on_branch(as_governance(clone), "feat/local")
+    doc = session_debt.build_handoff([clone], [])
+    assert doc["clean"] is False
+    assert [i["branch"] for i in doc["todo"]["unpushed"]] == ["feat/local"]
+    assert "**Push** `feat/local`" in session_debt.render_handoff(doc)
+
+
+def test_handoff_omits_uncommitted_files_and_pushed_state(clone: Path) -> None:
+    as_governance(clone)
     (clone / "scratch.txt").write_text("x", encoding="utf-8")
     doc = session_debt.build_handoff([clone], [])
-    (ws,) = doc["workspaces"]
-    assert ws["publish"] == "default-branch" and ws["uncommitted"] == 1
-    assert ws["uncommitted_sample"] == ["scratch.txt"]
-    assert doc["clean"] is True, "a dirty tree is reported, not a gate failure"
-    assert "**Uncommitted** 1 path(s)" in session_debt.render_handoff(doc)
+    text = session_debt.render_handoff(doc)
+    assert doc["clean"] is True and "scratch.txt" not in text
+    # Not the bare word: pytest's tmp path for this test contains it.
+    assert "**Uncommitted**" not in text and '"uncommitted' not in text, (
+        "a handoff is a to-do list, not an inventory"
+    )
 
 
 def test_handoff_carries_deferrals_for_a_human(clone: Path) -> None:
+    as_governance(clone)
     assert _run(clone, "record", "f-1", "--detail", "drift in settings").returncode == 0
     assert _run(clone, "defer", "f-1", "--reason", "needs org admin").returncode == 0
-    doc = session_debt.build_handoff([clone], [])
-    assert doc["clean"] is True
-    assert [f["id"] for f in doc["deferred_findings"]] == ["f-1"]
+    doc = session_debt.build_handoff([clone], ["merge #1"])
+    assert [f["id"] for f in doc["todo"]["deferred_for_a_human"]] == ["f-1"]
     text = session_debt.render_handoff(doc)
-    assert "**Deferred, needs a human** `f-1`" in text and "needs org admin" in text
+    assert "**Human decision** `f-1`" in text and "needs org admin" in text
+    assert "- merge #1" in text
+
+
+def test_friction_is_recorded_in_governance_and_never_blocks(clone: Path) -> None:
+    as_governance(clone)
+    result = _run(
+        clone,
+        "friction",
+        "docker-429",
+        "--detail",
+        "Docker Hub rate limit",
+        "--workaround",
+        "pulled from mirror.gcr.io",
+    )
+    assert result.returncode == 0, result.stderr
+    assert _run(clone, "check").returncode == 0, "friction is not abandoned work"
+    doc = session_debt.build_handoff([clone], [])
+    assert [f["id"] for f in doc["friction"]] == ["docker-429"]
+    assert "Worked around: pulled from mirror.gcr.io" in session_debt.render_handoff(doc)
+    assert _run(clone, "close", "docker-429", "--evidence", "mirror fallback").returncode == 0
+    assert session_debt.build_handoff([clone], [])["friction"] == []
+
+
+def test_friction_outside_governance_is_refused(clone: Path) -> None:
+    git(clone, "config", "remote.origin.url", "https://github.com/Quantum-L9/l9-ci-core")
+    result = _run(clone, "friction", "x", "--detail", "y")
+    assert result.returncode == 1 and "Cursor-Governance" in result.stderr
 
 
 def test_rendered_handoff_round_trips_its_document(clone: Path) -> None:
-    doc = session_debt.build_handoff([clone], ["merge #1", "fence ```` inside"])
-    text = session_debt.render_handoff(doc)
-    assert "## Next" in text and "- merge #1" in text
-    assert session_debt.read_handoff(text) == doc
+    doc = session_debt.build_handoff([as_governance(clone)], ["merge #1", "fence ```` inside"])
+    assert session_debt.read_handoff(session_debt.render_handoff(doc)) == doc
 
 
 def test_read_handoff_refuses_a_document_of_another_schema() -> None:
@@ -518,10 +573,10 @@ def test_read_handoff_refuses_a_document_of_another_schema() -> None:
 
 
 def test_handoff_cli_writes_one_file_and_never_fails(clone: Path) -> None:
-    commit_on_branch(clone, "feat/unpushed")
+    commit_on_branch(as_governance(clone), "feat/unpushed")
     out = clone / "out" / "handoff.md"
     result = _run(clone, "handoff", "--out", str(out), "--next", "push it")
     assert result.returncode == 0, "a report, not a gate"
     assert "open debt" in result.stdout
     doc = session_debt.read_handoff(out.read_text(encoding="utf-8"))
-    assert doc["next"] == ["push it"] and doc["clean"] is False
+    assert doc["todo"]["next"] == ["push it"] and doc["clean"] is False

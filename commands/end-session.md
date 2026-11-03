@@ -95,8 +95,10 @@ Skip only with `GOVERNANCE_BACKUP_SKIP=1`.
 
 ### Phase 5 — CONFIRMATION
 
-Write one handoff file, not separate briefs. Its workspace table and open or
-deferred items come from the debt ledger and git; add judgment as `--next`:
+Write one handoff file, not separate briefs. It lists what is still to be done
+and environment friction for Cursor-Governance workspaces, from the debt ledger
+and git; record friction with `session_debt.py friction` as it happens, and add
+judgment as `--next`:
 
 ```bash
 "$GRAPHITI_PY" "$GOV/ops/autonomy/session_debt.py" --root "$WS" \

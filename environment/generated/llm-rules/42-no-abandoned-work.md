@@ -30,14 +30,19 @@ python3 ops/autonomy/session_debt.py check           # exit 2 when anything is
 python3 ops/autonomy/session_debt.py record <id> --detail "..."
 python3 ops/autonomy/session_debt.py close  <id> --evidence "..."
 python3 ops/autonomy/session_debt.py defer  <id> --reason "..."
-python3 ops/autonomy/session_debt.py handoff --out <file> [--next "..."]  # one end-of-session handoff
+python3 ops/autonomy/session_debt.py friction <id> --detail "..." [--workaround "..."]
+python3 ops/autonomy/session_debt.py handoff --out <file> [--next "..."]  # to-dos + friction
 ```
 
-`handoff` is the end-of-session record: one Markdown file for a person with the
-same facts embedded as JSON (`l9.session-handoff.v1`) for the next agent, so the
-two cannot disagree. Each workspace's publish state is the gate's own verdict;
-uncommitted paths are listed but not judged. It never fails the caller. Write it
-instead of hand-written briefs; add judgment with `--next`.
+`handoff` is the end-of-session record, scoped to Cursor-Governance workspaces
+(origin `Quantum-L9/Cursor-Governance`). It lists only what is still to be done
+(unpushed branches, open findings, deferrals awaiting a human, `--next` steps)
+and environment friction; pushed branches and uncommitted files are omitted.
+One Markdown file carries the same facts as embedded JSON
+(`l9.session-handoff.v1`), so the two cannot disagree, and it never fails the
+caller. `friction` records something in the environment that got in the way:
+it lands in a Cursor-Governance ledger whatever repository the session worked
+in, never blocks a turn, and is cleared by `close` once governance fixes it.
 
 `defer` is deliberately weaker than `close`. It records that the thing is *not*
 fixed and keeps it open, so the next session inherits it instead of

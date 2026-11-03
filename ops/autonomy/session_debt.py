@@ -289,53 +289,61 @@ def collect(roots: list[Path]) -> dict[str, Any]:
     }
 
 
-def workspace_state(root: Path) -> dict[str, Any]:
-    """What a handoff reader needs to know about one repository, from git alone.
+#: The repository whose workspaces a handoff covers. Environment friction is
+#: governance's to fix, and its to-dos are the ones this ledger owns.
+GOVERNANCE_REPOSITORY = "quantum-l9/cursor-governance"
 
-    ``publish`` reuses the gate's own judgment (``publish_debt``) so a handoff
-    can never call a branch published that ``check`` would block on.
-    ``uncommitted`` is reported, not judged: the gate does not own the working
-    tree, and a dirty shared clone is often someone else's work.
-    """
-    _, branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
-    _, head = _git(root, "rev-parse", "HEAD")
-    code, porcelain = _git(root, "status", "--porcelain")
-    dirty = [line[3:] for line in porcelain.splitlines() if line.strip()] if code == 0 else []
-    if not branch or branch == "HEAD":
-        publish = "detached"
-    elif branch in UNPUBLISHABLE_BRANCHES:
-        publish = "default-branch"
-    else:
-        debt = publish_debt(root)
-        publish = "published" if debt is None else "unpushed" if debt["verified"] else "unverified"
-    return {
-        "workspace": str(root),
-        "branch": branch or None,
-        "head": head or None,
-        "publish": publish,
-        "uncommitted": len(dirty),
-        "uncommitted_sample": dirty[:10],
-    }
+
+def is_governance_workspace(root: Path) -> bool:
+    """True when ``root``'s origin is Quantum-L9/Cursor-Governance (any URL form)."""
+    code, url = _git(root, "config", "--get", "remote.origin.url")
+    if code != 0:
+        return False
+    path = url.strip().lower().rstrip("/").removesuffix(".git")
+    return path.endswith("/" + GOVERNANCE_REPOSITORY) or path.endswith(":" + GOVERNANCE_REPOSITORY)
+
+
+def governance_root(explicit: str | None = None) -> Path | None:
+    """Where friction is recorded: the named or current Cursor-Governance
+    workspace, else the governance SSOT clone. Never another repository's."""
+    for candidate in filter(None, (explicit, str(Path.cwd()))):
+        root = git_root(Path(candidate))
+        if root is not None and is_governance_workspace(root):
+            return root
+    ssot = git_root(Path.home() / ".cursor-governance")
+    return ssot if ssot is not None and is_governance_workspace(ssot) else None
 
 
 def build_handoff(roots: list[Path], next_steps: list[str]) -> dict[str, Any]:
-    """One end-of-session record: the gate's verdict plus the state behind it."""
-    report = collect(roots)
+    """What is still to be done, and what in the environment got in the way.
+
+    Scoped to Cursor-Governance workspaces. State that needs nothing (pushed
+    branches, a working tree's uncommitted files) is deliberately absent: a
+    handoff is a to-do list, not an inventory.
+    """
+    governed = [root for root in roots if is_governance_workspace(root)]
+    report = collect(governed)
+    friction = []
+    for root in governed:
+        for item in load_ledger(root).get("friction", []):
+            if isinstance(item, dict) and item.get("state") == "open":
+                friction.append({**item, "workspace": str(root)})
     return {
         "schema": HANDOFF_SCHEMA,
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "workspaces": [str(root) for root in governed],
         "clean": report["clean"],
-        "workspaces": [workspace_state(root) for root in roots],
-        "publish_debt": report["publish_debt"],
-        "blocking_findings": report["blocking_findings"],
-        "deferred_findings": [f for f in report["open_findings"] if f.get("state") == "deferred"],
-        "unreadable_ledgers": report["unreadable_ledgers"],
-        "next": [step for step in next_steps if step.strip()],
+        "todo": {
+            "unpushed": report["publish_debt"],
+            "open_findings": report["blocking_findings"],
+            "deferred_for_a_human": [
+                f for f in report["open_findings"] if f.get("state") == "deferred"
+            ],
+            "unreadable_ledgers": report["unreadable_ledgers"],
+            "next": [step for step in next_steps if step.strip()],
+        },
+        "friction": friction,
     }
-
-
-def _cell(value: object) -> str:
-    return str(value if value is not None else "—").replace("|", "\\|").replace("\n", " ")
 
 
 def render_handoff(doc: dict[str, Any]) -> str:
@@ -344,58 +352,38 @@ def render_handoff(doc: dict[str, Any]) -> str:
     One file replaces the pair of briefs (prose + JSON) a session used to write
     by hand: the prose is generated from the data, so the two cannot disagree.
     """
+    todo = doc["todo"]
     lines = [f"# Session handoff — {doc['generated_at']}", ""]
-    if doc["clean"]:
-        lines.append("**Turn clear:** nothing unpushed, no blocking findings.")
-    else:
-        lines.append(
-            "**Abandoned work:** this session cannot end clean until the items "
-            "below are finished or deferred."
-        )
+    if not doc["workspaces"]:
+        lines += ["No Cursor-Governance workspace in scope.", ""]
+    lines.append(
+        "**Turn clear:** nothing unpushed, no blocking findings."
+        if doc["clean"]
+        else "**Abandoned work:** finish or defer the items below before the session ends."
+    )
     lines.append("")
 
-    needs: list[str] = []
-    for item in doc["publish_debt"]:
-        needs.append(
-            f"- **Unpushed** `{item['branch']}` in `{item['workspace']}` — {item['detail']}"
+    items: list[str] = []
+    for item in todo["unpushed"]:
+        items.append(f"- **Push** `{item['branch']}` (`{item['workspace']}`) — {item['detail']}")
+    for item in todo["open_findings"]:
+        items.append(f"- **Fix** `{item.get('id')}` — {item.get('detail', '')}")
+    for item in todo["deferred_for_a_human"]:
+        items.append(
+            f"- **Human decision** `{item.get('id')}` — {item.get('detail', '')}"
+            + (f" Deferred because: {item['reason']}" if item.get("reason") else "")
         )
-    for item in doc["blocking_findings"]:
-        needs.append(
-            f"- **Open finding** `{item.get('id')}` — {item.get('detail', '')} "
-            f"(`{item['workspace']}`)"
-        )
-    for item in doc["deferred_findings"]:
-        needs.append(
-            f"- **Deferred, needs a human** `{item.get('id')}` — {item.get('detail', '')}"
-            + (f" Reason: {item['reason']}" if item.get("reason") else "")
-        )
-    for path in doc["unreadable_ledgers"]:
-        needs.append(f"- **Corrupt ledger** at `{path}` — cannot prove debt is discharged")
-    for ws in doc["workspaces"]:
-        if ws["uncommitted"]:
-            sample = ", ".join(f"`{p}`" for p in ws["uncommitted_sample"][:5])
-            needs.append(
-                f"- **Uncommitted** {ws['uncommitted']} path(s) in `{ws['workspace']}` "
-                f"(not judged by the gate; may be another session's): {sample}"
-            )
-    lines += ["## Needs attention", ""] + (needs or ["Nothing."]) + [""]
+    for path in todo["unreadable_ledgers"]:
+        items.append(f"- **Repair ledger** at `{path}` — cannot prove debt is discharged")
+    items += [f"- {step}" for step in todo["next"]]
+    lines += ["## Still to do", ""] + (items or ["Nothing."]) + [""]
 
-    lines += [
-        "## Workspaces",
-        "",
-        "| Workspace | Branch | HEAD | Publish | Uncommitted |",
-        "|---|---|---|---|---|",
+    friction = [
+        f"- `{item.get('id')}` — {item.get('detail', '')}"
+        + (f" Worked around: {item['workaround']}" if item.get("workaround") else "")
+        for item in doc["friction"]
     ]
-    for ws in doc["workspaces"]:
-        head = (ws["head"] or "")[:10] or None
-        lines.append(
-            f"| `{_cell(ws['workspace'])}` | `{_cell(ws['branch'])}` | `{_cell(head)}` "
-            f"| {ws['publish']} | {ws['uncommitted']} |"
-        )
-    lines.append("")
-
-    if doc["next"]:
-        lines += ["## Next", ""] + [f"- {step}" for step in doc["next"]] + [""]
+    lines += ["## Environment friction", ""] + (friction or ["None recorded."]) + [""]
 
     # JSON escapes newlines inside strings, so no line of the body can be a
     # bare fence: a plain ``` block always delimits it exactly.
@@ -530,7 +518,7 @@ def _transition(args: argparse.Namespace, state: str, extra: dict[str, Any]) -> 
         print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
         return 1
     ledger = load_ledger(root)
-    for finding in ledger["findings"]:
+    for finding in [*ledger["findings"], *ledger.get("friction", [])]:
         if finding.get("id") == args.id:
             finding["state"] = state
             finding.update(extra)
@@ -539,6 +527,34 @@ def _transition(args: argparse.Namespace, state: str, extra: dict[str, Any]) -> 
             return 0
     print(f"ERROR: no finding {args.id!r} in {_ledger_path(root)}", file=sys.stderr)
     return 1
+
+
+def cmd_friction(args: argparse.Namespace) -> int:
+    """Record something in the environment that got in the way.
+
+    Friction is governance's to fix, so it lands in a Cursor-Governance
+    workspace's ledger whatever repository the session was working in. It is
+    never a gate item: an agent cannot clear the environment by its own action.
+    """
+    root = governance_root(args.workspace)
+    if root is None:
+        print("ERROR: no Cursor-Governance workspace to record friction in", file=sys.stderr)
+        return 1
+    ledger = load_ledger(root)
+    items = [f for f in ledger.get("friction", []) if f.get("id") != args.id]
+    items.append(
+        {
+            "id": args.id,
+            "state": "open",
+            "detail": args.detail,
+            "workaround": args.workaround,
+            "recorded_at": int(time.time()),
+        }
+    )
+    ledger["friction"] = items
+    path = save_ledger(root, ledger)
+    print(f"recorded friction {args.id} → {path}")
+    return 0
 
 
 def cmd_close(args: argparse.Namespace) -> int:
@@ -563,11 +579,20 @@ def main() -> int:
     check.set_defaults(func=cmd_check)
 
     handoff = sub.add_parser(
-        "handoff", help="write one end-of-session handoff (markdown + embedded JSON)"
+        "handoff", help="write the end-of-session to-do and friction list (markdown + JSON)"
     )
     handoff.add_argument("--out", help="write here instead of stdout")
     handoff.add_argument("--next", action="append", help="a next step for the reader (repeatable)")
     handoff.set_defaults(func=cmd_handoff)
+
+    friction = sub.add_parser(
+        "friction", help="record environment friction for Cursor-Governance to fix"
+    )
+    friction.add_argument("id")
+    friction.add_argument("--detail", required=True)
+    friction.add_argument("--workaround", help="what the session did instead")
+    friction.add_argument("--workspace", help="a Cursor-Governance workspace")
+    friction.set_defaults(func=cmd_friction)
 
     record = sub.add_parser("record", help="record an observed defect as debt")
     record.add_argument("id")

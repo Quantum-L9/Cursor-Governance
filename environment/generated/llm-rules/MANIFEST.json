@@ -159,9 +159,9 @@
       "alias": null,
       "class": "always",
       "output": "42-no-abandoned-work.md",
-      "output_sha256": "f7e5c1418331d934f43f9d4846d33cf2ba6a79bbc07365719084ba76adf92e93",
+      "output_sha256": "8df37936fcf33b378c0e3636da7d924f685525e10862b225ee227ba8b827d17b",
       "source": "rules/42-no-abandoned-work.mdc",
-      "source_sha256": "fd0b487c8577f0bb715b5c0bee4c3276dcadd188f9cce86dc7825759c577af3c",
+      "source_sha256": "f4ce615355f310cf14779f8257180cecc424ca91e088e524b0e7a0189c3ee94e",
       "stem": "42-no-abandoned-work"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "0583db71e59ac66b9454adaf3019d463759d02106bac7d7ed87f94a5552f23b2"
+  "tree_sha256": "5b52ccee02ede3afd79bb1871a295af25f64c04393c8bb074e6b3c5d29c8e567"
 }
