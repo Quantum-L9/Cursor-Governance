@@ -12,6 +12,7 @@ from typing import Any
 from paths import is_under, plans_store_root, safe_cli_path
 from plan_sections import (
     GAR_SKILL_REF,
+    LEGACY_PLAN_SCHEMA_REFS,
     PLAN_SCHEMA_REL,
     REPO_ROOT,
     SKILL_ROOT,
@@ -25,6 +26,7 @@ from plan_sections import (
     missing_labels,
     receipt_status,
     unfilled_parameters,
+    workspace_root,
 )
 
 RECEIPT_SCHEMA = SKILL_ROOT / "schemas" / "plan-section-receipt.schema.json"
@@ -40,17 +42,23 @@ def _sha256(path: Path) -> str:
 
 
 def _resolve_declared(rel: str) -> Path:
+    """Resolve a receipt path against the planned workspace.
+
+    Relative paths are workspace-relative. The governance clone stays allowed
+    so receipts committed in Cursor-Governance (where the two coincide) and
+    absolute plans-store paths keep resolving.
+    """
     if not str(rel).strip():
         raise ValueError("empty declared path")
     raw = Path(rel)
-    repo = REPO_ROOT.resolve()
-    resolved = raw.resolve() if raw.is_absolute() else (repo / raw).resolve()
-    allowed = [repo]
+    workspace = workspace_root()
+    resolved = raw.resolve() if raw.is_absolute() else (workspace / raw).resolve()
+    allowed = [workspace, REPO_ROOT.resolve()]
     store = plans_store_root()
     if store is not None:
         allowed.append(store)
     if not any(is_under(resolved, root) for root in allowed):
-        raise ValueError(f"declared path escapes repo and plans store: {rel}")
+        raise ValueError(f"declared path escapes workspace and plans store: {rel}")
     return resolved
 
 
@@ -75,7 +83,7 @@ def _coverage_errors(receipt: dict[str, Any]) -> list[str]:
     for title in md_required_headings(mode=str(receipt.get("handoff_mode") or "cursor-build")):
         if title not in claimed_md:
             errors.append(f"G_RECEIPT_COVERAGE: receipt omits MD section {title!r}")
-    if receipt.get("section_schema_ref") != PLAN_SCHEMA_REL:
+    if receipt.get("section_schema_ref") not in (PLAN_SCHEMA_REL, *LEGACY_PLAN_SCHEMA_REFS):
         errors.append("G_RECEIPT_OWNER: section_schema_ref is not the PLAN_DOCUMENT schema")
     if receipt.get("template_ref") != TEMPLATE_REL:
         errors.append("G_RECEIPT_OWNER: template_ref is not the canonical executable plan")

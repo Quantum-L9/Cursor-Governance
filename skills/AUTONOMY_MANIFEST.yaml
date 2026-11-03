@@ -78,6 +78,8 @@ tiers:
   - skill: l9-python-tdd-with-uv
     use_when: writing or running Python tests under uv — red-green-refactor, vertical slicing, or uv project setup
   explicit_only:
+  - skill: l9-plan
+    reason: live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing — user-invoked only
   - skill: l9-forge
     reason: zero-pause batch execution
   - skill: l9-end-session
@@ -165,8 +167,6 @@ tiers:
     reason: superseded by skills/l9-wire-into-repo/ for generic repository wiring; specialized governance operations belong to their narrower owners (skills/l9-governance-symlinks/ for workspace binding) — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-wire-skill-into-repo/
     reason: superseded by skills/l9-wire-into-repo/; archived out of live skills/ discovery — never auto-invoke or reconcile
-  - item: skills/_archived/l9-plan/
-    reason: Program Execution planning retired with no live successor; ordinary planning stays skills/l9-plan-simple/ and does not absorb this pack — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-campaign-activate/
     reason: Program Execution campaign front door retired with no replacement; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-nuggets/
