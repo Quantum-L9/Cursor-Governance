@@ -404,6 +404,21 @@ def _join(items: list[str], empty: str) -> str:
     return ", ".join(_code(i) for i in cleaned) if cleaned else empty
 
 
+def _declared(value: Any) -> str:
+    """Project a PLAN_DOCUMENT value; absent stays the explicit NOT_DECLARED marker.
+
+    A list renders as code items (`none` when empty — declared empty is not
+    absent); a bool renders `true`/`false`; a scalar renders as code.
+    """
+    if value is None:
+        return NOT_DECLARED
+    if isinstance(value, bool):
+        return f"`{str(value).lower()}`"
+    if isinstance(value, list):
+        return _join([str(v) for v in value], "none")
+    return _code(value)
+
+
 def _bullets(items: list[str], empty: str) -> list[str]:
     cleaned = [str(i) for i in items if str(i).strip()]
     return [f"- {i}" for i in cleaned] if cleaned else [f"- {empty}"]
@@ -449,6 +464,10 @@ class _Ctx:
         self.conv: dict = plan.get("convergence") or {}
         self.stress: dict = plan.get("stress_test") or {}
         self.gmp: dict = plan.get("gmp_handoff") or {}
+        envelope: dict = plan.get("execution_envelope") or {}
+        self.network: dict = envelope.get("network") or {}
+        self.secrets: dict = envelope.get("secrets") or {}
+        self.complexity: dict = plan.get("complexity") or {}
         self.validations: list[dict] = [
             v for v in plan.get("final_validation") or [] if isinstance(v, dict)
         ]
@@ -545,7 +564,7 @@ def _sec_metadata(c: _Ctx) -> list[str]:
             + " |"
         ),
         "| is_project | `false` |",
-        f"| owner | {NOT_DECLARED} |",
+        f"| owner | {_cell(c.plan.get('owner') or NOT_DECLARED)} |",
         f"| created_at | {created} |",
         f"| updated_at | {created} |",
         f"| depth | `{_cell(c.plan.get('depth') or 'standard')}` |",
@@ -692,14 +711,14 @@ def _sec_envelope(c: _Ctx) -> list[str]:
         "",
         "| Field | Value |",
         "|-------|-------|",
-        f"| mode | {NOT_DECLARED} |",
-        f"| allowed_services | {NOT_DECLARED} |",
+        f"| mode | {_declared(c.network.get('mode'))} |",
+        f"| allowed_services | {_declared(c.network.get('allowed_services'))} |",
         "",
         "### Secrets",
         "",
         "| Field | Value |",
         "|-------|-------|",
-        f"| access | {NOT_DECLARED} |",
+        f"| access | {_declared(c.secrets.get('access'))} |",
         "| redaction_required | `true` |",
         "",
         "### Autonomous merge",
@@ -770,7 +789,8 @@ def _sec_architecture(c: _Ctx) -> list[str]:
         files = [str(f) for f in t.get("files") or []]
         ctx = _common_dir(files) if files else f"blocked: {_cell(t.get('blocker') or 'no files')}"
         lines.append(
-            f"| {_cell(t.get('id'))} | {_code(ctx)} | {NOT_DECLARED} | {contracts} | {prohibited} |"
+            f"| {_cell(t.get('id'))} | {_code(ctx)} | {_declared(t.get('layer'))} | {contracts} | "
+            f"{prohibited} |"
         )
     return lines
 
@@ -833,9 +853,12 @@ def _sec_complexity(c: _Ctx) -> list[str]:
         f"| complexity | `{c.max_risk}` — highest todo risk across {len(c.todos)} todo(s) |",
         f"| uncertainty | `{uncertainty}` — {len(unknowns)} unknown(s), {len(blocking)} blocking |",
         f"| blast_radius | `{c.max_risk}` — {_cell(c.stress.get('blast_radius') or NOT_DECLARED)} |",
-        f"| architectural_boundaries_crossed | {NOT_DECLARED} |",
-        f"| external_systems_touched | {NOT_DECLARED} |",
-        f"| migration_required | {NOT_DECLARED} |",
+        (
+            "| architectural_boundaries_crossed | "
+            f"{_declared(c.complexity.get('architectural_boundaries_crossed'))} |"
+        ),
+        f"| external_systems_touched | {_declared(c.complexity.get('external_systems_touched'))} |",
+        f"| migration_required | {_declared(c.complexity.get('migration_required'))} |",
         f"| unknown_dependency_count | `{len(unknowns)}` |",
     ]
 
@@ -1130,6 +1153,7 @@ def _sec_machine_stub(c: _Ctx, body_after_swap: str) -> list[str]:
             "overview": str(c.plan.get("objective") or c.title),
             "status": c.plan_status,
             "is_project": False,
+            "owner": str(c.plan.get("owner") or NOT_DECLARED),
         },
         "architect_framing": {
             "planning_ssot": "PLAN_DOCUMENT",
@@ -1165,8 +1189,11 @@ def _sec_machine_stub(c: _Ctx, body_after_swap: str) -> list[str]:
                 "write_deny": list(c.gmp.get("must_not_modify") or []),
             },
             "commands": {"allow": _commands(c)},
-            "network": {"mode": NOT_DECLARED},
-            "secrets": {"access": NOT_DECLARED, "redaction_required": True},
+            "network": {"mode": c.network.get("mode") or NOT_DECLARED},
+            "secrets": {
+                "access": c.secrets.get("access") or NOT_DECLARED,
+                "redaction_required": True,
+            },
             "autonomous_merge": False,
         },
         "side_effects_and_idempotency": [
@@ -1326,7 +1353,9 @@ def main() -> int:
     plan_path = safe_cli_path(args.plan_json)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     skill_root = Path(__file__).resolve().parents[1]
-    repo_root = skill_root.parents[2]
+    # skills/<pack>/ (or a nested skills/<group>/<pack>/): the repo root is the
+    # parent of the nearest `skills` ancestor.
+    repo_root = next(p.parent for p in skill_root.parents if p.name == "skills")
     if args.template:
         template_path = safe_cli_path(args.template)
     else:
