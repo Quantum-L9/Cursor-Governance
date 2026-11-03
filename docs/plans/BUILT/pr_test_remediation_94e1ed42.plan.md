@@ -157,4 +157,3 @@ Build commits each existing branch, pushes it without full pytest and without in
 - `rebase-348-349`: completed
 - `retest`: completed
 - `publish-ci`: completed
-

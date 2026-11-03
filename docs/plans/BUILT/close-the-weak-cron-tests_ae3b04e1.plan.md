@@ -554,4 +554,3 @@ The Odoo cron files stay unloaded. E2 is the contract those files enforce when O
 - `live-effects`: completed
 - `unreachable`: completed
 - `prove`: completed
-

@@ -445,4 +445,3 @@ Hook catalog for every commit: `.pre-commit-config.yaml`.
 | minimum_safe_next_action | When law holds and status=`executable`, press **Build** on the owning branch named by the todo, with `PR_STACK` empty because sibling chains fail closed, then `PR_REMEDIATE=0 make pr` and display that PR URL — do not free-form execute |
 | execute_via | Cursor Build; one existing PR branch per todo; display that PR URL |
 | broader_work_requires_separate_contract | true for the combined 778 plus 786 registry regeneration |
-
