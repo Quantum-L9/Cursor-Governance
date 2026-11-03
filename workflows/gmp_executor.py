@@ -1062,10 +1062,14 @@ from {module_path} import ...
     # =========================================================================
     def _write_local_report(self) -> Path:
         assert self.state is not None
-        reports = self.work_root / "reports"
-        reports.mkdir(parents=True, exist_ok=True)
-        slug = re.sub(r"[^a-z0-9]+", "-", self.state.task.lower())[:40].strip("-") or "gmp"
-        path = reports / f"{self.state.gmp_id}-{slug}.md"
+        from ops.reports.gmp import report_name
+        from ops.reports.publish import ReportKind, report_dir
+
+        # reports/gmp/GMP-Report-<NNN>-<Description>.md — the one location and
+        # name pattern for GMP reports (rules/81-gmp-audit.mdc).
+        reports = report_dir(self.work_root, ReportKind.GMP)
+        number = int(self.state.gmp_id.rsplit("-", 1)[-1])
+        path = reports / report_name(number, self.state.task)
         lines = [
             f"# {self.state.gmp_id}",
             "",
@@ -1166,8 +1170,14 @@ from {module_path} import ...
                     report_rel = report_rel[idx:]
                 paths.append(report_rel.split()[0])
             commit_msg = f"{self.state.gmp_id}: {self.state.task}"
-            add_argv = ["git", "add", "--"] + paths
-            self._run_argv(add_argv, cwd=self.work_root)
+            report_paths = [p for p in paths if p.startswith("reports/")]
+            source_paths = [p for p in paths if not p.startswith("reports/")]
+            if source_paths:
+                self._run_argv(["git", "add", "--"] + source_paths, cwd=self.work_root)
+            if report_paths:
+                # reports/ is commonly gitignored scratch; the GMP report is
+                # published with the PR, so it is force-added by exact path.
+                self._run_argv(["git", "add", "-f", "--"] + report_paths, cwd=self.work_root)
             code, stdout, stderr = self._run_argv(
                 ["git", "commit", "-m", commit_msg], cwd=self.work_root
             )
@@ -1233,20 +1243,11 @@ from {module_path} import ...
                 self._print_step(step, "pending")
 
     def _next_gmp_id(self) -> str:
-        gmp_num = 129
-        reports_dirs = [self.work_root / "reports" / "GMP Reports", self.work_root / "reports"]
-        for reports_dir in reports_dirs:
-            if not reports_dir.is_dir():
-                continue
-            for path in reports_dir.glob("GMP-Report-*.md"):
-                match = re.search(r"GMP-Report-(\d+)", path.name)
-                if match:
-                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
-            for path in reports_dir.glob("GMP-*.md"):
-                match = re.search(r"GMP-(\d+)", path.name)
-                if match:
-                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
-        return f"GMP-{gmp_num}"
+        from ops.reports.gmp import next_gmp_number
+
+        # One scanner for executor and hand-authored reports (rules/83); the
+        # executor keeps its historical floor.
+        return f"GMP-{next_gmp_number(self.work_root, floor=129)}"
 
     def _init_state(self, task: str, tier: str) -> None:
         self.state = GMPState(
