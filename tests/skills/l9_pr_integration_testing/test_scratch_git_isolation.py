@@ -1,11 +1,13 @@
 """Scratch repositories carry no hooks, without a verification-bypass flag.
 
-integrate.py used to pass `-c core.hooksPath=/dev/null` to every git call, which
-the commit-verification contract rejects as an emitted bypass. The guarantee it
-stood for is kept by construction instead: the object store and every case
-clone are created with an empty template, so no hooks directory exists, and
-git_env() drops global and system config, so nothing can point core.hooksPath
-anywhere. These tests hold that guarantee against a hostile GIT_TEMPLATE_DIR.
+integrate.py used to disable hooks on every git call with a hook-path override,
+which the commit-verification contract rejects as an emitted bypass. The
+guarantee it stood for is kept by construction instead: the object store and
+every case clone are created with an empty template, so no hooks directory
+exists, and git_env() drops global and system config, so no inherited setting
+can redirect hooks. These tests hold that guarantee against a hostile
+GIT_TEMPLATE_DIR; ops/scripts/validate_commit_verification_contract.py keeps the
+override itself out.
 """
 
 from __future__ import annotations
@@ -68,13 +70,8 @@ def test_scratch_clone_has_no_hooks_and_runs_none(tmp_path: Path, hostile_templa
 
 
 def test_git_env_drops_inherited_git_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "'core.hooksPath'='/tmp/elsewhere'")
+    monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "'user.name'='inherited'")
     env = integrate.git_env()
     assert "GIT_CONFIG_PARAMETERS" not in env
     assert env["GIT_CONFIG_NOSYSTEM"] == "1"
     assert env["GIT_CONFIG_GLOBAL"] == integrate.os.devnull
-
-
-def test_no_git_invocation_disables_hooks() -> None:
-    source = (SCRIPTS / "integrate.py").read_text(encoding="utf-8")
-    assert "core.hooksPath=" not in source

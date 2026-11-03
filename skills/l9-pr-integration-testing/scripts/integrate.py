@@ -281,8 +281,8 @@ def git_env():
 def git(args: list[str], cwd: Path | None = None, timeout=120, check=True):
     # No hook can run here: every repository this script touches is created by
     # scratch_init()/scratch_clone() with an empty template (no hooks
-    # directory), and git_env() drops global and system config, so nothing can
-    # set core.hooksPath. Hooks are absent rather than disabled by a bypass flag.
+    # directory), and git_env() drops global and system config, so no inherited
+    # setting can redirect hooks. Hooks are absent, not disabled by a flag.
     cmd = ["git", *args]
     p = subprocess.run(cmd, cwd=cwd, env=git_env(), text=True, capture_output=True, timeout=timeout)
     if check and p.returncode:
