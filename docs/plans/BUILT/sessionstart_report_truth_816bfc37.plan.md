@@ -1,26 +1,37 @@
 ---
 name: SessionStart report truth
-overview: "Make `/start-session` Runtime/Degraded a single derived view of measured probes: land cursor/tunnel n/a, close the GOV_DIR secrets dual writer (hook + plane path + one receipt, no collect() live fallback), and replace backup/venv/hydrate slogans with live probes."
+overview: 'Make `/start-session` Runtime/Degraded a single derived view of measured
+  probes: land cursor/tunnel n/a, close the GOV_DIR secrets dual writer (hook + plane
+  path + one receipt, no collect() live fallback), and replace backup/venv/hydrate
+  slogans with live probes.'
 todos:
-  - id: land-cursor-tunnel-strip-debug
-    content: Strip debug-eb0fc6 writers; keep cursor unknown=n/a and tunnel retired=n/a with tests
-    status: completed
-  - id: resolve-shared-bootstrap
-    content: Hook resolves bootstrap_agent_environment.sh from CURSOR_PROJECT_DIR then $GC (same order as reporter)
-    status: completed
-  - id: secrets-single-writer
-    content: Workspace-then-GOV_DIR secrets.py; required --receipt-out; collect() has no probe_* fallback
-    status: completed
-  - id: backup-venv-measured
-    content: Build-lock measured; else empty-stdin backup_gate + classify_backup; UV check stderr + classify_venv
-    status: completed
-  - id: hydrate-stale-runtime
-    content: continuation_stale is True degrades classifier; collect always emits memory-hydrate; invert fold test
-    status: completed
-  - id: prove-and-publish
-    content: Targeted pytest + narrow workspace bootstrap (not full hook); then scoped-commit + make pr
-    status: completed
+- id: land-cursor-tunnel-strip-debug
+  content: Strip debug-eb0fc6 writers; keep cursor unknown=n/a and tunnel retired=n/a
+    with tests
+  status: completed
+- id: resolve-shared-bootstrap
+  content: Hook resolves bootstrap_agent_environment.sh from CURSOR_PROJECT_DIR then
+    $GC (same order as reporter)
+  status: completed
+- id: secrets-single-writer
+  content: Workspace-then-GOV_DIR secrets.py; required --receipt-out; collect() has
+    no probe_* fallback
+  status: completed
+- id: backup-venv-measured
+  content: Build-lock measured; else empty-stdin backup_gate + classify_backup; UV
+    check stderr + classify_venv
+  status: completed
+- id: hydrate-stale-runtime
+  content: continuation_stale is True degrades classifier; collect always emits memory-hydrate;
+    invert fold test
+  status: completed
+- id: prove-and-publish
+  content: Targeted pytest + narrow workspace bootstrap (not full hook); then scoped-commit
+    + make pr
+  status: completed
 isProject: false
+built: true
+status: built
 ---
 
 # SessionStart report truth
@@ -181,3 +192,17 @@ Kernel readiness for **this plan document**: PartiallySucceeded — confirmed pl
 ## Execute via Cursor Build
 
 Press **Build**. Plan on this workspace. Execute on the unique open-PR chain tip (`PR_STACK=auto`). Never branch from `origin/main` if any open PR exists. Do not run `make campaign`. Do not admit a Program Lock. After todos: scoped-commit, `l4_local.py authorize-release`, `PR_STACK=auto PR_REMEDIATE=0 make pr`. Finish reply must show the PR URL.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `land-cursor-tunnel-strip-debug`: completed
+- `resolve-shared-bootstrap`: completed
+- `secrets-single-writer`: completed
+- `backup-venv-measured`: completed
+- `hydrate-stale-runtime`: completed
+- `prove-and-publish`: completed

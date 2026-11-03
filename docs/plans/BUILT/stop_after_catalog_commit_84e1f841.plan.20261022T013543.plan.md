@@ -1,43 +1,59 @@
 ---
 name: Stop after catalog commit
-overview: Cursor agents run the pre-commit catalog, commit locally, and stop. Claude Code finished contracts still run make pr. Makefile and .pre-commit-config.yaml stay unchanged. Every make-pr teacher is surface-split so the two paths cannot drift.
+overview: Cursor agents run the pre-commit catalog, commit locally, and stop. Claude
+  Code finished contracts still run make pr. Makefile and .pre-commit-config.yaml
+  stay unchanged. Every make-pr teacher is surface-split so the two paths cannot drift.
 todos:
-  - id: inventory-triggers
-    content: Lock the surface-split trigger inventory (Cursor stop vs Claude Code make pr). Do not strip adapter allow-lists or coding-contract terminal make pr.
-    status: completed
-  - id: law-append
-    content: Append CANONICAL_LAW surface-split section. Cursor turn ends at catalog + local commit. Claude Code finished contracts still make pr. Protected-root stamp. Append-only.
-    status: completed
-  - id: surface-profile
-    content: Split session_start_block and llm_rules_override by surface. Cursor standing next step is stop. Claude Code keeps authorize-release then make pr. Regenerate zz-autonomy-surface-override via project_llm_rules.py.
-    status: completed
-  - id: cursor-rules
-    content: Add the same surface predicate to rules 88, 48, 99 (and 42 if it still commands make pr as the finish step). Cursor stop. Claude Code keep make pr. Sync generated llm-rules via the projector.
-    status: completed
-  - id: gmp-finalize
-    content: Surface-split /gmp finalize + gmp-autonomy-bounds + skill. Cursor finalize is catalog + commit + stop. Claude Code finalize keeps authorize-release then make pr.
-    status: completed
-  - id: agents-append
-    content: Append AGENTS.md AGENT_STOP_AFTER_CATALOG_COMMIT_V1 with the same surface split (additive only).
-    status: completed
-  - id: reentry-prove
-    content: Extend test_ceremony_ownership.py for unnegated Cursor finish-then-make-pr strings without a claude-code predicate. Run that pytest only. Catalog and Makefile diffs empty.
-    status: completed
+- id: inventory-triggers
+  content: Lock the surface-split trigger inventory (Cursor stop vs Claude Code make
+    pr). Do not strip adapter allow-lists or coding-contract terminal make pr.
+  status: completed
+- id: law-append
+  content: Append CANONICAL_LAW surface-split section. Cursor turn ends at catalog
+    + local commit. Claude Code finished contracts still make pr. Protected-root stamp.
+    Append-only.
+  status: completed
+- id: surface-profile
+  content: Split session_start_block and llm_rules_override by surface. Cursor standing
+    next step is stop. Claude Code keeps authorize-release then make pr. Regenerate
+    zz-autonomy-surface-override via project_llm_rules.py.
+  status: completed
+- id: cursor-rules
+  content: Add the same surface predicate to rules 88, 48, 99 (and 42 if it still
+    commands make pr as the finish step). Cursor stop. Claude Code keep make pr. Sync
+    generated llm-rules via the projector.
+  status: completed
+- id: gmp-finalize
+  content: Surface-split /gmp finalize + gmp-autonomy-bounds + skill. Cursor finalize
+    is catalog + commit + stop. Claude Code finalize keeps authorize-release then
+    make pr.
+  status: completed
+- id: agents-append
+  content: Append AGENTS.md AGENT_STOP_AFTER_CATALOG_COMMIT_V1 with the same surface
+    split (additive only).
+  status: completed
+- id: reentry-prove
+  content: Extend test_ceremony_ownership.py for unnegated Cursor finish-then-make-pr
+    strings without a claude-code predicate. Run that pytest only. Catalog and Makefile
+    diffs empty.
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: stop_after_catalog_commit_84e1f841.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-29T02:44:00Z
-    body_sha256: "dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9"
+    ran_at: 2026-08-29 02:44:00+00:00
+    body_sha256: dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9
     deltas:
-      - "Stamped kernel_pass so leftover unique plan can pass the extract gate"
+    - Stamped kernel_pass so leftover unique plan can pass the extract gate
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-29T02:45:00Z
-    body_sha256: "dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9"
+    ran_at: 2026-08-29 02:45:00+00:00
+    body_sha256: dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9
     deltas:
-      - "Receipt only; leftover unique body unchanged"
+    - Receipt only; leftover unique body unchanged
+built: true
+status: built
 ---
 
 # PLAN: Stop after catalog commit (Cursor) / make pr (Claude Code)
@@ -146,3 +162,18 @@ Makefile `pr: pr-preflight pr-check` and [`.pre-commit-config.yaml`](.pre-commit
 - Narrowing adapter publish to Claude Code only (codex/gemini/manus stay)
 - Remediator `git push` when the user invoked `/l9-pr-remediation`
 - PE campaign packets
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `inventory-triggers`: completed
+- `law-append`: completed
+- `surface-profile`: completed
+- `cursor-rules`: completed
+- `gmp-finalize`: completed
+- `agents-append`: completed
+- `reentry-prove`: completed

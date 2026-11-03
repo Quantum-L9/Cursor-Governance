@@ -1,0 +1,338 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Close false attestation on PRs 776 777 778 and 786",
+  "objective": "Repair the confirmed false attestations on the existing PR heads and make 786 mergeable against current main. MEMORY_PREFETCH namespace=cursor-governance snapshot_digest=5c9536867c13e1df842b9458a8a4d3f3f88da0fd675f08635d95aa6519b78aa9 conflicts=0 policy_version=memory-phase-lock/v2. GAR run gar-pr-attestation-closure-2026-10-27 selected repair-in-place: exact hunk compare in the existing diff check, no synthesized SURVIVED or VERIFICATION pass, classic protection ABSENT only on the documented not-protected response otherwise UNKNOWN, and the existing review-thread transport selector. 778 keeps its verifier, rename overlap, and bot-lane split. 786 regenerates generated files after a rebase. Do not open a fifth sibling branch.",
+  "success_criteria": [
+    "A submitted patch whose added line has four extra spaces, and a patch whose hunk header line numbers differ, both fail diff_is_the_delivered_change on head 573fd886 or its descendant",
+    "The pipeline fixture string fed malformed payloads; rejected does not produce merge_readiness READY together with a SURVIVED readiness probe or convergence_status CONVERGED",
+    "collect_snapshot records classic protection ABSENT only for HTTP 404 body Branch not protected, merges a HTTP 200 protection document into the gate, and withholds complete readiness when the classic source is UNKNOWN",
+    "On a local CLI host, collect_snapshot reads review threads through GraphQL reviewThreads; the ccr route is used only when rest_only is true; neither transport available exits non-zero",
+    "778 head still descends from 777, still binds merge-blocking finding verification to the frozen head, and still counts previous_path in overlap",
+    "786 new head is GitHub mergeable MERGEABLE against main, and both skill registries are regenerated from that tree rather than copied from 778"
+  ],
+  "scope": {
+    "in": [
+      "PR 776 branch agent/claude/gar-coding-delegation-exclusivity at 573fd886e49ee7646ae71421b206b39425486e04",
+      "PR 777 branch agent/claude-code/pr-audit-pipeline at f175f971511f030790d758d30eae2cc28a1fc7ed",
+      "PR 778 branch agent/claude-code/pr-audit-correctness at d8e92836991849a266408bbacd62d638bd6c9ff2, rebased onto the repaired 777 tip",
+      "PR 786 branch agent/cursor/retire-stale-ci-skills at e264a1b42cf10c031994cc92100459ce8758b4ca, rebased onto origin/main",
+      "skills/l9-global-architect/scripts/verify_coding_delegation.py",
+      "skills/l9-pr-audit/scripts/assemble_audit.py",
+      "skills/l9-pr-audit/scripts/collect_snapshot.py",
+      "skills/l9-pr-audit/schemas/lane-findings.schema.json",
+      "skills/l9-pr-audit/references/semantic-lane.md",
+      "tests/skills/l9_pr_audit/test_audit_pipeline.py",
+      "Generated registries, rules manifests, llm-rules manifest, and filetree.md on the 786 tree only, via their owning generators"
+    ],
+    "out": [
+      "A new branch from origin/main",
+      "Squash of 778 onto main",
+      "Unwinding 778 verifier, previous_path overlap, or stand-alone bot lane pooling",
+      "Copying either branch skill-registry.json wholesale when 778 and 786 later share one tree",
+      "Root additive_only files",
+      "Merging any of these PRs",
+      "The dirty checkout claude/gar-skill-bootstrap-hook-mm2oj9",
+      "Dependabot PRs 764 765 766 771 and PR 791"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "PV-001",
+      "command_or_action": "git rev-parse HEAD && git branch --show-current && git status --porcelain",
+      "pass_criteria": "Planning checkout is claude/gar-skill-bootstrap-hook-mm2oj9 at 61bd04b46abdacea150670f1c7ef87071f03464c and is dirty. Execution does not mutate this checkout.",
+      "status": "passed"
+    },
+    {
+      "id": "PV-002",
+      "command_or_action": "gh pr view 776 777 778 786 --json headRefOid,baseRefName,mergeable,mergeStateStatus",
+      "pass_criteria": "Heads still match 573fd886, f175f971, d8e92836, and e264a1b4. 776 and 777 are MERGEABLE and BEHIND. 778 is MERGEABLE and CLEAN against 777. 786 is CONFLICTING and DIRTY.",
+      "status": "passed"
+    },
+    {
+      "id": "PV-003",
+      "command_or_action": "python3 ops/hooks/plan_memory_prefetch.py --workspace \"$PWD\" --task attestation-closure",
+      "pass_criteria": "MEMORY_PREFETCH conflicts=0 snapshot_digest 5c9536867c13e1df842b9458a8a4d3f3f88da0fd675f08635d95aa6519b78aa9",
+      "status": "passed"
+    },
+    {
+      "id": "PV-004",
+      "command_or_action": "Name .pre-commit-config.yaml as the hook catalog for every governed edit. python3 skills/_archived/l9-plan/scripts/route_plan.py --risk high --evidence sufficient --json",
+      "pass_criteria": "Depth is deep and omit_gates is empty",
+      "status": "passed"
+    },
+    {
+      "id": "PV-005",
+      "command_or_action": "git merge-base --is-ancestor f175f971511f030790d758d30eae2cc28a1fc7ed d8e92836991849a266408bbacd62d638bd6c9ff2",
+      "pass_criteria": "777 head is an ancestor of 778 head",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "On agent/claude-code/pr-audit-pipeline, stop assemble_audit.py from writing SURVIVED, validation_result PASS, or audit_passes pass_type VERIFICATION from a lane READY declaration or a probe DONE prose string. Require a separate run-directory final-verification artifact bound to the frozen head and covering claim, obligation, and probe ids before CONVERGED. Update test_audit_pipeline.py so the malformed-payload prose string cannot project that trio. Land the commit on the existing 777 branch.",
+      "files": [
+        "skills/l9-pr-audit/scripts/assemble_audit.py",
+        "tests/skills/l9_pr_audit/test_audit_pipeline.py",
+        "skills/l9-pr-audit/references/semantic-lane.md"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "operation": "Replace",
+      "anchor": "assemble() ready_prs SURVIVED block and audit_passes VERIFICATION record",
+      "shared_root_cause": "synthesized-attestation"
+    },
+    {
+      "id": "T2",
+      "task": "On the same 777 branch, make collect_snapshot.py select review threads with skills/l9-pr-remediation/scripts/protocol.py rest_only and the GraphQL reviewThreads path used by ingest_signals.py. Use ccr/review_threads only on the REST-only surface. If the selected transport fails, try the other once, then exit non-zero. Record classic branch protection: HTTP 404 with body Branch not protected means ABSENT; HTTP 200 is merged into required checks and approvals; every other result is UNKNOWN and cannot set complete readiness. Update semantic-lane.md so rulesets alone are not described as full merge readiness.",
+      "files": [
+        "skills/l9-pr-audit/scripts/collect_snapshot.py",
+        "skills/l9-pr-audit/references/semantic-lane.md",
+        "tests/skills/l9_pr_audit/test_audit_pipeline.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "leverage_rank": 2,
+      "operation": "Replace",
+      "anchor": "snapshot() threads = gh ccr/review_threads and merge_rules()",
+      "shared_root_cause": "unobserved-source-attested-complete"
+    },
+    {
+      "id": "T3",
+      "task": "Rebase agent/claude-code/pr-audit-correctness onto the new 777 tip. Keep the verify- lane head binding, previous_path overlap, and stand-alone bot lane pooling. Confirm the T1 and T2 closures are present on the new 778 head. Publish 778 with PR_BASE set to agent/claude-code/pr-audit-pipeline. Do not squash 778 onto main.",
+      "files": [
+        "skills/l9-pr-audit/scripts/assemble_audit.py",
+        "skills/l9-pr-audit/scripts/collect_snapshot.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1", "T2"],
+      "leverage_rank": 3,
+      "operation": "Replace",
+      "anchor": "778 parent f175f971",
+      "shared_root_cause": "synthesized-attestation"
+    },
+    {
+      "id": "T4",
+      "task": "On agent/claude/gar-coding-delegation-exclusivity, replace patch-id equality in diff_truth with an exact compare of hunk text against git diff --no-color --no-ext-diff of frozen_target_revision and the delivered revision. The only permitted normalization is dropping the index oid header line. Indentation-only added lines and shifted hunk headers return VIOLATED. Extend the in-file regression next to the VALUE = 3 case. Publish on that existing branch against main.",
+      "files": [
+        "skills/l9-global-architect/scripts/verify_coding_delegation.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 4,
+      "operation": "Replace",
+      "anchor": "diff_truth patch_id",
+      "shared_root_cause": "whitespace-blind-patch-id"
+    },
+    {
+      "id": "T5",
+      "task": "On agent/cursor/retire-stale-ci-skills, rebase onto current origin/main. Ignore a clean git merge-tree result that comes from merge.l9-generated keep-ours. Regenerate rules/RULES-MANIFEST.json, rules/RULES-MANIFEST.md, rules/RULES-MANIFEST.yaml, environment/generated/llm-rules/MANIFEST.json, both skill-registry.json copies, and filetree.md from the post-rebase tree. Confirm GitHub mergeable is MERGEABLE. Do not import 778 registry digest 54912808.",
+      "files": [
+        "rules/RULES-MANIFEST.json",
+        "rules/RULES-MANIFEST.md",
+        "rules/RULES-MANIFEST.yaml",
+        "environment/generated/llm-rules/MANIFEST.json",
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/generated/skill-registry.json",
+        "filetree.md"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "leverage_rank": 5,
+      "operation": "Replace",
+      "anchor": "origin/main b0ac77ad versus e264a1b4",
+      "shared_root_cause": "stale-generated-projection"
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "777 head no longer projects READY, SURVIVED, or CONVERGED from prose DONE probes",
+      "unlocks": "T3 rebase of 778"
+    },
+    {
+      "id": "M2",
+      "outcome": "778 contains the 777 closures and its own verifier, overlap, and bot-lane repairs",
+      "unlocks": "Audit stack can be reviewed as one chain"
+    },
+    {
+      "id": "M3",
+      "outcome": "776 rejects indent-only and hunk-header substitutions; 786 is mergeable with regenerated projections",
+      "unlocks": "Separate publication of those two existing PRs"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "pytest tests/skills/l9_pr_audit/test_audit_pipeline.py shows the prose DONE fixture is not READY with SURVIVED and not CONVERGED",
+      "no_go_action": "Do not rebase 778 until that test fails closed on the old assembler behavior"
+    },
+    {
+      "id": "C2",
+      "after": "T3",
+      "evidence_required": "git merge-base --is-ancestor of the new 777 tip into the new 778 tip, and the 778 diff still contains verify- head binding plus previous_path",
+      "no_go_action": "Abort the rebase and keep d8e92836 if the 778-only repairs are dropped"
+    },
+    {
+      "id": "C3",
+      "after": "T5",
+      "evidence_required": "gh pr view 786 reports mergeable MERGEABLE, and filetree.md no longer lists l9-ci-ops, l9-cli-optimization, or l9-setting-up-ci as live skills",
+      "no_go_action": "Do not push a keep-ours generated tree"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "repository root additive_only files",
+      "action": "n_a",
+      "reason": "No root file is in the write envelope"
+    },
+    {
+      "surface": "skills/l9-pr-audit/references/semantic-lane.md",
+      "action": "update",
+      "todo_ids": ["T1", "T2"]
+    },
+    {
+      "surface": "filetree.md",
+      "action": "update",
+      "todo_ids": ["T5"],
+      "reason": "Regenerate through the owning generator on the 786 tree"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does dropping only the index oid line still let an indentation change or a hunk-header change compare equal?",
+      "Can a lane file a final-verification artifact whose tested revision is the frozen head while the command never ran?",
+      "Does HTTP 404 without the body Branch not protected get stored as ABSENT?",
+      "Does rebasing 778 onto 777 drop the verify- head binding or previous_path overlap?",
+      "Does merge.l9-generated exit 0 on 786 hide a GitHub CONFLICTING result?"
+    ],
+    "assumed_false_ifs": [
+      "The four audited heads move before execution starts",
+      "An authorized owner re-scopes READY to mean rulesets only",
+      "778 is squashed onto main",
+      "This dirty planning checkout is used as the implementation tree"
+    ],
+    "blast_radius": "Honest audits that were projecting READY from prose probes become UNKNOWN or NOT_READY until a real head-bound verification artifact exists. 778's stack parent changes. 786's generated manifests follow the post-rebase tree, so a bad generator run republishes stale digests.",
+    "rollback": "Revert the scoped commits on each existing PR branch. Do not force-push. If the 778 rebase is wrong, reset that branch only to d8e92836991849a266408bbacd62d638bd6c9ff2 with an explicit user request, otherwise stop and leave the pre-rebase ref intact."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4", "T5"],
+    "shared_causes": [
+      "synthesized-attestation: one assembler change closes the false SURVIVED and false VERIFICATION pass on 777 and, after rebase, on 778",
+      "unobserved-source-attested-complete: transport selection and classic-protection status share one collector",
+      "whitespace-blind-patch-id is local to 776",
+      "stale-generated-projection is local to 786 until 778 and 786 share a tree"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the assembler path that writes SURVIVED from ready_prs and the unconditional pass_type VERIFICATION record",
+      "Delete the hard-coded ccr/review_threads call as the only thread transport",
+      "Do not add a second patch-id implementation or a second review-thread client"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Sibling open PR chains make PR_STACK=auto fail closed",
+      "mitigation": "Publish each repair on its existing branch with PR_STACK empty and PR_BASE set to that PR's current base. 778 base stays the 777 branch."
+    },
+    {
+      "risk": "778 rebase drops the child repairs",
+      "mitigation": "Checkpoint C2 compares the post-rebase diff with the pre-rebase 778-only markers and aborts on loss"
+    },
+    {
+      "risk": "Local l9-generated merge driver hides 786 conflicts",
+      "mitigation": "Judge 786 with GitHub mergeable and with git merge-file, not with merge-tree while the driver is registered"
+    },
+    {
+      "risk": "A later combined merge of 778 and 786 keeps the wrong skill registry",
+      "mitigation": "Follow-on regeneration from the combined corpus. This plan does not copy either registry file across branches."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Will GitHub return the exact body Branch not protected for an unprotected branch under this token at execution time?",
+      "decision_effect": "Only that body records ABSENT. Any other 404 or a 403 records UNKNOWN and withholds complete readiness.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Which non-header hunks inside the four 786 manifests conflict beyond generated_utc and source_tree_digest?",
+      "decision_effect": "Execution regenerates those files. It does not hand-merge hunks.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV-001",
+      "command": "python3 -m pytest tests/skills/l9_pr_audit/test_audit_pipeline.py -q",
+      "pass_criteria": "Prose DONE fixture is not READY with SURVIVED and not CONVERGED; a fixture with a head-bound final-verification artifact can reach those states",
+      "status": "pending"
+    },
+    {
+      "id": "FV-002",
+      "command": "python3 skills/l9-global-architect/scripts/verify_coding_delegation.py; hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "Indentation-only and hunk-header substitutions are VIOLATED; the VALUE = 3 case stays rejected. Hook catalog is .pre-commit-config.yaml.",
+      "status": "pending"
+    },
+    {
+      "id": "FV-003",
+      "command": "gh pr view 786 --json mergeable,mergeStateStatus,headRefOid",
+      "pass_criteria": "mergeable is MERGEABLE after the rebase and regeneration",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U2"],
+    "next_skill": "Build on the owning PR branches",
+    "stop_reason": "Plan is ready to Build. Execution evidence FV-001 FV-002 and FV-003 is still pending. U2 is resolved by regeneration, not by a hand merge."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-global-architect/scripts/verify_coding_delegation.py",
+      "skills/l9-pr-audit/scripts/assemble_audit.py",
+      "skills/l9-pr-audit/scripts/collect_snapshot.py",
+      "skills/l9-pr-audit/schemas/lane-findings.schema.json",
+      "skills/l9-pr-audit/references/semantic-lane.md",
+      "tests/skills/l9_pr_audit/test_audit_pipeline.py",
+      "rules/RULES-MANIFEST.json",
+      "rules/RULES-MANIFEST.md",
+      "rules/RULES-MANIFEST.yaml",
+      "environment/generated/llm-rules/MANIFEST.json",
+      "environment/agents/adapters/claude-code/settings.template.json",
+      "ops/generated/skill-registry.json",
+      "environment/agents/adapters/claude-code/generated/skill-registry.json",
+      "filetree.md"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Makefile",
+      "skills/l9-pr-remediation/scripts/protocol.py rest_only contract",
+      "778 verify- head binding, previous_path overlap, and stand-alone bot lane pooling",
+      "claude/gar-skill-bootstrap-hook-mm2oj9 dirty tree including skills/l9-pr-audit/schemas/audit-output.schema.json"
+    ],
+    "preserved_contracts": [
+      "f175f971 remains an ancestor of the 778 head after rebase",
+      "Exact hunk compare rejects indentation and hunk-location substitution",
+      "READY does not mean rulesets-only when classic protection is UNKNOWN",
+      "Generated registries are regenerated from the tree that contains them"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/skills/l9_pr_audit/test_audit_pipeline.py -q",
+      "python3 skills/l9-global-architect/scripts/verify_coding_delegation.py",
+      "gh pr view 786 --json mergeable,mergeStateStatus"
+    ]
+  }
+}

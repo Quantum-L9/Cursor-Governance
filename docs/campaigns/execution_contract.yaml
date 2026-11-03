@@ -1,0 +1,247 @@
+contract_id: L9-MEM-C1-CG-REMOTE-BRIDGE-20261026-001
+objective: Implement and verify one opt-in, INACTIVE-by-default Cursor-Governance consumer adapter that exposes
+  the existing l9-graphite-memory MCP stdio surface to Cursor and Claude Code while forwarding authorized requests
+  to the already-defined Memory 3.0 signed-agent Streamable HTTP contract. Preserve the current 2.6.0 local path
+  byte-for-byte in default behavior. Deliver one reviewable consumer PR, not the release, hosted deployment or
+  cutover.
+target:
+  repository_or_artifact: https://github.com/Quantum-L9/Cursor-Governance
+  base_revision: e31ea23149ae2669bcaca82da65252e56cf2ace5
+  branch_or_worktree: feat/memory-v3-remote-stdio-bridge (new worktree/feature branch from main; one PR against
+    main)
+authority_refs:
+- Operator-approved C1 Shared Memory Campaign v1.2, supplied under baseline/; the accepted 12-node graph is preserved,
+  not rewritten by this contract.
+- 'Operator confirmation on 2026-10-26: legacy C1 Memory SQLite store backed up and verified; replacement authorized.
+  This first consumer PR does not perform retirement, deletion or cutover.'
+- 'Quantum-L9/Cursor-Governance@e31ea23149ae2669bcaca82da65252e56cf2ace5: docs/decisions/ADR-0030-memory-control-plane-single-front-door.md;
+  ADR-0031-signed-agent-mcp-write-classes.md; ADR-0033-two-lanes-one-memoryservice.md; CANONICAL_LAW.md; ops/memory
+  and adapter code. Consumer is semantic owner for its entrypoints and transport policy.'
+- 'Quantum-L9/l9-graphiti-memory@eb0bcbed1e1652529675af52584185d2f09dd737: docs/REMOTE_MCP_CONTRACT.md; docs/adr/ADR-098-remote-mcp-transport-and-signed-agent-http-identity.md;
+  src/l9_graphite_memory/remote_client.py; pyproject.toml. The 3.0.0 SOURCE exists, but 3.0.0 is not yet a verified
+  published release.'
+- 'Quantum-L9/.github@3dcdeaae355b6de08562993f705084d7a3714bfd: the admitted hosted-Memory dependency exception
+  l9.product-kind-exception/memory-hosted-service@1; only the global owner can change this law.'
+- 'Quantum-L9/l9-semantic-compiler-engine@e07a143a7c1c642c8c3c4cba57897292a40a78f7: read-only owner of canonical
+  projection production and producer PASS receipts for verified L9 Coding Agent binding.'
+- Operator-supplied L9.CODING_AGENT.EXECUTION_CONTRACT.001 v1.1.0, same required-field and normalization format
+  as Memory A2 carrier delegation.
+- Prior parallel Memory A2 contract L9-MEM-C1-A2-CARRIER-20261026-001 is source-carrier ONLY; no branch or merge
+  dependency between these two PRs.
+in_scope:
+- At the existing Cursor-Governance Memory launcher/adapter ownership seam, add a trusted local MCP stdio-to-remote
+  Memory 3.0 bridge SELECTABLE ONLY by an explicit disabled-by-default opt-in. Do not add a second canonical service
+  or a model-owned HTTP front door. Existing normal launch and installer output must remain unchanged until later
+  authorized activation.
+- Reuse current canonical actor/surface resolution, signed assertion and identity-sealing implementations (agent_identity,
+  agent_assertion, print_agent_assertion_env, canonical identity projections) and existing source-owned package
+  remote client/transport where it legitimately fits. Any genuinely necessary bridge-specific glue must remain
+  owned by ops/memory; justify every new file by an unmet existing responsibility.
+- 'In opt-in test mode, convert the stdio client MCP handshake into a compliant HTTP Memory 3.0 session: account
+  for stdio protocol 2024-11-05 versus Memory HTTP supported 2025-11-25 / 2025-06-18; send the agreed MCP version
+  header after initialize, preserve JSON-RPC IDs, tools/list, tools/call, notifications/initialized and error/receipt
+  semantics. Never assume blind byte forwarding constitutes protocol compatibility.'
+- Mint or refresh the agent assertion and identity assertion HMAC for EACH HTTP request from the currently resolved
+  actor and its trusted scoped signing key; send only Authorization Bearer agent assertion, L9-Identity-Assertion
+  and L9-Identity-Assertion-HMAC. The signing key, grants map, human entrance and authority map never cross HTTPS
+  or enter model-facing configuration.
+- Stage an explicitly separate per-agent durable-key binding seam using current trusted Infisical/capability_bind
+  and approved per-machine custody, but no real key creation, storage migration or Infisical write. Never treat
+  ephemeral per-container self-signed keys as valid hosted parity; actual same-key host registry binding belongs
+  to a later gate.
+- Preserve the current authoritative MCP projection and Cursor managed-entry ownership. Provide staged selection
+  through existing launcher/configuration authorities, including minimal source-owner documentation of the opt-in
+  and its prerequisites; do not silently edit generated .mcp.json or actual user/account environments.
+- Add focused source-native tests for default local regression, opt-in MCP handshake/remote requests, per-request
+  signing, multi-agent identity and denied grants, failure taxonomy and no fallback; include a cross-repo disposable
+  Memory 3.0 signed-agent server/PostgreSQL 16 interoperability test when available independently of Memory A2
+  carrier.
+- Make the narrowest consumer-owned policy/ADR documentation revision explicitly recognizing trusted local stdio
+  bridge transport to the Memory 3.0 hosted exception while preserving the rule that model tools cannot call HTTP
+  directly. Do not add public contract fields or broaden the exception.
+- Provide one PR against Cursor-Governance main, with exact tests, branch head, scoped diff and a named activation
+  handoff; source preparation may proceed concurrently with A2 without touching its files.
+out_of_scope:
+- No release/tag, installation or lockfile rebind to 3.0.0, and no change to ops/config/memory-binding.json expected_package_version=2.6.0
+  or current official wheel/hash; the new remote branch remains dormant. No live Cursor, Claude Desktop, Claude
+  Code Web/Mobile or user machine activation.
+- No changes to l9-graphiti-memory (including its wire contracts), .github, l9-semantic-compiler-engine, l9-deploy,
+  l9-ci-core, l9-cognitive-runtime or any other repository. These source owners are read-only or inaccessible.
+- No C1 SSH/host/Docker/Caddy/PostgreSQL/SQLite action, no network/firewall/DNS/Infisical deployment changes,
+  no Memory 2.2.0 stop/delete, no Graphiti/Neo4j/Redis changes and no Cognitive Runtime modification.
+- No real agent key provisioning/rotation, server grant writing, real secret reads for validation, production
+  network allowlist activation, service admission or C1 E2E cross-device proof.
+- No direct model-controlled agent HTTPS MCP configuration, bearer-only service principal substitution, ephemeral-silo
+  success claim, hard-coded signing key/token, or HTTP transport without authenticating the three required headers.
+- No remote administrator features, new remote distillation/bootstrap tool, automatic SessionEnd distillation
+  reinterpretation, broad hook-lane rewrite, local-ledger archival, migration, replacement or silent fallback.
+- No general replacement of the independent Context7 vault bridge, generic secret service, MemoryService API,
+  agent registry meanings, grant model, generated adapters or unrelated code cleanup.
+locked_invariants:
+- 'Accepted architecture unchanged: centrally hosted Memory 3.0, one canonical PostgreSQL MemoryService on existing
+  C1, l9 ProductKind Dependency under admitted exception; consumer agents access one canonical MCP surface.'
+- Cursor and Claude Code use a local trusted STDIO entry. The bridge alone may call the signed-agent Memory 3.0
+  HTTPS /mcp endpoint; models and generated MCP entries never receive a direct remote HTTP server URL, bearer
+  or signing key.
+- Current default production remains fully local and pinned to verified Memory 2.6.0. Feature absent/false means
+  no remote network access, no new remote listener and existing MCP entry/args/actor behavior unchanged. Test-only
+  opt-in is explicit and cannot silently become default on merge.
+- In remote opt-in mode, any unreachable/invalid-auth/contract-mismatch/expired or ungranted remote operation
+  is refused as typed memory-blind; do NOT open or write a local SQLite store as a fallback.
+- Canonical identity is derived from the true process agent markers (cursor versus claude-code), not a static
+  user-supplied author; Desktop/Mobile are surfaces of claude-code, not separate author identities; actor identity
+  evidence and permission grants are separate.
+- Each agent owns a distinct durable signing key with corresponding server-side registry identity and only its
+  own effective namespace grants; no server-side key/grant map or human admin secret is transmitted over HTTP.
+  Nothing adds is_admin or an anonymous local-operator bypass.
+- 'MCP transport compliance: stdio protocol 2024-11-05, HTTP 2025-11-25 or 2025-06-18, stateless Streamable HTTP
+  with no session-id requirement; do not forward an unsupported protocol version to the server.'
+- Caller receives ordinary Memory MCP tools/typed receipts. Authorization denial never becomes a successful empty
+  response; invalid responses never become a valid memory receipt; no guessed compatibility defaults.
+- Staged code cannot require the actual 3.0.0 artifact release or changing Memory A2; test against explicit source-bound
+  3.0 source and disposable server where necessary, never a floating production pin.
+- Hooks have a remote gap for administrator-only distill/bootstrap; do not quietly add or emulate those operations
+  or retire local hook behavior in this contract.
+- The existing Memory 2.2.0 service and old SQLite are operator-authorized for later deletion after replacement,
+  and old backup verified; this coding PR does not do that work. Graphiti/Neo4j and Cognitive Runtime remain protected.
+- One new feature PR against main. Independent of parallel Memory A2; do not stack unrelated PRs or wait for A2
+  merge to work on source-level protocol.
+acceptance_criteria:
+- 'AC01 Local-default proof: without explicit opt-in, existing launchers, projection checks and managed Cursor/Claude
+  memory entries still use the 2.6.0 local stdio server and no remote URL, secret or request is introduced; current
+  relevant tests pass.'
+- 'AC02 Opt-in test-mode proof: a stdio MCP client can initialize via the bridge, list tools, call memory health/capabilities
+  and a write/read/search operation against a Memory 3.0 signed-agent HTTP endpoint; protocol-version conversion,
+  response IDs and notifications are exercised, not assumed.'
+- 'AC03 Credential proof: exact three required HTTP headers are produced for each request under the correct resolved
+  agent; identity assertion is sealed/HMAC-verified and fresh token minted/renewed before expiry; signing keys,
+  door secrets, human secret and grants map never appear in HTTP request body, logs, stderr, stdout, repo configs
+  or MCP responses.'
+- 'AC04 Isolation proof: Cursor and Claude Code represent distinct agents. A legitimate A write can be found by
+  authorized B on the SAME disposable MemoryService store, but B cannot masquerade as A or access an ungranted
+  namespace. Denials and 401/403 do not lose actor attribution or produce a write receipt.'
+- 'AC05 Fail-closed proof: missing URL in opt-in, missing or expired key/identity, mismatched server contract
+  or protocol, server timeout/TLS/redirect/unreachable, ungranted namespace and malformed JSON-RPC all yield explicit
+  failure with no fallback local SQLite access or success-shaped receipt.'
+- 'AC06 Consumer policy: any necessary ADR/README source change distinguishes an approved trusted stdio-to-remote
+  adapter from banned model-directed HTTP and does not broaden agent ingress, admin authority, canonical law or
+  deployment ownership. Generated files have authoritative source ownership and remain in sync if touched.'
+- 'AC07 No premature activation: current memory-binding.json still pins 2.6.0 exact wheel; default Claude Code
+  template and rendered .mcp.json, Cursor managed entry, Web/Mobile network settings and real machine keys are
+  unchanged except where a source-owned dormant selector demonstrably requires a minimal safe adjustment.'
+- 'AC08 Evidence and deliverable: one PR against Cursor-Governance main contains the focused source diff, tests
+  for both agent identities and negative controls, exact version-bound temporary Memory 3.0 fixture evidence (or
+  explicit Unknown), exact head/revision and an activation-dependency list. No remote production readiness or
+  C1 shared-memory success claimed.'
+forbidden_actions:
+- Do not touch GitHub repositories outside the one writable target; no editing even a local worktree in a read-only
+  dependency. If a new owner is required, stop and ask for explicit session amendment.
+- Do not publish any service image, release, merge, tag, deploy, change branch protections, rotate credentials,
+  provision databases, edit C1 or install/activate 3.0 in the live current Cursor/Claude environment.
+- Do not change the globally admitted Memory exception, Memory public wire protocol, actor/grant schemas, guest
+  or admin pathways, nor add a model-visible direct HTTP MCP entry.
+- Do not commit real keys, personal identifiers, secrets, credentials, environment files or hard-coded production
+  assertion values. Unit/test fixtures use synthetic values only.
+- Do not edit generated .mcp.json directly, widen Web/Mobile agent egress by default, alter existing Context7
+  behavior, open an external port or silently activate remote mode.
+- Do not assert no unknowns, PASS release conformance, independent architecture admission or E2E proof from mocks
+  or source-level checks; do not bypass failed gates, skip tests to force green or fabricate canonical three-PASS
+  projection receipts.
+- Do not publish via raw git push/gh pr create outside the verified Cursor-Governance SSOT make pr ceremony, nor
+  perform any other repository publication under this contract.
+validation_obligations:
+- V01 Bind current exact Cursor-Governance main@e31ea23149ae2669bcaca82da65252e56cf2ace5, Memory main@eb0bcbed1e1652529675af52584185d2f09dd737,
+  .github@3dcdeaae355b6de08562993f705084d7a3714bfd and semantic compiler@e07a143a7c1c642c8c3c4cba57897292a40a78f7;
+  re-evaluate affected paths if any material revision changed.
+- 'V02 Verify required current Coding Agent projection inputs from the REAL compiler: three canonical source projections,
+  three producer PASS receipts and current .github SHA. The embedded manual unknown receipts cannot support a
+  verified L9-conformant mutation claim; report exact blocker if absent.'
+- V03 Baseline current launcher/MCP surface tests and schema/registry identity invariants, then rerun focused
+  regressions plus target-native relevant test/quality gates from actually inspected owner source; record baseline
+  versus introduced failures.
+- V04 Exercise real stdio requests over the staged bridge (initialize/notifications/initialized/tools/list/tools/call)
+  against exact Memory 3.0 HTTP transport with an isolated test server and disposable PostgreSQL 16 if available;
+  do not require the A2 Docker carrier to test the protocol.
+- V05 Verify per-request signing/identity from synthetic scoped identities and keys, request headers, strict server
+  auth responses, two-agent read/write/denial and freshness; test missing env/key, key mismatch, TTL/expired,
+  wrong actor, unauthorized namespaces and no secret disclosure.
+- V06 Prove no fallback by instrumenting attempts to open SQLite/local MCP server and refusing remote failure
+  rather than serving stale data; verify no outbound request when dormant default.
+- V07 Verify authoring ownership for generated .mcp.json and managed Cursor entry. Demonstrate both default paths
+  remain unchanged and no secret/key or URL flows into projected client configs, shell commands or logs.
+- 'V08 Verify PR publication through the current Cursor-Governance SSOT only: at exact current Makefile and ops/make/publish.mk,
+  run one authorized make pr from SSOT with WS=exact writable checkout, PR_BASE=origin/main, OPEN_PR=1, PUSH_ONLY!=1
+  and L4 permissions checked. If permission/canonical binding/preflight fails, report BLOCKED and do not bypass.
+  Avoid redundant gate-only make pr.'
+- V09 Emit exact changed files, diff summary, focused and required test results, source/head and actual PR URL
+  only when observed; describe still-blocked release binding, real key provisioning, live network, C1 deployment,
+  Mobile/Cursor E2E and local-store retirement gates.
+delivery_mode: One bounded Cursor-Governance feature branch/commit and one review PR against main, only after
+  operator dispatch and successful L9/source/publication gates. No merge, 3.0 release/tag, host deployment, Infisical
+  write, Mobile/Cursor activation or runtime cutover.
+implementation_discretion: 'Contraction-first: reuse existing launcher, assertion material and package remote
+  client interfaces; choose minimal extra protocol bridge glue inside ops/memory only if existing trusted bridge
+  cannot implement dynamic identity/protocol correctly. The programmer chooses local implementation details but
+  may not add a new memory authority, alter public contract shapes or activate it by default.'
+external_action_permissions:
+- 'Contract authoring in this chat: delivery artifacts only; no repository/cloud/service mutations were made.'
+- After operator deliberately dispatches this contract, the authorized Coding Agent may inspect read-only sources,
+  edit/commit only the explicitly writable Cursor-Governance paths, and open one PR against main through its validated
+  SSOT publication ceremony.
+- No merge, release, deploy, C1 deletion, memory release-binding change, secret custody change, other-repository
+  mutation or consumer cutover permission is granted.
+unresolved_unknowns:
+- 'Operational successor only: real Memory 3.0 release tag, exact published wheel/sdist, hosted endpoint health,
+  server-side durable keys/grants, C1 PostgreSQL/Infisical, network allowlist, current host route and two actual
+  machine/session E2E are not proven; do not block dormant code from progressing on these alone.'
+- The exact real producer three-PASS L9 Coding Agent projection set has not been supplied in this handoff. Executor
+  must bind it, or explicitly return the authority/binding blocker; never manufacture or downgrade an L9 conformance
+  claim.
+- 'Stdio/HTTP message parity and remote lifecycle method coverage are not presumed complete: the isolated Memory
+  3.0 integration fixture must falsify any false equivalence; escalate only a proven material wire or scope conflict
+  to GAR, without altering Memory.'
+- Current hook SessionEnd distill is unsupported remotely per Memory 3.0 REMOTE_MCP_CONTRACT; address only at
+  future consumer activation stage, not with a new remote tool here.
+inspection_scope:
+- 'Writable Cursor-Governance: ops/memory/run_memory_mcp.sh, ops/memory/mcp_instantiation.py, agent_identity.py,
+  agent_assertion.py, print_agent_assertion_env.py, materialize_agent_authority.py, control_plane_client.py, templates,
+  tests, current owned policy and documentation.'
+- 'Writable Cursor-Governance: ops/secrets/vault_mcp_bridge.py and capability_bind.py for inspection of existing
+  reusable HTTPS/Infisical mechanics only; modifications there only if a direct mandatory bridge root-cause correction
+  is demonstrated and Context7 cannot regress.'
+- Read-only Memory 3.0 source and remote-client/source transport contract; read-only global authority and canonical
+  semantic compiler/real three-PASS projections; local provided campaign v1.2 files.
+- No C1 host, real secrets/keys, user machine config mutation or public Memory HTTP probing under this coding
+  slice.
+modification_scope:
+- 'Quantum-L9/Cursor-Governance ONLY: minimal ops/memory launcher and bridge/credential glue; limited source-of-truth
+  consumer ADR/policy text when unavoidable; exact affected tests and fixtures; minimal docs.'
+- 'Only when a verified direct dependency requires it: source-owned Claude MCP template or Cursor managed-entry
+  source. Do not edit derived/generated .mcp.json or any current default active entry, account UI, Web/Mobile
+  egress policy or wheel/lock binding.'
+- Generic Context7 bridge, shared capability binder and other adapter surfaces remain unchanged except a proven
+  in-scope reusable defect; new files require invariant/contract necessity proof and focused tests.
+readiness_claim: 'DELEGABLE_BOUNDED_DORMANT_CONSUMER_PR_ONLY: architected bridge and source owner are identified;
+  no executable code/test/remote release binding or hosted parity was asserted by this contract author.'
+baseline_expectations:
+- Cursor-Governance main e31ea23149ae2669bcaca82da65252e56cf2ace5 retains ops/config/memory-binding.json expected_package_version
+  2.6.0; existing local launcher uses the bound stdio MemoryService.
+- The Claude MCP template is source authority, .mcp.json is generated from that template; managed Cursor entry
+  is package-configurator owned, not authored in mcp_instantiation.py.
+- Existing ops/secrets/vault_mcp_bridge.py provides generic stdio to HTTPS for a static Context7 credential, not
+  the dynamic three-header signed-agent Memory 3.0 contract.
+- Memory 3.0 source provides the signed-agent HTTP MCP endpoint, RemoteMemoryClient and remote CLI; it supports
+  Streamable HTTP protocol revisions 2025-11-25/2025-06-18, whereas existing stdio reports 2024-11-05.
+- Hosted Claude Code currently self-provisions ephemeral in-container signing keys for local use, which cannot
+  establish C1 signed-agent parity; current default cannot be switched just by setting a URL.
+- Original Memory A2 source-carrier PR is a separate branch/repository and requires neither merging nor modification
+  before this bridge coding starts.
+preservation_obligations:
+- Preserve the current Memory 2.6.0 pinned release and exact existing local stdio behavior, package-owned command
+  shape, generated Claude/managed Cursor entries and session hooks by default.
+- Preserve Context7 vault bridge, per-agent canonical attribution, identity sealed evidence, grants, existing
+  hook envelopes, current security/egress protections and all unrelated local modifications.
+- Keep dormant staged tests isolated from user/home accounts, local SQLite files, real Infisical secrets, C1 host,
+  Graphiti projection and live signing keys.
+- Preserve distinct denied versus degraded/unknown outcomes; an auth or network failure cannot be reported as
+  an authorized empty result or local memory success.

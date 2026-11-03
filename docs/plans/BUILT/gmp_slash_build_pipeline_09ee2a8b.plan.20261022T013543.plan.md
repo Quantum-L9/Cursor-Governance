@@ -1,36 +1,47 @@
 ---
 name: GMP slash Build pipeline
-overview: "Rewrite `/gmp` so the slash itself is authorization: last same-turn steps are locked-venv executor --mode start, then Build of the named plan, then --mode finalize. No USER_GATE, no `/ynp`, no second confirm. Bounded-autonomy bounds apply as a GMP-only backup pipeline, not Program Execution."
+overview: 'Rewrite `/gmp` so the slash itself is authorization: last same-turn steps
+  are locked-venv executor --mode start, then Build of the named plan, then --mode
+  finalize. No USER_GATE, no `/ynp`, no second confirm. Bounded-autonomy bounds apply
+  as a GMP-only backup pipeline, not Program Execution.'
 todos:
-  - id: executor-noninteractive
-    content: "Add --authorized-by slash-gmp, --plan, --mode start|finalize|full, --commit-when-done; skip input() gates; STATE_FILE under .l9/gmp/; L4 begin on start. Files: workflows/gmp_executor.py"
-    status: completed
-  - id: rewrite-gmp-command
-    content: "Rewrite commands/gmp.md start-session style; auto_chain null; delete dag_executor; EXECUTION MANDATORY last steps = GOV_PY start, Build, GOV_PY finalize; COMMANDS_MANIFEST description. Files: commands/gmp.md, commands/COMMANDS_MANIFEST.yaml"
-    status: completed
-  - id: gmp-skill-bounds
-    content: "Point l9-gmp-protocol at workflows/gmp_executor.py; drop pasted command body; add gmp-autonomy-bounds.md. Files: skills/l9-gmp-protocol/SKILL.md, skills/l9-gmp-protocol/references/gmp-autonomy-bounds.md"
-    status: completed
-  - id: tests-gmp-pipeline
-    content: "Command contract test, authorized-start test, NO_SCOPE and NO_TASK fixtures. Files: tests/commands/test_gmp_slash_contract.py, tests/workflows/test_gmp_executor_authorized.py, tests/workflows/fixtures/gmp_plan_with_todos.plan.md, tests/workflows/fixtures/gmp_plan_empty.plan.md"
-    status: completed
+- id: executor-noninteractive
+  content: 'Add --authorized-by slash-gmp, --plan, --mode start|finalize|full, --commit-when-done;
+    skip input() gates; STATE_FILE under .l9/gmp/; L4 begin on start. Files: workflows/gmp_executor.py'
+  status: completed
+- id: rewrite-gmp-command
+  content: 'Rewrite commands/gmp.md start-session style; auto_chain null; delete dag_executor;
+    EXECUTION MANDATORY last steps = GOV_PY start, Build, GOV_PY finalize; COMMANDS_MANIFEST
+    description. Files: commands/gmp.md, commands/COMMANDS_MANIFEST.yaml'
+  status: completed
+- id: gmp-skill-bounds
+  content: 'Point l9-gmp-protocol at workflows/gmp_executor.py; drop pasted command
+    body; add gmp-autonomy-bounds.md. Files: skills/l9-gmp-protocol/SKILL.md, skills/l9-gmp-protocol/references/gmp-autonomy-bounds.md'
+  status: completed
+- id: tests-gmp-pipeline
+  content: 'Command contract test, authorized-start test, NO_SCOPE and NO_TASK fixtures.
+    Files: tests/commands/test_gmp_slash_contract.py, tests/workflows/test_gmp_executor_authorized.py,
+    tests/workflows/fixtures/gmp_plan_with_todos.plan.md, tests/workflows/fixtures/gmp_plan_empty.plan.md'
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: gmp_slash_build_pipeline_09ee2a8b.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-28T22:34:00Z
-    body_sha256: "04a88d92e4a35380e934d92f02eef39dc0d970dff9fbb498b928c81e69420e1b"
+    ran_at: 2026-08-28 22:34:00+00:00
+    body_sha256: 04a88d92e4a35380e934d92f02eef39dc0d970dff9fbb498b928c81e69420e1b
     deltas:
-      - "Stamped kernel_pass so this leftover /ff shelf plan can pass the plan gate"
-      - "Kept existing todos and body; no second plan created"
+    - Stamped kernel_pass so this leftover /ff shelf plan can pass the plan gate
+    - Kept existing todos and body; no second plan created
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T22:34:30Z
-    body_sha256: "04a88d92e4a35380e934d92f02eef39dc0d970dff9fbb498b928c81e69420e1b"
+    ran_at: 2026-08-28 22:34:30+00:00
+    body_sha256: 04a88d92e4a35380e934d92f02eef39dc0d970dff9fbb498b928c81e69420e1b
     deltas:
-      - "Re-ran Validate & Repair on the same bound path; no second plan created"
-      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+    - Re-ran Validate & Repair on the same bound path; no second plan created
+    - 'Content gates: no exclusive-list ellipsis and no unresolved exclusive lock'
+built: true
+status: built
 ---
 # GMP slash → executor → Build (no second confirm)
 
@@ -266,3 +277,15 @@ Press **Build**. Work on a **new branch from `origin/main`** (rule 46).
 - Do not execute on the dirty primary checkout.
 - After local finish of *this* wiring PR: ask once before `make pr`. After this PR merges, `/gmp` itself is the ask for future runs.
 - Do not merge.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `executor-noninteractive`: completed
+- `rewrite-gmp-command`: completed
+- `gmp-skill-bounds`: completed
+- `tests-gmp-pipeline`: completed

@@ -1,0 +1,345 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Close the weak cron tests",
+  "objective": "Close the weak-cron campaign on the current workspace. tests/cron_contract.py must pass the suite naming test. Offer and load fail-closed counts must be the rows that sort before the fixture. The claim reminder must be created once, or the test fails closed when that batch cannot reach the claim. Midnight recompute, logistics escalation, and monthly audit must fail if the method returns immediately, by asserting the stored field or log the live method changes. Missing-docs, scale-ticket, and geo backfill stay negative-only and are named unreachable. No production cron edit, addon loader, Docker run, or scanner change.",
+  "success_criteria": [
+    "tests/test_suite_structure.py::TestTestFileNaming::test_test_files_start_with_test passes with cron_contract.py listed in NON_TEST_FILES",
+    "Offer and load fail-closed counts include every row that sorts before the fixture, including same-key lower ids and null entered_state_at",
+    "The claim SLA test requires one Open Claim Reminder activity, or fails closed with the reminder-batch count, and invalidates the resolved claim before the last state read",
+    "A no-op midnight recompute leaves is_overdue false and is_expired false; the live cron sets both true on the test-owned stale rows",
+    "A no-op _cron_escalation_check leaves sla_breached false; the live method sets it true on the SLA load",
+    "A no-op run_monthly_audit emits no Monthly audit warning; the live method emits that warning when commission_locked exists",
+    "UNREACHABLE_IN_DOMAIN is exactly cron_check_missing_docs, cron_check_scale_tickets, and cron_geo_backfill, and the XML lock asserts that set",
+    "python3 ci/weak_test_fixer.py reports no assertion-free tests, and pytest passes the XML lock, the four validator modules, and tests/test_weak_test_authority.py"
+  ],
+  "scope": {
+    "in": [
+      "tests/test_suite_structure.py NON_TEST_FILES entry for cron_contract.py",
+      "tests/cron_contract.py unreachable-effect registry",
+      "tests/test_cron_xml_lock.py lock of that registry",
+      "tests/integration/test_cron_idempotency.py sort-prefix counts and reachable effects",
+      "tests/test_cron_runtime.py out-of-domain pairs, resolution_note, and negative-only reasons"
+    ],
+    "out": [
+      "Production cron bodies, manifests, ACL, and module version bumps",
+      "ci/weak_test_fixer.py and the extended-audit baseline",
+      "An addon test loader or any edit that puts these files on --test-enable",
+      "A Docker or make test-module run as proof",
+      "SQL backdating of create_date for missing docs or scale tickets",
+      "An addressed partner or a Nominatim call for geo backfill",
+      "Mocking pg_try_advisory_lock",
+      "tests/integration/test_offer_state_machine.py TestOfferCronExpiry",
+      "pipeline_v2.py and plasticos_base production code",
+      "Unrelated dirty files already in this detached checkout"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "standard",
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "MEMORY_PREFETCH namespace=ib-odoo-19 snapshot_digest=84285faaaf0ae34c9b231c0df0fb2c0098797dc2f04b98b31dc5e64450f3ee44 conflicts=0 state=HIT",
+      "pass_criteria": "prefetch status OK and conflicts 0",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "GAR bootloader load_order through STATE_MACHINE; profile loaded and not applied as PlasticOS inventory; First-Order intervention is test-contract repair; route_plan.py --risk medium --evidence sufficient",
+      "pass_criteria": "depth standard and omit_gates empty; architecture remains the settled test-contract repair",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "git rev-parse HEAD and git status --short on /Users/ib-mac/IB-Odoo_19 (LOCAL)/IB-Odoo_19; hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "detached HEAD 079a13df3c4c963a7c16bcb3f07f9cf32a8b5cd7 recorded; may_modify paths are the only dirty files this plan may continue",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "python3 -m pytest tests/test_suite_structure.py::TestTestFileNaming::test_test_files_start_with_test -q",
+      "pass_criteria": "currently fails on cron_contract.py; this plan exists to make that pass",
+      "status": "failed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "suite-name",
+      "task": "Add cron_contract.py to NON_TEST_FILES in tests/test_suite_structure.py. Do not rename the module and do not give it a test_ function.",
+      "files": ["tests/test_suite_structure.py"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "NON_TEST_FILES",
+      "leverage_rank": 1,
+      "shared_root_cause": "registry module is a non-test file outside the suite allowlist"
+    },
+    {
+      "id": "sort-prefix",
+      "task": "After the fixture exists, fail closed when the count of rows that sort strictly before it is already at the cron limit. Offer includes same valid_until with a lower id. Load SLA includes null entered_state_at and the same timestamp with a lower id. Do not assert the write when that count is at the limit.",
+      "files": ["tests/integration/test_cron_idempotency.py"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "test_offer_expire_in_domain and test_load_sla_in_domain",
+      "leverage_rank": 2,
+      "shared_root_cause": "fail-closed count is not the search order prefix"
+    },
+    {
+      "id": "claim-reminder",
+      "task": "Count the pending sort prefix after create and fail closed at 300 before asserting escalated. Count the reminder sort prefix and fail closed at 300 before asserting the activity. Otherwise require exactly one Open Claim Reminder for that claim after the first call and the same count after the second. Invalidate the resolved claim before the last state read. Pass a non-empty resolution_note on every resolved claim create.",
+      "files": [
+        "tests/integration/test_cron_idempotency.py",
+        "tests/test_cron_runtime.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["sort-prefix"],
+      "operation": "Replace",
+      "anchor": "test_claim_sla_in_domain and test_claim_sla_leaves_resolved_claim",
+      "leverage_rank": 3,
+      "shared_root_cause": "equal activity counts of zero pass a cron that never reminds"
+    },
+    {
+      "id": "live-effects",
+      "task": "Midnight: on the test-owned claim, SQL-set stored is_overdue false while opened_at stays in the past, then the cron must set it true; fail closed when open claims are already at 1000. On the test-owned document, SQL-set expiry_date to yesterday and is_expired false, then the cron must set is_expired true; fail closed when that document search is already at 1000. Do not assert days_open; it is not stored. Escalation: one awaiting_ready load created with the freight write token and entered_state_at 100 hours ago becomes sla_breached true and stays in that state; fail closed when SLA-state loads are already at 500. Audit: when commission_locked is on plasticos.transaction, a closed transaction this test creates must produce a WARNING containing Monthly audit:; when the field is absent, fail with that fact and do not skip. A draft transaction's name must not appear in that warning.",
+      "files": [
+        "tests/integration/test_cron_idempotency.py",
+        "tests/test_cron_runtime.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["claim-reminder"],
+      "operation": "Replace",
+      "anchor": "midnight, escalation, and monthly audit tests",
+      "leverage_rank": 4,
+      "shared_root_cause": "tests assert fields the live method does not write"
+    },
+    {
+      "id": "unreachable",
+      "task": "Add UNREACHABLE_IN_DOMAIN on the Odoo-free registry for cron_check_missing_docs, cron_check_scale_tickets, and cron_geo_backfill, each with the reason create_date cannot be aimed or the path calls Nominatim. The XML lock asserts that set equals those three methods. Keep the Odoo tests negative-only and state that reason in the test docstring. Do not add a positive assert for those three.",
+      "files": [
+        "tests/cron_contract.py",
+        "tests/test_cron_xml_lock.py",
+        "tests/integration/test_cron_idempotency.py",
+        "tests/test_cron_runtime.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["live-effects"],
+      "operation": "Insert",
+      "anchor": "CRONS",
+      "leverage_rank": 5,
+      "shared_root_cause": "negative pairs were indistinguishable from an unfinished effect test"
+    },
+    {
+      "id": "prove",
+      "task": "Run ruff check and ruff format on the edited test files, ci/weak_test_fixer.py, the suite naming test, the XML lock, the four validator modules, and tests/test_weak_test_authority.py. Do not run Docker.",
+      "files": [
+        "tests/test_suite_structure.py",
+        "tests/cron_contract.py",
+        "tests/test_cron_xml_lock.py",
+        "tests/integration/test_cron_idempotency.py",
+        "tests/test_cron_runtime.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["suite-name", "unreachable"],
+      "operation": "Replace",
+      "anchor": "proof commands",
+      "leverage_rank": 6,
+      "shared_root_cause": "scanner-clean is not the same as the suite naming gate"
+    }
+  ],
+  "critical_path": ["sort-prefix", "claim-reminder", "live-effects", "unreachable", "prove"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Suite naming accepts the registry module and the two batch guards match search order",
+      "unlocks": "claim and effect edits on the same files"
+    },
+    {
+      "id": "M2",
+      "outcome": "Reachable crons fail a no-op, and the three unreachable methods are named",
+      "unlocks": "the proof commands"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "suite-name",
+      "evidence_required": "pytest tests/test_suite_structure.py::TestTestFileNaming::test_test_files_start_with_test exits 0",
+      "no_go_action": "Stop. Do not rename cron_contract.py and do not add a test_ function to it."
+    },
+    {
+      "id": "C2",
+      "after": "live-effects",
+      "evidence_required": "The stale is_overdue and is_expired reads are false immediately before the cron call. If either read is already true, stop and do not claim the cron changed it.",
+      "no_go_action": "Stop that test and report the flush. Do not weaken the assert to the pre-call value."
+    },
+    {
+      "id": "C3",
+      "after": "prove",
+      "evidence_required": "ruff exits 0, weak_test_fixer prints no assertion-free tests, and the named pytest modules exit 0",
+      "no_go_action": "Stop. Do not add an addon loader and do not start Docker to explain a pure-pytest failure."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Test-contract repair only. No addon, command, or CI-gate change."
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "No invariant is added or relaxed."
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "Cron ownership and module layers stay as they are."
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "No root instruction change."
+    },
+    {
+      "surface": "__manifest__.py",
+      "action": "n_a",
+      "reason": "Tests and a suite allowlist entry do not reload a module."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does one registry constant make the offer, load, claim, midnight, escalation, and audit repairs unnecessary? No. Each search order and each stored effect is a separate owner.",
+      "Does SQL-setting is_expired false still leave the row outside the document search because expiry_date is today and the compute uses a strict less-than? The test must set expiry_date to yesterday, not today.",
+      "Does asserting days_open fail a no-op? No. days_open is computed and not stored, so a read recomputes it without the cron.",
+      "Does an audit warning about other closed transactions prove this test's row was scanned? The draft-name absence check does not. The warning assertion fails only a method that returns before logging. The fail-closed count of 500 is what keeps this row inside the batch.",
+      "Does listing three methods as unreachable hide a reachable assert? Missing docs and scale tickets sort by create_date, which create() sets to now, and their status rules need age. Geo backfill geocodes an addressed partner through Nominatim. No test-owned field change reaches those writes without a cron change or a network call."
+    ],
+    "assumed_false_ifs": [
+      "If invalidate plus a read recomputes is_overdue or is_expired from dependencies before the cron, the pre-call assert is already true and C2 stops the test.",
+      "If commission_locked is absent, the audit test fails closed instead of expecting a warning the domain cannot emit.",
+      "If resolved claim create has no resolution_note, the existing constraint raises. The test must pass a non-empty note.",
+      "If the detached checkout's unrelated dirty files are staged, the campaign commit is no longer this repair."
+    ],
+    "blast_radius": "Five test files. No model, cron XML, manifest, or scanner. Rollback is restoring those paths.",
+    "rollback": "git restore -- tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "suite-name",
+      "sort-prefix",
+      "claim-reminder",
+      "live-effects",
+      "unreachable",
+      "prove"
+    ],
+    "shared_causes": [
+      "A no-op still passes when the assert watches a field the cron does not write, or when two activity counts are both zero.",
+      "A fail-closed count that ignores nulls and same-key lower ids claims a write the batch never reaches."
+    ],
+    "deletions_or_consolidations": [
+      "Do not add a second offer, load, or claim stack. Edit the tests that already call the live methods.",
+      "Do not add positive tests for the three unreachable methods. One named set replaces a false effect claim.",
+      "Further compression into one helper is rejected. tests/test_weak_test_authority.py does not count a helper call as evidence."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "A stored-compute flush sets is_overdue or is_expired true before the cron, so the search misses the row and a correct cron fails the test.",
+      "mitigation": "Read the field immediately before the call and require false. If it is already true, C2 stops. Do not change the expected value to match the flush."
+    },
+    {
+      "risk": "The monthly-audit warning can be emitted for other closed transactions, so a log assert does not by itself prove this row was inside the 500.",
+      "mitigation": "Fail closed when the violation count is already 500 before create. The new closed row is then last and inside the batch. The no-op failure is the missing warning, not the row name."
+    },
+    {
+      "risk": "This checkout is detached and dirty with unrelated campaign files. A broad commit would publish them.",
+      "mitigation": "Stage only the five may_modify paths. Do not stage AGENTS.md, manifests, or the document-import campaign files."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Will TransactionCase recompute is_overdue or is_expired on the first read after the SQL update?",
+      "decision_effect": "If the pre-call read is already true, that test stops at C2 instead of asserting the cron.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Is an open pull request present when Build starts?",
+      "decision_effect": "The execute section already selects the unique chain tip when any open PR exists, and origin/main only when the board is empty. Planning does not open a worktree.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/ruff check tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py && .venv/bin/ruff format --check tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 ci/weak_test_fixer.py",
+      "pass_criteria": "prints no assertion-free tests",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 -m pytest tests/test_suite_structure.py::TestTestFileNaming::test_test_files_start_with_test tests/test_cron_xml_lock.py tests/test_opportunity_protocol_split.py tests/test_projection_outcome_schemas.py tests/test_semantic_gate_payloads.py tests/test_gate_sdk_invocation.py tests/test_weak_test_authority.py -q --tb=line",
+      "pass_criteria": "exit 0. The gate SDK test may skip when the SDK is not installed. No Docker run.",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "pre-commit run --config .pre-commit-config.yaml --files tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py",
+      "pass_criteria": "exit 0 using the repo hook catalog .pre-commit-config.yaml",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "cursor-build",
+    "stop_reason": "Design is closed. P3 is the known naming failure this plan fixes, and V1-V4 run at Build. U1 and U2 are accept_bounded."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "tests/test_suite_structure.py",
+      "tests/cron_contract.py",
+      "tests/test_cron_xml_lock.py",
+      "tests/integration/test_cron_idempotency.py",
+      "tests/test_cron_runtime.py"
+    ],
+    "must_not_modify": [
+      "ci/weak_test_fixer.py",
+      "plasticos_*/models",
+      "plasticos_*/data",
+      "plasticos_*/__manifest__.py",
+      "pipeline_v2.py",
+      "tests/integration/test_offer_state_machine.py",
+      "tests/conftest.py",
+      "tests/__init__.py"
+    ],
+    "preserved_contracts": [
+      "tests/cron_contract.py imports no Odoo",
+      "The XML lock stays bidirectional for the live cron methods",
+      "No helper may swallow an exception or hide a traceback",
+      "No search().write() of seed rows",
+      "No addon loader and no Docker proof claim",
+      "A test the cron cannot reach fails closed with the count"
+    ],
+    "validation_commands": [
+      ".venv/bin/ruff check tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py",
+      ".venv/bin/ruff format --check tests/test_suite_structure.py tests/cron_contract.py tests/test_cron_xml_lock.py tests/integration/test_cron_idempotency.py tests/test_cron_runtime.py",
+      "python3 ci/weak_test_fixer.py",
+      "python3 -m pytest tests/test_suite_structure.py::TestTestFileNaming::test_test_files_start_with_test tests/test_cron_xml_lock.py tests/test_opportunity_protocol_split.py tests/test_projection_outcome_schemas.py tests/test_semantic_gate_payloads.py tests/test_gate_sdk_invocation.py tests/test_weak_test_authority.py -q --tb=line"
+    ]
+  }
+}

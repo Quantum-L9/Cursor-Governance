@@ -1,39 +1,56 @@
 ---
 name: Ceremony phase two
-overview: Phase 2 rebuilds the make pr ceremony as a linear pipeline with one writer stage, one overlap decision, and one concurrent reader stage. Host PR_OVERLAP cannot skip tests. Ruff dirt hard-stops. No hook, kernel, pytest, or overlap checker runs twice on the same inputs. Code-only on PR 347. No AGENTS.md. No ignore. Push after 345 no longer conflicts.
+overview: Phase 2 rebuilds the make pr ceremony as a linear pipeline with one writer
+  stage, one overlap decision, and one concurrent reader stage. Host PR_OVERLAP cannot
+  skip tests. Ruff dirt hard-stops. No hook, kernel, pytest, or overlap checker runs
+  twice on the same inputs. Code-only on PR 347. No AGENTS.md. No ignore. Push after
+  345 no longer conflicts.
 todos:
-  - id: hermetic-env
-    content: Strip PR_OVERLAP / TELEMETRY / PR_STACK / PR_REMEDIATE at pytest spawn in run_pr_gate.sh and in run_python_test_suites._suite_env; keep _gate() as belt; add a non-_gate inherited-ignore test
-    status: completed
-  - id: writers-once-stop
-    content: "Split run_pr_precommit.sh: kernel_gate once, then writer hooks plus one locked-venv ruff --fix/format, then hard-stop on tracked dirt. Delete gate retry that rebases status_before. Skip pre-commit ruff/ruff-format on the velocity path."
-    status: completed
-  - id: overlap-once
-    content: "Append Makefile `pr: PR_EARLY_OVERLAP = 1`. After dirty-stop, fetch+pr_overlap_check once, write overlap receipt. open_pr_after_gate reuses that receipt unless fetch inputs changed. Diagnose stays overlap-free."
-    status: completed
-  - id: parallel-readers
-    content: After overlap, run remaining read-only hooks, uv-lock, root-protect, skill-activation, sync --check, hermetic pytest, security, wiring, and claude_projection --check in one parallel wave. Skip symlinks-check hook. Drop projection apply. L4 check-remote once via preflight receipt. Domain validators stay after resolve, before writers.
-    status: completed
-  - id: tests-validate
-    content: Pin spawn-strip, dirty-stop-no-retry, overlap-once-on-pr-only, ruff-once, and parallel-wave skip lists. Scoped-commit on 347. make pr only after 345 no longer conflicts.
-    status: completed
+- id: hermetic-env
+  content: Strip PR_OVERLAP / TELEMETRY / PR_STACK / PR_REMEDIATE at pytest spawn
+    in run_pr_gate.sh and in run_python_test_suites._suite_env; keep _gate() as belt;
+    add a non-_gate inherited-ignore test
+  status: completed
+- id: writers-once-stop
+  content: 'Split run_pr_precommit.sh: kernel_gate once, then writer hooks plus one
+    locked-venv ruff --fix/format, then hard-stop on tracked dirt. Delete gate retry
+    that rebases status_before. Skip pre-commit ruff/ruff-format on the velocity path.'
+  status: completed
+- id: overlap-once
+  content: 'Append Makefile `pr: PR_EARLY_OVERLAP = 1`. After dirty-stop, fetch+pr_overlap_check
+    once, write overlap receipt. open_pr_after_gate reuses that receipt unless fetch
+    inputs changed. Diagnose stays overlap-free.'
+  status: completed
+- id: parallel-readers
+  content: After overlap, run remaining read-only hooks, uv-lock, root-protect, skill-activation,
+    sync --check, hermetic pytest, security, wiring, and claude_projection --check
+    in one parallel wave. Skip symlinks-check hook. Drop projection apply. L4 check-remote
+    once via preflight receipt. Domain validators stay after resolve, before writers.
+  status: completed
+- id: tests-validate
+  content: Pin spawn-strip, dirty-stop-no-retry, overlap-once-on-pr-only, ruff-once,
+    and parallel-wave skip lists. Scoped-commit on 347. make pr only after 345 no
+    longer conflicts.
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: ceremony_phase_two_9d8aa92f.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-28T22:34:00Z
-    body_sha256: "b45fb4c31a12140a183eb3c28a375b2b761756949db02d2a7325a9735f5508b2"
+    ran_at: 2026-08-28 22:34:00+00:00
+    body_sha256: b45fb4c31a12140a183eb3c28a375b2b761756949db02d2a7325a9735f5508b2
     deltas:
-      - "Stamped kernel_pass so this leftover /ff shelf plan can pass the plan gate"
-      - "Kept existing todos and body; no second plan created"
+    - Stamped kernel_pass so this leftover /ff shelf plan can pass the plan gate
+    - Kept existing todos and body; no second plan created
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T22:34:30Z
-    body_sha256: "b45fb4c31a12140a183eb3c28a375b2b761756949db02d2a7325a9735f5508b2"
+    ran_at: 2026-08-28 22:34:30+00:00
+    body_sha256: b45fb4c31a12140a183eb3c28a375b2b761756949db02d2a7325a9735f5508b2
     deltas:
-      - "Re-ran Validate & Repair on the same bound path; no second plan created"
-      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+    - Re-ran Validate & Repair on the same bound path; no second plan created
+    - 'Content gates: no exclusive-list ellipsis and no unresolved exclusive lock'
+built: true
+status: built
 ---
 # Publish ceremony phase 2 — once-only pipeline
 
@@ -210,3 +227,16 @@ Existing content-digest gate receipt stays. `open_pr_after_gate.sh` consumes L4 
 ## Execute via Cursor Build
 
 Work on the existing `feat/publish-ceremony-once` worktree. Commit into 347. Do not open a sibling. Do not `ignore`. Do not merge.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `hermetic-env`: completed
+- `writers-once-stop`: completed
+- `overlap-once`: completed
+- `parallel-readers`: completed
+- `tests-validate`: completed
