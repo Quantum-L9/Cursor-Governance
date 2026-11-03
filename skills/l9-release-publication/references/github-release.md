@@ -43,7 +43,7 @@ When `release_creator: workflow`, do not create or edit the Release; verify it.
 ## Verification
 
 ```bash
-python3 scripts/verify_github_release.py --remote <owner/name> --tag <tag> \
+"$GOV_PY" "$SKILL_DIR/scripts/verify_github_release.py" --remote <owner/name> --tag <tag> \
   --peeled-commit <commit> [--require-asset <name> ...] [--major-tag <vN>]
 ```
 

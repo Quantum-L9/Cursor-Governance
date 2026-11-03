@@ -33,7 +33,7 @@ is invisible to it) or the receipt file `~/.l9/autonomy/publish-path-override.js
    in its own command:
 
    ```bash
-   python3 ops/autonomy/breakglass_receipt.py --write --issuer ops --hours 1 \
+   "$GOV_PY" "$GOV/ops/autonomy/breakglass_receipt.py" --write --issuer ops --hours 1 \
      --reason 'publish existing tag <tag> object <obj> peeled <commit>; no force, no recreate'
    ```
 
@@ -45,7 +45,7 @@ is invisible to it) or the receipt file `~/.l9/autonomy/publish-path-override.js
 
    ```bash
    rm -f ~/.l9/autonomy/publish-path-override.json
-   python3 ops/autonomy/breakglass_receipt.py --status
+   "$GOV_PY" "$GOV/ops/autonomy/breakglass_receipt.py" --status
    ```
 
 Never write the receipt and push in one shell command: the hook inspects the push

@@ -111,10 +111,16 @@ def inspect_workflow(path: Path) -> dict[str, Any]:
     tag_patterns = _as_list(push.get("tags")) if push is not None else []
     branches = _as_list(push.get("branches")) if push is not None else []
     paths = _as_list(push.get("paths")) if push is not None else []
+    # GitHub Actions: a push with no branches/branches-ignore and no tags/tags-ignore
+    # filter runs for branch pushes too, so a bare `on: push` tagger is a branch tagger.
+    has_branch_filter = push is not None and ("branches" in push or "branches-ignore" in push)
+    has_tag_filter = push is not None and ("tags" in push or "tags-ignore" in push)
+    branch_trigger = push is not None and (has_branch_filter or not has_tag_filter)
     return {
         "file": path.name,
         "push_tags": tag_patterns,
         "push_branches": branches,
+        "push_branch_trigger": branch_trigger,
         "push_paths": paths,
         "creates_tag": any(p.search(text) for p in _TAGGERS),
         "creates_release": any(p.search(text) for p in _RELEASE_CREATORS),
@@ -147,7 +153,7 @@ def classify(workflows: list[dict[str, Any]]) -> tuple[str, list[str]]:
     branch_taggers = [
         w["file"]
         for w in workflows
-        if w["push_branches"] and w["creates_tag"] and not w["push_tags"]
+        if w["push_branch_trigger"] and w["creates_tag"] and not w["push_tags"]
     ]
     evidence = [
         f"tag_push_workflows={','.join(tag_publishers) or 'none'}",
@@ -169,7 +175,11 @@ def responsibilities(model: str, workflows: list[dict[str, Any]]) -> dict[str, s
         creator = "workflow" if any(w["creates_release"] for w in tag_jobs) else "agent"
         return {"tag_creator": "operator_admitted_tag", "release_creator": creator}
     if model == "MAIN_TAGGER":
-        taggers = [w for w in workflows if w["push_branches"] and w["creates_tag"]]
+        taggers = [
+            w
+            for w in workflows
+            if w["push_branch_trigger"] and w["creates_tag"] and not w["push_tags"]
+        ]
         creator = "workflow" if any(w["creates_release"] for w in taggers) else "agent"
         return {"tag_creator": "workflow", "release_creator": creator}
     if model == "NO_AUTOMATION":

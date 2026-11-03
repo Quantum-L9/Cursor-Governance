@@ -46,7 +46,7 @@ owner approval, and any request to move, delete or recreate a tag that already e
 1. **Bind the target.** Check out the repository at the current tip of its default
    branch. Read the tip with `git ls-remote origin refs/heads/<default>`; that commit
    (or the version PR's merge commit) is what ships. A stale commit is never released.
-2. **Detect the model.** `python3 scripts/detect_release_model.py --repo-dir <checkout>`.
+2. **Detect the model.** (`$GOV_PY` and `$SKILL_DIR`: see Verification commands.) `"$GOV_PY" "$SKILL_DIR/scripts/detect_release_model.py" --repo-dir <checkout>`.
    It reports `model` (TAG_TRIGGERED, MAIN_TAGGER, NO_AUTOMATION, AMBIGUOUS, UNKNOWN),
    `tag_creator`, `release_creator` and `version_authority`. AMBIGUOUS or UNKNOWN: stop
    and show the evidence.
@@ -81,11 +81,15 @@ transport `Unknown`.
 
 ## Verification commands
 
+Run every script with the governance locked venv; a bare `python3` may lack PyYAML.
+
 ```bash
-python3 scripts/detect_release_model.py --repo-dir <checkout>
-python3 scripts/verify_release_tag.py --repo-dir <checkout> --tag <tag> --tag-object <obj> --peeled-commit <sha> --remote <owner/name> --bind-origin
-python3 scripts/verify_release_tag.py --remote <owner/name> --tag <tag> --kind any --peeled-commit <sha> --require-remote
-python3 scripts/verify_github_release.py --remote <owner/name> --tag <tag> --peeled-commit <sha> --major-tag <vN>
+GOV="$HOME/.cursor-governance"; GOV_PY="$GOV/.venv/bin/python"  # locked venv (PyYAML)
+SKILL_DIR="$GOV/skills/l9-release-publication"
+"$GOV_PY" "$SKILL_DIR/scripts/detect_release_model.py" --repo-dir <checkout>
+"$GOV_PY" "$SKILL_DIR/scripts/verify_release_tag.py" --repo-dir <checkout> --tag <tag> --tag-object <obj> --peeled-commit <sha> --remote <owner/name> --bind-origin
+"$GOV_PY" "$SKILL_DIR/scripts/verify_release_tag.py" --remote <owner/name> --tag <tag> --kind any --peeled-commit <sha> --require-remote
+"$GOV_PY" "$SKILL_DIR/scripts/verify_github_release.py" --remote <owner/name> --tag <tag> --peeled-commit <sha> --major-tag <vN>
 ```
 
 Exit codes: verify_release_tag 0 MATCH, 1 MISMATCH, 2 REMOTE_ABSENT, 3 TRANSPORT_BLOCKED;

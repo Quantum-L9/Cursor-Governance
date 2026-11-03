@@ -114,6 +114,27 @@ def test_detect_models(tmp_path, capsys, files, model, tag_creator, release_crea
     )
 
 
+UNFILTERED_TAGGER_STEPS = 'jobs:\n  r:\n    steps:\n      - run: git tag "v$V" "$GITHUB_SHA"\n'
+
+
+@pytest.mark.parametrize(
+    "trigger",
+    ["on: push\n", "on: [push]\n", "on:\n  push:\n", "on:\n  push:\n    paths: [package.json]\n"],
+)
+def test_detect_unfiltered_push_tagger_is_main_tagger(tmp_path, capsys, trigger):
+    root = _workflows(tmp_path, {"release.yml": trigger + UNFILTERED_TAGGER_STEPS})
+    code, out = _run_main(detect, ["--repo-dir", str(root)], capsys)
+    assert code == 0
+    assert (out["model"], out["tag_creator"]) == ("MAIN_TAGGER", "workflow")
+
+
+def test_detect_tags_ignore_only_is_not_a_branch_tagger(tmp_path, capsys):
+    text = "on:\n  push:\n    tags-ignore: ['nightly']\n" + UNFILTERED_TAGGER_STEPS
+    root = _workflows(tmp_path, {"r.yml": text})
+    code, out = _run_main(detect, ["--repo-dir", str(root)], capsys)
+    assert code == 0 and out["model"] == "NO_AUTOMATION"
+
+
 def test_detect_tag_push_job_that_creates_the_release(tmp_path, capsys):
     text = TAG_PUBLISH + '      - run: gh release create "$GITHUB_REF_NAME"\n'
     code, out = _run_main(
