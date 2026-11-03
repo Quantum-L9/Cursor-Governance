@@ -1,6 +1,6 @@
 ---
 name: l9-plan
-description: "explicit-only. Owns the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. Program Execution planning (/l9-plan PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple."
+description: "explicit-only owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. use when the user explicitly invokes /l9-plan or a task must change that schema, validator or renderer. Program Execution planning (PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple."
 disable-model-invocation: true
 metadata:
   skill_schema: 1

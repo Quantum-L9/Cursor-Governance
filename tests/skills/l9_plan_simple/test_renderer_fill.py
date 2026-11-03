@@ -359,19 +359,32 @@ def test_declarations_are_optional_in_the_plan_schema() -> None:
 
 def test_l9_plan_simple_runs_no_archived_asset() -> None:
     assert not (REPO / "skills" / "_archived" / "l9-plan").exists()
-    surfaces = [
-        *(REPO / "skills" / "l9-plan-simple").rglob("*"),
-        REPO / "workflows" / "dags" / "plan_simple_build_dag.py",
-    ]
+    # Tracked files only: bytecode caches and other untracked output are not
+    # surfaces (a __pycache__ .pyc embeds the legacy acceptance constant).
+    surfaces = subprocess.run(
+        [
+            "git",
+            "ls-files",
+            "-z",
+            "--",
+            "skills/l9-plan-simple",
+            "workflows/dags/plan_simple_build_dag.py",
+        ],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split("\0")
     legacy_ok = {
         "skills/l9-plan-simple/scripts/plan_sections.py",
         "skills/l9-plan-simple/schemas/plan-section-receipt.schema.json",
     }
     offenders = [
-        p.relative_to(REPO).as_posix()
-        for p in surfaces
-        if p.is_file()
-        and "_archived/l9-plan" in p.read_text(encoding="utf-8", errors="ignore")
-        and p.relative_to(REPO).as_posix() not in legacy_ok
+        rel
+        for rel in surfaces
+        if rel
+        and rel not in legacy_ok
+        and (REPO / rel).is_file()
+        and "_archived/l9-plan" in (REPO / rel).read_text(encoding="utf-8", errors="ignore")
     ]
     assert offenders == []
