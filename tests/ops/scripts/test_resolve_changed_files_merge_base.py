@@ -123,7 +123,20 @@ def test_live_repo_agrees_with_git_about_what_changed() -> None:
     result = run_resolver(REPO_ROOT)
     if result.returncode != 0:
         pytest.skip(f"no usable base in this checkout: {result.stderr[-200:]}")
-    ahead = git("diff", "--name-only", "origin/main...HEAD", cwd=REPO_ROOT, check=False)
+    # Same filter the resolver applies (resolve_changed_files.sh): deletions are
+    # not a change set to lint, so a delete-only branch correctly resolves to an
+    # empty comparison.
+    ahead = git(
+        "-c",
+        "core.quotePath=false",
+        "diff",
+        "--no-renames",
+        "--name-only",
+        "--diff-filter=ACMR",
+        "origin/main...HEAD",
+        cwd=REPO_ROOT,
+        check=False,
+    )
     if ahead.returncode != 0:
         pytest.skip(f"git cannot diff against origin/main here: {ahead.stderr[-200:]}")
     if ahead.stdout.strip():
