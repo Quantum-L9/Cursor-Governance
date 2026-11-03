@@ -1,5 +1,5 @@
 {
-  "generation_id": "fdb23f0beb1a1d2be0ce5ab606a144246c4e078942562fd46771ba1c63c0fcd4",
+  "generation_id": "e28fceb6db099266a11c5fec9022783668e33844084f58c2f63b1467b8532cd7",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1221,7 +1221,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "7879965600d5dd65a72f655b8a5ff3c4a7727a5f9dc8f4b6f315b001baa293c9",
+      "skill_sha256": "6c96ad9ab7b729afda966f3dc73b407d4205c78dd61e2130617a4dd0abbc1c6b",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1475,5 +1475,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "7287c105432943e2bc6c4dbf5c805a76fd5688e1161ae147cf6ce30316b56bba",
-  "source_skill_corpus_sha256": "2031e9c0f05eed487de9d04b153e4e11fe90a0371ac56e0ebaee9438ac1bee8b"
+  "source_skill_corpus_sha256": "12396035edcf3ec80b5dbdcb79ad8bd774d572286a252005e11d2bab67f50d09"
 }
