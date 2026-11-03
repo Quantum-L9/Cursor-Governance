@@ -16,6 +16,7 @@ them survives every push. The same code serves ``make pr`` and the org
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -341,6 +342,10 @@ class MechanicalFacts:
     blob_ids: dict[str, tuple[str, str]] = field(default_factory=dict)
     # The author's prose (load_intent), bound to `head`; None when absent.
     intent: PrIntent | None = None
+    # changed workflow present at HEAD -> whether that file states its token
+    # permissions (top level, or on every job). An omitted block inherits the
+    # repository default, which is neither enumerated nor least privilege.
+    workflow_permissions: dict[str, bool] = field(default_factory=dict)
 
 
 #: Completion status of one PR-body field in the handoff (``fields``):
@@ -717,6 +722,7 @@ def collect_mechanical(
         numstat=numstat,
         added_lines=added_lines,
         blob_ids=blob_ids,
+        workflow_permissions=_workflow_permissions(workspace, rows),
     )
 
 
@@ -744,6 +750,58 @@ def _measure_lines(
         elif line.startswith("+") and current:
             added_lines.setdefault(current, []).append(line[1:])
     return numstat, added_lines
+
+
+def _workflow_permissions(workspace: Path, rows: list[DiffRow]) -> dict[str, bool]:
+    """Whether each changed workflow still at HEAD states its token permissions."""
+    found: dict[str, bool] = {}
+    for row in rows:
+        if row.status.startswith("D") or not WORKFLOW_PATH_RE.match(row.path):
+            continue
+        text = _run_git(workspace, "show", f"HEAD:{row.path}")
+        found[row.path] = permissions_enumerated(text)
+    return found
+
+
+def permissions_enumerated(text: str) -> bool:
+    """True when a workflow declares ``permissions:`` at the top level, or on
+    every job. YAML is read structurally by indentation only: the composer is
+    stdlib-only, and a file this cannot read is reported as not enumerated."""
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    if any(re.match(r"^permissions:", ln) for ln in lines):
+        return True
+    try:
+        start = next(i for i, ln in enumerate(lines) if re.match(r"^jobs:\s*(#.*)?$", ln))
+    except StopIteration:
+        return False
+    body: list[str] = []
+    for ln in lines[start + 1 :]:
+        if ln and not ln[0].isspace() and not ln.startswith("#"):
+            break
+        if ln.strip() and not ln.lstrip().startswith("#"):
+            body.append(ln)
+    if not body:
+        return False
+    indent = len(body[0]) - len(body[0].lstrip())
+    jobs: list[list[str]] = []
+    for ln in body:
+        depth = len(ln) - len(ln.lstrip())
+        if depth == indent:
+            jobs.append([])
+        elif depth > indent and jobs:
+            jobs[-1].append(ln)
+    if not jobs:
+        return False
+    for children in jobs:
+        if not children:
+            return False
+        child = len(children[0]) - len(children[0].lstrip())
+        if not any(
+            len(c) - len(c.lstrip()) == child and c.lstrip().startswith("permissions:")
+            for c in children
+        ):
+            return False
+    return True
 
 
 def _semantic_blobs(
@@ -1665,6 +1723,8 @@ WORKFLOW_PATH_RE = re.compile(r"^\.github/workflows/[^/]+\.ya?ml$")
 IAM_PATH_RE = re.compile(r"(^|/)(iam|policies|roles?)(/|\.)|\.tf$|(^|/)terraform/", re.I)
 USES_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^'\"\s#]+)")
 FULL_SHA_RE = re.compile(r"@[0-9a-f]{40}$")
+#: A container action is pinned only by an image digest; a tag is mutable.
+DOCKER_DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
 PERMISSION_LINE_RE = re.compile(
     r"^\s*(permissions:|(actions|attestations|checks|contents|deployments|discussions|id-token|"
     r"issues|packages|pages|pull-requests|repository-projects|security-events|statuses):\s*\S)"
@@ -1677,16 +1737,24 @@ INTERFACE_PATH_RE = re.compile(
 
 
 def added_action_refs(facts: MechanicalFacts) -> list[tuple[str, str]]:
-    """(path, ref) for every remote action or reusable workflow a line adds."""
+    """(path, ref) for every remote action, reusable workflow or container
+    action (``docker://``) a line adds. Only a local ``./`` action is exempt."""
     refs: list[tuple[str, str]] = []
     for path, lines in facts.added_lines.items():
         if not path.endswith((".yml", ".yaml")):
             continue
         for line in lines:
             match = USES_RE.match(line)
-            if match and not match.group(1).startswith(("./", "docker://")):
+            if match and not match.group(1).startswith("./"):
                 refs.append((path, match.group(1)))
     return refs
+
+
+def ref_pinned(ref: str) -> bool:
+    """A remote action pins a full commit SHA; a container action an image digest."""
+    if ref.startswith("docker://"):
+        return bool(DOCKER_DIGEST_RE.search(ref))
+    return bool(FULL_SHA_RE.search(ref))
 
 
 def workflow_permission_changes(facts: MechanicalFacts) -> list[tuple[str, str]]:
@@ -1758,10 +1826,34 @@ def _fill_gates(text: str, facts: MechanicalFacts) -> str:
         reason = f"measured: permission or IAM change to review: {listed}"
         ok = False
     elif workflows:
-        reason = (
-            f"measured: {len(workflows)} workflow file(s) changed and no permission line was added"
-        )
-        ok = True
+        present = [
+            r.path
+            for r in _rows(facts)
+            if WORKFLOW_PATH_RE.match(r.path) and not r.status.startswith("D")
+        ]
+        inherited = [p for p in present if facts.workflow_permissions.get(p) is False]
+        unread = [p for p in present if p not in facts.workflow_permissions]
+        if inherited:
+            reason = (
+                f"measured: {len(inherited)} changed workflow(s) declare no permissions, so "
+                f"they inherit the repository's default token: {_short(inherited)}"
+            )
+            ok = False
+        elif unread:
+            reason = (
+                "unmeasured here: whether these workflows declare their permissions was not "
+                f"read at this head: {_short(unread)}"
+            )
+            ok = False
+        elif present:
+            reason = (
+                f"measured: {len(present)} changed workflow(s) each declare their permissions, "
+                "and this diff adds no permission line"
+            )
+            ok = True
+        else:
+            reason = "measured: workflow file(s) only removed; no permission is granted"
+            ok = True
     else:
         reason = "measured: no workflow, IAM or infrastructure file in this diff"
         ok = True
@@ -1770,15 +1862,17 @@ def _fill_gates(text: str, facts: MechanicalFacts) -> str:
     )
 
     refs = added_action_refs(facts)
-    loose = [ref for _, ref in refs if not FULL_SHA_RE.search(ref)]
+    loose = [ref for _, ref in refs if not ref_pinned(ref)]
     if loose:
         reason, ok = (
-            f"measured: {len(loose)} added reference(s) not pinned to a full SHA: {_short(loose)}",
+            f"measured: {len(loose)} added reference(s) not pinned to a full commit SHA "
+            f"or image digest: {_short(loose)}",
             False,
         )
     elif refs:
         reason, ok = (
-            f"measured: all {len(refs)} added action reference(s) pin a full commit SHA",
+            f"measured: all {len(refs)} added action reference(s) pin a full commit SHA "
+            "or image digest",
             True,
         )
     else:
@@ -2079,9 +2173,14 @@ def render_reviewer_focus(facts: MechanicalFacts) -> str:
             "- Workflow permissions added: "
             + "; ".join(f"`{p}`: `{line}`" for p, line in perms[:4])
         )
-    loose = [ref for _, ref in added_action_refs(facts) if not FULL_SHA_RE.search(ref)]
+    inherited = [p for p, declared in facts.workflow_permissions.items() if not declared]
+    if inherited:
+        bullets.append(
+            f"- Workflows with no permissions block (default token): {_short(inherited)}"
+        )
+    loose = [ref for _, ref in added_action_refs(facts) if not ref_pinned(ref)]
     if loose:
-        bullets.append(f"- Action references not pinned to a full SHA: {_short(loose)}")
+        bullets.append(f"- Action references not pinned to a SHA or digest: {_short(loose)}")
     workflows = [p for p in paths if WORKFLOW_PATH_RE.match(p)]
     if workflows:
         bullets.append(
@@ -2121,6 +2220,90 @@ def render_reviewer_focus(facts: MechanicalFacts) -> str:
     return "\n".join([REVIEWER_MEASURED, "", *bullets])
 
 
+#: Sections the composer derives in full from the measured range. Unlike the
+#: machine-owned regions they carry no markers (the org template's gates parse
+#: them as written), so ownership is proven by content instead: the composer
+#: records a digest of each as it wrote it, and a refresh recomposes a section
+#: only while its text still matches that digest. Text a person edited no
+#: longer matches and is left as theirs.
+DERIVED_SECTIONS = ("## Type of Change", "## Fix", "## Risk", "## Gates", "## Semantic change")
+DERIVED_STAMP_RE = re.compile(r"^<!-- l9-derived: ([^\n]*?) -->$", re.M)
+
+
+def _derived_key(heading: str) -> str:
+    return heading.lstrip("# ").lower().replace(" ", "-")
+
+
+def _section_digest(text: str) -> str:
+    normalized = "\n".join(line.rstrip() for line in text.strip().splitlines())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+
+def derived_digests(body: str) -> dict[str, str]:
+    """key -> digest of each derived section present in ``body``."""
+    found: dict[str, str] = {}
+    for heading in DERIVED_SECTIONS:
+        span = _heading_span(body, heading)
+        if span is not None:
+            found[_derived_key(heading)] = _section_digest(body[span[0] : span[1]])
+    return found
+
+
+def derived_stamp(digests: dict[str, str]) -> str:
+    return "<!-- l9-derived: " + " ".join(f"{k}={v}" for k, v in digests.items()) + " -->"
+
+
+def read_derived_stamp(body: str) -> dict[str, str] | None:
+    match = DERIVED_STAMP_RE.search(body)
+    if match is None:
+        return None
+    pairs = (item.partition("=") for item in match.group(1).split())
+    return {k: v for k, _, v in pairs if k and v}
+
+
+def _refresh_derived(body: str, facts: MechanicalFacts, template: Callable[[], str] | None) -> str:
+    """Recompose every derived section the composer still owns (see DERIVED_SECTIONS).
+
+    A body with no stamp predates it, and nothing proves which of its section
+    text is the composer's: it is left as written. Without a template loader
+    there is nothing to recompose from, and the same holds.
+    """
+    recorded = read_derived_stamp(body)
+    if recorded is None or template is None:
+        return body
+    # Same head, same facts: what was measured for it (a bound local receipt
+    # included) still stands, and a remote pass must not downgrade it.
+    if facts.head and recorded.get("head") == facts.head[:12]:
+        return body
+    owned: list[str] = []
+    for heading in DERIVED_SECTIONS:
+        span = _heading_span(body, heading)
+        if span is not None and recorded.get(_derived_key(heading)) == _section_digest(
+            body[span[0] : span[1]]
+        ):
+            owned.append(heading)
+    if not owned:
+        return body
+    fresh = _fill_template(template(), facts)
+    digests = dict(recorded)
+    if facts.head:
+        digests["head"] = facts.head[:12]
+    for heading in owned:
+        key = _derived_key(heading)
+        span = _heading_span(body, heading)
+        new_span = _heading_span(fresh, heading)
+        if span is None or new_span is None:
+            continue
+        replacement = fresh[new_span[0] : new_span[1]]
+        if not replacement.endswith("\n"):
+            replacement += "\n"
+        body = body[: span[0]] + replacement + body[span[1] :]
+        new_span = _heading_span(body, heading)
+        if new_span is not None:
+            digests[key] = _section_digest(body[new_span[0] : new_span[1]])
+    return DERIVED_STAMP_RE.sub(lambda _m: derived_stamp(digests), body, count=1)
+
+
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
     parts: list[str] = []
     filled = [
@@ -2139,7 +2322,13 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
     if facts.template_revision:
         parts.append(f"<!-- l9-pr-template: {facts.template_revision} -->")
     if template and template.strip():
-        parts.append(_fill_template(template, facts))
+        filled_text = _fill_template(template, facts)
+        digests = derived_digests(filled_text)
+        if digests:
+            if facts.head:
+                digests = {"head": facts.head[:12], **digests}
+            parts.append(derived_stamp(digests))
+        parts.append(filled_text)
         if facts.additive_only_paths:
             filled.append("protected-root")
     else:
@@ -2249,6 +2438,7 @@ def refresh_body(
                 body = body[:start] + facts.intent.reviewer_focus + body[end:]
             elif REVIEWER_UNRESOLVED in body:
                 body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
+    body = _refresh_derived(body, facts, template)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status

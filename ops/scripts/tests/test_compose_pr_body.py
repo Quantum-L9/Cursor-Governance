@@ -54,7 +54,9 @@ from compose_pr_body import (  # noqa: E402
     diff_rows,
     measure_additive_only,
     parse_row,
+    permissions_enumerated,
     range_title,
+    read_derived_stamp,
     refresh_body,
     region_content,
     render_evidence,
@@ -2503,7 +2505,7 @@ class MeasuredFieldTests(unittest.TestCase):
         # A local action is not a third-party reference; a tag is not a pin.
         self.assertIn(
             "- [ ] Third-party actions pinned to a full commit SHA — measured: 1 added "
-            "reference(s) not pinned to a full SHA: `actions/checkout@v4`",
+            "reference(s) not pinned to a full commit SHA or image digest: `actions/checkout@v4`",
             gates,
         )
         self.assertIn(
@@ -2533,16 +2535,18 @@ class MeasuredFieldTests(unittest.TestCase):
                     "      - uses: actions/checkout@0b93645e9fea7318ecaed2b359559ac225c90a2b"
                 ]
             },
+            workflow_permissions={".github/workflows/ci.yml": True},
         )
         gates = _section(compose_pr_body(pinned, CANONICAL_TEMPLATE).body, "Gates")
         self.assertIn(
             "- [x] Third-party actions pinned to a full commit SHA — measured: all 1 added "
-            "action reference(s) pin a full commit SHA",
+            "action reference(s) pin a full commit SHA or image digest",
             gates,
         )
         self.assertIn(
             "- [x] New IAM / workflow permissions are least privilege and enumerated — "
-            "measured: 1 workflow file(s) changed and no permission line was added",
+            "measured: 1 changed workflow(s) each declare their permissions, and this diff "
+            "adds no permission line",
             gates,
         )
         # Never ticked from a diff: secrets, semgrep and observability need a
@@ -2565,7 +2569,9 @@ class MeasuredFieldTests(unittest.TestCase):
         lines = focus.splitlines()
         self.assertEqual(lines[0], REVIEWER_MEASURED)
         self.assertTrue(lines[2].startswith("- Workflow permissions added:"), focus)
-        self.assertIn("- Action references not pinned to a full SHA: `actions/checkout@v4`", focus)
+        self.assertIn(
+            "- Action references not pinned to a SHA or digest: `actions/checkout@v4`", focus
+        )
         self.assertIn("- Largest changes: `.github/workflows/ci.yml` (+10/-0)", focus)
         # A later push with only a doc change re-ranks the region.
         later = MechanicalFacts(
@@ -2575,3 +2581,162 @@ class MeasuredFieldTests(unittest.TestCase):
         self.assertEqual(status, "updated")
         self.assertNotIn("Workflow permissions", region_content(refreshed, "REVIEWER-FOCUS") or "")
         self.assertIn("`docs/a.md`", region_content(refreshed, "REVIEWER-FOCUS") or "")
+
+
+class WorkflowPermissionTests(unittest.TestCase):
+    """A workflow with no permissions block inherits the repository default
+    token: that is neither enumerated nor least privilege, so the Gates box
+    stays unticked. Container actions are pinned only by an image digest."""
+
+    def test_permissions_enumerated_reads_top_level_and_every_job(self) -> None:
+        top = "on: push\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: x\n"
+        self.assertTrue(permissions_enumerated(top))
+        every = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    permissions:\n      contents: read\n"
+            "  b:\n    permissions: {}\n    runs-on: x\n"
+        )
+        self.assertTrue(permissions_enumerated(every))
+        one_missing = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    permissions:\n      contents: read\n"
+            "  b:\n    runs-on: x\n    steps:\n      - run: echo\n"
+        )
+        self.assertFalse(permissions_enumerated(one_missing))
+        # A `permissions:` key nested in a step's inputs is not the job's.
+        nested = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      - uses: a/b@c\n"
+            "        with:\n          permissions: write\n"
+        )
+        self.assertFalse(permissions_enumerated(nested))
+        self.assertFalse(permissions_enumerated("on: push\n"))
+        self.assertFalse(permissions_enumerated(""))
+
+    def _gates_for(self, workflow: str) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write("README.md", "x\n")
+            repo.commit("base")
+            repo.git("checkout", "-q", "-b", "work")
+            repo.write(".github/workflows/ci.yml", workflow)
+            repo.commit("ci: add the pipeline")
+            facts = collect_mechanical(repo.root, pr_base="main", verify=False)
+        return _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+
+    def test_omitted_permissions_leave_the_gate_unticked(self) -> None:
+        gates = self._gates_for(
+            "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo\n"
+        )
+        self.assertIn(
+            "- [ ] New IAM / workflow permissions are least privilege and enumerated — "
+            "measured: 1 changed workflow(s) declare no permissions, so they inherit the "
+            "repository's default token: `.github/workflows/ci.yml`",
+            gates,
+        )
+
+    def test_an_unread_workflow_is_not_claimed(self) -> None:
+        facts = MechanicalFacts(commits=["ci: x"], changed_files=["M\t.github/workflows/ci.yml"])
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        line = next(ln for ln in gates.splitlines() if "least privilege" in ln)
+        self.assertTrue(line.startswith("- [ ] "), line)
+        self.assertIn("was not read at this head", line)
+
+    def test_a_removed_workflow_grants_nothing(self) -> None:
+        facts = MechanicalFacts(commits=["ci: x"], changed_files=["D\t.github/workflows/ci.yml"])
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        self.assertIn("measured: workflow file(s) only removed", gates)
+
+    def test_container_actions_need_an_image_digest(self) -> None:
+        digest = "sha256:" + "a" * 64
+        for ref, pinned in (("docker://alpine:3.20", False), (f"docker://alpine@{digest}", True)):
+            with self.subTest(ref=ref):
+                facts = MechanicalFacts(
+                    commits=["ci: x"],
+                    changed_files=["M\t.github/workflows/ci.yml"],
+                    added_lines={".github/workflows/ci.yml": [f"      - uses: {ref}"]},
+                    workflow_permissions={".github/workflows/ci.yml": True},
+                )
+                gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+                line = next(ln for ln in gates.splitlines() if "Third-party actions" in ln)
+                self.assertEqual(line.startswith("- [x] "), pinned, line)
+                if not pinned:
+                    self.assertIn(f"`{ref}`", line)
+
+
+class DerivedSectionRefreshTests(unittest.TestCase):
+    """Type of Change, Fix, Risk, Gates and Semantic change describe the head
+    they were composed for. A refresh for a new head recomposes each one the
+    composer still owns (its text matches the digest recorded at compose) and
+    leaves a section a person edited as theirs."""
+
+    def _facts(self, head: str, **extra: object) -> MechanicalFacts:
+        base: dict[str, object] = {
+            "commits": ["docs: note"],
+            "commit_bodies": ["The guide left out the release step."],
+            "changed_files": ["M\tdocs/guide.md"],
+            "head": head,
+        }
+        base.update(extra)
+        return MechanicalFacts(**base)  # type: ignore[arg-type]
+
+    def _later(self) -> MechanicalFacts:
+        # The next push adds a workflow that writes contents.
+        return self._facts(
+            "b" * 40,
+            commits=["docs: note", "ci: publish"],
+            commit_bodies=["The guide left out the release step.", ""],
+            changed_files=["M\tdocs/guide.md", "A\t.github/workflows/pub.yml"],
+            added_lines={".github/workflows/pub.yml": ["permissions:", "  contents: write"]},
+            workflow_permissions={".github/workflows/pub.yml": True},
+        )
+
+    def test_composed_body_records_a_digest_per_derived_section(self) -> None:
+        body = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        stamp = read_derived_stamp(body) or {}
+        self.assertEqual(stamp.get("head"), "a" * 12)
+        for key in ("type-of-change", "fix", "risk", "gates", "semantic-change"):
+            self.assertIn(key, stamp)
+
+    def test_new_head_recomposes_owned_sections(self) -> None:
+        composed = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        self.assertIn("- [x] Low", _section(composed, "Risk"))
+        body, status = refresh_body(
+            composed, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertEqual(status, "updated")
+        self.assertIn("- [x] High", _section(body, "Risk"))
+        self.assertNotIn("- [x] Low", _section(body, "Risk"))
+        gates = _section(body, "Gates")
+        self.assertIn("- [ ] New IAM / workflow permissions", gates)
+        self.assertIn("`contents: write`", gates)
+        self.assertEqual((read_derived_stamp(body) or {}).get("head"), "b" * 12)
+        result = _run_org_validator("governance-pr.yml", body)
+        self.assertEqual(result["failures"], [])
+        # Idempotent: the same head again changes nothing.
+        again, status = refresh_body(
+            body, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertEqual((again, status), (body, "unchanged"))
+
+    def test_a_section_a_person_edited_stays_theirs(self) -> None:
+        composed = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        risk = _section(composed, "Risk")
+        edited = composed.replace(risk, risk + "\nReviewer: rollout is staged per region.\n", 1)
+        body, _ = refresh_body(
+            edited, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertIn("Reviewer: rollout is staged per region.", _section(body, "Risk"))
+        self.assertIn("- [x] Low", _section(body, "Risk"))
+        # Every section it did not touch still follows the head.
+        self.assertIn("`contents: write`", _section(body, "Gates"))
+
+    def test_same_head_and_unstamped_bodies_do_not_load_the_template(self) -> None:
+        def must_not_load() -> str:
+            raise AssertionError("nothing to recompose")
+
+        facts = self._facts("a" * 40)
+        composed = compose_pr_body(facts, CANONICAL_TEMPLATE).body
+        self.assertEqual(
+            refresh_body(composed, facts, remote=True, template=must_not_load)[1], "unchanged"
+        )
+        legacy = re.sub(r"^<!-- l9-derived: [^\n]*-->\n", "", composed, flags=re.M)
+        body, _ = refresh_body(legacy, self._later(), remote=True, template=must_not_load)
+        self.assertIn("- [x] Low", _section(body, "Risk"))
