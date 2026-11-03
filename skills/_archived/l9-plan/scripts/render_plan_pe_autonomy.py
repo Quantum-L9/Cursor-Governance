@@ -545,7 +545,7 @@ def _sec_metadata(c: _Ctx) -> list[str]:
             + " |"
         ),
         "| is_project | `false` |",
-        f"| owner | {_cell(c.plan.get('owner') or NOT_DECLARED)} |",
+        f"| owner | {NOT_DECLARED} |",
         f"| created_at | {created} |",
         f"| updated_at | {created} |",
         f"| depth | `{_cell(c.plan.get('depth') or 'standard')}` |",
@@ -1130,7 +1130,6 @@ def _sec_machine_stub(c: _Ctx, body_after_swap: str) -> list[str]:
             "overview": str(c.plan.get("objective") or c.title),
             "status": c.plan_status,
             "is_project": False,
-            "owner": str(c.plan.get("owner") or NOT_DECLARED),
         },
         "architect_framing": {
             "planning_ssot": "PLAN_DOCUMENT",

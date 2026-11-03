@@ -541,11 +541,6 @@
     },
     "estimate": {
       "type": "string"
-    },
-    "owner": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Accountable human or actor ref (e.g. l9.actor-registry/global@1#claude-code); projected to metadata.owner. Absent renders the NOT_DECLARED marker."
     }
   }
 }
