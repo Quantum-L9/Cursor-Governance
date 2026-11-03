@@ -90,9 +90,43 @@ def test_unrelated_history_fails_closed(tmp_path: Path) -> None:
     assert "no merge base" in result.stderr or "cannot determine" in result.stderr
 
 
-def test_live_repo_resolves_a_real_change_set() -> None:
-    """The regression this fixes: this branch must not resolve to nothing."""
+def test_a_branch_ahead_of_its_base_resolves_to_a_comparison(tmp_path: Path) -> None:
+    """Behavioural proof: committed work ahead of the base is never reported empty."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git("init", "-q", "-b", "main", ".", cwd=repo)
+    git("config", "user.email", "t@e", cwd=repo)
+    git("config", "user.name", "t", cwd=repo)
+    (repo / "a.txt").write_text("a\n", encoding="utf-8")
+    git("add", "a.txt", cwd=repo)
+    git("commit", "-qm", "a", cwd=repo)
+    git("checkout", "-q", "-b", "feature", cwd=repo)
+    (repo / "b.txt").write_text("b\n", encoding="utf-8")
+    git("add", "b.txt", cwd=repo)
+    git("commit", "-qm", "b", cwd=repo)
+
+    result = run_resolver(repo, base="main")
+    assert result.returncode == 0, result.stderr
+    assert "SOURCE:comparison base=main" in result.stderr
+    assert result.stdout.split() == ["b.txt"]
+
+
+def test_live_repo_agrees_with_git_about_what_changed() -> None:
+    """The resolver's answer for this checkout matches git's own three-dot diff.
+
+    The regression this guards is a non-empty change set reported as empty. The
+    converse is not a regression: on main, or on a branch with nothing committed
+    ahead of origin/main, an empty comparison is the correct answer, which is
+    why the old assertion ("this branch must resolve to a comparison") failed on
+    every main push.
+    """
     result = run_resolver(REPO_ROOT)
     if result.returncode != 0:
         pytest.skip(f"no usable base in this checkout: {result.stderr[-200:]}")
-    assert "comparison" in result.stderr
+    ahead = git("diff", "--name-only", "origin/main...HEAD", cwd=REPO_ROOT, check=False)
+    if ahead.returncode != 0:
+        pytest.skip(f"git cannot diff against origin/main here: {ahead.stderr[-200:]}")
+    if ahead.stdout.strip():
+        assert "comparison base=" in result.stderr or "comparison+working-tree" in result.stderr
+    else:
+        assert "SOURCE:empty" in result.stderr or "comparison-empty" in result.stderr
