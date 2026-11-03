@@ -214,6 +214,10 @@
           },
           "shared_root_cause": {
             "type": "string"
+          },
+          "layer": {
+            "enum": ["control_plane", "data_plane", "chassis", "ops", "runtime", "policy", "assurance", "memory", "graph", "docs", "external_system"],
+            "description": "Architecture layer this todo touches; projected to the Architecture impact table."
           }
         }
       }
@@ -541,6 +545,58 @@
     },
     "estimate": {
       "type": "string"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Accountable human or actor ref (e.g. l9.actor-registry/global@1#claude-code); projected to metadata.owner."
+    },
+    "execution_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Network and secrets envelope projected to the Execution envelope section.",
+      "properties": {
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": ["none", "read_only", "named_services_only", "existing_tunnel_only", "bounded_external_write"]
+            },
+            "allowed_services": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "access": {
+              "enum": ["none", "read_only_named", "runtime_injected_only"]
+            }
+          }
+        }
+      }
+    },
+    "complexity": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Declared boundary, external-system and migration facts projected to Complexity and uncertainty. An empty list declares none.",
+      "properties": {
+        "architectural_boundaries_crossed": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "external_systems_touched": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "migration_required": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

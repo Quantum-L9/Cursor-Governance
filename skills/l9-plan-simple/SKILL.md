@@ -99,7 +99,7 @@ Steps 0–9 are **identical in both modes**.
 5. **Decompose** — TODOs with files (or blocker) and deps. DAG rows are the task decomposition, not Controller `claim`/`render` Task Cards.
 6. **Stress-test + leverage** — mandatory in both modes; reuse `l9-plan` [plan-stress-test.md](../l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../l9-plan/references/first-order-leverage.md).
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Set the optional `owner` (accountable human or actor ref) and `estimate`; omitted, metadata renders `unknown — not declared`.
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Declare the optional `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer`; values are the template enums. An omitted field renders `unknown — not declared` and keeps the plan out of `executable`.
 9. **Validate JSON** — `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
 10. **Project** — one renderer, mode-selected:
 
