@@ -136,7 +136,10 @@ if BASE="$(pick_base)"; then
     # checker, because a `--depth 1` base has no merge base with it.
     echo "ERROR: cannot determine the change set against $BASE (no merge base)." >&2
     echo "       Deepen the clone (git fetch --unshallow) or pass explicit paths." >&2
-    exit 1
+    # Exit 3, not 1: missing history is a state of the clone, not of the tree.
+    # run_pr_gate.sh keys on it to block publication WITHOUT a STOP LOOPING
+    # receipt, which would otherwise outlive the deepen that cures it.
+    exit 3
   fi
   if [[ -n "$WORKING" && -n "$COMMITTED" ]]; then
     SOURCE="comparison+working-tree base=$BASE"
