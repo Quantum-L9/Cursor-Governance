@@ -443,6 +443,22 @@ class PinBumpTests(unittest.TestCase):
             commit(repo, "bump and sneak an edit")
             self.assertEqual(self._verdict(repo, base), "violation")
 
+    def test_pin_bump_plus_pure_addition_is_not_a_pin_bump(self) -> None:
+        """Codex on #809: an added hunk beside a bump must keep the PR-body review."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            bump(repo, "# keep this comment\n", "# keep this comment\n[tool.extra]\nx = 1\n")
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "bump and append unrelated config")
+            self.assertEqual(self._verdict(repo, base), "violation")
+            os.environ["L9_PR_BODY"] = "no stamp"
+            try:
+                argv = ["--base", base, "--repo", str(repo), "--require-pr-body"]
+                self.assertEqual(rp.main(argv), 1)
+            finally:
+                os.environ.pop("L9_PR_BODY", None)
+
     def test_renamed_package_is_violation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo, base = init_pin_repo(Path(tmp))

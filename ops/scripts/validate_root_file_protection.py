@@ -288,9 +288,9 @@ def pin_bump_detail(repo: Path, config: dict, base: str, head: str, path: str) -
     """A detail string when ``path``'s non-additive change is only version-pin bumps.
 
     None means "not a pin bump" (the additive_only rule then applies unchanged).
-    Fail closed: an unparsable line, an unpaired removal, any change besides the
-    version numbers, a missing/unreadable lock, or an exact pin the lock does not
-    resolve to all return None.
+    Fail closed: an unparsable line, an unpaired removal, any added line that is
+    not a bumped pin, any change besides the version numbers, a missing/unreadable
+    lock, or an exact pin the lock does not resolve to all return None.
     """
     pin_bump = config.get("pin_bump")
     if not isinstance(pin_bump, dict) or path not in pin_bump.get("files", []):
@@ -299,7 +299,9 @@ def pin_bump_detail(repo: Path, config: dict, base: str, head: str, path: str) -
     bumped: list[tuple[dict, dict]] = []
     for removed, added in _removed_added_hunks(diff):
         if not removed:
-            continue  # pure addition inside the file: allowed as ever
+            # A pure addition beside a pin bump makes the delta mixed: added content
+            # still needs the protected-root review, so it is not a pin bump.
+            return None
         if len(removed) != len(added):
             return None
         for old_line, new_line in zip(removed, added, strict=True):
