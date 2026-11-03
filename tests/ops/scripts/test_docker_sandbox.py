@@ -288,3 +288,58 @@ def test_a_pinned_digest_is_pulled_by_digest_never_by_tag(
 def test_a_malformed_pinned_digest_is_refused() -> None:
     with pytest.raises(SandboxError, match="sha256"):
         docker_sandbox.pin_image("redis:7", digest="sha256:short")
+
+
+# --- Core transport: REST, then git (gateways that 403 Core over REST) -------
+
+REST_403 = SandboxError("gh api repos/Quantum-L9/l9-ci-core failed (1): HTTP 403")
+
+
+def _rest_denied(path: str) -> dict:
+    raise REST_403
+
+
+def test_core_commit_prefers_rest(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(docker_sandbox, "gh_api", lambda path: {"sha": CORE_SHA})
+    monkeypatch.setattr(docker_sandbox, "_git", lambda *a: pytest.fail("git used while REST works"))
+    assert docker_sandbox.core_commit("main") == CORE_SHA
+
+
+def test_core_commit_falls_back_to_ls_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+    other = "b" * 40
+    listing = f"{other}\trefs/heads/mainline\n{CORE_SHA}\trefs/heads/main\n"
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", lambda *a: listing)
+    assert docker_sandbox.core_commit("main") == CORE_SHA
+
+
+def test_core_commit_refuses_an_unknown_ref_over_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", lambda *a: f"{CORE_SHA}\trefs/heads/main\n")
+    with pytest.raises(SandboxError, match="not a ref"):
+        docker_sandbox.core_commit("no-such-branch")
+
+
+def test_core_commit_reports_both_transports_failing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def git_down(*args: str) -> str:
+        raise SandboxError("git ls-remote failed (128): could not resolve host")
+
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", git_down)
+    with pytest.raises(SandboxError, match="HTTP 403.*git transport also failed"):
+        docker_sandbox.core_commit("main")
+
+
+def test_core_file_reads_the_exact_commit_over_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def git(*args: str) -> str:
+        calls.append(args)
+        return "lock-bytes" if "show" in args else ""
+
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", git)
+    assert docker_sandbox.core_file(CORE_SHA, "a/lock.json") == "lock-bytes"
+    fetch = next(c for c in calls if "fetch" in c)
+    assert fetch[-2:] == (docker_sandbox.CORE_GIT_URL, CORE_SHA)
+    assert calls[-1][-1] == f"{CORE_SHA}:a/lock.json"

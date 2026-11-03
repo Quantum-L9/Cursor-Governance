@@ -222,9 +222,56 @@ def gh_api(path: str) -> dict:
     return json.loads(run(["gh", "api", path], timeout=60).stdout)
 
 
+# Some session gateways scope REST to the session's own repositories and answer
+# HTTP 403 for Core, while still serving git for it. Git reads the same commit's
+# bytes, so it is a transport swap, not another source (the pattern
+# ops/scripts/org_dotgithub.py uses for <owner>/.github). Both failing is an error.
+CORE_GIT_URL = f"https://github.com/{CORE_REPO}"
+_REST_FAILURES = (SandboxError, KeyError, TypeError, json.JSONDecodeError)
+
+
+def _git(*args: str) -> str:
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    return run(["git", *args], timeout=120, env=env).stdout
+
+
+def core_commit(core_ref: str) -> str:
+    """Exact Core commit for ``core_ref``: REST, then ``git ls-remote``."""
+    try:
+        sha = gh_api(f"repos/{CORE_REPO}/commits/{core_ref}")["sha"]
+    except _REST_FAILURES as rest_error:
+        if HEX40.fullmatch(core_ref):
+            return core_ref
+        wanted = {core_ref, f"refs/heads/{core_ref}", f"refs/tags/{core_ref}"}
+        try:
+            listing = _git("ls-remote", CORE_GIT_URL)
+        except SandboxError as git_error:
+            msg = f"{rest_error}; git transport also failed: {git_error}"
+            raise SandboxError(msg) from git_error
+        rows = [line.split("\t") for line in listing.splitlines()]
+        sha = next((row[0] for row in rows if len(row) == 2 and row[1] in wanted), "")
+        if not sha:
+            msg = f"{rest_error}; git transport: {core_ref} is not a ref of {CORE_GIT_URL}"
+            raise SandboxError(msg) from rest_error
+    if not isinstance(sha, str) or not HEX40.fullmatch(sha):
+        raise SandboxError(f"{CORE_REPO}@{core_ref} did not resolve to a commit")
+    return sha
+
+
 def core_file(core_sha: str, path: str) -> str:
-    body = gh_api(f"repos/{CORE_REPO}/contents/{path}?ref={core_sha}")
-    return base64.b64decode(body["content"]).decode()
+    """``path`` at the exact Core commit: REST contents, then a shallow git fetch."""
+    try:
+        body = gh_api(f"repos/{CORE_REPO}/contents/{path}?ref={core_sha}")
+        return base64.b64decode(body["content"]).decode()
+    except _REST_FAILURES as rest_error:
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                _git("init", "--bare", "-q", tmp)
+                _git("-C", tmp, "fetch", "-q", "--depth=1", CORE_GIT_URL, core_sha)
+                return _git("-C", tmp, "show", f"{core_sha}:{path}")
+        except SandboxError as git_error:
+            msg = f"{rest_error}; git transport also failed: {git_error}"
+            raise SandboxError(msg) from git_error
 
 
 def daemon_up() -> bool:
@@ -488,7 +535,7 @@ def ensure(core_ref: str, with_semgrep: bool) -> dict:
             "core_ref": core_ref,
         }
         try:
-            core_sha = gh_api(f"repos/{CORE_REPO}/commits/{core_ref}")["sha"]
+            core_sha = core_commit(core_ref)
             lock_text = core_file(core_sha, LOCK_PATH)
             lock = parse_lock(lock_text)
             requirements = core_file(core_sha, REQUIREMENTS_PATH)
