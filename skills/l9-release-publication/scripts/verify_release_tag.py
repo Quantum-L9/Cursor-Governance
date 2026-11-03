@@ -48,20 +48,29 @@ _ORIGIN = re.compile(
 KINDS = ("annotated", "lightweight", "any")
 
 
-def _absolute(name: str) -> str:
-    """Resolve an executable from absolute PATH entries only (a relative entry can hijack it)."""
+def _absolute(name: str) -> str | None:
+    """Resolve an executable from absolute PATH entries only (a relative entry can hijack it).
+
+    Returns None when no absolute entry holds it; the caller never falls back to a bare
+    name, because subprocess would then search the full PATH, relative entries included.
+    """
     for directory in os.environ.get("PATH", "").split(os.pathsep):
         if not directory or not os.path.isabs(directory):
             continue
         found = shutil.which(name, path=directory)
         if found:
             return found
-    return name
+    return None
 
 
 def _run(cmd: list[str], cwd: str | None = None) -> subprocess.CompletedProcess[str]:
+    executable = _absolute(cmd[0])
+    if executable is None:
+        # Fail closed as an unrunnable command: callers read a nonzero exit as blocked.
+        message = f"{cmd[0]}: not found on an absolute PATH entry"
+        return subprocess.CompletedProcess(cmd, 127, "", message)
     return subprocess.run(
-        [_absolute(cmd[0]), *cmd[1:]], cwd=cwd, capture_output=True, text=True, check=False
+        [executable, *cmd[1:]], cwd=cwd, capture_output=True, text=True, check=False
     )
 
 

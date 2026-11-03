@@ -402,3 +402,22 @@ def test_release_absent(monkeypatch, capsys):
     )
     code, out = _run_main(releases, RELEASE_ARGV, capsys)
     assert code == 2 and out["status"] == "RELEASE_ABSENT"
+
+
+@pytest.mark.parametrize("assets", [["pkg.tgz", None], {"name": "pkg.tgz"}, "pkg.tgz"])
+def test_malformed_release_assets_are_a_mismatch_not_a_crash(monkeypatch, capsys, assets):
+    monkeypatch.setattr(tags, "gh_api", _release_host(_release(assets=assets)))
+    code, out = _run_main(releases, [*RELEASE_ARGV, "--require-asset", "pkg.tgz"], capsys)
+    assert code == 1 and "missing assets" in out["detail"]
+    assert out["release"]["assets"] == []
+
+
+def test_executable_outside_absolute_path_is_never_run_by_bare_name(monkeypatch, tmp_path):
+    rogue = tmp_path / "git"
+    rogue.write_text("#!/bin/sh\necho hijacked\n", encoding="utf-8")
+    rogue.chmod(0o755)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", ".")
+    assert tags._absolute("git") is None
+    result = tags._run(["git", "--version"])
+    assert result.returncode == 127 and "hijacked" not in result.stdout

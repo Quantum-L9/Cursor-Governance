@@ -62,6 +62,14 @@ def _input_error(args: argparse.Namespace) -> str:
     return ""
 
 
+def _asset_names(record: dict[str, Any]) -> set[str]:
+    """Asset names from a host Release; anything that is not a list of mappings yields none."""
+    assets = record.get("assets")
+    if not isinstance(assets, list):
+        return set()
+    return {str(a.get("name")) for a in assets if isinstance(a, dict)}
+
+
 def _check_release(record: dict[str, Any], args: argparse.Namespace) -> list[str]:
     problems: list[str] = []
     if record.get("tag_name") != args.tag:
@@ -70,8 +78,7 @@ def _check_release(record: dict[str, Any], args: argparse.Namespace) -> list[str
         problems.append("release is a draft")
     if record.get("prerelease") and not args.allow_prerelease:
         problems.append("release is a prerelease")
-    names = {str(a.get("name")) for a in record.get("assets") or [] if isinstance(a, dict)}
-    missing = sorted(set(args.require_asset) - names)
+    missing = sorted(set(args.require_asset) - _asset_names(record))
     if missing:
         problems.append("missing assets: " + ", ".join(missing))
     return problems
@@ -107,7 +114,7 @@ def main() -> int:
         "tag_name": record.get("tag_name"),
         "draft": bool(record.get("draft")),
         "prerelease": bool(record.get("prerelease")),
-        "assets": sorted(str(a.get("name")) for a in record.get("assets") or []),
+        "assets": sorted(_asset_names(record)),
     }
     problems = _check_release(record, args)
 
