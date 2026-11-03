@@ -247,14 +247,18 @@ def project_rules(
 
 
 def project_settings(
-    root: Path, workspace: Path, check: bool
+    root: Path, workspace: Path, check: bool, *, account_scope: bool = True
 ) -> tuple[DomainOutcome, DomainOutcome]:
     settings_outcome = DomainOutcome("settings")
     hooks_outcome = DomainOutcome("hooks")
+    if not account_scope:
+        # ~/.claude/settings.json is account scope: a worktree's template
+        # (unmerged skill overrides, hooks) must not become every repo's.
+        _note_account_scope_skipped(settings_outcome, root)
     try:
         from reconcile_claude_settings import run as settings_run
 
-        payload = settings_run(root, workspace=workspace, user=True, gov=True, check=check)
+        payload = settings_run(root, workspace=workspace, user=account_scope, gov=True, check=check)
     except Exception as exc:  # noqa: BLE001
         settings_outcome.status = "error"
         settings_outcome.failures.append(str(exc))
@@ -663,7 +667,9 @@ def run(
                         "or official docs GET"
                     )
     if "settings" in wanted or "hooks" in wanted:
-        settings_outcome, hooks_outcome = project_settings(root, workspace, check)
+        settings_outcome, hooks_outcome = project_settings(
+            root, workspace, check, account_scope=account_scope
+        )
         if "settings" in wanted:
             outcomes.append(settings_outcome)
         if "hooks" in wanted:
@@ -691,7 +697,9 @@ def run(
         "status": status,
         "domains": [o.as_dict() for o in outcomes],
     }
-    if write_receipt and not check:
+    # The default receipt is account scope too: a non-SSOT root records its run
+    # only where the caller asked (receipt_path), never over the SSOT's receipt.
+    if write_receipt and not check and (receipt_path is not None or account_scope):
         atomic_write(
             receipt_path or default_receipt_path(),
             json.dumps(receipt, indent=2, sort_keys=True) + "\n",

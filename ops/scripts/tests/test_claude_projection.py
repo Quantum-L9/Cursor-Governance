@@ -245,6 +245,12 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         self.assertIn("hosted_context7", rules_domain["detail"])
         self.assertIn("l9-context7-docs", rules_domain["detail"]["hosted_context7"])
 
+    def _as_ssot(self) -> None:
+        """Make the fixture root the SSOT clone, which alone owns account scope."""
+        ssot = self.home / ".cursor-governance"
+        shutil.move(str(self.root), str(ssot))
+        self.root = ssot
+
     def _with_account_adapters(self) -> None:
         """Add the real account-scope adapters (``~/.claude/...``) to the fixture root."""
         adapters = self.root / "environment" / "skill-adapters"
@@ -289,6 +295,32 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         for name in ("skills", "commands", "rules"):
             domain = next(d for d in receipt["domains"] if d["domain"] == name)
             self.assertTrue(domain["detail"]["account_scope"].startswith("skipped:"), name)
+
+    def test_non_ssot_root_leaves_account_settings_and_receipt_alone(self) -> None:
+        """Settings and the default receipt are account scope as well.
+
+        ~/.claude/settings.json carries the worktree template's skill overrides
+        and hooks, and ~/.l9/claude/projection-receipt.json names the governance
+        SHA; neither may follow a worktree. `make claude-projection` reaches the
+        settings domain with --root "$(CURDIR)".
+        """
+        receipt = claude_projection.run(self.root, self.ws, domains=("settings",))
+
+        self.assertFalse((self.home / ".claude" / "settings.json").exists())
+        self.assertFalse(self.receipt_path.exists(), "SSOT receipt overwritten")
+        self.assertTrue((self.ws / ".claude" / "settings.json").is_file())
+        domain = next(d for d in receipt["domains"] if d["domain"] == "settings")
+        self.assertTrue(domain["detail"]["account_scope"].startswith("skipped:"))
+
+    def test_ssot_root_still_owns_account_settings_and_receipt(self) -> None:
+        ssot = self.home / ".cursor-governance"
+        shutil.move(str(self.root), str(ssot))
+        self.root = ssot
+
+        claude_projection.run(self.root, self.ws, domains=("settings",))
+
+        self.assertTrue((self.home / ".claude" / "settings.json").is_file())
+        self.assertTrue(self.receipt_path.is_file())
 
     def test_ssot_root_still_owns_the_account_projection(self) -> None:
         self._with_account_adapters()
@@ -355,6 +387,8 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
 
     def test_skills_receipt_carries_unique_coverage_without_schema_change(self) -> None:
         """`projected` sums links across mount roots; coverage counts identities."""
+        # Coverage reads the account sync policy, which only an SSOT run writes.
+        self._as_ssot()
         receipt = self.run_engine()
         skills = next(d for d in receipt["domains"] if d["domain"] == "skills")
         coverage = skills["detail"]["coverage"]
@@ -371,6 +405,7 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         self.assertEqual(check["status"], "drift")
 
     def test_account_skill_sync_policy_retained_across_projection(self) -> None:
+        self._as_ssot()  # ~/.claude/settings.json is account scope
         template_path = (
             self.root
             / "environment"
