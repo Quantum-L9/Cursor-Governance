@@ -2391,3 +2391,20 @@ Append-only. Law: `CANONICAL_LAW.md` §14.1; decision: ADR-0053.
   never where a new secret is added.
   `make secrets-aws-sync` / `make secrets-aws-check REF=…` keep the old
   operator tools reachable under names that say what they are.
+
+<!-- L9_AUDIT_PLANS_REFINE_ONLY_V1 -->
+## `/l9-audit-plans` is leftover-todo refine only (2026-11-03) — supersedes the shelf-organizer phrasing in `L9_AUDIT_PLANS_V1`, `L9_PIPELINE_AUDIT_V1`, `L9_PLAN_AUDIT_ABSORBED_V1` and `SESSIONSTART_NO_PLAN_LIST_V1`
+
+Append-only. Those paragraphs stay on disk; where they call `/l9-audit-plans`
+the plans-store shelf organizer, or point at `commands/l9-audit-plans.md`,
+this section governs.
+
+- `/l9-audit-plans` resolves to skill `l9-audit-plans`
+  (`skills/l9-audit-plans/SKILL.md`); there is no `commands/` file.
+- It refines leftover todos of plans already in `stale/` or `built/` (fold or
+  compile onto a same-concern plan). It **moves no `.plan.md` file** between
+  folders. `skills/l9-audit-plans/scripts/shelf_plans.py` is retired
+  (`scripts/_archived/`) and must not run or be restored.
+- Moving spent root plans stays with `/l9-pipeline-audit` / `/plan-audit
+  --archive-spent` (`skills/l9-pipeline-audit/references/surfaces.md`).
+  SessionStart still neither reads nor moves plans.

@@ -94,7 +94,7 @@ second check grid. If a section is absent, say so.
 
 ### Ready For
 → `/ynp` — next action
-→ `/l9-audit-plans` — shelf the plans store (root = current unbuilt)
+→ `/l9-audit-plans` — refine leftover plan todos (moves no plans)
 → `/l9-pipeline-audit` — plans + PE campaigns (`/plan-audit` alias)
 → `/gmp "{task}"` — phased work
 → `/commands-index` or read `commands/commands-index.md` — full slash library
@@ -108,7 +108,7 @@ second check grid. If a section is absent, say so.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
 - `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
-- SessionStart does not read, rank, or display plans. Full harvest remains `/l9-pipeline-audit`. Shelf-only is `/l9-audit-plans`.
+- SessionStart does not read, rank, or display plans. Full harvest (and `--archive-spent` moves) remains `/l9-pipeline-audit`. Leftover-todo refine is `/l9-audit-plans`.
 - Tip activation compares the SSOT clone to GitHub `main` and reports commits ahead and behind. It does not fetch, pull, reset, or swap that clone, and it does not name a catch-up command.
 
 --- End Command ---
