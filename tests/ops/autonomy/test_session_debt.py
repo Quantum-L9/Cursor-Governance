@@ -573,6 +573,29 @@ def test_friction_outside_governance_is_refused(clone: Path) -> None:
     assert result.returncode == 1 and "Cursor-Governance" in result.stderr
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [("friction", "FR1", "--detail", "d"), ("record", "F2", "--detail", "d")],
+)
+def test_recording_into_a_corrupt_ledger_keeps_its_bytes(clone: Path, argv: tuple) -> None:
+    """A placeholder for an unreadable ledger is never written back over it.
+
+    Regression: friction (and record) on a truncated ledger saved
+    ``findings: []`` plus ``unreadable: true``, so the findings the file still
+    held were lost and every later ``check`` reported CORRUPT for good.
+    """
+    as_governance(clone)
+    path = clone / ".l9" / "autonomy" / session_debt.LEDGER_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    truncated = '{"schema": "x", "findings": [{"id": "F1", "state": "open"'
+    path.write_text(truncated, encoding="utf-8")
+
+    result = _run(clone, *argv)
+
+    assert result.returncode == 1 and "unreadable" in result.stderr
+    assert path.read_text(encoding="utf-8") == truncated
+
+
 def test_handoff_cli_writes_files_the_stop_hook_accepts(clone: Path) -> None:
     commit_on_branch(as_governance(clone), "feat/unpushed")
     assert _run(clone, "friction", "gh-503", "--detail", "transient 503").returncode == 0

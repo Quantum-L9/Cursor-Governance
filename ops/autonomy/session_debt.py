@@ -110,6 +110,11 @@ def load_ledger(root: Path) -> dict[str, Any]:
 
 def save_ledger(root: Path, payload: dict[str, Any]) -> Path:
     path = _ledger_path(root)
+    if payload.get("unreadable"):
+        # load_ledger returned a placeholder, not the file's findings: writing it
+        # back would replace whatever the corrupt file still held with nothing.
+        msg = f"refusing to overwrite unreadable ledger {path}"
+        raise ValueError(msg)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
@@ -533,12 +538,26 @@ def cmd_handoff(args: argparse.Namespace) -> int:
     return 0
 
 
+def _unreadable_refusal(root: Path, ledger: dict[str, Any]) -> int | None:
+    """Exit 1 with a repair message when the ledger on disk could not be parsed."""
+    if not ledger.get("unreadable"):
+        return None
+    print(
+        f"ERROR: ledger {_ledger_path(root)} is unreadable; repair or move it aside "
+        "before recording (writing now would discard what it holds)",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def cmd_record(args: argparse.Namespace) -> int:
     root = git_root(Path(args.workspace or Path.cwd()))
     if root is None:
         print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
         return 1
     ledger = load_ledger(root)
+    if (refused := _unreadable_refusal(root, ledger)) is not None:
+        return refused
     findings = [f for f in ledger["findings"] if f.get("id") != args.id]
     findings.append(
         {
@@ -584,6 +603,8 @@ def cmd_friction(args: argparse.Namespace) -> int:
         print("ERROR: no Cursor-Governance workspace to record friction in", file=sys.stderr)
         return 1
     ledger = load_ledger(root)
+    if (refused := _unreadable_refusal(root, ledger)) is not None:
+        return refused
     items = [f for f in ledger.get("friction", []) if f.get("id") != args.id]
     items.append(
         {
