@@ -129,5 +129,40 @@ class JitDrafterTests(unittest.TestCase):
             self.assertIn("0.1.0-draft", text)
 
 
+class ResolveCheckRoutingTests(unittest.TestCase):
+    """ADR-0053: a ref with an Infisical name is checked through capability_bind."""
+
+    def _run(self, ref: str, stdout: str, code: int = 0) -> tuple[list[str], tuple[bool, str]]:
+        calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: Any) -> Any:
+            calls.append(cmd)
+            return mock.Mock(returncode=code, stdout=stdout, stderr="")
+
+        with mock.patch.object(console.subprocess, "run", side_effect=fake_run):
+            result = console.resolve_check(ref)
+        return calls[0], result
+
+    def test_mapped_ref_uses_capability_bind_with_its_infisical_name(self) -> None:
+        cmd, (ok, _) = self._run(
+            "openclaw-igorbot/github#token", "GITHUB_TOKEN: bound source=infisical\n"
+        )
+        self.assertTrue(cmd[1].endswith("capability_bind.py"))
+        self.assertEqual(cmd[2:], ["--check", "GITHUB_TOKEN"])
+        self.assertTrue(ok)
+
+    def test_unbound_infisical_name_fails(self) -> None:
+        _, (ok, detail) = self._run(
+            "openclaw-igorbot/github#token", "GITHUB_TOKEN: unbound source=unbound\n", 1
+        )
+        self.assertFalse(ok)
+        self.assertIn("unbound", detail)
+
+    def test_structured_ui_session_ref_keeps_resolve_secret(self) -> None:
+        cmd, (ok, _) = self._run("openclaw-igorbot/ui-session-github", "OK ref=x\n")
+        self.assertTrue(cmd[1].endswith("resolve_secret.py"))
+        self.assertTrue(ok)
+
+
 if __name__ == "__main__":
     unittest.main()

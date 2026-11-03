@@ -138,6 +138,54 @@ def test_check_cli_prints_source_never_value() -> None:
     assert "source=" in result.stdout
 
 
+def test_check_cli_translates_a_legacy_ref_to_its_infisical_name() -> None:
+    """ADR-0053: a legacy openclaw-igorbot ref checks its Infisical name, never AWS."""
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(SECRETS_DIR / "capability_bind.py"),
+            "--check",
+            "openclaw-igorbot/semgrep#token",
+            "openclaw-igorbot/nope#nothing",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=30,
+        env={
+            **{k: v for k, v in os.environ.items() if k != "SEMGREP_APP_TOKEN"},
+            "SEMGREP_APP_TOKEN": "CANARY_MUST_NOT_APPEAR",
+        },
+    )
+    assert "CANARY_MUST_NOT_APPEAR" not in result.stdout + result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0].startswith("SEMGREP_APP_TOKEN: bound source=")
+    assert lines[1].startswith("<not-in-inventory>:")
+    assert "openclaw-igorbot" not in result.stdout  # the raw argument is never echoed
+    assert result.returncode == 1
+
+
+def test_legacy_ref_map_is_the_port_tools_map() -> None:
+    import legacy_refs
+    import port_aws_to_infisical
+
+    assert port_aws_to_infisical.ENV_MAP is legacy_refs.ENV_MAP
+    assert legacy_refs.infisical_name("openclaw-igorbot/github#token") == "GITHUB_TOKEN"
+    assert legacy_refs.infisical_name("openclaw-igorbot/sonarcloud#token") == "SONAR_TOKEN"
+    assert legacy_refs.infisical_name("openclaw-igorbot/context7#apikey") == "CONTEXT7_API_KEY"
+    assert legacy_refs.infisical_name("GITHUB_TOKEN") is None
+    # Refs the port named through its generic fallback translate the same way.
+    assert port_aws_to_infisical.env_name is legacy_refs.env_name
+    assert (
+        legacy_refs.infisical_name("openclaw-igorbot/google-service-account#private_key")
+        == "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY"
+    )
+    assert "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY" in cb.allowed_names()
+    # Every mapped name an agent binds must pass the bind name gate.
+    for name in ("GITHUB_TOKEN", "SONAR_TOKEN", "SEMGREP_APP_TOKEN", "CONTEXT7_API_KEY"):
+        assert name in cb.allowed_names()
+
+
 # --- the machine identity: one non-AWS bootstrap secret ----------------------
 
 import infisical_cli_login as machine_login  # noqa: E402

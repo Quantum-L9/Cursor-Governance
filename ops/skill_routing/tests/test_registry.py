@@ -180,7 +180,7 @@ def test_live_registry_has_no_single_word_force_signal_on_auto_skills() -> None:
 def test_single_word_force_signal_on_auto_skill_is_rejected(signal: str) -> None:
     """Case and punctuation do not hide a bare word: the scorer normalizes them away."""
     data = json.loads(LIVE.read_text(encoding="utf-8"))
-    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-aws-secrets")
+    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-secrets")
     route["positive_signals"].append(signal)
     with pytest.raises(reg.RegistryError, match="single-word signal"):
         reg.validate_registry(data)
@@ -189,7 +189,7 @@ def test_single_word_force_signal_on_auto_skill_is_rejected(signal: str) -> None
 @pytest.mark.parametrize("signal", ["openclaw-igorbot", "capability_bind", "INFISICAL_PROJECT_ID"])
 def test_identifier_force_signal_is_allowed(signal: str) -> None:
     data = json.loads(LIVE.read_text(encoding="utf-8"))
-    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-aws-secrets")
+    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-secrets")
     route["positive_signals"].append(signal)
     reg.validate_registry(data)
 

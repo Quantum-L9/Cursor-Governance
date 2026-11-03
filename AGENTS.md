@@ -2373,3 +2373,21 @@ current.
   and thread resolution still apply; `make pr` still never merges.
 - `"enforcement": "strict"` restores the 2026-10-12 → 2026-10-16 sections above
   unchanged.
+
+<!-- SECRETS_INFISICAL_STORE_V1 -->
+## Infisical is the secret store; AWS stays Cursor's bootstrap (2026-11-02) — supersedes §8's "AWS name-inventory SSOT" and "Infisical (long-term values)" paragraphs and its GitHub-authority ref
+
+Append-only. Law: `CANONICAL_LAW.md` §14.1; decision: ADR-0053.
+
+- **Add a secret:** create it in Infisical project `cursor-governance` (`prod`,
+  `/`) under a bare env-var name, then add the name to `root_env_keys` in
+  `ops/secrets/infisical-cursor-governance.yaml`. Never AWS first.
+- **Bind / check:** `ops/secrets/capability_bind.py --check NAME` (a legacy
+  `openclaw-igorbot/<svc>#<key>` ref is accepted and translated by
+  `ops/secrets/legacy_refs.py`). `make secrets-check NAME=…` runs the same
+  check. Skill: `l9-secrets` (was `l9-aws-secrets`).
+- **GitHub (§14):** the one PAT is Infisical `GITHUB_TOKEN`.
+- **AWS (`openclaw-igorbot/*`):** Cursor's bootstrap credential source (in place of a `.env`), unchanged —
+  never where a new secret is added.
+  `make secrets-aws-sync` / `make secrets-aws-check REF=…` keep the old
+  operator tools reachable under names that say what they are.

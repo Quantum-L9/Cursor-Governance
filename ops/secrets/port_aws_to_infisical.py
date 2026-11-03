@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Port openclaw-igorbot AWS Secrets Manager values into an Infisical project.
 
-L9_META: parent=l9-aws-secrets layer=script role=port_aws_to_infisical
+L9_META: parent=l9-secrets layer=script role=port_aws_to_infisical
 owner=igor_beylin status=active version=1.0.0 updated=2026-08-13
 
 Values never go to stdout, logs, or git. Summary is IDs / key names / counts only.
@@ -39,60 +39,12 @@ DEFAULT_PROJECT_ID = "9f92179d-3caa-4d7a-90a9-bb896499bfe6"
 DEFAULT_ENV = "prod"
 STRUCTURED_ROOT = "/aws/openclaw-igorbot"
 
-# Explicit env-var names for the Infisical `/` path (matches SEO-Bot / infisical-config).
-ENV_MAP: dict[tuple[str, str], str] = {
-    ("anthropic", "apikey"): "ANTHROPIC_API_KEY",
-    ("ceg", "API_SECRET_KEY"): "CEG_API_KEY",
-    ("clawhub", "token"): "CLAWHUB_API_KEY",
-    ("cloudflare", "apitoken"): "CLOUDFLARE_API_TOKEN",
-    ("cloudflare", "accountid"): "CLOUDFLARE_ACCOUNT_ID",
-    ("coderabbit", "apikey"): "CODERABBIT_API_KEY",
-    ("context7", "apikey"): "CONTEXT7_API_KEY",
-    ("coolify", "apikey"): "COOLIFY_TOKEN",
-    ("coolify", "url"): "COOLIFY_API_URL",
-    ("dataforseo", "apikey"): "DATAFORSEO_API_KEY",
-    ("dataforseo", "login"): "DATAFORSEO_LOGIN",
-    ("dataforseo", "password"): "DATAFORSEO_PASSWORD",
-    ("deepseek", "apikey"): "DEEPSEEK_API_KEY",
-    ("emma-telegram", "botToken"): "EMMA_TELEGRAM_BOT_TOKEN",
-    ("gitguardian", "apikey"): "GITGUARDIAN_API_KEY",
-    ("gemini", "apikey"): "GEMINI_API_KEY",
-    ("github", "token"): "GITHUB_TOKEN",
-    ("google-places", "apikey"): "GOOGLE_PLACES_API_KEY",
-    ("hetzner", "apitoken"): "HCLOUD_TOKEN",
-    ("igorbot-gateway-secret", "token"): "IGORBOT_GATEWAY_TOKEN",
-    ("mistral", "apikey"): "MISTRAL_API_KEY",
-    ("n8n", "api_key"): "N8N_API_KEY",
-    ("n8n", "api_url"): "N8N_API_URL",
-    ("n8n", "workflow_host"): "N8N_WORKFLOW_HOST",
-    ("nano-banana-pro", "apiKey"): "NANO_BANANA_API_KEY",
-    ("neo4j", "password"): "NEO4J_PASSWORD",
-    ("neo4j", "uri"): "NEO4J_URI",
-    ("notion", "token"): "NOTION_API_KEY",
-    ("odoo-web-lead", "api_key"): "ODOO_WEB_LEAD_API_KEY",
-    ("odoo-web-lead", "api_url"): "ODOO_WEB_LEAD_API_URL",
-    ("odoo-web-lead", "environment"): "ODOO_WEB_LEAD_ENVIRONMENT",
-    ("odoo-web-lead", "webhook_path"): "ODOO_WEB_LEAD_WEBHOOK_PATH",
-    ("openai", "apikey"): "OPENAI_API_KEY",
-    ("openai-whisper", "apiKey"): "OPENAI_WHISPER_API_KEY",
-    ("openrouter", "apikey"): "OPENROUTER_API_KEY",
-    ("pagespeed", "apikey"): "PAGESPEED_API_KEY",
-    ("perplexity", "apikey"): "PERPLEXITY_API_KEY",
-    ("posthog", "host"): "POSTHOG_HOST",
-    ("posthog", "personal_api_key"): "POSTHOG_PERSONAL_API_KEY",
-    ("posthog", "project_api_key"): "POSTHOG_PROJECT_API_KEY",
-    ("posthog", "project_id"): "POSTHOG_PROJECT_ID",
-    ("pypi", "token"): "PYPI_TOKEN",
-    ("pypi", "username"): "PYPI_USERNAME",
-    ("semgrep", "token"): "SEMGREP_APP_TOKEN",
-    ("seo-bot", "apikey"): "SEO_BOT_API_KEY",
-    ("sonarcloud", "token"): "SONAR_TOKEN",
-    ("stripe", "apikey"): "STRIPE_API_KEY",
-    ("telegram", "bottoken"): "TELEGRAM_BOT_TOKEN",
-    ("telegram-allowed-users", "ids"): "TELEGRAM_ALLOWED_USER_IDS",
-    ("telegram-chat-id", "id"): "TELEGRAM_CHAT_ID",
-    ("vercel", "token"): "VERCEL_TOKEN",
-}
+# Legacy ref -> Infisical name map: owned by legacy_refs.py (ADR-0053).
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+# ENV_MAP, sanitize_key and env_name: one translation for the port and the bind check.
+from legacy_refs import ENV_MAP, env_name, sanitize_key  # noqa: E402
 
 # Bootstrap secrets stay under /aws/... only — do not flatten to `/` (chicken-egg).
 SKIP_ROOT_PREFIXES = (
@@ -207,30 +159,6 @@ def parse_secret_payload(raw: str) -> dict[str, str]:
                 out[str(k)] = json.dumps(v, separators=(",", ":"))
         return out
     return {"value": raw}
-
-
-def sanitize_key(name: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_]", "_", name)
-    if cleaned and cleaned[0].isdigit():
-        cleaned = f"K_{cleaned}"
-    if not cleaned:
-        cleaned = "VALUE"
-    if not SECRET_NAME_RE.match(cleaned):
-        cleaned = "VALUE"
-    return cleaned
-
-
-def env_name(suffix: str, json_key: str) -> str:
-    mapped = ENV_MAP.get((suffix, json_key))
-    if mapped:
-        return mapped
-    suffix_u = sanitize_key(suffix.replace("-", "_")).upper()
-    key_u = sanitize_key(json_key).upper()
-    if key_u in {"APIKEY", "API_KEY"}:
-        return f"{suffix_u}_API_KEY"
-    if key_u in {"TOKEN", "APITOKEN", "API_TOKEN"}:
-        return f"{suffix_u}_TOKEN"
-    return f"{suffix_u}_{key_u}"
 
 
 # The Infisical transport lives in infisical_http (re-exported for callers).

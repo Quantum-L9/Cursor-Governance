@@ -14,7 +14,7 @@ updated: 2026-08-06
 
 | Layer | Name | Role |
 |---|---|---|
-| Primitive skill | `l9-aws-secrets` | Resolve refs; registry; fail-closed |
+| Primitive skill | `l9-secrets` | Resolve refs; registry; fail-closed |
 | Orchestrator skill | `l9-ui-operator` | Control plane; loads secrets; drives console |
 | Operating playbook | `saas-dashboard-when-api-insufficient` | Triggers, sequence, stop rules |
 | Cartridge | e.g. `github-packages-actions-access` | URLs, selectors, allowlist — not a skill |
