@@ -7,6 +7,14 @@ content fails the gate unless a matching justification marker is recorded in the
 commit messages. Machine-generated `regenerable` files are exempt from the additive
 check (they are rewritten wholesale by tooling) but remain CODEOWNERS-reviewed.
 
+Version-pin bumps (config ``pin_bump``): in a listed dependency manifest, a change
+whose every removed line pairs 1:1 with an added line naming the SAME requirement
+(same name, extras, operators, quoting and trailer) with only its version numbers
+changed, and whose exact ``==`` pins match the lock file at head, is a ``pin_bump``,
+not a rewrite. It needs no marker and no protected-root PR body. Any other edit in
+the same file keeps the full additive_only rule. The verdict reads the diff, never
+the author, so a bot and a human are judged identically.
+
 Justification marker (in any commit message in the PR range):
 
     ALLOW-ROOT-DELETION: <root-relative-path> — <reason with proof of necessity>
@@ -33,6 +41,7 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 DEFAULT_BASE = os.environ.get("ROOT_PROTECT_BASE", "origin/main")
@@ -53,6 +62,20 @@ _MARKER_RE = re.compile(
 # or a path keeps this fail-closed gate injection- and traversal-safe.
 _SAFE_REF = re.compile(r"\A[0-9A-Za-z._/+@^~-]{1,255}\Z")
 _SAFE_ROOT_RELPATH = re.compile(r"\A[0-9A-Za-z._ +@^~/-]{1,255}\Z")
+
+
+# One PEP 508-style requirement as it appears in a manifest line, e.g.
+#   "playwright==1.64.0",        boto3>=1.34,<2        "pkg[extra]~=2.1; python_version<'4'",
+# lead = indentation + optional opening quote; tail = everything after the specifier.
+_CLAUSE = r"(?:===|==|~=|!=|>=|<=|>|<)\s*[A-Za-z0-9.*+!_-]+"
+_REQUIREMENT_RE = re.compile(
+    r"\A(?P<lead>\s*[\"']?)"
+    r"(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)"
+    r"(?P<extras>\[[^\]]*\])?\s*"
+    rf"(?P<spec>{_CLAUSE}(?:\s*,\s*{_CLAUSE})*)"
+    r"(?P<tail>.*)\Z"
+)
+_CLAUSE_RE = re.compile(r"(===|==|~=|!=|>=|<=|>|<)\s*([A-Za-z0-9.*+!_-]+)")
 
 
 class ProtectionError(Exception):
@@ -113,6 +136,21 @@ def load_config(repo: Path) -> dict:
         if entry["rule"] not in ("additive_only", "managed", "regenerable"):
             msg = f"unknown rule for {entry['path']!r}: {entry['rule']}"
             raise ProtectionError(msg)
+    pin_bump = data.get("pin_bump")
+    if pin_bump is not None:
+        additive = {e["path"] for e in files if e["rule"] == "additive_only"}
+        if not isinstance(pin_bump, dict):
+            raise ProtectionError("pin_bump must be an object")
+        names = pin_bump.get("files")
+        lock = pin_bump.get("lock")
+        if not isinstance(names, list) or not names:
+            raise ProtectionError("pin_bump.files must be a non-empty list")
+        for name in names:
+            _require_safe(_SAFE_ROOT_RELPATH, name, "pin_bump file")
+            if name not in additive:
+                msg = f"pin_bump file {name!r} is not an additive_only protected file"
+                raise ProtectionError(msg)
+        _require_safe(_SAFE_ROOT_RELPATH, lock, "pin_bump lock")
     return data
 
 
@@ -198,6 +236,98 @@ def collect_justified_paths(repo: Path, base: str, head: str) -> set[str]:
     return justified
 
 
+def _norm_name(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _parse_requirement(line: str) -> dict | None:
+    match = _REQUIREMENT_RE.match(line)
+    if not match:
+        return None
+    clauses = _CLAUSE_RE.findall(match.group("spec"))
+    return {
+        "lead": match.group("lead"),
+        "name": _norm_name(match.group("name")),
+        "extras": match.group("extras") or "",
+        "ops": tuple(op for op, _ in clauses),
+        "versions": tuple(version for _, version in clauses),
+        "tail": match.group("tail"),
+    }
+
+
+def _removed_added_hunks(diff: str) -> list[tuple[list[str], list[str]]]:
+    hunks: list[tuple[list[str], list[str]]] = []
+    for line in diff.splitlines():
+        if line.startswith("@@"):
+            hunks.append(([], []))
+        elif not hunks or line.startswith(("---", "+++")):
+            continue
+        elif line.startswith("-"):
+            hunks[-1][0].append(line[1:])
+        elif line.startswith("+"):
+            hunks[-1][1].append(line[1:])
+    return hunks
+
+
+def _lock_versions(repo: Path, head: str, lock: str) -> dict[str, set[str]] | None:
+    try:
+        text = run_git(repo, ["show", f"{head}:{lock}"])
+        data = tomllib.loads(text)
+    except (ProtectionError, tomllib.TOMLDecodeError):
+        return None
+    versions: dict[str, set[str]] = {}
+    for package in data.get("package", []):
+        if isinstance(package, dict) and package.get("name") and package.get("version"):
+            versions.setdefault(_norm_name(str(package["name"])), set()).add(
+                str(package["version"])
+            )
+    return versions
+
+
+def pin_bump_detail(repo: Path, config: dict, base: str, head: str, path: str) -> str | None:
+    """A detail string when ``path``'s non-additive change is only version-pin bumps.
+
+    None means "not a pin bump" (the additive_only rule then applies unchanged).
+    Fail closed: an unparsable line, an unpaired removal, any change besides the
+    version numbers, a missing/unreadable lock, or an exact pin the lock does not
+    resolve to all return None.
+    """
+    pin_bump = config.get("pin_bump")
+    if not isinstance(pin_bump, dict) or path not in pin_bump.get("files", []):
+        return None
+    diff = run_git(repo, ["diff", "-U0", "--no-color", f"{base}..{head}", "--", path])
+    bumped: list[tuple[dict, dict]] = []
+    for removed, added in _removed_added_hunks(diff):
+        if not removed:
+            continue  # pure addition inside the file: allowed as ever
+        if len(removed) != len(added):
+            return None
+        for old_line, new_line in zip(removed, added, strict=True):
+            old, new = _parse_requirement(old_line), _parse_requirement(new_line)
+            if old is None or new is None:
+                return None
+            same_shape = all(old[k] == new[k] for k in ("lead", "name", "extras", "ops", "tail"))
+            if not same_shape or old["versions"] == new["versions"]:
+                return None
+            bumped.append((old, new))
+    if not bumped:
+        return None
+    locked = _lock_versions(repo, head, str(pin_bump.get("lock")))
+    if locked is None:
+        return None
+    for _old, new in bumped:
+        resolved = locked.get(new["name"])
+        if not resolved:
+            return None
+        if new["ops"] == ("==",) and new["versions"][0] not in resolved:
+            return None
+    changes = ", ".join(
+        f"{new['name']} {','.join(old['versions'])}->{','.join(new['versions'])}"
+        for old, new in bumped
+    )
+    return f"version-pin bump only ({changes}); matches {pin_bump.get('lock')}"
+
+
 def check(repo: Path, config: dict, base: str, head: str) -> list[dict]:
     mb = merge_base(repo, base, head)
     justified = collect_justified_paths(repo, mb, head)
@@ -220,8 +350,12 @@ def check(repo: Path, config: dict, base: str, head: str) -> list[dict]:
             detail = f"+{added} -{deleted}"
         else:
             deleted, detail = 1, "binary overwrite"
-        # Non-additive change to an additive_only file: needs a justification marker.
-        if path in justified:
+        # Non-additive change to an additive_only file: a pure version-pin bump in
+        # a listed manifest passes on content; anything else needs a marker.
+        pin_detail = pin_bump_detail(repo, config, mb, head, path)
+        if pin_detail:
+            findings.append({"path": path, "verdict": "pin_bump", "detail": pin_detail})
+        elif path in justified:
             findings.append(
                 {"path": path, "verdict": "justified", "detail": f"{detail} (ALLOW-ROOT-DELETION)"}
             )
@@ -330,7 +464,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     violations = [f for f in findings if f["verdict"] == "violation"]
-    tags = {"ok": "OK  ", "justified": "JUST", "exempt": "EXMPT", "violation": "FAIL"}
+    tags = {
+        "ok": "OK  ",
+        "justified": "JUST",
+        "exempt": "EXMPT",
+        "pin_bump": "PIN ",
+        "violation": "FAIL",
+    }
     count = len(config["protected_files"])
     print(f"[root-protect] base={ns.base} head={ns.head} protected={count}")
     for f in findings:
@@ -347,7 +487,12 @@ def main(argv: list[str] | None = None) -> int:
 
     require_body = bool(ns.require_pr_body) or os.environ.get("GITHUB_ACTIONS") == "true"
     template_missing = False
-    touched_additive = additive_only_touched(repo, config, base, head)
+    # A file whose whole change is a version-pin bump is not a protected-root edit,
+    # so it does not require the protected-root PR body.
+    pin_bumped = {f["path"] for f in findings if f["verdict"] == "pin_bump"}
+    touched_additive = [
+        p for p in additive_only_touched(repo, config, base, head) if p not in pin_bumped
+    ]
     if touched_additive:
         try:
             pr_body = load_pr_body(body_file=ns.pr_body_file)

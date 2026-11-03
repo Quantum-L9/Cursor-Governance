@@ -332,5 +332,201 @@ class RootProtectionTests(unittest.TestCase):
             )
 
 
+# --- version-pin bumps (pin_bump) ---------------------------------------------
+
+PIN_CONFIG = {
+    "schema_version": "1.0.0",
+    "protected_files": [
+        {"path": "pyproject.toml", "tier": "canonical", "rule": "additive_only"},
+        {"path": "OTHER.md", "tier": "canonical", "rule": "additive_only"},
+        {"path": "uv.lock", "tier": "regenerable", "rule": "regenerable"},
+    ],
+    "pin_bump": {"files": ["pyproject.toml"], "lock": "uv.lock"},
+}
+
+PYPROJECT = """[project]
+dependencies = [
+    "langgraph>=0.2",
+]
+
+[project.optional-dependencies]
+ui = [
+    "playwright==1.64.0",
+    "boto3>=1.34,<2",
+]
+# keep this comment
+"""
+
+
+def _lock(**versions: str) -> str:
+    return "".join(f'[[package]]\nname = "{n}"\nversion = "{v}"\n\n' for n, v in versions.items())
+
+
+def init_pin_repo(tmp: Path, *, with_lock: bool = True) -> tuple[Path, str]:
+    repo = tmp
+    git(repo, "init", "-q")
+    git(repo, "config", "user.email", "t@example.com")
+    git(repo, "config", "user.name", "T")
+    git(repo, "config", "commit.gpgsign", "false")
+    (repo / "ops" / "config").mkdir(parents=True)
+    config = dict(PIN_CONFIG)
+    if not with_lock:
+        config = {**PIN_CONFIG, "protected_files": PIN_CONFIG["protected_files"][:2]}
+    (repo / "ops" / "config" / "root-file-protection.json").write_text(
+        json.dumps(config), encoding="utf-8"
+    )
+    (repo / "pyproject.toml").write_text(PYPROJECT, encoding="utf-8")
+    (repo / "OTHER.md").write_text("one\ntwo\n", encoding="utf-8")
+    if with_lock:
+        (repo / "uv.lock").write_text(
+            _lock(langgraph="1.2.16", playwright="1.64.0", boto3="1.43.1"), encoding="utf-8"
+        )
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "base")
+    return repo, git(repo, "rev-parse", "HEAD")
+
+
+def bump(repo: Path, old: str, new: str) -> None:
+    path = repo / "pyproject.toml"
+    text = path.read_text(encoding="utf-8")
+    assert old in text, old
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def relock(repo: Path, **versions: str) -> None:
+    (repo / "uv.lock").write_text(_lock(**versions), encoding="utf-8")
+
+
+class PinBumpTests(unittest.TestCase):
+    """A version-pin bump is judged on its content, never on who made it."""
+
+    def setUp(self) -> None:
+        self._saved_ci_env = {
+            key: os.environ.pop(key) for key in _CI_BODY_LEAKS if key in os.environ
+        }
+
+    def tearDown(self) -> None:
+        os.environ.update(self._saved_ci_env)
+
+    def _verdict(self, repo: Path, base: str, config: dict | None = None) -> str | None:
+        findings = rp.check(repo, config or PIN_CONFIG, base, "HEAD")
+        return {f["path"]: f["verdict"] for f in findings}.get("pyproject.toml")
+
+    def test_exact_pin_bump_matching_lock_is_pin_bump(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "chore(deps): bump playwright")
+            self.assertEqual(self._verdict(repo, base), "pin_bump")
+
+    def test_range_bump_with_package_in_lock_is_pin_bump(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"boto3>=1.34,<2"', '"boto3>=1.35,<2"')
+            commit(repo, "chore(deps): raise boto3 floor")
+            self.assertEqual(self._verdict(repo, base), "pin_bump")
+
+    def test_exact_pin_the_lock_does_not_resolve_is_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')  # lock still 1.64.0
+            commit(repo, "bump without relock")
+            self.assertEqual(self._verdict(repo, base), "violation")
+
+    def test_pin_bump_plus_any_other_rewrite_is_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            bump(repo, "# keep this comment", "# rewritten comment")
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "bump and sneak an edit")
+            self.assertEqual(self._verdict(repo, base), "violation")
+
+    def test_renamed_package_is_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwrite==1.64.1"')
+            relock(repo, langgraph="1.2.16", playwrite="1.64.1", boto3="1.43.1")
+            commit(repo, "swap package")
+            self.assertEqual(self._verdict(repo, base), "violation")
+
+    def test_changed_operator_is_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright>=1.64.1"')
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "loosen pin")
+            self.assertEqual(self._verdict(repo, base), "violation")
+
+    def test_removed_dependency_is_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '    "boto3>=1.34,<2",\n', "")
+            commit(repo, "drop a dependency")
+            self.assertEqual(self._verdict(repo, base), "violation")
+
+    def test_missing_lock_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp), with_lock=False)
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            commit(repo, "bump with no lock in repo")
+            config = {**PIN_CONFIG, "protected_files": PIN_CONFIG["protected_files"][:2]}
+            self.assertEqual(self._verdict(repo, base, config), "violation")
+
+    def test_without_pin_bump_policy_the_rule_is_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "bump")
+            config = {k: v for k, v in PIN_CONFIG.items() if k != "pin_bump"}
+            self.assertEqual(self._verdict(repo, base, config), "violation")
+
+    def test_marker_still_justifies_a_real_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, "# keep this comment", "# rewritten comment")
+            commit(repo, "edit\n\nALLOW-ROOT-DELETION: pyproject.toml - reword, see issue 9")
+            self.assertEqual(self._verdict(repo, base), "justified")
+
+    def test_pin_bump_needs_no_protected_root_pr_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            commit(repo, "chore(deps): bump playwright")
+            os.environ["L9_PR_BODY"] = "Dependabot body without the stamp"
+            try:
+                argv = ["--base", base, "--repo", str(repo), "--require-pr-body"]
+                self.assertEqual(rp.main(argv), 0)
+            finally:
+                os.environ.pop("L9_PR_BODY", None)
+
+    def test_other_additive_file_in_the_same_pr_still_needs_the_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_pin_repo(Path(tmp))
+            bump(repo, '"playwright==1.64.0"', '"playwright==1.64.1"')
+            relock(repo, langgraph="1.2.16", playwright="1.64.1", boto3="1.43.1")
+            (repo / "OTHER.md").write_text("one\ntwo\nthree\n", encoding="utf-8")
+            commit(repo, "bump and append elsewhere")
+            os.environ["L9_PR_BODY"] = "no stamp"
+            try:
+                argv = ["--base", base, "--repo", str(repo), "--require-pr-body"]
+                self.assertEqual(rp.main(argv), 1)
+            finally:
+                os.environ.pop("L9_PR_BODY", None)
+
+    def test_pin_bump_file_must_be_additive_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _ = init_pin_repo(Path(tmp))
+            bad = {**PIN_CONFIG, "pin_bump": {"files": ["uv.lock"], "lock": "uv.lock"}}
+            (repo / "ops" / "config" / "root-file-protection.json").write_text(
+                json.dumps(bad), encoding="utf-8"
+            )
+            with self.assertRaises(rp.ProtectionError):
+                rp.load_config(repo)
+
+
 if __name__ == "__main__":
     unittest.main()
