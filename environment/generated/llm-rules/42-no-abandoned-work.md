@@ -31,18 +31,20 @@ python3 ops/autonomy/session_debt.py record <id> --detail "..."
 python3 ops/autonomy/session_debt.py close  <id> --evidence "..."
 python3 ops/autonomy/session_debt.py defer  <id> --reason "..."
 python3 ops/autonomy/session_debt.py friction <id> --detail "..." [--workaround "..."]
-python3 ops/autonomy/session_debt.py handoff --out <file> [--next "..."]  # to-dos + friction
+python3 ops/autonomy/session_debt.py handoff --pr <n> --objective "..." --status "..." [--next "..."]
 ```
 
-`handoff` is the end-of-session record, scoped to Cursor-Governance workspaces
-(origin `Quantum-L9/Cursor-Governance`). It lists only what is still to be done
-(unpushed branches, open findings, deferrals awaiting a human, `--next` steps)
-and environment friction; pushed branches and uncommitted files are omitted.
-One Markdown file carries the same facts as embedded JSON
-(`l9.session-handoff.v1`), so the two cannot disagree, and it never fails the
-caller. `friction` records something in the environment that got in the way:
-it lands in a Cursor-Governance ledger whatever repository the session worked
-in, never blocks a turn, and is cleared by `close` once governance fixes it.
+`handoff` generates both post-publish handoffs the Stop hook asks for, so
+neither is written by hand: `.l9/memory/handoff.json` carries only what is
+still to be done (unpushed branches and open findings as `not_completed`,
+deferrals as `blocked` and `human_actions`, `--next` steps), and
+`.l9/memory/governance-handoff.json` carries only environment friction and its
+workarounds. Only Cursor-Governance workspaces (origin
+`Quantum-L9/Cursor-Governance`) are read; finished, pushed or uncommitted
+state is omitted. Each file passes its own contract before it is written.
+`friction` records something in the environment that got in the way: it lands
+in a Cursor-Governance ledger whatever repository the session worked in, never
+blocks a turn, and is cleared by `close` once governance fixes it.
 
 `defer` is deliberately weaker than `close`. It records that the thing is *not*
 fixed and keeps it open, so the next session inherits it instead of

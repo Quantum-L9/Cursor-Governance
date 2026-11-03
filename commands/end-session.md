@@ -95,14 +95,14 @@ Skip only with `GOVERNANCE_BACKUP_SKIP=1`.
 
 ### Phase 5 — CONFIRMATION
 
-Write one handoff file, not separate briefs. It lists what is still to be done
-and environment friction for Cursor-Governance workspaces, from the debt ledger
-and git; record friction with `session_debt.py friction` as it happens, and add
-judgment as `--next`:
+Do not hand-write the two post-publish briefs. Record environment friction
+as it happens (`session_debt.py friction <id> --detail ... --workaround ...`),
+then generate both from the debt ledger: `.l9/memory/handoff.json` (what is
+still to be done) and `.l9/memory/governance-handoff.json` (friction):
 
 ```bash
-"$GRAPHITI_PY" "$GOV/ops/autonomy/session_debt.py" --root "$WS" \
-  handoff --out "$WS/.l9/autonomy/session-handoff.md" --next "{NEXT}"
+"$GRAPHITI_PY" "$GOV/ops/autonomy/session_debt.py" --root "$WS" handoff \
+  --workspace "$WS" --pr {PR} --objective "{TASK}" --status "{STATUS}" --next "{NEXT}"
 ```
 
 Then report continuation task / next / outcome, lesson count and backup status.

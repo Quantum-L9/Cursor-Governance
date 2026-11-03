@@ -37,17 +37,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 LEDGER_NAME = "session-debt.json"
 SCHEMA = "l9.session-debt.v1"
-HANDOFF_SCHEMA = "l9.session-handoff.v1"
 
 #: Branches this repository never publishes from, so commits on them are not
 #: publish debt. A detached HEAD is likewise not a branch to push.
@@ -314,93 +311,118 @@ def governance_root(explicit: str | None = None) -> Path | None:
     return ssot if ssot is not None and is_governance_workspace(ssot) else None
 
 
-def build_handoff(roots: list[Path], next_steps: list[str]) -> dict[str, Any]:
-    """What is still to be done, and what in the environment got in the way.
+def _contracts() -> tuple[Any, Any]:
+    """The two post-publish handoff contracts the Stop hook already enforces."""
+    repo = str(Path(__file__).resolve().parents[2])
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from ops.memory import governance_handoff, session_handoff
 
-    Scoped to Cursor-Governance workspaces. State that needs nothing (pushed
-    branches, a working tree's uncommitted files) is deliberately absent: a
-    handoff is a to-do list, not an inventory.
+    return session_handoff, governance_handoff
+
+
+def build_handoffs(
+    roots: list[Path],
+    *,
+    pr_number: int,
+    objective: str,
+    status: str,
+    next_steps: list[str],
+    friction_root: Path | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Both post-publish handoffs, generated instead of hand-written.
+
+    Only Cursor-Governance workspaces are read, and only what is still to be
+    done (repository handoff) and environment friction (governance handoff) is
+    carried: what is finished, pushed or merely uncommitted is not a to-do.
+    Each document passes its own contract's ``normalize``, so the Stop hook
+    accepts exactly what this produces.
     """
+    session_handoff, governance_handoff = _contracts()
     governed = [root for root in roots if is_governance_workspace(root)]
     report = collect(governed)
-    friction = []
-    for root in governed:
-        for item in load_ledger(root).get("friction", []):
-            if isinstance(item, dict) and item.get("state") == "open":
-                friction.append({**item, "workspace": str(root)})
-    return {
-        "schema": HANDOFF_SCHEMA,
-        "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "workspaces": [str(root) for root in governed],
-        "clean": report["clean"],
-        "todo": {
-            "unpushed": report["publish_debt"],
-            "open_findings": report["blocking_findings"],
-            "deferred_for_a_human": [
-                f for f in report["open_findings"] if f.get("state") == "deferred"
-            ],
-            "unreadable_ledgers": report["unreadable_ledgers"],
-            "next": [step for step in next_steps if step.strip()],
-        },
-        "friction": friction,
+    deferred = [f for f in report["open_findings"] if f.get("state") == "deferred"]
+
+    repo_brief = {
+        "schema": session_handoff.HANDOFF_SCHEMA,
+        "pr_number": pr_number,
+        "objective": objective,
+        "status": status,
+        "not_completed": [
+            {"item": f"push {d['branch']} ({d['workspace']})", "reason": d["detail"]}
+            for d in report["publish_debt"]
+        ]
+        + [
+            {"item": f"{f.get('id')}: {f.get('detail', '')}", "reason": "open finding"}
+            for f in report["blocking_findings"]
+        ]
+        + [
+            {"item": f"repair ledger {path}", "reason": "unreadable; debt unprovable"}
+            for path in report["unreadable_ledgers"]
+        ],
+        "blocked": [
+            {
+                "item": f"{f.get('id')}: {f.get('detail', '')}",
+                "blocker": f.get("reason") or "deferred",
+                "unblock": "a human decision, then session_debt.py close",
+            }
+            for f in deferred
+        ],
+        "human_actions": [
+            {"action": f"decide {f.get('id')}: {f.get('detail', '')}", "why": f.get("reason", "")}
+            for f in deferred
+        ],
+        "next_actions": [step for step in next_steps if step.strip()],
     }
 
-
-def render_handoff(doc: dict[str, Any]) -> str:
-    """Markdown for a person, with the same document embedded for the next agent.
-
-    One file replaces the pair of briefs (prose + JSON) a session used to write
-    by hand: the prose is generated from the data, so the two cannot disagree.
-    """
-    todo = doc["todo"]
-    lines = [f"# Session handoff — {doc['generated_at']}", ""]
-    if not doc["workspaces"]:
-        lines += ["No Cursor-Governance workspace in scope.", ""]
-    lines.append(
-        "**Turn clear:** nothing unpushed, no blocking findings."
-        if doc["clean"]
-        else "**Abandoned work:** finish or defer the items below before the session ends."
+    friction: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for root in [*governed, *([friction_root] if friction_root else [])]:
+        for item in load_ledger(root).get("friction", []):
+            if isinstance(item, dict) and item.get("state") == "open":
+                if item.get("id") not in seen:
+                    seen.add(str(item.get("id")))
+                    friction.append(item)
+    governance_brief = {
+        "schema": governance_handoff.GOVERNANCE_SCHEMA,
+        "pr_number": pr_number,
+        "environment_friction": [
+            {"item": str(f.get("id")), "detail": f.get("detail", "")} for f in friction
+        ],
+        "workarounds": [
+            {"item": str(f.get("id")), "workaround": f["workaround"]}
+            for f in friction
+            if f.get("workaround")
+        ],
+    }
+    return (
+        session_handoff.normalize(repo_brief, pr_number=pr_number),
+        governance_handoff.normalize(governance_brief, pr_number=pr_number),
     )
-    lines.append("")
-
-    items: list[str] = []
-    for item in todo["unpushed"]:
-        items.append(f"- **Push** `{item['branch']}` (`{item['workspace']}`) — {item['detail']}")
-    for item in todo["open_findings"]:
-        items.append(f"- **Fix** `{item.get('id')}` — {item.get('detail', '')}")
-    for item in todo["deferred_for_a_human"]:
-        items.append(
-            f"- **Human decision** `{item.get('id')}` — {item.get('detail', '')}"
-            + (f" Deferred because: {item['reason']}" if item.get("reason") else "")
-        )
-    for path in todo["unreadable_ledgers"]:
-        items.append(f"- **Repair ledger** at `{path}` — cannot prove debt is discharged")
-    items += [f"- {step}" for step in todo["next"]]
-    lines += ["## Still to do", ""] + (items or ["Nothing."]) + [""]
-
-    friction = [
-        f"- `{item.get('id')}` — {item.get('detail', '')}"
-        + (f" Worked around: {item['workaround']}" if item.get("workaround") else "")
-        for item in doc["friction"]
-    ]
-    lines += ["## Environment friction", ""] + (friction or ["None recorded."]) + [""]
-
-    # JSON escapes newlines inside strings, so no line of the body can be a
-    # bare fence: a plain ``` block always delimits it exactly.
-    body = json.dumps(doc, indent=2, sort_keys=True)
-    lines += ["## Machine-readable", "", "```json", body, "```", ""]
-    return "\n".join(lines)
 
 
-def read_handoff(text: str) -> dict[str, Any]:
-    """The embedded document back out of a rendered handoff."""
-    match = re.search(r"^```json\n(.*?)\n```$", text, re.MULTILINE | re.DOTALL)
-    if not match:
-        raise ValueError("no embedded handoff document")
-    doc = json.loads(match.group(1))
-    if doc.get("schema") != HANDOFF_SCHEMA:
-        raise ValueError(f"not a {HANDOFF_SCHEMA} document")
-    return doc
+def render_handoffs(repo_brief: dict[str, Any], governance_brief: dict[str, Any]) -> str:
+    """Both briefs as one Markdown page, through the contracts' own renderers."""
+    session_handoff, governance_handoff = _contracts()
+    gov_lines = governance_handoff.render_sections(governance_brief)
+    return "\n".join(
+        [
+            f"# Session handoff — PR #{repo_brief['pr_number']}",
+            "",
+            "## Still to do",
+            "",
+            "```text",
+            session_handoff.render(repo_brief),
+            "```",
+            "",
+            "## Environment friction (Cursor-Governance)",
+            "",
+            "```text",
+            "\n".join(gov_lines) if gov_lines else "none",
+            "```",
+            "",
+        ]
+    )
 
 
 def _render_findings(findings: list[dict[str, Any]]) -> str:
@@ -477,16 +499,37 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 
 def cmd_handoff(args: argparse.Namespace) -> int:
-    """Write the end-of-session handoff. A report, never a gate: always exit 0."""
-    doc = build_handoff(candidate_roots(args.root), args.next or [])
-    text = render_handoff(doc)
+    """Write both post-publish handoffs the Stop hook asks for, from the ledger."""
+    workspace = git_root(Path(args.workspace or Path.cwd()))
+    if workspace is None:
+        print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
+        return 1
+    session_handoff, governance_handoff = _contracts()
+    try:
+        repo_brief, governance_brief = build_handoffs(
+            candidate_roots(args.root),
+            pr_number=args.pr,
+            objective=args.objective,
+            status=args.status,
+            next_steps=args.next or [],
+            friction_root=governance_root(str(workspace)),
+        )
+    except session_handoff.HandoffError as exc:
+        print(f"ERROR: handoff not accepted by its contract: {exc}", file=sys.stderr)
+        return 1
+    for rel, brief in (
+        (session_handoff.HANDOFF_REL, repo_brief),
+        (governance_handoff.GOVERNANCE_REL, governance_brief),
+    ):
+        path = workspace / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(brief, indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {path}")
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(text, encoding="utf-8")
-        print(f"handoff written: {out} ({'clean' if doc['clean'] else 'open debt'})")
-    else:
-        print(text)
+        out.write_text(render_handoffs(repo_brief, governance_brief), encoding="utf-8")
+        print(f"wrote {out}")
     return 0
 
 
@@ -579,10 +622,15 @@ def main() -> int:
     check.set_defaults(func=cmd_check)
 
     handoff = sub.add_parser(
-        "handoff", help="write the end-of-session to-do and friction list (markdown + JSON)"
+        "handoff",
+        help="write both post-publish handoffs (to-dos + environment friction) from the ledger",
     )
-    handoff.add_argument("--out", help="write here instead of stdout")
-    handoff.add_argument("--next", action="append", help="a next step for the reader (repeatable)")
+    handoff.add_argument("--pr", type=int, required=True, help="the publication's PR number")
+    handoff.add_argument("--objective", required=True)
+    handoff.add_argument("--status", required=True, help="where things stand, one or two sentences")
+    handoff.add_argument("--next", action="append", help="a next step (repeatable)")
+    handoff.add_argument("--workspace", help="the published workspace (default: cwd)")
+    handoff.add_argument("--out", help="also write both briefs as one Markdown page here")
     handoff.set_defaults(func=cmd_handoff)
 
     friction = sub.add_parser(

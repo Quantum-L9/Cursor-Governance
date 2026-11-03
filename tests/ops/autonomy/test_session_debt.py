@@ -488,6 +488,22 @@ def test_governance_workspace_is_recognised_by_origin(
     assert session_debt.is_governance_workspace(clone) is governed
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+from ops.memory import governance_handoff, session_handoff  # noqa: E402
+
+
+def _handoffs(roots: list[Path], **kw: object) -> tuple[dict, dict]:
+    return session_debt.build_handoffs(
+        roots,
+        pr_number=kw.pop("pr_number", 7),  # type: ignore[arg-type]
+        objective="ship the thing",
+        status="open, CI running",
+        next_steps=kw.pop("next_steps", []),  # type: ignore[arg-type]
+        friction_root=kw.pop("friction_root", None),  # type: ignore[arg-type]
+    )
+
+
 def test_handoff_covers_only_cursor_governance_workspaces(origin: Path, tmp_path: Path) -> None:
     governance = as_governance(make_clone(origin, tmp_path / "gov"))
     other = tmp_path / "other"
@@ -498,43 +514,37 @@ def test_handoff_covers_only_cursor_governance_workspaces(origin: Path, tmp_path
     (other / "x.txt").write_text("x", encoding="utf-8")
     git(other, "add", "-A")
     git(other, "commit", "-q", "-m", "unpushed elsewhere")
-    doc = session_debt.build_handoff([governance, other], [])
-    assert doc["workspaces"] == [str(governance.resolve())]
-    assert doc["todo"]["unpushed"] == [], "another repository's debt is not this handoff's"
+    repo, _ = _handoffs([governance, other])
+    assert repo["not_completed"] == [], "another repository's debt is not this handoff's"
 
 
-def test_handoff_lists_unpushed_work_as_a_todo(clone: Path) -> None:
+def test_unpushed_work_and_open_findings_are_not_completed(clone: Path) -> None:
     commit_on_branch(as_governance(clone), "feat/local")
-    doc = session_debt.build_handoff([clone], [])
-    assert doc["clean"] is False
-    assert [i["branch"] for i in doc["todo"]["unpushed"]] == ["feat/local"]
-    assert "**Push** `feat/local`" in session_debt.render_handoff(doc)
+    assert _run(clone, "record", "bug-1", "--detail", "parser drops a field").returncode == 0
+    repo, _ = _handoffs([clone])
+    items = [entry["item"] for entry in repo["not_completed"]]
+    assert items[0].startswith("push feat/local") and items[1] == "bug-1: parser drops a field"
 
 
-def test_handoff_omits_uncommitted_files_and_pushed_state(clone: Path) -> None:
+def test_only_to_dos_are_carried(clone: Path) -> None:
     as_governance(clone)
     (clone / "scratch.txt").write_text("x", encoding="utf-8")
-    doc = session_debt.build_handoff([clone], [])
-    text = session_debt.render_handoff(doc)
-    assert doc["clean"] is True and "scratch.txt" not in text
-    # Not the bare word: pytest's tmp path for this test contains it.
-    assert "**Uncommitted**" not in text and '"uncommitted' not in text, (
-        "a handoff is a to-do list, not an inventory"
-    )
+    repo, _ = _handoffs([clone], next_steps=["merge #7"])
+    assert repo["completed"] == [] and repo["published"] == [] and repo["verification"] == []
+    assert repo["next_actions"] == ["merge #7"]
+    assert "scratch.txt" not in json.dumps(repo), "uncommitted files are not to-dos"
 
 
-def test_handoff_carries_deferrals_for_a_human(clone: Path) -> None:
+def test_deferrals_become_blocked_items_and_human_actions(clone: Path) -> None:
     as_governance(clone)
     assert _run(clone, "record", "f-1", "--detail", "drift in settings").returncode == 0
     assert _run(clone, "defer", "f-1", "--reason", "needs org admin").returncode == 0
-    doc = session_debt.build_handoff([clone], ["merge #1"])
-    assert [f["id"] for f in doc["todo"]["deferred_for_a_human"]] == ["f-1"]
-    text = session_debt.render_handoff(doc)
-    assert "**Human decision** `f-1`" in text and "needs org admin" in text
-    assert "- merge #1" in text
+    repo, _ = _handoffs([clone])
+    assert repo["blocked"][0]["blocker"] == "needs org admin"
+    assert repo["human_actions"][0]["action"].startswith("decide f-1")
 
 
-def test_friction_is_recorded_in_governance_and_never_blocks(clone: Path) -> None:
+def test_friction_goes_to_the_governance_handoff_only(clone: Path) -> None:
     as_governance(clone)
     result = _run(
         clone,
@@ -547,11 +557,14 @@ def test_friction_is_recorded_in_governance_and_never_blocks(clone: Path) -> Non
     )
     assert result.returncode == 0, result.stderr
     assert _run(clone, "check").returncode == 0, "friction is not abandoned work"
-    doc = session_debt.build_handoff([clone], [])
-    assert [f["id"] for f in doc["friction"]] == ["docker-429"]
-    assert "Worked around: pulled from mirror.gcr.io" in session_debt.render_handoff(doc)
+    repo, gov = _handoffs([clone])
+    assert gov["environment_friction"] == [
+        {"item": "docker-429", "detail": "Docker Hub rate limit"}
+    ]
+    assert gov["workarounds"] == [{"item": "docker-429", "workaround": "pulled from mirror.gcr.io"}]
+    assert "docker-429" not in json.dumps(repo), "friction never lands in the repository brief"
     assert _run(clone, "close", "docker-429", "--evidence", "mirror fallback").returncode == 0
-    assert session_debt.build_handoff([clone], [])["friction"] == []
+    assert _handoffs([clone])[1]["environment_friction"] == []
 
 
 def test_friction_outside_governance_is_refused(clone: Path) -> None:
@@ -560,23 +573,36 @@ def test_friction_outside_governance_is_refused(clone: Path) -> None:
     assert result.returncode == 1 and "Cursor-Governance" in result.stderr
 
 
-def test_rendered_handoff_round_trips_its_document(clone: Path) -> None:
-    doc = session_debt.build_handoff([as_governance(clone)], ["merge #1", "fence ```` inside"])
-    assert session_debt.read_handoff(session_debt.render_handoff(doc)) == doc
-
-
-def test_read_handoff_refuses_a_document_of_another_schema() -> None:
-    with pytest.raises(ValueError):
-        session_debt.read_handoff('```json\n{"schema": "other"}\n```\n')
-    with pytest.raises(ValueError):
-        session_debt.read_handoff("no document here")
-
-
-def test_handoff_cli_writes_one_file_and_never_fails(clone: Path) -> None:
+def test_handoff_cli_writes_files_the_stop_hook_accepts(clone: Path) -> None:
     commit_on_branch(as_governance(clone), "feat/unpushed")
+    assert _run(clone, "friction", "gh-503", "--detail", "transient 503").returncode == 0
     out = clone / "out" / "handoff.md"
-    result = _run(clone, "handoff", "--out", str(out), "--next", "push it")
-    assert result.returncode == 0, "a report, not a gate"
-    assert "open debt" in result.stdout
-    doc = session_debt.read_handoff(out.read_text(encoding="utf-8"))
-    assert doc["todo"]["next"] == ["push it"] and doc["clean"] is False
+    result = _run(
+        clone,
+        "handoff",
+        "--pr",
+        "7",
+        "--objective",
+        "ship it",
+        "--status",
+        "CI running",
+        "--next",
+        "merge #7",
+        "--out",
+        str(out),
+    )
+    assert result.returncode == 0, result.stderr
+    # The Stop hook's own loaders are the acceptance test.
+    repo = session_handoff.load(clone, pr_number=7)
+    gov = governance_handoff.load(clone, pr_number=7)
+    assert repo["next_actions"] == ["merge #7"] and repo["not_completed"]
+    assert gov["environment_friction"][0]["item"] == "gh-503"
+    page = out.read_text(encoding="utf-8")
+    assert "## Still to do" in page and "## Environment friction" in page
+
+
+def test_handoff_cli_refuses_what_the_contract_refuses(clone: Path) -> None:
+    as_governance(clone)
+    result = _run(clone, "handoff", "--pr", "7", "--objective", " ", "--status", "x")
+    assert result.returncode == 1 and "objective" in result.stderr
+    assert not (clone / session_handoff.HANDOFF_REL).exists()

@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-03T20:29:28Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-03T20:47:59Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -35,7 +35,7 @@ Generated: `2026-11-03T20:29:28Z`. Source: `rules/*.mdc`.
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |
 | `41-graph-engine-architecture.mdc` | `l9.rule.41.graph.engine.architecture` | global | security | agent_requested | 104 | `db87e22cdb8a` |
-| `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 110 | `f4ce615355f3` |
+| `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 112 | `67418472f719` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | agent_requested | 54 | `3a3ff21bfdec` |
 | `44-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 39 | `4c064ea19ce3` |
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 111 | `6012003b2d54` |
