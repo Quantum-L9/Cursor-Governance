@@ -110,7 +110,11 @@ is already `closed` and `write_count>0`, unless `--supersede`.
 2. HEALTH, then `repair-write` targeting the prior session id. Do not use client `write` as the close-gap repair.
 3. Optional Redis `cache_set_session_context`; the canonical continuation record (`ContinuationCapsuleV2`) is the resume SSOT either way.
 4. Run governance backup if needed.
-5. Emit handoff summary (completed / in-progress / next).
+5. Publish the handoff reports to the open PR when the Stop hooks did not
+   (Cursor, or a failed hook): `cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m
+   ops.reports.publish handoffs --workspace "$WS"` → `reports/end-session/session-handoff/`
+   and `reports/end-session/governance-handoff/` (created when absent).
+6. Emit handoff summary (completed / in-progress / next).
 
 ## Resource Map
 

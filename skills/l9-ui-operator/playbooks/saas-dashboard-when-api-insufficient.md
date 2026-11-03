@@ -4,7 +4,7 @@
 ## Purpose
 
 Configure a SaaS dashboard via the portable UI operator when API/CLI is insufficient.
-Uses `l9-aws-secrets` for refs and `ops/ui-operator/console.py` for execution.
+Uses `l9-secrets` for refs and `ops/ui-operator/console.py` for execution.
 
 ## Preconditions
 
@@ -15,7 +15,7 @@ Uses `l9-aws-secrets` for refs and `ops/ui-operator/console.py` for execution.
 ## Sequence
 
 1. **Bind** target site + goal. Fail-closed if requested mutation is outside cartridge `mutation_allowlist` or listed in `forbidden`.
-2. **Load `l9-aws-secrets`**. Resolve/check required refs (ids only in logs/receipts).
+2. **Load `l9-secrets`**. Resolve/check required refs (ids only in logs/receipts).
 3. **Prefer API/CLI**. If API can complete the goal, do that and skip UI. If UI is required, record why in the receipt evidence notes.
 4. **Load cartridge** or **JIT-draft** via `ops/ui-operator/jit_drafter.py`. New/changed cartridges require **human approve** (`--approve` on run; drafts stay under `drafts/`).
 5. **Console execute**:

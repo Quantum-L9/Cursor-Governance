@@ -170,3 +170,41 @@ def test_generation_is_byte_deterministic():
         check=False,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_live_registry_has_no_single_word_force_signal_on_auto_skills() -> None:
+    reg.validate_registry(json.loads(LIVE.read_text(encoding="utf-8")))
+
+
+@pytest.mark.parametrize("signal", ["infisical", "Infisical", "infisical!", " INFISICAL, "])
+def test_single_word_force_signal_on_auto_skill_is_rejected(signal: str) -> None:
+    """Case and punctuation do not hide a bare word: the scorer normalizes them away."""
+    data = json.loads(LIVE.read_text(encoding="utf-8"))
+    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-secrets")
+    route["positive_signals"].append(signal)
+    with pytest.raises(reg.RegistryError, match="single-word signal"):
+        reg.validate_registry(data)
+
+
+@pytest.mark.parametrize("signal", ["openclaw-igorbot", "capability_bind", "INFISICAL_PROJECT_ID"])
+def test_identifier_force_signal_is_allowed(signal: str) -> None:
+    data = json.loads(LIVE.read_text(encoding="utf-8"))
+    route = next(r for r in data["routing"]["routes"] if r["primary"] == "l9-secrets")
+    route["positive_signals"].append(signal)
+    reg.validate_registry(data)
+
+
+@pytest.mark.parametrize("key", ["force_threshold"])
+def test_malformed_force_threshold_is_a_registry_error(key: str) -> None:
+    data = json.loads(LIVE.read_text(encoding="utf-8"))
+    data["routing"][key] = "eight"
+    with pytest.raises(reg.RegistryError, match="routing.force_threshold must be an integer"):
+        reg.validate_registry(data)
+
+
+def test_signal_normalization_matches_the_scorer() -> None:
+    # The package re-exports a route_prompt *function*; import the module itself.
+    route_prompt = importlib.import_module("ops.skill_routing.route_prompt")
+
+    for text in ["Infisical!", "openclaw-igorbot/github#token", "  Bind  FROM infisical ", "a_b.c"]:
+        assert reg._normalize_signal(text) == route_prompt.normalize(text)

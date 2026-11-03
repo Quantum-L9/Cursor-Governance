@@ -99,6 +99,13 @@ reports/*
 !reports/repo-index/**
 !reports/wip-eviction/
 !reports/wip-eviction/**
+# Exception: published reports (ops/reports/publish.py) ride the PR —
+# reports/gmp/ (GMP executor) and reports/end-session/{session,governance}-handoff/
+# (post-publish handoff Stop hooks).
+!reports/gmp/
+!reports/gmp/**
+!reports/end-session/
+!reports/end-session/**
 
 # ── Bounded-autonomy durable state (per-consumer-workspace, never committed) ──
 # environment/claude-code/autonomy/ writes campaign state, leases, and locks

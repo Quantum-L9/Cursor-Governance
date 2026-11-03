@@ -2,7 +2,7 @@
   "schema_version": "1.1.0",
   "description": "Append-only protection contract for repository-root files. Read by ops/scripts/validate_root_file_protection.py (the fail-closed CI gate). The mechanical guarantee is the CI gate plus the ALLOW-ROOT-DELETION marker; ownership mode is solo_ruleset, so CODEOWNERS auto-request is disabled and CODEOWNERS review is NOT a guaranteed control until owners are re-enabled (codeowners_enforced). CODEOWNERS/ORG_INVARIANTS.yaml protected_paths remain the dormant ownership map.",
   "rules": {
-    "additive_only": "Strict. A PR may only add lines. Any removal or in-place rewrite of an existing line (or whole-file deletion) fails the gate unless a matching justification marker is present in the PR's commit messages. Purely additive changes and brand-new files pass.",
+    "additive_only": "Strict. A PR may only add lines. Any removal or in-place rewrite of an existing line (or whole-file deletion) fails the gate unless a matching justification marker is present in the PR's commit messages. Purely additive changes and brand-new files pass. Exception: a pure version-pin bump in a pin_bump manifest (see pin_bump).",
     "managed": "Human-edited operational file. Edits, overwrites, and deletions are allowed WITHOUT a justification marker, but the file is still routed to CODEOWNERS for human review. Not additive-locked.",
     "regenerable": "Machine-generated artifact rewritten wholesale by tooling; exempt from the additive check. Still CODEOWNERS-reviewed."
   },
@@ -66,6 +66,11 @@
     { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
     { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
   ],
+  "pin_bump": {
+    "description": "Content-based allowance for version-pin bumps (Dependabot or human). In a listed additive_only manifest, a change whose every removed line pairs 1:1 with an added line naming the same requirement with only its version numbers changed, and whose exact == pins resolve in the lock at head, is verdict pin_bump: no ALLOW-ROOT-DELETION marker and no protected-root PR body. Any other edit in the same file keeps the full additive_only rule. Judged on the diff, never the author.",
+    "files": ["pyproject.toml", "requirements.txt"],
+    "lock": "uv.lock"
+  },
   "exempt_root_files": [],
   "inventory_note": "Inventory completeness (validate_root_file_protection.py --strict-inventory or default reconcile): every tracked repo-root file (git ls-files, case-exact) must appear in protected_files or exempt_root_files, and every entry must name a tracked root file. Runtime-only artifacts that are gitignored (e.g. .harvest_executor_state.json, governance-health-report.json) are NOT tracked and must NOT be registered here; they are governed by .gitignore, not by this append-only gate."
 }

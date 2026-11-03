@@ -7,7 +7,9 @@ Modes:
   run       — execute journey (requires --approve, Playwright, provisioned session)
 
 Never logs or writes secret values. Receipts record ref ids only.
-Loads l9-aws-secrets resolve via ops/secrets/resolve_secret.py.
+Checks secret refs through skill l9-secrets: a legacy ref that maps to an Infisical
+name is checked with ops/secrets/capability_bind.py (Infisical, every surface);
+structured refs with no Infisical name (ui-session-*) keep resolve_secret.py.
 """
 
 from __future__ import annotations
@@ -125,12 +127,34 @@ def check_allowlist(cartridge: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _infisical_name(ref: str) -> str | None:
+    if str(SECRETS) not in sys.path:
+        sys.path.insert(0, str(SECRETS))
+    from legacy_refs import infisical_name
+
+    return infisical_name(ref)
+
+
 def resolve_check(ref: str) -> tuple[bool, str]:
-    """Run resolve_secret --check. Returns (ok, detail). Never captures values."""
-    script = SECRETS / "resolve_secret.py"
+    """Check a secret ref without capturing values. Returns (ok, detail).
+
+    A ref with an Infisical name is checked through capability_bind (ADR-0053);
+    a structured ref with none (ui-session-*) keeps the resolve_secret path.
+    """
     py = REPO / ".venv" / "bin" / "python"
+    python = str(py if py.is_file() else sys.executable)
+    name = _infisical_name(ref)
+    if name:
+        cmd = [python, str(SECRETS / "capability_bind.py"), "--check", name]
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return False, f"resolve_error:{exc}"
+        out = (proc.stdout or "").strip()[:200]
+        return proc.returncode == 0 and ": bound " in out, out or f"exit={proc.returncode}"
+    script = SECRETS / "resolve_secret.py"
     cmd = [
-        str(py if py.is_file() else sys.executable),
+        python,
         str(script),
         "--ref",
         ref,
