@@ -57,6 +57,17 @@ is invisible to it) or the receipt file `~/.l9/autonomy/publish-path-override.js
 Never write the receipt and push in one shell command: the hook inspects the push
 before the command runs, so the receipt would not exist yet.
 
+## Session transport refuses the tag push
+
+A hosted session's git transport can push branches but refuse a tag ref: the push
+fails with `RPC failed; HTTP 403` while the gate allowed it (observed 2026-11-03,
+`Quantum-L9/l9-constellation-topology` v2.0.0). That is a transport policy, not a
+gate decision. Remove the receipt, do not retry, and do not substitute the host API
+(below). Hand the operator the tag commands to run from their own clone,
+`git tag -s <tag> <commit> -m "<tag>"` then `git push origin refs/tags/<tag>`, and
+continue from the Release step once `verify_release_tag.py --require-remote` returns
+`MATCH` for the tag object they pushed.
+
 ## Denied substitutes
 
 - `--force`, `--tags`, deleting the tag, or pointing `refs/tags/<tag>` at another sha.
