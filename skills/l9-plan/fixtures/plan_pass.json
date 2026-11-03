@@ -43,6 +43,7 @@
       "dependencies": [],
       "operation": "Create",
       "anchor": "new file",
+      "layer": "assurance",
       "leverage_rank": 1,
       "shared_root_cause": "prose-only plans"
     },
@@ -59,6 +60,7 @@
       ],
       "operation": "Create",
       "anchor": "new file",
+      "layer": "assurance",
       "leverage_rank": 2
     }
   ],
@@ -183,5 +185,15 @@
     "validator",
     "fixtures"
   ],
-  "estimate": "1 GMP"
+  "estimate": "1 GMP",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {"mode": "none", "allowed_services": []},
+    "secrets": {"access": "none"}
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [],
+    "external_systems_touched": [],
+    "migration_required": false
+  }
 }
