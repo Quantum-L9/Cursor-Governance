@@ -1,5 +1,5 @@
 {
-  "generation_id": "869da86b083cdfcf4d3ae223f66529d559b1155f9ed754e7dc796d17a5e311dd",
+  "generation_id": "113f84245a9d5b3ca9cc4086a466e5d6e2813f2bc3bb67872ed73cf88103a843",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -785,14 +785,14 @@
     },
     {
       "composition_role": "general",
-      "description": "shelf then refine the Cursor plans store: root stays current unbuilt only; leftover todos fold or compile; harvested donors are omitted. use when /l9-audit-plans, a plans-store shelf audit, or leftover-todo refine runs.",
+      "description": "refine leftover plan todos already in stale/ or built/: fold or compile onto a same-concern plan; harvested donors are omitted. use when /l9-audit-plans or leftover-todo refine runs. shelf_plans.py is retired and must not run.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-audit-plans",
       "path": "skills/l9-audit-plans",
-      "reason": "plans-store shelf + leftover-todo refine mutates docs/plans (status law, harvested omit, fold/compile); slash /l9-audit-plans is the explicit invoke; disable-model-invocation",
+      "reason": "leftover-todo refine mutates docs/plans (fold/compile, harvested omit); slash /l9-audit-plans is the explicit invoke; shelf_plans.py is retired and must not run; disable-model-invocation",
       "skill_md": "skills/l9-audit-plans/SKILL.md",
-      "skill_sha256": "63b7c624e1939b456709ca695ba0982367e3178c169743d93e2db622c5a47f83",
+      "skill_sha256": "9a543e4fcaa4ca1a0ce6bc675b8df1352168a0e90b9a68bbc68b8d0df7cc5dc3",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1461,6 +1461,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "0be7ff1efef74c29c95d8ff864cd16aee08e7325cdb29b30041e8515a8f23f56",
-  "source_skill_corpus_sha256": "e516d2bdc1ef4d8f006f72421f46ff0e5e44b94de3f52ea5d9f259b05b9486c6"
+  "source_manifest_sha256": "928946ef848eda49194631a436f8d2a2b0fb5f98050415f338b782f6785589cc",
+  "source_skill_corpus_sha256": "2f6bce6bf1469763f19c3934b1dce093a39ec083474bddceb721da620e1b606c"
 }

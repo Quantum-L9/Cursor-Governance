@@ -8,6 +8,10 @@ version: 1.0.0
 
 # Plans-store shelves
 
+`scripts/shelf_plans.py` is retired. These names are vocabulary for plans that
+already sit in a folder. This skill does not move a plan into a folder, and it
+does not fold `partial/`, `backlog/`, or `pending/`.
+
 Live names only:
 
 | Folder | Meaning |
@@ -19,15 +23,15 @@ Live names only:
 | `archive/` | Leftover companions |
 | `archive/superseded/` | Superseded copies |
 
-Retired. Do not create. Fold then delete:
+Do not create:
 
-| Retired | Fold into |
+| Name | |
 |---|---|
-| `partial/` | `partially-built/` |
-| `backlog/` | `stale/` |
-| `pending/` | `stale/` |
+| `partial/` | not a shelf |
+| `backlog/` | not a shelf |
+| `pending/` | not a shelf |
 
 Current = README live-queue name, this week's `_*_M-D-YY` stamp, `compiled: true`
 with remaining todos, or an operator-named hex. Do not treat a bulk mtime bump
 as current. Companions (`.plan.json`, `.activate.yaml`, `.harvest.json`,
-`.section-receipt.json`) move with their `.plan.md`.
+`.section-receipt.json`) stay beside the plan that owns them.

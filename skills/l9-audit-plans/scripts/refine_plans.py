@@ -10,6 +10,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    yaml = None  # type: ignore[assignment]
+
 SCRIPTS = Path(__file__).resolve().parent
 AUDIT_SCRIPTS = SCRIPTS.parents[1] / "l9-pipeline-audit" / "scripts"
 if str(AUDIT_SCRIPTS) not in sys.path:
@@ -17,16 +22,100 @@ if str(AUDIT_SCRIPTS) not in sys.path:
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from audit_plans import TEMPLATE_NAME, slug_key  # noqa: E402
-from shelf_plans import (  # noqa: E402
-    _dump_frontmatter,
-    _iter_plan_mds,
-    _load_plan,
-    _unique_dirs,
-    allocate_todo_id,
-    apply_status,
-    leftover_todo_rows,
-)
+from audit_plans import TEMPLATE_NAME, parse_frontmatter, slug_key  # noqa: E402
+
+STATUS_FOR_VERDICT = {
+    "root": "current",
+    "partially-built": "partially-built",
+    "built": "built",
+    "stale": "stale",
+    "archive/superseded": "superseded",
+}
+
+
+def _iter_plan_mds(directory: Path) -> list[Path]:
+    if not directory.is_dir():
+        return []
+    return sorted(p for p in directory.glob("*.plan.md") if p.is_file())
+
+
+def _unique_dirs(*paths: Path) -> list[Path]:
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for path in paths:
+        if not path.is_dir():
+            continue
+        key = path.resolve()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return out
+
+
+def _load_plan(path: Path) -> tuple[dict[str, Any], str] | None:
+    try:
+        body = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    return parse_frontmatter(body)
+
+
+def _dump_frontmatter(path: Path, fm: dict[str, Any], body: str) -> None:
+    if yaml is None:
+        raise RuntimeError("PyYAML required to rewrite plan frontmatter")
+    dumped = yaml.safe_dump(fm, sort_keys=False, allow_unicode=True)
+    path.write_text(f"---\n{dumped}---\n{body}", encoding="utf-8")
+
+
+def allocate_todo_id(preferred: str, ids: set[str]) -> str:
+    """Keep suffixing until the folded id is unique in the destination list."""
+    candidate = preferred or "fold-1"
+    if candidate not in ids:
+        return candidate
+    suffix = 1
+    while True:
+        nxt = f"{preferred}-fold" if suffix == 1 else f"{preferred}-fold-{suffix}"
+        if nxt not in ids:
+            return nxt
+        suffix += 1
+
+
+def leftover_todo_rows(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    todos = fm.get("todos")
+    if not isinstance(todos, list):
+        return []
+    leftover: list[dict[str, Any]] = []
+    for item in todos:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "pending").lower()
+        if status in {"pending", "in_progress"}:
+            leftover.append(dict(item))
+    return leftover
+
+
+def apply_status(path: Path, verdict: str) -> None:
+    """Set folder status on a plan that already lives in that folder."""
+    loaded = _load_plan(path)
+    if loaded is None:
+        return
+    fm, body = loaded
+    wanted = STATUS_FOR_VERDICT.get(verdict, "")
+    if not wanted:
+        return
+    current = str(fm.get("status") or "").strip()
+    if verdict == "root":
+        if current == "current":
+            return
+        fm["status"] = "current"
+        _dump_frontmatter(path, fm, body)
+        return
+    if current == wanted:
+        return
+    fm["status"] = wanted
+    _dump_frontmatter(path, fm, body)
+
 
 CONCERN_PREFIXES: list[tuple[str, str]] = [
     ("ceremony", "ceremony_"),
