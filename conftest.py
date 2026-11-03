@@ -125,7 +125,7 @@ collect_ignore = [
     "skills/l9-idea-foundry/scripts/self_test.py",
     "skills/l9-plan-simple/scripts/self_test.py",
     "skills/l9-intelligence-harvest/scripts/self_test.py",
-    "skills/l9-plan/scripts/self_test.py",
+    "skills/_archived/l9-plan/scripts/self_test.py",
     "skills/_archived/l9-pe-campaign-activate/scripts/test_compile_activation_files.py",
     "skills/_archived/l9-pe-campaign-activate/scripts/test_compile_brief.py",
     "skills/_archived/l9-pe-campaign-activate/scripts/test_skill_contract.py",
