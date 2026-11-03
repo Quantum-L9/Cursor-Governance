@@ -32,7 +32,7 @@ Canonical replacement: `skills/l9-pr-remediation/` (v3.0.0 unified).
 | Need | Use |
 |---|---|
 | Converge a failing PR | `l9-pr-remediation` |
-| CI vs codebase ownership | `l9-pr-remediation` → `references/ownership-boundary.md` |
+| CI vs codebase ownership | `skills/l9-pr-remediation/references/ownership-boundary.md` |
 | Sonar / CodeQL / debt depth | `l9-pr-remediation` + its fetch scripts |
 
 References under this directory remain for historical comparison only.

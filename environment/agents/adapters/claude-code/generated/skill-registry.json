@@ -1,5 +1,5 @@
 {
-  "generation_id": "8230b0cdab6eee99109c3f168270d76e62378dce55dbf5e5ef9d5263a917ff3e",
+  "generation_id": "0344956e04fc10e23212fca9a00e897de1529411a9fffc7fcbcc0667ca916563",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -23,7 +23,7 @@
       "l9-prompt-engineering",
       "l9-incident-response",
       "l9-graphiti-memory",
-      "l9-aws-secrets",
+      "l9-secrets",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -394,23 +394,22 @@
         "supporting": []
       },
       {
-        "id": "aws_secrets",
+        "id": "secrets",
         "positive_signals": [
-          "resolve aws secret",
           "openclaw-igorbot",
-          "secrets registry",
-          "sync secrets registry",
-          "sync_secrets_registry",
           "resolve_secret",
-          "aws secrets manager ref",
-          "infisical",
+          "bind from infisical",
+          "infisical bind",
+          "infisical secret",
+          "capability_bind",
           "infisical-cursor-governance",
-          "cursor-governance project",
           "hydrate infisical",
           "INFISICAL_PROJECT_ID",
-          "port_aws_to_infisical"
+          "add a new secret",
+          "bind the credential",
+          "l9-secrets"
         ],
-        "primary": "l9-aws-secrets",
+        "primary": "l9-secrets",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -824,19 +823,6 @@
       "when_to_use": "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
     },
     {
-      "composition_role": "primary",
-      "description": "bind credentials from Infisical project cursor-governance at will, as this surface's machine identity (Claude \u2014 no AWS; Cursor \u2014 AWS login seed) \u2014 use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-aws-secrets",
-      "path": "skills/l9-aws-secrets",
-      "reason": "",
-      "skill_md": "skills/l9-aws-secrets/SKILL.md",
-      "skill_sha256": "daece176244a22d84d4d2ee791137b06f2d767fc2d605fc44340b0aa39228589",
-      "user_invocable": true,
-      "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
-    },
-    {
       "composition_role": "general",
       "description": "bounded autonomy campaign SOP for Cursor \u2014 parallel non-dependent Tasks, background PR-poll subagents while main continues, campaign authorization packet, join/merge-gate without autonomous merge. use when user runs /autonomy, needs PR convergence while continuing other work, or fans out independent lanes under ADR-0001 and root autonomy.",
       "disable_model_invocation": true,
@@ -871,7 +857,7 @@
       "path": "skills/l9-claude-code-deepseek",
       "reason": "",
       "skill_md": "skills/l9-claude-code-deepseek/SKILL.md",
-      "skill_sha256": "79d0b7550ca76ae3d9f001590ba508a878a767f44b6917565fe492895a60d775",
+      "skill_sha256": "f598e86b6ebe0fd21b2f977e041f211784d1ac65149dec5f1f0224a694c54483",
       "user_invocable": true,
       "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
     },
@@ -884,7 +870,7 @@
       "path": "skills/l9-claude-coding-contract-compiler",
       "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
       "skill_md": "skills/l9-claude-coding-contract-compiler/SKILL.md",
-      "skill_sha256": "a7b3e74847c7b04efc5acc95e6ddd9ff1a01c1d96fe01ccd0a78236491163e59",
+      "skill_sha256": "9d44c4b97b1800274f3b78699c7c39a87e957a23056bd8ff5210a727a4cbf69f",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -910,7 +896,7 @@
       "path": "skills/l9-code-graph-rag-mcp",
       "reason": "",
       "skill_md": "skills/l9-code-graph-rag-mcp/SKILL.md",
-      "skill_sha256": "9dd9849fcf57cded3c26a5f505f919b8b9c52321afe9686316f5edda4d2c1ca3",
+      "skill_sha256": "9cd502db19c14d08e0978bb0d7e627ce02ba76dcf38f18f94437623dc1d67fcd",
       "user_invocable": true,
       "when_to_use": "code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed"
     },
@@ -1001,7 +987,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "f989eb6ec5c010f290141413464671bec47a4e1080e86aae503aee54a945ebdf",
+      "skill_sha256": "c95b3aff0e742349877fa5d4fdc809d447668cf1f5558763994a4c5a61176de0",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1092,7 +1078,7 @@
       "path": "skills/l9-idea-execute",
       "reason": "routes validated IdeaOS decisions into Website-Bot, plan-simple, GAR, or an already-supported bounded repository path; Program Execution is not an execution owner; owner-selection and downstream invocation are high blast radius; disable-model-invocation",
       "skill_md": "skills/l9-idea-execute/SKILL.md",
-      "skill_sha256": "f99421f1ed0887dc336faf7eca3c4a51206b50959abe62a9ae9517097ad3c4de",
+      "skill_sha256": "e0ca32d20009fd5594c5cf9507d2f0ec4f70bf3cf0e81133d07243bf44335d65",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1222,7 +1208,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "c3c5e567d0dcff79aa09c71271c9b230a6b139793d0e65de4f6c691dee5789e8",
+      "skill_sha256": "f14c30a9bab15c4da0a409fb64acb2290eb087b09a64cc2be7da068952642612",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1261,7 +1247,7 @@
       "path": "skills/l9-pr-integration-testing",
       "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
-      "skill_sha256": "4ad1a6b90d36c085674a9880766f9d4870c8c7c1fe5107e53b62e788f8d85733",
+      "skill_sha256": "e6e491460c0fe5253f18578a51e069c23e7feea1bcbbb480b8fcfd302800d055",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1326,7 +1312,7 @@
       "path": "skills/l9-repo-birth",
       "reason": "control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation",
       "skill_md": "skills/l9-repo-birth/SKILL.md",
-      "skill_sha256": "4b33dafa7abd9b51a47e85dd469614c89dea6646e52488986598e798e1537f5a",
+      "skill_sha256": "ae6dba475dd3b1fd7a4d8054957fecbfa6e42e0393a199e0660bee4c9d614353",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1339,7 +1325,7 @@
       "path": "skills/l9-repo-index",
       "reason": "repo index export \u2014 on-demand only",
       "skill_md": "skills/l9-repo-index/SKILL.md",
-      "skill_sha256": "dde056ee1ee3bf45793a787c726cc743870bcda6ce19fb6b34d6400ee6833907",
+      "skill_sha256": "e486ef3d38b134a47978314dee576386e814932e2f0d1e1444c060098ddeef77",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1370,6 +1356,19 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "primary",
+      "description": "bind a named credential (api key, token, password) from Infisical project cursor-governance as this surface's machine identity, in-process and never printed. use when a command must bind or check a credential, add a new secret, or translate a legacy openclaw-igorbot/* ref to its Infisical name. not for discussing secrets policy.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-secrets",
+      "path": "skills/l9-secrets",
+      "reason": "",
+      "skill_md": "skills/l9-secrets/SKILL.md",
+      "skill_sha256": "c5a0405c8099f7d108a3e173f65674e8d6987e57d9bf431384c553c59c152bc8",
+      "user_invocable": true,
+      "when_to_use": "a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated \u2014 never printing values"
+    },
+    {
       "composition_role": "general",
       "description": "set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.",
       "disable_model_invocation": true,
@@ -1391,7 +1390,7 @@
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "skill_md": "skills/l9-skill-compiler/SKILL.md",
-      "skill_sha256": "54abe7f653d951ff5808df5129e6972539b822c36d5fc0a1b3e40c4df180b5ad",
+      "skill_sha256": "08e1a9438382a8b55502b60cfba8dcb7473f969ecc44c1ad24a9704a79a9c371",
       "user_invocable": true,
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
@@ -1410,14 +1409,14 @@
     },
     {
       "composition_role": "general",
-      "description": "portable saas dashboard ui operator \u2014 use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.",
+      "description": "portable saas dashboard ui operator \u2014 use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-secrets for refs without keychain.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-ui-operator",
       "path": "skills/l9-ui-operator",
       "reason": "SaaS admin UI mutations via Playwright cartridges \u2014 high blast radius; requires human approve",
       "skill_md": "skills/l9-ui-operator/SKILL.md",
-      "skill_sha256": "297f34729c9075028ca3ed66c9dc73555745e1caf1c82f08aaee11afcd8b621a",
+      "skill_sha256": "dd910df84f334141dcf4da1c925b8289f202ac368ca2afa6a6bc4b326199ff3d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1462,6 +1461,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
-  "source_skill_corpus_sha256": "2474340d176a811b28a152428f249ea2722ea83e28850ad5d018d41e951f810f"
+  "source_manifest_sha256": "0be7ff1efef74c29c95d8ff864cd16aee08e7325cdb29b30041e8515a8f23f56",
+  "source_skill_corpus_sha256": "d844b3cbf6fe03d52065e8caa31757fc614b4cecf6f719d18d3dc80d9abb385c"
 }

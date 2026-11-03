@@ -363,6 +363,23 @@ def main() -> int:
             )
             outcome = _write(text, pub, session_id)
         message = compose_announcement(pub, session_id, brief, brief_error, observed, outcome)
+        if reported or observed:
+            # The same content as the record, published as a markdown report in
+            # the clone (reports/end-session/governance-handoff/) and pushed to
+            # the PR branch (ops/reports/publish.py).
+            body = (
+                governance_handoff.render_sections(brief)
+                if brief
+                else ["agent governance handoff: NOT CAPTURED"]
+            )
+            message += "\n" + pp.publish_report(
+                "publish_governance_handoff",
+                root,
+                pub,
+                body + governance_handoff.render_observed(observed),
+                session_id=session_id,
+                agent_id=os.environ.get("L9_MEMORY_AGENT_ID") or "unknown-agent",
+            )
         announcements.append(message)
         pp.write_ledger(
             root,

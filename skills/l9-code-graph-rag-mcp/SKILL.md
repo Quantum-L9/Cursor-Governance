@@ -34,7 +34,7 @@ Operate **@er77/code-graph-rag-mcp** as a **repo-local code structure** graph (A
 
 1. Repo rule **`87-plasticos-code-graph-rag`** (when present) and `AGENTS.md`.
 2. **Grep / Read** for known symbols.
-3. PlasticOS wiring scripts (`scripts/check_module_wiring.py`, manifests) before graph importers.
+3. PlasticOS wiring scripts (`PlasticOS:scripts/check_module_wiring.py`, manifests) before graph importers.
 4. Code-graph **structural** tools (this skill).
 5. Code-graph **semantic** tools — scoped only.
 6. `Unknown` — stop; do not dump `get_graph` or unscoped search.

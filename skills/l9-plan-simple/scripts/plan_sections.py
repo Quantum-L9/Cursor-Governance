@@ -40,6 +40,8 @@ NEGATION_RE = re.compile(r"(?i)\b(do not|don't|never|not a|not the|must not|forb
 OPTIONAL_HEADING_RE = re.compile(r"\*+\(optional", re.I)
 HEADING_RE = re.compile(r"^## +(.+)$", re.M)
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.S)
+# A template instance slot such as `<todo_id>` left in a delivered plan.
+PARAMETER_RE = re.compile(r"<([a-z][a-z0-9_]*)>")
 
 try:
     import yaml
@@ -154,6 +156,42 @@ def live_make_campaign(text: str) -> bool:
     return False
 
 
+def template_slots(template_text: str | None = None) -> frozenset[str]:
+    """Every `<parameter>` slot the canonical executable-plan template declares."""
+    text = (
+        template_text if template_text is not None else template_path().read_text(encoding="utf-8")
+    )
+    return frozenset(PARAMETER_RE.findall(text))
+
+
+def unfilled_parameters(
+    text: str,
+    plan: dict[str, Any] | None = None,
+    template_text: str | None = None,
+) -> list[str]:
+    """Template `<parameter>` slots still present in the projection.
+
+    Only names the template declares count, so an angle-bracket token that is
+    not a template slot is ordinary content. A token that PLAN_DOCUMENT itself
+    carries (an objective about `<parameter>` values, a command taking
+    `<branch>`) was projected from the plan, not left over from the template,
+    and is excluded. A prohibition sentence that quotes a slot
+    (`Do not write ... = <sha>`) is not an unfilled instance either.
+    """
+    slots = template_slots(template_text)
+    projected: set[str] = set()
+    if plan is not None:
+        projected = set(PARAMETER_RE.findall(json.dumps(plan, ensure_ascii=False)))
+    found: set[str] = set()
+    for line in text.splitlines():
+        if NEGATION_RE.search(line):
+            continue
+        for name in PARAMETER_RE.findall(line):
+            if name in slots and name not in projected:
+                found.add(name)
+    return sorted(found)
+
+
 def json_section_presence(plan: dict[str, Any]) -> dict[str, bool]:
     return {key: key in plan for key in json_required_keys()}
 
@@ -178,8 +216,11 @@ def receipt_status(
     frontmatter: dict[str, bool],
     execute_swap: dict[str, bool],
     gar_invoked: bool,
+    unfilled: list[str] | tuple[str, ...] = (),
 ) -> str:
     if not gar_invoked:
+        return "fail"
+    if unfilled:
         return "fail"
     if not all(json_sections.values()):
         return "fail"
@@ -200,10 +241,16 @@ def missing_labels(
     frontmatter: dict[str, bool],
     execute_swap: dict[str, bool],
     gar_invoked: bool,
+    unfilled: list[str] | tuple[str, ...] = (),
 ) -> list[str]:
     errors: list[str] = []
     if not gar_invoked:
         errors.append("G_GAR_UPSTREAM: l9-global-architect was not recorded as invoked")
+    if unfilled:
+        errors.append(
+            "G_UNFILLED_PARAMETER: template parameters left unfilled: "
+            + ", ".join(f"<{name}>" for name in unfilled)
+        )
     for key, ok in json_sections.items():
         if not ok:
             errors.append(f"G_JSON_SECTION: missing PLAN_DOCUMENT key {key}")

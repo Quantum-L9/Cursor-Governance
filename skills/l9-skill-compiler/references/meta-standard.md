@@ -3,7 +3,7 @@ schema: 1
 parent: l9-skill-compiler
 layer: reference
 role: metadata-contract
-version: 3.8.0
+version: 3.9.0
 status: active
 -->
 
@@ -66,13 +66,31 @@ default, so portability cannot silently emit a pack the L9 gate rejects.
 
 Markdown references and adapters use a compact `L9_META` HTML comment. Scripts use module docstrings or language-native comments. Schemas use YAML comments. Assets require a sidecar only when provenance or licensing is material.
 
+## Path references in SKILL.md
+
+A backticked path in `SKILL.md` means a file inside this pack. Any other file
+says where it lives:
+
+| The file lives in | Write it as |
+|---|---|
+| this pack | `scripts/x.py` |
+| another pack, or elsewhere in the host repository | `skills/l9-other/scripts/x.py`, `ops/scripts/x.py` |
+| a different repository | `<repo>:path`, for example `l9-repo-template:scripts/x.py` |
+| whichever pack or repository the skill is applied to | a template, for example `<pack>/agents/meta.yaml` or `<consumer-repo>:scripts/x.py` |
+
+An unqualified path under a pack resource directory (`references/`, `scripts/`,
+`schemas/`, `policies/`, `adapters/`, ... or any top-level directory the pack
+has) that the pack does not ship fails validation, unless it is inside a code
+block or a prohibition clause ("do not include ...").
+
 ## Validation
 
 Fail metadata validation for unsupported top-level keys, a name that does not
 match the pack directory, a description outside 150-500 characters or without a
 trigger clause, an empty `paths`, an archived pack that is not
-`disable-model-invocation: true`, invalid YAML, missing purpose, secrets, or
-claims that cannot be traced to evidence.
+`disable-model-invocation: true`, a backticked pack file that does not exist
+(see Path references), invalid YAML, missing purpose, secrets, or claims that
+cannot be traced to evidence.
 
 `scripts/validate_skill_pack.py` is the executable form of this section and is a
 required gate before packaging. Do not restate this key set anywhere else in the

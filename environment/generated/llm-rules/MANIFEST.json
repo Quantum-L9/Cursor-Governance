@@ -312,9 +312,9 @@
       "alias": null,
       "class": "always",
       "output": "62-github-openclaw-authority.md",
-      "output_sha256": "4e0c1ea29faac87808d6aa2b665774ffa05ddc379d05bccf6b2771347408bdc8",
+      "output_sha256": "af349a73397c39e81f4962387ae923e45c95c63cf39c56a129f1bc5aca0f3554",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "f1966ca06ce98ca4a45260374e8320c1d177178372819fb1e0be026c71ac125e",
+      "source_sha256": "d72efbd4064492f6ac14b91fec6595cde4f20da7c34c693ff5e035c2f719b027",
       "stem": "62-github-openclaw-authority"
     },
     {
@@ -375,9 +375,9 @@
       "alias": null,
       "class": "paths",
       "output": "72-review-ergonomics.md",
-      "output_sha256": "8c4d2364fe5972cdb52bd99e11e5cd05f993904aa0a4bd73e53206e5c9adca10",
+      "output_sha256": "0692f7ea80bad2e582e23b79d09672fb75251ebe192582829aee00cd6ab1545c",
       "source": "rules/72-review-ergonomics.mdc",
-      "source_sha256": "64a18349f4bf5b1a52290baca13203fdb2876bcd32a58800ba542bf1647696f7",
+      "source_sha256": "e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239",
       "stem": "72-review-ergonomics"
     },
     {
@@ -458,7 +458,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/81-gmp-audit.mdc",
-      "source_sha256": "0a3985c2fdc4018fead5a265052db7ba51482417ad2b06d497c21f4a9c3f6c8b",
+      "source_sha256": "5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f",
       "stem": "81-gmp-audit"
     },
     {
@@ -469,15 +469,6 @@
       "source": "rules/82-deployment-manifest.mdc",
       "source_sha256": "b57f632b093ece624e9a8a83684f4180235eaa03736bf45ab0e78e9ccf166e48",
       "stem": "82-deployment-manifest"
-    },
-    {
-      "alias": null,
-      "class": "always",
-      "output": "83-gmp-contracts.md",
-      "output_sha256": "0ca828dd87c73e774efb2521f7916eb0cfb86a233644aedbfab26f2f3bfdcf3d",
-      "source": "rules/83-gmp-contracts.mdc",
-      "source_sha256": "f9c358d00e0e27d5bd5df868f50e936b4e764256ff5eee6788e55d066073f4ea",
-      "stem": "83-gmp-contracts"
     },
     {
       "alias": null,
@@ -637,9 +628,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 54,
+    "projected": 53,
     "skipped_agent_requested": 15,
-    "source_mdc": 69
+    "source_mdc": 68
   },
-  "tree_sha256": "1937006482d33183f3dc0529a656fb5f584287b8c4217b8326fca63017ec67f2"
+  "tree_sha256": "f43549c0eb3df5927d9973a2d66e4ad5ceab675974c587cc1125d178a2201525"
 }

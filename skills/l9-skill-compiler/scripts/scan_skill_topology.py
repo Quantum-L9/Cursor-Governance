@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-# SCAN_SKILL_TOPOLOGY: deterministic. Creation is never the default outcome.
+"""SCAN_SKILL_TOPOLOGY: decide whether a requested skill already has an owner.
+
+Deterministic; creation is never the default outcome. Input, output and the
+decision table are documented in references/topology-scan.md.
+"""
+
+import argparse
+import json
 import os
 import re
 import sys
@@ -184,12 +191,58 @@ def decide(subject, live):
     return "ESCALATE_TO_BOUNDED_LLM", evidence, candidate_rows, "bounded_llm"
 
 
+def build_parser():
+    parser = argparse.ArgumentParser(
+        prog="scan_skill_topology.py",
+        description=(
+            "SCAN_SKILL_TOPOLOGY: decide whether a requested skill already has an owner "
+            "among the live skills. Prints one JSON decision document. See "
+            "references/topology-scan.md for the full contract."
+        ),
+        epilog=(
+            'request.json: {"subject": {"proposed_name": str, "domain": str, '
+            '"stated_objective": str, "existing_skill": str (optional)}}. '
+            "Decisions: REPLACE_EXISTING, REJECT_NEW_SKILL, EXTEND_EXISTING, CREATE_NEW, "
+            "ESCALATE_TO_BOUNDED_LLM."
+        ),
+    )
+    parser.add_argument("request", help="path to the JSON request with a `subject` mapping")
+    parser.add_argument(
+        "skills_dir",
+        nargs="?",
+        default=None,
+        help="live skills directory (default: skills/ of the repository holding this pack)",
+    )
+    return parser
+
+
+SUBJECT_FIELDS = ("proposed_name", "domain", "stated_objective", "existing_skill")
+
+
+def load_subject(path):
+    """The request's `subject` mapping, or a reason it cannot be read."""
+    try:
+        req = load_json(path)
+    except OSError as exc:
+        return None, f"cannot read request {path}: {exc.strerror or exc}"
+    except json.JSONDecodeError as exc:
+        return None, f"request {path} is not valid JSON: {exc}"
+    subject = req.get("subject") if isinstance(req, dict) else None
+    if not isinstance(subject, dict):
+        return None, f"request {path} must be a JSON object with a `subject` mapping"
+    wrong = [f for f in SUBJECT_FIELDS if f in subject and not isinstance(subject[f], str)]
+    if wrong:
+        return None, f"subject fields must be strings: {', '.join(wrong)}"
+    return subject, None
+
+
 def main(argv):
-    if len(argv) < 2:
-        return fail("usage: scan_skill_topology.py <compile-request.json> [skills_dir]")
-    req = load_json(argv[1])
-    live = enumerate_live_skills(argv[2] if len(argv) > 2 else None)
-    decision, evidence, candidate_rows, decided_by = decide(req.get("subject", {}), live)
+    args = build_parser().parse_args(argv[1:])
+    subject, error = load_subject(args.request)
+    if error:
+        return fail(error)
+    live = enumerate_live_skills(args.skills_dir)
+    decision, evidence, candidate_rows, decided_by = decide(subject, live)
     return emit(
         {
             "stage": "SCAN_SKILL_TOPOLOGY",

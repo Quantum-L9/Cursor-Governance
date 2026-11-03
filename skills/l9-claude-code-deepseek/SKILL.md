@@ -19,7 +19,7 @@ Route Claude Code in **this clone** to DeepSeek. Never print key values.
 ## Do
 
 1. `cursor --install-extension anthropic.claude-code` if missing.
-2. Resolve `openclaw-igorbot/deepseek#apikey` via `l9-aws-secrets` (`--check` first). Write gitignored `<clone>/.env.local` (`0600`) with DeepSeek exports. Add `.env.local` and `.claude/settings.local.json` to the clone `.gitignore` first.
+2. Resolve `openclaw-igorbot/deepseek#apikey` via `l9-secrets` (`--check` first). Write gitignored `<clone>/.env.local` (`0600`) with DeepSeek exports. Add `.env.local` and `.claude/settings.local.json` to the clone `.gitignore` first.
 3. Write **clone-local** `scripts/claude-deepseek.sh` that sources `<clone>/.env.local`, `unset ANTHROPIC_API_KEY`, `cd`s to the clone, `exec claude "$@"`. Do **not** run `$HOME/.cursor-governance/scripts/claude-deepseek.sh` from a consumer — it `cd`s into governance.
 4. Set Cursor workspace + user `claudeCode.claudeProcessWrapper` to that script, `preferredLocation=panel`, `disableLoginPrompt=true`. Non-secret DeepSeek URL/models only in settings.
 5. Gitignored `.claude/settings.local.json`: same URL/models + `ANTHROPIC_AUTH_TOKEN` from `.env.local`. Never put the key in committed `.claude/settings.json`.

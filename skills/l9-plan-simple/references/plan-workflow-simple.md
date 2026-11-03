@@ -6,8 +6,8 @@ role: plan_workflow
 tags: [plan, todo, validation, projection, cursor-build, embedded, handoff, gar, section-receipt]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-09-02
+version: 1.4.0
+updated: 2026-11-02
 /L9_META -->
 
 # Plan Workflow — Shared Template, Two Handoff Modes
@@ -64,12 +64,14 @@ directory, so a `../../_archived/l9-plan/...` invocation from the skill root is 
 
 ```bash
 # default
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build \
+python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace . \
   > .cursor/plans/<snake_slug>_<8hex>.plan.md
 
 # caller-owned
 python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded
 ```
+
+The renderer fills every template section from PLAN_DOCUMENT; the output carries no `<parameter>` slot. `--workspace .` binds the baseline from the current git work tree (read-only); without it the baseline is `unbound`. A success criterion's proof is the `final_validation` entry it names by id (`V1`) or by a shared script/file name — name one in every criterion, or the property renders `unbound`. Fields PLAN_DOCUMENT does not carry render `unknown — …`: fix them in PLAN_DOCUMENT and re-render rather than hand-editing the projection.
 
 Or hand-copy the first-class SSOT and apply the mode's execute swap below. Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE).
 

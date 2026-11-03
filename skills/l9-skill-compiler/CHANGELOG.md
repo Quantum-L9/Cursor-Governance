@@ -3,11 +3,30 @@ schema: 1
 parent: l9-skill-compiler
 layer: release
 role: changelog
-version: 3.8.0
+version: 3.9.0
 status: active
 -->
 
 # Changelog
+
+## 3.9.0 - 2026-11-02
+
+### Removed
+- v2 runtime residue left in `SKILL.md` by the 3.8.0 replacement: the five deleted policy files (`skill-families`, `runtime-routing`, `capability-closure`, `target-profiles`, `behavior-evals`) and the Skill IR, primary-family and capability-closure rules that depended on them. v3.8 replaced that runtime by design; its scripts and schemas were already gone.
+
+### Changed
+- The target-profile rule is rebound to what exists: a platform convention belongs to its adapter under `adapters/`.
+- `scripts/scan_skill_topology.py` is wired into workflow step 4 and the resource map, with its input, output and decisions documented in `references/topology-scan.md`. The DAG-ownership invariant now names the step that enforces it.
+- `adapters/claude-code.md` writes a tool restriction as `metadata.allowed-tools` in a governed repository, uses top-level `allowed-tools` only under the explicit `agent-skills` profile, and states that the nested key is not enforced by Claude Code.
+
+### Added
+- `validate_skill_pack.py` fails when `SKILL.md` names a backticked pack file that does not exist. A pack file is one under a conventional resource directory or any top-level directory the pack has, or a pack root release file; `file.py::symbol` is checked as `file.py`. Fenced code, paths inside a prohibition clause ("do not include ..."), globs, templates, bare directory names and paths that exist in the host repository are exempt.
+- `scan_skill_topology.py` has a real `--help`, and a missing, unparseable or mis-shaped request exits `2` with the reason instead of a traceback.
+- Tests: `tests/test_topology_cli.py` in the pack and `tests/ops/scripts/test_skill_compiler_resource_refs.py` in the repository.
+- `references/meta-standard.md` states how `SKILL.md` names a file outside the pack: a host-repository path (`skills/l9-other/...`), `<repo>:path` for a different repository, or a `<pack>/...` template. Eight packs in this repository were rewritten to that form, and `tests/ops/scripts/test_skill_path_references.py` holds every pack to it.
+
+### Corrected
+- `MANIFEST.md`, `README.md` and `VALIDATION.md` are rebuilt from the files present and the checks actually run. The 3.8.0 `VALIDATION.md` reported a `tests/test_validators.py` run that does not exist and zero unlinked references while five listed policies were missing.
 
 ## 3.8.0 - 2026-08-28
 

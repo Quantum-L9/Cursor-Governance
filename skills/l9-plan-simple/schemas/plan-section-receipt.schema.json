@@ -117,6 +117,12 @@
         "live_make_campaign": { "type": "boolean" }
       }
     },
+    "unfilled_parameters": {
+      "description": "Template <parameter> slots still present in the projection; non-empty fails the receipt. Optional for receipts generated before 2026-11-02.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+      "uniqueItems": true
+    },
     "status": {
       "enum": ["pass", "fail"]
     }

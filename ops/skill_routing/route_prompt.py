@@ -146,8 +146,10 @@ def score_description_match(prompt: str, skill: dict[str, Any]) -> int:
                 score += 5 if size == 3 else 3
     prompt_tokens = _significant_tokens(prompt)
     overlap = prompt_tokens & set(corpus_tokens)
-    # Cap unigram contribution so generic words cannot dominate.
-    score += min(len(overlap), 4) * 2
+    # Cap unigram contribution BELOW the force threshold (8): generic words
+    # alone ("agent", "check", "secret", "values") must never force a skill;
+    # a phrase or name hit has to be present too.
+    score += min(len(overlap), 3) * 2
     name = str(skill.get("name", ""))
     if name and name in prompt:
         score += 12

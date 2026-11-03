@@ -42,6 +42,43 @@ UNFINISHED = re.compile(
 LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 SKIP_UNFINISHED = {"CHANGELOG.md"}
 
+#: A backticked path in SKILL.md is a resource reference when it starts with one
+#: of the pack's resource directories or names a pack root file. The directories
+#: are these conventional names plus every top-level directory the pack actually
+#: has (`contracts/`, `runtime/`, ...; see `resource_dirs`). Paths into the host
+#: repository (`ops/...`, `AGENTS.md`, `../...`) are not pack resources.
+PACK_DIRS = {
+    "adapters",
+    "agents",
+    "assets",
+    "fixtures",
+    "policies",
+    "references",
+    "schemas",
+    "scripts",
+    "templates",
+    "tests",
+}
+PACK_ROOT_FILES = {
+    "SKILL.md",
+    "README.md",
+    "RUNBOOK.md",
+    "MANIFEST.md",
+    "CHANGELOG.md",
+    "VALIDATION.md",
+    "expertise_model.yaml",
+    "skill_intelligence_report.yaml",
+}
+BACKTICK = re.compile(r"`([^`\n]+)`")
+FENCE = re.compile(r"^\s*(```|~~~)")
+#: A clause that tells the reader *not* to ship or use a path names an absent
+#: file on purpose ("Do not include `agents/openai.yaml` unless ..."). Only the
+#: clause before the path counts: a later "Never ..." sentence on the same line
+#: does not exempt the paths the line requires.
+NEGATED = re.compile(r"(?i)\b(do not|don't|never|must not)\b")
+CLAUSE_BREAK = re.compile(r"[.;!?](?:\s|$)|\s[—–]\s")
+NOT_A_PATH = re.compile(r"[*?\[\]<>{}$]|://")
+
 
 def load_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     text = path.read_text(encoding="utf-8")
@@ -61,6 +98,58 @@ def local_links(path: Path) -> list[str]:
             continue
         links.append(target.split("#", 1)[0])
     return links
+
+
+def resource_dirs(root: Path) -> set[str]:
+    """Conventional resource directories plus every top-level directory in the pack."""
+    present = {p.name for p in root.iterdir() if p.is_dir() and not p.name.startswith((".", "_"))}
+    return PACK_DIRS | present
+
+
+def _negated_before(line: str, start: int) -> bool:
+    """Whether the clause leading up to position `start` is a prohibition."""
+    prefix = line[:start]
+    breaks = list(CLAUSE_BREAK.finditer(prefix))
+    clause = prefix[breaks[-1].end() :] if breaks else prefix
+    return bool(NEGATED.search(clause))
+
+
+def referenced_pack_paths(
+    body: str, dirs: set[str] | frozenset[str] = frozenset(PACK_DIRS)
+) -> list[str]:
+    """Backticked pack resource paths in a SKILL.md body, outside code fences."""
+    found: list[str] = []
+    in_fence = False
+    for line in body.splitlines():
+        if FENCE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for match in BACKTICK.finditer(line):
+            if _negated_before(line, match.start()):
+                continue
+            raw = match.group(1)
+            token = raw.strip().split()[0] if raw.strip() else ""
+            token = token.split("::", 1)[0]  # `file.py::symbol` names the file
+            token = token.rstrip(".,;:")
+            if not token or NOT_A_PATH.search(token) or token.startswith(("/", "~", ".")):
+                continue
+            if token.endswith("/"):
+                continue  # a directory named as a convention, not a file the pack ships
+            head = token.split("/", 1)[0]
+            if ("/" in token and head in dirs) or token in PACK_ROOT_FILES:
+                if token not in found:
+                    found.append(token)
+    return found
+
+
+def host_repository(root: Path) -> Path | None:
+    """The repository holding the pack: the parent of its nearest `skills/` ancestor."""
+    for parent in root.resolve().parents:
+        if parent.name == "skills":
+            return parent.parent
+    return None
 
 
 def validate(root: Path, profile: str = "l9") -> list[str]:
@@ -116,6 +205,13 @@ def validate(root: Path, profile: str = "l9") -> list[str]:
         )
     if len(body.splitlines()) > 500:
         errors.append("SKILL.md exceeds 500 lines")
+    host = host_repository(root)
+    for ref in referenced_pack_paths(body, resource_dirs(root)):
+        if (root / ref).exists():
+            continue
+        if host is not None and (host / ref).exists():
+            continue  # a path into the repository that hosts the pack, not a pack file
+        errors.append(f"SKILL.md references a pack file that does not exist: {ref}")
 
     files = [p for p in root.rglob("*") if p.is_file()]
 
