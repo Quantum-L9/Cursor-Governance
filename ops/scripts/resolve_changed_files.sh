@@ -107,7 +107,9 @@ comparison_files() {
     # this branch can share no reachable ancestor and merge-base fails outright.
     # Deepen once and retry before giving up: on a shallow clone the history is
     # missing, not absent.
-    if [[ -f "$(git rev-parse --git-dir)/shallow" ]]; then
+    # Ask git, not the filesystem: in a linked worktree `--git-dir` names
+    # .git/worktrees/<name>, while the shallow file lives in the common dir.
+    if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
       git fetch --deepen=200 origin "${base#origin/}" >/dev/null 2>&1 \
         || git fetch --unshallow origin >/dev/null 2>&1 || true
       mb="$(git merge-base "$base" HEAD 2>/dev/null || true)"
