@@ -354,5 +354,14 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertTrue(isinstance(inflight, list))
 
 
+class LifecycleSourceHygieneTests(unittest.TestCase):
+    """The admission lock path must not carry session debug instrumentation."""
+
+    def test_receipts_writes_no_machine_local_debug_log(self) -> None:
+        source = Path(receipts.__file__).read_text(encoding="utf-8")
+        for marker in ("#region agent log", "/Users/", "debug-982472"):
+            self.assertNotIn(marker, source)
+
+
 if __name__ == "__main__":
     unittest.main()

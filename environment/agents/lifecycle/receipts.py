@@ -357,17 +357,7 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
         return []
     index = _load_host_correlation_index()
     open_ones: list[dict[str, Any]] = []
-    # #region agent log
-    _dbg_files = 0
-    _dbg_returned = 0
-    _dbg_bad_id = 0
-    _dbg_stopped = 0
-    _dbg_expired = 0
-    # #endregion
     for path in root.glob("*.json"):
-        # #region agent log
-        _dbg_files += 1
-        # #endregion
         try:
             body = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -379,102 +369,15 @@ def list_in_flight_host_admissions() -> list[dict[str, Any]]:
             try:
                 returned = return_path(assignment_id).is_file()
             except ValueError:
-                # #region agent log
-                _dbg_bad_id += 1
-                # #endregion
                 continue
             if returned:
-                # #region agent log
-                _dbg_returned += 1
-                # #endregion
                 continue
         if _host_admission_has_stop(body, index=index):
-            # #region agent log
-            _dbg_stopped += 1
-            # #endregion
             continue
         if _host_admission_expired(body, index=index):
-            # #region agent log
-            _dbg_expired += 1
-            # #endregion
             path.unlink(missing_ok=True)
             continue
         open_ones.append(body)
-    # #region agent log
-    try:
-        import time as _agent_time
-
-        _now = datetime.now(UTC)
-        _mut = [b for b in open_ones if b.get("mutation")]
-        _started = 0
-        _old = 0
-        _types: dict[str, int] = {}
-        _oldest = ""
-        _samples: list[dict[str, Any]] = []
-        _ranked = sorted(_mut, key=lambda b: str(b.get("observed_at") or ""))
-        for _b in _ranked:
-            _kind = str(_b.get("subagent_type") or "?")
-            _types[_kind] = _types.get(_kind, 0) + 1
-            _has_start = _host_admission_has_start(_b, index=index)
-            if _has_start:
-                _started += 1
-            _obs = str(_b.get("observed_at") or "")
-            if not _oldest or (_obs and _obs < _oldest):
-                _oldest = _obs
-            _parsed = _parse_observed_at(_b.get("observed_at"))
-            if _parsed is not None and _now - _parsed > HOST_ADMISSION_RUN_TTL:
-                _old += 1
-            if len(_samples) < 3:
-                _tid = str(_b.get("tool_use_id") or "")
-                _corr_times = [str(c.get("observed_at") or "") for c in index.get(_tid, ())]
-                _aid = str(_b.get("assignment_id") or "")
-                _ret = False
-                try:
-                    _ret = bool(_aid) and return_path(_aid).is_file()
-                except ValueError:
-                    _ret = False
-                _samples.append(
-                    {
-                        "observed_at": _obs,
-                        "subagent_type": _kind,
-                        "has_start": _has_start,
-                        "has_stop": _host_admission_has_stop(_b, index=index),
-                        "return_exists": _ret,
-                        "newest_correlation_at": max(_corr_times) if _corr_times else "",
-                        "correlation_count": len(_corr_times),
-                    }
-                )
-        _payload = {
-            "sessionId": "982472",
-            "runId": "post-fix",
-            "hypothesisId": "A",
-            "location": "receipts.py:list_in_flight_host_admissions",
-            "message": "in-flight cap inventory",
-            "data": {
-                "files": _dbg_files,
-                "skipped_returned": _dbg_returned,
-                "skipped_bad_id": _dbg_bad_id,
-                "skipped_stopped": _dbg_stopped,
-                "expired_unlinked": _dbg_expired,
-                "kept": len(open_ones),
-                "kept_mutating": len(_mut),
-                "mutating_with_start": _started,
-                "mutating_older_than_6h": _old,
-                "oldest_mutating_observed_at": _oldest,
-                "mutating_types": _types,
-                "oldest_mutating_samples": _samples,
-            },
-            "timestamp": int(_agent_time.time() * 1000),
-        }
-        with open(
-            "/Users/ib-mac/Cursor-Governance/.cursor/debug-982472.log",
-            "a",
-            encoding="utf-8",
-        ) as _agent_fh:
-            _agent_fh.write(json.dumps(_payload, default=str) + "\n")
-    except Exception:
-        pass
-    # #endregion
     return open_ones
 
 
