@@ -541,6 +541,17 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - fail-open, but never silent
             report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
         text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
+        if handoff is not None:
+            # The brief, published as a markdown report in the clone
+            # (reports/end-session/session-handoff/) and pushed to the PR branch.
+            text += "\n" + pp.publish_report(
+                "publish_session_handoff",
+                root,
+                pub,
+                session_handoff.render(handoff).splitlines(),
+                session_id=session_id,
+                agent_id=str(agent_id or ""),
+            )
         announcements.append(text)
         statuses.append(f"{root.name}={report.get('status')}")
         pp.write_ledger(
