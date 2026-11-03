@@ -3,7 +3,7 @@ schema: 1
 parent: l9-pr-integration-testing
 layer: reference
 role: repository-adapter-selection
-version: 0.2.0
+version: 0.4.0
 status: active
 -->
 
@@ -24,9 +24,19 @@ READY receipt exists. Do not reimplement any of it here. It provides, with a rec
 | A non-root runner in the `docker` group | `DockerSandbox` refuses UID 0 | user `l9sandbox` (`L9_DOCKER_SANDBOX_USER`) |
 | The session TLS trust bundle, readable by that user | host-side `git fetch` goes through a TLS-intercepting proxy; the original bundle is root-only | copied from `PIP_CERT` / `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` / `CURL_CA_BUNDLE` |
 | A pinned image with Git, `make` and the test runtime | merges, checkouts and tests all run inside a no-network container | `l9-ci-toolchain:core-<sha12>`, built from Quantum-L9/l9-ci-core `toolchain-lock.json` and `requirements-consumer-ci.txt` at an exact Core commit and verified tool-by-tool; `--with-semgrep` adds Core's hash-locked semgrep; Biome is excluded |
+| The official python base, despite Docker Hub rate limits | hosted sessions share outbound IPs, so anonymous Docker Hub pulls return HTTP 429 | a local copy first, then Docker Hub, then `mirror.gcr.io` (`L9_DOCKER_SANDBOX_MIRRORS`); `ensure` also starts `dockerd` with those mirrors. The base is pinned by content digest either way, which the mirror serves unchanged; the receipt records it as `base_image` |
 
 Repository dependencies cannot be installed during a no-network test, so the quick path
 layers the repository's own `make setup` output, run at the **base** SHA, onto that image.
+Isolated PEP 517 builds (`python -m build`, `pip install .`) resolve their build backend at
+test time, which a no-network container cannot do. The layer therefore pre-downloads the
+repository's `[build-system].requires` (or `setuptools>=40.8.0`, pip's fallback for a
+setuptools project without that table) into `/opt/l9-wheelhouse` after `make setup`, and
+sets `PIP_FIND_LINKS` to it and `PIP_NO_INDEX=1` for the test run. A test that needs any
+other package at run time still fails offline, and that failure is correct: declare the
+package in the repository's own setup. For a hand-written manifest, `quick.py --image-only`
+builds this layer and prints its pinned image id.
+
 A PR that changes a dependency input (manifests, lockfiles, `requirements*.txt`, `Makefile`,
 `Repo.mk`) is BLOCKED by the quick path, because that layer would test it against stale
 dependencies; build such a manifest by hand with an image provisioned from the combined revision.
@@ -61,7 +71,15 @@ Detect via a parsed `package.json`, JS/TS source, lockfile, CI and actual tests.
 
 ## Containerized and multi-service systems
 
-A Dockerfile or Compose file does not authorize using its runtime environment. Require a reviewed, locally present pinned image containing Git and the required test runtime. Docker runs with no network, no privileged mode, no host mounts beyond the disposable worktree, read-only root filesystem and explicit UID. Stateful dependencies and inter-container networking are **unsupported by the basic safe runner**. If required, record `BLOCKED`/`INCOMPLETE_EVIDENCE` and extend the adapter with reviewed, isolated provisioning plus executable witnesses. Do not point tests at production databases or accounts.
+A Dockerfile or Compose file does not authorize using its runtime environment. Require a reviewed, locally present pinned image containing Git and the required test runtime. Docker runs with no network, no privileged mode, no host mounts beyond the disposable worktree, read-only root filesystem and explicit UID. Do not point tests at production databases or accounts.
+
+### Service sidecars (Postgres, Redis, Neo4j, …)
+
+A manifest may declare `services` (each `name`, digest-pinned `image`, literal `env`, `ports`, and a required `health` check: `cmd`, `interval`, `timeout`, `retries`, `start_period`) and `test_env` (literal variables for the test procedures). For every case the runner starts a holder container with `--network none`, then joins the services and the test container to that holder's namespace (`--network container:<holder>`). Its only interface is loopback, so tests reach `localhost:5432` exactly as a CI job does and nothing has a route out. Each case gets fresh services; no state crosses from one candidate to the next. Services keep `--cap-drop ALL` plus only `CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID` (what an official image's entrypoint needs to drop to its service user), `no-new-privileges`, and memory/pid limits. Tests wait for Docker's own health status; a service that exits or turns unhealthy is an `ENVIRONMENT` blocker carrying its log tail, and every container is removed either way. Two services on one port are refused.
+
+`quick.py --ci-job WORKFLOW:JOB` derives these from the repository's own CI job at the base SHA (for example `--ci-job ci.yml:validate`). Service images are pinned through the same Docker Hub → mirror fallback as the toolchain base. A tag listed in [`service-images.json`](service-images.json) — `postgres:16`, `redis:7` and `neo4j:5.26.31`, snapshotted from Quantum-L9/l9-graphiti-memory@`606d59a7` CI — is pulled **by that digest** and never re-resolved, so a moved floating tag cannot change what runs. Any other tag is resolved at run time and reported as unpinned. The file is vendored data with provenance: nothing reads l9-graphiti-memory, or agent memory, at run time; refresh it deliberately (new digest, version, source commit) when that CI moves. Only `--health-*` options are accepted; any other option, `credentials`, `volumes`, a remapped port (`15432:5432`) or a workflow expression in a service's env is refused by name. `${{ github.run_id }}`-style run contexts become a fixed local literal. Job and workflow `env` travels to the tests; values that are expressions (secrets, variables) are omitted and listed as *not reproduced*. A PR that edits that workflow is refused, since its services would be stale. `--print-services` prints the pinned services and env as JSON for a hand-written manifest — it needs no V2 contract.
+
+The holder's hostname is `localhost`: under `--network none` a container's own hostname does not resolve, and a server that looks itself up (Neo4j's JVM) refuses to start. Every service's log is captured into the evidence bundle. What still cannot be reproduced: anything a service downloads at startup. Neo4j with `NEO4J_PLUGINS` turns healthy but logs that the plugin "will not be loaded" (verified live with `graph-data-science`), so tests that need it fail for an environment reason; `quick.py` names such settings as *not reproduced* before the run, and the service log shows it. Test procedures declaring a `failure_parser` also report their skipped-test count, so a suite that skips its database tests is visible rather than green.
 
 ## Odoo addons and PostgreSQL
 
@@ -69,7 +87,7 @@ Detect active Odoo addon manifests from source, distinguish comments from actual
 
 ## Database-backed repositories
 
-Verify migrations, isolation, DB version, schema state and fixture lifecycles from target repo evidence. The basic runner disallows external networks; a DB-dependent test cannot be replaced by mocks and marked integration-proven. Develop a separate adapter only when its service isolation and cleanup have real positive/adversarial Docker witnesses.
+Verify migrations, isolation, DB version, schema state and fixture lifecycles from target repo evidence. The runner disallows external networks; database services run as loopback-only sidecars (above). A DB-dependent test cannot be replaced by mocks and marked integration-proven.
 
 ## Common executable procedure contract
 

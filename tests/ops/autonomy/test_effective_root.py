@@ -534,3 +534,136 @@ def test_publish_into_a_second_clone_without_a_receipt_is_denied(
         )
     )
     assert allowed == "allow", "the authorized session checkout still publishes"
+
+
+# --- WS="$PWD" names the shell's own checkout ---------------------------------
+#
+# `make -C "$GOV" pr WS="$PWD"` is the documented way to publish a consumer from
+# its own checkout (rules/48). The gate refused every dynamic WS= value, then
+# fell back to the -C directory and looked for the release receipt in the
+# governance clone, so the publish was denied (EIE PR #259 governance handoff).
+# The hook payload carries the shell's cwd, so the exact PWD forms are knowable;
+# every other expansion stays unresolvable and is now refused by name instead of
+# being silently replaced by the -C directory.
+
+
+def _released(path: Path, branch: str) -> Path:
+    git(path, "checkout", "-q", "-b", branch)
+    begin(path, contract_id=branch.replace("/", "-"))
+    authorize_release(path)
+    return path
+
+
+def _claude_verdict(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], command: str, cwd: Path
+) -> str:
+    import io
+
+    import local_execution_gate as gate
+
+    event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+    assert gate.main_claude() == 0
+    return capsys.readouterr().out
+
+
+@pytest.fixture
+def l4_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+
+
+@pytest.mark.parametrize("ws", ['"$PWD"', "$PWD", '"${PWD}"', "${PWD}", '"$(pwd)"', "`pwd`"])
+def test_claude_pwd_workspace_uses_the_shell_cwd_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    main_repo: Path,
+    tmp_path: Path,
+    l4_on: None,
+    ws: str,
+) -> None:
+    consumer = _released(make_repo(tmp_path / "consumer"), "feat/pwd")
+    command = f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS={ws} PR_BASE=origin/main'
+    out = _claude_verdict(monkeypatch, capsys, command, consumer)
+    assert '"deny"' not in out, out
+
+
+def test_claude_pwd_workspace_follows_a_leading_cd(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    main_repo: Path,
+    tmp_path: Path,
+    l4_on: None,
+) -> None:
+    consumer = _released(make_repo(tmp_path / "consumer"), "feat/cd")
+    container = tmp_path / "container"
+    container.mkdir()
+    command = f'cd "{consumer}" && PR_REMEDIATE=0 make -C "{main_repo}" pr WS="$PWD"'
+    out = _claude_verdict(monkeypatch, capsys, command, container)
+    assert '"deny"' not in out, out
+
+
+def test_claude_pwd_workspace_is_not_the_dash_c_receipt(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    main_repo: Path,
+    tmp_path: Path,
+    l4_on: None,
+) -> None:
+    """The -C checkout's receipt must not authorize the shell's unreleased checkout."""
+    _released(main_repo, "feat/gov")
+    consumer = make_repo(tmp_path / "consumer")
+    command = f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="$PWD"'
+    out = _claude_verdict(monkeypatch, capsys, command, consumer)
+    assert '"deny"' in out, out
+
+
+def test_claude_pwd_after_a_later_cd_is_unresolvable(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    main_repo: Path,
+    tmp_path: Path,
+    l4_on: None,
+) -> None:
+    """Only a leading cd is followed; a cd mid-command leaves $PWD unknown."""
+    consumer = _released(make_repo(tmp_path / "consumer"), "feat/mid")
+    command = f'true && cd "{consumer}" && PR_REMEDIATE=0 make -C "{main_repo}" pr WS="$PWD"'
+    out = _claude_verdict(monkeypatch, capsys, command, main_repo)
+    assert '"deny"' in out and "literal path" in out, out
+
+
+@pytest.mark.parametrize("ws", ['"$OTHER"', "'$PWD'", '"$PWD/sub"', "~/repo"])
+def test_claude_unresolvable_workspace_is_refused_by_name(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    l4_on: None,
+    ws: str,
+) -> None:
+    """Even a released session checkout does not stand in for an unknown WS=."""
+    consumer = _released(make_repo(tmp_path / "consumer"), "feat/dyn")
+    out = _claude_verdict(monkeypatch, capsys, f"PR_REMEDIATE=0 make pr WS={ws}", consumer)
+    assert '"deny"' in out and "literal path" in out, out
+
+
+def test_unresolvable_workspace_on_a_dry_run_is_not_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    main_repo: Path,
+    l4_on: None,
+) -> None:
+    out = _claude_verdict(monkeypatch, capsys, 'make -n pr WS="$OTHER"', main_repo)
+    assert '"deny"' not in out, out
+
+
+def test_cursor_pwd_workspace_uses_the_reported_cwd(
+    main_repo: Path, tmp_path: Path, l4_on: None
+) -> None:
+    consumer = _released(make_repo(tmp_path / "consumer"), "feat/cursor")
+    event = {
+        "command": f'PR_REMEDIATE=0 make -C "{main_repo}" pr WS="$PWD"',
+        "cwd": str(consumer),
+        "workspace_roots": [str(consumer)],
+    }
+    permission, message = cursor_shell_verdict(json.dumps(event))
+    assert permission == "allow", message

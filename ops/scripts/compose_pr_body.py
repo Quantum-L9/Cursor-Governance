@@ -235,6 +235,65 @@ class GitRangeError(RuntimeError):
     """A git measurement the body depends on failed; never render it as empty."""
 
 
+#: Schema of the author's PR intent file, ``<workspace>/.l9/pr/pr-intent.json``.
+INTENT_SCHEMA = "l9.pr_intent.v1"
+#: Where open_pr_after_gate.sh looks for it.
+INTENT_RELPATH = ".l9/pr/pr-intent.json"
+#: Handoff detail for a field the author supplied through that file.
+INTENT_DETAIL = f"the author's text from {INTENT_RELPATH}, bound to this head"
+
+
+@dataclass(frozen=True)
+class PrIntent:
+    """Author prose for the fields nothing the composer measures can supply.
+
+    Commit subjects and one body paragraph are the composer's only prose
+    sources, so on a long branch the title was the oldest subject, Problem was
+    that commit's message and Reviewer focus stayed unresolved. The author
+    writes this file before ``make pr``; an empty field keeps the composer's
+    floor for that field.
+    """
+
+    title: str = ""
+    problem: str = ""
+    reviewer_focus: str = ""
+
+
+def load_intent(path: Path | None, head: str) -> PrIntent | None:
+    """The intent at *path* when it names *head*, else None (with a WARN).
+
+    Bound to HEAD like every other receipt here: an intent written for an
+    earlier branch or head must not describe this one. ``head`` in the file may
+    be abbreviated to 7+ characters.
+    """
+    if path is None or not path.is_file():
+        return None
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"WARN: {path} is not readable JSON ({exc}); intent ignored", file=sys.stderr)
+        return None
+    if not isinstance(doc, dict) or doc.get("schema") != INTENT_SCHEMA:
+        print(f"WARN: {path} is not schema {INTENT_SCHEMA}; intent ignored", file=sys.stderr)
+        return None
+    named = str(doc.get("head") or "").strip().lower()
+    if len(named) < 7 or not head or not head.lower().startswith(named):
+        print(
+            f"WARN: {path} names head {named or '(none)'}, not {head[:12] or '(unknown)'}; "
+            "intent ignored — rewrite it for this head",
+            file=sys.stderr,
+        )
+        return None
+
+    def text(key: str) -> str:
+        value = doc.get(key)
+        return value.strip() if isinstance(value, str) else ""
+
+    return PrIntent(
+        title=text("title"), problem=text("problem"), reviewer_focus=text("reviewer_focus")
+    )
+
+
 @dataclass
 class MechanicalFacts:
     # Oldest first. `git log base..HEAD` is newest-first, and the composer used
@@ -280,6 +339,8 @@ class MechanicalFacts:
     added_lines: dict[str, list[str]] = field(default_factory=dict)
     # semantic path -> (blob at the merge base, blob at HEAD); "" when absent.
     blob_ids: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # The author's prose (load_intent), bound to `head`; None when absent.
+    intent: PrIntent | None = None
 
 
 #: Completion status of one PR-body field in the handoff (``fields``):
@@ -801,8 +862,11 @@ def range_summary(facts: MechanicalFacts) -> str:
 
 
 def range_title(facts: MechanicalFacts) -> str:
-    """The PR title: the oldest own subject, no count. Empty when the range is empty
-    so the caller can fall back to the branch name."""
+    """The PR title: the author's intent title, else the oldest own subject, no
+    count. Empty when both are absent so the caller can fall back to the branch
+    name."""
+    if facts.intent is not None and facts.intent.title:
+        return facts.intent.title
     return facts.commits[0] if facts.commits else ""
 
 
@@ -967,6 +1031,7 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
     does not carry is absent, not "done".
     """
     fields: dict[str, dict[str, str]] = {}
+    intent = facts.intent or PrIntent()
 
     def put(name: str, status: str, detail: str) -> None:
         fields[name] = {"status": status, "detail": detail}
@@ -977,6 +1042,8 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
             COMPLETION_DERIVED,
             "no commit body states it — composed from the oldest subject and the measured diff",
         )
+    elif "## Problem" in body and intent.problem and intent.problem in body:
+        put("problem", COMPLETION_VERIFIED, INTENT_DETAIL)
     elif "## Problem" in body:
         put("problem", COMPLETION_VERIFIED, "oldest own commit subject and its body paragraph")
     if "## Type of Change" in body:
@@ -1036,7 +1103,10 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
             COMPLETION_NOT_APPLICABLE,
             "no canonical semantic artifact or release record in the measured diff",
         )
-    if REVIEWER_MEASURED in body:
+    # The author's intent wins when given; otherwise the composer ranks it.
+    if intent.reviewer_focus and intent.reviewer_focus in body:
+        put("reviewer_focus", COMPLETION_VERIFIED, INTENT_DETAIL)
+    elif REVIEWER_MEASURED in body:
         put("reviewer_focus", COMPLETION_DERIVED, "ranked from measured risk in the diff")
     if facts.additive_only_paths:
         mode = _edit_mode_expected(facts)
@@ -1902,7 +1972,8 @@ ERROR_FENCE = (
 
 def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = template
-    problem = range_problem(facts)
+    intent = facts.intent or PrIntent()
+    problem = intent.problem or range_problem(facts)
     fix = range_fix(facts)
     text = _fill_protected_root(text, facts)
     problem_written = False
@@ -1944,8 +2015,12 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_semantic(text, facts)
     text = _fill_gates(text, facts)
     if "## Reviewer focus" in text:
+        # An intent file's Reviewer focus is the author's own and stays as
+        # written; without one the composer ranks it in a refreshed region.
         text = text.replace(
-            REVIEWER_PLACEHOLDER, wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)), 1
+            REVIEWER_PLACEHOLDER,
+            intent.reviewer_focus or wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
+            1,
         )
     text = _put_region(text, REGION_INTENT, render_changes_by_intent(facts), _INTENT_PH)
     if facts.l4_binding == BOUND:
@@ -2159,9 +2234,61 @@ def refresh_body(
             body = _refresh_protected_root(body, facts, template)
         if facts.additive_only_paths and PROTECTED_STAMP not in body:
             body = PROTECTED_STAMP + "\n" + body
+    # The author's intent replaces only text the composer itself wrote; text a
+    # person already wrote in those sections is theirs and stays.
+    if facts.intent is not None:
+        if facts.intent.problem:
+            body = _replace_composed_problem(body, facts, facts.intent.problem)
+        if facts.intent.reviewer_focus:
+            # The composer's ranked region (or the older unresolved marker) is
+            # the composer's own text; the author's focus replaces it.
+            span = _region_span(body, REGION_REVIEWER)
+            if span is not None:
+                open_marker, close_marker = region_markers(REGION_REVIEWER)
+                start, end = span[0] - len(open_marker), span[1] + len(close_marker)
+                body = body[:start] + facts.intent.reviewer_focus + body[end:]
+            elif REVIEWER_UNRESOLVED in body:
+                body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
+
+
+def _replace_composed_problem(body: str, facts: MechanicalFacts, problem: str) -> str:
+    """Swap the Problem the composer derived from commits for the author's text.
+
+    Matches only the exact text range_problem writes for this branch's oldest
+    commit (its subject, any "(+N more commits below)" count, then its first
+    body paragraph or THIN_PROBLEM_NOTE). The count is free because the branch
+    grows between pushes; anything else a person edited there is left alone.
+    """
+    if not facts.commits:
+        return body
+    span = _heading_span(body, "## Problem")
+    if span is None:
+        return body
+    start, end = span
+    oldest = facts.commit_bodies[0] if facts.commit_bodies else ""
+    para = _first_paragraph(oldest)
+    # A body-less commit's Problem is the composer's note plus a measured
+    # sentence whose counts move between pushes, or the older bare note.
+    tail = (
+        re.escape(para)
+        if para
+        else "(?:"
+        + re.escape(THIN_PROBLEM_NOTE)
+        + r" Measured: [^\n]*"
+        + "|"
+        + re.escape(LEGACY_THIN_PROBLEM_NOTE)
+        + ")"
+    )
+    composed = re.compile(
+        re.escape(facts.commits[0]) + r"(?: \(\+\d+ more commits? below\))?\n\n" + tail
+    )
+    match = composed.search(body, start, end)
+    if match is None:
+        return body
+    return body[: match.start()] + problem + body[match.end() :]
 
 
 def _composed_head(body: str) -> str:
@@ -2500,7 +2627,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--print-title",
         action="store_true",
-        help="Print only the PR title (this branch's oldest own commit subject) and exit",
+        help="Print only the PR title (the intent title, else this branch's oldest own "
+        "commit subject) and exit",
+    )
+    parser.add_argument(
+        "--intent-file",
+        type=Path,
+        default=None,
+        help=f"Author prose ({INTENT_SCHEMA}: title, problem, reviewer_focus, head); "
+        f"make pr passes <workspace>/{INTENT_RELPATH} when it exists. Ignored unless "
+        "its head is this HEAD",
+    )
+    parser.add_argument(
+        "--print-intent-title",
+        action="store_true",
+        help="Print the intent file's title for this HEAD, or nothing, and exit. The "
+        "open-PR refresh retitles only from this, never from a commit subject",
     )
     parser.add_argument(
         "--check-template",
@@ -2549,12 +2691,16 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         print(f"TEMPLATE_OK {source.revision}")
         return 0
 
-    if args.print_title:
+    if args.print_title or args.print_intent_title:
         # Same range the body is told from. open_pr_after_gate.sh used to run its
         # own `git log base..HEAD | head -1`, a second copy of the range rule
         # that titled PR #602 with a main commit.
         facts = collect_mechanical(workspace, pr_base=args.pr_base, verify=False)
-        print(range_title(facts))
+        facts.intent = load_intent(args.intent_file, facts.head)
+        if args.print_intent_title:
+            print(facts.intent.title if facts.intent is not None else "")
+        else:
+            print(range_title(facts))
         return 0
 
     if args.check_body is not None:
@@ -2594,6 +2740,8 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         facts.gate_receipt = None
         facts.l4_receipt = None
         facts.breakglass = None
+    else:
+        facts.intent = load_intent(args.intent_file, facts.head)
 
     if args.refresh_body is not None:
         existing = args.refresh_body.read_text(encoding="utf-8")

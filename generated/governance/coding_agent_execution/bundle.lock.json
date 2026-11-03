@@ -1,7 +1,7 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec"
+    "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd"
   },
   "components": [
     {
@@ -36,7 +36,7 @@
   "producer": {
     "compiler": "l9-semantic-compiler",
     "repository": "Quantum-L9/l9-semantic-compiler-engine",
-    "revision": "b9b4892c26b706cced32b398fca6eeec3ad86efc",
+    "revision": "e07a143a7c1c642c8c3c4cba57897292a40a78f7",
     "revision_basis": "caller_asserted",
     "version": "0.9.3"
   },

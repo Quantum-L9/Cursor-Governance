@@ -27,7 +27,11 @@ def test_gmp_command_targets_the_caller_clone() -> None:
     assert 'GOV_EXEC="${GOV}/workflows/gmp_executor.py"' in text
     assert 'GOV="${HOME}/.cursor-governance"' in text
     assert 'WORK="$(git rev-parse --show-toplevel)" || exit 1' in text
-    assert 'PR_REMEDIATE=0 make -C "$GOV" pr WS="$WORK"' in text
+    # The publish names its workspace as $PWD from $WORK: the L4 gate resolves
+    # only $PWD forms and refuses any other shell variable in WS= on a publish.
+    assert 'cd "$WORK"' in text
+    assert 'PR_REMEDIATE=0 make -C "$GOV" pr WS="$PWD"' in text
+    assert 'WS="$WORK"' not in text
     assert '--workspace "$WORK" authorize-release' in text
     assert '"$GOV_PY" workflows/gmp_executor.py' not in text
     assert "$(pwd)/.venv/bin/python" not in text

@@ -137,3 +137,154 @@ def test_session_ca_follows_the_exported_trust_variables(
     assert session_ca() is None
     monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(bundle))
     assert session_ca() == bundle
+
+
+# --- Registry fallback (Docker Hub rate limits shared hosted IPs) ------------
+
+import subprocess  # noqa: E402
+
+import docker_sandbox  # noqa: E402
+
+DIGEST = "sha256:" + "f" * 64
+
+
+def test_mirrors_default_to_mirror_gcr_and_can_be_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("L9_DOCKER_SANDBOX_MIRRORS", raising=False)
+    assert docker_sandbox.registry_mirrors() == ["mirror.gcr.io"]
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", " a.example , b.example ")
+    assert docker_sandbox.registry_mirrors() == ["a.example", "b.example"]
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "")
+    assert docker_sandbox.registry_mirrors() == []
+
+
+def test_dockerd_is_started_with_each_mirror() -> None:
+    assert docker_sandbox.dockerd_argv(["mirror.gcr.io"]) == [
+        "dockerd",
+        "--registry-mirror=https://mirror.gcr.io",
+    ]
+    assert docker_sandbox.dockerd_argv([]) == ["dockerd"]
+
+
+def test_base_refs_try_docker_hub_first_then_mirrors() -> None:
+    assert docker_sandbox.base_refs("3.12.14", ["mirror.gcr.io"]) == [
+        "python:3.12.14-slim",
+        "mirror.gcr.io/library/python:3.12.14-slim",
+    ]
+
+
+def test_digest_for_picks_the_pulled_repository() -> None:
+    digests = [f"python@{DIGEST}", f"mirror.gcr.io/library/python@{DIGEST}"]
+    assert (
+        docker_sandbox.digest_for("mirror.gcr.io/library/python:3.12.14-slim", digests)
+        == f"mirror.gcr.io/library/python@{DIGEST}"
+    )
+    assert docker_sandbox.digest_for("python:3.12.14-slim", digests) == f"python@{DIGEST}"
+    assert docker_sandbox.digest_for("python:3.12.14-slim", []) is None
+
+
+class FakeDocker:
+    """docker as a script: Docker Hub answers 429, the mirror answers."""
+
+    def __init__(self, hub_fails: bool = True, mirror_fails: bool = False) -> None:
+        self.hub_fails, self.mirror_fails = hub_fails, mirror_fails
+        self.pulled: set[str] = set()
+        self.calls: list[list[str]] = []
+
+    def __call__(self, args: list[str], **_kwargs) -> subprocess.CompletedProcess[str]:
+        self.calls.append(args)
+        if args[:2] == ["docker", "pull"]:
+            ref = args[-1]
+            failed = self.mirror_fails if ref.startswith("mirror.gcr.io/") else self.hub_fails
+            if failed:
+                return subprocess.CompletedProcess(args, 1, "", "toomanyrequests: 429")
+            self.pulled.add(ref)
+            return subprocess.CompletedProcess(args, 0, ref, "")
+        ref = args[-1]
+        if ref in self.pulled:
+            repository = ref.rsplit(":", 1)[0]
+            return subprocess.CompletedProcess(args, 0, json.dumps([f"{repository}@{DIGEST}"]), "")
+        return subprocess.CompletedProcess(args, 1, "", "No such image")
+
+
+def test_a_rate_limited_docker_hub_falls_back_to_the_mirror(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker()
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    assert docker_sandbox.pinned_base("3.12.14") == f"mirror.gcr.io/library/python@{DIGEST}"
+    pulls = [call[-1] for call in fake.calls if call[:2] == ["docker", "pull"]]
+    assert pulls == ["python:3.12.14-slim", "mirror.gcr.io/library/python:3.12.14-slim"]
+
+
+def test_every_registry_failing_reports_each_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker(hub_fails=True, mirror_fails=True)
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    with pytest.raises(
+        SandboxError, match=r"python:3\.12\.14-slim: toomanyrequests.*mirror\.gcr\.io"
+    ):
+        docker_sandbox.pinned_base("3.12.14")
+
+
+def test_a_local_copy_is_used_without_any_pull(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = FakeDocker()
+    fake.pulled.add("mirror.gcr.io/library/python:3.12.14-slim")
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    assert docker_sandbox.pinned_base("3.12.14") == f"mirror.gcr.io/library/python@{DIGEST}"
+    assert not [call for call in fake.calls if call[:2] == ["docker", "pull"]]
+
+
+@pytest.mark.parametrize(
+    ("image", "refs"),
+    [
+        ("postgres:16", ["postgres:16", "mirror.gcr.io/library/postgres:16"]),
+        ("bitnami/redis:7", ["bitnami/redis:7", "mirror.gcr.io/bitnami/redis:7"]),
+        ("ghcr.io/o/svc:1", ["ghcr.io/o/svc:1"]),
+        ("localhost:5000/svc:1", ["localhost:5000/svc:1"]),
+    ],
+)
+def test_only_docker_hub_images_fall_through_to_a_mirror(image: str, refs: list[str]) -> None:
+    assert docker_sandbox.image_refs(image, ["mirror.gcr.io"]) == refs
+
+
+def test_a_service_image_is_pinned_through_the_mirror(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker()
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    assert docker_sandbox.pin_image("redis:7") == f"mirror.gcr.io/library/redis@{DIGEST}"
+
+
+@pytest.mark.parametrize(
+    ("ref", "repository"),
+    [
+        ("postgres:16", "postgres"),
+        ("mirror.gcr.io/library/redis:7", "mirror.gcr.io/library/redis"),
+        ("localhost:5000/svc:1", "localhost:5000/svc"),
+        ("postgres@sha256:" + "a" * 64, "postgres"),
+    ],
+)
+def test_repository_of_drops_only_the_tag(ref: str, repository: str) -> None:
+    assert docker_sandbox.repository_of(ref) == repository
+
+
+def test_a_pinned_digest_is_pulled_by_digest_never_by_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("L9_DOCKER_SANDBOX_MIRRORS", "mirror.gcr.io")
+    fake = FakeDocker()
+    monkeypatch.setattr(docker_sandbox, "run", lambda args, **kw: fake(args, **kw))
+    digest = "sha256:" + "b" * 64
+    assert (
+        docker_sandbox.pin_image("redis:7", digest=digest)
+        == f"mirror.gcr.io/library/redis@{digest}"
+    )
+    pulls = [call[-1] for call in fake.calls if call[:2] == ["docker", "pull"]]
+    assert pulls == [f"redis@{digest}", f"mirror.gcr.io/library/redis@{digest}"]
+    assert not any(":7" in ref for ref in pulls), "a floating tag must not be resolved"
+
+
+def test_a_malformed_pinned_digest_is_refused() -> None:
+    with pytest.raises(SandboxError, match="sha256"):
+        docker_sandbox.pin_image("redis:7", digest="sha256:short")

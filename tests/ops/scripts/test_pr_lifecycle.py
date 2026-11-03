@@ -847,6 +847,35 @@ def test_open_pr_after_gate_refreshes_only_machine_owned_regions() -> None:
     assert '"$_refreshed" -eq 0' in reopen
 
 
+def test_author_intent_reaches_title_and_body_and_retitles_only_from_intent() -> None:
+    """The author's .l9/pr/pr-intent.json is the one sanctioned prose input.
+
+    Both compose calls (title and body) receive it when it exists, so a fresh
+    PR opens with the author's title, Problem and Reviewer focus. On an
+    already-open PR the title is PATCHed only from `--print-intent-title`
+    (empty unless the intent names this head) and only when it differs, never
+    from a commit subject: a reviewer's title survives every push that carries
+    no intent (EIE PR #259 governance handoff).
+    """
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    compose = script[script.index("_compose_title_and_body() {") :]
+    compose = compose[: compose.index('if [[ -z "$pr_url" || -z "$pr_number" ]]; then')]
+    assert '_intent_args=(--intent-file "$WS/.l9/pr/pr-intent.json")' in compose
+    assert compose.count('${_intent_args[@]+"${_intent_args[@]}"}') == 2
+    reopen = script[script.index('echo "PR already open: $pr_url"') :]
+    reopen = reopen[: reopen.index("_pr_summary_py=")]
+    retitle_at = reopen.index('-f title="$_intent_title"')
+    guard = reopen.rfind(
+        'if [[ -n "$_intent_title" && "$_intent_title" != "$_open_title" ]]', 0, retitle_at
+    )
+    assert guard != -1
+    source = reopen.rfind("--print-intent-title", 0, guard)
+    assert source != -1 and "--print-title" not in reopen[source:retitle_at].replace(
+        "--print-intent-title", ""
+    )
+    assert "gh pr edit " not in reopen
+
+
 def test_a_refresh_after_the_push_never_aborts_make_pr() -> None:
     """Codex/Copilot on #720: the refresh runs after the push, so a create-time
     `exit 1` reached from it reported a published PR as failed and skipped the
