@@ -80,6 +80,7 @@ def publication(root: Path, started_at: float) -> dict[str, Any] | None:
         number = int(summary["number"])
         repo = str(summary["repo"])
         head_sha = str(summary.get("head_sha") or "")
+        head = str(summary.get("head") or "")
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
         return None
     return {
@@ -88,7 +89,30 @@ def publication(root: Path, started_at: float) -> dict[str, Any] | None:
         "number": number,
         "url": str(summary.get("url") or ""),
         "label": f"{repo}#{number}",
+        # The PR head branch and commit: where the handoff reports are pushed
+        # (ops/reports/publish.py refuses any other checked-out branch).
+        "head": head,
+        "head_sha": head_sha,
     }
+
+
+def publish_report(publisher: str, root: Path, pub: dict, lines: list[str], **meta: str) -> str:
+    """Write one handoff report under ``reports/end-session/`` and push it to the PR.
+
+    ``publisher`` names the ``ops.reports.publish`` function
+    (``publish_session_handoff`` / ``publish_governance_handoff``); the import
+    happens here, after the hook made the governance tree importable.
+
+    Fail-open: a Stop hook must never die on a report. The returned line is
+    appended to the hook's announcement so the outcome is never silent.
+    """
+    try:
+        from ops.reports import publish as reports
+
+        path, result = getattr(reports, publisher)(root, pub, lines, **meta)
+        return "• " + result.line([path], root)
+    except Exception as exc:  # noqa: BLE001 - reported in the announcement, never silent
+        return f"• report NOT published ({type(exc).__name__}: {str(exc)[:200]})"
 
 
 def is_subagent(event: dict) -> bool:

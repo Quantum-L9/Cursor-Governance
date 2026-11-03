@@ -1,14 +1,14 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-10-28T01:14:58Z'
+generated_utc: '2026-11-02T23:09:34Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:fa71fddf0fce4a5573110be97e7624e8ee13cf75c58e6da93b1f0fa87efbf206
+source_tree_digest: sha256:df6d4e4fbe4f2447557e4236f442b254a147c50474079cf7c93c66614de2539f
 summary:
-  total_mdc_files: 69
-  always_apply_true: 36
+  total_mdc_files: 68
+  always_apply_true: 35
   always_apply_false: 33
   no_boolean_always_apply: 0
-  explicit_rule_ids: 67
+  explicit_rule_ids: 66
   derived_rule_ids: 2
   deprecated_rules: 0
 rules:
@@ -982,7 +982,7 @@ rules:
 - file: 72-review-ergonomics.mdc
   id: l9.rule.72.review.ergonomics
   id_source: explicit
-  version: 1.0.0
+  version: 1.1.0
   description: Review ergonomics, PR size guidance, and checklists for L9.
   scope: global
   domain: output
@@ -995,8 +995,8 @@ rules:
   - '**/*.md'
   first_heading: Review ergonomics (L9)
   has_yaml_frontmatter: true
-  line_count: 168
-  content_digest: sha256:64a18349f4bf5b1a52290baca13203fdb2876bcd32a58800ba542bf1647696f7
+  line_count: 145
+  content_digest: sha256:e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1195,8 +1195,8 @@ rules:
 - file: 81-gmp-audit.mdc
   id: l9.rule.81.gmp.audit
   id_source: explicit
-  version: 1.0.0
-  description: 'GMP audit and verification rules: canonical and guide prompts mapped to L9 PRs and workspaces.'
+  version: 2.0.0
+  description: GMP audit and verification rules, and where optional GMP reports are saved (reports/gmp/) and how they are named. Absorbs the retired rule 83.
   scope: global
   domain: governance
   activation: agent_requested
@@ -1205,8 +1205,8 @@ rules:
   globs: null
   first_heading: GMP audit and verification (L9)
   has_yaml_frontmatter: true
-  line_count: 96
-  content_digest: sha256:0a3985c2fdc4018fead5a265052db7ba51482417ad2b06d497c21f4a9c3f6c8b
+  line_count: 93
+  content_digest: sha256:5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1236,28 +1236,6 @@ rules:
   content_digest: sha256:b57f632b093ece624e9a8a83684f4180235eaa03736bf45ab0e78e9ccf166e48
   authority: canonical_global
   context_cost: minimal
-  deprecated: false
-  replacement: null
-  removal_plan: null
-  extends: null
-  classification_source: mixed_or_derived
-- file: 83-gmp-contracts.mdc
-  id: l9.rule.83.gmp.contracts
-  id_source: explicit
-  version: 1.0.0
-  description: 'GMP contract enforcement: binding report paths, sequential GMP IDs, ISO dates, and post-write validation.'
-  scope: global
-  domain: governance
-  activation: always
-  activation_source: explicit
-  always_apply: true
-  globs: null
-  first_heading: GMP Contract Enforcement (L9)
-  has_yaml_frontmatter: true
-  line_count: 135
-  content_digest: sha256:f9c358d00e0e27d5bd5df868f50e936b4e764256ff5eee6788e55d066073f4ea
-  authority: canonical_global
-  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
