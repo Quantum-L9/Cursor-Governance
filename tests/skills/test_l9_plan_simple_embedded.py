@@ -155,9 +155,15 @@ def test_no_duplicate_planner_schema_validator_or_renderer() -> None:
     _sole_owner("validate_plan_document.py", "skills/l9-plan/scripts/validate_plan_document.py")
     _sole_owner("render_plan_pe_autonomy.py", "skills/l9-plan/scripts/render_plan_pe_autonomy.py")
     # The executable-plan template stays a symlink to the first-class SSOT.
-    forked = [
-        p.relative_to(ROOT).as_posix()
-        for p in SIMPLE.rglob("*.plan.md")
-        if p.is_file() and not p.is_symlink()
-    ]
+    # A fork is a committed copy. Scan tracked files only: self_test.py renders
+    # transient *.plan.md under fixtures/_self_test/ and deletes them, and the
+    # gate runs it in parallel with this suite, so a filesystem rglob races it.
+    tracked = subprocess.run(
+        ["git", "ls-files", "-z", "--", SIMPLE.relative_to(ROOT).as_posix()],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.split("\0")
+    forked = [rel for rel in tracked if rel.endswith(".plan.md") and not (ROOT / rel).is_symlink()]
     assert not forked, f"l9-plan-simple must not fork the executable-plan template: {forked}"
