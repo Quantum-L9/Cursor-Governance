@@ -26,6 +26,7 @@ from plan_sections import (
     missing_labels,
     receipt_status,
     unfilled_parameters,
+    workspace_root,
 )
 
 RECEIPT_SCHEMA = SKILL_ROOT / "schemas" / "plan-section-receipt.schema.json"
@@ -41,17 +42,23 @@ def _sha256(path: Path) -> str:
 
 
 def _resolve_declared(rel: str) -> Path:
+    """Resolve a receipt path against the planned workspace.
+
+    Relative paths are workspace-relative. The governance clone stays allowed
+    so receipts committed in Cursor-Governance (where the two coincide) and
+    absolute plans-store paths keep resolving.
+    """
     if not str(rel).strip():
         raise ValueError("empty declared path")
     raw = Path(rel)
-    repo = REPO_ROOT.resolve()
-    resolved = raw.resolve() if raw.is_absolute() else (repo / raw).resolve()
-    allowed = [repo]
+    workspace = workspace_root()
+    resolved = raw.resolve() if raw.is_absolute() else (workspace / raw).resolve()
+    allowed = [workspace, REPO_ROOT.resolve()]
     store = plans_store_root()
     if store is not None:
         allowed.append(store)
     if not any(is_under(resolved, root) for root in allowed):
-        raise ValueError(f"declared path escapes repo and plans store: {rel}")
+        raise ValueError(f"declared path escapes workspace and plans store: {rel}")
     return resolved
 
 

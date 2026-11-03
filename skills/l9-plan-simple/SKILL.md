@@ -100,13 +100,18 @@ Steps 0–9 are **identical in both modes**.
 6. **Stress-test + leverage** — mandatory in both modes; reuse `l9-plan` [plan-stress-test.md](../l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../l9-plan/references/first-order-leverage.md).
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
 8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Declare the optional `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer`; values are the template enums. An omitted field renders `unknown — not declared` and keeps the plan out of `executable`.
-9. **Validate JSON** — `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
+9. **Validate JSON** — FAIL → not ready. Steps 9–11 run from the root of the repository being planned (any repo, not only Cursor-Governance); the scripts ship in the governance clone:
+
+   ```bash
+   GOV="${GOV:-$HOME/.cursor-governance}"
+   python3 "$GOV/skills/l9-plan/scripts/validate_plan_document.py" <plan.json>
+   ```
 10. **Project** — one renderer, mode-selected:
 
    ```bash
-   # from the repository root
-   python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace .   # default
-   python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded       # caller-owned
+   # from the root of the repository being planned
+   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=cursor-build --workspace .   # default
+   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=embedded       # caller-owned
    ```
 
    The renderer fills **every** template section from PLAN_DOCUMENT — there is no seed head and no appended "fill guide". `--workspace .` binds the immutable baseline (repository, branch, HEAD, dirty) with read-only git probes; without it the baseline renders `unbound`. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name); a property naming none renders `unbound`. A value PLAN_DOCUMENT does not carry renders `unknown — …`. Resolve `unbound`/`unknown` values in PLAN_DOCUMENT and re-render — do not hand-edit the projection.
@@ -115,12 +120,14 @@ Steps 0–9 are **identical in both modes**.
 11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings, and records `unfilled_parameters`: any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready:
 
     ```bash
-    # from the repository root
-    python3 skills/l9-plan-simple/scripts/generate_plan_section_receipt.py \
+    # from the root of the repository being planned
+    python3 "$GOV/skills/l9-plan-simple/scripts/generate_plan_section_receipt.py" \
       --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
       --gar-invoked
-    python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
+    python3 "$GOV/skills/l9-plan-simple/scripts/validate_plan_section_receipt.py" <plan>.section-receipt.json
     ```
+
+    Plan paths in the receipt are relative to that repository's git root (absolute for a plan in the machine plans store), so the validator finds them whatever the working directory; the receipt argument itself must sit under the working directory or the plans store.
 12. **Handoff** — mode-specific, below.
 
 ### Handoff — `cursor-build` (default, unchanged)
