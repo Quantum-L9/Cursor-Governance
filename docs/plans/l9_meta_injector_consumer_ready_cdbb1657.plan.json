@@ -143,15 +143,13 @@
     },
     {
       "id": "T5",
-      "task": "ADR-079 + package scripts. Evidence (Context7 /npm/cli/v10.9.9 package-json.md 'Git URLs as Dependencies'): a git dependency is cloned, has ALL dependencies installed, its scripts run and is re-packed whenever any of build, prepare, prepack, preinstall, install, postinstall is defined; npm advises repos shipping pre-built artifacts to define none of them. So: rename script `build` to `compile` and move the `prepack` gate chain into an explicit `release:check` run by prepublishOnly, selfpack, CI smoke and release.yml; update every caller (CI workflows, Makefile, action.yml, docs, AGENTS.md/CLAUDE.md command text via append) in the same commit. check:dist parity enforcement must remain on every path it covers today except the git-install lifecycle. Update docs/package-contract.json.",
+      "task": "ADR-079: record the supported consumer install paths and the git-install evidence. Plan premise falsified at Build (stress_test assumed_false_ifs[0]): a marker probe on npm 10.9.9 showed only `prepare` triggers a git-dependency rebuild — `build`/`prepack` did not run — so no script is renamed. Instead the git-install path is proven by test (test:packed --git-install), no `prepare` script may be added without amending ADR-079, and check-release-candidate checks the bin and each dispatched child script instead of the bare `scripts` files entry.",
       "files": [
-        "package.json",
-        "docs/package-contract.json",
-        "docs/decisions/079-consumer-install-paths.md",
+        "docs/decisions/079-consumer-install-paths-and-runtime-only-tarball.md",
         "docs/decision_log.md",
-        ".github/workflows/",
-        "Makefile",
-        "README.md"
+        "docs/decisions/README.md",
+        "scripts/check-release-candidate.js",
+        "tests/release_v4_contract.test.ts"
       ],
       "effort": "M",
       "risk": "high",
@@ -452,8 +450,8 @@
     },
     {
       "id": "V3",
-      "command": "npx eslint . --format json | node -e \"...sum warningCount+errorCount\" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 | grep -c 'npm warn deprecated'",
-      "pass_criteria": "0, clean, 0",
+      "command": "npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 | grep -q 'npm warn deprecated'",
+      "pass_criteria": "lint 0 errors 0 warnings; tsc clean; npm ci prints no deprecation warning (the negated grep -q succeeds only when none is found)",
       "status": "pending"
     },
     {
@@ -538,7 +536,13 @@
       "CHANGELOG.md",
       "CURRENT_VALIDATION_REPORT.md",
       ".github/workflows/ci.yml",
-      ".github/dependabot.yml"
+      ".github/dependabot.yml",
+      "docs/decisions/README.md",
+      "scripts/check-release-candidate.js",
+      "tests/release_v4_contract.test.ts",
+      "tests/operation_cli_help.test.ts",
+      "tests/consolidator_cli_containment.test.ts",
+      "docs/architecture-manifest.json"
     ],
     "must_not_modify": [
       "docs/package-publication-decision.json approval fields",

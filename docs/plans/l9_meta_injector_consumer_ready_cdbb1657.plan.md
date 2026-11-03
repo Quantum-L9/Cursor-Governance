@@ -23,7 +23,7 @@ todos:
     phase: execute
     depends_on: [T1]
   - id: T5
-    content: "ADR-079 + package scripts. Evidence (Context7 /npm/cli/v10.9.9 package-json.md 'Git URLs as Dependencies'): a git dependency is cloned, has ALL dependencies installed, its scripts run and is re-packed whenever any of build, prepare, prepack, preinstall, install, postinstall is defined; npm advises repos shipping pre-built artifacts to define none of them. So: rename script `build` to `compile` and move the `prepack` gate chain into an explicit `release:check` run by prepublishOnly, selfpack, CI smoke and release.yml; update every caller (CI workflows, Makefile, action.yml, docs, AGENTS.md/CLAUDE.md command text via append) in the same commit. check:dist parity enforcement must remain on every path it covers today except the git-install lifecycle. Update docs/package-contract.json."
+    content: "ADR-079: record the supported consumer install paths and the git-install evidence. Plan premise falsified at Build (stress_test assumed_false_ifs[0]): a marker probe on npm 10.9.9 showed only `prepare` triggers a git-dependency rebuild — `build`/`prepack` did not run — so no script is renamed. Instead the git-install path is proven by test (test:packed --git-install), no `prepare` script may be added without amending ADR-079, and check-release-candidate checks the bin and each dispatched child script instead of the bare `scripts` files entry."
     status: pending
     phase: execute
     depends_on: [T1]
@@ -82,7 +82,7 @@ status: current
 > **Parameters:** every value is projected from PLAN_DOCUMENT. A value reading `unknown — …` or `unbound — …` is absent from PLAN_DOCUMENT and must be resolved before status becomes `executable`.
 > **Execute:** when status is `executable`, press **Build**, stack on the unique open-PR tip if any open PR exists (`PR_STACK=auto`; never `origin/main`), then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do **not** run `make campaign`, admit a Program Lock, or free-form mutate from this markdown alone.
 > **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract.
-> **File name:** `l9_meta_injector_zero_failures_zero_warnings_installable_and_runnable_from_a_consumer_repository_5fe81d78.plan.md`
+> **File name:** `l9_meta_injector_zero_failures_zero_warnings_installable_and_runnable_from_a_consumer_repository_083eb35b.plan.md`
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
 ## Execute via Cursor Build
@@ -109,8 +109,8 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 | status | `draft` — planning convergence is `partial`; remaining unknowns: U2 |
 | is_project | `false` |
 | owner | unknown — not declared in PLAN_DOCUMENT; resolve before status `executable` |
-| created_at | 2026-11-03T13:48:08+00:00 |
-| updated_at | 2026-11-03T13:48:08+00:00 |
+| created_at | 2026-11-03T14:15:21+00:00 |
+| updated_at | 2026-11-03T14:15:21+00:00 |
 | depth | `deep` |
 | estimate | 1 PR, 13 todos; ends merge-ready, no release |
 
@@ -128,7 +128,7 @@ Press **Build**. Plan on the current workspace. Execute on the unique open-PR ch
 
 | Field | Value |
 |-------|-------|
-| captured_at | `2026-11-03T13:48:08+00:00` |
+| captured_at | `2026-11-03T14:15:21+00:00` |
 | repository | `Quantum-L9/l9-meta-injector` |
 | workspace | `/home/user/l9-meta-injector` |
 | branch | `main` |
@@ -160,7 +160,7 @@ Each property's proof is the `final_validation` entry it names (by id or by scri
 | id | property | evidence_type | proof | blocking |
 |----|----------|---------------|-------|----------|
 | SP-01 | SC1: `npm ci && npm run validate` exits 0 on a clean checkout even when a git-ignored stray lockfile (pnpm-lock.yaml) sits at the repo root — proof V1 and V2 | `quality_gate` | V1: `npm ci && npm run lint && npm run validate` → exit 0; vitest 180 files, 0 failed, 0 worker errors; V2: `touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts` → all pass including REG-WU-078-a and REG-WU-029-RC-033-e | `true` |
-| SP-02 | SC2: ESLint reports 0 errors and 0 warnings, `tsc --noEmit` is clean, and `npm ci` prints no deprecation warning for a direct devDependency — proof V3 | `quality_gate` | V3: `npx eslint . --format json \| node -e "...sum warningCount+errorCount" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 \| grep -c 'npm warn deprecated'` → 0, clean, 0 | `true` |
+| SP-02 | SC2: ESLint reports 0 errors and 0 warnings, `tsc --noEmit` is clean, and `npm ci` prints no deprecation warning for a direct devDependency — proof V3 | `quality_gate` | V3: `npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 \| grep -q 'npm warn deprecated'` → lint 0 errors 0 warnings; tsc clean; npm ci prints no deprecation warning (the negated grep -q succeeds only when none is found) | `true` |
 | SP-03 | SC3: an installed packed tarball runs `l9-meta-injector --help` (exit 0), `inventory .` and `check . --authority <fixture>` inside a fresh temporary git repository — proof V4 | `quality_gate` | V4: `npm run test:packed` → packed-consumer: OK including bin --help, inventory ., check . --authority in a temp git repo | `true` |
 | SP-04 | SC4: `npm install git+file://<bare clone>#HEAD` succeeds in a temporary consumer and its installed bin runs `inventory .` — proof V5 | `quality_gate` | V5: `node scripts/test-packed-consumer.js --git-install` → git+file install succeeds and installed bin runs inventory . | `true` |
 | SP-05 | SC5: CI job `consumer-proof` runs the composite Action from a checkout of a separate fixture repository and passes — proof V6 | `quality_gate` | V6: `CI job consumer-proof on the PR head` → success | `true` |
@@ -201,13 +201,13 @@ Mutations outside this envelope are forbidden (PLAN-SCHEMA-004).
 
 ### Filesystem
 
-- **write_allow:** `src/`, `dist/`, `tests/`, `fixtures/consumer/`, `scripts/test-packed-consumer.js`, `scripts/operation-cli.js`, `scripts/lib/operation-dispatch.js`, `scripts/validation-report.js`, `scripts/semantics-verify.js`, `tools/consolidation/folder_artifact_consolidator.py`, `package.json`, `package-lock.json`, `docs/decisions/078-*.md`, `docs/decisions/079-*.md`, `docs/decision_log.md`, `docs/package-contract.json`, `docs/public-api-contract.json`, `docs/topology-conformance.json`, `docs/architecture.md`, `MANIFEST.json`, `README.md`, `AGENTS.md (append-only)`, `CHANGELOG.md`, `CURRENT_VALIDATION_REPORT.md`, `.github/workflows/ci.yml`, `.github/dependabot.yml`
+- **write_allow:** `src/`, `dist/`, `tests/`, `fixtures/consumer/`, `scripts/test-packed-consumer.js`, `scripts/operation-cli.js`, `scripts/lib/operation-dispatch.js`, `scripts/validation-report.js`, `scripts/semantics-verify.js`, `tools/consolidation/folder_artifact_consolidator.py`, `package.json`, `package-lock.json`, `docs/decisions/078-*.md`, `docs/decisions/079-*.md`, `docs/decision_log.md`, `docs/package-contract.json`, `docs/public-api-contract.json`, `docs/topology-conformance.json`, `docs/architecture.md`, `MANIFEST.json`, `README.md`, `AGENTS.md (append-only)`, `CHANGELOG.md`, `CURRENT_VALIDATION_REPORT.md`, `.github/workflows/ci.yml`, `.github/dependabot.yml`, `docs/decisions/README.md`, `scripts/check-release-candidate.js`, `tests/release_v4_contract.test.ts`, `tests/operation_cli_help.test.ts`, `tests/consolidator_cli_containment.test.ts`, `docs/architecture-manifest.json`
 - **write_deny:** `docs/package-publication-decision.json approval fields`, `accepted ADRs 001-077 (supersede with links only)`, `.github/workflows/release.yml tag logic`, `Quantum-L9/.github semantics (cite via .l9/meta-authority.yaml, never copy)`
 - **delete_allow:** none — no Delete todo
 
 ### Commands
 
-- **allow:** `npm ci`, `npm run lint`, `npm run validate`, `npm run check:publication`, `git status --porcelain --untracked-files=all`, `npm ci && npm run lint && npm run validate`, `touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts`, `npx eslint . --format json \| node -e "...sum warningCount+errorCount" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 \| grep -c 'npm warn deprecated'`, `npm run test:packed`, `node scripts/test-packed-consumer.js --git-install`, `CI job consumer-proof on the PR head`, `gh api repos/Quantum-L9/l9-meta-injector/commits/<head>/check-runs`, `node scripts/topology-conformance.js`, `.pre-commit-config.yaml`
+- **allow:** `npm ci`, `npm run lint`, `npm run validate`, `npm run check:publication`, `git status --porcelain --untracked-files=all`, `npm ci && npm run lint && npm run validate`, `touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts`, `npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 \| grep -q 'npm warn deprecated'`, `npm run test:packed`, `node scripts/test-packed-consumer.js --git-install`, `CI job consumer-proof on the PR head`, `gh api repos/Quantum-L9/l9-meta-injector/commits/<head>/check-runs`, `node scripts/topology-conformance.js`, `.pre-commit-config.yaml`
 - **deny:** `git push --force`, `git reset --hard`, admin merge, committing secrets
 
 ### Network
@@ -247,7 +247,7 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005). One row 
 | T2 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- docs/decisions/078-repository-facts-exclude-ignored-paths.md docs/decision_log.md` | `false` |
 | T3 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- src/repository_model.ts src/omit.ts dist/repository_model.js dist/repository_model.d.ts dist/omit.js dist/omit.d.ts tests/repository_fact_scope.test.ts` | `false` |
 | T4 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- scripts/operation-cli.js scripts/lib/operation-dispatch.js tests/operation_cli_help.test.ts` | `false` |
-| T5 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- package.json docs/package-contract.json docs/decisions/079-consumer-install-paths.md docs/decision_log.md .github/workflows/ Makefile README.md` | `false` |
+| T5 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- docs/decisions/079-consumer-install-paths-and-runtime-only-tarball.md docs/decision_log.md docs/decisions/README.md scripts/check-release-candidate.js tests/release_v4_contract.test.ts` | `false` |
 | T6 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- package.json docs/package-contract.json docs/public-api-contract.json` | `false` |
 | T7 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- .github/workflows/ci.yml package.json README.md` | `false` |
 | T8 | `filesystem_mutation` | `safe_with_dedupe` | `retry_once` | `git restore -- .github/workflows/ci.yml fixtures/consumer/` | `false` |
@@ -311,7 +311,7 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005). One row 
 - re-run `git status --porcelain --untracked-files=all`
 - re-run `npm ci && npm run lint && npm run validate`
 - re-run `touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts`
-- re-run `npx eslint . --format json | node -e "...sum warningCount+errorCount" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 | grep -c 'npm warn deprecated'`
+- re-run `npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 | grep -q 'npm warn deprecated'`
 - re-run `npm run test:packed`
 - re-run `node scripts/test-packed-consumer.js --git-install`
 - re-run `CI job consumer-proof on the PR head`
@@ -363,7 +363,7 @@ Must be acyclic before status may become `executable` (PLAN-SCHEMA-007).
 | T2 | ADR-078 (operator decision 2026-11-03, U1): repository-level facts (package_managers, governance_refs, adr_refs, package.name) exclude git-ignored paths, implemented by reusing the src/omit.ts gitignore matcher over the target's root .gitignore and .git/info/exclude (candidate B). Record candidate A (git ls-files) as rejected: it adds a git subprocess dependency to src/. Record the bounded gap: nested .gitignore files are not honoured. Append to docs/decision_log.md. | Cursor Build agent | `medium` | S | `[]` | `docs/decisions/078-repository-facts-exclude-ignored-paths.md`, `docs/decision_log.md` |
 | T3 | Implement ADR-078 in src/repository_model.ts (and the shared enumeration it uses), rebuild dist/ in the same commit, and add regression REG-WU-078-a: a git-ignored pnpm-lock.yaml at the root yields package_managers == ['npm']; REG-WU-078-b: a tracked pnpm-lock.yaml still yields pnpm. Keep REG-WU-029-RC-033-e assertions unchanged. | Cursor Build agent | `high` | M | `[T2]` | `src/repository_model.ts`, `src/omit.ts`, `dist/repository_model.js`, `dist/repository_model.d.ts`, `dist/omit.js`, `dist/omit.d.ts`, `tests/repository_fact_scope.test.ts` |
 | T4 | CLI usability for consumers: commit scripts/operation-cli.js with the executable bit (git update-index --chmod=+x); add `--help`/`-h` that prints usage and exits 0; keep ADR-022 relative-root refusal but make its error name the fix (`cd <repo> && l9-meta-injector inventory .`). | Cursor Build agent | `low` | S | `[T1]` | `scripts/operation-cli.js`, `scripts/lib/operation-dispatch.js`, `tests/operation_cli_help.test.ts` |
-| T5 | ADR-079 + package scripts. Evidence (Context7 /npm/cli/v10.9.9 package-json.md 'Git URLs as Dependencies'): a git dependency is cloned, has ALL dependencies installed, its scripts run and is re-packed whenever any of build, prepare, prepack, preinstall, install, postinstall is defined; npm advises repos shipping pre-built artifacts to define none of them. So: rename script `build` to `compile` and move the `prepack` gate chain into an explicit `release:check` run by prepublishOnly, selfpack, CI smoke and release.yml; update every caller (CI workflows, Makefile, action.yml, docs, AGENTS.md/CLAUDE.md command text via append) in the same commit. check:dist parity enforcement must remain on every path it covers today except the git-install lifecycle. Update docs/package-contract.json. | Cursor Build agent | `high` | M | `[T1]` | `package.json`, `docs/package-contract.json`, `docs/decisions/079-consumer-install-paths.md`, `docs/decision_log.md`, `.github/workflows/`, `Makefile`, `README.md` |
+| T5 | ADR-079: record the supported consumer install paths and the git-install evidence. Plan premise falsified at Build (stress_test assumed_false_ifs[0]): a marker probe on npm 10.9.9 showed only `prepare` triggers a git-dependency rebuild — `build`/`prepack` did not run — so no script is renamed. Instead the git-install path is proven by test (test:packed --git-install), no `prepare` script may be added without amending ADR-079, and check-release-candidate checks the bin and each dispatched child script instead of the bare `scripts` files entry. | Cursor Build agent | `high` | M | `[T1]` | `docs/decisions/079-consumer-install-paths-and-runtime-only-tarball.md`, `docs/decision_log.md`, `docs/decisions/README.md`, `scripts/check-release-candidate.js`, `tests/release_v4_contract.test.ts` |
 | T6 | Ship only runtime scripts: narrow package.json `files` from all of scripts/ to scripts/operation-cli.js plus the scripts/lib/ modules it requires; keep publication/release tooling (check-publication-readiness.js, check-release-candidate.js, which read docs/) out of the tarball. Update docs/public-api-contract.json if it enumerates shipped files; check:api and selfpack must stay green. | Cursor Build agent | `medium` | S | `[T5]` | `package.json`, `docs/package-contract.json`, `docs/public-api-contract.json` |
 | T7 | Node floor honesty (U2): add a CI matrix that runs the packed-consumer proof (runtime only, no devDependencies) on Node 18, 20 and 22. If 18/20 pass, keep engines.node >=18 and document devEngines >=22.12 as contributor-only; if not, raise engines.node to the lowest passing floor in ADR-079. | Cursor Build agent | `medium` | S | `[T1, T5]` | `.github/workflows/ci.yml`, `package.json`, `README.md` |
 | T8 | CI job `consumer-proof`: check out a separate fixture repository directory, run the composite Action via `uses: ./meta-injector` against it in modes inventory and check (with authority input), assert success and an untouched fixture for dry-run. Pin every action by SHA; no continue-on-error; no copied org workflow or L9_CORE_REF. | Cursor Build agent | `medium` | M | `[T4, T5]` | `.github/workflows/ci.yml`, `fixtures/consumer/` |
@@ -424,7 +424,7 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 |-------------|---------------|---------------|--------|---------|-------------------|--------|
 | E-V1 | SP-01 | `quality_gate_evidence` | command | `npm ci && npm run lint && npm run validate` | exit 0; vitest 180 files, 0 failed, 0 worker errors | `not_run` |
 | E-V2 | SP-01 | `quality_gate_evidence` | command | `touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts` | all pass including REG-WU-078-a and REG-WU-029-RC-033-e | `not_run` |
-| E-V3 | SP-02 | `quality_gate_evidence` | command | `npx eslint . --format json \| node -e "...sum warningCount+errorCount" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 \| grep -c 'npm warn deprecated'` | 0, clean, 0 | `not_run` |
+| E-V3 | SP-02 | `quality_gate_evidence` | command | `npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 \| grep -q 'npm warn deprecated'` | lint 0 errors 0 warnings; tsc clean; npm ci prints no deprecation warning (the negated grep -q succeeds only when none is found) | `not_run` |
 | E-V4 | SP-03 | `quality_gate_evidence` | command | `npm run test:packed` | packed-consumer: OK including bin --help, inventory ., check . --authority in a temp git repo | `not_run` |
 | E-V5 | SP-04 | `quality_gate_evidence` | command | `node scripts/test-packed-consumer.js --git-install` | git+file install succeeds and installed bin runs inventory . | `not_run` |
 | E-V6 | SP-05 | `quality_gate_evidence` | command | `CI job consumer-proof on the PR head` | success | `not_run` |
@@ -615,10 +615,10 @@ objective:
 capability_preflight_ref: "preflight.plan.simple.l9_meta_injector_zero_failures_zero_warnings_installable_and_runnable_from_a_consumer_repository.v1"
 execution_envelope:
   filesystem:
-    write_allow: ["src/", "dist/", "tests/", "fixtures/consumer/", "scripts/test-packed-consumer.js", "scripts/operation-cli.js", "scripts/lib/operation-dispatch.js", "scripts/validation-report.js", "scripts/semantics-verify.js", "tools/consolidation/folder_artifact_consolidator.py", "package.json", "package-lock.json", "docs/decisions/078-*.md", "docs/decisions/079-*.md", "docs/decision_log.md", "docs/package-contract.json", "docs/public-api-contract.json", "docs/topology-conformance.json", "docs/architecture.md", "MANIFEST.json", "README.md", "AGENTS.md (append-only)", "CHANGELOG.md", "CURRENT_VALIDATION_REPORT.md", ".github/workflows/ci.yml", ".github/dependabot.yml"]
+    write_allow: ["src/", "dist/", "tests/", "fixtures/consumer/", "scripts/test-packed-consumer.js", "scripts/operation-cli.js", "scripts/lib/operation-dispatch.js", "scripts/validation-report.js", "scripts/semantics-verify.js", "tools/consolidation/folder_artifact_consolidator.py", "package.json", "package-lock.json", "docs/decisions/078-*.md", "docs/decisions/079-*.md", "docs/decision_log.md", "docs/package-contract.json", "docs/public-api-contract.json", "docs/topology-conformance.json", "docs/architecture.md", "MANIFEST.json", "README.md", "AGENTS.md (append-only)", "CHANGELOG.md", "CURRENT_VALIDATION_REPORT.md", ".github/workflows/ci.yml", ".github/dependabot.yml", "docs/decisions/README.md", "scripts/check-release-candidate.js", "tests/release_v4_contract.test.ts", "tests/operation_cli_help.test.ts", "tests/consolidator_cli_containment.test.ts", "docs/architecture-manifest.json"]
     write_deny: ["docs/package-publication-decision.json approval fields", "accepted ADRs 001-077 (supersede with links only)", ".github/workflows/release.yml tag logic", "Quantum-L9/.github semantics (cite via .l9/meta-authority.yaml, never copy)"]
   commands:
-    allow: ["npm ci", "npm run lint", "npm run validate", "npm run check:publication", "git status --porcelain --untracked-files=all", "npm ci && npm run lint && npm run validate", "touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts", "npx eslint . --format json | node -e \"...sum warningCount+errorCount\" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 | grep -c 'npm warn deprecated'", "npm run test:packed", "node scripts/test-packed-consumer.js --git-install", "CI job consumer-proof on the PR head", "gh api repos/Quantum-L9/l9-meta-injector/commits/<head>/check-runs", "node scripts/topology-conformance.js", ".pre-commit-config.yaml"]
+    allow: ["npm ci", "npm run lint", "npm run validate", "npm run check:publication", "git status --porcelain --untracked-files=all", "npm ci && npm run lint && npm run validate", "touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts", "npm run lint && npx tsc --noEmit -p tsconfig.json && ! npm ci 2>&1 | grep -q 'npm warn deprecated'", "npm run test:packed", "node scripts/test-packed-consumer.js --git-install", "CI job consumer-proof on the PR head", "gh api repos/Quantum-L9/l9-meta-injector/commits/<head>/check-runs", "node scripts/topology-conformance.js", ".pre-commit-config.yaml"]
   network:
     mode: "unknown — not declared in PLAN_DOCUMENT; resolve before status `executable`"
   secrets:
@@ -707,7 +707,7 @@ todos:
     content: "CLI usability for consumers: commit scripts/operation-cli.js with the executable bit (git update-index --chmod=+x); add `--help`/`-h` that prints usage and exits 0; keep ADR-022 relative-root refusal but make its error name the fix (`cd <repo> && l9-meta-injector inventory .`)."
     status: "pending"
   - id: "T5"
-    content: "ADR-079 + package scripts. Evidence (Context7 /npm/cli/v10.9.9 package-json.md 'Git URLs as Dependencies'): a git dependency is cloned, has ALL dependencies installed, its scripts run and is re-packed whenever any of build, prepare, prepack, preinstall, install, postinstall is defined; npm advises repos shipping pre-built artifacts to define none of them. So: rename script `build` to `compile` and move the `prepack` gate chain into an explicit `release:check` run by prepublishOnly, selfpack, CI smoke and release.yml; update every caller (CI workflows, Makefile, action.yml, docs, AGENTS.md/CLAUDE.md command text via append) in the same commit. check:dist parity enforcement must remain on every path it covers today except the git-install lifecycle. Update docs/package-contract.json."
+    content: "ADR-079: record the supported consumer install paths and the git-install evidence. Plan premise falsified at Build (stress_test assumed_false_ifs[0]): a marker probe on npm 10.9.9 showed only `prepare` triggers a git-dependency rebuild — `build`/`prepack` did not run — so no script is renamed. Instead the git-install path is proven by test (test:packed --git-install), no `prepare` script may be added without amending ADR-079, and check-release-candidate checks the bin and each dispatched child script instead of the bare `scripts` files entry."
     status: "pending"
   - id: "T6"
     content: "Ship only runtime scripts: narrow package.json `files` from all of scripts/ to scripts/operation-cli.js plus the scripts/lib/ modules it requires; keep publication/release tooling (check-publication-readiness.js, check-release-candidate.js, which read docs/) out of the tarball. Update docs/public-api-contract.json if it enumerates shipped files; check:api and selfpack must stay green."
