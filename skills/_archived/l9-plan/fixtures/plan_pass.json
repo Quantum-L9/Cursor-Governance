@@ -183,5 +183,6 @@
     "validator",
     "fixtures"
   ],
-  "estimate": "1 GMP"
+  "estimate": "1 GMP",
+  "owner": "igor_beylin"
 }

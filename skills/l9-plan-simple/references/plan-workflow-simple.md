@@ -55,7 +55,7 @@ Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before**
 5. **Decompose** — TODOs with files (or blocker) and deps. DAG / Phase-0 rows are the todo projection, not Controller `claim`/`render` Task Cards.
 6. **Stress-test and leverage** — mandatory; no mode skips it.
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema.
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Set the optional `owner` (accountable human or actor ref) and `estimate`; omitted, metadata renders `unknown — not declared`.
 9. **Validate PLAN_DOCUMENT** — `validate_plan_document.py` MUST PASS before any projection is offered.
 10. **Project the plan** — one renderer, mode-selected:
 

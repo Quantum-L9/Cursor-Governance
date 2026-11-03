@@ -235,3 +235,38 @@ def test_angle_tokens_projected_from_the_plan_are_not_unfilled(tmp_path: Path) -
 
 def test_non_template_angle_token_is_ordinary_content() -> None:
     assert unfilled_parameters("run `tool <not_a_template_slot_xyz>`") == []
+
+
+def _machine_stub(out: str) -> dict:
+    yaml = pytest.importorskip("yaml")
+    stub = re.search(r"```yaml\n(.*?)```", out, re.S)
+    assert stub
+    return yaml.safe_load(stub.group(1))
+
+
+@pytest.mark.parametrize("mode", SIMPLE_MODES)
+def test_declared_owner_reaches_metadata_and_stub(mode: str) -> None:
+    owner = json.loads(FIXTURE.read_text(encoding="utf-8"))["owner"]
+    out = _render(mode)
+    assert _row(out, "owner") == f"| owner | {owner} |"
+    assert _machine_stub(out)["metadata"]["owner"] == owner
+
+
+def test_missing_owner_renders_not_declared(tmp_path: Path) -> None:
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    del plan["owner"]
+    out = _render_plan(tmp_path, plan)
+    assert _row(out, "owner").startswith("| owner | unknown — not declared in PLAN_DOCUMENT")
+    assert _machine_stub(out)["metadata"]["owner"].startswith("unknown — not declared")
+
+
+def test_owner_is_optional_and_typed_in_the_plan_schema() -> None:
+    from plan_sections import json_required_keys, plan_schema_path
+
+    schema = json.loads(plan_schema_path().read_text(encoding="utf-8"))
+    assert schema["properties"]["owner"] == {
+        **schema["properties"]["owner"],
+        "type": "string",
+        "minLength": 1,
+    }
+    assert "owner" not in json_required_keys(schema)
