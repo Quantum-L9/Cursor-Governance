@@ -343,3 +343,42 @@ def test_core_file_reads_the_exact_commit_over_git(monkeypatch: pytest.MonkeyPat
     fetch = next(c for c in calls if "fetch" in c)
     assert fetch[-2:] == (docker_sandbox.CORE_GIT_URL, CORE_SHA)
     assert calls[-1][-1] == f"{CORE_SHA}:a/lock.json"
+
+
+def test_core_commit_peels_an_annotated_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """refs/tags/<t> is the tag object; the ^{} row is the commit REST returns."""
+    tag_object = "c" * 40
+    listing = f"{tag_object}\trefs/tags/v2.0.0\n{CORE_SHA}\trefs/tags/v2.0.0^{{}}\n"
+    seen: list[tuple[str, ...]] = []
+
+    def git(*args: str) -> str:
+        seen.append(args)
+        return listing
+
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", git)
+    assert docker_sandbox.core_commit("v2.0.0") == CORE_SHA
+    assert "refs/tags/v2.0.0^{}" in seen[0], "ls-remote must ask for the peeled row by name"
+
+
+def test_core_commit_keeps_a_lightweight_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(docker_sandbox, "gh_api", _rest_denied)
+    monkeypatch.setattr(docker_sandbox, "_git", lambda *a: f"{CORE_SHA}\trefs/tags/v1\n")
+    assert docker_sandbox.core_commit("v1") == CORE_SHA
+
+
+def test_core_file_falls_back_when_the_rest_body_is_not_base64(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(docker_sandbox, "gh_api", lambda path: {"content": "%%%not-base64"})
+    monkeypatch.setattr(docker_sandbox, "_git", lambda *a: "git-bytes" if "show" in a else "")
+    assert docker_sandbox.core_file(CORE_SHA, "a/lock.json") == "git-bytes"
+
+
+def test_a_hung_git_is_a_sandbox_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def hang(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd="git", timeout=120)
+
+    monkeypatch.setattr(docker_sandbox.subprocess, "run", hang)
+    with pytest.raises(SandboxError, match="git ls-remote failed"):
+        docker_sandbox._git("ls-remote", docker_sandbox.CORE_GIT_URL)

@@ -227,12 +227,39 @@ def gh_api(path: str) -> dict:
 # bytes, so it is a transport swap, not another source (the pattern
 # ops/scripts/org_dotgithub.py uses for <owner>/.github). Both failing is an error.
 CORE_GIT_URL = f"https://github.com/{CORE_REPO}"
-_REST_FAILURES = (SandboxError, KeyError, TypeError, json.JSONDecodeError)
+# ValueError covers json.JSONDecodeError, binascii.Error (bad base64) and
+# UnicodeDecodeError: a REST body that cannot become the file's text is a REST
+# failure like any other, so it must reach the git transport too.
+_REST_FAILURES = (SandboxError, KeyError, TypeError, ValueError)
 
 
 def _git(*args: str) -> str:
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
-    return run(["git", *args], timeout=120, env=env).stdout
+    try:
+        return run(["git", *args], timeout=120, env=env).stdout
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SandboxError(f"git {args[0] if args else ''} failed: {exc}") from exc
+
+
+def _ls_remote_commit(core_ref: str) -> str:
+    """The commit ``core_ref`` names over git, peeling annotated tags.
+
+    ``refs/tags/<t>`` is the tag object for an annotated tag; only the
+    ``refs/tags/<t>^{}`` row is the commit REST's ``/commits/<ref>`` returns.
+    """
+    preference = [
+        core_ref,
+        f"refs/heads/{core_ref}",
+        f"refs/tags/{core_ref}^{{}}",
+        f"refs/tags/{core_ref}",
+    ]
+    listing = _git("ls-remote", CORE_GIT_URL, *preference)
+    rows = dict(
+        (row[1], row[0])
+        for row in (line.split("\t") for line in listing.splitlines())
+        if len(row) == 2
+    )
+    return next((rows[name] for name in preference if name in rows), "")
 
 
 def core_commit(core_ref: str) -> str:
@@ -242,14 +269,11 @@ def core_commit(core_ref: str) -> str:
     except _REST_FAILURES as rest_error:
         if HEX40.fullmatch(core_ref):
             return core_ref
-        wanted = {core_ref, f"refs/heads/{core_ref}", f"refs/tags/{core_ref}"}
         try:
-            listing = _git("ls-remote", CORE_GIT_URL)
+            sha = _ls_remote_commit(core_ref)
         except SandboxError as git_error:
             msg = f"{rest_error}; git transport also failed: {git_error}"
             raise SandboxError(msg) from git_error
-        rows = [line.split("\t") for line in listing.splitlines()]
-        sha = next((row[0] for row in rows if len(row) == 2 and row[1] in wanted), "")
         if not sha:
             msg = f"{rest_error}; git transport: {core_ref} is not a ref of {CORE_GIT_URL}"
             raise SandboxError(msg) from rest_error
