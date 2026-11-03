@@ -529,4 +529,3 @@ todos:
     content: <todo_content>
     status: pending
 ```
-
