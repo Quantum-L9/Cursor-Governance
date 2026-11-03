@@ -12,6 +12,7 @@ from typing import Any
 from paths import is_under, plans_store_root, safe_cli_path
 from plan_sections import (
     GAR_SKILL_REF,
+    LEGACY_PLAN_SCHEMA_REFS,
     PLAN_SCHEMA_REL,
     REPO_ROOT,
     SKILL_ROOT,
@@ -75,7 +76,7 @@ def _coverage_errors(receipt: dict[str, Any]) -> list[str]:
     for title in md_required_headings(mode=str(receipt.get("handoff_mode") or "cursor-build")):
         if title not in claimed_md:
             errors.append(f"G_RECEIPT_COVERAGE: receipt omits MD section {title!r}")
-    if receipt.get("section_schema_ref") != PLAN_SCHEMA_REL:
+    if receipt.get("section_schema_ref") not in (PLAN_SCHEMA_REL, *LEGACY_PLAN_SCHEMA_REFS):
         errors.append("G_RECEIPT_OWNER: section_schema_ref is not the PLAN_DOCUMENT schema")
     if receipt.get("template_ref") != TEMPLATE_REL:
         errors.append("G_RECEIPT_OWNER: template_ref is not the canonical executable plan")

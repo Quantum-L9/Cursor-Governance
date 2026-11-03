@@ -18,8 +18,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 SIMPLE_SCRIPTS = REPO / "skills" / "l9-plan-simple" / "scripts"
-RENDERER = REPO / "skills" / "_archived" / "l9-plan" / "scripts" / "render_plan_pe_autonomy.py"
-FIXTURE = REPO / "skills" / "_archived" / "l9-plan" / "fixtures" / "plan_pass.json"
+RENDERER = REPO / "skills" / "l9-plan" / "scripts" / "render_plan_pe_autonomy.py"
+FIXTURE = REPO / "skills" / "l9-plan" / "fixtures" / "plan_pass.json"
 
 sys.path.insert(0, str(SIMPLE_SCRIPTS))
 

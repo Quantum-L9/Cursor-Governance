@@ -1326,7 +1326,9 @@ def main() -> int:
     plan_path = safe_cli_path(args.plan_json)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     skill_root = Path(__file__).resolve().parents[1]
-    repo_root = skill_root.parents[2]
+    # skills/<pack>/ (or a nested skills/<group>/<pack>/): the repo root is the
+    # parent of the nearest `skills` ancestor.
+    repo_root = next(p.parent for p in skill_root.parents if p.name == "skills")
     if args.template:
         template_path = safe_cli_path(args.template)
     else:

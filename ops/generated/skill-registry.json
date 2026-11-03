@@ -1,5 +1,5 @@
 {
-  "generation_id": "66c8eec3ee7716b4ad9c5181015f878f8cf8d67de3235e17a77b052d1ece3e81",
+  "generation_id": "fdb23f0beb1a1d2be0ce5ab606a144246c4e078942562fd46771ba1c63c0fcd4",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1201,6 +1201,19 @@
     },
     {
       "composition_role": "general",
+      "description": "explicit-only. Owns the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. Program Execution planning (/l9-plan PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-plan",
+      "path": "skills/l9-plan",
+      "reason": "live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
+      "skill_md": "skills/l9-plan/SKILL.md",
+      "skill_sha256": "edd7faa1bb056724a885fd6c27eddbe86299101810582cf49ff738c98f08a971",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the executable-plan template. cursor-build executes then opens a stacked PR; embedded stops at planning artifacts with no execution authority. use when scope is unclear or Plan mode is on. do not use for /l9-plan, make campaign, or a PE lock.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
@@ -1208,7 +1221,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "a165cf37c068592bc084dc8308b77e6ef619e37c791760cdf40682e6ede70bde",
+      "skill_sha256": "7879965600d5dd65a72f655b8a5ff3c4a7727a5f9dc8f4b6f315b001baa293c9",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1461,6 +1474,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "0be7ff1efef74c29c95d8ff864cd16aee08e7325cdb29b30041e8515a8f23f56",
-  "source_skill_corpus_sha256": "9bc66021096319327f6a7f1eeb8048cef9c9cbc686fcf49c53f13b7ff83a8b59"
+  "source_manifest_sha256": "7287c105432943e2bc6c4dbf5c805a76fd5688e1161ae147cf6ce30316b56bba",
+  "source_skill_corpus_sha256": "2031e9c0f05eed487de9d04b153e4e11fe90a0371ac56e0ebaee9438ac1bee8b"
 }

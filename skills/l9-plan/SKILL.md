@@ -1,21 +1,21 @@
 ---
 name: l9-plan
-description: "deprecated — do not activate. Program Execution planning is retired and has no live owner. Ordinary plans stay with l9-plan-simple, which does not absorb this pack."
+description: "explicit-only. Owns the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. Program Execution planning (/l9-plan PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy, deprecated]
+  tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
   owner: igor_beylin
-  status: deprecated
-  version: 4.1.0
-  updated: 2026-10-07
+  status: active
+  version: 4.2.0
+  updated: 2026-11-03
 ---
 
-# l9-plan (retired)
+# l9-plan (explicit-only)
 
-Do not activate. This pack is archived. `/l9-plan`, Program Lock, and `make campaign` have no live owner. `l9-plan-simple` remains ordinary planning and does not inherit this pack.
+Live, user-invoked only. This pack owns the PLAN_DOCUMENT schema (`schemas/plan-document.schema.json`), validator (`scripts/validate_plan_document.py`) and projection renderer (`scripts/render_plan_pe_autonomy.py`) that `l9-plan-simple` runs. Program Execution planning — `/l9-plan` PE+autonomy, Program Lock, `make campaign` — has no live successor. Ordinary plans are `l9-plan-simple`, which does not inherit the PE workflow.
 
 # Execution Planning
 

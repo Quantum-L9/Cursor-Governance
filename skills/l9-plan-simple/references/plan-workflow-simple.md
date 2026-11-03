@@ -18,7 +18,7 @@ Fill the **same** first-class SSOT as `l9-plan`:
 [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](../../../environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md)
 (skill [executable-plan.template.md](executable-plan.template.md) is a symlink — do not fork).
 
-Section list matches [`../../_archived/l9-plan/references/plan-workflow-pe-autonomy.md`](../../../_archived/l9-plan/references/plan-workflow-pe-autonomy.md) except the execute authority.
+Section list matches [`../../l9-plan/references/plan-workflow-pe-autonomy.md`](../../l9-plan/references/plan-workflow-pe-autonomy.md) except the execute authority.
 
 ## Handoff modes
 
@@ -33,7 +33,7 @@ Mode selection is explicit and machine-observable (`--execute-via`, then `execut
 
 | Artifact | Role | Gate |
 |----------|------|------|
-| `PLAN_DOCUMENT` JSON | Machine SSOT for depth gates | `python3 ../../_archived/l9-plan/scripts/validate_plan_document.py` MUST PASS |
+| `PLAN_DOCUMENT` JSON | Machine SSOT for depth gates | `python3 ../../l9-plan/scripts/validate_plan_document.py` MUST PASS |
 | Cursor `.plan.md` | Mode-selected projection | Shared canonical template; PE execute block **replaced** |
 
 `PLAN_DOCUMENT` stays execution-neutral. The mode lives on the projection axis; do not encode it as a schema field, and do not fork the schema per mode.
@@ -60,15 +60,15 @@ Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before**
 10. **Project the plan** — one renderer, mode-selected:
 
 Run from the repository root: the scripts confine CLI paths to the working
-directory, so a `../../_archived/l9-plan/...` invocation from the skill root is rejected.
+directory, so a `../../l9-plan/...` invocation from the skill root is rejected.
 
 ```bash
 # default
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace . \
+python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace . \
   > .cursor/plans/<snake_slug>_<8hex>.plan.md
 
 # caller-owned
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded
+python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded
 ```
 
 The renderer fills every template section from PLAN_DOCUMENT; the output carries no `<parameter>` slot. `--workspace .` binds the baseline from the current git work tree (read-only); without it the baseline is `unbound`. A success criterion's proof is the `final_validation` entry it names by id (`V1`) or by a shared script/file name — name one in every criterion, or the property renders `unbound`. Fields PLAN_DOCUMENT does not carry render `unknown — …`: fix them in PLAN_DOCUMENT and re-render rather than hand-editing the projection.
@@ -77,7 +77,7 @@ Or hand-copy the first-class SSOT and apply the mode's execute swap below. Do **
 
 Frontmatter in both modes: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, the selected `execute_via`, and `status: current`. Convergence `execute_via` matches. `harvested` is a tag, never a status.
 
-10. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode`, so it is judged against that mode's headings: **Execute via Cursor Build** for `cursor-build`, **Handoff to Caller** for `embedded`. Schema owner stays `../../_archived/l9-plan/schemas/plan-document.schema.json`; the receipt shape is `../schemas/plan-section-receipt.schema.json`.
+10. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode`, so it is judged against that mode's headings: **Execute via Cursor Build** for `cursor-build`, **Handoff to Caller** for `embedded`. Schema owner stays `../../l9-plan/schemas/plan-document.schema.json`; the receipt shape is `../schemas/plan-section-receipt.schema.json`.
 
 ```bash
 # from the repository root
