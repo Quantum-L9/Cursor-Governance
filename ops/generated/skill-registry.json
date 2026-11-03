@@ -1,5 +1,5 @@
 {
-  "generation_id": "79957c4c51be34d35670c00e2f8ab5c31f9a26c48d689248ad7a538c10442bf4",
+  "generation_id": "0344956e04fc10e23212fca9a00e897de1529411a9fffc7fcbcc0667ca916563",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -987,7 +987,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "f989eb6ec5c010f290141413464671bec47a4e1080e86aae503aee54a945ebdf",
+      "skill_sha256": "c95b3aff0e742349877fa5d4fdc809d447668cf1f5558763994a4c5a61176de0",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1462,5 +1462,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "0be7ff1efef74c29c95d8ff864cd16aee08e7325cdb29b30041e8515a8f23f56",
-  "source_skill_corpus_sha256": "33c57a80e03a758fdac4b77e87426bffe4d1e991ced61867814adcca637d8889"
+  "source_skill_corpus_sha256": "d844b3cbf6fe03d52065e8caa31757fc614b4cecf6f719d18d3dc80d9abb385c"
 }
