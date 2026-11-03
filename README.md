@@ -60,7 +60,7 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 │   ├── scripts/_archived/  # Retired pre-Graphiti / Suite-6 scripts (do not depend on)
 │   ├── hooks/         # sessionStart / sessionEnd hooks
 │   ├── graphiti/      # Graphiti memory client + activation runbooks
-│   ├── secrets/       # AWS SM registry SSOT (openclaw-igorbot/*) + resolve
+│   ├── secrets/       # Infisical secret store bind (capability_bind) + Cursor AWS bootstrap
 │   ├── ui-operator/   # Portable SaaS UI console, cartridges, receipts
 │   └── logs/          # Runtime logs
 ├── intelligence/      # Active signal corpus — chat exports, distillation, mining
@@ -116,7 +116,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`skills/l9-structured-reasoning/SKILL.md`](skills/l9-structured-reasoning/SKILL.md) — adaptive evidence-based reasoning (plan/review/architecture/debug/corpus)
 - [`skills/_archived/`](skills/_archived/) — retired skill packs (not discoverable; do not activate)
 - [`skills/l9-graphiti-memory/SKILL.md`](skills/l9-graphiti-memory/SKILL.md) — Graphiti memory wiring
-- [`skills/l9-aws-secrets/SKILL.md`](skills/l9-aws-secrets/SKILL.md) — AWS SM + Infisical Cursor-Governance vault via `ops/secrets`
+- [`skills/l9-secrets/SKILL.md`](skills/l9-secrets/SKILL.md) — Infisical Cursor-Governance vault via `ops/secrets` (AWS SM stays Cursor's bootstrap, ADR-0053)
 - [`skills/l9-ui-operator/SKILL.md`](skills/l9-ui-operator/SKILL.md) — SaaS UI console when API is insufficient (explicit-only)
 
 ### Learning
@@ -128,7 +128,7 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`ops/scripts/validate_governance_symlinks.sh`](ops/scripts/validate_governance_symlinks.sh) — verify symlink wiring
 - [`ops/scripts/backup_to_github.sh`](ops/scripts/backup_to_github.sh) — commit + push SSOT to GitHub
 - [`ops/scripts/backup_gate.sh`](ops/scripts/backup_gate.sh) — gate the sessionEnd backup (reason filter, debounce, activity guard)
-- [`ops/secrets/README.md`](ops/secrets/README.md) — secrets registry sync/resolve
+- [`ops/secrets/README.md`](ops/secrets/README.md) — Infisical secret store, bind/check, legacy AWS seed
 - [`ops/ui-operator/README.md`](ops/ui-operator/README.md) — UI console + cartridges
 
 ### UI operator install (optional)

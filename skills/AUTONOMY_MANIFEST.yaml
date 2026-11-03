@@ -63,8 +63,8 @@ tiers:
     use_when: a production incident is active (SEV1–SEV4), coordinating mitigation, or writing a postmortem
   - skill: l9-graphiti-memory
     use_when: wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health
-  - skill: l9-aws-secrets
-    use_when: an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values
+  - skill: l9-secrets
+    use_when: a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated — never printing values
   - skill: l9-claude-code-deepseek
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
   - skill: l9-plan-simple
@@ -219,7 +219,7 @@ claude_routing:
   - l9-prompt-engineering
   - l9-incident-response
   - l9-graphiti-memory
-  - l9-aws-secrets
+  - l9-secrets
   - l9-code-graph-rag-mcp
   - l9-architecture-decision-records
   - l9-monitoring-terminal-errors
@@ -541,23 +541,22 @@ claude_routing:
     - retag the release
     - live workstation MCP cutover
     supporting: []
-  - id: aws_secrets
-    primary: l9-aws-secrets
+  - id: secrets
+    primary: l9-secrets
     signal_weight: 8
     positive_signals:
-    - resolve aws secret
     - openclaw-igorbot
-    - secrets registry
-    - sync secrets registry
-    - sync_secrets_registry
     - resolve_secret
-    - aws secrets manager ref
-    - infisical
+    - bind from infisical
+    - infisical bind
+    - infisical secret
+    - capability_bind
     - infisical-cursor-governance
-    - cursor-governance project
     - hydrate infisical
     - INFISICAL_PROJECT_ID
-    - port_aws_to_infisical
+    - add a new secret
+    - bind the credential
+    - l9-secrets
     supporting:
     - l9-structured-reasoning
   - id: audit_plans_shelf
