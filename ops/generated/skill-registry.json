@@ -1,5 +1,5 @@
 {
-  "generation_id": "28456f9c7e8adda3f3e691312914d522825b6e5d5e6c3f409ab066ce0cb90cfd",
+  "generation_id": "e62c01a67ad403aa911c918f119ba9bd0e682fcc88f01356d3d7fdab313c7f4f",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1338,14 +1338,14 @@
     },
     {
       "composition_role": "general",
-      "description": "Cut and publish a release tag and its GitHub Release for any L9 repository, detecting whether the repo publishes on tag push, tags itself on a version-bump merge, or has no release automation, then verifying tag identity, the release job and the Release. Use when the operator asks to cut, ship or finish a release or advance a major tag. Do not use for release notes, deployment, consumer rebinds, registry publishing, or moving an existing tag.",
+      "description": "Cut and publish a release tag, GitHub Release and major tag for any L9 repository, detecting whether it publishes on tag push, tags on a version-bump merge, or has no automation, then driving the release job to completion and finishing what it left undone. Use when the operator asks to cut, ship or finish a release or advance a major tag. Do not use for release notes, deployment, consumer rebinds, registry publishing, or moving an existing tag.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-release-publication",
       "path": "skills/l9-release-publication",
       "reason": "cuts and publishes immutable release tags and GitHub Releases for any L9 repository \u2014 pushes a tag ref through the publication-plane receipt, ships version bumps through make pr, and merges only on operator order; irreversible, so explicit only, hint_allowed so a release prompt surfaces Read/attach; disable-model-invocation",
       "skill_md": "skills/l9-release-publication/SKILL.md",
-      "skill_sha256": "c9fe5e9f791c97a6251886c652b1f2a0b27a4f85c46bc0e5b6e57b3573fb1184",
+      "skill_sha256": "d8e80c2eed44380d7141c71228307797323304a7568b137a0368b13f3cf603b1",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1508,5 +1508,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "68ace3ad674eb9de95650ee76fc95188cb6e2375790c33c9cbefdc1c69a13858",
-  "source_skill_corpus_sha256": "0064dfd8792e26ae3a3f3558be06e9e5cbf320b95c59eb0d791b91958386ab29"
+  "source_skill_corpus_sha256": "3c1680f7a83adb1c127c2ab6b7784620e73bae1acbdeb2085bc23de93a1c29b3"
 }

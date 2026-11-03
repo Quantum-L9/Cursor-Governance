@@ -1,6 +1,6 @@
 ---
 name: l9-release-publication
-description: Cut and publish a release tag and its GitHub Release for any L9 repository, detecting whether the repo publishes on tag push, tags itself on a version-bump merge, or has no release automation, then verifying tag identity, the release job and the Release. Use when the operator asks to cut, ship or finish a release or advance a major tag. Do not use for release notes, deployment, consumer rebinds, registry publishing, or moving an existing tag.
+description: Cut and publish a release tag, GitHub Release and major tag for any L9 repository, detecting whether it publishes on tag push, tags on a version-bump merge, or has no automation, then driving the release job to completion and finishing what it left undone. Use when the operator asks to cut, ship or finish a release or advance a major tag. Do not use for release notes, deployment, consumer rebinds, registry publishing, or moving an existing tag.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -53,15 +53,22 @@ owner approval, and any request to move, delete or recreate a tag that already e
 3. **Settle the version.** If the requested tag exists at another commit, stop and offer
    the next version. If the unreleased changelog carries breaking changes, ask once
    which line (major or minor, and what that does to the maintained major tag).
-4. **Run the model's sequence** in [release-models.md](references/release-models.md). Tag pushes
-   follow [publication-plane.md](references/publication-plane.md); the release job and Release follow
-   [github-release.md](references/github-release.md).
-5. **Verify.** `scripts/verify_release_tag.py --remote <owner/name> --require-remote`
+4. **Run the model's sequence** in [release-models.md](references/release-models.md) up to its
+   trigger (the version-PR merge or the tag push). Tag pushes follow
+   [publication-plane.md](references/publication-plane.md).
+5. **Complete.** A trigger is not a release. Run `scripts/complete_release.py` (the completion
+   loop in [github-release.md](references/github-release.md)) on the release commit: it waits for
+   the release job, checks the exact tag, the Release and the major tag on the host, and plans
+   whatever is missing. Run each plan step as its own command and rerun the loop until it exits
+   0. The job finishes its own work first; the agent pushes a missing tag or creates the
+   Release; only the operator moves an existing major tag.
+6. **Verify.** `scripts/verify_release_tag.py --remote <owner/name> --require-remote`
    (`--kind any` for a tag a job created), then `scripts/verify_github_release.py`, adding
    `--major-tag <vN>` when the release advances one. Report `RELEASE_VERIFIED` only on its exit 0.
-6. **Close out.** Record release evidence the repository keeps in a follow-up change, close
-   the release issue with the tag, Release URL and commit, and report open items (registry
-   publication, dependency PRs that now need rebinding).
+7. **Close out.** Give the operator the loop's `consumer_refresh` command: a plain `git fetch`
+   never moves an existing major tag in a clone. Record release evidence the repository keeps in
+   a follow-up change, close the release issue with the tag, Release URL and commit, and report
+   open items (registry publication, dependency PRs that now need rebinding).
 
 ## Stops
 
@@ -69,6 +76,10 @@ owner approval, and any request to move, delete or recreate a tag that already e
   operator has not chosen.
 - A release job waiting on an environment: report the run URL, job URL, environment and
   reviewer. Never approve on the operator's behalf.
+- An existing major tag behind the release after the job route is spent: hand the operator
+  the loop's lease command; never set `L9_GIT_DESTRUCTIVE_AUTHORIZED` yourself.
+- Reporting a release done while `complete_release.py` exits non-zero, or judging it from a
+  local clone.
 - Merging a version change, pushing a tag, or creating a Release without the operator's order.
 - `MISMATCH` or `TRANSPORT_BLOCKED` from a verifier: stop; never force a ref.
 
@@ -87,12 +98,14 @@ Run every script with the governance locked venv; a bare `python3` may lack PyYA
 GOV="$HOME/.cursor-governance"; GOV_PY="$GOV/.venv/bin/python"  # locked venv (PyYAML)
 SKILL_DIR="$GOV/skills/l9-release-publication"
 "$GOV_PY" "$SKILL_DIR/scripts/detect_release_model.py" --repo-dir <checkout>
+"$GOV_PY" "$SKILL_DIR/scripts/complete_release.py" --remote <owner/name> --tag <tag> --commit <sha> --major-tag <vN> --workflow <release_workflow> --repo-dir <checkout>
 "$GOV_PY" "$SKILL_DIR/scripts/verify_release_tag.py" --repo-dir <checkout> --tag <tag> --tag-object <obj> --peeled-commit <sha> --remote <owner/name> --bind-origin
 "$GOV_PY" "$SKILL_DIR/scripts/verify_release_tag.py" --remote <owner/name> --tag <tag> --kind any --peeled-commit <sha> --require-remote
 "$GOV_PY" "$SKILL_DIR/scripts/verify_github_release.py" --remote <owner/name> --tag <tag> --peeled-commit <sha> --major-tag <vN>
 ```
 
-Exit codes: verify_release_tag 0 MATCH, 1 MISMATCH, 2 REMOTE_ABSENT, 3 TRANSPORT_BLOCKED;
+Exit codes: complete_release 0 RELEASE_COMPLETE, 1 MISMATCH, 3 TRANSPORT_BLOCKED,
+4 WAITING_APPROVAL, 5 COMPLETION_REQUIRED, 6 RUN_PENDING; verify_release_tag 0 MATCH, 1 MISMATCH, 2 REMOTE_ABSENT, 3 TRANSPORT_BLOCKED;
 verify_github_release 0 RELEASE_VERIFIED, 1 MISMATCH, 2 RELEASE_ABSENT, 3 TRANSPORT_BLOCKED.
 
 ## After use

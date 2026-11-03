@@ -90,6 +90,14 @@ def _push_block(triggers: Any) -> dict[str, Any] | None:
     return None
 
 
+def _dispatchable(triggers: Any) -> bool:
+    if isinstance(triggers, str):
+        return triggers == "workflow_dispatch"
+    if isinstance(triggers, (list, dict)):
+        return "workflow_dispatch" in triggers
+    return False
+
+
 def _as_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -107,7 +115,8 @@ def inspect_workflow(path: Path) -> dict[str, Any]:
     doc = yaml.safe_load(text)
     if not isinstance(doc, dict):
         raise ValueError(f"{path.name}: not a workflow mapping")
-    push = _push_block(_triggers(doc))
+    triggers = _triggers(doc)
+    push = _push_block(triggers)
     tag_patterns = _as_list(push.get("tags")) if push is not None else []
     branches = _as_list(push.get("branches")) if push is not None else []
     paths = _as_list(push.get("paths")) if push is not None else []
@@ -122,6 +131,7 @@ def inspect_workflow(path: Path) -> dict[str, Any]:
         "push_branches": branches,
         "push_branch_trigger": branch_trigger,
         "push_paths": paths,
+        "dispatchable": _dispatchable(triggers),
         "creates_tag": any(p.search(text) for p in _TAGGERS),
         "creates_release": any(p.search(text) for p in _RELEASE_CREATORS),
     }
@@ -173,7 +183,11 @@ def responsibilities(model: str, workflows: list[dict[str, Any]]) -> dict[str, s
     if model == "TAG_TRIGGERED":
         tag_jobs = [w for w in workflows if w["push_tags"]]
         creator = "workflow" if any(w["creates_release"] for w in tag_jobs) else "agent"
-        return {"tag_creator": "operator_admitted_tag", "release_creator": creator}
+        return {
+            "tag_creator": "operator_admitted_tag",
+            "release_creator": creator,
+            **_release_job(tag_jobs),
+        }
     if model == "MAIN_TAGGER":
         taggers = [
             w
@@ -181,10 +195,20 @@ def responsibilities(model: str, workflows: list[dict[str, Any]]) -> dict[str, s
             if w["push_branch_trigger"] and w["creates_tag"] and not w["push_tags"]
         ]
         creator = "workflow" if any(w["creates_release"] for w in taggers) else "agent"
-        return {"tag_creator": "workflow", "release_creator": creator}
+        return {"tag_creator": "workflow", "release_creator": creator, **_release_job(taggers)}
     if model == "NO_AUTOMATION":
-        return {"tag_creator": "agent", "release_creator": "agent"}
-    return {"tag_creator": "unknown", "release_creator": "unknown"}
+        return {"tag_creator": "agent", "release_creator": "agent", **_release_job([])}
+    return {"tag_creator": "unknown", "release_creator": "unknown", **_release_job([])}
+
+
+def _release_job(jobs: list[dict[str, Any]]) -> dict[str, Any]:
+    """The one workflow complete_release.py follows; none when zero or several qualify."""
+    if len(jobs) != 1:
+        return {"release_workflow": None, "release_workflow_dispatchable": False}
+    return {
+        "release_workflow": jobs[0]["file"],
+        "release_workflow_dispatchable": jobs[0]["dispatchable"],
+    }
 
 
 def main() -> int:

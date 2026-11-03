@@ -45,12 +45,11 @@ The tag object is the release identity and is admitted by the operator.
    `REMOTE_ABSENT`: continue. Anything else stops.
 4. Push exactly `refs/tags/<tag>` (references/publication-plane.md).
 5. Re-run with `--remote owner/name --require-remote`; continue only on `MATCH`.
-6. Watch the one run that push created (references/github-release.md). An environment
-   approval wait is a stop: report run URL, job URL, environment, reviewer.
-7. `release_creator: workflow` → only verify. `release_creator: agent` → create the
-   Release bound to the peeled commit with the assets the repository's release
-   decision names.
-8. `verify_github_release.py` must report `RELEASE_VERIFIED`.
+6. Drive the run that push started to completion with the completion loop
+   (references/github-release.md): `complete_release.py --workflow <release_workflow>`.
+   `release_creator: agent` → the loop plans the Release; create it with the assets
+   the repository's release decision names.
+7. `verify_github_release.py` must report `RELEASE_VERIFIED`.
 
 ## MAIN_TAGGER — a branch-push job creates the tag itself
 
@@ -67,8 +66,14 @@ doing so races the job for the same name at the same commit.
    evidence.
 4. Merge only on the operator's order, at a green head, through
    `skills/l9-pr-remediation` merge tooling (`ops/autonomy/stack_safe_merge.py --run`).
-5. Watch the release job the merge started. Its own decision step may skip work that
-   already exists; read it rather than re-running it.
+5. Read the merge commit sha and drive the release job the merge started to
+   completion with the completion loop (references/github-release.md):
+   `complete_release.py --commit <merge sha> --workflow <release_workflow> --major-tag <vN>`.
+   The loop waits for the run, then checks the exact tag, the Release and the major
+   tag on the host. Whatever the job left undone is finished in the loop's order:
+   the job itself first (one dispatch or one rerun), then the agent route, then the
+   operator's lease push for a major tag. You create a tag in this model only when
+   the loop says the job will not.
 6. `verify_release_tag.py --remote owner/name --tag <tag> --kind any --peeled-commit <merge sha> --require-remote`,
    then `verify_github_release.py ... --major-tag <vN>` when the job advances a major tag.
 
@@ -79,7 +84,9 @@ doing so races the job for the same name at the same commit.
 2. Run TAG_TRIGGERED steps 2–5 (verify, bind origin, push the one ref, verify remote).
 3. Create the Release: `gh release create <tag> --verify-tag --title <tag> --notes-file <notes>`.
    `--verify-tag` refuses to let the host invent a tag at another commit.
-4. `verify_github_release.py` must report `RELEASE_VERIFIED`.
+4. If the repository keeps a major tag, run the completion loop without `--workflow`
+   (`complete_release.py --major-tag <vN> --tag-kind annotated`) and follow its plan.
+5. `verify_github_release.py` must report `RELEASE_VERIFIED`.
 
 ## AMBIGUOUS or UNKNOWN
 

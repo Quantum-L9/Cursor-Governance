@@ -421,3 +421,188 @@ def test_executable_outside_absolute_path_is_never_run_by_bare_name(monkeypatch,
     assert tags._absolute("git") is None
     result = tags._run(["git", "--version"])
     assert result.returncode == 127 and "hijacked" not in result.stdout
+
+
+# ---- complete_release -----------------------------------------------------------
+
+complete = _load("complete_release")
+REPO = "repos/Org/repo"
+RUNS = f"{REPO}/actions/workflows/release.yml/runs?head_sha={SHA_A}"
+DRIVE_ARGV = [
+    "--remote", "Org/repo", "--tag", "v4.3.0", "--commit", SHA_A, "--major-tag", "v4",
+    "--workflow", "release.yml", "--repo-dir", "/w/repo",
+    "--poll-seconds", "1", "--wait-seconds", "5", "--trigger-grace-seconds", "2",
+]  # fmt: skip
+
+
+def _run_record(status="completed", conclusion="success", attempt=1, run_id=7):
+    return {
+        "id": run_id,
+        "head_sha": SHA_A,
+        "status": status,
+        "conclusion": conclusion,
+        "run_attempt": attempt,
+        "event": "push",
+        "html_url": f"https://github.com/Org/repo/actions/runs/{run_id}",
+    }
+
+
+def _runs(*records) -> tuple[int, str, str]:
+    return 0, json.dumps({"workflow_runs": list(records)}), ""
+
+
+def _ok(body) -> tuple[int, str, str]:
+    return 0, json.dumps(body), ""
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    now = [0.0]
+    monkeypatch.setattr(complete, "_clock", lambda: now[0])
+    monkeypatch.setattr(complete, "_sleep", lambda s: now.__setitem__(0, now[0] + s))
+    return now
+
+
+def _drive(monkeypatch, capsys, responses, argv=DRIVE_ARGV):
+    monkeypatch.setattr(tags, "gh_api", _host(responses))
+    return _run_main(complete, list(argv), capsys)
+
+
+def _complete_host(**extra):
+    base = {
+        RUNS: _runs(_run_record()),
+        f"{REPO}/git/ref/tags/v4.3.0": _ref("commit", SHA_A),
+        f"{REPO}/git/ref/tags/v4": _ref("commit", SHA_A),
+        f"{REPO}/releases/tags/v4.3.0": _release(),
+    }
+    base.update(extra)
+    return base
+
+
+def test_drive_complete_release(monkeypatch, capsys, clock):
+    code, out = _drive(monkeypatch, capsys, _complete_host())
+    assert code == 0 and out["status"] == "RELEASE_COMPLETE"
+    assert out["consumer_refresh"] == (
+        "git fetch origin --force refs/tags/v4.3.0:refs/tags/v4.3.0 refs/tags/v4:refs/tags/v4"
+    )
+
+
+def test_drive_waits_for_the_run_then_verifies(monkeypatch, capsys, clock):
+    states = iter([_runs(_run_record(status="in_progress", conclusion=None)), _runs(_run_record())])
+    host = _host(_complete_host())
+    monkeypatch.setattr(tags, "gh_api", lambda p: next(states) if p == RUNS else host(p))
+    code, out = _run_main(complete, list(DRIVE_ARGV), capsys)
+    assert code == 0 and out["run"]["conclusion"] == "success" and clock[0] == 1
+
+
+def test_drive_stops_on_environment_approval(monkeypatch, capsys, clock):
+    waiting = [{"environment": {"name": "release"}, "reviewers": [{"reviewer": {"login": "ib"}}]}]
+    host = _complete_host(
+        **{
+            RUNS: _runs(_run_record(status="waiting", conclusion=None)),
+            f"{REPO}/actions/runs/7/pending_deployments": _ok(waiting),
+        }
+    )
+    code, out = _drive(monkeypatch, capsys, host)
+    assert code == 4 and out["pending"] == [{"environment": "release", "reviewers": ["ib"]}]
+
+
+def test_drive_run_still_pending_at_deadline(monkeypatch, capsys, clock):
+    host = _complete_host(**{RUNS: _runs(_run_record(status="in_progress", conclusion=None))})
+    code, out = _drive(monkeypatch, capsys, host)
+    assert code == 6 and out["status"] == "RUN_PENDING"
+
+
+def test_drive_major_left_behind_reruns_the_job_first(monkeypatch, capsys, clock):
+    host = _complete_host(
+        **{
+            f"{REPO}/git/ref/tags/v4": _ref("commit", SHA_B),
+            f"{REPO}/compare/{SHA_B}...{SHA_A}": _ok({"status": "ahead"}),
+        }
+    )
+    code, out = _drive(monkeypatch, capsys, host)
+    assert code == 5 and out["missing"] == ["major_advance"]
+    assert [s["route"] for s in out["plan"]] == ["repository_job"]
+    assert out["plan"][0]["command"].endswith(f"{REPO}/actions/runs/7/rerun")
+    operator = out["fallback"][-1]
+    assert operator["actor"] == "operator"
+    assert f"--force-with-lease=refs/tags/v4:{SHA_B}" in operator["command"]
+    assert "L9_GIT_DESTRUCTIVE_AUTHORIZED=" in operator["command"]
+
+
+def test_drive_after_one_rerun_hands_over_the_agent_route(monkeypatch, capsys, clock):
+    host = _complete_host(
+        **{
+            RUNS: _runs(_run_record(attempt=2)),
+            f"{REPO}/git/ref/tags/v4.3.0": (1, "", "gh: Not Found (HTTP 404)"),
+            f"{REPO}/releases/tags/v4.3.0": (1, "", "gh: Not Found (HTTP 404)"),
+        }
+    )
+    code, out = _drive(monkeypatch, capsys, host)
+    assert code == 5 and out["fallback"] == []
+    commands = [s["command"] for s in out["plan"]]
+    assert "breakglass_receipt.py" in commands[0] and "--write" in commands[0]
+    assert commands[1] == f"git -C /w/repo push origin {SHA_A}:refs/tags/v4.3.0"
+    assert commands[2].startswith("rm -f ~/.l9/autonomy/publish-path-override.json")
+    assert commands[3].startswith("gh release create v4.3.0 --repo Org/repo --verify-tag")
+
+
+def test_drive_failed_run_reruns_failed_jobs(monkeypatch, capsys, clock):
+    jobs = {"jobs": [{"name": "publish", "conclusion": "failure", "html_url": "u"}]}
+    host = _complete_host(
+        **{
+            RUNS: _runs(_run_record(conclusion="failure")),
+            f"{REPO}/actions/runs/7/jobs": _ok(jobs),
+            f"{REPO}/git/ref/tags/v4": _ref("commit", SHA_B),
+            f"{REPO}/compare/{SHA_B}...{SHA_A}": _ok({"status": "ahead"}),
+        }
+    )
+    code, out = _drive(monkeypatch, capsys, host)
+    assert code == 5 and out["run"]["failed_jobs"][0]["name"] == "publish"
+    assert out["plan"][0]["command"].endswith("/actions/runs/7/rerun-failed-jobs")
+
+
+def test_drive_untriggered_dispatchable_workflow_dispatches(monkeypatch, capsys, clock):
+    host = _complete_host(
+        **{
+            RUNS: _runs(),
+            f"{REPO}/git/ref/tags/v4.3.0": (1, "", "gh: Not Found (HTTP 404)"),
+            f"{REPO}/releases/tags/v4.3.0": (1, "", "gh: Not Found (HTTP 404)"),
+        }
+    )
+    code, out = _drive(monkeypatch, capsys, host, [*DRIVE_ARGV, "--dispatchable"])
+    assert code == 5 and out["run"] == {"state": "not_triggered"}
+    assert out["plan"][0]["command"] == (
+        f"gh api -X POST {REPO}/actions/workflows/release.yml/dispatches -f ref=main"
+    )
+
+
+@pytest.mark.parametrize(
+    ("override", "fragment"),
+    [
+        ({f"{REPO}/git/ref/tags/v4.3.0": _ref("commit", SHA_B)}, "already names"),
+        (
+            {
+                f"{REPO}/git/ref/tags/v4": _ref("commit", SHA_B),
+                f"{REPO}/compare/{SHA_B}...{SHA_A}": _ok({"status": "behind"}),
+            },
+            "never move it backwards",
+        ),
+    ],
+)
+def test_drive_never_repoints(monkeypatch, capsys, clock, override, fragment):
+    code, out = _drive(monkeypatch, capsys, _complete_host(**override))
+    assert code == 1 and fragment in out["detail"]
+
+
+def test_drive_major_must_be_the_tags_major(monkeypatch, capsys, clock):
+    argv = [a if a != "v4" else "v5" for a in DRIVE_ARGV]
+    code, out = _drive(monkeypatch, capsys, _complete_host(), argv)
+    assert code == 1 and "major prefix" in out["detail"]
+
+
+def test_detect_reports_the_release_workflow(tmp_path, capsys):
+    text = "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n" + UNFILTERED_TAGGER_STEPS
+    root = _workflows(tmp_path, {"release.yml": text})
+    _code, out = _run_main(detect, ["--repo-dir", str(root)], capsys)
+    assert (out["release_workflow"], out["release_workflow_dispatchable"]) == ("release.yml", True)

@@ -15,13 +15,15 @@ installed (no governance checkout, no PreToolUse publication hook).
 ## Decision change
 
 - Do not write a publish-path receipt and do not set `L9_LOCAL_PUSH_AUTHORIZED`.
-- Push the verified tag ref once: `git push origin refs/tags/<tag>`.
+- Push each tag ref the completion loop's plan names once: `git push origin refs/tags/<tag>`.
+- An operator-route major-tag lease push is still the operator's: hand it over.
 - MAIN_TAGGER branches still go through a pull request; without `make pr`, open it
   with the host's normal PR flow and leave the merge to the operator.
 
 ## Unchanged
 
-Tag identity checks (`scripts/verify_release_tag.py`), the one-run rule, environment
+The completion loop (`scripts/complete_release.py`), tag identity checks
+(`scripts/verify_release_tag.py`), the one-dispatch-or-one-rerun rule, environment
 approval stops, digest checks, and `scripts/verify_github_release.py` all still apply.
 `--force`, `--tags`, deleting a tag, and API-created tag objects stay forbidden.
 

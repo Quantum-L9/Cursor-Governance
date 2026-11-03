@@ -7,10 +7,15 @@ version: 1.0.0
 status: active
 -->
 
-# Publication plane: pushing one tag ref
+# Publication plane: pushing release tag refs
 
-Applies to TAG_TRIGGERED and NO_AUTOMATION, the two models where you push a tag.
-In MAIN_TAGGER you never push a tag.
+Applies to TAG_TRIGGERED and NO_AUTOMATION, where you push the exact tag, and to any
+model where the completion loop (`complete_release.py`) plans an agent tag push
+because the release job will not. In MAIN_TAGGER you push a tag only on that plan.
+
+Advancing an existing major tag is not an agent push: the git guardrails deny a lease
+push onto a shared tag ref without `L9_GIT_DESTRUCTIVE_AUTHORIZED`, which only the
+operator sets. The loop hands that command to the operator.
 
 Read `ops/autonomy/first_publication_gate.py` and `ops/autonomy/breakglass_receipt.py`
 in the governance checkout (`$HOME/.cursor-governance`) before pushing. The rules
@@ -40,7 +45,8 @@ is invisible to it) or the receipt file `~/.l9/autonomy/publish-path-override.js
    Confirm the status line says the grant is in force.
 2. `verify_release_tag.py ... --remote owner/name --bind-origin` must already have
    returned `REMOTE_ABSENT` or `MATCH` for that origin.
-3. In a later command, push exactly one ref: `git push origin refs/tags/<tag>`.
+3. In a later command, push exactly the refs the plan names, one ref per command
+   (for example `git push origin refs/tags/<tag>`).
 4. Remove the receipt as soon as the push returns, success or failure:
 
    ```bash
@@ -56,4 +62,5 @@ before the command runs, so the receipt would not exist yet.
 - `--force`, `--tags`, deleting the tag, or pointing `refs/tags/<tag>` at another sha.
 - Creating the tag object through the host API: a new object has a new sha even
   when the message matches.
-- Leaving the receipt in place, or using it for anything but that one ref.
+- Leaving the receipt in place, or using it for anything but the release refs the
+  loop's plan names.
