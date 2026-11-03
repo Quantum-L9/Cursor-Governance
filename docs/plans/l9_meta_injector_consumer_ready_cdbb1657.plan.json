@@ -1,0 +1,574 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "l9-meta-injector — zero failures, zero warnings, installable and runnable from a consumer repository",
+  "objective": "Make Quantum-L9/l9-meta-injector green on every local and CI gate with no warnings, and prove by automated test that another repository can install it (GitHub Action, packed tarball, git dependency) and run its CLI (inventory, check) against itself, without weakening any existing contract or the fail-closed npm publication gate.",
+  "success_criteria": [
+    "SC1: `npm ci && npm run validate` exits 0 on a clean checkout even when a git-ignored stray lockfile (pnpm-lock.yaml) sits at the repo root — proof V1 and V2",
+    "SC2: ESLint reports 0 errors and 0 warnings, `tsc --noEmit` is clean, and `npm ci` prints no deprecation warning for a direct devDependency — proof V3",
+    "SC3: an installed packed tarball runs `l9-meta-injector --help` (exit 0), `inventory .` and `check . --authority <fixture>` inside a fresh temporary git repository — proof V4",
+    "SC4: `npm install git+file://<bare clone>#HEAD` succeeds in a temporary consumer and its installed bin runs `inventory .` — proof V5",
+    "SC5: CI job `consumer-proof` runs the composite Action from a checkout of a separate fixture repository and passes — proof V6",
+    "SC6: every check-run on the PR head is green, including SonarCloud Code Analysis (0 new BUG/VULNERABILITY) and Topology conformance — proof V7 and V8",
+    "SC7: `git status --porcelain --untracked-files=all` prints nothing after `npm run validate` — proof V9",
+    "SC8: `npm run check:publication` still reports BLOCKED until a distribution owner approves; no approval field is forged — proof V10"
+  ],
+  "scope": {
+    "in": [
+      "Quantum-L9/l9-meta-injector: src/, dist/ (rebuilt, same commit), tests/, scripts/, package.json, docs/decisions/ (new ADR-078, ADR-079), docs/decision_log.md, docs/package-contract.json, docs/public-api-contract.json, docs/topology-conformance.json, README.md, AGENTS.md (append-only correction), CHANGELOG.md, CURRENT_VALIDATION_REPORT.md, .github/workflows/ci.yml, .github/dependabot.yml, scripts/validation-report.js, scripts/semantics-verify.js, tools/consolidation/folder_artifact_consolidator.py",
+      "Converging the open Dependabot PRs #116 and #117 and deciding #115 in this repository",
+      "SonarCloud new-code findings on main c352dbf (1 CRITICAL BUG S2871, 1 MINOR VULNERABILITY S4036, 5 MAJOR VULNERABILITY S8707)",
+      "Scheduled Topology conformance failure on main (stale docs/topology-conformance.json against consumer main 2c2c628)"
+    ],
+    "out": [
+      "npm registry publication: docs/package-publication-decision.json requires distribution-owner approval and approved_version; CLAUDE.md forbids marking publication evidence verified without external proof",
+      "Cursor-Governance environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh:528-531 (runs pnpm on npm repos): different repository; recorded as session-debt `session-deps-pnpm-override`, separate PR",
+      "Relaxing ADR-022 relative-root containment of the CLI and Action (absolute roots stay refused)",
+      "Any change in l9-constellation-topology (the consumer); its PR #33 is separate",
+      "Manually moving the `v4` tag; release.yml owns tags",
+      "Version bump / v4.2.1 release and v4 tag movement (operator decision 2026-11-03: stop at merge-ready PR)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind workspace /home/user/l9-meta-injector: branch main == origin/main @ c352dbf, clean tree, Node v22.23.4, npm 10.9.9",
+      "pass_criteria": "single root, clean, current with origin/main",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "npm ci && npm run lint && npx tsc --noEmit -p tsconfig.json",
+      "pass_criteria": "exit 0; ESLint 295 files 0 warnings 0 errors",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "npm run validate (after removing the pnpm-installed node_modules via npm ci)",
+      "pass_criteria": "exit 0",
+      "status": "failed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "npm run -s check:api, check:authority, check:manifest, check:dist, selfpack, test:packed, check:release-candidate (each individually)",
+      "pass_criteria": "each exit 0",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "npm run check:publication",
+      "pass_criteria": "BLOCKED by design (owner approval absent)",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "gh api check-runs for c352dbf; SonarCloud api/issues/search inNewCodePeriod BUG,VULNERABILITY",
+      "pass_criteria": "all green",
+      "status": "failed"
+    },
+    {
+      "id": "P6",
+      "command_or_action": ".pre-commit-config.yaml hook catalog",
+      "pass_criteria": "none configured in this repo (CLAUDE.md: CI commands are the authority)",
+      "status": "not_applicable"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Write the consumer-proof harness FIRST and watch it fail: extend scripts/test-packed-consumer.js to (a) install the packed tarball into a temp consumer that is a fresh git repo, run the installed bin `--help`, `inventory .`, and `check . --authority <fixture authority>`; (b) `npm install git+file://<temp bare clone>#HEAD` and run `inventory .`. Expected red today: (a) --help exits 1, (b) unknown — evidence for U4.",
+      "files": [
+        "scripts/test-packed-consumer.js",
+        "fixtures/consumer/authority.yaml",
+        "tests/packed_consumer_cli.test.ts"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "scripts/test-packed-consumer.js main(): after the library-import assertions",
+      "leverage_rank": 1,
+      "shared_root_cause": "consumer use was never exercised outside this repository (test:packed only imports the library with --ignore-scripts)"
+    },
+    {
+      "id": "T2",
+      "task": "ADR-078 (operator decision 2026-11-03, U1): repository-level facts (package_managers, governance_refs, adr_refs, package.name) exclude git-ignored paths, implemented by reusing the src/omit.ts gitignore matcher over the target's root .gitignore and .git/info/exclude (candidate B). Record candidate A (git ls-files) as rejected: it adds a git subprocess dependency to src/. Record the bounded gap: nested .gitignore files are not honoured. Append to docs/decision_log.md.",
+      "files": [
+        "docs/decisions/078-repository-facts-exclude-ignored-paths.md",
+        "docs/decision_log.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file after 077-stale-publisher-lock-takeover-guard.md",
+      "leverage_rank": 2,
+      "shared_root_cause": "observation treats every file on disk as repository truth"
+    },
+    {
+      "id": "T3",
+      "task": "Implement ADR-078 in src/repository_model.ts (and the shared enumeration it uses), rebuild dist/ in the same commit, and add regression REG-WU-078-a: a git-ignored pnpm-lock.yaml at the root yields package_managers == ['npm']; REG-WU-078-b: a tracked pnpm-lock.yaml still yields pnpm. Keep REG-WU-029-RC-033-e assertions unchanged.",
+      "files": [
+        "src/repository_model.ts",
+        "src/omit.ts",
+        "dist/repository_model.js",
+        "dist/repository_model.d.ts",
+        "dist/omit.js",
+        "dist/omit.d.ts",
+        "tests/repository_fact_scope.test.ts"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T2"],
+      "operation": "Replace",
+      "anchor": "src/repository_model.ts package-manager lockfile map (line ~665) and its file enumeration caller",
+      "leverage_rank": 3,
+      "shared_root_cause": "observation treats every file on disk as repository truth"
+    },
+    {
+      "id": "T4",
+      "task": "CLI usability for consumers: commit scripts/operation-cli.js with the executable bit (git update-index --chmod=+x); add `--help`/`-h` that prints usage and exits 0; keep ADR-022 relative-root refusal but make its error name the fix (`cd <repo> && l9-meta-injector inventory .`).",
+      "files": [
+        "scripts/operation-cli.js",
+        "scripts/lib/operation-dispatch.js",
+        "tests/operation_cli_help.test.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T1"],
+      "operation": "Replace",
+      "anchor": "scripts/lib/operation-dispatch.js argument parsing (usage error at lines ~360-361) and rejectAbsolute (line ~110)",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T5",
+      "task": "ADR-079 + package scripts. Evidence (Context7 /npm/cli/v10.9.9 package-json.md 'Git URLs as Dependencies'): a git dependency is cloned, has ALL dependencies installed, its scripts run and is re-packed whenever any of build, prepare, prepack, preinstall, install, postinstall is defined; npm advises repos shipping pre-built artifacts to define none of them. So: rename script `build` to `compile` and move the `prepack` gate chain into an explicit `release:check` run by prepublishOnly, selfpack, CI smoke and release.yml; update every caller (CI workflows, Makefile, action.yml, docs, AGENTS.md/CLAUDE.md command text via append) in the same commit. check:dist parity enforcement must remain on every path it covers today except the git-install lifecycle. Update docs/package-contract.json.",
+      "files": [
+        "package.json",
+        "docs/package-contract.json",
+        "docs/decisions/079-consumer-install-paths.md",
+        "docs/decision_log.md",
+        ".github/workflows/",
+        "Makefile",
+        "README.md"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1"],
+      "operation": "Replace",
+      "anchor": "package.json scripts.prepack, scripts.build, devEngines",
+      "leverage_rank": 4,
+      "shared_root_cause": "consumer use was never exercised outside this repository"
+    },
+    {
+      "id": "T6",
+      "task": "Ship only runtime scripts: narrow package.json `files` from all of scripts/ to scripts/operation-cli.js plus the scripts/lib/ modules it requires; keep publication/release tooling (check-publication-readiness.js, check-release-candidate.js, which read docs/) out of the tarball. Update docs/public-api-contract.json if it enumerates shipped files; check:api and selfpack must stay green.",
+      "files": ["package.json", "docs/package-contract.json", "docs/public-api-contract.json"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T5"],
+      "operation": "Replace",
+      "anchor": "package.json files[]",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T7",
+      "task": "Node floor honesty (U2): add a CI matrix that runs the packed-consumer proof (runtime only, no devDependencies) on Node 18, 20 and 22. If 18/20 pass, keep engines.node >=18 and document devEngines >=22.12 as contributor-only; if not, raise engines.node to the lowest passing floor in ADR-079.",
+      "files": [".github/workflows/ci.yml", "package.json", "README.md"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T1", "T5"],
+      "operation": "Insert",
+      "anchor": ".github/workflows/ci.yml after job smoke",
+      "leverage_rank": 8
+    },
+    {
+      "id": "T8",
+      "task": "CI job `consumer-proof`: check out a separate fixture repository directory, run the composite Action via `uses: ./meta-injector` against it in modes inventory and check (with authority input), assert success and an untouched fixture for dry-run. Pin every action by SHA; no continue-on-error; no copied org workflow or L9_CORE_REF.",
+      "files": [".github/workflows/ci.yml", "fixtures/consumer/"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T4", "T5"],
+      "operation": "Insert",
+      "anchor": ".github/workflows/ci.yml new job consumer-proof",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T9",
+      "task": "Fix SonarCloud new-code findings: S2871 scripts/validation-report.js:74 (explicit compare fn, deterministic order); S4036 scripts/semantics-verify.js:43 (fixed absolute PATH via gitBinary resolution, as WU-069 already does); S8707 x5 tools/consolidation/folder_artifact_consolidator.py:97,110,114,123,141 (contain every CLI-supplied path under the declared root, reject escapes). Add a test for each behavioural change.",
+      "files": [
+        "scripts/validation-report.js",
+        "scripts/semantics-verify.js",
+        "tools/consolidation/folder_artifact_consolidator.py",
+        "tests/validation_report.test.ts"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "the cited lines",
+      "leverage_rank": 9
+    },
+    {
+      "id": "T10",
+      "task": "Refresh topology conformance evidence: run `node scripts/topology-conformance.js --update` against consumer main 2c2c628, review the diff (only revision and derived hashes may move), commit docs/topology-conformance.json.",
+      "files": ["docs/topology-conformance.json"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "docs/topology-conformance.json consumer.revision and evidence record",
+      "leverage_rank": 10
+    },
+    {
+      "id": "T11",
+      "task": "Dependency warnings: converge Dependabot #117 (eslint 9.39.5 deprecated -> 10.13.0) and #116 (typescript-eslint 8.72.1) on their own branches via l9-pr-remediation (they own package.json/package-lock.json hunks; overlap gate). Decide #115 (@types/node 26 vs engines floor): add a dependabot ignore for @types/node majors above the engines floor, then close #115 with the reason.",
+      "files": [".github/dependabot.yml"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T7"],
+      "operation": "Insert",
+      "anchor": ".github/dependabot.yml npm ecosystem ignore[]",
+      "leverage_rank": 11
+    },
+    {
+      "id": "T12",
+      "task": "Docs truth: README install section (Action @v4 or @<sha>, packed tarball, git dependency; `cd <repo> && npx l9-meta-injector inventory .`), fix Action examples (add authority input; inventory/check instead of deprecated pipeline alias), complete the inputs table (authority, out, node-version; namespace applies to all modes; llm fails closed), append an AGENTS.md correction that distribution-owner approval cannot be waived.",
+      "files": ["README.md", "AGENTS.md"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T4", "T5", "T7"],
+      "operation": "Replace",
+      "anchor": "README.md Action usage sections (lines ~49-93); AGENTS.md tail (append-only)",
+      "leverage_rank": 12
+    },
+    {
+      "id": "T13",
+      "task": "Close-out evidence: `npm run manifest:update`, regenerate CURRENT_VALIDATION_REPORT.md at the final head (currently stale at c24681b), CHANGELOG entry, then the full gate.",
+      "files": ["CURRENT_VALIDATION_REPORT.md", "CHANGELOG.md", "MANIFEST.json"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T3", "T6", "T8", "T9", "T10", "T12"],
+      "operation": "Replace",
+      "anchor": "whole-file regeneration",
+      "leverage_rank": 13
+    }
+  ],
+  "critical_path": ["T1", "T5", "T4", "T8", "T13"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "consumer-proof harness exists and fails for the documented reasons",
+      "unlocks": "T4, T5, T7, T8 have a falsifying test"
+    },
+    {
+      "id": "M2",
+      "outcome": "repository facts ignore git-ignored files; local validate green with a stray ignored lockfile",
+      "unlocks": "SC1"
+    },
+    {
+      "id": "M3",
+      "outcome": "tarball and git installs run the CLI in a foreign repo; Action runs from a foreign checkout in CI",
+      "unlocks": "SC3, SC4, SC5"
+    },
+    {
+      "id": "M4",
+      "outcome": "SonarCloud, conformance, and dependency warnings cleared",
+      "unlocks": "SC2, SC6"
+    },
+    {
+      "id": "M5",
+      "outcome": "evidence regenerated; PR green and merge-ready",
+      "unlocks": "merge under operator authorization; release stays a separate operator decision"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "harness output showing --help exit 1 and the git-install result before any fix",
+      "no_go_action": "stop; a harness that is green before the fix cannot discriminate (KP-011 tautological verification)"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "REG-WU-078-a fails before T3 and passes after; full vitest 180 files 0 failed",
+      "no_go_action": "revert T3; reopen ADR-078 candidate selection"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "V4, V5, V6 green on the PR head",
+      "no_go_action": "do not request merge; consumers stay on @<sha>"
+    },
+    {
+      "id": "C4",
+      "after": "M5",
+      "evidence_required": "V1-V10 recorded in CURRENT_VALIDATION_REPORT.md bound to the final head",
+      "no_go_action": "do not request merge"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "README.md",
+      "action": "update",
+      "todo_ids": ["T12"]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": ["T12"]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "verify-before-push commands and CI topology unchanged except the added consumer-proof job, which AGENTS.md/README document"
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "no invariant is relaxed; ADR-078/079 add constraints recorded in docs/decisions"
+    },
+    {
+      "surface": "docs/architecture.md + MANIFEST.json",
+      "action": "update",
+      "todo_ids": ["T13"]
+    },
+    {
+      "surface": "docs/decisions + docs/decision_log.md",
+      "action": "update",
+      "todo_ids": ["T2", "T5"]
+    },
+    {
+      "surface": "CHANGELOG.md",
+      "action": "update",
+      "todo_ids": ["T13"]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Would the plan still be green if a consumer has no git binary (tarball install into a non-git directory)?",
+      "Can T3 hide a real lockfile that a consumer tracks but also lists in .gitignore by mistake (tracked-but-ignored)?",
+      "Does moving gates out of prepack let a broken dist/ reach a git consumer?",
+      "Could the harness pass because it runs inside this repository's own tree rather than a foreign one?",
+      "Is SonarCloud red caused by tools/consolidation, which CLAUDE.md calls historical reference, so deleting it would be the real fix?"
+    ],
+    "assumed_false_ifs": [
+      "npm's git fetcher does not run prepack for packages with committed dist/ (U4) — if false, T5 changes shape",
+      "dist/ runs on Node 18 — if false, engines.node must rise (T7)",
+      "the stale conformance record is consumer drift, not a producer regression — if the --update diff touches anything but revision-derived fields, stop and investigate"
+    ],
+    "blast_radius": "Every consumer of @v4 and of the TransportPacket repository facts (l9-constellation-topology ingests them): a wrong T3 changes package_managers/governance_refs facts across the constellation; a wrong T5/T6 ships a tarball missing runtime scripts.",
+    "rollback": "All changes land in one PR on a branch; revert the merge commit. No version bump and no tag movement in this plan (operator decision)."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T5",
+      "T4",
+      "T8",
+      "T6",
+      "T7",
+      "T9",
+      "T10",
+      "T11",
+      "T12",
+      "T13"
+    ],
+    "shared_causes": [
+      "consumer use was never exercised outside this repository (T1 feeds T4, T5, T6, T7, T8)",
+      "observation treats every file on disk as repository truth (T2, T3)"
+    ],
+    "deletions_or_consolidations": [
+      "drop publication/release tooling from the shipped tarball (T6)",
+      "retire the README's deprecated `pipeline` examples in favour of inventory/check (T12)"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "T3 changes constellation-visible repository facts",
+      "mitigation": "ADR-078 first; REG-WU-078-a/b pin both directions; topology conformance (V8) re-proves the consumer accepts the packets"
+    },
+    {
+      "risk": "T5 lifecycle change weakens dist/ parity enforcement",
+      "mitigation": "check:dist stays in npm run validate, CI smoke, prepublishOnly and release.yml; only the git-install lifecycle path stops invoking it"
+    },
+    {
+      "risk": "Dependabot eslint 10 major breaks eslint.config.js",
+      "mitigation": "converged on its own PR (#117) with npm run lint as the gate, not folded into this branch"
+    },
+    {
+      "risk": "the local governance provisioner keeps installing with pnpm and re-breaks the environment",
+      "mitigation": "run `npm ci` before every local gate; governance fix tracked separately (session-debt session-deps-pnpm-override)"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Exclude git-ignored files from repository-level facts (ADR-078), and via candidate A (git ls-files) or B (reuse omit.ts over .gitignore + .git/info/exclude)?",
+      "decision_effect": "RESOLVED 2026-11-03 by operator: exclude via .gitignore (candidate B); nested .gitignore is a documented bounded gap",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does dist/ run on Node 18 and 20 so engines.node >=18 is honest?",
+      "decision_effect": "T7 keeps or raises the floor; T11 @types/node ignore bound",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Approve releasing v4.2.1 (advances the v4 tag consumers pin)?",
+      "decision_effect": "RESOLVED 2026-11-03 by operator: no version bump in this PR; stop at merge-ready; README documents @<sha> pinning until a separate release decision",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U4",
+      "question": "Which lifecycle scripts does npm run for a git dependency that has committed dist/ and a prepack script?",
+      "decision_effect": "RESOLVED 2026-11-03 via Context7 /npm/cli/v10.9.9: build/prepare/prepack/preinstall/install/postinstall each trigger the full git-dependency build flow; T5 removes `build` and `prepack` script names",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U5",
+      "question": "npm registry publication approval",
+      "decision_effect": "none in this plan; check:publication stays BLOCKED",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "npm ci && npm run lint && npm run validate",
+      "pass_criteria": "exit 0; vitest 180 files, 0 failed, 0 worker errors",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "touch pnpm-lock.yaml (git-ignored) && npx vitest run tests/repository_fact_scope.test.ts",
+      "pass_criteria": "all pass including REG-WU-078-a and REG-WU-029-RC-033-e",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "npx eslint . --format json | node -e \"...sum warningCount+errorCount\" && npx tsc --noEmit -p tsconfig.json && npm ci 2>&1 | grep -c 'npm warn deprecated'",
+      "pass_criteria": "0, clean, 0",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "npm run test:packed",
+      "pass_criteria": "packed-consumer: OK including bin --help, inventory ., check . --authority in a temp git repo",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "node scripts/test-packed-consumer.js --git-install",
+      "pass_criteria": "git+file install succeeds and installed bin runs inventory .",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": "CI job consumer-proof on the PR head",
+      "pass_criteria": "success",
+      "status": "pending"
+    },
+    {
+      "id": "V7",
+      "command": "gh api repos/Quantum-L9/l9-meta-injector/commits/<head>/check-runs",
+      "pass_criteria": "every check-run conclusion success, SonarCloud Code Analysis included",
+      "status": "pending"
+    },
+    {
+      "id": "V8",
+      "command": "node scripts/topology-conformance.js",
+      "pass_criteria": "exit 0 against consumer main",
+      "status": "pending"
+    },
+    {
+      "id": "V9",
+      "command": "git status --porcelain --untracked-files=all",
+      "pass_criteria": "empty output",
+      "status": "pending"
+    },
+    {
+      "id": "V10",
+      "command": "npm run check:publication",
+      "pass_criteria": "BLOCKED (fail-closed preserved)",
+      "status": "pending"
+    },
+    {
+      "id": "V11",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "N/A: l9-meta-injector configures no pre-commit framework; CI commands (V1, V7) are the authority per CLAUDE.md",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U2"],
+    "next_skill": "l9-pr-remediation",
+    "stop_reason": "plan validated; U1/U3 operator-bound, U4 resolved from npm docs; U2 (Node 18/20 runtime floor) is probed by the T7 CI matrix — no Node 18/20 runtime in this container"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "src/",
+      "dist/",
+      "tests/",
+      "fixtures/consumer/",
+      "scripts/test-packed-consumer.js",
+      "scripts/operation-cli.js",
+      "scripts/lib/operation-dispatch.js",
+      "scripts/validation-report.js",
+      "scripts/semantics-verify.js",
+      "tools/consolidation/folder_artifact_consolidator.py",
+      "package.json",
+      "package-lock.json",
+      "docs/decisions/078-*.md",
+      "docs/decisions/079-*.md",
+      "docs/decision_log.md",
+      "docs/package-contract.json",
+      "docs/public-api-contract.json",
+      "docs/topology-conformance.json",
+      "docs/architecture.md",
+      "MANIFEST.json",
+      "README.md",
+      "AGENTS.md (append-only)",
+      "CHANGELOG.md",
+      "CURRENT_VALIDATION_REPORT.md",
+      ".github/workflows/ci.yml",
+      ".github/dependabot.yml"
+    ],
+    "must_not_modify": [
+      "docs/package-publication-decision.json approval fields",
+      "accepted ADRs 001-077 (supersede with links only)",
+      ".github/workflows/release.yml tag logic",
+      "Quantum-L9/.github semantics (cite via .l9/meta-authority.yaml, never copy)"
+    ],
+    "preserved_contracts": [
+      "ADR-022 contained CLI/Action dispatch: relative roots only",
+      "TypeScript pipeline is the sole active engine; tools/consolidation stays reference-only",
+      "dist/ committed and in parity with src/ in the same commit",
+      "check:publication fail-closed",
+      "no copied org workflow, no L9_CORE_REF/L9_SDK_REF pin, no continue-on-error, actions pinned by SHA",
+      "TransportPacket is the only wire format for emitted packets"
+    ],
+    "validation_commands": [
+      "npm ci",
+      "npm run lint",
+      "npm run validate",
+      "npm run check:publication",
+      "git status --porcelain --untracked-files=all"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "harness red first",
+    "ADR before contract changes",
+    "dist rebuilt with src",
+    "manifest regenerated",
+    "publication gate untouched"
+  ],
+  "estimate": "1 PR, 13 todos; ends merge-ready, no release"
+}
