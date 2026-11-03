@@ -23,8 +23,9 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -125,3 +126,37 @@ def read_org_file(owner: str, path: str, *, gh: GhApi = gh_api, git: GitRead = g
             msg = f"{rest_error}; git transport also failed: {git_error}"
             raise OrgFileError(msg) from git_error
         return OrgFile(sha=sha, text=text, transport="git")
+
+
+Runner = Callable[[list[str]], int]
+
+
+def _run(argv: list[str]) -> int:
+    try:
+        return subprocess.run(argv, capture_output=True, check=False, timeout=60).returncode
+    except (OSError, subprocess.TimeoutExpired):
+        return 1
+
+
+def rest_probe(owner: str, path: str, run: Runner = _run) -> bool:
+    """Whether the REST transport alone can read ``path`` from ``<owner>/.github``.
+
+    A capability measurement, not a read: it never falls back to git, because its
+    caller (``ops/scripts/lib/gh_auth_probe.sh`` ``org_template_read``) reports
+    one verdict per transport (``docs/DEGRADED_MODE_CONTRACT.md``). Callers that
+    need the file's contents use ``read_org_file``.
+    """
+    return run(["gh", "api", f"repos/{owner}/.github/contents/{path}"]) == 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """``probe-rest OWNER PATH``: exit 0 when REST reads the file, 1 when refused."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if len(args) != 3 or args[0] != "probe-rest":
+        print("usage: org_dotgithub.py probe-rest OWNER PATH", file=sys.stderr)
+        return 2
+    return 0 if rest_probe(args[1], args[2]) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -64,13 +64,20 @@ _gh_capability() { # $1=name, rest=command
   esac
 }
 
+# Builtins only: this file is sourced on PATHs that may hold no coreutils.
+_gh_auth_probe_dir="${BASH_SOURCE[0]%/*}"
+[ "$_gh_auth_probe_dir" = "${BASH_SOURCE[0]}" ] && _gh_auth_probe_dir=.
+_GH_AUTH_PROBE_ORG_DOTGITHUB="$(cd "$_gh_auth_probe_dir/.." && pwd)/org_dotgithub.py"
+
 gh_capability_probe() { # $1=owner of <owner>/.github
   local owner="${1:-}" token code
   if command -v gh >/dev/null 2>&1; then
     _gh_capability rest_user gh api user
     if [ -n "$owner" ]; then
+      # The REST call itself lives in org_dotgithub.py, the one module allowed
+      # to address <owner>/.github; the verdict stays REST-only.
       _gh_capability org_template_read \
-        gh api "repos/${owner}/.github/contents/.github/pull_request_template.md"
+        python3 "$_GH_AUTH_PROBE_ORG_DOTGITHUB" probe-rest "$owner" .github/pull_request_template.md
     else
       echo "org_template_read=UNKNOWN"
     fi

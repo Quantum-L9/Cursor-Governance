@@ -104,6 +104,30 @@ class ReadOrgFileTests(unittest.TestCase):
         self.assertEqual((sha, text), (head, "pinned\n"))
 
 
+class RestProbeTests(unittest.TestCase):
+    """The capability probe gh_auth_probe.sh reports as org_template_read."""
+
+    def test_probe_is_one_rest_call_with_no_git_fallback(self) -> None:
+        calls: list[list[str]] = []
+
+        def refused(argv: list[str]) -> int:
+            calls.append(argv)
+            return 1
+
+        self.assertFalse(org_dotgithub.rest_probe("Quantum-L9", PATH, run=refused))
+        self.assertEqual(calls, [["gh", "api", f"repos/Quantum-L9/.github/contents/{PATH}"]])
+
+    def test_probe_ok_when_the_rest_call_succeeds(self) -> None:
+        self.assertTrue(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 0))
+
+    def test_cli_exit_codes(self) -> None:
+        with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=True):
+            self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), 0)
+        with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=False):
+            self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), 1)
+        self.assertEqual(org_dotgithub.main(["read", "Quantum-L9"]), 2)
+
+
 class SingleReaderTests(unittest.TestCase):
     """Every read of <owner>/.github goes through org_dotgithub, so none can lose the git route."""
 
