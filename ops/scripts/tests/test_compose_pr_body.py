@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 from compose_pr_body import (  # noqa: E402
-    COMPLETION_NEEDS_AUTHOR,
+    COMPLETION_DERIVED,
     COMPLETION_NOT_APPLICABLE,
     COMPLETION_UNVERIFIED,
     COMPLETION_VERIFIED,
@@ -25,6 +25,7 @@ from compose_pr_body import (  # noqa: E402
     EDIT_MODE_STALE_PREFIX,
     ERROR_FENCE,
     GATE_UNVERIFIED,
+    LEGACY_THIN_PROBLEM_NOTE,
     NO_OWN_COMMIT,
     NO_SUBJECT,
     PROTECTED_REMOTE_NOTICE_PREFIX,
@@ -34,12 +35,14 @@ from compose_pr_body import (  # noqa: E402
     REGION_FILES,
     REGION_INTENT,
     REGION_PROTECTED_PATHS,
+    REVIEWER_MEASURED,
     REVIEWER_PLACEHOLDER,
     REVIEWER_UNRESOLVED,
     SCHEMA,
     SEMANTIC_FIELD_UNRESOLVED,
     SEMANTIC_NA,
     THIN_PROBLEM_NOTE,
+    TYPE_INFERRED,
     TYPE_UNRESOLVED,
     UNMEASURED,
     GitRangeError,
@@ -51,7 +54,9 @@ from compose_pr_body import (  # noqa: E402
     diff_rows,
     measure_additive_only,
     parse_row,
+    permissions_enumerated,
     range_title,
+    read_derived_stamp,
     refresh_body,
     region_content,
     render_evidence,
@@ -185,11 +190,19 @@ class ComposePrBodyTests(unittest.TestCase):
             "`ops/scripts/open_pr_after_gate.sh` — fix: fill PR body from receipts", result.body
         )
         self.assertIn("- N/A — no additive_only root files", result.body)
-        # The handoff says what the body says: the subject-only Problem and
-        # the Reviewer focus still need the author; nothing else is "done".
-        self.assertEqual(
-            sorted(entry.split(":")[0] for entry in result.needs_completion),
-            ["problem", "reviewer_focus"],
+        # Nothing is left for an author: the subject-only Problem is composed
+        # from the diff and the Reviewer focus is ranked from it, and the
+        # handoff says so field by field.
+        self.assertEqual(result.needs_completion, [])
+        self.assertEqual(result.fields["problem"]["status"], COMPLETION_DERIVED)
+        self.assertEqual(result.fields["reviewer_focus"]["status"], COMPLETION_DERIVED)
+        self.assertIn(THIN_PROBLEM_NOTE, _section(result.body, "Problem"))
+        self.assertIn(
+            "Measured: 1 path(s) — 1 modified — in `ops/`", _section(result.body, "Problem")
+        )
+        self.assertIn(
+            "- Changed paths: `ops/scripts/open_pr_after_gate.sh`",
+            _section(result.body, "Reviewer focus"),
         )
         self.assertIn("commits", result.mechanical_filled)
 
@@ -212,7 +225,10 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn("append-only — none.", result.body)
         self.assertEqual(result.fields["protected_root"]["status"], COMPLETION_VERIFIED)
         self.assertIn("AGENTS.md; edit mode Append-only", result.fields["protected_root"]["detail"])
-        self.assertTrue(any(e.startswith("reviewer_focus:") for e in result.needs_completion))
+        # The append-only root file leads the measured Reviewer focus.
+        focus = _section(result.body, "Reviewer focus")
+        self.assertIn("- Append-only root files: `AGENTS.md`", focus)
+        self.assertEqual(result.needs_completion, [])
         self.assertIn("protected-root", result.mechanical_filled)
 
     def test_template_without_closes_placeholder_writes_measured_closes_only(self) -> None:
@@ -628,13 +644,13 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertEqual(doc["schema"], SCHEMA)
         self.assertEqual(doc["pr_number"], 12)
         self.assertEqual(doc["commit_count"], 1)
-        # "a" is no conventional-commit type, has no body paragraph, and the
-        # template asks for Reviewer focus: three fields only the author can
-        # complete, and the handoff used to report none.
-        self.assertEqual(
-            sorted(e.split(":")[0] for e in doc["needs_completion"]),
-            ["problem", "reviewer_focus", "type_of_change"],
-        )
+        # "a" is no conventional-commit type and has no body paragraph, and the
+        # template asks for Reviewer focus: each is composed from the diff, so
+        # the handoff lists nothing for an author and names how each was derived.
+        self.assertEqual(doc["needs_completion"], [])
+        for name in ("problem", "reviewer_focus", "type_of_change"):
+            self.assertEqual(doc["fields"][name]["status"], COMPLETION_DERIVED, name)
+        self.assertIn("Feature / enhancement", doc["fields"]["type_of_change"]["detail"])
         self.assertEqual(doc["fields"], result.fields)
 
 
@@ -723,7 +739,14 @@ class OrgPrGateContractTests(unittest.TestCase):
         body = compose_pr_body(self._facts(), TEMPLATE).body
         gates = _section(body, "Gates")
         regression = "Regression test added that fails without this fix"
-        self.assertIn(f"{regression} — {GATE_UNVERIFIED}", gates)
+        # Measured, never "not applicable": the test files this diff changes are
+        # named, and failing-without-the-fix is said to be unmeasured.
+        self.assertIn(
+            f"- [ ] {regression} — measured: 1 test file(s) changed: `tests/test_new.py`; "
+            "failing without the fix is not measured",
+            gates,
+        )
+        self.assertNotIn(GATE_UNVERIFIED, gates)
         self.assertNotIn("not this change", gates)
         self.assertNotIn(UNMEASURED, gates)
 
@@ -899,9 +922,11 @@ class RefreshTests(unittest.TestCase):
         body = body.replace(
             "<!-- EVIDENCE:END -->", "<!-- EVIDENCE:END -->\n\nManual: ran the soak for 2h."
         )
+        # A reviewer adds their own focus beside the composed region; refresh
+        # rewrites only the region and must keep their words.
         return body.replace(
-            REVIEWER_UNRESOLVED,
-            "Look hardest at the retry loop.",
+            "<!-- REVIEWER-FOCUS:END -->",
+            "<!-- REVIEWER-FOCUS:END -->\n\nLook hardest at the retry loop.",
         )
 
     def test_refresh_moves_paths_and_keeps_reviewer_text(self) -> None:
@@ -918,6 +943,8 @@ class RefreshTests(unittest.TestCase):
         ):
             self.assertIn(kept, body)
         self.assertNotIn("`ops/b.py`", body)
+        # The composed focus follows the push: it names the new range, not the old.
+        self.assertIn("`ops/c.py`", region_content(body, "REVIEWER-FOCUS") or "")
         self.assertIn("- `ops/c.py` — ", body)
         self.assertIn("- `old/x.py -> new/x.py` — ", body)
         self.assertEqual(check_inventory(body, [parse_row(r) for r in self.LATER]), ([], []))
@@ -1474,10 +1501,10 @@ class CanonicalCompletenessTests(unittest.TestCase):
         body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
         rows = [parse_row(line) for line in self.NAME_STATUS]
         self.assertEqual(check_inventory(body, rows), ([], []))
-        # A path no own commit touched is said to be unresolved, not explained
-        # with some other commit's subject.
-        self.assertIn("- `README.md` — _unresolved — no commit", body)
-        self.assertIn("commit context, not a verified per-file rationale", body)
+        # A path no own commit touched says so, not explained with some other
+        # commit's subject.
+        self.assertIn(f"- `README.md` — {NO_OWN_COMMIT}", body)
+        self.assertIn("is the subject of the newest commit in this branch that touched it", body)
 
     def test_composed_body_passes_the_org_gates_and_is_deterministic(self) -> None:
         first = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
@@ -1514,11 +1541,23 @@ class CanonicalCompletenessTests(unittest.TestCase):
         self.assertRegex(body, r"(?m)^- \[ \] Low — additive, reversible, no data or contract")
         self.assertEqual(_section(body, "Summary").strip(), "chore: rework the tool (+1 more)")
 
-    def test_type_of_change_is_evidence_or_explicitly_unresolved(self) -> None:
+    def test_type_of_change_is_always_measured(self) -> None:
         body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
         section = _section(body, "Type of Change")
-        self.assertNotIn("[x]", section)
-        self.assertIn("unresolved — no conventional-commit type", section)
+        # chore: and test: are conventional types now: CI / governance, Refactor.
+        self.assertIn("- [x] CI / governance change\n", section + "\n")
+        self.assertIn("- [x] Refactor (no behavior change)\n", section + "\n")
+        self.assertNotIn(TYPE_UNRESOLVED, section)
+        # No conventional type at all: the paths decide, and the box says so.
+        bare = compose_pr_body(self._facts(commits=["rework the tool"]), CANONICAL_TEMPLATE).body
+        section = _section(bare, "Type of Change")
+        self.assertIn(f"- [x] Feature / enhancement — {TYPE_INFERRED}", section)
+        self.assertNotIn(TYPE_UNRESOLVED, section)
+        docs = compose_pr_body(
+            self._facts(commits=["update guide"], changed_files=["M\tdocs/guide.md"]),
+            CANONICAL_TEMPLATE,
+        ).body
+        self.assertIn("- [x] Documentation", _section(docs, "Type of Change"))
         fixed = compose_pr_body(
             self._facts(commits=["fix(io)!: stop dropping rows"]), CANONICAL_TEMPLATE
         ).body
@@ -1539,16 +1578,35 @@ class CanonicalCompletenessTests(unittest.TestCase):
         section = _section(applicable, "Semantic change")
         self.assertIn("- [ ] N/A", section)
         self.assertIn("not applicable: this diff changes `semantics/registry.yaml`", section)
-        self.assertIn("Foundation / release candidate affected: _unresolved", section)
+        # Measured, not left for an author: the change kind and the coordinates.
+        self.assertIn(
+            "Foundation / release candidate affected: measured: no release-record directory "
+            "in this diff; the change is to canonical semantic source",
+            section,
+        )
+        self.assertIn("Prior exact coordinate or source identity", section)
+        self.assertIn("measured at the merge base: `semantics/registry.yaml` blob", section)
+        self.assertIn("measured at this head: `semantics/registry.yaml` blob", section)
+        self.assertNotIn(SEMANTIC_FIELD_UNRESOLVED, section)
         self.assertNotIn("[x]", section)
 
-    def test_human_judgment_fields_stay_explicitly_unresolved(self) -> None:
+    def test_judgment_fields_are_composed_from_measurements(self) -> None:
         body = compose_pr_body(self._facts(), CANONICAL_TEMPLATE).body
-        self.assertIn(REVIEWER_UNRESOLVED, _section(body, "Reviewer focus"))
+        focus = _section(body, "Reviewer focus")
+        self.assertNotIn(REVIEWER_UNRESOLVED, focus)
+        self.assertIn(REVIEWER_MEASURED, focus)
+        # Ranked from the diff: the deleted and renamed/copied paths are named.
+        self.assertIn("- Deleted or renamed: `ops/dead.py`", focus)
+        self.assertIn("`old/name.py -> new/name.py`", focus)
         risk = _section(body, "Risk")
-        self.assertIn("not an assessment", risk)
-        self.assertIn("Rollback: revert this PR (composer default; not verified", risk)
-        self.assertIn("Blast radius: 5 changed files", risk)
+        self.assertIn("_Risk tick measured from the diff:", risk)
+        self.assertNotIn("change it if it is wrong", risk)
+        # Rollback names what a revert restores, measured from the rows.
+        self.assertIn(
+            "Rollback: revert this PR; the revert restores 1 deleted path(s): `ops/dead.py`", risk
+        )
+        self.assertIn("measured: no migration path in this diff", risk)
+        self.assertIn("Blast radius: 5 changed files (Files touched) in ", risk)
 
     def test_duplicate_region_template_is_rejected(self) -> None:
         doubled = (
@@ -1760,16 +1818,18 @@ class SemanticClassificationTests(unittest.TestCase):
                 "release-work/product-release-binding.yaml",
             ],
         )
-        # What the diff establishes is stated; what it cannot is unresolved,
-        # never a fabricated coordinate, revalidation or admission.
+        # Every field carries a measurement — the change kinds and the blob
+        # coordinates at both ends — never a fabricated revalidation or admission.
         self.assertIn(
-            f"Foundation / release candidate affected: {SEMANTIC_FIELD_UNRESOLVED}", section
+            "Foundation / release candidate affected: measured: no release-record directory",
+            section,
         )
         self.assertIn("Prior exact coordinate or source identity", section)
-        self.assertEqual(section.count(SEMANTIC_FIELD_UNRESOLVED), 7)
+        self.assertIn("measured at the merge base: `product-topology.yaml` blob", section)
+        self.assertNotIn(SEMANTIC_FIELD_UNRESOLVED, section)
         self.assertNotIn(UNMEASURED, section)
-        self.assertEqual(result.fields["semantic_change"]["status"], COMPLETION_NEEDS_AUTHOR)
-        self.assertTrue(any(e.startswith("semantic_change:") for e in result.needs_completion))
+        self.assertEqual(result.fields["semantic_change"]["status"], COMPLETION_DERIVED)
+        self.assertEqual(result.needs_completion, [])
         # The composed body still passes the org gate: the classification is a
         # reason on the N/A box, not a bare unchecked line.
         self.assertEqual(_run_org_validator("governance-pr.yml", result.body)["failures"], [])
@@ -1819,7 +1879,7 @@ class SemanticClassificationTests(unittest.TestCase):
         unrelated = self._semantic(["R100\told/name.py\tnew/name.py"]).strip()
         self.assertEqual(unrelated, SEMANTIC_NA)
 
-    def test_foundation_version_is_measured_and_the_rest_stays_unresolved(self) -> None:
+    def test_foundation_version_and_every_field_are_measured(self) -> None:
         section = self._semantic(
             [
                 "M\tdocs/semantic-foundation/v3.21.0/RELEASE_VALIDATION.md",
@@ -1829,17 +1889,21 @@ class SemanticClassificationTests(unittest.TestCase):
         )
         self.assertIn(
             "Foundation / release candidate affected: measured in this diff: "
-            "`docs/semantic-foundation/v3.21.0/`, `docs/semantic-foundation/v3.22.0/`; "
-            f"release candidate {SEMANTIC_FIELD_UNRESOLVED}",
+            "`docs/semantic-foundation/v3.21.0/`, `docs/semantic-foundation/v3.22.0/`",
             section,
         )
+        self.assertIn("New exact coordinate (when applicable): measured at this head:", section)
         self.assertIn(
-            f"New exact coordinate (when applicable): {SEMANTIC_FIELD_UNRESOLVED}", section
+            "measured: release-record files in this diff: "
+            "`docs/semantic-foundation/v3.21.0/RELEASE_VALIDATION.md`",
+            section,
         )
+        # Claims stay unticked, each with what was measured; none is left blank.
         for claim in ("revalidated", "result pasted", "updated when canonical", "checked ("):
             line = next(ln for ln in section.splitlines() if claim in ln)
             self.assertTrue(line.startswith("- [ ] "), line)
-            self.assertIn(SEMANTIC_FIELD_UNRESOLVED, line)
+            self.assertIn(" — measured: ", line)
+        self.assertNotIn(SEMANTIC_FIELD_UNRESOLVED, section)
 
     def test_stacked_pr_classifies_its_own_range_only(self) -> None:
         """The parent of a stack touched the ProductTopology; the child did not.
@@ -2088,8 +2152,9 @@ class ProtectedRootRemoteRefreshTests(unittest.TestCase):
 
 
 class CompletionHandoffTests(unittest.TestCase):
-    """F4: the handoff names every field only the author can complete, and
-    reports the rest as verified, not applicable, or unverified."""
+    """Every field is composed: the handoff reports each as verified, derived
+    (composed from measurements), not applicable or unverified, and never as
+    left for an author — ``needs_completion`` is always empty."""
 
     COMPLETE_TEMPLATE = TEMPLATE.replace(
         "## Reviewer focus\n\n" + REVIEWER_PLACEHOLDER + "\n\n", ""
@@ -2114,45 +2179,58 @@ class CompletionHandoffTests(unittest.TestCase):
         self.assertEqual(result.fields["type_of_change"]["status"], COMPLETION_VERIFIED)
         self.assertIn("Bug fix", result.fields["type_of_change"]["detail"])
         self.assertEqual(result.fields["protected_root"]["status"], COMPLETION_NOT_APPLICABLE)
-        # Unverified is reported, never promoted to done.
-        for name in ("risk", "gate_receipt", "l4_receipt", "security_gates"):
+        # Unverified is reported, never promoted to done; the risk tick is
+        # derived from the diff, not verified.
+        self.assertEqual(result.fields["risk"]["status"], COMPLETION_DERIVED)
+        for name in ("gate_receipt", "l4_receipt", "security_gates"):
             self.assertEqual(result.fields[name]["status"], COMPLETION_UNVERIFIED, name)
         self.assertNotIn("semantic_change", result.fields)  # the older template has no section
 
-    def test_every_applicable_unresolved_field_is_listed(self) -> None:
+    def test_every_judgment_field_is_composed_not_left(self) -> None:
         cases = {
-            "reviewer_focus": (self._complete_facts(), TEMPLATE, REVIEWER_UNRESOLVED),
+            "reviewer_focus": (
+                self._complete_facts(),
+                TEMPLATE,
+                REVIEWER_MEASURED,
+                REVIEWER_UNRESOLVED,
+            ),
             "type_of_change": (
                 self._complete_facts(commits=["stop dropping rows"]),
                 self.COMPLETE_TEMPLATE,
+                TYPE_INFERRED,
                 TYPE_UNRESOLVED,
             ),
             "problem": (
                 self._complete_facts(commit_bodies=[""]),
                 self.COMPLETE_TEMPLATE,
                 THIN_PROBLEM_NOTE,
+                LEGACY_THIN_PROBLEM_NOTE,
             ),
             "semantic_change": (
                 self._complete_facts(changed_files=["M\tproduct-topology.yaml"]),
                 CANONICAL_TEMPLATE,
+                "measured at this head: `product-topology.yaml` blob",
                 SEMANTIC_FIELD_UNRESOLVED,
             ),
         }
-        for name, (facts, template, marker) in cases.items():
+        for name, (facts, template, composed, retired) in cases.items():
             with self.subTest(field=name):
                 result = compose_pr_body(facts, template)
-                self.assertIn(marker, result.body)
-                self.assertEqual(result.fields[name]["status"], COMPLETION_NEEDS_AUTHOR)
-                self.assertTrue(any(e.startswith(f"{name}:") for e in result.needs_completion))
+                self.assertIn(composed, result.body)
+                self.assertNotIn(retired, result.body)
+                self.assertEqual(result.fields[name]["status"], COMPLETION_DERIVED)
+                self.assertEqual(result.needs_completion, [])
 
-    def test_empty_own_range_leaves_problem_to_the_author(self) -> None:
-        """PR738-F3: with no own commit there is no subject to verify, so the
-        handoff must not call Problem verified while the body says so."""
+    def test_empty_own_range_composes_problem_from_the_diff(self) -> None:
+        """PR738-F3: with no own commit there is no subject to verify; the
+        Problem is composed from the measured diff and reported as derived."""
         empty = self._complete_facts(commits=[], commit_bodies=[], path_subjects={})
         result = compose_pr_body(empty, CANONICAL_TEMPLATE)
-        self.assertIn(NO_SUBJECT, _section(result.body, "Problem"))
-        self.assertEqual(result.fields["problem"]["status"], COMPLETION_NEEDS_AUTHOR)
-        self.assertTrue(any(e.startswith("problem:") for e in result.needs_completion))
+        problem = _section(result.body, "Problem")
+        self.assertIn(NO_SUBJECT, problem)
+        self.assertIn("Measured: 1 path(s) — 1 modified — in `ops/`", problem)
+        self.assertEqual(result.fields["problem"]["status"], COMPLETION_DERIVED)
+        self.assertEqual(result.needs_completion, [])
 
     def test_verified_evidence_is_only_a_bound_receipt(self) -> None:
         bound = self._complete_facts(
@@ -2192,19 +2270,18 @@ class CompletionHandoffTests(unittest.TestCase):
             doc = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(doc["schema"], SCHEMA)
         self.assertEqual(doc["needs_completion"], result.needs_completion)
-        self.assertEqual(
-            sorted(e.split(":")[0] for e in doc["needs_completion"]),
-            ["problem", "reviewer_focus", "semantic_change", "type_of_change"],
-        )
+        self.assertEqual(doc["needs_completion"], [])
         markers = {
             "problem": THIN_PROBLEM_NOTE,
-            "reviewer_focus": REVIEWER_UNRESOLVED,
-            "semantic_change": SEMANTIC_FIELD_UNRESOLVED,
-            "type_of_change": TYPE_UNRESOLVED,
+            "reviewer_focus": REVIEWER_MEASURED,
+            "semantic_change": "measured at the merge base:",
+            "type_of_change": TYPE_INFERRED,
         }
         for name, marker in markers.items():
-            self.assertEqual(doc["fields"][name]["status"], COMPLETION_NEEDS_AUTHOR)
+            self.assertEqual(doc["fields"][name]["status"], COMPLETION_DERIVED)
             self.assertIn(marker, result.body)
+        for retired in (REVIEWER_UNRESOLVED, SEMANTIC_FIELD_UNRESOLVED, TYPE_UNRESOLVED):
+            self.assertNotIn(retired, result.body)
         self.assertTrue(doc["thin_problem"])
         self.assertNotIn(
             COMPLETION_VERIFIED,
@@ -2272,30 +2349,44 @@ class AuthorIntentTests(unittest.TestCase):
         facts = _facts(["M\tops/a.py"], head=self.HEAD, intent=intent)
         self.assertEqual(range_title(facts), "T")
         result = compose_pr_body(facts, CANONICAL_TEMPLATE)
-        self.assertIn(REVIEWER_UNRESOLVED, _section(result.body, "Reviewer focus"))
+        # No intent Reviewer focus: the composer's measured floor, never a blank.
+        self.assertIn(REVIEWER_MEASURED, _section(result.body, "Reviewer focus"))
+        self.assertEqual(result.fields["reviewer_focus"]["status"], COMPLETION_DERIVED)
         self.assertIn("Why the work started.", _section(result.body, "Problem"))
 
-    def test_refresh_replaces_only_the_composers_unresolved_markers(self) -> None:
+    def test_refresh_replaces_only_the_composers_own_text(self) -> None:
         thin = _facts(["M\tops/a.py"], commit_bodies=["", ""], head="b" * 40)
         opened = compose_pr_body(thin, CANONICAL_TEMPLATE).body
         self.assertIn(THIN_PROBLEM_NOTE, opened)
-        self.assertIn(REVIEWER_UNRESOLVED, opened)
+        self.assertIn(REVIEWER_MEASURED, opened)
         intent = self._intent()
         later = _facts(["M\tops/a.py"], commit_bodies=["", ""], head=self.HEAD, intent=intent)
         body, status = refresh_body(opened, later)
         self.assertEqual(status, "updated")
         self.assertNotIn(THIN_PROBLEM_NOTE, body)
-        self.assertNotIn(REVIEWER_UNRESOLVED, body)
+        # The composer's ranked region gives way to the author's focus.
+        self.assertNotIn(REVIEWER_MEASURED, body)
+        self.assertNotIn("REVIEWER-FOCUS:START", body)
         self.assertIn(self.INTENT["problem"], _section(body, "Problem"))
         self.assertIn(self.INTENT["reviewer_focus"], _section(body, "Reviewer focus"))
 
     def test_refresh_never_overwrites_text_a_person_wrote(self) -> None:
         opened = compose_pr_body(_facts(["M\tops/a.py"], head="b" * 40), CANONICAL_TEMPLATE).body
-        reviewed = opened.replace(REVIEWER_UNRESOLVED, "Reviewer wrote this.")
+        start = opened.index("<!-- REVIEWER-FOCUS:START -->")
+        end = opened.index("<!-- REVIEWER-FOCUS:END -->") + len("<!-- REVIEWER-FOCUS:END -->")
+        # A person replaced the composer's region with their own focus: it is
+        # theirs now, and a later intent does not overwrite it.
+        reviewed = opened[:start] + "Reviewer wrote this." + opened[end:]
         later = _facts(["M\tops/a.py"], head=self.HEAD, intent=self._intent())
         body, _ = refresh_body(reviewed, later)
         self.assertIn("Reviewer wrote this.", body)
         self.assertNotIn(self.INTENT["reviewer_focus"], body)
+        # Text a person writes beside the region also survives the intent swap.
+        beside = opened.replace(
+            "<!-- REVIEWER-FOCUS:END -->", "<!-- REVIEWER-FOCUS:END -->\n\nAlso check the retries."
+        )
+        body, _ = refresh_body(beside, later)
+        self.assertIn("Also check the retries.", body)
 
     def test_refresh_replaces_a_commit_derived_problem_on_a_grown_branch(self) -> None:
         """PR #798 itself: opened with no intent, its Problem was the oldest commit's
@@ -2368,5 +2459,326 @@ class AuthorIntentTests(unittest.TestCase):
             )
 
 
+class TypeEvidenceReportTests(unittest.TestCase):
+    """The handoff says where a Type of Change came from: a commit type is
+    verified; a docs/-only or .github/-only diff is measured from the paths and
+    never reported as read from a commit."""
+
+    def test_path_only_types_are_derived_not_verified(self) -> None:
+        for path, label in (
+            ("docs/guide.md", "Documentation"),
+            (".github/workflows/ci.yml", "CI / governance change"),
+        ):
+            with self.subTest(path=path):
+                facts = MechanicalFacts(
+                    commits=["update the guide"],
+                    changed_files=[f"M\t{path}"],
+                    workflow_permissions={path: True} if path.endswith(".yml") else {},
+                )
+                field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
+                self.assertEqual(field["status"], COMPLETION_DERIVED, field)
+                self.assertNotIn("commit types", field["detail"])
+                self.assertIn(label, field["detail"])
+
+    def test_a_commit_type_is_verified(self) -> None:
+        facts = MechanicalFacts(commits=["docs: update the guide"], changed_files=["M\tdocs/a.md"])
+        field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
+        self.assertEqual(field["status"], COMPLETION_VERIFIED, field)
+        self.assertIn("commit types", field["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class MeasuredFieldTests(unittest.TestCase):
+    """Every field the composer used to leave for an author is measured: the
+    Gates boxes from the added lines, Reviewer focus ranked from the diff, and
+    the line facts collected from real git."""
+
+    WORKFLOW = (
+        "on: push\n"
+        "permissions:\n"
+        "  contents: write\n"
+        "jobs:\n"
+        "  x:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    steps:\n"
+        "      - uses: actions/checkout@v4\n"
+        "      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5\n"
+        "      - uses: ./.github/actions/local\n"
+    )
+
+    def _collected(self) -> MechanicalFacts:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write("src/app.py", "a = 1\n")
+            repo.commit("base")
+            repo.git("checkout", "-q", "-b", "work")
+            repo.write(".github/workflows/ci.yml", self.WORKFLOW)
+            repo.write("src/app.py", "a = 2\nb = 3\n")
+            repo.write("tests/test_app.py", "def test_a():\n    assert True\n")
+            repo.commit("ci: add the pipeline")
+            return collect_mechanical(repo.root, pr_base="main", verify=False)
+
+    def test_line_facts_are_collected_from_git(self) -> None:
+        facts = self._collected()
+        self.assertEqual(facts.numstat["src/app.py"], (2, 1))
+        self.assertEqual(facts.numstat[".github/workflows/ci.yml"], (10, 0))
+        self.assertIn("  contents: write", facts.added_lines[".github/workflows/ci.yml"])
+
+    def test_gates_are_measured_from_the_added_lines(self) -> None:
+        body = compose_pr_body(self._collected(), CANONICAL_TEMPLATE).body
+        gates = _section(body, "Gates")
+        # A local action is not a third-party reference; a tag is not a pin.
+        self.assertIn(
+            "- [ ] Third-party actions pinned to a full commit SHA — measured: 1 added "
+            "reference(s) not pinned to a full commit SHA or image digest: `actions/checkout@v4`",
+            gates,
+        )
+        self.assertIn(
+            "- [ ] New IAM / workflow permissions are least privilege and enumerated — "
+            "measured: permission or IAM change to review: "
+            "`.github/workflows/ci.yml`: `permissions:`; "
+            "`.github/workflows/ci.yml`: `contents: write`",
+            gates,
+        )
+        self.assertIn(
+            "- [ ] Regression test added that fails without this fix — measured: 1 test file(s) "
+            "changed: `tests/test_app.py`",
+            gates,
+        )
+        self.assertNotIn(GATE_UNVERIFIED, gates)
+        # A changed workflow permission makes the risk High.
+        self.assertIn("- [x] High", _section(body, "Risk"))
+        result = _run_org_validator("governance-pr.yml", body)
+        self.assertEqual(result["failures"], [])
+
+    def test_gates_tick_only_what_the_diff_proves(self) -> None:
+        pinned = MechanicalFacts(
+            commits=["ci: pin"],
+            changed_files=["M\t.github/workflows/ci.yml"],
+            added_lines={
+                ".github/workflows/ci.yml": [
+                    "      - uses: actions/checkout@0b93645e9fea7318ecaed2b359559ac225c90a2b"
+                ]
+            },
+            workflow_permissions={".github/workflows/ci.yml": True},
+        )
+        gates = _section(compose_pr_body(pinned, CANONICAL_TEMPLATE).body, "Gates")
+        self.assertIn(
+            "- [x] Third-party actions pinned to a full commit SHA — measured: all 1 added "
+            "action reference(s) pin a full commit SHA or image digest",
+            gates,
+        )
+        self.assertIn(
+            "- [x] New IAM / workflow permissions are least privilege and enumerated — "
+            "measured: 1 changed workflow(s) each declare their permissions, and this diff "
+            "adds no permission line",
+            gates,
+        )
+        # Never ticked from a diff: secrets, semgrep and observability need a
+        # receipt or are not visible in changed lines.
+        for label in ("No secrets", "`semgrep` clean", "Observability exists"):
+            line = next(ln for ln in gates.splitlines() if label in ln)
+            self.assertTrue(line.startswith("- [ ] "), line)
+        interface = MechanicalFacts(commits=["feat: api"], changed_files=["M\tapi/openapi.yaml"])
+        gates = _section(compose_pr_body(interface, CANONICAL_TEMPLATE).body, "Gates")
+        self.assertIn(
+            "- [ ] Public interface change is documented and versioned — measured: interface "
+            "file(s) changed, documentation and versioning to review: `api/openapi.yaml`",
+            gates,
+        )
+
+    def test_reviewer_focus_ranks_the_riskiest_paths_and_follows_refresh(self) -> None:
+        facts = self._collected()
+        body = compose_pr_body(facts, CANONICAL_TEMPLATE).body
+        focus = region_content(body, "REVIEWER-FOCUS") or ""
+        lines = focus.splitlines()
+        self.assertEqual(lines[0], REVIEWER_MEASURED)
+        self.assertTrue(lines[2].startswith("- Workflow permissions added:"), focus)
+        self.assertIn(
+            "- Action references not pinned to a SHA or digest: `actions/checkout@v4`", focus
+        )
+        self.assertIn("- Largest changes: `.github/workflows/ci.yml` (+10/-0)", focus)
+        # A later push with only a doc change re-ranks the region.
+        later = MechanicalFacts(
+            commits=["docs: note"], changed_files=["M\tdocs/a.md"], head="b" * 40
+        )
+        refreshed, status = refresh_body(body, later)
+        self.assertEqual(status, "updated")
+        self.assertNotIn("Workflow permissions", region_content(refreshed, "REVIEWER-FOCUS") or "")
+        self.assertIn("`docs/a.md`", region_content(refreshed, "REVIEWER-FOCUS") or "")
+
+
+class WorkflowPermissionTests(unittest.TestCase):
+    """A workflow with no permissions block inherits the repository default
+    token: that is neither enumerated nor least privilege, so the Gates box
+    stays unticked. Container actions are pinned only by an image digest."""
+
+    def test_permissions_enumerated_reads_top_level_and_every_job(self) -> None:
+        top = "on: push\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: x\n"
+        self.assertTrue(permissions_enumerated(top))
+        every = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    permissions:\n      contents: read\n"
+            "  b:\n    permissions: {}\n    runs-on: x\n"
+        )
+        self.assertTrue(permissions_enumerated(every))
+        one_missing = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    permissions:\n      contents: read\n"
+            "  b:\n    runs-on: x\n    steps:\n      - run: echo\n"
+        )
+        self.assertFalse(permissions_enumerated(one_missing))
+        # A `permissions:` key nested in a step's inputs is not the job's.
+        nested = (
+            "on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      - uses: a/b@c\n"
+            "        with:\n          permissions: write\n"
+        )
+        self.assertFalse(permissions_enumerated(nested))
+        self.assertFalse(permissions_enumerated("on: push\n"))
+        self.assertFalse(permissions_enumerated(""))
+
+    def _gates_for(self, workflow: str) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write("README.md", "x\n")
+            repo.commit("base")
+            repo.git("checkout", "-q", "-b", "work")
+            repo.write(".github/workflows/ci.yml", workflow)
+            repo.commit("ci: add the pipeline")
+            facts = collect_mechanical(repo.root, pr_base="main", verify=False)
+        return _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+
+    def test_omitted_permissions_leave_the_gate_unticked(self) -> None:
+        gates = self._gates_for(
+            "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo\n"
+        )
+        self.assertIn(
+            "- [ ] New IAM / workflow permissions are least privilege and enumerated — "
+            "measured: 1 changed workflow(s) declare no permissions, so they inherit the "
+            "repository's default token: `.github/workflows/ci.yml`",
+            gates,
+        )
+
+    def test_an_unread_workflow_is_not_claimed(self) -> None:
+        facts = MechanicalFacts(commits=["ci: x"], changed_files=["M\t.github/workflows/ci.yml"])
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        line = next(ln for ln in gates.splitlines() if "least privilege" in ln)
+        self.assertTrue(line.startswith("- [ ] "), line)
+        self.assertIn("was not read at this head", line)
+
+    def test_a_removed_workflow_grants_nothing(self) -> None:
+        facts = MechanicalFacts(commits=["ci: x"], changed_files=["D\t.github/workflows/ci.yml"])
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        self.assertIn("measured: workflow file(s) only removed", gates)
+
+    def test_only_workflows_and_action_manifests_carry_action_refs(self) -> None:
+        facts = MechanicalFacts(
+            commits=["ci: x"],
+            changed_files=["M\tconfig/deps.yml", "M\t.github/actions/setup/action.yml"],
+            added_lines={
+                "config/deps.yml": ["uses: some/lib@v1"],
+                ".github/actions/setup/action.yml": ["    - uses: actions/cache@v4"],
+            },
+        )
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        line = next(ln for ln in gates.splitlines() if "Third-party actions" in ln)
+        self.assertIn("`actions/cache@v4`", line)
+        self.assertNotIn("some/lib", line)
+
+    def test_container_actions_need_an_image_digest(self) -> None:
+        digest = "sha256:" + "a" * 64
+        for ref, pinned in (("docker://alpine:3.20", False), (f"docker://alpine@{digest}", True)):
+            with self.subTest(ref=ref):
+                facts = MechanicalFacts(
+                    commits=["ci: x"],
+                    changed_files=["M\t.github/workflows/ci.yml"],
+                    added_lines={".github/workflows/ci.yml": [f"      - uses: {ref}"]},
+                    workflow_permissions={".github/workflows/ci.yml": True},
+                )
+                gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+                line = next(ln for ln in gates.splitlines() if "Third-party actions" in ln)
+                self.assertEqual(line.startswith("- [x] "), pinned, line)
+                if not pinned:
+                    self.assertIn(f"`{ref}`", line)
+
+
+class DerivedSectionRefreshTests(unittest.TestCase):
+    """Type of Change, Fix, Risk, Gates and Semantic change describe the head
+    they were composed for. A refresh for a new head recomposes each one the
+    composer still owns (its text matches the digest recorded at compose) and
+    leaves a section a person edited as theirs."""
+
+    def _facts(self, head: str, **extra: object) -> MechanicalFacts:
+        base: dict[str, object] = {
+            "commits": ["docs: note"],
+            "commit_bodies": ["The guide left out the release step."],
+            "changed_files": ["M\tdocs/guide.md"],
+            "head": head,
+        }
+        base.update(extra)
+        return MechanicalFacts(**base)  # type: ignore[arg-type]
+
+    def _later(self) -> MechanicalFacts:
+        # The next push adds a workflow that writes contents.
+        return self._facts(
+            "b" * 40,
+            commits=["docs: note", "ci: publish"],
+            commit_bodies=["The guide left out the release step.", ""],
+            changed_files=["M\tdocs/guide.md", "A\t.github/workflows/pub.yml"],
+            added_lines={".github/workflows/pub.yml": ["permissions:", "  contents: write"]},
+            workflow_permissions={".github/workflows/pub.yml": True},
+        )
+
+    def test_composed_body_records_a_digest_per_derived_section(self) -> None:
+        body = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        stamp = read_derived_stamp(body) or {}
+        self.assertEqual(stamp.get("head"), "a" * 12)
+        for key in ("type-of-change", "fix", "risk", "gates", "semantic-change"):
+            self.assertIn(key, stamp)
+
+    def test_new_head_recomposes_owned_sections(self) -> None:
+        composed = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        self.assertIn("- [x] Low", _section(composed, "Risk"))
+        body, status = refresh_body(
+            composed, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertEqual(status, "updated")
+        self.assertIn("- [x] High", _section(body, "Risk"))
+        self.assertNotIn("- [x] Low", _section(body, "Risk"))
+        gates = _section(body, "Gates")
+        self.assertIn("- [ ] New IAM / workflow permissions", gates)
+        self.assertIn("`contents: write`", gates)
+        self.assertEqual((read_derived_stamp(body) or {}).get("head"), "b" * 12)
+        result = _run_org_validator("governance-pr.yml", body)
+        self.assertEqual(result["failures"], [])
+        # Idempotent: the same head again changes nothing.
+        again, status = refresh_body(
+            body, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertEqual((again, status), (body, "unchanged"))
+
+    def test_a_section_a_person_edited_stays_theirs(self) -> None:
+        composed = compose_pr_body(self._facts("a" * 40), CANONICAL_TEMPLATE).body
+        risk = _section(composed, "Risk")
+        edited = composed.replace(risk, risk + "\nReviewer: rollout is staged per region.\n", 1)
+        body, _ = refresh_body(
+            edited, self._later(), remote=True, template=lambda: CANONICAL_TEMPLATE
+        )
+        self.assertIn("Reviewer: rollout is staged per region.", _section(body, "Risk"))
+        self.assertIn("- [x] Low", _section(body, "Risk"))
+        # Every section it did not touch still follows the head.
+        self.assertIn("`contents: write`", _section(body, "Gates"))
+
+    def test_same_head_and_unstamped_bodies_do_not_load_the_template(self) -> None:
+        def must_not_load() -> str:
+            raise AssertionError("nothing to recompose")
+
+        facts = self._facts("a" * 40)
+        composed = compose_pr_body(facts, CANONICAL_TEMPLATE).body
+        self.assertEqual(
+            refresh_body(composed, facts, remote=True, template=must_not_load)[1], "unchanged"
+        )
+        legacy = re.sub(r"^<!-- l9-derived: [^\n]*-->\n", "", composed, flags=re.M)
+        body, _ = refresh_body(legacy, self._later(), remote=True, template=must_not_load)
+        self.assertIn("- [x] Low", _section(body, "Risk"))
