@@ -114,17 +114,36 @@ class RestProbeTests(unittest.TestCase):
             calls.append(argv)
             return 1
 
-        self.assertFalse(org_dotgithub.rest_probe("Quantum-L9", PATH, run=refused))
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=refused), 1)
         self.assertEqual(calls, [["gh", "api", f"repos/Quantum-L9/.github/contents/{PATH}"]])
 
     def test_probe_ok_when_the_rest_call_succeeds(self) -> None:
-        self.assertTrue(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 0))
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 0), 0)
 
-    def test_cli_exit_codes(self) -> None:
-        with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=True):
-            self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), 0)
-        with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=False):
-            self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), 1)
+    def test_any_other_refusal_is_denied(self) -> None:
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 4), 1)
+
+    def test_a_call_that_never_completed_is_not_a_refusal(self) -> None:
+        """Timeout and an unrunnable gh map to the UNKNOWN codes, never DENIED (1)."""
+        for code in (124, 127):
+            self.assertEqual(
+                org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda a, c=code: c), code
+            )
+
+    def test_runner_classifies_timeout_and_missing_tool(self) -> None:
+        with unittest.mock.patch.object(
+            org_dotgithub.subprocess, "run", side_effect=subprocess.TimeoutExpired("gh", 60)
+        ):
+            self.assertEqual(org_dotgithub._run(["gh", "api", "x"]), 124)
+        with unittest.mock.patch.object(
+            org_dotgithub.subprocess, "run", side_effect=FileNotFoundError("gh")
+        ):
+            self.assertEqual(org_dotgithub._run(["gh", "api", "x"]), 127)
+
+    def test_cli_passes_the_probe_status_through(self) -> None:
+        for code in (0, 1, 124, 127):
+            with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=code):
+                self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), code)
         self.assertEqual(org_dotgithub.main(["read", "Quantum-L9"]), 2)
 
 

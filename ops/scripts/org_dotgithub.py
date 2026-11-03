@@ -131,31 +131,42 @@ def read_org_file(owner: str, path: str, *, gh: GhApi = gh_api, git: GitRead = g
 Runner = Callable[[list[str]], int]
 
 
+#: Exit statuses the probe CLI shares with gh_auth_probe.sh's _gh_capability:
+#: 0 OK, 1 DENIED (the call ran and was refused), 124 timed out and 127 could
+#: not run are UNKNOWN, never a refusal GitHub did not make.
+PROBE_OK, PROBE_DENIED, PROBE_TIMEOUT, PROBE_UNAVAILABLE = 0, 1, 124, 127
+
+
 def _run(argv: list[str]) -> int:
     try:
         return subprocess.run(argv, capture_output=True, check=False, timeout=60).returncode
-    except (OSError, subprocess.TimeoutExpired):
-        return 1
+    except subprocess.TimeoutExpired:
+        return PROBE_TIMEOUT
+    except OSError:
+        return PROBE_UNAVAILABLE
 
 
-def rest_probe(owner: str, path: str, run: Runner = _run) -> bool:
-    """Whether the REST transport alone can read ``path`` from ``<owner>/.github``.
+def rest_probe(owner: str, path: str, run: Runner = _run) -> int:
+    """Exit status for whether the REST transport alone can read ``path``.
 
     A capability measurement, not a read: it never falls back to git, because its
     caller (``ops/scripts/lib/gh_auth_probe.sh`` ``org_template_read``) reports
     one verdict per transport (``docs/DEGRADED_MODE_CONTRACT.md``). Callers that
     need the file's contents use ``read_org_file``.
     """
-    return run(["gh", "api", f"repos/{owner}/.github/contents/{path}"]) == 0
+    rc = run(["gh", "api", f"repos/{owner}/.github/contents/{path}"])
+    if rc in (PROBE_OK, PROBE_TIMEOUT, PROBE_UNAVAILABLE):
+        return rc
+    return PROBE_DENIED
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """``probe-rest OWNER PATH``: exit 0 when REST reads the file, 1 when refused."""
+    """``probe-rest OWNER PATH``: exit 0 OK, 1 refused, 124 timed out, 127 could not run."""
     args = list(sys.argv[1:] if argv is None else argv)
     if len(args) != 3 or args[0] != "probe-rest":
         print("usage: org_dotgithub.py probe-rest OWNER PATH", file=sys.stderr)
         return 2
-    return 0 if rest_probe(args[1], args[2]) else 1
+    return rest_probe(args[1], args[2])
 
 
 if __name__ == "__main__":

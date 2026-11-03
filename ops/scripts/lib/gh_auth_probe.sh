@@ -68,16 +68,32 @@ _gh_capability() { # $1=name, rest=command
 _gh_auth_probe_dir="${BASH_SOURCE[0]%/*}"
 [ "$_gh_auth_probe_dir" = "${BASH_SOURCE[0]}" ] && _gh_auth_probe_dir=.
 _GH_AUTH_PROBE_ORG_DOTGITHUB="$(cd "$_gh_auth_probe_dir/.." && pwd)/org_dotgithub.py"
+# The locked interpreter, never a bare python3 (AGENTS.md): $GOV_PY when the
+# caller bound one, else this repository's own venv. Neither -> UNKNOWN.
+_GH_AUTH_PROBE_VENV_PY="$(cd "$_gh_auth_probe_dir/../../.." && pwd)/.venv/bin/python3"
+
+_gh_auth_probe_python() {
+  if [ -n "${GOV_PY:-}" ] && [ -x "$GOV_PY" ]; then
+    printf '%s' "$GOV_PY"
+  elif [ -x "$_GH_AUTH_PROBE_VENV_PY" ]; then
+    printf '%s' "$_GH_AUTH_PROBE_VENV_PY"
+  fi
+}
 
 gh_capability_probe() { # $1=owner of <owner>/.github
-  local owner="${1:-}" token code
+  local owner="${1:-}" token code py
   if command -v gh >/dev/null 2>&1; then
     _gh_capability rest_user gh api user
     if [ -n "$owner" ]; then
       # The REST call itself lives in org_dotgithub.py, the one module allowed
       # to address <owner>/.github; the verdict stays REST-only.
-      _gh_capability org_template_read \
-        python3 "$_GH_AUTH_PROBE_ORG_DOTGITHUB" probe-rest "$owner" .github/pull_request_template.md
+      py="$(_gh_auth_probe_python)"
+      if [ -n "$py" ]; then
+        _gh_capability org_template_read \
+          "$py" "$_GH_AUTH_PROBE_ORG_DOTGITHUB" probe-rest "$owner" .github/pull_request_template.md
+      else
+        echo "org_template_read=UNKNOWN"
+      fi
     else
       echo "org_template_read=UNKNOWN"
     fi
