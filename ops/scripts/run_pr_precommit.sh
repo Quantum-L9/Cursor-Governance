@@ -276,7 +276,14 @@ _consumer_ruff_pin() {
     fi
   done
   [[ -f "$WS/pyproject.toml" ]] || return 0
-  python3 - "$WS/pyproject.toml" <<'PY' 2>/dev/null || true
+  # macOS /usr/bin/python3 is 3.9 and has no tomllib. A failed import used to
+  # be swallowed, so a pyproject pin was treated as "no pin" and the gate ran
+  # pre-commit with governance ruff. Parse with the governance interpreter.
+  local _py="python3"
+  if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+    _py="$GOV_ROOT/.venv/bin/python"
+  fi
+  "$_py" - "$WS/pyproject.toml" <<'PY' 2>/dev/null || true
 import re
 import sys
 import tomllib
