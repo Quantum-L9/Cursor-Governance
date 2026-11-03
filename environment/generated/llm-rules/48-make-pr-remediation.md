@@ -141,6 +141,24 @@ that counts as explicit approval for the push + PR open performed by
 `ops/scripts/open_pr_after_gate.sh` (overrides the generic “ask before push”
 default for this one command path only).
 
+## Write the PR's prose before `make pr` (2026-10-31)
+
+The composer measures facts; it cannot measure intent. Without input it titles
+the PR with the oldest commit subject, fills Problem from that commit's message
+and leaves Reviewer focus unresolved. Before `make pr`, write
+`.l9/pr/pr-intent.json` in the workspace (local state; never commit it):
+
+```json
+{"schema": "l9.pr_intent.v1", "head": "<git rev-parse HEAD>",
+ "title": "…", "problem": "…", "reviewer_focus": "…"}
+```
+
+It is read only when `head` names the current HEAD (7+ characters), so rewrite
+it after any new commit. A missing field keeps the composer's default for that
+field. On an already-open PR, `make pr` replaces only text the composer wrote
+(a commit-derived Problem, an unresolved Reviewer focus) and retitles the PR
+only from `title`; text a person wrote stays. Do not PATCH the title or body over REST instead.
+
 ## Report what the publish shipped (MUST, every `make pr`)
 
 `Opened: <url>` is not a report. Every publish MUST be followed by a summary
