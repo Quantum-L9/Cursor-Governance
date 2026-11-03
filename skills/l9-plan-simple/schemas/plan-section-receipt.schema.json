@@ -51,7 +51,11 @@
       "pattern": "^[0-9a-f]{64}$"
     },
     "section_schema_ref": {
-      "const": "skills/_archived/l9-plan/schemas/plan-document.schema.json"
+      "enum": [
+        "skills/l9-plan/schemas/plan-document.schema.json",
+        "skills/_archived/l9-plan/schemas/plan-document.schema.json"
+      ],
+      "description": "New receipts record skills/l9-plan/. The _archived/ spelling is accepted only so receipts written while l9-plan was archived keep validating."
     },
     "template_ref": {
       "const": "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"

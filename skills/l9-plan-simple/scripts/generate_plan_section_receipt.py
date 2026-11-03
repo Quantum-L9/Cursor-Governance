@@ -11,11 +11,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from paths import safe_cli_path
+from paths import is_under, safe_cli_path
 from plan_sections import (
     GAR_SKILL_REF,
     PLAN_SCHEMA_REL,
-    REPO_ROOT,
     TEMPLATE_REL,
     execute_swap_presence,
     frontmatter_presence,
@@ -24,6 +23,7 @@ from plan_sections import (
     md_section_presence,
     receipt_status,
     unfilled_parameters,
+    workspace_root,
 )
 
 RECEIPT_KIND = "simple_plan_section_receipt"
@@ -34,10 +34,16 @@ def _sha256(path: Path) -> str:
 
 
 def _rel(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
-    except ValueError:
-        return path.name
+    """Workspace-relative when inside the planned repository, else absolute.
+
+    Never a bare filename: the validator must find the file again from any
+    directory of the same workspace.
+    """
+    resolved = path.resolve()
+    workspace = workspace_root()
+    if is_under(resolved, workspace):
+        return resolved.relative_to(workspace).as_posix()
+    return resolved.as_posix()
 
 
 def build_receipt(

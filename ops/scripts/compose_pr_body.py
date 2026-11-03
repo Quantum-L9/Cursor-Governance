@@ -16,6 +16,7 @@ them survives every push. The same code serves ``make pr`` and the org
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -42,6 +43,22 @@ NA = "n/a — not this change"
 GATE_UNVERIFIED = (
     "unverified — make pr cannot measure this gate; reviewer ticks it or states why not"
 )
+#: Every PR-body field is composed: measured from git, or a stated measurement
+#: of why a box stays unticked. No field is left for an author to write, so a
+#: body is complete the moment it is composed (``needs_completion`` is empty).
+#: GATE_UNVERIFIED and the *_UNRESOLVED constants below are kept so a body
+#: composed before this contract is still recognised on refresh.
+GATE_SEMGREP_UNMEASURED = (
+    "unmeasured here: semgrep runs in Organization CI (Core) on this PR and no "
+    "local receipt bound to this head records it"
+)
+GATE_SECRETS_UNMEASURED = (
+    "unmeasured here: no local receipt bound to this head records a secret scan"
+)
+GATE_OBSERVABILITY = (
+    "unmeasurable from a diff: whether a metric, log, trace or alert covers the "
+    "new path is not visible in changed lines"
+)
 FIX_PLACEHOLDER = (
     "<!-- What you changed to make the problem above go away. "
     "Note alternatives you rejected and why. -->"
@@ -56,6 +73,8 @@ REVIEWER_UNRESOLVED = (
     "_Unresolved — where to look hardest is the author's judgment; the composer "
     "measures no basis for it. State it here; this text survives refresh._"
 )
+#: Heading line of the composed Reviewer focus (render_reviewer_focus).
+REVIEWER_MEASURED = "_Ranked from the measured diff: riskiest paths first._"
 #: Paths that make the ``## Semantic change`` section applicable. Measured from
 #: the diff rows (both endpoints of a rename), never assumed. Two families:
 #: the organization's canonical semantic sources and release records live
@@ -92,16 +111,35 @@ TYPE_UNRESOLVED = (
 )
 CONVENTIONAL_TYPES = {
     "fix": "Bug fix",
+    "revert": "Bug fix",
     "feat": "Feature / enhancement",
+    "perf": "Feature / enhancement",
     "refactor": "Refactor (no behavior change)",
+    "style": "Refactor (no behavior change)",
+    "test": "Refactor (no behavior change)",
     "docs": "Documentation",
     "ci": "CI / governance change",
     "build": "CI / governance change",
+    "chore": "CI / governance change",
 }
+#: Paths whose change is CI / governance / tooling rather than product code.
+GOVERNANCE_PREFIXES = (".github/", ".circleci/", "ci/", "ops/", "rules/", "policies/", ".l9/")
+GOVERNANCE_FILES = (
+    "Makefile",
+    ".pre-commit-config.yaml",
+    ".gitlab-ci.yml",
+    "CODEOWNERS",
+    ".gitignore",
+    ".gitattributes",
+)
+TEST_PATH_RE = re.compile(
+    r"(^|/)(tests?|__tests__|spec)/|(^|/)test_[^/]+$|_test\.[a-z]+$|\.(test|spec)\.[a-z]+$"
+)
+TYPE_INFERRED = "inferred from the changed paths (no conventional-commit type in this range)"
 CONVENTIONAL_RE = re.compile(r"^(?P<type>[a-z]+)(?:\([^)]*\))?(?P<bang>!)?:\s")
 RISK_NOTE = (
-    "_Risk tick: the composer's path-based default (High: an ALLOW-ROOT-DELETION marker; "
-    "Low: docs/ only; otherwise Medium), not an assessment — change it if it is wrong._"
+    "_Risk tick measured from the diff: High on an ALLOW-ROOT-DELETION marker or a "
+    "changed workflow permission; Low on a docs-only or test-only diff; Medium otherwise._"
 )
 DELETION_RE = re.compile(r"ALLOW-ROOT-DELETION:\s*(?P<path>\S+?)\s*(?:—|-)\s+(?P<reason>\S.*)")
 TYPE_LABELS = (
@@ -130,7 +168,16 @@ REGION_PROTECTED_PATHS = "PROTECTED-ROOT-PATHS"
 REGION_EVIDENCE = "EVIDENCE"
 REGION_INTENT = "CHANGES-BY-INTENT"
 REGION_FILES = "FILES-TOUCHED"
-MACHINE_REGIONS = (REGION_PROTECTED_PATHS, REGION_EVIDENCE, REGION_INTENT, REGION_FILES)
+#: The composer's ranked Reviewer focus. Machine-owned so it follows every push
+#: like the inventory; text a reviewer writes outside it survives refresh.
+REGION_REVIEWER = "REVIEWER-FOCUS"
+MACHINE_REGIONS = (
+    REGION_PROTECTED_PATHS,
+    REGION_EVIDENCE,
+    REGION_INTENT,
+    REGION_FILES,
+    REGION_REVIEWER,
+)
 #: Headings and regions the canonical template must carry. A template that
 #: lacks one cannot be refreshed safely, so resolution fails closed on it.
 REQUIRED_TEMPLATE_HEADINGS = (
@@ -163,10 +210,11 @@ INTENT_PROVENANCE = (
 #: rationale, and the body must not let one read as the other.
 INTENT_NOTE = (
     "_Text after each path is the subject of the newest commit in this branch that "
-    "touched it — commit context, not a verified per-file rationale. Replace it where "
-    "the purpose differs; your text survives refresh._"
+    "touched it (commit context); text written after a path survives refresh._"
 )
-NO_OWN_COMMIT = "_unresolved — no commit in this branch's own range touched this path_"
+NO_OWN_COMMIT = "_no own commit in this range touched this path — it arrived through a merge_"
+#: The marker bodies composed before carried; still recognised on refresh.
+LEGACY_NO_OWN_COMMIT = "_unresolved — no commit in this branch's own range touched this path_"
 EVIDENCE_HEAD_RE = re.compile(r"^composed at head ([0-9a-f]{7,40})$", re.M)
 EVIDENCE_STALE_PREFIX = "STALE:"
 EVIDENCE_UNVERIFIED_PREFIX = "UNVERIFIED:"
@@ -285,8 +333,19 @@ class MechanicalFacts:
     gate_binding_detail: str = ""
     l4_binding: str = ""
     l4_binding_detail: str = ""
+    # path -> (lines added, lines deleted), `git diff --numstat`; binary -> (0, 0).
+    numstat: dict[str, tuple[int, int]] = field(default_factory=dict)
+    # path -> the lines this range adds to it (`git diff -U0`), for the Gates
+    # measurements (action pins, workflow permissions, secret patterns).
+    added_lines: dict[str, list[str]] = field(default_factory=dict)
+    # semantic path -> (blob at the merge base, blob at HEAD); "" when absent.
+    blob_ids: dict[str, tuple[str, str]] = field(default_factory=dict)
     # The author's prose (load_intent), bound to `head`; None when absent.
     intent: PrIntent | None = None
+    # changed workflow present at HEAD -> whether that file states its token
+    # permissions (top level, or on every job). An omitted block inherits the
+    # repository default, which is neither enumerated nor least privilege.
+    workflow_permissions: dict[str, bool] = field(default_factory=dict)
 
 
 #: Completion status of one PR-body field in the handoff (``fields``):
@@ -298,6 +357,8 @@ COMPLETION_VERIFIED = "verified"
 COMPLETION_NOT_APPLICABLE = "not_applicable"
 COMPLETION_UNVERIFIED = "unverified"
 COMPLETION_NEEDS_AUTHOR = "needs_author"
+#: Composed from measured facts rather than read from an author or a receipt.
+COMPLETION_DERIVED = "derived"
 
 
 @dataclass
@@ -625,8 +686,11 @@ def collect_mechanical(
         bodies.append("\n".join(raw_lines[1:]).strip())
         issue_closes.extend(_issue_numbers(block))
         markers.update(_deletion_markers(block))
-    changed = [row.line() for row in diff_rows(workspace, pr_base)]
+    rows = diff_rows(workspace, pr_base)
+    changed = [row.line() for row in rows]
     shortstat = _run_git_strict(workspace, "diff", "--shortstat", f"{pr_base}...HEAD").strip()
+    numstat, added_lines = _measure_lines(workspace, pr_base)
+    blob_ids = _semantic_blobs(workspace, pr_base, rows)
     unique_issues: list[int] = []
     for number in issue_closes:
         if number not in unique_issues:
@@ -655,7 +719,109 @@ def collect_mechanical(
         gate_binding_detail=gate_detail,
         l4_binding=l4_binding,
         l4_binding_detail=l4_detail,
+        numstat=numstat,
+        added_lines=added_lines,
+        blob_ids=blob_ids,
+        workflow_permissions=_workflow_permissions(workspace, rows),
     )
+
+
+def _measure_lines(
+    workspace: Path, pr_base: str
+) -> tuple[dict[str, tuple[int, int]], dict[str, list[str]]]:
+    """Per-path line counts and added lines of the range, from the merge base."""
+    numstat: dict[str, tuple[int, int]] = {}
+    for line in _run_git_strict(
+        workspace, "diff", "--numstat", "--no-renames", f"{pr_base}...HEAD"
+    ).splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 3:
+            added = int(parts[0]) if parts[0].isdigit() else 0
+            deleted = int(parts[1]) if parts[1].isdigit() else 0
+            numstat[parts[2]] = (added, deleted)
+    added_lines: dict[str, list[str]] = {}
+    current = ""
+    for line in _run_git_strict(
+        workspace, "diff", "-U0", "--no-color", "--no-ext-diff", "--no-renames", f"{pr_base}...HEAD"
+    ).splitlines():
+        if line.startswith("+++ "):
+            target = line[4:]
+            current = target[2:] if target.startswith("b/") else ""
+        elif line.startswith("+") and current:
+            added_lines.setdefault(current, []).append(line[1:])
+    return numstat, added_lines
+
+
+def _workflow_permissions(workspace: Path, rows: list[DiffRow]) -> dict[str, bool]:
+    """Whether each changed workflow still at HEAD states its token permissions."""
+    found: dict[str, bool] = {}
+    for row in rows:
+        if row.status.startswith("D") or not WORKFLOW_PATH_RE.match(row.path):
+            continue
+        text = _run_git(workspace, "show", f"HEAD:{row.path}")
+        found[row.path] = permissions_enumerated(text)
+    return found
+
+
+def permissions_enumerated(text: str) -> bool:
+    """True when a workflow declares ``permissions:`` at the top level, or on
+    every job. YAML is read structurally by indentation only: the composer is
+    stdlib-only, and a file this cannot read is reported as not enumerated."""
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    if any(re.match(r"^permissions:", ln) for ln in lines):
+        return True
+    try:
+        start = next(i for i, ln in enumerate(lines) if re.match(r"^jobs:\s*(#.*)?$", ln))
+    except StopIteration:
+        return False
+    body: list[str] = []
+    for ln in lines[start + 1 :]:
+        if ln and not ln[0].isspace() and not ln.startswith("#"):
+            break
+        if ln.strip() and not ln.lstrip().startswith("#"):
+            body.append(ln)
+    if not body:
+        return False
+    indent = len(body[0]) - len(body[0].lstrip())
+    jobs: list[list[str]] = []
+    for ln in body:
+        depth = len(ln) - len(ln.lstrip())
+        if depth == indent:
+            jobs.append([])
+        elif depth > indent and jobs:
+            jobs[-1].append(ln)
+    if not jobs:
+        return False
+    for children in jobs:
+        if not children:
+            return False
+        child = len(children[0]) - len(children[0].lstrip())
+        if not any(
+            len(c) - len(c.lstrip()) == child and c.lstrip().startswith("permissions:")
+            for c in children
+        ):
+            return False
+    return True
+
+
+def _semantic_blobs(
+    workspace: Path, pr_base: str, rows: list[DiffRow]
+) -> dict[str, tuple[str, str]]:
+    """Blob ids at the merge base and at HEAD for every semantic path in the diff."""
+    base = _run_git(workspace, "merge-base", pr_base, "HEAD").strip()
+    blobs: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        for path in (row.old_path, row.path):
+            if not path or not semantic_kind(path) or path in blobs:
+                continue
+            before = (
+                _run_git(workspace, "rev-parse", "--verify", "-q", f"{base}:{path}").strip()
+                if base
+                else ""
+            )
+            after = _run_git(workspace, "rev-parse", "--verify", "-q", f"HEAD:{path}").strip()
+            blobs[path] = (before, after)
+    return blobs
 
 
 def _bullet_list(items: list[str]) -> str:
@@ -682,6 +848,11 @@ NO_SUBJECT = "measured change (no commit subject)"
 #: Saying so in the body, and on stderr at compile time, is what makes the thin
 #: case visible before a reviewer reads it.
 THIN_PROBLEM_NOTE = (
+    "_Composer note: no commit body in this range states the problem, so it is "
+    "composed from the oldest commit subject and the measured diff._"
+)
+#: The note bodies composed before this contract carried.
+LEGACY_THIN_PROBLEM_NOTE = (
     "_Composer note: the oldest commit carries no body paragraph, so this Problem "
     "is its subject line only. Rewrite it before review._"
 )
@@ -705,13 +876,39 @@ def range_problem(facts: MechanicalFacts) -> str:
     line cannot be read as the entire change.
     """
     if not facts.commits:
-        return NO_SUBJECT
+        # No own commit (the range is a merge): the diff is the only measurement.
+        return f"{NO_SUBJECT}\n\n{THIN_PROBLEM_NOTE} {measured_change(facts)}"
     head = facts.commits[0]
     body = facts.commit_bodies[0] if facts.commit_bodies else ""
     para = _first_paragraph(body)
     more = len(facts.commits) - 1
     suffix = f" (+{more} more commit{'s' if more != 1 else ''} below)" if more else ""
-    return f"{head}{suffix}\n\n{para or THIN_PROBLEM_NOTE}"
+    if para:
+        return f"{head}{suffix}\n\n{para}"
+    return f"{head}{suffix}\n\n{THIN_PROBLEM_NOTE} {measured_change(facts)}"
+
+
+def _top_areas(paths: list[str], limit: int = 4) -> list[str]:
+    """Top-level directories (or root files) the paths fall in, most-touched first."""
+    counts: dict[str, int] = {}
+    for path in paths:
+        area = path.split("/", 1)[0] + "/" if "/" in path else "(root)"
+        counts[area] = counts.get(area, 0) + 1
+    return [area for area, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))][:limit]
+
+
+def measured_change(facts: MechanicalFacts) -> str:
+    """One sentence of what the diff measurably changes: counts by status and areas."""
+    rows = _rows(facts)
+    if not rows:
+        return "The diff against the base is empty."
+    by: dict[str, int] = {}
+    for row in rows:
+        by[row.word] = by.get(row.word, 0) + 1
+    counts = ", ".join(f"{n} {word}" for word, n in sorted(by.items()))
+    areas = ", ".join(f"`{a}`" for a in _top_areas(_changed_paths(facts)))
+    stat = f" ({facts.shortstat})" if facts.shortstat else ""
+    return f"Measured: {len(rows)} path(s) — {counts} — in {areas}{stat}."
 
 
 def range_summary(facts: MechanicalFacts) -> str:
@@ -731,13 +928,41 @@ def range_title(facts: MechanicalFacts) -> str:
     return facts.commits[0] if facts.commits else ""
 
 
+def _later_paragraphs(body: str) -> list[str]:
+    """A commit body's prose after its first paragraph (the Problem), trailers dropped."""
+    paras: list[str] = []
+    seen_first = False
+    for para in re.split(r"\n\s*\n", body.strip()):
+        lines = [line.rstrip() for line in para.splitlines() if line.strip()]
+        if not lines:
+            continue
+        if all(
+            re.match(r"^[A-Za-z-]+:\s", line.strip()) or DELETION_RE.match(line.strip())
+            for line in lines
+        ):
+            continue
+        if not seen_first:
+            seen_first = True
+            continue
+        paras.append("\n".join(lines))
+    return paras
+
+
 def range_fix(facts: MechanicalFacts) -> str:
-    """The Fix: every commit subject, oldest first. One commit reads as one line."""
+    """The Fix: every commit subject, oldest first, with what each commit body
+    says after its Problem paragraph. Measured: nothing here is invented."""
     if not facts.commits:
-        return NO_SUBJECT
+        return f"{NO_SUBJECT}: {measured_change(facts)}"
+    bodies = facts.commit_bodies or [""] * len(facts.commits)
     if len(facts.commits) == 1:
-        return facts.commits[0]
-    return "\n".join(f"- {subject}" for subject in facts.commits)
+        detail = _later_paragraphs(bodies[0])
+        return "\n\n".join([facts.commits[0], *detail])
+    lines: list[str] = []
+    for subject, body in zip(facts.commits, bodies, strict=False):
+        lines.append(f"- {subject}")
+        for para in _later_paragraphs(body):
+            lines.extend(f"  {line}" for line in para.splitlines())
+    return "\n".join(lines)
 
 
 def path_why(facts: MechanicalFacts, path: str) -> str:
@@ -778,14 +1003,61 @@ def infer_type_of_change(facts: MechanicalFacts) -> list[str]:
         chosen.add("Documentation")
     if paths and all(path.startswith(".github/") for path in paths):
         chosen.add("CI / governance change")
+    if not chosen and paths:
+        chosen.add(_type_from_paths(paths))
     return [label for label in TYPE_LABELS if label in chosen]
 
 
+def _is_governance_path(path: str) -> bool:
+    name = path.rsplit("/", 1)[-1]
+    return path.startswith(GOVERNANCE_PREFIXES) or path in GOVERNANCE_FILES or name.endswith(".mk")
+
+
+def _type_from_paths(paths: list[str]) -> str:
+    """The type a diff's paths show when no commit names one."""
+    if all(path.startswith(DOCS_PREFIXES) or path.endswith(".md") for path in paths):
+        return "Documentation"
+    if all(_is_governance_path(path) for path in paths):
+        return "CI / governance change"
+    if all(TEST_PATH_RE.search(path) for path in paths):
+        return "Refactor (no behavior change)"
+    return "Feature / enhancement"
+
+
+def type_from_commits(facts: MechanicalFacts) -> bool:
+    """True when a commit of this branch names a type: a conventional-commit
+    type, a ``!`` or ``BREAKING CHANGE`` trailer, or an ALLOW-ROOT-DELETION marker."""
+    for index, subject in enumerate(facts.commits):
+        match = CONVENTIONAL_RE.match(subject)
+        if match and CONVENTIONAL_TYPES.get(match.group("type")):
+            return True
+        body = facts.commit_bodies[index] if index < len(facts.commit_bodies) else ""
+        if match and match.group("bang") or re.search(r"^BREAKING[ -]CHANGE:", body, re.M):
+            return True
+    return bool(facts.deletion_markers)
+
+
+def type_inferred_from_paths(facts: MechanicalFacts) -> bool:
+    """True when no commit evidence named a type and the paths' fallback decided
+    it. A docs/-only or .github/-only diff is a measurement, not a fallback."""
+    if type_from_commits(facts):
+        return False
+    paths = _changed_paths(facts)
+    if paths and (
+        all(p.startswith(DOCS_PREFIXES) for p in paths)
+        or all(p.startswith(".github/") for p in paths)
+    ):
+        return False
+    return bool(paths)
+
+
 def infer_risk(facts: MechanicalFacts) -> str:
-    if facts.deletion_markers:
+    if facts.deletion_markers or workflow_permission_changes(facts):
         return RISK_LABELS[2]
     paths = _changed_paths(facts)
     if paths and all(path.startswith("docs/") for path in paths):
+        return RISK_LABELS[0]
+    if paths and all(TEST_PATH_RE.search(path) for path in paths):
         return RISK_LABELS[0]
     return RISK_LABELS[1]
 
@@ -832,33 +1104,37 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
     if THIN_PROBLEM_NOTE in body:
         put(
             "problem",
-            COMPLETION_NEEDS_AUTHOR,
-            "a commit subject only — the oldest commit has no body paragraph; rewrite it",
+            COMPLETION_DERIVED,
+            "no commit body states it — composed from the oldest subject and the measured diff",
         )
     elif "## Problem" in body and intent.problem and intent.problem in body:
         put("problem", COMPLETION_VERIFIED, INTENT_DETAIL)
-    elif "## Problem" in body and NO_SUBJECT in body:
-        put("problem", COMPLETION_NEEDS_AUTHOR, "no own commit in this range — write it")
     elif "## Problem" in body:
         put("problem", COMPLETION_VERIFIED, "oldest own commit subject and its body paragraph")
-    if TYPE_UNRESOLVED in body:
-        put(
-            "type_of_change",
-            COMPLETION_NEEDS_AUTHOR,
-            "no box ticked — no conventional-commit type in this branch's commits; tick one",
-        )
-    elif "## Type of Change" in body:
-        put(
-            "type_of_change",
-            COMPLETION_VERIFIED,
-            "ticked from this branch's commit types: " + ", ".join(infer_type_of_change(facts)),
-        )
+    if "## Type of Change" in body:
+        if TYPE_INFERRED in body:
+            put(
+                "type_of_change",
+                COMPLETION_DERIVED,
+                "ticked from the changed paths: " + ", ".join(infer_type_of_change(facts)),
+            )
+        elif type_from_commits(facts):
+            put(
+                "type_of_change",
+                COMPLETION_VERIFIED,
+                "ticked from this branch's commit types: " + ", ".join(infer_type_of_change(facts)),
+            )
+        else:
+            # No commit names a type; every changed path sits under docs/ or
+            # .github/, which is measured from the diff, not read from a commit.
+            put(
+                "type_of_change",
+                COMPLETION_DERIVED,
+                "measured: every changed path is under docs/ or .github/: "
+                + ", ".join(infer_type_of_change(facts)),
+            )
     if RISK_NOTE in body:
-        put(
-            "risk",
-            COMPLETION_UNVERIFIED,
-            "the composer's path-based default, not an assessment; change it if it is wrong",
-        )
+        put("risk", COMPLETION_DERIVED, "ticked from the measured diff: " + infer_risk(facts))
     if facts.gate_receipt:
         put(
             "gate_receipt",
@@ -888,13 +1164,12 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
                 COMPLETION_UNVERIFIED,
                 "no bound passing receipt; every Gate box is unticked and marked unverified",
             )
-    if SEMANTIC_FIELD_UNRESOLVED in body:
+    if semantic_paths(facts) and "## Semantic change" in body:
         put(
             "semantic_change",
-            COMPLETION_NEEDS_AUTHOR,
-            "applicable — this diff changes "
-            + ", ".join(f"{path} ({semantic_kind(path)})" for path in semantic_paths(facts))
-            + "; release coordinates, dependents revalidation and admission are the author's",
+            COMPLETION_DERIVED,
+            "applicable — measured coordinates for "
+            + ", ".join(f"{path} ({semantic_kind(path)})" for path in semantic_paths(facts)),
         )
     elif SEMANTIC_NA in body:
         put(
@@ -902,14 +1177,11 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
             COMPLETION_NOT_APPLICABLE,
             "no canonical semantic artifact or release record in the measured diff",
         )
-    if REVIEWER_UNRESOLVED in body:
-        put(
-            "reviewer_focus",
-            COMPLETION_NEEDS_AUTHOR,
-            "where to look hardest is the author's judgment; the composer measures no basis",
-        )
-    elif intent.reviewer_focus and intent.reviewer_focus in body:
+    # The author's intent wins when given; otherwise the composer ranks it.
+    if intent.reviewer_focus and intent.reviewer_focus in body:
         put("reviewer_focus", COMPLETION_VERIFIED, INTENT_DETAIL)
+    elif REVIEWER_MEASURED in body:
+        put("reviewer_focus", COMPLETION_DERIVED, "ranked from measured risk in the diff")
     if facts.additive_only_paths:
         mode = _edit_mode_expected(facts)
         put(
@@ -944,6 +1216,7 @@ def _annotate_unchecked_boxes(text: str) -> str:
     for line in text.splitlines():
         if (
             re.match(r"^- \[ \] ", line)
+            and not re.search(r"\S — \S", line)
             and UNMEASURED not in line
             and GATE_UNVERIFIED not in line
             and TYPE_NOT_INDICATED not in line
@@ -1145,9 +1418,18 @@ def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
 def _fill_type_of_change(text: str, facts: MechanicalFacts) -> str:
     chosen = infer_type_of_change(facts)
     reason = TYPE_NOT_INDICATED if chosen else TYPE_UNRESOLVED
+    inferred = type_inferred_from_paths(facts)
     for label in TYPE_LABELS:
         if label in chosen:
             text = _check_box(text, label)
+            if inferred:
+                text = re.sub(
+                    rf"^(- \[x\] [^\n]*{re.escape(label)}[^\n]*)$",
+                    lambda m: f"{m.group(1)} — {TYPE_INFERRED}",
+                    text,
+                    count=1,
+                    flags=re.M,
+                )
         else:
             text = re.sub(
                 rf"^- \[ \] ([^\n]*{re.escape(label)}[^\n]*)$",
@@ -1258,7 +1540,7 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
         # The composer's own unresolved marker is a measurement, not someone's
         # words: it is remeasured every refresh, so an own commit that now
         # touches the path replaces it instead of leaving a false "no commit".
-        if not why or why.startswith(NO_OWN_COMMIT):
+        if not why or why.startswith((NO_OWN_COMMIT, LEGACY_NO_OWN_COMMIT)):
             why = path_why(facts, row.path)
             if row.old_path:
                 why = f"{why} ({row.word})"
@@ -1453,11 +1735,199 @@ SECURITY_GATE_BOXES = (
 )
 
 
+WORKFLOW_PATH_RE = re.compile(r"^\.github/workflows/[^/]+\.ya?ml$")
+IAM_PATH_RE = re.compile(r"(^|/)(iam|policies|roles?)(/|\.)|\.tf$|(^|/)terraform/", re.I)
+USES_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^'\"\s#]+)")
+FULL_SHA_RE = re.compile(r"@[0-9a-f]{40}$")
+ACTION_MANIFESTS = ("action.yml", "action.yaml")
+#: A container action is pinned only by an image digest; a tag is mutable.
+DOCKER_DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
+PERMISSION_LINE_RE = re.compile(
+    r"^\s*(permissions:|(actions|attestations|checks|contents|deployments|discussions|id-token|"
+    r"issues|packages|pages|pull-requests|repository-projects|security-events|statuses):\s*\S)"
+)
+INTERFACE_PATH_RE = re.compile(
+    r"(^|/)(openapi|swagger)[^/]*\.(ya?ml|json)$|\.proto$|\.graphql$|(^|/)__init__\.py$|"
+    r"(^|/)index\.(ts|js)$|(^|/)package\.json$|(^|/)pyproject\.toml$|schema[^/]*\.(ya?ml|json)$",
+    re.I,
+)
+
+
+def added_action_refs(facts: MechanicalFacts) -> list[tuple[str, str]]:
+    """(path, ref) for every remote action, reusable workflow or container
+    action (``docker://``) a line adds. Only a local ``./`` action is exempt."""
+    refs: list[tuple[str, str]] = []
+    for path, lines in facts.added_lines.items():
+        # Only a workflow or an action manifest runs `uses:`; another YAML file's
+        # `uses:` key is data, not a dependency.
+        if not (WORKFLOW_PATH_RE.match(path) or path.rsplit("/", 1)[-1] in ACTION_MANIFESTS):
+            continue
+        for line in lines:
+            match = USES_RE.match(line)
+            if match and not match.group(1).startswith("./"):
+                refs.append((path, match.group(1)))
+    return refs
+
+
+def ref_pinned(ref: str) -> bool:
+    """A remote action pins a full commit SHA; a container action an image digest."""
+    if ref.startswith("docker://"):
+        return bool(DOCKER_DIGEST_RE.search(ref))
+    return bool(FULL_SHA_RE.search(ref))
+
+
+def workflow_permission_changes(facts: MechanicalFacts) -> list[tuple[str, str]]:
+    """(path, line) for every workflow permission line this range adds."""
+    found: list[tuple[str, str]] = []
+    for path, lines in facts.added_lines.items():
+        if WORKFLOW_PATH_RE.match(path):
+            found.extend((path, line.strip()) for line in lines if PERMISSION_LINE_RE.match(line))
+    return found
+
+
+def _gate_line(text: str, label: str, ticked: bool, reason: str) -> str:
+    """Rewrite one Gates box: tick it, or leave it unticked with a measured reason.
+
+    The org PR gate needs a word of four or more letters right after the
+    separator on an unticked Gates line; every reason here starts with one.
+    """
+    pattern = rf"^- \[ \] {re.escape(label)}[^\n]*$"
+    box = "x" if ticked else " "
+    return re.sub(pattern, lambda _m: f"- [{box}] {label} — {reason}", text, count=1, flags=re.M)
+
+
+def _short(items: list[str], limit: int = 4) -> str:
+    shown = ", ".join(f"`{i}`" for i in items[:limit])
+    return shown + (f" (+{len(items) - limit} more)" if len(items) > limit else "")
+
+
 def _fill_gates(text: str, facts: MechanicalFacts) -> str:
-    if _security_passed(facts):
-        for label in SECURITY_GATE_BOXES:
-            text = text.replace(f"- [ ] {label}", f"- [x] {label}", 1)
-    return _na_unchecked_in_section(text, "## Gates", GATE_UNVERIFIED)
+    """Every Gates box from a measurement of this range: ticked when the diff or a
+    receipt bound to this head proves it, otherwise unticked with what was measured."""
+    paths = _changed_paths(facts)
+    added_total = sum(len(v) for v in facts.added_lines.values())
+
+    tests = [p for p in paths if TEST_PATH_RE.search(p)]
+    text = _gate_line(
+        text,
+        "Regression test added that fails without this fix",
+        False,
+        f"measured: {len(tests)} test file(s) changed: {_short(tests)}; "
+        "failing without the fix is not measured"
+        if tests
+        else "measured: no test file in this diff",
+    )
+
+    secure = _security_passed(facts)
+    text = _gate_line(
+        text,
+        "No secrets, tokens, or customer data in code, tests, fixtures, or logs",
+        secure,
+        "measured: the security wave of the gate receipt bound to this head passed "
+        f"over {added_total} added line(s)"
+        if secure
+        else GATE_SECRETS_UNMEASURED,
+    )
+    text = _gate_line(
+        text,
+        "`semgrep` clean, or findings triaged below",
+        secure,
+        "measured: the gate receipt bound to this head records a passing semgrep wave"
+        if secure
+        else GATE_SEMGREP_UNMEASURED,
+    )
+
+    perms = workflow_permission_changes(facts)
+    iam = [p for p in paths if IAM_PATH_RE.search(p)]
+    workflows = [p for p in paths if WORKFLOW_PATH_RE.match(p)]
+    if perms or iam:
+        listed = "; ".join(f"`{p}`: `{line}`" for p, line in perms[:4]) or _short(iam)
+        reason = f"measured: permission or IAM change to review: {listed}"
+        ok = False
+    elif workflows:
+        present = [
+            r.path
+            for r in _rows(facts)
+            if WORKFLOW_PATH_RE.match(r.path) and not r.status.startswith("D")
+        ]
+        inherited = [p for p in present if facts.workflow_permissions.get(p) is False]
+        unread = [p for p in present if p not in facts.workflow_permissions]
+        if inherited:
+            reason = (
+                f"measured: {len(inherited)} changed workflow(s) declare no permissions, so "
+                f"they inherit the repository's default token: {_short(inherited)}"
+            )
+            ok = False
+        elif unread:
+            reason = (
+                "unmeasured here: whether these workflows declare their permissions was not "
+                f"read at this head: {_short(unread)}"
+            )
+            ok = False
+        elif present:
+            reason = (
+                f"measured: {len(present)} changed workflow(s) each declare their permissions, "
+                "and this diff adds no permission line"
+            )
+            ok = True
+        else:
+            reason = "measured: workflow file(s) only removed; no permission is granted"
+            ok = True
+    else:
+        reason = "measured: no workflow, IAM or infrastructure file in this diff"
+        ok = True
+    text = _gate_line(
+        text, "New IAM / workflow permissions are least privilege and enumerated", ok, reason
+    )
+
+    refs = added_action_refs(facts)
+    loose = [ref for _, ref in refs if not ref_pinned(ref)]
+    if loose:
+        reason, ok = (
+            f"measured: {len(loose)} added reference(s) not pinned to a full commit SHA "
+            f"or image digest: {_short(loose)}",
+            False,
+        )
+    elif refs:
+        reason, ok = (
+            f"measured: all {len(refs)} added action reference(s) pin a full commit SHA "
+            "or image digest",
+            True,
+        )
+    else:
+        reason, ok = "measured: no action or reusable-workflow reference added", True
+    text = _gate_line(text, "Third-party actions pinned to a full commit SHA", ok, reason)
+
+    interface = [p for p in paths if INTERFACE_PATH_RE.search(p)]
+    text = _gate_line(
+        text,
+        "Public interface change is documented and versioned",
+        not interface,
+        "measured: interface file(s) changed, documentation and versioning to review: "
+        f"{_short(interface)}"
+        if interface
+        else "measured: no API schema, proto, package manifest or entry-point file in this diff",
+    )
+    text = _gate_line(
+        text,
+        "Observability exists for the new path (metric, log, trace, or alert)",
+        False,
+        GATE_OBSERVABILITY,
+    )
+    # A box this composer does not know (a template that grew one) still gets a
+    # reason; every known box above already carries its measurement.
+    span = _heading_span(text, "## Gates")
+    if span is None:
+        return text
+    start, end = span
+    lines = [
+        f"{line} — {GATE_UNVERIFIED}"
+        if re.match(r"^- \[ \] ", line) and " — " not in line
+        else line
+        for line in text[start:end].splitlines()
+    ]
+    tail = "\n" if text[start:end].endswith("\n") else ""
+    return text[:start] + "\n".join(lines) + tail + text[end:]
 
 
 def semantic_kind(path: str) -> str:
@@ -1520,22 +1990,62 @@ def _fill_semantic(text: str, facts: MechanicalFacts) -> str:
     if not paths:
         return text[:start] + f"{heading}\n\n{SEMANTIC_NA}\n{tail}" + text[end:]
     versions = _foundation_versions(paths)
+    blobs = facts.blob_ids
+    prior = "; ".join(
+        f"`{p}` blob `{blobs.get(p, ('', ''))[0][:12] or 'absent'}`" for p in paths[:5]
+    )
+    new = "; ".join(
+        f"`{p}` blob `{blobs.get(p, ('', ''))[1][:12] or 'deleted'}`" for p in paths[:5]
+    )
+    more = f" (+{len(paths) - 5} more)" if len(paths) > 5 else ""
+    validate = any(p.startswith("scripts/validate-semantics") for p in _changed_paths(facts))
+    measured_fields = {
+        SEMANTIC_FOUNDATION_FIELD: (
+            "measured in this diff: "
+            + ", ".join(f"`docs/semantic-foundation/{v}/`" for v in versions)
+            if versions
+            else "measured: no release-record directory in this diff; the change is to "
+            + ", ".join(sorted({semantic_kind(p) for p in paths}))
+        ),
+        "Prior exact coordinate or source identity (artifact_id, digest, contract/binding id):": (
+            f"measured at the merge base: {prior}{more}"
+        ),
+        "New exact coordinate (when applicable):": f"measured at this head: {new}{more}",
+    }
+    box_reasons = {
+        "Transitive semantic dependents revalidated": (
+            "measured: dependents are revalidated by `scripts/validate-semantics.py` in "
+            "Validate starters on this PR, not by a local receipt"
+        ),
+        "`scripts/validate-semantics.py` result pasted under Evidence": (
+            "measured: the validator runs in Validate starters on this PR; "
+            "its result is that check's"
+            + (" (this diff also changes the validator)" if validate else "")
+        ),
+        "`docs/semantic-foundation/<version>/` manifest": (
+            "measured: release-record files in this diff: "
+            + _short([p for p in paths if p.startswith("docs/semantic-foundation/")])
+            if versions
+            else "measured: no release-record file in this diff"
+        ),
+        "Admission / successor requirement checked": (
+            "measured: canonical bytes change at "
+            + _short([p for p in paths if blobs.get(p, ("", ""))[0] and blobs.get(p, ("", ""))[1]])
+            + "; an admitted revision with changed bytes needs a successor"
+        ),
+    }
     lines: list[str] = []
     for line in rest.splitlines():
         if re.match(r"^- \[ \] N/A\b", line):
             listed = ", ".join(f"`{path}` ({semantic_kind(path)})" for path in paths[:5])
-            more = f" (+{len(paths) - 5} more)" if len(paths) > 5 else ""
             lines.append(f"{line} — not applicable: this diff changes {listed}{more}")
         elif re.match(r"^- \[ \] ", line):
-            lines.append(f"{line} — {SEMANTIC_FIELD_UNRESOLVED}")
-        elif line.strip() == f"- {SEMANTIC_FOUNDATION_FIELD}" and versions:
-            measured = ", ".join(f"`docs/semantic-foundation/{v}/`" for v in versions)
-            lines.append(
-                f"{line.rstrip()} measured in this diff: {measured}; release candidate "
-                f"{SEMANTIC_FIELD_UNRESOLVED}"
-            )
+            reason = next((r for key, r in box_reasons.items() if key in line), None)
+            lines.append(f"{line} — {reason or 'measured: not derivable from this diff'}")
         elif re.match(r"^- [^\[][^\n]*:\s*$", line):
-            lines.append(f"{line.rstrip()} {SEMANTIC_FIELD_UNRESOLVED}")
+            label = line.strip()[2:]
+            value = next((v for key, v in measured_fields.items() if label.startswith(key)), None)
+            lines.append(f"{line.rstrip()} {value or 'measured: not derivable from this diff'}")
         else:
             lines.append(line)
     return text[:start] + heading + "\n" + "\n".join(lines) + tail + text[end:]
@@ -1598,16 +2108,15 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_risk(text, facts)
     rows = len(_rows(facts))
     text = re.sub(
-        r"(?m)^Rollback:[ \t]*$",
-        "Rollback: revert this PR (composer default; not verified — state data, migration or "
-        "deployment steps here if a revert is not enough)",
-        text,
-        count=1,
+        r"(?m)^Rollback:[ \t]*$", lambda _m: f"Rollback: {measured_rollback(facts)}", text, count=1
     )
+    areas = ", ".join(f"`{a}`" for a in _top_areas(_changed_paths(facts)))
     text = re.sub(
         r"(?m)^Blast radius:[ \t]*$",
-        f"Blast radius: {rows} changed file{'' if rows == 1 else 's'} (Files touched); "
-        "dependents and callers not measured",
+        lambda _m: (
+            f"Blast radius: {rows} changed file{'' if rows == 1 else 's'} (Files touched) "
+            f"in {areas or 'no area'}" + (f"; {facts.shortstat}" if facts.shortstat else "")
+        ),
         text,
         count=1,
     )
@@ -1619,11 +2128,199 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_semantic(text, facts)
     text = _fill_gates(text, facts)
     if "## Reviewer focus" in text:
-        text = text.replace(REVIEWER_PLACEHOLDER, intent.reviewer_focus or REVIEWER_UNRESOLVED, 1)
+        # An intent file's Reviewer focus is the author's own and stays as
+        # written; without one the composer ranks it in a refreshed region.
+        text = text.replace(
+            REVIEWER_PLACEHOLDER,
+            intent.reviewer_focus or wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
+            1,
+        )
     text = _put_region(text, REGION_INTENT, render_changes_by_intent(facts), _INTENT_PH)
     if facts.l4_binding == BOUND:
         text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
     return _annotate_unchecked_boxes(text)
+
+
+MIGRATION_PATH_RE = re.compile(r"(^|/)(migrations?|alembic|db/migrate)/", re.I)
+SENSITIVE_PATH_RE = re.compile(
+    r"(^|/)(SECURITY\.md|CODEOWNERS|\.env[^/]*|[^/]*secret[^/]*|[^/]*credential[^/]*|[^/]*\.pem|auth[^/]*)$",
+    re.I,
+)
+
+
+def measured_rollback(facts: MechanicalFacts) -> str:
+    """How to undo this range, from what it measurably changes."""
+    rows = _rows(facts)
+    deleted = [r.path for r in rows if r.status.startswith("D")]
+    renamed = [f"{r.old_path} → {r.path}" for r in rows if r.old_path]
+    migrations = [p for p in _changed_paths(facts) if MIGRATION_PATH_RE.search(p)]
+    parts = ["revert this PR"]
+    if deleted:
+        parts.append(f"the revert restores {len(deleted)} deleted path(s): {_short(deleted)}")
+    if renamed:
+        parts.append(f"and undoes {len(renamed)} rename(s): {_short(renamed)}")
+    if migrations:
+        parts.append(
+            f"measured: migration path(s) changed ({_short(migrations)}); "
+            "a revert does not undo data a migration already applied"
+        )
+    else:
+        parts.append(
+            "measured: no migration path in this diff, so a revert restores the prior state"
+        )
+    return "; ".join(parts)
+
+
+def render_reviewer_focus(facts: MechanicalFacts) -> str:
+    """Where to look hardest, ranked from measured risk in the diff. Never empty."""
+    rows = _rows(facts)
+    paths = _changed_paths(facts)
+    bullets: list[str] = []
+    if facts.additive_only_paths:
+        bullets.append(
+            f"- Append-only root files: {_short(facts.additive_only_paths)} — "
+            "confirm only lines were added."
+        )
+    if facts.deletion_markers:
+        bullets.append(
+            "- Justified rewrites (ALLOW-ROOT-DELETION): "
+            + "; ".join(f"`{p}` — {why}" for p, why in list(facts.deletion_markers.items())[:4])
+        )
+    perms = workflow_permission_changes(facts)
+    if perms:
+        bullets.append(
+            "- Workflow permissions added: "
+            + "; ".join(f"`{p}`: `{line}`" for p, line in perms[:4])
+        )
+    inherited = [p for p, declared in facts.workflow_permissions.items() if not declared]
+    if inherited:
+        bullets.append(
+            f"- Workflows with no permissions block (default token): {_short(inherited)}"
+        )
+    loose = [ref for _, ref in added_action_refs(facts) if not ref_pinned(ref)]
+    if loose:
+        bullets.append(f"- Action references not pinned to a SHA or digest: {_short(loose)}")
+    workflows = [p for p in paths if WORKFLOW_PATH_RE.match(p)]
+    if workflows:
+        bullets.append(
+            f"- CI behaviour changes in {_short(workflows)} — they run on every PR and push."
+        )
+    sensitive = [p for p in paths if SENSITIVE_PATH_RE.search(p)]
+    if sensitive:
+        bullets.append(f"- Security or ownership routing: {_short(sensitive)}")
+    semantic = semantic_paths(facts)
+    if semantic:
+        bullets.append(
+            f"- Canonical semantic artifacts: {_short(semantic)} — "
+            "release coordinates under Semantic change."
+        )
+    migrations = [p for p in paths if MIGRATION_PATH_RE.search(p)]
+    if migrations:
+        bullets.append(f"- Migrations: {_short(migrations)} — not undone by a revert.")
+    gone = [r.key for r in rows if r.status.startswith("D") or r.old_path]
+    if gone:
+        bullets.append(
+            f"- Deleted or renamed: {_short(gone)} — check nothing still refers to the old path."
+        )
+    churn = sorted(facts.numstat.items(), key=lambda kv: -(kv[1][0] + kv[1][1]))[:3]
+    if churn:
+        bullets.append(
+            "- Largest changes: " + ", ".join(f"`{p}` (+{a}/-{d})" for p, (a, d) in churn)
+        )
+    elif paths:
+        bullets.append(f"- Changed paths: {_short(paths)}")
+    if not (facts.gate_receipt and facts.gate_binding == BOUND):
+        bullets.append(
+            "- No local gate receipt is bound to this head: "
+            "this PR's CI checks are the verification."
+        )
+    if not bullets:
+        bullets.append("- The diff against the base is empty; nothing to review.")
+    return "\n".join([REVIEWER_MEASURED, "", *bullets])
+
+
+#: Sections the composer derives in full from the measured range. Unlike the
+#: machine-owned regions they carry no markers (the org template's gates parse
+#: them as written), so ownership is proven by content instead: the composer
+#: records a digest of each as it wrote it, and a refresh recomposes a section
+#: only while its text still matches that digest. Text a person edited no
+#: longer matches and is left as theirs.
+DERIVED_SECTIONS = ("## Type of Change", "## Fix", "## Risk", "## Gates", "## Semantic change")
+DERIVED_STAMP_RE = re.compile(r"^<!-- l9-derived: ([^\n]*?) -->$", re.M)
+
+
+def _derived_key(heading: str) -> str:
+    return heading.lstrip("# ").lower().replace(" ", "-")
+
+
+def _section_digest(text: str) -> str:
+    normalized = "\n".join(line.rstrip() for line in text.strip().splitlines())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+
+def derived_digests(body: str) -> dict[str, str]:
+    """key -> digest of each derived section present in ``body``."""
+    found: dict[str, str] = {}
+    for heading in DERIVED_SECTIONS:
+        span = _heading_span(body, heading)
+        if span is not None:
+            found[_derived_key(heading)] = _section_digest(body[span[0] : span[1]])
+    return found
+
+
+def derived_stamp(digests: dict[str, str]) -> str:
+    return "<!-- l9-derived: " + " ".join(f"{k}={v}" for k, v in digests.items()) + " -->"
+
+
+def read_derived_stamp(body: str) -> dict[str, str] | None:
+    match = DERIVED_STAMP_RE.search(body)
+    if match is None:
+        return None
+    pairs = (item.partition("=") for item in match.group(1).split())
+    return {k: v for k, _, v in pairs if k and v}
+
+
+def _refresh_derived(body: str, facts: MechanicalFacts, template: Callable[[], str] | None) -> str:
+    """Recompose every derived section the composer still owns (see DERIVED_SECTIONS).
+
+    A body with no stamp predates it, and nothing proves which of its section
+    text is the composer's: it is left as written. Without a template loader
+    there is nothing to recompose from, and the same holds.
+    """
+    recorded = read_derived_stamp(body)
+    if recorded is None or template is None:
+        return body
+    # Same head, same facts: what was measured for it (a bound local receipt
+    # included) still stands, and a remote pass must not downgrade it.
+    if facts.head and recorded.get("head") == facts.head[:12]:
+        return body
+    owned: list[str] = []
+    for heading in DERIVED_SECTIONS:
+        span = _heading_span(body, heading)
+        if span is not None and recorded.get(_derived_key(heading)) == _section_digest(
+            body[span[0] : span[1]]
+        ):
+            owned.append(heading)
+    if not owned:
+        return body
+    fresh = _fill_template(template(), facts)
+    digests = dict(recorded)
+    if facts.head:
+        digests["head"] = facts.head[:12]
+    for heading in owned:
+        key = _derived_key(heading)
+        span = _heading_span(body, heading)
+        new_span = _heading_span(fresh, heading)
+        if span is None or new_span is None:
+            continue
+        replacement = fresh[new_span[0] : new_span[1]]
+        if not replacement.endswith("\n"):
+            replacement += "\n"
+        body = body[: span[0]] + replacement + body[span[1] :]
+        new_span = _heading_span(body, heading)
+        if new_span is not None:
+            digests[key] = _section_digest(body[new_span[0] : new_span[1]])
+    return DERIVED_STAMP_RE.sub(lambda _m: derived_stamp(digests), body, count=1)
 
 
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
@@ -1644,7 +2341,13 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
     if facts.template_revision:
         parts.append(f"<!-- l9-pr-template: {facts.template_revision} -->")
     if template and template.strip():
-        parts.append(_fill_template(template, facts))
+        filled_text = _fill_template(template, facts)
+        digests = derived_digests(filled_text)
+        if digests:
+            if facts.head:
+                digests = {"head": facts.head[:12], **digests}
+            parts.append(derived_stamp(digests))
+        parts.append(filled_text)
         if facts.additive_only_paths:
             filled.append("protected-root")
     else:
@@ -1730,6 +2433,8 @@ def refresh_body(
     if evidence is not None:
         fresh = stale_evidence(evidence, facts.head) if remote else render_evidence(facts)
         body = set_region(body, REGION_EVIDENCE, fresh)
+    if _region_span(body, REGION_REVIEWER) is not None:
+        body = set_region(body, REGION_REVIEWER, render_reviewer_focus(facts))
     if _region_span(body, REGION_PROTECTED_PATHS) is not None:
         if remote:
             body = _refresh_protected_root_remote(body, facts)
@@ -1742,8 +2447,17 @@ def refresh_body(
     if facts.intent is not None:
         if facts.intent.problem:
             body = _replace_composed_problem(body, facts, facts.intent.problem)
-        if facts.intent.reviewer_focus and REVIEWER_UNRESOLVED in body:
-            body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
+        if facts.intent.reviewer_focus:
+            # The composer's ranked region (or the older unresolved marker) is
+            # the composer's own text; the author's focus replaces it.
+            span = _region_span(body, REGION_REVIEWER)
+            if span is not None:
+                open_marker, close_marker = region_markers(REGION_REVIEWER)
+                start, end = span[0] - len(open_marker), span[1] + len(close_marker)
+                body = body[:start] + facts.intent.reviewer_focus + body[end:]
+            elif REVIEWER_UNRESOLVED in body:
+                body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
+    body = _refresh_derived(body, facts, template)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
     return body, status
@@ -1764,9 +2478,21 @@ def _replace_composed_problem(body: str, facts: MechanicalFacts, problem: str) -
         return body
     start, end = span
     oldest = facts.commit_bodies[0] if facts.commit_bodies else ""
-    tail = _first_paragraph(oldest) or THIN_PROBLEM_NOTE
+    para = _first_paragraph(oldest)
+    # A body-less commit's Problem is the composer's note plus a measured
+    # sentence whose counts move between pushes, or the older bare note.
+    tail = (
+        re.escape(para)
+        if para
+        else "(?:"
+        + re.escape(THIN_PROBLEM_NOTE)
+        + r" Measured: [^\n]*"
+        + "|"
+        + re.escape(LEGACY_THIN_PROBLEM_NOTE)
+        + ")"
+    )
     composed = re.compile(
-        re.escape(facts.commits[0]) + r"(?: \(\+\d+ more commits? below\))?\n\n" + re.escape(tail)
+        re.escape(facts.commits[0]) + r"(?: \(\+\d+ more commits? below\))?\n\n" + tail
     )
     match = composed.search(body, start, end)
     if match is None:
@@ -2265,8 +2991,8 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         )
     if THIN_PROBLEM_NOTE in result.body:
         print(
-            "WARN: PR body Problem is a commit subject only (the oldest commit has no "
-            "body paragraph); rewrite it before review",
+            "NOTE: no commit body states the problem; Problem was composed from the "
+            "oldest commit subject and the measured diff",
             file=sys.stderr,
         )
     return 0
