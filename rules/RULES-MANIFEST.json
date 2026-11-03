@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-11-03T13:07:55Z",
+  "generated_utc": "2026-11-03T20:22:39Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:deac4a0c71c42189c30e6b2db4068add591bc8490ca65892458543a736b41c71",
+  "source_tree_digest": "sha256:b6a47af247739db004dcc13b84b1e8ad017011d916f54a313cf2954f7bbc579c",
   "summary": {
     "total_mdc_files": 68,
     "always_apply_true": 35,
@@ -454,8 +454,8 @@
       "globs": null,
       "first_heading": "No abandoned work",
       "has_yaml_frontmatter": true,
-      "line_count": 98,
-      "content_digest": "sha256:c847d4fc91995f5f5f5f4dabaf98791e03eb8bfd17bc744e54661bb2aeb37334",
+      "line_count": 105,
+      "content_digest": "sha256:fd0b487c8577f0bb715b5c0bee4c3276dcadd188f9cce86dc7825759c577af3c",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

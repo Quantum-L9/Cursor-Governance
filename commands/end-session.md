@@ -95,4 +95,12 @@ Skip only with `GOVERNANCE_BACKUP_SKIP=1`.
 
 ### Phase 5 — CONFIRMATION
 
-Continuation task / next / outcome, lesson count, git branch, backup status.
+Write one handoff file, not separate briefs. Its workspace table and open or
+deferred items come from the debt ledger and git; add judgment as `--next`:
+
+```bash
+"$GRAPHITI_PY" "$GOV/ops/autonomy/session_debt.py" --root "$WS" \
+  handoff --out "$WS/.l9/autonomy/session-handoff.md" --next "{NEXT}"
+```
+
+Then report continuation task / next / outcome, lesson count and backup status.

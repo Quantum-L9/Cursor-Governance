@@ -37,7 +37,14 @@ python3 ops/autonomy/session_debt.py check           # exit 2 when anything is
 python3 ops/autonomy/session_debt.py record <id> --detail "..."
 python3 ops/autonomy/session_debt.py close  <id> --evidence "..."
 python3 ops/autonomy/session_debt.py defer  <id> --reason "..."
+python3 ops/autonomy/session_debt.py handoff --out <file> [--next "..."]  # one end-of-session handoff
 ```
+
+`handoff` is the end-of-session record: one Markdown file for a person with the
+same facts embedded as JSON (`l9.session-handoff.v1`) for the next agent, so the
+two cannot disagree. Each workspace's publish state is the gate's own verdict;
+uncommitted paths are listed but not judged. It never fails the caller. Write it
+instead of hand-written briefs; add judgment with `--next`.
 
 `defer` is deliberately weaker than `close`. It records that the thing is *not*
 fixed and keeps it open, so the next session inherits it instead of

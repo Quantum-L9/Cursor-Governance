@@ -37,14 +37,17 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 LEDGER_NAME = "session-debt.json"
 SCHEMA = "l9.session-debt.v1"
+HANDOFF_SCHEMA = "l9.session-handoff.v1"
 
 #: Branches this repository never publishes from, so commits on them are not
 #: publish debt. A detached HEAD is likewise not a branch to push.
@@ -286,6 +289,132 @@ def collect(roots: list[Path]) -> dict[str, Any]:
     }
 
 
+def workspace_state(root: Path) -> dict[str, Any]:
+    """What a handoff reader needs to know about one repository, from git alone.
+
+    ``publish`` reuses the gate's own judgment (``publish_debt``) so a handoff
+    can never call a branch published that ``check`` would block on.
+    ``uncommitted`` is reported, not judged: the gate does not own the working
+    tree, and a dirty shared clone is often someone else's work.
+    """
+    _, branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+    _, head = _git(root, "rev-parse", "HEAD")
+    code, porcelain = _git(root, "status", "--porcelain")
+    dirty = [line[3:] for line in porcelain.splitlines() if line.strip()] if code == 0 else []
+    if not branch or branch == "HEAD":
+        publish = "detached"
+    elif branch in UNPUBLISHABLE_BRANCHES:
+        publish = "default-branch"
+    else:
+        debt = publish_debt(root)
+        publish = "published" if debt is None else "unpushed" if debt["verified"] else "unverified"
+    return {
+        "workspace": str(root),
+        "branch": branch or None,
+        "head": head or None,
+        "publish": publish,
+        "uncommitted": len(dirty),
+        "uncommitted_sample": dirty[:10],
+    }
+
+
+def build_handoff(roots: list[Path], next_steps: list[str]) -> dict[str, Any]:
+    """One end-of-session record: the gate's verdict plus the state behind it."""
+    report = collect(roots)
+    return {
+        "schema": HANDOFF_SCHEMA,
+        "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "clean": report["clean"],
+        "workspaces": [workspace_state(root) for root in roots],
+        "publish_debt": report["publish_debt"],
+        "blocking_findings": report["blocking_findings"],
+        "deferred_findings": [f for f in report["open_findings"] if f.get("state") == "deferred"],
+        "unreadable_ledgers": report["unreadable_ledgers"],
+        "next": [step for step in next_steps if step.strip()],
+    }
+
+
+def _cell(value: object) -> str:
+    return str(value if value is not None else "—").replace("|", "\\|").replace("\n", " ")
+
+
+def render_handoff(doc: dict[str, Any]) -> str:
+    """Markdown for a person, with the same document embedded for the next agent.
+
+    One file replaces the pair of briefs (prose + JSON) a session used to write
+    by hand: the prose is generated from the data, so the two cannot disagree.
+    """
+    lines = [f"# Session handoff — {doc['generated_at']}", ""]
+    if doc["clean"]:
+        lines.append("**Turn clear:** nothing unpushed, no blocking findings.")
+    else:
+        lines.append(
+            "**Abandoned work:** this session cannot end clean until the items "
+            "below are finished or deferred."
+        )
+    lines.append("")
+
+    needs: list[str] = []
+    for item in doc["publish_debt"]:
+        needs.append(
+            f"- **Unpushed** `{item['branch']}` in `{item['workspace']}` — {item['detail']}"
+        )
+    for item in doc["blocking_findings"]:
+        needs.append(
+            f"- **Open finding** `{item.get('id')}` — {item.get('detail', '')} "
+            f"(`{item['workspace']}`)"
+        )
+    for item in doc["deferred_findings"]:
+        needs.append(
+            f"- **Deferred, needs a human** `{item.get('id')}` — {item.get('detail', '')}"
+            + (f" Reason: {item['reason']}" if item.get("reason") else "")
+        )
+    for path in doc["unreadable_ledgers"]:
+        needs.append(f"- **Corrupt ledger** at `{path}` — cannot prove debt is discharged")
+    for ws in doc["workspaces"]:
+        if ws["uncommitted"]:
+            sample = ", ".join(f"`{p}`" for p in ws["uncommitted_sample"][:5])
+            needs.append(
+                f"- **Uncommitted** {ws['uncommitted']} path(s) in `{ws['workspace']}` "
+                f"(not judged by the gate; may be another session's): {sample}"
+            )
+    lines += ["## Needs attention", ""] + (needs or ["Nothing."]) + [""]
+
+    lines += [
+        "## Workspaces",
+        "",
+        "| Workspace | Branch | HEAD | Publish | Uncommitted |",
+        "|---|---|---|---|---|",
+    ]
+    for ws in doc["workspaces"]:
+        head = (ws["head"] or "")[:10] or None
+        lines.append(
+            f"| `{_cell(ws['workspace'])}` | `{_cell(ws['branch'])}` | `{_cell(head)}` "
+            f"| {ws['publish']} | {ws['uncommitted']} |"
+        )
+    lines.append("")
+
+    if doc["next"]:
+        lines += ["## Next", ""] + [f"- {step}" for step in doc["next"]] + [""]
+
+    # JSON escapes newlines inside strings, so no line of the body can be a
+    # bare fence: a plain ``` block always delimits it exactly.
+    body = json.dumps(doc, indent=2, sort_keys=True)
+    lines += ["## Machine-readable", "", "```json", body, "```", ""]
+    return "\n".join(lines)
+
+
+def read_handoff(text: str) -> dict[str, Any]:
+    """The embedded document back out of a rendered handoff."""
+    match = re.search(r"^```json\n(.*?)\n```$", text, re.MULTILINE | re.DOTALL)
+    if not match:
+        raise ValueError("no embedded handoff document")
+    doc = json.loads(match.group(1))
+    if doc.get("schema") != HANDOFF_SCHEMA:
+        raise ValueError(f"not a {HANDOFF_SCHEMA} document")
+    return doc
+
+
 def _render_findings(findings: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for item in findings:
@@ -359,6 +488,20 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_handoff(args: argparse.Namespace) -> int:
+    """Write the end-of-session handoff. A report, never a gate: always exit 0."""
+    doc = build_handoff(candidate_roots(args.root), args.next or [])
+    text = render_handoff(doc)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(text, encoding="utf-8")
+        print(f"handoff written: {out} ({'clean' if doc['clean'] else 'open debt'})")
+    else:
+        print(text)
+    return 0
+
+
 def cmd_record(args: argparse.Namespace) -> int:
     root = git_root(Path(args.workspace or Path.cwd()))
     if root is None:
@@ -418,6 +561,13 @@ def main() -> int:
 
     check = sub.add_parser("check", help="exit 2 when any debt is open (gate)")
     check.set_defaults(func=cmd_check)
+
+    handoff = sub.add_parser(
+        "handoff", help="write one end-of-session handoff (markdown + embedded JSON)"
+    )
+    handoff.add_argument("--out", help="write here instead of stdout")
+    handoff.add_argument("--next", action="append", help="a next step for the reader (repeatable)")
+    handoff.set_defaults(func=cmd_handoff)
 
     record = sub.add_parser("record", help="record an observed defect as debt")
     record.add_argument("id")

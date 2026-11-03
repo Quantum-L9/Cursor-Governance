@@ -454,3 +454,74 @@ def test_claude_stop_wrapper_scopes_the_gate_to_the_session_roots(tmp_path: Path
     assert session_debt_wrap.session_roots(same, {"CLAUDE_PROJECT_DIR": str(project)}) == [
         str(project)
     ]
+
+
+# --- Handoff: one end-of-session record -------------------------------------
+
+
+def test_handoff_reports_each_workspace_with_the_gates_own_publish_verdict(
+    origin: Path, tmp_path: Path
+) -> None:
+    pushed = make_clone(origin, tmp_path / "pushed")
+    commit_on_branch(pushed, "feat/pushed")
+    git(pushed, "push", "-q", "-u", "origin", "feat/pushed")
+    # A second clone of the seeded origin: make_clone would re-seed an
+    # identical base commit, which git refuses as empty.
+    unpushed = tmp_path / "unpushed"
+    subprocess.run(["git", "clone", "-q", str(origin), str(unpushed)], check=True)
+    git(unpushed, "config", "user.email", "t@example.com")
+    git(unpushed, "config", "user.name", "t")
+    # Distinct content: an identical tree, parent, author and second would give
+    # the same SHA as the pushed commit, which origin genuinely has.
+    git(unpushed, "checkout", "-q", "-b", "feat/local")
+    (unpushed / "local.txt").write_text("local only", encoding="utf-8")
+    git(unpushed, "add", "-A")
+    git(unpushed, "commit", "-q", "-m", "local work")
+    doc = session_debt.build_handoff([pushed, unpushed], [])
+    publish = {Path(ws["workspace"]).name: ws["publish"] for ws in doc["workspaces"]}
+    assert publish == {"pushed": "published", "unpushed": "unpushed"}
+    assert doc["clean"] is False and doc["publish_debt"][0]["branch"] == "feat/local"
+
+
+def test_handoff_names_uncommitted_paths_without_judging_them(clone: Path) -> None:
+    (clone / "scratch.txt").write_text("x", encoding="utf-8")
+    doc = session_debt.build_handoff([clone], [])
+    (ws,) = doc["workspaces"]
+    assert ws["publish"] == "default-branch" and ws["uncommitted"] == 1
+    assert ws["uncommitted_sample"] == ["scratch.txt"]
+    assert doc["clean"] is True, "a dirty tree is reported, not a gate failure"
+    assert "**Uncommitted** 1 path(s)" in session_debt.render_handoff(doc)
+
+
+def test_handoff_carries_deferrals_for_a_human(clone: Path) -> None:
+    assert _run(clone, "record", "f-1", "--detail", "drift in settings").returncode == 0
+    assert _run(clone, "defer", "f-1", "--reason", "needs org admin").returncode == 0
+    doc = session_debt.build_handoff([clone], [])
+    assert doc["clean"] is True
+    assert [f["id"] for f in doc["deferred_findings"]] == ["f-1"]
+    text = session_debt.render_handoff(doc)
+    assert "**Deferred, needs a human** `f-1`" in text and "needs org admin" in text
+
+
+def test_rendered_handoff_round_trips_its_document(clone: Path) -> None:
+    doc = session_debt.build_handoff([clone], ["merge #1", "fence ```` inside"])
+    text = session_debt.render_handoff(doc)
+    assert "## Next" in text and "- merge #1" in text
+    assert session_debt.read_handoff(text) == doc
+
+
+def test_read_handoff_refuses_a_document_of_another_schema() -> None:
+    with pytest.raises(ValueError):
+        session_debt.read_handoff('```json\n{"schema": "other"}\n```\n')
+    with pytest.raises(ValueError):
+        session_debt.read_handoff("no document here")
+
+
+def test_handoff_cli_writes_one_file_and_never_fails(clone: Path) -> None:
+    commit_on_branch(clone, "feat/unpushed")
+    out = clone / "out" / "handoff.md"
+    result = _run(clone, "handoff", "--out", str(out), "--next", "push it")
+    assert result.returncode == 0, "a report, not a gate"
+    assert "open debt" in result.stdout
+    doc = session_debt.read_handoff(out.read_text(encoding="utf-8"))
+    assert doc["next"] == ["push it"] and doc["clean"] is False
