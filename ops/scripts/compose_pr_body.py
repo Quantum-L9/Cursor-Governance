@@ -1024,16 +1024,23 @@ def _type_from_paths(paths: list[str]) -> str:
     return "Feature / enhancement"
 
 
-def type_inferred_from_paths(facts: MechanicalFacts) -> bool:
-    """True when no commit evidence named a type and the paths decided it."""
+def type_from_commits(facts: MechanicalFacts) -> bool:
+    """True when a commit of this branch names a type: a conventional-commit
+    type, a ``!`` or ``BREAKING CHANGE`` trailer, or an ALLOW-ROOT-DELETION marker."""
     for index, subject in enumerate(facts.commits):
         match = CONVENTIONAL_RE.match(subject)
         if match and CONVENTIONAL_TYPES.get(match.group("type")):
-            return False
+            return True
         body = facts.commit_bodies[index] if index < len(facts.commit_bodies) else ""
         if match and match.group("bang") or re.search(r"^BREAKING[ -]CHANGE:", body, re.M):
-            return False
-    if facts.deletion_markers:
+            return True
+    return bool(facts.deletion_markers)
+
+
+def type_inferred_from_paths(facts: MechanicalFacts) -> bool:
+    """True when no commit evidence named a type and the paths' fallback decided
+    it. A docs/-only or .github/-only diff is a measurement, not a fallback."""
+    if type_from_commits(facts):
         return False
     paths = _changed_paths(facts)
     if paths and (
@@ -1111,11 +1118,20 @@ def completion_fields(body: str, facts: MechanicalFacts) -> dict[str, dict[str, 
                 COMPLETION_DERIVED,
                 "ticked from the changed paths: " + ", ".join(infer_type_of_change(facts)),
             )
-        else:
+        elif type_from_commits(facts):
             put(
                 "type_of_change",
                 COMPLETION_VERIFIED,
                 "ticked from this branch's commit types: " + ", ".join(infer_type_of_change(facts)),
+            )
+        else:
+            # No commit names a type; every changed path sits under docs/ or
+            # .github/, which is measured from the diff, not read from a commit.
+            put(
+                "type_of_change",
+                COMPLETION_DERIVED,
+                "measured: every changed path is under docs/ or .github/: "
+                + ", ".join(infer_type_of_change(facts)),
             )
     if RISK_NOTE in body:
         put("risk", COMPLETION_DERIVED, "ticked from the measured diff: " + infer_risk(facts))
@@ -1723,6 +1739,7 @@ WORKFLOW_PATH_RE = re.compile(r"^\.github/workflows/[^/]+\.ya?ml$")
 IAM_PATH_RE = re.compile(r"(^|/)(iam|policies|roles?)(/|\.)|\.tf$|(^|/)terraform/", re.I)
 USES_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*['\"]?([^'\"\s#]+)")
 FULL_SHA_RE = re.compile(r"@[0-9a-f]{40}$")
+ACTION_MANIFESTS = ("action.yml", "action.yaml")
 #: A container action is pinned only by an image digest; a tag is mutable.
 DOCKER_DIGEST_RE = re.compile(r"@sha256:[0-9a-f]{64}$")
 PERMISSION_LINE_RE = re.compile(
@@ -1741,7 +1758,9 @@ def added_action_refs(facts: MechanicalFacts) -> list[tuple[str, str]]:
     action (``docker://``) a line adds. Only a local ``./`` action is exempt."""
     refs: list[tuple[str, str]] = []
     for path, lines in facts.added_lines.items():
-        if not path.endswith((".yml", ".yaml")):
+        # Only a workflow or an action manifest runs `uses:`; another YAML file's
+        # `uses:` key is data, not a dependency.
+        if not (WORKFLOW_PATH_RE.match(path) or path.rsplit("/", 1)[-1] in ACTION_MANIFESTS):
             continue
         for line in lines:
             match = USES_RE.match(line)

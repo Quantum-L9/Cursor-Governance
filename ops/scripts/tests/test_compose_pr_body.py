@@ -2459,6 +2459,34 @@ class AuthorIntentTests(unittest.TestCase):
             )
 
 
+class TypeEvidenceReportTests(unittest.TestCase):
+    """The handoff says where a Type of Change came from: a commit type is
+    verified; a docs/-only or .github/-only diff is measured from the paths and
+    never reported as read from a commit."""
+
+    def test_path_only_types_are_derived_not_verified(self) -> None:
+        for path, label in (
+            ("docs/guide.md", "Documentation"),
+            (".github/workflows/ci.yml", "CI / governance change"),
+        ):
+            with self.subTest(path=path):
+                facts = MechanicalFacts(
+                    commits=["update the guide"],
+                    changed_files=[f"M\t{path}"],
+                    workflow_permissions={path: True} if path.endswith(".yml") else {},
+                )
+                field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
+                self.assertEqual(field["status"], COMPLETION_DERIVED, field)
+                self.assertNotIn("commit types", field["detail"])
+                self.assertIn(label, field["detail"])
+
+    def test_a_commit_type_is_verified(self) -> None:
+        facts = MechanicalFacts(commits=["docs: update the guide"], changed_files=["M\tdocs/a.md"])
+        field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
+        self.assertEqual(field["status"], COMPLETION_VERIFIED, field)
+        self.assertIn("commit types", field["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -2643,6 +2671,20 @@ class WorkflowPermissionTests(unittest.TestCase):
         facts = MechanicalFacts(commits=["ci: x"], changed_files=["D\t.github/workflows/ci.yml"])
         gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
         self.assertIn("measured: workflow file(s) only removed", gates)
+
+    def test_only_workflows_and_action_manifests_carry_action_refs(self) -> None:
+        facts = MechanicalFacts(
+            commits=["ci: x"],
+            changed_files=["M\tconfig/deps.yml", "M\t.github/actions/setup/action.yml"],
+            added_lines={
+                "config/deps.yml": ["uses: some/lib@v1"],
+                ".github/actions/setup/action.yml": ["    - uses: actions/cache@v4"],
+            },
+        )
+        gates = _section(compose_pr_body(facts, CANONICAL_TEMPLATE).body, "Gates")
+        line = next(ln for ln in gates.splitlines() if "Third-party actions" in ln)
+        self.assertIn("`actions/cache@v4`", line)
+        self.assertNotIn("some/lib", line)
 
     def test_container_actions_need_an_image_digest(self) -> None:
         digest = "sha256:" + "a" * 64
