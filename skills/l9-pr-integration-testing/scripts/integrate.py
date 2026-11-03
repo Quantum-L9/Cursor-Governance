@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -25,6 +26,13 @@ IMAGE = re.compile(r"^(?:sha256:[0-9a-f]{64}|[a-zA-Z0-9][a-zA-Z0-9_./:-]*@sha256
 REPO = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 SAFE_REF = re.compile(r"^[A-Za-z0-9_./-]+$")
 CATEGORIES = {"PYTHON", "NODE", "ODOO", "CONTAINER", "DATABASE"}
+SERVICE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,30}$")
+ENV_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,127}$")
+DURATION = re.compile(r"^([0-9]{1,4})(ms|s|m)$")
+# What an official database image's entrypoint needs to drop from root to its
+# service user. Nothing here reaches the network: services share a namespace
+# whose only interface is loopback.
+SERVICE_CAPS = ("CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID")
 
 
 class SafetyError(RuntimeError):
@@ -53,6 +61,80 @@ def bounded_relative(path: str) -> bool:
         and ".git" not in p.parts
         and not any(x in path for x in ("\\", "\x00"))
     )
+
+
+def validate_env(env, where: str) -> dict:
+    """Literal, committed configuration only: no expressions, no NULs."""
+    if env is None:
+        return {}
+    if not isinstance(env, dict):
+        raise SafetyError(f"{where} must be an object of strings")
+    for key, value in env.items():
+        if not isinstance(key, str) or not ENV_KEY.fullmatch(key):
+            raise SafetyError(f"{where} has an invalid variable name {key!r}")
+        if not isinstance(value, str) or "\x00" in value or "\n" in value:
+            raise SafetyError(f"{where}.{key} must be a single-line string")
+        if "${{" in value:
+            raise SafetyError(f"{where}.{key} is a workflow expression, not a literal value")
+    return env
+
+
+def duration_seconds(value: str) -> float:
+    match = DURATION.fullmatch(value)
+    if not match:
+        raise SafetyError(f"health duration {value!r} must look like 500ms, 10s or 1m")
+    number, unit = int(match.group(1)), match.group(2)
+    return number / 1000 if unit == "ms" else number * 60 if unit == "m" else float(number)
+
+
+def validate_services(services) -> list:
+    """Service sidecars: digest-pinned, health-checked, on one loopback namespace."""
+    if services is None:
+        return []
+    if not isinstance(services, list) or len(services) > 6:
+        raise SafetyError("services must be a list of at most 6 sidecars")
+    names, ports = set(), set()
+    for service in services:
+        if not isinstance(service, dict):
+            raise SafetyError("each service must be an object")
+        name = service.get("name", "")
+        if not SERVICE_NAME.fullmatch(name) or name in names:
+            raise SafetyError(f"service name {name!r} must be unique, lowercase and short")
+        names.add(name)
+        if not isinstance(service.get("image"), str) or not IMAGE.fullmatch(service["image"]):
+            raise SafetyError(f"service {name} image must be pinned by sha256 digest")
+        validate_env(service.get("env"), f"services.{name}.env")
+        health = service.get("health")
+        if not isinstance(health, dict):
+            raise SafetyError(
+                f"service {name} needs a health check: tests must not race its startup"
+            )
+        cmd = health.get("cmd")
+        if not isinstance(cmd, str) or not cmd.strip() or "\x00" in cmd or "\n" in cmd:
+            raise SafetyError(f"service {name} health.cmd must be a single-line command")
+        for key in ("interval", "timeout", "start_period"):
+            if key in health:
+                duration_seconds(health[key])
+        retries = health.get("retries", 3)
+        if not isinstance(retries, int) or not 1 <= retries <= 100:
+            raise SafetyError(f"service {name} health.retries must be 1-100")
+        for port in service.get("ports", []):
+            if not isinstance(port, int) or not 0 < port < 65536:
+                raise SafetyError(f"service {name} port {port!r} invalid")
+            if port in ports:
+                raise SafetyError(
+                    f"two services listen on port {port}; one loopback namespace cannot hold both"
+                )
+            ports.add(port)
+    return services
+
+
+def health_deadline(health: dict) -> float:
+    """How long Docker itself would take to call the service unhealthy, plus slack."""
+    interval = duration_seconds(health.get("interval", "30s"))
+    timeout = duration_seconds(health.get("timeout", "30s"))
+    start = duration_seconds(health.get("start_period", "0s"))
+    return min(600.0, start + (interval + timeout) * (health.get("retries", 3) + 1) + 30)
 
 
 def validate_plan(m: dict):
@@ -148,6 +230,8 @@ def validate_plan(m: dict):
             raise SafetyError("probe requires exact nonempty from and to text")
         if probe["from"] == probe["to"] or len(probe["from"]) > 8000 or len(probe["to"]) > 8000:
             raise SafetyError("probe must materially change bounded exact text")
+    validate_services(m.get("services"))
+    validate_env(m.get("test_env"), "test_env")
     if m.get("fixture_only"):
         raise SafetyError("fixture_only input cannot be run through production CLI")
     return True
@@ -389,10 +473,12 @@ def inspect_weak_tests(store, heads, per_pr):
 class DockerSandbox:
     """Allowlisted docker run flags only; no networks, host socket, root or privilege."""
 
-    def __init__(self, image, run_id, uid=None, gid=None):
+    def __init__(self, image, run_id, uid=None, gid=None, services=(), test_env=None):
         if not IMAGE.fullmatch(image):
             raise SafetyError("image digest not pinned")
         self.image = image
+        self.services = list(services)
+        self.test_env = dict(test_env or {})
         self.run_id = run_id
         self.uid = os.getuid() if uid is None else uid
         self.gid = os.getgid() if gid is None else gid
@@ -417,13 +503,35 @@ class DockerSandbox:
                     + p.stderr[-300:]
                 )
             provenance[name] = p.stdout.strip()
+        for service in self.services:
+            p = subprocess.run(
+                ["docker", "image", "inspect", "--format", "{{.Id}}", service["image"]],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            if p.returncode:
+                raise SafetyError(
+                    f"DOCKER_UNAVAILABLE: pinned service image for {service['name']} is not local"
+                )
+            provenance[f"service_image:{service['name']}"] = p.stdout.strip()
         return provenance
 
-    def command(self, case_dir: Path, argv: list[str], seconds=300, isolate_git=False):
+    def command(
+        self,
+        case_dir: Path,
+        argv: list[str],
+        seconds=300,
+        isolate_git=False,
+        network="none",
+        env=None,
+    ):
         self.call_number += 1
         name = f"l9-pr-{self.run_id}-{self.call_number}"
         if not argv or any(not isinstance(s, str) or "\x00" in s for s in argv):
             raise SafetyError("container command requires clean argv")
+        if network != "none" and not re.fullmatch(r"container:l9-pr-[a-z0-9-]+-net-\d+", network):
+            raise SafetyError("a command may only join this run's own loopback namespace")
         args = [
             "docker",
             "run",
@@ -433,7 +541,7 @@ class DockerSandbox:
             "--name",
             name,
             "--network",
-            "none",
+            network,
             "--read-only",
             "--cap-drop",
             "ALL",
@@ -464,6 +572,7 @@ class DockerSandbox:
             "GIT_TERMINAL_PROMPT=0",
             "-e",
             "PYTHONDONTWRITEBYTECODE=1",
+            *(item for key, value in (env or {}).items() for item in ("-e", f"{key}={value}")),
             # The runner's own Git steps ignore global/system config and pin the
             # commit date. Test procedures must not inherit that: a suite that
             # writes $HOME/.gitconfig (url.insteadOf, identity) would otherwise
@@ -476,6 +585,10 @@ class DockerSandbox:
                     "GIT_CONFIG_NOSYSTEM=1",
                     "-e",
                     "GIT_COMMITTER_DATE=2000-01-01T00:00:00+00:00",
+                    # Both dates, or a merge commit's SHA changes on every run
+                    # and the same candidate gets a different revision id.
+                    "-e",
+                    "GIT_AUTHOR_DATE=2000-01-01T00:00:00+00:00",
                 ]
                 if isolate_git
                 else []
@@ -509,6 +622,188 @@ class DockerSandbox:
                 "elapsed_ms": int((time.monotonic() - started) * 1000),
                 "timed_out": True,
             }
+
+    @contextlib.contextmanager
+    def services_up(self, writer, case):
+        """Start this case's sidecars in a fresh network-less namespace.
+
+        A holder container owns a namespace whose only interface is loopback.
+        Services and the test container join it, so tests reach them on
+        localhost exactly as a CI job does, and nothing has a route out. Every
+        case gets fresh services: no state crosses from one candidate to the next.
+        """
+        if not self.services:
+            yield "none"
+            return
+        self.call_number += 1
+        holder = f"l9-pr-{self.run_id}-net-{self.call_number}"
+        started = []
+        try:
+            self._docker_run_detached(
+                [
+                    "--name",
+                    holder,
+                    "--network",
+                    "none",
+                    # Joined containers take this hostname. Under --network none
+                    # a container's own hostname does not resolve, and a server
+                    # that looks itself up (Neo4j's JVM does) refuses to start;
+                    # "localhost" resolves through the namespace's own hosts file.
+                    "--hostname",
+                    "localhost",
+                    "--read-only",
+                    "--cap-drop",
+                    "ALL",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--pids-limit",
+                    "8",
+                    "--memory",
+                    "32m",
+                    "--user",
+                    f"{self.uid}:{self.gid}",
+                    "--entrypoint",
+                    "sleep",
+                    self.image,
+                    "infinity",
+                ]
+            )
+            started.append(holder)
+            for service in self.services:
+                name = f"{holder}-{service['name']}"
+                health = service["health"]
+                args = [
+                    "--name",
+                    name,
+                    "--network",
+                    f"container:{holder}",
+                    "--cap-drop",
+                    "ALL",
+                    *(item for cap in SERVICE_CAPS for item in ("--cap-add", cap)),
+                    "--security-opt",
+                    "no-new-privileges",
+                    "--pids-limit",
+                    "256",
+                    "--memory",
+                    "1024m",
+                    "--cpus",
+                    "1",
+                    "--health-cmd",
+                    health["cmd"],
+                    "--health-retries",
+                    str(health.get("retries", 3)),
+                ]
+                for key in ("interval", "timeout", "start_period"):
+                    if key in health:
+                        args += [f"--health-{key.replace('_', '-')}", health[key]]
+                for key, value in (service.get("env") or {}).items():
+                    args += ["-e", f"{key}={value}"]
+                self._docker_run_detached([*args, service["image"]])
+                started.append(name)
+            ready = {}
+            for service in self.services:
+                name = f"{holder}-{service['name']}"
+                ready[service["name"]] = self._await_healthy(
+                    name, service["name"], health_deadline(service["health"])
+                )
+            writer.record(
+                case,
+                "SERVICES",
+                "HEALTHY",
+                {
+                    "namespace": "loopback-only",
+                    "services": [
+                        {"name": s["name"], "image": s["image"], "ready_ms": ready[s["name"]]}
+                        for s in self.services
+                    ],
+                },
+            )
+            yield f"container:{holder}"
+        finally:
+            # Each service's own log travels with the evidence: a service can be
+            # healthy yet degraded (a plugin it could not download), and that
+            # must be attributable rather than read as a defect in the PR.
+            # Capture is best-effort; removal is not. A capture that times out
+            # or cannot be written must never skip the removal below.
+            try:
+                for name in started[1:]:
+                    self._capture_service_log(writer, case, name)
+            finally:
+                for name in reversed(started):
+                    try:
+                        subprocess.run(
+                            ["docker", "rm", "-f", name], capture_output=True, timeout=60
+                        )
+                    except subprocess.TimeoutExpired:
+                        continue
+
+    def _capture_service_log(self, writer, case, name):
+        try:
+            logs = subprocess.run(
+                ["docker", "logs", "--tail", "200", name],
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=30,
+            )
+            status, body = (
+                "CAPTURED" if logs.returncode == 0 else "UNAVAILABLE",
+                (logs.stdout or "") + (logs.stderr or ""),
+            )
+        except subprocess.TimeoutExpired:
+            status, body = "UNAVAILABLE", "docker logs timed out"
+        try:
+            writer.record(case, "SERVICE_LOG", status, {"container": name}, log=body)
+        except OSError:
+            writer.record(case, "SERVICE_LOG", "UNAVAILABLE", {"container": name})
+
+    def _docker_run_detached(self, args):
+        p = subprocess.run(
+            ["docker", "run", "-d", "--pull", "never", *args],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if p.returncode:
+            raise SafetyError(
+                "service container failed to start: " + (p.stderr or p.stdout).strip()[-300:]
+            )
+
+    def _await_healthy(self, container, label, deadline_seconds):
+        started = time.monotonic()
+        state = ""
+        while time.monotonic() - started < deadline_seconds:
+            p = subprocess.run(
+                [
+                    "docker",
+                    "inspect",
+                    "--format",
+                    "{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}",
+                    container,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            state = p.stdout.strip()
+            if state == "running healthy":
+                return int((time.monotonic() - started) * 1000)
+            if p.returncode or not state.startswith(("running", "created")) or "unhealthy" in state:
+                break
+            time.sleep(0.5)
+        logs = subprocess.run(
+            ["docker", "logs", "--tail", "40", container],
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=20,
+        )
+        tail = ((logs.stdout or "") + (logs.stderr or "")).strip()[-600:]
+        raise SafetyError(
+            f"service container {label} did not become healthy ({state or 'gone'}); "
+            f"it has no network, so an image that downloads at startup cannot run here. "
+            f"log tail: {tail}"
+        )
 
 
 class EvidenceWriter:
@@ -634,26 +929,50 @@ def prepare_case(store, name, workdir, sandbox, writer, base_sha, heads):
 
 def tests_case(sandbox, path, name, tests, writer):
     results = []
-    for p in tests:
-        result = sandbox.command(path, p["argv"], int(p.get("timeout_seconds", 300)))
-        eid = writer.log_command(name, "TEST", p["argv"], result)
-        fids = parse_failure_ids(
-            result["stdout"] + "\n" + result["stderr"], p.get("failure_parser", "")
-        )
-        results.append(
-            {
-                "evidence_id": eid,
-                "status": "TIMEOUT"
-                if result["timed_out"]
-                else "PASS"
-                if result["returncode"] == 0
-                else "FAIL",
-                "procedure": p["id"],
-                "returncode": result["returncode"],
-                "failure_ids": fids,
-            }
-        )
+    with sandbox.services_up(writer, name) as network:
+        for p in tests:
+            result = sandbox.command(
+                path,
+                p["argv"],
+                int(p.get("timeout_seconds", 300)),
+                network=network,
+                env=sandbox.test_env,
+            )
+            eid = writer.log_command(name, "TEST", p["argv"], result)
+            body = result["stdout"] + "\n" + result["stderr"]
+            parser = p.get("failure_parser", "")
+            results.append(
+                {
+                    "evidence_id": eid,
+                    "status": "TIMEOUT"
+                    if result["timed_out"]
+                    else "PASS"
+                    if result["returncode"] == 0
+                    else "FAIL",
+                    "procedure": p["id"],
+                    "returncode": result["returncode"],
+                    "failure_ids": parse_failure_ids(body, parser),
+                    "skipped": parse_skipped(body, parser),
+                }
+            )
     return results
+
+
+def parse_skipped(body: str, parser: str):
+    """Skipped-test count from a known runner's summary; None when unknown.
+
+    A skip is not a pass: a suite that skips its database tests reports green
+    while proving nothing about them, so the count travels with the result.
+    """
+    patterns = {
+        "pytest": r"\b(\d+) skipped\b",
+        "unittest": r"\bskipped=(\d+)\b",
+        "node-test": r"(?m)^# skip (\d+)$",
+    }
+    if parser not in patterns:
+        return None
+    found = re.findall(patterns[parser], body)
+    return sum(int(n) for n in found) if found else 0
 
 
 def parse_failure_ids(body: str, parser: str):
@@ -667,7 +986,50 @@ def parse_failure_ids(body: str, parser: str):
     return None
 
 
-def negative_probe(sandbox, path, index, p, tests, writer, workdir):
+def judge_probe(reference, mutated):
+    """Decide whether a mutation was caught, relative to the unmutated candidate.
+
+    A failure only counts as catching the mutation when it is a failure the
+    unmutated candidate did not already have: a passing procedure that now
+    fails, or an already-failing procedure that gains failure identities it did
+    not have before. Anything that cannot be told apart from the pre-existing
+    failure is INCONCLUSIVE, never KILLED.
+    """
+    before = {r["procedure"]: r for r in reference}
+    caught, unjudged = [], []
+    for result in mutated:
+        pid = result["procedure"]
+        ref = before.get(pid)
+        if result["status"] == "TIMEOUT":
+            unjudged.append(f"{pid}: timed out under the mutation")
+        elif ref is None:
+            unjudged.append(f"{pid}: no unmutated result to compare against")
+        elif ref["status"] == "PASS":
+            if result["status"] == "FAIL":
+                caught.append(f"{pid}: passed unmutated, fails under the mutation")
+        elif ref["status"] == "TIMEOUT":
+            unjudged.append(f"{pid}: timed out on the unmutated candidate")
+        elif result["status"] == "PASS":
+            continue
+        elif ref.get("failure_ids") is None or result.get("failure_ids") is None:
+            unjudged.append(
+                f"{pid}: already failing unmutated and has no failure parser, "
+                "so a failure under the mutation cannot be told apart"
+            )
+        elif not result["failure_ids"]:
+            unjudged.append(f"{pid}: failure under the mutation named no test identities")
+        else:
+            new = sorted(set(result["failure_ids"]) - set(ref["failure_ids"]))
+            if new:
+                caught.append(f"{pid}: new failures {', '.join(new[:5])}")
+    if caught:
+        return "KILLED", caught
+    if unjudged:
+        return "INCONCLUSIVE", unjudged
+    return "SURVIVED", ["no procedure gained a failure under the mutation"]
+
+
+def negative_probe(sandbox, path, index, p, tests, writer, workdir, reference):
     proof = workdir / f"mutation-{index}"
     # Source mutation never touches authoritative case; only a disposable copy.
     shutil.copytree(path, proof, symlinks=True)
@@ -692,10 +1054,7 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
         raise SafetyError("mutation target must match exactly once; no guessed replacement")
     target.write_text(raw.replace(p["from"], p["to"], 1), encoding="utf-8")
     results = tests_case(sandbox, proof, f"fault-probe-{index}", tests, writer)
-    if any(x["status"] == "TIMEOUT" for x in results):
-        status = "INCONCLUSIVE"
-    else:
-        status = "KILLED" if any(x["status"] == "FAIL" for x in results) else "SURVIVED"
+    status, basis = judge_probe(reference, results)
     return {
         "index": index,
         "path": p["path"],
@@ -703,6 +1062,7 @@ def negative_probe(sandbox, path, index, p, tests, writer, workdir):
         "from_sha256": sha(p["from"].encode()),
         "to_sha256": sha(p["to"].encode()),
         "status": status,
+        "basis": basis,
         "test_evidence_ids": [x["evidence_id"] for x in results],
     }
 
@@ -789,6 +1149,15 @@ def run(m: dict, out: Path):
         "order_basis": m.get("order_basis", "UNKNOWN"),
         "docker_image": m.get("image", "UNKNOWN"),
         "network": "none",
+        # Sidecars share a loopback-only namespace with the tests; "network"
+        # stays none because nothing in the run has a route out.
+        "services": [
+            {"name": x.get("name"), "image": x.get("image")} for x in m.get("services") or []
+        ],
+        "service_source": m.get("service_source"),
+        "test_env_keys": sorted(m.get("test_env") or {}),
+        "test_env_omitted": m.get("test_env_omitted", []),
+        "service_warnings": m.get("service_warnings", []),
         "run_id": run_id,
         "started_at": stamp,
         "states": [],
@@ -805,7 +1174,9 @@ def run(m: dict, out: Path):
     work_path = None
     try:
         validate_plan(m)
-        sandbox = DockerSandbox(m["image"], run_id)
+        sandbox = DockerSandbox(
+            m["image"], run_id, services=m.get("services") or [], test_env=m.get("test_env")
+        )
         manifest["docker_provenance"] = sandbox.preflight()
         with tempfile.TemporaryDirectory(prefix="l9-pr-integration-") as tmp:
             work = Path(tmp)
@@ -866,6 +1237,7 @@ def run(m: dict, out: Path):
                 )
                 statuses = {}
                 combined_path = None
+                combined_tests = []
                 for name, heads in phases:
                     case, merges, rev = prepare_case(
                         store, name, work, sandbox, writer, m["repository"]["base_sha"], heads
@@ -890,6 +1262,7 @@ def run(m: dict, out: Path):
                         )
                         if name == "combined":
                             combined_path = case
+                            combined_tests = tests
                         execution["docker_executed"] = True
                     manifest["states"].append(row)
                 if combined_path:
@@ -1117,10 +1490,32 @@ def run(m: dict, out: Path):
                             )
                     manifest["states"].append(alt_record)
                 probe_results = []
-                if combined_path and statuses.get("combined") == "PASS":
-                    for i, probe in enumerate(m.get("negative_probes", []), 1):
+                requested = m.get("negative_probes", [])
+                if requested and not combined_path:
+                    eid = writer.record(
+                        "negative probes",
+                        "PROBE_SKIPPED",
+                        "NOT_RUN",
+                        {"reason": "no combined candidate to mutate", "requested": len(requested)},
+                    )
+                    writer.finding(
+                        "UNVERIFIED",
+                        "MEDIUM",
+                        "Mutation probes not run: the combined candidate did not merge",
+                        [eid],
+                        action="Resolve the merge conflict, then rerun the probes",
+                    )
+                if combined_path:
+                    for i, probe in enumerate(requested, 1):
                         result = negative_probe(
-                            sandbox, combined_path, i, probe, m["test_procedures"], writer, work
+                            sandbox,
+                            combined_path,
+                            i,
+                            probe,
+                            m["test_procedures"],
+                            writer,
+                            work,
+                            combined_tests,
                         )
                         probe_results.append(result)
                         if result["status"] == "SURVIVED":
@@ -1136,8 +1531,11 @@ def run(m: dict, out: Path):
                             writer.finding(
                                 "UNVERIFIED",
                                 "MEDIUM",
-                                f"Mutation probe {result['name']} timed out",
+                                f"Mutation probe {result['name']} inconclusive: "
+                                + "; ".join(result["basis"]),
                                 result["test_evidence_ids"],
+                                action="Declare a failure_parser for the procedure, or fix the "
+                                "pre-existing failure, so the probe can be judged",
                             )
                 manifest["negative_probes"] = probe_results
                 execution["negative_probe_killed"] = bool(probe_results) and all(
