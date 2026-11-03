@@ -61,13 +61,13 @@ Nested skills; pre-birth and repository-birth workflows; orchestration pipelines
 
 | Mode | Output | Load |
 |------|--------|------|
-| plan | `PLAN_DOCUMENT` JSON + Cursor `.plan.md` (shared template; Build handoff or embedded handoff) | [`../../_archived/l9-plan/schemas/plan-document.schema.json`](../../_archived/l9-plan/schemas/plan-document.schema.json) + **[references/plan-workflow-simple.md](references/plan-workflow-simple.md)** + first-class SSOT [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](../../environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) (skill `references/executable-plan.template.md` → symlink) |
+| plan | `PLAN_DOCUMENT` JSON + Cursor `.plan.md` (shared template; Build handoff or embedded handoff) | [`../l9-plan/schemas/plan-document.schema.json`](../l9-plan/schemas/plan-document.schema.json) + **[references/plan-workflow-simple.md](references/plan-workflow-simple.md)** + first-class SSOT [`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](../../environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md) (skill `references/executable-plan.template.md` → symlink) |
 
 Authoritative machine artifact: **PLAN_DOCUMENT** (JSON), validated by `l9-plan`'s `validate_plan_document.py` (reuse, do not copy). PLAN_DOCUMENT stays execution-neutral — the mode lives on the projection axis, not in the schema.
 
 Upstream planner: **`l9-global-architect`**. This skill does not invent architecture. Load the GAR bootloader and run it before emitting PLAN_DOCUMENT, in **both** modes. Standalone `/l9-global-architect` stays explicit-only; this supporting invoke is the plan-simple contract.
 
-Section proof: generate then validate a **section receipt** against `../../_archived/l9-plan/schemas/plan-document.schema.json` required keys plus the required `.plan.md` headings (template items 1–16 + the selected mode's handoff heading). The receipt records `handoff_mode`, so a `cursor-build` plan is proved against **Execute via Cursor Build** and an `embedded` plan against **Handoff to Caller**.
+Section proof: generate then validate a **section receipt** against `../l9-plan/schemas/plan-document.schema.json` required keys plus the required `.plan.md` headings (template items 1–16 + the selected mode's handoff heading). The receipt records `handoff_mode`, so a `cursor-build` plan is proved against **Execute via Cursor Build** and an `embedded` plan against **Handoff to Caller**.
 
 Default human/executable projection: the shared canonical `.plan.md` with the PE execute block **replaced** by the selected mode's handoff block.
 
@@ -93,20 +93,25 @@ Steps 0–9 are **identical in both modes**.
 
 0. **Memory prefetch** — run `python3 ops/hooks/plan_memory_prefetch.py --workspace "$PWD" --task "<objective>"` and cite `MEMORY_PREFETCH` from `.l9/memory/plan-prefetch.json`. Cursor `beforeSubmitPrompt` fires the same hook when `l9-plan-simple` is routed.
 1. **Architect (upstream, required)** — Read [`../l9-global-architect/SKILL.md`](../l9-global-architect/SKILL.md) and follow its bootloader: load `runtime/MANIFEST.yaml` in `load_order`, instantiate run state, derive the objective, select architecture. Do not emit PLAN_DOCUMENT until GAR has selected architecture or recorded that architecture is already settled. Embedded mode does not waive this.
-2. **Doctrine / depth** — load `l9-plan` [planning-doctrine.md](../../_archived/l9-plan/references/planning-doctrine.md) and classify via `python3 ../../_archived/l9-plan/scripts/route_plan.py` (escalate-only). Do not omit baseline gates.
+2. **Doctrine / depth** — load `l9-plan` [planning-doctrine.md](../l9-plan/references/planning-doctrine.md) and classify via `python3 ../l9-plan/scripts/route_plan.py` (escalate-only). Do not omit baseline gates.
 3. **Pre-Validate** — bind the **current workspace** (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** lock `origin/main` or open a tip worktree.
 4. **Gather** — objective, scope in/out, falsifiable success. Ambiguity → STOP and ask.
 5. **Decompose** — TODOs with files (or blocker) and deps. DAG rows are the task decomposition, not Controller `claim`/`render` Task Cards.
-6. **Stress-test + leverage** — mandatory in both modes; reuse `l9-plan` [plan-stress-test.md](../../_archived/l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../../_archived/l9-plan/references/first-order-leverage.md).
+6. **Stress-test + leverage** — mandatory in both modes; reuse `l9-plan` [plan-stress-test.md](../l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../l9-plan/references/first-order-leverage.md).
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema.
-9. **Validate JSON** — `python3 ../../_archived/l9-plan/scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Declare the optional `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer`; values are the template enums. An omitted field renders `unknown — not declared` and keeps the plan out of `executable`.
+9. **Validate JSON** — FAIL → not ready. Steps 9–11 run from the root of the repository being planned (any repo, not only Cursor-Governance); the scripts ship in the governance clone:
+
+   ```bash
+   GOV="${GOV:-$HOME/.cursor-governance}"
+   python3 "$GOV/skills/l9-plan/scripts/validate_plan_document.py" <plan.json>
+   ```
 10. **Project** — one renderer, mode-selected:
 
    ```bash
-   # from the repository root
-   python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build --workspace .   # default
-   python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=embedded       # caller-owned
+   # from the root of the repository being planned
+   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=cursor-build --workspace .   # default
+   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=embedded       # caller-owned
    ```
 
    The renderer fills **every** template section from PLAN_DOCUMENT — there is no seed head and no appended "fill guide". `--workspace .` binds the immutable baseline (repository, branch, HEAD, dirty) with read-only git probes; without it the baseline renders `unbound`. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name); a property naming none renders `unbound`. A value PLAN_DOCUMENT does not carry renders `unknown — …`. Resolve `unbound`/`unknown` values in PLAN_DOCUMENT and re-render — do not hand-edit the projection.
@@ -115,12 +120,14 @@ Steps 0–9 are **identical in both modes**.
 11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings, and records `unfilled_parameters`: any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready:
 
     ```bash
-    # from the repository root
-    python3 skills/l9-plan-simple/scripts/generate_plan_section_receipt.py \
+    # from the root of the repository being planned
+    python3 "$GOV/skills/l9-plan-simple/scripts/generate_plan_section_receipt.py" \
       --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
       --gar-invoked
-    python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
+    python3 "$GOV/skills/l9-plan-simple/scripts/validate_plan_section_receipt.py" <plan>.section-receipt.json
     ```
+
+    Plan paths in the receipt are relative to that repository's git root (absolute for a plan in the machine plans store), so the validator finds them whatever the working directory; the receipt argument itself must sit under the working directory or the plans store.
 12. **Handoff** — mode-specific, below.
 
 ### Handoff — `cursor-build` (default, unchanged)
@@ -141,26 +148,26 @@ Return the validated PLAN_DOCUMENT and the embedded projection to the invoking c
 - [references/plan-workflow-simple.md](references/plan-workflow-simple.md) — shared workflow; two handoff branches
 - [references/executable-plan.template.md](references/executable-plan.template.md) — symlink to the first-class SSOT (do not fork)
 - [references/validation-checklist.md](references/validation-checklist.md)
-- [`../../_archived/l9-plan/schemas/plan-document.schema.json`](../../_archived/l9-plan/schemas/plan-document.schema.json) — required JSON sections
+- [`../l9-plan/schemas/plan-document.schema.json`](../l9-plan/schemas/plan-document.schema.json) — required JSON sections
 - [`schemas/plan-section-receipt.schema.json`](schemas/plan-section-receipt.schema.json) — receipt shape (`handoff_mode`-aware)
 - [`scripts/generate_plan_section_receipt.py`](scripts/generate_plan_section_receipt.py)
 - [`scripts/validate_plan_section_receipt.py`](scripts/validate_plan_section_receipt.py)
-- [`../../_archived/l9-plan/scripts/validate_plan_document.py`](../../_archived/l9-plan/scripts/validate_plan_document.py)
-- [`../../_archived/l9-plan/scripts/render_plan_pe_autonomy.py`](../../_archived/l9-plan/scripts/render_plan_pe_autonomy.py) — `--execute-via=cursor-build` | `--execute-via=embedded`
-- [`../../_archived/l9-plan/scripts/route_plan.py`](../../_archived/l9-plan/scripts/route_plan.py)
+- [`../l9-plan/scripts/validate_plan_document.py`](../l9-plan/scripts/validate_plan_document.py)
+- [`../l9-plan/scripts/render_plan_pe_autonomy.py`](../l9-plan/scripts/render_plan_pe_autonomy.py) — `--execute-via=cursor-build` | `--execute-via=embedded`
+- [`../l9-plan/scripts/route_plan.py`](../l9-plan/scripts/route_plan.py)
 - `l9-plan` is archived. PE/campaign planning has no live owner.
 
 ## Validation
 
 Run from the repository root — the scripts reject paths that escape the working
-directory, so `../../_archived/l9-plan/...` from the skill root fails on path confinement.
+directory, so `../l9-plan/...` from the skill root fails on path confinement.
 
 ```bash
-python3 skills/_archived/l9-plan/scripts/validate_plan_document.py skills/_archived/l9-plan/fixtures/plan_pass.json
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py skills/_archived/l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "Execute via Cursor Build"
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py skills/_archived/l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "PR_STACK=auto"
-python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py skills/_archived/l9-plan/fixtures/plan_pass.json --execute-via=embedded | grep -q "Handoff to Caller"
-! python3 skills/_archived/l9-plan/scripts/render_plan_pe_autonomy.py skills/_archived/l9-plan/fixtures/plan_pass.json --execute-via=embedded | grep -q "PR_STACK=auto"
+python3 skills/l9-plan/scripts/validate_plan_document.py skills/l9-plan/fixtures/plan_pass.json
+python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "Execute via Cursor Build"
+python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "PR_STACK=auto"
+python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json --execute-via=embedded | grep -q "Handoff to Caller"
+! python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json --execute-via=embedded | grep -q "PR_STACK=auto"
 python3 skills/l9-plan-simple/scripts/generate_plan_section_receipt.py --help >/dev/null
 python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py --help >/dev/null
 python3 skills/l9-plan-simple/scripts/self_test.py
