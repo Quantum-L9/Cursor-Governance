@@ -429,8 +429,13 @@ _compose_title_and_body() {
   # the stack parent had merely not caught up to yet.
   _title_python="$GOV_ROOT/.venv/bin/python"
   [[ -x "$_title_python" ]] || _title_python="python3"
+  # The author's prose for title, Problem and Reviewer focus, bound to HEAD by
+  # the composer (an intent for another head is ignored with a WARN). The
+  # `[@]+` form keeps an empty array legal under `set -u` on bash 3.2.
+  _intent_args=()
+  [[ -f "$WS/.l9/pr/pr-intent.json" ]] && _intent_args=(--intent-file "$WS/.l9/pr/pr-intent.json")
   title="$("$_title_python" "$SCRIPT_DIR/compose_pr_body.py" \
-    --workspace "$WS" --pr-base "$PR_BASE" --print-title 2>/dev/null || true)"
+    --workspace "$WS" --pr-base "$PR_BASE" ${_intent_args[@]+"${_intent_args[@]}"} --print-title 2>/dev/null || true)"
   if [[ -z "$title" ]]; then
     title="$branch"
   fi
@@ -501,7 +506,7 @@ _compose_title_and_body() {
   mkdir -p "$WS/.l9/pr"
   compose_handoff="$WS/.l9/pr/pr-body-completion.json"
   compose_args=(--workspace "$WS" --pr-base "$PR_BASE" --handoff "$compose_handoff"
-    --org-owner "$owner" --repo-name "$name")
+    --org-owner "$owner" --repo-name "$name" ${_intent_args[@]+"${_intent_args[@]}"})
   if [[ -n "$_touched_additive" ]]; then
     printf '%s\n' "$_touched_additive" > "$WS/.l9/pr/additive-only.txt"
     compose_args+=(--additive-only-file "$WS/.l9/pr/additive-only.txt")
@@ -706,6 +711,27 @@ PY
         echo "      .github/pull_request_template.md (stamp <!-- L9_PROTECTED_ROOT_PR -->)."
         echo "      A rewrite (not append-only) additionally needs a commit line:"
         echo "        ALLOW-ROOT-DELETION: <path> — <reason>"
+      fi
+    fi
+  fi
+  # Retitle only from the author's intent for this head, never from a commit
+  # subject: a title a reviewer edited stays theirs unless the author restates it.
+  _intent_file="$WS/.l9/pr/pr-intent.json"
+  if [[ -f "$_intent_file" && -n "${owner:-}" && -n "${name:-}" ]]; then
+    _intent_python="$GOV_ROOT/.venv/bin/python"
+    [[ -x "$_intent_python" ]] || _intent_python="python3"
+    _intent_title="$("$_intent_python" "$SCRIPT_DIR/compose_pr_body.py" \
+      --workspace "$WS" --pr-base "$PR_BASE" --intent-file "$_intent_file" \
+      --print-intent-title 2>/dev/null || true)"
+    if ! _open_title="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .title 2>/dev/null)"; then
+      _open_title=""
+    fi
+    if [[ -n "$_intent_title" && "$_intent_title" != "$_open_title" ]]; then
+      if gh api --method PATCH "repos/${owner}/${name}/pulls/${pr_number}" \
+          -f title="$_intent_title" >/dev/null 2>&1; then
+        echo "Retitled from $_intent_file: $_intent_title"
+      else
+        echo "WARN: could not retitle the PR from $_intent_file (REST PATCH failed)"
       fi
     fi
   fi

@@ -293,12 +293,21 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="report bound/source; never values",
     )
-    parser.add_argument("names", nargs="+", help="inventory env-var names")
+    parser.add_argument(
+        "names",
+        nargs="+",
+        help="inventory env-var names, or legacy openclaw-igorbot/<svc>#<key> refs",
+    )
     args = parser.parse_args(argv)
+
+    from legacy_refs import infisical_name, is_legacy_ref
 
     exit_code = 0
     allowed = allowed_names()
-    for name in args.names:
+    for raw in args.names:
+        # A legacy AWS ref means its Infisical name (ADR-0053); it never routes
+        # to AWS. An unmapped ref checks as a name that is not in the inventory.
+        name = (infisical_name(raw) or "<unmapped-legacy-ref>") if is_legacy_ref(raw) else raw
         status = bind_status(name)
         source = literal_source(status["source"])
         label = "bound" if status["bound"] else source

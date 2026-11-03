@@ -14,17 +14,17 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:4b7eaae5ad128e7ae485dffa5d106edf0488a31d3370d58fed15c01595ca634f",
+      "digest": "sha256:976892e22c694f7682fe763cbd40cb2d647643babc4455e237d4cbfcd81ed936",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
     "engine_contract": {
-      "digest": "sha256:fe5d79a65acd7e2587337136d4874b04399d9166d2b652accefd2309fc986be2",
+      "digest": "sha256:fabe78189f47e7463b99da27b58da1b3d72561b8a8d3913ede06dd821f88e5f1",
       "path": "semantics/projection_engine_contract.yaml",
       "ref": "l9.compiler/projection-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:fdb565beab18f1e794b0b90caa264679e769af84eb9573e2e0356f8c2d013d63",
+      "digest": "sha256:60a2114286fa9718b24c3be0e29942db16e5ecb79bc773fbbbdca1950ce9ea09",
       "path": "semantics/projection_profiles.yaml",
       "ref": "l9.projection-profile-catalog/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec",
+    "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
@@ -51,7 +51,7 @@
       "digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
       "path": "semantics/contracts.yaml",
       "ref": "l9.source/contracts@1",
-      "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec"
+      "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd"
     }
   ],
   "operation": "projection",
@@ -67,8 +67,8 @@
     "digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
     "ref": "l9.projection/coding-agent-execution@1"
   },
-  "receipt_digest": "sha256:66fa8973bc48f3763604b61668be749176cf75f45dfbaf7e4c4e4b40d4aeb6fc",
-  "receipt_identity": "l9.receipt-instance/d4891b441ab1c10d654ca9c32ca13f9554e341ff732d3c2848115922f3b8aa89",
+  "receipt_digest": "sha256:a5a28717fd162a9bb09c6e2484b76638a6dbdbe2aa9b365e5b248db108ac74bd",
+  "receipt_identity": "l9.receipt-instance/941056a8c860955401c60b028020ab0eb62426f1ef114e29c48ce0ed01aa379b",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -137,7 +137,7 @@
       },
       "source_currentness": {
         "digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
-        "revision": "7252e3b43c75ad0eab9483feb1552ba504ecbcec",
+        "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd",
         "status": "pass"
       },
       "source_identity": {

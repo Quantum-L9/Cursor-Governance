@@ -3,5 +3,5 @@
 # Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
 interface:
   display_name: "L9 Secrets"
-  short_description: "AWS + Infisical credential resolution without printing values"
+  short_description: "Infisical credential binding without printing values"
   brand_color: "#1E3A5F"

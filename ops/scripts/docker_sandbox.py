@@ -70,6 +70,13 @@ EXACT_VERSION = re.compile(r"^\d+(?:\.\d+)+$")
 PIN_LINE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)==(\S+)$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 DAEMON_START_SECONDS = 45
+# Pull-through mirrors tried after Docker Hub. Hosted sessions share outbound
+# IPs, so anonymous Docker Hub pulls are rate-limited (HTTP 429) long before a
+# single session pulls anything. mirror.gcr.io serves the official images under
+# the same content digests, so a mirror changes where the bytes come from, never
+# which bytes they are: the base is still pinned by digest. Comma-separated;
+# set L9_DOCKER_SANDBOX_MIRRORS="" to use Docker Hub only.
+DEFAULT_MIRRORS = "mirror.gcr.io"
 
 
 class SandboxError(RuntimeError):
@@ -231,6 +238,43 @@ def daemon_up() -> bool:
     )
 
 
+def registry_mirrors() -> list[str]:
+    raw = os.environ.get("L9_DOCKER_SANDBOX_MIRRORS", DEFAULT_MIRRORS)
+    return [host.strip() for host in raw.split(",") if host.strip()]
+
+
+def dockerd_argv(mirrors: list[str]) -> list[str]:
+    """dockerd as this module starts it: Docker Hub pulls fall through to the mirrors."""
+    return ["dockerd", *(f"--registry-mirror=https://{host}" for host in mirrors)]
+
+
+def image_refs(image: str, mirrors: list[str]) -> list[str]:
+    """Where a Docker Hub image may be pulled from, in order of preference.
+
+    Only Docker Hub names fall through to a mirror: an image already naming a
+    registry host (``ghcr.io/...``) is pulled from that host alone.
+    """
+    first = image.split("/", 1)[0]
+    if "/" in image and ("." in first or ":" in first or first == "localhost"):
+        return [image]
+    path = image if "/" in image else f"library/{image}"
+    return [image, *(f"{host}/{path}" for host in mirrors)]
+
+
+def base_refs(python_version: str, mirrors: list[str]) -> list[str]:
+    """Where the official python base may be pulled from, in order of preference."""
+    return image_refs(f"python:{python_version}-slim", mirrors)
+
+
+def digest_for(ref: str, digests: list[str]) -> str | None:
+    """The RepoDigest belonging to ``ref``'s repository, else the first one."""
+    repository = ref.rsplit(":", 1)[0]
+    for digest in digests:
+        if digest.split("@", 1)[0] == repository:
+            return digest
+    return digests[0] if digests else None
+
+
 def start_daemon() -> None:
     if daemon_up():
         return
@@ -240,7 +284,11 @@ def start_daemon() -> None:
         raise SandboxError("no Docker daemon is running and this user cannot start one")
     log = (STATE_DIR / "dockerd.log").open("ab")
     subprocess.Popen(
-        ["dockerd"], stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True
+        dockerd_argv(registry_mirrors()),
+        stdout=log,
+        stderr=log,
+        stdin=subprocess.DEVNULL,
+        start_new_session=True,
     )
     deadline = time.monotonic() + DAEMON_START_SECONDS
     while time.monotonic() < deadline:
@@ -298,20 +346,55 @@ def local_digests(ref: str) -> list[str]:
     return json.loads(proc.stdout) if proc.returncode == 0 and proc.stdout.strip() else []
 
 
-def pinned_base(python_version: str) -> str:
-    """The base image by registry digest; pull only when no local copy has one.
+def repository_of(ref: str) -> str:
+    """``ref`` without its tag or digest; a registry ``host:port`` is kept."""
+    head, _, last = ref.split("@", 1)[0].rpartition("/")
+    last = last.split(":", 1)[0]
+    return f"{head}/{last}" if head else last
 
-    Docker Hub rate-limits even a HEAD on an already-present tag, so a warm
-    rebuild must not depend on the registry answering.
+
+def pin_image(image: str, digest: str | None = None) -> str:
+    """``image`` pinned by registry digest, pulling it if no local copy exists.
+
+    A local copy under any known name is used first: Docker Hub rate-limits
+    even a HEAD on an already-present tag, so a warm run must not depend on a
+    registry answering. Otherwise Docker Hub is pulled, then each mirror; the
+    first that answers wins and every failure is reported if none does.
+
+    With ``digest`` the tag is never resolved: each registry is asked for
+    exactly that content, so a moved floating tag cannot change what runs.
     """
-    ref = f"python:{python_version}-slim"
-    digests = local_digests(ref)
-    if not digests:
-        run(["docker", "pull", "--quiet", ref], timeout=600)
-        digests = local_digests(ref)
-    if not digests:
-        raise SandboxError(f"{ref} has no registry digest to pin")
-    return digests[0]
+    if digest is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        raise SandboxError(f"pinned digest for {image} is not sha256:<64 hex>")
+    refs = image_refs(image, registry_mirrors())
+    if digest is not None:
+        refs = [f"{repository_of(ref)}@{digest}" for ref in refs]
+        for ref in refs:
+            if local_digests(ref):
+                return ref
+    else:
+        for ref in refs:
+            found = digest_for(ref, local_digests(ref))
+            if found:
+                return found
+    failures = []
+    for ref in refs:
+        proc = run(["docker", "pull", "--quiet", ref], timeout=600, check=False)
+        if proc.returncode == 0:
+            if digest is not None:
+                return ref
+            found = digest_for(ref, local_digests(ref))
+            if found:
+                return found
+            failures.append(f"{ref}: pulled but has no registry digest to pin")
+            continue
+        failures.append(f"{ref}: {(proc.stderr or proc.stdout).strip()[-200:]}")
+    raise SandboxError(f"cannot pull {image}: " + "; ".join(failures))
+
+
+def pinned_base(python_version: str) -> str:
+    """The official python base, pinned by registry digest (see pin_image)."""
+    return pin_image(f"python:{python_version}-slim")
 
 
 def image_id(ref: str) -> str | None:
@@ -428,6 +511,16 @@ def ensure(core_ref: str, with_semgrep: bool) -> dict:
                 toolchain_lock_sha256=hashlib.sha256(lock_text.encode()).hexdigest(),
                 image_tag=tag,
                 image_id=built,
+                base_image=run(
+                    [
+                        "docker",
+                        "image",
+                        "inspect",
+                        "--format",
+                        '{{index .Config.Labels "org.l9.base-image"}}',
+                        built,
+                    ]
+                ).stdout.strip(),
                 with_semgrep=with_semgrep,
                 excluded_tools=EXCLUDED_TOOLS,
                 observed_versions=observed,

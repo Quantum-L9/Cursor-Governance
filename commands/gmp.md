@@ -50,7 +50,9 @@ The executor enforces the lock and the outcome tokens. The agent owns the rest.
    tests, `reports/`, and the executor's own runtime state under `.l9/`
    (consumers that do not ignore `.l9/` show `.l9/gmp/executor-state.json`).
    Anything else: stop and report it.
-6. **Evidence.** The executor writes `$WORK/reports/<gmp_id>-<slug>.md`. The
+6. **Evidence.** The executor writes `$WORK/reports/gmp/GMP-Report-<NNN>-<Description>.md`
+   (folder created when absent; location and name per `rules/81-gmp-audit.mdc`) and
+   commits it with the work, so `make pr` publishes it on the PR. The
    finish reply lists files changed, tests run with pass or fail, and the PR
    URL or the reason there is none.
 
@@ -106,8 +108,18 @@ only on Cursor:
 
 ```bash
 "$GOV_PY" "$GOV/ops/autonomy/l4_local.py" --workspace "$WORK" authorize-release
-PR_REMEDIATE=0 make -C "$GOV" pr WS="$WORK"
+cd "$WORK"
 ```
+
+Then, as its own command from `$WORK` (the repository root):
+
+```bash
+PR_REMEDIATE=0 make -C "$GOV" pr WS="$PWD"
+```
+
+The L4 gate reads `WS="$PWD"` as the shell's directory and refuses any other
+shell variable in `WS=` on a publish (it cannot know which checkout `$WORK`
+names, so it cannot tell whose release receipt applies).
 
 Do not run `make precommit-repo` then `make pr`. Do not merge. Do not start
 pytest in finalize.
@@ -156,7 +168,7 @@ the governance imports.
 
 - L4 local commits; no mid-work push. Cursor finalize is `authorize-release`
   then `PR_REMEDIATE=0 make pr` / `l9 pr` (from a consumer, the
-  `make -C "$GOV" pr WS="$WORK"` form above). Adapter surfaces publish inside
+  `make -C "$GOV" pr WS="$PWD"` form above, run from `$WORK`). Adapter surfaces publish inside
   finalize with `PR_REMEDIATE=0`; do not publish a second time.
 - Max 4 / 2 mutation Tasks. Admission via `autonomy/adapters/cursor/host_bridge.py`.
   If the lease is denied, serialize on the main agent. Do not ask.

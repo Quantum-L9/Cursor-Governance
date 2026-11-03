@@ -135,7 +135,7 @@ Projection only. Generated from the live tree. Not authority.
 | `skills/l9-audit-plans/scripts` | submodule | 4 | missing |
 | `skills/l9-auditing-performance` | module | 0 | missing |
 | `skills/l9-auditing-security` | module | 0 | missing |
-| `skills/l9-aws-secrets` | module | 0 | missing |
+| `skills/l9-secrets` | module | 0 | missing |
 | `skills/l9-bounded-autonomy` | module | 0 | missing |
 | `skills/l9-chat-extraction` | module | 0 | missing |
 | `skills/l9-ci-ops` | module | 0 | missing |
@@ -1179,7 +1179,7 @@ skills/
   l9-auditing-security/
     SKILL.md
     references/
-  l9-aws-secrets/
+  l9-secrets/
     SKILL.md
     agents/
     references/

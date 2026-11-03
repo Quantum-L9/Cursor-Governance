@@ -1,5 +1,5 @@
 {
-  "generation_id": "c75eb1e7c7840f761d4605275627dd79809a53c848b1c904e034af38583a3268",
+  "generation_id": "869da86b083cdfcf4d3ae223f66529d559b1155f9ed754e7dc796d17a5e311dd",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -23,7 +23,7 @@
       "l9-prompt-engineering",
       "l9-incident-response",
       "l9-graphiti-memory",
-      "l9-aws-secrets",
+      "l9-secrets",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -394,23 +394,22 @@
         "supporting": []
       },
       {
-        "id": "aws_secrets",
+        "id": "secrets",
         "positive_signals": [
-          "resolve aws secret",
           "openclaw-igorbot",
-          "secrets registry",
-          "sync secrets registry",
-          "sync_secrets_registry",
           "resolve_secret",
-          "aws secrets manager ref",
-          "infisical",
+          "bind from infisical",
+          "infisical bind",
+          "infisical secret",
+          "capability_bind",
           "infisical-cursor-governance",
-          "cursor-governance project",
           "hydrate infisical",
           "INFISICAL_PROJECT_ID",
-          "port_aws_to_infisical"
+          "add a new secret",
+          "bind the credential",
+          "l9-secrets"
         ],
-        "primary": "l9-aws-secrets",
+        "primary": "l9-secrets",
         "signal_weight": 8,
         "supporting": [
           "l9-structured-reasoning"
@@ -824,19 +823,6 @@
       "when_to_use": "reviewing code for security risks, scanning for exposed secrets, or hardening before release"
     },
     {
-      "composition_role": "primary",
-      "description": "bind credentials from Infisical project cursor-governance at will, as this surface's machine identity (Claude \u2014 no AWS; Cursor \u2014 AWS login seed) \u2014 use when an agent needs an api key, token, password, infisical bind, aws secret ref, registry sync, or fail-closed credential check without printing values.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-aws-secrets",
-      "path": "skills/l9-aws-secrets",
-      "reason": "",
-      "skill_md": "skills/l9-aws-secrets/SKILL.md",
-      "skill_sha256": "daece176244a22d84d4d2ee791137b06f2d767fc2d605fc44340b0aa39228589",
-      "user_invocable": true,
-      "when_to_use": "an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values"
-    },
-    {
       "composition_role": "general",
       "description": "bounded autonomy campaign SOP for Cursor \u2014 parallel non-dependent Tasks, background PR-poll subagents while main continues, campaign authorization packet, join/merge-gate without autonomous merge. use when user runs /autonomy, needs PR convergence while continuing other work, or fans out independent lanes under ADR-0001 and root autonomy.",
       "disable_model_invocation": true,
@@ -871,7 +857,7 @@
       "path": "skills/l9-claude-code-deepseek",
       "reason": "",
       "skill_md": "skills/l9-claude-code-deepseek/SKILL.md",
-      "skill_sha256": "79d0b7550ca76ae3d9f001590ba508a878a767f44b6917565fe492895a60d775",
+      "skill_sha256": "f598e86b6ebe0fd21b2f977e041f211784d1ac65149dec5f1f0224a694c54483",
       "user_invocable": true,
       "when_to_use": "wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing"
     },
@@ -1001,7 +987,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "f989eb6ec5c010f290141413464671bec47a4e1080e86aae503aee54a945ebdf",
+      "skill_sha256": "c95b3aff0e742349877fa5d4fdc809d447668cf1f5558763994a4c5a61176de0",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1261,7 +1247,7 @@
       "path": "skills/l9-pr-integration-testing",
       "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
-      "skill_sha256": "e6e491460c0fe5253f18578a51e069c23e7feea1bcbbb480b8fcfd302800d055",
+      "skill_sha256": "4ad1a6b90d36c085674a9880766f9d4870c8c7c1fe5107e53b62e788f8d85733",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1370,6 +1356,19 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "primary",
+      "description": "bind a named credential (api key, token, password) from Infisical project cursor-governance as this surface's machine identity, in-process and never printed. use when a command must bind or check a credential, add a new secret, or translate a legacy openclaw-igorbot/* ref to its Infisical name. not for discussing secrets policy.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-secrets",
+      "path": "skills/l9-secrets",
+      "reason": "",
+      "skill_md": "skills/l9-secrets/SKILL.md",
+      "skill_sha256": "c5a0405c8099f7d108a3e173f65674e8d6987e57d9bf431384c553c59c152bc8",
+      "user_invocable": true,
+      "when_to_use": "a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated \u2014 never printing values"
+    },
+    {
       "composition_role": "general",
       "description": "set up Terraform infrastructure-as-code for cloud resources, including provider configuration, modules, state management, and CI integration. use when bootstrapping Terraform IaC, structuring modules/state, or wiring Terraform into CI.",
       "disable_model_invocation": true,
@@ -1410,14 +1409,14 @@
     },
     {
       "composition_role": "general",
-      "description": "portable saas dashboard ui operator \u2014 use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-aws-secrets for refs without keychain.",
+      "description": "portable saas dashboard ui operator \u2014 use when apis are insufficient and an agent must configure github packages, vercel, or similar admin ui via playbook plus site cartridges, loading l9-secrets for refs without keychain.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-ui-operator",
       "path": "skills/l9-ui-operator",
       "reason": "SaaS admin UI mutations via Playwright cartridges \u2014 high blast radius; requires human approve",
       "skill_md": "skills/l9-ui-operator/SKILL.md",
-      "skill_sha256": "297f34729c9075028ca3ed66c9dc73555745e1caf1c82f08aaee11afcd8b621a",
+      "skill_sha256": "dd910df84f334141dcf4da1c925b8289f202ac368ca2afa6a6bc4b326199ff3d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1462,6 +1461,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "9523e76aac3807c45997e622db3c9c83f3be222aed7c2d0faa0a314c8b951aa6",
-  "source_skill_corpus_sha256": "8d95afbc4b35c4590df82e7f2f45ba88d2e2974b2653490c66b897caf093a9d6"
+  "source_manifest_sha256": "0be7ff1efef74c29c95d8ff864cd16aee08e7325cdb29b30041e8515a8f23f56",
+  "source_skill_corpus_sha256": "e516d2bdc1ef4d8f006f72421f46ff0e5e44b94de3f52ea5d9f259b05b9486c6"
 }

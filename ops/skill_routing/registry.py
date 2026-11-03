@@ -124,6 +124,46 @@ def _validate_record(record: Any, position: int) -> dict[str, Any]:
     return record
 
 
+_PLAIN_WORD_RE = re.compile(r"[a-z]+")
+#: Same normalization as ``route_prompt.normalize`` (pinned by a test): a signal
+#: is classified as the scorer will see it, so "Infisical" or "infisical!" is
+#: the bare word "infisical", while identifiers keep their "-", "_", "#", ".".
+_NON_SIGNAL_CHARS = re.compile(r"[^a-z0-9+#./_-]+")
+
+
+def _normalize_signal(text: str) -> str:
+    return " ".join(_NON_SIGNAL_CHARS.sub(" ", text.lower()).split())
+
+
+def _as_int(value: Any, field: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise RegistryError(f"{field} must be an integer, got {value!r}") from exc
+
+
+def _check_force_signals(route: dict[str, Any], invocation: Any, force: int) -> None:
+    """An auto-invocable skill must not be forced by one ordinary word.
+
+    One matched signal scores ``signal_weight``; at or above the force threshold
+    a bare word ("infisical") routes every prompt — and every relayed agent
+    report — that merely mentions it. Use a phrase or an identifier instead.
+    """
+    weight = _as_int(route.get("signal_weight", 4), f"route {route.get('id')!r} signal_weight")
+    if invocation != "model_allowed" or weight < force:
+        return
+    bare = [
+        s
+        for s in route.get("positive_signals", [])
+        if _PLAIN_WORD_RE.fullmatch(_normalize_signal(str(s)))
+    ]
+    if bare:
+        raise RegistryError(
+            f"route {route.get('id')!r}: single-word signal(s) {bare} would force "
+            f"{route['primary']} on one ordinary word; use a phrase or an identifier"
+        )
+
+
 def validate_registry(data: Any, *, root: Path | None = None, check_files: bool = False) -> None:
     """Raise ``RegistryError`` unless ``data`` is a well-formed v2 registry.
 
@@ -157,11 +197,14 @@ def validate_registry(data: Any, *, root: Path | None = None, check_files: bool 
         if name in seen:
             raise RegistryError(f"duplicate skill name: {name}")
         seen.add(name)
+    invocation = {record["name"]: record.get("invocation") for record in skills}
+    force = _as_int(data["routing"].get("force_threshold", 8), "routing.force_threshold")
     for route in routes:
         if not isinstance(route, dict) or not route.get("primary"):
             raise RegistryError(f"route without primary: {route!r}")
         if route["primary"] not in seen:
             raise RegistryError(f"route {route.get('id')!r} names unknown primary")
+        _check_force_signals(route, invocation.get(route["primary"]), force)
         for support in route.get("supporting", []):
             if support not in seen:
                 raise RegistryError(f"route {route.get('id')!r} names unknown support")

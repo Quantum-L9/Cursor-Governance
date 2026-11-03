@@ -1836,3 +1836,13 @@ or a local stdio-to-HTTP bridge.
 7. The operator CLI `python -m ops.memory.cli` is not the agent MCP
    transport. Hook envelopes stay bounded. SessionEnd does not emulate
    admin distill over HTTP.
+
+---
+
+## 14.1 Secret store (2026-11-02) — amends §12 and §14
+
+Infisical project `cursor-governance` is the secret store on every surface;
+new secrets are added there. Where §12 or §14 says AWS Secrets Manager or
+`l9-aws-secrets`, read Infisical and `l9-secrets`: §14's PAT is Infisical
+`GITHUB_TOKEN`. AWS Secrets Manager remains Cursor's bootstrap credential
+source (in place of a `.env`), unchanged. ADR-0053.
