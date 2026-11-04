@@ -107,7 +107,9 @@ comparison_files() {
     # this branch can share no reachable ancestor and merge-base fails outright.
     # Deepen once and retry before giving up: on a shallow clone the history is
     # missing, not absent.
-    if [[ -f "$(git rev-parse --git-dir)/shallow" ]]; then
+    # Ask git, not the filesystem: in a linked worktree `--git-dir` names
+    # .git/worktrees/<name>, while the shallow file lives in the common dir.
+    if [[ "$(git rev-parse --is-shallow-repository 2>/dev/null)" == "true" ]]; then
       git fetch --deepen=200 origin "${base#origin/}" >/dev/null 2>&1 \
         || git fetch --unshallow origin >/dev/null 2>&1 || true
       mb="$(git merge-base "$base" HEAD 2>/dev/null || true)"
@@ -134,7 +136,10 @@ if BASE="$(pick_base)"; then
     # checker, because a `--depth 1` base has no merge base with it.
     echo "ERROR: cannot determine the change set against $BASE (no merge base)." >&2
     echo "       Deepen the clone (git fetch --unshallow) or pass explicit paths." >&2
-    exit 1
+    # Exit 3, not 1: missing history is a state of the clone, not of the tree.
+    # run_pr_gate.sh keys on it to block publication WITHOUT a STOP LOOPING
+    # receipt, which would otherwise outlive the deepen that cures it.
+    exit 3
   fi
   if [[ -n "$WORKING" && -n "$COMMITTED" ]]; then
     SOURCE="comparison+working-tree base=$BASE"

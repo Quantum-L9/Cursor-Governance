@@ -92,17 +92,47 @@ class DomainOutcome:
         }
 
 
-def project_skills(root: Path, workspace: Path, check: bool) -> DomainOutcome:
+def owns_account_scope(root: Path) -> bool:
+    """True only when ``root`` is the governance SSOT clone.
+
+    The account projection (``~/.claude/skills``, ``~/.claude/rules``,
+    ``~/.claude/commands``) must follow ``$HOME/.cursor-governance`` alone. A
+    worktree or second clone still projects into its own workspace, but never
+    re-points the account links at itself — otherwise every repository loads
+    that checkout's unmerged code. Same boundary as #761, which guarded
+    ``sync_generated_artifacts.py`` but not this engine (``run_pr_gate.sh``'s
+    local-activation heal calls it with ``--root "$WS"``).
+    """
+    from sync_generated_artifacts import governance_ssot_root
+
+    return root.resolve() == governance_ssot_root()
+
+
+def _note_account_scope_skipped(outcome: DomainOutcome, root: Path) -> None:
+    outcome.detail["account_scope"] = (
+        f"skipped: {root} is not the governance SSOT clone; the account projection is left alone"
+    )
+
+
+def project_skills(
+    root: Path, workspace: Path, check: bool, *, account_scope: bool = True
+) -> DomainOutcome:
     outcome = DomainOutcome("skills")
     try:
         from reconcile_llm_skill_adapters import reconcile_adapters, run_orphan_migration
 
-        migration = run_orphan_migration(workspace, check=check, quiet=True)
+        if not account_scope:
+            _note_account_scope_skipped(outcome, root)
+        migration = run_orphan_migration(
+            workspace, check=check, quiet=True, skip_user=not account_scope
+        )
         if migration is not None:
             outcome.detail["orphan_migration"] = migration
             if migration.get("returncode", 0) != 0:
                 outcome.failures.append("orphan-migration-conflict")
-        payload = reconcile_adapters(root, workspace=workspace, check=check)
+        payload = reconcile_adapters(
+            root, workspace=workspace, check=check, skip_user=not account_scope
+        )
     except Exception as exc:  # noqa: BLE001
         outcome.status = "error"
         outcome.failures.append(str(exc))
@@ -148,12 +178,17 @@ def attach_skill_coverage(outcome: DomainOutcome, root: Path, workspace: Path) -
         outcome.detail["coverage"] = {"status": "unknown", "error": str(exc)}
 
 
-def project_commands(root: Path, workspace: Path, check: bool) -> DomainOutcome:
+def project_commands(
+    root: Path, workspace: Path, check: bool, *, account_scope: bool = True
+) -> DomainOutcome:
     outcome = DomainOutcome("commands")
     try:
         from reconcile_claude_commands import reconcile
 
-        payload = reconcile(root, workspace=workspace, check=check)
+        if not account_scope:
+            _note_account_scope_skipped(outcome, root)
+        scopes = ("user", "project") if account_scope else ("project",)
+        payload = reconcile(root, workspace=workspace, check=check, scopes=scopes)
     except Exception as exc:  # noqa: BLE001
         outcome.status = "error"
         outcome.failures.append(str(exc))
@@ -175,7 +210,9 @@ def project_commands(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     return outcome
 
 
-def project_rules(root: Path, workspace: Path, check: bool) -> DomainOutcome:
+def project_rules(
+    root: Path, workspace: Path, check: bool, *, account_scope: bool = True
+) -> DomainOutcome:
     outcome = DomainOutcome("rules")
     try:
         import project_llm_rules as rules_projector
@@ -188,7 +225,11 @@ def project_rules(root: Path, workspace: Path, check: bool) -> DomainOutcome:
                 outcome.detail["projection_errors"] = errors
         else:
             rules_projector.materialize(root)
-        payload = reconcile_adapters(root, workspace=workspace, check=check)
+        if not account_scope:
+            _note_account_scope_skipped(outcome, root)
+        payload = reconcile_adapters(
+            root, workspace=workspace, check=check, skip_user=not account_scope
+        )
     except Exception as exc:  # noqa: BLE001
         outcome.status = "error"
         outcome.failures.append(str(exc))
@@ -206,14 +247,18 @@ def project_rules(root: Path, workspace: Path, check: bool) -> DomainOutcome:
 
 
 def project_settings(
-    root: Path, workspace: Path, check: bool
+    root: Path, workspace: Path, check: bool, *, account_scope: bool = True
 ) -> tuple[DomainOutcome, DomainOutcome]:
     settings_outcome = DomainOutcome("settings")
     hooks_outcome = DomainOutcome("hooks")
+    if not account_scope:
+        # ~/.claude/settings.json is account scope: a worktree's template
+        # (unmerged skill overrides, hooks) must not become every repo's.
+        _note_account_scope_skipped(settings_outcome, root)
     try:
         from reconcile_claude_settings import run as settings_run
 
-        payload = settings_run(root, workspace=workspace, user=True, gov=True, check=check)
+        payload = settings_run(root, workspace=workspace, user=account_scope, gov=True, check=check)
     except Exception as exc:  # noqa: BLE001
         settings_outcome.status = "error"
         settings_outcome.failures.append(str(exc))
@@ -606,13 +651,14 @@ def run(
     workspace = workspace.resolve()
     outcomes: list[DomainOutcome] = []
     wanted = set(domains)
+    account_scope = owns_account_scope(root)
 
     if "skills" in wanted:
-        outcomes.append(project_skills(root, workspace, check))
+        outcomes.append(project_skills(root, workspace, check, account_scope=account_scope))
     if "commands" in wanted:
-        outcomes.append(project_commands(root, workspace, check))
+        outcomes.append(project_commands(root, workspace, check, account_scope=account_scope))
     if "rules" in wanted:
-        outcomes.append(project_rules(root, workspace, check))
+        outcomes.append(project_rules(root, workspace, check, account_scope=account_scope))
         if os.environ.get("SKIP_PLUGIN_MARKETPLACE", "") == "true":
             for outcome in outcomes:
                 if outcome.name == "rules":
@@ -621,7 +667,9 @@ def run(
                         "or official docs GET"
                     )
     if "settings" in wanted or "hooks" in wanted:
-        settings_outcome, hooks_outcome = project_settings(root, workspace, check)
+        settings_outcome, hooks_outcome = project_settings(
+            root, workspace, check, account_scope=account_scope
+        )
         if "settings" in wanted:
             outcomes.append(settings_outcome)
         if "hooks" in wanted:
@@ -649,7 +697,9 @@ def run(
         "status": status,
         "domains": [o.as_dict() for o in outcomes],
     }
-    if write_receipt and not check:
+    # The default receipt is account scope too: a non-SSOT root records its run
+    # only where the caller asked (receipt_path), never over the SSOT's receipt.
+    if write_receipt and not check and (receipt_path is not None or account_scope):
         atomic_write(
             receipt_path or default_receipt_path(),
             json.dumps(receipt, indent=2, sort_keys=True) + "\n",

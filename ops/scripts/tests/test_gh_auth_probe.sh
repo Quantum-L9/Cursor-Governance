@@ -111,4 +111,27 @@ if grep -Eq 'curl[^|]*Bearer' "$LIB"; then
 fi
 pass "the direct API probe keeps the token out of argv"
 
+# T9 — the org template probe runs the locked interpreter ($GOV_PY), never a
+# bare python3, and a probe that timed out is UNKNOWN rather than DENIED.
+cat > "$TMP_ROOT/bin/locked-python" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" > "$PROBE_ARGS"
+exit "${PROBE_RC:-0}"
+STUB
+chmod +x "$TMP_ROOT/bin/locked-python"
+caps="$(PATH="$TMP_ROOT/bin:$PATH" GOV_PY="$TMP_ROOT/bin/locked-python" \
+  PROBE_ARGS="$TMP_ROOT/probe-args" PROBE_RC=124 \
+  bash -c "source '$LIB'; gh_capability_probe Quantum-L9")"
+grep -qx "org_template_read=UNKNOWN" <<<"$caps" || fail "timed-out probe must be UNKNOWN; got: $caps"
+grep -q "org_dotgithub.py probe-rest Quantum-L9 .github/pull_request_template.md" "$TMP_ROOT/probe-args" \
+  || fail "probe did not run through \$GOV_PY: $(cat "$TMP_ROOT/probe-args" 2>/dev/null)"
+caps="$(PATH="$TMP_ROOT/bin:$PATH" GOV_PY="$TMP_ROOT/bin/locked-python" \
+  PROBE_ARGS="$TMP_ROOT/probe-args" PROBE_RC=1 \
+  bash -c "source '$LIB'; gh_capability_probe Quantum-L9")"
+grep -qx "org_template_read=DENIED" <<<"$caps" || fail "refused probe must be DENIED; got: $caps"
+if grep -Eq '^[[:space:]]*python3[[:space:]]' "$LIB"; then
+  fail "gh_auth_probe.sh calls a bare python3"
+fi
+pass "the org template probe uses the locked interpreter and keeps UNKNOWN distinct"
+
 echo "OK: $PASS assertions"

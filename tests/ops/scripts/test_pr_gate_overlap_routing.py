@@ -181,12 +181,13 @@ def test_telemetry_denial_after_warned_base_conflict_writes_no_receipt(tmp_path:
     assert not failure.exists(), failure.read_text(encoding="utf-8")
 
 
-def test_receipt_suppression_is_confined_to_fetch_and_overlap() -> None:
+def test_receipt_suppression_is_confined_to_fetch_resolution_and_overlap() -> None:
     """A genuine red-tree failure must still write the STOP LOOPING receipt.
 
-    Only the base fetch and the early overlap stage may set ``_gate_env_block``;
-    every later stage (reader wave, pytest, security) exits through the trap
-    with the receipt intact.
+    Only the base fetch, an undeterminable change set (resolver exit 3: the
+    clone lacks the base history) and the early overlap stage may set
+    ``_gate_env_block``; every later stage (reader wave, pytest, security) exits
+    through the trap with the receipt intact.
     """
     gate = GATE.read_text(encoding="utf-8")
     overlap_at = gate.index("--- early overlap")
@@ -196,5 +197,13 @@ def test_receipt_suppression_is_confined_to_fetch_and_overlap() -> None:
     assert all(i < wave_at for i in sets)
     overlap_block = gate[overlap_at:wave_at]
     assert "_gate_env_block=1" in overlap_block
+    # The resolution site suppresses only for exit 3 (undeterminable), never
+    # for an ordinary resolver failure.
+    resolve_at = gate.index('if [[ "$_resolve_rc" -eq 3 ]]; then')
+    resolve_end = gate.index('elif [[ "$_resolve_rc" -ne 0 ]]; then', resolve_at)
+    assert gate[resolve_at:resolve_end].count("_gate_env_block=1") == 1
+    assert all(overlap_at <= i < wave_at or resolve_at <= i < resolve_end for i in sets), (
+        "a receipt suppression outside the fetch/overlap stage and the exit-3 branch"
+    )
     assert '[[ "$_overlap_rc" -eq 3 ]] && _gate_env_block=1' not in gate
     assert 'python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE"' in gate

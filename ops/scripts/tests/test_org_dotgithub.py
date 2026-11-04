@@ -104,6 +104,49 @@ class ReadOrgFileTests(unittest.TestCase):
         self.assertEqual((sha, text), (head, "pinned\n"))
 
 
+class RestProbeTests(unittest.TestCase):
+    """The capability probe gh_auth_probe.sh reports as org_template_read."""
+
+    def test_probe_is_one_rest_call_with_no_git_fallback(self) -> None:
+        calls: list[list[str]] = []
+
+        def refused(argv: list[str]) -> int:
+            calls.append(argv)
+            return 1
+
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=refused), 1)
+        self.assertEqual(calls, [["gh", "api", f"repos/Quantum-L9/.github/contents/{PATH}"]])
+
+    def test_probe_ok_when_the_rest_call_succeeds(self) -> None:
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 0), 0)
+
+    def test_any_other_refusal_is_denied(self) -> None:
+        self.assertEqual(org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda argv: 4), 1)
+
+    def test_a_call_that_never_completed_is_not_a_refusal(self) -> None:
+        """Timeout and an unrunnable gh map to the UNKNOWN codes, never DENIED (1)."""
+        for code in (124, 127):
+            self.assertEqual(
+                org_dotgithub.rest_probe("Quantum-L9", PATH, run=lambda a, c=code: c), code
+            )
+
+    def test_runner_classifies_timeout_and_missing_tool(self) -> None:
+        with unittest.mock.patch.object(
+            org_dotgithub.subprocess, "run", side_effect=subprocess.TimeoutExpired("gh", 60)
+        ):
+            self.assertEqual(org_dotgithub._run(["gh", "api", "x"]), 124)
+        with unittest.mock.patch.object(
+            org_dotgithub.subprocess, "run", side_effect=FileNotFoundError("gh")
+        ):
+            self.assertEqual(org_dotgithub._run(["gh", "api", "x"]), 127)
+
+    def test_cli_passes_the_probe_status_through(self) -> None:
+        for code in (0, 1, 124, 127):
+            with unittest.mock.patch.object(org_dotgithub, "rest_probe", return_value=code):
+                self.assertEqual(org_dotgithub.main(["probe-rest", "Quantum-L9", PATH]), code)
+        self.assertEqual(org_dotgithub.main(["read", "Quantum-L9"]), 2)
+
+
 class SingleReaderTests(unittest.TestCase):
     """Every read of <owner>/.github goes through org_dotgithub, so none can lose the git route."""
 

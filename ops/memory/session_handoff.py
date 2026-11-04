@@ -277,6 +277,10 @@ def request_reason(
     parts = [
         f"L9 post-publish handoffs required for {pr_label}. Write the file(s) below, "
         "then stop. Each is written ONCE to memory. Empty sections are []."
+        "\nGenerate both from the debt ledger instead of writing them by hand "
+        "(record friction first with `session_debt.py friction <id> --detail ...`): "
+        f"python3 ops/autonomy/session_debt.py handoff --pr {pr_number} "
+        '--objective "..." --status "..." [--next "..."]'
     ]
     if str(HANDOFF_REL) in missing:
         parts.append(
