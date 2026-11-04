@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SHELF = ROOT / "scripts" / "shelf_plans.py"
+ARCHIVED_SHELF = ROOT / "scripts" / "_archived" / "shelf_plans.py"
 REFINE = ROOT / "scripts" / "refine_plans.py"
 INVOKE = ROOT / "scripts" / "run_audit_plans.py"
 
@@ -76,6 +76,19 @@ def main() -> int:
         errors.append("SKILL.md must cite refine.md and concerns.md")
     if "run_audit_plans.py" not in skill:
         errors.append("SKILL.md must invoke run_audit_plans.py")
+    if "shelf_plans.py is retired" not in skill:
+        errors.append("SKILL.md must record that shelf_plans.py is retired")
+    if (ROOT / "scripts" / "shelf_plans.py").exists():
+        errors.append("scripts/shelf_plans.py must not remain on the live path")
+    for live in (REFINE, INVOKE):
+        source = live.read_text(encoding="utf-8")
+        if "import shelf_plans" in source or "from shelf_plans" in source:
+            errors.append(f"{live.name} must not import shelf_plans")
+    retired = _run([sys.executable, str(ARCHIVED_SHELF)])
+    if retired.returncode != 2 or "retired" not in retired.stderr:
+        errors.append(
+            f"archived shelf_plans.py must refuse to run: {retired.returncode} {retired.stderr}"
+        )
     if "L9_AUDIT_PLANS_REFINE=0" not in skill:
         errors.append("SKILL.md must name the refine kill switch")
     if "SessionStart must not" not in skill and "SessionStart" not in skill:
@@ -104,10 +117,11 @@ def main() -> int:
         )
         _write(plans / "pending" / "old_pending.plan.md", _plan("old", ["pending"]))
         _write(plans / "backlog" / "old_backlog.plan.md", _plan("old2", ["pending"]))
-        proc = _run(
+        before_started = (plans / "leftover_started.plan.md").read_text(encoding="utf-8")
+        stayed = _run(
             [
                 sys.executable,
-                str(SHELF),
+                str(INVOKE),
                 "--plans-dir",
                 str(plans),
                 "--workspace",
@@ -118,77 +132,27 @@ def main() -> int:
                 "json",
             ]
         )
-        if proc.returncode != 0:
-            errors.append(f"shelf_plans.py failed: {proc.stdout}{proc.stderr}")
+        if stayed.returncode != 0:
+            errors.append(f"invoke must not move plans: {stayed.stdout}{stayed.stderr}")
         else:
-            if (plans / "partial").exists():
-                errors.append("partial/ must be removed")
-            if (plans / "pending").exists():
-                errors.append("pending/ must be removed")
-            if (plans / "backlog").exists():
-                errors.append("backlog/ must be removed")
+            if not (plans / "partial").is_dir():
+                errors.append("partial/ must stay; shelf no longer folds it")
+            if not (plans / "pending").is_dir():
+                errors.append("pending/ must stay; shelf no longer folds it")
+            if not (plans / "backlog").is_dir():
+                errors.append("backlog/ must stay; shelf no longer folds it")
             if not (plans / "keep_me_9-5-26.plan.md").is_file():
                 errors.append("current plan must stay at root")
-            if str(_fm(plans / "keep_me_9-5-26.plan.md").get("status")) != "current":
-                errors.append("root missing status must heal to current")
-            if not (plans / "partially-built" / "leftover_started.plan.md").is_file():
-                errors.append("started leftover must go to partially-built/")
-            started_fm = _fm(plans / "partially-built" / "leftover_started.plan.md")
-            if started_fm.get("status") != "partially-built":
-                errors.append("leave-root status must match dest folder")
-            if not (plans / "stale" / "leftover_unbuilt.plan.md").is_file():
-                errors.append("parked unbuilt must go to stale/")
-            if _fm(plans / "stale" / "leftover_unbuilt.plan.md").get("status") != "stale":
-                errors.append("stale donor must have status stale")
-            if not (plans / "built" / "leftover_done.plan.md").is_file():
-                errors.append("finished leftover must go to built/")
-
-        dest_win = Path(tmp) / "dest-win"
-        dest_win.mkdir()
-        _write(dest_win / "README.md", "1. `keep`\n")
-        _write(
-            dest_win / "same_slug_aaaa1111.plan.md",
-            _plan("incoming", ["completed", "pending"], contents=["incoming done", "new leftover"]),
-        )
-        _write(
-            dest_win / "partially-built" / "same_slug_bbbb2222.plan.md",
-            _plan(
-                "keeper",
-                ["completed", "pending"],
-                status="partially-built",
-                contents=["done", "keep me"],
-            ),
-        )
-        dest_before = (dest_win / "partially-built" / "same_slug_bbbb2222.plan.md").read_text(
-            encoding="utf-8"
-        )
-        _run(
-            [
-                sys.executable,
-                str(SHELF),
-                "--plans-dir",
-                str(dest_win),
-                "--workspace",
-                tmp,
-                "--today",
-                "2026-09-05",
-                "--format",
-                "json",
-            ]
-        )
-        dest_after = (dest_win / "partially-built" / "same_slug_bbbb2222.plan.md").read_text(
-            encoding="utf-8"
-        )
-        dest_fm = _fm(dest_win / "partially-built" / "same_slug_bbbb2222.plan.md")
-        dest_contents = [str(t.get("content")) for t in dest_fm.get("todos") or []]
-        if "keep me" not in dest_contents:
-            errors.append("started dest must keep its own leftover")
-        if "new leftover" not in dest_contents:
-            errors.append("dest-wins must merge unique leftover todos from the same-slug src")
-        if dest_before == dest_after:
-            errors.append("dest-wins must rewrite dest when src has unique leftovers")
-        if (dest_win / "same_slug_aaaa1111.plan.md").is_file():
-            errors.append("same-slug src should be removed after dest-wins")
+            if not (plans / "leftover_started.plan.md").is_file():
+                errors.append("started plan must stay at root")
+            if (plans / "leftover_started.plan.md").read_text(encoding="utf-8") != before_started:
+                errors.append("invoke must not rewrite a root plan")
+            if (plans / "partially-built" / "leftover_started.plan.md").exists():
+                errors.append("started plan must not be moved to partially-built/")
+            if (plans / "stale" / "leftover_unbuilt.plan.md").exists():
+                errors.append("unbuilt plan must not be moved to stale/")
+            if (plans / "built" / "leftover_done.plan.md").exists():
+                errors.append("finished plan must not be moved to built/")
 
         refine_dir = Path(tmp) / "refine"
         refine_dir.mkdir()
@@ -302,23 +266,11 @@ def main() -> int:
                 contents=["uppercase leftover"],
             ),
         )
-        _run(
-            [
-                sys.executable,
-                str(SHELF),
-                "--plans-dir",
-                str(supersede_dir),
-                "--workspace",
-                tmp,
-                "--today",
-                "2026-09-05",
-                "--format",
-                "json",
-            ]
-        )
-        if not (supersede_dir / "archive" / "superseded" / "old_thing.plan.md").is_file():
-            errors.append("frontmatter status superseded must shelf to archive/superseded")
         _run([sys.executable, str(REFINE), "--plans-dir", str(supersede_dir), "--format", "json"])
+        if not (supersede_dir / "old_thing.plan.md").is_file():
+            errors.append("superseded root plan must stay put")
+        if (supersede_dir / "archive" / "superseded" / "old_thing.plan.md").exists():
+            errors.append("superseded root plan must not be moved to archive/superseded")
         compiled = list(supersede_dir.glob("compiled_*.plan.md"))
         if not compiled:
             errors.append("uppercase BUILT leftover must be compiled or folded")

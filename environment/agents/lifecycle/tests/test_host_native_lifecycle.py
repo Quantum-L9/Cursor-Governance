@@ -217,6 +217,51 @@ class HostNativeLifecycleTests(unittest.TestCase):
         self.assertEqual(inflight, [])
         self.assertIsNone(receipts.load_host_admission("tu-stale"))
 
+    def test_abandoned_start_expires_and_fresh_start_stays(self) -> None:
+        from datetime import UTC, datetime, timedelta
+
+        old = (
+            datetime.now(UTC) - receipts.HOST_ADMISSION_RUN_TTL - timedelta(minutes=5)
+        ).isoformat()
+        receipts.write_host_correlation(
+            {
+                "subagent_id": "sub-abandoned",
+                "assignment_id": "host-native-tu-abandoned",
+                "tool_use_id": "tu-abandoned",
+                "observed_at": old,
+            }
+        )
+        receipts.write_host_admission(
+            {
+                "tool_use_id": "tu-abandoned",
+                "assignment_id": "host-native-tu-abandoned",
+                "mutation": True,
+                "subagent_type": "l9-pr-remediation",
+                "observed_at": old,
+            }
+        )
+        receipts.write_host_correlation(
+            {
+                "subagent_id": "sub-live",
+                "assignment_id": "host-native-tu-live",
+                "tool_use_id": "tu-live",
+            }
+        )
+        receipts.write_host_admission(
+            {
+                "tool_use_id": "tu-live",
+                "assignment_id": "host-native-tu-live",
+                "mutation": True,
+                "subagent_type": "l9-pr-remediation",
+            }
+        )
+        inflight = receipts.list_in_flight_host_admissions()
+        self.assertEqual([item.get("tool_use_id") for item in inflight], ["tu-live"])
+        self.assertIsNone(receipts.load_host_admission("tu-abandoned"))
+        self.assertTrue(receipts.host_stop_path("sub-abandoned").is_file())
+        self.assertIsNotNone(receipts.load_host_admission("tu-live"))
+        self.assertFalse(receipts.host_stop_path("sub-live").is_file())
+
     def test_correlation_index_maps_tool_use_and_call_id(self) -> None:
         receipts.write_host_correlation(
             {
@@ -307,6 +352,15 @@ class HostNativeLifecycleTests(unittest.TestCase):
         )
         inflight = receipts.list_in_flight_host_admissions()
         self.assertTrue(isinstance(inflight, list))
+
+
+class LifecycleSourceHygieneTests(unittest.TestCase):
+    """The admission lock path must not carry session debug instrumentation."""
+
+    def test_receipts_writes_no_machine_local_debug_log(self) -> None:
+        source = Path(receipts.__file__).read_text(encoding="utf-8")
+        for marker in ("#region agent log", "/Users/", "debug-982472"):
+            self.assertNotIn(marker, source)
 
 
 if __name__ == "__main__":

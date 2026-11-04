@@ -8,9 +8,10 @@ version: 1.0.0
 
 # Plans-store refine
 
-Invoke path (this skill only): shelf → refine → shelf → README live-queue.
+Invoke path (this skill only): refine → README live-queue.
+`scripts/shelf_plans.py` is retired and is not called.
 SessionStart must not call refine. Kill switch: `L9_AUDIT_PLANS_REFINE=0`
-(diagnose: shelf + display only).
+(diagnose: display only).
 
 `l9-intelligence-harvest` stays read-only. `scripts/refine_plans.py` is the
 only fold/compile writer.
@@ -25,10 +26,9 @@ Every `.plan.md` frontmatter must have `status`:
 - `stale` — `stale/`
 - `superseded` — `archive/superseded/`
 
-`/l9-plan-simple` writes `status: current` on first draft. Shelf heals a root
-file missing `status` to `current`. Leave-root rewrites `status` to the dest
-folder. Do not write a parked status onto a live root file. Do not write
-`status: harvested`.
+`/l9-plan-simple` writes `status: current` on first draft. This skill does not
+move a plan and does not heal a missing root `status`. Do not write a parked
+status onto a live root file. Do not write `status: harvested`.
 
 ## Harvested (tag, not a status)
 

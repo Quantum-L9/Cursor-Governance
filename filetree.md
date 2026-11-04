@@ -1169,10 +1169,12 @@ skills/
     agents/
     references/
     scripts/
+      _archived/
+        RETIRED.md
+        shelf_plans.py
       refine_plans.py
       run_audit_plans.py
       self_test.py
-      shelf_plans.py
   l9-auditing-performance/
     SKILL.md
     references/

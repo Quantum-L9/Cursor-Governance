@@ -113,6 +113,10 @@ def host_correlation_path(subagent_id: str) -> Path:
 
 
 HOST_ADMISSION_RESERVE_TTL = timedelta(minutes=2)
+# A start with no stop and no return is a live lane only inside this window.
+# Older starts are abandoned slots: subagentStop never wrote a receipt, and
+# leaving them in flight fills max_mutation_lanes forever.
+HOST_ADMISSION_RUN_TTL = timedelta(hours=6)
 
 
 def host_admission_path(tool_use_id: str) -> Path:
@@ -235,19 +239,35 @@ def _host_admission_has_start(
     return tool_use_id in table
 
 
+def _host_admission_activity_at(
+    body: dict[str, Any], *, index: HostCorrelationIndex | None = None
+) -> datetime | None:
+    """Latest stamp on the admission or any correlation that shares its id."""
+    stamps = [_parse_observed_at(body.get("observed_at"))]
+    tool_use_id = str(body.get("tool_use_id") or "")
+    table = index if index is not None else _load_host_correlation_index()
+    for corr in table.get(tool_use_id, ()):
+        stamps.append(_parse_observed_at(corr.get("observed_at")))
+    parsed = [stamp for stamp in stamps if stamp is not None]
+    return max(parsed) if parsed else None
+
+
 def _host_admission_expired(
     body: dict[str, Any],
     *,
     now: datetime | None = None,
     index: HostCorrelationIndex | None = None,
 ) -> bool:
-    if _host_admission_has_start(body, index=index) or _host_admission_has_stop(body, index=index):
+    if _host_admission_has_stop(body, index=index):
         return False
-    observed = _parse_observed_at(body.get("observed_at"))
-    if observed is None:
+    activity = _host_admission_activity_at(body, index=index)
+    if activity is None:
         return False
     clock = now or datetime.now(UTC)
-    return clock - observed > HOST_ADMISSION_RESERVE_TTL
+    age = clock - activity
+    if _host_admission_has_start(body, index=index):
+        return age > HOST_ADMISSION_RUN_TTL
+    return age > HOST_ADMISSION_RESERVE_TTL
 
 
 def _host_admission_has_stop(
@@ -271,8 +291,67 @@ def _host_admission_has_stop(
     return False
 
 
+def terminate_abandoned_host_agents(*, now: datetime | None = None) -> dict[str, int]:
+    """Write the stop the launcher owes every start that subagentStop never closed.
+
+    The Task admission path calls this before it counts the mutation cap.
+    A correlation younger than ``HOST_ADMISSION_RUN_TTL`` is left alone.
+    """
+    clock = now or datetime.now(UTC)
+    root = subagent_receipt_root() / "host-correlation"
+    stopped = 0
+    kept_live = 0
+    if root.is_dir():
+        for path in root.glob("*.json"):
+            try:
+                body = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(body, dict):
+                continue
+            subagent_id = str(body.get("subagent_id") or "").strip()
+            if not subagent_id:
+                continue
+            try:
+                if host_stop_path(subagent_id).is_file():
+                    continue
+            except ValueError:
+                continue
+            activity = _parse_observed_at(body.get("observed_at"))
+            if activity is not None and clock - activity <= HOST_ADMISSION_RUN_TTL:
+                kept_live += 1
+                continue
+            try:
+                write_host_stop(
+                    subagent_id,
+                    {
+                        "status": "abandoned",
+                        "reason": "launcher reaped: subagentStop did not arrive",
+                        "assignment_id": body.get("assignment_id"),
+                        "tool_use_id": body.get("tool_use_id"),
+                    },
+                )
+            except (OSError, RuntimeError, ValueError):
+                continue
+            for key in ("tool_use_id", "tool_call_id"):
+                tool_id = str(body.get(key) or "").strip()
+                if not tool_id:
+                    continue
+                try:
+                    host_admission_path(tool_id).unlink(missing_ok=True)
+                except ValueError:
+                    continue
+            stopped += 1
+    return {"stopped": stopped, "kept_live": kept_live}
+
+
 def list_in_flight_host_admissions() -> list[dict[str, Any]]:
-    """Host-native admissions that have not returned or stopped."""
+    """Host-native admissions that have not returned or stopped.
+
+    The Task launch path calls this while holding the admission lock, so a
+    launch terminates abandoned children before it counts the mutation cap.
+    """
+    terminate_abandoned_host_agents()
     root = subagent_receipt_root() / "host-admission"
     if not root.is_dir():
         return []
