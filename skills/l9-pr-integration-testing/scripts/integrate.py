@@ -561,6 +561,13 @@ class DockerSandbox:
             "ALL",
             "--security-opt",
             "no-new-privileges",
+            # PID 1 must reap. Without an init the test command is PID 1, and
+            # every orphaned grandchild (a backgrounded git, a test's own
+            # subprocess tree) stays a zombie that counts against --pids-limit:
+            # a Cursor-Governance suite left 111 of 128 slots on its baseline,
+            # and a PR adding git-heavy tests then failed with "cannot fork()"
+            # and "can't start new thread" -- environment, reported as code.
+            "--init",
             "--pids-limit",
             "128",
             "--memory",
