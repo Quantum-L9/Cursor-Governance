@@ -565,11 +565,8 @@ claude_routing:
     positive_signals:
     - l9-audit-plans
     - /l9-audit-plans
-    - organize plans store
-    - shelf plans
     - refine leftover plan todos
     - docs/plans/stale
-    - partially-built shelf
     supporting:
     - l9-pipeline-audit
     - l9-ynp
@@ -582,6 +579,9 @@ claude_routing:
     - plan audit
     - unbuilt plans
     - stale plans
+    - organize plans store
+    - shelf plans
+    - partially-built shelf
     - audit .cursor/plans
     - which plans are unbuilt
     - harvest campaigns

@@ -1,5 +1,5 @@
 {
-  "generation_id": "10c83596c756fe0967aa16a1c8f6cb6b509e7ae972be3e5ed8026a1eaa4a95e7",
+  "generation_id": "ca285018788e77139f11abffce16bf2e8cb6368c013aa0f7bbecfffb62765bd8",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -420,11 +420,8 @@
         "positive_signals": [
           "l9-audit-plans",
           "/l9-audit-plans",
-          "organize plans store",
-          "shelf plans",
           "refine leftover plan todos",
-          "docs/plans/stale",
-          "partially-built shelf"
+          "docs/plans/stale"
         ],
         "primary": "l9-audit-plans",
         "signal_weight": 9,
@@ -441,6 +438,9 @@
           "plan audit",
           "unbuilt plans",
           "stale plans",
+          "organize plans store",
+          "shelf plans",
+          "partially-built shelf",
           "audit .cursor/plans",
           "which plans are unbuilt",
           "harvest campaigns",
@@ -1474,6 +1474,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "64a4f8e5b97ec1e47e26151a67c7589b72bb4186ba7eb7537e9f3ed53414a12e",
+  "source_manifest_sha256": "d6a34888ffb49becc937e6e944a0d2ad8007effd2cd85399ebc46e9c8c709eea",
   "source_skill_corpus_sha256": "95badba7ec6abc89e30cbdfe6584b912b7fda55c1086999c1ae7ae0753453f77"
 }
