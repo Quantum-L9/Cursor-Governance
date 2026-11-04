@@ -100,6 +100,66 @@ def test_bind_rejects_unknown_name() -> None:
     }
 
 
+AUTH0_NAMES = ("AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET")
+
+
+def test_operator_only_names_are_gated_inventory_names() -> None:
+    operator_only = cb.operator_only_names()
+    assert set(AUTH0_NAMES) <= operator_only
+    assert operator_only <= cb.allowed_names()
+
+
+@pytest.mark.parametrize("name", AUTH0_NAMES)
+def test_operator_only_name_refused_for_an_environment_identity(
+    monkeypatch: pytest.MonkeyPatch, name: str
+) -> None:
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
+    monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(cb, "_identity_source", lambda: "env")
+    assert cb.bind(name, infisical_cli=lambda _: "CANARY_OPERATOR_ONLY") is None
+    assert cb.bind_status(name) == {"name": name, "bound": False, "source": "operator-only-refused"}
+
+
+def test_operator_only_name_refused_on_a_hosted_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "1")
+    monkeypatch.setenv("AUTH0_CLIENT_SECRET", "CANARY_HOSTED_ENV")
+    monkeypatch.setattr(cb, "_identity_source", lambda: "profile")
+    assert cb.bind("AUTH0_CLIENT_SECRET", infisical_cli=lambda _: "CANARY_OPERATOR_ONLY") is None
+    assert cb.bind_status("AUTH0_CLIENT_SECRET")["source"] == "operator-only-refused"
+
+
+def test_operator_only_name_binds_on_the_workstation_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
+    monkeypatch.delenv("AUTH0_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr(cb, "_identity_source", lambda: "profile")
+    value = cb.bind("AUTH0_CLIENT_SECRET", infisical_cli=lambda _: "CANARY_OPERATOR_ONLY")
+    assert value == "CANARY_OPERATOR_ONLY"
+    assert cb.bind_status("AUTH0_CLIENT_SECRET")["source"] == "infisical"
+    assert _env_lacks("AUTH0_CLIENT_SECRET")
+
+
+def test_operator_only_gate_does_not_touch_other_names(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_CODE_REMOTE", "1")
+    monkeypatch.delenv("SEMGREP_APP_TOKEN", raising=False)
+    monkeypatch.setattr(cb, "_identity_source", lambda: "env")
+    value = cb.bind("SEMGREP_APP_TOKEN", infisical_cli=lambda _: "CANARY_ORDINARY")
+    assert value == "CANARY_ORDINARY"
+
+
+def test_identity_source_is_read_from_the_machine_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        machine_login, "machine_identity", lambda env=None: ("profile", {"client_id": "x"})
+    )
+    assert cb._identity_source() == "profile"
+    cb.reset_cache()
+    monkeypatch.setattr(machine_login, "machine_identity", lambda env=None: ("", None))
+    assert cb._identity_source() == ""
+
+
 def test_bind_never_writes_environ(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SONAR_TOKEN", raising=False)
     cb.bind("SONAR_TOKEN", infisical_cli=lambda _: "CANARY_SONAR")
