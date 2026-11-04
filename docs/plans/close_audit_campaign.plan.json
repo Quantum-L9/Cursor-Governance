@@ -1,0 +1,328 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Close the proved-findings audit campaign",
+  "objective": "Finish fix/audit-proved-findings by reusing the field registry and the pinned defusedxml parser, hoisting the constant document-rule search, and proving the result on the pinned test fixture. A write of different values per record stays, because one write cannot carry those values.",
+  "success_criteria": [
+    "scripts/audit/odoo_audit.py describes the same rule it enforces: an unresolved view emits nothing, and depends and onchange checks use the same inherit registry as constraints",
+    "A write inside a loop is a finding only when every item would receive the same values; a write of different values per item is not a finding, and plasticos_enrichment/models/enrichment_run.py is not rewritten to hide those writes",
+    "cron_check_missing_docs searches plasticos.document.rule once, before the transaction loop, with the same domain",
+    "Every repository XML parse named in this plan imports defusedxml.ElementTree and the nosec marker on that parse is gone",
+    "tests/test_cron_xml_lock.py and tests/cron_contract.py are on fix/audit-proved-findings, and the lock test imports defusedxml.ElementTree",
+    "run_baseline_gate.sh reports no new CRITICAL or HIGH finding and the three proved types stay absent from both baseline files",
+    "The pinned Docker test fixture runs the tests of every plasticos module whose Python behavior changed, and make update of those modules runs only when that worktree is the tree Docker mounts"
+  ],
+  "scope": {
+    "in": [
+      "Worktree /Users/ib-mac/IB-Odoo_19 (LOCAL)/wt-audit-truth on branch fix/audit-proved-findings",
+      "scripts/audit/odoo_audit.py docstring, depends check, and onchange check",
+      "scripts/audit/performance_audit.py identical-values write rule and its unit tests",
+      "plasticos_documents/models/transaction_docs.py cron_check_missing_docs rule search",
+      "Stdlib XML parses in tools/cron_invariant_check.py, tests/test_xpath_anchor_topology.py, tests/test_odoo19_compat.py, ci/check_xpath_stability.py, ci/check_state_guard_bypass.py, ci/check_automation_field_refs.py",
+      "Copy of the two untracked cron files from the main checkout onto this branch",
+      "Fixture tests and a mount-checked module upgrade of the modules already bumped on this branch"
+    ],
+    "out": [
+      "27 unbounded searches and 19 unjustified sudo calls; they are a later campaign",
+      "CRM roadmap README failure and VanillaSoft phantom enums on the other branch",
+      "pipeline_v2.py and enrichment feature wiring",
+      "A batch write helper or a nested function whose only job is to hide enrichment profile writes",
+      "New baseline allowlist rows",
+      "A new test-database template or a second Docker Compose project",
+      "Any other dirty file in the main checkout",
+      "ci and tools parsers beyond the six named XML entry points"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Bind wt-audit-truth at fix/audit-proved-findings, dirty against Staging 04bd0594, coded_master.py untracked. Main checkout holds only the two untracked cron files that this plan copies.",
+      "pass_criteria": "The bound tree is the worktree, not the CRM worktree and not the dirty main checkout",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 .cursor-commands/ops/hooks/plan_memory_prefetch.py --workspace the main checkout --task the close-out objective",
+      "pass_criteria": "MEMORY_PREFETCH snapshot_digest 84285faaaf0ae34c9b231c0df0fb2c0098797dc2f04b98b31dc5e64450f3ee44 conflicts=0",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 .cursor-commands/skills/_archived/l9-plan/scripts/route_plan.py --risk high --evidence sufficient --json",
+      "pass_criteria": "depth deep and omit_gates empty",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "Name .pre-commit-config.yaml as the hook catalog for the governed checkout",
+      "pass_criteria": "Catalog named; no origin/main lock and no new worktree requirement",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Make the field and query scanners describe and enforce one rule: inherit fields are visible to depends and onchange, unresolved views stay silent, and a loop write is a finding only when the values are identical",
+      "files": [
+        "wt-audit-truth/scripts/audit/odoo_audit.py",
+        "wt-audit-truth/scripts/audit/performance_audit.py",
+        "wt-audit-truth/tests/test_odoo_audit_field_attribution.py",
+        "wt-audit-truth/tests/test_audit_n_plus_one.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_fields_on_model and _loop_calls",
+      "leverage_rank": 1,
+      "shared_root_cause": "file-scoped checks and a lexical loop rule that cannot see identical writes"
+    },
+    {
+      "id": "T3",
+      "task": "Parse repository XML with the pinned defusedxml parser, delete the nosec markers on those calls, and copy the two cron lock files onto the branch",
+      "files": [
+        "wt-audit-truth/tools/cron_invariant_check.py",
+        "wt-audit-truth/tests/test_xpath_anchor_topology.py",
+        "wt-audit-truth/tests/test_odoo19_compat.py",
+        "wt-audit-truth/ci/check_xpath_stability.py",
+        "wt-audit-truth/ci/check_state_guard_bypass.py",
+        "wt-audit-truth/ci/check_automation_field_refs.py",
+        "wt-audit-truth/tests/test_cron_xml_lock.py",
+        "wt-audit-truth/tests/cron_contract.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "xml.etree.ElementTree",
+      "leverage_rank": 2,
+      "shared_root_cause": "stdlib XML parse hidden by nosec"
+    },
+    {
+      "id": "T2",
+      "task": "Search plasticos.document.rule once before the missing-document transaction loop, keeping the current domain",
+      "files": [
+        "wt-audit-truth/plasticos_documents/models/transaction_docs.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "cron_check_missing_docs",
+      "leverage_rank": 3,
+      "shared_root_cause": "constant-domain search repeated per transaction"
+    },
+    {
+      "id": "T4",
+      "task": "Rescan, run the scanner and cron tests, and run fixture tests for every module whose Python behavior changed",
+      "files": [
+        "wt-audit-truth/scripts/audit/run_baseline_gate.sh",
+        "wt-audit-truth/config/test_env_fixture.conf"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1", "T2", "T3"],
+      "operation": "Wrap",
+      "anchor": "run_baseline_gate.sh and make test-module",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T5",
+      "task": "Upgrade the already bumped modules only when Docker mounts this worktree",
+      "files": [
+        "wt-audit-truth/docker-compose.yml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T4"],
+      "operation": "Wrap",
+      "anchor": "make update m= the bumped module list",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": ["T1", "T3", "T2", "T4", "T5"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Scanners and the document-rule hoist match the proved-finding rule",
+      "unlocks": "static gate"
+    },
+    {
+      "id": "M2",
+      "outcome": "Repository XML parses use defusedxml and the cron lock files are on the branch",
+      "unlocks": "static gate"
+    },
+    {
+      "id": "M3",
+      "outcome": "Baseline gate and fixture tests pass",
+      "unlocks": "mount-checked upgrade"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "Field attribution tests and n-plus-one tests pass, including an identical-values write finding and a differing-values write that is silent",
+      "no_go_action": "Stop. Do not allowlist the new finding and do not wrap the enrichment write"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "rg finds no xml.etree.ElementTree import in the six named files, and the cron lock test passes on the worktree",
+      "no_go_action": "Stop. Do not add a nosec marker"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "run_baseline_gate.sh prints no audit baseline regression, and make test-module for the changed modules passes on the pinned fixture",
+      "no_go_action": "Stop the upgrade. Fix the failing module before make update"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No addon count, command, or CI contract change. The scanner docstring inside scripts/audit/odoo_audit.py is the surface that must match the code."
+    },
+    {
+      "surface": "scripts/audit/odoo_audit.py module docstring",
+      "action": "update",
+      "todo_ids": ["T1"]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does extending depends and onchange to inherit fields create a new gated finding that the plan would silence with a baseline row?",
+      "Does defusedxml reject repository XML that the stdlib parser accepted?",
+      "Can the enrichment profile merge become one write without dropping per-profile values?",
+      "Does make update from this worktree change a database whose compose project mounts the dirty main checkout?"
+    ],
+    "assumed_false_ifs": [
+      "A nosec comment is an acceptable close for a stdlib XML parse",
+      "A nested helper that only hides a write closes an N+1 finding",
+      "The uncommitted manifest bumps must be bumped again before the first upgrade",
+      "The main checkout's other dirty files belong on this branch"
+    ],
+    "blast_radius": "A wrong inherit-field check can hide a real missing field or fail the baseline gate. A wrong Docker mount can upgrade the wrong tree. A rejected XML parse stops the cron and CI parsers that read repository XML.",
+    "rollback": "The branch is uncommitted. Restore the worktree with git checkout -- on the touched paths and remove the two copied cron files if they were the only additions. Do not reset the dirty main checkout."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T3", "T2", "T4", "T5"],
+    "shared_causes": [
+      "Field checks that still see only the first _name in a file",
+      "Stdlib XML parsing concealed by nosec",
+      "A search whose domain does not change inside a loop",
+      "Distinct per-record writes treated as a missing batch API"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the nosec B314 markers on the named XML parses",
+      "Delete the per-transaction document-rule search by hoisting it",
+      "Delete the docstring sentences that still call unresolved views a gated finding",
+      "Do not add a write wrapper in plasticos_enrichment"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Inherit-aware depends or onchange checks emit a new proved finding",
+      "mitigation": "Fix the missing field or the registry. Do not add a baseline row to go green."
+    },
+    {
+      "risk": "defusedxml rejects a local XML file the stdlib parser accepted",
+      "mitigation": "That rejection is the closed behavior for entity expansion. Repair the XML if it is a real document; do not switch the parser back."
+    },
+    {
+      "risk": "Docker Compose for the live database mounts the main checkout",
+      "mitigation": "Probe the mount before make update. Run fixture tests from the worktree either way. Do not start a second compose project."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Which directory does the running Docker Compose project mount as /mnt/extra-addons?",
+      "decision_effect": "make update runs only when that directory is the wt-audit-truth worktree. Otherwise the upgrade stays blocked and the fixture tests are the runtime proof.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "In wt-audit-truth: python3 -m pytest tests/test_odoo_audit_field_attribution.py tests/test_audit_n_plus_one.py tests/test_cron_xml_lock.py tests/test_audit_baseline_gate.py -q",
+      "pass_criteria": "All collected tests pass",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "In wt-audit-truth: bash scripts/audit/run_baseline_gate.sh",
+      "pass_criteria": "No audit baseline regression",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "In wt-audit-truth: make test-module for each plasticos module whose Python behavior changed, on the database named in config/test_env_fixture.conf",
+      "pass_criteria": "Each module's Odoo tests pass on the fixture clone",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": ".pre-commit-config.yaml via pre-commit run on the touched paths in wt-audit-truth",
+      "pass_criteria": "Hooks pass for the touched files",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "Build then stacked make pr",
+    "stop_reason": "Architecture is selected and the plan is validated. Implementation starts when Build is pressed. U1 is probed before the upgrade and does not block the code edits."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "wt-audit-truth/scripts/audit/odoo_audit.py",
+      "wt-audit-truth/scripts/audit/performance_audit.py",
+      "wt-audit-truth/tests/test_odoo_audit_field_attribution.py",
+      "wt-audit-truth/tests/test_audit_n_plus_one.py",
+      "wt-audit-truth/plasticos_documents/models/transaction_docs.py",
+      "wt-audit-truth/tools/cron_invariant_check.py",
+      "wt-audit-truth/tests/test_xpath_anchor_topology.py",
+      "wt-audit-truth/tests/test_odoo19_compat.py",
+      "wt-audit-truth/ci/check_xpath_stability.py",
+      "wt-audit-truth/ci/check_state_guard_bypass.py",
+      "wt-audit-truth/ci/check_automation_field_refs.py",
+      "wt-audit-truth/tests/test_cron_xml_lock.py",
+      "wt-audit-truth/tests/cron_contract.py"
+    ],
+    "must_not_modify": [
+      "pipeline_v2.py",
+      "plasticos_enrichment/models/enrichment_run.py",
+      "the dirty main checkout except reading the two cron files",
+      "the CRM worktree",
+      "config/test_env_fixture.conf",
+      "ci/baselines except to refuse a new allowlist row"
+    ],
+    "preserved_contracts": [
+      "FIELD_NOT_FOUND and INVALID_CONSTRAINT_FIELD emit only for a fully resolved model missing the field",
+      "N_PLUS_ONE_QUERY emits only for a per-item lookup or create, or for a write whose values are identical across the loop",
+      "A page cursor and a per-item savepoint are not findings",
+      "defusedxml==0.7.1 stays the pinned parser",
+      "Docker tests clone only the database in config/test_env_fixture.conf",
+      "make update lists only the modules whose manifests already changed on this branch",
+      "Publication is make pr into Staging"
+    ],
+    "validation_commands": [
+      "pytest tests/test_odoo_audit_field_attribution.py tests/test_audit_n_plus_one.py tests/test_cron_xml_lock.py tests/test_audit_baseline_gate.py",
+      "bash scripts/audit/run_baseline_gate.sh",
+      "make test-module for each changed plasticos module",
+      "pre-commit run on the touched paths"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "GAR intervention USE_EXISTING",
+    "field registry reused",
+    "defusedxml reused",
+    "distinct writes kept",
+    "fixture before upgrade"
+  ],
+  "estimate": "one Build on the existing worktree"
+}

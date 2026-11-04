@@ -1,0 +1,120 @@
+{
+  "audit_id": "audit.quantum-l9.cursor-governance.open-prs.2026-10-20",
+  "audit_schema_sha256": "a3afe4dd305827908f442409876957b3fbf128d4be4cdb1a659e07e773c3ab06",
+  "autoremediate": 0,
+  "builder_sha256": "41aad8b842f5e1a148fdd5ab4f83e4cfe6369f386bcd0796c94fc518e854a286",
+  "builder_version": "2.0.0",
+  "canonical_audit_sha256": "82f21724ff9fd7d012be50bbf470979b5a7e9ddd87f8f3a3d93936dd6a5b28da",
+  "change_ledger_set_sha256": "b1316eee1c63016ee115141451eac3be201a0ae74df40832a0b3eab9c4174c42",
+  "files": {
+    "00_READ_FIRST.md": {
+      "bytes": 3383,
+      "sha256": "681fb46266a8d6d8e0f09ea608511d511595ac79fa368e2005c5649e0707261f"
+    },
+    "PR_REMEDIATION_CONTRACT.md": {
+      "bytes": 15817,
+      "sha256": "b151209e6afe6761db036b7ab201f5df77804f22a3f8257e18305c0ad8276709"
+    },
+    "audit.json": {
+      "bytes": 8694329,
+      "sha256": "82f21724ff9fd7d012be50bbf470979b5a7e9ddd87f8f3a3d93936dd6a5b28da"
+    },
+    "audit.md": {
+      "bytes": 69114,
+      "sha256": "20d8bdf9789dac4067a2e007343c295a79299c25909b0bcd6e59c04d25d8a07d"
+    },
+    "change-ledger.json": {
+      "bytes": 6027795,
+      "sha256": "b1316eee1c63016ee115141451eac3be201a0ae74df40832a0b3eab9c4174c42"
+    },
+    "remediation-handoff.json": {
+      "bytes": 352563,
+      "sha256": "187700ed03295f0974dfe7a6aae7766caf4fa33a61aa213c9bd23480b285eec0"
+    }
+  },
+  "handoff_schema_sha256": "2ea6d20f86c4a445c95e1be6ba27986d363b905262fe0f1f6a3ec9b19837279e",
+  "manifest_schema_sha256": "820311bca546632d812e5e07bc8efed4e43432bfe79dd474b31f00dc8ddb6d01",
+  "pr_bindings": [
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 737,
+      "source_head_sha": "d0682d99b76e59df7e5a627bf326e3faffeedcb2"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 738,
+      "source_head_sha": "37072903942ffc5ef4c19b470e85635031a1affd"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 739,
+      "source_head_sha": "2a2d0d839cd2d029509f49aa5a09cd29fa44ed85"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 740,
+      "source_head_sha": "d2d4d8fbd593e628260f4f7be3f0e7347dcddf5b"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 741,
+      "source_head_sha": "7baa960df32a612448a4e88f572675a94c10285f"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 744,
+      "source_head_sha": "b8ed6b2c503c569eea4922ddd477dc77477ae8b9"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 745,
+      "source_head_sha": "ba20287ed8b4d44dcea86a8bd607e6706bdca939"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 746,
+      "source_head_sha": "641a6098a481c1a7d6d63f7f9cac6b17af0b7054"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 747,
+      "source_head_sha": "c435b881dc3b2fc49fa40f619a65081854bad917"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 748,
+      "source_head_sha": "b9d97983ce3c98cd34a950c9a081faab27bf30b9"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 749,
+      "source_head_sha": "1e1eccb2978844ec77e439373a4143493fb0ef35"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 750,
+      "source_head_sha": "d22a531ba59296e70ab4a4912f2b09f9490b6e34"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 751,
+      "source_head_sha": "8439dfa8062e3420b142fe3f6b27a7ab871932c4"
+    },
+    {
+      "base_sha": "2406510a18124026ac48d50d9891e93fd9772be7",
+      "pr_number": 752,
+      "source_head_sha": "78e5722a4a440130940f3c1477945dd045575ddd"
+    },
+    {
+      "base_sha": "60aee3be82e97984099678df4a311cf23a0e462a",
+      "pr_number": 755,
+      "source_head_sha": "02e0b7ef9b4c7791e4bdb6503907724d17475a1b"
+    }
+  ],
+  "repository_binding": {
+    "audited_default_branch_sha": "60aee3be82e97984099678df4a311cf23a0e462a",
+    "default_branch": "main",
+    "repository": "Quantum-L9/Cursor-Governance"
+  },
+  "schema_version": "l9.pr-audit.bundle-manifest.v2.0"
+}

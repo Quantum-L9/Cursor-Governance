@@ -1,26 +1,36 @@
 ---
 name: Fix ff slash command
-overview: Make `/ff` switch the named clone onto `main` as step 0 (inside `ff.sh`, after parking dirt), and move Improve → Recursive Alignment → Validate & Repair for leftover WIP / plans / campaigns onto that shelf path — before pre-commit, and never as an L4/kernel_gate trigger.
+overview: Make `/ff` switch the named clone onto `main` as step 0 (inside `ff.sh`,
+  after parking dirt), and move Improve → Recursive Alignment → Validate & Repair
+  for leftover WIP / plans / campaigns onto that shelf path — before pre-commit, and
+  never as an L4/kernel_gate trigger.
 todos:
-  - id: ff-step0-switch
-    content: Park then git switch to main inside ff.sh; identity check BRANCH_AFTER==main; do not reset feature branches
-    status: completed
-  - id: ff-self-test
-    content: "Add self_test: feature branch unique commits survive; clone ends on origin/main"
-    status: completed
-  - id: corpus-kernels-protocol
-    content: Shelf leftover WIP/plans/campaigns; apply Improve then RA then V&R before commit; L4 begin+authorize only
-    status: completed
-  - id: kernel-gate-skip
-    content: Skip WIP/docs/plans/campaigns in kernel_gate; corpus-only changesets skip tree latch; flip tests
-    status: completed
-  - id: plan-receipt-ra
-    content: Insert recursive_alignment between improve and validate_repair in plan kernel_pass checker + fixtures
-    status: completed
-  - id: doctrine
-    content: Update ff.md, skill refs, rule 55, AGENTS.md append, surface_profile kernel_hook, pack validator
-    status: completed
+- id: ff-step0-switch
+  content: Park then git switch to main inside ff.sh; identity check BRANCH_AFTER==main;
+    do not reset feature branches
+  status: completed
+- id: ff-self-test
+  content: 'Add self_test: feature branch unique commits survive; clone ends on origin/main'
+  status: completed
+- id: corpus-kernels-protocol
+  content: Shelf leftover WIP/plans/campaigns; apply Improve then RA then V&R before
+    commit; L4 begin+authorize only
+  status: completed
+- id: kernel-gate-skip
+  content: Skip WIP/docs/plans/campaigns in kernel_gate; corpus-only changesets skip
+    tree latch; flip tests
+  status: completed
+- id: plan-receipt-ra
+  content: Insert recursive_alignment between improve and validate_repair in plan
+    kernel_pass checker + fixtures
+  status: completed
+- id: doctrine
+  content: Update ff.md, skill refs, rule 55, AGENTS.md append, surface_profile kernel_hook,
+    pack validator
+  status: completed
 isProject: false
+built: true
+status: built
 ---
 
 # Fix `/ff`: switch to main, then corpus kernels
@@ -129,3 +139,17 @@ Leave [`ops/hooks/plan_kernel_gate.py`](ops/hooks/plan_kernel_gate.py) campaign-
 - `governance_activate_fresh.sh` / `make sync` / putting `make pr` inside `ff.sh`.
 - Applying the three kernels to the whole tracked WIP/plans/campaign corpus on every `/ff` (only leftover untracked being shelved).
 - Changing tree-kernel RA+V&R for ordinary code PRs.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `ff-step0-switch`: completed
+- `ff-self-test`: completed
+- `corpus-kernels-protocol`: completed
+- `kernel-gate-skip`: completed
+- `plan-receipt-ra`: completed
+- `doctrine`: completed

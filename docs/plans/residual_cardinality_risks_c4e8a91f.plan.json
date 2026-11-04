@@ -1,0 +1,238 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Close two cardinality display and retry gaps",
+  "objective": "A transaction with several loads shows carrier names and a date span on its single sales-dashboard row, and a scale-ticket cron failure is retried on the next run. Competing ownership keeps exactly one committed parent. The seven baseline test failures stay untouched.",
+  "success_criteria": [
+    "A transaction with three loads still produces one plasticos.sales.dashboard row whose revenue_total and gross_margin equal the transaction, while carrier_name lists each distinct carrier and pickup_datetime is the earliest pickup",
+    "After one load's scale-ticket reminder raises, the next cron run records that load's reminder without waiting for the scan cursor to wrap",
+    "Two concurrent parent assignments still leave one committed parent and one rolled-back session",
+    "The seven baseline failures remain the same tests and are not edited"
+  ],
+  "scope": {
+    "in": [
+      "plasticos_commission sales dashboard SQL view and its cardinality test",
+      "plasticos_documents scale-ticket cron retry list and its cardinality test",
+      "The existing competing-ownership test contract for SerializationFailure"
+    ],
+    "out": [
+      "Offer acceptance creating a transaction",
+      "Claim chargeback and penalty computes",
+      "Commission and claim ACL rows",
+      "Changing PostgreSQL isolation or retrying a SerializationFailure inside the request",
+      "Publication of unrelated modules"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git -C the feature worktree rev-parse HEAD and status",
+      "pass_criteria": "branch feat/domestic-multi-load-cardinality and the cardinality commits are present",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "Compare the seven failing test identities on 677d734 and on the feature full suite",
+      "pass_criteria": "Same seven test names and the same assertion text on both checkouts",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Read plasticos.sales.dashboard init SQL and cron_check_scale_tickets",
+      "pass_criteria": "Financial columns come from the transaction row; the cron advances a cursor before the page finishes",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Fill carrier_name and the date columns from per-transaction aggregates when a deal has several loads. Keep one dashboard row and do not sum money.",
+      "files": [
+        "plasticos_commission/models/sales_dashboard.py",
+        "plasticos_commission/tests/test_sales_dashboard_load_cardinality.py",
+        "plasticos_commission/__manifest__.py"
+      ],
+      "effort": "small",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "operation": "Replace",
+      "anchor": "sole_load_id join in plasticos_sales_dashboard"
+    },
+    {
+      "id": "T2",
+      "task": "Store scale-ticket load ids whose savepoint failed and process that list at the start of the next cron run while the scan cursor still advances.",
+      "files": [
+        "plasticos_documents/models/transaction_docs.py",
+        "plasticos_documents/tests/test_scale_ticket_cardinality.py",
+        "plasticos_documents/__manifest__.py"
+      ],
+      "effort": "small",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 2,
+      "operation": "Wrap",
+      "anchor": "cron_check_scale_tickets savepoint"
+    },
+    {
+      "id": "T3",
+      "task": "State in the competing-ownership test that SerializationFailure is a full rollback of the loser under repeatable read. Do not change the lock or the isolation level.",
+      "files": [
+        "plasticos_logistics/tests/test_load_cardinality.py"
+      ],
+      "effort": "small",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 3,
+      "operation": "Replace",
+      "anchor": "test_two_sessions_cannot_both_commit_competing_load_ownership docstring"
+    },
+    {
+      "id": "T4",
+      "task": "Leave the seven baseline failures unchanged.",
+      "files": [],
+      "blocker": "The same seven assertions fail on isolated origin/Staging at 677d734. Repair belongs on a separate branch.",
+      "effort": "none",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 4
+    }
+  ],
+  "critical_path": ["T1", "T2"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Dashboard cardinality test shows one financial row plus aggregated carrier and pickup",
+      "unlocks": "M2"
+    },
+    {
+      "id": "M2",
+      "outcome": "A failed scale-ticket load is present in the retry parameter and succeeds on the following run",
+      "unlocks": "local commit"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "The cardinality test asserts len(rows)==1, equal revenue, a combined carrier_name, and the earliest pickup",
+      "no_go_action": "Revert the view change if the search returns more than one row or the money differs from the transaction"
+    },
+    {
+      "id": "C2",
+      "after": "T2",
+      "evidence_required": "test_one_load_failure_does_not_stop_the_next_load shows the failed id in the retry parameter and a later run sets the reminder",
+      "no_go_action": "Revert the retry list if the cursor stops advancing or a failure blocks the rest of the page"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No command, module count, or CI contract change"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does string_agg of carrier names duplicate revenue_total when three loads exist?",
+      "Does a permanently failing load stop the scan cursor?",
+      "Does accepting SerializationFailure hide a second committed parent?"
+    ],
+    "assumed_false_ifs": [
+      "The dashboard join fans out to one financial row per load",
+      "The retry list replaces the cursor and strands loads above the cursor",
+      "The seven baseline failures were introduced by the cardinality commits"
+    ],
+    "blast_radius": "plasticos_commission view rebuild and plasticos_documents cron state in ir.config_parameter. No schema drop. No accounting formula change.",
+    "rollback": "Revert the two module commits. The view rebuilds from the previous init SQL on the next module update. The retry parameter is unused if the cron code is reverted."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "shared_causes": [
+      "Singular load columns were nulled for every multi-load deal to protect financial cardinality",
+      "The scale-ticket cursor advances before each load's savepoint commits"
+    ],
+    "deletions_or_consolidations": [
+      "Do not add a second dashboard row model",
+      "Do not change database isolation to turn SerializationFailure into ValidationError"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Aggregated carrier text is mistaken for one carrier",
+      "mitigation": "Distinct names are comma-separated and load_id stays empty when the count is not 1, so the open-load action still refuses a single load"
+    },
+    {
+      "risk": "A load that fails on every run grows the retry parameter without bound",
+      "mitigation": "The stored id list is capped at the existing batch size of 300"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Who repairs the seven baseline failures?",
+      "decision_effect": "They are excluded from this branch. A later branch can take them.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "odoo --test-tags the sales dashboard cardinality test and the scale-ticket cardinality tests on odoo_test_wf7eb54ae39",
+      "pass_criteria": "0 failed and 0 errors for those tags",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "ruff check and ruff format on the edited Python files with ruff 0.16.0",
+      "pass_criteria": "both commands exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "pre-commit run --files on the edited paths using .pre-commit-config.yaml",
+      "pass_criteria": "the hook catalog in .pre-commit-config.yaml exits 0 for those files",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "cursor-build",
+    "stop_reason": "Architecture is the existing view and cron. Two repairs are specified. Isolation and the seven baseline failures are explicit non-changes."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "plasticos_commission/models/sales_dashboard.py",
+      "plasticos_commission/tests/test_sales_dashboard_load_cardinality.py",
+      "plasticos_commission/__manifest__.py",
+      "plasticos_documents/models/transaction_docs.py",
+      "plasticos_documents/tests/test_scale_ticket_cardinality.py",
+      "plasticos_documents/__manifest__.py",
+      "plasticos_logistics/tests/test_load_cardinality.py",
+      "plasticos_logistics/models/load.py",
+      "plasticos_logistics/__manifest__.py"
+    ],
+    "must_not_modify": [
+      "plasticos_claims/tests/test_bridge_models.py",
+      "plasticos_claims/tests/test_depends_transaction_claims_bridge.py",
+      "plasticos_security_base/tests/test_action_methods.py",
+      "plasticos_commission/tests/test_security_acl.py",
+      "plasticos_offer",
+      "plasticos_documents/__manifest__.py version 19.0.2.2.0"
+    ],
+    "preserved_contracts": [
+      "One sales-dashboard row per transaction",
+      "revenue_total and gross_margin are copied from the transaction and are not multiplied by load count",
+      "load_id is set only when the transaction has exactly one load",
+      "A scale-ticket failure does not stop later loads in the same page",
+      "Exactly one competing parent assignment commits",
+      "Documents repository version is not moved to 19.0.2.2.0"
+    ],
+    "validation_commands": [
+      "ruff check and ruff format on the edited files",
+      "Enterprise tests for the dashboard cardinality tag and the scale-ticket cardinality tag"
+    ]
+  }
+}

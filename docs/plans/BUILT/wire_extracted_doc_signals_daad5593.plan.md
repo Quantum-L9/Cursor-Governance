@@ -1,56 +1,93 @@
 ---
 name: Wire every extracted signal in l9-update-agent-docs into a compiled document
-overview: "Every fact l9-update-agent-docs extracts (source facts, interface summaries and signatures, imports, relationships, skill contract fields, manifest and tsconfig fields, surface-analyzer parses, evidence references, quality findings) reaches at least one compiled output (a README, AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt, filetree.md, or the receipt), and a ratchet test fails when a new extr..."
+overview: Every fact l9-update-agent-docs extracts (source facts, interface summaries
+  and signatures, imports, relationships, skill contract fields, manifest and tsconfig
+  fields, surface-analyzer parses, evidence references, quality findings) reaches
+  at least one compiled output (a README, AGENTS.md, CLAUDE.md, INVARIANTS.md, llm.txt,
+  filetree.md, or the receipt), and a ratchet test fails when a new extr...
 todos:
-  - id: T1
-    content: "Add the signal ledger ratchet: test_signal_ledger.py enumerates dataclass fields of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, the SkillContract slots, and surface-analyzer output keys, and asserts each is read by a consumer module (renderers, doc_root, doc_llm, receipt writer). Start with an explicit UNWIRED allowlist naming today's drops; each later wiring task deletes its entries; final state is an empty allowlist"
-    status: completed
-    phase: execute
-    depends_on: []
-  - id: T2
-    content: "Compile README models once in repo_docs.audit_repository before root docs and llm.txt, and pass the compiled (model, rendered) outputs into compile_missing_root_docs and render_llm_txt"
-    status: completed
-    phase: execute
-    depends_on: [T1]
-  - id: T3
-    content: "Feed JS/TS imports into classify_dependencies in both compile_readme_model branches; resolve local relative imports to the sibling module path so Internal names a real target"
-    status: completed
-    phase: execute
-    depends_on: [T1]
-  - id: T4
-    content: "Capture the exported function parameter list in _extract_javascript and store it in InterfaceDoc.signature"
-    status: completed
-    phase: execute
-    depends_on: [T1]
-  - id: T5
-    content: "Render SkillContract.version in the skill README header and render model.authority_links as links in the Authority section; carry version onto ReadmeModel"
-    status: completed
-    phase: execute
-    depends_on: [T1]
-  - id: T6
-    content: "AGENTS.md compiles a Commands section from package.json scripts and pyproject project.scripts (reuse surface_analyzers/python_project.py parse) and a Module map from the compiled README models (path link plus compiled purpose); INVARIANTS.md lists workflow name and job ids from the workflow parse"
-    status: completed
-    phase: execute
-    depends_on: [T2]
-  - id: T7
-    content: "llm.txt manifest gains one entry per compiled README (path, purpose, sha256, owner l9-update-agent-docs, authority_class projection) under the existing L9_DOC_MANIFEST schema; add the policy hook in doc-surface-policy.yaml"
-    status: completed
-    phase: execute
-    depends_on: [T2]
-  - id: T8
-    content: "Receipt module_readme_quality entries carry each README's evidence references and every WARN finding (rule_id, message), not only counts"
-    status: completed
-    phase: execute
-    depends_on: [T1]
-  - id: T9
-    content: "Targeted tests for T3-T8, empty the ledger allowlist, add the signal-utilization law to SKILL.md (every extracted field has a named consumer; ledger is the gate), bump version to 4.4.0, add self_test token"
-    status: completed
-    phase: execute
-    depends_on: [T3, T4, T5, T6, T7, T8]
+- id: T1
+  content: 'Add the signal ledger ratchet: test_signal_ledger.py enumerates dataclass
+    fields of ModuleDoc, InterfaceDoc, SourceFact, DependencyDoc, ReadmeModel, the
+    SkillContract slots, and surface-analyzer output keys, and asserts each is read
+    by a consumer module (renderers, doc_root, doc_llm, receipt writer). Start with
+    an explicit UNWIRED allowlist naming today''s drops; each later wiring task deletes
+    its entries; final state is an empty allowlist'
+  status: completed
+  phase: execute
+  depends_on: []
+- id: T2
+  content: Compile README models once in repo_docs.audit_repository before root docs
+    and llm.txt, and pass the compiled (model, rendered) outputs into compile_missing_root_docs
+    and render_llm_txt
+  status: completed
+  phase: execute
+  depends_on:
+  - T1
+- id: T3
+  content: Feed JS/TS imports into classify_dependencies in both compile_readme_model
+    branches; resolve local relative imports to the sibling module path so Internal
+    names a real target
+  status: completed
+  phase: execute
+  depends_on:
+  - T1
+- id: T4
+  content: Capture the exported function parameter list in _extract_javascript and
+    store it in InterfaceDoc.signature
+  status: completed
+  phase: execute
+  depends_on:
+  - T1
+- id: T5
+  content: Render SkillContract.version in the skill README header and render model.authority_links
+    as links in the Authority section; carry version onto ReadmeModel
+  status: completed
+  phase: execute
+  depends_on:
+  - T1
+- id: T6
+  content: AGENTS.md compiles a Commands section from package.json scripts and pyproject
+    project.scripts (reuse surface_analyzers/python_project.py parse) and a Module
+    map from the compiled README models (path link plus compiled purpose); INVARIANTS.md
+    lists workflow name and job ids from the workflow parse
+  status: completed
+  phase: execute
+  depends_on:
+  - T2
+- id: T7
+  content: llm.txt manifest gains one entry per compiled README (path, purpose, sha256,
+    owner l9-update-agent-docs, authority_class projection) under the existing L9_DOC_MANIFEST
+    schema; add the policy hook in doc-surface-policy.yaml
+  status: completed
+  phase: execute
+  depends_on:
+  - T2
+- id: T8
+  content: Receipt module_readme_quality entries carry each README's evidence references
+    and every WARN finding (rule_id, message), not only counts
+  status: completed
+  phase: execute
+  depends_on:
+  - T1
+- id: T9
+  content: Targeted tests for T3-T8, empty the ledger allowlist, add the signal-utilization
+    law to SKILL.md (every extracted field has a named consumer; ledger is the gate),
+    bump version to 4.4.0, add self_test token
+  status: completed
+  phase: execute
+  depends_on:
+  - T3
+  - T4
+  - T5
+  - T6
+  - T7
+  - T8
 isProject: false
 kind: simple
 execute_via: cursor-build
-status: current
+status: built
+built: true
 ---
 
 # PLAN: Wire every extracted signal in l9-update-agent-docs into a compiled document
@@ -539,3 +576,20 @@ todos:
     content: <todo_content>
     status: pending
 ```
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `T1`: completed
+- `T2`: completed
+- `T3`: completed
+- `T4`: completed
+- `T5`: completed
+- `T6`: completed
+- `T7`: completed
+- `T8`: completed
+- `T9`: completed

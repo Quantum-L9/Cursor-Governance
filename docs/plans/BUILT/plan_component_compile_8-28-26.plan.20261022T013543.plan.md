@@ -1,57 +1,95 @@
 ---
 name: Compile harvestable plan components into GMP Compiled plans
-overview: "Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, consolidate them by concern, and emit compiled plans that execute via /gmp. Do not use Program Execution to fix Program Execution."
+overview: Replace the binary plan-shelf verdict with a per-component classifier so
+  a stale or superseded mission can still donate live invariants. Harvest those invariants
+  without implementation, consolidate them by concern, and emit compiled plans that
+  execute via /gmp. Do not use Program Execution to fix Program Execution.
 todos:
-  - id: todo-01-baseline-preflight
-    content: "Cut a wired worktree from fetched origin/main, lock that full SHA, copy this plan onto the branch, and re-run CP-01..CP-04. Stop and replan on SHA drift. Do not execute on the dirty primary checkout."
-    status: cancelled
-    phase: execute
-    depends_on: []
-  - id: todo-02-component-verdict-law
-    content: "Write the component-verdict contract: live_invariant, stale_wiring, superseded_mission, spent. A mixed plan stays harvestable. compiled: true is a live PE tag, not a built skip. Donors use status: superseded plus compiled_into after harvest."
-    status: completed
-    phase: execute
-    depends_on: [todo-01-baseline-preflight]
-  - id: todo-03-classifier-emit
-    content: "Extend audit_plans.py to emit per-component verdicts and a harvestable count without moving files. SessionStart stays display-only and fail-open. Keep the PyYAML fallback and Do **not** run make-campaign prohibition. Add mixed-verdict fixtures to self_test.py."
-    status: completed
-    phase: execute
-    depends_on: [todo-02-component-verdict-law]
-  - id: todo-04-audit-plans-harvest-step
-    content: "Add a harvest-candidate report to /l9-audit-plans after the live-queue scan. It lists harvestable components by concern. It must not auto-Build, auto-compile, or auto-shelf a mixed plan as superseded."
-    status: completed
-    phase: execute
-    depends_on: [todo-03-classifier-emit]
-  - id: todo-05-harvest-invariants
-    content: "Add harvest_plan_invariants.py that reads Gold Nugget Extractor by path and writes invariants-only receipts grouped by concern. No implementation code. No l9-harvest-pipeline. No new l9-intelligence-harvest skill. Fail closed if a receipt contains code fences destined for deploy."
-    status: completed
-    phase: execute
-    depends_on: [todo-03-classifier-emit]
-  - id: todo-06-gar-compile-by-concern
-    content: "Explicitly boot l9-global-architect in STANDALONE mode, load runtime/MANIFEST.yaml in load_order, and compile harvest receipts into one concern map. Repository presence must not flip GAR into PE-integrated mode. Output is a concern bundle, not product code."
-    status: cancelled
-    phase: execute
-    depends_on: [todo-05-harvest-invariants]
-  - id: todo-07-emit-compiled-pe-plans
-    content: "For each concern bundle, run l9-plan (not l9-plan-simple): validate_plan_document.py PASS, render_plan_pe_autonomy.py --execute-via pe-campaign, kernel receipt PASS. Frontmatter compiled: true, kind: pe. Stamp donor compiled_into. Land compiled plans at docs/plans root."
-    status: completed
-    phase: execute
-    depends_on: [todo-06-gar-compile-by-concern]
-  - id: todo-08-rewire-stale-pe
-    content: "On each compiled plan, replace stale PE wires: restore a live Execute via @environment/program-execution heading, bind Program Lock and Controller lease, and remove leftover Cursor-Build-only execute paths. Keep Do not run make campaign only as a prohibition on simple leftovers, not as the execute path."
-    status: cancelled
-    phase: execute
-    depends_on: [todo-07-emit-compiled-pe-plans]
-  - id: todo-09-e2e-conformance
-    content: "Prove each compiled concern on the execute worktree: make program-execution-conformance, then the campaign probe named by that plan. Fail closed on empty commands or inspection-only compiled tasks."
-    status: cancelled
-    phase: execute
-    depends_on: [todo-08-rewire-stale-pe]
-  - id: todo-10-converge
-    content: "Run l9-plan-audit self_test and harvest extractor tests, make pr-check on the changed set, then PR_REMEDIATE=0 make pr. Do not merge. Write Graphiti PICKUP for the compiled cohort."
-    status: cancelled
-    phase: execute
-    depends_on: [todo-04-audit-plans-harvest-step, todo-09-e2e-conformance]
+- id: todo-01-baseline-preflight
+  content: Cut a wired worktree from fetched origin/main, lock that full SHA, copy
+    this plan onto the branch, and re-run CP-01..CP-04. Stop and replan on SHA drift.
+    Do not execute on the dirty primary checkout.
+  status: cancelled
+  phase: execute
+  depends_on: []
+- id: todo-02-component-verdict-law
+  content: 'Write the component-verdict contract: live_invariant, stale_wiring, superseded_mission,
+    spent. A mixed plan stays harvestable. compiled: true is a live PE tag, not a
+    built skip. Donors use status: superseded plus compiled_into after harvest.'
+  status: completed
+  phase: execute
+  depends_on:
+  - todo-01-baseline-preflight
+- id: todo-03-classifier-emit
+  content: Extend audit_plans.py to emit per-component verdicts and a harvestable
+    count without moving files. SessionStart stays display-only and fail-open. Keep
+    the PyYAML fallback and Do **not** run make-campaign prohibition. Add mixed-verdict
+    fixtures to self_test.py.
+  status: completed
+  phase: execute
+  depends_on:
+  - todo-02-component-verdict-law
+- id: todo-04-audit-plans-harvest-step
+  content: Add a harvest-candidate report to /l9-audit-plans after the live-queue
+    scan. It lists harvestable components by concern. It must not auto-Build, auto-compile,
+    or auto-shelf a mixed plan as superseded.
+  status: completed
+  phase: execute
+  depends_on:
+  - todo-03-classifier-emit
+- id: todo-05-harvest-invariants
+  content: Add harvest_plan_invariants.py that reads Gold Nugget Extractor by path
+    and writes invariants-only receipts grouped by concern. No implementation code.
+    No l9-harvest-pipeline. No new l9-intelligence-harvest skill. Fail closed if a
+    receipt contains code fences destined for deploy.
+  status: completed
+  phase: execute
+  depends_on:
+  - todo-03-classifier-emit
+- id: todo-06-gar-compile-by-concern
+  content: Explicitly boot l9-global-architect in STANDALONE mode, load runtime/MANIFEST.yaml
+    in load_order, and compile harvest receipts into one concern map. Repository presence
+    must not flip GAR into PE-integrated mode. Output is a concern bundle, not product
+    code.
+  status: cancelled
+  phase: execute
+  depends_on:
+  - todo-05-harvest-invariants
+- id: todo-07-emit-compiled-pe-plans
+  content: 'For each concern bundle, run l9-plan (not l9-plan-simple): validate_plan_document.py
+    PASS, render_plan_pe_autonomy.py --execute-via pe-campaign, kernel receipt PASS.
+    Frontmatter compiled: true, kind: pe. Stamp donor compiled_into. Land compiled
+    plans at docs/plans root.'
+  status: completed
+  phase: execute
+  depends_on:
+  - todo-06-gar-compile-by-concern
+- id: todo-08-rewire-stale-pe
+  content: 'On each compiled plan, replace stale PE wires: restore a live Execute
+    via @environment/program-execution heading, bind Program Lock and Controller lease,
+    and remove leftover Cursor-Build-only execute paths. Keep Do not run make campaign
+    only as a prohibition on simple leftovers, not as the execute path.'
+  status: cancelled
+  phase: execute
+  depends_on:
+  - todo-07-emit-compiled-pe-plans
+- id: todo-09-e2e-conformance
+  content: 'Prove each compiled concern on the execute worktree: make program-execution-conformance,
+    then the campaign probe named by that plan. Fail closed on empty commands or inspection-only
+    compiled tasks.'
+  status: cancelled
+  phase: execute
+  depends_on:
+  - todo-08-rewire-stale-pe
+- id: todo-10-converge
+  content: Run l9-plan-audit self_test and harvest extractor tests, make pr-check
+    on the changed set, then PR_REMEDIATE=0 make pr. Do not merge. Write Graphiti
+    PICKUP for the compiled cohort.
+  status: cancelled
+  phase: execute
+  depends_on:
+  - todo-04-audit-plans-harvest-step
+  - todo-09-e2e-conformance
 isProject: false
 kind: simple
 execute_via: gmp
@@ -59,20 +97,24 @@ kernel_pass:
   bound_path: plan_component_compile_8-28-26.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-28T19:20:00Z
-    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    ran_at: 2026-08-28 19:20:00+00:00
+    body_sha256: 7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607
     deltas:
-      - "User override: execute this compile via /gmp, not Program Execution"
-      - "Neutralized the live make campaign command and PE execute heading"
-      - "Cancelled PE worktree, GAR-integrated boot, PE rewire, and campaign-conformance todos"
+    - 'User override: execute this compile via /gmp, not Program Execution'
+    - Neutralized the live make campaign command and PE execute heading
+    - Cancelled PE worktree, GAR-integrated boot, PE rewire, and campaign-conformance
+      todos
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T19:21:00Z
-    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    ran_at: 2026-08-28 19:21:00+00:00
+    body_sha256: 7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607
     deltas:
-      - "compiled packets are kind:simple / execute_via:gmp; donors carry compiled_into only"
-      - "Harvest CLI refuses implementation fences; first pe-loop packet emitted"
-      - "Stamped kernel_pass after Improve then Validate and Repair"
+    - compiled packets are kind:simple / execute_via:gmp; donors carry compiled_into
+      only
+    - Harvest CLI refuses implementation fences; first pe-loop packet emitted
+    - Stamped kernel_pass after Improve then Validate and Repair
+built: true
+status: built
 ---
 
 # PLAN: Compile harvestable plan components into GMP Compiled plans
@@ -681,3 +723,21 @@ todos:
     content: …
     status: pending
 ```
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `todo-01-baseline-preflight`: cancelled
+- `todo-02-component-verdict-law`: completed
+- `todo-03-classifier-emit`: completed
+- `todo-04-audit-plans-harvest-step`: completed
+- `todo-05-harvest-invariants`: completed
+- `todo-06-gar-compile-by-concern`: cancelled
+- `todo-07-emit-compiled-pe-plans`: completed
+- `todo-08-rewire-stale-pe`: cancelled
+- `todo-09-e2e-conformance`: cancelled
+- `todo-10-converge`: cancelled

@@ -1,61 +1,75 @@
 ---
 name: Seed doc functional upgrades
-overview: Catalog 3–5 functional (not cosmetic) upgrades for every ranked Quantum-L9/.github seed document, then execute the highest-leverage waves on a new branch from .github origin/main so default seed hardens L9, stops red PRs, and lets agents ship without asking.
+overview: Catalog 3–5 functional (not cosmetic) upgrades for every ranked Quantum-L9/.github
+  seed document, then execute the highest-leverage waves on a new branch from .github
+  origin/main so default seed hardens L9, stops red PRs, and lets agents ship without
+  asking.
 todos:
-  - id: w0-baseline
-    content: "Lock .github origin/main SHA; stack on #58 if open; Program Lock bind; new branch from that tip"
-    status: completed
-  - id: w0-seeder-policy
-    content: "Shrink ALL_CATEGORIES: drop LICENSE, FUNDING, on-org-update; dependabot Actions-only; collapse duplicate issue templates; stack-detect Python lint dest"
-    status: completed
-  - id: w0-contributing
-    content: Rewrite CONTRIBUTING.md to live activation + make pr (delete v2 .cursor/rules|skills|commands symlink ritual)
-    status: completed
-  - id: w1-python-skip
-    content: "Mirror #58 on l9-lint-test.yml: detect Python manifests, skip jobs, rename Test Suite, no unpinned pip"
-    status: completed
-  - id: w1-gov-caller
-    content: governance.yml job-level permissions for both jobs; preflight v1 tag SHA
-    status: completed
-  - id: w2-gov-pack
-    content: Fill sdk_policy; add agent/l4 profile; ship Semgrep identity maps; JSON-in-YAML seed preflight
-    status: completed
-  - id: w2-analysis
-    content: Stack-select Semgrep configs; governance-pack-missing check; prefer Core analyze-semgrep reusable
-    status: completed
-  - id: w3-codeowners-pr
-    content: Path-scoped CODEOWNERS; agent/chore PR template variant; labels default to org-sync not seed
-    status: completed
-  - id: w4-prove
-    content: Extend test-build-seed-payload.js + validate-starters.sh; make validate / pr-check; update l9-setting-up-ci pointers
-    status: completed
+- id: w0-baseline
+  content: 'Lock .github origin/main SHA; stack on #58 if open; Program Lock bind;
+    new branch from that tip'
+  status: completed
+- id: w0-seeder-policy
+  content: 'Shrink ALL_CATEGORIES: drop LICENSE, FUNDING, on-org-update; dependabot
+    Actions-only; collapse duplicate issue templates; stack-detect Python lint dest'
+  status: completed
+- id: w0-contributing
+  content: Rewrite CONTRIBUTING.md to live activation + make pr (delete v2 .cursor/rules|skills|commands
+    symlink ritual)
+  status: completed
+- id: w1-python-skip
+  content: 'Mirror #58 on l9-lint-test.yml: detect Python manifests, skip jobs, rename
+    Test Suite, no unpinned pip'
+  status: completed
+- id: w1-gov-caller
+  content: governance.yml job-level permissions for both jobs; preflight v1 tag SHA
+  status: completed
+- id: w2-gov-pack
+  content: Fill sdk_policy; add agent/l4 profile; ship Semgrep identity maps; JSON-in-YAML
+    seed preflight
+  status: completed
+- id: w2-analysis
+  content: Stack-select Semgrep configs; governance-pack-missing check; prefer Core
+    analyze-semgrep reusable
+  status: completed
+- id: w3-codeowners-pr
+  content: Path-scoped CODEOWNERS; agent/chore PR template variant; labels default
+    to org-sync not seed
+  status: completed
+- id: w4-prove
+  content: Extend test-build-seed-payload.js + validate-starters.sh; make validate
+    / pr-check; update l9-setting-up-ci pointers
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: seed_doc_functional_upgrades_757455bf.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-29T17:20:00Z
-    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    ran_at: 2026-08-29 17:20:00+00:00
+    body_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
     deltas:
-      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
-      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
-      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+    - Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS
+    - Keep this plan's existing todos and body; do not reopen landed work from this
+      stamp
+    - 'Do not mix #374 end-of-file-fixer exclude into this corpus pass'
   recursive_alignment:
     kernel: kernels/Recursive Alignment.md
-    ran_at: 2026-08-29T17:20:30Z
-    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    ran_at: 2026-08-29 17:20:30+00:00
+    body_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
     deltas:
-      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
-      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
-      - "Do not edit .pre-commit-config.yaml in this cluster"
+    - 'Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent'
+    - Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES
+    - Do not edit .pre-commit-config.yaml in this cluster
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-29T17:21:00Z
-    body_sha256: "6190c8d9d881dd6d6109c477bd2ddc3fbab272da96ca236072056221e5eec89c"
+    ran_at: 2026-08-29 17:21:00+00:00
+    body_sha256: 6190c8d9d881dd6d6109c477bd2ddc3fbab272da96ca236072056221e5eec89c
     deltas:
-      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
-      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
-      - "Do not mark status executable while the checker still fails"
+    - G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp
+    - Canonical body_sha256 is the post-stamp file hash with sha fields zeroed
+    - Do not mark status executable while the checker still fails
+built: true
+status: built
 ---
 
 # Seed-document functional upgrades
@@ -281,3 +295,20 @@ Seeder becomes stack-aware (detect `package.json` / `pyproject.toml` / `requirem
 After plan confirm: emit `PLAN_DOCUMENT` JSON → `skills/l9-plan/scripts/validate_plan_document.py` PASS → `render_plan_pe_autonomy.py` into `docs/plans/` (machine store). Then `make campaign INTENT=<plan>` from a clean .github worktree on `origin/main` (or #58 tip). Autonomy packet must not widen Task Card ceilings. `autonomous_merge: false`.
 
 **YNP (single next play):** confirm this plan, then merge or stack [#58](https://github.com/Quantum-L9/.github/pull/58) and run wave 0 (seeder default-category shrink + CONTRIBUTING rewrite). That removes the most red-PR mass per line changed.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `w0-baseline`: completed
+- `w0-seeder-policy`: completed
+- `w0-contributing`: completed
+- `w1-python-skip`: completed
+- `w1-gov-caller`: completed
+- `w2-gov-pack`: completed
+- `w2-analysis`: completed
+- `w3-codeowners-pr`: completed
+- `w4-prove`: completed

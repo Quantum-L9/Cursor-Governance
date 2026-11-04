@@ -1,0 +1,307 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "CRM lead material identity map",
+  "objective": "Make VanillaSoft CRM lead material fields resolve the locked exact identities, with bare LDPE stored as polymer LDPE and form FILM, and with comma-separated material names imported as separate materials. Keep normalize_material unchanged so ERP worksheet lines keep today's resolver. MEMORY_PREFETCH namespace=ib-odoo-19 snapshot_digest=7308339ce5ef8668a81b5faf844dd63e6e5f047007703387f673f09c04dddd67 conflicts=0. GAR architecture: one CRM exact-identity table realized through the existing master lookup, invoked only from the CRM lead material store; phrase specs win over that table; commas split phrase fields only.",
+  "success_criteria": [
+    "normalize_crm_material('LDPE') returns polymer LDPE and form FILM with no grade and no attributes",
+    "normalize_material('LDPE') still returns unresolved material and performs no polymer master lookup",
+    "A CRM Materials value 'LDPE, HDPE Drums' creates two profiles: LDPE with form FILM, and HDPE with form DRUMS",
+    "Nylon resolves to polymer code NYLON and Metal resolves to polymer code METAL",
+    "HDPE, HDPE-HMW, BOPP, and LLDPE resolve to those polymer codes with an empty form unless an existing phrase spec already names a form",
+    "plasticos_transaction native_document_import still calls normalize_material"
+  ],
+  "scope": {
+    "in": [
+      "plasticos_material_profile/models/material_normalizer.py",
+      "plasticos_material_profile/tests/test_material_normalizer.py",
+      "plasticos_material_profile/__manifest__.py version bump",
+      "plasticos_crm_sync/services/orchestrator.py phrase split and CRM resolver call",
+      "plasticos_crm_sync/tests/test_orchestrator_upsert.py",
+      "plasticos_crm_sync/__manifest__.py version bump"
+    ],
+    "out": [
+      "ERP worksheet classification in plasticos_transaction/models/native_document_import.py",
+      "New polymer masters, forms, or attributes",
+      "Substring or fuzzy material matching",
+      "Comma splitting of material-form hint fields",
+      "web_lead.py polymer maps",
+      "Replaying the 4876-contact import"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "deep",
+  "pre_validation": [
+    {
+      "id": "PV-001",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse --short HEAD",
+      "pass_criteria": "Workspace is Staging at 607a64b8 with a dirty tree; no Program Lock",
+      "status": "passed"
+    },
+    {
+      "id": "PV-002",
+      "command_or_action": "Read plasticos_material_profile/models/material_normalizer.py normalize_material",
+      "pass_criteria": "A miss of _SPECS returns unresolved material before _master",
+      "status": "passed"
+    },
+    {
+      "id": "PV-003",
+      "command_or_action": "Read plasticos_crm_sync/services/orchestrator.py _split_material_values",
+      "pass_criteria": "Split is newline, pipe, and semicolon; comma stays inside one value",
+      "status": "passed"
+    },
+    {
+      "id": "PV-004",
+      "command_or_action": "Read polymer_data.xml records polymer_pa and polymer_metal and material_form FILM",
+      "pass_criteria": "NYLON, METAL, and FILM masters already exist",
+      "status": "passed"
+    },
+    {
+      "id": "PV-005",
+      "command_or_action": "Read plasticos_crm_sync/__manifest__.py and plasticos_material_profile/__manifest__.py version fields",
+      "pass_criteria": "crm_sync is already 19.0.1.9.4 and material_profile is 19.0.5.10.8",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add _CRM_EXACT and normalize_crm_material beside normalize_material. Match the whole collapsed casefolded description. A _SPECS hit delegates to normalize_material, including PE, Pallets, HDPE Drums, LDPE Film, and PC/ABS. An exact miss of _SPECS uses _CRM_EXACT only for that description: LDPE is LDPE plus FILM; Nylon is NYLON; Metal is METAL; E-Waste is EWASTE; HDPE- is HDPE; HDPE-HMW is HDPE_HMW; Plastic Pallets is PLASTIC_PALLETS; Gaylord Boxes is GAYLORD_BOXES; HDPE, PP, MRP, PET, ABS, PC, PS, HIPS, PVC, EPS, BOPP, TPO, TPE, PBT, and LLDPE keep those codes and an empty form. grade_evidence and structured hints still use _SPECS only, so a form hint of LDPE does not add a second identity. Two different specs conflict. Lookup is exact, never a prefix, and does not import web_lead _POLYMER_NORMALIZE. Realize through the existing _master path. No migration folder. Bump plasticos_material_profile from 19.0.5.10.8 to 19.0.5.10.9.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/__manifest__.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "operation": "Insert",
+      "anchor": "normalize_material",
+      "shared_root_cause": "exact-identity-before-lookup"
+    },
+    {
+      "id": "T2",
+      "task": "In _material_inputs, split ASCII commas only for phrase fields (materials, material, material (...)), after the existing newline, pipe, and semicolon split, and drop empty pieces. Leave form-hint values unsplit and leave hint promotion on normalize_material. Change only the import inside _store_normalized_materials to normalize_crm_material, which covers both the contact path and the approved-material path because both call that store. Leave the savepoint wrappers and _write_profile_classification unchanged so an empty grade or attribute set does not clear a grade already stored on the shared LDPE-plus-FILM profile. Bump plasticos_crm_sync from 19.0.1.9.4 to 19.0.1.9.5.",
+      "files": [
+        "plasticos_crm_sync/services/orchestrator.py",
+        "plasticos_crm_sync/__manifest__.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "leverage_rank": 2,
+      "operation": "Replace",
+      "anchor": "_split_material_values and _store_normalized_materials",
+      "shared_root_cause": "exact-identity-before-lookup"
+    },
+    {
+      "id": "T3",
+      "task": "Add discriminating tests: normalize_material('LDPE') stays unresolved with no master lookup; normalize_crm_material('LDPE') is LDPE plus FILM; HDPE- and HDPE-HMW stay distinct; Nylon and Metal hit NYLON and METAL; a Materials value 'LDPE, HDPE Drums' stores FILM and DRUMS; 'LDPE, LDPE Film' reuses one profile; a form hint 'Roll, Film' stays one unsplit hint; graded film then bare LDPE keeps grade A and clean/dry; 'PE, LDPE' stores HDPE with an empty form and LDPE plus FILM; mystery fluff still records an error row and keeps the lead; native_document_import still calls normalize_material. Existing HDPE Drums and PC/ABS phrase tests stay green.",
+      "files": [
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/tests/test_orchestrator_upsert.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T1", "T2"],
+      "leverage_rank": 3,
+      "operation": "Insert",
+      "anchor": "TestMaterialNormalizer and Test orchestrator material upsert"
+    },
+    {
+      "id": "T4",
+      "task": "Run ruff and the touched-file pre-commit hooks, then the two module test targets on the pinned Docker fixture.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/services/orchestrator.py",
+        "plasticos_crm_sync/tests/test_orchestrator_upsert.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T3"],
+      "leverage_rank": 4,
+      "operation": "Wrap"
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3", "T4"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "CRM exact identities resolve without changing normalize_material",
+      "unlocks": "T2"
+    },
+    {
+      "id": "M2",
+      "outcome": "A comma-separated CRM material field becomes one profile per name",
+      "unlocks": "T4"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "normalize_material('LDPE') is unresolved and normalize_crm_material('LDPE') is LDPE plus FILM",
+      "no_go_action": "Stop before editing the orchestrator"
+    },
+    {
+      "id": "C2",
+      "after": "T3",
+      "evidence_required": "Existing phrase tests still expect HDPE Drums to store form DRUMS and PC/ABS to store PC_ABS",
+      "no_go_action": "Revert the CRM call-site switch"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No command, module count, or import-law change"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "No layer or model change"
+    },
+    {
+      "surface": "workflow_state.md",
+      "action": "n_a",
+      "reason": "Mapping behavior stays in code and tests"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does normalize_material('LDPE') still return unresolved material?",
+      "Does 'HDPE Drums' still store form DRUMS after the CRM function is introduced?",
+      "Does a form hint 'Roll, Film' stay one value?",
+      "Does a form hint LDPE beside description HDPE Drums resolve to HDPE plus DRUMS rather than a conflict?",
+      "Does native_document_import still import normalize_material?",
+      "Does 'HDPE-' resolve to HDPE while 'HDPE-HMW' resolves to HDPE_HMW?"
+    ],
+    "assumed_false_ifs": [
+      "Phrase fields contain quantities with thousands separators, so an ASCII comma is not always a material boundary",
+      "Bare LDPE and a graded LDPE film phrase on one lead share one LDPE-plus-FILM profile; the empty grade on bare LDPE does not clear a stored grade",
+      "A missing FILM master makes bare LDPE unresolved instead of inventing a form"
+    ],
+    "blast_radius": "Cross-module: CRM phrase storage in plasticos_crm_sync and a new function in plasticos_material_profile. ERP line classification, polymer seed data, profile-reuse keys in plasticos_crm_bridge, and qualified phrase specs stay in place. A bare LDPE joins the existing LDPE-plus-FILM reuse key. Failure stays inside the existing material savepoint: the lead remains admitted and the material error is recorded.",
+    "rollback": "Revert the material_profile and crm_sync commits. No schema migration and no new master data."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "shared_causes": [
+      "Exact workbook tokens never reach polymer master lookup",
+      "CRM phrase splitting omits comma"
+    ],
+    "deletions_or_consolidations": [
+      "One CRM exact table and one master-lookup realization, rather than a second lookup inside the orchestrator"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Bare LDPE and '99 Clear LDPE Film' reuse one LDPE-plus-FILM profile, so the grade and clean/dry attributes land on that shared row",
+      "mitigation": "Keep the existing polymer-plus-form reuse key and the existing conflicting-grade refusal"
+    },
+    {
+      "risk": "Switching every normalizer call would change ERP worksheet lines",
+      "mitigation": "Only _store_normalized_materials calls normalize_crm_material. Contact and approved material paths both reach that one store"
+    },
+    {
+      "risk": "Matching _CRM_EXACT against structured form hints would turn hint LDPE plus description HDPE Drums into a conflict and drop both",
+      "mitigation": "The exact table applies only to the description phrase. grade_evidence and structured hints stay on _SPECS"
+    },
+    {
+      "risk": "The plan previously named crm_sync version 19.0.1.9.4, which is already the manifest version, so a bump to that number would not reload",
+      "mitigation": "Bump crm_sync from 19.0.1.9.4 to 19.0.1.9.5 and material_profile from 19.0.5.10.8 to 19.0.5.10.9"
+    },
+    {
+      "risk": "Existing CRM tests patch normalize_material",
+      "mitigation": "Phrase-spec inputs delegate to normalize_material so those patches still observe the call"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Do bare LLDPE, BOPP, HDPE, and HDPE-HMW also imply a form?",
+      "decision_effect": "Those four stay polymer-only because the locked workbook rows name a polymer and the operator overrode form only for LDPE",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does every comma in a material phrase field separate names?",
+      "decision_effect": "Phrase fields split on every comma; form hints do not",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U3",
+      "question": "Do Unicode commas or the token ewaste without a hyphen count as material separators or aliases?",
+      "decision_effect": "Only the ASCII comma splits phrase fields. Only the collapsed workbook token e-waste maps to EWASTE",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV-001",
+      "command": "ruff check plasticos_material_profile/models/material_normalizer.py plasticos_material_profile/tests/test_material_normalizer.py plasticos_material_profile/__manifest__.py plasticos_crm_sync/services/orchestrator.py plasticos_crm_sync/tests/test_orchestrator_upsert.py plasticos_crm_sync/__manifest__.py && ruff format --check plasticos_material_profile/models/material_normalizer.py plasticos_material_profile/tests/test_material_normalizer.py plasticos_material_profile/__manifest__.py plasticos_crm_sync/services/orchestrator.py plasticos_crm_sync/tests/test_orchestrator_upsert.py plasticos_crm_sync/__manifest__.py",
+      "pass_criteria": "ruff check and ruff format --check exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "FV-002",
+      "command": "pre-commit run --config .pre-commit-config.yaml --files plasticos_material_profile/models/material_normalizer.py plasticos_material_profile/__manifest__.py plasticos_material_profile/tests/test_material_normalizer.py plasticos_crm_sync/services/orchestrator.py plasticos_crm_sync/__manifest__.py plasticos_crm_sync/tests/test_orchestrator_upsert.py",
+      "pass_criteria": "Touched-file hooks exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "FV-003",
+      "command": "make test-module m=plasticos_material_profile && make test-module m=plasticos_crm_sync",
+      "pass_criteria": "Both module test runs report the material tests passed on the pinned fixture",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "cursor-build",
+    "stop_reason": "PLAN_ATTACK closed the version, hint-match, and discriminating-test defects. Runtime validation stays pending until Build runs the todos."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "plasticos_material_profile/models/material_normalizer.py",
+      "plasticos_material_profile/tests/test_material_normalizer.py",
+      "plasticos_material_profile/__manifest__.py",
+      "plasticos_crm_sync/services/orchestrator.py",
+      "plasticos_crm_sync/tests/test_orchestrator_upsert.py",
+      "plasticos_crm_sync/__manifest__.py"
+    ],
+    "must_not_modify": [
+      "plasticos_transaction/models/native_document_import.py",
+      "plasticos_material_profile/data/polymer_data.xml",
+      "plasticos_material_profile/data/material_form_data.xml",
+      "plasticos_web_leads/models/web_lead.py",
+      "plasticos_crm_bridge/models/material_profile.py",
+      "pipeline_v2.py"
+    ],
+    "preserved_contracts": [
+      "Qualified _SPECS phrases keep their polymer, form, source, attributes, and grade",
+      "An unknown form stays empty except bare LDPE, which stores FILM",
+      "A material failure still rolls back inside its savepoint and keeps the admitted lead",
+      "Profile reuse remains one row per partner or lead facility, polymer, and form",
+      "An empty grade or attribute result does not clear a grade or attributes already stored on that row",
+      "ERP worksheet lines continue to call normalize_material",
+      "A material exception still rolls back its savepoint and leaves the admitted lead in place"
+    ],
+    "validation_commands": [
+      "ruff check and ruff format --check on the four Python files and both manifests",
+      "pre-commit run --config .pre-commit-config.yaml --files on the six touched paths",
+      "make test-module m=plasticos_material_profile",
+      "make test-module m=plasticos_crm_sync"
+    ]
+  },
+  "checklist": [
+    "GAR selected a CRM-only exact-identity extension; shared ERP resolver stays",
+    "route_plan.py reported standard; GAR depth is deep because the edit crosses plasticos_material_profile and plasticos_crm_sync",
+    "Operator lock: LDPE plus FILM, comma-separated names, Nylon to NYLON, Metal to METAL",
+    "PLAN_ATTACK: rejected putting bare codes into _SPECS because that would change ERP; rejected matching _CRM_EXACT on form hints; corrected the crm_sync bump from the already-current 19.0.1.9.4 to 19.0.1.9.5",
+    "Live-queue audit: this plan is the current unbuilt item, 4 pending todos, age under one day"
+  ],
+  "estimate": "One focused change set across two modules"
+}

@@ -1,36 +1,52 @@
 ---
 name: PR remediator speed
-overview: Remediation is not the make pr ceremony. Keep merge=true on /l9-pr-remediation. Local verify is precommit-repo plus ruff only. Commit and git push. Pytest and conformance stay on CI. No CI poll.
+overview: Remediation is not the make pr ceremony. Keep merge=true on /l9-pr-remediation.
+  Local verify is precommit-repo plus ruff only. Commit and git push. Pytest and conformance
+  stay on CI. No CI poll.
 todos:
-  - id: skill-fast-path
-    content: "SKILL.md 4.3.0: one remediator publish path (precommit-repo, commit, git push). Keep merge authorization on slash invoke. Delete make pr-check / make pr / CI poll from Converge laws and hot path."
-    status: completed
-  - id: strip-ceremony-refs
-    content: Rewrite convergence-loop.md and run-contract.md so P_verify is make precommit-repo, P_cmd allows remediator git push, Wait Protocol and gh run watch are gone, worktrees are reused.
-    status: completed
-  - id: align-copies
-    content: Keep merge=true on commands/l9-pr-remediation.md, AGENTS.md §3.2, and rule 48. Carve remediator publish (precommit-repo + git push) out of the make pr ceremony. Update AUTONOMY_MANIFEST.yaml the same way. Append AGENTS.md L9_PR_REMEDIATE_SPEED_V1.
-    status: completed
-  - id: self-test-regen
-    content: self_test.py 4.3.0 needles for precommit-repo, remediator git push, no 8-minute poll. sync_generated_artifacts --force for registries and llm-rules/48. Run self_test PASS.
-    status: completed
+- id: skill-fast-path
+  content: 'SKILL.md 4.3.0: one remediator publish path (precommit-repo, commit, git
+    push). Keep merge authorization on slash invoke. Delete make pr-check / make pr
+    / CI poll from Converge laws and hot path.'
+  status: completed
+- id: strip-ceremony-refs
+  content: Rewrite convergence-loop.md and run-contract.md so P_verify is make precommit-repo,
+    P_cmd allows remediator git push, Wait Protocol and gh run watch are gone, worktrees
+    are reused.
+  status: completed
+- id: align-copies
+  content: Keep merge=true on commands/l9-pr-remediation.md, AGENTS.md §3.2, and rule
+    48. Carve remediator publish (precommit-repo + git push) out of the make pr ceremony.
+    Update AUTONOMY_MANIFEST.yaml the same way. Append AGENTS.md L9_PR_REMEDIATE_SPEED_V1.
+  status: completed
+- id: self-test-regen
+  content: self_test.py 4.3.0 needles for precommit-repo, remediator git push, no
+    8-minute poll. sync_generated_artifacts --force for registries and llm-rules/48.
+    Run self_test PASS.
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: pr_remediator_speed_c4b0d4ae.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-28T20:16:00Z
-    body_sha256: "7fce5fc726fb860624a4affb68d0a48f21f40bf81ea1dbd628abaeea5d211629"
+    ran_at: 2026-08-28 20:16:00+00:00
+    body_sha256: 7fce5fc726fb860624a4affb68d0a48f21f40bf81ea1dbd628abaeea5d211629
     deltas:
-      - "Applied Improve.md to this completed simple plan: merge stays on; remediator verify is precommit-repo; remediator publish is git push of an existing PR."
-      - "Left ceremony Makefile and leftover open PRs out of scope. Did not implement ceremony_phase_two from this file."
+    - 'Applied Improve.md to this completed simple plan: merge stays on; remediator
+      verify is precommit-repo; remediator publish is git push of an existing PR.'
+    - Left ceremony Makefile and leftover open PRs out of scope. Did not implement
+      ceremony_phase_two from this file.
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T20:16:30Z
-    body_sha256: "7fce5fc726fb860624a4affb68d0a48f21f40bf81ea1dbd628abaeea5d211629"
+    ran_at: 2026-08-28 20:16:30+00:00
+    body_sha256: 7fce5fc726fb860624a4affb68d0a48f21f40bf81ea1dbd628abaeea5d211629
     deltas:
-      - "Applied Validate & Repair.md: exclusive locks stay explicit; no either/or without a blocker; todos remain completed."
-      - "Stamped kernel_pass on this same path. Canonical sha is SHA-256 after every body_sha256 scalar is zeroed."
+    - 'Applied Validate & Repair.md: exclusive locks stay explicit; no either/or without
+      a blocker; todos remain completed.'
+    - Stamped kernel_pass on this same path. Canonical sha is SHA-256 after every
+      body_sha256 scalar is zeroed.
+built: true
+status: built
 ---
 
 # PR remediator speed contract
@@ -138,3 +154,15 @@ PASS required. Falsifiable read-backs after the edit:
 ## Execute via Cursor Build
 
 Press **Build**. Current checkout. Do not run `make campaign`. Do not admit a Program Lock. Do not write `Lock: origin/main = <sha>`. Do not open a new worktree from tip. Do not resume remediating 341–347 until this pack lands.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `skill-fast-path`: completed
+- `strip-ceremony-refs`: completed
+- `align-copies`: completed
+- `self-test-regen`: completed

@@ -1,68 +1,85 @@
 ---
 name: DAG authoring CONVERT
-overview: "Add CONVERT to l9-dag-authoring: classify every SessionDAG, emit a StateGraph only for intelligence-harvest-v1, leave SessionDAG deletion to a follow-on plan."
+overview: 'Add CONVERT to l9-dag-authoring: classify every SessionDAG, emit a StateGraph
+  only for intelligence-harvest-v1, leave SessionDAG deletion to a follow-on plan.'
 todos:
-  - id: T01
-    content: Reverify HEAD; stop if write_allow paths are dirty with foreign bytes
-    status: completed
-  - id: T02
-    content: Add session-deprecation.yaml with the ten catalog rows, each carrying source_path and proof_path
-    status: completed
-  - id: T03
-    content: Add session-to-langgraph-contract.md (classify first; emit only CONVERT_TO_LANGGRAPH; never register; never delete in the same step)
-    status: completed
-  - id: T04
-    content: Extend request and receipt schemas to CONVERT v2.2.0 with disposition fields; allow_session_retire default false
-    status: completed
-  - id: T05
-    content: Add CONVERT to lifecycle and ownership policies; mark SESSION_GUIDANCE deprecated_pending_convert only in graph-kinds.yaml
-    status: completed
-  - id: T06
-    content: Update validate_request.py and render_receipt.py; CONVERT requires dag_id or dag_path; refuse allow_session_retire true
-    status: completed
-  - id: T07
-    content: Add classify_conversion_disposition.py; source must be SESSION_GUIDANCE; unknown id BLOCKED; prove survivor or skill path
-    status: completed
-  - id: T08
-    content: Add convert_session_to_langgraph.py; refuse any disposition other than CONVERT_TO_LANGGRAPH; prose action fails closed
-    status: completed
-  - id: T09
-    content: Add fixtures and pack tests for twin, absorb, convert, unknown id, LangGraph source, and prose-action refuse
-    status: completed
-  - id: T10
-    content: Add CONVERT to SKILL.md and /dag-authoring --convert; keep the command under 80 lines; mention CONVERT on the commands-index dag-authoring row
-    status: completed
-  - id: T11
-    content: Dry-run the classifier on every catalog id; CONVERT_TO_LANGGRAPH count must equal 1 or stop
-    status: completed
-  - id: T12
-    content: Emit workflows/dags/intelligence_harvest/ from the IR node set; add test_intelligence_harvest_langgraph.py
-    status: completed
-  - id: T13
-    content: Point harvest SKILL.md and skill-ir authority.canonical_dag at the new graph.py; keep dag_registry_id and the SessionDAG adapter
-    status: completed
-  - id: T14
-    content: Run pack tests plus OPEN_PR=0 make pr; prove get_session_dag intelligence-harvest-v1 still resolves; do not push
-    status: completed
+- id: T01
+  content: Reverify HEAD; stop if write_allow paths are dirty with foreign bytes
+  status: completed
+- id: T02
+  content: Add session-deprecation.yaml with the ten catalog rows, each carrying source_path
+    and proof_path
+  status: completed
+- id: T03
+  content: Add session-to-langgraph-contract.md (classify first; emit only CONVERT_TO_LANGGRAPH;
+    never register; never delete in the same step)
+  status: completed
+- id: T04
+  content: Extend request and receipt schemas to CONVERT v2.2.0 with disposition fields;
+    allow_session_retire default false
+  status: completed
+- id: T05
+  content: Add CONVERT to lifecycle and ownership policies; mark SESSION_GUIDANCE
+    deprecated_pending_convert only in graph-kinds.yaml
+  status: completed
+- id: T06
+  content: Update validate_request.py and render_receipt.py; CONVERT requires dag_id
+    or dag_path; refuse allow_session_retire true
+  status: completed
+- id: T07
+  content: Add classify_conversion_disposition.py; source must be SESSION_GUIDANCE;
+    unknown id BLOCKED; prove survivor or skill path
+  status: completed
+- id: T08
+  content: Add convert_session_to_langgraph.py; refuse any disposition other than
+    CONVERT_TO_LANGGRAPH; prose action fails closed
+  status: completed
+- id: T09
+  content: Add fixtures and pack tests for twin, absorb, convert, unknown id, LangGraph
+    source, and prose-action refuse
+  status: completed
+- id: T10
+  content: Add CONVERT to SKILL.md and /dag-authoring --convert; keep the command
+    under 80 lines; mention CONVERT on the commands-index dag-authoring row
+  status: completed
+- id: T11
+  content: Dry-run the classifier on every catalog id; CONVERT_TO_LANGGRAPH count
+    must equal 1 or stop
+  status: completed
+- id: T12
+  content: Emit workflows/dags/intelligence_harvest/ from the IR node set; add test_intelligence_harvest_langgraph.py
+  status: completed
+- id: T13
+  content: Point harvest SKILL.md and skill-ir authority.canonical_dag at the new
+    graph.py; keep dag_registry_id and the SessionDAG adapter
+  status: completed
+- id: T14
+  content: Run pack tests plus OPEN_PR=0 make pr; prove get_session_dag intelligence-harvest-v1
+    still resolves; do not push
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: dag_authoring_convert_4d8d80c4.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-29T01:26:00Z
-    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    ran_at: 2026-08-29 01:26:00+00:00
+    body_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
     deltas:
-      - "Parked this leftover CONVERT plan so unique commits can ride pr-train without a new planning pass"
-      - "Kept CONVERT as classify-then-emit; SessionDAG deletion stays a follow-on"
-      - "Did not mix this plan onto ssot main; extract cherry-picks only"
+    - Parked this leftover CONVERT plan so unique commits can ride pr-train without
+      a new planning pass
+    - Kept CONVERT as classify-then-emit; SessionDAG deletion stays a follow-on
+    - Did not mix this plan onto ssot main; extract cherry-picks only
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-29T01:26:30Z
-    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    ran_at: 2026-08-29 01:26:30+00:00
+    body_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
     deltas:
-      - "Todos T01-T14 already completed in the source commits; this file is the receipt not a new Build"
-      - "No make campaign and no Program Lock from this parked plan"
-      - "kernel_pass stamped so precommit plan-gate can pass the extract"
+    - Todos T01-T14 already completed in the source commits; this file is the receipt
+      not a new Build
+    - No make campaign and no Program Lock from this parked plan
+    - kernel_pass stamped so precommit plan-gate can pass the extract
+built: true
+status: built
 ---
 
 # PLAN: Add CONVERT to l9-dag-authoring
@@ -242,3 +259,25 @@ Delete twin SessionDAGs, fold absorb-row text into the named skills, drop the st
 ## Rollback
 
 `git restore --staged --worktree --` the write_allow paths. Delete only files this Build created under `workflows/dags/intelligence_harvest/`. Do not revert foreign commits on `feat/pr-check-folded`.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `T01`: completed
+- `T02`: completed
+- `T03`: completed
+- `T04`: completed
+- `T05`: completed
+- `T06`: completed
+- `T07`: completed
+- `T08`: completed
+- `T09`: completed
+- `T10`: completed
+- `T11`: completed
+- `T12`: completed
+- `T13`: completed
+- `T14`: completed

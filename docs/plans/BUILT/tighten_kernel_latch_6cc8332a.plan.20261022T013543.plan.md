@@ -1,40 +1,54 @@
 ---
 name: Tighten Kernel Latch
-overview: "Keep kernel_gate.py as the precommit latch. Close stamp-without-artifact: record requires a path-confined hashed apply report with non-empty deltas; verify re-runs three structural predicates. Agent still applies RA then V&R. l9-recursive-optimization stays optional routing, not the gate."
+overview: 'Keep kernel_gate.py as the precommit latch. Close stamp-without-artifact:
+  record requires a path-confined hashed apply report with non-empty deltas; verify
+  re-runs three structural predicates. Agent still applies RA then V&R. l9-recursive-optimization
+  stays optional routing, not the gate.'
 todos:
-  - id: schema-report
-    content: Add l9.kernel_apply.v1 report contract and l9.kernel_receipt.v2 fields; add kernel_predicates.py with report_structure, report_sha, and delta_paths_exist
-    status: completed
-  - id: record-requires-report
-    content: record() requires report= Path; CLI --report defaults to .l9/autonomy/kernel-apply.md; refuse missing file, path escape, bad frontmatter, empty deltas, or missing delta paths
-    status: completed
-  - id: verify-rerun
-    content: verify_tree/precommit reject v1; re-hash report; re-run the three predicates; keep kernel_shas plus not-HEAD binding
-    status: completed
-  - id: close-l4-bypass
-    content: record_kernels must not stamp a passing v2 receipt; keep the existing try/except swallow so L4 authorize tests do not write a fake report
-    status: completed
-  - id: agent-text
-    content: Update L9_AGENT_REQUIRED and surface_profile kernel_hook.note; name l9-recursive-optimization as optional pack routing only
-    status: completed
-  - id: tests-prove
-    content: Replace the honor-system test; add fail/pass cases; run the locked pytest file list
-    status: completed
+- id: schema-report
+  content: Add l9.kernel_apply.v1 report contract and l9.kernel_receipt.v2 fields;
+    add kernel_predicates.py with report_structure, report_sha, and delta_paths_exist
+  status: completed
+- id: record-requires-report
+  content: record() requires report= Path; CLI --report defaults to .l9/autonomy/kernel-apply.md;
+    refuse missing file, path escape, bad frontmatter, empty deltas, or missing delta
+    paths
+  status: completed
+- id: verify-rerun
+  content: verify_tree/precommit reject v1; re-hash report; re-run the three predicates;
+    keep kernel_shas plus not-HEAD binding
+  status: completed
+- id: close-l4-bypass
+  content: record_kernels must not stamp a passing v2 receipt; keep the existing try/except
+    swallow so L4 authorize tests do not write a fake report
+  status: completed
+- id: agent-text
+  content: Update L9_AGENT_REQUIRED and surface_profile kernel_hook.note; name l9-recursive-optimization
+    as optional pack routing only
+  status: completed
+- id: tests-prove
+  content: Replace the honor-system test; add fail/pass cases; run the locked pytest
+    file list
+  status: completed
 isProject: false
 kernel_pass:
   bound_path: tighten_kernel_latch_6cc8332a.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-29T04:06:10Z
-    body_sha256: "d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896"
+    ran_at: 2026-08-29 04:06:10+00:00
+    body_sha256: d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896
     deltas:
-      - "Latch contract stays kernel_gate.py plus hashed apply report; l9-recursive-optimization stays optional routing"
+    - Latch contract stays kernel_gate.py plus hashed apply report; l9-recursive-optimization
+      stays optional routing
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-29T04:06:40Z
-    body_sha256: "d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896"
+    ran_at: 2026-08-29 04:06:40+00:00
+    body_sha256: d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896
     deltas:
-      - "Plan todos marked completed on this extract; remediator does not implement v2 record(); no exclusive-lock defects"
+    - Plan todos marked completed on this extract; remediator does not implement v2
+      record(); no exclusive-lock defects
+built: true
+status: built
 ---
 
 # Tighten kernel latch evidence
@@ -185,3 +199,17 @@ Press **Build**. Work in the **current checkout** on a feature branch (do not mi
 - Do not write `Lock: origin/main = <sha>`.
 - Do not open a new worktree from tip as a planning requirement.
 - Do not edit `AGENTS.md` or `Makefile`.
+
+## Build evidence (auto)
+
+- detected_at: `2026-10-22T01:35:43Z`
+- conversation_id: `786058ae-3232-401a-b953-4f555fb68782`
+- generation_id: `204ab38e-f016-4e63-92aa-c7875d3b06db`
+- transcript: `/Users/ib-mac/.cursor/projects/Users-ib-mac-Cursor-Governance/agent-transcripts/786058ae-3232-401a-b953-4f555fb68782/786058ae-3232-401a-b953-4f555fb68782.jsonl`
+- todos at build time:
+- `schema-report`: completed
+- `record-requires-report`: completed
+- `verify-rerun`: completed
+- `close-l4-bypass`: completed
+- `agent-text`: completed
+- `tests-prove`: completed

@@ -1,0 +1,271 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Repair PR 784 identity seam",
+  "objective": "Repair the two open identity-seam findings on PR 784 and publish them onto that same open PR. I784-01 must reject a same-revision projection whose bytes do not match the receipt digest before an assertion is signed, by reusing one pure verifier already implied by the governance checker. I784-02 must stop an OAuth client string from denying a registered adapter actor, while a client string alone still selects no actor and never enters provenance. I784-U01 stays an owner interpretation: do not change result=resolved or invent a ReleaseIdentity. MEMORY_PREFETCH namespace=cursor-governance snapshot_digest=abd055b76524463d4889e22594e655ab37768197789d8596c1f4fa935cd4e47e checked_record_count=339 conflicts=0 policy_version=memory-phase-lock/v2. GAR: architecture is already settled (canonical projection plus runtime assertion issuer); the intervention reuses the existing output-digest check rather than a new identity design. Publication target is the already-checked-out branch feat/memory-native-http-consumer (head 4e5e5a0cf0f5dc82fbbf0f1b356b38430d9e6107), which is PR 784 against main. Do not cut a sibling branch and do not retarget the base.",
+  "success_criteria": [
+    "A same-revision projection whose actor description changes and whose receipt is untouched is refused before seal_identity_assertion, while the unchanged canonical fixture still mints",
+    "resolve_agent_id admits manus when L9_MEMORY_AGENT_ID is manus whether or not OAUTH_CLIENT_ID equals manus, refuses an OAuth client string with no adapter id, and normalized_runtime_evidence omits the client id",
+    "tools/assurance/check_canonical_identity_projection.py and build_runtime_identity_assertion call the same verify_identity_projection owner",
+    "PR 784 is updated by make pr and the finish reply shows https://github.com/Quantum-L9/Cursor-Governance/pull/784"
+  ],
+  "scope": {
+    "in": [
+      "ops/memory/identity_projection.py new pure projection/receipt verifier",
+      "ops/memory/print_agent_assertion_env.py mint path",
+      "ops/memory/agent_identity.py adapter admission",
+      "tools/assurance/check_canonical_identity_projection.py receipt check",
+      "tests/ops/memory/test_agent_assertion.py and test_agent_identity.py"
+    ],
+    "out": [
+      "I784-U01 result flag, applicable dimensions, and ReleaseIdentity manufacture",
+      "Claude actor/surface treatment and the signed-agent door wire format",
+      "Quantum-L9/.github contract edits and Memory 2.6.0 verifier changes",
+      "Merge of PR 784",
+      "The dirty claude/gar-skill-bootstrap-hook-mm2oj9 checkout and its unrelated plans"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "deep",
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "python3 ops/hooks/plan_memory_prefetch.py --workspace /Users/ib-mac/Cursor-Governance --task identity seam repair",
+      "pass_criteria": "MEMORY_PREFETCH conflicts=0",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "bind worktree /Users/ib-mac/.l9/gov-worktrees/feat-memory-native-http-consumer at 4e5e5a0cf0f5dc82fbbf0f1b356b38430d9e6107 on feat/memory-native-http-consumer tracking origin, clean",
+      "pass_criteria": "HEAD equals the audited PR 784 head and the worktree is clean",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 skills/_archived/l9-plan/scripts/route_plan.py --risk high --evidence strong --json",
+      "pass_criteria": "depth deep with baseline gates retained",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "name .pre-commit-config.yaml as the hook catalog for the governed worktree",
+      "pass_criteria": "catalog named; no Program Lock and no origin/main lock",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add verify_identity_projection and call it from the governance checker and from build_runtime_identity_assertion before sealing. Reject output digest mismatch, receipt/projection coordinate mismatch, binding/profile coordinate mismatch, and a resolved actor or surface whose status is not current.",
+      "files": [
+        "ops/memory/identity_projection.py",
+        "ops/memory/print_agent_assertion_env.py",
+        "tools/assurance/check_canonical_identity_projection.py",
+        "tests/ops/memory/test_agent_assertion.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "check_canonical_identity_projection._validate_receipt sha256(PROJECTION_PATH.read_bytes())",
+      "leverage_rank": 1,
+      "shared_root_cause": "receipt digest copied into the assertion without hashing the projection bytes"
+    },
+    {
+      "id": "T2",
+      "task": "Remove the OAuth client equality denial from resolve_agent_id. Admit adapter actors only from ADAPTER_IDENTITIES. Add the audit counterexample and prove client ids stay out of normalized evidence.",
+      "files": [
+        "ops/memory/agent_identity.py",
+        "tests/ops/memory/test_agent_identity.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "resolve_agent_id oauth_public_client_claim equality branches",
+      "leverage_rank": 2,
+      "shared_root_cause": "an actor-affecting comparison is absent from normalized runtime evidence"
+    },
+    {
+      "id": "T3",
+      "task": "Leave I784-U01 unchanged. Do not edit result, applicable dimensions, or the Memory verifier.",
+      "files": [
+        "ops/memory/print_agent_assertion_env.py",
+        "tests/ops/memory/test_agent_assertion.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "result resolved with release_identity unknown",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T4",
+      "task": "Run the identity tests and the canonical projection checker, then scoped-commit on feat/memory-native-http-consumer, authorize-release, and PR_REMEDIATE=0 make pr so PR 784 updates against main.",
+      "files": [
+        "ops/memory/identity_projection.py",
+        "ops/memory/print_agent_assertion_env.py",
+        "ops/memory/agent_identity.py",
+        "tools/assurance/check_canonical_identity_projection.py",
+        "tests/ops/memory/test_agent_assertion.py",
+        "tests/ops/memory/test_agent_identity.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T1", "T2", "T3"],
+      "operation": "Replace",
+      "anchor": "existing PR 784 head",
+      "leverage_rank": 4
+    }
+  ],
+  "critical_path": ["T1", "T2", "T4"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Same-revision content drift is refused before signing and the OAuth counterexample agrees in both resolution and evidence",
+      "unlocks": "publication onto PR 784"
+    },
+    {
+      "id": "M2",
+      "outcome": "PR 784 head contains the repair and make pr reports the existing PR URL",
+      "unlocks": "owner decision on I784-U01, which is outside this slice"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "pytest shows the description tamper raises IdentityResolutionError matching digest, and the unchanged cursor fixture still resolves",
+      "no_go_action": "do not publish a mint path that still copies receipt.output.digest without hashing the file"
+    },
+    {
+      "id": "C2",
+      "after": "T4",
+      "evidence_required": "make pr exits 0 and the PR URL is https://github.com/Quantum-L9/Cursor-Governance/pull/784",
+      "no_go_action": "do not merge and do not push a different branch"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No operating-instruction change. The repair is local to the identity assertion issuer and its checker."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "I784-U01 would be a law interpretation. This slice does not edit it."
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "No consumer-facing index change."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does hashing the file still pass when the committed projection and receipt already agree, or does the happy path now refuse every mint?",
+      "Does removing the OAuth equality test let a client id that is not manus, codex, or gemini become an actor?",
+      "Does a status check fire only after the digest matches, so a content tamper cannot be laundered as a current actor?",
+      "Would publishing with PR_STACK=auto retarget PR 784 onto a sibling chain instead of updating it against main?"
+    ],
+    "assumed_false_ifs": [
+      "The receipt digest is assumed to be the projection hash. It is only a claim until the file bytes are hashed.",
+      "OAuth equality is assumed to be an authorization control. It denies a registered adapter and is invisible to the evidence digest.",
+      "result=resolved is assumed to mean every applicable dimension is known. The audit says that reading is unresolved and the Memory 2.6.0 verifier requires resolved."
+    ],
+    "blast_radius": "Every runtime identity assertion mint and the canonical identity projection checker. A false refusal blocks signed-agent memory writes. A missed digest check leaves the audited hole. Claude host-marker resolution and the HMAC wire format are outside the edit.",
+    "rollback": "Revert the single repair commit on feat/memory-native-http-consumer. Do not reset main. PR 784 returns to 4e5e5a0cf0f5dc82fbbf0f1b356b38430d9e6107."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T4", "T3"],
+    "shared_causes": [
+      "The issuer trusted receipt metadata instead of the projection bytes the checker already hashes",
+      "Actor admission used a comparison that provenance does not record"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the OAuth equality branches in resolve_agent_id",
+      "Replace the issuer source-revision-only check with verify_identity_projection",
+      "Replace the checker inline digest and coordinate loop with the same function"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "A shared verifier that is stricter than the committed receipt refuses every current assertion.",
+      "mitigation": "Run the existing cursor and claude mint tests and the projection checker on the unmodified canonical files before publish."
+    },
+    {
+      "risk": "PR_STACK=auto with several open PRs fails closed or retargets the base.",
+      "mitigation": "Publish from the PR 784 worktree with PR_STACK empty and PR_REMEDIATE=0 so make pr updates the existing PR against origin/main."
+    },
+    {
+      "risk": "Changing result to unknown satisfies a literal dimension reading and disables Memory 2.6.0 signed writes.",
+      "mitigation": "Do not edit the result flag in this slice."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "I784-U01",
+      "question": "Does l9.identity-assertion result=resolved scope only to the subject actor, or to every applicable product-kind dimension including release_identity?",
+      "decision_effect": "No local edit. Changing result to unknown would fail the Memory 2.6.0 verifier. A typed split needs the canonical identity owner and the Memory owner.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest tests/ops/memory/test_agent_assertion.py tests/ops/memory/test_agent_identity.py -q --tb=short",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python tools/assurance/check_canonical_identity_projection.py",
+      "pass_criteria": "canonical identity projection governance: PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "PR_REMEDIATE=0 make pr runs .pre-commit-config.yaml changed-file hooks on the PR 784 worktree",
+      "pass_criteria": "gate PASS and the existing PR 784 URL is updated",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["I784-U01"],
+    "next_skill": "Build on the PR 784 worktree, then make pr",
+    "stop_reason": "I784-01 and I784-02 are specified. I784-U01 is accepted as out of this slice until the identity owner decides."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/memory/identity_projection.py",
+      "ops/memory/print_agent_assertion_env.py",
+      "ops/memory/agent_identity.py",
+      "tools/assurance/check_canonical_identity_projection.py",
+      "tests/ops/memory/test_agent_assertion.py",
+      "tests/ops/memory/test_agent_identity.py"
+    ],
+    "must_not_modify": [
+      "ops/memory/agent_assertion.py wire format",
+      "generated/governance/canonical_identity.yaml",
+      "generated/governance/canonical_identity.receipt.yaml",
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "the claude/gar-skill-bootstrap-hook-mm2oj9 worktree"
+    ],
+    "preserved_contracts": [
+      "Claude desktop, CLI, web, and mobile remain one claude-code actor",
+      "unknown Claude entrypoints keep surface_identity unknown",
+      "public OAuth client ids do not select an actor",
+      "result stays resolved and release_identity stays unknown",
+      "signed-agent authentication token wire format stays unchanged"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest tests/ops/memory/test_agent_assertion.py tests/ops/memory/test_agent_identity.py -q --tb=short",
+      ".venv/bin/python tools/assurance/check_canonical_identity_projection.py",
+      "PR_REMEDIATE=0 make pr"
+    ]
+  }
+}
