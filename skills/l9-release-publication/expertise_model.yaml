@@ -1,0 +1,81 @@
+# L9_META
+#   schema: 1
+#   parent: l9-release-publication
+#   layer: skill
+#   role: expertise_model
+#   version: 1.0.0
+#   status: active
+# Compiled with l9-skill-compiler from Quantum-L9/l9-graphiti-memory
+# skill/l9-release-publication (tag-push publication) and the observed release of
+# Quantum-L9/l9-meta-injector v4.3.0 (version-authority release job), generalized to
+# any L9 repository.
+
+expertise_model:
+  experts:
+    - release operator who reads which job owns the tag before touching one
+    - publication-plane reviewer who separates a tag push from a branch pull request
+    - release-job watcher who treats environment approval and skipped steps as stops
+    - version steward who refuses to re-point an existing tag and asks for the line
+  doctrine:
+    - the repository's own release job decides who creates the tag and the Release
+    - a tag that exists names one release; current code needs a new version, never a moved tag
+    - the release commit is the current tip of the default branch or the version PR merge commit
+    - in a branch-tagger repository the release is the version change, so the agent never creates the tag
+    - in a tag-push repository the admitted tag object is the release identity
+    - a green job, a pushed tag, or a pending approval is not a published Release
+    - derived evidence that embeds the producer version moves with the bump and is refreshed before merge
+    - the publish-path receipt exists only for the release refs the completion plan names and is removed on every return
+    - a trigger is not a release; the release is done when the exact tag, the Release and the major tag are at the release commit on the host
+  invariants:
+    - never create, move, delete, recreate or force-push a tag the repository's job owns or already published
+    - never write the publish-path receipt and push in one command
+    - never dispatch or rerun a release job more than once per release commit, and never rerun one that would publish twice
+    - never approve an environment or merge the version change without the operator's order
+    - never report RELEASE_VERIFIED while complete_release.py exits non-zero
+    - never push a lease onto an existing major tag; hand that command to the operator
+    - an AMBIGUOUS or UNKNOWN release model stops the release
+  authority_hierarchy:
+    - operator instruction naming the repository, version and, when admitted, the tag object and commit
+    - the repository's release job definitions and release decision documents
+    - the repository's version authority file and preparation script
+    - verify_release_tag.py and verify_github_release.py JSON against the host
+    - the release job run log and conclusion
+    - model inference
+  activation_signals:
+    - cut, publish or ship a release tag for a named repository
+    - finish a release whose tag, job or host Release is incomplete
+    - the maintained major tag must point at a new release
+    - verify that a published tag and Release match the admitted commit
+    - a release job is waiting on an environment approval
+  reject_signals:
+    - changelog or release-notes drafting without publishing
+    - deploying a release to an environment
+    - rebinding a consumer onto a published release
+    - moving or recreating a tag that already names another commit
+    - npm or other registry publication without a recorded owner approval
+  adapters:
+    - name: ungoverned-git
+      load_when: the tag push runs where the first-publication gate is not installed
+      changes: push each planned tag ref without a publish-path receipt; open release PRs with the host's normal flow
+  failure_modes:
+    - name: raced_repository_tagger
+      prevention: detect_release_model.py decides tag_creator before any tag is created
+    - name: stale_release_or_stale_view
+      prevention: read the default-branch tip, refuse to re-point an existing tag, and judge from the host with consumer_refresh for clones
+    - name: version_bump_breaks_derived_evidence
+      prevention: run the repository's full gate after the bump and refresh what it names before merge
+    - name: receipt_outlives_push
+      prevention: write the receipt alone, push in a later command, delete it on every return
+    - name: release_left_incomplete
+      prevention: complete_release.py waits for the run and plans the missing tag, Release or major move; verify_github_release.py gates RELEASE_VERIFIED
+  leverage_points:
+    - name: completion loop that drives the release job to all three host facts
+      score: 25
+    - name: deterministic release-model detection with tag and release ownership
+      score: 25
+    - name: host-side tag identity and RELEASE_VERIFIED gate including the major tag
+      score: 24
+    - name: operator-owned version line, merge and approval stops
+      score: 22
+    - name: derived-evidence refresh after the version bump
+      score: 20

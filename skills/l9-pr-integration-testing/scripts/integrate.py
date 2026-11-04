@@ -279,17 +279,31 @@ def git_env():
 
 
 def git(args: list[str], cwd: Path | None = None, timeout=120, check=True):
-    cmd = ["git", "-c", "core.hooksPath=/dev/null", *args]
+    # No hook can run here: every repository this script touches is created by
+    # scratch_init()/scratch_clone() with an empty template (no hooks
+    # directory), and git_env() drops global and system config, so no inherited
+    # setting can redirect hooks. Hooks are absent, not disabled by a flag.
+    cmd = ["git", *args]
     p = subprocess.run(cmd, cwd=cwd, env=git_env(), text=True, capture_output=True, timeout=timeout)
     if check and p.returncode:
         raise SafetyError(f"Git failed ({p.returncode}): {p.stderr[-700:]}")
     return p
 
 
+def scratch_init(store: Path):
+    """A bare object store with no hooks directory, whatever GIT_TEMPLATE_DIR says."""
+    git(["init", "--bare", "--template=", str(store)])
+
+
+def scratch_clone(store: Path, path: Path, timeout=120):
+    """A clone of the scratch store with no hooks directory."""
+    git(["clone", "--no-checkout", "--template=", str(store), str(path)], timeout=timeout)
+
+
 def local_bind_git_objects(m: dict, workdir: Path):
     """Fetch immutable objects only. Test code/merges execute in Docker, not on host."""
     store = workdir / "objects.git"
-    git(["init", "--bare", str(store)])
+    scratch_init(store)
     remote = m["repository"]["url"]
     git(
         ["--git-dir", str(store), "fetch", "--no-tags", remote, m["repository"]["base_ref"]],
@@ -547,6 +561,13 @@ class DockerSandbox:
             "ALL",
             "--security-opt",
             "no-new-privileges",
+            # PID 1 must reap. Without an init the test command is PID 1, and
+            # every orphaned grandchild (a backgrounded git, a test's own
+            # subprocess tree) stays a zombie that counts against --pids-limit:
+            # a Cursor-Governance suite left 111 of 128 slots on its baseline,
+            # and a PR adding git-heavy tests then failed with "cannot fork()"
+            # and "can't start new thread" -- environment, reported as code.
+            "--init",
             "--pids-limit",
             "128",
             "--memory",
@@ -888,8 +909,6 @@ def docker_git(sandbox: DockerSandbox, path: Path, args, seconds=90):
         "-c",
         "safe.directory=/workspace",
         "-c",
-        "core.hooksPath=/dev/null",
-        "-c",
         "commit.gpgsign=false",
         "-c",
         "user.name=L9 Test",
@@ -902,7 +921,7 @@ def docker_git(sandbox: DockerSandbox, path: Path, args, seconds=90):
 
 def prepare_case(store, name, workdir, sandbox, writer, base_sha, heads):
     path = workdir / name
-    git(["clone", "--no-checkout", str(store), str(path)], timeout=120)
+    scratch_clone(store, path)
     argv, result = docker_git(sandbox, path, ["checkout", "--detach", base_sha])
     writer.log_command(name, "CHECKOUT", argv, result)
     if result["returncode"] != 0:

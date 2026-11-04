@@ -1,5 +1,5 @@
 {
-  "generation_id": "ca285018788e77139f11abffce16bf2e8cb6368c013aa0f7bbecfffb62765bd8",
+  "generation_id": "5287401e15cbc4b60f8c71e59fc823ead0bd8862db08a630f17259b224c32e04",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -362,6 +362,39 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "release_publication",
+        "negative_signals": [
+          "release notes",
+          "changelog draft",
+          "deploy the release",
+          "rebind memory release",
+          "npm publish"
+        ],
+        "positive_signals": [
+          "/l9-release-publication",
+          "cut a release tag",
+          "cut the release tag",
+          "publish a release tag",
+          "publish the release",
+          "cut a new release",
+          "advance the major tag",
+          "github release"
+        ],
+        "primary": "l9-release-publication",
+        "required_any": [
+          "/l9-release-publication",
+          "cut a release tag",
+          "cut the release tag",
+          "publish a release tag",
+          "publish the release",
+          "cut a new release",
+          "advance the major tag"
+        ],
+        "signal_weight": 8,
+        "supporting": []
       },
       {
         "hint_allowed": true,
@@ -1318,6 +1351,19 @@
     },
     {
       "composition_role": "general",
+      "description": "Cut and publish a release tag, GitHub Release and major tag for any L9 repository, detecting whether it publishes on tag push, tags on a version-bump merge, or has no automation, then driving the release job to completion and finishing what it left undone. Use when the operator asks to cut, ship or finish a release or advance a major tag. Do not use for release notes, deployment, consumer rebinds, registry publishing, or moving an existing tag.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-release-publication",
+      "path": "skills/l9-release-publication",
+      "reason": "cuts and publishes immutable release tags and GitHub Releases for any L9 repository \u2014 pushes a tag ref through the publication-plane receipt, ships version bumps through make pr, and merges only on operator order; irreversible, so explicit only, hint_allowed so a release prompt surfaces Read/attach; disable-model-invocation",
+      "skill_md": "skills/l9-release-publication/SKILL.md",
+      "skill_sha256": "d8e80c2eed44380d7141c71228307797323304a7568b137a0368b13f3cf603b1",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "route an explicit repository-birth handoff for a verified local PE/PEC source commit to the factory-owned packager in Quantum-L9/l9-repo-template. Use when an explicit repository-birth request or a validated Idea Execute REQUEST_BIRTH_HANDOFF graph stage requires factory packaging; never invoke after PE by default.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1474,6 +1520,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "d6a34888ffb49becc937e6e944a0d2ad8007effd2cd85399ebc46e9c8c709eea",
-  "source_skill_corpus_sha256": "95badba7ec6abc89e30cbdfe6584b912b7fda55c1086999c1ae7ae0753453f77"
+  "source_manifest_sha256": "33c4851215c1ef793ea7a10234f805997a303dd59f8a4e49e17c82277b8c26fd",
+  "source_skill_corpus_sha256": "534b88b662917811acdd2cdbad928ae5792e490aff3b457b27bc57a5d861f49c"
 }

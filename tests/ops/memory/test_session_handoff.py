@@ -89,6 +89,7 @@ def test_one_request_carries_only_the_missing_handoffs() -> None:
         pr_label="Org/repo#7", pr_number=7, missing={gov[0]: "absent"}, governance=gov
     )
     assert gov[1] in only_gov and f"1) {rel}" not in only_gov
+    assert "session_debt.py handoff --pr 7" in both, "the generator is named, not hand-writing"
 
 
 def test_the_example_is_itself_a_valid_brief() -> None:

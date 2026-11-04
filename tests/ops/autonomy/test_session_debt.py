@@ -454,3 +454,178 @@ def test_claude_stop_wrapper_scopes_the_gate_to_the_session_roots(tmp_path: Path
     assert session_debt_wrap.session_roots(same, {"CLAUDE_PROJECT_DIR": str(project)}) == [
         str(project)
     ]
+
+
+# --- Handoff: what is still to do, and environment friction ------------------
+
+GOVERNANCE_URL = "https://github.com/Quantum-L9/Cursor-Governance.git"
+
+
+def as_governance(root: Path) -> Path:
+    """Point a test clone's origin URL at Cursor-Governance (pushes still go to
+    the local bare origin through pushurl)."""
+    bare = git(root, "config", "--get", "remote.origin.url")
+    git(root, "config", "remote.origin.pushurl", bare)
+    git(root, "config", "remote.origin.url", GOVERNANCE_URL)
+    git(root, "config", "url." + bare + ".insteadOf", GOVERNANCE_URL)
+    return root
+
+
+@pytest.mark.parametrize(
+    ("url", "governed"),
+    [
+        ("https://github.com/Quantum-L9/Cursor-Governance.git", True),
+        ("git@github.com:quantum-l9/cursor-governance.git", True),
+        ("http://proxy@127.0.0.1:1/git/Quantum-L9/Cursor-Governance", True),
+        ("https://github.com/Quantum-L9/l9-ci-core", False),
+        ("https://github.com/someone/not-cursor-governance.git", False),
+    ],
+)
+def test_governance_workspace_is_recognised_by_origin(
+    clone: Path, url: str, governed: bool
+) -> None:
+    git(clone, "config", "remote.origin.url", url)
+    assert session_debt.is_governance_workspace(clone) is governed
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+from ops.memory import governance_handoff, session_handoff  # noqa: E402
+
+
+def _handoffs(roots: list[Path], **kw: object) -> tuple[dict, dict]:
+    return session_debt.build_handoffs(
+        roots,
+        pr_number=kw.pop("pr_number", 7),  # type: ignore[arg-type]
+        objective="ship the thing",
+        status="open, CI running",
+        next_steps=kw.pop("next_steps", []),  # type: ignore[arg-type]
+        friction_root=kw.pop("friction_root", None),  # type: ignore[arg-type]
+    )
+
+
+def test_handoff_covers_only_cursor_governance_workspaces(origin: Path, tmp_path: Path) -> None:
+    governance = as_governance(make_clone(origin, tmp_path / "gov"))
+    other = tmp_path / "other"
+    subprocess.run(["git", "clone", "-q", str(origin), str(other)], check=True)
+    git(other, "config", "user.email", "t@example.com")
+    git(other, "config", "user.name", "t")
+    git(other, "checkout", "-q", "-b", "feat/elsewhere")
+    (other / "x.txt").write_text("x", encoding="utf-8")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "unpushed elsewhere")
+    repo, _ = _handoffs([governance, other])
+    assert repo["not_completed"] == [], "another repository's debt is not this handoff's"
+
+
+def test_unpushed_work_and_open_findings_are_not_completed(clone: Path) -> None:
+    commit_on_branch(as_governance(clone), "feat/local")
+    assert _run(clone, "record", "bug-1", "--detail", "parser drops a field").returncode == 0
+    repo, _ = _handoffs([clone])
+    items = [entry["item"] for entry in repo["not_completed"]]
+    assert items[0].startswith("push feat/local") and items[1] == "bug-1: parser drops a field"
+
+
+def test_only_to_dos_are_carried(clone: Path) -> None:
+    as_governance(clone)
+    (clone / "scratch.txt").write_text("x", encoding="utf-8")
+    repo, _ = _handoffs([clone], next_steps=["merge #7"])
+    assert repo["completed"] == [] and repo["published"] == [] and repo["verification"] == []
+    assert repo["next_actions"] == ["merge #7"]
+    assert "scratch.txt" not in json.dumps(repo), "uncommitted files are not to-dos"
+
+
+def test_deferrals_become_blocked_items_and_human_actions(clone: Path) -> None:
+    as_governance(clone)
+    assert _run(clone, "record", "f-1", "--detail", "drift in settings").returncode == 0
+    assert _run(clone, "defer", "f-1", "--reason", "needs org admin").returncode == 0
+    repo, _ = _handoffs([clone])
+    assert repo["blocked"][0]["blocker"] == "needs org admin"
+    assert repo["human_actions"][0]["action"].startswith("decide f-1")
+
+
+def test_friction_goes_to_the_governance_handoff_only(clone: Path) -> None:
+    as_governance(clone)
+    result = _run(
+        clone,
+        "friction",
+        "docker-429",
+        "--detail",
+        "Docker Hub rate limit",
+        "--workaround",
+        "pulled from mirror.gcr.io",
+    )
+    assert result.returncode == 0, result.stderr
+    assert _run(clone, "check").returncode == 0, "friction is not abandoned work"
+    repo, gov = _handoffs([clone])
+    assert gov["environment_friction"] == [
+        {"item": "docker-429", "detail": "Docker Hub rate limit"}
+    ]
+    assert gov["workarounds"] == [{"item": "docker-429", "workaround": "pulled from mirror.gcr.io"}]
+    assert "docker-429" not in json.dumps(repo), "friction never lands in the repository brief"
+    assert _run(clone, "close", "docker-429", "--evidence", "mirror fallback").returncode == 0
+    assert _handoffs([clone])[1]["environment_friction"] == []
+
+
+def test_friction_outside_governance_is_refused(clone: Path) -> None:
+    git(clone, "config", "remote.origin.url", "https://github.com/Quantum-L9/l9-ci-core")
+    result = _run(clone, "friction", "x", "--detail", "y")
+    assert result.returncode == 1 and "Cursor-Governance" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [("friction", "FR1", "--detail", "d"), ("record", "F2", "--detail", "d")],
+)
+def test_recording_into_a_corrupt_ledger_keeps_its_bytes(clone: Path, argv: tuple) -> None:
+    """A placeholder for an unreadable ledger is never written back over it.
+
+    Regression: friction (and record) on a truncated ledger saved
+    ``findings: []`` plus ``unreadable: true``, so the findings the file still
+    held were lost and every later ``check`` reported CORRUPT for good.
+    """
+    as_governance(clone)
+    path = clone / ".l9" / "autonomy" / session_debt.LEDGER_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    truncated = '{"schema": "x", "findings": [{"id": "F1", "state": "open"'
+    path.write_text(truncated, encoding="utf-8")
+
+    result = _run(clone, *argv)
+
+    assert result.returncode == 1 and "unreadable" in result.stderr
+    assert path.read_text(encoding="utf-8") == truncated
+
+
+def test_handoff_cli_writes_files_the_stop_hook_accepts(clone: Path) -> None:
+    commit_on_branch(as_governance(clone), "feat/unpushed")
+    assert _run(clone, "friction", "gh-503", "--detail", "transient 503").returncode == 0
+    out = clone / "out" / "handoff.md"
+    result = _run(
+        clone,
+        "handoff",
+        "--pr",
+        "7",
+        "--objective",
+        "ship it",
+        "--status",
+        "CI running",
+        "--next",
+        "merge #7",
+        "--out",
+        str(out),
+    )
+    assert result.returncode == 0, result.stderr
+    # The Stop hook's own loaders are the acceptance test.
+    repo = session_handoff.load(clone, pr_number=7)
+    gov = governance_handoff.load(clone, pr_number=7)
+    assert repo["next_actions"] == ["merge #7"] and repo["not_completed"]
+    assert gov["environment_friction"][0]["item"] == "gh-503"
+    page = out.read_text(encoding="utf-8")
+    assert "## Still to do" in page and "## Environment friction" in page
+
+
+def test_handoff_cli_refuses_what_the_contract_refuses(clone: Path) -> None:
+    as_governance(clone)
+    result = _run(clone, "handoff", "--pr", "7", "--objective", " ", "--status", "x")
+    assert result.returncode == 1 and "objective" in result.stderr
+    assert not (clone / session_handoff.HANDOFF_REL).exists()
