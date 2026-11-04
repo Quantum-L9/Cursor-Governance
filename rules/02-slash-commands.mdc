@@ -78,7 +78,7 @@ Live commands match `commands/COMMANDS_MANIFEST.yaml` (**18** — skill wrappers
 | `/index` | `commands/index.md` | Export repo indexes |
 | `/pr-train` | `commands/pr-train.md` | Stacked PR train DAG |
 | `/l9-plan-build` | `commands/l9-plan-build.md` | Plan-simple + kernels + Build DAG |
-| `/l9-audit-plans` | `commands/l9-audit-plans.md` | Plans-store shelf (not pipeline audit) |
+| `/l9-audit-plans` | `skills/l9-audit-plans/SKILL.md` | Leftover-todo refine; moves no plans (not pipeline audit) |
 | `/lcto` | `commands/lcto.md` | L CTO strategic mode |
 | `/spec` | `commands/spec.md` | Specification generator |
 | `/rules` | `commands/rules.md` | List governance rules |

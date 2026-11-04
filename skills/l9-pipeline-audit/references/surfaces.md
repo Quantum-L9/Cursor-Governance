@@ -19,7 +19,7 @@ The slash report NEXT 1–3 fills from the plans queue. Cap 3.
 | plans | tracked `docs/plans` via `.cursor/plans` → `~/.cursor/plans` | all todos done / `built` / `superseded` | `docs/plans/<concern>_compiled_M-D-YY.plan.md` |
 
 SessionStart does not run this scan. A human slash (`/l9-pipeline-audit`
-/ `/plan-audit` with `--archive-spent`, or `/l9-audit-plans`) may move spent
+/ `/plan-audit` with `--archive-spent`) may move spent
 root plans to `built/` or `archive/superseded/` (cap 8). Do not move mixed
 harvestable donors. Do not instantiate a Program Lock. Do not run `make campaign`.
 Acquire and hold the store clone's repo-write lock around `--archive-spent`.
