@@ -20,6 +20,13 @@ Only names listed in ``infisical-cursor-governance.yaml`` ``root_env_keys``
 ``INFISICAL_CLIENT_SECRET`` and the bootstrap ``L9_INFISICAL_CLIENT_SECRET`` are
 refused even if asked: the identity is used, never handed out.
 
+Names in ``operator_only_keys`` bind only on the operator workstation: the
+machine identity came from the workstation profile (not the environment) and
+``CLAUDE_CODE_REMOTE`` is unset. Anywhere else they report
+``source=operator-only-refused``, whatever the environment holds. A hosted
+process controls both inputs, so this is defense in depth; the boundary is the
+Infisical forbid privilege that ``operator_only_iam.py`` gives every hosted identity.
+
 Usage:
   capability_bind.py --check SEMGREP_APP_TOKEN   # names + source only
 """
@@ -62,11 +69,16 @@ SOURCE_INFISICAL = "infisical"
 SOURCE_INFISICAL_ABSENT = "infisical-machine-absent"
 SOURCE_UNBOUND = "unbound"
 SOURCE_REFUSED = "refused"
+SOURCE_OPERATOR_ONLY_REFUSED = "operator-only-refused"
 SOURCE_AWS = "aws"  # never produced; leftover is a fault in the reporter
+
+#: ``infisical_cli_login.machine_identity`` source for the workstation file.
+IDENTITY_SOURCE_PROFILE = "profile"
 
 _VALUES: dict[str, str] = {}
 _SOURCES: dict[str, str] = {}
 _PROFILE: dict[str, str] | None = None
+_PROFILE_SOURCE = ""
 _PROFILE_LOADED = False
 _UA_TOKEN: str | None = None
 #: A login this process already lost. Every name binds through the same identity,
@@ -93,12 +105,18 @@ def allowed_names() -> frozenset[str]:
     return frozenset(keys)
 
 
+def operator_only_names() -> frozenset[str]:
+    inv = _inventory()
+    return frozenset(str(name) for name in (inv.get("operator_only_keys") or []) if name)
+
+
 def reset_cache() -> None:
     """Test hook. Never call from a fetcher to 'retry' a miss with a paste."""
-    global _PROFILE, _PROFILE_LOADED, _UA_TOKEN
+    global _PROFILE, _PROFILE_SOURCE, _PROFILE_LOADED, _UA_TOKEN
     _VALUES.clear()
     _SOURCES.clear()
     _PROFILE = None
+    _PROFILE_SOURCE = ""
     _PROFILE_LOADED = False
     _UA_TOKEN = None
     _LOGIN_STATE["failed"] = False
@@ -128,14 +146,26 @@ def _accepted_secret(name: str, value: str) -> bool:
 
 def _machine_profile() -> dict[str, str] | None:
     """This surface's machine identity (environment, then workstation file)."""
-    global _PROFILE, _PROFILE_LOADED
+    global _PROFILE, _PROFILE_SOURCE, _PROFILE_LOADED
     if _PROFILE_LOADED:
         return _PROFILE
     _PROFILE_LOADED = True
     import infisical_cli_login as machine_login
 
-    _PROFILE = machine_login.machine_identity()[1]
+    _PROFILE_SOURCE, _PROFILE = machine_login.machine_identity()
     return _PROFILE
+
+
+def _identity_source() -> str:
+    """Where this surface's machine identity came from: ``env``, ``profile`` or ``""``."""
+    _machine_profile()
+    return _PROFILE_SOURCE
+
+
+def _operator_surface() -> bool:
+    if (os.environ.get("CLAUDE_CODE_REMOTE") or "").strip():
+        return False
+    return _identity_source() == IDENTITY_SOURCE_PROFILE
 
 
 def _ua_token(profile: dict[str, str]) -> str | None:
@@ -211,6 +241,8 @@ def _resolve(
         source, value = SOURCE_REFUSED, None
     elif name not in allowed_names():
         source, value = SOURCE_UNBOUND, None
+    elif name in operator_only_names() and not _operator_surface():
+        source, value = SOURCE_OPERATOR_ONLY_REFUSED, None
     else:
         present = (os.environ.get(name) or "").strip()
         if present:
@@ -262,6 +294,7 @@ KNOWN_SOURCES = (
     SOURCE_INFISICAL_ABSENT,
     SOURCE_UNBOUND,
     SOURCE_REFUSED,
+    SOURCE_OPERATOR_ONLY_REFUSED,
     SOURCE_AWS,
 )
 
