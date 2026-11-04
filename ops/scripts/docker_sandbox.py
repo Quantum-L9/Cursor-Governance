@@ -222,9 +222,80 @@ def gh_api(path: str) -> dict:
     return json.loads(run(["gh", "api", path], timeout=60).stdout)
 
 
+# Some session gateways scope REST to the session's own repositories and answer
+# HTTP 403 for Core, while still serving git for it. Git reads the same commit's
+# bytes, so it is a transport swap, not another source (the pattern
+# ops/scripts/org_dotgithub.py uses for <owner>/.github). Both failing is an error.
+CORE_GIT_URL = f"https://github.com/{CORE_REPO}"
+# ValueError covers json.JSONDecodeError, binascii.Error (bad base64) and
+# UnicodeDecodeError: a REST body that cannot become the file's text is a REST
+# failure like any other, so it must reach the git transport too.
+_REST_FAILURES = (SandboxError, KeyError, TypeError, ValueError)
+
+
+def _git(*args: str) -> str:
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        return run(["git", *args], timeout=120, env=env).stdout
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise SandboxError(f"git {args[0] if args else ''} failed: {exc}") from exc
+
+
+def _ls_remote_commit(core_ref: str) -> str:
+    """The commit ``core_ref`` names over git, peeling annotated tags.
+
+    ``refs/tags/<t>`` is the tag object for an annotated tag; only the
+    ``refs/tags/<t>^{}`` row is the commit REST's ``/commits/<ref>`` returns.
+    """
+    preference = [
+        core_ref,
+        f"refs/heads/{core_ref}",
+        f"refs/tags/{core_ref}^{{}}",
+        f"refs/tags/{core_ref}",
+    ]
+    listing = _git("ls-remote", CORE_GIT_URL, *preference)
+    rows = dict(
+        (row[1], row[0])
+        for row in (line.split("\t") for line in listing.splitlines())
+        if len(row) == 2
+    )
+    return next((rows[name] for name in preference if name in rows), "")
+
+
+def core_commit(core_ref: str) -> str:
+    """Exact Core commit for ``core_ref``: REST, then ``git ls-remote``."""
+    try:
+        sha = gh_api(f"repos/{CORE_REPO}/commits/{core_ref}")["sha"]
+    except _REST_FAILURES as rest_error:
+        if HEX40.fullmatch(core_ref):
+            return core_ref
+        try:
+            sha = _ls_remote_commit(core_ref)
+        except SandboxError as git_error:
+            msg = f"{rest_error}; git transport also failed: {git_error}"
+            raise SandboxError(msg) from git_error
+        if not sha:
+            msg = f"{rest_error}; git transport: {core_ref} is not a ref of {CORE_GIT_URL}"
+            raise SandboxError(msg) from rest_error
+    if not isinstance(sha, str) or not HEX40.fullmatch(sha):
+        raise SandboxError(f"{CORE_REPO}@{core_ref} did not resolve to a commit")
+    return sha
+
+
 def core_file(core_sha: str, path: str) -> str:
-    body = gh_api(f"repos/{CORE_REPO}/contents/{path}?ref={core_sha}")
-    return base64.b64decode(body["content"]).decode()
+    """``path`` at the exact Core commit: REST contents, then a shallow git fetch."""
+    try:
+        body = gh_api(f"repos/{CORE_REPO}/contents/{path}?ref={core_sha}")
+        return base64.b64decode(body["content"]).decode()
+    except _REST_FAILURES as rest_error:
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                _git("init", "--bare", "-q", tmp)
+                _git("-C", tmp, "fetch", "-q", "--depth=1", CORE_GIT_URL, core_sha)
+                return _git("-C", tmp, "show", f"{core_sha}:{path}")
+        except SandboxError as git_error:
+            msg = f"{rest_error}; git transport also failed: {git_error}"
+            raise SandboxError(msg) from git_error
 
 
 def daemon_up() -> bool:
@@ -488,7 +559,7 @@ def ensure(core_ref: str, with_semgrep: bool) -> dict:
             "core_ref": core_ref,
         }
         try:
-            core_sha = gh_api(f"repos/{CORE_REPO}/commits/{core_ref}")["sha"]
+            core_sha = core_commit(core_ref)
             lock_text = core_file(core_sha, LOCK_PATH)
             lock = parse_lock(lock_text)
             requirements = core_file(core_sha, REQUIREMENTS_PATH)

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress \u2014 since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, or a secret-inventory row, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN \u00a78).",
+  "description": "Exact path-based exceptions for ops/scripts/validate_memory_egress_boundary.py. Every entry names why the path may spell a forbidden token and an expiry; an expired entry is a finding. Nothing here authorizes provider egress \u2014 since stage C11 every remaining entry is a negative check, a scanner/allowlist self-reference, a protected operator-owned file, a secret-inventory row, or a declaration of the Memory 3.0 OAuth audience that CANONICAL_LAW \u00a78.10 authorizes, never a code path that calls a provider (CURSOR_GOVERNANCE_MEMORY_CONTROL_PLANE_REALIGNMENT_BUILD_PLAN \u00a78).",
   "mode": "enforce",
   "mode_note": "enforce (stage C11+): any unlisted or expired finding fails the validator and tests/ops/memory/test_egress_boundary.py. The legacy provider client, env plane, shadow reader, distiller and their tests were deleted at C11; the C11 tombstone at ops/graphiti/graphiti_memory_client.py was deleted at C15 (ADR-0033).",
   "entries": [
@@ -163,6 +163,18 @@
     {
       "path": "environment/agents/adapters/manus/tests/test_manus_adapter.py",
       "reason": "Negative checks (assertNotIn) that the rendered manus environment carries no provider URL or token.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "environment/agents/adapters/claude-code/account/memory-oauth-connector.yaml",
+      "reason": "Claude account connector `resource_identifier`. Memory 3.0 OAuth audience, not a provider route: the RFC 8707 resource identifier https://memory.quantumaipartners.com/mcp that Quantum-L9/l9-graphiti-memory publishes as MEMORY_RESOURCE_IDENTIFIER (ADR-100, src/l9_graphite_memory/version.py). CANONICAL_LAW \u00a78.10 authorizes the native authenticated Streamable HTTP MCP transport; this file declares its audience and grants no raw Graphiti HTTP. Added by #791 without a row.",
+      "retire_at_stage": "never",
+      "expires": "2099-01-01"
+    },
+    {
+      "path": "ops/config/memory-auth0-onboarding.yaml",
+      "reason": "Auth0 onboarding contract `resource.identifier`. Memory 3.0 OAuth audience, not a provider route: the RFC 8707 resource identifier https://memory.quantumaipartners.com/mcp that Quantum-L9/l9-graphiti-memory publishes as MEMORY_RESOURCE_IDENTIFIER (ADR-100, src/l9_graphite_memory/version.py). CANONICAL_LAW \u00a78.10 authorizes the native authenticated Streamable HTTP MCP transport; this file declares its audience and grants no raw Graphiti HTTP. Added by #791 without a row.",
       "retire_at_stage": "never",
       "expires": "2099-01-01"
     }

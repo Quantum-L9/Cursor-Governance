@@ -84,6 +84,14 @@ def test_profile_hardening_is_unchanged(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert "--read-only" in args and "--privileged" not in args
 
 
+def test_test_containers_reap_orphans(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """An init reaps zombies so the PID cap measures live processes only."""
+    for isolate in (False, True):
+        args = docker_args(monkeypatch, tmp_path, isolate_git=isolate)
+        assert "--init" in args
+        assert args.index("--init") < args.index("--pids-limit")
+
+
 @pytest.mark.parametrize(
     "reason",
     [

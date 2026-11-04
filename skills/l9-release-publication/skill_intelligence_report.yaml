@@ -1,0 +1,134 @@
+# L9_META
+#   schema: 1
+#   parent: l9-release-publication
+#   layer: skill
+#   role: skill_intelligence_report
+#   version: 1.0.0
+#   status: active
+
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - operator asks to cut, publish or ship a release tag for a named repository
+      - a release is partly done (tag pushed, job green or waiting, Release missing)
+      - the maintained major tag must advance to a new release
+    weak_signals:
+      - a release job waits on an environment reviewer
+      - a changelog has an Unreleased section the operator wants shipped
+    reject_signals:
+      - release notes or changelog drafting with no publication
+      - environment deployment, consumer rebind, or registry publication without owner approval
+      - moving or recreating a tag that already names another commit
+    specificity_score: 5
+    false_positive_risk_score: 1
+  authority_model:
+    order:
+      - operator instruction naming the repository, version and admitted identities
+      - repository release job definitions and release decision documents
+      - repository version authority and preparation script
+      - verifier JSON against the host
+      - release job run log
+      - model inference
+    conflict_rule: higher authority wins; a repository job outranks any habit from another repository
+    unknown_rule: Unknown outranks an inferred model, version, SHA, digest or publication claim
+  expert_heuristics:
+    - condition: detect_release_model.py reports MAIN_TAGGER
+      judgment: the repository's job owns the tag; creating it yourself races that job at the same commit
+      action: ship the version change through a pull request, then drive the job with complete_release.py until it exits 0
+    - condition: detect_release_model.py reports TAG_TRIGGERED
+      judgment: the admitted annotated tag object is the release identity
+      action: verify local and remote identity, push that one ref, then drive the run it started with complete_release.py
+    - condition: detect_release_model.py reports NO_AUTOMATION
+      judgment: nothing else will create the tag or the Release
+      action: create an annotated tag at the operator's commit, push it, and gh release create --verify-tag
+    - condition: the requested tag already exists at a different commit than the current default-branch tip
+      judgment: that tag names an older release
+      action: stop and offer the next version; never re-point the tag
+    - condition: the changelog's unreleased section lists breaking changes
+      judgment: the release line is the operator's decision
+      action: present the major and the minor option with their effect on the major tag and ask once
+    - condition: the full gate fails after the version bump while it passed before
+      judgment: derived evidence embeds the producer version
+      action: refresh exactly the named records, rerun the gate, and record the step in the release checklist
+    - condition: the release job waits on an environment, or finished with the exact tag, the Release or the major tag not at the release commit
+      judgment: neither is a publication, whatever the job's conclusion says
+      action: stop for an approval with the run URL and reviewer; otherwise follow complete_release.py's plan (job route once, agent route, then the operator's lease push)
+  doctrine:
+    - the repository's own release job decides tag and Release ownership
+    - an existing tag is never re-pointed
+    - a green job is not a published Release
+    - the receipt exists only for the release refs the completion plan names
+    - inference never supplies a version, SHA or digest
+  invariants:
+    - no tag created, moved, recreated or force-pushed against the repository's job
+    - no receipt written inside the push command, and none left behind
+    - at most one dispatch or one rerun of the release job per release commit
+    - no major-tag lease push by the agent; that is the operator's
+    - no merge or environment approval without the operator's order
+    - no RELEASE_VERIFIED while complete_release.py exits non-zero
+  adapter_map:
+    core_default: the governance publication plane evaluates any tag push
+    adapters:
+      - ungoverned-git
+  failure_modes:
+    - raced the repository tagger
+    - released a stale commit or re-pointed a tag
+    - version bump broke derived evidence after merge
+    - publish-path receipt outlived the push
+    - release job reported as a published Release, or left incomplete
+    - release judged from a stale local clone
+  leverage_points:
+    - deterministic release-model detection
+    - completion loop that drives the release job to the tag, Release and major tag
+    - host-side tag identity and RELEASE_VERIFIED gate including the major tag
+    - operator-owned version line, merge and approval
+    - derived-evidence refresh after the bump
+  evidence_hierarchy:
+    - operator-named repository, version and admitted identities
+    - detect_release_model.py JSON
+    - verify_release_tag.py JSON
+    - release job run conclusion and decision log
+    - verify_github_release.py JSON
+  self_improvement_hook:
+    capture_only_when_observed:
+      - a repository the detector classified wrongly
+      - a release step the operator had to correct
+      - a derived record that broke after a version bump
+      - a missed or false trigger
+    action: >-
+      change the smallest pattern in detect_release_model.py or the smallest heuristic,
+      add a regression test under tests/skills/l9_release_publication, and rerun
+      validate_skill_pack.py and validate_exemplary_skill.py
+  exemplary_gate_results:
+    activation_precision:
+      status: pass
+      evidence: explicit-only tier; five strong and five reject signals; registry route requires a release phrase
+    adapter_architecture:
+      status: pass
+      evidence: one adapter (ungoverned-git) that changes the push transport and PR route only
+    evidence_hierarchy:
+      status: pass
+      evidence: four scripts emit JSON with fixed exit codes; RELEASE_COMPLETE from complete_release.py and RELEASE_VERIFIED from verify_github_release.py
+    doctrine_extraction:
+      status: pass
+      evidence: doctrine drawn from the graphiti-memory pack and the observed meta-injector v4.3.0 release
+    expert_heuristics:
+      status: pass
+      evidence: seven condition-judgment-action rules, each tied to a model or an observed failure
+    failure_modes:
+      status: pass
+      evidence: six named failures with a prevention that a script or step enforces
+    leverage_model:
+      status: pass
+      evidence: five scored leverage points
+    self_improvement_hook:
+      status: pass
+      evidence: capture limited to observed misclassification, correction, broken evidence or trigger error
+    compiler_enforcement_gates:
+      status: pass
+      evidence: Gate A-F evidence recorded in the build; validate_skill_pack.py and validate_exemplary_skill.py run
+    skill_intelligence_report:
+      status: pass
+      evidence: this report and expertise_model.yaml satisfy validate_exemplary_skill.py field limits
+  tier_decision:
+    tier: exemplary

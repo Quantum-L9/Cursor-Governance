@@ -551,8 +551,21 @@ _gate_run_precommit() {
 }
 
 # Resolve once, before pre-commit. Soft-empty: nothing to gate is PASS.
+_resolve_rc=0
 PR_ALLOW_EMPTY=1 PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
-  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true)
+  >"$changed_file" 2> >(grep -E '^(SOURCE:|ERROR:)' >&2 || true) || _resolve_rc=$?
+if [[ "$_resolve_rc" -eq 3 ]]; then
+  # The change set could not be computed: the clone lacks the base history
+  # (no merge base). That is the environment, not a red tree — the tree digest
+  # does not move when the clone is deepened, so a STOP LOOPING receipt would
+  # refuse every re-run after the cure. Block publication, write no receipt.
+  echo "FAIL: change set undeterminable vs $PR_BASE — base history unavailable (environment, not a red tree)"
+  echo "      Deepen the clone (git fetch --deepen=200 origin ${PR_BASE#origin/}), then re-run make pr."
+  _gate_env_block=1
+  exit 1
+elif [[ "$_resolve_rc" -ne 0 ]]; then
+  exit "$_resolve_rc"
+fi
 if [[ ! -s "$changed_file" ]]; then
   echo "OK: nothing to gate vs $PR_BASE (no committed or working-tree changes outside scratch)"
   _gate_write_receipt not_run
