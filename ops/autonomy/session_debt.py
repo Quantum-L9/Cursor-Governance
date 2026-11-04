@@ -110,6 +110,11 @@ def load_ledger(root: Path) -> dict[str, Any]:
 
 def save_ledger(root: Path, payload: dict[str, Any]) -> Path:
     path = _ledger_path(root)
+    if payload.get("unreadable"):
+        # load_ledger returned a placeholder, not the file's findings: writing it
+        # back would replace whatever the corrupt file still held with nothing.
+        msg = f"refusing to overwrite unreadable ledger {path}"
+        raise ValueError(msg)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
@@ -286,6 +291,145 @@ def collect(roots: list[Path]) -> dict[str, Any]:
     }
 
 
+#: The repository whose workspaces a handoff covers. Environment friction is
+#: governance's to fix, and its to-dos are the ones this ledger owns.
+GOVERNANCE_REPOSITORY = "quantum-l9/cursor-governance"
+
+
+def is_governance_workspace(root: Path) -> bool:
+    """True when ``root``'s origin is Quantum-L9/Cursor-Governance (any URL form)."""
+    code, url = _git(root, "config", "--get", "remote.origin.url")
+    if code != 0:
+        return False
+    path = url.strip().lower().rstrip("/").removesuffix(".git")
+    return path.endswith("/" + GOVERNANCE_REPOSITORY) or path.endswith(":" + GOVERNANCE_REPOSITORY)
+
+
+def governance_root(explicit: str | None = None) -> Path | None:
+    """Where friction is recorded: the named or current Cursor-Governance
+    workspace, else the governance SSOT clone. Never another repository's."""
+    for candidate in filter(None, (explicit, str(Path.cwd()))):
+        root = git_root(Path(candidate))
+        if root is not None and is_governance_workspace(root):
+            return root
+    ssot = git_root(Path.home() / ".cursor-governance")
+    return ssot if ssot is not None and is_governance_workspace(ssot) else None
+
+
+def _contracts() -> tuple[Any, Any]:
+    """The two post-publish handoff contracts the Stop hook already enforces."""
+    repo = str(Path(__file__).resolve().parents[2])
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from ops.memory import governance_handoff, session_handoff
+
+    return session_handoff, governance_handoff
+
+
+def build_handoffs(
+    roots: list[Path],
+    *,
+    pr_number: int,
+    objective: str,
+    status: str,
+    next_steps: list[str],
+    friction_root: Path | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Both post-publish handoffs, generated instead of hand-written.
+
+    Only Cursor-Governance workspaces are read, and only what is still to be
+    done (repository handoff) and environment friction (governance handoff) is
+    carried: what is finished, pushed or merely uncommitted is not a to-do.
+    Each document passes its own contract's ``normalize``, so the Stop hook
+    accepts exactly what this produces.
+    """
+    session_handoff, governance_handoff = _contracts()
+    governed = [root for root in roots if is_governance_workspace(root)]
+    report = collect(governed)
+    deferred = [f for f in report["open_findings"] if f.get("state") == "deferred"]
+
+    repo_brief = {
+        "schema": session_handoff.HANDOFF_SCHEMA,
+        "pr_number": pr_number,
+        "objective": objective,
+        "status": status,
+        "not_completed": [
+            {"item": f"push {d['branch']} ({d['workspace']})", "reason": d["detail"]}
+            for d in report["publish_debt"]
+        ]
+        + [
+            {"item": f"{f.get('id')}: {f.get('detail', '')}", "reason": "open finding"}
+            for f in report["blocking_findings"]
+        ]
+        + [
+            {"item": f"repair ledger {path}", "reason": "unreadable; debt unprovable"}
+            for path in report["unreadable_ledgers"]
+        ],
+        "blocked": [
+            {
+                "item": f"{f.get('id')}: {f.get('detail', '')}",
+                "blocker": f.get("reason") or "deferred",
+                "unblock": "a human decision, then session_debt.py close",
+            }
+            for f in deferred
+        ],
+        "human_actions": [
+            {"action": f"decide {f.get('id')}: {f.get('detail', '')}", "why": f.get("reason", "")}
+            for f in deferred
+        ],
+        "next_actions": [step for step in next_steps if step.strip()],
+    }
+
+    friction: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for root in [*governed, *([friction_root] if friction_root else [])]:
+        for item in load_ledger(root).get("friction", []):
+            if isinstance(item, dict) and item.get("state") == "open":
+                if item.get("id") not in seen:
+                    seen.add(str(item.get("id")))
+                    friction.append(item)
+    governance_brief = {
+        "schema": governance_handoff.GOVERNANCE_SCHEMA,
+        "pr_number": pr_number,
+        "environment_friction": [
+            {"item": str(f.get("id")), "detail": f.get("detail", "")} for f in friction
+        ],
+        "workarounds": [
+            {"item": str(f.get("id")), "workaround": f["workaround"]}
+            for f in friction
+            if f.get("workaround")
+        ],
+    }
+    return (
+        session_handoff.normalize(repo_brief, pr_number=pr_number),
+        governance_handoff.normalize(governance_brief, pr_number=pr_number),
+    )
+
+
+def render_handoffs(repo_brief: dict[str, Any], governance_brief: dict[str, Any]) -> str:
+    """Both briefs as one Markdown page, through the contracts' own renderers."""
+    session_handoff, governance_handoff = _contracts()
+    gov_lines = governance_handoff.render_sections(governance_brief)
+    return "\n".join(
+        [
+            f"# Session handoff — PR #{repo_brief['pr_number']}",
+            "",
+            "## Still to do",
+            "",
+            "```text",
+            session_handoff.render(repo_brief),
+            "```",
+            "",
+            "## Environment friction (Cursor-Governance)",
+            "",
+            "```text",
+            "\n".join(gov_lines) if gov_lines else "none",
+            "```",
+            "",
+        ]
+    )
+
+
 def _render_findings(findings: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for item in findings:
@@ -359,12 +503,61 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_handoff(args: argparse.Namespace) -> int:
+    """Write both post-publish handoffs the Stop hook asks for, from the ledger."""
+    workspace = git_root(Path(args.workspace or Path.cwd()))
+    if workspace is None:
+        print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
+        return 1
+    session_handoff, governance_handoff = _contracts()
+    try:
+        repo_brief, governance_brief = build_handoffs(
+            candidate_roots(args.root),
+            pr_number=args.pr,
+            objective=args.objective,
+            status=args.status,
+            next_steps=args.next or [],
+            friction_root=governance_root(str(workspace)),
+        )
+    except session_handoff.HandoffError as exc:
+        print(f"ERROR: handoff not accepted by its contract: {exc}", file=sys.stderr)
+        return 1
+    for rel, brief in (
+        (session_handoff.HANDOFF_REL, repo_brief),
+        (governance_handoff.GOVERNANCE_REL, governance_brief),
+    ):
+        path = workspace / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(brief, indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {path}")
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(render_handoffs(repo_brief, governance_brief), encoding="utf-8")
+        print(f"wrote {out}")
+    return 0
+
+
+def _unreadable_refusal(root: Path, ledger: dict[str, Any]) -> int | None:
+    """Exit 1 with a repair message when the ledger on disk could not be parsed."""
+    if not ledger.get("unreadable"):
+        return None
+    print(
+        f"ERROR: ledger {_ledger_path(root)} is unreadable; repair or move it aside "
+        "before recording (writing now would discard what it holds)",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def cmd_record(args: argparse.Namespace) -> int:
     root = git_root(Path(args.workspace or Path.cwd()))
     if root is None:
         print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
         return 1
     ledger = load_ledger(root)
+    if (refused := _unreadable_refusal(root, ledger)) is not None:
+        return refused
     findings = [f for f in ledger["findings"] if f.get("id") != args.id]
     findings.append(
         {
@@ -387,7 +580,7 @@ def _transition(args: argparse.Namespace, state: str, extra: dict[str, Any]) -> 
         print(f"ERROR: not a git work tree: {args.workspace or Path.cwd()}", file=sys.stderr)
         return 1
     ledger = load_ledger(root)
-    for finding in ledger["findings"]:
+    for finding in [*ledger["findings"], *ledger.get("friction", [])]:
         if finding.get("id") == args.id:
             finding["state"] = state
             finding.update(extra)
@@ -396,6 +589,36 @@ def _transition(args: argparse.Namespace, state: str, extra: dict[str, Any]) -> 
             return 0
     print(f"ERROR: no finding {args.id!r} in {_ledger_path(root)}", file=sys.stderr)
     return 1
+
+
+def cmd_friction(args: argparse.Namespace) -> int:
+    """Record something in the environment that got in the way.
+
+    Friction is governance's to fix, so it lands in a Cursor-Governance
+    workspace's ledger whatever repository the session was working in. It is
+    never a gate item: an agent cannot clear the environment by its own action.
+    """
+    root = governance_root(args.workspace)
+    if root is None:
+        print("ERROR: no Cursor-Governance workspace to record friction in", file=sys.stderr)
+        return 1
+    ledger = load_ledger(root)
+    if (refused := _unreadable_refusal(root, ledger)) is not None:
+        return refused
+    items = [f for f in ledger.get("friction", []) if f.get("id") != args.id]
+    items.append(
+        {
+            "id": args.id,
+            "state": "open",
+            "detail": args.detail,
+            "workaround": args.workaround,
+            "recorded_at": int(time.time()),
+        }
+    )
+    ledger["friction"] = items
+    path = save_ledger(root, ledger)
+    print(f"recorded friction {args.id} → {path}")
+    return 0
 
 
 def cmd_close(args: argparse.Namespace) -> int:
@@ -418,6 +641,27 @@ def main() -> int:
 
     check = sub.add_parser("check", help="exit 2 when any debt is open (gate)")
     check.set_defaults(func=cmd_check)
+
+    handoff = sub.add_parser(
+        "handoff",
+        help="write both post-publish handoffs (to-dos + environment friction) from the ledger",
+    )
+    handoff.add_argument("--pr", type=int, required=True, help="the publication's PR number")
+    handoff.add_argument("--objective", required=True)
+    handoff.add_argument("--status", required=True, help="where things stand, one or two sentences")
+    handoff.add_argument("--next", action="append", help="a next step (repeatable)")
+    handoff.add_argument("--workspace", help="the published workspace (default: cwd)")
+    handoff.add_argument("--out", help="also write both briefs as one Markdown page here")
+    handoff.set_defaults(func=cmd_handoff)
+
+    friction = sub.add_parser(
+        "friction", help="record environment friction for Cursor-Governance to fix"
+    )
+    friction.add_argument("id")
+    friction.add_argument("--detail", required=True)
+    friction.add_argument("--workaround", help="what the session did instead")
+    friction.add_argument("--workspace", help="a Cursor-Governance workspace")
+    friction.set_defaults(func=cmd_friction)
 
     record = sub.add_parser("record", help="record an observed defect as debt")
     record.add_argument("id")
