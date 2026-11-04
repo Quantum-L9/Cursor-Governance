@@ -68,6 +68,20 @@ gate decision. Remove the receipt, do not retry, and do not substitute the host 
 continue from the Release step once `verify_release_tag.py --require-remote` returns
 `MATCH` for the tag object they pushed.
 
+The same session class also refuses the Release itself (observed 2026-11-04, same
+repository): `gh release create|edit|upload` fail because they use GraphQL, the REST
+`POST|PATCH /repos/{o}/{r}/releases[/{id}]` returns `403 Creating, editing, or deleting
+releases is not permitted for this session type`, and the asset upload to
+`uploads.github.com` returns `415` because the gateway accepts JSON bodies only. Do not
+look for another route. Hand the operator the built assets, `SHA256SUMS`, and the notes
+file to attach on the Release edit page, then run `verify_github_release.py
+--require-asset` and `complete_release.py` (both read-only) on what they published.
+
+An operator who publishes from the host's "Draft a new release" page creates a
+lightweight, unsigned tag. Check the kind with `verify_release_tag.py --kind`, and
+record the mismatch in the Release notes when the repository asks for a signed tag.
+Never replace a published tag to repair it.
+
 ## Denied substitutes
 
 - `--force`, `--tags`, deleting the tag, or pointing `refs/tags/<tag>` at another sha.
