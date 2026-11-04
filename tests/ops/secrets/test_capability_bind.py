@@ -100,7 +100,7 @@ def test_bind_rejects_unknown_name() -> None:
     }
 
 
-AUTH0_NAMES = ("AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET")
+AUTH0_NAMES = ("AUTH0_CLIENT_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET")
 
 
 def test_operator_only_names_are_gated_inventory_names() -> None:

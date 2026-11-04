@@ -23,7 +23,9 @@ refused even if asked: the identity is used, never handed out.
 Names in ``operator_only_keys`` bind only on the operator workstation: the
 machine identity came from the workstation profile (not the environment) and
 ``CLAUDE_CODE_REMOTE`` is unset. Anywhere else they report
-``source=operator-only-refused``, whatever the environment holds.
+``source=operator-only-refused``, whatever the environment holds. A hosted
+process controls both inputs, so this is defense in depth; the boundary is the
+Infisical forbid privilege that ``operator_only_iam.py`` gives every hosted identity.
 
 Usage:
   capability_bind.py --check SEMGREP_APP_TOKEN   # names + source only
