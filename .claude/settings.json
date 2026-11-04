@@ -336,6 +336,7 @@
     "l9-pr-audit": "user-invocable-only",
     "l9-pr-integration-testing": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
+    "l9-release-publication": "user-invocable-only",
     "l9-repo-birth": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
     "l9-repo-sync": "user-invocable-only",
