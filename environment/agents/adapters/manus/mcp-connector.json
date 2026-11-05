@@ -30,5 +30,7 @@
     "no_arbitrary_file_access": true,
     "no_repository_write_tools": true
   },
-  "retired_server_keys": ["graphiti-memory"]
+  "retired_server_keys": [
+    "graphiti-memory"
+  ]
 }
