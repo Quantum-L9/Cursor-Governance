@@ -99,8 +99,9 @@ class ManusAdapterContractTests(unittest.TestCase):
         self.assertEqual(
             connector["memory"],
             {
-                "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
-                "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+                "agent_lane": "native-authenticated-streamable-http-UPSTREAM_BLOCKED",
+                "lifecycle": "bearer-protected-blocked-compatibility-stubs",
+                "startup": "health-only-on-demand-no-write-precondition",
                 "fallback": "fail-closed-no-local-operator-identity",
             },
         )
@@ -115,32 +116,23 @@ class ManusAdapterContractTests(unittest.TestCase):
     def test_memory_mcp_carrier_is_separate_and_package_owned(self) -> None:
         connector = json.loads((ADAPTER / "memory-mcp-connector.json").read_text(encoding="utf-8"))
         self.assertEqual(connector["name"], "l9-memory-manus")
-        self.assertEqual(connector["transport"], "stdio")
-        self.assertEqual(connector["command"], "rendered-locally")
+        self.assertEqual(connector["transport"], "streamable-http")
         self.assertEqual(
             connector["authentication"],
             {
-                "mode": "inherited-signed-agent-assertion",
-                "agent_id": "manus",
-                "human_door": "forbidden",
-                "local_operator_fallback": "forbidden",
-            },
-        )
-        self.assertEqual(
-            connector["authority_delivery"],
-            {
-                "mode": "encrypted-connector-environment",
-                "payload": "manus-scoped-agent-door-and-signing-key-only",
-                "grant": "derived-from-canonical-agent-registry",
-                "materialization": "per-process-0600-runtime-files-removed-on-exit",
+                "mode": "native-authenticated-oauth",
+                "credential_delivery": "host-managed-native-client",
+                "actor_admission": "UNBOUND",
             },
         )
         self.assertEqual(connector["package"]["distribution"], "l9-graphite-memory")
-        self.assertEqual(connector["package"]["entrypoint"], "l9-memory-server --transport stdio")
-        self.assertTrue(connector["scope"]["ordinary_agent_reads"])
-        self.assertTrue(connector["scope"]["cold_safe_agent_writes"])
-        self.assertTrue(connector["scope"]["governed_writes_and_phase_locks"])
-        self.assertFalse(connector["scope"]["lifecycle_start_close"])
+        self.assertEqual(connector["package"]["status"], "UPSTREAM_BLOCKED")
+        self.assertEqual(connector["native_client"]["status"], "UNBOUND")
+        self.assertEqual(connector["readiness"]["live"], "UNKNOWN")
+        self.assertFalse(connector["readiness"]["installable"])
+        self.assertFalse(connector["readiness"]["coding_session_requires_memory"])
+        self.assertNotIn("command", connector)
+        self.assertNotIn("authority_delivery", connector)
         self.assertNotIn("mcpServers", connector)
         self.assertNotIn("url", connector)
         self.assertNotIn("headers", connector)
@@ -189,7 +181,8 @@ class ManusAdapterContractTests(unittest.TestCase):
         text = launcher.read_text(encoding="utf-8")
         self.assertIn(".venv/bin/python", text)
         self.assertIn("mcp_server.py", text)
-        self.assertIn("export_agent_assertion_env.sh", text)
+        self.assertNotIn("export_agent_assertion_env.sh", text)
+        self.assertIn("${!L9_MEMORY_@}", text)
 
     def test_memory_mcp_launcher_fails_closed_without_signed_assertion(self) -> None:
         launcher = ADAPTER / "serve_memory_mcp.sh"
@@ -209,65 +202,45 @@ class ManusAdapterContractTests(unittest.TestCase):
                 env={"HOME": isolated_home, "PATH": "/usr/bin:/bin"},
             )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("signed Manus memory door unavailable", result.stderr)
+        self.assertIn("UPSTREAM_BLOCKED", result.stderr)
         text = launcher.read_text(encoding="utf-8")
-        self.assertIn("l9-memory-server", text)
-        self.assertIn("export_agent_assertion_env.sh", text)
-        self.assertIn("local-operator compatibility principal", text)
-        self.assertIn("L9_MANUS_MEMORY_AUTHORITY_JSON", text)
-        self.assertIn("materialize_memory_authority.py", text)
-        self.assertIn("mktemp -d", text)
-        self.assertIn("runtime authority directory is missing after mktemp", text)
-        self.assertIn("trap cleanup EXIT HUP INT TERM", text)
-        self.assertIn("unset L9_MANUS_MEMORY_AUTHORITY_JSON", text)
+        for forbidden in (
+            "l9-memory-server",
+            "export_agent_assertion_env.sh",
+            "mktemp",
+            "materialize_memory_authority.py",
+        ):
+            self.assertNotIn(forbidden, text)
 
-    def test_memory_mcp_renderer_emits_no_secret_stdio_draft(self) -> None:
+    def test_memory_mcp_renderer_refuses_even_a_secret_free_draft(self) -> None:
         renderer = importlib.import_module("render_memory_mcp_connector")
-        draft = renderer.draft(REPOSITORY)
-        server = draft["mcpServers"]["l9-memory-manus"]
-        self.assertEqual(server["command"], str(ADAPTER / "serve_memory_mcp.sh"))
-        self.assertEqual(server["args"], ["--governance", str(REPOSITORY)])
-        self.assertNotIn("env", server)
-        self.assertNotIn("headers", server)
+        with self.assertRaisesRegex(ValueError, "UPSTREAM_BLOCKED"):
+            renderer.draft(REPOSITORY)
 
-    def test_memory_mcp_renderer_accepts_only_scoped_manus_authority(self) -> None:
+    def test_memory_mcp_renderer_refuses_all_authority_without_reading(self) -> None:
         renderer = importlib.import_module("render_memory_mcp_connector")
         authority = {
             "agents_door_secret": "d" * 24,
             "agent_signing_keys": {"manus": "m" * 24},
         }
-        server = renderer.draft(REPOSITORY, authority)["mcpServers"]["l9-memory-manus"]
-        rendered = json.loads(server["env"]["L9_MANUS_MEMORY_AUTHORITY_JSON"])
-        self.assertEqual(rendered, authority)
-        with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary) / "authority.json"
-            source.write_text(
-                json.dumps(authority | {"human_door_secret": "h" * 24}),
-                encoding="utf-8",
-            )
-            with self.assertRaises(ValueError):
-                renderer._scoped_authority(source)
+        with self.assertRaisesRegex(ValueError, "UPSTREAM_BLOCKED"):
+            renderer.draft(REPOSITORY, authority)
+        from unittest import mock
 
-    def test_memory_mcp_renderer_writes_authority_drafts_atomically(self) -> None:
+        with mock.patch.object(Path, "read_text", side_effect=AssertionError("must not read")):
+            with self.assertRaisesRegex(ValueError, "retired --authority-file"):
+                renderer._scoped_authority(Path("/unread/authority.json"))
+
+    def test_memory_mcp_renderer_never_overwrites_an_existing_output(self) -> None:
         renderer = importlib.import_module("render_memory_mcp_connector")
-        authority = {
-            "agents_door_secret": "d" * 24,
-            "agent_signing_keys": {"manus": "m" * 24},
-        }
-        payload = renderer.draft(REPOSITORY, authority)
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / "l9-memory-manus.json"
             destination.write_text("{}\n", encoding="utf-8")
             destination.chmod(0o644)
-            renderer._write_draft(destination, payload, contains_authority=True)
-            self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
-            written = json.loads(destination.read_text(encoding="utf-8"))
-            self.assertEqual(written, payload)
-
-            linked = Path(temporary) / "linked.json"
-            linked.symlink_to(destination)
-            with self.assertRaises(ValueError):
-                renderer._write_draft(linked, payload, contains_authority=True)
+            with self.assertRaisesRegex(ValueError, "UPSTREAM_BLOCKED"):
+                renderer._write_draft(destination, {}, contains_authority=True)
+            self.assertEqual(destination.stat().st_mode & 0o777, 0o644)
+            self.assertEqual(destination.read_text(encoding="utf-8"), "{}\n")
 
     def test_installer_refuses_a_non_repository_before_bootstrapping(self) -> None:
         installer = ADAPTER / "install.sh"

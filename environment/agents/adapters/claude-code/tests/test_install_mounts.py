@@ -22,6 +22,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.ops.scripts.test_agent_bootstrap_readiness import BootstrapTree, put, snapshot
+
 REPO = Path(__file__).resolve().parents[5]
 INSTALL = REPO / "environment" / "agents" / "adapters" / "claude-code" / "install.sh"
 BOOTSTRAP = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
@@ -360,74 +362,102 @@ class InstallMountTests(unittest.TestCase):
 
 
 class LockedInterpreterPinTests(unittest.TestCase):
-    """T-23: a pin mismatch is reported, not silently tolerated."""
+    """T-23: full-script preflight fails closed before any consumer probes.
+
+    The two independent, tracked clones have matching source provenance. Python
+    is a genuine isolated fixture venv; uv/network/mutators are guarded. These
+    are observational checks, not Claude runtime-semantics migration or apply.
+    """
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self._tmp.name)
-        self.gov = self.root / "gov"
-        for sub in ("ops/scripts", "ops/autonomy", "ops/secrets", "kernels", ".venv/bin"):
-            (self.gov / sub).mkdir(parents=True, exist_ok=True)
-        (self.gov / "CANONICAL_LAW.md").write_text("synthetic\n", encoding="utf-8")
-        (self.gov / "ops" / "scripts" / "ensure_uv_environment.sh").write_text(
-            "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
-        )
-        self.workspace = self.root / "ws"
-        self.workspace.mkdir()
-        subprocess.run(["git", "init", "-q", str(self.workspace)], check=True)
         self.addCleanup(self._tmp.cleanup)
-
-    def _install_fake_python(self, version: str) -> None:
-        python3 = self.gov / ".venv" / "bin" / "python3"
-        python3.write_text(
-            "#!/bin/sh\n"
-            'case "$*" in\n'
-            f"  *version_info*) echo '{version}' ;;\n"
-            f"  --version) echo 'Python {version}.0' ;;\n"
-            "  *) exit 0 ;;\n"
-            "esac\n",
-            encoding="utf-8",
+        self.tree = BootstrapTree(Path(self._tmp.name))
+        self.gov = self.tree.gov
+        self.workspace = self.tree.ws
+        put(
+            self.gov / "ops/memory/namespace_context.py",
+            "import os\nfrom types import SimpleNamespace\n"
+            "def resolve_namespace_context(root):\n"
+            "    assert os.environ['L9_GOVERNANCE_SURFACE'] == 'claude-code'\n"
+            "    return SimpleNamespace(write_namespace_hint='fixture', method='fixture')\n",
         )
-        python3.chmod(0o755)
 
     def _run(self) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
-        env.pop("L9_GOVERNANCE_SURFACE", None)
-        return subprocess.run(
+        before = snapshot(self.tree.root)
+        result = subprocess.run(
             [
-                "bash",
-                str(BOOTSTRAP),
+                "/bin/bash",
+                str(self.tree.source / "ops/scripts/bootstrap_agent_environment.sh"),
                 "--surface",
                 "claude-code",
                 "--governance",
                 str(self.gov),
                 "--workspace",
                 str(self.workspace),
+                "--check",
             ],
             capture_output=True,
             text=True,
-            env=env,
+            env=self.tree.env,
+            cwd=self.workspace,
+            timeout=45,
             check=False,
         )
+        self.assertEqual(snapshot(self.tree.root), before, result.stderr)
+        self.assertEqual(result.stdout, "", result.stdout)
+        self.assertNotIn("FORBIDDEN", result.stderr)
+        self.assertNotIn("revision UNKNOWN", result.stderr)
+        return result
+
+    def _assert_blocked_before_consumers(self, result: subprocess.CompletedProcess[str]) -> None:
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertNotIn("UNLOCKED FALLBACK", result.stderr)
+        self.assertNotIn("Agent environment ready", result.stderr)
+        for consumer in (
+            "Canonical checker",
+            "Publish-path",
+            "SessionStart secrets",
+            "Repository-scoped identity",
+            "Readiness preflight",
+        ):
+            self.assertNotIn(consumer, result.stderr)
 
     def test_absent_locked_interpreter_is_reported_not_silently_replaced(self) -> None:
-        (self.gov / ".python-version").write_text("3.12\n", encoding="utf-8")
+        for alias in ("python3", "python"):
+            (self.gov / ".venv/bin" / alias).unlink()
+        # No sync/fingerprint metadata probe may lend an ambient interpreter to
+        # this absent-locked-Python preflight case.
+        (self.tree.bin / "uv").unlink()
         result = self._run()
-        self.assertIn("locked interpreter ABSENT", result.stderr)
-        self.assertIn("UNLOCKED FALLBACK", result.stderr)
-        self.assertNotIn("Agent environment ready", result.stderr)
+        self._assert_blocked_before_consumers(result)
+        self.assertIn(
+            f"locked interpreter ABSENT under {self.gov}/.venv — "
+            "every governed gate will fail closed",
+            result.stderr,
+        )
+        self.assertIn(
+            f"repair: uv sync --locked in {self.gov} (needs pypi.org and astral.sh egress)",
+            result.stderr,
+        )
 
     def test_pin_mismatch_names_the_pin_and_the_fetch_host(self) -> None:
-        (self.gov / ".python-version").write_text("3.12\n", encoding="utf-8")
-        self._install_fake_python("3.11")
+        # Exercise the real version guard, not a fake successful interpreter.
+        # Preserve actionable pin/fetch repair detail without reaching consumers.
+        put(self.gov / ".python-version", "9.99\n")
         result = self._run()
-        self.assertIn("pins 3.12", result.stderr)
-        self.assertIn("astral.sh", result.stderr)
-        self.assertNotIn("Agent environment ready", result.stderr)
+        self._assert_blocked_before_consumers(result)
+        self.assertIn(
+            "agent-bootstrap WARN: locked .venv prefix/version/pydantic/yaml verification "
+            "failed — fail-closed before consumers",
+            result.stderr,
+        )
+        self.assertNotIn("locked interpreter ABSENT", result.stderr)
+        self.assertIn("declared Python pin: 9.99", result.stderr)
+        self.assertIn("repair: uv sync --locked", result.stderr)
+        self.assertIn("needs pypi.org and astral.sh egress", result.stderr)
 
     def test_matching_pin_is_silent(self) -> None:
-        (self.gov / ".python-version").write_text("3.12\n", encoding="utf-8")
-        self._install_fake_python("3.12")
         result = self._run()
         self.assertNotIn("pins 3.12", result.stderr)
         self.assertIn("locked interpreter:", result.stderr)

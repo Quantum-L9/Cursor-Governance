@@ -1,101 +1,89 @@
 #!/usr/bin/env python3
-"""Capability broker is retired — shared bootstrap must not score it as DEGRADED.
+"""Retired broker never runs or counts; only the chosen secrets failure degrades.
 
-The broker never shipped. Session bootstrap owns session_start_secrets.py and
-does not call ops/secrets/bootstrap_agent_env.sh. Stubs at that path must not
-change the degraded-count or the ready banner.
+Every bootstrap invocation executes the exact copied script in tracked source
+and governance clones with matching known SHA, a genuine isolated locked venv,
+complete dependency stubs and guarded tools. Apply collaborators and secrets
+receipts are fixture-only; no checkout venv, live identity or service is used.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
-BOOTSTRAP = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
-
-GATE_DENY = """#!/usr/bin/env python3
-import json, sys
-event = json.load(sys.stdin)
-command = (event.get("tool_input") or {}).get("command", "")
-if "make pr" in command:
-    raise SystemExit(0)
-print(json.dumps({"hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "deny",
-    "permissionDecisionReason": "Publish path: `git push` is not sanctioned.",
-}}))
-"""
+from tests.ops.scripts.test_agent_bootstrap_readiness import (
+    BootstrapTree,
+    git,
+    put,
+    snapshot,
+)
 
 
 class _PlaneBootstrapCase(unittest.TestCase):
-    """Shared bootstrap fixture. Carries no tests of its own."""
+    """Guarded synthetic apply fixture. Carries no tests of its own."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self._tmp.name)
-        self.gov = self.root / "gov"
-        self.workspace = self.root / "ws"
-        self.bin = self.root / "bin"
-        self.bin.mkdir()
-        for sub in ("ops/autonomy", "ops/scripts", "ops/secrets", "ops/graphiti", "kernels"):
-            (self.gov / sub).mkdir(parents=True, exist_ok=True)
-        (self.gov / "CANONICAL_LAW.md").write_text("synthetic\n", encoding="utf-8")
-        for kernel in ("Recursive Alignment.md", "Validate & Repair.md"):
-            (self.gov / "kernels" / kernel).write_text("synthetic\n", encoding="utf-8")
-        real_venv = REPO / ".venv"
-        if real_venv.is_dir():
-            (self.gov / ".venv").symlink_to(real_venv)
-        (self.gov / "ops" / "scripts" / "ensure_uv_environment.sh").write_text(
-            "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
-        )
-        gate = self.gov / "ops" / "autonomy" / "local_execution_gate.py"
-        gate.write_text(GATE_DENY, encoding="utf-8")
-        gate.chmod(0o755)
-        gitleaks = self.bin / "gitleaks"
-        gitleaks.write_text("#!/bin/sh\necho 'gitleaks version 8.24.3'\n", encoding="utf-8")
-        gitleaks.chmod(0o755)
-        self.receipt_argv = self.root / "receipt-argv.json"
-        writer = self.gov / "ops" / "scripts" / "write_runtime_readiness_receipt.py"
-        writer.write_text(
-            "#!/usr/bin/env python3\n"
-            "import json, sys\n"
-            f"open({str(self.receipt_argv)!r}, 'w').write(json.dumps(sys.argv[1:]))\n",
-            encoding="utf-8",
-        )
-        self.workspace.mkdir()
-        subprocess.run(["git", "init", "-q", str(self.workspace)], check=False, capture_output=True)
         self.addCleanup(self._tmp.cleanup)
+        self.tree = BootstrapTree(Path(self._tmp.name))
+        self.root = self.tree.root
+        self.gov = self.tree.gov
+        self.workspace = self.tree.ws
+        self.tree.stub_apply()
+        self.sha = git(self.tree.source, "rev-parse", "HEAD")
+        self.assertEqual(git(self.gov, "rev-parse", "HEAD"), self.sha)
+        put(
+            self.gov / "ops/memory/namespace_context.py",
+            "import os\nfrom types import SimpleNamespace\n"
+            "def resolve_namespace_context(root):\n"
+            "    assert os.environ['L9_GOVERNANCE_SURFACE'] == 'cursor'\n"
+            "    return SimpleNamespace(write_namespace_hint='fixture', method='fixture')\n",
+        )
+        self.receipt_argv = self.root / "receipt-argv.json"
+        put(
+            self.gov / "ops/scripts/write_runtime_readiness_receipt.py",
+            "import json, os, sys\nfrom pathlib import Path\n"
+            "assert os.environ['L9_GOVERNANCE_SURFACE'] == 'cursor'\n"
+            "args = sys.argv[1:]\n"
+            "def value(flag):\n    return args[args.index(flag) + 1]\n"
+            "assert value('--surface') == 'cursor'\n"
+            f"assert value('--governance') == {str(self.gov)!r}\n"
+            f"assert value('--workspace') == {str(self.workspace)!r}\n"
+            f"assert value('--governance-revision') == {self.sha!r}\n"
+            f"assert value('--runtime-script-revision') == {self.sha!r}\n"
+            f"Path({str(self.receipt_argv)!r}).write_text(json.dumps(args))\n",
+        )
 
     def _write_owner(self, *, exit_code: int, receipt: dict[str, object] | None = None) -> None:
-        """Stand in for session_start_secrets.py with a chosen exit + receipt."""
-        owner = self.gov / "ops" / "secrets" / "session_start_secrets.py"
-        owner.write_text(
-            "#!/usr/bin/env python3\n"
-            "import json, sys\n"
-            "receipt = " + repr(json.dumps(receipt) if receipt is not None else None) + "\n"
-            "if receipt is not None and '--receipt-out' in sys.argv:\n"
-            "    dest = sys.argv[sys.argv.index('--receipt-out') + 1]\n"
-            "    open(dest, 'w', encoding='utf-8').write(receipt)\n"
+        """Fake the canonical secrets API; its only write is the fixture receipt."""
+        owner = self.gov / "ops/secrets/session_start_secrets.py"
+        dest = self.workspace / ".l9/session/secrets-plane.json"
+        payload = receipt if receipt is not None else {"ok": exit_code == 0, "state": "fixture"}
+        put(
+            owner,
+            "import os, sys\nfrom pathlib import Path\n"
+            f"assert Path(__file__).resolve() == Path({str(owner)!r}).resolve()\n"
+            "assert os.environ['L9_GOVERNANCE_SURFACE'] == 'cursor'\n"
+            "assert os.environ['PYTHONDONTWRITEBYTECODE'] == '1'\n"
+            f"assert sys.argv[1:] == ['--receipt-out', {str(dest)!r}]\n"
+            f"dest = Path({str(dest)!r})\n"
+            f"assert dest.resolve().is_relative_to(Path({str(self.workspace)!r}).resolve())\n"
+            "print('FIXTURE_AUTH_NOT_LIVE')\n"
+            f"dest.write_text({json.dumps(payload)!r}, encoding='utf-8')\n"
             f"raise SystemExit({exit_code})\n",
-            encoding="utf-8",
         )
 
     def _run(self, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
-        env.pop("L9_GOVERNANCE_SURFACE", None)
-        env.pop("CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE", None)
-        env.pop("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID", None)
-        env.update(extra_env or {})
-        env["PATH"] = f"{self.bin}:{env.get('PATH', '')}"
-        return subprocess.run(
+        before_source = snapshot(self.tree.source)
+        before_gov = snapshot(self.gov)
+        result = subprocess.run(
             [
-                "bash",
-                str(BOOTSTRAP),
+                "/bin/bash",
+                str(self.tree.source / "ops/scripts/bootstrap_agent_environment.sh"),
                 "--surface",
                 "cursor",
                 "--governance",
@@ -105,9 +93,23 @@ class _PlaneBootstrapCase(unittest.TestCase):
             ],
             capture_output=True,
             text=True,
-            env=env,
+            env={**self.tree.env, **(extra_env or {})},
+            cwd=self.workspace,
+            timeout=45,
             check=False,
         )
+        self.assertEqual(snapshot(self.tree.source), before_source, result.stderr)
+        self.assertEqual(snapshot(self.gov), before_gov, result.stderr)
+        self.assertEqual(result.stdout, "", result.stdout)
+        self.assertNotIn("FORBIDDEN", result.stderr)
+        self.assertNotIn("revision UNKNOWN", result.stderr)
+        self.assertIn("locked interpreter:", result.stderr)
+        self.assertIn(
+            "gates importable: pydantic + pyyaml + jsonschema (locked env)", result.stderr
+        )
+        self.assertIn("publish_path_gate=ENFORCED", result.stderr)
+        self.assertIn("FIXTURE_AUTH_NOT_LIVE", result.stderr)
+        return result
 
     def _degraded_count(self) -> int:
         argv = json.loads(self.receipt_argv.read_text(encoding="utf-8"))
@@ -117,14 +119,19 @@ class _PlaneBootstrapCase(unittest.TestCase):
 class RetiredCapabilityPlaneTests(_PlaneBootstrapCase):
     def test_retired_plane_does_not_degrade_or_call_the_stub(self) -> None:
         self._write_owner(exit_code=0)
-        stub = self.gov / "ops" / "secrets" / "bootstrap_agent_env.sh"
-        stub.write_text("#!/usr/bin/env bash\necho STUB_RAN >&2\nexit 1\n", encoding="utf-8")
-        stub.chmod(0o755)
+        stub = self.gov / "ops/secrets/bootstrap_agent_env.sh"
+        marker = self.root / "retired-broker-invoked"
+        put(
+            stub,
+            f"#!/bin/bash\necho STUB_RAN >&2\n/bin/touch '{marker}'\nexit 1\n",
+            executable=True,
+        )
         result = self._run()
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
         self.assertIn("secrets plane: session_start_secrets.py", result.stderr)
         self.assertNotIn("STUB_RAN", result.stderr)
-        self.assertIn("Agent environment ready", result.stderr)
+        self.assertFalse(marker.exists(), "retired broker must never execute")
+        self.assertIn("Agent environment ready", result.stderr)  # synthetic apply only
         self.assertEqual(self._degraded_count(), 0)
 
 
@@ -141,16 +148,20 @@ class SecretsPlaneNoSurfaceExemptionTests(_PlaneBootstrapCase):
     def test_a_hosted_surface_without_an_identity_degrades(self) -> None:
         self._write_owner(exit_code=1)
         result = self._run(self.HOSTED)
+        self.assertEqual(result.returncode, 6, result.stderr)
         self.assertIn("session_start_secrets failed", result.stderr)
         self.assertNotIn("unavailable by surface", result.stderr)
+        self.assertNotIn("Agent environment ready", result.stderr)
         self.assertEqual(self._degraded_count(), 1)
 
     def test_owner_failure_still_degrades(self) -> None:
         """The negative: a surface that should have bound, and did not."""
         self._write_owner(exit_code=1)
         result = self._run()
+        self.assertEqual(result.returncode, 6, result.stderr)
         self.assertIn("session_start_secrets failed", result.stderr)
         self.assertNotIn("unavailable by surface", result.stderr)
+        self.assertNotIn("Agent environment ready", result.stderr)
         self.assertEqual(self._degraded_count(), 1)
 
     def test_plane_ok_says_nothing_about_the_surface(self) -> None:
@@ -160,6 +171,7 @@ class SecretsPlaneNoSurfaceExemptionTests(_PlaneBootstrapCase):
             receipt={"ok": True, "state": "ok", "surface_class": "operator", "binds": []},
         )
         result = self._run(self.HOSTED)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("unavailable by surface", result.stderr)
         self.assertEqual(self._degraded_count(), 0)
 
