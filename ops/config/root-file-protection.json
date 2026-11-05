@@ -25,50 +25,213 @@
     "regenerable": "Machine-generated artifact. rule=regenerable."
   },
   "protected_files": [
-    { "path": "AGENTS.md", "tier": "canonical", "rule": "additive_only" },
-    { "path": "CLAUDE.md", "tier": "managed", "rule": "managed" },
-    { "path": "CANONICAL_LAW.md", "tier": "canonical", "rule": "additive_only" },
-    { "path": "ORG_INVARIANTS.yaml", "tier": "canonical", "rule": "additive_only" },
-    { "path": "CODEOWNERS", "tier": "canonical", "rule": "additive_only" },
-    { "path": "LICENSE", "tier": "canonical", "rule": "additive_only" },
-    { "path": "SECURITY.md", "tier": "canonical", "rule": "additive_only" },
-    { "path": "pyproject.toml", "tier": "canonical", "rule": "additive_only" },
-    { "path": "requirements.txt", "tier": "canonical", "rule": "additive_only" },
-    { "path": "Makefile", "tier": "canonical", "rule": "additive_only" },
-    { "path": "conftest.py", "tier": "canonical", "rule": "additive_only" },
-    { "path": ".pre-commit-config.yaml", "tier": "canonical", "rule": "additive_only" },
-    { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
-    { "path": ".mcp.json", "tier": "regenerable", "rule": "regenerable" },
-    { "path": "filetree.md", "tier": "regenerable", "rule": "regenerable" },
-    { "path": "llm.txt", "tier": "regenerable", "rule": "regenerable" },
-    { "path": "README.md", "tier": "managed", "rule": "managed" },
-    { "path": "ARCHITECTURE.md", "tier": "managed", "rule": "managed" },
-    { "path": "INVARIANTS.md", "tier": "managed", "rule": "managed" },
-    { "path": "CONTRIBUTING.md", "tier": "managed", "rule": "managed" },
-    { "path": "CODE_OF_CONDUCT.md", "tier": "managed", "rule": "managed" },
-    { "path": "SUPPORT.md", "tier": "managed", "rule": "managed" },
-    { "path": "activation-command.md", "tier": "managed", "rule": "managed" },
-    { "path": "TODO.md", "tier": "managed", "rule": "managed" },
-    { "path": "CHANGELOG.md", "tier": "managed", "rule": "managed" },
-    { "path": "sonar-project.properties", "tier": "managed", "rule": "managed" },
-    { "path": ".sonarcloud.properties", "tier": "managed", "rule": "managed" },
-    { "path": "end-session.yaml", "tier": "managed", "rule": "managed" },
-    { "path": ".editorconfig", "tier": "managed", "rule": "managed" },
-    { "path": "biome.json", "tier": "managed", "rule": "managed" },
-    { "path": ".env.example", "tier": "managed", "rule": "managed" },
-    { "path": ".harvest_executor_state.example.json", "tier": "managed", "rule": "managed" },
-    { "path": ".gitattributes", "tier": "managed", "rule": "managed" },
-    { "path": ".gitignore", "tier": "managed", "rule": "managed" },
-    { "path": ".semgrepignore", "tier": "managed", "rule": "managed" },
-    { "path": ".ruffignore", "tier": "managed", "rule": "managed" },
-    { "path": ".biomeignore", "tier": "managed", "rule": "managed" },
-    { "path": ".python-version", "tier": "managed", "rule": "managed" },
-    { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
-    { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
+    {
+      "path": "AGENTS.md",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "CLAUDE.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "CANONICAL_LAW.md",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "ORG_INVARIANTS.yaml",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "CODEOWNERS",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "LICENSE",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "SECURITY.md",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "pyproject.toml",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "requirements.txt",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "Makefile",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": "conftest.py",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": ".gitleaks.toml",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
+      "path": ".mcp.json",
+      "tier": "regenerable",
+      "rule": "regenerable"
+    },
+    {
+      "path": "filetree.md",
+      "tier": "regenerable",
+      "rule": "regenerable"
+    },
+    {
+      "path": "llm.txt",
+      "tier": "regenerable",
+      "rule": "regenerable"
+    },
+    {
+      "path": "README.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "INVARIANTS.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "CODE_OF_CONDUCT.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "SUPPORT.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "activation-command.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "TODO.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "sonar-project.properties",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".sonarcloud.properties",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "end-session.yaml",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".editorconfig",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "biome.json",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".env.example",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".harvest_executor_state.example.json",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".gitattributes",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".gitignore",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".semgrepignore",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".ruffignore",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".biomeignore",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".python-version",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": ".cursorignore",
+      "tier": "managed",
+      "rule": "managed"
+    },
+    {
+      "path": "uv.lock",
+      "tier": "regenerable",
+      "rule": "regenerable"
+    }
   ],
   "pin_bump": {
     "description": "Content-based allowance for version-pin bumps (Dependabot or human). In a listed additive_only manifest, a change whose every removed line pairs 1:1 with an added line naming the same requirement with only its version numbers changed, and whose exact == pins resolve in the lock at head, is verdict pin_bump: no ALLOW-ROOT-DELETION marker and no protected-root PR body. Any other edit in the same file keeps the full additive_only rule. Judged on the diff, never the author.",
-    "files": ["pyproject.toml", "requirements.txt"],
+    "files": [
+      "pyproject.toml",
+      "requirements.txt"
+    ],
     "lock": "uv.lock"
   },
   "exempt_root_files": [],

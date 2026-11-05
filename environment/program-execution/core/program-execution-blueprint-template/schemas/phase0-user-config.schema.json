@@ -33,7 +33,12 @@
       "const": 0
     },
     "definition_status": {
-      "enum": ["draft", "active", "superseded", "retired"]
+      "enum": [
+        "draft",
+        "active",
+        "superseded",
+        "retired"
+      ]
     },
     "program_deploying": {
       "type": "boolean"
@@ -52,10 +57,16 @@
       ],
       "properties": {
         "default": {
-          "enum": ["maximum_within_ceiling", "narrowed_by_decision"]
+          "enum": [
+            "maximum_within_ceiling",
+            "narrowed_by_decision"
+          ]
         },
         "profile": {
-          "enum": ["bounded_local_execution", "program_deploy_max_autonomy"]
+          "enum": [
+            "bounded_local_execution",
+            "program_deploy_max_autonomy"
+          ]
         },
         "authority": {
           "type": "string",
@@ -81,20 +92,32 @@
       }
     },
     "adapter_status": {
-      "enum": ["absent", "present"]
+      "enum": [
+        "absent",
+        "present"
+      ]
     },
     "blocking_inventory": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["true_blocking", "advisory_or_disabled"],
+      "required": [
+        "true_blocking",
+        "advisory_or_disabled"
+      ],
       "properties": {
         "true_blocking": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "advisory_or_disabled": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -106,19 +129,36 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["action", "expiry", "bound_to_program_digest"],
+        "required": [
+          "action",
+          "expiry",
+          "bound_to_program_digest"
+        ],
         "properties": {
           "action": {
-            "enum": ["push", "pull_request", "commit", "local_write"]
+            "enum": [
+              "push",
+              "pull_request",
+              "commit",
+              "local_write"
+            ]
           },
-          "expiry": { "type": "string", "minLength": 1 },
-          "bound_to_program_digest": { "const": true }
+          "expiry": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bound_to_program_digest": {
+            "const": true
+          }
         }
       }
     },
     "open_business_decisions": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "alignment": {
       "type": "object",
@@ -131,15 +171,30 @@
       ],
       "properties": {
         "uv_lock_check": {
-          "enum": ["pending", "pass", "fail", "not_applicable"]
+          "enum": [
+            "pending",
+            "pass",
+            "fail",
+            "not_applicable"
+          ]
         },
         "toolchain_pin_lockstep": {
-          "enum": ["pending", "pass", "fail", "not_applicable"]
+          "enum": [
+            "pending",
+            "pass",
+            "fail",
+            "not_applicable"
+          ]
         },
-        "make_pr_gate_required": { "const": true },
+        "make_pr_gate_required": {
+          "const": true
+        },
         "targets_inventoried": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -155,34 +210,60 @@
       ],
       "properties": {
         "packet_id": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "declared_repos": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "declared_prs": {
           "type": "array",
-          "items": { "type": ["string", "integer"] }
+          "items": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
         },
         "declared_branches": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "declared_ops": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
     "kill_switch": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "operator_action", "auto_file_watch_enforced"],
+      "required": [
+        "path",
+        "operator_action",
+        "auto_file_watch_enforced"
+      ],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "operator_action": { "type": "string", "minLength": 1 },
-        "auto_file_watch_enforced": { "type": "boolean" }
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "auto_file_watch_enforced": {
+          "type": "boolean"
+        }
       }
     },
     "resource_hygiene_ack": {
@@ -191,20 +272,33 @@
     "operator_ack": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "acknowledged_at"],
+      "required": [
+        "name",
+        "acknowledged_at"
+      ],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
         "acknowledged_at": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
     "completeness": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phase0_complete"],
+      "required": [
+        "phase0_complete"
+      ],
       "properties": {
-        "phase0_complete": { "type": "boolean" }
+        "phase0_complete": {
+          "type": "boolean"
+        }
       }
     },
     "notes": {

@@ -5,15 +5,24 @@
   "description": "Operator long-form architecture prose after deterministic normalization, hashing, and segmentation. This is not the raw document: it is the addressable record the compiler is allowed to reason about.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "target", "source", "units"],
+  "required": [
+    "schema",
+    "target",
+    "source",
+    "units"
+  ],
   "properties": {
-    "schema": { "const": "l9.program-execution.architecture-intent.v1" },
+    "schema": {
+      "const": "l9.program-execution.architecture-intent.v1"
+    },
     "target": {
       "type": "string",
       "minLength": 3,
       "description": "owner/repo the architecture applies to"
     },
-    "title": { "type": "string" },
+    "title": {
+      "type": "string"
+    },
     "declared": {
       "type": "boolean",
       "description": "true when the document itself carried the schema frontmatter; false when the operator selected the architecture route explicitly"
@@ -21,27 +30,52 @@
     "source": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["sha256", "media_type"],
+      "required": [
+        "sha256",
+        "media_type"
+      ],
       "properties": {
-        "path": { "type": "string" },
-        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "media_type": { "type": "string", "minLength": 1 },
-        "lines": { "type": "integer", "minimum": 1 }
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "units": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/unit" }
+      "items": {
+        "$ref": "#/$defs/unit"
+      }
     }
   },
   "$defs": {
     "unit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "kind", "line_start", "line_end", "sha256"],
+      "required": [
+        "id",
+        "kind",
+        "line_start",
+        "line_end",
+        "sha256"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^SRC-[0-9]{4,}$" },
+        "id": {
+          "type": "string",
+          "pattern": "^SRC-[0-9]{4,}$"
+        },
         "kind": {
           "enum": [
             "frontmatter",
@@ -53,11 +87,27 @@
             "blockquote"
           ]
         },
-        "line_start": { "type": "integer", "minimum": 1 },
-        "line_end": { "type": "integer", "minimum": 1 },
-        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "signals": { "type": "array", "items": { "type": "string" } },
-        "text": { "type": "string" }
+        "line_start": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "line_end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "type": "string"
+        }
       }
     }
   }

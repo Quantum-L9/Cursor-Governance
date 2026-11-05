@@ -15,16 +15,28 @@
     "merge_order"
   ],
   "properties": {
-    "audit_id": { "type": "string", "minLength": 1 },
+    "audit_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "authorities": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["authority_id", "kind", "source", "scope", "precedence"],
+        "required": [
+          "authority_id",
+          "kind",
+          "source",
+          "scope",
+          "precedence"
+        ],
         "properties": {
-          "authority_id": { "type": "string", "minLength": 1 },
+          "authority_id": {
+            "type": "string",
+            "minLength": 1
+          },
           "kind": {
             "enum": [
               "USER",
@@ -44,12 +56,23 @@
             "minLength": 1,
             "description": "repository path (optionally #section) the rule lives in"
           },
-          "scope": { "type": "string", "minLength": 1 },
-          "precedence": { "type": "integer", "minimum": 1 }
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "precedence": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       }
     },
-    "authority_conflicts": { "type": "array", "items": { "type": "object" } },
+    "authority_conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "validation_authority": {
       "type": "string",
       "minLength": 1,
@@ -65,12 +88,36 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["component_id", "responsibilities", "path_prefixes", "authority_ids"],
+        "required": [
+          "component_id",
+          "responsibilities",
+          "path_prefixes",
+          "authority_ids"
+        ],
         "properties": {
-          "component_id": { "type": "string", "minLength": 1 },
-          "responsibilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-          "path_prefixes": { "type": "array", "items": { "type": "string" } },
-          "authority_ids": { "type": "array", "items": { "type": "string" } }
+          "component_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "responsibilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "path_prefixes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authority_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -88,7 +135,9 @@
           "authority_ids"
         ],
         "properties": {
-          "boundary_id": { "type": "string" },
+          "boundary_id": {
+            "type": "string"
+          },
           "kind": {
             "enum": [
               "COMMUNICATION",
@@ -104,15 +153,33 @@
               "OTHER"
             ]
           },
-          "owner_component_id": { "type": "string" },
-          "subject": { "type": "string" },
-          "participants": { "type": "array", "items": { "type": "string" } },
-          "authority_ids": { "type": "array", "items": { "type": "string" } },
+          "owner_component_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authority_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "control": {
             "type": "object",
             "description": "for SECURITY/POLICY_ENFORCEMENT/VALIDATION/SOURCE_OF_TRUTH boundaries: the per-PR control adequacy judgment",
             "additionalProperties": false,
-            "required": ["control_type", "requirement", "per_pr"],
+            "required": [
+              "control_type",
+              "requirement",
+              "per_pr"
+            ],
             "properties": {
               "control_type": {
                 "enum": [
@@ -126,11 +193,18 @@
                   "SOURCE_OF_TRUTH"
                 ]
               },
-              "requirement": { "type": "string" },
+              "requirement": {
+                "type": "string"
+              },
               "per_pr": {
                 "type": "object",
                 "additionalProperties": {
-                  "enum": ["ADEQUATE", "UNDERBUILT", "NOT_APPLICABLE", "UNKNOWN"]
+                  "enum": [
+                    "ADEQUATE",
+                    "UNDERBUILT",
+                    "NOT_APPLICABLE",
+                    "UNKNOWN"
+                  ]
                 }
               }
             }
@@ -144,32 +218,60 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["merge_blocking", "rationale"],
+        "required": [
+          "merge_blocking",
+          "rationale"
+        ],
         "properties": {
-          "merge_blocking": { "type": "boolean" },
-          "rationale": { "type": "string", "minLength": 1 }
+          "merge_blocking": {
+            "type": "boolean"
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
     "parent_findings": {
       "type": "array",
       "description": "cross-lane findings in lane-findings finding shape",
-      "items": { "type": "object" }
+      "items": {
+        "type": "object"
+      }
     },
     "merge_order": {
       "type": "array",
-      "items": { "type": "integer", "minimum": 1 },
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
       "uniqueItems": true
     },
-    "unknowns": { "type": "array", "items": { "type": "object" } },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
     "minimum_safe_next_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "rationale", "expected_evidence"],
+      "required": [
+        "action",
+        "rationale",
+        "expected_evidence"
+      ],
       "properties": {
-        "action": { "type": "string" },
-        "rationale": { "type": "string" },
-        "expected_evidence": { "type": "string" }
+        "action": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "expected_evidence": {
+          "type": "string"
+        }
       }
     }
   }

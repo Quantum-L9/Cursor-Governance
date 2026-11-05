@@ -21,7 +21,12 @@
       "const": "governance_policy"
     },
     "status": {
-      "enum": ["proposed", "active", "deprecated", "retired"]
+      "enum": [
+        "proposed",
+        "active",
+        "deprecated",
+        "retired"
+      ]
     },
     "canonical": {
       "const": true
@@ -155,20 +160,32 @@
           "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
         },
         "schema_version": {
-          "type": ["integer", "string"]
+          "type": [
+            "integer",
+            "string"
+          ]
         },
         "organization": {
-          "type": ["string", "object"]
+          "type": [
+            "string",
+            "object"
+          ]
         },
         "owner": {
-          "type": ["string", "object"]
+          "type": [
+            "string",
+            "object"
+          ]
         },
         "owner_team": {
           "type": "string"
         },
         "canonical_source": {
           "type": "object",
-          "required": ["repository", "path"],
+          "required": [
+            "repository",
+            "path"
+          ],
           "properties": {
             "repository": {
               "const": "Quantum-L9/Cursor-Governance"
@@ -203,7 +220,10 @@
     },
     "principle": {
       "type": "object",
-      "required": ["id", "statement"],
+      "required": [
+        "id",
+        "statement"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -220,7 +240,10 @@
     },
     "assertionReference": {
       "type": "object",
-      "required": ["type", "version"],
+      "required": [
+        "type",
+        "version"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -235,7 +258,10 @@
     },
     "embeddedAssertion": {
       "type": "object",
-      "required": ["type", "version"],
+      "required": [
+        "type",
+        "version"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -270,13 +296,28 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "severity": {
-          "enum": ["critical", "high", "medium", "low"]
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
         },
         "status": {
-          "enum": ["proposed", "active", "deprecated", "retired"]
+          "enum": [
+            "proposed",
+            "active",
+            "deprecated",
+            "retired"
+          ]
         },
         "policy_state": {
-          "enum": ["proposed", "active", "deprecated", "retired"]
+          "enum": [
+            "proposed",
+            "active",
+            "deprecated",
+            "retired"
+          ]
         },
         "requirement": {
           "type": "object"
@@ -304,14 +345,22 @@
         },
         "violation": {
           "type": "object",
-          "required": ["code", "action"],
+          "required": [
+            "code",
+            "action"
+          ],
           "properties": {
             "code": {
               "type": "string",
               "pattern": "^L9_ORG_[A-Z0-9_]+$"
             },
             "action": {
-              "enum": ["block", "alert", "block_and_alert", "warn"]
+              "enum": [
+                "block",
+                "alert",
+                "block_and_alert",
+                "warn"
+              ]
             },
             "message": {
               "type": "string"
@@ -386,10 +435,14 @@
                 "const": "critical"
               }
             },
-            "required": ["severity"]
+            "required": [
+              "severity"
+            ]
           },
           "then": {
-            "required": ["violation"]
+            "required": [
+              "violation"
+            ]
           }
         }
       ]
@@ -409,7 +462,11 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "control_type": {
-          "enum": ["preventive", "detective", "corrective"]
+          "enum": [
+            "preventive",
+            "detective",
+            "corrective"
+          ]
         },
         "execution_boundary": {
           "type": "string"

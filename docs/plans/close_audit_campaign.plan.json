@@ -122,7 +122,11 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T1", "T2", "T3"],
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3"
+      ],
       "operation": "Wrap",
       "anchor": "run_baseline_gate.sh and make test-module",
       "leverage_rank": 4
@@ -135,13 +139,21 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T4"],
+      "dependencies": [
+        "T4"
+      ],
       "operation": "Wrap",
       "anchor": "make update m= the bumped module list",
       "leverage_rank": 5
     }
   ],
-  "critical_path": ["T1", "T3", "T2", "T4", "T5"],
+  "critical_path": [
+    "T1",
+    "T3",
+    "T2",
+    "T4",
+    "T5"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -188,7 +200,9 @@
     {
       "surface": "scripts/audit/odoo_audit.py module docstring",
       "action": "update",
-      "todo_ids": ["T1"]
+      "todo_ids": [
+        "T1"
+      ]
     }
   ],
   "stress_test": {
@@ -208,7 +222,13 @@
     "rollback": "The branch is uncommitted. Restore the worktree with git checkout -- on the touched paths and remove the two copied cron files if they were the only additions. Do not reset the dirty main checkout."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T3", "T2", "T4", "T5"],
+    "ranked_todo_ids": [
+      "T1",
+      "T3",
+      "T2",
+      "T4",
+      "T5"
+    ],
     "shared_causes": [
       "Field checks that still see only the first _name in a file",
       "Stdlib XML parsing concealed by nosec",
@@ -272,7 +292,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1"],
+    "remaining_unknown_ids": [
+      "U1"
+    ],
     "next_skill": "Build then stacked make pr",
     "stop_reason": "Architecture is selected and the plan is validated. Implementation starts when Build is pressed. U1 is probed before the upgrade and does not block the code edits."
   },

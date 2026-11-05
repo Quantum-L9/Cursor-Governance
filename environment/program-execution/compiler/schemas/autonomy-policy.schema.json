@@ -5,7 +5,17 @@
   "description": "Referenced autonomy profiles for Program Execution programs. Overlays may narrow, never widen.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "id", "execution", "planning", "decisions", "authorization_ceiling", "verification", "unknowns", "replanning"],
+  "required": [
+    "schema",
+    "id",
+    "execution",
+    "planning",
+    "decisions",
+    "authorization_ceiling",
+    "verification",
+    "unknowns",
+    "replanning"
+  ],
   "properties": {
     "schema": {
       "const": "program-execution.autonomy-policy.v1"
@@ -38,10 +48,16 @@
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["continue_until"],
+      "required": [
+        "continue_until"
+      ],
       "properties": {
         "continue_until": {
-          "enum": ["blocking_authority_boundary", "final_handoff", "first_failure"]
+          "enum": [
+            "blocking_authority_boundary",
+            "final_handoff",
+            "first_failure"
+          ]
         }
       }
     },
@@ -91,25 +107,46 @@
       ],
       "properties": {
         "evidence_determined": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "policy_determined": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "reversible_planning_choice": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "architecture_change": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "public_contract_change": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "permission_expansion": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         },
         "irreversible_risk_acceptance": {
-          "enum": ["auto", "require_authority"]
+          "enum": [
+            "auto",
+            "require_authority"
+          ]
         }
       }
     },
@@ -164,20 +201,32 @@
     "verification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["independent", "worker_self_verification"],
+      "required": [
+        "independent",
+        "worker_self_verification"
+      ],
       "properties": {
         "independent": {
-          "enum": ["required", "optional"]
+          "enum": [
+            "required",
+            "optional"
+          ]
         },
         "worker_self_verification": {
-          "enum": ["insufficient", "sufficient"]
+          "enum": [
+            "insufficient",
+            "sufficient"
+          ]
         }
       }
     },
     "unknowns": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["block_only_dependents", "resolve_from_authoritative_evidence"],
+      "required": [
+        "block_only_dependents",
+        "resolve_from_authoritative_evidence"
+      ],
       "properties": {
         "block_only_dependents": {
           "type": "boolean"
@@ -190,13 +239,19 @@
     "replanning": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["allowed_within_locked_authority", "authority_widening"],
+      "required": [
+        "allowed_within_locked_authority",
+        "authority_widening"
+      ],
       "properties": {
         "allowed_within_locked_authority": {
           "type": "boolean"
         },
         "authority_widening": {
-          "enum": ["forbidden", "owner_only"]
+          "enum": [
+            "forbidden",
+            "owner_only"
+          ]
         }
       }
     }

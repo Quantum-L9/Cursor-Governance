@@ -188,8 +188,13 @@
   "estimate": "1 GMP",
   "owner": "igor_beylin",
   "execution_envelope": {
-    "network": {"mode": "none", "allowed_services": []},
-    "secrets": {"access": "none"}
+    "network": {
+      "mode": "none",
+      "allowed_services": []
+    },
+    "secrets": {
+      "access": "none"
+    }
   },
   "complexity": {
     "architectural_boundaries_crossed": [],

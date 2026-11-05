@@ -107,7 +107,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Create",
       "anchor": "requiresSearchProvider in src/matrices/search-policy.ts lines 45-50; VISION_TASKS in src/index.ts line 33",
       "leverage_rank": 3,
@@ -123,7 +125,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T01"],
+      "dependencies": [
+        "T01"
+      ],
       "operation": "Replace",
       "anchor": "assertSearchVisionCompatible in src/matrices/search-policy.ts lines 76-80; resolveRoute in src/index.ts lines 44-58",
       "leverage_rank": 2,
@@ -139,7 +143,10 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T01", "T02"],
+      "dependencies": [
+        "T01",
+        "T02"
+      ],
       "operation": "Replace",
       "anchor": "dispatchProvider in src/index.ts lines 158-191; RoutingResolution in src/types.ts lines 188-199",
       "leverage_rank": 1,
@@ -154,7 +161,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T01"],
+      "dependencies": [
+        "T01"
+      ],
       "operation": "Insert",
       "anchor": "resolvePerplexityConfig in src/matrices/perplexity-matrix.ts lines 42-68",
       "leverage_rank": 7,
@@ -170,7 +179,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T02"],
+      "dependencies": [
+        "T02"
+      ],
       "operation": "Insert",
       "anchor": "resolveRoute in src/index.ts after validateCapabilities; recency/domainFilter on TaskDescriptor in src/types.ts lines 112-113",
       "leverage_rank": 5,
@@ -186,7 +197,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T03"],
+      "dependencies": [
+        "T03"
+      ],
       "operation": "Insert",
       "anchor": "execute() budget reservation at src/index.ts lines 124-125; consensus dispatch condition at line 170",
       "leverage_rank": 6,
@@ -204,7 +217,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T03"],
+      "dependencies": [
+        "T03"
+      ],
       "operation": "Insert",
       "anchor": "callLog.push at src/index.ts line 142; catch path lines 144-155; classifyProviderError in src/provider-errors.ts line 121",
       "leverage_rank": 4,
@@ -222,7 +237,14 @@
       ],
       "effort": "L",
       "risk": "medium",
-      "dependencies": ["T02", "T03", "T04", "T05", "T06", "T07"],
+      "dependencies": [
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07"
+      ],
       "operation": "Replace",
       "anchor": "tests/routing-matrix.test.ts already exists on main; tests inject fake provider clients via RouterDependencies",
       "leverage_rank": 8,
@@ -241,7 +263,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T08"],
+      "dependencies": [
+        "T08"
+      ],
       "operation": "Replace",
       "anchor": "package.json version 1.1.3; consumer package pins are cross-repo edits done only in this wave",
       "leverage_rank": 9,
@@ -256,7 +280,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T09"],
+      "dependencies": [
+        "T09"
+      ],
       "operation": "Replace",
       "anchor": "existing routing documentation sections in ARCHITECTURE.md and README.md",
       "leverage_rank": 11,
@@ -331,32 +357,46 @@
     {
       "surface": "src/types.ts public contracts (RoutingResolution, RoutingDecision)",
       "action": "update",
-      "todo_ids": ["T03", "T07"]
+      "todo_ids": [
+        "T03",
+        "T07"
+      ]
     },
     {
       "surface": "src/index.ts public exports (resolveCapabilities, validateCapabilities, error codes)",
       "action": "update",
-      "todo_ids": ["T01", "T02"]
+      "todo_ids": [
+        "T01",
+        "T02"
+      ]
     },
     {
       "surface": "ARCHITECTURE.md routing authority chain",
       "action": "update",
-      "todo_ids": ["T10"]
+      "todo_ids": [
+        "T10"
+      ]
     },
     {
       "surface": "README.md routing and audit documentation",
       "action": "update",
-      "todo_ids": ["T10"]
+      "todo_ids": [
+        "T10"
+      ]
     },
     {
       "surface": "package.json + package-lock.json",
       "action": "update",
-      "todo_ids": ["T09"]
+      "todo_ids": [
+        "T09"
+      ]
     },
     {
       "surface": "Website-Bot and SEO-Bot package.json + package-lock.json",
       "action": "update",
-      "todo_ids": ["T09"]
+      "todo_ids": [
+        "T09"
+      ]
     },
     {
       "surface": "src/schemas.ts",
@@ -512,7 +552,13 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["UNK-001", "UNK-002", "UNK-003", "UNK-004", "UNK-005"],
+    "remaining_unknown_ids": [
+      "UNK-001",
+      "UNK-002",
+      "UNK-003",
+      "UNK-004",
+      "UNK-005"
+    ],
     "next_skill": "l9-ynp",
     "stop_reason": "PLAN_DOCUMENT validates and the PE+autonomy blueprint projects. Pre-validation P5 and all final validations remain pending until execute. PR #55 disposition and npm publish are human-gated. Do not implement from this markdown alone; execution flows through @environment/program-execution + @autonomy under a Program lease."
   },

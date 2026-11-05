@@ -5,7 +5,10 @@
   "description": "Minimal user-facing goal-level entry contract for the Program Execution intent compiler. Only information that cannot be safely discovered may be required. Optional constraints may only narrow the active policy profile.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "objective"],
+  "required": [
+    "schema",
+    "objective"
+  ],
   "properties": {
     "schema": {
       "const": "program-execution.intent.v1"
@@ -30,7 +33,10 @@
       "additionalProperties": false,
       "properties": {
         "mode": {
-          "enum": ["program_handoff", "authority_boundary"]
+          "enum": [
+            "program_handoff",
+            "authority_boundary"
+          ]
         },
         "convergence_owner": {
           "type": "string"
