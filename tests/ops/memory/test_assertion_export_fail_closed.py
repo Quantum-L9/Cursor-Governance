@@ -70,7 +70,7 @@ def test_only_successfully_minted_file_is_sourced_and_removed(tmp_path, mint_rc)
     assert "stale-fixture" not in result.stdout
 
 
-def test_missing_maps_clear_stale_outputs_without_exiting_sourcing_host(tmp_path):
+def test_missing_maps_preserve_legacy_handoff_without_claiming_a_fresh_mint(tmp_path):
     result = subprocess.run(
         [
             "bash",
@@ -91,6 +91,7 @@ def test_missing_maps_clear_stale_outputs_without_exiting_sourcing_host(tmp_path
         },
     )
     assert result.returncode == 0
-    assert result.stdout.startswith("skipped|unset\n")
-    assert "stale-fixture" not in result.stdout
+    assert result.stdout.startswith("skipped|stale-fixture\n")
+    for name in OUTPUT_KEYS:
+        assert f"{name}=stale-fixture" in result.stdout
     assert list(tmp_path.iterdir()) == []

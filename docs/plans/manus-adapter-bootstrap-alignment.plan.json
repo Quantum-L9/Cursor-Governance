@@ -101,7 +101,7 @@
   "todos": [
     {
       "id": "T1",
-      "task": "Repair the shared bootstrap owner, not a Manus copy: branch check/apply before UV provisioning, secrets removal/login/mkdir, receipt writes and other mutation; count check-mode UV mismatch as DEGRADED. Verify the locked venv version and required pydantic/yaml imports immediately after toolchain resolution before every gate/secrets/identity consumer; missing/wrong/import-failing locked Python is exit 1 with no system-python governance fallback. Preserve exit 0/6/1, stderr diagnostics and stdout machine payload. Make ensure_uv check architecture mismatch observational and prevent fingerprint/lock-state mutation while retaining apply concurrency behavior. Independent review follow-up: apply selects only the verified governance secrets owner, never an older workspace copy. Source revision requires the exact repository root and tracked script ownership, so nested copied code cannot borrow an enclosing HEAD.",
+      "task": "Repair the shared bootstrap owner, not a Manus copy: branch check/apply before UV provisioning, secrets removal/login/mkdir, receipt writes and other mutation; count check-mode UV mismatch as DEGRADED. Verify the locked venv version and required pydantic/yaml imports immediately after toolchain resolution before every gate/secrets/identity consumer; missing/wrong/import-failing locked Python is exit 1 with no system-python governance fallback. Preserve exit 0/6/1, stderr diagnostics and stdout machine payload. Make ensure_uv check architecture mismatch observational and prevent fingerprint/lock-state mutation while retaining apply concurrency behavior. Independent review follow-up: apply selects only the verified governance secrets owner, never an older workspace copy. Source revision requires the exact repository root and tracked script ownership, so nested copied code cannot borrow an enclosing HEAD. Broad release-gate peer fixtures are isolated against the same real locked-prefix/version/tracked-source helper; no peer installer runtime changes. Present preflight failure retains actionable declared-pin and locked-sync/pypi.org/astral.sh diagnostics. Local topology keeps canonical SSOT clean on main and execution on the feature checkout; no protected source is modified for freshness.",
       "files": [
         "ops/scripts/bootstrap_agent_environment.sh",
         "ops/scripts/ensure_uv_environment.sh",
@@ -109,7 +109,9 @@
         "ops/scripts/tests/test_bootstrap_invariants.py",
         "ops/scripts/tests/test_uv_environment_fingerprint.sh",
         "tests/ops/scripts/test_agent_bootstrap_readiness.py",
-        "ops/scripts/tests/test_session_start_runtime_report.py"
+        "ops/scripts/tests/test_session_start_runtime_report.py",
+        "environment/agents/adapters/claude-code/tests/test_install_mounts.py",
+        "ops/scripts/tests/test_capability_plane_counts_degraded.py"
       ],
       "operation": "Replace",
       "anchor": "Locked toolchain and check/apply branches",
@@ -164,7 +166,7 @@
     },
     {
       "id": "T4",
-      "task": "Consolidate complete canonical identity assurance at the existing shared owner and invoke it from adapter validation/materialization. Require v2 operating bindings, exact actor_ref/surface_refs and active binding/current projected identities; reject legacy agent_id/status fields, foreign identity, missing scope and tampered/stale/unverifiable projection before any materialized file. Do not edit canonical registries or treat registered identities as OAuth admission. Preserve projector provenance-equivalence semantics rather than forcing source-revision churn. Guard the legacy shared assertion exporter so a nonzero mint cannot source a pre-existing output path; skipped/failed export must not leave stale assertions accepted by a launcher. Trusted canonical checker keeps its code ROOT at the source checkout; only artifact paths are rebound. A fresh-process hostile caller-root ops package must never execute.",
+      "task": "Consolidate complete canonical identity assurance at the existing shared owner and invoke it from adapter validation/materialization. Require v2 operating bindings, exact actor_ref/surface_refs and active binding/current projected identities; reject legacy agent_id/status fields, foreign identity, missing scope and tampered/stale/unverifiable projection before any materialized file. Do not edit canonical registries or treat registered identities as OAuth admission. Preserve projector provenance-equivalence semantics rather than forcing source-revision churn. Guard the legacy shared assertion exporter so a nonzero mint cannot source a pre-existing output path; failed/refused fresh exports cannot leave stale assertions accepted by a launcher. A skipped legacy mint preserves its existing scoped pre-launch handoff without claiming a fresh mint; native Manus launchers independently refuse and strip every legacy assertion, so this is not a Manus transport fallback. Trusted canonical checker keeps its code ROOT at the source checkout; only artifact paths are rebound. A fresh-process hostile caller-root ops package must never execute.",
       "files": [
         "tools/assurance/check_canonical_identity_projection.py",
         "ops/memory/identity_projection.py",
@@ -552,7 +554,7 @@
       "U3"
     ],
     "next_skill": "Upstream Memory native package/client and OAuth actor admission; scoped #826 publication is parent-owned",
-    "stop_reason": "All in-scope source repairs and seven independent-review closures are implemented. Final integrated offline selection: 780 passed and 43 subtests; reporter suite: 79 passed and 17 subtests; final scoped security closure review PASS; real Manus check returned 6 with stdout empty and 71 observed Git/runtime entries unchanged. Unchanged hook catalog, locked Ruff/format, bash syntax, diff hygiene, canonical identity and required plan pipeline/admission pass. Native Memory remains UPSTREAM_BLOCKED, client UNBOUND, live UNKNOWN; live Infisical auth was not attempted. UV shell-count fixture failure is pre-existing and reproduced at unchanged baseline; Python UV/locking/seal regressions pass. User explicitly approved the existing #826 stack target after sibling #827 appeared. Scoped commit/release publication is the remaining parent ceremony, not a runtime deployment or merge."
+    "stop_reason": "All in-scope source repairs and seven independent-review closures are implemented. Final integrated offline selection: 780 passed and 43 subtests; reporter suite: 79 passed and 17 subtests; final scoped security closure review PASS; real Manus check returned 6 with stdout empty and 71 observed Git/runtime entries unchanged. Unchanged hook catalog, locked Ruff/format, bash syntax, diff hygiene, canonical identity and required plan pipeline/admission pass. Native Memory remains UPSTREAM_BLOCKED, client UNBOUND, live UNKNOWN; live Infisical auth was not attempted. UV shell-count fixture failure is pre-existing and reproduced at unchanged baseline; Python UV/locking/seal regressions pass. User explicitly approved the existing #826 stack target after sibling #827 appeared. Scoped commit/release publication is the remaining parent ceremony, not a runtime deployment or merge. Release follow-up: first canonical gate security passed, but broad pytest exposed obsolete peer fixture assumptions plus an overbroad skipped-mint compatibility change; exact mandated14-nodeid recheck now passes. Existing peer handoff is preserved only when mint was not attempted; failed/fresh mints clear stale outputs and nonzero helper output files are never sourced. Canonical SSOT local pointer now resolves to a clean-main worktree; feature source remains separate, wired PASS. Follow-up validation/commit and canonical publication are in progress; no gate bypass."
   },
   "gmp_handoff": {
     "may_modify": [
@@ -603,7 +605,9 @@
       "tests/ops/memory/test_assertion_export_fail_closed.py",
       "environment/agents/adapters/manus/tests/test_native_memory_boundary.py",
       "ops/secrets/capability_bind.py",
-      "ops/scripts/tests/test_session_start_runtime_report.py"
+      "ops/scripts/tests/test_session_start_runtime_report.py",
+      "environment/agents/adapters/claude-code/tests/test_install_mounts.py",
+      "ops/scripts/tests/test_capability_plane_counts_degraded.py"
     ],
     "must_not_modify": [
       "CANONICAL_LAW.md",

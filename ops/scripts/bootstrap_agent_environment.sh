@@ -199,6 +199,9 @@ assert tuple(sys.version_info[:len(pinned)]) == pinned, "wrong pinned Python ver
 import pydantic, yaml
 ' "$GOV_DIR" 2>/dev/null; then
   warn "locked .venv prefix/version/pydantic/yaml verification failed — fail-closed before consumers"
+  _declared_pin="$(head -n 1 "$GOV_DIR/.python-version" 2>/dev/null)" || _declared_pin="UNKNOWN"
+  [[ "$_declared_pin" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || _declared_pin="UNKNOWN"
+  warn "  declared Python pin: $_declared_pin; repair: uv sync --locked in $GOV_DIR (needs pypi.org and astral.sh egress)"
   exit 1
 fi
 say "locked interpreter: $GOV_PY ($("$GOV_PY" -B -I --version 2>&1))"
