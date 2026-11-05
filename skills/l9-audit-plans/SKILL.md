@@ -19,7 +19,7 @@ Leftover-todo refine for the Cursor plans store. Slash `/l9-audit-plans`
 is the explicit invoke. This is **not** `l9-pipeline-audit` (live-queue +
 harvest) and **not** `l9-plan` (author a plan).
 
-`scripts/shelf_plans.py` is retired. Do not run it. Do not restore it.
+`shelf_plans.py` is retired (archived at `scripts/_archived/shelf_plans.py`). Do not run it. Do not restore it.
 This skill does not move `.plan.md` files between folders.
 
 Do **not** auto-Build. Do **not** `make campaign`. SessionStart must not call
