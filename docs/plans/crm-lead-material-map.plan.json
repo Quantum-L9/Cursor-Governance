@@ -88,7 +88,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "leverage_rank": 2,
       "operation": "Replace",
       "anchor": "_split_material_values and _store_normalized_materials",
@@ -103,7 +105,10 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T1", "T2"],
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
       "leverage_rank": 3,
       "operation": "Insert",
       "anchor": "TestMaterialNormalizer and Test orchestrator material upsert"
@@ -119,12 +124,19 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T3"],
+      "dependencies": [
+        "T3"
+      ],
       "leverage_rank": 4,
       "operation": "Wrap"
     }
   ],
-  "critical_path": ["T1", "T2", "T3", "T4"],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -186,7 +198,12 @@
     "rollback": "Revert the material_profile and crm_sync commits. No schema migration and no new master data."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
     "shared_causes": [
       "Exact workbook tokens never reach polymer master lookup",
       "CRM phrase splitting omits comma"

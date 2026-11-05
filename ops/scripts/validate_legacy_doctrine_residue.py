@@ -226,6 +226,7 @@ MEMORY_DOCTRINE_ADR_GLOB = "docs/decisions/ADR-*.md"
 #: The ordinary agent write (ADR-0033). Every converged write-teaching surface
 #: must carry it. ``memory.phase_lock`` + ``memory.write_governed`` remain an
 #: allowed optional pair and are deliberately NOT required any more.
+# nosemgrep: l9.baseline.python.hardcoded-credential -- an MCP tool name, not a credential
 AGENT_WRITE_TOKEN = "memory.write_agent"
 
 #: Positive presence: a converged surface must still CARRY the contract.

@@ -15,7 +15,9 @@
           {
             "claim_id": "CLM-001",
             "statement": "Option A preserves compatibility",
-            "evidence_refs": ["ADR-12"],
+            "evidence_refs": [
+              "ADR-12"
+            ],
             "evidence_grade": "direct",
             "disconfirming_evidence": [],
             "uncertainty_type": "none",
@@ -26,11 +28,19 @@
           {
             "option_id": "OPT-001",
             "summary": "Incremental migration",
-            "benefits": ["reversible"],
-            "costs": ["temporary dual path"],
-            "risks": ["drift"],
+            "benefits": [
+              "reversible"
+            ],
+            "costs": [
+              "temporary dual path"
+            ],
+            "risks": [
+              "drift"
+            ],
             "reversibility": "high",
-            "evidence_refs": ["ADR-12"]
+            "evidence_refs": [
+              "ADR-12"
+            ]
           }
         ],
         "selected_option": "OPT-001",
@@ -52,7 +62,9 @@
           {
             "claim_id": "CLM-001",
             "statement": "Option A preserves compatibility",
-            "evidence_refs": ["ADR-12"],
+            "evidence_refs": [
+              "ADR-12"
+            ],
             "evidence_grade": "direct",
             "disconfirming_evidence": [],
             "uncertainty_type": "none",
@@ -63,11 +75,19 @@
           {
             "option_id": "OPT-001",
             "summary": "Incremental migration",
-            "benefits": ["reversible"],
-            "costs": ["temporary dual path"],
-            "risks": ["drift"],
+            "benefits": [
+              "reversible"
+            ],
+            "costs": [
+              "temporary dual path"
+            ],
+            "risks": [
+              "drift"
+            ],
             "reversibility": "high",
-            "evidence_refs": ["ADR-12"]
+            "evidence_refs": [
+              "ADR-12"
+            ]
           }
         ],
         "selected_option": "OPT-001",
@@ -88,7 +108,9 @@
           {
             "claim_id": "CLM-001",
             "statement": "Option A preserves compatibility",
-            "evidence_refs": ["ADR-12"],
+            "evidence_refs": [
+              "ADR-12"
+            ],
             "evidence_grade": "direct",
             "disconfirming_evidence": [],
             "uncertainty_type": "none",
@@ -99,11 +121,19 @@
           {
             "option_id": "OPT-001",
             "summary": "Incremental migration",
-            "benefits": ["reversible"],
-            "costs": ["temporary dual path"],
-            "risks": ["drift"],
+            "benefits": [
+              "reversible"
+            ],
+            "costs": [
+              "temporary dual path"
+            ],
+            "risks": [
+              "drift"
+            ],
             "reversibility": "high",
-            "evidence_refs": ["ADR-12"]
+            "evidence_refs": [
+              "ADR-12"
+            ]
           }
         ],
         "selected_option": "OPT-001",
@@ -127,7 +157,9 @@
           {
             "claim_id": "CLM-001",
             "statement": "Option A preserves compatibility",
-            "evidence_refs": ["ADR-12"],
+            "evidence_refs": [
+              "ADR-12"
+            ],
             "evidence_grade": "direct",
             "disconfirming_evidence": [],
             "uncertainty_type": "none",
@@ -138,11 +170,19 @@
           {
             "option_id": "OPT-001",
             "summary": "Incremental migration",
-            "benefits": ["reversible"],
-            "costs": ["temporary dual path"],
-            "risks": ["drift"],
+            "benefits": [
+              "reversible"
+            ],
+            "costs": [
+              "temporary dual path"
+            ],
+            "risks": [
+              "drift"
+            ],
             "reversibility": "high",
-            "evidence_refs": ["ADR-12"]
+            "evidence_refs": [
+              "ADR-12"
+            ]
           }
         ],
         "selected_option": "OPT-001",

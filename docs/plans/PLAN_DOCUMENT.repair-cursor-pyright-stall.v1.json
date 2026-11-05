@@ -62,7 +62,9 @@
     {
       "id": "todo-01-stop-ssot-checkout-link",
       "task": "In setup_workspace_symlinks.sh, classify workspace kind and treat ssot_checkout the same as ssot for .cursor-commands only: remove an existing link and do not create one. Consumers still get the link. Leave .cursor/plans and plugin wiring unchanged.",
-      "files": ["ops/scripts/setup_workspace_symlinks.sh"],
+      "files": [
+        "ops/scripts/setup_workspace_symlinks.sh"
+      ],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -80,7 +82,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["todo-01-stop-ssot-checkout-link"],
+      "dependencies": [
+        "todo-01-stop-ssot-checkout-link"
+      ],
       "operation": "Insert",
       "anchor": "ssot_checkout — consumer .cursor-commands / .cursor/plans / .cursor/governance not required",
       "leverage_rank": 3
@@ -88,7 +92,9 @@
     {
       "id": "todo-03-pin-pyright-include",
       "task": "Add cursorpyright.analysis.include matching pyproject.toml [tool.pyright] include (conftest.py, ops, environment, skills, tools, workflows). Set cursorpyright.analysis.autoSearchPaths to false and cursorpyright.shouldImportPylanceSettings to never. Keep the existing exclude list. Do not edit biome.json.",
-      "files": ["environment/ide/settings.python.json"],
+      "files": [
+        "environment/ide/settings.python.json"
+      ],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -106,7 +112,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["todo-03-pin-pyright-include"],
+      "dependencies": [
+        "todo-03-pin-pyright-include"
+      ],
       "operation": "Replace",
       "anchor": "SETTINGS_FILES=... settings.python.json",
       "leverage_rank": 4
@@ -114,7 +122,9 @@
     {
       "id": "todo-05-prove-clear",
       "task": "Run the kind tests and make pr-check. Restart Cursor Pyright. Confirm Output Cursor - Pyright does not enumerate .cursor-commands, and the files-to-analyze spinner is gone with only markdown editors open.",
-      "files": [".pre-commit-config.yaml"],
+      "files": [
+        ".pre-commit-config.yaml"
+      ],
       "effort": "S",
       "risk": "low",
       "dependencies": [
@@ -255,7 +265,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1"],
+    "remaining_unknown_ids": [
+      "U1"
+    ],
     "next_skill": "Build on this checkout",
     "stop_reason": "PLAN_DOCUMENT validated. Implementation waits for Cursor Build. Do not run make campaign."
   },

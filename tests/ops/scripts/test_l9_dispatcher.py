@@ -177,9 +177,9 @@ def test_installer_installs_and_checks(tmp_path: Path) -> None:
 
 
 def test_makefile_owns_classification_no_second_registry() -> None:
-    # The allowlist lives in the Makefile (single authority). The dispatcher must
-    # not embed its own target list.
-    mk = (REPO / "Makefile").read_text(encoding="utf-8")
+    # The allowlist lives in Repo.mk (single authority; the root Makefile is the
+    # make-v1 facade that includes it). The dispatcher must not embed its own list.
+    mk = (REPO / "Repo.mk").read_text(encoding="utf-8")
     assert "L9_CONSUMER_SAFE_TARGETS" in mk
     assert "l9-consumer-safe-list" in mk
     disp = DISPATCHER.read_text(encoding="utf-8")

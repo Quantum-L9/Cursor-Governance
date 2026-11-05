@@ -20,81 +20,269 @@
     "blockers"
   ],
   "properties": {
-    "schema": {"const": "l9.repo-docs.obligation.v1"},
-    "obligation_id": {"type": "string", "minLength": 1},
-    "surface": {"type": "string", "minLength": 1},
+    "schema": {
+      "const": "l9.repo-docs.obligation.v1"
+    },
+    "obligation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "surface": {
+      "type": "string",
+      "minLength": 1
+    },
     "target": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "path", "selector", "present"],
+      "required": [
+        "kind",
+        "path",
+        "selector",
+        "present"
+      ],
       "properties": {
-        "kind": {"enum": ["file", "generated_file", "external", "surface"]},
-        "path": {"type": ["string", "null"]},
-        "selector": {"type": ["string", "null"]},
-        "present": {"type": "boolean"}
+        "kind": {
+          "enum": [
+            "file",
+            "generated_file",
+            "external",
+            "surface"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "present": {
+          "type": "boolean"
+        }
       }
     },
     "owner": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "authority_class", "execution_mode", "executor"],
+      "required": [
+        "id",
+        "authority_class",
+        "execution_mode",
+        "executor"
+      ],
       "properties": {
-        "id": {"type": "string", "minLength": 1},
-        "authority_class": {"type": "string", "minLength": 1},
-        "execution_mode": {"enum": ["owner_native", "generator", "specialist", "external", "none"]},
-        "executor": {"type": ["string", "null"]}
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority_class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_mode": {
+          "enum": [
+            "owner_native",
+            "generator",
+            "specialist",
+            "external",
+            "none"
+          ]
+        },
+        "executor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "ownership": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["obligation_owner", "semantic_owner", "execution_owner", "mutation_guard"],
+      "required": [
+        "obligation_owner",
+        "semantic_owner",
+        "execution_owner",
+        "mutation_guard"
+      ],
       "properties": {
-        "obligation_owner": {"type": "string", "minLength": 1},
-        "semantic_owner": {"type": "string", "minLength": 1},
-        "execution_owner": {"type": "string", "minLength": 1},
-        "mutation_guard": {"type": ["string", "null"]}
+        "obligation_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mutation_guard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "assessment": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["analyzer", "status", "findings", "disposition", "mutation_guard"],
+      "required": [
+        "analyzer",
+        "status",
+        "findings",
+        "disposition",
+        "mutation_guard"
+      ],
       "properties": {
-        "analyzer": {"type": ["string", "null"]},
-        "status": {"enum": ["NOT_REQUIRED", "NOT_APPLICABLE", "PASS", "NEEDS_IMPROVEMENT", "BLOCKED"]},
+        "analyzer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "NOT_REQUIRED",
+            "NOT_APPLICABLE",
+            "PASS",
+            "NEEDS_IMPROVEMENT",
+            "BLOCKED"
+          ]
+        },
         "findings": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["finding_id", "rule_id", "severity", "property", "observed_state", "expected_state", "evidence_ids", "remediation_class"],
+            "required": [
+              "finding_id",
+              "rule_id",
+              "severity",
+              "property",
+              "observed_state",
+              "expected_state",
+              "evidence_ids",
+              "remediation_class"
+            ],
             "properties": {
-              "finding_id": {"type": "string", "minLength": 1},
-              "rule_id": {"type": "string", "minLength": 1},
-              "severity": {"enum": ["material", "blocking"]},
-              "property": {"type": "string", "minLength": 1},
-              "observed_state": {"type": "string"},
-              "expected_state": {"type": "string"},
-              "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-              "remediation_class": {"enum": ["SURGICAL", "HANDOFF"]}
+              "finding_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rule_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "severity": {
+                "enum": [
+                  "material",
+                  "blocking"
+                ]
+              },
+              "property": {
+                "type": "string",
+                "minLength": 1
+              },
+              "observed_state": {
+                "type": "string"
+              },
+              "expected_state": {
+                "type": "string"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "remediation_class": {
+                "enum": [
+                  "SURGICAL",
+                  "HANDOFF"
+                ]
+              }
             }
           }
         },
-        "disposition": {"enum": ["IMPROVE", "PRESERVE", "HANDOFF", "UNKNOWN", "NOT_APPLICABLE"]},
+        "disposition": {
+          "enum": [
+            "IMPROVE",
+            "PRESERVE",
+            "HANDOFF",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
         "mutation_guard": {
-          "type": ["object", "null"],
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": false,
-          "required": ["id", "status", "source", "rule", "tier", "justification_marker", "evidence_ids", "detail"],
+          "required": [
+            "id",
+            "status",
+            "source",
+            "rule",
+            "tier",
+            "justification_marker",
+            "evidence_ids",
+            "detail"
+          ],
           "properties": {
-            "id": {"type": "string", "minLength": 1},
-            "status": {"enum": ["RESOLVED", "BLOCKED"]},
-            "source": {"type": ["string", "null"]},
-            "rule": {"type": ["string", "null"]},
-            "tier": {"type": ["string", "null"]},
-            "justification_marker": {"type": ["string", "null"]},
-            "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-            "detail": {"type": "string"}
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "enum": [
+                "RESOLVED",
+                "BLOCKED"
+              ]
+            },
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "rule": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tier": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "justification_marker": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "detail": {
+              "type": "string"
+            }
           }
         }
       }
@@ -102,106 +290,347 @@
     "trigger": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["rules", "source_changes", "basis"],
+      "required": [
+        "rules",
+        "source_changes",
+        "basis"
+      ],
       "properties": {
-        "rules": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "source_changes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "basis": {"enum": ["changed_files", "baseline", "run_mutation"]}
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "source_changes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "basis": {
+          "enum": [
+            "changed_files",
+            "baseline",
+            "run_mutation"
+          ]
+        }
       }
     },
-    "revision": {"$ref": "#/$defs/revision"},
+    "revision": {
+      "$ref": "#/$defs/revision"
+    },
     "qualification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "status", "semantic_owner", "harvest_target", "harvest_request_id", "concept_ids"],
+      "required": [
+        "kind",
+        "status",
+        "semantic_owner",
+        "harvest_target",
+        "harvest_request_id",
+        "concept_ids"
+      ],
       "properties": {
-        "kind": {"enum": ["deterministic", "semantic"]},
-        "status": {"enum": ["QUALIFIED", "AWAITING", "NOT_REQUIRED", "BLOCKED"]},
-        "semantic_owner": {"type": ["string", "null"]},
-        "harvest_target": {"type": ["string", "null"]},
-        "harvest_request_id": {"type": ["string", "null"]},
-        "concept_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        "kind": {
+          "enum": [
+            "deterministic",
+            "semantic"
+          ]
+        },
+        "status": {
+          "enum": [
+            "QUALIFIED",
+            "AWAITING",
+            "NOT_REQUIRED",
+            "BLOCKED"
+          ]
+        },
+        "semantic_owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "harvest_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "harvest_request_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "concept_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
       }
     },
     "required_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "mode", "owner", "executor"],
+      "required": [
+        "type",
+        "mode",
+        "owner",
+        "executor"
+      ],
       "properties": {
-        "type": {"enum": ["REFRESH", "REGENERATE", "CREATE", "RECONCILE", "PRESERVE", "VALIDATE", "HANDOFF", "NO_ACTION"]},
-        "mode": {"enum": ["OWNER_NATIVE", "SEMANTICALLY_QUALIFIED", "EXTERNAL_OWNER", "NONE"]},
-        "owner": {"type": "string", "minLength": 1},
-        "executor": {"type": ["string", "null"]}
+        "type": {
+          "enum": [
+            "REFRESH",
+            "REGENERATE",
+            "CREATE",
+            "RECONCILE",
+            "PRESERVE",
+            "VALIDATE",
+            "HANDOFF",
+            "NO_ACTION"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "OWNER_NATIVE",
+            "SEMANTICALLY_QUALIFIED",
+            "EXTERNAL_OWNER",
+            "NONE"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
     "lifecycle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "reason", "terminal"],
+      "required": [
+        "status",
+        "reason",
+        "terminal"
+      ],
       "properties": {
-        "status": {"enum": ["DETECTED", "AWAITING_QUALIFICATION", "OPEN", "HANDOFF_REQUIRED", "SATISFIED", "VALIDATED", "CLOSED", "PRESERVED", "BLOCKED", "NOT_APPLICABLE"]},
-        "reason": {"type": "string"},
-        "terminal": {"type": "boolean"}
+        "status": {
+          "enum": [
+            "DETECTED",
+            "AWAITING_QUALIFICATION",
+            "OPEN",
+            "HANDOFF_REQUIRED",
+            "SATISFIED",
+            "VALIDATED",
+            "CLOSED",
+            "PRESERVED",
+            "BLOCKED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "terminal": {
+          "type": "boolean"
+        }
       }
     },
     "validation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "results"],
+      "required": [
+        "required",
+        "results"
+      ],
       "properties": {
-        "required": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
         "results": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "status", "evidence_ids", "detail"],
+            "required": [
+              "name",
+              "status",
+              "evidence_ids",
+              "detail"
+            ],
             "properties": {
-              "name": {"type": "string", "minLength": 1},
-              "status": {"enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN", "NotApplicable"]},
-              "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-              "detail": {"type": "string"}
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "BLOCKED",
+                  "UNKNOWN",
+                  "NotApplicable"
+                ]
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "detail": {
+                "type": "string"
+              }
             }
           }
         }
       }
     },
-    "blockers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
   },
   "$defs": {
     "revision": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "base_ref", "base_sha", "source_head_sha", "tested_revision_sha", "comparison_mode"],
+      "required": [
+        "repository",
+        "base_ref",
+        "base_sha",
+        "source_head_sha",
+        "tested_revision_sha",
+        "comparison_mode"
+      ],
       "properties": {
-        "repository": {"type": "string", "minLength": 1},
-        "base_ref": {"type": ["string", "null"]},
-        "base_sha": {"type": ["string", "null"]},
-        "source_head_sha": {"type": "string", "minLength": 1},
-        "tested_revision_sha": {"type": "string", "minLength": 1},
-        "comparison_mode": {"enum": ["merge_base_to_head", "worktree_to_head", "snapshot", "unknown"]}
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base_sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_head_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tested_revision_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "comparison_mode": {
+          "enum": [
+            "merge_base_to_head",
+            "worktree_to_head",
+            "snapshot",
+            "unknown"
+          ]
+        }
       }
     },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "type", "source", "locator", "epistemic", "supports"],
+      "required": [
+        "id",
+        "type",
+        "source",
+        "locator",
+        "epistemic",
+        "supports"
+      ],
       "properties": {
-        "id": {"type": "string", "minLength": 1},
-        "type": {"enum": ["change", "topology", "target", "harvest", "capability", "validation", "revision", "adapter"]},
-        "source": {"type": "string", "minLength": 1},
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "change",
+            "topology",
+            "target",
+            "harvest",
+            "capability",
+            "validation",
+            "revision",
+            "adapter"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
         "locator": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "value"],
+          "required": [
+            "kind",
+            "value"
+          ],
           "properties": {
-            "kind": {"enum": ["path", "rule", "sha", "symbol", "artifact", "value"]},
-            "value": {"type": "string", "minLength": 1}
+            "kind": {
+              "enum": [
+                "path",
+                "rule",
+                "sha",
+                "symbol",
+                "artifact",
+                "value"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
-        "epistemic": {"enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"]},
-        "supports": {"type": "string", "minLength": 1}
+        "epistemic": {
+          "enum": [
+            "CONFIRMED",
+            "INFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "supports": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }

@@ -99,7 +99,10 @@
       "leverage_rank": 4
     }
   ],
-  "critical_path": ["T1", "T2"],
+  "critical_path": [
+    "T1",
+    "T2"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -148,7 +151,12 @@
     "rollback": "Revert the two module commits. The view rebuilds from the previous init SQL on the next module update. The retry parameter is unused if the cron code is reverted."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T2", "T3", "T4"],
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
     "shared_causes": [
       "Singular load columns were nulled for every multi-load deal to protect financial cardinality",
       "The scale-ticket cursor advances before each load's savepoint commits"
@@ -198,7 +206,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1"],
+    "remaining_unknown_ids": [
+      "U1"
+    ],
     "next_skill": "cursor-build",
     "stop_reason": "Architecture is the existing view and cron. Two repairs are specified. Isolation and the seven baseline failures are explicit non-changes."
   },

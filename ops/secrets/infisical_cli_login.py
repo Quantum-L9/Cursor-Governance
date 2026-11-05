@@ -62,6 +62,7 @@ REQUIRED = ("client_id", "client_secret", "project_id")
 
 #: The one bootstrap secret, and its non-secret companion.
 ENV_CLIENT_ID = "L9_INFISICAL_CLIENT_ID"
+# nosemgrep: l9.baseline.python.hardcoded-credential -- environment variable name, not a value
 ENV_CLIENT_SECRET = "L9_INFISICAL_CLIENT_SECRET"
 ENV_PROJECT_ID = "L9_INFISICAL_PROJECT_ID"
 ENV_ENVIRONMENT = "L9_INFISICAL_ENV"

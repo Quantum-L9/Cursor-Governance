@@ -28,6 +28,14 @@ DEFAULT_DB_NAME = "memory.sqlite3"
 #: Columns 2.3.1 ``initialize()`` indexes before it can ALTER them onto a
 #: pre-2.3 ``outbox_events`` table.
 OUTBOX_LEASE_COLUMNS: tuple[str, ...] = ("lease_id", "lease_owner", "lease_expires_at")
+#: Literal DDL per column: no statement is built by string formatting.
+_OUTBOX_LEASE_DDL: dict[str, str] = {
+    "lease_id": "ALTER TABLE outbox_events ADD COLUMN lease_id TEXT",
+    "lease_owner": "ALTER TABLE outbox_events ADD COLUMN lease_owner TEXT",
+    "lease_expires_at": "ALTER TABLE outbox_events ADD COLUMN lease_expires_at TEXT",
+}
+if tuple(_OUTBOX_LEASE_DDL) != OUTBOX_LEASE_COLUMNS:  # one source for the column set
+    raise RuntimeError("store_compat: _OUTBOX_LEASE_DDL must cover OUTBOX_LEASE_COLUMNS in order")
 
 _DEBUG_LOG = Path(__file__).resolve().parents[2] / ".cursor" / "debug-01ef49.log"
 
@@ -93,7 +101,7 @@ def prepare_v2_sqlite_store(
             }
             for column in OUTBOX_LEASE_COLUMNS:
                 if column not in columns:
-                    connection.execute(f"ALTER TABLE outbox_events ADD COLUMN {column} TEXT")
+                    connection.execute(_OUTBOX_LEASE_DDL[column])
                     altered.append(f"outbox_events.{column}")
         if "memory_records" in tables:
             columns = {

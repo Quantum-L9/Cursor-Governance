@@ -15,8 +15,10 @@ REGISTRY_FILENAME = "infisical-login.registry.yaml"
 DEFAULT_REGISTRY = HERE / REGISTRY_FILENAME
 
 NAMESPACE = "cursor-governance"
+# nosemgrep: l9.baseline.python.hardcoded-credential -- secret-store path, not a value
 INVENTORY_LOGIN_SECRET = "cursor-governance/infisical-login"
 # Historical AWS SM object. Not written to the registry file.
+# nosemgrep: l9.baseline.python.hardcoded-credential -- secret-store path, not a value
 AWS_SM_LOGIN_SECRET = "openclaw-igorbot/infisical-cursor-governance"
 AWS_SM_PREFIX = "openclaw-igorbot/"
 AWS_SM_ALLOWLIST = frozenset({AWS_SM_LOGIN_SECRET})

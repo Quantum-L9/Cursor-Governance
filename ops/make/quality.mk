@@ -15,7 +15,7 @@ L9_TARGETS += \
 	lint-mypy \
 	lint \
 	uv-lock-check \
-	test \
+	pytest-suites \
 	corpus-reachability \
 	rules-corpus-audit \
 	rules-validate \
@@ -91,7 +91,8 @@ uv-lock-check:
 	else \
 		echo "OK: no uv.lock present, skipping"; \
 	fi
-test: venv
+# `make test` is the make-v1 facade verb (root Makefile -> Repo.mk repo-test).
+pytest-suites: venv
 	bash ops/scripts/run_pytest_suites.sh --tb=short -q
 corpus-reachability: venv
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
