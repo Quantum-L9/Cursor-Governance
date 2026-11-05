@@ -63,6 +63,8 @@ fi
 # the post-sync check and the seal all name this binary. A venv that ships only
 # a python3 shim (no python alias) passes the guard and must seal with it too.
 VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
+[ -x "$VENV_PYTHON" ] || VENV_PYTHON="$GOV_ROOT/.venv/bin/python"
+export PYTHONDONTWRITEBYTECODE=1
 
 # The architecture the host can actually run wheels for. `uname -m` alone is not
 # that answer: under Rosetta it reports the emulated architecture, and the venv
@@ -80,7 +82,7 @@ HOST_MACHINE="$(_host_native_machine)"
 
 _venv_machine() {
   [ -x "$VENV_PYTHON" ] || return 1
-  "$VENV_PYTHON" -I -c 'import platform; print(platform.machine())' 2>/dev/null
+  "$VENV_PYTHON" -B -I -c 'import platform; print(platform.machine())' 2>/dev/null
 }
 
 # The interpreter whose identity the fingerprint records: the venv's own, never
@@ -100,7 +102,7 @@ _fingerprint_python() {
 }
 
 fingerprint() {
-  "$(_fingerprint_python)" - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" \
+  "$(_fingerprint_python)" -B -I - "$GOV_ROOT" "$(uv --version 2>/dev/null || true)" \
     "$HOST_MACHINE" <<'PY'
 import hashlib
 import platform
@@ -138,7 +140,9 @@ _writer_lock_busy() {
   local rc=0
   [ -e "$LOCK_FILE" ] || return 1
   if command -v flock >/dev/null 2>&1; then
-    if flock -n -s "$LOCK_FILE" true 2>/dev/null; then
+    # Filename-form flock opens with O_CREAT. Open the existing file for input
+    # instead, in a subshell so the descriptor/lock is released on return.
+    if ( exec 9<"$LOCK_FILE" && flock -n -s 9 ) 2>/dev/null; then
       return 1
     fi
     return 0
@@ -231,7 +235,7 @@ _verify_environment() {
     probe='import l9_graphite_memory'
   fi
   # -I: the caller's PYTHONPATH / cwd must not lend a broken venv a package.
-  if [ -x "$VENV_PYTHON" ] && "$VENV_PYTHON" -I -c "$probe" >/dev/null 2>&1; then
+  if [ -x "$VENV_PYTHON" ] && "$VENV_PYTHON" -B -I -c "$probe" >/dev/null 2>&1; then
     rm -f "$IN_PROGRESS"
     return 0
   fi
@@ -262,7 +266,7 @@ if [ -x "$VENV_PYTHON" ]; then
   if [ -n "$_venv_machine_value" ] && [ "$_venv_machine_value" != "$HOST_MACHINE" ]; then
     _arch_mismatch="$_venv_machine_value"
     echo "UV: .venv interpreter is $_venv_machine_value on a $HOST_MACHINE host; re-synchronizing" >&2
-    rm -f "$STATE_FILE"
+    [ "$MODE" = "check" ] || rm -f "$STATE_FILE"
   fi
 fi
 
@@ -288,7 +292,7 @@ _seal_memory_artifact() {
   return 0
 }
 
-if [ "$current" = "$expected" ] && [ -x "$VENV_PYTHON" ]; then
+if [ "$current" = "$expected" ] && [ -x "$VENV_PYTHON" ] && [ -z "$_arch_mismatch" ]; then
   # Diagnostic, not a machine result: stdout in this chain is the sessionStart
   # JSON payload, so every human-readable line must go to stderr (F-08).
   echo "UV: cached locked environment" >&2
@@ -350,8 +354,10 @@ if [ "$_sync_rc" -ne 0 ]; then
   exit "$_sync_rc"
 fi
 
+VENV_PYTHON="$GOV_ROOT/.venv/bin/python3"
+[ -x "$VENV_PYTHON" ] || VENV_PYTHON="$GOV_ROOT/.venv/bin/python"
 if [ ! -x "$VENV_PYTHON" ]; then
-  echo "UV: sync completed without a usable .venv/bin/python3" >&2
+  echo "UV: sync completed without a usable .venv/bin/python3 or python" >&2
   exit 1
 fi
 

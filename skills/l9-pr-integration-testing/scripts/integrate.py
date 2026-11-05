@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Revision-bound, fail-closed Docker integration runner. No upstream mutations."""
+"""Revision-bound, fail-closed Docker integration runner.
+
+This runner exports a candidate checkout and can retest that checkout.
+It does not publish. Publication is the sibling publisher.
+"""
 
 from __future__ import annotations
 
@@ -298,6 +302,56 @@ def scratch_init(store: Path):
 def scratch_clone(store: Path, path: Path, timeout=120):
     """A clone of the scratch store with no hooks directory."""
     git(["clone", "--no-checkout", "--template=", str(store), str(path)], timeout=timeout)
+
+
+def export_candidate(src: Path, dest: Path) -> str:
+    """Copy a checkout out of a disposable directory. The copy owns its objects."""
+    git_dir = src / ".git"
+    if not git_dir.is_dir() or git_dir.is_symlink():
+        raise SafetyError("candidate checkout has no real git directory")
+    if dest.exists():
+        raise SafetyError(f"candidate export already exists: {dest}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dest, symlinks=True)
+    rev = git(["rev-parse", "HEAD"], cwd=dest).stdout.strip()
+    if not HEX40.fullmatch(rev):
+        raise SafetyError("exported candidate has no HEAD")
+    return rev
+
+
+def introduced_failures(baseline: list[dict], current: list[dict]) -> list[str]:
+    """Failure identities the candidate added relative to the baseline run.
+
+    An empty list means the retest is not worse. A result that cannot be
+    compared is treated as worse so publication stays fail-closed. A timeout,
+    or any other non-FAIL status the baseline did not already have, is worse
+    even when the new run parsed no failure identities.
+    """
+    before = {row.get("procedure"): row for row in baseline}
+    introduced: list[str] = []
+    for row in current:
+        pid = str(row.get("procedure") or "")
+        ref = before.get(pid)
+        status = row.get("status")
+        if ref is None:
+            if status != "PASS":
+                introduced.append(f"{pid}: no baseline result")
+            continue
+        if ref.get("status") == "PASS" and status != "PASS":
+            introduced.append(f"{pid}: baseline passed")
+            continue
+        if status == "PASS":
+            continue
+        if status != "FAIL" and status != ref.get("status"):
+            introduced.append(f"{pid}: status degraded to {status}")
+            continue
+        ref_ids = ref.get("failure_ids")
+        cur_ids = row.get("failure_ids")
+        if not isinstance(ref_ids, list) or not isinstance(cur_ids, list):
+            introduced.append(f"{pid}: failure identities cannot be compared")
+            continue
+        introduced.extend(sorted(set(cur_ids) - set(ref_ids)))
+    return introduced
 
 
 def local_bind_git_objects(m: dict, workdir: Path):
@@ -1200,6 +1254,7 @@ def run(m: dict, out: Path):
         with tempfile.TemporaryDirectory(prefix="l9-pr-integration-") as tmp:
             work = Path(tmp)
             work_path = work
+            combined_case = None
             try:
                 store = local_bind_git_objects(m, work)
                 verify_commands(m, store)
@@ -1256,11 +1311,14 @@ def run(m: dict, out: Path):
                 )
                 statuses = {}
                 combined_path = None
+                combined_case = None
                 combined_tests = []
                 for name, heads in phases:
                     case, merges, rev = prepare_case(
                         store, name, work, sandbox, writer, m["repository"]["base_sha"], heads
                     )
+                    if name == "combined":
+                        combined_case = case
                     row = {"name": name, "merges": merges, "revision": rev}
                     if rev is None:
                         statuses[name] = "CONFLICT"
@@ -1561,7 +1619,14 @@ def run(m: dict, out: Path):
                     p["status"] == "KILLED" for p in probe_results
                 )
             finally:
-                pass
+                if combined_case is not None:
+                    try:
+                        exported = out / "candidate"
+                        sha = export_candidate(combined_case, exported)
+                        manifest["candidate_path"] = str(exported.resolve())
+                        manifest["candidate_sha"] = sha
+                    except (SafetyError, OSError) as exc:
+                        manifest["candidate_export_error"] = str(exc)
     except (SafetyError, OSError, subprocess.TimeoutExpired) as exc:
         reason = str(exc)
         kind = blocker_kind(reason)
@@ -1596,13 +1661,80 @@ def run(m: dict, out: Path):
     return verdict
 
 
+def baseline_tests_from_evidence(evidence: Path) -> list[dict]:
+    manifest = json.loads((evidence / "integration_manifest.json").read_text(encoding="utf-8"))
+    for state in manifest.get("states") or []:
+        if state.get("name") == "baseline":
+            tests = state.get("tests") or []
+            if not isinstance(tests, list):
+                raise SafetyError("baseline tests are not a list")
+            return tests
+    raise SafetyError("baseline evidence has no baseline state")
+
+
+def retest_exported(m: dict, candidate: Path, out: Path, baseline_tests: list[dict]) -> dict:
+    """Rerun the verified argv on an exported checkout. Does not merge PR heads."""
+    validate_plan(m)
+    if out.exists() and any(out.iterdir()):
+        raise SafetyError(f"output must be empty: {out}")
+    out.mkdir(parents=True, exist_ok=True)
+    head = git(["rev-parse", "HEAD"], cwd=candidate).stdout.strip()
+    if not HEX40.fullmatch(head):
+        raise SafetyError("retest candidate has no HEAD")
+    dirty = git(["status", "--porcelain"], cwd=candidate, check=False)
+    if dirty.returncode != 0 or dirty.stdout.strip():
+        raise SafetyError("retest candidate is dirty or conflicted")
+    sandbox = DockerSandbox(
+        m["image"],
+        uuid.uuid4().hex[:10],
+        services=m.get("services") or [],
+        test_env=m.get("test_env"),
+    )
+    sandbox.preflight()
+    writer = EvidenceWriter(out)
+    tests = tests_case(sandbox, candidate, "retest", m["test_procedures"], writer)
+    introduced = introduced_failures(baseline_tests, tests)
+    body = {
+        "schema": "l9.integration.retest/v1",
+        "candidate_sha": head,
+        "tests": tests,
+        "introduced": introduced,
+        "worse_than_baseline": bool(introduced),
+    }
+    (out / "retest.json").write_text(
+        json.dumps(body, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return body
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--manifest", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument(
+        "--retest-candidate",
+        type=Path,
+        help="retest this exported checkout instead of merging PR heads",
+    )
+    ap.add_argument(
+        "--baseline-evidence",
+        type=Path,
+        help="prior evidence directory whose baseline tests the retest is compared with",
+    )
     args = ap.parse_args()
     try:
         plan = json.loads(args.manifest.read_text(encoding="utf-8"))
+        if args.retest_candidate:
+            if args.baseline_evidence is None:
+                raise SafetyError("retest requires --baseline-evidence")
+            body = retest_exported(
+                plan,
+                args.retest_candidate,
+                args.out,
+                baseline_tests_from_evidence(args.baseline_evidence),
+            )
+            print(json.dumps(body, sort_keys=True))
+            return 0 if not body["worse_than_baseline"] else 1
         verdict = run(plan, args.out)
     except (ValueError, OSError, SafetyError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

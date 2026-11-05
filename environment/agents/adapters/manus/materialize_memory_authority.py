@@ -1,146 +1,117 @@
 #!/usr/bin/env python3
-"""Materialize one connector-scoped Manus memory authority for one child process.
+"""Retired Manus credential materializer; pure grant inspection is assurance only.
 
-The connector provides a JSON map through stdin.  This helper accepts only the
-shared agents door and the Manus signing key, derives a public Manus-only grant
-from the canonical registry, and writes both maps under an already private
-runtime directory.  It never prints authority values or exports a human door.
+No production Memory 3.0 credential artifact may be created by this adapter.
+The retained pure helper validates an operating v2 binding and delegates full
+canonical assurance before deriving secret-free historical grant information.
+That information is not native OAuth authorization or service-side admission.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import os
-import stat
 import sys
 from pathlib import Path
-from typing import Any
 
 import yaml
 
-#: Canonical actor coordinate (rule 64); only this exact reference names Manus.
 MANUS_ACTOR_REF = "l9.actor-registry/global@1#manus"
+MANUS_SURFACE_REF = "l9.surface-registry/global@1#manus-cloud"
+RETIRED_REASON = (
+    "UPSTREAM_BLOCKED: stdio/HMAC authority materialization retired; native Manus client UNBOUND"
+)
 
 
 class AuthorityMaterializationError(ValueError):
-    """Raised when connector-provided authority is not scoped to Manus."""
-
-
-def _mode_is_private(path: Path, expected: int) -> bool:
-    return stat.S_IMODE(path.stat().st_mode) == expected
-
-
-def _write_private_json(path: Path, payload: dict[str, Any]) -> None:
-    encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    try:
-        with os.fdopen(descriptor, "wb") as handle:
-            handle.write(encoded)
-        os.chmod(path, 0o600)
-    except BaseException:
-        path.unlink(missing_ok=True)
-        raise
+    """Credential materialization is retired or canonical assurance failed."""
 
 
 def scoped_tokens(raw: object) -> dict[str, object]:
-    if not isinstance(raw, dict):
-        raise AuthorityMaterializationError("connector authority must be a JSON object")
-    if "human_door_secret" in raw:
-        raise AuthorityMaterializationError("human memory door is forbidden")
-    if set(raw) != {"agents_door_secret", "agent_signing_keys"}:
-        raise AuthorityMaterializationError(
-            "connector authority must contain only scoped agent fields"
-        )
-    door = raw.get("agents_door_secret")
-    keys = raw.get("agent_signing_keys")
-    if not isinstance(door, str) or len(door) < 24:
-        raise AuthorityMaterializationError("agents door is absent or too short")
-    if not isinstance(keys, dict) or set(keys) != {"manus"}:
-        raise AuthorityMaterializationError(
-            "connector authority must contain only the Manus signing key"
-        )
-    manus_key = keys.get("manus")
-    if not isinstance(manus_key, str) or len(manus_key) < 24 or manus_key == door:
-        raise AuthorityMaterializationError("Manus signing key is absent, too short, or reused")
-    return {"agents_door_secret": door, "agent_signing_keys": {"manus": manus_key}}
+    del raw
+    raise AuthorityMaterializationError(RETIRED_REASON)
 
 
 def _manus_grants(governance: Path) -> dict[str, object]:
-    registry_path = governance / "environment" / "agents" / "agent_registry.yaml"
-    registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
-    if not isinstance(registry, dict):
-        raise AuthorityMaterializationError("agent registry must be an object")
-    agents = registry.get("agents")
-    roles = registry.get("roles")
-    if not isinstance(agents, dict) or not isinstance(roles, dict):
-        raise AuthorityMaterializationError("agent registry is missing agents or roles")
-    manus = agents.get("manus")
-    # Same adaptation as ops/memory/materialize_agent_authority.py: the
-    # operating registry records binding_status and actor_ref (rule 64).
-    active = isinstance(manus, dict) and (
-        manus.get("status") == "active" or manus.get("binding_status") == "active"
-    )
-    if not active:
-        raise AuthorityMaterializationError("active Manus registry entry is required")
-    assert isinstance(manus, dict)
-    if "agent_id" not in manus:
-        # Identity comes from the canonical actor_ref only; never infer it from
-        # the adapter name (rule 64). A missing or foreign ref fails closed.
-        if str(manus.get("actor_ref") or "") != MANUS_ACTOR_REF:
+    """Pure secret-free legacy grant inspection, never a credential path."""
+    try:
+        registry = yaml.safe_load(
+            (governance / "environment/agents/agent_registry.yaml").read_text(encoding="utf-8")
+        )
+        if (
+            not isinstance(registry, dict)
+            or registry.get("schema") != "l9.cursor-governance.agent-bindings/v2"
+        ):
+            raise AuthorityMaterializationError("exact v2 operating binding schema is required")
+        agents, roles = registry.get("agents"), registry.get("roles")
+        if not isinstance(agents, dict) or not isinstance(roles, dict):
+            raise AuthorityMaterializationError("agent registry is missing agents or roles")
+        manus = agents.get("manus")
+        if not isinstance(manus, dict) or manus.get("binding_status") != "active":
+            raise AuthorityMaterializationError("binding_status must be exactly active")
+        if {"agent_id", "source", "status"}.intersection(manus):
             raise AuthorityMaterializationError(
-                f"Manus registry entry must carry actor_ref {MANUS_ACTOR_REF}"
+                "legacy agent_id/source/status overrides are forbidden"
             )
-        manus = dict(manus, agent_id="manus")
-    role = manus.get("role")
-    role_definition = roles.get(role)
-    if not isinstance(role_definition, dict):
-        raise AuthorityMaterializationError("Manus role definition is required")
+        saved = list(sys.path)
+        try:
+            source_root = Path(__file__).resolve().parents[4]
+            sys.path.insert(0, str(source_root))
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from validate_manus_adapter import canonical_identity_errors
 
-    sys.path.insert(0, str(governance))
-    from environment.agents.tools.render_principals import build_principal
+            from ops.memory.agent_identity import actor_ref_from_binding
 
-    principal = build_principal(
-        manus,
-        role_definition,
-        tenant="l9",
-        organization="quantum-l9",
-        workspace=str(registry.get("workspace_group", "igor-workspace")),
-    )
-    from ops.memory.materialize_agent_authority import signed_door_grant
+            if actor_ref_from_binding("manus", manus) != MANUS_ACTOR_REF:
+                raise AuthorityMaterializationError("actor_ref must name exact canonical Manus")
+            if manus.get("surface_refs") != [MANUS_SURFACE_REF]:
+                raise AuthorityMaterializationError("surface_refs must name current manus-cloud")
+            failures = canonical_identity_errors(governance)
+            if failures:
+                raise AuthorityMaterializationError("; ".join(failures))
+            role = manus.get("role")
+            role_definition = roles.get(role)
+            if not isinstance(role_definition, dict):
+                raise AuthorityMaterializationError("Manus role definition is required")
+            groups = manus.get("assigned_groups")
+            if (
+                not isinstance(groups, list)
+                or not groups
+                or any(not isinstance(group, str) or not group for group in groups)
+            ):
+                raise AuthorityMaterializationError(
+                    "non-empty assigned namespace scope is required"
+                )
+            from environment.agents.tools.render_principals import build_principal
+            from ops.memory.materialize_agent_authority import signed_door_grant
 
-    return {"grants": {"manus": signed_door_grant(principal)}}
+            principal = build_principal(
+                dict(manus, agent_id="manus"),
+                role_definition,
+                tenant="l9",
+                organization="quantum-l9",
+                workspace=str(registry.get("workspace_group", "igor-workspace")),
+            )
+            return {"grants": {"manus": signed_door_grant(principal)}}
+        finally:
+            sys.path[:] = saved
+    except (ImportError, OSError, ValueError, KeyError, TypeError, yaml.YAMLError) as exc:
+        raise AuthorityMaterializationError(str(exc)) from exc
 
 
 def materialize(governance: Path, output_directory: Path, authority: object) -> None:
-    governance = governance.resolve()
-    if not (governance / "CANONICAL_LAW.md").is_file():
-        raise AuthorityMaterializationError("governance root is invalid")
-    output_directory = output_directory.resolve()
-    if not output_directory.is_dir() or not _mode_is_private(output_directory, 0o700):
-        raise AuthorityMaterializationError("runtime authority directory must be mode 0700")
-    tokens = scoped_tokens(authority)
-    grants = _manus_grants(governance)
-    _write_private_json(output_directory / "agent_tokens.local.json", tokens)
-    try:
-        _write_private_json(output_directory / "agent_grants.json", grants)
-    except BaseException:
-        (output_directory / "agent_tokens.local.json").unlink(missing_ok=True)
-        raise
+    """Refuse before filesystem resolution, authority inspection or output."""
+    del governance, output_directory, authority
+    raise AuthorityMaterializationError(RETIRED_REASON)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--governance", type=Path, required=True)
     parser.add_argument("--output-directory", type=Path, required=True)
-    args = parser.parse_args(argv)
-    try:
-        authority = json.load(sys.stdin)
-        materialize(args.governance, args.output_directory, authority)
-    except (AuthorityMaterializationError, json.JSONDecodeError, OSError, yaml.YAMLError) as exc:
-        print(f"manus-memory-authority ERROR: {exc}", file=sys.stderr)
-        return 1
-    return 0
+    parser.parse_args(argv)
+    # stdin can contain stale authority: never read it, even for validation.
+    print("manus-memory-authority " + RETIRED_REASON, file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

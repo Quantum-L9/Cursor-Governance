@@ -9,7 +9,7 @@ dag_file: workflows/dags/plan_simple_build_dag.py
 
 # /l9-plan-build — plan, harden, Build/GMP
 
-**DAG-ENFORCED.** Execute `plan-simple-build-v1` at `workflows/dags/plan_simple_build_dag.py` (`SESSION_GUIDANCE`).
+**DAG-ENFORCED.** Execute `plan-simple-build-v1` at `workflows/dags/plan_simple_build_dag.py` (`SESSION_GUIDANCE`). The plan writer is `skills/l9-plan-simple/scripts/run_plan_pipeline.py`; it must exit 0 before Build.
 
 Composes existing owners. Do not invent a second skill.
 

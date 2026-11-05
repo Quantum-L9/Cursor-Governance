@@ -129,7 +129,7 @@ tiers:
   - skill: l9-pr-audit
     reason: deep revision-bound PR audit that emits evidence bundles and Fable handoffs; never mutates audited PRs; slash or explicit invoke only; disable-model-invocation
   - skill: l9-pr-integration-testing
-    reason: runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation
+    reason: runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; publishes one new integration PR of the retested tree through make pr and does not update source branches or merge; its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation
   - skill: l9-coding-agent
     reason: GAR realization sibling that mutates code inside a locked semantic envelope; its broad implement/repair/refactor description would hijack ordinary coding routing if auto-invoked; slash or explicit invoke only; disable-model-invocation
   - skill: l9-pipeline-orchestrator

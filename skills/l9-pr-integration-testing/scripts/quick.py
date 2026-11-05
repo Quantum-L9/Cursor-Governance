@@ -186,6 +186,8 @@ def summarize(evidence: Path) -> dict:
         "service_warnings": manifest.get("service_warnings", []),
         "cleanup": manifest.get("cleanup"),
         "runner_scripts": manifest.get("runner_scripts", {}),
+        "candidate_path": manifest.get("candidate_path", ""),
+        "candidate_sha": manifest.get("candidate_sha", ""),
         "evidence": str(evidence),
     }
 
@@ -210,6 +212,16 @@ def render(summary: dict) -> str:
     for finding in summary["findings"]:
         lines.append(f"  [{finding['classification']} {finding['severity']}] {finding['reason']}")
     lines.append(f"  evidence: {summary['evidence']}")
+    if summary.get("candidate_path"):
+        lines.append(f"  candidate: {summary['candidate_path']}")
+        lines.append(
+            "  retest: python3 scripts/integrate.py --retest-candidate "
+            "<candidate> --baseline-evidence <evidence> --manifest <manifest> --out <retest>"
+        )
+        lines.append(
+            "  publish: python3 scripts/publish_integration_pr.py --evidence <evidence> "
+            "--candidate <candidate> --retest <retest>"
+        )
     if summary["verdict"] == "INCOMPLETE_EVIDENCE" and summary["execution"].get("docker_executed"):
         lines.append(
             "  next: review the combined diff, then scripts/apply_review.py (SKILL.md step 7)"

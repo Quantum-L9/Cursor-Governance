@@ -1349,6 +1349,11 @@ def main() -> int:
         default=None,
         help="bind the immutable baseline from this git work tree (read-only probes)",
     )
+    parser.add_argument(
+        "--allow-draft",
+        action="store_true",
+        help="emit a projection that still contains undeclared fields",
+    )
     args = parser.parse_args()
     plan_path = safe_cli_path(args.plan_json)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -1367,7 +1372,15 @@ def main() -> int:
             template_path = safe_cli_path(str(TEMPLATE_REL))
     template_text = template_path.read_text(encoding="utf-8")
     baseline = bind_workspace(safe_cli_path(args.workspace)) if args.workspace else None
-    sys.stdout.write(render(plan, template_text, execute_via=args.execute_via, baseline=baseline))
+    text = render(plan, template_text, execute_via=args.execute_via, baseline=baseline)
+    sys.stdout.write(text)
+    if not args.allow_draft and "unknown — not declared" in text:
+        print(
+            "FAIL: projection contains undeclared fields (unknown — not declared). "
+            "Declare them in PLAN_DOCUMENT or pass --allow-draft.",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 

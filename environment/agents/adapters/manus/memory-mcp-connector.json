@@ -5,37 +5,48 @@
     "path": "environment/agents/adapters/manus/memory-mcp-connector.json",
     "layer": "adapter",
     "owner": "memory-control-plane",
-    "status": "active",
-    "version": "2.0.0",
-    "updated": "2026-09-20",
-    "note": "Carrier for the separate package-owned signed Manus memory MCP stdio lane. A local draft may place only the Manus-scoped agent door and Manus signing key in the Custom MCP encrypted environment; the launcher derives the public Manus grant and removes per-process material on exit. Never add an HTTP URL, provider credential, human door, peer key, or raw assertion here."
+    "status": "blocked",
+    "version": "3.0.0",
+    "updated": "2026-11-05",
+    "note": "Non-installable native consumer contract. Canonical registration is not authenticated client admission. No executable connector can be rendered until an accepted native package and proven Manus client binding exist."
   },
   "name": "l9-memory-manus",
-  "transport": "stdio",
-  "command": "rendered-locally",
+  "transport": "streamable-http",
   "authentication": {
-    "mode": "inherited-signed-agent-assertion",
-    "agent_id": "manus",
-    "human_door": "forbidden",
-    "local_operator_fallback": "forbidden"
+    "mode": "native-authenticated-oauth",
+    "credential_delivery": "host-managed-native-client",
+    "actor_admission": "UNBOUND"
   },
-  "authority_delivery": {
-    "mode": "encrypted-connector-environment",
-    "payload": "manus-scoped-agent-door-and-signing-key-only",
-    "grant": "derived-from-canonical-agent-registry",
-    "materialization": "per-process-0600-runtime-files-removed-on-exit"
+  "identity": {
+    "actor_ref": "l9.actor-registry/global@1#manus",
+    "surface_ref": "l9.surface-registry/global@1#manus-cloud",
+    "registration_is_authentication": false
   },
   "package": {
     "distribution": "l9-graphite-memory",
-    "entrypoint": "l9-memory-server --transport stdio",
-    "tool_authority": "package-owned-mcp-tools"
+    "status": "UPSTREAM_BLOCKED",
+    "examined_consumer_pin": "2.6.0",
+    "owner_revision": "ae6e2c0d0c29dfe2a3de3fdf5293e4d996164620",
+    "owner_issue": "Quantum-L9/l9-graphiti-memory#108",
+    "tool_authority": "MemoryService"
   },
-  "scope": {
-    "ordinary_agent_reads": true,
-    "cold_safe_agent_writes": true,
-    "governed_writes_and_phase_locks": true,
-    "lifecycle_start_close": false,
-    "provider_transport": false,
-    "generic_shell": false
+  "native_client": {
+    "requested": "manus-native",
+    "status": "UNBOUND",
+    "owner_api": "unavailable"
+  },
+  "readiness": {
+    "status": "UPSTREAM_BLOCKED",
+    "live": "UNKNOWN",
+    "installable": false,
+    "coding_session_requires_memory": false
+  },
+  "fallback": {
+    "stdio": "forbidden",
+    "hmac": "forbidden",
+    "static_bearer": "forbidden",
+    "bridge": "forbidden",
+    "operator_cli_as_agent_transport": "forbidden",
+    "provider_transport": "forbidden"
   }
 }

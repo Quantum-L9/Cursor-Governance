@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ SCRIPTS = REPO / "skills/l9-pr-integration-testing/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import integrate  # noqa: E402
+import publish_integration_pr as publish  # noqa: E402
 import quick  # noqa: E402
 
 CONTRACT = (
@@ -656,3 +658,282 @@ def test_a_hung_log_capture_never_skips_container_removal(
     assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]
     logs = [r for r in writer.records if r["kind"] == "SERVICE_LOG"]
     assert [r["status"] for r in logs] == ["UNAVAILABLE"]
+
+
+def _init_repo(path: Path) -> str:
+    path.mkdir(parents=True)
+    integrate.git(["init", "--template=", str(path)])
+    (path / "README").write_text("x\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=path)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "init"],
+        cwd=path,
+    )
+    return integrate.git(["rev-parse", "HEAD"], cwd=path).stdout.strip()
+
+
+def _runner_manifest() -> dict:
+    return {
+        "repository": {
+            "full_name": "o/r",
+            "base_ref": "main",
+            "base_sha": "a" * 40,
+            "url": "https://github.com/o/r.git",
+        },
+        "prs": [
+            {
+                "number": 4,
+                "head_sha": "b" * 40,
+                "base_ref": "main",
+                "source_branch": "feature/four",
+                "fetch_url": "https://github.com/o/r.git",
+                "fetch_ref": "refs/pull/4/head",
+            },
+            {
+                "number": 12,
+                "head_sha": "c" * 40,
+                "base_ref": "main",
+                "source_branch": "feature/twelve",
+                "fetch_url": "https://github.com/o/r.git",
+                "fetch_ref": "refs/pull/12/head",
+            },
+        ],
+        "integration_order": [4, 12],
+        "order_basis": "EXPLICIT_APPROVED",
+        "network": "none",
+        "image": "sha256:" + "c" * 64,
+        "test_procedures": quick.procedures_from_contract(CONTRACT, ["test"], 600),
+        "execution_authority": {"scope": "DISPOSABLE_DOCKER_ONLY", "source": "operator"},
+    }
+
+
+def test_export_survives_removal_of_the_source_directory(tmp_path: Path) -> None:
+    source_root = tmp_path / "disposable"
+    source = source_root / "combined"
+    sha = _init_repo(source)
+    dest = tmp_path / "evidence" / "candidate"
+    exported = integrate.export_candidate(source, dest)
+    shutil.rmtree(source_root)
+    assert dest.is_dir()
+    assert exported == sha
+    assert integrate.git(["rev-parse", "HEAD"], cwd=dest).stdout.strip() == sha
+
+
+def test_retest_does_not_merge_source_heads(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def boom(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("retest merged source heads")
+
+    monkeypatch.setattr(integrate, "prepare_case", boom)
+    monkeypatch.setattr(integrate.DockerSandbox, "preflight", lambda self: {})
+    # retest_exported builds its DockerSandbox from the host identity, which
+    # refuses UID 0 by design. Pin a non-root identity (as docker_args does) so
+    # the outcome does not depend on who runs the suite: cloud sessions are root.
+    monkeypatch.setattr(integrate.os, "getuid", lambda: 1000)
+    monkeypatch.setattr(integrate.os, "getgid", lambda: 1000)
+    monkeypatch.setattr(
+        integrate,
+        "tests_case",
+        lambda *_args, **_kwargs: [
+            {
+                "procedure": "test",
+                "status": "PASS",
+                "failure_ids": [],
+                "evidence_id": "e",
+                "returncode": 0,
+                "skipped": 0,
+            }
+        ],
+    )
+    candidate = tmp_path / "candidate"
+    _init_repo(candidate)
+    body = integrate.retest_exported(
+        _runner_manifest(),
+        candidate,
+        tmp_path / "retest",
+        [{"procedure": "test", "status": "PASS", "failure_ids": []}],
+    )
+    assert body["worse_than_baseline"] is False
+    assert (tmp_path / "retest" / "retest.json").is_file()
+
+
+def test_introduced_failure_marks_a_new_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "PASS", "failure_ids": []}],
+        [{"procedure": "test", "status": "FAIL", "failure_ids": ["tests/test_a.py::test_x"]}],
+    )
+    assert introduced == ["test: baseline passed"]
+
+
+def test_timeout_after_a_baseline_failure_is_a_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "FAIL", "failure_ids": ["tests/a.py::x"]}],
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+    )
+    assert introduced == ["test: status degraded to TIMEOUT"]
+
+
+def test_repeated_timeout_without_new_ids_is_not_a_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+    )
+    assert introduced == []
+
+
+def test_publisher_names_one_branch_and_refuses_unsafe_targets() -> None:
+    assert publish.branch_name([12, 4]) == "integration/l9-prs-4-12"
+    common = {
+        "head_sha": "a" * 40,
+        "retest_sha": "b" * 40,
+        "manifest_sha": "c" * 40,
+        "descends_from_manifest": True,
+        "branch": "integration/l9-prs-4",
+        "source_branches": {"feature/four"},
+        "remote_branches": set(),
+        "worse": False,
+        "dirty": False,
+    }
+    with pytest.raises(publish.PublishRefusal, match="retested SHA"):
+        publish.decide(**common)
+    with pytest.raises(publish.PublishRefusal, match="source PR branch"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "branch": "feature/four",
+            }
+        )
+    with pytest.raises(publish.PublishRefusal, match="already has"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "remote_branches": {"integration/l9-prs-4"},
+            }
+        )
+    with pytest.raises(publish.PublishRefusal, match="no candidate SHA"):
+        publish.decide(
+            **{**common, "head_sha": "a" * 40, "retest_sha": "a" * 40, "manifest_sha": ""}
+        )
+    with pytest.raises(publish.PublishRefusal, match="does not descend"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "descends_from_manifest": False,
+            }
+        )
+
+
+def _publication_evidence(path: Path, *, candidate_sha: str, url: str) -> Path:
+    path.mkdir()
+    (path / "integration_manifest.json").write_text(
+        json.dumps(
+            {
+                "repository": {"url": url, "base_ref": "main"},
+                "prs": [
+                    {
+                        "number": 4,
+                        "source_branch": "feature/four",
+                        "head_sha": "b" * 40,
+                    }
+                ],
+                "candidate_sha": candidate_sha,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _retest_dir(path: Path, candidate_sha: str) -> Path:
+    path.mkdir()
+    (path / "retest.json").write_text(
+        json.dumps({"candidate_sha": candidate_sha, "worse_than_baseline": False}),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_publish_refuses_a_checkout_outside_the_exported_history(tmp_path: Path) -> None:
+    exported = _init_repo(tmp_path / "exported")
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    integrate.git(["init", "--template=", str(unrelated)])
+    (unrelated / "README").write_text("other\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=unrelated)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "other"],
+        cwd=unrelated,
+    )
+    other = integrate.git(["rev-parse", "HEAD"], cwd=unrelated).stdout.strip()
+    assert other != exported
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    evidence = _publication_evidence(tmp_path / "evidence", candidate_sha=exported, url=str(bare))
+    retest = _retest_dir(tmp_path / "retest", other)
+    with pytest.raises(publish.PublishRefusal, match="does not descend"):
+        publish.assess_evidence(evidence, unrelated, retest)
+
+
+def test_publish_accepts_the_exported_candidate_and_a_descendant(tmp_path: Path) -> None:
+    candidate = tmp_path / "candidate"
+    exported = _init_repo(candidate)
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    evidence = _publication_evidence(tmp_path / "evidence", candidate_sha=exported, url=str(bare))
+    same = publish.assess_evidence(evidence, candidate, _retest_dir(tmp_path / "retest", exported))
+    assert same["head_sha"] == exported
+    (candidate / "README").write_text("y\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=candidate)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "repair"],
+        cwd=candidate,
+    )
+    child = integrate.git(["rev-parse", "HEAD"], cwd=candidate).stdout.strip()
+    later = publish.assess_evidence(
+        evidence, candidate, _retest_dir(tmp_path / "retest-child", child)
+    )
+    assert later["head_sha"] == child
+    assert publish.head_descends_from(candidate, exported) is True
+
+
+def test_prepare_branch_does_not_move_source_refs(tmp_path: Path) -> None:
+    candidate = tmp_path / "candidate"
+    sha = _init_repo(candidate)
+    integrate.git(["update-ref", "refs/heads/l9-pr-7", sha], cwd=candidate)
+    publish.prepare_local_branch(candidate, "integration/l9-prs-7", "https://github.com/o/r.git")
+    assert integrate.git(["rev-parse", "integration/l9-prs-7"], cwd=candidate).stdout.strip() == sha
+    assert integrate.git(["rev-parse", "l9-pr-7"], cwd=candidate).stdout.strip() == sha
+    origin = integrate.git(["remote", "get-url", "origin"], cwd=candidate).stdout.strip()
+    assert origin == "https://github.com/o/r.git"
+
+
+def test_remote_branch_probe_reads_without_updating(tmp_path: Path) -> None:
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    seed = tmp_path / "seed"
+    real = _init_repo(seed)
+    before = integrate.git(["--git-dir", str(bare), "show-ref"], check=False).stdout
+    integrate.git(
+        ["--git-dir", str(bare), "fetch", str(seed), "HEAD:refs/heads/integration/l9-prs-4"]
+    )
+    assert publish.remote_has_branch(str(bare), "integration/l9-prs-4") is True
+    assert publish.remote_has_branch(str(bare), "integration/l9-prs-9") is False
+    after = integrate.git(
+        ["--git-dir", str(bare), "rev-parse", "integration/l9-prs-4"]
+    ).stdout.strip()
+    assert after == real
+    assert "l9-pr-" not in before
+
+
+def test_runner_and_publisher_have_no_direct_publication_command() -> None:
+    for name in ("integrate.py", "publish_integration_pr.py"):
+        text = (SCRIPTS / name).read_text(encoding="utf-8")
+        assert "git push" not in text
+        assert "gh pr create" not in text
