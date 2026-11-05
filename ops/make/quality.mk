@@ -92,6 +92,9 @@ uv-lock-check:
 		echo "OK: no uv.lock present, skipping"; \
 	fi
 # `make test` is the make-v1 facade verb (root Makefile -> Repo.mk repo-test).
+# In a GitHub Actions pull_request run (Core's required Analyze job) the wrapper
+# tests only the PR's changed files (ops/scripts/lib/ci_pr_scope.sh); push,
+# dispatch and local runs keep the full suite. L9_CI_FULL_SUITE=1 forces it.
 pytest-suites: venv
 	bash ops/scripts/run_pytest_suites.sh --tb=short -q
 corpus-reachability: venv
