@@ -52,6 +52,7 @@ def _gar_module():
     script_dir = REPO_ROOT / "skills" / "l9-global-architect" / "scripts"
     if str(script_dir) not in sys.path:
         sys.path.insert(0, str(script_dir))
+    sys.dont_write_bytecode = True
     import write_plan_run
 
     return write_plan_run

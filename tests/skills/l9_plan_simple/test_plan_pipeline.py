@@ -14,12 +14,13 @@ ADMIT = REPO / "skills" / "l9-plan-simple" / "scripts" / "admit_plan.py"
 VALIDATOR = REPO / "skills" / "l9-plan" / "scripts" / "validate_plan_document.py"
 RENDERER = REPO / "skills" / "l9-plan" / "scripts" / "render_plan_pe_autonomy.py"
 FIXTURE = REPO / "skills" / "l9-plan" / "fixtures" / "plan_pass.json"
-HOLD = REPO / "tests" / "skills" / "l9_plan_simple" / "_pipeline_hold"
+HOLD_ROOT = REPO / "tests" / "skills" / "l9_plan_simple"
 GAR_SCRIPTS = REPO / "skills" / "l9-global-architect" / "scripts"
 SIMPLE_SCRIPTS = REPO / "skills" / "l9-plan-simple" / "scripts"
 
 sys.path.insert(0, str(SIMPLE_SCRIPTS))
 sys.path.insert(0, str(GAR_SCRIPTS))
+sys.dont_write_bytecode = True
 
 from admit_plan import check_plan  # noqa: E402
 from generate_plan_section_receipt import build_receipt  # noqa: E402
@@ -39,6 +40,12 @@ def _prefetch(workspace: Path) -> None:
     path.write_text(json.dumps({"schema": "test", "status": "HIT"}) + "\n", encoding="utf-8")
 
 
+def _hold(name: str) -> Path:
+    path = HOLD_ROOT / f"_pipeline_hold_{name}"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def _clear(hold: Path) -> None:
     if not hold.exists():
         return
@@ -51,7 +58,7 @@ def _clear(hold: Path) -> None:
 
 
 def test_v1_pipeline_exits_nonzero_without_a_gar_run(tmp_path: Path) -> None:
-    hold = HOLD
+    hold = _hold("v1")
     hold.mkdir(parents=True, exist_ok=True)
     plan = hold / "plan.json"
     try:
@@ -106,7 +113,7 @@ def test_v2_validator_rejects_a_plan_missing_required_declarations(tmp_path: Pat
 
 
 def test_v3_pipeline_passes_when_the_gar_run_and_declarations_are_present() -> None:
-    hold = HOLD
+    hold = _hold("v3")
     hold.mkdir(parents=True, exist_ok=True)
     plan = hold / "plan.json"
     gar = hold / "gar-run.json"
@@ -152,7 +159,7 @@ def test_v3_pipeline_passes_when_the_gar_run_and_declarations_are_present() -> N
 
 
 def test_v4_admit_rejects_a_title_and_paragraph() -> None:
-    hold = HOLD
+    hold = _hold("v4")
     hold.mkdir(parents=True, exist_ok=True)
     thin = hold / "thin_title.plan.md"
     try:
@@ -174,7 +181,7 @@ def test_v4_admit_rejects_a_title_and_paragraph() -> None:
 
 
 def test_v5_receipt_fails_when_invoked_and_the_run_file_is_absent() -> None:
-    hold = HOLD
+    hold = _hold("v5")
     hold.mkdir(parents=True, exist_ok=True)
     plan = hold / "plan.json"
     md = hold / "out.plan.md"

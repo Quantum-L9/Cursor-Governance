@@ -24,6 +24,7 @@ from validate_plan_section_receipt import check_receipt  # noqa: E402
 GAR_SCRIPTS = REPO / "skills" / "l9-global-architect" / "scripts"
 if str(GAR_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(GAR_SCRIPTS))
+sys.dont_write_bytecode = True
 from write_plan_run import write_run  # noqa: E402
 
 # Repo-root paths: the scripts confine CLI arguments to the working directory,

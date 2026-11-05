@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,13 +35,15 @@ UNBOUND_PROOF = "unbound — no "
 def _gar_module():
     if str(GAR_SCRIPTS) not in sys.path:
         sys.path.insert(0, str(GAR_SCRIPTS))
+    sys.dont_write_bytecode = True
     import write_plan_run
 
     return write_plan_run
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=Path.cwd(), text=True, capture_output=True)
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    return subprocess.run(cmd, cwd=Path.cwd(), text=True, capture_output=True, env=env)
 
 
 def _marker_hits(text: str) -> list[str]:
