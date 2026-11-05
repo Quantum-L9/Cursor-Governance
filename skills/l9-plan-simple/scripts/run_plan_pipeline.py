@@ -41,9 +41,22 @@ def _gar_module():
     return write_plan_run
 
 
-def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str], *, workspace: Path | None = None) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    if workspace is not None:
+        env["L9_PLAN_WORKSPACE"] = str(workspace)
     return subprocess.run(cmd, cwd=Path.cwd(), text=True, capture_output=True, env=env)
+
+
+def _sibling_receipt(plan_md: Path) -> Path:
+    """The only receipt path admit_plan.py will read."""
+    name = plan_md.name
+    suffix = ".plan.md"
+    if name.endswith(suffix):
+        receipt_name = name[: -len(suffix)] + ".section-receipt.json"
+    else:
+        receipt_name = name + ".section-receipt.json"
+    return plan_md.with_name(receipt_name)
 
 
 def _marker_hits(text: str) -> list[str]:
@@ -72,18 +85,26 @@ def main(argv: list[str] | None = None) -> int:
         workspace = safe_cli_path(args.workspace)
         out_md = safe_cli_path(args.out_md)
         gar_run = safe_cli_path(args.gar_run)
-        receipt_arg = args.out_receipt
-        if receipt_arg is None:
-            receipt_arg = str(out_md).removesuffix(".plan.md") + ".section-receipt.json"
-        out_receipt = safe_cli_path(receipt_arg)
+        canonical = _sibling_receipt(out_md)
+        if args.out_receipt is None:
+            out_receipt = canonical
+        else:
+            out_receipt = safe_cli_path(args.out_receipt)
     except SystemExit as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
+
+    if out_receipt.resolve() != canonical.resolve():
+        print(
+            f"FAIL: --out-receipt must be the sibling {canonical.name} that admit_plan.py reads",
+            file=sys.stderr,
+        )
         return 2
 
     if not gar_run.is_file():
         print(f"FAIL: GAR run file is absent: {gar_run}", file=sys.stderr)
         return 1
-    problems = _gar_module().verify_run(gar_run)
+    problems = _gar_module().verify_run(gar_run, workspace=workspace)
     if problems:
         print("FAIL: GAR run file", file=sys.stderr)
         for problem in problems:
@@ -103,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         print("FAIL: memory prefetch receipt is empty", file=sys.stderr)
         return 1
 
-    validated = _run([sys.executable, str(VALIDATOR), str(plan_json)])
+    validated = _run([sys.executable, str(VALIDATOR), str(plan_json)], workspace=workspace)
     if validated.returncode != 0:
         sys.stderr.write(validated.stdout)
         sys.stderr.write(validated.stderr)
@@ -117,7 +138,8 @@ def main(argv: list[str] | None = None) -> int:
             f"--execute-via={args.execute_via}",
             "--workspace",
             str(workspace),
-        ]
+        ],
+        workspace=workspace,
     )
     hits = _marker_hits(rendered.stdout)
     if rendered.returncode != 0 or hits:
@@ -141,18 +163,41 @@ def main(argv: list[str] | None = None) -> int:
             "--gar-invoked",
             "--gar-run",
             str(gar_run),
-        ]
+        ],
+        workspace=workspace,
     )
     if generated.returncode != 0:
         sys.stderr.write(generated.stdout)
         sys.stderr.write(generated.stderr)
         return generated.returncode or 1
-    checked = _run([sys.executable, str(VALIDATE_RECEIPT), str(out_receipt)])
+    checked = _run([sys.executable, str(VALIDATE_RECEIPT), str(out_receipt)], workspace=workspace)
     sys.stdout.write(checked.stdout)
     if checked.returncode != 0:
         sys.stderr.write(checked.stderr)
         sys.stderr.write(checked.stdout)
         return checked.returncode or 1
+
+    scripts = str(SCRIPTS)
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from admit_plan import check_plan
+
+    admit_errors = check_plan(out_md)
+    if admit_errors:
+        print("FAIL: pipeline output is not admissible", file=sys.stderr)
+        for err in admit_errors:
+            print(f"  {err}", file=sys.stderr)
+        return 1
+
+    hooks = REPO / "ops" / "hooks"
+    if str(hooks) not in sys.path:
+        sys.path.insert(0, str(hooks))
+    import plan_kernel_gate
+
+    plan_kernel_gate.clear_pipeline_required(workspace, out_md)
+    toplevel = _gar_module().planned_workspace(workspace)
+    if toplevel != workspace.resolve():
+        plan_kernel_gate.clear_pipeline_required(toplevel, out_md)
     print(f"PASS: wrote {out_md}")
     return 0
 

@@ -11,13 +11,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 SCHEMA = "l9.gar_plan_run.v1"
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = SKILL_ROOT.parents[1]
 MANIFEST = SKILL_ROOT / "runtime" / "MANIFEST.yaml"
 
 try:
@@ -50,12 +51,49 @@ def load_order_digest(entries: list[dict[str, str]]) -> str:
     return _sha256_bytes(blob.encode("utf-8"))
 
 
-def _evidence_ok(rel: str) -> str | None:
+def planned_workspace(explicit: Path | None = None) -> Path:
+    """Git root of the repository being planned.
+
+    Evidence paths are relative to that repository, not to the governance
+    clone that ships this script. An explicit path wins, then
+    ``L9_PLAN_WORKSPACE`` (so a child verifier follows the pipeline's
+    ``--workspace``), then the working directory. A directory inside a
+    checkout resolves to that checkout's toplevel.
+    """
+    if explicit is None:
+        raw = os.environ.get("L9_PLAN_WORKSPACE", "").strip()
+        if raw:
+            explicit = Path(raw)
+    start = (explicit if explicit is not None else Path.cwd()).expanduser()
+    try:
+        start = start.resolve()
+    except OSError:
+        start = Path.cwd().resolve()
+    probe = start if start.is_dir() else start.parent
+    if explicit is not None and not probe.is_dir():
+        raise ValueError(f"workspace is not a directory: {explicit}")
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=probe,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return probe
+    top = proc.stdout.strip()
+    if proc.returncode == 0 and top:
+        return Path(top).resolve()
+    return probe
+
+
+def _evidence_ok(rel: str, root: Path) -> str | None:
     raw = Path(rel)
     if raw.is_absolute() or ".." in raw.parts or not rel.strip():
         return f"evidence path must be repo-relative: {rel}"
-    path = (REPO_ROOT / raw).resolve()
-    repo = REPO_ROOT.resolve()
+    path = (root / raw).resolve()
+    repo = root.resolve()
     if path != repo and repo not in path.parents:
         return f"evidence path escapes the repository: {rel}"
     if not path.is_file():
@@ -70,6 +108,7 @@ def write_run(
     intervention: str,
     evidence_paths: list[str],
     run_id: str,
+    workspace: Path | None = None,
 ) -> dict[str, Any]:
     cause = governing_cause.strip()
     chosen = intervention.strip()
@@ -77,7 +116,8 @@ def write_run(
         raise ValueError("governing_cause and intervention are required")
     if not evidence_paths:
         raise ValueError("evidence_paths is required")
-    problems = [msg for rel in evidence_paths if (msg := _evidence_ok(rel))]
+    root = planned_workspace(workspace)
+    problems = [msg for rel in evidence_paths if (msg := _evidence_ok(rel, root))]
     if problems:
         raise ValueError("; ".join(problems))
     entries = load_order_entries()
@@ -95,7 +135,7 @@ def write_run(
     return body
 
 
-def verify_run(path: Path) -> list[str]:
+def verify_run(path: Path, *, workspace: Path | None = None) -> list[str]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -113,8 +153,9 @@ def verify_run(path: Path) -> list[str]:
     if not isinstance(evidence, list) or not evidence:
         errors.append("evidence_paths is empty")
     else:
+        root = planned_workspace(workspace)
         for rel in evidence:
-            problem = _evidence_ok(str(rel))
+            problem = _evidence_ok(str(rel), root)
             if problem:
                 errors.append(problem)
     try:
@@ -135,9 +176,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", help="run file to write")
     parser.add_argument("--verify", help="run file to verify")
     parser.add_argument("--run-id", default="gar-plan-run")
+    parser.add_argument(
+        "--workspace",
+        help="repository the evidence paths are relative to (default: git root of cwd)",
+    )
     args = parser.parse_args(argv)
+    workspace = Path(args.workspace) if args.workspace else None
     if args.verify:
-        problems = verify_run(Path(args.verify))
+        problems = verify_run(Path(args.verify), workspace=workspace)
         if problems:
             print("FAIL: GAR run", file=sys.stderr)
             for problem in problems:
@@ -163,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
             intervention=str(decision.get("intervention") or ""),
             evidence_paths=[str(item) for item in decision.get("evidence_paths") or []],
             run_id=str(decision.get("run_id") or args.run_id),
+            workspace=workspace,
         )
     except (OSError, ValueError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)

@@ -216,6 +216,96 @@ def test_v5_receipt_fails_when_invoked_and_the_run_file_is_absent() -> None:
         _clear(hold)
 
 
+def test_v7_custom_out_receipt_is_refused() -> None:
+    hold = _hold("v7")
+    hold.mkdir(parents=True, exist_ok=True)
+    plan = hold / "plan.json"
+    out = hold / "out.plan.md"
+    try:
+        plan.write_text("{}\n", encoding="utf-8")
+        proc = subprocess.run(
+            [
+                PY,
+                str(PIPELINE),
+                "--plan-json",
+                str(plan.relative_to(REPO)),
+                "--execute-via",
+                "cursor-build",
+                "--workspace",
+                str(hold.relative_to(REPO)),
+                "--gar-run",
+                str((hold / "missing-gar.json").relative_to(REPO)),
+                "--out-md",
+                str(out.relative_to(REPO)),
+                "--out-receipt",
+                str((hold / "custom-receipt.json").relative_to(REPO)),
+            ],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode != 0
+        assert "--out-receipt" in proc.stderr
+        assert not out.exists()
+    finally:
+        _clear(hold)
+
+
+def test_v8_pipeline_clears_only_a_matching_latch() -> None:
+    hold = _hold("v8")
+    hold.mkdir(parents=True, exist_ok=True)
+    plan = hold / "plan.json"
+    gar = hold / "gar-run.json"
+    out = hold / "out.plan.md"
+    hooks = REPO / "ops" / "hooks"
+    sys.path.insert(0, str(hooks))
+    import plan_kernel_gate
+
+    latch = plan_kernel_gate.pipeline_required_path(REPO)
+    previous = latch.read_text(encoding="utf-8") if latch.is_file() else None
+    try:
+        _bound_plan(plan)
+        _prefetch(hold)
+        write_run(
+            gar,
+            governing_cause="the latch must clear only for the admitted plan",
+            intervention="one pipeline is the only writer",
+            evidence_paths=["skills/l9-plan-simple/SKILL.md"],
+            run_id="v8",
+        )
+        plan_kernel_gate.write_pipeline_required(REPO, "other plan", str(REPO / "other.plan.md"))
+        command = [
+            PY,
+            str(PIPELINE),
+            "--plan-json",
+            str(plan.relative_to(REPO)),
+            "--execute-via",
+            "cursor-build",
+            "--workspace",
+            str(hold.relative_to(REPO)),
+            "--gar-run",
+            str(gar.relative_to(REPO)),
+            "--out-md",
+            str(out.relative_to(REPO)),
+        ]
+        kept = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
+        assert kept.returncode == 0, kept.stderr + kept.stdout
+        assert latch.is_file()
+        plan_kernel_gate.write_pipeline_required(REPO, "this plan", str(out))
+        cleared = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
+        assert cleared.returncode == 0, cleared.stderr + cleared.stdout
+        assert not latch.is_file()
+    finally:
+        if previous is None:
+            if latch.is_file():
+                latch.unlink()
+        else:
+            latch.parent.mkdir(parents=True, exist_ok=True)
+            latch.write_text(previous, encoding="utf-8")
+        _clear(hold)
+
+
 def test_v6_renderer_default_stays_program_execution() -> None:
     proc = subprocess.run(
         [PY, str(RENDERER), str(FIXTURE)],

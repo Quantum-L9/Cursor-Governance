@@ -119,7 +119,7 @@ def _gar_gate(receipt: dict[str, Any]) -> tuple[bool, str]:
         return False, f"G_GAR_UPSTREAM: {exc}"
     if not run_path.is_file():
         return False, f"G_GAR_UPSTREAM: run file missing: {run_rel}"
-    problems = _gar_module().verify_run(run_path)
+    problems = _gar_module().verify_run(run_path, workspace=workspace_root())
     if problems:
         return False, "G_GAR_UPSTREAM: run file failed verification: " + "; ".join(problems)
     actual = _sha256(run_path)

@@ -10,6 +10,7 @@ script does not delete a plan file.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 from pathlib import Path
 
@@ -21,7 +22,65 @@ EXEMPT_NAMES = {"_TEMPLATE.plan.md"}
 SHELVED = ("/built/", "/archive/", "/superseded/")
 
 
-def check_plan(path: Path) -> list[str]:
+def _repo_root() -> Path:
+    cwd = Path.cwd().resolve()
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return cwd
+    top = proc.stdout.strip()
+    return Path(top).resolve() if proc.returncode == 0 and top else cwd
+
+
+def _receipt_run_rel(receipt: Path) -> str | None:
+    try:
+        data = json.loads(receipt.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    gar = data.get("gar_upstream")
+    if not isinstance(gar, dict):
+        return None
+    run_rel = gar.get("run_path")
+    if not isinstance(run_rel, str) or not run_rel.strip():
+        return None
+    return run_rel.strip()
+
+
+def _index_proof_errors(plan: Path, receipt: Path) -> list[str]:
+    """A tracked plan must commit the receipt and the GAR run it names.
+
+    Working-tree copies are not a publish. Paths outside this checkout cannot
+    be in the index, so only in-repo proof is required here.
+    """
+    if not _git_tracks(plan):
+        return []
+    errors: list[str] = []
+    if not _git_tracks(receipt):
+        errors.append(f"G_ADMIT: section receipt is not in the git index: {receipt.name}")
+    run_rel = _receipt_run_rel(receipt)
+    if not run_rel:
+        return errors
+    raw = Path(run_rel)
+    repo = _repo_root()
+    run_path = raw if raw.is_absolute() else (repo / raw)
+    try:
+        run_path.resolve().relative_to(repo)
+    except (OSError, ValueError):
+        return errors
+    if not _git_tracks(run_path):
+        errors.append(f"G_ADMIT: GAR run is not in the git index: {run_rel}")
+    return errors
+
+
+def check_plan(path: Path, *, require_index: bool = False) -> list[str]:
     if path.name in EXEMPT_NAMES:
         return []
     posix = path.as_posix()
@@ -33,6 +92,8 @@ def check_plan(path: Path) -> list[str]:
     if not receipt.is_file():
         return [f"G_ADMIT: no section receipt beside {path.name}"]
     errors = check_receipt(receipt)
+    if require_index:
+        errors.extend(_index_proof_errors(path, receipt))
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -69,10 +130,11 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     for raw in args.plans:
         path = safe_cli_path(raw)
-        if not args.all and not _git_tracks(path):
+        tracked = _git_tracks(path)
+        if not args.all and not tracked:
             print(f"SKIP: {path} is not in the git index")
             continue
-        errors = check_plan(path)
+        errors = check_plan(path, require_index=tracked)
         if errors:
             failed = True
             print(f"FAIL: {path}")

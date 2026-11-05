@@ -51,6 +51,9 @@ def _plan_and_receipt(cwd: Path, plan_dir: Path, env: dict[str, str]) -> Path:
     renders a working-tree copy; the plan pair then lives in ``plan_dir``.
     """
     plan_dir.mkdir(parents=True, exist_ok=True)
+    source = cwd / "src" / "app.py"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("print('planned workspace')\n", encoding="utf-8")
     plan_json = plan_dir / "plan.json"
     plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
     plan["success_criteria"] = ["self_test.py PASS"]
@@ -65,7 +68,7 @@ def _plan_and_receipt(cwd: Path, plan_dir: Path, env: dict[str, str]) -> Path:
             {
                 "governing_cause": "consumer receipt paths must stay resolvable",
                 "intervention": "bind the receipt to a verified GAR run file",
-                "evidence_paths": ["skills/l9-plan/fixtures/plan_pass.json"],
+                "evidence_paths": ["src/app.py"],
                 "run_id": "consumer-test",
             }
         ),
@@ -131,6 +134,64 @@ def test_receipt_validates_from_a_consumer_subdirectory(tmp_path: Path) -> None:
     sub = repo / "docs"
     check = _run([str(VALIDATE), str(receipt.relative_to(sub))], sub, env)
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_consumer_evidence_is_not_resolved_in_governance(tmp_path: Path) -> None:
+    repo = _consumer_repo(tmp_path)
+    decision = repo / "gar-decision.json"
+    decision.write_text(
+        json.dumps(
+            {
+                "governing_cause": "evidence must live in the planned repository",
+                "intervention": "resolve evidence against that repository",
+                "evidence_paths": ["skills/l9-plan/fixtures/plan_pass.json"],
+                "run_id": "governance-only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    wrote = _run(
+        [
+            str(REPO / "skills" / "l9-global-architect" / "scripts" / "write_plan_run.py"),
+            "--decision",
+            str(decision),
+            "--out",
+            str(repo / "gar-run.json"),
+        ],
+        repo,
+        _env(),
+    )
+    assert wrote.returncode != 0
+    assert "not a file" in wrote.stderr
+
+
+def test_tracked_plan_requires_indexed_receipt_and_run(tmp_path: Path) -> None:
+    repo = _consumer_repo(tmp_path)
+    env = _env()
+    receipt = _plan_and_receipt(repo, repo / "docs" / "plans", env)
+    plan = repo / "docs" / "plans" / "demo_0123abcd.plan.md"
+    admit = REPO / "skills" / "l9-plan-simple" / "scripts" / "admit_plan.py"
+
+    def _add(*paths: str) -> None:
+        subprocess.run(["git", "-C", str(repo), "add", "--", *paths], check=True)
+
+    def _admit() -> subprocess.CompletedProcess[str]:
+        return _run([str(admit), "docs/plans/demo_0123abcd.plan.md"], repo, env)
+
+    _add("docs/plans/demo_0123abcd.plan.md")
+    missing_receipt = _admit()
+    assert missing_receipt.returncode != 0
+    assert "section receipt is not in the git index" in missing_receipt.stdout
+
+    _add("docs/plans/demo_0123abcd.section-receipt.json")
+    missing_run = _admit()
+    assert missing_run.returncode != 0
+    assert "GAR run is not in the git index" in missing_run.stdout
+
+    _add("docs/plans/gar-run.json")
+    admitted = _admit()
+    assert admitted.returncode == 0, admitted.stdout + admitted.stderr
+    assert plan.is_file() and receipt.is_file()
 
 
 def test_receipt_validates_for_a_plan_in_the_plans_store(tmp_path: Path) -> None:
