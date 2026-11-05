@@ -231,20 +231,20 @@
     }
   ],
   "stress_test": {
-      "disconfirming_questions": [
-        "Does intersecting changed files with owned_paths='.' still select the entire repo-root suite and leave wall-clock unchanged?",
-        "If agents start on the newest PR by createdAt when two siblings target main, does a later squash of the wrong parent delete the other child?",
-        "If a shared helper under ops/scripts/ changes and no test_<stem>.py exists, does the scoped gate ship with zero tests for that file?",
-        "Does implying L9_TASK_BASE_AUTHORIZED for auto tip also waive main-bound checks for an arbitrary --base the agent typed?"
-      ],
-      "assumed_false_ifs": [
-        "repo-root owned_paths '.' is treated as a wildcard that still dumps the catalog on pr-check",
-        "PR_STACK=auto remains publish-only and start stays origin/main",
-        "CI and make pr-full are pointed at the new local selector",
-        "gh is unavailable and the resolver silently guesses main while open PRs exist"
-      ],
-      "blast_radius": "Under-scoped pytest can merge a helper break. Auto-start on the wrong sibling can recreate the squash-parent orphan. A fail-open gh outage can fork main while a stack exists.",
-      "rollback": "Revert the commit(s) on the feature branch. Restore run_pr_gate.sh pytest to run_pytest_suites.sh with only the secrets ignore. Restore agent_worktree_start.sh origin/main default. Keep stack_safe_merge.py and merge_gate parent-squash denial untouched."
+    "disconfirming_questions": [
+      "Does intersecting changed files with owned_paths='.' still select the entire repo-root suite and leave wall-clock unchanged?",
+      "If agents start on the newest PR by createdAt when two siblings target main, does a later squash of the wrong parent delete the other child?",
+      "If a shared helper under ops/scripts/ changes and no test_<stem>.py exists, does the scoped gate ship with zero tests for that file?",
+      "Does implying L9_TASK_BASE_AUTHORIZED for auto tip also waive main-bound checks for an arbitrary --base the agent typed?"
+    ],
+    "assumed_false_ifs": [
+      "repo-root owned_paths '.' is treated as a wildcard that still dumps the catalog on pr-check",
+      "PR_STACK=auto remains publish-only and start stays origin/main",
+      "CI and make pr-full are pointed at the new local selector",
+      "gh is unavailable and the resolver silently guesses main while open PRs exist"
+    ],
+    "blast_radius": "Under-scoped pytest can merge a helper break. Auto-start on the wrong sibling can recreate the squash-parent orphan. A fail-open gh outage can fork main while a stack exists.",
+    "rollback": "Revert the commit(s) on the feature branch. Restore run_pr_gate.sh pytest to run_pytest_suites.sh with only the secrets ignore. Restore agent_worktree_start.sh origin/main default. Keep stack_safe_merge.py and merge_gate parent-squash denial untouched."
   },
   "leverage": {
     "ranked_todo_ids": [

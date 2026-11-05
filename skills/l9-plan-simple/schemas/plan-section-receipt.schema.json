@@ -63,7 +63,10 @@
     "gar_upstream": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["invoked", "skill_ref"],
+      "required": [
+        "invoked",
+        "skill_ref"
+      ],
       "properties": {
         "invoked": {
           "type": "boolean"
@@ -72,7 +75,10 @@
           "const": "skills/l9-global-architect"
         },
         "run_id": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -93,19 +99,44 @@
     "frontmatter": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "overview", "todos", "isProject", "kind", "execute_via", "status"],
+      "required": [
+        "name",
+        "overview",
+        "todos",
+        "isProject",
+        "kind",
+        "execute_via",
+        "status"
+      ],
       "properties": {
-        "name": { "type": "boolean" },
-        "overview": { "type": "boolean" },
-        "todos": { "type": "boolean" },
-        "isProject": { "type": "boolean" },
-        "kind": { "type": "boolean" },
-        "execute_via": { "type": "boolean" },
-        "status": { "type": "boolean" }
+        "name": {
+          "type": "boolean"
+        },
+        "overview": {
+          "type": "boolean"
+        },
+        "todos": {
+          "type": "boolean"
+        },
+        "isProject": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "boolean"
+        },
+        "execute_via": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "boolean"
+        }
       }
     },
     "handoff_mode": {
-      "enum": ["cursor-build", "embedded"]
+      "enum": [
+        "cursor-build",
+        "embedded"
+      ]
     },
     "execute_swap": {
       "type": "object",
@@ -116,19 +147,31 @@
         "live_make_campaign"
       ],
       "properties": {
-        "handoff_heading": { "type": "boolean" },
-        "live_pe_heading": { "type": "boolean" },
-        "live_make_campaign": { "type": "boolean" }
+        "handoff_heading": {
+          "type": "boolean"
+        },
+        "live_pe_heading": {
+          "type": "boolean"
+        },
+        "live_make_campaign": {
+          "type": "boolean"
+        }
       }
     },
     "unfilled_parameters": {
       "description": "Template <parameter> slots still present in the projection; non-empty fails the receipt. Optional for receipts generated before 2026-11-02.",
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
       "uniqueItems": true
     },
     "status": {
-      "enum": ["pass", "fail"]
+      "enum": [
+        "pass",
+        "fail"
+      ]
     }
   }
 }

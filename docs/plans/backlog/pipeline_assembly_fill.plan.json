@@ -111,7 +111,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "compile_activation_files.py build_source definition_status ready if index == 1 else blocked",
       "leverage_rank": 1,
@@ -127,7 +129,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T01"],
+      "dependencies": [
+        "T01"
+      ],
       "operation": "Replace",
       "anchor": "controller.py _gate_satisfied and complete_task completion_gates loop",
       "leverage_rank": 4,
@@ -143,7 +147,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "controller.py verify gates[validation] requires nonempty validations list",
       "leverage_rank": 2,
@@ -159,7 +165,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "controller.py claim_task base_sha=repo[head_sha] and prepare_worktree worktree add -b lease.branch lease.base_sha",
       "leverage_rank": 2,
@@ -175,7 +183,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T03"],
+      "dependencies": [
+        "T03"
+      ],
       "operation": "Replace",
       "anchor": "ops/scripts/stack_pr.py cmd_base default_branch fallback",
       "leverage_rank": 6,
@@ -190,7 +200,12 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T01", "T02", "T03", "T25"],
+      "dependencies": [
+        "T01",
+        "T02",
+        "T03",
+        "T25"
+      ],
       "operation": "Insert",
       "anchor": "run_campaign.py UNTIL_STAGES tuple and default_arm return",
       "leverage_rank": 5,
@@ -206,7 +221,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py write_launch_pointer pec_ready_empty_is_expected False",
       "leverage_rank": 7,
@@ -221,7 +238,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py UNTIL_STAGES and default_make_pr",
       "leverage_rank": 8,
@@ -238,7 +257,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T07"],
+      "dependencies": [
+        "T07"
+      ],
       "operation": "Replace",
       "anchor": "CAMPAIGN_EXECUTION_POLICY.yaml publish.merge false halt_before_merge true",
       "leverage_rank": 14,
@@ -255,7 +276,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Insert",
       "anchor": "close_campaign.py close_campaign in-place write; no COMPLETED mover",
       "leverage_rank": 9,
@@ -271,7 +294,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "compile_brief.py assign_campaign_id collision assigns base-v2",
       "leverage_rank": 15
@@ -285,7 +310,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py isolate_worktree if worktree.exists reuse",
       "leverage_rank": 16
@@ -299,7 +326,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T03"],
+      "dependencies": [
+        "T03"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py default_ensure_target_checkout donor=write_root and git clone --depth 1 --single-branch --branch main",
       "leverage_rank": 12
@@ -314,7 +343,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T12"],
+      "dependencies": [
+        "T12"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py admit revision=seed target.repository_id",
       "leverage_rank": 18
@@ -329,7 +360,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T10"],
+      "dependencies": [
+        "T10"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py quarantine_occupied pec workspace only",
       "leverage_rank": 17
@@ -344,7 +377,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py claim without ttl; controller.py claim_task ttl_hours=8",
       "leverage_rank": 19
@@ -358,7 +393,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T07"],
+      "dependencies": [
+        "T07"
+      ],
       "operation": "Insert",
       "anchor": "run_campaign.py ensure_integration_branch local-only branch create",
       "leverage_rank": 13
@@ -371,7 +408,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "run_peer_task_pipeline.py abort-execution call; pec/cli.py missing subcommand",
       "leverage_rank": 20
@@ -385,7 +424,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py default_program_blockers and mark_host_campaign_active",
       "leverage_rank": 21
@@ -400,7 +441,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Replace",
       "anchor": "run_campaign.py write_launch_pointer operator_ack_required True",
       "leverage_rank": 22
@@ -415,7 +458,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Insert",
       "anchor": "compiler/cli.py L9_ALLOW_INTENT_COMPILER escape; pec bootstrap admission",
       "leverage_rank": 23
@@ -429,7 +474,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T05"],
+      "dependencies": [
+        "T05"
+      ],
       "operation": "Insert",
       "anchor": "controller.py start_task; run_campaign.py write_execution_card",
       "leverage_rank": 24
@@ -444,7 +491,10 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T03", "T05"],
+      "dependencies": [
+        "T03",
+        "T05"
+      ],
       "operation": "Replace",
       "anchor": "skills/l9-pe-campaign-activate/references/pipeline.md isolate section",
       "leverage_rank": 25
@@ -462,9 +512,29 @@
       "effort": "L",
       "risk": "high",
       "dependencies": [
-        "T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09",
-        "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18",
-        "T19", "T20", "T21", "T22", "T25"
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "T25"
       ],
       "operation": "Insert",
       "anchor": "test_run_campaign.py existing unmocked arm loop",
@@ -479,7 +549,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T23"],
+      "dependencies": [
+        "T23"
+      ],
       "operation": "Replace",
       "anchor": "Cursor-Governance make pr-check / CI on feat/pipeline-assembly-fill",
       "leverage_rank": 11
@@ -583,37 +655,58 @@
     {
       "surface": "skills/l9-pe-campaign-activate/SKILL.md",
       "action": "update",
-      "todo_ids": ["T08", "T19", "T23"]
+      "todo_ids": [
+        "T08",
+        "T19",
+        "T23"
+      ]
     },
     {
       "surface": "skills/l9-pe-campaign-activate/references/pipeline.md",
       "action": "update",
-      "todo_ids": ["T19", "T22", "T23"]
+      "todo_ids": [
+        "T19",
+        "T22",
+        "T23"
+      ]
     },
     {
       "surface": "skills/l9-pe-campaign-activate/references/merge-authority.md",
       "action": "update",
-      "todo_ids": ["T08"]
+      "todo_ids": [
+        "T08"
+      ]
     },
     {
       "surface": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
       "action": "update",
-      "todo_ids": ["T08", "T09"]
+      "todo_ids": [
+        "T08",
+        "T09"
+      ]
     },
     {
       "surface": "environment/program-execution/audits/pipeline-assembly-audit.v1.yaml",
       "action": "update",
-      "todo_ids": ["T00", "T23"]
+      "todo_ids": [
+        "T00",
+        "T23"
+      ]
     },
     {
       "surface": "environment/program-execution/MANIFEST.json",
       "action": "update",
-      "todo_ids": ["T00", "T23"]
+      "todo_ids": [
+        "T00",
+        "T23"
+      ]
     },
     {
       "surface": "Makefile",
       "action": "update",
-      "todo_ids": ["T04"],
+      "todo_ids": [
+        "T04"
+      ],
       "reason": "append-only helper target; do not rewrite existing campaign or PR_BASE lines"
     },
     {
@@ -784,7 +877,11 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["UNK-001", "UNK-002", "UNK-003"],
+    "remaining_unknown_ids": [
+      "UNK-001",
+      "UNK-002",
+      "UNK-003"
+    ],
     "next_skill": "l9-ynp",
     "stop_reason": "PLAN_DOCUMENT and PE+autonomy projection are the planning deliverable. Implementation is not run in plan mode. UNK-001/002/003 are locked to audit defaults (accept_bounded). Execute via @environment/program-execution then subordinate @autonomy under a Program lease on feat/pipeline-assembly-fill."
   },

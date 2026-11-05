@@ -105,7 +105,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T00"],
+      "dependencies": [
+        "T00"
+      ],
       "operation": "Create",
       "anchor": "new adapters/ directory beside program-execution core",
       "leverage_rank": 2,
@@ -121,7 +123,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T01"],
+      "dependencies": [
+        "T01"
+      ],
       "operation": "Replace",
       "anchor": "compile_activation_files.py actions = [implement_task_...] fill; program.definition_status draft",
       "leverage_rank": 1,
@@ -138,7 +142,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T02"],
+      "dependencies": [
+        "T02"
+      ],
       "operation": "Insert",
       "anchor": "run_campaign.py after stack_fn(seed, primed_root) before compile_activation",
       "leverage_rank": 5,
@@ -154,7 +160,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T02"],
+      "dependencies": [
+        "T02"
+      ],
       "operation": "Replace",
       "anchor": "controller.py verify_attempt empty required_commands file-exists PASS; verdict enum PASSED_LOCAL|FAILED|STALE",
       "leverage_rank": 3,
@@ -169,7 +177,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T04"],
+      "dependencies": [
+        "T04"
+      ],
       "operation": "Replace",
       "anchor": "controller.py evaluate_gate and complete_task PASSED_LOCAL-only complete",
       "leverage_rank": 4,
@@ -185,7 +195,10 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["T04", "T05"],
+      "dependencies": [
+        "T04",
+        "T05"
+      ],
       "operation": "Insert",
       "anchor": "contracts.py validate_source_contract required/unknown sets; run_campaign execute verify branch",
       "leverage_rank": 6,
@@ -203,7 +216,10 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T03", "T06"],
+      "dependencies": [
+        "T03",
+        "T06"
+      ],
       "operation": "Insert",
       "anchor": "file-set.md two-file allowlist; pipeline.md activate stage",
       "leverage_rank": 7,
@@ -278,22 +294,30 @@
     {
       "surface": "skills/l9-pe-campaign-activate/references/pipeline.md",
       "action": "update",
-      "todo_ids": ["T07"]
+      "todo_ids": [
+        "T07"
+      ]
     },
     {
       "surface": "skills/l9-pe-campaign-activate/references/file-set.md",
       "action": "update",
-      "todo_ids": ["T07"]
+      "todo_ids": [
+        "T07"
+      ]
     },
     {
       "surface": "skills/l9-pe-campaign-activate/SKILL.md",
       "action": "update",
-      "todo_ids": ["T07"]
+      "todo_ids": [
+        "T07"
+      ]
     },
     {
       "surface": "environment/program-execution/MANIFEST.json",
       "action": "update",
-      "todo_ids": ["T07"]
+      "todo_ids": [
+        "T07"
+      ]
     },
     {
       "surface": "l9-ci-core AGENTS.md and seven kernel doctrine files",
@@ -410,7 +434,10 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["UNK-001", "UNK-002"],
+    "remaining_unknown_ids": [
+      "UNK-001",
+      "UNK-002"
+    ],
     "next_skill": "l9-ynp",
     "stop_reason": "PLAN_DOCUMENT validates. Pre and final validation remain pending until execute. UNK-001 and UNK-002 are accept_bounded and re-probed at T00. Do not implement from this markdown alone."
   },

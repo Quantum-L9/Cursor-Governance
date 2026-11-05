@@ -14,7 +14,11 @@
     "repo_docs": {
       "repository": "Quantum-L9/Cursor-Governance",
       "semantic_source_digest": "e321757be2548045ce02b3ecda744aefaf21b9aeb630f4fe1de0c04f3a78e60c",
-      "required_surfaces": ["agents", "architecture", "invariants"]
+      "required_surfaces": [
+        "agents",
+        "architecture",
+        "invariants"
+      ]
     }
   },
   "inventory": [
@@ -22,19 +26,25 @@
       "path": "ops/autonomy/surface_detect.py",
       "classification": "active",
       "action": "keep",
-      "evidence_ids": ["ev-surface-detect"]
+      "evidence_ids": [
+        "ev-surface-detect"
+      ]
     },
     {
       "path": "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh",
       "classification": "active",
       "action": "keep",
-      "evidence_ids": ["ev-hook-exec"]
+      "evidence_ids": [
+        "ev-hook-exec"
+      ]
     },
     {
       "path": "AGENTS.md",
       "classification": "active",
       "action": "keep",
-      "evidence_ids": ["ev-agents-surface"]
+      "evidence_ids": [
+        "ev-agents-surface"
+      ]
     }
   ],
   "system": {
@@ -86,8 +96,12 @@
         "ops/autonomy/surface_detect.py",
         "ops/scripts/lib/surface_detect.sh"
       ],
-      "mutations": ["surgical refresh"],
-      "evidence_ids": ["ev-agents-surface"]
+      "mutations": [
+        "surgical refresh"
+      ],
+      "evidence_ids": [
+        "ev-agents-surface"
+      ]
     },
     {
       "item": "architecture",
@@ -99,8 +113,13 @@
         "ops/autonomy/surface_detect.py",
         "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
       ],
-      "mutations": ["index pointer"],
-      "evidence_ids": ["ev-surface-detect", "ev-hook-exec"]
+      "mutations": [
+        "index pointer"
+      ],
+      "evidence_ids": [
+        "ev-surface-detect",
+        "ev-hook-exec"
+      ]
     },
     {
       "item": "invariants",
@@ -108,9 +127,15 @@
       "visibility": "repository",
       "is_wrapper": false,
       "resolved_target": "INVARIANTS.md",
-      "dependencies": ["ops/autonomy/surface_detect.py"],
-      "mutations": ["index pointer"],
-      "evidence_ids": ["ev-surface-detect"]
+      "dependencies": [
+        "ops/autonomy/surface_detect.py"
+      ],
+      "mutations": [
+        "index pointer"
+      ],
+      "evidence_ids": [
+        "ev-surface-detect"
+      ]
     }
   ],
   "drift": [],
@@ -158,7 +183,10 @@
       "semantic_contract": "surface_detect.py / surface_detect.sh resolve the live surface from CURSOR_AGENT and explicit ids; a projected claude-code or claude-code-remote value does not outrank an active Cursor agent marker.",
       "disposition": "PORT",
       "beneficiary_destination": "docs:agents",
-      "evidence_ids": ["ev-surface-detect", "ev-agents-surface"],
+      "evidence_ids": [
+        "ev-surface-detect",
+        "ev-agents-surface"
+      ],
       "risks": [
         "Treating the projected env as authority would keep Cursor inside Claude gates."
       ],
@@ -189,7 +217,10 @@
       "semantic_contract": "l9_hook_exec skips only local_execution_gate_wrap.py and memory_gate.py when the resolved surface is not Claude; merge_gate_wrap.py and session_debt_wrap.py remain.",
       "disposition": "PORT",
       "beneficiary_destination": "docs:architecture",
-      "evidence_ids": ["ev-hook-exec", "ev-surface-detect"],
+      "evidence_ids": [
+        "ev-hook-exec",
+        "ev-surface-detect"
+      ],
       "risks": [
         "Skipping merge_gate_wrap would drop merge-denial from the adapter path."
       ],
@@ -220,7 +251,9 @@
       "semantic_contract": "Gate skip and kernel latch decisions consume surface_detect output. A projected L9_GOVERNANCE_SURFACE is evidence, not identity, when CURSOR_AGENT is set.",
       "disposition": "PORT",
       "beneficiary_destination": "docs:invariants",
-      "evidence_ids": ["ev-surface-detect"],
+      "evidence_ids": [
+        "ev-surface-detect"
+      ],
       "risks": [
         "An explicit non-Cursor L9_GOVERNANCE_SURFACE must still win when CURSOR_AGENT is unset."
       ],

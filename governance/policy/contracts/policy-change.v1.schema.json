@@ -21,60 +21,131 @@
     "provenance"
   ],
   "properties": {
-    "schema": {"const": "l9.policy-change.v1"},
-    "change_id": {"type": "string", "pattern": "^(GOV-[0-9]{4}-[0-9]{4,}|GOV-MIG-[0-9a-f]{12,64})$"},
-    "change_set_id": {"type": ["string", "null"], "minLength": 1},
-    "scope": {"enum": ["organization", "repository"]},
-    "operation": {"enum": ["add", "amend", "supersede", "retire"]},
-    "invariant_id": {"type": "string", "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"},
+    "schema": {
+      "const": "l9.policy-change.v1"
+    },
+    "change_id": {
+      "type": "string",
+      "pattern": "^(GOV-[0-9]{4}-[0-9]{4,}|GOV-MIG-[0-9a-f]{12,64})$"
+    },
+    "change_set_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "scope": {
+      "enum": [
+        "organization",
+        "repository"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "amend",
+        "supersede",
+        "retire"
+      ]
+    },
+    "invariant_id": {
+      "type": "string",
+      "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"
+    },
     "supersedes": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"type": "string", "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"},
+      "items": {
+        "type": "string",
+        "pattern": "^L9-(ORG|REPO)-[0-9]{3,}$"
+      },
       "default": []
     },
     "preconditions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["base_policy_digest", "target_invariant_digest", "superseded_invariant_digests"],
+      "required": [
+        "base_policy_digest",
+        "target_invariant_digest",
+        "superseded_invariant_digests"
+      ],
       "properties": {
-        "base_policy_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "base_policy_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
         "target_invariant_digest": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "superseded_invariant_digests": {
           "type": "object",
-          "additionalProperties": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
         }
       }
     },
     "depends_on": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"type": "string", "minLength": 1}
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "authority": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "refs"],
+      "required": [
+        "kind",
+        "refs"
+      ],
       "properties": {
-        "kind": {"enum": ["explicit_user_authorization", "approved_adr", "legacy_migration"]},
+        "kind": {
+          "enum": [
+            "explicit_user_authorization",
+            "approved_adr",
+            "legacy_migration"
+          ]
+        },
         "refs": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
     "requirement": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "statement", "applicability"],
+      "required": [
+        "title",
+        "statement",
+        "applicability"
+      ],
       "properties": {
-        "title": {"type": "string", "minLength": 1, "maxLength": 160},
-        "statement": {"type": "string", "minLength": 1},
-        "applicability": {"type": "string", "minLength": 1}
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "applicability": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "relationships": {
@@ -82,10 +153,24 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "target"],
+        "required": [
+          "type",
+          "target"
+        ],
         "properties": {
-          "type": {"enum": ["specializes", "strengthens", "depends_on_invariant", "replaces", "implements_external_requirement"]},
-          "target": {"type": "string", "minLength": 1}
+          "type": {
+            "enum": [
+              "specializes",
+              "strengthens",
+              "depends_on_invariant",
+              "replaces",
+              "implements_external_requirement"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -94,12 +179,35 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "kind", "required"],
+        "required": [
+          "path",
+          "kind",
+          "required"
+        ],
         "properties": {
-          "path": {"type": "string", "minLength": 1},
-          "kind": {"enum": ["configuration", "enforcement", "runtime_contract", "schema", "workflow", "adapter"]},
-          "required": {"type": "boolean"},
-          "symbol": {"type": ["string", "null"]}
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "configuration",
+              "enforcement",
+              "runtime_contract",
+              "schema",
+              "workflow",
+              "adapter"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "symbol": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       }
     },
@@ -108,55 +216,114 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "kind", "required"],
+        "required": [
+          "path",
+          "kind",
+          "required"
+        ],
         "properties": {
-          "path": {"type": "string", "minLength": 1},
-          "kind": {"enum": ["test", "validator", "workflow", "ruleset_evidence", "manual_external"]},
-          "required": {"type": "boolean"},
-          "invocation_id": {"type": ["string", "null"]}
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "test",
+              "validator",
+              "workflow",
+              "ruleset_evidence",
+              "manual_external"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "invocation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       }
     },
     "projection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["invariants", "agents", "providers"],
+      "required": [
+        "invariants",
+        "agents",
+        "providers"
+      ],
       "properties": {
-        "invariants": {"type": "boolean"},
-        "agents": {"type": "boolean"},
+        "invariants": {
+          "type": "boolean"
+        },
+        "agents": {
+          "type": "boolean"
+        },
         "providers": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"enum": ["claude", "codex", "gemini", "manus", "cursor"]}
+          "items": {
+            "enum": [
+              "claude",
+              "codex",
+              "gemini",
+              "manus",
+              "cursor"
+            ]
+          }
         }
       }
     },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["migration"],
+      "required": [
+        "migration"
+      ],
       "properties": {
         "migration": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["source_path", "source_sha", "source_clause_ids", "evidence_ids"],
+              "required": [
+                "source_path",
+                "source_sha",
+                "source_clause_ids",
+                "evidence_ids"
+              ],
               "properties": {
-                "source_path": {"type": "string", "minLength": 1},
-                "source_sha": {"type": "string", "minLength": 7},
+                "source_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_sha": {
+                  "type": "string",
+                  "minLength": 7
+                },
                 "source_clause_ids": {
                   "type": "array",
                   "minItems": 1,
                   "uniqueItems": true,
-                  "items": {"type": "string", "minLength": 1}
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 },
                 "evidence_ids": {
                   "type": "array",
                   "minItems": 1,
                   "uniqueItems": true,
-                  "items": {"type": "string", "minLength": 1}
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               }
             }
@@ -167,40 +334,99 @@
   },
   "allOf": [
     {
-      "if": {"properties": {"scope": {"const": "organization"}}},
-      "then": {"properties": {"invariant_id": {"pattern": "^L9-ORG-[0-9]{3,}$"}}}
-    },
-    {
-      "if": {"properties": {"scope": {"const": "repository"}}},
-      "then": {"properties": {"invariant_id": {"pattern": "^L9-REPO-[0-9]{3,}$"}}}
-    },
-    {
-      "if": {"properties": {"operation": {"const": "add"}}},
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "organization"
+          }
+        }
+      },
       "then": {
         "properties": {
-          "preconditions": {
-            "properties": {"target_invariant_digest": {"type": "null"}}
+          "invariant_id": {
+            "pattern": "^L9-ORG-[0-9]{3,}$"
           }
         }
       }
     },
     {
-      "if": {"properties": {"operation": {"const": "supersede"}}},
+      "if": {
+        "properties": {
+          "scope": {
+            "const": "repository"
+          }
+        }
+      },
       "then": {
         "properties": {
-          "supersedes": {"minItems": 1},
-          "preconditions": {
-            "properties": {"superseded_invariant_digests": {"minProperties": 1}}
+          "invariant_id": {
+            "pattern": "^L9-REPO-[0-9]{3,}$"
           }
         }
       }
     },
     {
-      "if": {"properties": {"operation": {"enum": ["amend", "retire"]}}},
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "add"
+          }
+        }
+      },
       "then": {
         "properties": {
           "preconditions": {
-            "properties": {"target_invariant_digest": {"type": "string"}}
+            "properties": {
+              "target_invariant_digest": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "supersede"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "supersedes": {
+            "minItems": 1
+          },
+          "preconditions": {
+            "properties": {
+              "superseded_invariant_digests": {
+                "minProperties": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "enum": [
+              "amend",
+              "retire"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "preconditions": {
+            "properties": {
+              "target_invariant_digest": {
+                "type": "string"
+              }
+            }
           }
         }
       }

@@ -113,13 +113,21 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T1", "T2", "T3"],
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3"
+      ],
       "operation": "Replace",
       "anchor": "existing PR 784 head",
       "leverage_rank": 4
     }
   ],
-  "critical_path": ["T1", "T2", "T4"],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T4"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -179,7 +187,12 @@
     "rollback": "Revert the single repair commit on feat/memory-native-http-consumer. Do not reset main. PR 784 returns to 4e5e5a0cf0f5dc82fbbf0f1b356b38430d9e6107."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T2", "T4", "T3"],
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T4",
+      "T3"
+    ],
     "shared_causes": [
       "The issuer trusted receipt metadata instead of the projection bytes the checker already hashes",
       "Actor admission used a comparison that provenance does not record"
@@ -234,7 +247,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["I784-U01"],
+    "remaining_unknown_ids": [
+      "I784-U01"
+    ],
     "next_skill": "Build on the PR 784 worktree, then make pr",
     "stop_reason": "I784-01 and I784-02 are specified. I784-U01 is accepted as out of this slice until the identity owner decides."
   },

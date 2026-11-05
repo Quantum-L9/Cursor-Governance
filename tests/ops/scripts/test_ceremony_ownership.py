@@ -132,7 +132,8 @@ def test_plan_teachers_keep_only_precommit_catalog() -> None:
 
 
 def test_makefile_pr_graph_uses_direct_gate() -> None:
-    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    # The root Makefile is the make-v1 facade; the composition lives in Repo.mk.
+    makefile = (ROOT / "Repo.mk").read_text(encoding="utf-8")
     publish = (ROOT / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
     assert "ops/make/publish.mk" in makefile
     assert re.search(r"^pr:\s*pr-preflight\s*$", publish, re.MULTILINE), (

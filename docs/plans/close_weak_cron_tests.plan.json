@@ -66,7 +66,9 @@
     {
       "id": "suite-name",
       "task": "Add cron_contract.py to NON_TEST_FILES in tests/test_suite_structure.py. Do not rename the module and do not give it a test_ function.",
-      "files": ["tests/test_suite_structure.py"],
+      "files": [
+        "tests/test_suite_structure.py"
+      ],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -78,7 +80,9 @@
     {
       "id": "sort-prefix",
       "task": "After the fixture exists, fail closed when the count of rows that sort strictly before it is already at the cron limit. Offer includes same valid_until with a lower id. Load SLA includes null entered_state_at and the same timestamp with a lower id. Do not assert the write when that count is at the limit.",
-      "files": ["tests/integration/test_cron_idempotency.py"],
+      "files": [
+        "tests/integration/test_cron_idempotency.py"
+      ],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -96,7 +100,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["sort-prefix"],
+      "dependencies": [
+        "sort-prefix"
+      ],
       "operation": "Replace",
       "anchor": "test_claim_sla_in_domain and test_claim_sla_leaves_resolved_claim",
       "leverage_rank": 3,
@@ -111,7 +117,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["claim-reminder"],
+      "dependencies": [
+        "claim-reminder"
+      ],
       "operation": "Replace",
       "anchor": "midnight, escalation, and monthly audit tests",
       "leverage_rank": 4,
@@ -128,7 +136,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["live-effects"],
+      "dependencies": [
+        "live-effects"
+      ],
       "operation": "Insert",
       "anchor": "CRONS",
       "leverage_rank": 5,
@@ -146,14 +156,23 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["suite-name", "unreachable"],
+      "dependencies": [
+        "suite-name",
+        "unreachable"
+      ],
       "operation": "Replace",
       "anchor": "proof commands",
       "leverage_rank": 6,
       "shared_root_cause": "scanner-clean is not the same as the suite naming gate"
     }
   ],
-  "critical_path": ["sort-prefix", "claim-reminder", "live-effects", "unreachable", "prove"],
+  "critical_path": [
+    "sort-prefix",
+    "claim-reminder",
+    "live-effects",
+    "unreachable",
+    "prove"
+  ],
   "milestones": [
     {
       "id": "M1",
