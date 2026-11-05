@@ -340,6 +340,19 @@ def _stack_ancestors(number: int, parents: dict[int, int]) -> set[int]:
     return out
 
 
+def _root_bases(prs: list[dict[str, Any]], parents: dict[int, int]) -> dict[int, str]:
+    """Branch each PR finally lands on: the base of its bottom open stack ancestor."""
+    base_of = {int(pr["number"]): str(pr.get("baseRefName") or "") for pr in prs}
+    roots: dict[int, str] = {}
+    for number in base_of:
+        bottom, seen = number, {number}
+        while parents.get(bottom) in base_of and parents[bottom] not in seen:
+            bottom = parents[bottom]
+            seen.add(bottom)
+        roots[number] = base_of[bottom]
+    return roots
+
+
 def merge_now(
     prs: list[dict[str, Any]],
     *,
@@ -354,9 +367,14 @@ def merge_now(
     gone and every older non-generated overlap partner is either gone or
     declared leftover. Independent green PRs may start in parallel. Later
     remediations do not hold this prefix.
+
+    An overlap holds a PR only when both land on the same root base (following
+    stack chains). An older PR into another long-lived branch never meets this
+    PR's merge, so this merge cannot conflict it.
     """
     open_nums = {int(pr["number"]) for pr in prs}
     parents = {int(edge["child"]): int(edge["parent"]) for edge in edges}
+    roots = _root_bases(prs, parents)
     leftover = {n for n, board in boards.items() if board == "leftover"}
     ready: list[int] = []
     blocked: list[dict[str, Any]] = []
@@ -371,6 +389,8 @@ def merge_now(
             if pred == number:
                 break
             if pred not in open_nums or pred in leftover:
+                continue
+            if roots.get(pred) != roots.get(number):
                 continue
             if pred in _overlap_partners(overlap, number):
                 blockers.append({"pr": pred, "reason": "older_nongenerated_overlap"})
