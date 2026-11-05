@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -53,10 +52,37 @@ def _plan_and_receipt(cwd: Path, plan_dir: Path, env: dict[str, str]) -> Path:
     """
     plan_dir.mkdir(parents=True, exist_ok=True)
     plan_json = plan_dir / "plan.json"
-    shutil.copyfile(FIXTURE, plan_json)
+    plan = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    plan["success_criteria"] = ["self_test.py PASS"]
+    plan_json.write_text(json.dumps(plan) + "\n", encoding="utf-8")
     render_src = cwd / ".l9" / "render-src.json"
     render_src.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(FIXTURE, render_src)
+    render_src.write_text(plan_json.read_text(encoding="utf-8"), encoding="utf-8")
+    decision = plan_dir / "gar-decision.json"
+    gar_run = plan_dir / "gar-run.json"
+    decision.write_text(
+        json.dumps(
+            {
+                "governing_cause": "consumer receipt paths must stay resolvable",
+                "intervention": "bind the receipt to a verified GAR run file",
+                "evidence_paths": ["skills/l9-plan/fixtures/plan_pass.json"],
+                "run_id": "consumer-test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    wrote = _run(
+        [
+            str(REPO / "skills" / "l9-global-architect" / "scripts" / "write_plan_run.py"),
+            "--decision",
+            str(decision),
+            "--out",
+            str(gar_run),
+        ],
+        cwd,
+        env,
+    )
+    assert wrote.returncode == 0, wrote.stderr
     render = _run(
         [str(RENDERER), str(render_src), "--execute-via=cursor-build", "--workspace", "."],
         cwd,
@@ -76,6 +102,8 @@ def _plan_and_receipt(cwd: Path, plan_dir: Path, env: dict[str, str]) -> Path:
             "--out",
             str(receipt),
             "--gar-invoked",
+            "--gar-run",
+            str(gar_run),
             "--gar-run-id",
             "consumer-test",
         ],

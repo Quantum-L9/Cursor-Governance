@@ -7,7 +7,6 @@ import json
 import re
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +20,11 @@ if str(SCRIPTS) not in sys.path:
 
 from generate_plan_section_receipt import build_receipt  # noqa: E402
 from validate_plan_section_receipt import check_receipt  # noqa: E402
+
+GAR_SCRIPTS = REPO / "skills" / "l9-global-architect" / "scripts"
+if str(GAR_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(GAR_SCRIPTS))
+from write_plan_run import write_run  # noqa: E402
 
 # Repo-root paths: the scripts confine CLI arguments to the working directory,
 # so the SKILL.md Validation block is documented and run from the repo root.
@@ -47,13 +51,15 @@ def _skill_validation_scripts() -> list[str]:
     )
 
 
-def _render(dest: Path, mode: str = "cursor-build") -> None:
+def _render(src: Path, dest: Path, mode: str = "cursor-build") -> None:
     proc = _run(
         [
             sys.executable,
             str(RENDER),
-            str(PLAN_PASS),
+            str(src),
             f"--execute-via={mode}",
+            "--workspace",
+            ".",
         ],
         cwd=REPO,
     )
@@ -71,6 +77,11 @@ def main() -> int:
         errors.append("SKILL.md missing generate_plan_section_receipt.py")
     if "validate_plan_section_receipt.py" not in skill:
         errors.append("SKILL.md missing validate_plan_section_receipt.py")
+    if "run_plan_pipeline.py" not in skill:
+        errors.append("SKILL.md does not name run_plan_pipeline.py")
+    workflow = (ROOT / "references" / "plan-workflow-simple.md").read_text(encoding="utf-8")
+    if "hand-copy" in skill or "hand-copy" in workflow:
+        errors.append("hand-copy bypass is still documented")
 
     listed = _skill_validation_scripts()
     if not listed:
@@ -84,80 +95,94 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
 
-    with tempfile.TemporaryDirectory() as tmp:
-        plan_md = Path(tmp) / "pass.plan.md"
-        _render(plan_md)
-        hold = ROOT / "fixtures" / "_self_test"
-        hold.mkdir(parents=True, exist_ok=True)
-        live_json = hold / "plan_pass.json"
-        live_md = hold / "pass.plan.md"
-        live_receipt = hold / "pass.receipt.json"
-        fail_md = hold / "fail.plan.md"
-        fail_receipt = hold / "fail.receipt.json"
-        extra: tuple[Path, ...] = ()
-        try:
-            live_json.write_bytes(PLAN_PASS.read_bytes())
-            live_md.write_text(plan_md.read_text(encoding="utf-8"), encoding="utf-8")
-            receipt = build_receipt(live_json, live_md, gar_invoked=True, gar_run_id="self-test")
-            live_receipt.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
-            pass_errors = check_receipt(live_receipt)
-            if pass_errors:
-                errors.append("expected PASS receipt failed:\n  " + "\n  ".join(pass_errors))
+    hold = ROOT / "fixtures" / "_self_test"
+    hold.mkdir(parents=True, exist_ok=True)
+    live_json = hold / "plan_pass.json"
+    live_md = hold / "pass.plan.md"
+    live_receipt = hold / "pass.receipt.json"
+    fail_md = hold / "fail.plan.md"
+    fail_receipt = hold / "fail.receipt.json"
+    gar_run = hold / "gar-run.json"
+    extra: tuple[Path, ...] = ()
+    try:
+        bound = json.loads(PLAN_PASS.read_text(encoding="utf-8"))
+        bound["success_criteria"] = ["self_test.py PASS"]
+        live_json.write_text(json.dumps(bound, indent=2) + "\n", encoding="utf-8")
+        _render(live_json, live_md)
+        write_run(
+            gar_run,
+            governing_cause="self-test proves the receipt names a real GAR run file",
+            intervention="one pipeline writer",
+            evidence_paths=["skills/l9-plan/fixtures/plan_pass.json"],
+            run_id="self-test",
+        )
+        receipt = build_receipt(
+            live_json, live_md, gar_invoked=True, gar_run_id="self-test", gar_run=gar_run
+        )
+        live_receipt.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+        pass_errors = check_receipt(live_receipt)
+        if pass_errors:
+            errors.append("expected PASS receipt failed:\n  " + "\n  ".join(pass_errors))
 
-            stripped = live_md.read_text(encoding="utf-8").replace("## Rollback\n", "## Removed\n")
-            fail_md.write_text(stripped, encoding="utf-8")
-            fail_built = build_receipt(live_json, fail_md, gar_invoked=True, gar_run_id="self-test")
-            fail_receipt.write_text(json.dumps(fail_built, indent=2) + "\n", encoding="utf-8")
-            fail_errors = check_receipt(fail_receipt)
-            if not any("Rollback" in err for err in fail_errors):
-                errors.append(
-                    "missing-Rollback fixture did not emit G_MD_SECTION for Rollback: "
-                    + repr(fail_errors)
-                )
+        stripped = live_md.read_text(encoding="utf-8").replace("## Rollback\n", "## Removed\n")
+        fail_md.write_text(stripped, encoding="utf-8")
+        fail_built = build_receipt(
+            live_json, fail_md, gar_invoked=True, gar_run_id="self-test", gar_run=gar_run
+        )
+        fail_receipt.write_text(json.dumps(fail_built, indent=2) + "\n", encoding="utf-8")
+        fail_errors = check_receipt(fail_receipt)
+        if not any("Rollback" in err for err in fail_errors):
+            errors.append(
+                "missing-Rollback fixture did not emit G_MD_SECTION for Rollback: "
+                + repr(fail_errors)
+            )
 
-            no_gar = build_receipt(live_json, live_md, gar_invoked=False, gar_run_id=None)
-            if no_gar["status"] != "fail":
-                errors.append("receipt with gar_upstream.invoked=false must status=fail")
+        no_gar = build_receipt(live_json, live_md, gar_invoked=False, gar_run_id=None)
+        if no_gar["status"] != "fail":
+            errors.append("receipt with gar_upstream.invoked=false must status=fail")
+        bare = build_receipt(live_json, live_md, gar_invoked=True, gar_run_id="self-test")
+        if bare["status"] != "fail" or bare["gar_upstream"]["run_path"] is not None:
+            errors.append("bare --gar-invoked must not pass without a run file")
 
-            if receipt.get("handoff_mode") != "cursor-build":
-                errors.append(f"cursor-build receipt handoff_mode: {receipt.get('handoff_mode')!r}")
-            build_text = live_md.read_text(encoding="utf-8")
-            if not re.search(r"(?m)^status:\s*current\s*$", build_text):
-                errors.append("cursor-build projection missing status: current")
-            if re.search(r"(?m)^status:\s*harvested\s*$", build_text):
-                errors.append("harvested must not be a status")
+        if receipt.get("handoff_mode") != "cursor-build":
+            errors.append(f"cursor-build receipt handoff_mode: {receipt.get('handoff_mode')!r}")
+        build_text = live_md.read_text(encoding="utf-8")
+        if not re.search(r"(?m)^status:\s*current\s*$", build_text):
+            errors.append("cursor-build projection missing status: current")
+        if re.search(r"(?m)^status:\s*harvested\s*$", build_text):
+            errors.append("harvested must not be a status")
 
-            # Embedded handoff: same receipt shape, judged against its own mode.
-            emb_md = hold / "embedded.plan.md"
-            emb_receipt = hold / "embedded.receipt.json"
-            extra = (emb_md, emb_receipt)
-            _render(emb_md, mode="embedded")
-            emb_built = build_receipt(live_json, emb_md, gar_invoked=True, gar_run_id="self-test")
-            emb_receipt.write_text(json.dumps(emb_built, indent=2) + "\n", encoding="utf-8")
-            if emb_built.get("handoff_mode") != "embedded":
-                errors.append(f"embedded receipt handoff_mode: {emb_built.get('handoff_mode')!r}")
-            emb_errors = check_receipt(emb_receipt)
-            if emb_errors:
-                errors.append(
-                    "expected PASS embedded receipt failed:\n  " + "\n  ".join(emb_errors)
-                )
-            emb_text = emb_md.read_text(encoding="utf-8")
-            if not re.search(r"(?m)^status:\s*current\s*$", emb_text):
-                errors.append("embedded projection missing status: current")
-            pe_md = hold / "pe.plan.md"
-            extra = (emb_md, emb_receipt, pe_md)
-            _render(pe_md, mode="pe-campaign")
-            pe_text = pe_md.read_text(encoding="utf-8")
-            if not re.search(r"(?m)^status:\s*current\s*$", pe_text):
-                errors.append("pe-campaign projection missing status: current")
-            if re.search(r"(?m)^status:\s*harvested\s*$", pe_text):
-                errors.append("pe-campaign must not use harvested as a status")
-        finally:
-            for path in (live_json, live_md, live_receipt, fail_md, fail_receipt, *extra):
-                if path.exists():
-                    path.unlink()
-            if hold.exists() and not any(hold.iterdir()):
-                hold.rmdir()
+        # Embedded handoff: same receipt shape, judged against its own mode.
+        emb_md = hold / "embedded.plan.md"
+        emb_receipt = hold / "embedded.receipt.json"
+        extra = (emb_md, emb_receipt)
+        _render(live_json, emb_md, mode="embedded")
+        emb_built = build_receipt(
+            live_json, emb_md, gar_invoked=True, gar_run_id="self-test", gar_run=gar_run
+        )
+        emb_receipt.write_text(json.dumps(emb_built, indent=2) + "\n", encoding="utf-8")
+        if emb_built.get("handoff_mode") != "embedded":
+            errors.append(f"embedded receipt handoff_mode: {emb_built.get('handoff_mode')!r}")
+        emb_errors = check_receipt(emb_receipt)
+        if emb_errors:
+            errors.append("expected PASS embedded receipt failed:\n  " + "\n  ".join(emb_errors))
+        emb_text = emb_md.read_text(encoding="utf-8")
+        if not re.search(r"(?m)^status:\s*current\s*$", emb_text):
+            errors.append("embedded projection missing status: current")
+        pe_md = hold / "pe.plan.md"
+        extra = (emb_md, emb_receipt, pe_md)
+        _render(live_json, pe_md, mode="pe-campaign")
+        pe_text = pe_md.read_text(encoding="utf-8")
+        if not re.search(r"(?m)^status:\s*current\s*$", pe_text):
+            errors.append("pe-campaign projection missing status: current")
+        if re.search(r"(?m)^status:\s*harvested\s*$", pe_text):
+            errors.append("pe-campaign must not use harvested as a status")
+    finally:
+        for path in (live_json, live_md, live_receipt, fail_md, fail_receipt, gar_run, *extra):
+            if path.exists():
+                path.unlink()
+        if hold.exists() and not any(hold.iterdir()):
+            hold.rmdir()
 
     if errors:
         print("FAIL: l9-plan-simple self_test", file=sys.stderr)

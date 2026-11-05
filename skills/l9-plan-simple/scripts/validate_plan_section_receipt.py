@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ from plan_sections import (
     md_required_headings,
     md_section_presence,
     missing_labels,
+    projection_marker_errors,
     receipt_status,
     unfilled_parameters,
     workspace_root,
@@ -93,6 +95,38 @@ def _coverage_errors(receipt: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _gar_module():
+    script_dir = REPO_ROOT / "skills" / "l9-global-architect" / "scripts"
+    if str(script_dir) not in sys.path:
+        sys.path.insert(0, str(script_dir))
+    import write_plan_run
+
+    return write_plan_run
+
+
+def _gar_gate(receipt: dict[str, Any]) -> tuple[bool, str]:
+    """Return whether the named GAR run file verifies, plus the failure label."""
+    gar = receipt.get("gar_upstream") or {}
+    if not bool(gar.get("invoked")):
+        return False, "G_GAR_UPSTREAM: l9-global-architect was not recorded as invoked"
+    run_rel = gar.get("run_path")
+    if not isinstance(run_rel, str) or not run_rel.strip():
+        return False, "G_GAR_UPSTREAM: invoked without a verified run file"
+    try:
+        run_path = _resolve_declared(run_rel)
+    except (OSError, ValueError) as exc:
+        return False, f"G_GAR_UPSTREAM: {exc}"
+    if not run_path.is_file():
+        return False, f"G_GAR_UPSTREAM: run file missing: {run_rel}"
+    problems = _gar_module().verify_run(run_path)
+    if problems:
+        return False, "G_GAR_UPSTREAM: run file failed verification: " + "; ".join(problems)
+    actual = _sha256(run_path)
+    if str(gar.get("run_sha256") or "") != actual:
+        return False, "G_GAR_UPSTREAM: run_sha256 does not match the run file"
+    return True, ""
+
+
 def check_receipt(path: Path) -> list[str]:
     try:
         receipt = json.loads(path.read_text(encoding="utf-8"))
@@ -139,7 +173,8 @@ def check_receipt(path: Path) -> list[str]:
     observed_fm = frontmatter_presence(md_text)
     observed_swap = execute_swap_presence(md_text)
     observed_unfilled = unfilled_parameters(md_text, plan)
-    gar_invoked = bool((receipt.get("gar_upstream") or {}).get("invoked"))
+    gar_run_ok, gar_error = _gar_gate(receipt)
+    markers = projection_marker_errors(md_text)
 
     if receipt.get("json_sections") != observed_json:
         errors.append("G_RECEIPT_STALE: json_sections does not match current PLAN_DOCUMENT")
@@ -153,7 +188,13 @@ def check_receipt(path: Path) -> list[str]:
         errors.append("G_RECEIPT_STALE: unfilled_parameters does not match current .plan.md")
 
     observed_status = receipt_status(
-        observed_json, observed_md, observed_fm, observed_swap, gar_invoked, observed_unfilled
+        observed_json,
+        observed_md,
+        observed_fm,
+        observed_swap,
+        gar_run_ok,
+        observed_unfilled,
+        markers,
     )
     if receipt.get("status") != observed_status:
         errors.append(
@@ -165,8 +206,10 @@ def check_receipt(path: Path) -> list[str]:
             observed_md,
             observed_fm,
             observed_swap,
-            gar_invoked,
+            gar_run_ok,
             observed_unfilled,
+            markers,
+            gar_error or None,
         )
     )
 

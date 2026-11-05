@@ -239,6 +239,27 @@ def execute_swap_presence(text: str) -> dict[str, bool]:
     }
 
 
+NOT_DECLARED_MARK = "unknown — not declared"
+UNBOUND_BASELINE_MARK = "unbound — re-render"
+UNBOUND_PROOF_MARK = "unbound — no "
+
+
+def projection_marker_errors(text: str) -> list[str]:
+    """Refuse a projection that still carries an unresolved fill marker.
+
+    The legend uses the ellipsis forms ``unknown — …`` and ``unbound — …``.
+    Those are instructions, not the markers this function matches.
+    """
+    errors: list[str] = []
+    if NOT_DECLARED_MARK in text:
+        errors.append("G_PROJECTION_MARKER: unknown — not declared")
+    if UNBOUND_BASELINE_MARK in text:
+        errors.append("G_PROJECTION_MARKER: unbound baseline")
+    if UNBOUND_PROOF_MARK in text:
+        errors.append("G_PROJECTION_MARKER: unbound success property")
+    return errors
+
+
 def receipt_status(
     json_sections: dict[str, bool],
     md_sections: dict[str, bool],
@@ -246,10 +267,11 @@ def receipt_status(
     execute_swap: dict[str, bool],
     gar_invoked: bool,
     unfilled: list[str] | tuple[str, ...] = (),
+    marker_errors: list[str] | tuple[str, ...] = (),
 ) -> str:
     if not gar_invoked:
         return "fail"
-    if unfilled:
+    if unfilled or marker_errors:
         return "fail"
     if not all(json_sections.values()):
         return "fail"
@@ -271,10 +293,15 @@ def missing_labels(
     execute_swap: dict[str, bool],
     gar_invoked: bool,
     unfilled: list[str] | tuple[str, ...] = (),
+    marker_errors: list[str] | tuple[str, ...] = (),
+    gar_error: str | None = None,
 ) -> list[str]:
     errors: list[str] = []
     if not gar_invoked:
-        errors.append("G_GAR_UPSTREAM: l9-global-architect was not recorded as invoked")
+        errors.append(
+            gar_error or "G_GAR_UPSTREAM: l9-global-architect was not recorded as invoked"
+        )
+    errors.extend(marker_errors)
     if unfilled:
         errors.append(
             "G_UNFILLED_PARAMETER: template parameters left unfilled: "

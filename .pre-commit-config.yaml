@@ -127,6 +127,13 @@ repos:
         files: ^(\.cursor-plugin/plugin\.json|environment/agents/adapters/cursor/(skills/|validate_skill_projection\.py)|skills/|ops/generated/skill-registry\.json|ops/skill_routing/|ops/hooks/(before_submit_skill_router\.py|hooks\.json\.template)|rules/23-l9-skill-routing\.mdc)
         pass_filenames: false
 
+      - id: plan-pipeline-admit
+        name: Simple plans need a passing pipeline receipt
+        entry: python3 skills/l9-plan-simple/scripts/admit_plan.py
+        language: system
+        files: \.plan\.md$
+        pass_filenames: true
+
       - id: repo-hygiene
         name: Repository housekeeping gate (RB-HK-001)
         entry: python3 tools/check_repo_hygiene.py

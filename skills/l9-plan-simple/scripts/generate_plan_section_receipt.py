@@ -15,12 +15,14 @@ from paths import is_under, safe_cli_path
 from plan_sections import (
     GAR_SKILL_REF,
     PLAN_SCHEMA_REL,
+    REPO_ROOT,
     TEMPLATE_REL,
     execute_swap_presence,
     frontmatter_presence,
     handoff_mode,
     json_section_presence,
     md_section_presence,
+    projection_marker_errors,
     receipt_status,
     unfilled_parameters,
     workspace_root,
@@ -46,12 +48,22 @@ def _rel(path: Path) -> str:
     return resolved.as_posix()
 
 
+def _gar_module():
+    script_dir = REPO_ROOT / "skills" / "l9-global-architect" / "scripts"
+    if str(script_dir) not in sys.path:
+        sys.path.insert(0, str(script_dir))
+    import write_plan_run
+
+    return write_plan_run
+
+
 def build_receipt(
     plan_json_path: Path,
     plan_md_path: Path,
     *,
     gar_invoked: bool,
     gar_run_id: str | None,
+    gar_run: Path | None = None,
 ) -> dict[str, Any]:
     plan = json.loads(plan_json_path.read_text(encoding="utf-8"))
     if not isinstance(plan, dict):
@@ -63,6 +75,23 @@ def build_receipt(
     execute_swap = execute_swap_presence(md_text)
     mode = handoff_mode(md_text)
     unfilled = unfilled_parameters(md_text, plan)
+    markers = projection_marker_errors(md_text)
+    run_rel = None
+    run_sha = None
+    run_id = gar_run_id
+    gar_run_ok = False
+    if gar_run is not None and gar_run.is_file():
+        problems = _gar_module().verify_run(gar_run)
+        gar_run_ok = not problems
+        run_sha = _sha256(gar_run)
+        run_rel = _rel(gar_run)
+        try:
+            payload = json.loads(gar_run.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            payload = {}
+        if isinstance(payload, dict) and payload.get("run_id"):
+            run_id = str(payload["run_id"])
+    claimed = bool(gar_invoked) or gar_run is not None
     return {
         "schema_version": "1.0.0",
         "kind": RECEIPT_KIND,
@@ -75,9 +104,11 @@ def build_receipt(
         "template_ref": TEMPLATE_REL,
         "handoff_mode": mode,
         "gar_upstream": {
-            "invoked": gar_invoked,
+            "invoked": claimed,
             "skill_ref": GAR_SKILL_REF,
-            "run_id": gar_run_id,
+            "run_id": run_id,
+            "run_path": run_rel,
+            "run_sha256": run_sha,
         },
         "json_sections": json_sections,
         "md_sections": md_sections,
@@ -89,8 +120,9 @@ def build_receipt(
             md_sections,
             frontmatter,
             execute_swap,
-            gar_invoked,
+            gar_run_ok,
             unfilled,
+            markers,
         ),
     }
 
@@ -107,16 +139,23 @@ def main(argv: list[str] | None = None) -> int:
         help="record that l9-global-architect ran upstream (default: false; pass evidence)",
     )
     parser.add_argument("--gar-run-id", default=None, help="optional GAR run id")
+    parser.add_argument(
+        "--gar-run",
+        default=None,
+        help="GAR run file written by write_plan_run.py; required for status pass",
+    )
     args = parser.parse_args(argv)
     plan_json = safe_cli_path(args.plan_json)
     plan_md = safe_cli_path(args.plan_md)
     out = safe_cli_path(args.out)
+    gar_run = safe_cli_path(args.gar_run) if args.gar_run else None
     try:
         receipt = build_receipt(
             plan_json,
             plan_md,
             gar_invoked=bool(args.gar_invoked),
             gar_run_id=args.gar_run_id,
+            gar_run=gar_run,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"FAIL: cannot build receipt: {exc}", file=sys.stderr)

@@ -21,6 +21,8 @@ INJECT_TEXT = (
 )
 REQUIRED_REL = Path(".l9") / "plan" / "kernel-pass-required.json"
 REQUIRED_SCHEMA = "l9.plan.kernel_pass_required.v1"
+PIPELINE_REL = Path(".l9") / "plan" / "pipeline-required.json"
+PIPELINE_SCHEMA = "l9.plan.pipeline_required.v1"
 MTIME_WINDOW_S = 120 * 60
 PLAN_SUFFIX = ".plan.md"
 CAMPAIGN_RE = re.compile(r"(?:^|[\s;&|])make(?:\s+\S+)*\s+campaign(?:\s|$)", re.I)
@@ -243,10 +245,48 @@ def execute_verdict(event: dict[str, Any]) -> tuple[str, str]:
     return "allow", ""
 
 
+def _admit_plan(path: Path) -> list[str]:
+    scripts = repo_root() / "skills" / "l9-plan-simple" / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    try:
+        import admit_plan
+    except Exception as exc:
+        return [f"G_ADMIT: checker unavailable: {exc}"]
+    return admit_plan.check_plan(path)
+
+
+def write_pipeline_required(workspace: Path, reason: str, plan: str | None) -> None:
+    path = workspace / PIPELINE_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = {
+        "schema": PIPELINE_SCHEMA,
+        "reason": reason,
+        "plan": plan,
+        "repair": "skills/l9-plan-simple/scripts/run_plan_pipeline.py",
+        "written_at": datetime.now(UTC).isoformat(),
+    }
+    path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+
+
 def handle_post_tool_use(event: dict[str, Any]) -> None:
-    # Store-plan kernel apply is /ff-owned. Do not latch Improve/V&R here.
-    del event
-    return
+    # Store-plan kernel apply stays /ff-owned. This latch is the plan pipeline
+    # admission, a different file, and it does not delete the plan.
+    workspace = workspace_from_event(event)
+    tool = str(event.get("tool_name") or event.get("toolName") or "")
+    path = written_path(event)
+    if path is not None and path.name.endswith(PLAN_SUFFIX):
+        if path.is_file():
+            errors = _admit_plan(path)
+            if errors:
+                write_pipeline_required(workspace, "; ".join(errors[:8]), str(path))
+        return
+    if "CreatePlan" in tool or tool.lower() in {"create_plan", "createplan"}:
+        write_pipeline_required(
+            workspace,
+            "host plan tool payload seen; file gate still required",
+            None,
+        )
 
 
 def handle_execute_gate(event: dict[str, Any]) -> int:
