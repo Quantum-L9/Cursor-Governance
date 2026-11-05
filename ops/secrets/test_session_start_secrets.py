@@ -19,7 +19,7 @@ SECRETS = Path(__file__).resolve().parent
 def _bind_status(rows: list[dict[str, Any]]) -> Any:
     by_name = {str(row["name"]): row for row in rows}
 
-    def _lookup(name: str) -> dict[str, Any]:
+    def _lookup(name: str, *, env=None) -> dict[str, Any]:
         return by_name[name]
 
     return _lookup

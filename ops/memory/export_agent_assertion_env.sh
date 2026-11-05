@@ -15,6 +15,12 @@
 # shellcheck disable=SC2034,SC2317  # status is read by the sourcing launcher; `exit` runs when executed
 set -uo pipefail
 L9_ASSERTION_EXPORT_STATUS=skipped
+# A failed/skipped fresh mint must not leave an inherited assertion usable.
+# Input map paths and the requested actor are preserved; only minted outputs
+# are cleared. This legacy operator/hook helper is not a native MCP transport.
+unset L9_MEMORY_AGENTS_DOOR_SECRET L9_MEMORY_AGENT_ASSERTION
+unset L9_MEMORY_AGENT_SIGNING_KEYS_JSON L9_MEMORY_AGENT_GRANTS_JSON
+unset L9_MEMORY_IDENTITY_ASSERTION_JSON L9_MEMORY_IDENTITY_ASSERTION_HMAC
 AGENT_ID="${L9_MEMORY_AGENT_ID:-}"
 SECRET_MAP="${L9_MEMORY_SECRET_MAP:-$HOME/.config/l9-memory/agent_tokens.local.json}"
 GRANTS_MAP="${L9_MEMORY_GRANTS_MAP:-$HOME/.config/l9-memory/agent_grants.json}"
@@ -50,11 +56,18 @@ _assert_path="$(
     --grants-map "$GRANTS_MAP" \
     --format shell
 )" || _assert_rc=$?
-if [[ -n "${_assert_path:-}" && -f "$_assert_path" ]]; then
+if [[ "$_assert_rc" -eq 0 && -n "${_assert_path:-}" && -f "$_assert_path" ]]; then
   # shellcheck disable=SC1090
-  source "$_assert_path"
+  if source "$_assert_path"; then
+    L9_ASSERTION_EXPORT_STATUS=minted
+  else
+    L9_ASSERTION_EXPORT_STATUS=failed
+    unset L9_MEMORY_AGENTS_DOOR_SECRET L9_MEMORY_AGENT_ASSERTION
+    unset L9_MEMORY_AGENT_SIGNING_KEYS_JSON L9_MEMORY_AGENT_GRANTS_JSON
+    unset L9_MEMORY_IDENTITY_ASSERTION_JSON L9_MEMORY_IDENTITY_ASSERTION_HMAC
+    echo "assertion env NOT minted: output could not be loaded" >&2
+  fi
   rm -f "$_assert_path"
-  L9_ASSERTION_EXPORT_STATUS=minted
 else
   # The maps exist and an identity resolved, yet the helper produced no env
   # file (its stderr names why). Say so: a refused mint must not read like a

@@ -166,8 +166,8 @@ class GovernanceMcpService:
                 "name": "governance_bootstrap",
                 "description": (
                     "Delegate an existing Git workspace to the shared L9 Manus bootstrap. "
-                    "This tool requires a bearer-protected deployment because even diagnostic runs "
-                    "write local readiness metadata. Apply mode also requires "
+                    "This tool requires a bearer-protected deployment; check is observational. "
+                    "Apply mode also requires "
                     "--allow-bootstrap-apply and never installs credentials or changes remote "
                     "services."
                 ),
@@ -266,9 +266,8 @@ class GovernanceMcpService:
                     {
                         "name": "memory_lifecycle_status",
                         "description": (
-                            "Report names-only readiness for the signed Manus memory agent door "
-                            "and "
-                            "the bounded lifecycle bridge. It never reads or writes memory."
+                            "Report names-only UPSTREAM_BLOCKED package, UNBOUND native Manus "
+                            "client and UNKNOWN live admission. No Memory I/O or authentication."
                         ),
                         "inputSchema": {
                             "type": "object",
@@ -279,18 +278,16 @@ class GovernanceMcpService:
                     {
                         "name": "memory_lifecycle_start",
                         "description": (
-                            "Explicit Manus session-start lifecycle call. It runs canonical "
-                            "bounded hydration and returns authorized context plus "
-                            "non-authoritative local session evidence. Requires the signed "
-                            "Manus agent door; it never falls back to an "
-                            "operator principal."
+                            "Blocked compatibility stub for explicit health-only startup. "
+                            "No hydration, workspace resolution, receipt or operator fallback. "
+                            "Memory is not a repository-write precondition."
                         ),
                         "inputSchema": {
                             "type": "object",
                             "properties": {
                                 "workspace": {
                                     "type": "string",
-                                    "description": "Absolute Git workspace path to hydrate.",
+                                    "description": "Retained compatibility input; not resolved.",
                                 },
                                 "task": {
                                     "type": "string",
@@ -316,10 +313,9 @@ class GovernanceMcpService:
                     {
                         "name": "memory_lifecycle_close",
                         "description": (
-                            "Explicit Manus session-end lifecycle call. It admits a canonical "
-                            "continuation and performs idempotent canonical close under the "
-                            "bounded Manus close envelope. "
-                            "Summary text is redacted before processing and is never returned."
+                            "Blocked compatibility stub; returns native admission unknowns "
+                            "without reading workspace, echoing summary, creating a transcript "
+                            "or emulating close/admin distill."
                         ),
                         "inputSchema": {
                             "type": "object",
@@ -429,14 +425,17 @@ class GovernanceMcpService:
                     files.append(candidate)
         return sorted(set(files))
 
-    def _adapter_contract_errors(self) -> list[str]:
+    def _adapter_contract_report(self) -> dict[str, Any]:
         validator = self.adapter_root / "validate_manus_adapter.py"
         spec = importlib.util.spec_from_file_location("manus_validate_manus_adapter", validator)
         if spec is None or spec.loader is None:
-            return [f"unable to load adapter validator at {validator}"]
+            raise ToolInputError(f"unable to load adapter validator at {validator}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module.validate(self.governance_root)
+        return module.validation_report(self.governance_root)
+
+    def _adapter_contract_errors(self) -> list[str]:
+        return self._adapter_contract_report()["errors"]
 
     def _memory_lifecycle(self):
         """Load the thin lifecycle wrapper after binding it to this checkout."""
@@ -466,18 +465,21 @@ class GovernanceMcpService:
     def status(self, arguments: dict[str, Any]) -> dict[str, Any]:
         git_head = _run(["git", "rev-parse", "--short", "HEAD"], cwd=self.governance_root)
         git_branch = _run(["git", "status", "--porcelain=v1", "--branch"], cwd=self.governance_root)
-        adapter_errors = self._adapter_contract_errors()
+        report = self._adapter_contract_report()
         result: dict[str, Any] = {
             "governance_root": str(self.governance_root),
             "governance_git_head": git_head.get("stdout", "").strip(),
             "governance_git_status": git_branch.get("stdout", "").strip(),
             "manus_adapter": {
-                "status": "ready" if not adapter_errors else "invalid",
-                "contract_errors": adapter_errors,
+                "status": "validated" if not report["errors"] else "invalid",
+                "contract_errors": report["errors"],
+                "validation": report,
                 "mcp_server": {"transport": "streamable-http", "endpoint": "/mcp"},
                 "memory": {
-                    "agent_lane": "package-owned l9-graphite-memory MCP/CLI",
-                    "lifecycle": "enabled" if self.memory_lifecycle_enabled else "disabled",
+                    "status": report["native_binding"]["status"],
+                    "native_client": report["native_binding"]["native_client"],
+                    "live": report["live"]["status"],
+                    "lifecycle": "blocked-stubs" if self.memory_lifecycle_enabled else "disabled",
                 },
                 "bootstrap_enabled": self.bootstrap_enabled,
                 "bootstrap_apply_enabled": self.bootstrap_apply_enabled,
@@ -499,30 +501,22 @@ class GovernanceMcpService:
     def memory_lifecycle_status(self, _arguments: dict[str, Any]) -> dict[str, Any]:
         self._require_memory_lifecycle()
         lifecycle = self._memory_lifecycle()
-        status = lifecycle.signed_agent_door_status()
-        return {
-            "status": "ready" if status["status"] == "ready" else "blocked",
-            "transport": "memory-control-plane/v1",
-            "lifecycle": status,
-            "agent_lane": "package-owned l9-graphite-memory MCP/CLI",
-        }
+        return lifecycle.native_memory_status()
 
     def memory_lifecycle_start(self, arguments: dict[str, Any]) -> dict[str, Any]:
         self._require_memory_lifecycle()
-        workspace = self._resolve_workspace(arguments.get("workspace"))
         lifecycle = self._memory_lifecycle()
         return lifecycle.start_session(
-            workspace=workspace,
+            workspace=arguments.get("workspace"),
             task=arguments.get("task"),
             session_id=arguments.get("session_id"),
         )
 
     def memory_lifecycle_close(self, arguments: dict[str, Any]) -> dict[str, Any]:
         self._require_memory_lifecycle()
-        workspace = self._resolve_workspace(arguments.get("workspace"))
         lifecycle = self._memory_lifecycle()
         return lifecycle.close_session_from_manus(
-            workspace=workspace,
+            workspace=arguments.get("workspace"),
             session_id=arguments.get("session_id"),
             summary=arguments.get("summary"),
             next_action=arguments.get("next_action"),
@@ -703,7 +697,8 @@ class GovernanceMcpService:
                 "instructions": (
                     "Use this MCP server to inspect the shared L9 governance contract and run the "
                     "existing Manus bootstrap. A protected deployment may additionally expose the "
-                    "bounded canonical Manus memory lifecycle. It never exposes a memory provider, "
+                    "blocked Manus memory compatibility stubs, not native Memory readiness. "
+                    "It never exposes a memory provider, "
                     "credentials, shell, arbitrary file access, or repository-writing tool."
                 ),
             }
@@ -857,7 +852,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--enable-memory-lifecycle",
         action="store_true",
-        help="Enable bounded canonical Manus memory lifecycle tools; requires --auth-token-file.",
+        help="Expose blocked Memory compatibility stubs; requires --auth-token-file.",
     )
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:

@@ -1,0 +1,653 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Manus adapter bootstrap alignment",
+  "owner": "l9.actor-registry/global@1#manus",
+  "estimate": "One bounded implementation and regression-validation pass; native hosted Memory admission is an upstream dependency, not an implementation estimate.",
+  "depth": "deep",
+  "code_in_scope": true,
+  "objective": "Fully align the Manus adapter with current shared bootstrap, identity, secrets and native Memory contracts without inventing authority. Planning is an artifact-only subtask; downstream implementation remains the user's requested outcome. Use the existing shared owners for observational check, locked-Python preflight, independent source-revision readiness and hosted Manus no-AWS/no-operator-profile classification. Replace the historical Manus Memory stdio/HMAC carrier with a fail-closed native Memory 3.0 carrier/render/readiness interface that explicitly reports UPSTREAM_BLOCKED while the owner package/client and OAuth actor admission are unavailable. Keep ordinary coding usable memory-blind. Baseline is Quantum-L9/Cursor-Governance branch fix/manus-bootstrap-alignment at 334faa6957e0c2f67eeea4b397019f6a141a30b8, advanced by the parent before any source edit onto the unique PR chain #824 -> #825 -> #826 (feat/fail-closed-plan-pipeline). Preserve all 32 inherited paths and every existing owner contract. GAR decision and reasoning-owner receipts are docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-decision.json; the tool-owned GAR run and plan pipeline own structural admission only, never runtime or live-auth admission.",
+  "success_criteria": [
+    "V1 proves shared bootstrap --check performs no installation, secrets login/profile mutation, receipt removal/write, Git exclude/prune/ref mutation or scratch restoration; it leaves fixture filesystem snapshots unchanged and reports unsynchronized/missing optional components as exit 6 rather than READY.",
+    "V1 and V2 prove locked .venv absence, wrong pinned version or required import failure exits 1 before any policy/secrets/namespace/readiness consumer and never executes system Python for governance work; Manus install selects the locked validator interpreter after bootstrap.",
+    "V3 proves runtime_script_revision is independently resolved from the executing script owner, not copied from --governance; mismatched two-clone revisions yield NOT_READY/REVISION_MISMATCH and missing provenance remains UNKNOWN.",
+    "V4 proves explicit hosted Manus classification uses the shared surface detector, performs no AWS import/probe/seed or operator profile fallback whether the machine identity is present, absent or refused, never exposes values, and preserves authorized Cursor/operator behavior.",
+    "V5 proves canonical identity assurance is owned by the shared verifier; Manus materialization rejects legacy agent_id/status shortcuts, foreign/unknown/non-current actor or surface, inactive binding and stale/tampered projection before producing files; failed mint paths never source or reuse an existing assertion file.",
+    "V6 proves the committed Memory carrier is native authenticated Streamable HTTP, contains no fabricated issuer/client/callback/credential or stdio/HMAC/provider fallback, and renderer/readiness refuse the installed 2.6.0 package as UPSTREAM_BLOCKED without starting it or changing the lockfile. Canonical actor manus and surface manus-cloud remain registration only, not auth proof.",
+    "V7 proves lifecycle startup is bounded health-only, retrieval is explicit/on-demand and not a repository-write precondition; native-client absence or unproved OAuth actor admission is fail-closed for memory while governance remains usable. No lifecycle wrapper emulates admin distill or a local operator agent door.",
+    "V8 proves Infisical configured shape is separate from observed auth state, 401 outcomes name the failing stage without leaking request/response credentials, token expiry/invalid expiry never overstates usable lifetime, and offline fixtures cannot be described as live Universal Auth proof.",
+    "V9 and V10 prove matching docs/contracts/tests contain no active legacy memory instructions, preserve unrelated governance/Infisical MCP safety, pass scoped quality gates and contain only this plan's allowlisted changes; root protected files, inherited planning owners, upstream .github/Memory and secrets remain untouched."
+  ],
+  "scope": {
+    "in": [
+      "Shared bootstrap ordering and strictly observational --check in ops/scripts/bootstrap_agent_environment.sh, including honest 0/6/1 status, machine stdout hygiene and optional component accounting.",
+      "ensure_uv_environment.sh check safety, especially architecture mismatch fingerprint deletion and any read-only lock probe side effects; preserve exclusive apply/shared reader concurrency and pinned apply behavior.",
+      "Independent runtime source provenance in write_runtime_readiness_receipt.py with corresponding tests and no new receipt authority.",
+      "Shared hosted Manus surface classification, no AWS or operator profile fallback in session_start_secrets.py/infisical_cli_login.py, using existing surface_detect instead of private host marker lists.",
+      "Shared canonical identity assurance through tools/assurance/check_canonical_identity_projection.py and ops/memory/identity_projection.py; materializer rejects legacy bypasses and failed-mint exporter guard is fail-closed.",
+      "Manus Memory carrier/render/launch/readiness interface consumes native owner contract only or reports UPSTREAM_BLOCKED; no package upgrade, registration churn or auth fabrication.",
+      "Explicit health-only/on-demand Manus lifecycle adapter behavior, matching memory-hook envelope and shared bootstrap surface documentation; keep the sole canonical close owner and no hosted admin emulation.",
+      "Native Infisical status/configuration/auth distinction, bounded credential-redacted stage errors and cache-expiry safety; preserve the separate encrypted connector credential boundary.",
+      "Manus README/setup/session bootstrap/env comments, structural validator, owner contracts and focused regression tests; plan artifacts generated through the current mandatory run_plan_pipeline.py."
+    ],
+    "out": [
+      "Planning subagent may create only this plan's docs/plans artifacts and bounded owner-script prefetch evidence; no code patches, branches, Git commits, pushes, pull requests, deployments or runtime/credential changes.",
+      "No edits to CANONICAL_LAW.md, AGENTS.md, CLAUDE.md, README.md, Makefile, .pre-commit-config.yaml, any skill, command, rule, generated skill registry or any of the 32 inherited PR-chain files.",
+      "No upstream Quantum-L9/.github or l9-graphiti-memory mutation, release admission, issue closure, deployment or package/uv.lock change.",
+      "No Auth0 tenant issuer/client/callback invention, token/secret writes, OAuth login, live Memory operation, local stdio-to-HTTP bridge, provider client or historical HMAC/bearer fallback.",
+      "No reinterpretation of OAuth subject/client as actor/surface; no claim of live auth, hosted/client/mobile admission, externally executed GAR/Cognitive Runtime, controller transport or effective PR authority from structure.",
+      "No root protected-file edits, skill modification, arbitrary API/shell capability, broad registry refactor, changes to authorized Cursor operator bootstrap or weakening gates/tests for green.",
+      "No Program Execution, Program Lock, Controller lease, campaign execution, autonomous merge or persistent automation. Future publication is parent/executor-owned and requires current stacked-PR/L4 authority."
+    ]
+  },
+  "execution_envelope": {
+    "network": {
+      "mode": "bounded_external_write",
+      "allowed_services": [
+        "GitHub Quantum-L9/Cursor-Governance only for the downstream executor's existing stacked PR publication path; offline fixtures for Auth0, Infisical and Memory; no live service configuration, authentication or deployment"
+      ]
+    },
+    "secrets": {
+      "access": "none"
+    }
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [
+      "shared bootstrap versus adapter wrapping",
+      "canonical identity provenance versus operating binding",
+      "hosted secrets versus operator bootstrap",
+      "native Memory package authority versus host-managed OAuth client",
+      "configuration structure versus observed runtime admission"
+    ],
+    "external_systems_touched": [
+      "Quantum-L9/.github pinned source read only",
+      "Quantum-L9/l9-graphiti-memory pinned source read only",
+      "GitHub downstream stacked PR publication only; parent-owned"
+    ],
+    "migration_required": false
+  },
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": "git status --short; git rev-parse HEAD; git branch --show-current; git diff --name-only 061fae50dbc1c1e57280b8f94f0a4df783f746d9..HEAD",
+      "pass_criteria": "Observed clean at 334faa6957e0c2f67eeea4b397019f6a141a30b8 on fix/manus-bootstrap-alignment before plan artifacts; inherited 32 files are not this task's changes. Reverify at execution start; do not overwrite parent or inherited work.",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": ".venv/bin/python -B tools/authority/project_canonical_identity.py --authority-root /home/ubuntu/L9-Org-Authority --check",
+      "pass_criteria": "Existing projector reports historical 9b27869dd893fcd28f76f99c9184a90435542c76 provenance-equivalent through .github 93dbaa13e5062c243a6bc47e9b63af0a808808c1; actor manus/surface manus-cloud already registered. Source revision alone does not demand regenerated bytes.",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "PYTHONDONTWRITEBYTECODE=1 L9_MEMORY_ENV_HEAL=0 .venv/bin/python -B ops/hooks/plan_memory_prefetch.py --workspace . --task 'Manus adapter bootstrap alignment'",
+      "pass_criteria": "Bounded prefetch attempted without environment healing. Observed NO_HIT, zero records/conflicts, snapshot_digest 4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945 at original 061fae50 baseline; record as historical planning evidence only, native auth UNKNOWN. CANONICAL_LAW 8.9/8.10 makes memory nonblocking; changed-source task context must not be invented.",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "Read /home/ubuntu/manus-fix-baseline.log and parent-provided scoped regression baseline; inspect .pre-commit-config.yaml as the hook catalog without editing it",
+      "pass_criteria": "Log records 204 passed in 38.76s before implementation; not a final implementation verdict. Parent reports locked UV check cached and current BOUND canonical binding; these observations grant no new authority.",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": ".venv/bin/python -B skills/l9-plan/scripts/route_plan.py --risk high --evidence partial --json; load skills/l9-global-architect/runtime/MANIFEST.yaml load_order and pinned Reasoning Foursome snapshots",
+      "pass_criteria": "Observed deep with omit_gates []; all 14 GAR owner artifacts resolve and are loaded in order; GAR decision is selected before PLAN_DOCUMENT. No integrated runtime activation or unimplemented product extract substitution.",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Repair the shared bootstrap owner, not a Manus copy: branch check/apply before UV provisioning, secrets removal/login/mkdir, receipt writes and other mutation; count check-mode UV mismatch as DEGRADED. Verify the locked venv version and required pydantic/yaml imports immediately after toolchain resolution before every gate/secrets/identity consumer; missing/wrong/import-failing locked Python is exit 1 with no system-python governance fallback. Preserve exit 0/6/1, stderr diagnostics and stdout machine payload. Make ensure_uv check architecture mismatch observational and prevent fingerprint/lock-state mutation while retaining apply concurrency behavior. Independent review follow-up: apply selects only the verified governance secrets owner, never an older workspace copy. Source revision requires the exact repository root and tracked script ownership, so nested copied code cannot borrow an enclosing HEAD.",
+      "files": [
+        "ops/scripts/bootstrap_agent_environment.sh",
+        "ops/scripts/ensure_uv_environment.sh",
+        "ops/scripts/tests/test_bootstrap_diagnostic_contract.py",
+        "ops/scripts/tests/test_bootstrap_invariants.py",
+        "ops/scripts/tests/test_uv_environment_fingerprint.sh",
+        "tests/ops/scripts/test_agent_bootstrap_readiness.py",
+        "ops/scripts/tests/test_session_start_runtime_report.py"
+      ],
+      "operation": "Replace",
+      "anchor": "Locked toolchain and check/apply branches",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "layer": "ops",
+      "shared_root_cause": "Shared check currently executes mutators and checks locked imports after policy consumers."
+    },
+    {
+      "id": "T2",
+      "task": "Select Manus validator interpreter only after shared bootstrap returns and fail closed if a locked interpreter is absent. Resolve runtime_script_revision from the actual executing script source root independently of --governance; explicit provenance overrides remain truthful inputs and UNKNOWN remains represented. Add two-clone/copied-script/missing-Git tests, retain mismatch and digest semantics and do not rewrite runtime receipt schema. Default writer source provenance requires exact root and tracked ownership of the executing writer. Explicit overrides and UNKNOWN/omit behavior remain truthful inputs.",
+      "files": [
+        "environment/agents/adapters/manus/install.sh",
+        "ops/scripts/write_runtime_readiness_receipt.py",
+        "ops/scripts/tests/test_runtime_readiness_receipt.py",
+        "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+        "tests/ops/scripts/test_agent_bootstrap_readiness.py"
+      ],
+      "operation": "Replace",
+      "anchor": "PYTHON_BIN selection and runtime_rev default",
+      "effort": "small",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "leverage_rank": 3,
+      "layer": "assurance",
+      "shared_root_cause": "Eager adapter interpreter selection and same-root provenance aliasing conceal broken bootstrap/two-clone drift."
+    },
+    {
+      "id": "T3",
+      "task": "Use canonical shared surface detection for explicit hosted Manus classification. In the shared secrets identity owner, Manus takes only sanctioned runtime machine identity inputs and never imports/probes AWS, seeds credentials or falls back to an operator's Infisical profile, including missing/refused/partial identities. Preserve Cursor/operator authorized bootstrap and self-hosted pool precedence; retain names-only failure/status and no credential exposure. Main executor owns this shared change. Complete the shared identity context through capability_bind: optional explicit environment propagated without os.environ writes; identity/value/source/token/failed-login caches invalidated on context changes before cache hits. Real binder tests prepopulate an operator context and prove explicit/ambient-transition Manus cannot reuse it.",
+      "files": [
+        "ops/secrets/session_start_secrets.py",
+        "ops/secrets/infisical_cli_login.py",
+        "ops/secrets/test_session_start_secrets.py",
+        "tests/ops/secrets/test_manus_identity_plane.py",
+        "ops/secrets/capability_bind.py"
+      ],
+      "operation": "Replace",
+      "anchor": "surface_class, machine_identity and run_plane",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "leverage_rank": 2,
+      "layer": "ops",
+      "shared_root_cause": "Hosted Manus is currently classified as operator when environment machine identity is absent, reopening AWS/profile behavior."
+    },
+    {
+      "id": "T4",
+      "task": "Consolidate complete canonical identity assurance at the existing shared owner and invoke it from adapter validation/materialization. Require v2 operating bindings, exact actor_ref/surface_refs and active binding/current projected identities; reject legacy agent_id/status fields, foreign identity, missing scope and tampered/stale/unverifiable projection before any materialized file. Do not edit canonical registries or treat registered identities as OAuth admission. Preserve projector provenance-equivalence semantics rather than forcing source-revision churn. Guard the legacy shared assertion exporter so a nonzero mint cannot source a pre-existing output path; skipped/failed export must not leave stale assertions accepted by a launcher. Trusted canonical checker keeps its code ROOT at the source checkout; only artifact paths are rebound. A fresh-process hostile caller-root ops package must never execute.",
+      "files": [
+        "tools/assurance/check_canonical_identity_projection.py",
+        "ops/memory/identity_projection.py",
+        "ops/memory/export_agent_assertion_env.sh",
+        "environment/agents/adapters/manus/materialize_memory_authority.py",
+        "environment/agents/adapters/manus/validate_manus_adapter.py",
+        "environment/agents/adapters/manus/tests/test_memory_authority.py",
+        "tests/test_canonical_identity_projection.py",
+        "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+        "tests/ops/memory/test_assertion_export_fail_closed.py"
+      ],
+      "operation": "Replace",
+      "anchor": "shared assurance and _manus_grants legacy acceptance",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [],
+      "leverage_rank": 4,
+      "layer": "assurance",
+      "shared_root_cause": "Adapters must consume one verified canonical projection instead of permitting legacy identity/status shortcuts or stale failed-mint files."
+    },
+    {
+      "id": "T5",
+      "task": "Replace the historical Manus memory stdio/HMAC carrier, renderer and launcher contract with native authenticated MCP Streamable HTTP consumption or explicit UPSTREAM_BLOCKED. The installed owner package is 2.6.0; owner main ae6e2c0d0c29dfe2a3de3fdf5293e4d996164620 leaves hosted OAuth actor admission issue 108 open. Consume only owner-supplied package/client capabilities and a proven host-managed client binding; do not invent an SDK method, issuer, callback, public client id or credential. A candidate descriptor may cite the existing published resource identifier only as owner contract, never a live endpoint admission. Renderer must refuse an executable connector when required native package/client proof is missing and must not render or start stdio/HMAC/legacy maps as fallback. Materializer remains legacy rejection assurance only, not a production Memory 3.0 credential path. Validator must validate the blocked contract without advertising Memory ready.",
+      "files": [
+        "environment/agents/adapters/manus/memory-mcp-connector.json",
+        "environment/agents/adapters/manus/render_memory_mcp_connector.py",
+        "environment/agents/adapters/manus/serve_memory_mcp.sh",
+        "environment/agents/adapters/manus/validate_manus_adapter.py",
+        "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+        "environment/agents/adapters/manus/tests/test_memory_authority.py",
+        "environment/agents/adapters/manus/tests/test_native_memory_boundary.py"
+      ],
+      "operation": "Replace",
+      "anchor": "memory carrier transport, renderer and package launch",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "T4"
+      ],
+      "leverage_rank": 5,
+      "layer": "memory",
+      "shared_root_cause": "Current carrier/validator enforce superseded stdio/HMAC rather than current native owner law."
+    },
+    {
+      "id": "T6",
+      "task": "Make explicit Manus startup health-only and on-demand retrieval separate from startup and repository mutation, using the existing shared health/envelope and canonical close semantics only if a native owner client is available. Otherwise lifecycle tools report UPSTREAM_BLOCKED with names-only evidence and do not invoke historical signed local/operator CLI as an agent transport. Remove launcher minting for the hosted memory lifecycle path; leave unrelated governance bearer protection and apply authorization unchanged. Align the existing manus-session-start envelope to resolve/health/capabilities only and prohibit admin distill emulation. No custom lifecycle authority or fake public Manus hook.",
+      "files": [
+        "environment/agents/adapters/manus/memory_lifecycle.py",
+        "environment/agents/adapters/manus/mcp_server.py",
+        "environment/agents/adapters/manus/serve_mcp.sh",
+        "environment/agents/adapters/manus/mcp-connector.json",
+        "ops/config/memory-hook-envelopes.json",
+        "environment/agents/adapters/manus/tests/test_memory_lifecycle.py",
+        "environment/agents/adapters/manus/tests/test_mcp_server.py",
+        "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md",
+        "environment/agents/adapters/manus/tests/test_native_memory_boundary.py"
+      ],
+      "operation": "Replace",
+      "anchor": "start_session, lifecycle status and manus-session-start envelope",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "T5"
+      ],
+      "leverage_rank": 6,
+      "layer": "memory",
+      "shared_root_cause": "Legacy startup hydration/write precondition and bridge assertions conflict with health-only/native transport law."
+    },
+    {
+      "id": "T7",
+      "task": "Separate Infisical configuration shape from observed Universal Auth state in native MCP status; a configured descriptor is not live authentication. Keep status observational, record unverified/observed auth without accidental login, emit stage-specific sanitized 401 errors, clear refused/expired cached tokens and enforce truthful bounded expiresIn semantics including absent, invalid, very short and expired lifetime. Tests use offline fake APIs and confirm no request credential, echoed resolved value or auth response reaches output. Do not expand capabilities or add credentials. Main executor owns this change. Anchor token expiry before login so round-trip time cannot extend it, reject already-expired responses, and recursively inspect original decoded response strings/keys so JSON escaping cannot hide credential echoes.",
+      "files": [
+        "environment/agents/adapters/manus/infisical_mcp_server.py",
+        "environment/agents/adapters/manus/tests/test_infisical_mcp_server.py",
+        "environment/agents/adapters/manus/tests/test_render_infisical_mcp_connector.py"
+      ],
+      "operation": "Replace",
+      "anchor": "InfisicalClient.status, login cache and SafeMcpError",
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "T3"
+      ],
+      "leverage_rank": 7,
+      "layer": "assurance",
+      "shared_root_cause": "Configuration-ready and cache-shape observations are not live authentication truth."
+    },
+    {
+      "id": "T8",
+      "task": "Update Manus README/setup/session-bootstrap/env comments and shared SURFACE_BOOTSTRAP_CONTRACT to current owner law with matched validator/tests: canonical .github identity versus operating binding; check is observational; locked missing Python blocks; Manus no AWS/profile fallback; native Memory-only/UPSTREAM_BLOCKED; startup health-only, hydration on demand and no memory precondition on coding; Infisical configured/auth separation. Remove active stdio/HMAC/cross-chat secret-map and must-start-before-writes instructions. Keep secret-plane runtime identity distinct from connector-only native Infisical credentials, explicit project instruction versus enforced hook, dormant manus-cloud PE provider and parent-owned stacked PR contract. Do not modify protected root docs or skills. Replace shared SessionStart hydrate/prefetch table and active Claude startup compile_and_format prose with health-only startup and explicitly on-demand retrieval. Documentation correction grants no peer runtime hook.",
+      "files": [
+        "environment/agents/adapters/manus/README.md",
+        "environment/agents/adapters/manus/setup.md",
+        "environment/agents/adapters/manus/session_bootstrap.md",
+        "environment/agents/adapters/manus/environment.env.example",
+        "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md",
+        "environment/agents/adapters/manus/validate_manus_adapter.py",
+        "environment/agents/adapters/manus/tests/test_manus_adapter.py"
+      ],
+      "operation": "Replace",
+      "anchor": "current identity, secrets and memory operating instructions",
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7"
+      ],
+      "leverage_rank": 8,
+      "layer": "docs",
+      "shared_root_cause": "Stale adapter prose/structural markers regenerate retired runtime expectations."
+    },
+    {
+      "id": "T9",
+      "task": "Run all scoped proofs, broader applicable shared regressions and the unchanged .pre-commit-config.yaml catalog; distinguish structural admission, unit-fixture results and live Unknowns. Inspect diff against 334faa6957e0c2f67eeea4b397019f6a141a30b8, preserve inherited paths and leave failure evidence honest. Re-run the tool-owned plan pipeline/section admission after any plan change; parent then executes only its authorized scoped commit/L4/stacked PR route and displays the PR URL. No planner-side publication or runtime claim. User explicitly selected PR #826 on 2026-11-05 after sibling #827 appeared. Retain PR_STACK=auto with explicit PR_BASE=origin/feat/fail-closed-plan-pipeline; never reinterpret this as permission to merge, bypass gates, or rebase onto #827.",
+      "files": [
+        "docs/plans/manus-adapter-bootstrap-alignment.plan.json",
+        "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.plan.md",
+        "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.section-receipt.json",
+        "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-decision.json",
+        "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-run.json"
+      ],
+      "operation": "Create",
+      "anchor": "planning evidence and scoped implementation validation",
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": [
+        "T8"
+      ],
+      "leverage_rank": 9,
+      "layer": "assurance",
+      "shared_root_cause": "Proof must be source-bound and cannot collapse planning completeness into implemented/live runtime success."
+    }
+  ],
+  "critical_path": [
+    "T4",
+    "T5",
+    "T6",
+    "T8",
+    "T9"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "T1/T2/T3 prove observational bootstrap, early locked interpreter and hosted no-AWS semantics.",
+      "unlocks": "Reliable local session readiness without vendor duplication or secret writes."
+    },
+    {
+      "id": "M2",
+      "outcome": "T4/T5/T6 prove canonical identity consumption and blocked native memory interface.",
+      "unlocks": "Honest memory-blind coding and future owner admission without compatibility fallback."
+    },
+    {
+      "id": "M3",
+      "outcome": "T7/T8/T9 prove auth-truth distinction, current docs/contracts and scoped quality evidence.",
+      "unlocks": "Parent-owned stacked PR handoff; does not unlock live OAuth, deployments or memory admission."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "V1 fixture no-side-effect snapshots and locked-Python failure matrix.",
+      "no_go_action": "Stop shared bootstrap changes if check mutates or a policy consumer runs on fallback Python; repair at the shared owner."
+    },
+    {
+      "id": "C2",
+      "after": "T4",
+      "evidence_required": "V5 canonical projection/legacy materialization/failed-mint negative cases.",
+      "no_go_action": "Do not produce credential/grant files or launch any memory process after failed identity assurance."
+    },
+    {
+      "id": "C3",
+      "after": "T6",
+      "evidence_required": "V6/V7 prove UPSTREAM_BLOCKED without stdio/HMAC/provider fallback and health-only startup.",
+      "no_go_action": "Keep memory fail-closed and coding usable; never invent upstream APIs, client registration, credentials or a deployment to clear the blocker."
+    },
+    {
+      "id": "C4",
+      "after": "T9",
+      "evidence_required": "V1-V10 scoped checks and diff hygiene, current plan/section admission; parent must separately prove publication gates.",
+      "no_go_action": "Stop publication on failure, overlapping parent changes or sibling PR chains. No force push, merge or silent embedded-mode switch."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "environment/agents/adapters/manus/README.md, setup.md, session_bootstrap.md, environment.env.example",
+      "action": "update",
+      "todo_ids": [
+        "T8"
+      ],
+      "reason": "Remove retired carrier/lifecycle/AWS instructions and explain honest readiness and auth boundaries."
+    },
+    {
+      "surface": "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md",
+      "action": "update",
+      "todo_ids": [
+        "T6",
+        "T8"
+      ],
+      "reason": "Correct shared lifecycle startup semantics to current health-only/on-demand law without changing law."
+    },
+    {
+      "surface": "Root CANONICAL_LAW.md, AGENTS.md, CLAUDE.md, README.md, Makefile and .pre-commit-config.yaml",
+      "action": "n_a",
+      "reason": "Explicitly protected by task scope; existing law/catalog already own desired semantics and are consumed unchanged."
+    },
+    {
+      "surface": "skills/, commands/, rules/ and all 32 inherited PR-chain paths",
+      "action": "n_a",
+      "reason": "Owner changes already inherited at 334faa6957; no skill modification, manual receipt bypass or unrelated overwrite authorized."
+    },
+    {
+      "surface": "Quantum-L9/.github registries/projection and Memory owner repository",
+      "action": "n_a",
+      "reason": "Pinned current registration/provenance already verified; upstream source is read-only and issue108 remains upstream-owned."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Can --check with uv absent, architecture mismatch, stale receipts and a writable operator HOME perform any filesystem/network mutation or secrets login before a mode guard?",
+      "Can a missing, wrong-version or import-failing .venv reach gate/secrets/namespace code through an unlocked interpreter, or can Manus retain a system validator chosen before bootstrap repair?",
+      "Does a two-clone readiness test produce different actual runtime/source and governance SHAs, or does the writer alias them and falsely report READY?",
+      "Can explicit Manus with absent/refused/partial credentials be scored as operator and load an unrelated machine profile or import/probe AWS?",
+      "Can legacy agent_id/status, a tampered projection, non-current actor/surface or failed mint with an existing file bypass shared assurance?",
+      "Can a structurally valid native descriptor or OAuth public client name be advertised as actor admission, or can missing owner package2.6.0 support cause an executable stdio/HMAC fallback?",
+      "Does lifecycle startup hydrate/read records or become an implicit repository-write gate despite current law, or does close emulate forbidden hosted admin distill?",
+      "Can configured Infisical shape, an absent/invalid TTL or a fake API success be reported as live auth, or can sanitized401 errors still leak echoed credentials?",
+      "Can final scoped diff overwrite any inherited plan-pipeline owner or parent patch; does a current PR-board change invalidate publication eligibility without changing plan handoff mode?"
+    ],
+    "assumed_false_ifs": [
+      "Assumption false if shared owner changes fail any eligible peer adapter regression; restore/repair shared semantics instead of adding a Manus fork.",
+      "Assumption false if native owner APIs cannot be directly verified; choose explicit UPSTREAM_BLOCKED, not local SDK/credential invention.",
+      "Assumption false if historical canonical projection governing bytes change; rerun existing verifier and keep unproved provenance UNKNOWN, never relabel historical bytes.",
+      "Assumption false if parent workspace gains overlapping modifications; stop and reconcile ownership rather than overwriting or broad staging.",
+      "Assumption false if live auth, package release or current PR topology differs later; reverify downstream, no planning receipt claims admission."
+    ],
+    "blast_radius": "Shared bootstrap, secrets classification and identity assurance serve every adapter; incorrect edits can allow check-mode mutation, operator credential borrowing or false READY/identity/auth claims across surfaces. Memory transport containment is Manus-local and must not disturb unrelated governance/Infisical servers. No database/deployment migration or credential mutation is in scope.",
+    "rollback": "Use scoped forward repair or a separately authorized scoped revert of this task's exact changed paths; preserve parent edits and the 32 inherited files. Do not use hard reset, force push, blanket git restore or resurrect retired hosted Memory stdio/HMAC as rollback. Before publication compare source/diff to baseline, rerun affected tests and confirm check leaves fixture state unchanged. No data, credential or deployed external state is changed, so no data rollback is required."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T3",
+      "T2",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "T8",
+      "T9"
+    ],
+    "shared_causes": [
+      "Fix observational mode and early locked-toolchain admission once in the shared bootstrap instead of per-adapter patches.",
+      "Keep one canonical identity assurance owner and remove adapter legacy bypasses rather than copy registries or regenerate equivalent identity projections.",
+      "Do not force a single physical cause: hosted secrets classification, runtime provenance and unsupported native Memory are independently evidenced residual work under one owner-alignment intervention.",
+      "Separate configuration, source readiness and live auth/admission so failed/unknown observations cannot be reused as permission."
+    ],
+    "deletions_or_consolidations": [
+      "Remove system-Python governance fallback and eager validator selection.",
+      "Remove active historical Memory stdio/HMAC/secret-map carrier generation and launcher expectations; preserve only explicit rejection tests, not a compatibility production path.",
+      "Remove legacy identity/status acceptance and stale failed-mint reuse.",
+      "Remove automatic startup hydration and memory-before-repository-write claims.",
+      "Consume existing assurance/surface/health/close owners; no new scheduler, auth proxy, lifecycle authority or private surface marker list."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Shared check/preflight corrections change other adapters' degraded/blocked behavior.",
+      "mitigation": "Fixture-first 0/6/1 and peer bootstrap regression matrix; keep optional components fail-soft and required locked interpreter fail-closed."
+    },
+    {
+      "risk": "Native Memory adoption cannot be completed from installed package2.6.0 and open owner OAuth actor issue108.",
+      "mitigation": "Implement honest native carrier/render/readiness refusal, report UPSTREAM_BLOCKED and leave coding usable; no package upgrade or live admission claim."
+    },
+    {
+      "risk": "Hosted surface detection or auth status accidentally borrows operator state or exposes a credential.",
+      "mitigation": "Use shared surface owner, forbid hosted operator profile/AWS and use names-only staged results with synthetic secret-negative tests."
+    },
+    {
+      "risk": "Structural plan admission is mistaken for completed implementation or live runtime admission.",
+      "mitigation": "Keep final checks pending and convergence partial until executor proves them; tool-owned GAR receipt is a load-order artifact, not external orchestration/auth evidence."
+    },
+    {
+      "risk": "PR-chain baseline drift or inherited scope leakage.",
+      "mitigation": "334faa6957 baseline and protected inherited-path set; parent alone refreshes chain tip/gates and publishes scoped stack with PR_STACK=auto."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "When will the exact native Memory package/client and hosted OAuth actor admission be accepted by Memory owner issue108?",
+      "decision_effect": "Blocks live memory capability and executable connector rendering; does not block local adapter repair, structural validation or coding session.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "What actual Manus host-managed OAuth public client/callback binding and Auth0 issuer admission will the owner/operator prove?",
+      "decision_effect": "Remain UNKNOWN; no renderer or document invents these values and registered actor/surface does not prove principal attribution.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U3",
+      "question": "Will live Infisical Universal Auth and native hosted-client/mobile proof succeed in a separately authorized runtime campaign?",
+      "decision_effect": "Offline tests and descriptor shape cannot answer; no live login, token write, capability or readiness claim in this task.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U4",
+      "question": "Will parent execution/publication still have a unique compatible open-PR chain tip at handoff?",
+      "decision_effect": "Reverify downstream before source mutation/publication; sibling chains or overlapping parent dirt require stop, never silent mode switch.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B -m pytest -q tests/ops/scripts/test_agent_bootstrap_readiness.py ops/scripts/tests/test_bootstrap_diagnostic_contract.py ops/scripts/tests/test_bootstrap_invariants.py",
+      "pass_criteria": "Exit/status/stdout contracts and new fixture snapshots pass; no check-mode mutation or unlocked policy consumer. Tests must isolate HOME/state and never apply against the active shared .venv. The unchanged UV shell-count fixture fails identically at baseline because its stub counts sync --help; retain its independent baseline failure evidence, not a fabricated PASS.",
+      "status": "passed"
+    },
+    {
+      "id": "V2",
+      "command": "bash -n ops/scripts/bootstrap_agent_environment.sh ops/scripts/ensure_uv_environment.sh environment/agents/adapters/manus/install.sh; .venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_manus_adapter.py",
+      "pass_criteria": "Syntax and updated contract tests pass; late locked validator selection, missing/wrong/import-failing locked Python and thin installer failure behavior are proved without real bootstrap apply.",
+      "status": "passed"
+    },
+    {
+      "id": "V3",
+      "command": ".venv/bin/python -B -m pytest -q ops/scripts/tests/test_runtime_readiness_receipt.py tests/ops/scripts/test_claude_bootstrap_receipt_revision.py tests/ops/scripts/test_agent_bootstrap_readiness.py",
+      "pass_criteria": "Independent executing-source revision, UNKNOWN provenance, two-clone mismatch and existing receipt reader/digest regressions pass.",
+      "status": "passed"
+    },
+    {
+      "id": "V4",
+      "command": ".venv/bin/python -B -m pytest -q ops/secrets/test_session_start_secrets.py tests/ops/secrets/test_manus_identity_plane.py",
+      "pass_criteria": "Hosted Manus absent/partial/refused/present identity cases never import/probe AWS or use operator profile; existing Cursor/operator/self-hosted cases and names-only receipts pass.",
+      "status": "passed"
+    },
+    {
+      "id": "V5",
+      "command": ".venv/bin/python -B tools/assurance/check_canonical_identity_projection.py; .venv/bin/python -B tools/authority/project_canonical_identity.py --authority-root /home/ubuntu/L9-Org-Authority --check; .venv/bin/python -B -m pytest -q tests/test_canonical_identity_projection.py environment/agents/adapters/manus/tests/test_memory_authority.py environment/agents/adapters/manus/tests/test_manus_adapter.py tests/ops/memory/test_assertion_export_fail_closed.py",
+      "pass_criteria": "Shared canonical binding/projection/receipt and currentness pass; legacy identity/status/tamper/non-current and failed-mint file/stale-env negative cases fail closed with no authority production.",
+      "status": "passed"
+    },
+    {
+      "id": "V6",
+      "command": ".venv/bin/python -B environment/agents/adapters/manus/validate_manus_adapter.py --repo-root .; .venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_manus_adapter.py environment/agents/adapters/manus/tests/test_memory_authority.py; .venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_native_memory_boundary.py",
+      "pass_criteria": "Native carrier structurally valid while renderer/readiness reports installed2.6.0 UPSTREAM_BLOCKED; no stdio/HMAC/provider fallback, fabricated OAuth input, executable legacy credential carrier, release or auth claim.",
+      "status": "passed"
+    },
+    {
+      "id": "V7",
+      "command": ".venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_memory_lifecycle.py environment/agents/adapters/manus/tests/test_mcp_server.py; .venv/bin/python -B ops/scripts/validate_memory_egress_boundary.py --enforce --root .; .venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_native_memory_boundary.py",
+      "pass_criteria": "Updated lifecycle health-only/on-demand/no-write-precondition and blocked-native-client tests pass; no startup hydration, local operator agent fallback, admin distill emulation or provider egress introduced. Governance protection unchanged.",
+      "status": "passed"
+    },
+    {
+      "id": "V8",
+      "command": ".venv/bin/python -B -m pytest -q environment/agents/adapters/manus/tests/test_infisical_mcp_server.py environment/agents/adapters/manus/tests/test_render_infisical_mcp_connector.py",
+      "pass_criteria": "Configured/auth-unverified and observed auth states are distinct, status does not authenticate, staged401 errors redact all credentials, short/invalid/expired cache lifetime is truthful and response values remain withheld; only offline proof claimed.",
+      "status": "passed"
+    },
+    {
+      "id": "V9",
+      "command": ".venv/bin/python -B skills/l9-plan-simple/scripts/run_plan_pipeline.py --plan-json docs/plans/manus-adapter-bootstrap-alignment.plan.json --execute-via cursor-build --workspace . --gar-run docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-run.json --out-md docs/plans/manus_adapter_bootstrap_alignment_a15b0001.plan.md; .venv/bin/python -B skills/l9-plan-simple/scripts/admit_plan.py --all docs/plans/manus_adapter_bootstrap_alignment_a15b0001.plan.md; git diff --check",
+      "pass_criteria": "Current pipeline validates JSON, verifies real GAR load-order run, fills canonical projection and validates bound section receipt; admission --all PASS without unbound/undeclared/parameter markers. This is plan-structure admission only. Matching adapter/shared docs no longer teach retired behavior.",
+      "status": "passed"
+    },
+    {
+      "id": "V10",
+      "command": "PATH=\"$PWD/.venv/bin:$PATH\" L9_GOVERNANCE_SURFACE=manus PYTHONDONTWRITEBYTECODE=1 make precommit-repo; git diff --check; scoped unchanged .pre-commit-config.yaml hook catalog on all repair/new test paths",
+      "pass_criteria": "Only approved task paths change; no protected root/inherited/skill/upstream/credential mutation, whitespace defect or weakened gate. Applicable unchanged catalog passes and failures remain evidence. Parent alone authorizes release and publishes its scoped stacked PR after all mandatory implementation proofs pass.",
+      "status": "passed"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3"
+    ],
+    "next_skill": "Upstream Memory native package/client and OAuth actor admission; scoped #826 publication is parent-owned",
+    "stop_reason": "All in-scope source repairs and seven independent-review closures are implemented. Final integrated offline selection: 780 passed and 43 subtests; reporter suite: 79 passed and 17 subtests; final scoped security closure review PASS; real Manus check returned 6 with stdout empty and 71 observed Git/runtime entries unchanged. Unchanged hook catalog, locked Ruff/format, bash syntax, diff hygiene, canonical identity and required plan pipeline/admission pass. Native Memory remains UPSTREAM_BLOCKED, client UNBOUND, live UNKNOWN; live Infisical auth was not attempted. UV shell-count fixture failure is pre-existing and reproduced at unchanged baseline; Python UV/locking/seal regressions pass. User explicitly approved the existing #826 stack target after sibling #827 appeared. Scoped commit/release publication is the remaining parent ceremony, not a runtime deployment or merge."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/bootstrap_agent_environment.sh",
+      "ops/scripts/ensure_uv_environment.sh",
+      "ops/scripts/write_runtime_readiness_receipt.py",
+      "ops/scripts/tests/test_bootstrap_diagnostic_contract.py",
+      "ops/scripts/tests/test_bootstrap_invariants.py",
+      "ops/scripts/tests/test_uv_environment_fingerprint.sh",
+      "ops/scripts/tests/test_runtime_readiness_receipt.py",
+      "ops/secrets/session_start_secrets.py",
+      "ops/secrets/infisical_cli_login.py",
+      "ops/secrets/test_session_start_secrets.py",
+      "tools/assurance/check_canonical_identity_projection.py",
+      "ops/memory/identity_projection.py",
+      "ops/memory/export_agent_assertion_env.sh",
+      "ops/config/memory-hook-envelopes.json",
+      "tests/test_canonical_identity_projection.py",
+      "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md",
+      "environment/agents/adapters/manus/install.sh",
+      "environment/agents/adapters/manus/validate_manus_adapter.py",
+      "environment/agents/adapters/manus/materialize_memory_authority.py",
+      "environment/agents/adapters/manus/memory-mcp-connector.json",
+      "environment/agents/adapters/manus/render_memory_mcp_connector.py",
+      "environment/agents/adapters/manus/serve_memory_mcp.sh",
+      "environment/agents/adapters/manus/memory_lifecycle.py",
+      "environment/agents/adapters/manus/mcp_server.py",
+      "environment/agents/adapters/manus/serve_mcp.sh",
+      "environment/agents/adapters/manus/mcp-connector.json",
+      "environment/agents/adapters/manus/infisical_mcp_server.py",
+      "environment/agents/adapters/manus/README.md",
+      "environment/agents/adapters/manus/setup.md",
+      "environment/agents/adapters/manus/session_bootstrap.md",
+      "environment/agents/adapters/manus/environment.env.example",
+      "environment/agents/adapters/manus/tests/test_manus_adapter.py",
+      "environment/agents/adapters/manus/tests/test_memory_authority.py",
+      "environment/agents/adapters/manus/tests/test_memory_lifecycle.py",
+      "environment/agents/adapters/manus/tests/test_mcp_server.py",
+      "environment/agents/adapters/manus/tests/test_infisical_mcp_server.py",
+      "environment/agents/adapters/manus/tests/test_render_infisical_mcp_connector.py",
+      "docs/plans/manus-adapter-bootstrap-alignment.plan.json",
+      "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.plan.md",
+      "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.section-receipt.json",
+      "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-decision.json",
+      "docs/plans/manus_adapter_bootstrap_alignment_a15b0001.gar-run.json",
+      "tests/ops/scripts/test_agent_bootstrap_readiness.py",
+      "tests/ops/secrets/test_manus_identity_plane.py",
+      "tests/ops/memory/test_assertion_export_fail_closed.py",
+      "environment/agents/adapters/manus/tests/test_native_memory_boundary.py",
+      "ops/secrets/capability_bind.py",
+      "ops/scripts/tests/test_session_start_runtime_report.py"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "README.md",
+      "Makefile",
+      ".pre-commit-config.yaml",
+      "skills/",
+      "commands/",
+      "rules/",
+      "pyproject.toml",
+      "uv.lock",
+      "generated/governance/canonical_identity.yaml",
+      "generated/governance/canonical_identity.receipt.yaml",
+      "environment/agents/agent_registry.yaml",
+      "governance/authority-bindings/canonical-agent-identity.yaml",
+      "all inherited 061fae50..334faa69 paths",
+      "/home/ubuntu/L9-Org-Authority",
+      "/home/ubuntu/L9-Memory-Owner",
+      "credential/secret stores, deployed services, account configuration and shared live .venv"
+    ],
+    "preserved_contracts": [
+      "CANONICAL_LAW.md 8.9 health-only/on-demand/no-memory-write-precondition and 8.10 native Memory3 OAuth/client/identity separation; 14.1 Infisical secret authority.",
+      "environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md existing shared detector precedence; adapters wrap and do not redefine meaning.",
+      "ops/scripts/bootstrap_agent_environment.sh 0 satisfied / 6 usable degraded / 1 locked-interpreter blocked, machine stdout versus stderr diagnostics.",
+      "tools/authority/project_canonical_identity.py provenance-equivalence, ops/memory/identity_projection.py digest/current-identity verification, canonical .github actor/surface ownership versus operating bindings.",
+      "Memory owner ADR-100/REMOTE_MCP_CONTRACT.md at ae6e2c0d: OAuth native hosted door only, unknown client/actor admission remains blocked; legacy package presence is not hosted suitability.",
+      "Governance wrapper no arbitrary shell/file/write tools and explicit bearer/apply guard; native Infisical fixed capability manifest, viewSecretValue=false and response-secret withholding.",
+      "Current l9-plan-simple pipeline owner at 334faa6957: tool-owned write_plan_run, pipeline projection/section receipt and admit_plan; structural admission is not runtime admission.",
+      "Parent-owned stacked PR/L4 path, inherited unique #824->825->826 chain tip; no Program Execution, Controller, deployment or autonomous merge."
+    ],
+    "validation_commands": [
+      "Run V1-V10 from /home/ubuntu/Cursor-Governance using .venv/bin/python -B and isolated fixtures; no bootstrap apply or live login against the active shared environment.",
+      "After all proofs pass parent may use its own scoped commit and authorize-release, then PR_STACK=auto PR_REMEDIATE=0 make pr, and must display the opened PR URL. Planning subagent performs none of these external effects."
+    ]
+  },
+  "checklist": [
+    "Current stacked baseline verified before plan emission",
+    "GAR mandatory load order and Reasoning Foursome owners loaded before architecture selection",
+    "Selected intervention ADAPT_UPSTREAM; no semantics harvesting or new auth/runtime owner",
+    "Mandatory doctrine, deep stress, leverage, DAG, checkpoints and rollback included",
+    "Every success criterion explicitly binds V1-V10",
+    "Plan pipeline and tool-owned GAR run exclusively own markdown/section emission",
+    "Final implementation checks remain pending and live auth/admission UNKNOWN"
+  ]
+}

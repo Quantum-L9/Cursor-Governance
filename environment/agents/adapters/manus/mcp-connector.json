@@ -6,9 +6,9 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "5.0.0",
-    "updated": "2026-09-19",
-    "note": "This is a no-secret carrier for the L9 Governance streamable-HTTP MCP server. A bearer-protected deployment can expose bounded canonical Manus lifecycle calls, but the package-owned agent memory lane remains separate and the carrier never exposes the retired Graphiti provider endpoint. Render a deployment-specific connector draft with render_mcp_connector.py."
+    "version": "6.0.0",
+    "updated": "2026-11-05",
+    "note": "No-secret governance carrier. Optional bearer-protected Memory compatibility stubs report UPSTREAM_BLOCKED only; this server is neither a native Memory client nor a credential carrier. Governance and native Memory authentication are distinct."
   },
   "name": "l9-governance",
   "transport": "streamable-http",
@@ -20,8 +20,9 @@
     "apply_bootstrap_requires": "bearer-token-file plus --allow-bootstrap-apply"
   },
   "memory": {
-    "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
-    "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+    "agent_lane": "native-authenticated-streamable-http-UPSTREAM_BLOCKED",
+    "lifecycle": "bearer-protected-blocked-compatibility-stubs",
+    "startup": "health-only-on-demand-no-write-precondition",
     "fallback": "fail-closed-no-local-operator-identity"
   },
   "safety": {

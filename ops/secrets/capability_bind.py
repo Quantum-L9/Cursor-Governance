@@ -34,10 +34,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import sys
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -81,11 +83,14 @@ _PROFILE: dict[str, str] | None = None
 _PROFILE_SOURCE = ""
 _PROFILE_LOADED = False
 _UA_TOKEN: str | None = None
+# Only the digest is retained; environment values and identity identifiers are
+# never exposed as context records. One active context, not a cross-peer cache.
+_CONTEXT_FINGERPRINT: str | None = None
 #: A login this process already lost. Every name binds through the same identity,
 #: so once universal-auth has failed (with its own retry policy) the next name
 #: cannot succeed either — and on an egress-denied host each fresh attempt cost
 #: ~1.1 s, four of them per SessionStart, inside a 30 s hook budget. Cleared only
-#: by ``reset_cache``; a new process starts clean.
+#: by ``reset_cache`` or an environment context change.
 _LOGIN_STATE: dict[str, bool] = {"failed": False}
 
 InfisicalFn = Callable[[str], str | None]
@@ -113,6 +118,7 @@ def operator_only_names() -> frozenset[str]:
 def reset_cache() -> None:
     """Test hook. Never call from a fetcher to 'retry' a miss with a paste."""
     global _PROFILE, _PROFILE_SOURCE, _PROFILE_LOADED, _UA_TOKEN
+    global _CONTEXT_FINGERPRINT
     _VALUES.clear()
     _SOURCES.clear()
     _PROFILE = None
@@ -120,9 +126,38 @@ def reset_cache() -> None:
     _PROFILE_LOADED = False
     _UA_TOKEN = None
     _LOGIN_STATE["failed"] = False
+    _CONTEXT_FINGERPRINT = None
 
 
-def note_login_failed() -> None:
+def _ensure_context(env: Mapping[str, str] | None = None) -> Mapping[str, str]:
+    """Invalidate all identity/value state before any different-context cache hit.
+
+    Hash the complete mapping, including the canonical surface and route, rather
+    than maintain a private list that could miss a newly consumed identity input.
+    The digest stays internal and neither it nor the mapping is ever reported.
+    """
+    global _CONTEXT_FINGERPRINT
+    import infisical_cli_login as machine_login
+
+    source = os.environ if env is None else env
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            {
+                "env": sorted(source.items()),
+                "surface": machine_login.detect_surface(source),
+                "route": machine_login.canonical_route(),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    if fingerprint != _CONTEXT_FINGERPRINT:
+        reset_cache()
+        _CONTEXT_FINGERPRINT = fingerprint
+    return source
+
+
+def note_login_failed(env: Mapping[str, str] | None = None) -> None:
     """Record that this process's machine-identity login already failed.
 
     For a caller that logged in as the same identity itself (SessionStart's
@@ -130,6 +165,7 @@ def note_login_failed() -> None:
     it has just watched fail. Never a way to skip a bind: sources still read
     ``unbound`` and the plane still reports FAILED.
     """
+    _ensure_context(env)
     _LOGIN_STATE["failed"] = True
 
 
@@ -144,32 +180,37 @@ def _accepted_secret(name: str, value: str) -> bool:
     return True
 
 
-def _machine_profile() -> dict[str, str] | None:
+def _machine_profile(env: Mapping[str, str] | None = None) -> dict[str, str] | None:
     """This surface's machine identity (environment, then workstation file)."""
     global _PROFILE, _PROFILE_SOURCE, _PROFILE_LOADED
+    _ensure_context(env)
     if _PROFILE_LOADED:
         return _PROFILE
     _PROFILE_LOADED = True
     import infisical_cli_login as machine_login
 
-    _PROFILE_SOURCE, _PROFILE = machine_login.machine_identity()
+    _PROFILE_SOURCE, _PROFILE = machine_login.machine_identity(env)
     return _PROFILE
 
 
-def _identity_source() -> str:
-    """Where this surface's machine identity came from: ``env``, ``profile`` or ``""``."""
-    _machine_profile()
+def _identity_source(env: Mapping[str, str] | None = None) -> str:
+    """Where this surface's machine identity came from: ``env``, ``profile`` or ``\"\"``."""
+    _ensure_context(env)
+    _machine_profile() if env is None else _machine_profile(env)
     return _PROFILE_SOURCE
 
 
-def _operator_surface() -> bool:
-    if (os.environ.get("CLAUDE_CODE_REMOTE") or "").strip():
+def _operator_surface(env: Mapping[str, str] | None = None) -> bool:
+    source = _ensure_context(env)
+    if (source.get("CLAUDE_CODE_REMOTE") or "").strip():
         return False
-    return _identity_source() == IDENTITY_SOURCE_PROFILE
+    identity_source = _identity_source() if env is None else _identity_source(env)
+    return identity_source == IDENTITY_SOURCE_PROFILE
 
 
-def _ua_token(profile: dict[str, str]) -> str | None:
+def _ua_token(profile: dict[str, str], env: Mapping[str, str] | None = None) -> str | None:
     global _UA_TOKEN
+    _ensure_context(env)
     if _UA_TOKEN:
         return _UA_TOKEN
     if _LOGIN_STATE["failed"]:
@@ -198,12 +239,13 @@ def _secret_from_payload(payload: dict, name: str) -> str | None:
     return None
 
 
-def _from_machine_profile(name: str) -> str | None:
+def _from_machine_profile(name: str, env: Mapping[str, str] | None = None) -> str | None:
     """One secret as this surface's machine identity, over Infisical HTTP."""
-    profile = _machine_profile()
+    _ensure_context(env)
+    profile = _machine_profile() if env is None else _machine_profile(env)
     if profile is None:
         return None
-    token = _ua_token(profile)
+    token = _ua_token(profile, env)
     if not token:
         return None
     from infisical_http import infisical_req
@@ -236,22 +278,30 @@ def _resolve(
     name: str,
     *,
     infisical_cli: InfisicalFn | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> tuple[str, str | None]:
+    context = _ensure_context(env)
+    # Preserve the no-argument private test seams for default callers as well
+    # as the name-only injected fetch callback; explicit contexts flow in full.
+    kwargs = {} if env is None else {"env": env}
     if name in REFUSED_NAMES:
         source, value = SOURCE_REFUSED, None
     elif name not in allowed_names():
         source, value = SOURCE_UNBOUND, None
-    elif name in operator_only_names() and not _operator_surface():
+    elif name in operator_only_names() and not _operator_surface(**kwargs):
         source, value = SOURCE_OPERATOR_ONLY_REFUSED, None
     else:
-        present = (os.environ.get(name) or "").strip()
+        present = (context.get(name) or "").strip()
         if present:
             source, value = SOURCE_ENV, present
-        elif infisical_cli is None and _machine_profile() is None:
+        elif infisical_cli is None and _machine_profile(**kwargs) is None:
             source, value = SOURCE_INFISICAL_ABSENT, None
         else:
-            fetch = infisical_cli or _from_machine_profile
-            resolved = fetch(name)
+            resolved = (
+                infisical_cli(name)
+                if infisical_cli is not None
+                else _from_machine_profile(name, **kwargs)
+            )
             source, value = (SOURCE_INFISICAL, resolved) if resolved else (SOURCE_UNBOUND, None)
     return source, value
 
@@ -260,11 +310,13 @@ def bind(
     name: str,
     *,
     infisical_cli: InfisicalFn | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> str | None:
     """Return the bound value, or None. Never prints. Never writes ``os.environ``."""
+    _ensure_context(env)
     if name in _VALUES:
         return _VALUES[name]
-    source, value = _resolve(name, infisical_cli=infisical_cli)
+    source, value = _resolve(name, infisical_cli=infisical_cli, env=env)
     _SOURCES[name] = source
     if value:
         _VALUES[name] = value
@@ -275,10 +327,12 @@ def bind(
 def bind_first(
     *names: str,
     infisical_cli: InfisicalFn | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> str | None:
     """Bind the first name that resolves. Used by fetchers with alias env tuples."""
+    _ensure_context(env)
     for name in names:
-        value = bind(name, infisical_cli=infisical_cli)
+        value = bind(name, infisical_cli=infisical_cli, env=env)
         if value:
             return value
     return None
@@ -307,10 +361,11 @@ def literal_source(raw: object) -> str:
     return "unknown"
 
 
-def bind_status(name: str) -> dict[str, str | bool]:
+def bind_status(name: str, *, env: Mapping[str, str] | None = None) -> dict[str, str | bool]:
     """Availability only. The value is never included."""
+    _ensure_context(env)
     if name not in _SOURCES:
-        bind(name)
+        bind(name, env=env)
     source = _SOURCES.get(name, SOURCE_UNBOUND)
     bound = source in {SOURCE_ENV, SOURCE_INFISICAL}
     return {"name": name, "bound": bound, "source": source}
