@@ -21,6 +21,7 @@
       "!!**/.ruff_cache",
       "!**/.l9",
       "!**/reports",
+      "!**/_archived",
       "!**/ops/generated",
       "!**/generated",
       "!governance-health-report.json",
@@ -80,7 +81,7 @@
       "trailingNewline": true,
       "trailingCommas": "none",
       "bracketSpacing": true,
-      "expand": "auto",
+      "expand": "always",
       "delimiterSpacing": false
     },
     "linter": {
@@ -155,7 +156,10 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.jsonc", "**/.vscode"],
+      "includes": [
+        "**/*.jsonc",
+        "**/.vscode"
+      ],
       "json": {
         "parser": {
           "allowComments": true,
