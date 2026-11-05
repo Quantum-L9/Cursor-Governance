@@ -122,6 +122,10 @@ reports/*
 # action. It is fetched from the commit under test, so it MUST be tracked;
 # an untracked local copy does not exist in CI.
 !.l9/ci.json
+# The Repository Execution V2 contract, read by l9-ci-core's
+# run-repository-verification from the commit under test. Tracked for the same
+# reason as ci.json: Core enrolls Cursor-Governance in required mode.
+!.l9/repo-workflow.json
 # .l9/scratch-hold/ — park vault (covered by .l9/* above)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3

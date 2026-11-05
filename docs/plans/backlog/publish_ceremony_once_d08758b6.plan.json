@@ -191,22 +191,30 @@
     {
       "surface": "AGENTS.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "CANONICAL_LAW.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "INVARIANTS.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "Makefile",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "CLAUDE.md",

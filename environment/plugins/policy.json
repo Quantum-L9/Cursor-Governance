@@ -20,15 +20,21 @@
     },
     "odoo_plasticos": {
       "description": "Odoo/PlasticOS repos (see exceptions.yaml). Adds the Odoo-native rule bundle.",
-      "additional_capabilities": ["odoo-plasticos-rules"]
+      "additional_capabilities": [
+        "odoo-plasticos-rules"
+      ]
     },
     "aws_infra": {
       "description": "Repos with AWS/CDK/IaC surface. Adds AWS operational guidance.",
-      "additional_capabilities": ["aws-infra-guidance"]
+      "additional_capabilities": [
+        "aws-infra-guidance"
+      ]
     },
     "zep_memory": {
       "description": "Repos integrating Zep context graphs. Adds Zep-specific guidance.",
-      "additional_capabilities": ["zep-memory-guidance"]
+      "additional_capabilities": [
+        "zep-memory-guidance"
+      ]
     }
   }
 }

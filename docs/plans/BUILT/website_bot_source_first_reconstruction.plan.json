@@ -105,7 +105,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "operation": "Wrap",
       "anchor": "extractPage return and SourceSiteIngestionStage.canReuseManifest",
       "leverage_rank": 1,
@@ -120,7 +122,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T2"],
+      "dependencies": [
+        "T2"
+      ],
       "operation": "Replace",
       "anchor": "ContentGenerationStage reconstructing branch: matchSourcePage fallback to '/'",
       "leverage_rank": 2,
@@ -135,7 +139,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T2"],
+      "dependencies": [
+        "T2"
+      ],
       "operation": "Wrap",
       "anchor": "DesignIntelligenceStage after sourcePalette check",
       "leverage_rank": 4,
@@ -155,7 +161,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T3"],
+      "dependencies": [
+        "T3"
+      ],
       "operation": "Wrap",
       "anchor": "SiteAssemblerStage siteConfig.nav and astro_template chrome",
       "leverage_rank": 6,
@@ -171,7 +179,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T2"],
+      "dependencies": [
+        "T2"
+      ],
       "operation": "Wrap",
       "anchor": "scoreSourceCandidate logoLike byteLength and slotAssignPriority",
       "leverage_rank": 5,
@@ -186,7 +196,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T2"],
+      "dependencies": [
+        "T2"
+      ],
       "operation": "Replace",
       "anchor": "generate-spec designReasoning call and withAssets overlay; seo_contract.site_url",
       "leverage_rank": 3,
@@ -201,7 +213,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["T3"],
+      "dependencies": [
+        "T3"
+      ],
       "operation": "Replace",
       "anchor": "SchemaGeneratorStage.generateFaqs LLM loop",
       "leverage_rank": 7,
@@ -220,7 +234,14 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["T2", "T3", "T4", "T6", "T7", "T8"],
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T6",
+        "T7",
+        "T8"
+      ],
       "operation": "Create",
       "anchor": "tests/unit reconstruction suite",
       "leverage_rank": 8,
@@ -234,7 +255,11 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T5", "T7", "T9"],
+      "dependencies": [
+        "T5",
+        "T7",
+        "T9"
+      ],
       "operation": "Wrap",
       "anchor": "npm run pipeline:end-to-end -- --spec=../../generated-spec/safehavenrr.yaml",
       "leverage_rank": 9,
@@ -251,7 +276,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T10"],
+      "dependencies": [
+        "T10"
+      ],
       "operation": "Wrap",
       "anchor": "gh pr create against Quantum-L9/Website-Bot",
       "leverage_rank": 10,
@@ -330,13 +357,18 @@
     {
       "surface": "Website-Bot README / generate-spec usage",
       "action": "update",
-      "todo_ids": ["T7"],
+      "todo_ids": [
+        "T7"
+      ],
       "reason": "generate-spec still documents crawl plus LLM as the identity path; crawled routes, phone, palette, and showable site_url MUST win"
     },
     {
       "surface": "skills/l9-e2e-blocker-resolution/references/campaign-reuse.md",
       "action": "update",
-      "todo_ids": ["T1", "T11"],
+      "todo_ids": [
+        "T1",
+        "T11"
+      ],
       "reason": "Bind reconstruction-only visual fidelity so the next e2e cannot invent a brochure"
     }
   ],
@@ -460,7 +492,10 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1", "U2"],
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
     "next_skill": "/autonomy",
     "stop_reason": "PLAN_DOCUMENT improved and re-validated. Implementation is not started from this plan. Campaign clone already contains T2 T4 T5 T6 prototype. Remaining CODE holes: T3 home-copy fallback and empty-crawl fail-closed; T7 crawl-first spec identity plus site_url; T8 FAQ LLM skip; T10 alias proof; T11 PR. Execute via @environment/program-execution + /autonomy, not free-form chat mutation."
   },

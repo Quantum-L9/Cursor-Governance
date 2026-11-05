@@ -3,8 +3,23 @@
 # Identity files decide ssot_checkout — not $HOME/.l9/gov-worktrees/ path prefix.
 # shellcheck shell=bash
 
+# Builtins only: callers run under minimal PATHs (a gate test uses
+# PATH=/usr/bin:/bin), where python3 may be absent. An interpreter failure here
+# used to yield "" for both sides, and "" = "" classified every workspace ssot.
+# cd -P / pwd -P resolves symlinks (macOS /tmp -> /private/tmp) as before; a path
+# that is not an existing directory is returned as given, so it can never equal
+# a resolved one by accident.
 _workspace_kind_realpath() {
-  python3 -c 'import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "$1"
+  local p="${1:-}"
+  case "$p" in
+    \~) p="$HOME" ;;
+    \~/*) p="$HOME/${p#\~/}" ;;
+  esac
+  if [ -n "$p" ] && [ -d "$p" ]; then
+    (cd -P -- "$p" 2>/dev/null && pwd -P) || printf '%s\n' "$p"
+  else
+    printf '%s\n' "$p"
+  fi
 }
 
 is_governance_identity_tree() {
@@ -37,7 +52,7 @@ classify_workspace_kind() {
   local ws_real gc_real
   ws_real="$(_workspace_kind_realpath "$ws")"
   gc_real="$(_workspace_kind_realpath "$gc")"
-  if [ "$ws_real" = "$gc_real" ]; then
+  if [ -n "$ws_real" ] && [ "$ws_real" = "$gc_real" ]; then
     echo "ssot"
     return 0
   fi

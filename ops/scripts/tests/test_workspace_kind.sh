@@ -62,6 +62,22 @@ GOV_ROOT="$CHECKOUT"
 unset GOV_ROOT
 pass "classifier ssot / ssot_checkout / consumer"
 
+# python3 unavailable (a minimal PATH, an image without it): the classifier must
+# not depend on it. It once resolved both sides through python3, got "" twice,
+# and called every workspace ssot -- a consumer then ran the governance suites.
+NOPY_BIN="$TMP/nopy-bin"
+mkdir -p "$NOPY_BIN"
+printf '#!/bin/sh\nexit 127\n' >"$NOPY_BIN/python3"
+chmod +x "$NOPY_BIN/python3"
+nopy_kind() { PATH="$NOPY_BIN:$PATH" classify_workspace_kind "$1"; }
+[ "$(nopy_kind "$CONSUMER")" = "consumer" ] \
+  || fail_now "without python3 a consumer must stay consumer (got $(nopy_kind "$CONSUMER"))"
+[ "$(nopy_kind "$CHECKOUT")" = "ssot_checkout" ] \
+  || fail_now "without python3 an identity tree must stay ssot_checkout"
+[ "$(nopy_kind "$HOME/.cursor-governance")" = "ssot" ] \
+  || fail_now "without python3 the live SSOT must stay ssot"
+pass "classifier does not depend on python3"
+
 out="$(bash "$OPS_DIR/check_governance_wiring.sh" --workspace "$CHECKOUT" 2>&1 || true)"
 echo "$out" | grep -q 'Workspace kind:  ssot_checkout' \
   || fail_now "checker must print ssot_checkout kind: $out"
