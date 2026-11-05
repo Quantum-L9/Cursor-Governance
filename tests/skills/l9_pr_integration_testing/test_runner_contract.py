@@ -727,6 +727,11 @@ def test_retest_does_not_merge_source_heads(
 
     monkeypatch.setattr(integrate, "prepare_case", boom)
     monkeypatch.setattr(integrate.DockerSandbox, "preflight", lambda self: {})
+    # retest_exported builds its DockerSandbox from the host identity, which
+    # refuses UID 0 by design. Pin a non-root identity (as docker_args does) so
+    # the outcome does not depend on who runs the suite: cloud sessions are root.
+    monkeypatch.setattr(integrate.os, "getuid", lambda: 1000)
+    monkeypatch.setattr(integrate.os, "getgid", lambda: 1000)
     monkeypatch.setattr(
         integrate,
         "tests_case",
