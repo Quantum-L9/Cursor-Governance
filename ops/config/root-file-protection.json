@@ -76,6 +76,11 @@
       "rule": "additive_only"
     },
     {
+      "path": "Repo.mk",
+      "tier": "canonical",
+      "rule": "additive_only"
+    },
+    {
       "path": "conftest.py",
       "tier": "canonical",
       "rule": "additive_only"
