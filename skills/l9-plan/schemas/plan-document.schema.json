@@ -605,12 +605,18 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Network and secrets envelope projected to the Execution envelope section.",
-      "required": ["network", "secrets"],
+      "required": [
+        "network",
+        "secrets"
+      ],
       "properties": {
         "network": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode", "allowed_services"],
+          "required": [
+            "mode",
+            "allowed_services"
+          ],
           "properties": {
             "mode": {
               "enum": [
@@ -633,7 +639,9 @@
         "secrets": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["access"],
+          "required": [
+            "access"
+          ],
           "properties": {
             "access": {
               "enum": [
@@ -649,7 +657,11 @@
     "complexity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["architectural_boundaries_crossed", "external_systems_touched", "migration_required"],
+      "required": [
+        "architectural_boundaries_crossed",
+        "external_systems_touched",
+        "migration_required"
+      ],
       "description": "Declared boundary, external-system and migration facts projected to Complexity and uncertainty. An empty list declares none.",
       "properties": {
         "architectural_boundaries_crossed": {
