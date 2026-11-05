@@ -2,7 +2,9 @@
   "$schema_note": "l9.claude-plugins-desired.v1 — the ONLY declaration of Claude Code plugin desired state. setup_claude_code_plugins.sh (imperative fallback) and the claude_projection engine both read this file; neither carries its own plugin list. core.plugins are marketplace packages Desktop should converge. desktop_only are local extras (hookify, desktop-commander, pr-review-toolkit): hosted Web/Mobile skip the marketplace (SKIP_PLUGIN_MARKETPLACE=true) and must not DEGRADE for that skip. Class ids come from environment/plugins/exceptions.yaml via workspace_open_plugin_loader.py --classify.",
   "schema": "l9.claude-plugins-desired.v1",
   "core": {
-    "marketplaces": ["anthropics/claude-plugins-official"],
+    "marketplaces": [
+      "anthropics/claude-plugins-official"
+    ],
     "plugins": [
       "context7@claude-plugins-official"
     ]
@@ -14,12 +16,20 @@
   ],
   "classes": {
     "aws_infra": {
-      "marketplaces": ["anthropics/claude-plugins-official"],
-      "plugins": ["aws-core@claude-plugins-official"]
+      "marketplaces": [
+        "anthropics/claude-plugins-official"
+      ],
+      "plugins": [
+        "aws-core@claude-plugins-official"
+      ]
     },
     "zep_memory": {
-      "marketplaces": ["getzep/zep"],
-      "plugins": ["building-with-zep@zep"]
+      "marketplaces": [
+        "getzep/zep"
+      ],
+      "plugins": [
+        "building-with-zep@zep"
+      ]
     }
   },
   "retired_user_scope": [

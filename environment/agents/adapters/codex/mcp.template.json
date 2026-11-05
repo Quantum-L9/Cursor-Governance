@@ -10,6 +10,10 @@
     "updated": "2026-10-26",
     "note": "Codex does not author a Memory MCP server. Native Memory 3.0 is authenticated Streamable HTTP owned by the memory package. A stdio-only package is UPSTREAM_BLOCKED. No URL or secret is invented here."
   },
-  "_retired_servers": ["graphiti-memory", "l9-graphite-memory", "l9-shared-memory"],
+  "_retired_servers": [
+    "graphiti-memory",
+    "l9-graphite-memory",
+    "l9-shared-memory"
+  ],
   "mcpServers": {}
 }

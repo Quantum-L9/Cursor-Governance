@@ -90,7 +90,9 @@
       ],
       "effort": "S",
       "risk": "high",
-      "dependencies": ["T-A"],
+      "dependencies": [
+        "T-A"
+      ],
       "operation": "Replace",
       "anchor": "alembic.ini script_location = migrations",
       "leverage_rank": 2,
@@ -109,7 +111,9 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T-B"],
+      "dependencies": [
+        "T-B"
+      ],
       "operation": "Replace",
       "anchor": "enrich_entity idempotency get/set and EnrichmentResult uniqueness",
       "leverage_rank": 3,
@@ -124,7 +128,9 @@
       ],
       "effort": "S",
       "risk": "high",
-      "dependencies": ["T-C"],
+      "dependencies": [
+        "T-C"
+      ],
       "operation": "Replace",
       "anchor": "approve_schema_proposal and get_result UUID-only queries",
       "leverage_rank": 5,
@@ -139,14 +145,21 @@
       ],
       "effort": "S",
       "risk": "high",
-      "dependencies": ["T-C"],
+      "dependencies": [
+        "T-C"
+      ],
       "operation": "Replace",
       "anchor": "payload.get(tenant_id) or tenant reversed",
       "leverage_rank": 4,
       "shared_root_cause": "payload tenant overrides trusted transport tenant"
     }
   ],
-  "critical_path": ["T-A", "T-B", "T-C", "T-E"],
+  "critical_path": [
+    "T-A",
+    "T-B",
+    "T-C",
+    "T-E"
+  ],
   "milestones": [
     {
       "id": "M0",
@@ -198,7 +211,13 @@
     {
       "surface": ".cursor-commands/WIP/PE EIE/eie-inference-isolation-v1.md",
       "action": "update",
-      "todo_ids": ["T-A", "T-B", "T-C", "T-D", "T-E"]
+      "todo_ids": [
+        "T-A",
+        "T-B",
+        "T-C",
+        "T-D",
+        "T-E"
+      ]
     }
   ],
   "stress_test": {
@@ -216,7 +235,13 @@
     "rollback": "Planning emit: delete the brief, PLAN_DOCUMENT JSON, and projected .plan.md. PE run: do not merge campaign/eie-inference-isolation-v1; revert the campaign branch."
   },
   "leverage": {
-    "ranked_todo_ids": ["T-A", "T-B", "T-C", "T-E", "T-D"],
+    "ranked_todo_ids": [
+      "T-A",
+      "T-B",
+      "T-C",
+      "T-E",
+      "T-D"
+    ],
     "shared_causes": [
       "trusted transport tenant is dropped at the application boundary",
       "process-local or globally unique idempotency is treated as durable isolation",
@@ -284,7 +309,10 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1", "U2"],
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
     "next_skill": "l9-ynp",
     "stop_reason": "planning emit complete; product execution is make campaign INTENT= the scoped brief, not pec and not this planning agent"
   },

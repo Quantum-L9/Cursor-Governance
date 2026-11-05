@@ -5,13 +5,27 @@
   "description": "One semantic lane's judgment over its assigned PRs. scripts/assemble_audit.py projects it into audit.json; the lane never writes audit.json itself.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["lane", "prs", "findings", "cross_pr", "unknowns"],
+  "required": [
+    "lane",
+    "prs",
+    "findings",
+    "cross_pr",
+    "unknowns"
+  ],
   "$defs": {
-    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["locator", "evidence_type", "status", "fact"],
+      "required": [
+        "locator",
+        "evidence_type",
+        "status",
+        "fact"
+      ],
       "properties": {
         "locator": {
           "type": "string",
@@ -19,11 +33,21 @@
           "description": "path:line@sha, check/job id, or command"
         },
         "path": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "repository-relative file the evidence is about, if any"
         },
         "revision": {
-          "oneOf": [{ "$ref": "#/$defs/sha" }, { "type": "null" }],
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "description": "exact revision observed or tested"
         },
         "evidence_type": {
@@ -40,9 +64,18 @@
             "CROSS_PR_INTERACTION"
           ]
         },
-        "status": { "enum": ["CONFIRMED", "INFERENCE"] },
+        "status": {
+          "enum": [
+            "CONFIRMED",
+            "INFERENCE"
+          ]
+        },
         "result": {
-          "enum": ["PASS", "FAIL", "NOT_EXECUTED"],
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_EXECUTED"
+          ],
           "description": "required for TEST/CI/RUNTIME: outcome on revision"
         },
         "proves": {
@@ -59,7 +92,10 @@
           },
           "description": "only the properties this record actually discriminates; default behavior_mismatch"
         },
-        "fact": { "type": "string", "minLength": 1 }
+        "fact": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "finding": {
@@ -85,14 +121,23 @@
         "detection"
       ],
       "properties": {
-        "id": { "type": "string", "pattern": "^F-[A-Za-z0-9]+-[0-9]+$" },
+        "id": {
+          "type": "string",
+          "pattern": "^F-[A-Za-z0-9]+-[0-9]+$"
+        },
         "prs": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "integer", "minimum": 1 }
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
         },
-        "title": { "type": "string", "minLength": 1 },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
         "finding_class": {
           "enum": [
             "COMPLETENESS",
@@ -114,73 +159,202 @@
             "SUPERSESSION"
           ]
         },
-        "severity": { "enum": ["Critical", "High", "Medium", "Low"] },
-        "confidence": { "enum": ["Confirmed", "Probable", "Possible", "Unknown"] },
-        "origin": { "enum": ["PR_INTRODUCED", "PR_EXPOSED", "PRE_EXISTING", "UNKNOWN"] },
-        "merge_blocking": { "type": "boolean" },
-        "merge_blocking_basis": { "type": ["string", "null"] },
+        "severity": {
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "Confirmed",
+            "Probable",
+            "Possible",
+            "Unknown"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "PR_INTRODUCED",
+            "PR_EXPOSED",
+            "PRE_EXISTING",
+            "UNKNOWN"
+          ]
+        },
+        "merge_blocking": {
+          "type": "boolean"
+        },
+        "merge_blocking_basis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "authority": {
           "type": "string",
           "minLength": 1,
           "description": "authority_id from judgment.json authorities"
         },
-        "authority_rule": { "type": "string" },
-        "expected": { "type": "string", "minLength": 1 },
-        "observed": { "type": "string", "minLength": 1 },
-        "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } },
-        "root_cause_state": { "enum": ["CONFIRMED", "INFERENCE", "UNKNOWN"] },
-        "closure_condition": { "type": "string", "minLength": 1 },
+        "authority_rule": {
+          "type": "string"
+        },
+        "expected": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "root_cause_state": {
+          "enum": [
+            "CONFIRMED",
+            "INFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "closure_condition": {
+          "type": "string",
+          "minLength": 1
+        },
         "implementation_surfaces": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "pattern": "^[^\\s@:#]+$" },
+          "items": {
+            "type": "string",
+            "pattern": "^[^\\s@:#]+$"
+          },
           "description": "repository-relative paths only"
         },
         "remediation_owner_class": {
-          "enum": ["CODEBASE", "CI_PIPELINE", "ENVIRONMENT", "HUMAN", "VALIDATION_ONLY"]
+          "enum": [
+            "CODEBASE",
+            "CI_PIPELINE",
+            "ENVIRONMENT",
+            "HUMAN",
+            "VALIDATION_ONLY"
+          ]
         },
         "closing_validation": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "procedure"],
+          "required": [
+            "kind",
+            "procedure"
+          ],
           "properties": {
-            "kind": { "enum": ["COMMAND", "CHECK", "MANUAL"] },
-            "procedure": { "type": "string", "minLength": 1 }
+            "kind": {
+              "enum": [
+                "COMMAND",
+                "CHECK",
+                "MANUAL"
+              ]
+            },
+            "procedure": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
-        "detection": { "$ref": "#/$defs/detection" }
+        "detection": {
+          "$ref": "#/$defs/detection"
+        }
       }
     },
     "probe": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "evidence"],
+      "required": [
+        "status",
+        "evidence"
+      ],
       "properties": {
-        "status": { "enum": ["DONE", "NOT_APPLICABLE", "NOT_DONE"] },
+        "status": {
+          "enum": [
+            "DONE",
+            "NOT_APPLICABLE",
+            "NOT_DONE"
+          ]
+        },
         "evidence": {
           "type": "string",
           "description": "DONE: command, input or locator and its observed result; NOT_APPLICABLE/NOT_DONE: why"
         },
-        "finding_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+        "finding_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "if": { "properties": { "status": { "const": "DONE" } } },
-      "then": { "properties": { "evidence": { "minLength": 12 } } },
-      "else": { "properties": { "evidence": { "minLength": 1 } } }
+      "if": {
+        "properties": {
+          "status": {
+            "const": "DONE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minLength": 12
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "evidence": {
+            "minLength": 1
+          }
+        }
+      }
     },
     "detection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ci", "bot_review", "evidence"],
+      "required": [
+        "ci",
+        "bot_review",
+        "evidence"
+      ],
       "description": "whether the PR's existing signals already caught this defect on the audited head",
       "properties": {
-        "ci": { "enum": ["CAUGHT", "MISSED", "NOT_APPLICABLE"] },
-        "bot_review": { "enum": ["CAUGHT", "MISSED", "NOT_APPLICABLE"] },
-        "evidence": { "type": "string", "minLength": 1 }
+        "ci": {
+          "enum": [
+            "CAUGHT",
+            "MISSED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "bot_review": {
+          "enum": [
+            "CAUGHT",
+            "MISSED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   },
   "properties": {
-    "lane": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "lane": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
     "prs": {
       "type": "array",
       "minItems": 1,
@@ -203,17 +377,31 @@
           "probes"
         ],
         "properties": {
-          "pr": { "type": "integer", "minimum": 1 },
-          "head_sha": { "$ref": "#/$defs/sha" },
-          "objective": { "type": "string", "minLength": 1 },
+          "pr": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "head_sha": {
+            "$ref": "#/$defs/sha"
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 1
+          },
           "scope_fidelity": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["path", "disposition", "basis"],
+              "required": [
+                "path",
+                "disposition",
+                "basis"
+              ],
               "properties": {
-                "path": { "type": "string" },
+                "path": {
+                  "type": "string"
+                },
                 "disposition": {
                   "enum": [
                     "REQUIRED",
@@ -224,7 +412,9 @@
                     "UNKNOWN"
                   ]
                 },
-                "basis": { "type": "string" }
+                "basis": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -233,10 +423,19 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["check", "conclusion", "causality", "evidence"],
+              "required": [
+                "check",
+                "conclusion",
+                "causality",
+                "evidence"
+              ],
               "properties": {
-                "check": { "type": "string" },
-                "conclusion": { "type": "string" },
+                "check": {
+                  "type": "string"
+                },
+                "conclusion": {
+                  "type": "string"
+                },
                 "causality": {
                   "enum": [
                     "PR_INTRODUCED",
@@ -247,8 +446,15 @@
                     "NOT_APPLICABLE"
                   ]
                 },
-                "finding_id": { "type": ["string", "null"] },
-                "evidence": { "type": "string" }
+                "finding_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "evidence": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -257,15 +463,32 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["thread_id", "semantic_disposition", "evidence"],
+              "required": [
+                "thread_id",
+                "semantic_disposition",
+                "evidence"
+              ],
               "properties": {
-                "thread_id": { "type": "string" },
-                "author": { "type": "string" },
-                "summary": { "type": "string" },
-                "semantic_disposition": {
-                  "enum": ["ADDRESSED", "NOT_ADDRESSED", "OBSOLETE", "UNKNOWN"]
+                "thread_id": {
+                  "type": "string"
                 },
-                "evidence": { "type": "string" }
+                "author": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "semantic_disposition": {
+                  "enum": [
+                    "ADDRESSED",
+                    "NOT_ADDRESSED",
+                    "OBSOLETE",
+                    "UNKNOWN"
+                  ]
+                },
+                "evidence": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -274,22 +497,63 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["command", "tested_revision", "result", "properties_discriminated"],
+              "required": [
+                "command",
+                "tested_revision",
+                "result",
+                "properties_discriminated"
+              ],
               "properties": {
-                "command": { "type": "string" },
-                "tested_revision": {
-                  "oneOf": [{ "$ref": "#/$defs/sha" }, { "const": "UPSTREAM" }]
+                "command": {
+                  "type": "string"
                 },
-                "result": { "enum": ["PASS", "FAIL", "NOT_EXECUTED"] },
-                "properties_discriminated": { "type": "string" }
+                "tested_revision": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/sha"
+                    },
+                    {
+                      "const": "UPSTREAM"
+                    }
+                  ]
+                },
+                "result": {
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "NOT_EXECUTED"
+                  ]
+                },
+                "properties_discriminated": {
+                  "type": "string"
+                }
               }
             }
           },
-          "merge_conflict_with_main": { "type": ["boolean", "null"] },
-          "readiness": { "enum": ["READY", "NOT_READY", "UNKNOWN"] },
-          "readiness_basis": { "type": "string", "minLength": 1 },
+          "merge_conflict_with_main": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "readiness": {
+            "enum": [
+              "READY",
+              "NOT_READY",
+              "UNKNOWN"
+            ]
+          },
+          "readiness_basis": {
+            "type": "string",
+            "minLength": 1
+          },
           "objective_source": {
-            "enum": ["ISSUE", "ORIGINAL_PROMPT", "USER", "PR_BODY"],
+            "enum": [
+              "ISSUE",
+              "ORIGINAL_PROMPT",
+              "USER",
+              "PR_BODY"
+            ],
             "description": "where the requester's ask came from; PR_BODY means only the author's own description was available"
           },
           "requirements": {
@@ -298,16 +562,39 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "text", "status", "evidence"],
+              "required": [
+                "id",
+                "text",
+                "status",
+                "evidence"
+              ],
               "properties": {
-                "id": { "type": "string", "pattern": "^R[0-9]+$" },
-                "text": { "type": "string", "minLength": 1 },
-                "status": { "enum": ["MET", "PARTIAL", "NOT_MET", "UNKNOWN"] },
-                "evidence": { "type": "string", "minLength": 1 },
+                "id": {
+                  "type": "string",
+                  "pattern": "^R[0-9]+$"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "MET",
+                    "PARTIAL",
+                    "NOT_MET",
+                    "UNKNOWN"
+                  ]
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "finding_ids": {
                   "type": "array",
                   "uniqueItems": true,
-                  "items": { "type": "string" }
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -323,29 +610,51 @@
               "ingress_reachability"
             ],
             "properties": {
-              "adversarial_input": { "$ref": "#/$defs/probe" },
-              "base_discrimination": { "$ref": "#/$defs/probe" },
-              "merged_tree": { "$ref": "#/$defs/probe" },
-              "ci_causality": { "$ref": "#/$defs/probe" },
-              "ingress_reachability": { "$ref": "#/$defs/probe" }
+              "adversarial_input": {
+                "$ref": "#/$defs/probe"
+              },
+              "base_discrimination": {
+                "$ref": "#/$defs/probe"
+              },
+              "merged_tree": {
+                "$ref": "#/$defs/probe"
+              },
+              "ci_causality": {
+                "$ref": "#/$defs/probe"
+              },
+              "ingress_reachability": {
+                "$ref": "#/$defs/probe"
+              }
             }
           }
         }
       }
     },
-    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
     "cross_pr": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["prs", "relationship", "evidence", "consequence"],
+        "required": [
+          "prs",
+          "relationship",
+          "evidence",
+          "consequence"
+        ],
         "properties": {
           "prs": {
             "type": "array",
             "minItems": 2,
             "uniqueItems": true,
-            "items": { "type": "integer" }
+            "items": {
+              "type": "integer"
+            }
           },
           "relationship": {
             "enum": [
@@ -360,8 +669,14 @@
               "UNKNOWN"
             ]
           },
-          "evidence": { "type": "string", "minLength": 1 },
-          "consequence": { "type": "string", "minLength": 1 }
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "consequence": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -370,13 +685,30 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["what", "blocks", "evidence_needed"],
+        "required": [
+          "what",
+          "blocks",
+          "evidence_needed"
+        ],
         "properties": {
-          "what": { "type": "string" },
-          "prs": { "type": "array", "items": { "type": "integer" } },
-          "blocks": { "type": "string" },
-          "blocks_readiness": { "type": "boolean" },
-          "evidence_needed": { "type": "string" }
+          "what": {
+            "type": "string"
+          },
+          "prs": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "blocks": {
+            "type": "string"
+          },
+          "blocks_readiness": {
+            "type": "boolean"
+          },
+          "evidence_needed": {
+            "type": "string"
+          }
         }
       }
     }
