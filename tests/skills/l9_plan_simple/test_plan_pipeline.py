@@ -161,7 +161,7 @@ def test_v4_admit_rejects_a_title_and_paragraph() -> None:
         assert errors
         assert any(err.startswith("G_ADMIT") for err in errors)
         proc = subprocess.run(
-            [PY, str(ADMIT), str(thin.relative_to(REPO))],
+            [PY, str(ADMIT), "--all", str(thin.relative_to(REPO))],
             cwd=REPO,
             capture_output=True,
             text=True,
