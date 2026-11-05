@@ -98,15 +98,10 @@
     {
       "id": "T2",
       "task": "Create ops/ci_parity/install.py: idempotent, flock single-flight (~/.local/share/l9-ci-parity/.install.lock), sha256-verified release binaries (codeql bundle 2.27.0, actionlint, shellcheck, osv-scanner, biome 2.5.5) into ~/.local/share/l9-ci-parity/<tool>/<ver> with ~/.local/bin symlinks; `uv tool install pkg==ver` for semgrep/zizmor/yamllint/pip-audit; version probe skips reinstall; --check prints literal per-tool status; sha mismatch refuses and leaves prior install intact.",
-      "files": [
-        "ops/ci_parity/install.py",
-        "tests/ops/ci_parity/test_install.py"
-      ],
+      "files": ["ops/ci_parity/install.py", "tests/ops/ci_parity/test_install.py"],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Create",
       "anchor": "new file",
       "leverage_rank": 5
@@ -122,9 +117,7 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T2"
-      ],
+      "dependencies": ["T2"],
       "operation": "Insert",
       "anchor": "setup.sh after toolchain step; session_deps_cloud.sh background worker after deps install",
       "leverage_rank": 8
@@ -139,9 +132,7 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Create",
       "anchor": "new file",
       "leverage_rank": 2,
@@ -177,11 +168,7 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": [
-        "T1",
-        "T4",
-        "T5"
-      ],
+      "dependencies": ["T1", "T4", "T5"],
       "operation": "Create",
       "anchor": "new file",
       "leverage_rank": 1,
@@ -198,9 +185,7 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Create",
       "anchor": "new file; properties sonar.sources line",
       "leverage_rank": 9
@@ -219,9 +204,7 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": [
-        "T6"
-      ],
+      "dependencies": ["T6"],
       "operation": "Create",
       "anchor": "new hook files; settings PostToolUse/PreToolUse arrays",
       "leverage_rank": 6
@@ -229,15 +212,10 @@
     {
       "id": "T9",
       "task": "Add a Claude-guarded `_wave_start ci-parity` entry to ops/scripts/run_pr_gate.sh parallel reader wave (runs run.py --gate HEAD niced so pytest keeps priority; guard = l9_is_claude_gate_surface && tools present && L9_CI_PARITY!=0) and add ops/ci_parity/*.py, tools.yaml and lane configs to _GATE_CODE_FILES.",
-      "files": [
-        "ops/scripts/run_pr_gate.sh",
-        "tests/ops/scripts/test_run_pr_gate_ci_parity.py"
-      ],
+      "files": ["ops/scripts/run_pr_gate.sh", "tests/ops/scripts/test_run_pr_gate_ci_parity.py"],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T6"
-      ],
+      "dependencies": ["T6"],
       "operation": "Insert",
       "anchor": "run_pr_gate.sh parallel reader wave (~:973-1026) and _GATE_CODE_FILES (~:123-142)",
       "leverage_rank": 7
@@ -252,9 +230,7 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T6"
-      ],
+      "dependencies": ["T6"],
       "operation": "Replace",
       "anchor": "host allowlist table; setup section; env example tail",
       "leverage_rank": 11
@@ -272,9 +248,7 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "T2"
-      ],
+      "dependencies": ["T2"],
       "operation": "Insert",
       "anchor": "top-level after `on:` block",
       "leverage_rank": 10
@@ -282,29 +256,16 @@
     {
       "id": "T12",
       "task": "Parity proof: run `run.py --gate` on 745a1b06 and 29c767df in the snapshot clone; record the CodeQL/semgrep verdicts next to the CI verdicts for those heads in ops/ci_parity/README.md and the PR body.",
-      "files": [
-        "ops/ci_parity/README.md"
-      ],
+      "files": ["ops/ci_parity/README.md"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T6",
-        "T3"
-      ],
+      "dependencies": ["T6", "T3"],
       "operation": "Insert",
       "anchor": "README evidence section",
       "leverage_rank": 12
     }
   ],
-  "critical_path": [
-    "T1",
-    "T4",
-    "T5",
-    "T6",
-    "T8",
-    "T9",
-    "T12"
-  ],
+  "critical_path": ["T1", "T4", "T5", "T6", "T8", "T9", "T12"],
   "milestones": [
     {
       "id": "M1",
@@ -357,9 +318,7 @@
     {
       "surface": "AGENTS.md",
       "action": "update",
-      "todo_ids": [
-        "T5"
-      ],
+      "todo_ids": ["T5"],
       "reason": "append-only section CI_PARITY_HOSTED_CLAUDE_V1 records the capability_exec amendment and timing tiers"
     },
     {
@@ -370,16 +329,12 @@
     {
       "surface": "ops/secrets/capabilities.yaml + ops/secrets/README.md",
       "action": "update",
-      "todo_ids": [
-        "T5"
-      ]
+      "todo_ids": ["T5"]
     },
     {
       "surface": "environment/agents/adapters/claude-code/web/{README.md,network-policy.md} + environment.env.example",
       "action": "update",
-      "todo_ids": [
-        "T10"
-      ]
+      "todo_ids": ["T10"]
     },
     {
       "surface": "Makefile / ops/make/*.mk",
@@ -418,20 +373,7 @@
     "rollback": "Immediate: set L9_CI_PARITY=0 (disables hooks and the gate wave without a revert). Full: revert the PR; installed binaries are inert under ~/.local/share/l9-ci-parity and ~/.cache/l9-ci-parity and are removed by explicit path; rotate SEMGREP_APP_TOKEN in Infisical if any canary test ever fails post-merge."
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T6",
-      "T4",
-      "T1",
-      "T5",
-      "T2",
-      "T8",
-      "T9",
-      "T3",
-      "T7",
-      "T11",
-      "T10",
-      "T12"
-    ],
+    "ranked_todo_ids": ["T6", "T4", "T1", "T5", "T2", "T8", "T9", "T3", "T7", "T11", "T10", "T12"],
     "shared_causes": [
       "CI-only scanners discovered after push (3 CodeQL push-and-wait rounds on #659)",
       "legacy finding debt with no diff scoping makes every new scanner noisy",
@@ -554,12 +496,7 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": [
-      "U1",
-      "U2",
-      "U3",
-      "U5"
-    ],
+    "remaining_unknown_ids": ["U1", "U2", "U3", "U5"],
     "next_skill": "l9-gmp-protocol",
     "stop_reason": "plan validated structurally; U1-U3/U5 are execution-time probes with defined fallbacks; P5 needs the user to set the claude-code identity in the environment before secret lanes can be proven live"
   },

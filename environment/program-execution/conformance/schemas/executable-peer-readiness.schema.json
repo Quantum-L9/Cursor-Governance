@@ -7,19 +7,10 @@
   "type": "object",
   "$defs": {
     "pass_fail": {
-      "enum": [
-        "PASS",
-        "FAIL"
-      ]
+      "enum": ["PASS", "FAIL"]
     },
     "probe_status": {
-      "enum": [
-        "PASS",
-        "FAIL",
-        "BLOCKED",
-        "UNSUPPORTED",
-        "UNKNOWN"
-      ]
+      "enum": ["PASS", "FAIL", "BLOCKED", "UNSUPPORTED", "UNKNOWN"]
     },
     "identifier": {
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
@@ -52,23 +43,13 @@
           "$ref": "#/$defs/pass_fail"
         },
         "error": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "autonomy_provider_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         }
       },
-      "required": [
-        "status",
-        "error",
-        "autonomy_provider_ref"
-      ]
+      "required": ["status", "error", "autonomy_provider_ref"]
     },
     "program_execution": {
       "additionalProperties": false,
@@ -78,16 +59,10 @@
           "$ref": "#/$defs/pass_fail"
         },
         "contract_family": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "descriptor_digest": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "provider_probe": {
           "additionalProperties": false,
@@ -97,10 +72,7 @@
               "$ref": "#/$defs/probe_status"
             },
             "blocked_reason": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "capabilities": {
               "type": "array",
@@ -109,26 +81,13 @@
               }
             },
             "receipt_digest": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             }
           },
-          "required": [
-            "status",
-            "blocked_reason",
-            "capabilities",
-            "receipt_digest"
-          ]
+          "required": ["status", "blocked_reason", "capabilities", "receipt_digest"]
         }
       },
-      "required": [
-        "status",
-        "contract_family",
-        "descriptor_digest",
-        "provider_probe"
-      ]
+      "required": ["status", "contract_family", "descriptor_digest", "provider_probe"]
     },
     "autonomy": {
       "additionalProperties": false,
@@ -138,22 +97,13 @@
           "$ref": "#/$defs/pass_fail"
         },
         "provider_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "protocol_version": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "canonical_path": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "gateway_enforced": {
           "type": "boolean"
@@ -220,16 +170,10 @@
       "format": "date-time"
     },
     "status": {
-      "enum": [
-        "READY",
-        "BLOCKED"
-      ]
+      "enum": ["READY", "BLOCKED"]
     },
     "blocked_reason": {
-      "type": [
-        "string",
-        "null"
-      ]
+      "type": ["string", "null"]
     },
     "receipt_digest": {
       "type": "string",

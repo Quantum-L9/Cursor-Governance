@@ -29,11 +29,7 @@
     "intent": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "original_objective",
-        "normalized_objective"
-      ],
+      "required": ["id", "original_objective", "normalized_objective"],
       "properties": {
         "id": {
           "type": "string",
@@ -52,22 +48,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "repository_id",
-          "resolution_source",
-          "confidence"
-        ],
+        "required": ["repository_id", "resolution_source", "confidence"],
         "properties": {
           "repository_id": {
             "type": "string"
           },
           "resolution_source": {
-            "enum": [
-              "user",
-              "evidence",
-              "decision",
-              "policy"
-            ]
+            "enum": ["user", "evidence", "decision", "policy"]
           },
           "evidence_ids": {
             "type": "array",
@@ -76,11 +63,7 @@
             }
           },
           "confidence": {
-            "enum": [
-              "high",
-              "medium",
-              "low"
-            ]
+            "enum": ["high", "medium", "low"]
           }
         }
       }
@@ -88,9 +71,7 @@
     "governing_authority": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "policy_profile"
-      ],
+      "required": ["policy_profile"],
       "properties": {
         "policy_profile": {
           "type": "string"
@@ -114,11 +95,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "statement",
-          "source"
-        ],
+        "required": ["id", "statement", "source"],
         "properties": {
           "id": {
             "type": "string",
@@ -130,18 +107,10 @@
           "source": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "type",
-              "ref"
-            ],
+            "required": ["type", "ref"],
             "properties": {
               "type": {
-                "enum": [
-                  "evidence",
-                  "decision",
-                  "policy",
-                  "user"
-                ]
+                "enum": ["evidence", "decision", "policy", "user"]
               },
               "ref": {
                 "type": "string"
@@ -154,11 +123,7 @@
     "decisions": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "accepted_from_authority",
-        "accepted_from_policy",
-        "requires_human_authority"
-      ],
+      "required": ["accepted_from_authority", "accepted_from_policy", "requires_human_authority"],
       "properties": {
         "accepted_from_authority": {
           "type": "array",
@@ -185,13 +150,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "topic",
-          "blocks",
-          "safe_state",
-          "resolution_requirements"
-        ],
+        "required": ["id", "topic", "blocks", "safe_state", "resolution_requirements"],
         "properties": {
           "id": {
             "type": "string",
@@ -221,11 +180,7 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "authoritative",
-        "supporting",
-        "stale_or_conflicting"
-      ],
+      "required": ["authoritative", "supporting", "stale_or_conflicting"],
       "properties": {
         "authoritative": {
           "type": "array",
@@ -250,22 +205,13 @@
     "program_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "mode"
-      ],
+      "required": ["mode"],
       "properties": {
         "mode": {
-          "enum": [
-            "create",
-            "extend",
-            "supersede"
-          ]
+          "enum": ["create", "extend", "supersede"]
         },
         "parent_program_ref": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "reason": {
           "type": "string"
@@ -283,41 +229,21 @@
       ],
       "properties": {
         "intent_resolution": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
+          "enum": ["high", "medium", "low"]
         },
         "target_resolution": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
+          "enum": ["high", "medium", "low"]
         },
         "authority_resolution": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
+          "enum": ["high", "medium", "low"]
         },
         "repository_understanding": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
+          "enum": ["high", "medium", "low"]
         }
       }
     },
     "synthesis_status": {
-      "enum": [
-        "ready",
-        "blocked",
-        "requires_authority"
-      ]
+      "enum": ["ready", "blocked", "requires_authority"]
     }
   }
 }

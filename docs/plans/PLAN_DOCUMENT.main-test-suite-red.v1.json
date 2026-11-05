@@ -68,9 +68,7 @@
     {
       "id": "T2",
       "task": "Allowlist the Memory 3.0 OAuth resource identifier in memory-oauth-connector.yaml and memory-auth0-onboarding.yaml, citing CANONICAL_LAW §8.10 and ADR-100",
-      "files": [
-        "ops/config/memory-egress-allowlist.json"
-      ],
+      "files": ["ops/config/memory-egress-allowlist.json"],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -96,9 +94,7 @@
     {
       "id": "T4",
       "task": "Make the live-repo resolver test correct for a checkout with no commits ahead (expect SOURCE:empty) and add a temp-repo test proving a branch with a commit ahead resolves to `comparison`",
-      "files": [
-        "tests/ops/scripts/test_resolve_changed_files_merge_base.py"
-      ],
+      "files": ["tests/ops/scripts/test_resolve_changed_files_merge_base.py"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -109,27 +105,14 @@
     {
       "id": "T5",
       "task": "Run the full CI test profile, then close session-debt item main-test-suite-5-failures with the run as evidence",
-      "files": [
-        ".l9/autonomy/session-debt.json"
-      ],
+      "files": [".l9/autonomy/session-debt.json"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T1",
-        "T2",
-        "T3",
-        "T4"
-      ],
+      "dependencies": ["T1", "T2", "T3", "T4"],
       "leverage_rank": 5
     }
   ],
-  "critical_path": [
-    "T2",
-    "T1",
-    "T3",
-    "T4",
-    "T5"
-  ],
+  "critical_path": ["T2", "T1", "T3", "T4", "T5"],
   "milestones": [
     {
       "id": "M1",
@@ -189,13 +172,7 @@
     "rollback": "revert the single fix commit; each todo touches disjoint files"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T2",
-      "T1",
-      "T3",
-      "T4",
-      "T5"
-    ],
+    "ranked_todo_ids": ["T2", "T1", "T3", "T4", "T5"],
     "shared_causes": [
       "gates on main were red before these merges and PR CI runs only changed-file subsets, so the full-suite failures never blocked a PR"
     ],

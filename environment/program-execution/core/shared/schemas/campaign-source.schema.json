@@ -114,10 +114,7 @@
             ]
           },
           "repository_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "lifecycle": {
             "enum": [
@@ -171,10 +168,7 @@
         "additionalProperties": true,
         "properties": {
           "selected_option_id": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "blocking_task_ids": {
             "type": "array",

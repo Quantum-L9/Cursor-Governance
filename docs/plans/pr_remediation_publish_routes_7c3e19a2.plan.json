@@ -51,9 +51,7 @@
     {
       "id": "T1",
       "task": "Define PUBLISH_IN_SCOPE, PUBLISH_SCOPE_EXPANSION and PUBLISH_COMMANDS; discover_gate_registry publishes both routes; validate_gate_registry, validate_plan and Gate E accept membership in PUBLISH_COMMANDS only",
-      "files": [
-        "skills/l9-pr-remediation/scripts/protocol.py"
-      ],
+      "files": ["skills/l9-pr-remediation/scripts/protocol.py"],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -65,14 +63,10 @@
     {
       "id": "T2",
       "task": "Add tests: both sanctioned routes accepted by validate_plan, unsanctioned routes rejected, discovered registry names both routes and validates",
-      "files": [
-        "tests/skills/l9_pr_remediation/test_protocol.py"
-      ],
+      "files": ["tests/skills/l9_pr_remediation/test_protocol.py"],
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "T1"
-      ],
+      "dependencies": ["T1"],
       "operation": "Insert",
       "anchor": "after existing commit_policy tests",
       "leverage_rank": 3
@@ -119,11 +113,7 @@
       "shared_root_cause": "selector routed protocol.py only to 'skills', so its mirror tests never ran on #688"
     }
   ],
-  "critical_path": [
-    "T1",
-    "T2",
-    "T4"
-  ],
+  "critical_path": ["T1", "T2", "T4"],
   "milestones": [
     {
       "id": "M1",
@@ -164,9 +154,7 @@
     {
       "surface": "skills/l9-pr-remediation/SKILL.md",
       "action": "update",
-      "todo_ids": [
-        "T3"
-      ]
+      "todo_ids": ["T3"]
     }
   ],
   "stress_test": {
@@ -183,15 +171,8 @@
     "rollback": "revert the PR; protocol returns to the stacked-only constant"
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "T1",
-      "T4",
-      "T2",
-      "T3"
-    ],
-    "shared_causes": [
-      "a constant narrowed without its tests running"
-    ],
+    "ranked_todo_ids": ["T1", "T4", "T2", "T3"],
+    "shared_causes": ["a constant narrowed without its tests running"],
     "deletions_or_consolidations": [
       "three stale SKILL.md lines contradicting the file's own two-route rule"
     ]
@@ -273,11 +254,6 @@
     ]
   },
   "depth": "standard",
-  "checklist": [
-    "protocol",
-    "tests",
-    "SKILL.md",
-    "selector"
-  ],
+  "checklist": ["protocol", "tests", "SKILL.md", "selector"],
   "estimate": "1 GMP"
 }

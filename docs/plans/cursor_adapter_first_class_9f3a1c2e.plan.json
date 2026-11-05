@@ -62,11 +62,7 @@
     {
       "id": "fix-hydrate-boolean",
       "task": "Classify hydrate from packet JSON booleans via new ops/scripts/classify_hydrate_state.py; conservative no-classifier fallback; twin tests",
-      "files": [
-        "ops/hooks/session_start_bootstrap.sh",
-        "ops/scripts/classify_hydrate_state.py",
-        "ops/scripts/tests/test_classify_hydrate_state.py"
-      ],
+      "files": ["ops/hooks/session_start_bootstrap.sh", "ops/scripts/classify_hydrate_state.py", "ops/scripts/tests/test_classify_hydrate_state.py"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -77,18 +73,10 @@
     {
       "id": "surface-isolate-receipts",
       "task": "Surface-parameterize claude_bootstrap_receipt.py; downgrade foreign-workspace receipts to stale_other_surface; add cursor-adapter row; guard memory_prefetch.py behind Claude runtime markers",
-      "files": [
-        "ops/scripts/claude_bootstrap_receipt.py",
-        "ops/scripts/session_start_runtime_report.py",
-        "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
-        "ops/scripts/tests/test_session_start_runtime_report.py",
-        "environment/agents/adapters/claude-code/tests/test_memory_prefetch_guard.py"
-      ],
+      "files": ["ops/scripts/claude_bootstrap_receipt.py", "ops/scripts/session_start_runtime_report.py", "environment/agents/adapters/claude-code/hooks/memory_prefetch.py", "ops/scripts/tests/test_session_start_runtime_report.py", "environment/agents/adapters/claude-code/tests/test_memory_prefetch_guard.py"],
       "effort": "M",
       "risk": "medium",
-      "dependencies": [
-        "fix-hydrate-boolean"
-      ],
+      "dependencies": ["fix-hydrate-boolean"],
       "operation": "Replace",
       "leverage_rank": 2,
       "shared_root_cause": "receipt-without-surface-identity; hooks-without-runtime-guard"
@@ -96,27 +84,17 @@
     {
       "id": "cursor-adapter-pack",
       "task": "Thin environment/agents/adapters/cursor/ pack + make cursor-install / cursor-install-check + agents README layout line",
-      "files": [
-        "environment/agents/adapters/cursor/",
-        "Makefile",
-        "environment/agents/README.md"
-      ],
+      "files": ["environment/agents/adapters/cursor/", "Makefile", "environment/agents/README.md"],
       "effort": "M",
       "risk": "low",
-      "dependencies": [
-        "surface-isolate-receipts"
-      ],
+      "dependencies": ["surface-isolate-receipts"],
       "operation": "Create",
       "leverage_rank": 3
     },
     {
       "id": "path-venv",
       "task": "Homebrew PATH prepend in SessionStart; $HOME workspace refusal in shared bootstrap and install.sh; locked-venv documentation",
-      "files": [
-        "ops/hooks/session_start_bootstrap.sh",
-        "ops/scripts/bootstrap_agent_environment.sh",
-        "environment/agents/adapters/cursor/README.md"
-      ],
+      "files": ["ops/hooks/session_start_bootstrap.sh", "ops/scripts/bootstrap_agent_environment.sh", "environment/agents/adapters/cursor/README.md"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -127,10 +105,7 @@
     {
       "id": "ingest-debt-ledger",
       "task": "TECH_DEBT.md + tech_debt.json in WIP/9-2-26/cursor-remediation/ from both packs; no zips; UNKNOWN rows only for evidence that stays absent",
-      "files": [
-        "WIP/9-2-26/cursor-remediation/TECH_DEBT.md",
-        "WIP/9-2-26/cursor-remediation/tech_debt.json"
-      ],
+      "files": ["WIP/9-2-26/cursor-remediation/TECH_DEBT.md", "WIP/9-2-26/cursor-remediation/tech_debt.json"],
       "effort": "M",
       "risk": "low",
       "dependencies": [],
@@ -140,25 +115,18 @@
     {
       "id": "todo-pointer",
       "task": "One EOF pointer in TODO.md to the ledger; Igor block untouched",
-      "files": [
-        "TODO.md"
-      ],
+      "files": ["TODO.md"],
       "blocker": "none: TODO.md is the literal target filename, not placeholder text",
       "effort": "S",
       "risk": "low",
-      "dependencies": [
-        "ingest-debt-ledger"
-      ],
+      "dependencies": ["ingest-debt-ledger"],
       "operation": "Insert",
       "leverage_rank": 6
     },
     {
       "id": "emit-simple-plan",
       "task": "Official PLAN_DOCUMENT + docs/plans .plan.md (kind: simple, execute_via: cursor-build) + section receipt",
-      "files": [
-        "docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.json",
-        "docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.md"
-      ],
+      "files": ["docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.json", "docs/plans/cursor_adapter_first_class_9f3a1c2e.plan.md"],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -172,15 +140,7 @@
       "blocker": "none: publish ceremony only — no file edits; make pr owns the gate",
       "effort": "S",
       "risk": "medium",
-      "dependencies": [
-        "fix-hydrate-boolean",
-        "surface-isolate-receipts",
-        "cursor-adapter-pack",
-        "path-venv",
-        "ingest-debt-ledger",
-        "todo-pointer",
-        "emit-simple-plan"
-      ],
+      "dependencies": ["fix-hydrate-boolean", "surface-isolate-receipts", "cursor-adapter-pack", "path-venv", "ingest-debt-ledger", "todo-pointer", "emit-simple-plan"],
       "leverage_rank": 8
     }
   ],
@@ -225,17 +185,13 @@
     {
       "surface": "Makefile",
       "action": "update",
-      "todo_ids": [
-        "cursor-adapter-pack"
-      ],
+      "todo_ids": ["cursor-adapter-pack"],
       "reason": "append-only cursor-install targets; additive_only root file, make pr stamps L9_PROTECTED_ROOT_PR"
     },
     {
       "surface": "TODO.md",
       "action": "update",
-      "todo_ids": [
-        "todo-pointer"
-      ],
+      "todo_ids": ["todo-pointer"],
       "reason": "one EOF pointer; additive_only; Igor block untouched"
     },
     {
@@ -258,26 +214,9 @@
     "rollback": "Every deliverable is a revertable unit: hydrate hunk + new script, report classifier hunk, one new directory, appended Makefile lines, two WIP files, one TODO line."
   },
   "leverage": {
-    "ranked_todo_ids": [
-      "fix-hydrate-boolean",
-      "surface-isolate-receipts",
-      "cursor-adapter-pack",
-      "path-venv",
-      "ingest-debt-ledger",
-      "todo-pointer",
-      "emit-simple-plan",
-      "publish"
-    ],
-    "shared_causes": [
-      "substring-as-status",
-      "receipt-without-surface-identity",
-      "hooks-without-runtime-guard",
-      "$HOME-as-workspace"
-    ],
-    "deletions_or_consolidations": [
-      "no second receipt reader — claude_bootstrap_receipt.py parameterized instead",
-      "no adapter-owned hydrate/env logic — everything lands in ops/ first"
-    ]
+    "ranked_todo_ids": ["fix-hydrate-boolean", "surface-isolate-receipts", "cursor-adapter-pack", "path-venv", "ingest-debt-ledger", "todo-pointer", "emit-simple-plan", "publish"],
+    "shared_causes": ["substring-as-status", "receipt-without-surface-identity", "hooks-without-runtime-guard", "$HOME-as-workspace"],
+    "deletions_or_consolidations": ["no second receipt reader — claude_bootstrap_receipt.py parameterized instead", "no adapter-owned hydrate/env logic — everything lands in ops/ first"]
   },
   "risks": [
     {
@@ -341,10 +280,7 @@
   ],
   "convergence": {
     "status": "converged",
-    "remaining_unknown_ids": [
-      "U-B",
-      "U-C"
-    ],
+    "remaining_unknown_ids": ["U-B", "U-C"],
     "next_skill": "none — Build executed; publish via make pr",
     "stop_reason": "all todos executed; both residual unknowns are accept_bounded and ledgered"
   },

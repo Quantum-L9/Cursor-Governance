@@ -5,43 +5,23 @@
   "description": "Candidate interpretation only. Nothing here is authority until it is admitted against source provenance and grounding.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema",
-    "items"
-  ],
+  "required": ["schema", "items"],
   "properties": {
-    "schema": {
-      "const": "l9.program-execution.architecture-extractor-response.v1"
-    },
-    "request_id": {
-      "type": "string"
-    },
-    "notes": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
+    "schema": { "const": "l9.program-execution.architecture-extractor-response.v1" },
+    "request_id": { "type": "string" },
+    "notes": { "type": "array", "items": { "type": "string" } },
     "items": {
       "type": "array",
-      "items": {
-        "$ref": "#/$defs/item"
-      }
+      "items": { "$ref": "#/$defs/item" }
     }
   },
   "$defs": {
     "item": {
       "type": "object",
       "additionalProperties": true,
-      "required": [
-        "kind",
-        "statement",
-        "source_refs"
-      ],
+      "required": ["kind", "statement", "source_refs"],
       "properties": {
-        "id": {
-          "type": "string"
-        },
+        "id": { "type": "string" },
         "kind": {
           "enum": [
             "objective",
@@ -66,70 +46,23 @@
             "informational"
           ]
         },
-        "statement": {
-          "type": "string",
-          "minLength": 1
-        },
+        "statement": { "type": "string", "minLength": 1 },
         "source_refs": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "type": "string",
-            "pattern": "^SRC-[0-9]{4,}$"
-          }
+          "items": { "type": "string", "pattern": "^SRC-[0-9]{4,}$" }
         },
-        "materiality": {
-          "enum": [
-            "material",
-            "informational"
-          ]
-        },
-        "confidence": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ]
-        },
-        "subject": {
-          "type": "string"
-        },
-        "target": {
-          "type": "string"
-        },
-        "rationale": {
-          "type": "string"
-        },
-        "implementation_hint": {
-          "type": "string"
-        },
-        "probeable": {
-          "type": "boolean"
-        },
-        "suggested_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "suggested_tests": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "related_semantic_ids": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "contradicts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
+        "materiality": { "enum": ["material", "informational"] },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "subject": { "type": "string" },
+        "target": { "type": "string" },
+        "rationale": { "type": "string" },
+        "implementation_hint": { "type": "string" },
+        "probeable": { "type": "boolean" },
+        "suggested_paths": { "type": "array", "items": { "type": "string" } },
+        "suggested_tests": { "type": "array", "items": { "type": "string" } },
+        "related_semantic_ids": { "type": "array", "items": { "type": "string" } },
+        "contradicts": { "type": "array", "items": { "type": "string" } }
       }
     }
   }
