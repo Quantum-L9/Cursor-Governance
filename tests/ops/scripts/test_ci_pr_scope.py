@@ -181,3 +181,27 @@ def test_deletion_only_pr_scopes_to_nothing(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
     assert "0 changed path(s)" in result.stderr
+
+
+def test_pr_full_forces_the_full_suite_on_its_test_prerequisite() -> None:
+    """`make pr-full` is the full gate even inside a pull_request CI job.
+
+    Read make's own database (-p) without running anything (-n -q): pr-full
+    must carry the target-specific export, which GNU make passes to `test`.
+    """
+    repo = HELPER.parents[3]
+    db = subprocess.run(
+        ["make", "-C", str(repo), "-p", "-n", "-q", "pr-full"],
+        env=_base_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    ).stdout
+    # make -p prints a target-specific variable as `<target>: NAME := value`.
+    assert "pr-full: L9_CI_FULL_SUITE := 1" in db.splitlines(), (
+        "make does not attach L9_CI_FULL_SUITE := 1 to pr-full"
+    )
+    # -p does not show `export`; without it the recipe's shell never sees the value.
+    publish = (repo / "ops" / "make" / "publish.mk").read_text(encoding="utf-8")
+    assert "pr-full: export L9_CI_FULL_SUITE := 1" in publish.splitlines()
