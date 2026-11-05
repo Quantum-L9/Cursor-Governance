@@ -761,11 +761,29 @@ def test_introduced_failure_marks_a_new_regression() -> None:
     assert introduced == ["test: baseline passed"]
 
 
+def test_timeout_after_a_baseline_failure_is_a_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "FAIL", "failure_ids": ["tests/a.py::x"]}],
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+    )
+    assert introduced == ["test: status degraded to TIMEOUT"]
+
+
+def test_repeated_timeout_without_new_ids_is_not_a_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+        [{"procedure": "test", "status": "TIMEOUT", "failure_ids": []}],
+    )
+    assert introduced == []
+
+
 def test_publisher_names_one_branch_and_refuses_unsafe_targets() -> None:
     assert publish.branch_name([12, 4]) == "integration/l9-prs-4-12"
     common = {
         "head_sha": "a" * 40,
         "retest_sha": "b" * 40,
+        "manifest_sha": "c" * 40,
+        "descends_from_manifest": True,
         "branch": "integration/l9-prs-4",
         "source_branches": {"feature/four"},
         "remote_branches": set(),
@@ -792,6 +810,92 @@ def test_publisher_names_one_branch_and_refuses_unsafe_targets() -> None:
                 "remote_branches": {"integration/l9-prs-4"},
             }
         )
+    with pytest.raises(publish.PublishRefusal, match="no candidate SHA"):
+        publish.decide(
+            **{**common, "head_sha": "a" * 40, "retest_sha": "a" * 40, "manifest_sha": ""}
+        )
+    with pytest.raises(publish.PublishRefusal, match="does not descend"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "descends_from_manifest": False,
+            }
+        )
+
+
+def _publication_evidence(path: Path, *, candidate_sha: str, url: str) -> Path:
+    path.mkdir()
+    (path / "integration_manifest.json").write_text(
+        json.dumps(
+            {
+                "repository": {"url": url, "base_ref": "main"},
+                "prs": [
+                    {
+                        "number": 4,
+                        "source_branch": "feature/four",
+                        "head_sha": "b" * 40,
+                    }
+                ],
+                "candidate_sha": candidate_sha,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _retest_dir(path: Path, candidate_sha: str) -> Path:
+    path.mkdir()
+    (path / "retest.json").write_text(
+        json.dumps({"candidate_sha": candidate_sha, "worse_than_baseline": False}),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_publish_refuses_a_checkout_outside_the_exported_history(tmp_path: Path) -> None:
+    exported = _init_repo(tmp_path / "exported")
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    integrate.git(["init", "--template=", str(unrelated)])
+    (unrelated / "README").write_text("other\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=unrelated)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "other"],
+        cwd=unrelated,
+    )
+    other = integrate.git(["rev-parse", "HEAD"], cwd=unrelated).stdout.strip()
+    assert other != exported
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    evidence = _publication_evidence(tmp_path / "evidence", candidate_sha=exported, url=str(bare))
+    retest = _retest_dir(tmp_path / "retest", other)
+    with pytest.raises(publish.PublishRefusal, match="does not descend"):
+        publish.assess_evidence(evidence, unrelated, retest)
+
+
+def test_publish_accepts_the_exported_candidate_and_a_descendant(tmp_path: Path) -> None:
+    candidate = tmp_path / "candidate"
+    exported = _init_repo(candidate)
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    evidence = _publication_evidence(tmp_path / "evidence", candidate_sha=exported, url=str(bare))
+    same = publish.assess_evidence(evidence, candidate, _retest_dir(tmp_path / "retest", exported))
+    assert same["head_sha"] == exported
+    (candidate / "README").write_text("y\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=candidate)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "repair"],
+        cwd=candidate,
+    )
+    child = integrate.git(["rev-parse", "HEAD"], cwd=candidate).stdout.strip()
+    later = publish.assess_evidence(
+        evidence, candidate, _retest_dir(tmp_path / "retest-child", child)
+    )
+    assert later["head_sha"] == child
+    assert publish.head_descends_from(candidate, exported) is True
 
 
 def test_prepare_branch_does_not_move_source_refs(tmp_path: Path) -> None:
