@@ -9,18 +9,42 @@ receipts are fixture-only; no checkout venv, live identity or service is used.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.ops.scripts.test_agent_bootstrap_readiness import (
-    BootstrapTree,
-    git,
-    put,
-    snapshot,
-)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _bootstrap_fixtures():
+    """Load the shared bootstrap fixtures by file path, not as ``tests.ops...``.
+
+    Under ``--import-mode=importlib`` the name ``tests`` is whichever regular
+    ``tests`` package was imported first (e.g.
+    ``environment/agents/adapters/claude-agent-sdk/tests``), so a dotted import
+    of ``tests.ops.scripts`` fails or succeeds on collection order alone.
+    """
+    name = "_l9_bootstrap_readiness_fixtures"
+    module = sys.modules.get(name)
+    if module is None:
+        path = _REPO_ROOT / "tests" / "ops" / "scripts" / "test_agent_bootstrap_readiness.py"
+        spec = importlib.util.spec_from_file_location(name, path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return module
+
+
+_FIXTURES = _bootstrap_fixtures()
+BootstrapTree = _FIXTURES.BootstrapTree
+git = _FIXTURES.git
+put = _FIXTURES.put
+snapshot = _FIXTURES.snapshot
 
 
 class _PlaneBootstrapCase(unittest.TestCase):
