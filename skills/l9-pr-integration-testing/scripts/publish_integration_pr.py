@@ -31,16 +31,36 @@ def branch_name(numbers: list[int]) -> str:
     return "integration/l9-prs-" + "-".join(str(n) for n in ordered)
 
 
+def head_descends_from(candidate: Path, manifest_sha: str) -> bool:
+    """True when HEAD is the exported candidate or a commit that descends from it."""
+    if not HEX40.fullmatch(manifest_sha):
+        return False
+    probe = git(
+        ["merge-base", "--is-ancestor", manifest_sha, "HEAD"],
+        cwd=candidate,
+        check=False,
+    )
+    return probe.returncode == 0
+
+
 def decide(
     *,
     head_sha: str,
     retest_sha: str,
+    manifest_sha: str,
+    descends_from_manifest: bool,
     branch: str,
     source_branches: set[str],
     remote_branches: set[str],
     worse: bool,
     dirty: bool,
 ) -> None:
+    if not HEX40.fullmatch(manifest_sha):
+        raise PublishRefusal("integration manifest has no candidate SHA")
+    if not descends_from_manifest:
+        raise PublishRefusal(
+            "candidate HEAD does not descend from the integration manifest candidate"
+        )
     if not HEX40.fullmatch(head_sha) or head_sha != retest_sha:
         raise PublishRefusal("candidate HEAD is not the retested SHA")
     if branch in source_branches:
@@ -108,9 +128,12 @@ def assess_evidence(evidence: Path, candidate: Path, retest_dir: Path) -> dict:
     origin_url = str(repository.get("url") or "")
     if not origin_url:
         raise PublishRefusal("evidence has no repository url")
+    manifest_sha = str(manifest.get("candidate_sha") or "")
     decide(
         head_sha=head,
         retest_sha=str(retest.get("candidate_sha") or ""),
+        manifest_sha=manifest_sha,
+        descends_from_manifest=head_descends_from(candidate, manifest_sha),
         branch=branch,
         source_branches=source_branches,
         remote_branches={branch} if remote_has_branch(origin_url, branch) else set(),

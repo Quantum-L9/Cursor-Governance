@@ -323,7 +323,9 @@ def introduced_failures(baseline: list[dict], current: list[dict]) -> list[str]:
     """Failure identities the candidate added relative to the baseline run.
 
     An empty list means the retest is not worse. A result that cannot be
-    compared is treated as worse so publication stays fail-closed.
+    compared is treated as worse so publication stays fail-closed. A timeout,
+    or any other non-FAIL status the baseline did not already have, is worse
+    even when the new run parsed no failure identities.
     """
     before = {row.get("procedure"): row for row in baseline}
     introduced: list[str] = []
@@ -338,10 +340,13 @@ def introduced_failures(baseline: list[dict], current: list[dict]) -> list[str]:
         if ref.get("status") == "PASS" and status != "PASS":
             introduced.append(f"{pid}: baseline passed")
             continue
-        ref_ids = ref.get("failure_ids")
-        cur_ids = row.get("failure_ids")
         if status == "PASS":
             continue
+        if status != "FAIL" and status != ref.get("status"):
+            introduced.append(f"{pid}: status degraded to {status}")
+            continue
+        ref_ids = ref.get("failure_ids")
+        cur_ids = row.get("failure_ids")
         if not isinstance(ref_ids, list) or not isinstance(cur_ids, list):
             introduced.append(f"{pid}: failure identities cannot be compared")
             continue
