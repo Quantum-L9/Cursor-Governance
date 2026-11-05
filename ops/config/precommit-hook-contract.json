@@ -115,6 +115,11 @@
       "mode": "read_only",
       "locality": "governance",
       "note": "validate_skill_projection.py — Cursor virtual gateway cardinality; reports only"
+    },
+    "plan-pipeline-admit": {
+      "mode": "read_only",
+      "locality": "governance",
+      "note": "skills/l9-plan-simple/scripts/admit_plan.py — admits a simple plan only with a passing section receipt; reports only"
     }
   }
 }
