@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ SCRIPTS = REPO / "skills/l9-pr-integration-testing/scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import integrate  # noqa: E402
+import publish_integration_pr as publish  # noqa: E402
 import quick  # noqa: E402
 
 CONTRACT = (
@@ -656,3 +658,173 @@ def test_a_hung_log_capture_never_skips_container_removal(
     assert fake.removed() == ["l9-pr-abc123-net-1-postgres", "l9-pr-abc123-net-1"]
     logs = [r for r in writer.records if r["kind"] == "SERVICE_LOG"]
     assert [r["status"] for r in logs] == ["UNAVAILABLE"]
+
+
+def _init_repo(path: Path) -> str:
+    path.mkdir(parents=True)
+    integrate.git(["init", "--template=", str(path)])
+    (path / "README").write_text("x\n", encoding="utf-8")
+    integrate.git(["add", "README"], cwd=path)
+    integrate.git(
+        ["-c", "user.email=t@example.invalid", "-c", "user.name=T", "commit", "-m", "init"],
+        cwd=path,
+    )
+    return integrate.git(["rev-parse", "HEAD"], cwd=path).stdout.strip()
+
+
+def _runner_manifest() -> dict:
+    return {
+        "repository": {
+            "full_name": "o/r",
+            "base_ref": "main",
+            "base_sha": "a" * 40,
+            "url": "https://github.com/o/r.git",
+        },
+        "prs": [
+            {
+                "number": 4,
+                "head_sha": "b" * 40,
+                "base_ref": "main",
+                "source_branch": "feature/four",
+                "fetch_url": "https://github.com/o/r.git",
+                "fetch_ref": "refs/pull/4/head",
+            },
+            {
+                "number": 12,
+                "head_sha": "c" * 40,
+                "base_ref": "main",
+                "source_branch": "feature/twelve",
+                "fetch_url": "https://github.com/o/r.git",
+                "fetch_ref": "refs/pull/12/head",
+            },
+        ],
+        "integration_order": [4, 12],
+        "order_basis": "EXPLICIT_APPROVED",
+        "network": "none",
+        "image": "sha256:" + "c" * 64,
+        "test_procedures": quick.procedures_from_contract(CONTRACT, ["test"], 600),
+        "execution_authority": {"scope": "DISPOSABLE_DOCKER_ONLY", "source": "operator"},
+    }
+
+
+def test_export_survives_removal_of_the_source_directory(tmp_path: Path) -> None:
+    source_root = tmp_path / "disposable"
+    source = source_root / "combined"
+    sha = _init_repo(source)
+    dest = tmp_path / "evidence" / "candidate"
+    exported = integrate.export_candidate(source, dest)
+    shutil.rmtree(source_root)
+    assert dest.is_dir()
+    assert exported == sha
+    assert integrate.git(["rev-parse", "HEAD"], cwd=dest).stdout.strip() == sha
+
+
+def test_retest_does_not_merge_source_heads(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    def boom(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("retest merged source heads")
+
+    monkeypatch.setattr(integrate, "prepare_case", boom)
+    monkeypatch.setattr(integrate.DockerSandbox, "preflight", lambda self: {})
+    monkeypatch.setattr(
+        integrate,
+        "tests_case",
+        lambda *_args, **_kwargs: [
+            {
+                "procedure": "test",
+                "status": "PASS",
+                "failure_ids": [],
+                "evidence_id": "e",
+                "returncode": 0,
+                "skipped": 0,
+            }
+        ],
+    )
+    candidate = tmp_path / "candidate"
+    _init_repo(candidate)
+    body = integrate.retest_exported(
+        _runner_manifest(),
+        candidate,
+        tmp_path / "retest",
+        [{"procedure": "test", "status": "PASS", "failure_ids": []}],
+    )
+    assert body["worse_than_baseline"] is False
+    assert (tmp_path / "retest" / "retest.json").is_file()
+
+
+def test_introduced_failure_marks_a_new_regression() -> None:
+    introduced = integrate.introduced_failures(
+        [{"procedure": "test", "status": "PASS", "failure_ids": []}],
+        [{"procedure": "test", "status": "FAIL", "failure_ids": ["tests/test_a.py::test_x"]}],
+    )
+    assert introduced == ["test: baseline passed"]
+
+
+def test_publisher_names_one_branch_and_refuses_unsafe_targets() -> None:
+    assert publish.branch_name([12, 4]) == "integration/l9-prs-4-12"
+    common = {
+        "head_sha": "a" * 40,
+        "retest_sha": "b" * 40,
+        "branch": "integration/l9-prs-4",
+        "source_branches": {"feature/four"},
+        "remote_branches": set(),
+        "worse": False,
+        "dirty": False,
+    }
+    with pytest.raises(publish.PublishRefusal, match="retested SHA"):
+        publish.decide(**common)
+    with pytest.raises(publish.PublishRefusal, match="source PR branch"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "branch": "feature/four",
+            }
+        )
+    with pytest.raises(publish.PublishRefusal, match="already has"):
+        publish.decide(
+            **{
+                **common,
+                "head_sha": "a" * 40,
+                "retest_sha": "a" * 40,
+                "remote_branches": {"integration/l9-prs-4"},
+            }
+        )
+
+
+def test_prepare_branch_does_not_move_source_refs(tmp_path: Path) -> None:
+    candidate = tmp_path / "candidate"
+    sha = _init_repo(candidate)
+    integrate.git(["update-ref", "refs/heads/l9-pr-7", sha], cwd=candidate)
+    publish.prepare_local_branch(candidate, "integration/l9-prs-7", "https://github.com/o/r.git")
+    assert integrate.git(["rev-parse", "integration/l9-prs-7"], cwd=candidate).stdout.strip() == sha
+    assert integrate.git(["rev-parse", "l9-pr-7"], cwd=candidate).stdout.strip() == sha
+    origin = integrate.git(["remote", "get-url", "origin"], cwd=candidate).stdout.strip()
+    assert origin == "https://github.com/o/r.git"
+
+
+def test_remote_branch_probe_reads_without_updating(tmp_path: Path) -> None:
+    bare = tmp_path / "remote.git"
+    integrate.git(["init", "--bare", "--template=", str(bare)])
+    seed = tmp_path / "seed"
+    real = _init_repo(seed)
+    before = integrate.git(["--git-dir", str(bare), "show-ref"], check=False).stdout
+    integrate.git(
+        ["--git-dir", str(bare), "fetch", str(seed), "HEAD:refs/heads/integration/l9-prs-4"]
+    )
+    assert publish.remote_has_branch(str(bare), "integration/l9-prs-4") is True
+    assert publish.remote_has_branch(str(bare), "integration/l9-prs-9") is False
+    after = integrate.git(
+        ["--git-dir", str(bare), "rev-parse", "integration/l9-prs-4"]
+    ).stdout.strip()
+    assert after == real
+    assert "l9-pr-" not in before
+
+
+def test_runner_and_publisher_have_no_direct_publication_command() -> None:
+    for name in ("integrate.py", "publish_integration_pr.py"):
+        text = (SCRIPTS / name).read_text(encoding="utf-8")
+        assert "git push" not in text
+        assert "gh pr create" not in text

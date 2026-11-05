@@ -9,7 +9,7 @@ status: active
 
 # Authority, scope and independent source review
 
-Load when freezing PRs, selecting integration order, evaluating semantic ownership or applying the source-review gate. The tool does **not** grant merge, upstream mutation, production access, or publication authority.
+Load when freezing PRs, selecting integration order, evaluating semantic ownership or applying the source-review gate. `scripts/bind_github.py` does not grant merge or publication. Invoking the skill publishes one new integration PR of the retested combined tree. It does not update source PR branches, merge, or grant production access.
 
 ## Binding and source trust
 
@@ -38,4 +38,4 @@ An active `l9-pr-audit` can provide a detailed read-only independent audit, but 
 
 ## Repair and continuation
 
-Correct the highest authoritative owner whose behavior is wrong; do not patch a downstream symptom to manufacture green. Each confirmed issue has exact source path/revision, expected/actual behavior, reproduction command, root cause or UNKNOWN, correction owner, regression witness and preservation obligation. PR repair is outside this skill and requires a separately authorized coding/publication path. After any PR changes, throw away the prior verdict and rebind/retest new immutable revisions.
+Correct the highest authoritative owner whose behavior is wrong; do not patch a downstream symptom to manufacture green. Each confirmed issue has exact source path/revision, expected/actual behavior, reproduction command, root cause or UNKNOWN, correction owner, regression witness and preservation obligation. Invocation of this skill publishes one new integration PR of the retested combined tree. Repairs are committed only on the exported checkout. Source PR branches are not updated, and this skill does not merge. After the source PRs move, throw away the prior verdict and rebind.

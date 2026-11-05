@@ -1,5 +1,5 @@
 {
-  "generation_id": "5287401e15cbc4b60f8c71e59fc823ead0bd8862db08a630f17259b224c32e04",
+  "generation_id": "4e83bcc5c6cc24dc99b87139c2e2f116b725606b6b8e5a4e5b6836fe5e450ff6",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1286,14 +1286,14 @@
     },
     {
       "composition_role": "general",
-      "description": "Build and falsify a revision-bound combined pull-request candidate inside disposable Docker isolation, with differential tests, Git merge provenance, semantic overlap review and targeted false-green probes. Use when testing one or more actual GitHub PRs together before integration, especially when green CI or clean merges may hide defects. Do not use for CI status alone, static-only PR review, production deployment, or authorizing a merge.",
+      "description": "Build and falsify a combined pull-request candidate inside disposable Docker isolation, then open one new integration PR of the repaired tree through make pr. Use when testing one or more GitHub PRs together before integration. Do not use to update source PR branches, merge those PRs, check CI status alone, or deploy.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-integration-testing",
       "path": "skills/l9-pr-integration-testing",
-      "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
+      "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; publishes one new integration PR of the retested tree through make pr and does not update source branches or merge; its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
-      "skill_sha256": "4ad1a6b90d36c085674a9880766f9d4870c8c7c1fe5107e53b62e788f8d85733",
+      "skill_sha256": "dc147e747b4b2db051bca83f7b1599667f65d2955d8cd9f6f25685a33fc246a6",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1520,6 +1520,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "33c4851215c1ef793ea7a10234f805997a303dd59f8a4e49e17c82277b8c26fd",
-  "source_skill_corpus_sha256": "534b88b662917811acdd2cdbad928ae5792e490aff3b457b27bc57a5d861f49c"
+  "source_manifest_sha256": "8c72990f0c3be9cc3c201121f6fb3d5ad61c8bd791d28bb618d1b05e9fb50acc",
+  "source_skill_corpus_sha256": "45673a460631ddc76fbd6c8a6477d2ea81f23c1c95cfedf91657f1a69edc7205"
 }
