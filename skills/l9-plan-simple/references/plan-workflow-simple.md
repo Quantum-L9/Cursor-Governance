@@ -55,7 +55,7 @@ Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before**
 5. **Decompose** — TODOs with files (or blocker) and deps. DAG / Phase-0 rows are the todo projection, not Controller `claim`/`render` Task Cards.
 6. **Stress-test and leverage** — mandatory; no mode skips it.
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Declare the optional `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer`; values are the template enums. An omitted field renders `unknown — not declared` and keeps the plan out of `executable`.
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. `owner`, `estimate`, `execution_envelope` (`network.mode`, `network.allowed_services`, `secrets.access`), `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer` are required. An omitted field renders `unknown — not declared` and the renderer exits non-zero.
 9. **Validate PLAN_DOCUMENT** — `validate_plan_document.py` MUST PASS before any projection is offered.
 10. **Project the plan** — one renderer, mode-selected:
 
@@ -66,31 +66,23 @@ their governance path rather than from the skill root.
 
 ```bash
 GOV="${GOV:-$HOME/.cursor-governance}"
-python3 "$GOV/skills/l9-plan/scripts/validate_plan_document.py" <plan.json>
-
-# default
-python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=cursor-build --workspace . \
-  > .cursor/plans/<snake_slug>_<8hex>.plan.md
-
-# caller-owned
-python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=embedded
+python3 "$GOV/skills/l9-global-architect/scripts/write_plan_run.py" \
+  --decision <gar-decision.json> --out <gar-run.json>
+# default is cursor-build. Embedded is --execute-via=embedded.
+python3 "$GOV/skills/l9-plan-simple/scripts/run_plan_pipeline.py" \
+  --plan-json <plan.json> --execute-via cursor-build --workspace . \
+  --gar-run <gar-run.json> --out-md .cursor/plans/<snake_slug>_<8hex>.plan.md
 ```
 
-The renderer fills every template section from PLAN_DOCUMENT; the output carries no `<parameter>` slot. `--workspace .` binds the baseline from the current git work tree (read-only); without it the baseline is `unbound`. A success criterion's proof is the `final_validation` entry it names by id (`V1`) or by a shared script/file name — name one in every criterion, or the property renders `unbound`. Fields PLAN_DOCUMENT does not carry render `unknown — …`: fix them in PLAN_DOCUMENT and re-render rather than hand-editing the projection.
+The only writer is `skills/l9-plan-simple/scripts/run_plan_pipeline.py`. It runs the validator, then the renderer with the selected `--execute-via` and `--workspace .`, then the section receipt. Do not emit the markdown any other way. The renderer fills every template section from PLAN_DOCUMENT; the output carries no `<parameter>` slot. `--workspace .` binds the baseline from the current git work tree (read-only). A success criterion's proof is the `final_validation` entry it names by id (`V1`) or by a shared script/file name — name one in every criterion. Fields PLAN_DOCUMENT does not carry render `unknown — not declared` and the renderer exits non-zero: fix them in PLAN_DOCUMENT and re-run the pipeline rather than hand-editing the projection.
 
-Or hand-copy the first-class SSOT and apply the mode's execute swap below. Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE).
+Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE). Embedded is `--execute-via=embedded`.
 
 Frontmatter in both modes: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, the selected `execute_via`, and `status: current`. Convergence `execute_via` matches. `harvested` is a tag, never a status.
 
 10. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode`, so it is judged against that mode's headings: **Execute via Cursor Build** for `cursor-build`, **Handoff to Caller** for `embedded`. Schema owner stays `../../l9-plan/schemas/plan-document.schema.json`; the receipt shape is `../schemas/plan-section-receipt.schema.json`.
 
-```bash
-# from the root of the repository being planned
-python3 "$GOV/skills/l9-plan-simple/scripts/generate_plan_section_receipt.py" \
-  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
-  --gar-invoked
-python3 "$GOV/skills/l9-plan-simple/scripts/validate_plan_section_receipt.py" <plan>.section-receipt.json
-```
+The command in step 10 writes the receipt beside the plan. A receipt whose `gar_upstream.invoked` is true and whose run file is absent fails `validate_plan_section_receipt.py`.
 
 Receipt plan paths are relative to the planned repository's git root (absolute
 for a plan in the machine plans store), so the validator finds them whatever the

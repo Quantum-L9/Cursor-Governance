@@ -99,35 +99,27 @@ Steps 0–9 are **identical in both modes**.
 5. **Decompose** — TODOs with files (or blocker) and deps. DAG rows are the task decomposition, not Controller `claim`/`render` Task Cards.
 6. **Stress-test + leverage** — mandatory in both modes; reuse `l9-plan` [plan-stress-test.md](../l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../l9-plan/references/first-order-leverage.md).
 7. **Doc / Root Surface Impact** — update TODOs or N/A with reason.
-8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. Declare the optional `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer`; values are the template enums. An omitted field renders `unknown — not declared` and keeps the plan out of `executable`.
-9. **Validate JSON** — FAIL → not ready. Steps 9–11 run from the root of the repository being planned (any repo, not only Cursor-Governance); the scripts ship in the governance clone:
+8. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema. `owner`, `estimate`, `execution_envelope.network` (`mode`, `allowed_services`), `execution_envelope.secrets.access`, `complexity` (`architectural_boundaries_crossed`, `external_systems_touched`, `migration_required`) and each todo's `layer` are required; values are the template enums. An omitted field renders `unknown — not declared` and the renderer exits non-zero.
+9. **Write the plan through one pipeline.** Steps 9–11 are what `run_plan_pipeline.py` runs. Do not stop after a validator, a hand-built markdown file, or `--gar-invoked` with no run file. From the root of the repository being planned (any repo, not only Cursor-Governance):
 
    ```bash
    GOV="${GOV:-$HOME/.cursor-governance}"
-   python3 "$GOV/skills/l9-plan/scripts/validate_plan_document.py" <plan.json>
+   python3 "$GOV/skills/l9-global-architect/scripts/write_plan_run.py" \
+     --decision <gar-decision.json> --out <gar-run.json>
+   # cursor-build (default). Embedded is --execute-via=embedded.
+   python3 "$GOV/skills/l9-plan-simple/scripts/run_plan_pipeline.py" \
+     --plan-json <plan.json> --execute-via cursor-build --workspace . \
+     --gar-run <gar-run.json> \
+     --out-md .cursor/plans/<snake_slug>_<8hex>.plan.md
    ```
-10. **Project** — one renderer, mode-selected:
 
-   ```bash
-   # from the root of the repository being planned
-   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=cursor-build --workspace .   # default
-   python3 "$GOV/skills/l9-plan/scripts/render_plan_pe_autonomy.py" <plan.json> --execute-via=embedded       # caller-owned
-   ```
+   The pipeline requires `.l9/memory/plan-prefetch.json` in the workspace, a GAR run file whose `load_order` hash matches `runtime/MANIFEST.yaml`, a PASS from `validate_plan_document.py`, and a projection with no `unknown — not declared`, no unbound baseline, and no unbound success property. It then runs `generate_plan_section_receipt.py` and `validate_plan_section_receipt.py`. A bare `--gar-invoked` flag cannot pass.
 
-   The renderer fills **every** template section from PLAN_DOCUMENT — there is no seed head and no appended "fill guide". `--workspace .` binds the immutable baseline (repository, branch, HEAD, dirty) with read-only git probes; without it the baseline renders `unbound`. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name); a property naming none renders `unbound`. A value PLAN_DOCUMENT does not carry renders `unknown — …`. Resolve `unbound`/`unknown` values in PLAN_DOCUMENT and re-render — do not hand-edit the projection.
+   The renderer fills **every** template section from PLAN_DOCUMENT. `--workspace .` binds the immutable baseline with read-only git probes. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name). Resolve markers in PLAN_DOCUMENT and re-run the pipeline — do not hand-edit the projection.
 
-   Write to `.cursor/plans/<slug>_<8hex>.plan.md` in `cursor-build`; in `embedded`, return the projection to the caller (a path only if the caller asked for one). Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
-11. **Section receipt** — generate then validate, in both modes. The receipt stamps `handoff_mode` and is judged against that mode's headings, and records `unfilled_parameters`: any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready:
-
-    ```bash
-    # from the root of the repository being planned
-    python3 "$GOV/skills/l9-plan-simple/scripts/generate_plan_section_receipt.py" \
-      --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
-      --gar-invoked
-    python3 "$GOV/skills/l9-plan-simple/scripts/validate_plan_section_receipt.py" <plan>.section-receipt.json
-    ```
-
-    Plan paths in the receipt are relative to that repository's git root (absolute for a plan in the machine plans store), so the validator finds them whatever the working directory; the receipt argument itself must sit under the working directory or the plans store.
+   `cursor-build` writes `.cursor/plans/<slug>_<8hex>.plan.md`. `embedded` (`--execute-via=embedded`) returns the projection to the caller. Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
+10. **Section receipt** — written only by the pipeline. It stamps `handoff_mode`, `gar_upstream.run_path`, and `gar_upstream.run_sha256`. Any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready.
+11. **Admission** — `admit_plan.py` exits non-zero unless that receipt passes. A title and a paragraph is not a plan.
 12. **Handoff** — mode-specific, below.
 
 ### Handoff — `cursor-build` (default, unchanged)
@@ -170,6 +162,8 @@ python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixture
 ! python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json --execute-via=embedded | grep -q "PR_STACK=auto"
 python3 skills/l9-plan-simple/scripts/generate_plan_section_receipt.py --help >/dev/null
 python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py --help >/dev/null
+python3 skills/l9-plan-simple/scripts/run_plan_pipeline.py --help >/dev/null
+python3 skills/l9-global-architect/scripts/write_plan_run.py --help >/dev/null
 python3 skills/l9-plan-simple/scripts/self_test.py
 python3 -m pytest tests/skills/test_l9_plan_simple_embedded.py tests/skills/l9_plan_simple -q
 ```

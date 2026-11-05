@@ -14,6 +14,7 @@ invoke the Cursor SessionStart secret bootstrap.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
@@ -38,6 +39,10 @@ JsonRequester = Callable[[str, str, Mapping[str, str], dict[str, Any] | None], d
 
 class SafeMcpError(Exception):
     """An error safe to return to a model-controlled MCP caller."""
+
+    def __init__(self, message: str, *, http_status: int | None = None) -> None:
+        super().__init__(message)
+        self.http_status = http_status
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -99,15 +104,24 @@ class InfisicalSettings:
         return not self.missing_fields
 
     def validate(self) -> None:
-        parsed = urllib.parse.urlsplit(self.site_url)
+        try:
+            parsed = urllib.parse.urlsplit(self.site_url)
+            port = parsed.port
+        except ValueError as exc:
+            raise SafeMcpError("Infisical site URL must be a valid HTTPS origin") from exc
         if parsed.scheme != "https" or not parsed.netloc or parsed.path not in {"", "/"}:
             raise SafeMcpError("Infisical site URL must be an HTTPS origin")
+        if parsed.hostname != "app.infisical.com" or port not in {None, 443}:
+            raise SafeMcpError("Infisical site URL must use the canonical HTTPS host")
         if parsed.query or parsed.fragment or parsed.username or parsed.password:
             raise SafeMcpError(
                 "Infisical site URL must not include credentials, query, or fragment"
             )
         if not self.secret_path.startswith("/"):
             raise SafeMcpError("Infisical secret path must start with '/'")
+        for value in (self.client_id, self.client_secret, self.project_id):
+            if value == "proxy-injected" or value.startswith("__ENCRYPTED_"):
+                raise SafeMcpError("Infisical credential placeholders are not usable configuration")
 
 
 @dataclass(frozen=True)
@@ -233,7 +247,9 @@ def _request_json(
         with opener.open(request, timeout=20) as response:  # noqa: S310
             raw = response.read(MAX_HTTP_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as exc:
-        raise SafeMcpError(f"upstream request failed with HTTP {exc.code}") from exc
+        raise SafeMcpError(
+            f"upstream request failed with HTTP {exc.code}", http_status=exc.code
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise SafeMcpError(f"upstream request failed: {type(exc).__name__}") from exc
     if len(raw) > MAX_HTTP_RESPONSE_BYTES:
@@ -257,13 +273,67 @@ class InfisicalClient:
         self._request_json = request_json
         self._access_token = ""
         self._access_token_expires_at = 0.0
+        self._authentication = "unverified"
+        self._scope_access = "unverified"
+
+    def _expire_token(self) -> None:
+        if self._access_token and time.monotonic() >= self._access_token_expires_at:
+            self._access_token = ""
+            self._access_token_expires_at = 0.0
+            self._authentication = "expired"
+            self._scope_access = "unverified"
+
+    def _request_stage(
+        self,
+        stage: str,
+        method: str,
+        url: str,
+        headers: Mapping[str, str],
+        body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Retain the failing stage/code, never an upstream body or exception text."""
+        try:
+            return self._request_json(method, url, headers, body)
+        except SafeMcpError as exc:
+            code = exc.http_status
+            suffix = f" with HTTP {code}" if code is not None else ""
+            raise SafeMcpError(f"{stage} failed{suffix}", http_status=code) from exc
+
+    def _safe_payload(self, payload: dict[str, Any], *values: str) -> dict[str, Any]:
+        protected = (self.settings.client_secret, self._access_token, *values)
+
+        def contains_credential(value: Any) -> bool:
+            # Inspect decoded strings, including keys: JSON escaping must not
+            # turn a recoverable credential into an apparently safe response.
+            if isinstance(value, str):
+                return any(secret and secret in value for secret in protected)
+            if isinstance(value, Mapping):
+                return any(
+                    contains_credential(key) or contains_credential(nested)
+                    for key, nested in value.items()
+                )
+            if isinstance(value, (list, tuple)):
+                return any(contains_credential(nested) for nested in value)
+            return False
+
+        if contains_credential(payload):
+            raise SafeMcpError("response was withheld because it contained credential material")
+        return payload
 
     def status(self, capabilities: Mapping[str, Capability]) -> dict[str, Any]:
         """Return only configuration posture and declared capability identifiers."""
 
-        configuration = "ready" if self.settings.configured else "missing_configuration"
+        self._expire_token()
+        configuration = "configured" if self.settings.configured else "missing_configuration"
+        if self.settings.configured:
+            try:
+                self.settings.validate()
+            except (SafeMcpError, ValueError):
+                configuration = "invalid_configuration"
         return {
             "status": configuration,
+            "authentication": self._authentication,
+            "scope_access": self._scope_access,
             "missing_configuration": list(self.settings.missing_fields),
             "capabilities": sorted(capabilities),
             "secret_values_exposed": False,
@@ -274,30 +344,59 @@ class InfisicalClient:
             missing = ", ".join(self.settings.missing_fields)
             raise SafeMcpError(f"Infisical connector is not configured: {missing}")
         self.settings.validate()
+        self._expire_token()
         if self._access_token and time.monotonic() < self._access_token_expires_at:
             return self._access_token
-        payload = self._request_json(
-            "POST",
-            f"{self.settings.site_url}/api/v1/auth/universal-auth/login",
-            {},
-            {"clientId": self.settings.client_id, "clientSecret": self.settings.client_secret},
-        )
+        login_started_at = time.monotonic()
+        try:
+            payload = self._request_stage(
+                "universal_auth_login",
+                "POST",
+                f"{self.settings.site_url}/api/v1/auth/universal-auth/login",
+                {},
+                {"clientId": self.settings.client_id, "clientSecret": self.settings.client_secret},
+            )
+        except SafeMcpError:
+            self._authentication = "refused"
+            self._scope_access = "unverified"
+            raise
         token = payload.get("accessToken")
         expires_in = payload.get("expiresIn")
         if not isinstance(token, str) or not token:
+            self._authentication = "refused"
             raise SafeMcpError("Infisical login did not return an access token")
         try:
-            ttl = max(30, min(int(expires_in), 3600))
+            ttl = float(expires_in)
         except (TypeError, ValueError):
-            ttl = 300
+            ttl = 0.0
+        if isinstance(expires_in, bool) or not math.isfinite(ttl) or ttl <= 0:
+            self._authentication = "unverified"
+            raise SafeMcpError("universal_auth_login returned an unverified token lifetime")
+        ttl = min(ttl, 3600.0)
+        # The response arrives after issuance. Starting the clock on receipt
+        # would add network/processing delay to the server-issued lifetime.
+        expires_at = login_started_at + ttl - min(30.0, ttl * 0.1)
+        if time.monotonic() >= expires_at:
+            self._authentication = "expired"
+            self._scope_access = "unverified"
+            raise SafeMcpError("universal_auth_login returned an already-expired token")
         self._access_token = token
-        self._access_token_expires_at = time.monotonic() + max(1, ttl - 30)
+        self._access_token_expires_at = expires_at
+        self._authentication = "authenticated"
         return token
 
-    def _infisical_get(self, path: str, query: Mapping[str, str]) -> dict[str, Any]:
+    def _infisical_get(self, stage: str, path: str, query: Mapping[str, str]) -> dict[str, Any]:
         token = self._token()
         url = f"{self.settings.site_url}{path}?{urllib.parse.urlencode(query)}"
-        return self._request_json("GET", url, {"Authorization": f"Bearer {token}"}, None)
+        try:
+            return self._request_stage(stage, "GET", url, {"Authorization": f"Bearer {token}"})
+        except SafeMcpError as exc:
+            self._scope_access = "refused"
+            if exc.http_status == 401:
+                self._access_token = ""
+                self._access_token_expires_at = 0.0
+                self._authentication = "refused"
+            raise
 
     def list_metadata(self, limit: int) -> dict[str, Any]:
         """List bounded secret metadata while asking Infisical not to return values."""
@@ -305,6 +404,7 @@ class InfisicalClient:
         if not 1 <= limit <= MAX_METADATA_RESULTS:
             raise SafeMcpError(f"limit must be between 1 and {MAX_METADATA_RESULTS}")
         payload = self._infisical_get(
+            "secret_metadata",
             "/api/v4/secrets",
             {
                 "projectId": self.settings.project_id,
@@ -335,10 +435,13 @@ class InfisicalClient:
                     "value_exposed": False,
                 }
             )
-        return {"count": len(results), "secrets": results}
+        response = self._safe_payload({"count": len(results), "secrets": results})
+        self._scope_access = "verified"
+        return response
 
     def _resolve_secret(self, name: str) -> str:
         payload = self._infisical_get(
+            "capability_secret_resolution",
             f"/api/v4/secrets/{urllib.parse.quote(name, safe='')}",
             {
                 "projectId": self.settings.project_id,
@@ -353,6 +456,7 @@ class InfisicalClient:
         value = secret.get("secretValue") if isinstance(secret, dict) else None
         if not isinstance(value, str) or not value:
             raise SafeMcpError("configured capability secret is unavailable")
+        self._scope_access = "verified"
         return value
 
     def invoke(self, capability: Capability, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -360,7 +464,8 @@ class InfisicalClient:
 
         path = capability.render_path(arguments)
         secret_value = self._resolve_secret(capability.secret_key)
-        payload = self._request_json(
+        payload = self._request_stage(
+            "capability_upstream",
             capability.method,
             f"{capability.origin}{path}",
             {
@@ -373,12 +478,9 @@ class InfisicalClient:
         sanitized = {
             field: payload.get(field) for field in capability.response_fields if field in payload
         }
-        serialized = json.dumps(sanitized, sort_keys=True, default=str)
-        if secret_value in serialized:
-            raise SafeMcpError(
-                "capability response was withheld because it contained credential material"
-            )
-        return {"capability": capability.identifier, "result": sanitized}
+        return self._safe_payload(
+            {"capability": capability.identifier, "result": sanitized}, secret_value
+        )
 
 
 def _tool_result(payload: dict[str, Any], *, is_error: bool = False) -> dict[str, Any]:
@@ -398,7 +500,8 @@ class ManusInfisicalMcp:
         capabilities_path: Path = DEFAULT_CAPABILITIES_PATH,
     ) -> None:
         self.capabilities = load_capabilities(capabilities_path)
-        self.client = InfisicalClient(InfisicalSettings.from_env(env or os.environ), request_json)
+        source = os.environ if env is None else env
+        self.client = InfisicalClient(InfisicalSettings.from_env(source), request_json)
 
     def _tools(self) -> list[dict[str, Any]]:
         return [

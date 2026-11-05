@@ -630,11 +630,8 @@ class HookWiringTests(unittest.TestCase):
         )
         self.assertIn("session_start_secrets.py", bootstrap)
         self.assertIn("--receipt-out", bootstrap)
-        self.assertIn("$WORKSPACE/ops/secrets/session_start_secrets.py", bootstrap)
-        self.assertLess(
-            bootstrap.index("$WORKSPACE/ops/secrets/session_start_secrets.py"),
-            bootstrap.index("$GOV_DIR/ops/secrets/session_start_secrets.py"),
-        )
+        self.assertIn("$GOV_DIR/ops/secrets/session_start_secrets.py", bootstrap)
+        self.assertNotIn("$WORKSPACE/ops/secrets/session_start_secrets.py", bootstrap)
         self.assertIn('rm -f "$SECRETS_RECEIPT"', bootstrap)
         self.assertNotIn("itest: unavailable — neo4j absent", text)
         self.assertNotIn("publish-path grant: none", text)

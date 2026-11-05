@@ -24,7 +24,11 @@
     "final_validation",
     "convergence",
     "gmp_handoff",
-    "code_in_scope"
+    "code_in_scope",
+    "owner",
+    "estimate",
+    "execution_envelope",
+    "complexity"
   ],
   "properties": {
     "schema_version": {
@@ -161,7 +165,8 @@
           "effort",
           "risk",
           "dependencies",
-          "leverage_rank"
+          "leverage_rank",
+          "layer"
         ],
         "properties": {
           "id": {
@@ -555,10 +560,12 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Network and secrets envelope projected to the Execution envelope section.",
+      "required": ["network", "secrets"],
       "properties": {
         "network": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["mode", "allowed_services"],
           "properties": {
             "mode": {
               "enum": ["none", "read_only", "named_services_only", "existing_tunnel_only", "bounded_external_write"]
@@ -572,6 +579,7 @@
         "secrets": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["access"],
           "properties": {
             "access": {
               "enum": ["none", "read_only_named", "runtime_injected_only"]
@@ -583,6 +591,7 @@
     "complexity": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["architectural_boundaries_crossed", "external_systems_touched", "migration_required"],
       "description": "Declared boundary, external-system and migration facts projected to Complexity and uncertainty. An empty list declares none.",
       "properties": {
         "architectural_boundaries_crossed": {

@@ -1,0 +1,428 @@
+{
+  "run_id": "gar.manus-adapter-bootstrap-alignment.a15b0001",
+  "governing_cause": "Verified owner-boundary drift: shared bootstrap check executes mutation and reaches policy consumers before locked-interpreter admission; adapter readiness/provenance and historical Memory/identity instructions promote configuration or legacy shortcuts into authority. These findings share an owner-alignment pattern, not one physically sufficient patch. Native package/OAuth admission is an independently unavailable upstream prerequisite.",
+  "intervention": "ADAPT_UPSTREAM: repair existing shared bootstrap/provenance/secrets/identity owners and make the thin Manus adapter consume current owner contracts, with native Memory carrier/render/readiness refusing UPSTREAM_BLOCKED instead of resurrecting stdio/HMAC. Reuse shared detector, identity assurance, envelope, health and close semantics; no new memory client, auth proxy, issuer, scheduler or semantic owner. Independent residual fixes remain explicit, and live Memory/OAuth admission is not part of this intervention.",
+  "evidence_paths": [
+    "skills/l9-global-architect/runtime/MANIFEST.yaml",
+    "skills/l9-global-architect/runtime/RUN_STATE.yaml",
+    "skills/l9-global-architect/contracts/OBJECTIVE_DERIVATION.yaml",
+    "skills/l9-global-architect/integrations/REASONING_FOURSOME_BINDING.yaml",
+    "skills/l9-global-architect/references/reasoning-foursome/01_FIRST_ORDER_THINKING_KERNEL.md",
+    "skills/l9-global-architect/references/reasoning-foursome/02_SECOND_ORDER_CONSEQUENCE_LENS.md",
+    "skills/l9-global-architect/references/reasoning-foursome/03_LEVERAGE_KERNEL.md",
+    "skills/l9-global-architect/references/reasoning-foursome/04_SIGNAL_LEVERAGE_KERNEL.md",
+    "CANONICAL_LAW.md",
+    "ops/scripts/bootstrap_agent_environment.sh",
+    "ops/scripts/ensure_uv_environment.sh",
+    "ops/scripts/write_runtime_readiness_receipt.py",
+    "ops/secrets/session_start_secrets.py",
+    "ops/secrets/infisical_cli_login.py",
+    "tools/assurance/check_canonical_identity_projection.py",
+    "tools/authority/project_canonical_identity.py",
+    "ops/memory/identity_projection.py",
+    "ops/memory/export_agent_assertion_env.sh",
+    "environment/agents/adapters/manus/materialize_memory_authority.py",
+    "environment/agents/adapters/manus/validate_manus_adapter.py",
+    "environment/agents/adapters/manus/memory-mcp-connector.json",
+    "environment/agents/adapters/manus/memory_lifecycle.py",
+    "environment/agents/adapters/manus/infisical_mcp_server.py",
+    "ops/config/memory-auth0-onboarding.yaml",
+    "generated/governance/canonical_identity.yaml",
+    "generated/governance/canonical_identity.receipt.yaml"
+  ],
+  "receipt_boundary": {
+    "kind": "bounded local planning decision, input to tool-owned write_plan_run.py",
+    "authority": "Local contract-consuming decision evidence only; the GAR run writer hashes load_order and the plan pipeline validates structural completeness. Neither proves external runtime execution, coding delegation, live auth, service/client admission or release.",
+    "current_handoff_mode": "cursor-build explicitly retained; planning-only subtask is not an embedded switch",
+    "runtime_integration_mode": "STANDALONE",
+    "active_runtime_binding_observed": false,
+    "orchestration_authority_transferred": false,
+    "coding_delegation_status": "NONE",
+    "architecture_intelligence_status": "NOT_REQUESTED",
+    "architecture_intelligence_note": "No canonical product extracts are available or required to select this bounded source-owner repair. Target repository/current owner contracts are the inspected truth, not a fabricated admitted inventory or fallback observer projection.",
+    "implementation_performed": false,
+    "runtime_or_auth_admission_claimed": false,
+    "predicted_benefit_not_realized": true
+  },
+  "logical_run_state_binding": {
+    "template_ref": "skills/l9-global-architect/runtime/RUN_STATE.yaml#instance_template",
+    "instantiation": "Logical state was initialized INTAKE before observations; this bounded decision records the resulting target/objective/census and architectural selection, not a new runtime semantic schema.",
+    "target": {
+      "status": "BOUND",
+      "repository": "Quantum-L9/Cursor-Governance",
+      "path": "/home/ubuntu/Cursor-Governance",
+      "branch": "fix/manus-bootstrap-alignment",
+      "revision": "334faa6957e0c2f67eeea4b397019f6a141a30b8",
+      "historical_initial_revision": "061fae50dbc1c1e57280b8f94f0a4df783f746d9",
+      "artifact_types": [
+        "repository source",
+        "planning artifacts"
+      ],
+      "inspection_scope": [
+        "shared bootstrap and secrets",
+        "canonical identity projection/assurance",
+        "Manus adapter, carrier, lifecycle, tests and docs",
+        "pinned Memory/.github owner contracts read-only"
+      ],
+      "correction_scope": [
+        "this task's docs/plans artifacts only for this subagent"
+      ],
+      "excluded_scope": [
+        "code mutation, commits, remote changes by planner",
+        "protected root/skill/inherited PR files",
+        "upstream owner repositories",
+        "deployments and credentials"
+      ],
+      "inaccessible_scope": [
+        "actual admitted native client/OAuth actor path and live credential proof; no authorized live probe in this planning run"
+      ]
+    },
+    "objective": {
+      "requested": true,
+      "requested_outcome": "User requests plan plus implementation; delegated subtask explicitly owns planning artifacts only and must return architecture/envelope before parent code edits.",
+      "realization_mode": "ARTIFACT",
+      "realization_mode_source": "Current explicit delegated task requires new PLAN_DOCUMENT/projection/receipts and prohibits this subagent's code mutation; user-level future MUTATION outcome remains preserved in the plan.",
+      "validation_required": true,
+      "derivation_rule_ids": [
+        "RQ-001",
+        "RM-002",
+        "VD-001",
+        "AC-001",
+        "AC-002",
+        "DL-004"
+      ],
+      "delivery_mode": "IN_PLACE_WORKSPACE",
+      "acceptance_conditions": [
+        "Exact requested plan paths",
+        "GAR manifest-order and reasoning-owner receipts",
+        "Current tip baseline and inherited ownership respected",
+        "Owner pipeline and JSON/section/admission PASS",
+        "No code mutation, commits, deployment or credentials by planner"
+      ]
+    },
+    "authority": {
+      "resolved": true,
+      "sources": [
+        "explicit delegated constraints",
+        "verified current target source",
+        "CANONICAL_LAW/AGENTS/shared owner contracts",
+        "l9-plan-simple pipeline at current chain tip",
+        "GAR manifest and reasoning semantic owners"
+      ],
+      "mutation_permission": "planning artifacts only",
+      "external_action_permission": "no external writes"
+    },
+    "capability_census": {
+      "inspect": "available; file/git reads observed",
+      "mutate": "available only for authorized planning artifacts; no source mutation permitted",
+      "validate": "available; .venv/bin/python -B existing scripts",
+      "deliver": "available; shared workspace artifacts and parent submission",
+      "external_side_effect": "unavailable by scope; no live service/credential/remote writes"
+    },
+    "depth_profile": "DEEP",
+    "depth_evidence": "route_plan.py --risk high --evidence partial --json returned deep, omit_gates []; shared/concurrency/security/compatibility boundaries are material.",
+    "architecture_profile": {
+      "profile_ref": "skills/l9-global-architect/contracts/L9_ARCHITECTURE_PROFILE.yaml",
+      "load_status": "LOADED before foursome binding",
+      "applicability": "APPLICABLE from explicit L9 scope and target owner contracts",
+      "material_role_bindings": [
+        "Cursor-Governance consumer/control-plane and Manus thin adapter from current source",
+        "MemoryService sole Memory authority from pinned owner contract",
+        ".github actor/surface canonical authority from verified projection owner",
+        "Infisical secret authority from current law"
+      ],
+      "status": "SATISFIED for selected architecture only; no live inventory/routability/health claim"
+    }
+  },
+  "solution_surface_census": {
+    "owner_ref": "skills/l9-global-architect/integrations/REASONING_FOURSOME_BINDING.yaml#solution_surface_census",
+    "beneficiary_existing_capabilities": [
+      "shared bootstrap, locked UV owner, readiness writer, canonical surface_detect",
+      "shared secrets identity and canonical identity projection assurance"
+    ],
+    "constellation_capabilities": [
+      "pinned .github registry/projector inputs",
+      "Memory owner native hosted transport and ADR-100 contract"
+    ],
+    "upstream_public_tools": [
+      "existing .venv/bin/python -B validators, plan pipeline, run writer and admit_plan"
+    ],
+    "upstream_packages": [
+      "installed l9-graphite-memory 2.6.0 lacks current native hosted/client admission; presence not suitability"
+    ],
+    "upstream_apis": [
+      "owner REMOTE_MCP_CONTRACT/ADR-100 inspected; hosted actor OAuth admission issue108 open, no assumed executable door"
+    ],
+    "upstream_sdks": [
+      "No verified native OAuth Manus SDK binding in current package; not invented"
+    ],
+    "upstream_clis": [
+      "ops/hooks/plan_memory_prefetch.py bounded operator-style planning lane; not an agent MCP transport/auth proof"
+    ],
+    "upstream_services": [
+      "Memory native service contract only, live readiness/auth UNKNOWN",
+      "Infisical dedicated native connector shape, live auth UNKNOWN"
+    ],
+    "vendorable_implementations": [
+      "No donor/vendor necessary; existing owner repair is smaller"
+    ],
+    "transplantable_code": [
+      "No transplant selected; no new package-client implementation authorized"
+    ],
+    "semantic_only_donor_value": [
+      "Current owner Memory native contract constrains refusal without recreating implementation"
+    ],
+    "unresolved_capability_unknowns": [
+      "native owner package/client release, actor admission, host-managed Manus callback/issuer binding remain UNKNOWN and bounded outside implementation"
+    ],
+    "census_sufficient": true,
+    "sufficiency_limit": "Enough to select existing-owner adaptation and fail-closed interface; insufficient for live memory/auth adoption, intentionally not selected."
+  },
+  "first_order_decision": {
+    "semantic_owner_ref": "skills/l9-global-architect/references/reasoning-foursome/01_FIRST_ORDER_THINKING_KERNEL.md",
+    "objective": "The bounded Manus owner-alignment implementation described by PLAN_DOCUMENT, without false native-memory/auth completion.",
+    "governing_cause_status": "verified individual source defects; shared governing pattern inferred and not forced into one physical cause",
+    "authoritative_owner": "Existing shared ops/bootstrap/secrets/identity owners; Manus binds native Memory owner contract but cannot repair upstream issue108.",
+    "intervention_class": "ADAPT_UPSTREAM",
+    "decisive_intervention": "Make the existing shared owners enforce truthful check/interpreter/provenance/identity/auth boundaries, and the thin adapter consume them with an explicit blocked native Memory interface.",
+    "why_this_one_change": "One owner-alignment intervention class eliminates per-adapter semantic forks; independent source corrections remain necessary. No single bootstrap edit can create an unavailable OAuth-native package/client.",
+    "work_expected_to_become_unnecessary": [
+      "per-adapter bootstrap/Python/provenance patches",
+      "duplicate canonical identity assurance",
+      "legacy carrier/mint/secret-map compatibility wiring",
+      "automatic hydration/write-precondition ritual",
+      "chasing false auth/READY verdicts from configured shape"
+    ],
+    "residual_work_still_required": [
+      "separate bootstrap, source-provenance, hosted-secret and identity corrections",
+      "native Memory descriptor/render/refusal and lifecycle containment",
+      "matching tests/docs and later actual owner-issued client/auth admission"
+    ],
+    "disconfirming_evidence_checked": [
+      "Current scripts show independent defects, so forced one-file compression rejected",
+      "Pinned Memory owner supersedes legacy doors but does not prove live client/actor admission",
+      "Historical canonical projection is provenance-equivalent, so regenerate-for-new-SHA is unnecessary",
+      "Current plan owner requires tool-owned run/pipeline, so bare gar-invoked/manual admission is rejected"
+    ],
+    "assumptions": [
+      "Current shared owner APIs stay available",
+      "Parent preserves current inherited source while applying scoped changes"
+    ],
+    "unknowns": [
+      "actual native package/client/auth acceptance; not substituted"
+    ],
+    "confidence": "high for existing-owner architecture; unknown for live native auth",
+    "second_order_handoff_required": true
+  },
+  "second_order_prediction": {
+    "semantic_owner_ref": "skills/l9-global-architect/references/reasoning-foursome/02_SECOND_ORDER_CONSEQUENCE_LENS.md",
+    "intervention_ref": "#first_order_decision",
+    "direct_expected_result": "Diagnostic mode becomes observational and early locked admission/provenance becomes reliable; Memory native absence is visible and nonblocking to coding.",
+    "consequence_paths": [
+      {
+        "path_id": "SO1",
+        "affected_participants": [
+          "all shared bootstrap adapters"
+        ],
+        "predicted_changes": [
+          "check no longer writes session/secrets/readiness/Git state",
+          "missing locked Python blocks before optional consumers"
+        ],
+        "timing": "immediate",
+        "direction": "beneficial",
+        "reversibility": "bounded",
+        "causal_confidence": "high",
+        "evidence_refs": [
+          "ops/scripts/bootstrap_agent_environment.sh",
+          "ops/scripts/ensure_uv_environment.sh"
+        ]
+      },
+      {
+        "path_id": "SO2",
+        "affected_participants": [
+          "Manus hosted secrets",
+          "Cursor/operator secrets"
+        ],
+        "predicted_changes": [
+          "Manus never borrows operator AWS/profile",
+          "wrong classification could regress operator behavior, requiring peer tests"
+        ],
+        "timing": "immediate",
+        "direction": "mixed",
+        "reversibility": "bounded",
+        "causal_confidence": "high",
+        "evidence_refs": [
+          "ops/secrets/session_start_secrets.py",
+          "ops/secrets/infisical_cli_login.py"
+        ]
+      },
+      {
+        "path_id": "SO3",
+        "affected_participants": [
+          "Manus Memory connector and lifecycle"
+        ],
+        "predicted_changes": [
+          "historical connector may cease to start by design",
+          "native support remains UPSTREAM_BLOCKED until owner admission",
+          "ordinary coding remains usable"
+        ],
+        "timing": "immediate",
+        "direction": "mixed",
+        "reversibility": "bounded",
+        "causal_confidence": "high",
+        "evidence_refs": [
+          "CANONICAL_LAW.md",
+          "environment/agents/adapters/manus/memory-mcp-connector.json"
+        ]
+      },
+      {
+        "path_id": "SO4",
+        "affected_participants": [
+          "identity assurance and auth consumers"
+        ],
+        "predicted_changes": [
+          "legacy/tampered identity and stale failed-mint file cannot claim authority",
+          "configured Infisical descriptor no longer implies observed login"
+        ],
+        "timing": "near_term",
+        "direction": "beneficial",
+        "reversibility": "bounded",
+        "causal_confidence": "high",
+        "evidence_refs": [
+          "tools/assurance/check_canonical_identity_projection.py",
+          "environment/agents/adapters/manus/infisical_mcp_server.py"
+        ]
+      }
+    ],
+    "system_state_expected_to_change": [
+      "meaning consumed from shared owner instead of adapter prose",
+      "readiness and auth observations separated",
+      "blocked Memory remains contained"
+    ],
+    "unknowns": [
+      "implementation test outcomes and live auth results; no retrospective prediction rewrite"
+    ]
+  },
+  "signal_prediction_propagation": {
+    "semantic_owner_ref": "skills/l9-global-architect/references/reasoning-foursome/04_SIGNAL_LEVERAGE_KERNEL.md",
+    "source_signal_ref": "#second_order_prediction",
+    "topology": "ONE_WAY",
+    "required_meaning": {
+      "evidence": true,
+      "provenance": true,
+      "context": true,
+      "authority": true,
+      "uncertainty": true
+    },
+    "eligible_consumers": [
+      "local Leverage assessment",
+      "GAR bounded architecture decision",
+      "parent implementation executor"
+    ],
+    "excluded_consumers": [
+      "live Memory/OAuth admission",
+      "canonical upstream registry writeback",
+      "unrelated skill/PR owners"
+    ],
+    "routes": [
+      {
+        "route_id": "SL1",
+        "payload_ref": "this decision plus source refs and pipeline-bound PLAN_DOCUMENT",
+        "adds_nonredundant_value": "Keeps cause, predicted peer effects, current revisions, ownership and Unknowns available to executor and tests without copying runtime law"
+      }
+    ],
+    "reconvergence": {
+      "required": false,
+      "synthesis_owner": "none"
+    },
+    "loop_controls": {
+      "novelty": "current source revision and decision digest",
+      "idempotency": "one bounded artifact/pipeline pass",
+      "generation_limit": "one planning handoff; changed architecture requires new owner decision",
+      "convergence": "pipeline proof and parent submission"
+    },
+    "expected_signal_drag": [
+      "large source-owner reference set; no broader broadcast or artificial feedback loop"
+    ]
+  },
+  "predicted_leverage_assessment": {
+    "semantic_owner_ref": "skills/l9-global-architect/references/reasoning-foursome/03_LEVERAGE_KERNEL.md",
+    "first_order_intervention_ref": "#first_order_decision",
+    "second_order_prediction_ref": "#second_order_prediction",
+    "signal_topology_evidence_refs": [
+      "#signal_prediction_propagation"
+    ],
+    "available_leverage": [
+      "shared bootstrap owner already serves all eligible adapters",
+      "shared canonical assurance and existing detector eliminate duplicate meaning"
+    ],
+    "predicted_leverage": {
+      "systemic_improvements": [
+        "one shared no-mutation check and early locked admission",
+        "truthful identity/provenance/auth distinctions"
+      ],
+      "eligible_consumers_strengthened": [
+        "shared bootstrap peers",
+        "Manus adapter consumers",
+        "future owner-native client adoption"
+      ],
+      "work_reduction": [
+        "less duplicated bootstrap/identity logic and false-readiness triage"
+      ],
+      "expected_drag": [
+        "shared regression cost",
+        "loss of historical unauthorized Memory compatibility",
+        "upstream native admission remains separate"
+      ]
+    },
+    "current_leverage_rank": "unknown; no new realized topology assigned",
+    "current_leverage_score": "unknown; no realized-effect measurement",
+    "proceed_signal": "supported",
+    "confidence": "high for reuse and bounded fail-closed containment, unknown for live operation"
+  },
+  "gar_architecture_decision": {
+    "semantic_owner_ref": "skills/l9-global-architect/kernels/ARCHITECT_KERNEL.yaml",
+    "selected_candidate": "Existing shared-owner repair plus thin Manus native descriptor/refusal; ADAPT_UPSTREAM within bound First-Order decision.",
+    "rejected_candidates": [
+      "Manus-local bootstrap/secrets/identity fork: duplicate meaning",
+      "legacy stdio/HMAC bridge/fallback: current owner law forbids",
+      "new OAuth/server/client implementation: scope and required proof unavailable",
+      "register Manus again/regenerate provenance-equivalent projection: unnecessary authority churn",
+      "manual plan receipt/admission: current pipeline owner forbids"
+    ],
+    "intervention_fidelity": "SATISFIED for planned source-owner repair; no unsupported live runtime promised",
+    "architectural_integrity": "SATISFIED for selected bounded architecture only, subject to implementation proofs V1-V10",
+    "failure_semantics": [
+      "locked interpreter failures exit1",
+      "optional bootstrap failures degraded exit6",
+      "check never mutates",
+      "identity/auth unavailable never becomes authority",
+      "native Memory unsupported UPSTREAM_BLOCKED; coding usable"
+    ],
+    "architecture_selected_before_plan_emission": true
+  },
+  "post_execution_receipts": {
+    "second_order_after": "Parent execution realized the bounded source/offline predictions: strictly observational check; early locked admission; actual source ownership; canonical code/data isolation; scoped identity cache isolation; no active hosted legacy Memory path; truthful Infisical auth/TTL and credential reflection containment. Seven independent-review findings were reproduced/fixed and scoped final closure review passed.",
+    "realized_leverage": "Locally validated shared-owner reuse, not a measured deployed rank/score: 780 integrated tests plus43 subtests and79 reporter tests plus17 subtests. No claimed upstream admission, constellation rollout, live auth or accepted PR merge.",
+    "signal_observation_and_writeback": "Generated plan, source/tests and value-free local evidence are handed to the parent-owned scoped #826 PR ceremony. No canonical registry, Memory record, secret, deployed service, or runtime authentication writeback.",
+    "propagation_gap": "Shared gains remain source/offline validated until repository owners accept the PR. Native package/client/OAuth actor admission and live service/mobile proof remain independently upstream-owned."
+  },
+  "source_observations": {
+    "canonical_authority_revision": "93dbaa13e5062c243a6bc47e9b63af0a808808c1",
+    "committed_projection_revision": "9b27869dd893fcd28f76f99c9184a90435542c76",
+    "projection_verdict": "Observed existing projector provenance-equivalent; historical label retained, no credential/role/namespace admission implied",
+    "memory_owner_revision": "ae6e2c0d0c29dfe2a3de3fdf5293e4d996164620",
+    "memory_owner_contract_refs": [
+      "/home/ubuntu/L9-Memory-Owner/docs/REMOTE_MCP_CONTRACT.md",
+      "/home/ubuntu/L9-Memory-Owner/docs/adr/ADR-100-native-oauth-mcp-full-cutover.md"
+    ],
+    "memory_actor_admission": "issue108 open as independently observed by parent; native auth UNKNOWN",
+    "prefetch": "Owner-script bounded prefetch at original source revision returned NO_HIT, checked_record_count0, conflicts0, digest4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945; historical receipt is not native live-auth proof",
+    "baseline_test_log": "/home/ubuntu/manus-fix-baseline.log: 204 passed in38.76s, before implementation",
+    "inherited_scope": "Parent fast-forwarded to334faa6957 on unique #824->825->826 tip; 32 inherited paths not this task's changes, no protected/skill overwrite",
+    "final_test_log": "/home/ubuntu/manus-fix-final-tests.log: 780 passed,43 subtests passed,147.86s",
+    "final_reporter_log": "/home/ubuntu/manus-fix-runtime-report-tests.log:79 passed,17 subtests passed,1.54s",
+    "review_findings_closed": 7,
+    "publication_base": "User selected #826, feat/fail-closed-plan-pipeline@334faa6957e0c2f67eeea4b397019f6a141a30b8; #827 sibling intentionally not selected"
+  }
+}
