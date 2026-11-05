@@ -1,5 +1,5 @@
 {
-  "generation_id": "5287401e15cbc4b60f8c71e59fc823ead0bd8862db08a630f17259b224c32e04",
+  "generation_id": "f5ec72540d763ac5abbb9ecca26f5e9fb68678696db13461da83750e0b6c6e1a",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -825,7 +825,7 @@
       "path": "skills/l9-audit-plans",
       "reason": "leftover-todo refine mutates docs/plans (fold/compile, harvested omit); slash /l9-audit-plans is the explicit invoke; shelf_plans.py is retired and must not run; disable-model-invocation",
       "skill_md": "skills/l9-audit-plans/SKILL.md",
-      "skill_sha256": "9a543e4fcaa4ca1a0ce6bc675b8df1352168a0e90b9a68bbc68b8d0df7cc5dc3",
+      "skill_sha256": "57011b21b53ef3140c8397513a6b4092ecb0c2f7fc701da2a8491052adf3093d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1521,5 +1521,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "33c4851215c1ef793ea7a10234f805997a303dd59f8a4e49e17c82277b8c26fd",
-  "source_skill_corpus_sha256": "534b88b662917811acdd2cdbad928ae5792e490aff3b457b27bc57a5d861f49c"
+  "source_skill_corpus_sha256": "06a87063b0705e850fee0218bc24763e1010ae5dab7042f246b49f503557be14"
 }
