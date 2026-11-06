@@ -307,6 +307,56 @@ def test_gate_lanes_filter_runs_only_the_named_lanes(tmp_path: Path) -> None:
     assert "shellcheck" in {lane.name for lane in run.applicable(ctx, ("fast", "heavy"))}
 
 
+def test_core_lane_receipt_stands_only_for_the_same_core_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    loaded = manifest.load()
+    lane = loaded.lanes["semgrep-l9"]
+    digest = run._lane_digest(loaded, lane)
+    record = {"digest": digest, "status": "pass", "core_sha": "a" * 40}
+    monkeypatch.setattr(run, "_CORE_SHAS", {"main": "a" * 40})
+    assert run.receipt_reusable(loaded, lane, record)
+    monkeypatch.setattr(run, "_CORE_SHAS", {"main": "b" * 40})  # Core moved its governance
+    assert not run.receipt_reusable(loaded, lane, record)
+    monkeypatch.setattr(run, "_CORE_SHAS", {})
+
+    class Unreachable:
+        @staticmethod
+        def core_commit(ref: str) -> str:
+            raise RuntimeError("git transport also failed")
+
+    monkeypatch.setattr(run, "_core_reader", lambda: Unreachable)
+    assert not run.receipt_reusable(loaded, lane, record)  # cannot prove it: re-run
+
+
+def test_skip_and_error_receipts_are_never_reused() -> None:
+    loaded = manifest.load()
+    lane = loaded.lanes["biome"]
+    digest = run._lane_digest(loaded, lane)
+    assert run.receipt_reusable(loaded, lane, {"digest": digest, "status": "pass"})
+    for status in ("skip", "error"):
+        assert not run.receipt_reusable(loaded, lane, {"digest": digest, "status": status})
+
+
+def test_core_lane_records_the_core_commit_it_applied(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    loaded = manifest.load()
+    lane = loaded.lanes["semgrep-l9"]
+    binary = tmp_path / "tool"
+    binary.write_text("")
+    monkeypatch.setattr(manifest.Manifest, "resolve", lambda self, name: binary)
+
+    def lane_fn(ctx: run.Context, lane: object, binary: Path, files: list[str]) -> list:
+        ctx.facts["core_sha"] = "e" * 40
+        return []
+
+    monkeypatch.setitem(run.LANES, "semgrep-l9", lane_fn)
+    ctx = run.replace(_ctx(tmp_path, tmp_path), changed=["ops/x.py"])
+    record = run.run_lane(ctx, lane, run.WeightedSemaphore(2))
+    assert record["core_sha"] == "e" * 40 and record["status"] == "pass"
+
+
 def test_cli_rejects_an_unknown_lane(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         run.main(["--gate", "HEAD", "--lanes", "biome,no-such-lane"])

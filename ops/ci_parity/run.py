@@ -155,6 +155,9 @@ class Context:
     nice: bool
     timeout: int
     notices: list[str] = field(default_factory=list)
+    #: Inputs a lane resolved at run time (e.g. the Core commit whose governance
+    #: it applied); recorded in the receipt so reuse can check them.
+    facts: dict[str, str] = field(default_factory=dict)
 
 
 def cache_dir(loaded: manifest.Manifest, slug: str) -> Path:
@@ -526,6 +529,7 @@ def _lane_semgrep_l9(
     core_ref = str(lane.extra.get("core_ref") or "main")
     try:
         gov = stage_core_governance(ctx, profile, languages, core_ref)
+        ctx.facts["core_sha"] = gov.core_sha
         source = stage_sdk_source(ctx, ctx.loaded.tools[lane.tool])
         python = sdk_python(binary)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
@@ -732,7 +736,7 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
             notice=f"{lane.tool} {tool.version} not installed (ops/ci_parity/install.py)",
         )
         return record
-    ctx = replace(ctx, notices=[])  # per lane: lanes run concurrently
+    ctx = replace(ctx, notices=[], facts={})  # per lane: lanes run concurrently
     weight = sem.acquire(lane.weight)
     started = time.monotonic()
     try:
@@ -759,6 +763,7 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     for finding in fresh:
         bucket = "blocking" if fnd.blocks(finding, lane.block, mapped) else "advisory"
         record[bucket].append(finding.as_dict())
+    record.update(ctx.facts)
     lane_notices = ctx.notices
     if lane_notices:
         record["notice"] = "; ".join(lane_notices)
@@ -831,6 +836,35 @@ def receipt_dir(cache: Path, sha: str, base: str) -> Path:
     return cache / "receipts" / f"{sha[:12]}__{base[:12]}"
 
 
+_CORE_SHAS: dict[str, str] = {}
+
+
+def current_core_sha(ref: str) -> str | None:
+    """Core's commit for `ref` now (once per process), or None when unreadable."""
+    if ref not in _CORE_SHAS:
+        try:
+            _CORE_SHAS[ref] = _core_reader().core_commit(ref)
+        except (OSError, RuntimeError):
+            return None
+    return _CORE_SHAS[ref]
+
+
+def receipt_reusable(loaded: manifest.Manifest, lane: manifest.Lane, data: dict[str, Any]) -> bool:
+    """A receipt stands only for the same inputs and only for a real verdict.
+
+    `skip` and `error` are not verdicts: a tool installed since, or a transient
+    failure, must get a fresh run instead of silently passing the gate. A lane
+    that applies Core's live governance also needs the same Core commit.
+    """
+    if data.get("digest") != _lane_digest(loaded, lane) or data.get("status") in ("skip", "error"):
+        return False
+    core_ref = lane.extra.get("core_ref")
+    if core_ref:
+        current = current_core_sha(str(core_ref))
+        return current is not None and data.get("core_sha") == current
+    return True
+
+
 def read_receipts(cache: Path, ctx: Context) -> dict[str, dict[str, Any]]:
     found: dict[str, dict[str, Any]] = {}
     directory = receipt_dir(cache, ctx.sha, ctx.base)
@@ -840,7 +874,7 @@ def read_receipts(cache: Path, ctx: Context) -> dict[str, dict[str, Any]]:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if data.get("digest") == _lane_digest(ctx.loaded, lane) and data.get("status") != "error":
+        if receipt_reusable(ctx.loaded, lane, data):
             found[lane.name] = data
     return found
 
