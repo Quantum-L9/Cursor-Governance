@@ -26,12 +26,15 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import io
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import threading
 import time
@@ -300,29 +303,283 @@ def _lane_codeql(
     )
 
 
+#: Languages the SDK's packaged Semgrep rulesets cover, by changed-file suffix.
+SDK_LANGUAGES = {
+    ".py": "python",
+    ".pyi": "python",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".js": "typescript",
+    ".jsx": "typescript",
+}
+#: What a proxied host needs to reach the Semgrep registry. The SDK hands
+#: semgrep only PATH/HOME/TMP*, so behind a proxy semgrep exits 2 and writes no
+#: report; a shim first on PATH restores these for that one process.
+PROXY_ENV = (
+    "HTTPS_PROXY",
+    "https_proxy",
+    "HTTP_PROXY",
+    "http_proxy",
+    "NO_PROXY",
+    "no_proxy",
+    "SSL_CERT_FILE",
+    "REQUESTS_CA_BUNDLE",
+)
+GATE_EXIT = {0: "pass", 1: "fail", 6: "incomplete"}
+
+
+def sdk_languages(files: Sequence[str]) -> list[str]:
+    return sorted({SDK_LANGUAGES[s] for f in files if (s := Path(f).suffix) in SDK_LANGUAGES})
+
+
+def provider_path(directory: Path, semgrep: Path, env: dict[str, str]) -> str:
+    """PATH for the SDK: a proxy shim when needed, then the pinned semgrep's directory."""
+    entries = [str(semgrep.parent)]
+    exported = {k: env[k] for k in PROXY_ENV if env.get(k)}
+    if exported:
+        shim_dir = directory / "semgrep-shim"
+        shim_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        shim = shim_dir / "semgrep"
+        lines = ["#!/bin/sh"]
+        lines += [f"export {k}={shlex.quote(v)}" for k, v in sorted(exported.items())]
+        lines.append(f'exec {shlex.quote(str(semgrep))} "$@"')
+        shim.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        shim.chmod(0o700)
+        entries.insert(0, str(shim_dir))
+    return os.pathsep.join([*entries, env.get("PATH", "")])
+
+
+def sdk_blocking_findings(gate: dict[str, Any], bundle: dict[str, Any]) -> list[fnd.Finding]:
+    """Core's blocking findings, located through the SDK's own finding bundle."""
+    by_id = {f.get("finding_id"): f for f in bundle.get("findings") or []}
+    out: list[fnd.Finding] = []
+    for finding_id in gate.get("blocking_finding_ids") or []:
+        found = by_id.get(finding_id) or {}
+        where = (found.get("locations") or [{}])[0]
+        out.append(
+            fnd.Finding(
+                "semgrep-l9",
+                str(found.get("provider_rule_id") or finding_id),
+                "error",
+                str(where.get("normalized_path") or "?"),
+                int(where.get("start_line") or 0),
+                str(found.get("message") or "blocking finding"),
+            )
+        )
+    return out
+
+
+def _provider_failure(bundle_path: Path) -> str:
+    try:
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "no finding bundle"
+    failures = bundle.get("provider_failures") or []
+    return "; ".join(str(f.get("message") or f.get("failure_type")) for f in failures) or "unknown"
+
+
+#: Where org-ci provisions the SDK and stages Core's governance, relative to the
+#: checkout. Semgrep names a rule after its config file's path from the working
+#: directory, so Core's policy keys read `l9.runtime.sdk.source.l9_ci...`: the
+#: SDK source has to sit at this same relative path for those keys to match.
+SDK_SOURCE = Path(".l9/runtime/sdk/source")
+ORG_GOVERNANCE = Path(".l9/runtime/org-governance")
+GOVERNANCE_ROOT = ".github/actions/resolve-governance"
+#: Runs the SDK's CLI from SDK_SOURCE inside the pinned tool's environment (the
+#: role Core's `.pth` edge plays), so the packaged rulesets resolve under the
+#: checkout instead of the tool's site-packages.
+SDK_BOOTSTRAP = (
+    "import sys; sys.path.insert(0, sys.argv.pop(1)); "
+    "from l9_ci.__main__ import main; raise SystemExit(main())"
+)
+
+
+@dataclass(frozen=True)
+class CoreGovernance:
+    """What resolve-governance emits for one Core profile."""
+
+    core_sha: str
+    strict: bool
+    required: bool
+    policy: Path  # staged, relative to the checkout
+    identity_maps: Path  # staged directory, relative to the checkout
+
+
+def _core_reader() -> Any:
+    scripts = HERE.parent / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import docker_sandbox  # noqa: PLC0415  (the one reader of Core's files)
+
+    return docker_sandbox
+
+
+def _profile_value(text: str, profile: str, key: str) -> Any:
+    import yaml  # noqa: PLC0415
+
+    data = yaml.safe_load(text) or {}
+    entry = (data.get("profiles") or {}).get(profile)
+    if not isinstance(entry, dict) or key not in entry:
+        raise ValueError(f"Core governance has no {key!r} for profile {profile!r}")
+    return entry[key]
+
+
+def stage_core_governance(
+    ctx: Context, profile: str, languages: Sequence[str], core_ref: str = "main"
+) -> CoreGovernance:
+    """Read Core's bundled governance at `core_ref` and stage it like resolve-governance.
+
+    Core never uses a consumer's own governance files for this gate; it ships
+    the execution profile, policy and identity maps with its action.
+    """
+    reader = _core_reader()
+    sha = reader.core_commit(core_ref)
+    cached = ctx.loaded.cache_root / "core" / sha
+    files = {
+        "profiles": f"{GOVERNANCE_ROOT}/defaults/execution-profiles.yaml",
+        "required": f"{GOVERNANCE_ROOT}/defaults/provider-requiredness.yaml",
+        "thresholds": f"{GOVERNANCE_ROOT}/defaults/quality-thresholds.yaml",
+    }
+
+    def read(rel: str) -> str:
+        path = cached / rel
+        if not path.is_file():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(reader.core_file(sha, rel), encoding="utf-8")
+        return path.read_text(encoding="utf-8")
+
+    strict = bool(_profile_value(read(files["profiles"]), profile, "strict"))
+    required = bool(_profile_value(read(files["required"]), profile, "semgrep"))
+    policy_name = Path(str(_profile_value(read(files["thresholds"]), profile, "sdk_policy"))).name
+    staged = ctx.scan_dir / ORG_GOVERNANCE
+    (staged / "semgrep-identity-maps").mkdir(parents=True, exist_ok=True)
+    (staged / policy_name).write_text(read(f"{GOVERNANCE_ROOT}/{policy_name}"), encoding="utf-8")
+    for language in languages:
+        text = read(f"{GOVERNANCE_ROOT}/identity-maps/{language}.yaml")
+        (staged / "semgrep-identity-maps" / f"{language}.yaml").write_text(text, encoding="utf-8")
+    return CoreGovernance(
+        core_sha=sha,
+        strict=strict,
+        required=required,
+        policy=ORG_GOVERNANCE / policy_name,
+        identity_maps=ORG_GOVERNANCE / "semgrep-identity-maps",
+    )
+
+
+def stage_sdk_source(ctx: Context, tool: manifest.Tool) -> Path:
+    """The SDK at its pinned commit, extracted at SDK_SOURCE in the snapshot."""
+    url = tool.package.removeprefix("git+")
+    mirror = ctx.loaded.cache_root / "l9-ci-sdk.git"
+    if not (mirror / "HEAD").is_file():
+        mirror.mkdir(parents=True, exist_ok=True)
+        _git(mirror, "init", "-q", "--bare")
+    probe = subprocess.run(
+        ["git", "-C", str(mirror), "cat-file", "-e", f"{tool.version}^{{commit}}"],
+        capture_output=True,
+        check=False,
+    )
+    if probe.returncode != 0:
+        _git(mirror, "fetch", "-q", "--depth=1", url, tool.version)
+    target = ctx.scan_dir / SDK_SOURCE
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    archive = subprocess.run(
+        ["git", "-C", str(mirror), "archive", "--format=tar", tool.version],
+        capture_output=True,
+        check=True,
+    )
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
+        tar.extractall(target, filter="data")
+    return target
+
+
+def sdk_python(binary: Path) -> str:
+    """The interpreter of the pinned l9-ci tool environment (its entry point's shebang)."""
+    first = binary.read_text(encoding="utf-8", errors="replace").splitlines()[:1]
+    if first and first[0].startswith("#!") and Path(first[0][2:].strip()).is_file():
+        return first[0][2:].strip()
+    sibling = binary.parent / "python"
+    if sibling.is_file():
+        return str(sibling)
+    raise OSError(f"cannot find the Python behind {binary}")
+
+
 def _lane_semgrep_l9(
     ctx: Context, lane: manifest.Lane, binary: Path, files: list[str]
 ) -> list[fnd.Finding]:
-    sarif = ctx.cache / "semgrep-l9.sarif"
-    argv = [
-        str(binary),
-        "scan",
-        "--sarif",
-        f"--output={sarif}",
-        "--metrics=off",
-        "--disable-version-check",
-        "--quiet",
-    ]
-    for config in lane.extra.get("configs") or []:
-        argv.append(f"--config={config}")
-    argv += [f"--baseline-commit={ctx.base}", "."]
-    _run(argv, ctx.scan_dir, ctx)
-    if not sarif.is_file():
-        ctx.notices.append("semgrep-l9: no SARIF produced")
+    """Core's SDK Semgrep gate on the whole snapshot, as org-ci runs it.
+
+    Same SDK commit, semgrep version, rule composition, staged Core governance
+    (profile strictness, requiredness, policy, identity map) and gate. The
+    verdict is `gate evaluate`'s exit (0 pass, 1 fail, 6 incomplete); `semgrep
+    run` exits 0 even when semgrep wrote no report, so it never stands for a pass.
+    """
+    provider = str(lane.extra.get("provider") or "semgrep")
+    semgrep = ctx.loaded.resolve(provider)
+    if semgrep is None:
+        version = ctx.loaded.tools[provider].version
+        ctx.notices.append(f"semgrep-l9: SKIP — {provider} {version} not installed")
         return []
-    return fnd.parse_sarif(
-        json.loads(sarif.read_text(encoding="utf-8")), "semgrep-l9", ctx.scan_dir, files
-    )
+    languages = sdk_languages(files)
+    profile = str(lane.extra.get("core_profile") or "pr_fast")
+    core_ref = str(lane.extra.get("core_ref") or "main")
+    try:
+        gov = stage_core_governance(ctx, profile, languages, core_ref)
+        source = stage_sdk_source(ctx, ctx.loaded.tools[lane.tool])
+        python = sdk_python(binary)
+    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+        ctx.notices.append(f"semgrep-l9: cannot stage Core's gate — {exc}")
+        return []
+    work = ctx.cache / "semgrep-l9"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
+    env = dict(os.environ)
+    env["PATH"] = provider_path(work, semgrep, env)
+    cli = [python, "-c", SDK_BOOTSTRAP, str(source)]
+    try:
+        return _sdk_gate(ctx, cli, languages, gov, work, env)
+    finally:
+        shutil.rmtree(work / "semgrep-shim", ignore_errors=True)  # proxy values off disk
+
+
+def _sdk_gate(
+    ctx: Context,
+    cli: list[str],
+    languages: Sequence[str],
+    gov: CoreGovernance,
+    work: Path,
+    env: dict[str, str],
+) -> list[fnd.Finding]:
+    out: list[fnd.Finding] = []
+    for language in languages:
+        bundle = work / f"{language}.finding-bundle.json"
+        gate_out = work / f"{language}.gate-result.json"
+        run_argv = [*cli, "semgrep", "run", "--language", language, "--root", "."]
+        run_argv += ["--output", str(bundle), "--snapshot-id", ctx.sha, "--revision", ctx.sha]
+        run_argv += ["--policy", str(gov.policy)]
+        run_argv += ["--identity-map", str(gov.identity_maps / f"{language}.yaml")]
+        run_argv += ["--strict"] if gov.strict else []
+        run_argv += ["--required"] if gov.required else []
+        proc = _run(run_argv, ctx.scan_dir, ctx, env=env)
+        if not bundle.is_file():
+            tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-1:] or ["no output"]
+            reason = tail[0][:240]
+            ctx.notices.append(f"semgrep-l9 ({language}): the SDK wrote no bundle — {reason}")
+            continue
+        gate_argv = [*cli, "gate", "evaluate", "--bundle", str(bundle), "--output", str(gate_out)]
+        gate_argv.append("--strict-unresolved" if gov.strict else "--no-strict-unresolved")
+        verdict = GATE_EXIT.get(_run(gate_argv, ctx.scan_dir, ctx, env=env).returncode)
+        if verdict == "pass":
+            continue
+        if verdict == "fail" and gate_out.is_file():
+            gate = json.loads(gate_out.read_text(encoding="utf-8"))
+            out.extend(sdk_blocking_findings(gate, json.loads(bundle.read_text(encoding="utf-8"))))
+            continue
+        reason = _provider_failure(bundle)
+        ctx.notices.append(f"semgrep-l9 ({language}): gate {verdict or 'error'} — {reason}")
+    return out
 
 
 def _lane_semgrep_pro(
@@ -431,13 +688,26 @@ def _runner_digest() -> str:
     return digest.hexdigest()
 
 
-def lane_digest(lane: manifest.Lane, tool: manifest.Tool) -> str:
+def lane_digest(
+    lane: manifest.Lane, tool: manifest.Tool, provider: manifest.Tool | None = None
+) -> str:
+    """Receipt key: runner code, lane config, and every tool version the lane runs."""
     payload = json.dumps(
-        {"runner": _runner_digest(), "lane": lane.__dict__, "tool": tool.version},
+        {
+            "runner": _runner_digest(),
+            "lane": lane.__dict__,
+            "tool": tool.version,
+            "provider": provider.version if provider else None,
+        },
         sort_keys=True,
         default=str,
     )
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
+def _lane_digest(loaded: manifest.Manifest, lane: manifest.Lane) -> str:
+    provider = loaded.tools.get(str(lane.extra.get("provider") or ""))
+    return lane_digest(lane, loaded.tools[lane.tool], provider)
 
 
 def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[str, Any]:
@@ -447,7 +717,7 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
         "lane": lane.name,
         "tool": lane.tool,
         "version": tool.version,
-        "digest": lane_digest(lane, tool),
+        "digest": _lane_digest(ctx.loaded, lane),
         "sha": ctx.sha,
         "base": ctx.base,
         "status": "pass",
@@ -476,7 +746,15 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     finally:
         sem.release(weight)
     record["elapsed_ms"] = int((time.monotonic() - started) * 1000)
-    fresh = found if lane.name == "osv-scanner" else fnd.new_findings(found, ctx.ranges)
+    # Lanes whose CI check judges a whole file or the whole tree keep every
+    # finding; the rest keep only those on a line the change touched.
+    scope = lane.extra.get("scope")
+    if lane.name == "osv-scanner" or scope == "whole-tree":
+        fresh = found
+    elif scope == "changed-files":
+        fresh = [f for f in found if f.path in files]
+    else:
+        fresh = fnd.new_findings(found, ctx.ranges)
     mapped = _mapped_rules(ctx, lane)
     for finding in fresh:
         bucket = "blocking" if fnd.blocks(finding, lane.block, mapped) else "advisory"
@@ -493,11 +771,15 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
     return record
 
 
-def applicable(ctx: Context, tiers: Sequence[str]) -> list[manifest.Lane]:
+def applicable(
+    ctx: Context, tiers: Sequence[str], only: Sequence[str] | None = None
+) -> list[manifest.Lane]:
     return [
         lane
         for lane in ctx.loaded.lanes.values()
-        if lane.tier in tiers and any(lane.matches(f) for f in ctx.changed)
+        if lane.tier in tiers
+        and (only is None or lane.name in only)
+        and any(lane.matches(f) for f in ctx.changed)
     ]
 
 
@@ -535,8 +817,11 @@ def ensure_snapshot(workspace: Path, cache: Path, sha: str) -> Path:
         # A shallow workspace cannot be shared: git ignores --shared/--local for
         # a shallow source, so the clone is a copy frozen at creation, with no
         # alternates. Every later commit was then "not a tree" (checkout exit
-        # 128) on every run — hosted checkouts are shallow. Fetch it in.
-        _git(clone, "fetch", "-q", "--no-tags", "origin", sha)
+        # 128) on every run — hosted checkouts are shallow. Fetch it in, from
+        # the workspace being scanned: the clone is cached per repository, so
+        # its `origin` is whichever workspace created it, and another worktree
+        # or clone's commits are not there.
+        _git(clone, "fetch", "-q", "--no-tags", str(workspace), sha)
     _git(clone, "-c", "advice.detachedHead=false", "checkout", "-q", "--detach", "--force", sha)
     _git(clone, "clean", "-q", "-f", "-d", "-x")
     return clone
@@ -555,8 +840,7 @@ def read_receipts(cache: Path, ctx: Context) -> dict[str, dict[str, Any]]:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        tool = ctx.loaded.tools[lane.tool]
-        if data.get("digest") == lane_digest(lane, tool) and data.get("status") != "error":
+        if data.get("digest") == _lane_digest(ctx.loaded, lane) and data.get("status") != "error":
             found[lane.name] = data
     return found
 
@@ -666,17 +950,20 @@ def build_context(
     )
 
 
-def scan_commit(ctx: Context, wait: float) -> list[dict[str, Any]]:
-    """Run every applicable lane not already receipted for this commit."""
+def scan_commit(
+    ctx: Context, wait: float, only: Sequence[str] | None = None
+) -> list[dict[str, Any]]:
+    """Run every applicable lane (or only the named ones) not already receipted."""
+    lanes = applicable(ctx, ("fast", "heavy"), only)
     with clone_lock(ctx.cache, wait):
         have = read_receipts(ctx.cache, ctx)
-        missing = [lane for lane in applicable(ctx, ("fast", "heavy")) if lane.name not in have]
+        missing = [lane for lane in lanes if lane.name not in have]
         if missing:
             ensure_snapshot(ctx.workspace, ctx.cache, ctx.sha)
             records = run_lanes(ctx, missing)
             write_receipts(ctx.cache, ctx, records)
             have.update({r["lane"]: r for r in records})
-    return [have[lane.name] for lane in applicable(ctx, ("fast", "heavy")) if lane.name in have]
+    return [have[lane.name] for lane in lanes if lane.name in have]
 
 
 def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) -> tuple[str, int]:
@@ -785,7 +1072,13 @@ def mode_commit(
     return 0
 
 
-def mode_gate(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: str | None) -> int:
+def mode_gate(
+    loaded: manifest.Manifest,
+    workspace: Path,
+    sha_ref: str,
+    base: str | None,
+    only: Sequence[str] | None = None,
+) -> int:
     ctx = build_context(loaded, workspace, sha_ref, base, nice=True)
     if ctx is None:
         print(
@@ -793,12 +1086,12 @@ def mode_gate(loaded: manifest.Manifest, workspace: Path, sha_ref: str, base: st
             "(shallow history or missing base; no parent-commit fallback)"
         )
         return 0
-    if not applicable(ctx, ("fast", "heavy")):
+    if not applicable(ctx, ("fast", "heavy"), only):
         print(f"ci-parity gate {ctx.sha[:8]}: no lane applies to this change")
         return 0
     wait = float(os.environ.get("L9_CI_PARITY_WAIT") or DEFAULT_WAIT)
     try:
-        records = scan_commit(ctx, wait=wait)
+        records = scan_commit(ctx, wait=wait, only=only)
     except TimeoutError:
         print(
             f"ci-parity gate {ctx.sha[:8]}: SKIP — scan still running after "
@@ -836,6 +1129,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--workspace", type=Path)
     parser.add_argument("--base")
     parser.add_argument("--background", action="store_true")
+    parser.add_argument(
+        "--lanes",
+        help="--gate only: comma-separated lane names to run (default: every applicable lane)",
+    )
     args = parser.parse_args(argv)
     if manifest.disabled():
         print("ci-parity: disabled (L9_CI_PARITY=0)")
@@ -848,7 +1145,13 @@ def main(argv: list[str] | None = None) -> int:
         return mode_status(loaded, workspace)
     if args.commit:
         return mode_commit(loaded, workspace, args.commit, args.base, args.background)
-    return mode_gate(loaded, workspace, args.gate, args.base)
+    only = None
+    if args.lanes:
+        only = [name.strip() for name in args.lanes.split(",") if name.strip()]
+        unknown = sorted(set(only) - set(loaded.lanes))
+        if unknown:
+            parser.error(f"--lanes: unknown lane(s) {', '.join(unknown)}")
+    return mode_gate(loaded, workspace, args.gate, args.base, only)
 
 
 if __name__ == "__main__":

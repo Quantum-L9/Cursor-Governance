@@ -2430,3 +2430,29 @@ repository without the V2 contract.
   `uv==0.12.1` if absent), `repo-validate` → `uv-lock-check rules-validate`,
   `repo-check` → `lint-ruff-full`, `repo-test` → `pytest-suites` (the former
   `test` recipe). `make test`, `make pr` and every other target keep working.
+
+<!-- CI_PARITY_CORE_GATE_AT_PUBLISH_V1 -->
+## `make pr` runs Analyze (central Core)'s Biome and SDK Semgrep gate (2026-11-06) — amends CI_PARITY_HOSTED_CLAUDE_V1
+
+Append-only. #829 met two required Core checks only in CI: Biome and the SDK
+Semgrep gate. The local gate had neither — it never ran Biome, and its Semgrep
+scan used this repository's rules, not Core's.
+
+- **Two lanes at publish.** `make pr`'s reader wave runs
+  `ops/ci_parity/run.py --gate HEAD --lanes biome,semgrep-l9` on non-Cursor
+  surfaces (Cursor stays unchanged). Exit 2 fails the gate. CodeQL and every
+  other lane stay with CI and the commit-time hooks.
+- **Core's tools at Core's pins.** `tools.yaml` stays the one pin source:
+  Biome 2.5.8 at Core's locked sha256, Semgrep 1.171.0, and the `l9-ci` SDK at
+  the revision `org-ci.yml` provisions. A `ci_ref` with `repo:` points into
+  l9-ci-core; `validate_manifest.py --remote` reads it, and `make pr` prints a
+  re-pin warning when Core has moved.
+- **Core's verdict, not a re-implementation.** `semgrep-l9` runs the SDK's
+  `semgrep run` and `gate evaluate` with the SDK source at
+  `.l9/runtime/sdk/source` and Core's bundled `pr_fast` governance staged under
+  `.l9/runtime/org-governance`, exactly where org-ci puts them. It blocks on
+  whatever Core's gate blocks, across the whole tree. Biome blocks on any
+  finding in a changed file. Replaying #829's pre-fix commit reports the same
+  seven findings Core reported.
+- **Unchanged.** An absent tool or an unstageable gate is a reported skip, not
+  a pass and not a block. `L9_CI_PARITY=0` disables it. CI stays authoritative.

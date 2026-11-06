@@ -4,7 +4,9 @@
 # run.py refuses a tool whose installed version differs. `ci_ref` records the
 # CI evidence a pin mirrors; validate_manifest.py fails when the recorded CI pin
 # line changes without this file being re-pinned, so local parity cannot drift
-# silently from what CI runs.
+# silently from what CI runs. A ci_ref with `repo:` names a file in another
+# repository (l9-ci-core): the offline check skips it, `--remote` reads it over
+# the network, and make pr runs `--remote` as a warning.
 #
 # Cursor never reads this file: the runner is wired only from Claude hooks and
 # a Claude-guarded make pr wave entry (see README.md).
@@ -51,28 +53,56 @@ tools:
     version_cmd: [--version]
     expect: 2.6.0
   biome:
-    version: 2.5.5
+    version: 2.5.8
     method: release_binary
-    url: https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.5.5/biome-linux-x64
-    sha256: 12ecb833102c8bf8ab6ede7ecd5b6e6fc76e8af95b3ef356933a1f5330afc028
+    url: https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.5.8/biome-linux-x64
+    sha256: 17abac7ef72e7a1aaccd89892f7e2e62c9919d27473defe772be04ad78400ac2
     binary: biome
     version_cmd: [--version]
-    expect: 2.5.5
+    expect: 2.5.8
     ci_ref:
-      path: .github/workflows/l9-lint-test-node.yml
-      contains: f546f122d33601ea5a4b2592e3482c5c39eddd82
-      observed: l9-biome-scan.yml runs Biome 2.5.5 with this exact sha256 (PR #658 CI log, 2026-09-24)
+      path: biome.json
+      contains: schemas/2.5.8/schema.json
+      observed: >-
+        Analyze (central Core) runs `biome ci` in blocking mode with Core's
+        install-biome lock biome-2.5.8.json, whose linux-x64 sha256 is this one
+        (l9-ci-core main, 2026-11-06). Core's toolchain alignment reports
+        biome.json drifting from that lock.
   semgrep:
-    version: 1.178.0
+    version: 1.171.0
     method: uv_tool
     package: semgrep
     binary: semgrep
     version_cmd: [--version]
-    expect: 1.178.0
+    expect: 1.171.0
     ci_ref:
-      path: .github/workflows/l9-analysis.yml
-      contains: semgrep>=1.100.0,<2.0.0
-      observed: floating range, not an exact pin; semgrep lanes stay advisory until CI pins one version
+      repo: Quantum-L9/l9-ci-core
+      ref: main
+      path: .github/actions/install-consumer-ci/toolchain-lock.json
+      contains: '"semgrep": "1.171.0"'
+      observed: >-
+        Analyze (central Core) installs exactly this version from Core's
+        hash-locked install-semgrep/locks/semgrep-1.171.0.txt (org-ci.yml
+        INPUT_SEMGREP_VERSION default, 2026-11-06).
+  l9-ci:
+    # The CI SDK Core runs for its Semgrep gate. Kept in its own tool
+    # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.171.0 needs
+    # <4.26, so the two cannot share one (Core installs them separately too).
+    # The version is the SDK commit; uv installs exactly that revision.
+    version: 6d70e829cdd9987279f5e48eed340b2b67881662
+    method: uv_tool
+    package: git+https://github.com/Quantum-L9/l9-ci-sdk
+    binary: l9-ci
+    version_cmd: [gate, evaluate, --help]
+    expect: --strict-unresolved
+    ci_ref:
+      repo: Quantum-L9/l9-ci-core
+      ref: main
+      path: .github/workflows/org-ci.yml
+      contains: "'6d70e829cdd9987279f5e48eed340b2b67881662'"
+      observed: >-
+        org-ci.yml provisions the SDK at this default sdk-revision for
+        Analyze (central Core), 2026-11-06.
   zizmor:
     version: 1.30.1
     method: uv_tool
@@ -119,6 +149,8 @@ tools:
 #   tier heavy — commit-time in the background snapshot clone, reused by the gate
 #   block      — severities that block when the finding is NEW on a changed line
 #                (empty = advisory: reported, never blocks)
+#   scope      — optional: `changed-files` keeps every finding in a changed file,
+#                `whole-tree` keeps every finding, for checks CI judges that way
 #   weight     — CPU slots taken from the nproc budget while the lane runs
 lanes:
   ruff:
@@ -160,8 +192,11 @@ lanes:
     tool: biome
     tier: fast
     globs: ["*.json", "*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs", "*.cjs"]
-    # CI runs Biome advisory (enforce-biome: false); local mirrors that.
-    block: []
+    # Analyze (central Core) runs `biome ci` blocking: any finding in a changed
+    # file fails it, not only one on a changed line (a whole-file format
+    # diagnostic anchors wherever Biome puts it).
+    block: [error]
+    scope: changed-files
     weight: 1
   codeql:
     tool: codeql
@@ -173,14 +208,22 @@ lanes:
     block: [error, security-high]
     weight: 2
   semgrep-l9:
-    tool: semgrep
+    # Analyze (central Core)'s SDK Semgrep gate, not a re-implementation of its
+    # rules: `l9-ci semgrep run` then `l9-ci gate evaluate`, with the SDK
+    # source at .l9/runtime/sdk/source and Core's own bundled governance for
+    # `core_profile` (strictness, requiredness, policy, identity maps) read
+    # from l9-ci-core at `core_ref` and staged where org-ci stages it. Core
+    # judges the whole tree, so this lane does too: a rule or policy change can
+    # make untouched lines block (it did on #829).
+    tool: l9-ci
+    provider: semgrep
+    core_profile: pr_fast
+    core_ref: main
     tier: heavy
-    globs: ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"]
-    configs: [p/python, p/javascript, p/typescript]
-    identity_map: .github/governance/semgrep-identity-map.yaml
-    # Advisory until CI pins an exact semgrep version. A floating range is not an identity. F-662-002.
-    block: []
-    weight: 1
+    globs: ["*.py", "*.pyi", "*.js", "*.jsx", "*.ts", "*.tsx"]
+    block: [error]
+    scope: whole-tree
+    weight: 2
   semgrep-pro:
     tool: semgrep
     tier: heavy

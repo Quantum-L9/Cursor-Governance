@@ -45,10 +45,9 @@ def test_drift_validator_fails_when_ci_moves_without_a_repin(tmp_path: Path) -> 
     workflow = tmp_path / ".github" / "workflows"
     workflow.mkdir(parents=True)
     (workflow / "codeql.yml").write_text("uses: org/repo/.github/workflows/x.yml@0000000\n")
-    (workflow / "l9-lint-test-node.yml").write_text(
-        "uses: x@f546f122d33601ea5a4b2592e3482c5c39eddd82\n"
+    (tmp_path / "biome.json").write_text(
+        '{"$schema": "https://biomejs.dev/schemas/2.5.8/schema.json"}\n'
     )
-    (workflow / "l9-analysis.yml").write_text("pip install 'semgrep>=1.100.0,<2.0.0'\n")
     (tmp_path / "requirements.txt").write_text("pip-audit==2.10.1\n")
     (tmp_path / "pyproject.toml").write_text('"ruff==0.16.1"\n')
     problems = validate_manifest.check(tmp_path)
@@ -125,9 +124,71 @@ def test_install_never_clobbers_a_foreign_file_on_path(tmp_path: Path) -> None:
 
 def test_unpinned_scanners_are_advisory() -> None:
     lanes = manifest.load().lanes
-    for name in ("shellcheck", "actionlint", "zizmor", "yamllint", "semgrep-l9", "osv-scanner"):
+    for name in ("shellcheck", "actionlint", "zizmor", "yamllint", "osv-scanner"):
         assert lanes[name].block == (), name
     assert lanes["codeql"].block
+
+
+def test_core_blocking_checks_block_at_exact_core_pins() -> None:
+    """Analyze (central Core) blocks on Biome and its SDK Semgrep gate, at exact pins."""
+    loaded = manifest.load()
+    for name in ("biome", "semgrep-l9"):
+        lane = loaded.lanes[name]
+        assert lane.block == ("error",), name
+        contains = loaded.tools[lane.tool].ci_ref["contains"]
+        assert contains and not validate_manifest._RANGE.search(contains), name
+    sdk = loaded.lanes["semgrep-l9"]
+    assert sdk.tool == "l9-ci" and sdk.extra["provider"] == "semgrep"
+    assert sdk.extra["scope"] == "whole-tree"
+    assert loaded.lanes["biome"].extra["scope"] == "changed-files"
+    assert loaded.tools["l9-ci"].package.startswith("git+https://")
+    assert len(loaded.tools["l9-ci"].version) == 40
+
+
+def test_uv_tool_spec_pins_pypi_by_version_and_git_by_commit() -> None:
+    loaded = manifest.load()
+    assert install.uv_tool_spec(loaded.tools["semgrep"]) == "semgrep==1.171.0"
+    sdk = loaded.tools["l9-ci"]
+    assert install.uv_tool_spec(sdk) == f"{sdk.package}@{sdk.version}"
+
+
+def _remote_manifest(tmp_path: Path) -> Path:
+    yml = tmp_path / "tools.yaml"
+    yml.write_text(
+        "schema: l9.ci-parity.tools.v1\n"
+        "tools:\n  sdk:\n    version: '1'\n    method: uv_tool\n    package: x\n"
+        "    binary: x\n    version_cmd: [--help]\n    expect: x\n    ci_ref:\n"
+        "      repo: Quantum-L9/l9-ci-core\n      ref: main\n      path: org-ci.yml\n"
+        "      contains: \"'abc'\"\n"
+        "lanes: {}\n"
+    )
+    return yml
+
+
+def test_remote_ci_ref_is_skipped_offline(tmp_path: Path) -> None:
+    assert validate_manifest.check(tmp_path, _remote_manifest(tmp_path)) == []
+
+
+def test_remote_ci_ref_fails_when_core_moved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    yml = _remote_manifest(tmp_path)
+    monkeypatch.setattr(validate_manifest, "_remote_text", lambda ref: "sdk-revision: 'def'")
+    problems = validate_manifest.check(tmp_path, yml, remote=True)
+    assert len(problems) == 1 and "Quantum-L9/l9-ci-core@main:org-ci.yml" in problems[0]
+    monkeypatch.setattr(validate_manifest, "_remote_text", lambda ref: "x || 'abc' }}")
+    assert validate_manifest.check(tmp_path, yml, remote=True) == []
+
+
+def test_unreadable_remote_ci_ref_is_a_problem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unreachable(ref: dict[str, str]) -> str:
+        raise OSError("git transport also failed")
+
+    monkeypatch.setattr(validate_manifest, "_remote_text", unreachable)
+    problems = validate_manifest.check(tmp_path, _remote_manifest(tmp_path), remote=True)
+    assert len(problems) == 1 and "unreadable" in problems[0]
 
 
 def test_blocking_lane_rejects_a_version_range(tmp_path: Path) -> None:
