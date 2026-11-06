@@ -110,11 +110,99 @@ def clean_markdown(text: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+# --- L9_META (consumer contract C-18) -------------------------------------------
+#
+# Repositories that adopt L9_META headers (contract C-18, e.g.
+# Cognitive.Engine.Graphs ``docs/contracts/L9_META_HEADERS.md``) fail CI on a
+# tracked markdown file without one. A report published there must carry the
+# repository's own header, or every publication turns the PR red. The header is
+# never invented: its fields are copied from markdown the repository already
+# headers, and a repository with no such file gets no header at all.
+
+#: Schema-1 fields, in contract order.
+L9_META_FIELDS = ("l9_schema", "origin", "engine", "layer", "tags", "owner", "status")
+#: The markdown header form, at the top of the file.
+_L9_META_BLOCK = re.compile(r"\A<!-- L9_META\n(?P<body>.*?)\n/L9_META -->\n", re.DOTALL)
+#: Files read while looking for the repository's header (the callers are Stop hooks).
+L9_META_SCAN_LIMIT = 200
+_L9_META_READ_BYTES = 4096
+
+L9_META_TAGS: dict[ReportKind, str] = {
+    ReportKind.GMP: "gmp-report",
+    ReportKind.SESSION_HANDOFF: "session-handoff",
+    ReportKind.GOVERNANCE_HANDOFF: "governance-handoff",
+}
+
+
+def l9_meta_fields(text: str) -> dict[str, str] | None:
+    """The schema-1 L9_META fields ``text`` opens with, or None."""
+    match = _L9_META_BLOCK.match(text)
+    if not match:
+        return None
+    fields: dict[str, str] = {}
+    for line in match.group("body").splitlines():
+        key, sep, value = line.partition(":")
+        if not sep:
+            return None
+        fields[key.strip()] = value.strip()
+    return fields if tuple(fields) == L9_META_FIELDS else None
+
+
+def _tracked_markdown(root: Path) -> list[Path]:
+    try:
+        proc = _git(root, "ls-files", "-z", "--", "*.md")
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if proc.returncode != 0:
+        return []
+    return [root / rel for rel in sorted(proc.stdout.split("\0")) if rel]
+
+
+def repository_l9_meta(root: Path, exclude: Path | None = None) -> dict[str, str] | None:
+    """The L9_META convention ``root`` already uses for markdown, or None.
+
+    Report siblings under ``reports/`` are consulted first, then tracked
+    markdown; the first schema-1 header found wins (sorted, bounded scan).
+    """
+    root = Path(root)
+    reports = root / REPORTS_DIR
+    siblings = sorted(reports.rglob("*.md")) if reports.is_dir() else []
+    seen: set[Path] = set()
+    for path in [*siblings, *_tracked_markdown(root)]:
+        if len(seen) >= L9_META_SCAN_LIMIT:
+            break
+        if path in seen or (exclude is not None and path == exclude):
+            continue
+        seen.add(path)
+        try:
+            with path.open(encoding="utf-8", errors="replace") as fh:
+                head = fh.read(_L9_META_READ_BYTES)
+        except OSError:
+            continue
+        fields = l9_meta_fields(head)
+        if fields is not None:
+            return fields
+    return None
+
+
+def l9_meta_header(fields: dict[str, str], kind: ReportKind) -> str:
+    """A report's header in the repository's convention; layer and tag are the report's own."""
+    values = {**fields, "layer": "[reports]", "tags": f"[{L9_META_TAGS[kind]}]"}
+    body = [f"{key}: {values[key]}" for key in L9_META_FIELDS]
+    return "\n".join(["<!-- L9_META", *body, "/L9_META -->"])
+
+
 def write_report(root: Path, kind: ReportKind, filename: str, text: str) -> Path:
     if Path(filename).name != filename or not filename.endswith(".md"):
         raise ValueError(f"report filename must be a bare *.md name, got {filename!r}")
     path = report_dir(root, kind) / filename
-    path.write_text(clean_markdown(text), encoding="utf-8")
+    text = clean_markdown(text)
+    if l9_meta_fields(text) is None:
+        fields = repository_l9_meta(root, exclude=path)
+        if fields is not None:
+            # The consumer's injector form: header, one blank line, body.
+            text = l9_meta_header(fields, kind) + "\n\n" + text.lstrip("\n")
+    path.write_text(text, encoding="utf-8")
     return path
 
 

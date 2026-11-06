@@ -327,3 +327,104 @@ def test_publish_refuses_anything_but_a_report_file(clone: Path, bad: str) -> No
     assert result.status == "failed" and "not a report file under reports/" in result.detail
     assert _git(clone, "rev-parse", "HEAD") == head
     assert _git(clone, "diff", "--cached", "--name-only") == ""
+
+
+# --- L9_META: reports adopt the consumer's header convention (contract C-18) ---
+
+_CONSUMER_HEADER = (
+    "<!-- L9_META\n"
+    "l9_schema: 1\n"
+    "origin: engine-specific\n"
+    "engine: graph\n"
+    "layer: [reports]\n"
+    "tags: [gap-analysis]\n"
+    "owner: engine-team\n"
+    "status: active\n"
+    "/L9_META -->\n"
+)
+
+
+def _expected_header(tag: str) -> str:
+    return (
+        "<!-- L9_META\nl9_schema: 1\norigin: engine-specific\nengine: graph\n"
+        f"layer: [reports]\ntags: [{tag}]\nowner: engine-team\nstatus: active\n/L9_META -->\n\n"
+    )
+
+
+def test_handoff_copies_the_sibling_reports_l9_meta_header(clone: Path) -> None:
+    sibling = clone / "reports" / "GAP-ANALYSIS.md"
+    sibling.parent.mkdir(parents=True, exist_ok=True)
+    sibling.write_text(_CONSUMER_HEADER + "\n# Gap analysis\n", encoding="utf-8")
+
+    session, result = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+    governance, _ = rp.publish_governance_handoff(clone, _pub(), ["environment friction:"])
+
+    assert result.status == "pushed", result
+    # The consumer's injector form: header, one blank line, then the report.
+    assert session.read_text(encoding="utf-8").startswith(
+        _expected_header("session-handoff") + "# Session handoff — Org/work#7\n"
+    )
+    assert governance.read_text(encoding="utf-8").startswith(
+        _expected_header("governance-handoff") + "# Governance handoff — Org/work#7\n"
+    )
+
+
+def test_header_convention_falls_back_to_tracked_markdown(clone: Path) -> None:
+    (clone / "docs").mkdir()
+    (clone / "docs" / "GUIDE.md").write_text(_CONSUMER_HEADER + "\n# Guide\n", encoding="utf-8")
+    _git(clone, "add", "--", "docs/GUIDE.md")
+    _git(clone, "commit", "-q", "-m", "docs")
+
+    path, _ = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+
+    assert path.read_text(encoding="utf-8").startswith(_expected_header("session-handoff"))
+
+
+def test_repository_without_l9_meta_gets_no_header(clone: Path) -> None:
+    # README.md exists but carries no header: nothing is invented.
+    path, _ = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+
+    text = path.read_text(encoding="utf-8")
+    assert "L9_META" not in text and text.startswith("# Session handoff")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        _CONSUMER_HEADER.replace("engine: graph\n", ""),  # a field missing
+        _CONSUMER_HEADER.replace("origin", "source"),  # a field renamed
+        "\n" + _CONSUMER_HEADER,  # not at the top of the file
+    ],
+)
+def test_malformed_sibling_header_is_not_copied(tmp_path: Path, bad: str) -> None:
+    sibling = tmp_path / "reports" / "OLD.md"
+    sibling.parent.mkdir(parents=True)
+    sibling.write_text(bad + "\n# Old\n", encoding="utf-8")
+
+    path = rp.write_report(tmp_path, rp.ReportKind.SESSION_HANDOFF, "x.md", "# Report\n")
+
+    assert path.read_text(encoding="utf-8") == "# Report\n"
+
+
+def test_report_that_already_has_a_header_is_not_given_a_second(tmp_path: Path) -> None:
+    sibling = tmp_path / "reports" / "OLD.md"
+    sibling.parent.mkdir(parents=True)
+    sibling.write_text(_CONSUMER_HEADER + "\n# Old\n", encoding="utf-8")
+    own = _CONSUMER_HEADER.replace("gap-analysis", "authored") + "\n# Mine\n"
+
+    path = rp.write_report(tmp_path, rp.ReportKind.GMP, "GMP-Report-001-x.md", own)
+
+    assert path.read_text(encoding="utf-8") == own
+    assert path.read_text(encoding="utf-8").count("<!-- L9_META") == 1
+
+
+def test_rewriting_a_report_keeps_the_convention_not_its_own_header(tmp_path: Path) -> None:
+    # The file being written is excluded from discovery, so a rewrite never
+    # copies a stale header from the previous version of itself.
+    first = rp.write_report(tmp_path, rp.ReportKind.SESSION_HANDOFF, "x.md", "# One\n")
+    assert first.read_text(encoding="utf-8") == "# One\n"
+    first.write_text(_CONSUMER_HEADER + "\n# One\n", encoding="utf-8")
+
+    again = rp.write_report(tmp_path, rp.ReportKind.SESSION_HANDOFF, "x.md", "# Two\n")
+
+    assert again.read_text(encoding="utf-8") == "# Two\n"
