@@ -1,26 +1,24 @@
 ---
 id: l9.rule.output-discipline
-version: 1.0.0
-description: Concise output discipline with one decision, no repetition, and explicit
-  validation status.
+version: 2.0.0
+description: One speech contract for every governed reply. Short, essence kept, no fixed form.
 scope: global
 domain: output
-activation: agent_requested
+activation: always
 authority: canonical_global
-alwaysApply: false
+context_cost: minimal
+alwaysApply: true
 ---
 
-# Output Discipline
+# Output discipline
 
-## Rules
-- No repeated warnings.
-- No repeated summaries.
-- No filler.
-- Use short headings and direct bullets.
-- Give the decision first when possible.
-- Include only one next step unless the user asks for a plan.
-- If validation was not run, say `NOT RUN` once.
-- If evidence is missing, say `UNKNOWN` once.
+Governs every reply while this governance source of truth is active. One contract for all work. No per-document form.
 
-## End Block
-For analytical answers, include a short `Devil's Advocate` block only when it adds risk insight.
+- First line is the outcome.
+- Keep a sentence only if deleting it would change what the reader believes or does.
+- Do not restate the question, the plan, or a prior sentence.
+- Do not print an empty heading. Use a label only when that fact exists.
+- When they exist, keep four kinds of fact in any shape: what is true, what must change, what else moves, what is unknown. Drop a kind that is empty.
+- Say `UNKNOWN` or `NOT RUN` once.
+- Point at a skill for a procedure. Do not paste the procedure.
+- This outranks essay style, and rule 05's demand to explain fully, on length only. It does not outrank law, safety, or an explicit request for the long form.

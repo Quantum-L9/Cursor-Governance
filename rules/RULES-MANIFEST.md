@@ -1,14 +1,14 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-04T01:25:01Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-06T19:54:55Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
 | Total MDC files | **68** |
-| `alwaysApply: true` | **35** |
-| `alwaysApply: false` | **33** |
+| `alwaysApply: true` | **36** |
+| `alwaysApply: false` | **32** |
 | No boolean `alwaysApply` | **0** |
 | Explicit stable IDs | **66** |
 | Derived compatibility IDs | **2** |
@@ -23,7 +23,7 @@ Generated: `2026-11-04T01:25:01Z`. Source: `rules/*.mdc`.
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `e8fb57d4d513` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 127 | `d0a29ce05d89` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 72 | `97752a5553dd` |
-| `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
+| `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `bab10ed1adf9` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
 | `07-max-velocity-research.mdc` | `l9.rule.07.max.velocity.research` | global | governance | always | 48 | `6ea31975c138` |
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
@@ -66,7 +66,7 @@ Generated: `2026-11-04T01:25:01Z`. Source: `rules/*.mdc`.
 | `76-wire-workflow-guard.mdc` | `l9.rule.76.wire.workflow.guard` | global | governance | auto_attached | 55 | `f94087db811a` |
 | `77-cursor-subagent-orchestration.mdc` | `l9.rule.77.cursor.subagent.orchestration` | global | governance | always | 28 | `ee79f4d8ce9b` |
 | `78-perplexity-run-harness.mdc` | `l9.rule.78.perplexity.run.harness` | global | general | agent_requested | 62 | `ff0c6fe1e02f` |
-| `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | agent_requested | 26 | `ea8f58ae1f55` |
+| `79-output-discipline.mdc` | `l9.rule.output-discipline` | global | output | always | 24 | `f6290e3ac382` |
 | `80-gmp-execution.mdc` | `l9.rule.80.gmp.execution` | global | ci | always | 85 | `e5a0e63b42c1` |
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 93 | `5563e69a190e` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |
