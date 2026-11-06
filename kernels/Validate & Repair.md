@@ -1,6 +1,6 @@
 artifact_type: "ai_coding_execution_kernel"
 name: "validate_repair_complete_align_and_harden"
-version: "1.1"
+version: "1.2"
 
 family:
   invoked_from: "kernels/Improve.md"
@@ -257,7 +257,8 @@ finding_taxonomy:
     - "Identify unsafe input processing, authentication and authorization gaps, secret exposure, unsafe defaults, and privilege expansion."
     - "Identify unsafe execution, deserialization, and output encoding."
   reliability:
-    - "Identify nondeterminism, race conditions, concurrency hazards, and missing idempotency where retries are expected."
+    - "Identify race conditions, concurrency hazards, and missing idempotency where retries are expected."
+    - "A determinism finding belongs to kernels/Leverage.md. Do not repair it here."
     - "Identify retry, timeout, cancellation, startup, shutdown, recovery defects, and resource leaks."
   architecture:
     - "Identify duplicate responsibility, conflicting ownership, forbidden dependency direction, cyclic coupling, and cross-layer leakage."
@@ -431,7 +432,7 @@ execution_logic:
       - "Run this step only for a verified alignment, security, reliability, or boundary finding."
       - "Align naming, imports, exports, paths, schemas, manifests, documentation, and tests with validated behavior."
       - "Correct input and output validation, error propagation, diagnostics, and applicable resource, concurrency, timeout, cancellation, retry, and recovery behavior."
-      - "Correct unsafe or nondeterministic behavior, and remove proven duplicate responsibility and proven dead implementation."
+      - "Correct unsafe behavior, and remove proven duplicate responsibility and proven dead implementation. A determinism finding follows kernels/Leverage.md."
       - "Remove temporary, debug, cache, and residue artifacts, and update operational documentation when implementation or usage changed."
     halt_if:
       - "Halt when hardening would change product identity or add unrelated architecture."

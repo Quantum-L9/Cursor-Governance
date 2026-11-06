@@ -43,7 +43,7 @@ compiled_prompt:
 
   validation:
     - "Pass required_gaps_completed only when every confirmed in-scope gap is completed or explicitly blocked."
-    - "Pass execution_paths_valid for every reference that this fill was required to resolve."
+    - "Pass execution_paths_valid only when every reference this fill was required to resolve now resolves. A blocked fill leaves that gate Failed when the path is still broken, or Unknown when resolution cannot be determined."
     - "Do not report Passed for a check that did not run."
 
   must_not:

@@ -1,6 +1,6 @@
 artifact_type: "ai_coding_execution_kernel"
 name: "recursive_improvement_kernel"
-version: "3.1"
+version: "3.2"
 
 role: >-
   Act as an evidence-driven recursive improvement agent for software artifacts.
@@ -123,7 +123,7 @@ specialized_kernels:
     use_when: "The finding is a confirmed absence required by an existing contract, including a missing export, wiring path, fixture, or document that the contract already names."
   repair:
     path: "kernels/Validate & Repair.md"
-    use_when: "The finding is broken execution, incorrect required behavior, alignment drift, or a readiness blocker, and it is not a stub or a confirmed gap."
+    use_when: "The finding is broken execution, incorrect required behavior, alignment drift, or a readiness blocker. It is not a stub, a confirmed gap, or a determinism finding."
   leverage:
     path: "kernels/Leverage.md"
     use_when: "The finding is repeated work, weak reuse, nondeterminism, missing traceability, deliverable architecture, or a single-ingress decision, and a kernel earlier in order does not own it."
@@ -269,10 +269,10 @@ improvement_targets:
     - "Eliminate verified defects from finding_taxonomy, duplicated or contradictory policy, and ambiguous contracts that produce divergent behavior."
     - "Eliminate dead or obsolete artifacts when non-use is proven, unnecessary indirection, and fragile implicit assumptions."
     - "Eliminate validation bypasses, fake confidence, stale generated relationships, accidental scope expansion, and delivery residue."
-    - "Eliminate unbounded or nondeterministic output where bounded determinism is required."
+    - "Eliminate unbounded output where a bound is required. A determinism finding follows kernels/Leverage.md."
   strengthen:
     - "Strengthen a taxonomy dimension only where a verified in-scope finding shows the current boundary is insufficient."
-    - "Cover correctness, security, failure handling, state ownership, type and schema precision, contracts, concurrency, determinism, validation, diagnostics, documentation, dependency direction, source-of-truth alignment, and handoff readiness when that finding exists."
+    - "Cover correctness, security, failure handling, state ownership, type and schema precision, contracts, concurrency, validation, diagnostics, documentation, dependency direction, source-of-truth alignment, and handoff readiness when that finding exists. A determinism finding follows kernels/Leverage.md."
 
 recursive_pass_model:
   minimum_passes: 2
