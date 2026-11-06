@@ -41,8 +41,21 @@ if is_l9_isolate_workspace "$ROOT"; then
   exit 2
 fi
 bash "$ROOT/ops/scripts/ensure_gov_python.sh" "$ROOT"
+# A GitHub Actions pull_request run (Core's required `make test`) tests only the
+# PR's changed files; every other run keeps the full suite. See the helper.
+# shellcheck source=lib/ci_pr_scope.sh
+source "$ROOT/ops/scripts/lib/ci_pr_scope.sh"
+scope_args=()
+if scope_paths="$(l9_ci_pr_changed_files)"; then
+  scope_file="$(mktemp "${TMPDIR:-/tmp}/l9-ci-scope.XXXXXX")"
+  if [[ -n "$scope_paths" ]]; then
+    printf '%s\n' "$scope_paths" >"$scope_file"
+  fi
+  scope_args=(--changed-file "$scope_file")
+fi
 if [[ -x "$ROOT/.venv/bin/python" ]] && "$ROOT/.venv/bin/python" -c 'import pytest' 2>/dev/null; then
-  exec "$ROOT/.venv/bin/python" "$RUNNER" --profile local -- "$@"
+  # The guarded expansion keeps an empty array safe under `set -u` on bash 3.2.
+  exec "$ROOT/.venv/bin/python" "$RUNNER" --profile local ${scope_args[@]+"${scope_args[@]}"} -- "$@"
 fi
 echo "FAIL: locked .venv missing pytest — uv sync --locked --extra dev" >&2
 exit 2

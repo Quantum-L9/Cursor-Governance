@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -112,7 +113,74 @@ def _contains_forbidden_key(value: Any) -> bool:
     return False
 
 
-def validate(repo_root: Path) -> list[str]:
+def canonical_identity_errors(repo_root: Path) -> list[str]:
+    """Delegate the complete canonical owner checks, including receipt bytes.
+
+    Load trusted checker code from this adapter's source checkout, not a caller
+    fixture; rebind its document paths only. No duplicated hashes or resolver.
+    """
+    source_root = Path(__file__).resolve().parents[4]
+    owner_path = source_root / "tools/assurance/check_canonical_identity_projection.py"
+    failures: list[str] = []
+    saved = list(sys.path)
+    try:
+        sys.path.insert(0, str(source_root))
+        spec = importlib.util.spec_from_file_location("manus_canonical_assurance", owner_path)
+        if spec is None or spec.loader is None:
+            return ["canonical identity assurance owner unavailable"]
+        owner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(owner)
+        # ROOT also controls receipt-verifier imports: retain the trusted source
+        # checkout. The caller's repository is data only, never executable code.
+        owner.BINDING_PATH = (
+            repo_root / "governance/authority-bindings/canonical-agent-identity.yaml"
+        )
+        owner.AGENT_REGISTRY_PATH = repo_root / "environment/agents/agent_registry.yaml"
+        owner.PROJECTION_PATH = repo_root / "generated/governance/canonical_identity.yaml"
+        owner.RECEIPT_PATH = repo_root / "generated/governance/canonical_identity.receipt.yaml"
+        binding = owner._load_yaml(owner.BINDING_PATH, failures)
+        registry = owner._load_yaml(owner.AGENT_REGISTRY_PATH, failures)
+        projection = owner._load_yaml(owner.PROJECTION_PATH, failures)
+        receipt = owner._load_yaml(owner.RECEIPT_PATH, failures)
+        if failures:
+            return failures
+        owner._validate_binding(binding, failures)
+        owner._validate_projection(binding, projection, failures)
+        owner._validate_receipt(binding, projection, receipt, failures)
+        owner._validate_agent_registry(registry, projection, failures)
+        from ops.memory.agent_identity import actor_ref_from_binding
+        from ops.memory.identity_projection import verify_identity_projection
+
+        manus = (registry.get("agents") or {}).get("manus")
+        if not isinstance(manus, dict):
+            failures.append("active Manus operating binding is required")
+        else:
+            if manus.get("binding_status") != "active":
+                failures.append("Manus binding_status must be active")
+            if {"agent_id", "source", "status"}.intersection(manus):
+                failures.append("Manus binding forbids legacy agent_id/source/status overrides")
+            if actor_ref_from_binding("manus", manus) != ACTOR_REF_PREFIX + "manus":
+                failures.append("Manus actor_ref must name the exact canonical actor")
+            if manus.get("surface_refs") != ["l9.surface-registry/global@1#manus-cloud"]:
+                failures.append("Manus surface_refs must name the current manus-cloud assignment")
+            failures.extend(
+                verify_identity_projection(
+                    projection,
+                    receipt,
+                    owner.PROJECTION_PATH.read_bytes(),
+                    binding,
+                    actor_id="manus",
+                    surface_id="manus-cloud",
+                )
+            )
+    except (ImportError, OSError, ValueError, KeyError, TypeError, yaml.YAMLError) as exc:
+        failures.append(f"canonical identity assurance failed: {exc}")
+    finally:
+        sys.path[:] = saved
+    return failures
+
+
+def _structural_errors(repo_root: Path) -> list[str]:
     errors: list[str] = []
     adapter = repo_root / ADAPTER_RELATIVE
     required_files = {
@@ -174,8 +242,9 @@ def validate(repo_root: Path) -> list[str]:
     if connector.get("endpoint_path") != "/mcp" or connector.get("health_path") != "/health":
         errors.append("MCP carrier must declare /mcp and /health endpoints")
     if connector.get("memory") != {
-        "agent_lane": "package-owned-l9-graphite-memory-mcp-or-cli",
-        "lifecycle": "bearer-protected-canonical-hydrate-and-close-only",
+        "agent_lane": "native-authenticated-streamable-http-UPSTREAM_BLOCKED",
+        "lifecycle": "bearer-protected-blocked-compatibility-stubs",
+        "startup": "health-only-on-demand-no-write-precondition",
         "fallback": "fail-closed-no-local-operator-identity",
     }:
         errors.append("MCP carrier must declare the bounded Manus memory lifecycle boundary")
@@ -204,39 +273,52 @@ def validate(repo_root: Path) -> list[str]:
     memory_connector = json.loads(
         (adapter / "memory-mcp-connector.json").read_text(encoding="utf-8")
     )
-    if memory_connector.get("transport") != "stdio":
-        errors.append("memory MCP carrier must use the package-owned stdio transport")
-    if memory_connector.get("command") != "rendered-locally":
-        errors.append("memory MCP carrier must require a locally rendered absolute command")
+    if memory_connector.get("transport") != "streamable-http":
+        errors.append("memory MCP carrier must require native Streamable HTTP")
     if memory_connector.get("authentication") != {
-        "mode": "inherited-signed-agent-assertion",
-        "agent_id": "manus",
-        "human_door": "forbidden",
-        "local_operator_fallback": "forbidden",
+        "mode": "native-authenticated-oauth",
+        "credential_delivery": "host-managed-native-client",
+        "actor_admission": "UNBOUND",
     }:
-        errors.append("memory MCP carrier must require the signed Manus agent door")
-    if memory_connector.get("authority_delivery") != {
-        "mode": "encrypted-connector-environment",
-        "payload": "manus-scoped-agent-door-and-signing-key-only",
-        "grant": "derived-from-canonical-agent-registry",
-        "materialization": "per-process-0600-runtime-files-removed-on-exit",
+        errors.append("memory MCP carrier must declare unbound native authentication")
+    if memory_connector.get("identity") != {
+        "actor_ref": ACTOR_REF_PREFIX + "manus",
+        "surface_ref": "l9.surface-registry/global@1#manus-cloud",
+        "registration_is_authentication": False,
     }:
-        errors.append("memory MCP carrier must preserve scoped durable authority delivery")
-    if memory_connector.get("package") != {
-        "distribution": "l9-graphite-memory",
-        "entrypoint": "l9-memory-server --transport stdio",
-        "tool_authority": "package-owned-mcp-tools",
+        errors.append("memory identity registration must not imply authentication")
+    package = memory_connector.get("package") or {}
+    if (
+        package.get("distribution") != "l9-graphite-memory"
+        or package.get("status") != "UPSTREAM_BLOCKED"
+    ):
+        errors.append("memory package must report UPSTREAM_BLOCKED")
+    if memory_connector.get("native_client") != {
+        "requested": "manus-native",
+        "status": "UNBOUND",
+        "owner_api": "unavailable",
     }:
-        errors.append("memory MCP carrier must retain package-owned tool authority")
-    if memory_connector.get("scope") != {
-        "ordinary_agent_reads": True,
-        "cold_safe_agent_writes": True,
-        "governed_writes_and_phase_locks": True,
-        "lifecycle_start_close": False,
-        "provider_transport": False,
-        "generic_shell": False,
+        errors.append("memory native Manus client must remain explicitly UNBOUND")
+    if memory_connector.get("readiness") != {
+        "status": "UPSTREAM_BLOCKED",
+        "live": "UNKNOWN",
+        "installable": False,
+        "coding_session_requires_memory": False,
     }:
-        errors.append("memory MCP carrier scope must separate agent tools from lifecycle")
+        errors.append("memory readiness must remain blocked with live UNKNOWN")
+    if memory_connector.get("fallback") != {
+        "stdio": "forbidden",
+        "hmac": "forbidden",
+        "static_bearer": "forbidden",
+        "bridge": "forbidden",
+        "operator_cli_as_agent_transport": "forbidden",
+        "provider_transport": "forbidden",
+    }:
+        errors.append("memory must forbid retired transport and operator fallbacks")
+    if {"command", "args", "authority_delivery", "issuer", "client_id", "callback"}.intersection(
+        memory_connector
+    ):
+        errors.append("memory carrier must not contain executable or invented client material")
     if "mcpServers" in memory_connector or _contains_forbidden_key(memory_connector):
         errors.append(
             "memory MCP carrier must not contain a deployment URL, headers, "
@@ -328,7 +410,9 @@ def validate(repo_root: Path) -> list[str]:
 
     lifecycle = (adapter / "memory_lifecycle.py").read_text(encoding="utf-8")
     for marker in (
-        "canonical_hydrate",
+        "native_memory_status",
+        "UPSTREAM_BLOCKED",
+        "health-only",
         "close_session",
         "manus-session-start",
         "manus-session-end",
@@ -337,7 +421,10 @@ def validate(repo_root: Path) -> list[str]:
         if marker not in lifecycle:
             errors.append(f"Manus memory lifecycle is missing canonical marker: {marker}")
     for forbidden in (
-        "from l9_graphite_memory import",
+        "from ops.memory",
+        "from ops.graphiti",
+        "subprocess.",
+        "tempfile.",
         "GRAPHITI_MCP_URL",
         "L9_MEMORY_HTTP_URL",
     ):
@@ -352,24 +439,27 @@ def validate(repo_root: Path) -> list[str]:
             errors.append(f"MCP launcher is missing required marker: {marker}")
 
     memory_launcher = (adapter / "serve_memory_mcp.sh").read_text(encoding="utf-8")
-    for marker in (
-        "export_agent_assertion_env.sh",
-        "L9_MEMORY_AGENT_ID=manus",
-        "L9_MANUS_MEMORY_AUTHORITY_JSON",
-        "materialize_memory_authority.py",
-        "mktemp -d",
-        "trap cleanup EXIT HUP INT TERM",
-        "l9-memory-server",
-        "--transport stdio",
-        "local-operator compatibility principal",
-    ):
+    for marker in ("UPSTREAM_BLOCKED", "stdio/HMAC", "--governance", "exit 2"):
         if marker not in memory_launcher:
             errors.append(f"memory MCP launcher is missing required marker: {marker}")
-    for forbidden in ("GRAPHITI_MCP_URL", "L9_MEMORY_HTTP_URL", "http://", "https://"):
+    for forbidden in (
+        "export_agent_assertion_env.sh",
+        "materialize_memory_authority.py",
+        "mktemp",
+        "l9-memory-server",
+        "source ",
+        "exec ",
+        "http://",
+        "https://",
+    ):
         if forbidden in memory_launcher:
             errors.append(
                 f"memory MCP launcher contains prohibited transport material: {forbidden}"
             )
+    if "export_agent_assertion_env.sh" in launcher:
+        errors.append("governance launcher must not mint Memory assertions")
+    if "${!L9_MEMORY_@}" not in launcher or "unset L9_MANUS_MEMORY_AUTHORITY_JSON" not in launcher:
+        errors.append("governance launcher must strip inherited Memory authority")
 
     installer = (adapter / "install.sh").read_text(encoding="utf-8")
     for marker in (
@@ -387,6 +477,35 @@ def validate(repo_root: Path) -> list[str]:
     return errors
 
 
+def validation_report(repo_root: Path) -> dict[str, Any]:
+    """Offline layers: contract/canonical PASS never means native/live ready."""
+    try:
+        structural = _structural_errors(repo_root)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, yaml.YAMLError) as exc:
+        structural = [f"adapter structural validation failed: {exc}"]
+    canonical = canonical_identity_errors(repo_root)
+    return {
+        "schema": "l9.manus.adapter-validation.v1",
+        "structural": {"status": "PASS" if not structural else "FAIL", "errors": structural},
+        "canonical_identity": {"status": "PASS" if not canonical else "FAIL", "errors": canonical},
+        "native_binding": {
+            "status": "UPSTREAM_BLOCKED",
+            "package": "UPSTREAM_BLOCKED",
+            "native_client": "UNBOUND",
+            "actor_admission": "UNBOUND",
+        },
+        "live": {"status": "UNKNOWN", "authentication": "unverified", "scope_access": "unverified"},
+        "memory_ready": False,
+        "coding_session_requires_memory": False,
+        "errors": structural + canonical,
+    }
+
+
+def validate(repo_root: Path) -> list[str]:
+    """Compatibility API: errors concern contracts, never native availability."""
+    return validation_report(repo_root)["errors"]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -395,17 +514,24 @@ def main(argv: list[str] | None = None) -> int:
         default=Path(__file__).resolve().parents[4],
         help="repository root containing environment/agents",
     )
+    parser.add_argument(
+        "--json", action="store_true", help="Emit separated offline assurance layers"
+    )
     args = parser.parse_args(argv)
-    try:
-        errors = validate(args.repo_root.resolve())
-    except (OSError, ValueError, json.JSONDecodeError, yaml.YAMLError) as exc:
-        errors = [str(exc)]
+    report = validation_report(args.repo_root.resolve())
+    errors = report["errors"]
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
     if errors:
         print("FAIL — Manus adapter contract violations:", file=sys.stderr)
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
-    print("PASS — Manus adapter is thin, identity-bound, and provider-neutral", file=sys.stderr)
+    print(
+        "PASS — adapter structural/canonical assurance; Memory UPSTREAM_BLOCKED, "
+        "native client UNBOUND, live UNKNOWN",
+        file=sys.stderr,
+    )
     return 0
 
 

@@ -65,15 +65,12 @@
     },
     "manus-session-start": {
       "callers": [
-        "environment/agents/adapters/manus/memory_lifecycle.py -> canonical_hydrate via protected L9 Governance MCP"
+        "environment/agents/adapters/manus/memory_lifecycle.py (explicit health-only startup policy; currently UPSTREAM_BLOCKED with no native owner client or Memory I/O)"
       ],
       "allowed_operations": [
         "resolve",
         "health",
-        "capabilities",
-        "hydrate",
-        "search",
-        "conflicts"
+        "capabilities"
       ],
       "record_classes": [],
       "max_records": 0,

@@ -42,8 +42,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+_REPO = HERE.parents[1]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
 
 from infisical_http import DEFAULT_HOST, universal_auth_login  # noqa: E402
+
+from ops.autonomy.surface_detect import detect_surface  # noqa: E402
 
 try:
     import yaml
@@ -162,14 +167,26 @@ def file_identity() -> dict[str, str] | None:
 def machine_identity(
     env: Mapping[str, str] | None = None,
 ) -> tuple[str, dict[str, str] | None]:
-    """(source, identity): the environment first, then the workstation profile."""
+    """Environment first; Manus never borrows a workstation identity.
+
+    Connector-only credentials are deliberately not visible to this owner.
+    An absent, incomplete or refused Manus environment identity stays absent;
+    the connector's authentication cannot establish shared-session readiness.
+    """
     identity = env_identity(env)
     if identity is not None:
         return SOURCE_ENV, identity
+    if environment_only_surface(env):
+        return "", None
     identity = file_identity()
     if identity is not None:
         return SOURCE_PROFILE, identity
     return "", None
+
+
+def environment_only_surface(env: Mapping[str, str] | None = None) -> bool:
+    """Canonical Manus detection narrows identity access; it grants nothing."""
+    return detect_surface(env) == "manus"
 
 
 def profile_present() -> bool:
@@ -256,7 +273,7 @@ def ensure_machine_profile(
             identity["host"], identity["client_id"], identity["client_secret"]
         )
         return "env" if token else "failed"
-    if not allow_aws_seed:
+    if not allow_aws_seed or environment_only_surface(env):
         return "absent"
     seeded = _seed_from_aws()
     if seeded is None:

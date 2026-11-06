@@ -140,11 +140,16 @@ def test_quoted_slot_in_a_prohibition_is_not_unfilled() -> None:
     assert unfilled_parameters("| commit_sha | `<commit_sha>` |") == ["commit_sha"]
 
 
-def _render_plan(tmp_path: Path, plan: dict, mode: str = "cursor-build") -> str:
+def _render_plan(
+    tmp_path: Path, plan: dict, mode: str = "cursor-build", *, allow_draft: bool = False
+) -> str:
     path = tmp_path / "plan.json"
     path.write_text(json.dumps(plan), encoding="utf-8")
+    cmd = [sys.executable, str(RENDERER), "plan.json", f"--execute-via={mode}"]
+    if allow_draft:
+        cmd.append("--allow-draft")
     proc = subprocess.run(
-        [sys.executable, str(RENDERER), "plan.json", f"--execute-via={mode}"],
+        cmd,
         cwd=tmp_path,
         check=False,
         capture_output=True,
@@ -310,7 +315,7 @@ def test_non_empty_lists_render_as_items(tmp_path: Path) -> None:
 
 
 def test_absent_declarations_keep_the_explicit_marker(tmp_path: Path) -> None:
-    out = _render_plan(tmp_path, _strip_declarations(_fixture()))
+    out = _render_plan(tmp_path, _strip_declarations(_fixture()), allow_draft=True)
     for row in DECLARABLE_ROWS:
         assert NOT_DECLARED_TEXT in _row(out, row), row
     arch = out.split("| todo_id | bounded_context | layer |", 1)[1].split("\n\n", 1)[0]
@@ -347,14 +352,29 @@ def test_schema_rejects_values_outside_the_template_contract(tmp_path: Path, mut
     assert proc.returncode != 0, proc.stdout
 
 
-def test_declarations_are_optional_in_the_plan_schema() -> None:
+def test_cli_refuses_a_projection_with_undeclared_fields(tmp_path: Path) -> None:
+    path = tmp_path / "plan.json"
+    path.write_text(json.dumps(_strip_declarations(_fixture())), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(RENDERER), "plan.json", "--execute-via=cursor-build"],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode != 0
+    assert "unknown — not declared" in proc.stdout
+    assert "allow-draft" in proc.stderr
+
+
+def test_declarations_are_required_in_the_plan_schema() -> None:
     from plan_sections import json_required_keys, plan_schema_path
 
     schema = json.loads(plan_schema_path().read_text(encoding="utf-8"))
     required = json_required_keys(schema)
-    for key in ("owner", "execution_envelope", "complexity"):
-        assert key in schema["properties"] and key not in required, key
-    assert "layer" not in schema["properties"]["todos"]["items"]["required"]
+    for key in ("owner", "estimate", "execution_envelope", "complexity"):
+        assert key in required, key
+    assert "layer" in schema["properties"]["todos"]["items"]["required"]
 
 
 def test_l9_plan_simple_runs_no_archived_asset() -> None:

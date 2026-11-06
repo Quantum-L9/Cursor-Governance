@@ -117,7 +117,7 @@ invent a fourth personality.
 | Meaning | Owner |
 |---|---|
 | Surface identity | `ops/autonomy/surface_detect.py` + shell twin |
-| Hydrate compile | `ops/graphiti/hydration` |
+| On-demand hydrate compile | `ops/graphiti/hydration` |
 | Hydrate honesty | `ops/scripts/classify_hydrate_state.py` |
 | Close / PICKUP | canonical `close_session` / `hydration.cli close` |
 | Local execution / L4 / merge gates | `ops/autonomy/` |
@@ -127,7 +127,7 @@ invent a fourth personality.
 
 | Meaning | Cursor event | Claude event |
 |---|---|---|
-| Session hydrate | `sessionStart` | `SessionStart` via prefetch |
+| Session memory health-only | `sessionStart` | `SessionStart` via `memory_prefetch.py` (health only) |
 | Session close | `sessionEnd` | `Stop` |
 | Skill route | `beforeSubmitPrompt` | `UserPromptSubmit` |
 | L4 / merge | `beforeShellExecution` | `PreToolUse` Bash/GitHub |
@@ -136,13 +136,25 @@ invent a fourth personality.
 Cursor-only and Claude-only event names stay downstream. Shared lifecycle
 semantics stay in `ops/`.
 
+CANONICAL_LAW §8.9 supersedes automatic SessionStart hydration on both surfaces:
+startup makes a bounded health call, not a hydrate, search, conflict read,
+session-packet compile or resume-content injection. Retrieval is explicit and
+on demand through the canonical memory owner; it is not a repository-write
+precondition. This table consumes that law and does not claim new peer runtime
+changes or native-client admission.
+
 ## Hydration honesty
 
-Claude `memory_prefetch.py` runs `compile_and_format`, then classifies the
-**emitted `additional_context` markdown** with
-`classify_hydrate_state.classify`. Packet booleans are authoritative, so a
-healthy JSON fence containing `"degraded": false` is not degraded merely
-because the word appears.
+### Retired SessionStart hydration description
+
+Before CANONICAL_LAW §8.9, Claude `memory_prefetch.py` ran
+`compile_and_format`, then classified the **emitted `additional_context`
+markdown** with `classify_hydrate_state.classify`. That automatic startup path
+is retired, not the current SessionStart contract. The on-demand hydration
+compile owner remains `ops/graphiti/hydration`, and the shared honesty classifier
+remains `ops/scripts/classify_hydrate_state.py`. For hydration output, packet
+booleans are authoritative, so a healthy JSON fence containing
+`"degraded": false` is not degraded merely because the word appears.
 
 Do not copy Cursor banner sections into Claude. Share the classifier, not the
 presentation.
@@ -162,3 +174,20 @@ No `session_close.py` and no second close authority.
 Cursor and Claude receipt **files** remain separate. The shared reader remains
 `ops/scripts/claude_bootstrap_receipt.py --surface` where applicable. This
 contract does not merge receipt stores.
+
+## Manus explicit startup alignment (2026-11-05)
+
+CANONICAL_LAW §8.9/§8.10 governs Manus too: startup is bounded health-only,
+retrieval is explicit/on-demand, and memory is not a repository-write
+precondition. Manus project instructions are not enforced platform hooks.
+The `manus-session-start` envelope admits only resolve, health and capabilities;
+it does not authorize startup hydration or read records.
+
+The thin Manus adapter presently reports native Memory `UPSTREAM_BLOCKED`,
+native client `UNBOUND`, and live admission `UNKNOWN`, without resolving a
+workspace, invoking the operator CLI, hydrating, closing, writing a receipt or
+emulating admin distill. No admitted owner Manus client API is available.
+Governance remains usable memory-blind. Its optional bearer-protected lifecycle
+names are compatibility stubs, not a Memory bridge. The existing bounded hook
+and operator authorities remain distinct and unchanged; no Manus Program
+Execution transport or provider is activated by this alignment.

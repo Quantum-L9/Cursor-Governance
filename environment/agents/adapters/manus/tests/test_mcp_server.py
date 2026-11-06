@@ -82,10 +82,15 @@ class ManusMcpServerTests(unittest.TestCase):
     def test_status_and_validation_use_existing_adapter_contract(self) -> None:
         status = self.service.call_tool("governance_status", {})
         self.assertFalse(status.get("isError", False))
-        self.assertEqual(status["structuredContent"]["manus_adapter"]["status"], "ready")
+        self.assertEqual(status["structuredContent"]["manus_adapter"]["status"], "validated")
         self.assertEqual(
             status["structuredContent"]["manus_adapter"]["memory"]["lifecycle"], "disabled"
         )
+        report = status["structuredContent"]["manus_adapter"]["validation"]
+        self.assertEqual(report["canonical_identity"]["status"], "PASS")
+        self.assertEqual(report["native_binding"]["status"], "UPSTREAM_BLOCKED")
+        self.assertEqual(report["live"]["status"], "UNKNOWN")
+        self.assertFalse(report["memory_ready"])
 
         validation = self.service.call_tool("governance_validate", {"mode": "manus"})
         self.assertTrue(validation.get("isError", False))
@@ -109,8 +114,8 @@ class ManusMcpServerTests(unittest.TestCase):
         status = protected.call_tool("memory_lifecycle_status", {})
         self.assertFalse(status.get("isError", False))
         payload = status["structuredContent"]
-        self.assertEqual(payload["transport"], "memory-control-plane/v1")
-        self.assertIn(payload["status"], {"ready", "blocked"})
+        self.assertEqual(payload["transport"], "streamable-http")
+        self.assertEqual(payload["status"], "UPSTREAM_BLOCKED")
 
         refused = self.service.call_tool("memory_lifecycle_start", {})
         self.assertTrue(refused.get("isError", False))
@@ -128,8 +133,8 @@ class ManusMcpServerTests(unittest.TestCase):
             sys.path[:] = restored
         self.assertFalse(status.get("isError", False))
         payload = status["structuredContent"]
-        self.assertIn(payload["status"], {"ready", "blocked"})
-        self.assertEqual(payload["transport"], "memory-control-plane/v1")
+        self.assertEqual(payload["status"], "UPSTREAM_BLOCKED")
+        self.assertEqual(payload["transport"], "streamable-http")
 
     def test_lifecycle_start_refuses_unsigned_agent_fallback_before_memory_io(self) -> None:
         protected = mcp_server.GovernanceMcpService(REPOSITORY, memory_lifecycle_enabled=True)
@@ -150,8 +155,9 @@ class ManusMcpServerTests(unittest.TestCase):
                     "session_id": "manus-test-session",
                 },
             )
-        self.assertTrue(result.get("isError", False))
-        self.assertIn("signed agent door", result["structuredContent"]["error"])
+        self.assertFalse(result.get("isError", False))
+        self.assertEqual(result["structuredContent"]["status"], "UPSTREAM_BLOCKED")
+        self.assertEqual(result["structuredContent"]["native_client"], "UNBOUND")
 
     def test_bootstrap_requires_a_real_git_workspace(self) -> None:
         result = self.service.call_tool(

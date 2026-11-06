@@ -129,6 +129,9 @@ pr-full: \
 pr-full: capability-contract-validate
 pr-full: pr-full-corpus
 pr-full: pr-security-full
+# pr-full is the full gate: never let a pull_request CI environment narrow its
+# `test` prerequisite to changed files (ops/scripts/lib/ci_pr_scope.sh).
+pr-full: export L9_CI_FULL_SUITE := 1
 pr-full-corpus: venv
 	$(PYTHON) ops/scripts/validate_legacy_doctrine_residue.py
 	$(PYTHON) ops/scripts/validate_workflow_action_pins.py
