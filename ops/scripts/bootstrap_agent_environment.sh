@@ -58,6 +58,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+export L9_GOVERNANCE_SURFACE="$SURFACE"
+export PYTHONDONTWRITEBYTECODE=1
+if [ "$CHECK" = "1" ]; then
+  export GIT_OPTIONAL_LOCKS=0
+fi
+
 # Every one of these is a HUMAN diagnostic, so all three write to stderr. This
 # script's stdout belongs to whatever machine payload the caller is composing —
 # for sessionStart that is a single JSON document (F-08). Making the channel
@@ -98,6 +104,41 @@ DEGRADED=0
 #: Publish-path diagnostic: ENFORCED | NOT_ENFORCED | PROBE_ERROR (F-09).
 PUBLISH_PATH_STATE="PROBE_ERROR"
 
+# Resolve the executing bootstrap owner independently of the governance input.
+# A known mixed revision is unsafe even before provisioning: do not mutate either
+# clone. A copied/unversioned source is UNKNOWN, never borrowed from governance.
+_exact_root_git_sha() {
+  local root top tracked_path="${2:-}"
+  root="$(cd "$1" 2>/dev/null && pwd -P)" || return 1
+  top="$(git -C "$root" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  top="$(cd "$top" 2>/dev/null && pwd -P)" || return 1
+  [ "$top" = "$root" ] || return 1
+  if [ -n "$tracked_path" ]; then
+    git -C "$root" ls-files --error-unmatch -- "$tracked_path" >/dev/null 2>&1 || return 1
+  fi
+  git -C "$root" rev-parse HEAD 2>/dev/null
+}
+SOURCE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd -P)"
+SOURCE_FILE="$(cd "$SCRIPT_DIR" && pwd -P)/$(basename "${BASH_SOURCE[0]}")"
+SOURCE_SHA="UNKNOWN"
+if [ "$SOURCE_FILE" = "$SOURCE_ROOT/ops/scripts/bootstrap_agent_environment.sh" ] \
+   && [ ! -L "$SOURCE_FILE" ]; then
+  SOURCE_SHA="$(_exact_root_git_sha "$SOURCE_ROOT" ops/scripts/bootstrap_agent_environment.sh)" \
+    || SOURCE_SHA="UNKNOWN"
+fi
+GOVERNANCE_SHA="$(_exact_root_git_sha "$GOV_DIR")" || GOVERNANCE_SHA="UNKNOWN"
+SOURCE_SHA="${SOURCE_SHA:-UNKNOWN}"
+GOVERNANCE_SHA="${GOVERNANCE_SHA:-UNKNOWN}"
+if [ "$SOURCE_SHA" != "UNKNOWN" ] && [ "$GOVERNANCE_SHA" != "UNKNOWN" ] \
+   && [ "$SOURCE_SHA" != "$GOVERNANCE_SHA" ]; then
+  warn "REVISION_MISMATCH: bootstrap source and governance differ — refusing before apply mutations"
+  exit 1
+fi
+if [ "$SOURCE_SHA" = "UNKNOWN" ] || [ "$GOVERNANCE_SHA" = "UNKNOWN" ]; then
+  warn "source/governance revision UNKNOWN — readiness remains DEGRADED"
+  DEGRADED=$((DEGRADED + 1))
+fi
+
 # --- 1) Locked toolchain ----------------------------------------------------
 # uv.lock is the SSOT for interpreter and dependency versions;
 # ensure_uv_environment.sh is the wrapper that applies it, fingerprint-cached so
@@ -106,7 +147,7 @@ PUBLISH_PATH_STATE="PROBE_ERROR"
 # it those imports fall back to whatever system python3 exists, memory gates
 # cannot load, and governed writes are denied. Never install a pin by name here.
 log "Locked governance toolchain (uv.lock)"
-if ! command -v uv >/dev/null 2>&1; then
+if ! command -v uv >/dev/null 2>&1 && [ "$CHECK" != "1" ]; then
   say "uv not present — installing from PyPI (no new network host required)"
   python3 -m pip install --quiet uv 2>/dev/null || pip install --quiet uv 2>/dev/null \
     || warn "could not install uv — allowlist pypi.org"
@@ -115,9 +156,12 @@ if command -v uv >/dev/null 2>&1; then
   ENSURE="$GOV_DIR/ops/scripts/ensure_uv_environment.sh"
   if [ -f "$ENSURE" ]; then
     if [ "$CHECK" = "1" ]; then
-      bash "$ENSURE" "$GOV_DIR" check || warn "locked environment out of sync with uv.lock"
+      bash "$ENSURE" "$GOV_DIR" check >&2 || {
+        warn "locked environment out of sync with uv.lock"
+        DEGRADED=$((DEGRADED + 1))
+      }
     else
-      bash "$ENSURE" "$GOV_DIR" apply || {
+      bash "$ENSURE" "$GOV_DIR" apply >&2 || {
         warn "uv sync --locked failed — governed writes will be denied"
         DEGRADED=$((DEGRADED + 1))
       }
@@ -137,28 +181,34 @@ fi
 # entirely, so every hook's interpreter guard tripped in silence (B-03, B-22).
 GOV_PY="$GOV_DIR/.venv/bin/python3"
 [ -x "$GOV_PY" ] || GOV_PY="$GOV_DIR/.venv/bin/python"
-if [ -x "$GOV_PY" ]; then
-  say "locked interpreter: $GOV_PY ($("$GOV_PY" --version 2>&1))"
-  GOV_PY_PIN_FILE="$GOV_DIR/.python-version"
-  if [ -f "$GOV_PY_PIN_FILE" ]; then
-    gov_py_pin="$(tr -d '[:space:]' < "$GOV_PY_PIN_FILE")"
-    gov_py_have="$("$GOV_PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)"
-    case "$gov_py_have" in
-      "$gov_py_pin"*) : ;;
-      *)
-        warn "locked interpreter is $gov_py_have but .python-version pins $gov_py_pin"
-        warn "  uv fetches the pinned CPython from astral.sh on first sync — allowlist it"
-        DEGRADED=$((DEGRADED + 1))
-        ;;
-    esac
-  fi
-else
+if [ ! -x "$GOV_PY" ]; then
   warn "locked interpreter ABSENT under $GOV_DIR/.venv — every governed gate will fail closed"
   warn "  repair: uv sync --locked in $GOV_DIR (needs pypi.org and astral.sh egress)"
-  DEGRADED=$((DEGRADED + 1))
-  GOV_PY="python3"
-  say "interpreter: $GOV_PY ($("$GOV_PY" --version 2>&1)) — UNLOCKED FALLBACK, reported not hidden"
+  exit 1
 fi
+if ! "$GOV_PY" -B -I -c '
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]).resolve()
+pin = (root / ".python-version").read_text().strip()
+pinned = tuple(int(part) for part in pin.split("."))
+assert 2 <= len(pinned) <= 3, "invalid Python pin"
+assert Path(sys.prefix).resolve() == (root / ".venv").resolve(), "wrong venv prefix"
+assert sys.prefix != sys.base_prefix, "not a virtual environment"
+assert tuple(sys.version_info[:len(pinned)]) == pinned, "wrong pinned Python version"
+import pydantic, yaml
+' "$GOV_DIR" 2>/dev/null; then
+  warn "locked .venv prefix/version/pydantic/yaml verification failed — fail-closed before consumers"
+  _declared_pin="$(head -n 1 "$GOV_DIR/.python-version" 2>/dev/null)" || _declared_pin="UNKNOWN"
+  [[ "$_declared_pin" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || _declared_pin="UNKNOWN"
+  warn "  declared Python pin: $_declared_pin; repair: uv sync --locked in $GOV_DIR (needs pypi.org and astral.sh egress)"
+  exit 1
+fi
+say "locked interpreter: $GOV_PY ($("$GOV_PY" -B -I --version 2>&1))"
+"$GOV_PY" -B -I -c 'import jsonschema' 2>/dev/null \
+  && say "gates importable: pydantic + pyyaml + jsonschema (locked env)" \
+  || { warn "jsonschema import FAILING — governed writes will be denied"
+       DEGRADED=$((DEGRADED + 1)); }
 
 # --- 2) Canonical checker toolchain -----------------------------------------
 # No surface reimplements a check. ops/scripts/run_pr_security.sh owns
@@ -283,8 +333,21 @@ if [ -f "$GATE" ]; then
     _gp_out=""
     _gp_rc=0
     _gp_out="$(
-      printf '{"tool_name":"Bash","tool_input":{"command":"%s"},"cwd":"%s"}' "$1" "$WORKSPACE" \
-        | "$GOV_PY" "$GATE" claude 2>/dev/null
+      if [ "$CHECK" = "1" ]; then
+        # The full CLI can record L4 breakglass even for a synthetic event.
+        # Invoke only the existing stateless path rule, not host enforcement.
+        "$GOV_PY" -B -I -c '
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from local_execution_gate import publish_path_workflow_deny
+reason = publish_path_workflow_deny(sys.argv[2])
+if reason is not None:
+    print(json.dumps({"permissionDecision": "deny", "permissionDecisionReason": reason}))
+' "$(dirname "$GATE")" "$1" 2>/dev/null
+      else
+        printf '{"tool_name":"Bash","tool_input":{"command":"%s"},"cwd":"%s"}' "$1" "$WORKSPACE" \
+          | "$GOV_PY" -B "$GATE" claude 2>/dev/null
+      fi
     )" || _gp_rc=$?
 
     if [ "$_gp_rc" -ne 0 ]; then
@@ -309,6 +372,7 @@ if [ -f "$GATE" ]; then
 
   # ops/autonomy/local_execution_gate.py — the path-rule denial marker.
   PATH_RULE_MARKER='Publish path'
+  [ "$CHECK" != "1" ] || say "publish-path check: path-rule-only diagnostic; NOT host enforcement verification"
   raw_probe="$(_gate_probe 'make push')"
   make_probe="$(_gate_probe 'make pr')"
   raw_state="${raw_probe%%:*}"
@@ -365,25 +429,35 @@ fi
 # --- 3) SessionStart secrets plane ------------------------------------------
 # One owner. The capability broker stays retired. Values are never exported.
 # This is not a Makefile ceremony (no secrets-bind target). No AWS step exists.
-# Prefer the workspace script so a two-clone checkout is not bound to a stale
-# SSOT plane. Receipt path is required --receipt-out (cwd may be $GOV_DIR).
+# Always use the governance owner whose provenance was checked above, never a
+# workspace copy. Receipt path is required --receipt-out (cwd may be $GOV_DIR).
 log "SessionStart secrets plane"
 SECRETS_RECEIPT="$WORKSPACE/.l9/session/secrets-plane.json"
-rm -f "$SECRETS_RECEIPT"
+if [ "$CHECK" != "1" ]; then
+  rm -f "$SECRETS_RECEIPT"
+fi
 SECRETS_PY=""
-if [ -f "$WORKSPACE/ops/secrets/session_start_secrets.py" ]; then
-  SECRETS_PY="$WORKSPACE/ops/secrets/session_start_secrets.py"
-elif [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
+if [ -f "$GOV_DIR/ops/secrets/session_start_secrets.py" ]; then
   SECRETS_PY="$GOV_DIR/ops/secrets/session_start_secrets.py"
 fi
-if [ -n "$SECRETS_PY" ]; then
+if [ "$CHECK" = "1" ]; then
+  # Presence is configuration shape only. Do not login, bind, seed, write or
+  # remove a receipt, and never promote a cached ready receipt to auth proof.
+  if [ -n "${L9_INFISICAL_CLIENT_ID:-}" ] && [ -n "${L9_INFISICAL_CLIENT_SECRET:-}" ]; then
+    say "secrets plane: machine identity configuration present (shape only)"
+  else
+    say "secrets plane: machine identity configuration absent/incomplete (shape only)"
+  fi
+  warn "secrets plane: observed auth UNKNOWN in observational check (cached receipts are not proof)"
+  DEGRADED=$((DEGRADED + 1))
+elif [ -n "$SECRETS_PY" ]; then
   say "secrets plane: session_start_secrets.py"
   mkdir -p "$(dirname "$SECRETS_RECEIPT")"
   # Infisical is the only secret plane and every surface binds it through its
   # machine identity (L9_INFISICAL_CLIENT_ID + L9_INFISICAL_CLIENT_SECRET, or an
   # operator's ~/.infisical/l9-machine.json). No surface is exempt: a missing or
   # refused identity exits 1 and the reporter shows ### FAILED with the fix.
-  if "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT"; then
+  if "$GOV_PY" "$SECRETS_PY" --receipt-out "$SECRETS_RECEIPT" >&2; then
     say "secrets plane: Infisical machine identity logged in"
   else
     warn "session_start_secrets failed — reporter will show ### FAILED"
@@ -522,14 +596,6 @@ fi
 
 # --- 6) Readiness preflight (report only; never blocks) ---------------------
 log "Readiness preflight"
-if ! "$GOV_PY" -c 'import pydantic, yaml' 2>/dev/null; then
-  warn "locked .venv cannot import pydantic/yaml — fail-closed (do not fall through to system python3)"
-  exit 1
-fi
-"$GOV_PY" -c 'import jsonschema' 2>/dev/null \
-  && say "gates importable: pydantic + pyyaml + jsonschema (locked env)" \
-  || { warn "jsonschema import FAILING — governed writes will be denied"
-       DEGRADED=$((DEGRADED + 1)); }
 
 if [ "${USER_ID:-}" = "cursor_agent" ] && [ "$SURFACE" != "cursor" ]; then
   warn "memory identity 'cursor_agent' is reserved — surface '$SURFACE' must use its own USER_ID"
@@ -562,11 +628,11 @@ if [ -f "$GOV_DIR/ops/autonomy/l4_local.py" ] && git -C "$WORKSPACE" rev-parse -
   # document, which would make the chain's stdout TWO JSON documents and break
   # the renderer just as surely as a warning line would (F-08). Neither is a
   # machine result for this chain, so both go to stderr.
-  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status 2>/dev/null >&2 ) \
+  ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/autonomy/l4_local.py" status >&2 2>/dev/null ) \
     || say "L4 phase: not begun (push/PR denied until authorize-release)"
   if [ "$CHECK" != "1" ] && [ -f "$GOV_DIR/ops/scripts/scratch_hold.py" ]; then
     ( cd "$WORKSPACE" && "$GOV_PY" "$GOV_DIR/ops/scripts/scratch_hold.py" restore --all \
-        2>/dev/null >&2 ) || true
+        >&2 2>/dev/null ) || true
   fi
 fi
 
@@ -580,21 +646,25 @@ fi
 # jsonschema, broken publish-path probe) is machine-detectable without being
 # mistaken for a hard failure. The retired capability broker is not one of
 # those degradations.
-BOOTSTRAP_EXIT=0
-if [ "$DEGRADED" -gt 0 ]; then
-  warn "agent bootstrap completed with $DEGRADED degraded component(s) on surface '$SURFACE'"
-  BOOTSTRAP_EXIT=6
-else
-  log "Agent environment ready — surface=$SURFACE governance=$GOV_DIR"
-fi
-
 # Runtime readiness receipt — last-write-wins; never prints secret values.
-if [ -f "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" ]; then
+if [ "$CHECK" != "1" ] && [ -f "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" ]; then
   "$GOV_PY" "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" \
     --surface "$SURFACE" \
     --workspace "$WORKSPACE" \
     --governance "$GOV_DIR" \
+    --governance-revision "$GOVERNANCE_SHA" \
+    --runtime-script-revision "$SOURCE_SHA" \
     --degraded-count "$DEGRADED" \
-    >/dev/null 2>&1 || warn "runtime readiness receipt write failed"
+    >/dev/null 2>&1 || {
+      warn "runtime readiness receipt write failed"
+      DEGRADED=$((DEGRADED + 1))
+    }
+fi
+BOOTSTRAP_EXIT=0
+if [ "$DEGRADED" -gt 0 ]; then
+  warn "agent bootstrap completed with $DEGRADED degraded component(s) on surface '$SURFACE'"
+  BOOTSTRAP_EXIT=6
+elif [ "$CHECK" != "1" ]; then
+  log "Agent environment ready — surface=$SURFACE governance=$GOV_DIR"
 fi
 exit "$BOOTSTRAP_EXIT"

@@ -1,0 +1,217 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "workspace_kind.sh never classifies a workspace as ssot when python3 is absent",
+  "objective": "Fix at its source the baseline integration failure tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py::test_consumer_workspace_skips_the_governance_registry. ops/scripts/lib/workspace_kind.sh _workspace_kind_realpath shells out to python3; with no python3 on PATH both resolutions are empty, the comparison \"\" = \"\" holds, and classify_workspace_kind answers ssot for every workspace (fail-open: a consumer repository is treated as the governance SSOT). Replace the helper with shell builtins and refuse to equate two empty resolutions. The other baseline failures are out of scope: test_org_dotgithub single-reader was fixed by merged #814, and the three test_pr_gate_overlap_routing failures are ENVIRONMENT (the integration image lacks uv and the locked .venv that run_pr_gate.sh correctly fails closed on; CI and the host provide both).",
+  "success_criteria": [
+    "classify_workspace_kind returns consumer for a non-governance directory when python3 is unavailable (PATH stub exiting 127), and still returns ssot for the SSOT and ssot_checkout for an identity tree (V1)",
+    "the new test_workspace_kind.sh case fails against the current helper and passes after the fix (V1, checkpoint C1)",
+    "tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py passes inside the integration container image (l9-cg-deps:06fee41, PATH=/usr/bin:/bin, no python3 there) where it failed before (V3)",
+    "no consumer of classify_workspace_kind changes behaviour on a host that has python3 (V1, V2)"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/lib/workspace_kind.sh: _workspace_kind_realpath and the ssot comparison in classify_workspace_kind",
+      "ops/scripts/tests/test_workspace_kind.sh: one regression case"
+    ],
+    "out": [
+      "tests/ops/scripts/test_pr_gate_overlap_routing.py: ENVIRONMENT, the gate's locked-interpreter contract (ensure_gov_python.sh) is correct to fail closed without uv",
+      "ops/scripts/tests/test_org_dotgithub.py single-reader: fixed by #814",
+      "integration image or Core toolchain changes (uv, wheel cache): would be new provisioning, excluded by the operator",
+      "ops/autonomy/resolve_execution_gate.py: Python mirror of the identity test, unaffected",
+      "any change to the test under repair (it encodes the correct contract)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": "Reproduce: run test_pr_gate_pytest_workspace_scope.py in docker image l9-cg-deps:06fee41 with --init --network none, HOME=/tmp; observe 'python3: command not found' and classify -> ssot",
+      "pass_criteria": "the test fails with assert 'registry' == 'skip' and the bash -x trace shows ws_real='' gc_real=''",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "On the host at main@061fae5: bash ops/scripts/tests/test_workspace_kind.sh and pytest tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py",
+      "pass_criteria": "both pass (baseline green where python3 exists); hook catalog is .pre-commit-config.yaml (shellcheck, ruff)",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Replace the python3 call in _workspace_kind_realpath with builtins (expand a leading ~, then `cd -P -- \"$p\" && pwd -P` for an existing directory, else echo the expanded path unchanged), and in classify_workspace_kind answer ssot only when ws_real is non-empty and equals gc_real.",
+      "files": [
+        "ops/scripts/lib/workspace_kind.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_workspace_kind_realpath() body (line 7) and the `if [ \"$ws_real\" = \"$gc_real\" ]` test (line 40)",
+      "layer": "control_plane",
+      "leverage_rank": 1,
+      "shared_root_cause": "identity classification depended on an optional interpreter and compared failure outputs"
+    },
+    {
+      "id": "T2",
+      "task": "Add one case to the existing test: prepend a bin dir whose python3 exits 127, then assert the consumer fixture stays consumer, the identity tree stays ssot_checkout and the live SSOT stays ssot.",
+      "files": [
+        "ops/scripts/tests/test_workspace_kind.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Insert",
+      "anchor": "after the first `pass \"classifier ssot / ssot_checkout / consumer\"`",
+      "layer": "assurance",
+      "leverage_rank": 2,
+      "shared_root_cause": "identity classification depended on an optional interpreter and compared failure outputs"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "classifier is interpreter-independent and fails closed to consumer",
+      "unlocks": "the container baseline loses its workspace-scope failure; consumer gates no longer run the governance registry on python3-less hosts"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T2",
+      "evidence_required": "the new case FAILS when the test runs against the pre-fix helper (git show HEAD:ops/scripts/lib/workspace_kind.sh copied into a scratch tree) and PASSES after T1",
+      "no_go_action": "stop; the regression case does not discriminate"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md / ARCHITECTURE.md / README",
+      "action": "n_a",
+      "reason": "behaviour-preserving fix of an internal helper; no documented contract changes"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any caller pass a path that does not exist yet and rely on realpath resolving symlinked parents? (python realpath resolves parents of a missing leaf; the builtin keeps the literal path)",
+      "Does any caller pass a file rather than a directory?",
+      "Is ~ ever passed unexpanded?"
+    ],
+    "assumed_false_ifs": [
+      "If a missing GLOBAL_COMMANDS path previously equalled a workspace only through parent-symlink resolution, ssot detection would change; both sides are compared after identical treatment, so equality of two real directories is unchanged"
+    ],
+    "blast_radius": "every caller of classify_workspace_kind (run_pr_gate.sh, session_start_bootstrap.sh, ensure_workspace_wired.sh, check_governance_wiring.sh, setup_workspace_symlinks.sh, validate_governance_symlinks.sh, workspace_link_health.sh, cursor_plans_store.sh); on hosts with python3 the results are unchanged",
+    "rollback": "revert the single commit; no state or data migration"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2"
+    ],
+    "shared_causes": [
+      "optional-interpreter dependency in a fail-closed identity check"
+    ],
+    "deletions_or_consolidations": [
+      "removes the python3 subprocess from the helper"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "macOS /tmp -> /private/tmp: a lexical path would not equal a resolved one",
+      "mitigation": "cd -P / pwd -P resolves symlinks for existing directories, the same idiom ensure_gov_python.sh already relies on"
+    },
+    {
+      "risk": "a missing SSOT path now compares literally instead of via realpath of its parents",
+      "mitigation": "a missing SSOT cannot equal an existing workspace in either version; ssot requires both to be real directories"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "bash ops/scripts/tests/test_workspace_kind.sh",
+      "pass_criteria": "all cases PASS, including the python3-absent case",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "TESTING=true .venv/bin/python -m pytest -q tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py tests/ops/scripts/test_workspace_link_health.py",
+      "pass_criteria": "all pass on the host",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "docker run --rm --init --network none --read-only --user 30033:30033 -e HOME=/tmp -e TESTING=true -e PYTHONPATH=/workspace --tmpfs /tmp:rw,exec --mount type=bind,src=$PWD,dst=/workspace l9-cg-deps:06fee41 python -m pytest -q -p no:cacheprovider tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py",
+      "pass_criteria": "the previously failing test passes in the integration image",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "shellcheck ops/scripts/lib/workspace_kind.sh ops/scripts/tests/test_workspace_kind.sh",
+      "pass_criteria": "no new findings",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": ".pre-commit-config.yaml hooks on the changed files (via the make pr gate)",
+      "pass_criteria": "all hooks pass",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-ynp",
+    "stop_reason": "plan validated; implementation not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/lib/workspace_kind.sh",
+      "ops/scripts/tests/test_workspace_kind.sh"
+    ],
+    "must_not_modify": [
+      "tests/ops/scripts/test_pr_gate_pytest_workspace_scope.py",
+      "tests/ops/scripts/test_pr_gate_overlap_routing.py",
+      "ops/scripts/ensure_gov_python.sh",
+      "ops/scripts/run_pr_gate.sh"
+    ],
+    "preserved_contracts": [
+      "classify_workspace_kind output vocabulary ssot | ssot_checkout | consumer",
+      "identity files decide ssot_checkout",
+      "gate locked-interpreter fail-closed contract"
+    ],
+    "validation_commands": [
+      "bash ops/scripts/tests/test_workspace_kind.sh",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "reproduce",
+    "fix",
+    "regression",
+    "container witness"
+  ],
+  "estimate": "1 small PR",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {
+      "mode": "none",
+      "allowed_services": []
+    },
+    "secrets": {
+      "access": "none"
+    }
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [],
+    "external_systems_touched": [],
+    "migration_required": false
+  }
+}

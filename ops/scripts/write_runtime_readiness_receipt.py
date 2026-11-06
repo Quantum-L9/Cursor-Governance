@@ -46,6 +46,37 @@ def _git_sha(cwd: Path) -> str:
     return sha if proc.returncode == 0 and sha else UNKNOWN
 
 
+def _exact_root_git_sha(root: Path, *, tracked_script: Path | None = None) -> str:
+    """An enclosing checkout cannot lend its HEAD to a copied source tree."""
+    root = root.resolve()
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if top.returncode != 0 or not top.stdout.strip():
+            return UNKNOWN
+        if Path(top.stdout.strip()).resolve() != root:
+            return UNKNOWN
+        if tracked_script is not None:
+            relative = tracked_script.resolve().relative_to(root)
+            if relative != Path("ops/scripts/write_runtime_readiness_receipt.py"):
+                return UNKNOWN
+            tracked = subprocess.run(
+                ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", str(relative)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if tracked.returncode != 0:
+                return UNKNOWN
+    except (OSError, ValueError):
+        return UNKNOWN
+    return _git_sha(root)
+
+
 def workspace_id_for(workspace: Path) -> str:
     resolved = str(workspace.expanduser().resolve())
     return hashlib.sha256(resolved.encode("utf-8")).hexdigest()
@@ -174,12 +205,14 @@ def main(argv: list[str] | None = None) -> int:
     gov_rev = (
         UNKNOWN
         if args.omit_governance_revision
-        else (args.governance_revision or _git_sha(gov_dir))
+        else (args.governance_revision or _exact_root_git_sha(gov_dir))
     )
     runtime_rev = (
         UNKNOWN
         if args.omit_runtime_script_revision
-        else (args.runtime_script_revision or _git_sha(gov_dir))
+        else (
+            args.runtime_script_revision or _exact_root_git_sha(REPO, tracked_script=Path(__file__))
+        )
     )
     session_id = _unknown(args.session_id or _default_session_id())
     memory_root = args.memory_state_root or _default_memory_root(workspace)

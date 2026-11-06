@@ -56,7 +56,9 @@
     {
       "id": "todo-00c-fix-template-sync",
       "task": "Fix sync_cursor_plan_template _under_repo so .cursor/plans home symlink mirror is allowed; --check PASS",
-      "files": ["skills/l9-plan/scripts/sync_cursor_plan_template.py"],
+      "files": [
+        "skills/l9-plan/scripts/sync_cursor_plan_template.py"
+      ],
       "effort": "S",
       "risk": "medium",
       "dependencies": [],
@@ -68,7 +70,9 @@
     {
       "id": "todo-01-baseline",
       "task": "Create worktree fix/l9-git-work-preserve from origin/main; L4 begin; Program Lock; lock full SHA",
-      "files": [".l9/autonomy/"],
+      "files": [
+        ".l9/autonomy/"
+      ],
       "effort": "S",
       "risk": "low",
       "dependencies": [],
@@ -79,10 +83,14 @@
     {
       "id": "todo-02-design",
       "task": "Write diagnose-first refs prune stash policy and receipt schema under skills/l9-git-work-preserve/references/",
-      "files": ["skills/l9-git-work-preserve/references/"],
+      "files": [
+        "skills/l9-git-work-preserve/references/"
+      ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["todo-01-baseline"],
+      "dependencies": [
+        "todo-01-baseline"
+      ],
       "operation": "Create",
       "anchor": "new pack references",
       "leverage_rank": 3
@@ -90,10 +98,14 @@
     {
       "id": "todo-03-scripts",
       "task": "Implement inventory_git_work.py diagnose_ref_value.py and fixture self_test",
-      "files": ["skills/l9-git-work-preserve/scripts/"],
+      "files": [
+        "skills/l9-git-work-preserve/scripts/"
+      ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["todo-02-design"],
+      "dependencies": [
+        "todo-02-design"
+      ],
       "operation": "Create",
       "anchor": "new pack scripts",
       "leverage_rank": 4
@@ -101,10 +113,16 @@
     {
       "id": "todo-04-compile",
       "task": "Compile SKILL.md and agents/meta.yaml zero-stub pack via l9-skill-compiler",
-      "files": ["skills/l9-git-work-preserve/SKILL.md", "skills/l9-git-work-preserve/agents/meta.yaml"],
+      "files": [
+        "skills/l9-git-work-preserve/SKILL.md",
+        "skills/l9-git-work-preserve/agents/meta.yaml"
+      ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["todo-02-design", "todo-03-scripts"],
+      "dependencies": [
+        "todo-02-design",
+        "todo-03-scripts"
+      ],
       "operation": "Create",
       "anchor": "new pack root",
       "leverage_rank": 5
@@ -112,10 +130,18 @@
     {
       "id": "todo-05-slash-docs",
       "task": "Add /git-work-preserve command manifests index rule 02; append CANONICAL_LAW section 11 to backlog Diagnose First path",
-      "files": ["commands/git-work-preserve.md", "commands/COMMANDS_MANIFEST.yaml", "commands-index.md", "rules/02-slash-commands.mdc", "CANONICAL_LAW.md"],
+      "files": [
+        "commands/git-work-preserve.md",
+        "commands/COMMANDS_MANIFEST.yaml",
+        "commands-index.md",
+        "rules/02-slash-commands.mdc",
+        "CANONICAL_LAW.md"
+      ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["todo-04-compile"],
+      "dependencies": [
+        "todo-04-compile"
+      ],
       "operation": "Create",
       "anchor": "commands + law append",
       "leverage_rank": 6
@@ -123,10 +149,15 @@
     {
       "id": "todo-06-wire",
       "task": "Run l9-wire-into-repo for l9-git-work-preserve SSOT-only symlink",
-      "files": ["ops/generated/skill-registry.json", ".claude/skills/"],
+      "files": [
+        "ops/generated/skill-registry.json",
+        ".claude/skills/"
+      ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["todo-05-slash-docs"],
+      "dependencies": [
+        "todo-05-slash-docs"
+      ],
       "operation": "Replace",
       "anchor": "wire skill registries",
       "leverage_rank": 7
@@ -134,10 +165,15 @@
     {
       "id": "todo-07-prove",
       "task": "Run pack self_test make pr-check dry-run audit and sync_cursor_plan_template --check",
-      "files": ["skills/l9-git-work-preserve/scripts/self_test.py"],
+      "files": [
+        "skills/l9-git-work-preserve/scripts/self_test.py"
+      ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["todo-00c-fix-template-sync", "todo-06-wire"],
+      "dependencies": [
+        "todo-00c-fix-template-sync",
+        "todo-06-wire"
+      ],
       "operation": "Wrap",
       "anchor": "validation commands",
       "leverage_rank": 8
@@ -145,10 +181,15 @@
     {
       "id": "todo-08-converge",
       "task": "Run Recursive Alignment and Validate Repair kernels; L4 authorize-release; make pr; l9-pr-remediation; merge per L4 Build",
-      "files": ["PULL_REQUEST_TEMPLATE.md", ".l9/pr/"],
+      "files": [
+        "PULL_REQUEST_TEMPLATE.md",
+        ".l9/pr/"
+      ],
       "effort": "L",
       "risk": "irreversible",
-      "dependencies": ["todo-07-prove"],
+      "dependencies": [
+        "todo-07-prove"
+      ],
       "operation": "Wrap",
       "anchor": "PR converge",
       "leverage_rank": 9
@@ -205,12 +246,16 @@
     {
       "surface": "CANONICAL_LAW.md",
       "action": "update",
-      "todo_ids": ["todo-05-slash-docs"]
+      "todo_ids": [
+        "todo-05-slash-docs"
+      ]
     },
     {
       "surface": "commands/COMMANDS_MANIFEST.yaml",
       "action": "update",
-      "todo_ids": ["todo-05-slash-docs"]
+      "todo_ids": [
+        "todo-05-slash-docs"
+      ]
     },
     {
       "surface": "ORG_INVARIANTS.yaml",
@@ -301,7 +346,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U1"],
+    "remaining_unknown_ids": [
+      "U1"
+    ],
     "next_skill": "/autonomy + @environment/program-execution",
     "stop_reason": "PLAN_DOCUMENT validated; implementation Build starting"
   },

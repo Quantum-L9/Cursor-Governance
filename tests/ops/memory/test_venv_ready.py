@@ -536,7 +536,11 @@ def _without_util_linux(env: dict[str, str], tmp_path: Path) -> dict[str, str]:
             keep.append(raw)
             continue
         for tool in directory.iterdir():
-            if tool.name not in ("flock", "setsid") and not (mirror / tool.name).exists():
+            # lexists, not exists: a dangling system symlink (merged-/usr runner
+            # images list the same one under /bin and /usr/bin) mirrors as a
+            # dangling link, which exists() reports absent, and the second
+            # directory's symlink_to then raised FileExistsError.
+            if tool.name not in ("flock", "setsid") and not os.path.lexists(mirror / tool.name):
                 (mirror / tool.name).symlink_to(tool)
     keep.append(str(mirror))
     return {**env, "PATH": os.pathsep.join(keep)}

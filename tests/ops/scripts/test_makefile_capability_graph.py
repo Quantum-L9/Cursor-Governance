@@ -19,14 +19,22 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 from make_database import make_database  # noqa: E402
 
+# The root Makefile is the generated l9-ci-core make-v1 facade (Repository
+# Execution V2); the capability graph it used to own lives in Repo.mk.
 MAKEFILE = ROOT / "Makefile"
+REPO_MK = ROOT / "Repo.mk"
+FACADE_HEADER = "# GENERATED repository execution facade: make-v1. DO NOT EDIT.\n"
 MAKE_DIR = ROOT / "ops" / "make"
 
 ROOT_TARGETS = {
-    "help",
+    "capabilities",
     "targets",
     "consumer-targets",
     "l9-consumer-safe-list",
+    "repo-setup",
+    "repo-validate",
+    "repo-check",
+    "repo-test",
 }
 TARGET_RULE = re.compile(r"^(?P<targets>[A-Za-z0-9_. -]+):(?P<tail>.*)$")
 
@@ -77,24 +85,24 @@ def _rule_owners(path: Path) -> dict[str, list[Path]]:
 
 
 def _make_fragments() -> list[str]:
-    text = MAKEFILE.read_text(encoding="utf-8")
+    text = REPO_MK.read_text(encoding="utf-8")
     match = re.search(
         r"^MAKE_FRAGMENTS\s*:=\s*\\\n(?P<body>(?:.*\\\n)+?\s*ops/make/internal\.mk)$",
         text,
         re.MULTILINE,
     )
-    assert match is not None, "root Makefile must declare the fragment composition list"
+    assert match is not None, "Repo.mk must declare the fragment composition list"
     return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
 
 
 def _consumer_safe_targets() -> list[str]:
-    text = MAKEFILE.read_text(encoding="utf-8")
+    text = REPO_MK.read_text(encoding="utf-8")
     match = re.search(
         r"^L9_CONSUMER_SAFE_TARGETS\s*:=\s*\\\n(?P<body>(?:.*\\\n)+?\s*workspace-clean)$",
         text,
         re.MULTILINE,
     )
-    assert match is not None, "root Makefile must own the consumer-safe target list"
+    assert match is not None, "Repo.mk must own the consumer-safe target list"
     return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
 
 
@@ -115,7 +123,7 @@ def test_root_composes_every_live_make_fragment_once() -> None:
     assert sorted(fragments) == live
     assert not EVICTED_FRAGMENTS & set(fragments), "an evicted fragment is still composed"
 
-    root = MAKEFILE.read_text(encoding="utf-8")
+    root = REPO_MK.read_text(encoding="utf-8")
     assert "include $(MAKE_FRAGMENTS)" in root
     assert "_MISSING_MAKE_FRAGMENTS" in root
     assert "missing required Make fragments" in root
@@ -123,7 +131,7 @@ def test_root_composes_every_live_make_fragment_once() -> None:
 
 def test_every_registered_capability_has_one_live_recipe_owner() -> None:
     fragments = [ROOT / path for path in _make_fragments()]
-    registered = _assignment_targets(MAKEFILE)
+    registered = _assignment_targets(REPO_MK)
     for fragment in fragments:
         registered.extend(_assignment_targets(fragment))
 
@@ -132,7 +140,7 @@ def test_every_registered_capability_has_one_live_recipe_owner() -> None:
     assert not duplicates, f"each capability must be registered exactly once: {duplicates}"
 
     owners: dict[str, list[Path]] = collections.defaultdict(list)
-    for path in [MAKEFILE, *fragments]:
+    for path in [REPO_MK, *fragments]:
         for target, target_owners in _rule_owners(path).items():
             owners[target].extend(target_owners)
 
@@ -147,17 +155,26 @@ def test_every_registered_capability_has_one_live_recipe_owner() -> None:
     assert not duplicate_owners, f"capabilities have competing fragment owners: {duplicate_owners}"
 
 
+def test_root_makefile_is_the_make_v1_facade_over_repo_mk() -> None:
+    facade = MAKEFILE.read_text(encoding="utf-8")
+    assert facade.startswith(FACADE_HEADER)
+    assert ".DEFAULT_GOAL := help" in facade
+    assert "\ninclude Repo.mk\n" in facade
+    for phase in ("setup", "validate", "check", "test"):
+        assert re.search(rf"^{phase}: repo-{phase} ## ", facade, re.MULTILINE), phase
+    assert "L9_TARGETS" not in facade, "the facade carries no repository registry"
+
+
 def test_root_stays_a_composition_and_introspection_surface() -> None:
-    root_owned = set(_rule_owners(MAKEFILE))
+    root_owned = set(_rule_owners(REPO_MK))
     assert root_owned == ROOT_TARGETS
-    text = MAKEFILE.read_text(encoding="utf-8")
-    assert ".DEFAULT_GOAL := help" in text
+    text = REPO_MK.read_text(encoding="utf-8")
     assert "L9_TARGETS :=" in text
     assert "L9_CONSUMER_SAFE_TARGETS :=" in text
 
 
 def test_consumer_safe_targets_are_registered_and_exposed_by_make() -> None:
-    registered = set(_assignment_targets(MAKEFILE))
+    registered = set(_assignment_targets(REPO_MK))
     for fragment in (ROOT / path for path in _make_fragments()):
         registered.update(_assignment_targets(fragment))
     safe = _consumer_safe_targets()
@@ -177,7 +194,7 @@ def test_consumer_safe_targets_are_registered_and_exposed_by_make() -> None:
 
 
 def test_registered_targets_have_parseable_make_database_entries() -> None:
-    targets = _assignment_targets(MAKEFILE)
+    targets = _assignment_targets(REPO_MK)
     for fragment in (ROOT / path for path in _make_fragments()):
         targets.extend(_assignment_targets(fragment))
     result = make_database(ROOT)
@@ -259,7 +276,7 @@ def test_cursor_governance_has_no_local_wip_subsystem() -> None:
     for fragment in sorted(MAKE_DIR.glob("*.mk")):
         registered.update(_assignment_targets(fragment))
         registered.update(_rule_owners(fragment))
-    registered.update(_assignment_targets(MAKEFILE))
+    registered.update(_assignment_targets(REPO_MK))
     assert not (registered & _WIP_MAKE_TARGETS), "WIP Make targets must stay absent"
 
     for rel in _FF_CORPUS_KEEP_FILES:

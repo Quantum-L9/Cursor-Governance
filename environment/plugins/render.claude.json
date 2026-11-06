@@ -12,12 +12,30 @@
     "zep": "getzep/zep"
   },
   "capabilities": {
-    "docs-lookup": { "plugin": "context7@claude-plugins-official", "scope": "user" },
-    "shell-tooling": { "plugin": "desktop-commander@claude-plugins-official", "scope": "user" },
-    "hook-authoring": { "plugin": "hookify@claude-plugins-official", "scope": "user" },
-    "pr-review": { "plugin": "pr-review-toolkit@claude-plugins-official", "scope": "user" },
+    "docs-lookup": {
+      "plugin": "context7@claude-plugins-official",
+      "scope": "user"
+    },
+    "shell-tooling": {
+      "plugin": "desktop-commander@claude-plugins-official",
+      "scope": "user"
+    },
+    "hook-authoring": {
+      "plugin": "hookify@claude-plugins-official",
+      "scope": "user"
+    },
+    "pr-review": {
+      "plugin": "pr-review-toolkit@claude-plugins-official",
+      "scope": "user"
+    },
     "odoo-plasticos-rules": null,
-    "aws-infra-guidance": { "plugin": "aws-core@claude-plugins-official", "scope": "project" },
-    "zep-memory-guidance": { "plugin": "building-with-zep@zep", "scope": "project" }
+    "aws-infra-guidance": {
+      "plugin": "aws-core@claude-plugins-official",
+      "scope": "project"
+    },
+    "zep-memory-guidance": {
+      "plugin": "building-with-zep@zep",
+      "scope": "project"
+    }
   }
 }

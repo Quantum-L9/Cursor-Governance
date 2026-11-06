@@ -4,136 +4,107 @@
 Covers findings F-08, F-09 and F-10.
 
 Every case runs the REAL ops/scripts/bootstrap_agent_environment.sh against a
-synthetic governance root, so the gate under probe can be replaced with a stub
-that produces each of the three outcomes on demand. Nothing here needs network,
-AWS, Infisical or a capability broker.
+synthetic source/governance/workspace/HOME tree, using the readiness suite's
+locked-prefix/version fixtures and guarded tools. Check probes use only the
+stateless path-rule API. Legacy SessionStart/wiring cases copy their exact
+owners and stub activation/auth/apply collaborators; no live tree, venv,
+network, AWS, Infisical or capability broker is used.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import shlex
+import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-import pytest
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# Runs the real bootstrap with the governance clone symlinked to this checkout
-# and asserts the checkout is untouched. Shares that window with the other
-# live-tree tests, so it shares their xdist group; the full rationale lives in
-# ops/scripts/tests/test_governance_refresh_receipt.py.
-pytestmark = pytest.mark.xdist_group("live_repo_tree")
+
+def _bootstrap_fixtures():
+    """Load the shared bootstrap fixtures by file path, not as ``tests.ops...``.
+
+    Under ``--import-mode=importlib`` the name ``tests`` is whichever regular
+    ``tests`` package was imported first (e.g.
+    ``environment/agents/adapters/claude-agent-sdk/tests``), so a dotted import
+    of ``tests.ops.scripts`` fails or succeeds on collection order alone.
+    """
+    name = "_l9_bootstrap_readiness_fixtures"
+    module = sys.modules.get(name)
+    if module is None:
+        path = _REPO_ROOT / "tests" / "ops" / "scripts" / "test_agent_bootstrap_readiness.py"
+        spec = importlib.util.spec_from_file_location(name, path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return module
+
+
+_FIXTURES = _bootstrap_fixtures()
+REAL_PYTHON = _FIXTURES.REAL_PYTHON
+BootstrapTree = _FIXTURES.BootstrapTree
+put = _FIXTURES.put
+snapshot = _FIXTURES.snapshot
 
 REPO = Path(__file__).resolve().parents[3]
-BOOTSTRAP = REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh"
 SESSION_START = REPO / "ops" / "hooks" / "session_start_bootstrap.sh"
-ENSURE_UV = REPO / "ops" / "scripts" / "ensure_uv_environment.sh"
-ENSURE_WIRED = REPO / "ops" / "scripts" / "ensure_workspace_wired.sh"
-RENDERER = REPO / "ops" / "scripts" / "render_bootstrap_context.py"
 
 #: A gate that behaves like the real one: the path rule denies a raw push and
 #: never denies `make pr`. A stub that denied both would be correctly reported
 #: as BROKEN, not ENFORCED - the probe distinguishes those.
-GATE_DENY = """#!/usr/bin/env python3
-import json, sys
-event = json.load(sys.stdin)
-command = (event.get("tool_input") or {}).get("command", "")
-if "make pr" in command:
-    raise SystemExit(0)
-print(json.dumps({"hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "deny",
-    "permissionDecisionReason": "Publish path: `git push` is not sanctioned.",
-}}))
+GATE_DENY = """def publish_path_workflow_deny(command):
+    if command == "make push":
+        return "Publish path: `make push` is not sanctioned."
+    assert command == "make pr", command
+    return None
 """
 
 #: Both probes denied by the path rule - the sanctioned route is closed.
-GATE_DENY_EVERYTHING = """#!/usr/bin/env python3
-import json, sys
-json.load(sys.stdin)
-print(json.dumps({"hookSpecificOutput": {
-    "hookEventName": "PreToolUse",
-    "permissionDecision": "deny",
-    "permissionDecisionReason": "Publish path: everything is denied.",
-}}))
+GATE_DENY_EVERYTHING = """def publish_path_workflow_deny(command):
+    return "Publish path: everything is denied."
 """
 
 #: A gate that permits everything - the genuine NOT_ENFORCED case.
-GATE_ALLOW = """#!/usr/bin/env python3
-import json, sys
-json.load(sys.stdin)
+GATE_ALLOW = """def publish_path_workflow_deny(command):
+    return None
 """
 
 #: A gate that crashes. Historically indistinguishable from GATE_ALLOW.
-GATE_CRASH = """#!/usr/bin/env python3
-import sys
-print("Traceback (most recent call last):", file=sys.stderr)
-raise SystemExit(1)
+GATE_CRASH = """def publish_path_workflow_deny(command):
+    raise RuntimeError("fixture path-rule crash")
 """
 
 #: A gate that exits 0 but returns something that carries no decision.
-GATE_MALFORMED = """#!/usr/bin/env python3
-import sys
-json_ish = '{"hookSpecificOutput": {"hookEventName": "PreToolUse"}}'
-print(json_ish)
+GATE_MALFORMED = """def publish_path_workflow_deny(command):
+    print('{"hookSpecificOutput": {"hookEventName": "PreToolUse"}}')
+    return None
 """
 
 
-def tree_state(repo: Path) -> str:
-    """Everything git can see changing under ``repo``: porcelain status plus
-    the worktree diff.
-
-    Ignored paths (``.venv``, ``.l9``, coverage data, ``__pycache__``) are
-    excluded by construction, so comparing two snapshots is stable under the
-    canonical xdist + coverage runner; a tracked file rewritten, moved, or
-    deleted, and any new unignored file, all change the snapshot. Both flags
-    are pinned so a developer's git config (``status.showUntrackedFiles=no``,
-    ``diff.external``) cannot blind or reshape the comparison.
-    """
-    git = ["git", "-C", str(repo)]
-    status = subprocess.run(
-        [*git, "status", "--porcelain", "--untracked-files=normal"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
-    diff = subprocess.run(
-        [*git, "diff", "--no-ext-diff"], capture_output=True, text=True, check=True
-    ).stdout
-    return status + diff
-
-
-def run_session_start(home: Path, workspace: Path) -> subprocess.CompletedProcess[str]:
-    """Run the real Cursor SessionStart hook against a moved HOME.
-
-    resolve_governance_paths() is pinned to $HOME/.cursor-governance by design
-    (rule 06 admits no alternate root), so the chain is isolated by moving HOME:
-    the caller has already pointed ``home/.cursor-governance`` at this checkout,
-    and every artifact the hook writes lands in the temp tree.
-    """
+def run_session_start(tree: BootstrapTree) -> subprocess.CompletedProcess[str]:
+    """Run the exact copied hook; all reachable writers are fixture-owned."""
     env = {
-        **os.environ,
-        "HOME": str(home),
-        "CURSOR_PROJECT_DIR": str(workspace),
+        **tree.env,
+        "CURSOR_PROJECT_DIR": str(tree.ws),
         "GOVERNANCE_BACKUP_SKIP": "1",
-        # Reconcilers (install_ide_profile.sh) are double-forked into the
-        # background by default, so the hook's exit is not the end of its
-        # writes: tearDown's rmtree then races a detached installer still
-        # extracting an extension into this temp HOME ("Directory not empty").
-        # The hook's own foreground switch makes exit mean done.
+        # No detached writer may outlive TemporaryDirectory cleanup.
         "L9_BOOTSTRAP_SYNC": "1",
     }
     return subprocess.run(
-        ["bash", str(SESSION_START)],
+        ["/bin/bash", str(tree.gov / "ops/hooks/session_start_bootstrap.sh")],
         capture_output=True,
         text=True,
-        timeout=900,
+        timeout=45,
         env=env,
-        # Cursor launches the hook with the workspace as cwd; the hook's
-        # `${CURSOR_PROJECT_DIR:-$PWD}` fallbacks must never see the checkout.
-        cwd=workspace,
+        cwd=tree.ws,
+        input="",
         check=False,
     )
 
@@ -179,61 +150,155 @@ class PlansStoreSnapshot:
 
 
 class BootstrapFixture(unittest.TestCase):
-    """Builds a synthetic governance root whose gate we control."""
+    """Reuse the full-script readiness fixture, never the checkout's venv."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
-        root = Path(self._tmp.name)
-        self.gov = root / "gov"
-        self.workspace = root / "ws"
-        (self.gov / "ops" / "autonomy").mkdir(parents=True)
-        (self.gov / "ops" / "scripts").mkdir(parents=True)
-        (self.gov / "kernels").mkdir(parents=True)
-        (self.gov / "CANONICAL_LAW.md").write_text("synthetic\n", encoding="utf-8")
-        for kernel in ("Recursive Alignment.md", "Validate & Repair.md"):
-            (self.gov / "kernels" / kernel).write_text("synthetic\n", encoding="utf-8")
-        # Reuse the real locked interpreter so the preflight import check passes.
-        real_venv = REPO / ".venv"
-        if real_venv.is_dir():
-            (self.gov / ".venv").symlink_to(real_venv)
-        # The real fingerprint helper, so its stream discipline is under test too.
-        (self.gov / "ops" / "scripts" / "ensure_uv_environment.sh").write_text(
-            ENSURE_UV.read_text(encoding="utf-8"), encoding="utf-8"
+        self.addCleanup(self._tmp.cleanup)
+        self.tree = BootstrapTree(Path(self._tmp.name))
+        self.gov = self.tree.gov
+        self.workspace = self.tree.ws
+        put(
+            self.gov / "ops/memory/namespace_context.py",
+            "import os\nfrom types import SimpleNamespace\n"
+            "def resolve_namespace_context(root):\n"
+            "    assert os.environ['L9_GOVERNANCE_SURFACE'] in ('manus', 'cursor', 'claude-code')\n"
+            "    return SimpleNamespace(write_namespace_hint='fixture', method='fixture')\n",
         )
-        self.workspace.mkdir()
-        subprocess.run(["git", "init", "-q", str(self.workspace)], check=False, capture_output=True)
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    def isolate_session_writers(self) -> None:
+        """Copy only admitted owners; activation/auth/apply stay explicit stubs.
+
+        No installer, backup, memory provider, worktree reconciler or full-setup
+        fallback is materialized. Mutation commands reject every path outside
+        this fixture, and exported functions preserve guards even when the
+        exact SessionStart hook prepends platform-specific PATH entries.
+        """
+        self.tree.stub_apply()
+        # SessionStart executes governance's bootstrap, whereas BootstrapTree's
+        # apply fixture executes source's. Stub the writer at both actual owners.
+        shutil.copy2(
+            self.tree.source / "ops/scripts/lib/session_git_excludes.sh",
+            self.gov / "ops/scripts/lib/session_git_excludes.sh",
+        )
+        for name in (
+            "ops/hooks/session_start_bootstrap.sh",
+            "ops/scripts/ensure_workspace_wired.sh",
+            "ops/scripts/resolve_governance_paths.sh",
+            "ops/scripts/render_bootstrap_context.py",
+            "ops/scripts/lib/workspace_kind.sh",
+            "ops/scripts/lib/workspace_link_health.sh",
+            "ops/scripts/lib/cursor_plans_store.sh",
+            "ops/scripts/lib/plugin_siblings.sh",
+        ):
+            original = REPO / name
+            target = self.gov / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(original, target)
+            self.assertEqual(target.read_bytes(), original.read_bytes())
+        (self.gov / "skills").mkdir()
+        (self.tree.home / ".cursor-governance").symlink_to(self.gov)
+        put(
+            self.gov / "ops/scripts/governance_activate_fresh.sh",
+            "#!/bin/bash\necho 'STATUS action=fixture sha=unknown remote_sha=unknown "
+            "detail=isolated-no-network'\n",
+            executable=True,
+        )
+        put(
+            self.gov / "ops/secrets/session_start_secrets.py",
+            "import json, os, sys\nfrom pathlib import Path\n"
+            "assert os.environ['L9_GOVERNANCE_SURFACE'] in ('cursor', 'claude-code')\n"
+            "print('FIXTURE_AUTH_NOT_LIVE')\n"
+            "dest = Path(sys.argv[sys.argv.index('--receipt-out')+1])\n"
+            "dest.write_text(json.dumps({'ok': True}))\n",
+        )
+        self.tree.env.update(
+            L9_GOVERNANCE_SURFACE="cursor",
+            L9_GOVERNANCE_DIR=str(self.gov),
+            ALLOW_METADATA_PY="1",
+            PYTHONDONTWRITEBYTECODE="1",
+            GRAPHITI_MEMORY_ENABLED="0",
+            TMPDIR=str(self.tree.root / "tmp"),
+        )
+        (self.tree.root / "tmp").mkdir()
+        # Python checks both lexical paths and symlink targets before a writer
+        # is invoked. The temporary root itself is never an admitted operand.
+        guard = self.tree.root / "guard_mutation.py"
+        put(
+            guard,
+            "import os, subprocess, sys\nfrom pathlib import Path\n"
+            f"root = Path({str(self.tree.root)!r}).resolve()\n"
+            "tool, *args = sys.argv[1:]\n"
+            "for arg in args:\n"
+            "    if arg.startswith('-') or (tool.endswith('/chmod') and arg == '+x'):\n"
+            "        continue\n"
+            "    path = Path(os.path.abspath(arg))\n"
+            "    if path == root or not path.is_relative_to(root) or "
+            "not path.resolve().is_relative_to(root):\n"
+            "        raise SystemExit('FORBIDDEN external mutation: ' + arg)\n"
+            "raise SystemExit(subprocess.run([tool, *args], check=False).returncode)\n",
+        )
+        for name in ("mkdir", "rm", "mv", "cp", "ln", "chmod", "mktemp"):
+            tool = shutil.which(name)
+            self.assertIsNotNone(tool)
+            put(
+                self.tree.bin / name,
+                "#!/bin/bash\n"
+                f"exec {shlex.quote(REAL_PYTHON)} -B -I {shlex.quote(str(guard))} "
+                f'{shlex.quote(str(tool))} "$@"\n',
+                executable=True,
+            )
+        for name in ("wc",):
+            (self.tree.bin / name).symlink_to(shutil.which(name))
+        shell_env = self.tree.root / "fixture_shell_env.sh"
+        put(
+            shell_env,
+            "\n".join(
+                f'{tool.name}() {{ {shlex.quote(str(tool))} "$@"; }}; export -f {tool.name}'
+                for tool in sorted(self.tree.bin.iterdir())
+            )
+            + "\n",
+        )
+        self.tree.env["BASH_ENV"] = str(shell_env)
 
     def install_gate(self, source: str) -> None:
         gate = self.gov / "ops" / "autonomy" / "local_execution_gate.py"
-        gate.write_text(source, encoding="utf-8")
-        gate.chmod(0o755)
+        put(
+            gate,
+            source + "\nif __name__ == '__main__':\n"
+            "    raise RuntimeError('FORBIDDEN full recording gate in check')\n",
+        )
 
     def run_bootstrap(
         self, *extra: str, surface: str = "claude-code"
     ) -> subprocess.CompletedProcess[str]:
-        env = dict(os.environ)
-        env.pop("L9_GOVERNANCE_SURFACE", None)
-        return subprocess.run(
+        before = snapshot(self.tree.root)
+        proc = subprocess.run(
             [
-                "bash",
-                str(BOOTSTRAP),
+                "/bin/bash",
+                str(self.tree.source / "ops/scripts/bootstrap_agent_environment.sh"),
                 "--surface",
                 surface,
                 "--governance",
                 str(self.gov),
                 "--workspace",
                 str(self.workspace),
+                "--check",
                 *extra,
             ],
             capture_output=True,
             text=True,
-            timeout=300,
-            env=env,
+            timeout=45,
+            env=self.tree.env,
+            cwd=self.workspace,
             check=False,
         )
+        self.assertEqual(snapshot(self.tree.root), before, proc.stderr)
+        self.assertEqual(proc.returncode, 6, proc.stderr)  # observational auth is UNKNOWN
+        self.assertIn("observed auth UNKNOWN", proc.stderr)
+        self.assertNotIn("Agent environment ready", proc.stderr)
+        self.assertNotIn("FORBIDDEN", proc.stderr)
+        return proc
 
 
 class StdoutMachineContractTests(BootstrapFixture):
@@ -265,13 +330,7 @@ class StdoutMachineContractTests(BootstrapFixture):
 
     def test_uv_fingerprint_diagnostic_is_stderr_only(self) -> None:
         """F-08 / section 25 - the specific helper that leaked, isolated."""
-        proc = subprocess.run(
-            ["bash", str(ENSURE_UV), str(REPO), "apply"],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=False,
-        )
+        proc = self.tree.unchanged_check("ops/scripts/ensure_uv_environment.sh", code=0)
         self.assertEqual(proc.stdout, "", f"ensure_uv wrote to stdout: {proc.stdout!r}")
         self.assertIn("UV:", proc.stderr)
 
@@ -280,8 +339,8 @@ class StdoutMachineContractTests(BootstrapFixture):
 
         resolve_governance_paths() is pinned to $HOME/.cursor-governance by
         design (rule 06 admits no alternate root), so the chain is isolated by
-        moving HOME instead: the temp HOME's clone points at this checkout, and
-        every artifact the hook writes lands in the temp tree.
+        moving HOME and copying exact owners: the temp HOME's clone points at
+        synthetic governance, never this checkout or its installed interpreter.
 
         "Every artifact" has to be arranged, not assumed. SessionStart does
         not read or emit the plans store. The machine plans store that
@@ -290,11 +349,10 @@ class StdoutMachineContractTests(BootstrapFixture):
         store is pinned to the workspace through the library's own stamp
         (ops/scripts/lib/cursor_plans_store.sh reads
         ``~/.cursor/l9-plans-store`` first), and the snapshot comparison
-        below proves the checkout is untouched.
+        below includes ignored paths, modes and mtimes in both copied owners.
         """
-        home = Path(self._tmp.name) / "home"
-        home.mkdir()
-        (home / ".cursor-governance").symlink_to(REPO)
+        self.isolate_session_writers()
+        home = self.tree.home
         plans_store = self.workspace / "docs" / "plans"
         plans_store.mkdir(parents=True)
         spent = plans_store / "spent_stay_abcd1234.plan.md"
@@ -305,9 +363,11 @@ class StdoutMachineContractTests(BootstrapFixture):
         )
         (home / ".cursor").mkdir()
         (home / ".cursor" / "l9-plans-store").write_text(f"{plans_store}\n", encoding="utf-8")
-        before = tree_state(REPO)
-        proc = run_session_start(home, self.workspace)
-        after = tree_state(REPO)
+        before = (snapshot(self.tree.source), snapshot(self.gov))
+        proc = run_session_start(self.tree)
+        after = (snapshot(self.tree.source), snapshot(self.gov))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("FORBIDDEN", proc.stderr)
         # No find-first-brace, no line filtering, no take-last-line.
         payload = json.loads(proc.stdout)
         self.assertIsInstance(payload, dict)
@@ -317,8 +377,8 @@ class StdoutMachineContractTests(BootstrapFixture):
         self.assertEqual(
             before,
             after,
-            "the Cursor SessionStart hook wrote into the checked-out repository; the "
-            "plan store and every reconciler target must resolve to the temp tree",
+            "the Cursor SessionStart hook wrote into a copied owner; the "
+            "plan store and every writer target must resolve to the temp HOME/workspace",
         )
         # The plan store the hook wired for this workspace is the temp one.
         wired = self.workspace / ".cursor" / "plans"
@@ -330,11 +390,16 @@ class StdoutMachineContractTests(BootstrapFixture):
         )
 
         render = subprocess.run(
-            [str(REPO / ".venv" / "bin" / "python"), str(RENDERER)],
+            [
+                str(self.gov / ".venv/bin/python"),
+                str(self.gov / "ops/scripts/render_bootstrap_context.py"),
+            ],
             input=proc.stdout,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=30,
+            env=self.tree.env,
+            cwd=self.workspace,
             check=False,
         )
         self.assertEqual(render.returncode, 0, f"renderer rejected stdout: {render.stdout}")
@@ -358,15 +423,14 @@ class SessionStartPlansStoreTests(BootstrapFixture):
         """Temp HOME whose ``~/.cursor/plans`` is a legacy real directory.
 
         The machine store a consumer workspace would migrate into defaults to
-        ``<gov>/docs/plans``, i.e. this checkout, so it is pinned to an empty
+        ``<gov>/docs/plans``, so it is pinned to an empty
         temp directory through the library's own first-run stamp
         (``~/.cursor/l9-plans-store``): a migration then lands in ``store``
         instead of polluting the repository, and an empty ``store`` afterwards
         is the proof that no copy happened.
         """
-        home = Path(self._tmp.name) / "home"
-        home.mkdir()
-        (home / ".cursor-governance").symlink_to(REPO)
+        self.isolate_session_writers()
+        home = self.tree.home
         store = Path(self._tmp.name) / "store"
         store.mkdir()
         plans = home / ".cursor" / "plans"
@@ -398,13 +462,15 @@ class SessionStartPlansStoreTests(BootstrapFixture):
 
     def test_session_start_never_migrates_a_legacy_real_plans_directory(self) -> None:
         home, _plans, snapshot = self._legacy_home()
-        before = tree_state(REPO)
-        proc = run_session_start(home, self.workspace)
-        after = tree_state(REPO)
+        before = self._owner_state()
+        proc = run_session_start(self.tree)
+        after = self._owner_state()
         evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, evidence)
+        self.assertNotIn("FORBIDDEN", proc.stderr, evidence)
         payload = json.loads(proc.stdout)
         context = payload["additional_context"]
-        self.assertEqual(before, after, "the hook wrote into the checked-out repository")
+        self.assertEqual(before, after, "the hook wrote into a copied owner")
         snapshot.assert_untouched(self, evidence)
         # Wiring still succeeded: the links ensure_workspace_wired.sh owns exist
         # and the hook reports the links-only heal, not the full-setup fallback
@@ -416,49 +482,73 @@ class SessionStartPlansStoreTests(BootstrapFixture):
     def test_links_only_plans_mode_wires_without_touching_the_store(self) -> None:
         """The mode the hook sets, exercised directly on the helper."""
         home, _plans, snapshot = self._legacy_home()
-        env = {**os.environ, "HOME": str(home)}
+        env = dict(self.tree.env)
         env["L9_WIRE_LINKS_ONLY"] = "1"
         env["L9_PLANS_STORE_MODE"] = "links-only"
+        before = self._owner_state()
         proc = subprocess.run(
-            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            [
+                "/bin/bash",
+                str(self.gov / "ops/scripts/ensure_workspace_wired.sh"),
+                str(self.workspace),
+            ],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=45,
             env=env,
+            cwd=self.workspace,
             check=False,
         )
         evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
         self.assertEqual(proc.returncode, 0, evidence)
+        self.assertNotIn("FORBIDDEN", evidence)
+        self.assertEqual(self._owner_state(), before, evidence)
         snapshot.assert_untouched(self, evidence)
         self._assert_workspace_wired(home, evidence)
         self.assertNotIn("MIGRATED:", proc.stdout, evidence)
         second = subprocess.run(
-            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            [
+                "/bin/bash",
+                str(self.gov / "ops/scripts/ensure_workspace_wired.sh"),
+                str(self.workspace),
+            ],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=45,
             env=env,
+            cwd=self.workspace,
             check=False,
         )
+        self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
+        self.assertNotIn("FORBIDDEN", second.stdout + second.stderr)
+        self.assertEqual(self._owner_state(), before, second.stdout + second.stderr)
         self.assertIn("already wired", second.stdout, second.stdout + second.stderr)
         snapshot.assert_untouched(self, second.stdout + second.stderr)
 
     def test_default_plans_mode_still_migrates_for_manual_callers(self) -> None:
         """Manual setup keeps ownership of the migration; only SessionStart opts out."""
         home, plans, snapshot = self._legacy_home()
-        env = {**os.environ, "HOME": str(home)}
+        env = dict(self.tree.env)
         env["L9_WIRE_LINKS_ONLY"] = "1"
         env.pop("L9_PLANS_STORE_MODE", None)
+        before = self._owner_state()
         proc = subprocess.run(
-            ["bash", str(ENSURE_WIRED), str(self.workspace)],
+            [
+                "/bin/bash",
+                str(self.gov / "ops/scripts/ensure_workspace_wired.sh"),
+                str(self.workspace),
+            ],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=45,
             env=env,
+            cwd=self.workspace,
             check=False,
         )
         evidence = f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
         self.assertEqual(proc.returncode, 0, evidence)
+        self.assertNotIn("FORBIDDEN", evidence)
+        self.assertEqual(self._owner_state(), before, evidence)
         self.assertIn("MIGRATED:", proc.stdout, evidence)
         self.assertTrue(plans.is_symlink(), evidence)
         renamed = [p for p in plans.parent.iterdir() if p.name.startswith("plans.pre-repo-store.")]
@@ -468,6 +558,9 @@ class SessionStartPlansStoreTests(BootstrapFixture):
         self.assertEqual(Path(os.path.realpath(plans)), Path(os.path.realpath(snapshot.store)))
         self.assertTrue((snapshot.store / "legacy_abcd1234.plan.md").is_file(), evidence)
         self.assertTrue((snapshot.store / "BUILT" / "old_deadbeef.plan.md").is_file(), evidence)
+
+    def _owner_state(self) -> tuple[dict, dict]:
+        return snapshot(self.tree.source), snapshot(self.gov)
 
     def test_hook_sets_links_only_plans_mode_on_every_heal(self) -> None:
         """Static twin of the behavioral case: no ENSURE call without the mode."""
@@ -527,21 +620,20 @@ class PublishPathProbeStateTests(BootstrapFixture):
         proc = self.run_bootstrap()
         self.assertEqual(self._state(proc), "PROBE_ERROR")
 
-    def test_probe_event_carries_cwd(self) -> None:
-        """Section 10 - the probe must test policy, not malformed-input handling."""
-        recorder = self.gov / "event.json"
+    def test_stateless_probe_carries_workspace_cwd_and_surface(self) -> None:
+        """Section 10 - check evaluates the path API, never a recording event CLI."""
         self.install_gate(
-            "#!/usr/bin/env python3\n"
-            "import json, sys, pathlib\n"
-            "event = json.load(sys.stdin)\n"
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps(event))\n"
-            'print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",'
-            ' "permissionDecision": "deny",'
-            ' "permissionDecisionReason": "Publish path: denied."}}))\n'
+            "import os\nfrom pathlib import Path\n"
+            "def publish_path_workflow_deny(command):\n"
+            f"    assert Path.cwd() == Path({str(self.workspace)!r})\n"
+            "    assert os.environ['L9_GOVERNANCE_SURFACE'] == 'claude-code'\n"
+            "    assert os.environ['PYTHONDONTWRITEBYTECODE'] == '1'\n"
+            "    assert command in ('make push', 'make pr'), command\n"
+            "    return 'Publish path: denied.' if command == 'make push' else None\n"
         )
-        self.run_bootstrap()
-        event = json.loads(recorder.read_text(encoding="utf-8"))
-        self.assertEqual(event.get("cwd"), str(self.workspace))
+        proc = self.run_bootstrap()
+        self.assertEqual(self._state(proc), "ENFORCED")
+        self.assertIn("path-rule-only diagnostic; NOT host enforcement", proc.stderr)
 
 
 class SurfacePropagationTests(BootstrapFixture):

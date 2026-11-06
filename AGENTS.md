@@ -2408,3 +2408,25 @@ this section governs.
 - Moving spent root plans stays with `/l9-pipeline-audit` / `/plan-audit
   --archive-spent` (`skills/l9-pipeline-audit/references/surfaces.md`).
   SessionStart still neither reads nor moves plans.
+
+<!-- REPO_EXECUTION_V2_FACADE_V1 -->
+## Root Makefile is the make-v1 facade; the capability graph lives in Repo.mk (2026-11-05) — supersedes "the root Makefile owns composition, the registry and introspection" wherever stated above
+
+Append-only. l9-ci-core enrolls Cursor-Governance in **required** Repository
+Execution V2 verification (Core `contract-policy.json`, projected from the org
+repository registry). Its required `Analyze (central Core)` check fails any
+repository without the V2 contract.
+
+- `.l9/repo-workflow.json` declares `l9.repo-execution/v2`, facade `make-v1`,
+  phases `setup`, `validate`, `check`, `test`.
+- The root `Makefile` is Core's generated facade, byte-for-byte (verified by
+  Core on every PR). **Never edit it**; it includes `Repo.mk` and routes each
+  phase to one `repo-*` leaf.
+- `Repo.mk` (canonical, additive-only) owns what the root `Makefile` owned:
+  shared variables, `ops/make/*.mk` composition, `L9_TARGETS`, the single
+  `L9_CONSUMER_SAFE_TARGETS` authority and introspection (`make capabilities`,
+  formerly `make help`; `make help` now lists the facade phases).
+- Leaves reuse existing capabilities: `repo-setup` → `venv` (installs
+  `uv==0.12.1` if absent), `repo-validate` → `uv-lock-check rules-validate`,
+  `repo-check` → `lint-ruff-full`, `repo-test` → `pytest-suites` (the former
+  `test` recipe). `make test`, `make pr` and every other target keep working.

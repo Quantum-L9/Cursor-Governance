@@ -342,6 +342,64 @@ def test_merge_now_leftover_overlap_does_not_hold_the_green_pr(tmp_path: Path, m
     assert ready["merge_blocked"] == []
 
 
+def test_merge_now_overlap_into_another_base_does_not_hold_the_green_pr(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # An older long-lived PR into another branch (IB-Odoo_19 #197 into
+    # Development) overlaps a green PR into Staging. Merging the green PR does
+    # not touch the other base, so it must not wait on it.
+    _probe(
+        tmp_path,
+        monkeypatch,
+        [
+            _pr(1, ["ops/a.py", "ops/shared.py"], base="Development"),
+            _pr(2, ["ops/shared.py"], base="Staging"),
+        ],
+    )
+    prs = pr_fleet.inventory(TARGET)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=pr_fleet.stack_edges(prs),
+        overlap=pr_fleet.overlap_matrix(prs),
+        boards={1: "fix", 2: "merge"},
+        order=[1, 2],
+    )
+    assert ready["merge_now"] == [2]
+    assert ready["merge_blocked"] == []
+
+
+def test_merge_now_overlap_follows_the_stack_to_its_root_base(tmp_path: Path, monkeypatch) -> None:
+    # PR 3 is stacked on PR 2's branch, which targets main; PR 1 also targets
+    # main and overlaps PR 3. Both land on main, so the overlap still holds.
+    _probe(
+        tmp_path,
+        monkeypatch,
+        [
+            _pr(1, ["ops/shared.py"]),
+            _pr(2, ["ops/b.py"], head="feat/parent"),
+            _pr(3, ["ops/shared.py"], base="feat/parent"),
+        ],
+    )
+    prs = pr_fleet.inventory(TARGET)
+    ready = pr_fleet.merge_now(
+        prs,
+        edges=pr_fleet.stack_edges(prs),
+        overlap=pr_fleet.overlap_matrix(prs),
+        boards={1: "fix", 2: "fix", 3: "merge"},
+        order=[1, 2, 3],
+    )
+    assert ready["merge_now"] == []
+    assert ready["merge_blocked"] == [
+        {
+            "pr": 3,
+            "blocked_by": [
+                {"pr": 2, "reason": "stack_parent_open"},
+                {"pr": 1, "reason": "older_nongenerated_overlap"},
+            ],
+        }
+    ]
+
+
 def test_merge_now_holds_a_stacked_child_until_the_parent_lands(
     tmp_path: Path, monkeypatch
 ) -> None:

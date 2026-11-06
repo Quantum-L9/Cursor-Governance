@@ -69,6 +69,10 @@ def surface_class(env: Mapping[str, str] | None = None) -> str:
     ``self_hosted`` and still degrades.
     """
     source = os.environ if env is None else env
+    # Shared canonical detection, not a private Manus host-marker list. An
+    # intentional Manus surface must never inherit a Claude pool/operator seed.
+    if login.environment_only_surface(source):
+        return MODEL_CONTROLLED
     pool = (source.get("CLAUDE_CODE_REMOTE_ENVIRONMENT_ID") or "").strip()
     if pool.startswith("ccpool_"):
         return SELF_HOSTED
@@ -130,28 +134,34 @@ def _aws_probe() -> dict[str, Any]:
 
 
 def run_plane(env: Mapping[str, str] | None = None) -> dict[str, Any]:
-    klass = surface_class(env)
-    source = login.machine_identity(env)[0]
+    # One snapshot for classification, login and every bind. Never install a
+    # caller's context into os.environ or borrow ambient operator credentials.
+    context = dict(os.environ if env is None else env)
+    klass = surface_class(context)
+    source = login.machine_identity(context)[0]
     aws: dict[str, Any] | None = None
     if klass == MODEL_CONTROLLED or source == login.SOURCE_ENV:
-        # Claude: the environment identity; no AWS step at all.
-        login_state = login.ensure_machine_profile(env)
+        # Hosted Claude / Manus: no AWS step. Manus's shared identity owner
+        # additionally refuses the operator profile even when env is incomplete.
+        login_state = login.ensure_machine_profile(context)
         if login_state == "failed":
             # Same identity the binds below would log in as: one attempt, not
             # one per name. Their sources still read unbound.
-            cb.note_login_failed()
+            cb.note_login_failed(context)
     else:
         # Cursor / operator: main's behaviour, unchanged — AWS preflight, then
         # the existing profile or the AWS seed that writes it.
         aws = _aws_probe()
         login_state = (
-            login.ensure_machine_profile(env, allow_aws_seed=True) if aws.get("ok") else "skipped"
+            login.ensure_machine_profile(context, allow_aws_seed=True)
+            if aws.get("ok")
+            else "skipped"
         )
-        source = login.machine_identity(env)[0] or source
+        source = login.machine_identity(context)[0] or source
     identity = identity_status(login_state, source)
     binds: list[dict[str, Any]] = []
     for name in BIND_NAMES:
-        status = cb.bind_status(name)
+        status = cb.bind_status(name, env=context)
         binds.append(
             {
                 "name": name,  # the module's own literal, not the bind result's echo

@@ -24,7 +24,11 @@
     "final_validation",
     "convergence",
     "gmp_handoff",
-    "code_in_scope"
+    "code_in_scope",
+    "owner",
+    "estimate",
+    "execution_envelope",
+    "complexity"
   ],
   "properties": {
     "schema_version": {
@@ -92,20 +96,53 @@
         "target"
       ],
       "properties": {
-        "schema": {"const": "l9.idea-execute.plan-binding/v1"},
-        "gar_decision_ref": {"type": "string", "minLength": 1},
-        "gar_decision_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-        "gar_status": {"const": "ACCEPTED"},
-        "graph_unit_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-        "lifecycle_run_id": {"type": "string", "minLength": 1},
+        "schema": {
+          "const": "l9.idea-execute.plan-binding/v1"
+        },
+        "gar_decision_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gar_decision_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "gar_status": {
+          "const": "ACCEPTED"
+        },
+        "graph_unit_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "lifecycle_run_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "target": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["lifecycle", "logical_target_id", "future_repository_intent"],
+          "required": [
+            "lifecycle",
+            "logical_target_id",
+            "future_repository_intent"
+          ],
           "properties": {
-            "lifecycle": {"const": "pre_birth_local_execution_workspace"},
-            "logical_target_id": {"type": "string", "minLength": 1},
-            "future_repository_intent": {"type": "string", "minLength": 1}
+            "lifecycle": {
+              "const": "pre_birth_local_execution_workspace"
+            },
+            "logical_target_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "future_repository_intent": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
@@ -161,7 +198,8 @@
           "effort",
           "risk",
           "dependencies",
-          "leverage_rank"
+          "leverage_rank",
+          "layer"
         ],
         "properties": {
           "id": {
@@ -216,7 +254,19 @@
             "type": "string"
           },
           "layer": {
-            "enum": ["control_plane", "data_plane", "chassis", "ops", "runtime", "policy", "assurance", "memory", "graph", "docs", "external_system"],
+            "enum": [
+              "control_plane",
+              "data_plane",
+              "chassis",
+              "ops",
+              "runtime",
+              "policy",
+              "assurance",
+              "memory",
+              "graph",
+              "docs",
+              "external_system"
+            ],
             "description": "Architecture layer this todo touches; projected to the Architecture impact table."
           }
         }
@@ -555,26 +605,50 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Network and secrets envelope projected to the Execution envelope section.",
+      "required": [
+        "network",
+        "secrets"
+      ],
       "properties": {
         "network": {
           "type": "object",
           "additionalProperties": false,
+          "required": [
+            "mode",
+            "allowed_services"
+          ],
           "properties": {
             "mode": {
-              "enum": ["none", "read_only", "named_services_only", "existing_tunnel_only", "bounded_external_write"]
+              "enum": [
+                "none",
+                "read_only",
+                "named_services_only",
+                "existing_tunnel_only",
+                "bounded_external_write"
+              ]
             },
             "allowed_services": {
               "type": "array",
-              "items": {"type": "string", "minLength": 1}
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
             }
           }
         },
         "secrets": {
           "type": "object",
           "additionalProperties": false,
+          "required": [
+            "access"
+          ],
           "properties": {
             "access": {
-              "enum": ["none", "read_only_named", "runtime_injected_only"]
+              "enum": [
+                "none",
+                "read_only_named",
+                "runtime_injected_only"
+              ]
             }
           }
         }
@@ -583,15 +657,26 @@
     "complexity": {
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "architectural_boundaries_crossed",
+        "external_systems_touched",
+        "migration_required"
+      ],
       "description": "Declared boundary, external-system and migration facts projected to Complexity and uncertainty. An empty list declares none.",
       "properties": {
         "architectural_boundaries_crossed": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "external_systems_touched": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "migration_required": {
           "type": "boolean"

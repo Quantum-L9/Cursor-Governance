@@ -1,5 +1,5 @@
 {
-  "generation_id": "5287401e15cbc4b60f8c71e59fc823ead0bd8862db08a630f17259b224c32e04",
+  "generation_id": "69f52c9881392962a99028a730ebbeea1f93ae671b9ea1412847be748a6a0ca6",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -825,7 +825,7 @@
       "path": "skills/l9-audit-plans",
       "reason": "leftover-todo refine mutates docs/plans (fold/compile, harvested omit); slash /l9-audit-plans is the explicit invoke; shelf_plans.py is retired and must not run; disable-model-invocation",
       "skill_md": "skills/l9-audit-plans/SKILL.md",
-      "skill_sha256": "9a543e4fcaa4ca1a0ce6bc675b8df1352168a0e90b9a68bbc68b8d0df7cc5dc3",
+      "skill_sha256": "57011b21b53ef3140c8397513a6b4092ecb0c2f7fc701da2a8491052adf3093d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1254,7 +1254,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "3c0bb3cdf6f6455d3d10120960471c86f65288212e5ebb2e3921511fb7f06fc2",
+      "skill_sha256": "fc2f8a49dfbaa7e228b24e1d2c8d15b16c0aadeef0b1896b2310093eccf4c942",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1286,14 +1286,14 @@
     },
     {
       "composition_role": "general",
-      "description": "Build and falsify a revision-bound combined pull-request candidate inside disposable Docker isolation, with differential tests, Git merge provenance, semantic overlap review and targeted false-green probes. Use when testing one or more actual GitHub PRs together before integration, especially when green CI or clean merges may hide defects. Do not use for CI status alone, static-only PR review, production deployment, or authorizing a merge.",
+      "description": "Build and falsify a combined pull-request candidate inside disposable Docker isolation, then open one new integration PR of the repaired tree through make pr. Use when testing one or more GitHub PRs together before integration. Do not use to update source PR branches, merge those PRs, check CI status alone, or deploy.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-integration-testing",
       "path": "skills/l9-pr-integration-testing",
-      "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; never writes, merges or publishes upstream, and its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
+      "reason": "runs actual combined PR commits in disposable no-network Docker containers through the governance sandbox (ops/scripts/docker_sandbox.py), which starts a daemon and a runner user; publishes one new integration PR of the retested tree through make pr and does not update source branches or merge; its verdict is not merge authorization; slash or explicit invoke only; disable-model-invocation",
       "skill_md": "skills/l9-pr-integration-testing/SKILL.md",
-      "skill_sha256": "4ad1a6b90d36c085674a9880766f9d4870c8c7c1fe5107e53b62e788f8d85733",
+      "skill_sha256": "69d4cab5b530d5513fea668a6a83ec87faf254da8e6a75dd72f1c5585e79623d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1520,6 +1520,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "33c4851215c1ef793ea7a10234f805997a303dd59f8a4e49e17c82277b8c26fd",
-  "source_skill_corpus_sha256": "534b88b662917811acdd2cdbad928ae5792e490aff3b457b27bc57a5d861f49c"
+  "source_manifest_sha256": "8c72990f0c3be9cc3c201121f6fb3d5ad61c8bd791d28bb618d1b05e9fb50acc",
+  "source_skill_corpus_sha256": "03961a9fa5f134c65d49271413e1f2bca87e47c99af405eb55e8e60b9c02e0f7"
 }

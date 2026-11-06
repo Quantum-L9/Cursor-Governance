@@ -97,7 +97,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["T1"],
+      "dependencies": [
+        "T1"
+      ],
       "leverage_rank": 2,
       "operation": "Replace",
       "anchor": "snapshot() threads = gh ccr/review_threads and merge_rules()",
@@ -112,7 +114,10 @@
       ],
       "effort": "M",
       "risk": "high",
-      "dependencies": ["T1", "T2"],
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
       "leverage_rank": 3,
       "operation": "Replace",
       "anchor": "778 parent f175f971",
@@ -153,7 +158,11 @@
       "shared_root_cause": "stale-generated-projection"
     }
   ],
-  "critical_path": ["T1", "T2", "T3"],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -200,12 +209,17 @@
     {
       "surface": "skills/l9-pr-audit/references/semantic-lane.md",
       "action": "update",
-      "todo_ids": ["T1", "T2"]
+      "todo_ids": [
+        "T1",
+        "T2"
+      ]
     },
     {
       "surface": "filetree.md",
       "action": "update",
-      "todo_ids": ["T5"],
+      "todo_ids": [
+        "T5"
+      ],
       "reason": "Regenerate through the owning generator on the 786 tree"
     }
   ],
@@ -227,7 +241,13 @@
     "rollback": "Revert the scoped commits on each existing PR branch. Do not force-push. If the 778 rebase is wrong, reset that branch only to d8e92836991849a266408bbacd62d638bd6c9ff2 with an explicit user request, otherwise stop and leave the pre-rebase ref intact."
   },
   "leverage": {
-    "ranked_todo_ids": ["T1", "T2", "T3", "T4", "T5"],
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5"
+    ],
     "shared_causes": [
       "synthesized-attestation: one assembler change closes the false SURVIVED and false VERIFICATION pass on 777 and, after rebase, on 778",
       "unobserved-source-attested-complete: transport selection and classic-protection status share one collector",
@@ -294,7 +314,9 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U2"],
+    "remaining_unknown_ids": [
+      "U2"
+    ],
     "next_skill": "Build on the owning PR branches",
     "stop_reason": "Plan is ready to Build. Execution evidence FV-001 FV-002 and FV-003 is still pending. U2 is resolved by regeneration, not by a hand merge."
   },
