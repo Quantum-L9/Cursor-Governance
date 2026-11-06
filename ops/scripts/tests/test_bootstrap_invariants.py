@@ -80,7 +80,12 @@ SWALLOW_BASELINE = {
     # already counted in the 15→16 note — failing to RECORD heal stdout must
     # never change WHETHER the gate passed; the receipt parser now reads that
     # log so an append failure is a reporting gap, not a verdict swallow.
-    "ops/scripts/run_pr_gate.sh": 20,
+    # 21 since CI_PARITY_CORE_GATE_AT_PUBLISH_V1: `install.py ... || echo WARN`
+    # before the Core-parity lanes. A failed install is not a check result: the
+    # run.py call that follows reports each lane whose tool is absent as
+    # `skip` with the reason, and its own exit (2 = blocking) still decides the
+    # gate. The swallow degrades provisioning, never a verdict.
+    "ops/scripts/run_pr_gate.sh": 21,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,
     "environment/agents/adapters/claude-code/install.sh": 3,
