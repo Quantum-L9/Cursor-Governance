@@ -202,11 +202,20 @@ def test_absent_push_gate_fails_open_through_the_real_launcher(tmp_path: Path) -
     assert proc.returncode == 0, proc.stderr
 
 
-def test_make_pr_does_not_start_ci_parity() -> None:
+def test_make_pr_runs_only_the_core_blocking_lanes() -> None:
+    """Publish never waits on a full CI scan (ae2a454e), but it does run the two
+    checks Analyze (central Core) blocks on, Biome and the SDK Semgrep gate
+    (CI_PARITY_CORE_GATE_AT_PUBLISH_V1). CodeQL and the other lanes stay with
+    CI and the commit-time hooks, and Cursor stays unchanged."""
     text = (REPO_ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text()
     assert "_gate_ci_parity_enabled" not in text
-    assert "_gate_run_ci_parity" not in text
-    assert "_wave_start ci-parity" not in text
+    assert "_wave_start ci-parity _gate_run_ci_parity" in text
+    body = text.split("_gate_run_ci_parity() {", 1)[1].split("\n}\n", 1)[0]
+    runs = [line for line in body.splitlines() if line.strip().startswith('"$py" "$pkg/run.py"')]
+    assert len(runs) == 1 and "--gate HEAD" in runs[0]
+    assert "--lanes biome,semgrep-l9 " in runs[0]
+    assert "codeql" not in body
+    assert body.index("is_cursor_host_surface") < body.index('"$pkg/run.py"')
 
 
 def test_deps_hook_self_heals_and_fingerprints_package_lock_json() -> None:

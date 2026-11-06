@@ -124,6 +124,13 @@ def _install_release(tool: manifest.Tool, target: Path, from_dir: Path | None) -
     return final / tool.binary
 
 
+def uv_tool_spec(tool: manifest.Tool) -> str:
+    """`pkg==version` from PyPI, or `git+URL@commit` for a tool pinned to a revision."""
+    if tool.package.startswith("git+"):
+        return f"{tool.package}@{tool.version}"
+    return f"{tool.package}=={tool.version}"
+
+
 def _install_uv_tool(tool: manifest.Tool, target: Path) -> Path:
     uv = shutil.which("uv")
     if uv is None:
@@ -133,7 +140,7 @@ def _install_uv_tool(tool: manifest.Tool, target: Path) -> Path:
     env["UV_TOOL_DIR"] = str(target.parent.parent / "uv-tools")
     env["UV_TOOL_BIN_DIR"] = str(bin_dir)
     proc = subprocess.run(
-        [uv, "tool", "install", "--force", f"{tool.package}=={tool.version}"],
+        [uv, "tool", "install", "--force", uv_tool_spec(tool)],
         env=env,
         capture_output=True,
         text=True,

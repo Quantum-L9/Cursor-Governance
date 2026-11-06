@@ -989,9 +989,48 @@ _gate_run_security() {
   PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
 }
 
-# Publication does not run ops/ci_parity. Claude and Cursor share this script.
-# CodeQL and whole-tree Semgrep stay on CI. The edit-time --file hook is not
-# this ceremony.
+# Analyze (central Core) blocks on two checks the rest of this gate never ran:
+# Biome, and the SDK Semgrep gate (#829 met both only in CI). Publication runs
+# exactly those two ops/ci_parity lanes, at Core's pins from tools.yaml; CodeQL
+# and the other lanes stay with CI and the commit-time hooks. Cursor is
+# unchanged by construction (CI_PARITY_HOSTED_CLAUDE_V1). An absent tool or a
+# gate that cannot be staged is reported as skipped, never as a pass.
+_gate_run_ci_parity() {
+  echo "--- ci-parity (Analyze (central Core): biome, semgrep-l9) ---"
+  if is_cursor_host_surface; then
+    echo "OK: skip ci-parity (Cursor surface; Analyze (central Core) runs in CI)"
+    return 0
+  fi
+  if [[ "${L9_CI_PARITY:-1}" == "0" ]]; then
+    echo "OK: skip ci-parity (L9_CI_PARITY=0)"
+    return 0
+  fi
+  local py="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python"
+  local pkg="$GOV_ROOT/ops/ci_parity"
+  if [[ ! -x "$py" || ! -f "$pkg/run.py" ]]; then
+    echo "OK: skip ci-parity (no governance venv or ops/ci_parity at $GOV_ROOT)"
+    return 0
+  fi
+  if ! "$py" "$pkg/validate_manifest.py" --remote; then
+    echo "WARN: Core's pins moved past ops/ci_parity/tools.yaml; the lanes below ran" \
+         "at the pinned versions — re-pin tools.yaml"
+  fi
+  "$py" "$pkg/install.py" --tool biome --tool semgrep --tool l9-ci \
+    || echo "WARN: ci-parity install incomplete; a lane without its tool is skipped"
+  local rc=0
+  "$py" "$pkg/run.py" --gate HEAD --workspace "$WS" --lanes biome,semgrep-l9 || rc=$?
+  if [[ "$rc" -eq 2 ]]; then
+    echo "FAIL: ci-parity — Analyze (central Core) would block these findings (see BLOCK above)"
+    return 1
+  fi
+  if [[ "$rc" -ne 0 ]]; then
+    echo "FAIL: ci-parity runner exited $rc"
+    return 1
+  fi
+}
+
+# Claude and Cursor share this script. The edit-time --file hook is not this
+# ceremony.
 
 _gate_run_readers() {
   echo "--- pre-commit readers (once) ---"
@@ -1048,6 +1087,7 @@ _wave_start skill-activation _gate_run_skill_activation
 _wave_start projection _gate_run_projection_check
 _wave_start wiring _gate_run_wiring
 _wave_start security _gate_run_security
+_wave_start ci-parity _gate_run_ci_parity
 _wave_rc=0
 _wave_i=0
 while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do

@@ -174,6 +174,21 @@ def test_absent_tool_is_a_skip_not_a_block(world: dict, capsys: pytest.CaptureFi
     assert "not installed" in capsys.readouterr().out
 
 
+def test_a_skip_receipt_is_rerun_once_the_tool_is_installed(world: dict) -> None:
+    """A commit-time scan before install wrote `skip`; publish must not reuse it."""
+    state = world["loaded"].state_path
+    installed = state.read_text()
+    state.write_text("{}")
+    repo = world["repo"]
+    (repo / "a.sh").write_text("BAD legacy\nok\nBAD new\n")
+    _git(repo, "commit", "-q", "-am", "add bad")
+    assert run.mode_commit(world["loaded"], repo, "HEAD", world["base"], background=False) == 0
+    assert _calls(world) == 0  # tool absent: a skip receipt, no scan
+    state.write_text(installed)
+    assert run.mode_gate(world["loaded"], repo, "HEAD", world["base"]) == 2
+    assert _calls(world) == 1
+
+
 def test_file_mode_reports_only_the_edited_lines(
     world: dict, capsys: pytest.CaptureFixture[str]
 ) -> None:

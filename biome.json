@@ -19,7 +19,7 @@
       "!!**/__pycache__",
       "!!**/.git",
       "!!**/.ruff_cache",
-      "!**/.l9",
+      "!.l9",
       "!**/reports",
       "!**/_archived",
       "!**/ops/generated",
