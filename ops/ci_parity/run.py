@@ -736,6 +736,19 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
             notice=f"{lane.tool} {tool.version} not installed (ops/ci_parity/install.py)",
         )
         return record
+    # Same predicate as Org CI: no root config means the check is not applicable
+    # and must not run Biome's defaults against the changed files.
+    required = [str(name) for name in (lane.extra.get("requires_any_file") or [])]
+    if required and not any((ctx.scan_dir / name).is_file() for name in required):
+        listed = " or ".join(required)
+        record.update(
+            status="skip",
+            notice=(
+                f"{lane.name}: not applicable — no {listed} at the scanned root; "
+                "Org CI does not run this check"
+            ),
+        )
+        return record
     ctx = replace(ctx, notices=[], facts={})  # per lane: lanes run concurrently
     weight = sem.acquire(lane.weight)
     started = time.monotonic()
