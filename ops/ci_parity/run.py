@@ -469,6 +469,27 @@ def stage_core_governance(
     )
 
 
+def extract_tar_inside(tar: tarfile.TarFile, destination: Path) -> None:
+    """Extract only members whose names stay inside ``destination``.
+
+    ``filter="data"`` refuses absolute paths, ``..``, links that escape, and
+    special files. Semgrep's tarfile rule still flags a bare ``extractall``;
+    it accepts the call only when ``members=`` is the set that was checked.
+    A member that fails the check refuses the whole archive before any write.
+    """
+    root = destination.resolve()
+    kept: list[tarfile.TarInfo] = []
+    for member in tar.getmembers():
+        name = member.name
+        path = Path(name)
+        if path.is_absolute() or ".." in path.parts:
+            raise tarfile.TarError(f"refusing tar member outside destination: {name}")
+        if not (root / name).resolve().is_relative_to(root):
+            raise tarfile.TarError(f"refusing tar member outside destination: {name}")
+        kept.append(member)
+    tar.extractall(destination, members=kept, filter="data")
+
+
 def stage_sdk_source(ctx: Context, tool: manifest.Tool) -> Path:
     """The SDK at its pinned commit, extracted at SDK_SOURCE in the snapshot."""
     url = tool.package.removeprefix("git+")
@@ -493,7 +514,7 @@ def stage_sdk_source(ctx: Context, tool: manifest.Tool) -> Path:
         check=True,
     )
     with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
-        tar.extractall(target, filter="data")
+        extract_tar_inside(tar, target)
     return target
 
 
