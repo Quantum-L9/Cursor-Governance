@@ -1,5 +1,5 @@
 {
-  "canonical_skill_count": 56,
+  "canonical_skill_count": 57,
   "canonical_skills": [
     "l9-api-smoke-testing",
     "l9-architecture-decision-records",
@@ -55,6 +55,7 @@
     "l9-structured-reasoning",
     "l9-ui-operator",
     "l9-update-agent-docs",
+    "l9-violations",
     "l9-wire-into-repo",
     "l9-ynp"
   ],
@@ -113,6 +114,7 @@
     "l9-structured-reasoning": "model_allowed",
     "l9-ui-operator": "explicit_only",
     "l9-update-agent-docs": "model_allowed",
+    "l9-violations": "explicit_only",
     "l9-wire-into-repo": "model_allowed",
     "l9-ynp": "model_allowed"
   },
@@ -255,7 +257,8 @@
     "l9-repo-sync": "user-invocable-only",
     "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
-    "l9-ui-operator": "user-invocable-only"
+    "l9-ui-operator": "user-invocable-only",
+    "l9-violations": "user-invocable-only"
   },
   "workspace_skill_overrides": {
     "l9-audit-plans": "user-invocable-only",
@@ -288,6 +291,7 @@
     "l9-repo-sync": "user-invocable-only",
     "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
-    "l9-ui-operator": "user-invocable-only"
+    "l9-ui-operator": "user-invocable-only",
+    "l9-violations": "user-invocable-only"
   }
 }
