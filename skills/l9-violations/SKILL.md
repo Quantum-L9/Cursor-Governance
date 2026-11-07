@@ -1,15 +1,24 @@
 ---
 name: l9-violations
-description: "Report a governance or skill-process violation and keep the brief only inside this pack until it is addressed. Use when an agent skips a required skill, bypasses a named workflow, or when asked to record, restore, or review a violation. Do not use for ordinary code review, a passing test, or feature work with no broken contract."
+description: Report a governance or skill-process violation and keep the brief only
+  inside this pack until it is addressed. Use when an agent skips a required skill,
+  bypasses a named workflow, or when asked to record, restore, or review a violation.
+  Do not use for ordinary code review, a passing test, or feature work with no broken
+  contract.
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, violation, governance, evidence]
+  tags:
+  - l9
+  - violation
+  - governance
+  - evidence
   owner: igor_beylin
   status: active
   version: 1.0.0
-  updated: "2026-11-07"
+  updated: '2026-11-07'
+disable-model-invocation: true
 ---
 
 # Violations

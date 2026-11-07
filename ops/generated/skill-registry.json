@@ -1,5 +1,5 @@
 {
-  "generation_id": "69f52c9881392962a99028a730ebbeea1f93ae671b9ea1412847be748a6a0ca6",
+  "generation_id": "ac40528c438214b3c1b9f9a38592c7b4d7af4638ff456ba30f67cc772ec39395",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1493,6 +1493,19 @@
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
+      "composition_role": "general",
+      "description": "Report a governance or skill-process violation and keep the brief only inside this pack until it is addressed. Use when an agent skips a required skill, bypasses a named workflow, or when asked to record, restore, or review a violation. Do not use for ordinary code review, a passing test, or feature work with no broken contract.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-violations",
+      "path": "skills/l9-violations",
+      "reason": "Record a governance or skill-process breach inside this pack. Explicit only \u2014 invoke when an agent skipped a required skill or the user asks to record or review a violation. Not an always-on reviewer.",
+      "skill_md": "skills/l9-violations/SKILL.md",
+      "skill_sha256": "51c326c548bb413d4c50990808278133617abce7375828a7bf8d3a1ac1d139d0",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "wire, rewire, verify, or unwire an existing repository artifact or capability by locating its authoritative owner, selecting the highest-leverage upstream integration point, propagating through existing manifests, generators, exports, adapters, and discovery surfaces, and proving downstream reachability. use when something exists but is not discoverable, reachable, registered, exported, invoked, configured, hooked up, or consistently consumed across intended repository surfaces.",
       "disable_model_invocation": false,
@@ -1520,6 +1533,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "8c72990f0c3be9cc3c201121f6fb3d5ad61c8bd791d28bb618d1b05e9fb50acc",
-  "source_skill_corpus_sha256": "03961a9fa5f134c65d49271413e1f2bca87e47c99af405eb55e8e60b9c02e0f7"
+  "source_manifest_sha256": "902c19a479a54b2c3b5f711b2c4026d6aaa0b01cf4b1a9960ab1150e6561040d",
+  "source_skill_corpus_sha256": "1de0700ee50bec05784be0165aa1aac488b4df045c1b16b786e6cce2b438f55c"
 }
