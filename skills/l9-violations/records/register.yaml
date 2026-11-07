@@ -1,0 +1,162 @@
+schema: l9.violations.register.v1
+records:
+- id: V-2026-01-02-001
+  status: acknowledged
+  severity: critical
+  type: speculate_without_reading
+  date: '2026-01-02'
+  title: Speculated that CodeGenAgent was unimplemented
+  brief: records/V-2026-01-02-001.md
+- id: V-2026-01-04-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_move
+  date: '2026-01-04'
+  title: Moved files the user had placed
+  brief: records/V-2026-01-04-001.md
+- id: V-2026-01-06-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_deletion
+  date: '2026-01-06'
+  title: Deleted the audit-suite expansion folder
+  brief: records/V-2026-01-06-001.md
+- id: V-2026-01-07-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_production_change
+  date: '2026-01-07'
+  title: Changed a production VPS after being told to stop
+  brief: records/V-2026-01-07-001.md
+- id: V-2026-01-14-001
+  status: acknowledged
+  severity: high
+  type: restored_user_deletion
+  date: '2026-01-14'
+  title: Put back a section the user had removed
+  brief: records/V-2026-01-14-001.md
+- id: V-2026-01-19-001
+  status: acknowledged
+  severity: medium
+  type: invented_capability
+  date: '2026-01-19'
+  title: Registered tools that do not exist
+  brief: records/V-2026-01-19-001.md
+- id: V-2026-01-20-001
+  status: addressed
+  severity: critical
+  type: unauthorized_deletion
+  date: '2026-01-20'
+  title: Deleted core/symbolic_computation because nothing imported it
+  brief: records/V-2026-01-20-001.md
+- id: V-2026-01-21-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_infrastructure_change
+  date: '2026-01-21'
+  title: Rebuilt the C1 server without approval
+  brief: records/V-2026-01-21-001.md
+- id: V-2026-01-21-002
+  status: acknowledged
+  severity: medium
+  type: parallel_implementation
+  date: '2026-01-21'
+  title: Opened a second deduplication path
+  brief: records/V-2026-01-21-002.md
+- id: V-2026-01-25-001
+  status: acknowledged
+  severity: medium
+  type: rewrite_instead_of_copy
+  date: '2026-01-25'
+  title: Rewrote a harvest instead of copying it
+  brief: records/V-2026-01-25-001.md
+- id: V-2026-01-31-001
+  status: acknowledged
+  severity: critical
+  type: hidden_finding
+  date: '2026-01-31'
+  title: Hid findings with noqa comments
+  brief: records/V-2026-01-31-001.md
+- id: V-2026-02-02-001
+  status: acknowledged
+  severity: high
+  type: hidden_finding
+  date: '2026-02-02'
+  title: Tried to noqa a print check
+  brief: records/V-2026-02-02-001.md
+- id: V-2026-02-13-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_infrastructure_change
+  date: '2026-02-13'
+  title: Reached for the human-only deploy script
+  brief: records/V-2026-02-13-001.md
+- id: V-2026-02-16-001
+  status: acknowledged
+  severity: high
+  type: hidden_finding
+  date: '2026-02-16'
+  title: Excluded a CI check from the hook
+  brief: records/V-2026-02-16-001.md
+- id: V-2026-03-17-001
+  status: acknowledged
+  severity: critical
+  type: unauthorized_push
+  date: '2026-03-17'
+  title: Committed and pushed without being asked
+  brief: records/V-2026-03-17-001.md
+- id: V-2026-03-18-001
+  status: acknowledged
+  severity: high
+  type: existing_code_overwritten
+  date: '2026-03-18'
+  title: Rewrote working XML to match a new file
+  brief: records/V-2026-03-18-001.md
+- id: V-2026-06-06-001
+  status: addressed
+  severity: medium
+  type: rule_defect
+  date: '2026-06-06'
+  title: A push rule still allowed an unasked commit
+  brief: records/V-2026-06-06-001.md
+- id: V-2026-09-14-001
+  status: acknowledged
+  severity: critical
+  type: falsified_evidence
+  date: '2026-09-14'
+  title: Stamped kernel receipts without applying the kernels
+  brief: records/V-2026-09-14-001.md
+- id: V-2026-10-04-001
+  status: acknowledged
+  severity: high
+  type: unauthorized_merge
+  date: '2026-10-04'
+  title: Merged an overlapping PR without authorization
+  brief: records/V-2026-10-04-001.md
+- id: V-2026-11-07-001
+  status: open
+  severity: high
+  type: skill_bypass
+  date: '2026-11-07'
+  title: Skipped l9-plan-simple and GAR for a Cursor plan card
+  brief: records/V-2026-11-07-001.md
+fixtures:
+  file: records/fixtures.yaml
+  count: 12
+unformalized_sources:
+- path: learning/failures/formal_lessons_pending.json
+  id: FL_20251117_user_correction
+  reason: 41 pattern hashes from 2025-10-10 to 2025-11-15. No narrative, so no brief
+    was invented.
+read_and_not_a_violation:
+- path: learning/failures/worktree-make-pr-wiring.md
+  reason: make pr failed because a worktree was unwired.
+- path: learning/failures/precommit-hook-attribution.md
+  reason: A hook message named the wrong author.
+- path: learning/failures/integrity-tool-must-not-heal.md
+  reason: Design rule for checkers.
+- path: learning/failures/check-must-not-recreate-archived.md
+  reason: Design rule for checkers.
+- path: learning/failures/learned-lessons-corpus.md
+  reason: 'Prevention rules. Dated breaches in it are records above. The 2026-01-20
+    union-alias removal and the 2026-02-16 PR #111 note are lessons, not breaches.'
