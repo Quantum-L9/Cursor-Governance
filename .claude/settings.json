@@ -344,7 +344,8 @@
     "l9-repo-sync": "user-invocable-only",
     "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
-    "l9-ui-operator": "user-invocable-only"
+    "l9-ui-operator": "user-invocable-only",
+    "l9-violations": "user-invocable-only"
   },
   "workflowSizeGuideline": "unrestricted"
 }
