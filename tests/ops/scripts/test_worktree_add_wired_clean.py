@@ -20,7 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "ops/scripts/worktree_add_wired.sh"
-_STUB_VENV = "venv:\n\ttouch .venv-marker\n"
+_STUB_VENV = "venv:\n\tmkdir -p .venv\n\ttouch .venv-marker\n"
 
 pytestmark = [
     pytest.mark.skipif(shutil.which("git") is None, reason="git not installed"),
@@ -69,6 +69,7 @@ def test_new_consumer_worktree_leaves_tracked_agent_docs_untouched(tmp_path: Pat
     assert (worktree / ".cursor-commands").is_symlink(), proc.stdout
     assert not (worktree / ".vscode").exists(), "worktree setup ran the IDE reconciler"
     assert "--- venv (make venv) ---" not in proc.stdout
+    _assert_ssot_venv(proc, worktree, home)
 
 
 def _init_consumer(tmp_path: Path, files: dict[str, str]) -> tuple[Path, Path, Path]:
@@ -105,7 +106,17 @@ def _assert_stub_venv(proc: subprocess.CompletedProcess[str], worktree: Path) ->
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "--- venv (make venv) ---" in proc.stdout
     assert (worktree / ".venv-marker").is_file()
+    assert (worktree / ".venv").is_dir()
     assert not (worktree / ".venv").is_symlink()
+
+
+def _assert_ssot_venv(proc: subprocess.CompletedProcess[str], worktree: Path, home: Path) -> None:
+    link = worktree / ".venv"
+    ssot_venv = (home / ".cursor-governance" / ".venv").resolve()
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "--- venv (SSOT " in proc.stdout
+    assert link.is_symlink()
+    assert link.resolve() == ssot_venv
 
 
 def test_worktree_runs_root_venv_target(tmp_path: Path) -> None:
@@ -123,12 +134,19 @@ def test_worktree_runs_venv_target_from_included_fragment(tmp_path: Path) -> Non
     _assert_stub_venv(proc, worktree)
 
 
-def test_uv_lock_without_venv_target_does_not_build(tmp_path: Path) -> None:
+def test_uv_lock_without_venv_target_uses_ssot(tmp_path: Path) -> None:
     consumer, worktree, home = _init_consumer(
         tmp_path,
         {"pyproject.toml": "[project]\nname = 'x'\n", "uv.lock": "version = 1\n"},
     )
     proc = _run_wired(consumer, worktree, home)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "locked venv" not in proc.stdout
-    assert not (worktree / ".venv").exists()
+    assert "--- venv (make venv) ---" not in proc.stdout
+    _assert_ssot_venv(proc, worktree, home)
+
+
+def test_venv_target_that_creates_no_venv_uses_ssot(tmp_path: Path) -> None:
+    consumer, worktree, home = _init_consumer(tmp_path, {"Makefile": "venv:\n\ttrue\n"})
+    proc = _run_wired(consumer, worktree, home)
+    assert "--- venv (make venv) ---" in proc.stdout
+    _assert_ssot_venv(proc, worktree, home)
