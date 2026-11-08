@@ -390,8 +390,8 @@ files:
   sha256: 181df8e54d5edd133ba000dc55df46b9459d623085f4d560e142d1f16f4e928b
   bytes: 3010
 - path: program-execution-controller-template/scripts/pec/state.py
-  sha256: c1eaa49b5838c31cfc6a3e6a8abfd0f2981991f7a07d2a69e4787434cf5cd17e
-  bytes: 48982
+  sha256: f7b0aa599c8e73778b4661c18d5f381bf5aaccfc403246cb991ea98bcf5f08e2
+  bytes: 53779
 - path: program-execution-controller-template/scripts/pec/workspace_reset.py
   sha256: 514ed27b962fe5590117b1bf2b5cbe81eef4b553bf024e59c6e5162e82c30bdf
   bytes: 7903
@@ -658,4 +658,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 217
-  total_bytes: 1130413
+  total_bytes: 1135210
