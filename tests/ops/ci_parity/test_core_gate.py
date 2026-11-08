@@ -289,6 +289,7 @@ def test_scope_keeps_whole_file_and_whole_tree_findings(
     binary = tmp_path / "biome"
     binary.write_text("")
     monkeypatch.setattr(manifest.Manifest, "resolve", lambda self, name: binary)
+    (tmp_path / "biome.json").write_text("{}\n")
     ctx = run.replace(_ctx(tmp_path, tmp_path), changed=["changed.json"], ranges={})
     sem = run.WeightedSemaphore(2)
     biome = run.run_lane(ctx, loaded.lanes["biome"], sem)
@@ -298,6 +299,53 @@ def test_scope_keeps_whole_file_and_whole_tree_findings(
     assert sorted(f["path"] for f in tree["blocking"]) == ["changed.json", "untouched.py"]
     line_lane = run.replace(loaded.lanes["biome"], extra={})
     assert run.run_lane(ctx, line_lane, sem)["blocking"] == []  # default: changed lines only
+
+
+def test_biome_lane_skips_when_the_repo_has_no_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Org CI does not run Biome without a root config; the lane must not either."""
+    called = False
+
+    def boom(ctx: object, lane: object, binary: Path, files: list[str]) -> list[object]:
+        nonlocal called
+        called = True
+        raise AssertionError("biome ci must not run without a config")
+
+    monkeypatch.setitem(run.LANES, "biome", boom)
+    binary = tmp_path / "biome"
+    binary.write_text("")
+    monkeypatch.setattr(manifest.Manifest, "resolve", lambda self, name: binary)
+    scan = tmp_path / "scan"
+    scan.mkdir()
+    (scan / "app.ts").write_text("export const x = 1\n")
+    loaded = manifest.load()
+    assert loaded.lanes["biome"].extra["requires_any_file"] == ["biome.json", "biome.jsonc"]
+    ctx = run.replace(_ctx(tmp_path, scan), changed=["app.ts"], ranges={})
+    record = run.run_lane(ctx, loaded.lanes["biome"], run.WeightedSemaphore(2))
+    assert record["status"] == "skip"
+    assert record["blocking"] == []
+    assert "not applicable" in record["notice"]
+    assert called is False
+
+
+@pytest.mark.parametrize("config_name", ["biome.json", "biome.jsonc"])
+def test_biome_lane_blocks_when_a_root_config_is_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, config_name: str
+) -> None:
+    found = [run.fnd.Finding("biome", "format", "error", "app.ts", 1, "format")]
+    monkeypatch.setitem(run.LANES, "biome", lambda ctx, lane, binary, files: list(found))
+    binary = tmp_path / "biome"
+    binary.write_text("")
+    monkeypatch.setattr(manifest.Manifest, "resolve", lambda self, name: binary)
+    scan = tmp_path / "scan"
+    scan.mkdir()
+    (scan / config_name).write_text("{}\n")
+    (scan / "app.ts").write_text("export const x = 1\n")
+    ctx = run.replace(_ctx(tmp_path, scan), changed=["app.ts"], ranges={})
+    record = run.run_lane(ctx, manifest.load().lanes["biome"], run.WeightedSemaphore(2))
+    assert record["status"] == "fail"
+    assert [item["path"] for item in record["blocking"]] == ["app.ts"]
 
 
 def test_gate_lanes_filter_runs_only_the_named_lanes(tmp_path: Path) -> None:

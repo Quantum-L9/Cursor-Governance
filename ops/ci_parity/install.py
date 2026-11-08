@@ -35,6 +35,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import manifest  # noqa: E402
+from run import extract_tar_inside  # noqa: E402
 
 DOWNLOAD_TIMEOUT = 1800
 
@@ -112,7 +113,7 @@ def _install_release(tool: manifest.Tool, target: Path, from_dir: Path | None) -
             shutil.move(str(asset), staging / tool.binary)
         else:
             with tarfile.open(asset) as archive:
-                archive.extractall(staging, filter="data")
+                extract_tar_inside(archive, staging)
         binary = staging / tool.binary
         if not binary.is_file():
             raise InstallError(f"{tool.name}: archive lacks {tool.binary}")

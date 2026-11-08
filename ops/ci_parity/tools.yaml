@@ -192,9 +192,12 @@ lanes:
     tool: biome
     tier: fast
     globs: ["*.json", "*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs", "*.cjs"]
-    # Analyze (central Core) runs `biome ci` blocking: any finding in a changed
-    # file fails it, not only one on a changed line (a whole-file format
-    # diagnostic anchors wherever Biome puts it).
+    # Analyze (central Core) runs `biome ci` blocking only when the checkout
+    # root has biome.json or biome.jsonc (org-ci.yml hashFiles at 68ed994;
+    # otherwise not_applicable). Any finding in a changed file fails it, not
+    # only one on a changed line (a whole-file format diagnostic anchors
+    # wherever Biome puts it).
+    requires_any_file: [biome.json, biome.jsonc]
     block: [error]
     scope: changed-files
     weight: 1
