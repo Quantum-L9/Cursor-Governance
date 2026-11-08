@@ -28,6 +28,15 @@ pytestmark = [
 ]
 
 
+def _wired_env(home: Path) -> dict[str, str]:
+    env = {**os.environ, "HOME": str(home)}
+    # The fixture SSOT is $HOME/.cursor-governance. A parent L9_GOVERNANCE_DIR
+    # would point the fallback at the operator's clone instead of the fixture.
+    env.pop("L9_WIRE_LINKS_ONLY", None)
+    env.pop("L9_GOVERNANCE_DIR", None)
+    return env
+
+
 def _git(cwd: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", *args],
@@ -51,8 +60,7 @@ def test_new_consumer_worktree_leaves_tracked_agent_docs_untouched(tmp_path: Pat
     _git(consumer, "commit", "-qm", "init")
 
     worktree = tmp_path / "wt"
-    env = {**os.environ, "HOME": str(home)}
-    env.pop("L9_WIRE_LINKS_ONLY", None)
+    env = _wired_env(home)
     proc = subprocess.run(
         ["bash", str(SCRIPT), "-b", "feat/x", str(worktree), "main"],
         cwd=consumer,
@@ -89,8 +97,7 @@ def _init_consumer(tmp_path: Path, files: dict[str, str]) -> tuple[Path, Path, P
 
 
 def _run_wired(consumer: Path, worktree: Path, home: Path) -> subprocess.CompletedProcess[str]:
-    env = {**os.environ, "HOME": str(home)}
-    env.pop("L9_WIRE_LINKS_ONLY", None)
+    env = _wired_env(home)
     return subprocess.run(
         ["bash", str(SCRIPT), "-b", "feat/x", str(worktree), "main"],
         cwd=consumer,
