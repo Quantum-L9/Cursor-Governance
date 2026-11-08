@@ -856,6 +856,32 @@ claude_routing:
     note: 'explicit_only + hint_allowed — Package an already verified clean source commit only. Never invoke as a default PE successor or create a remote repository from a hint.
 
       '
+  - id: governance_violation
+    primary: l9-violations
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /l9-violations
+    - governance violation
+    - skill violation
+    - record a violation
+    - review a violation
+    positive_signals:
+    - /l9-violations
+    - governance violation
+    - record a governance violation
+    - skipped a required skill
+    - bypassed a required workflow
+    - violation brief
+    negative_signals:
+    - code review
+    - passing test
+    - feature work
+    supporting:
+    - l9-structured-reasoning
+    note: 'explicit_only + hint_allowed — Record or review a governance or skill-process breach inside the l9-violations pack. Never an always-on reviewer, and a hint never records a violation on its own.
+
+      '
 slash_commands:
   registry: commands/COMMANDS_MANIFEST.yaml
   index: commands/commands-index.md

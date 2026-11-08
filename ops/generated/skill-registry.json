@@ -1,5 +1,5 @@
 {
-  "generation_id": "ac40528c438214b3c1b9f9a38592c7b4d7af4638ff456ba30f67cc772ec39395",
+  "generation_id": "335ce615b25d8306c4dcddacd8dae9316b0582cc5289845ca33302a2735f8848",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -768,6 +768,36 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "governance_violation",
+        "negative_signals": [
+          "code review",
+          "passing test",
+          "feature work"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Record or review a governance or skill-process breach inside the l9-violations pack. Never an always-on reviewer, and a hint never records a violation on its own.\n",
+        "positive_signals": [
+          "/l9-violations",
+          "governance violation",
+          "record a governance violation",
+          "skipped a required skill",
+          "bypassed a required workflow",
+          "violation brief"
+        ],
+        "primary": "l9-violations",
+        "required_any": [
+          "/l9-violations",
+          "governance violation",
+          "skill violation",
+          "record a violation",
+          "review a violation"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
       }
     ],
     "supporting_skills": [
@@ -1501,7 +1531,7 @@
       "path": "skills/l9-violations",
       "reason": "Record a governance or skill-process breach inside this pack. Explicit only \u2014 invoke when an agent skipped a required skill or the user asks to record or review a violation. Not an always-on reviewer.",
       "skill_md": "skills/l9-violations/SKILL.md",
-      "skill_sha256": "51c326c548bb413d4c50990808278133617abce7375828a7bf8d3a1ac1d139d0",
+      "skill_sha256": "2c1dd27dd6ca5f9ccf567877a6caf9ba1fdef2cf73892f2926e6626494c23afb",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1533,6 +1563,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "902c19a479a54b2c3b5f711b2c4026d6aaa0b01cf4b1a9960ab1150e6561040d",
-  "source_skill_corpus_sha256": "1de0700ee50bec05784be0165aa1aac488b4df045c1b16b786e6cce2b438f55c"
+  "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
+  "source_skill_corpus_sha256": "9d23a9983233da350f2695923c2bb9a84e4cfdaed89c590b7fbce0deda5cd323"
 }
