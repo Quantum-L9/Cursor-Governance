@@ -459,7 +459,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "44ef683407142d800965c42db5f9b6021e7e66b8fb6ce5ba260cd3f55e317371"
+      "sha256": "100a7e12b6c5a40eea558daf6b47edc53d80d10f60fc2d957d4a264cb09f4bc6"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -1615,7 +1615,7 @@
     },
     {
       "path": "integrations/subagent-generated-data/campaign_summary.py",
-      "sha256": "ba477a7b59b618e20ed8eba2c1b53e8e68c8bec532fe1fd3f62c086a91bd05fa"
+      "sha256": "09049e7dcbbeb1edf8fe373ddb4da9e11983c1b187ec460626f532274f3ff793"
     },
     {
       "path": "integrations/subagent-generated-data/compile_units.py",
@@ -2111,7 +2111,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "ce09a34d55cf6306dd9d0acfd76b964c1d0528e74838565ca15bccbc22718773"
+      "sha256": "ea77c3b78753d294f90562ec47cb625bfa5a584befc404c5eb957dd815f966ef"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2203,7 +2203,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "ca642b27d633db3d683d13bf2448bd6b215d6dee3d18676cce620d44a75cc2d5"
+      "sha256": "8b28da9096d1f45453d5a47fd2e19dc3c688d3f5d8f7e8ca1229d97c658bdaf1"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",

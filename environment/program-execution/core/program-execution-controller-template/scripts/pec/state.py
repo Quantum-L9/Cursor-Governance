@@ -21,6 +21,172 @@ RUNTIME_SCHEMA_KEY = "runtime_schema_version"
 #: Bounded wait for the single-writer lock before a mutation is refused.
 BUSY_TIMEOUT_SECONDS = 5.0
 
+# Every statement below is a static string: no identifier or value is
+# interpolated into SQL text at runtime. Values are always bound parameters.
+# A partial UPDATE binds a `set_<column>` flag per updatable column, and the
+# column keeps its current value when its flag is false, so one fixed
+# statement serves any subset of the allowed columns.
+
+#: Columns `update_task` may change, in the order `_UPDATE_TASK_SQL` names them.
+_TASK_UPDATE_COLUMNS = (
+    "scope_status",
+    "source_contract_path",
+    "source_contract_digest",
+    "rendered_contract_path",
+    "rendered_contract_digest",
+    "base_sha",
+    "branch",
+    "worktree",
+    "lease_id",
+    "attempts",
+    "last_error",
+)
+_UPDATE_TASK_SQL = (
+    "UPDATE tasks SET "
+    "scope_status = CASE WHEN :set_scope_status THEN :scope_status ELSE scope_status END, "
+    "source_contract_path = CASE WHEN :set_source_contract_path "
+    "THEN :source_contract_path ELSE source_contract_path END, "
+    "source_contract_digest = CASE WHEN :set_source_contract_digest "
+    "THEN :source_contract_digest ELSE source_contract_digest END, "
+    "rendered_contract_path = CASE WHEN :set_rendered_contract_path "
+    "THEN :rendered_contract_path ELSE rendered_contract_path END, "
+    "rendered_contract_digest = CASE WHEN :set_rendered_contract_digest "
+    "THEN :rendered_contract_digest ELSE rendered_contract_digest END, "
+    "base_sha = CASE WHEN :set_base_sha THEN :base_sha ELSE base_sha END, "
+    "branch = CASE WHEN :set_branch THEN :branch ELSE branch END, "
+    "worktree = CASE WHEN :set_worktree THEN :worktree ELSE worktree END, "
+    "lease_id = CASE WHEN :set_lease_id THEN :lease_id ELSE lease_id END, "
+    "attempts = CASE WHEN :set_attempts THEN :attempts ELSE attempts END, "
+    "last_error = CASE WHEN :set_last_error THEN :last_error ELSE last_error END "
+    "WHERE id = :row_key"
+)
+
+#: Columns `update_lease` may change, in the order `_UPDATE_LEASE_SQL` names them.
+_LEASE_UPDATE_COLUMNS = ("worktree", "contract_digest", "active")
+_UPDATE_LEASE_SQL = (
+    "UPDATE leases SET "
+    "worktree = CASE WHEN :set_worktree THEN :worktree ELSE worktree END, "
+    "contract_digest = CASE WHEN :set_contract_digest "
+    "THEN :contract_digest ELSE contract_digest END, "
+    "active = CASE WHEN :set_active THEN :active ELSE active END "
+    "WHERE lease_id = :row_key"
+)
+
+#: Columns `update_execution_attempt` may change, in the order
+#: `_UPDATE_EXECUTION_ATTEMPT_SQL` names them.
+_EXECUTION_ATTEMPT_UPDATE_COLUMNS = (
+    "state",
+    "provider_ref",
+    "provider_execution_id",
+    "terminal_at",
+    "terminal_status",
+    "fence_status",
+    "fenced_at",
+    "reason",
+)
+_UPDATE_EXECUTION_ATTEMPT_SQL = (
+    "UPDATE execution_attempts SET "
+    "state = CASE WHEN :set_state THEN :state ELSE state END, "
+    "provider_ref = CASE WHEN :set_provider_ref THEN :provider_ref ELSE provider_ref END, "
+    "provider_execution_id = CASE WHEN :set_provider_execution_id "
+    "THEN :provider_execution_id ELSE provider_execution_id END, "
+    "terminal_at = CASE WHEN :set_terminal_at THEN :terminal_at ELSE terminal_at END, "
+    "terminal_status = CASE WHEN :set_terminal_status "
+    "THEN :terminal_status ELSE terminal_status END, "
+    "fence_status = CASE WHEN :set_fence_status THEN :fence_status ELSE fence_status END, "
+    "fenced_at = CASE WHEN :set_fenced_at THEN :fenced_at ELSE fenced_at END, "
+    "reason = CASE WHEN :set_reason THEN :reason ELSE reason END "
+    "WHERE attempt_id = :row_key"
+)
+
+#: `upsert_task` inserts every column; on conflict it refreshes only the
+#: definition columns and leaves runtime-owned columns untouched.
+_UPSERT_TASK_SQL = (
+    "INSERT INTO tasks("
+    "id, title, wave_id, workstream_id, target_id, repository_id, execution_kind, "
+    "objective, dependencies, required_decisions, blocking_unknowns, required_evidence, "
+    "completion_gates, authorization_ceiling, required_acceptance, "
+    "verification_mechanisms, required_validation_commands, risk_tier, "
+    "definition_status, runtime_state, scope_status, source_contract_path, "
+    "source_contract_digest, rendered_contract_path, rendered_contract_digest, "
+    "base_sha, branch, worktree, lease_id, attempts, last_error"
+    ") VALUES("
+    ":id, :title, :wave_id, :workstream_id, :target_id, :repository_id, :execution_kind, "
+    ":objective, :dependencies, :required_decisions, :blocking_unknowns, "
+    ":required_evidence, :completion_gates, :authorization_ceiling, "
+    ":required_acceptance, :verification_mechanisms, :required_validation_commands, "
+    ":risk_tier, :definition_status, :runtime_state, :scope_status, "
+    ":source_contract_path, :source_contract_digest, :rendered_contract_path, "
+    ":rendered_contract_digest, :base_sha, :branch, :worktree, :lease_id, :attempts, "
+    ":last_error"
+    ") ON CONFLICT(id) DO UPDATE SET "
+    "title=excluded.title, wave_id=excluded.wave_id, "
+    "workstream_id=excluded.workstream_id, target_id=excluded.target_id, "
+    "repository_id=excluded.repository_id, execution_kind=excluded.execution_kind, "
+    "objective=excluded.objective, dependencies=excluded.dependencies, "
+    "required_decisions=excluded.required_decisions, "
+    "blocking_unknowns=excluded.blocking_unknowns, "
+    "required_evidence=excluded.required_evidence, "
+    "completion_gates=excluded.completion_gates, "
+    "authorization_ceiling=excluded.authorization_ceiling, "
+    "required_acceptance=excluded.required_acceptance, "
+    "verification_mechanisms=excluded.verification_mechanisms, "
+    "required_validation_commands=excluded.required_validation_commands, "
+    "risk_tier=excluded.risk_tier, definition_status=excluded.definition_status"
+)
+
+#: Columns `create_execution_attempt` writes, in `_INSERT_EXECUTION_ATTEMPT_SQL` order.
+_EXECUTION_ATTEMPT_COLUMNS = (
+    "attempt_id",
+    "task_id",
+    "attempt_number",
+    "lease_id",
+    "program_digest",
+    "contract_digest",
+    "base_sha",
+    "worktree",
+    "baseline_path",
+    "baseline_digest",
+    "state",
+    "provider_ref",
+    "provider_execution_id",
+    "started_at",
+    "terminal_at",
+    "terminal_status",
+    "fence_status",
+    "fenced_at",
+    "reason",
+)
+_INSERT_EXECUTION_ATTEMPT_SQL = (
+    "INSERT INTO execution_attempts("
+    "attempt_id, task_id, attempt_number, lease_id, program_digest, contract_digest, "
+    "base_sha, worktree, baseline_path, baseline_digest, state, provider_ref, "
+    "provider_execution_id, started_at, terminal_at, terminal_status, fence_status, "
+    "fenced_at, reason"
+    ") VALUES("
+    ":attempt_id, :task_id, :attempt_number, :lease_id, :program_digest, "
+    ":contract_digest, :base_sha, :worktree, :baseline_path, :baseline_digest, :state, "
+    ":provider_ref, :provider_execution_id, :started_at, :terminal_at, "
+    ":terminal_status, :fence_status, :fenced_at, :reason"
+    ")"
+)
+
+
+def _masked_update_params(
+    columns: tuple[str, ...], fields: dict[str, Any], row_key: Any
+) -> dict[str, Any]:
+    """Bind parameters for a static masked UPDATE over ``columns``.
+
+    Each column gets its new value (or None) and a ``set_<column>`` flag that
+    is true only for a column the caller named, so unnamed columns keep their
+    stored value -- including a caller-supplied None, which still writes NULL.
+    """
+    params: dict[str, Any] = {"row_key": row_key}
+    for name in columns:
+        params[name] = fields.get(name)
+        params[f"set_{name}"] = name in fields
+    return params
+
 
 class StateError(RuntimeError):
     def __init__(self, message: str, *, error_code: str | None = None):
@@ -101,7 +267,7 @@ class StateDB:
     def _commit(self) -> None:
         """Commit unless an enclosing Controller transaction owns the commit."""
         if self._tx_depth == 0 and self.conn.in_transaction:
-            self._commit()
+            self.conn.commit()
 
     @contextmanager
     def controller_transaction(self) -> Iterator[StateDB]:
@@ -548,34 +714,7 @@ class StateDB:
             "attempts": current["attempts"] if current else 0,
             "last_error": current["last_error"] if current else None,
         }
-        columns = ",".join(payload)
-        placeholders = ",".join(f":{key}" for key in payload)
-        updates = ",".join(
-            f"{key}=excluded.{key}"
-            for key in payload
-            if key
-            not in {
-                "id",
-                "runtime_state",
-                "scope_status",
-                "source_contract_path",
-                "source_contract_digest",
-                "rendered_contract_path",
-                "rendered_contract_digest",
-                "base_sha",
-                "branch",
-                "worktree",
-                "lease_id",
-                "attempts",
-                "last_error",
-            }
-        )
-        # Identifiers come from the hardcoded payload keys above; values are
-        # bound parameters.
-        self.conn.execute(
-            f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501  # nosec B608
-            payload,
-        )
+        self.conn.execute(_UPSERT_TASK_SQL, payload)
         self._commit()
 
     def _task_row(self, row: sqlite3.Row) -> dict[str, Any]:
@@ -609,30 +748,13 @@ class StateDB:
         self._commit()
 
     def update_task(self, task_id: str, **fields: Any) -> None:
-        allowed = {
-            "scope_status",
-            "source_contract_path",
-            "source_contract_digest",
-            "rendered_contract_path",
-            "rendered_contract_digest",
-            "base_sha",
-            "branch",
-            "worktree",
-            "lease_id",
-            "attempts",
-            "last_error",
-        }
-        unknown = set(fields) - allowed
+        unknown = set(fields) - set(_TASK_UPDATE_COLUMNS)
         if unknown:
             raise ValueError(f"unsupported task fields: {sorted(unknown)}")
         if not fields:
             return
-        sets = ",".join(f"{name}=?" for name in fields)
-        # Column names are validated against the `allowed` set above; values
-        # are bound parameters.
         self.conn.execute(
-            f"UPDATE tasks SET {sets} WHERE id=?",  # nosec B608
-            [*fields.values(), task_id],
+            _UPDATE_TASK_SQL, _masked_update_params(_TASK_UPDATE_COLUMNS, fields, task_id)
         )
         self._commit()
 
@@ -827,15 +949,12 @@ class StateDB:
         self._commit()
 
     def update_lease(self, lease_id: str, **fields: Any) -> None:
-        allowed = {"worktree", "contract_digest", "active"}
-        if set(fields) - allowed:
+        if set(fields) - set(_LEASE_UPDATE_COLUMNS):
             raise ValueError("unsupported lease update")
-        sets = ",".join(f"{name}=?" for name in fields)
-        # Column names are validated against the `allowed` set above; values
-        # are bound parameters.
+        if not fields:
+            return
         self.conn.execute(
-            f"UPDATE leases SET {sets} WHERE lease_id=?",  # nosec B608
-            [*fields.values(), lease_id],
+            _UPDATE_LEASE_SQL, _masked_update_params(_LEASE_UPDATE_COLUMNS, fields, lease_id)
         )
         self._commit()
 
@@ -931,60 +1050,20 @@ class StateDB:
         return int(row["n"])
 
     def create_execution_attempt(self, record: dict[str, Any]) -> None:
-        columns = (
-            "attempt_id",
-            "task_id",
-            "attempt_number",
-            "lease_id",
-            "program_digest",
-            "contract_digest",
-            "base_sha",
-            "worktree",
-            "baseline_path",
-            "baseline_digest",
-            "state",
-            "provider_ref",
-            "provider_execution_id",
-            "started_at",
-            "terminal_at",
-            "terminal_status",
-            "fence_status",
-            "fenced_at",
-            "reason",
-        )
-        payload = {name: record.get(name) for name in columns}
+        payload = {name: record.get(name) for name in _EXECUTION_ATTEMPT_COLUMNS}
         payload["fence_status"] = payload["fence_status"] or "none"
-        self.conn.execute(
-            "INSERT INTO execution_attempts("
-            + ",".join(columns)
-            + ") VALUES("
-            + ",".join(f":{name}" for name in columns)
-            + ")",
-            payload,
-        )
+        self.conn.execute(_INSERT_EXECUTION_ATTEMPT_SQL, payload)
         self._commit()
 
     def update_execution_attempt(self, attempt_id: str, **fields: Any) -> None:
-        allowed = {
-            "state",
-            "provider_ref",
-            "provider_execution_id",
-            "terminal_at",
-            "terminal_status",
-            "fence_status",
-            "fenced_at",
-            "reason",
-        }
-        unknown = set(fields) - allowed
+        unknown = set(fields) - set(_EXECUTION_ATTEMPT_UPDATE_COLUMNS)
         if unknown:
             raise ValueError(f"unsupported execution attempt fields: {sorted(unknown)}")
         if not fields:
             return
-        sets = ",".join(f"{name}=?" for name in fields)
-        # Column names are validated against `allowed`; values are bound.
         self.conn.execute(
-            f"UPDATE execution_attempts SET {sets} WHERE attempt_id=?",  # nosec B608
-            [*fields.values(), attempt_id],
+            _UPDATE_EXECUTION_ATTEMPT_SQL,
+            _masked_update_params(_EXECUTION_ATTEMPT_UPDATE_COLUMNS, fields, attempt_id),
         )
         self._commit()
 
