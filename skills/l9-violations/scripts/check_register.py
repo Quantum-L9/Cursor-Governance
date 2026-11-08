@@ -12,6 +12,18 @@ import yaml
 STATUSES = {"open", "acknowledged", "addressed"}
 SEVERITIES = {"critical", "high", "medium"}
 ID_RE = re.compile(r"^V-(\d{4}-\d{2}-\d{2})-(\d{3})$")
+#: The brief fields the register row repeats (references/report-contract.md).
+#: Each must appear once in the brief as a `- Field: value` line and equal the row.
+MIRRORED_FIELDS = ("type", "severity", "status", "date")
+FIELD_RE = re.compile(r"^- (Type|Severity|Status|Date):[ \t]*(.*?)[ \t]*$", re.MULTILINE)
+
+
+def brief_fields(text: str) -> dict[str, list[str]]:
+    """Every value each mirrored field takes in a brief, keyed by lowercase field name."""
+    found: dict[str, list[str]] = {}
+    for name, value in FIELD_RE.findall(text):
+        found.setdefault(name.lower(), []).append(value)
+    return found
 
 
 def check(root: Path) -> list[str]:
@@ -60,8 +72,22 @@ def check(root: Path) -> list[str]:
         if not path.is_file():
             errors.append(f"{record_id}: missing {brief}")
             continue
-        if record_id not in path.read_text(encoding="utf-8"):
+        text = path.read_text(encoding="utf-8")
+        if record_id not in text:
             errors.append(f"{record_id}: brief does not contain its id")
+        fields = brief_fields(text)
+        for name in MIRRORED_FIELDS:
+            values = fields.get(name, [])
+            expected = str(row.get(name, ""))
+            if len(values) != 1:
+                errors.append(
+                    f"{record_id}: brief must state {name.capitalize()} exactly once, "
+                    f"found {len(values)}"
+                )
+            elif values[0] != expected:
+                errors.append(
+                    f"{record_id}: brief {name} {values[0]!r} != register {name} {expected!r}"
+                )
     on_disk = {path.name[: -len(".md")] for path in (root / "records").glob("V-*.md")}
     missing = on_disk - seen
     if missing:

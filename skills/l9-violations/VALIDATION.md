@@ -16,7 +16,7 @@ The slash command was not restored.
 |---|---|
 | `validate_skill_pack.py skills/l9-violations` | PASS, 27 files, before this file existed |
 | `scripts/check_register.py` | PASS |
-| `pytest skills/l9-violations/tests/test_check_register.py` | 3 passed |
+| `pytest skills/l9-violations/tests/test_check_register.py` | 5 passed |
 | `ops/scripts/check_skills_standard.py` | PASS, 57 live, discovery 8399 bytes of 16384 |
 | `ruff check` and `ruff format --check` on this pack | passed |
 

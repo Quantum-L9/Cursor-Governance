@@ -75,7 +75,7 @@ Tracker self-tests are not a status. They live only in `records/fixtures.yaml`.
 
 ## Check
 
-`scripts/check_register.py` fails when a register row has no brief, a brief is missing from the register, a fixture row is unlabeled, or a brief path leaves `records/`.
+`scripts/check_register.py` fails when a register row has no brief, a brief is missing from the register, a brief's Type, Severity, Status, or Date differs from its register row, a fixture row is unlabeled, or a brief path leaves `records/`.
 
 ## Failure
 
