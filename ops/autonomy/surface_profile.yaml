@@ -107,6 +107,28 @@ surface_capabilities:
       This key names which GitHub TRANSPORT is sanctioned. It says nothing about the
       publication path — `make pr` remains the sanctioned route (see
       l4_local_autonomy) — and it confers no merge authority.
+    # Author review on the PR this checkout published. Claude's allow list
+    # matches the helper prefix. The helper enforces the route list and the
+    # pr-summary binding. Raw `gh api` POST stays off the allow list.
+    review_activity:
+      command: ops/scripts/pr_threads.py
+      receipt: .l9/pr/pr-summary.json # l9.pr_summary.v1; --pr matches number; repo matches origin; state is open
+      allow_prefixes:
+        - "Bash(python3 ops/scripts/pr_threads.py:*)"
+        - "Bash(python3 -u ops/scripts/pr_threads.py:*)"
+      routes:
+        - "POST /repos/{o}/{r}/pulls/{n}/comments/{cid}/replies"
+        - "POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve"
+        - "POST /repos/{o}/{r}/issues/{n}/comments"
+      denied:
+        - merge
+        - approve
+        - force-push
+        - unresolve
+        - auto-merge
+        - ready-for-review
+        - convert-to-draft
+      raw_gh_api_post: not_allowlisted
 
 claude_execution_profiles:
   policy: ops/autonomy/claude-execution-profiles.json

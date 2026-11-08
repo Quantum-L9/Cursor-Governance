@@ -37,6 +37,13 @@ from typing import Any, NoReturn
 
 from protocol import rest_only as _rest_only
 
+_OPS_SCRIPTS = Path(__file__).resolve().parents[3] / "ops" / "scripts"
+if str(_OPS_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_OPS_SCRIPTS))
+from lib.pr_thread_routes import comment as _comment_route  # noqa: E402
+from lib.pr_thread_routes import reply as _reply_route  # noqa: E402
+from lib.pr_thread_routes import resolve as _resolve_route  # noqa: E402
+
 GH_TIMEOUT_SEC = 30
 CHUNK_SIZE = 6
 VALID_DISPOSITIONS = frozenset({"fixed", "deferred", "acknowledged", "disagreed"})
@@ -81,13 +88,6 @@ def _graphql(payload: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _rest(method: str, path: str, payload: dict[str, Any] | None = None) -> str:
-    argv = ["gh", "api", "--method", method, path]
-    if payload is None:
-        return _run_gh(argv)
-    return _run_gh([*argv, "--input", "-"], input_text=json.dumps(payload))
-
-
 def _comment_id(th: dict[str, Any]) -> int:
     raw = th.get("comment_id")
     try:
@@ -107,11 +107,7 @@ def _comment_id(th: dict[str, Any]) -> int:
 def _reply_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
     calls = 0
     for th in threads:
-        _rest(
-            "POST",
-            f"repos/{repo}/pulls/{number}/comments/{_comment_id(th)}/replies",
-            {"body": th["body"]},
-        )
+        _reply_route(repo, number, _comment_id(th), str(th["body"]), run=_run_gh)
         calls += 1
     return calls
 
@@ -119,14 +115,8 @@ def _reply_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
 def _resolve_rest(repo: str, number: int, threads: list[dict[str, Any]]) -> int:
     calls = 0
     for th in threads:
-        cid = _comment_id(th)
-        raw = _rest("POST", f"repos/{repo}/pulls/{number}/ccr/comments/{cid}/resolve")
+        _resolve_route(repo, number, _comment_id(th), run=_run_gh)
         calls += 1
-        try:
-            if json.loads(raw).get("resolved") is not True:
-                _fail(f"comment {cid}: resolve returned resolved!=true: {raw[:200]}")
-        except json.JSONDecodeError:
-            _fail(f"comment {cid}: resolve returned non-JSON: {raw[:200]}")
     return calls
 
 
@@ -275,7 +265,7 @@ def _post_summary(repo: str, number: int, body: str) -> None:
     # absent from the guard list in ops/scripts/lib/gh_graphql.sh — so it failed
     # here while looking allowed. A PR comment is an issue comment; this route
     # is unconditional because it is correct on local CLI too.
-    _rest("POST", f"repos/{repo}/issues/{number}/comments", {"body": body})
+    _comment_route(repo, number, body, run=_run_gh)
 
 
 def _load_input(path: Path) -> dict[str, Any]:

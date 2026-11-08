@@ -180,38 +180,42 @@ hand-rolled loop did (18 threads / 107s / no output until exit). What remains
 forbidden is a **hand-rolled per-thread `gh` loop outside the helper** on any
 surface, and any `gh pr …` / `gh api graphql` call on a REST-only surface.
 
-Single-thread fallback (one thread only, or the helper is unavailable). Pick
-the row for your surface; do not mix:
+Single-thread writes go through `ops/scripts/pr_threads.py`. That command is
+the standing Claude Code allow. It posts only to the open PR named by
+`.l9/pr/pr-summary.json` in this checkout, and it appends the attribution
+footer itself. Discover comment ids with GET; do not hand-roll
+`gh api --method POST`.
 
-### Reply to inline (diff) comments (every surface)
+### Reply to inline (diff) comments
 
 ```bash
-# gh has no --timeout; bound the spawn externally (same 30s as reply_threads.py).
-timeout 30s gh api --method POST /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
-  -f body="{canonical_reply}"
+python3 ops/scripts/pr_threads.py reply --pr {pr_number} --comment-id {comment_id} <<'EOF'
+{canonical_reply}
+EOF
 ```
 
-### Reply to review-level comments (every surface)
+### Status comment (review-level)
 
 `gh pr comment` is GraphQL-backed and 403s on a REST-only gateway while looking
-allowed. A PR comment is an issue comment; use the native route everywhere:
+allowed. A PR comment is an issue comment. The helper posts that route:
 
 ```bash
-timeout 30s gh api --method POST /repos/{owner}/{repo}/issues/{pr_number}/comments \
-  -f body="{reply}"
+python3 ops/scripts/pr_threads.py comment --pr {pr_number} <<'EOF'
+{reply}
+EOF
 ```
 
-### Resolve a thread — REST-only surface (Claude Code Web / Mobile)
+### Resolve a thread
+
+`ccr/review_threads` emits no GraphQL node id. Resolve by comment id. The
+helper fails unless the response says `resolved: true`.
 
 ```bash
-# Discover threads + the comment_id that keys them (no node id exists here).
 gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/ccr/review_threads
 # → [{resolved, outdated, path, line, comment_ids: [...]}, …]; bodies come from
 gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/comments
 
-# Resolve by the thread's first comment id; the response must say resolved: true.
-timeout 30s gh api --method POST \
-  /repos/{owner}/{repo}/pulls/{pr_number}/ccr/comments/{comment_id}/resolve
+python3 ops/scripts/pr_threads.py resolve --pr {pr_number} --comment-id {comment_id}
 ```
 
 ### Resolve a thread — local CLI / Desktop (GraphQL reachable)
