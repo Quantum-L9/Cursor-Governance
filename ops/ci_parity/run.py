@@ -469,6 +469,27 @@ def stage_core_governance(
     )
 
 
+def extract_tar_inside(tar: tarfile.TarFile, destination: Path) -> None:
+    """Extract only members whose names stay inside ``destination``.
+
+    ``filter="data"`` refuses absolute paths, ``..``, links that escape, and
+    special files. Semgrep's tarfile rule still flags a bare ``extractall``;
+    it accepts the call only when ``members=`` is the set that was checked.
+    A member that fails the check refuses the whole archive before any write.
+    """
+    root = destination.resolve()
+    kept: list[tarfile.TarInfo] = []
+    for member in tar.getmembers():
+        name = member.name
+        path = Path(name)
+        if path.is_absolute() or ".." in path.parts:
+            raise tarfile.TarError(f"refusing tar member outside destination: {name}")
+        if not (root / name).resolve().is_relative_to(root):
+            raise tarfile.TarError(f"refusing tar member outside destination: {name}")
+        kept.append(member)
+    tar.extractall(destination, members=kept, filter="data")
+
+
 def stage_sdk_source(ctx: Context, tool: manifest.Tool) -> Path:
     """The SDK at its pinned commit, extracted at SDK_SOURCE in the snapshot."""
     url = tool.package.removeprefix("git+")
@@ -493,7 +514,7 @@ def stage_sdk_source(ctx: Context, tool: manifest.Tool) -> Path:
         check=True,
     )
     with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
-        tar.extractall(target, filter="data")
+        extract_tar_inside(tar, target)
     return target
 
 
@@ -734,6 +755,19 @@ def run_lane(ctx: Context, lane: manifest.Lane, sem: WeightedSemaphore) -> dict[
         record.update(
             status="skip",
             notice=f"{lane.tool} {tool.version} not installed (ops/ci_parity/install.py)",
+        )
+        return record
+    # Same predicate as Org CI: no root config means the check is not applicable
+    # and must not run Biome's defaults against the changed files.
+    required = [str(name) for name in (lane.extra.get("requires_any_file") or [])]
+    if required and not any((ctx.scan_dir / name).is_file() for name in required):
+        listed = " or ".join(required)
+        record.update(
+            status="skip",
+            notice=(
+                f"{lane.name}: not applicable — no {listed} at the scanned root; "
+                "Org CI does not run this check"
+            ),
         )
         return record
     ctx = replace(ctx, notices=[], facts={})  # per lane: lanes run concurrently

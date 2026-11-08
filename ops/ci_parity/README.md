@@ -68,8 +68,12 @@ security wave already runs that exact pin when dependency files change.
 - **Semgrep Pro.** `semgrep ci --dry-run` fetches the org policy with the token
   and creates no scan. Advisory until probe U1 proves parity with the
   `semgrep-cloud-platform/scan` check.
-- **Biome** blocks: Analyze (central Core) runs `biome ci` in blocking mode with
-  its locked 2.5.8 binary, so any finding in a changed file blocks.
+- **Biome** blocks only when the scanned tree has `biome.json` or `biome.jsonc`
+  at its root, the same predicate as Analyze (central Core)
+  (`hashFiles('biome.json', 'biome.jsonc')`; otherwise `not_applicable`). Core
+  runs `biome ci` in blocking mode with its locked 2.5.8 binary, so any finding
+  in a changed file blocks. A repo with neither file skips the lane and does
+  not fail the gate.
 - **New tools** (actionlint, zizmor, shellcheck, yamllint) block on error level
   on changed lines only, so existing debt never blocks.
 
