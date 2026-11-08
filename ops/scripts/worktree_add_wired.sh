@@ -55,10 +55,18 @@ fi
 # reconcile the IDE profile deliberately.
 L9_WIRE_LINKS_ONLY=1 bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
 
-# Real locked venv in this tree. A symlink to another checkout's .venv fails
-# ensure_gov_python.sh (sys.prefix != this path). Consumer repos without
-# pyproject.toml + uv.lock are skipped.
-if [ -f "$path/pyproject.toml" ] && [ -f "$path/uv.lock" ]; then
-  echo "--- locked venv (ops/scripts/ensure_uv_environment.sh) ---"
-  bash "$SCRIPT_DIR/ensure_gov_python.sh" "$path"
+# Every repo builds this tree's .venv with its own `make venv`.
+# The recipe may live in an included fragment, so ask Make; do not grep
+# the root Makefile and do not branch on uv.lock or requirements*.txt.
+# make -q: 0 up to date, 1 would run, 2 no such target. A symlink to
+# another checkout's .venv is not a substitute.
+if ! command -v make >/dev/null 2>&1; then
+  echo "ERROR: make is not on PATH; cannot build $path/.venv" >&2
+  exit 1
+fi
+make_venv_rc=0
+make -C "$path" -q venv >/dev/null 2>&1 || make_venv_rc=$?
+if [ "$make_venv_rc" -eq 0 ] || [ "$make_venv_rc" -eq 1 ]; then
+  echo "--- venv (make venv) ---"
+  make -C "$path" venv
 fi

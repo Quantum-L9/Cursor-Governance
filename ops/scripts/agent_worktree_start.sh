@@ -133,7 +133,7 @@ fi
 mkdir -p "$(dirname "$worktree")"
 
 # Wired add (never raw `git worktree add`: the new tree needs its gitignored
-# .cursor links — rule 49 — and a real .venv when the repo is a uv project).
+# .cursor links — rule 49 — and a real .venv when the repo has a venv Make target).
 echo "--- create wired worktree ($branch @ ${base_sha:0:12}) ---"
 bash "$SCRIPT_DIR/worktree_add_wired.sh" -b "$branch" "$worktree" "$base_sha"
 
@@ -185,6 +185,6 @@ RESULT: PASS — agent task started
   base     : $base_ref @ $base_sha
 
 Next: cd "$worktree" && work only there. Publish with 'make pr' (never a raw push).
-  venv     : $worktree/.venv  (uv projects only; materialized by worktree_add_wired.sh)
+  venv     : $worktree/.venv  (when the repo has a venv Make target; materialized by worktree_add_wired.sh)
 SUMMARY
 fi
