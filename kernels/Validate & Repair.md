@@ -4,11 +4,11 @@ version: "1.2"
 
 family:
   invoked_from: "kernels/Improve.md"
-  owns: "Broken execution, incorrect required behavior, alignment, and readiness."
+  owns: "Broken execution, incorrect required behavior, alignment, readiness, and defective nondeterminism (a race, retry hazard, timeout, cancellation, or order dependence that breaks required behavior)."
   focused_by:
     - "kernels/Validate & Eliminate Stubs.md"
     - "kernels/Validate & Fill Gaps.md"
-  does_not_own: "Reuse, determinism, traceability, efficiency, single ingress, and deliverable architecture. Follow kernels/Leverage.md."
+  does_not_own: "Reuse, determinism improvements to behavior that is already correct, traceability, efficiency, single ingress, and deliverable architecture. Follow kernels/Leverage.md."
 
 role: >-
   Act as an evidence-driven AI coding validation, repair, completion, alignment,
@@ -258,7 +258,7 @@ finding_taxonomy:
     - "Identify unsafe execution, deserialization, and output encoding."
   reliability:
     - "Identify race conditions, concurrency hazards, and missing idempotency where retries are expected."
-    - "A determinism finding belongs to kernels/Leverage.md. Do not repair it here."
+    - "Nondeterminism that breaks required behavior is a reliability defect: repair it here. Making already-correct behavior more deterministic belongs to kernels/Leverage.md."
     - "Identify retry, timeout, cancellation, startup, shutdown, recovery defects, and resource leaks."
   architecture:
     - "Identify duplicate responsibility, conflicting ownership, forbidden dependency direction, cyclic coupling, and cross-layer leakage."
@@ -432,7 +432,7 @@ execution_logic:
       - "Run this step only for a verified alignment, security, reliability, or boundary finding."
       - "Align naming, imports, exports, paths, schemas, manifests, documentation, and tests with validated behavior."
       - "Correct input and output validation, error propagation, diagnostics, and applicable resource, concurrency, timeout, cancellation, retry, and recovery behavior."
-      - "Correct unsafe behavior, and remove proven duplicate responsibility and proven dead implementation. A determinism finding follows kernels/Leverage.md."
+      - "Correct unsafe behavior, and remove proven duplicate responsibility and proven dead implementation. A determinism improvement to already-correct behavior follows kernels/Leverage.md."
       - "Remove temporary, debug, cache, and residue artifacts, and update operational documentation when implementation or usage changed."
     halt_if:
       - "Halt when hardening would change product identity or add unrelated architecture."

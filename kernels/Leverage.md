@@ -4,11 +4,12 @@ version: "1.1"
 
 family:
   invoked_from: "kernels/Improve.md"
-  owns: "Reuse, determinism, traceability, efficiency, single ingress, and deliverable architecture."
+  owns: "Reuse, determinism improvements to behavior that is already correct, traceability, efficiency, single ingress, and deliverable architecture."
   does_not_own:
     - "Stub, TODO, placeholder, scaffold, and fake-validation removal. Follow kernels/Validate & Eliminate Stubs.md."
     - "A confirmed absence required by an existing contract. Follow kernels/Validate & Fill Gaps.md."
     - "Broken execution and readiness repair. Follow kernels/Validate & Repair.md."
+    - "Defective nondeterminism: a race, retry hazard, timeout, cancellation, or order dependence that breaks required behavior. Follow kernels/Validate & Repair.md."
 
 role: >-
   Act as an evidence-driven AI coding improvement, leverage, architecture,

@@ -123,10 +123,10 @@ specialized_kernels:
     use_when: "The finding is a confirmed absence required by an existing contract, including a missing export, wiring path, fixture, or document that the contract already names."
   repair:
     path: "kernels/Validate & Repair.md"
-    use_when: "The finding is broken execution, incorrect required behavior, alignment drift, or a readiness blocker. It is not a stub, a confirmed gap, or a determinism finding."
+    use_when: "The finding is broken execution, incorrect required behavior, alignment drift, a readiness blocker, or defective nondeterminism (a race, retry hazard, timeout, cancellation, or order dependence that breaks required behavior). It is not a stub, a confirmed gap, or a determinism improvement to already-correct behavior."
   leverage:
     path: "kernels/Leverage.md"
-    use_when: "The finding is repeated work, weak reuse, nondeterminism, missing traceability, deliverable architecture, or a single-ingress decision, and a kernel earlier in order does not own it."
+    use_when: "The finding is repeated work, weak reuse, a determinism improvement to already-correct behavior, missing traceability, deliverable architecture, or a single-ingress decision, and a kernel earlier in order does not own it."
 
 core_principles:
   evidence_first:
@@ -269,10 +269,10 @@ improvement_targets:
     - "Eliminate verified defects from finding_taxonomy, duplicated or contradictory policy, and ambiguous contracts that produce divergent behavior."
     - "Eliminate dead or obsolete artifacts when non-use is proven, unnecessary indirection, and fragile implicit assumptions."
     - "Eliminate validation bypasses, fake confidence, stale generated relationships, accidental scope expansion, and delivery residue."
-    - "Eliminate unbounded output where a bound is required. A determinism finding follows kernels/Leverage.md."
+    - "Eliminate unbounded output where a bound is required. Defective nondeterminism follows kernels/Validate & Repair.md; a determinism improvement follows kernels/Leverage.md."
   strengthen:
     - "Strengthen a taxonomy dimension only where a verified in-scope finding shows the current boundary is insufficient."
-    - "Cover correctness, security, failure handling, state ownership, type and schema precision, contracts, concurrency, validation, diagnostics, documentation, dependency direction, source-of-truth alignment, and handoff readiness when that finding exists. A determinism finding follows kernels/Leverage.md."
+    - "Cover correctness, security, failure handling, state ownership, type and schema precision, contracts, concurrency, validation, diagnostics, documentation, dependency direction, source-of-truth alignment, and handoff readiness when that finding exists. Defective nondeterminism follows kernels/Validate & Repair.md; a determinism improvement follows kernels/Leverage.md."
 
 recursive_pass_model:
   minimum_passes: 2
