@@ -89,7 +89,7 @@ tools:
     # environment: l9-ci pins jsonschema==4.26.0 and semgrep 1.171.0 needs
     # <4.26, so the two cannot share one (Core installs them separately too).
     # The version is the SDK commit; uv installs exactly that revision.
-    version: 6d70e829cdd9987279f5e48eed340b2b67881662
+    version: d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2
     method: uv_tool
     package: git+https://github.com/Quantum-L9/l9-ci-sdk
     binary: l9-ci
@@ -99,10 +99,10 @@ tools:
       repo: Quantum-L9/l9-ci-core
       ref: main
       path: .github/workflows/org-ci.yml
-      contains: "'6d70e829cdd9987279f5e48eed340b2b67881662'"
+      contains: "'d09d3963cf8835446b9d1cfd5a03cc79ce16e2e2'"
       observed: >-
         org-ci.yml provisions the SDK at this default sdk-revision for
-        Analyze (central Core), 2026-11-06.
+        Analyze (central Core), read at l9-ci-core main 68ed9943, 2026-11-07.
   zizmor:
     version: 1.30.1
     method: uv_tool
