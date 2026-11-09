@@ -13,12 +13,18 @@
       "ceremony": {
         "kernel": "scripts/make_push_pipeline.sh",
         "kernel_requires": [
-          "refuse \"destination must be Staging",
+          "bash scripts/pr_stack_parent.sh name \"${BASE}\"",
           "git status --porcelain"
-        ]
+        ],
+        "helper_requires": {
+          "scripts/pr_stack_parent.sh": [
+            "staging|production|main)",
+            "refuse \"destination must be Staging or a stacked parent branch"
+          ]
+        }
       },
       "authority": "CANONICAL_LAW.md §13 (integration-branch-first); IB-Odoo_19 AGENTS.md 2026-10-07 correction (make pr is the sole publication SSOT)",
-      "reason": "Repository declares Staging as its integration branch and owns a publication kernel (scripts/make_push_pipeline.sh) that refuses any other base. Governance delegates the pr ceremony to it exactly once; the consumer never gets to declare this itself (ORG L9-ORG-006)."
+      "reason": "Repository declares Staging as its integration branch and owns a publication kernel (scripts/make_push_pipeline.sh) whose base check (scripts/pr_stack_parent.sh, since IB-Odoo_19 d0e1a37 on 2026-11-04) refuses Production, main and a bare staging spelling and admits only Staging or a stacked parent branch with an open PR into Staging. Governance delegates the pr ceremony to it exactly once; the consumer never gets to declare this itself (ORG L9-ORG-006)."
     }
   }
 }

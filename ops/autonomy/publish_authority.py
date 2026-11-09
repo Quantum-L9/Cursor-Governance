@@ -168,8 +168,37 @@ def load_registry(path: Path) -> dict:
                 raise RegistryError(
                     f"{path}: {key}: ceremony.kernel_requires must list the kernel's guards"
                 )
+            _check_helper_requires(path, key, ceremony)
         _check_required_git_hooks(path, key, entry)
     return document
+
+
+def _check_helper_requires(path: Path, key: str, ceremony: dict) -> None:
+    """``helper_requires`` is optional: guards the kernel delegates to a helper.
+
+    A kernel may move a guard into a script it calls (IB-Odoo_19 moved its
+    base refusal into ``scripts/pr_stack_parent.sh`` on 2026-11-04). Pinning
+    only the call would trust the helper blindly, so each helper is a relative
+    path mapped to the guards its own body must carry.
+    """
+    if "helper_requires" not in ceremony:
+        return
+    helpers = ceremony["helper_requires"]
+    message = (
+        f"{path}: {key}: ceremony.helper_requires must map relative helper paths "
+        "to non-empty lists of guards"
+    )
+    if not isinstance(helpers, dict) or not helpers:
+        raise RegistryError(message)
+    for helper, guards in helpers.items():
+        if not isinstance(helper, str) or not helper.strip() or helper.startswith("/"):
+            raise RegistryError(message)
+        if (
+            not isinstance(guards, list)
+            or not guards
+            or not all(isinstance(s, str) and s.strip() for s in guards)
+        ):
+            raise RegistryError(message)
 
 
 def _check_required_git_hooks(path: Path, key: str, entry: dict) -> None:
@@ -246,6 +275,19 @@ def verify_ceremony(workspace: Path, decision: Decision) -> list[str]:
     for guard in decision.ceremony["kernel_requires"]:
         if guard not in body:
             problems.append(f"kernel {decision.ceremony['kernel']} lacks guard {guard!r}")
+    for helper, guards in (decision.ceremony.get("helper_requires") or {}).items():
+        # A helper's guards protect nothing unless the kernel runs it; this holds
+        # even for an entry whose kernel_requires does not pin the call itself.
+        if helper not in body:
+            problems.append(f"kernel {decision.ceremony['kernel']} does not invoke helper {helper}")
+        try:
+            helper_body = (workspace / helper).read_text(encoding="utf-8")
+        except OSError as exc:
+            problems.append(f"publication helper {helper} unreadable: {exc}")
+            continue
+        for guard in guards:
+            if guard not in helper_body:
+                problems.append(f"helper {helper} lacks guard {guard!r}")
     recipe = _recipe_of(workspace, str(decision.native_target))
     if recipe is None:
         problems.append(f"Makefile declares no {decision.native_target!r} target")
