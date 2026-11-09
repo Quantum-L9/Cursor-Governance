@@ -233,6 +233,8 @@ def test_registry_pins_the_base_refusal_in_the_stack_parent_helper() -> None:
     assert 'bash scripts/pr_stack_parent.sh name "${BASE}"' in ceremony["kernel_requires"]
     guards = ceremony["helper_requires"]["scripts/pr_stack_parent.sh"]
     assert any("destination must be Staging" in guard for guard in guards)
+    entry = pa.load_registry(REGISTRY)["repositories"][ODOO_KEY]
+    assert "pr_stack_parent.sh" in entry["reason"] and "refuses Production" in entry["reason"]
 
 
 def test_listed_origin_resolves_native(tmp_path: Path) -> None:
@@ -567,6 +569,35 @@ def test_kernel_without_the_pinned_guards_is_not_the_ceremony(tmp_path: Path) ->
     proc = _runner(repo, OPEN_PR="1")
     assert proc.returncode == 2
     assert "PUBLISH_CEREMONY_UNVERIFIED" in proc.stderr and "lacks guard" in proc.stderr
+
+
+def test_a_helper_the_kernel_never_runs_is_not_the_ceremony(tmp_path: Path) -> None:
+    """Helper guards count only when the kernel invokes the helper, even for an entry
+    whose kernel_requires does not pin that call."""
+    repo = _stub_consumer(tmp_path)
+    (repo / KERNEL).write_text(
+        '#!/usr/bin/env bash\nstatus="$(git status --porcelain)"\nexit 0\n', encoding="utf-8"
+    )
+    ceremony = {
+        "kernel": KERNEL,
+        "kernel_requires": ["git status --porcelain"],
+        "helper_requires": {HELPER: ["destination must be Staging"]},
+    }
+    decision = pa.Decision(
+        route="native",
+        origin=ODOO_KEY,
+        native_target="pr",
+        declared_base="Staging",
+        ceremony=ceremony,
+    )
+    problems = pa.verify_ceremony(repo, decision)
+    assert problems == [f"kernel {KERNEL} does not invoke helper {HELPER}"]
+    # Restoring the call clears it: the helper itself still carries its guard.
+    (repo / KERNEL).write_text(
+        f'#!/usr/bin/env bash\nbash {HELPER} name "$3"\nstatus="$(git status --porcelain)"\n',
+        encoding="utf-8",
+    )
+    assert pa.verify_ceremony(repo, decision) == []
 
 
 def test_helper_without_the_base_refusal_is_not_the_ceremony(tmp_path: Path) -> None:

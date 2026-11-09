@@ -276,6 +276,10 @@ def verify_ceremony(workspace: Path, decision: Decision) -> list[str]:
         if guard not in body:
             problems.append(f"kernel {decision.ceremony['kernel']} lacks guard {guard!r}")
     for helper, guards in (decision.ceremony.get("helper_requires") or {}).items():
+        # A helper's guards protect nothing unless the kernel runs it; this holds
+        # even for an entry whose kernel_requires does not pin the call itself.
+        if helper not in body:
+            problems.append(f"kernel {decision.ceremony['kernel']} does not invoke helper {helper}")
         try:
             helper_body = (workspace / helper).read_text(encoding="utf-8")
         except OSError as exc:
