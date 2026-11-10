@@ -57,6 +57,9 @@
       "distribution": {
         "type": "object"
       },
+      "effects": {
+        "type": "object"
+      },
       "failure": {
         "type": "object"
       },
@@ -64,6 +67,9 @@
         "type": "object"
       },
       "identity": {
+        "type": "object"
+      },
+      "interfaces": {
         "type": "object"
       },
       "lifecycle": {
@@ -194,14 +200,20 @@
       "material_upstream_change_invalidates_currentness_until_recompiled_or_compatibility_proven",
       "manifest_preserves_identity_dimension_semantics",
       "manifest_preserves_identity_resolution_and_assertion_contract_coordinates",
-      "manifest_does_not_collapse_governance_profile_into_identity"
+      "manifest_does_not_collapse_governance_profile_into_identity",
+      "manifest_interfaces_and_effects_preserve_the_source_topology_declarations_exactly",
+      "manifest_interfaces_and_effects_are_required_when_the_source_topology_declares_them",
+      "implementation_lowering_takes_inbound_action_routing_only_from_manifest_interfaces",
+      "implementation_lowering_takes_consequential_operation_idempotency_only_from_manifest_effects",
+      "an_interface_action_or_consequential_operation_absent_from_the_manifest_is_not_lowered",
+      "manifest_preserves_each_port_and_adapter_implementation_ref_exactly_from_the_source_topology"
     ],
     "type": "object"
   },
-  "projection_digest": "sha256:02f97ba4e61ddf6939e77435bc905adc954e4b401d869c759ef771ea13c4ab01",
+  "projection_digest": "sha256:78f71e39b8046bd9f7cb57960cc112bfba84b1418c377c38b57b96b3bf373005",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:7e31b8202e9daece716e1f5a9fa2c6bb5cb7e6f1bc42115fba708538b6fd6efa",
+  "source_digest": "sha256:3a2cbc316b090e59a06dcd7bb0393f4bc56b7f65e3a08c64403d815ce22e7ede",
   "source_ref": "l9.source/product-manifest-schema@1"
 }

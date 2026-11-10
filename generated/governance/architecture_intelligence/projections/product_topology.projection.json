@@ -554,14 +554,17 @@
       "governance_profile_is_not_identity",
       "dynamic_identity_is_resolved_into_identity_assertion_not_authored_as_static_session_fact",
       "valid_identity_assertion_is_consumed_not_rederived",
-      "product_kind_exception_is_claimed_only_by_explicit_reference_and_exact_subject_binding"
+      "product_kind_exception_is_claimed_only_by_explicit_reference_and_exact_subject_binding",
+      "port_and_adapter_entries_follow_entry_shapes",
+      "implementation_ref_is_an_optional_declared_source_coordinate_not_semantic_authority",
+      "implementation_ref_never_makes_a_port_or_adapter_resolve"
     ],
     "type": "object"
   },
-  "projection_digest": "sha256:e52c766b64a8fa7d31012d907455a95becbc57c079d62558dd4b70d77dd1f869",
+  "projection_digest": "sha256:0880d3c7b491d97be448a84ad78a389fa1074b5b714807a203303385aab21884",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:5ecf2e7a18eef93177230a7f379453dfcd444bedad9f74eba4d1504737bc6520",
+  "source_digest": "sha256:a2510f4fc80b755d25b66c08f0d723e2f14b65966d6689b8b426ea23e5c3abf4",
   "source_ref": "l9.source/product-topology-schema@1"
 }

@@ -1,24 +1,24 @@
 {
   "components": [
     {
-      "projection_digest": "sha256:17bd721067fa57d47d680d3527ed954379de92a87ae5c1930bb09a9f2e7d0857",
+      "projection_digest": "sha256:ed5f526b2795b1f6af59d8d02f48bcd36f3480bba03686b73f5e9576cf3580cd",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+      "source_digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
-      "projection_digest": "sha256:b01df9f54c1a8c010d410fe6d0566da68a25fd8e8487c484e485c8dfab23021f",
+      "projection_digest": "sha256:83b755f688b905a79cf9fc1c2ae17a66e5abe6637dc1cbce49df60208fe75553",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
       "source_ref": "l9.source/invariants@1"
     },
     {
-      "projection_digest": "sha256:e521fd9ac3e8930b78467310c68a7324a1f9c6c2e69b7e8075edfaf9ea62977e",
+      "projection_digest": "sha256:3add2dbe542ea1bff69303213ad80ff59694550ebb162dcd17a7c8a24a632134",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/contracts@1",
       "source_class": "contracts",
-      "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
       "source_ref": "l9.source/contracts@1"
     },
     {
@@ -43,10 +43,10 @@
       "source_ref": "l9.source/architecture-rules@1"
     },
     {
-      "projection_digest": "sha256:e52c766b64a8fa7d31012d907455a95becbc57c079d62558dd4b70d77dd1f869",
+      "projection_digest": "sha256:0880d3c7b491d97be448a84ad78a389fa1074b5b714807a203303385aab21884",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/product-topology-schema@1",
       "source_class": "product_topology",
-      "source_digest": "sha256:5ecf2e7a18eef93177230a7f379453dfcd444bedad9f74eba4d1504737bc6520",
+      "source_digest": "sha256:a2510f4fc80b755d25b66c08f0d723e2f14b65966d6689b8b426ea23e5c3abf4",
       "source_ref": "l9.source/product-topology-schema@1"
     },
     {
@@ -78,10 +78,10 @@
       "source_ref": "l9.source/identity-model@1"
     },
     {
-      "projection_digest": "sha256:26b9ce9d87d7423f102f97779a4600c6002c68973e4f6f6c14b38e20b91eadd6",
+      "projection_digest": "sha256:2b892560a66c4aa5a3a6f808232b0d18787b6728e41b76a153b0b89e9779c920",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/architecture-patterns@1",
       "source_class": "architecture_patterns",
-      "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+      "source_digest": "sha256:c4adbeff6e953404aaafe275a13a387e9fdd0d9bd8dbe3adfa46af88cfe2a323",
       "source_ref": "l9.source/architecture-patterns@1"
     },
     {
@@ -92,10 +92,10 @@
       "source_ref": "l9.source/port-catalog@1"
     },
     {
-      "projection_digest": "sha256:1b3bbf846d054ee48e50d4dd5a9313223c39442c5a51779409ae503bd1fc816c",
+      "projection_digest": "sha256:0f139ebfa57508d035d3af6574ea0983cf37a54137682f14e820e4084435ed7a",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/capabilities@1",
       "source_class": "capabilities",
-      "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+      "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
       "source_ref": "l9.source/capabilities@1"
     },
     {
@@ -120,10 +120,10 @@
       "source_ref": "l9.source/technology-capabilities@1"
     },
     {
-      "projection_digest": "sha256:cff9b725c6e8e49dd64537dfe49075c7e2a07dfcfeca7bd20ec67feb46fab00f",
+      "projection_digest": "sha256:4b3539b5df92e3c911d96bd16e9795450a2b2b100204d6d75ab5ce49dd5f6d4f",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/binding-catalog@1",
       "source_class": "binding_catalog",
-      "source_digest": "sha256:bc4da9f550be0dcc3f36d072b6ead000bf5f1eda51f84bdbcfb1d8cda81fd72f",
+      "source_digest": "sha256:8c9a3cd4370feed7118835cbaffa34f99372f8696ccf07917906501368c65eb9",
       "source_ref": "l9.source/binding-catalog@1"
     },
     {
@@ -141,10 +141,10 @@
       "source_ref": "l9.source/artifact-model@1"
     },
     {
-      "projection_digest": "sha256:02f97ba4e61ddf6939e77435bc905adc954e4b401d869c759ef771ea13c4ab01",
+      "projection_digest": "sha256:78f71e39b8046bd9f7cb57960cc112bfba84b1418c377c38b57b96b3bf373005",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/product-manifest-schema@1",
       "source_class": "product_manifest",
-      "source_digest": "sha256:7e31b8202e9daece716e1f5a9fa2c6bb5cb7e6f1bc42115fba708538b6fd6efa",
+      "source_digest": "sha256:3a2cbc316b090e59a06dcd7bb0393f4bc56b7f65e3a08c64403d815ce22e7ede",
       "source_ref": "l9.source/product-manifest-schema@1"
     },
     {
@@ -155,21 +155,21 @@
       "source_ref": "l9.source/authority-model@1"
     },
     {
-      "projection_digest": "sha256:0d1ad617ea86d5653957aa0e3761fb1ef6aca9b682a3c58d2094d9b4d0d87c52",
+      "projection_digest": "sha256:e9048ab5971ffc45a1f57f3d1caaf65021bc88003a0377173f2f79c6722d4817",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/lifecycle@1",
       "source_class": "lifecycle",
-      "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+      "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
       "source_ref": "l9.source/lifecycle@1"
     },
     {
-      "projection_digest": "sha256:d0378d89856ebb476f8b1ed07d3188938bdb03ff70e9471cccd955e827c2ebf3",
+      "projection_digest": "sha256:782a29e7a94bc33648c5bac3def68e644b7cdfce2567b143a4e7bb62fbe5b9a1",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/semantic-dependency-model@1",
       "source_class": "semantic_dependency_model",
-      "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+      "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
       "source_ref": "l9.source/semantic-dependency-model@1"
     }
   ],
-  "composition_digest": "sha256:0f9e3b9ce5a7764dc606022bec42eebbb069487d834068bad9f23bc524a82689",
+  "composition_digest": "sha256:d53152f592464407a7b9329ef901537dfbbde9706594568a163f5072ab1dc328",
   "composition_profile": {
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
     "ref": "l9.compose/architecture-intelligence@1"
@@ -558,10 +558,12 @@
               {
                 "from": "conformance_runner",
                 "relation": "compares",
-                "to": [
-                  "reference_model",
-                  "candidate_implementation"
-                ]
+                "to": "reference_model"
+              },
+              {
+                "from": "conformance_runner",
+                "relation": "compares",
+                "to": "candidate_implementation"
               }
             ],
             "nodes": [
@@ -740,13 +742,15 @@
             "changed_candidate_requires_new_authority_decision"
           ],
           "id": "l9.pattern/authority-candidate-admission@1",
-          "lifecycle": [
-            "candidate",
-            "admission_evaluated",
-            "awaiting_authority",
-            "admitted",
-            "published"
-          ],
+          "lifecycle": {
+            "stages": [
+              "candidate",
+              "admission_evaluated",
+              "awaiting_authority",
+              "admitted",
+              "published"
+            ]
+          },
           "purpose": "Separate candidate generation from authoritative admission using immutable digest-bound decisions.\n"
         },
         {
@@ -1980,15 +1984,15 @@
             "admission": "canonical_active",
             "artifact": "invariants.yaml",
             "artifact_id": "l9.invariants/global@1",
-            "item_count": 31,
-            "sha256": "771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a"
+            "item_count": 34,
+            "sha256": "2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa"
           },
           {
             "admission": "canonical_active",
             "artifact": "contracts.yaml",
             "artifact_id": "l9.contracts/global@1",
-            "item_count": 26,
-            "sha256": "f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79"
+            "item_count": 29,
+            "sha256": "86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7"
           }
         ]
       },
@@ -3375,6 +3379,253 @@
             "L9-CORRECTNESS-001",
             "L9-CAPABILITY-001"
           ]
+        },
+        {
+          "applicability": {
+            "does_not_apply_to": [
+              "generic_numerical_reasoning_without_strategic_value_claim",
+              "unrelated_governed_decision_evaluation",
+              "unrelated_strategic_planning_activity"
+            ],
+            "method_conditional": "probability_mass_only_for_probabilistic_methods;_belief_state_QV_only_if_QV_selected;_portfolio_rules_only_for_joint_action_claims",
+            "trigger": "an_assessment_makes_a_material_strategic_value_claim",
+            "unavailable_claim": "conditional_or_unknown_without_imposing_unrelated_method"
+          },
+          "applies_to": [
+            "assessments_asserting_applicable_objective_relative_quantitative_strategic_value_claims"
+          ],
+          "forbidden": [
+            "separately_subtracting_direct_cost_or_risk_loss_already_embedded_in_utility_flows",
+            "treating_unmapped_material_accounting_consequences_as_zero",
+            "requiring_belief_state_QV_optimizer_for_every_legitimate_strategic_assessment",
+            "treating_any_supported_method_as_valid_for_claims_it_cannot_establish",
+            "demanding_mathematical_proof_of_general_real_world_forecast_adequacy",
+            "value_rank_overrides_hard_constraints",
+            "undefined_leverage_score_in_machine_contract",
+            "summing_period_stock_levels_as_if_new_flow_utility",
+            "inventing_missing_scenario_probability_or_unmodelled_future_as_zero",
+            "applying_realization_probability_twice_to_one_effect",
+            "treating_heuristic_pseudoreceipt_as_a_real_numerical_owner_result",
+            "declaring_a_truncated_future_or_unverified_actor_response_model_complete",
+            "double_counted_unattributed_or_unreconciled_material_state_delta",
+            "information_gain_as_automatic_positive_utility",
+            "forecast_claimed_as_observed_or_authoritative_truth",
+            "projected_semantics_redefined_by_consumer",
+            "evaluation_result_promoted_to_plan_commitment_or_action_authorization",
+            "treating_arbitrarily_paired_scenarios_as_identified_causal_effects",
+            "counting_third_party_benefits_without_authorized_welfare_aggregation",
+            "using_future_observations_to_rank_prior_action_policies",
+            "summing_jointly_interacting_action_values_as_independent",
+            "claiming_a_precise_winner_when_material_uncertainty_can_reverse_preference",
+            "treating_projection_attestation_as_executed_numerical_model_or_calibration_proof",
+            "imposing_strategic_value_specific_math_on_unrelated_evaluations"
+          ],
+          "guarantees": [
+            "assessment_is_derived_and_non_authoritative",
+            "assessment_preserves_question_appropriate_result_shape",
+            "declared_aggregate_distinguished_from_trajectory_calculation_and_verified_prediction",
+            "excluded_infeasible_actions_distinguished_from_unresolved_comparisons",
+            "source_and_evidence_revision_changes_invalidate_affected_evaluations"
+          ],
+          "id": "l9.contract/strategic-value-assessment@1",
+          "outcomes": {
+            "satisfied": "traceable_nonduplicative_evaluation_with_governed_authority_boundary",
+            "unresolved": "missing_evidence_probability_mass_causal_attribution_or_model_unknown",
+            "violated": "incompatible_or_double_counted_or_misrepresented_value_claim"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Govern objective-relative quantitative Strategic Value assessment without transferring Numerical Reasoning, business policy, planning authority, or execution authority to a projection or consumer.",
+          "requires": [
+            "explicit_objective_utility_units_and_feasible_baseline",
+            "declared_utility_flow_basis_and_mandatory_mutually_exclusive_exhaustive_accounting_partition",
+            "method_appropriate_probability_scenario_uncertainty_or_robustness_model_or_declared_only_status",
+            "applicable_future_counterfactual_valuation_under_owner_admitted_method_or_explicit_declared_only_status",
+            "compatible_temporal_utility_basis_and_declared_discount_where_applicable",
+            "complete_probability_mass_when_probabilistic_method_applies_or_explicit_unresolved_missing_mass",
+            "defensible_counterfactual_comparability_under_selected_method",
+            "legitimate_recurrence_identified_by_distinct_time_indexed_state_deltas",
+            "bounded_tail_and_early_stop_coverage_or_explicit_unresolved_consequences",
+            "bounded_horizon_and_revision_bound_model_inputs",
+            "formal_admissibility_and_mandatory_constraint_check",
+            "relevant_alternative_and_counterfactual_comparison",
+            "exactly_one_accounting_home_per_material_effect_with_gross_net_reconciliation",
+            "effect_identity_provenance_attribution_and_overlap_handling",
+            "explicit_material_unknowns_and_uncertainty",
+            "negative_propagation_and_coordinating_drag_where_material",
+            "separate_predicted_and_realized_outcomes",
+            "method_appropriate_handling_of_material_strategic_actor_responses_or_conditional_unknown",
+            "qv_belief_state_model_coordinates_only_when_qv_method_selected",
+            "finite_question_appropriate_bounds_with_qv_specific_branch_belief_controls_only_when_selected",
+            "numerical_owner_receipts_for_claims_of_executed_lookahead_or_calibration",
+            "no_novelty_echo_or_circular_value_inflation",
+            "counterfactual_worlds_share_defensible_initial_conditions_time_basis_and_identification_assumptions",
+            "beneficiary_scope_and_welfare_aggregation_when_cross_actor_effects_material",
+            "nonanticipative_conditional_policies_when_sequential_actions_are_evaluated",
+            "joint_portfolio_counterfactual_and_resource_interactions_for_nonadditive_actions",
+            "uncertainty_sensitivity_or_conditional_frontier_when_preference_can_flip",
+            "method_identity_input_lineage_executed_method_evidence_and_applicable_independently_reviewable_model_validation_evidence_for_strong_numerical_claims",
+            "model_coverage_ledger_has_nonoverlapping_IEV_SFV_DC_ERL_OC_effect_assignments",
+            "costs_risk_and_opportunity_losses_embedded_in_net_flows_are_excluded_from_separate_subtraction",
+            "unknown_or_unreconciled_accounting_effects_preclude_a_complete_sv_claim",
+            "numerical_method_selection_is_question_appropriate_not_universally_QV",
+            "applicable_independently_reviewable_validation_evidence_suitable_to_model_and_claim",
+            "interpret_retained_former_candidate_semantics_conditionally_under_strategic_value_model",
+            "when_learning_or_computing_is_an_alternative_compare_expected_marginal_decision_improvement_net_of_costs"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-SV-001",
+            "L9-SV-002",
+            "L9-AUTH-001",
+            "L9-AUTH-002",
+            "L9-HARD-001",
+            "L9-UNKNOWN-001",
+            "L9-STRATEGY-001",
+            "L9-PROJECTION-001",
+            "L9-PROV-001",
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001",
+            "L9-COORD-001"
+          ]
+        },
+        {
+          "applicability": {
+            "does_not_apply_to": [
+              "passive_world_assessment_without_strategic_interaction_claim",
+              "generic_optimisation_without_strategic_actor_responses"
+            ],
+            "sv_dependency": "none_for_gt_only",
+            "trigger": "the_assessment_asserts_an_adaptive_actor_response_or_game_solution_claim"
+          },
+          "applies_to": [
+            "assessments_explicitly_claiming_strategic_actor_response",
+            "game_theoretic_method_outputs_asserted_under_their_declared_model"
+          ],
+          "forbidden": [
+            "counterparty_statement_promoted_to_unknown_private_fact",
+            "unexplained_perfect_rationality_assumption",
+            "iterative_stability_alone_claimed_as_nash_equilibrium_proof",
+            "independent_copied_observation_misrepresented_as_independent_evidence",
+            "fourth_reasoning_node_created_by_method_complexity_alone",
+            "analysis_or_projection_result_promoted_to_action_permission",
+            "gt_assessment_silently_imports_sv_five_bucket_semantics_or_claim_scoped_sv_law"
+          ],
+          "guarantees": [
+            "interaction_results_are_conditional_advisory_and_revision_bound",
+            "probabilistic_and_numerical_methods_remain_owned_by_their_respective_reasoning_owners",
+            "passive_response_approximation_is_declared_rather_than_silently_assumed",
+            "equilibrium_assessment_is_not_world_prediction_or_policy_authorization",
+            "gt_only_assessment_does_not_require_a_strategic_value_projection_or_valuation"
+          ],
+          "id": "l9.contract/strategic-interaction-assessment@1",
+          "outcomes": {
+            "satisfied": "conditional_strategic_interaction_assessment_with_provenance_and_declared_limits",
+            "unresolved": "insufficient_model_response_evidence_or_solution_specific_assurance",
+            "violated": "unsupported_or_overauthoritative_strategic_claim"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Govern model-conditioned analysis of adaptive actors without creating value semantics, authoritative facts, a fourth reasoning owner or action permission.",
+          "requires": [
+            "declared_focal_actor_objective_and_admissible_candidate_action_set",
+            "declared_other_actors_information_sets_move_order_and_focal_action_conditional_response_paths",
+            "model_identity_revision_evidence_lineage_and_declared_reasoning_horizon",
+            "focal_action_conditional_response_model_with_joint_dependence_or_explicit_unknown",
+            "formal_constraints_are_noncompensable_and_action_feasibility_is_separately_checked",
+            "solution_concept_method_identity_and_claim_appropriate_diagnostics_when_equilibrium_or_best_response_is_asserted",
+            "bounded_belief_recursion_lookahead_and_calculation_budget_when_performed",
+            "separate_observations_hypotheses_forecasts_and_actual_outcomes",
+            "explicit_model_limitations_and_failure_status_when_priors_payoffs_or_behavior_are_unverified",
+            "consumer_keeps_strategy_policy_permission_and_execution_authority",
+            "missing_response_mass_dependence_or_information_is_explicit_unknown_not_implicitly_normalized",
+            "claim_specific_diagnostics_must_distinguish_numerical_stability_from_deviation_gain_and_solution_validity"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-GT-001",
+            "L9-AUTH-002",
+            "L9-HARD-001",
+            "L9-UNKNOWN-001",
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001"
+          ]
+        },
+        {
+          "applicability": {
+            "does_not_apply_to": [
+              "gt_only_non_sv_assessment",
+              "sv_only_assessment",
+              "generic_numerical_reasoning_without_sv_claim"
+            ],
+            "qv": "only_when_question_appropriate_method_selected",
+            "sv_dependency": "independently_admitted_sv_model_contract_projection_and_composition",
+            "trigger": "assessment_asserts_combined_gt_conditioned_quantitative_strategic_value",
+            "unknown_resolution": "unresolved_without_numeric_claim"
+          },
+          "applies_to": [
+            "assessments_claiming_combined_gt_and_strategic_value"
+          ],
+          "forbidden": [
+            "adding_independent_gt_uplift_to_already_counted_sv_effect",
+            "duplicating_sv_five_bucket_definitions_in_gt",
+            "restating_paraphrasing_or_weakening_sv_assessment_contract_obligations_in_gt_contracts",
+            "reusing_an_unverified_sv_candidate_as_if_admitted",
+            "silently_merging_conflicting_actor_or_value_assumptions",
+            "treating_merged_projection_payload_as_executed_numerical_assessment",
+            "ranking_infeasible_actions_by_soft_value",
+            "automatic_plan_revision_or_action_from_combined_assessment",
+            "claiming_sv_contract_is_admitted_because_a_candidate_is_open_or_candidate_schemas_pass",
+            "constructing_gt_plus_sv_value_by_summing_standalone_sv_and_gt_uplift",
+            "mandatory_qv_method_for_all_gt_sv_combined_evaluations",
+            "numerical_ranking_before_five_bucket_causal_accounting_is_reconciled"
+          ],
+          "guarantees": [
+            "gt_only_remains_valid_without_sv_as_separate_unquantified_strategic_assessment",
+            "sv_only_remains_independent_without_gt_as_separate_mode",
+            "one_canonical_sv_claim_may_be_conditioned_on_adaptive_response_and_lower_higher_or_equal",
+            "sv_five_bucket_partition_and_counterfactual_method_are_reused_by_reference_not_redefined",
+            "unadmitted_incompatible_or_unknown_sv_dependency_cannot_produce_evaluated_numeric_result",
+            "semantic_projection_composition_does_not_execute_numerical_valuation",
+            "numerical_owner_result_and_empirical_validation_are_distinct_from_projection_provenance",
+            "sequential_and_portfolio_math_are_required_only_for_claims_that_use_those_methods"
+          ],
+          "id": "l9.contract/strategic-value-interaction-composition@1",
+          "outcomes": {
+            "satisfied": "one_traceable_interaction_conditioned_canonical_sv_result",
+            "unresolved": "sv_dependency_unadmitted_or_comparison_model_unknown_or_unverified",
+            "violated": "double_counted_incompatible_or_unauthorized_composed_claim"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Govern a consumer's interaction-conditioned evaluation using GT response semantics and the independently admitted l9.contract/strategic-value-assessment@1 plus l9.strategic.value@1. GT does not own valuation, create an SV model, or grant plan or execution authority.",
+          "requires": [
+            "independently_admitted_sv_model_and_assessment_contract",
+            "authenticated_current_sv_projection_and_composition",
+            "authenticated_current_gt_projection_and_composition",
+            "exact_compatible_canonical_authority_coordinates",
+            "five_source_sv_semantic_view_and_three_source_gt_semantic_view_are_independently_compiled_with_real_producer_provenance",
+            "combined_assessment_expressly_claims_interaction_conditioned_strategic_value_not_just_gt_only",
+            "every_requires_entry_of_l9_contract_strategic_value_assessment_at_1_satisfied_by_reference_for_the_one_canonical_sv_claim",
+            "every_forbidden_entry_of_l9_contract_strategic_value_assessment_at_1_respected_by_reference",
+            "focal_action_conditional_joint_response_trajectory_distribution_with_complete_probability_mass_or_explicit_unknown",
+            "one_question_appropriate_numerical_owner_method_for_canonical_sv_valuation_not_mandatory_qv",
+            "one_mutually_exclusive_exhaustive_iev_sfv_dc_erl_oc_accounting_ledger_owned_by_sv_model_with_embedded_cost_reconciliation",
+            "material_actors_response_or_unverified_model_adequacy_remain_conditional_or_unknown_under_sv_claim",
+            "changed_material_actor_model_probability_counterfactual_or_source_revision_invalidates_affected_claim",
+            "consumer_retains_candidate_selection_strategy_policy_plan_revision_and_action_authorization"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-GT-001",
+            "L9-SV-001",
+            "L9-SV-002",
+            "L9-AUTH-002",
+            "L9-HARD-001",
+            "L9-UNKNOWN-001",
+            "L9-PROJECTION-001",
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001",
+            "L9-PROV-001",
+            "L9-COORD-001"
+          ]
         }
       ],
       "derivation": {
@@ -3382,8 +3633,8 @@
         "source_admission": "canonical_active",
         "source_artifact": "invariants.yaml",
         "source_artifact_id": "l9.invariants/global@1",
-        "source_digest_sha256": "771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
-        "source_invariant_count": 31
+        "source_digest_sha256": "2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
+        "source_invariant_count": 34
       },
       "outcome_semantics": {
         "global_error_taxonomy_defined_here": false,
@@ -3870,6 +4121,24 @@
           "scope": "semantic_foundation_release",
           "severity": "constitutional",
           "statement": "A successor semantic-foundation release MUST preserve every still-applicable mechanically enforced predecessor closure property unless an explicit authoritative supersession retires it."
+        },
+        {
+          "id": "L9-SV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "For an assessment asserting quantified Strategic Value, declare the objective, compatible utility units, feasible counterfactual baseline, bounded horizon, applicable discount and utility-flow basis, model/evidence coordinates and material uncertainty. Unknown or incompatible inputs cannot establish a complete Strategic Value ranking. For a Strategic Value claim, a counterfactual comparison must identify the same decision-relevant initial conditions, utility measure, exogenous context and time basis across intervention and baseline worlds, or explicitly quantify their divergence. A convenient scenario pairing or historical correlation is not evidence of an identifiable causal intervention effect."
+        },
+        {
+          "id": "L9-SV-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "For an assessment asserting quantified Strategic Value, every material consequence must have an exhaustive, mutually exclusive accounting partition across IEV, SFV, DC, ERL and OC. Reconcile gross and net utility, common causal/time identities, separately subtracted versus embedded costs and losses, overlaps, attribution and probability weighting; conflicting or missing coverage remains Unknown or conditional, not zero."
+        },
+        {
+          "id": "L9-GT-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "For an assessment that asserts strategic interaction, model other actors' consequential responses as conditional on the focal action, their information available at each decision point, incentives and version-bound response assumptions, or preserve missing conditional behavior as Unknown. A passive-world approximation is only an explicit model assumption, never silently equivalent to adaptive response. This obligation does not by itself assert a quantified Strategic Value claim."
         }
       ]
     },
@@ -4707,6 +4976,9 @@
         "distribution": {
           "type": "object"
         },
+        "effects": {
+          "type": "object"
+        },
         "failure": {
           "type": "object"
         },
@@ -4714,6 +4986,9 @@
           "type": "object"
         },
         "identity": {
+          "type": "object"
+        },
+        "interfaces": {
           "type": "object"
         },
         "lifecycle": {
@@ -4844,7 +5119,13 @@
         "material_upstream_change_invalidates_currentness_until_recompiled_or_compatibility_proven",
         "manifest_preserves_identity_dimension_semantics",
         "manifest_preserves_identity_resolution_and_assertion_contract_coordinates",
-        "manifest_does_not_collapse_governance_profile_into_identity"
+        "manifest_does_not_collapse_governance_profile_into_identity",
+        "manifest_interfaces_and_effects_preserve_the_source_topology_declarations_exactly",
+        "manifest_interfaces_and_effects_are_required_when_the_source_topology_declares_them",
+        "implementation_lowering_takes_inbound_action_routing_only_from_manifest_interfaces",
+        "implementation_lowering_takes_consequential_operation_idempotency_only_from_manifest_effects",
+        "an_interface_action_or_consequential_operation_absent_from_the_manifest_is_not_lowered",
+        "manifest_preserves_each_port_and_adapter_implementation_ref_exactly_from_the_source_topology"
       ],
       "type": "object"
     },
@@ -5399,7 +5680,10 @@
         "governance_profile_is_not_identity",
         "dynamic_identity_is_resolved_into_identity_assertion_not_authored_as_static_session_fact",
         "valid_identity_assertion_is_consumed_not_rederived",
-        "product_kind_exception_is_claimed_only_by_explicit_reference_and_exact_subject_binding"
+        "product_kind_exception_is_claimed_only_by_explicit_reference_and_exact_subject_binding",
+        "port_and_adapter_entries_follow_entry_shapes",
+        "implementation_ref_is_an_optional_declared_source_coordinate_not_semantic_authority",
+        "implementation_ref_never_makes_a_port_or_adapter_resolve"
       ],
       "type": "object"
     },
@@ -6014,6 +6298,17 @@
             "identity_model",
             "contracts",
             "authority_model"
+          ]
+        },
+        "implementation_ir": {
+          "change_effect": "implementation_ir_and_target_artifacts_stale",
+          "depends_on": [
+            "product_manifest",
+            "authority_revision",
+            "target_binding",
+            "behavior_contract_refs",
+            "behavior_contract_digests",
+            "compiler_coordinates"
           ]
         },
         "port_resolution": {

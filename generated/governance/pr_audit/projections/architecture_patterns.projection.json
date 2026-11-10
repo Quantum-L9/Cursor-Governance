@@ -121,13 +121,15 @@
           "changed_candidate_requires_new_authority_decision"
         ],
         "id": "l9.pattern/authority-candidate-admission@1",
-        "lifecycle": [
-          "candidate",
-          "admission_evaluated",
-          "awaiting_authority",
-          "admitted",
-          "published"
-        ],
+        "lifecycle": {
+          "stages": [
+            "candidate",
+            "admission_evaluated",
+            "awaiting_authority",
+            "admitted",
+            "published"
+          ]
+        },
         "purpose": "Separate candidate generation from authoritative admission using immutable digest-bound decisions.\n"
       },
       {
@@ -177,10 +179,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:ecf244ab0b688a17f642d23e8d7d2ad711f8378c9f3b08706e6bde76c749fd47",
+  "projection_digest": "sha256:8d292a216a78d179ac2c1460772de7468f3df7f4edde0594857116329228bbf0",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+  "source_digest": "sha256:c4adbeff6e953404aaafe275a13a387e9fdd0d9bd8dbe3adfa46af88cfe2a323",
   "source_ref": "l9.source/architecture-patterns@1"
 }
