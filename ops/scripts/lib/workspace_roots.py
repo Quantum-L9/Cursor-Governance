@@ -25,6 +25,7 @@ callers keep their existing behaviour byte-for-byte.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NamedTuple
@@ -186,6 +187,7 @@ def adopted_projection_roots(
     relative_target: Path | str,
     state_name: str,
     exclude_targets: Iterable[Path] = (),
+    owner_root: Path | None = None,
 ) -> list[Path]:
     """Ancestors of `workspace` that already hold a projection of this adapter.
 
@@ -225,6 +227,16 @@ def adopted_projection_roots(
     it was joined to and adopt a directory outside the lineage entirely. The
     containment above is a claim this function has to enforce, not merely
     describe.
+
+    `owner_root` makes "our own state file" mean OUR governance root, not just
+    our filename. The state file records the `governance_root` that wrote it.
+    Without this check a second governance checkout nested in the container
+    (`/home/user/Cursor-Governance` beside the SSOT `/root/.cursor-governance`)
+    adopted the container mirror the SSOT bootstrap owns and re-pointed every
+    link at itself; the next session's bootstrap pointed them back. Given an
+    owner, an ancestor is adopted only when its state file names that same root,
+    and an unreadable or ownerless state file is not adopted: a projection we
+    cannot prove we own is left alone.
     """
     relative = Path(relative_target)
     if relative.is_absolute() or any(part == ".." for part in relative.parts):
@@ -245,8 +257,24 @@ def adopted_projection_roots(
         try:
             if target.resolve() in blocked:
                 continue
-            if (target / state_name).is_file():
-                adopted.append(ancestor)
+            state = target / state_name
+            if not state.is_file():
+                continue
+            if owner_root is not None and not _state_owned_by(state, owner_root):
+                continue
+            adopted.append(ancestor)
         except OSError:
             continue
     return adopted
+
+
+def _state_owned_by(state: Path, owner_root: Path) -> bool:
+    """True when the projection state file names `owner_root` as its writer."""
+    try:
+        payload = json.loads(state.read_text(encoding="utf-8"))
+        recorded = payload.get("governance_root") if isinstance(payload, dict) else None
+        if not isinstance(recorded, str) or not recorded:
+            return False
+        return Path(recorded).resolve() == Path(owner_root).resolve()
+    except (OSError, ValueError):
+        return False
