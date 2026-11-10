@@ -55,7 +55,8 @@ DELIVERY_ERRORS = (TransportError, KeyError, TypeError, ValueError, ImportError)
 
 
 class Transport(Protocol):
-    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any: ...
+    def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
+        """One REST call; returns the decoded JSON or raises TransportError."""
 
 
 class GhApi:
