@@ -333,12 +333,16 @@ Generated from `environment/agents/adapters/claude-code/web/environment.env.exam
 by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
 example and regenerate, or the two disagree and the drift check trusts the example.
 
-## Carries no credentials, by contract
+## Carries one credential, by contract
 
-No PAT, no Graphiti bearer, no Sonar or Semgrep token, no Infisical client
-secret, no AWS key. Everything in this field is readable by anything the model
-can run. A capability reporting DEGRADED is a broker-delivery problem; pasting a
-secret here to turn it green is a permanent compromise (contract S1/S2/S3).
+The only credential that belongs in this field is this surface's Infisical
+machine identity: `L9_INFISICAL_CLIENT_ID` plus `L9_INFISICAL_CLIENT_SECRET`
+(docs/DEGRADED_MODE_CONTRACT.md, "Secrets plane, 2026-09-24"). It is set once,
+by the operator, and is deliberately not listed below. Everything else is bound
+from Infisical in-process: no PAT, no Graphiti bearer, no Sonar, Semgrep or
+Context7 token, no AWS key. Everything in this field is readable by anything the
+model can run, so a capability reporting DEGRADED is fixed in Infisical, never
+by pasting its secret here (contract S1/S2/S3).
 
 `verify_account_env.py` now reports a prohibited credential it finds in the live
 runtime, so a paste of one does not pass silently.
