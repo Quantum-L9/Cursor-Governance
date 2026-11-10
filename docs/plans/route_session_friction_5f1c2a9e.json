@@ -1,0 +1,472 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Route session friction to its owner and track the Core l9-ci revision",
+  "objective": "Stop the post-publish Stop hooks from committing end-session handoff reports onto PR head branches, deliver governance (environment-friction) handoffs to a deduplicated Cursor-Governance intake keyed by friction id, and make the l9-ci CI-parity tool install the SDK revision that l9-ci-core org-ci.yml runs instead of a hand pin.",
+  "success_criteria": [
+    "S1: publishing a session or governance end-session handoff never creates a commit, never pushes, and never changes the PR head (proved by V1 against a real git clone with a bare origin)",
+    "S2: the session handoff is upserted as exactly one PR comment per (PR, kind) keyed by <!-- l9-handoff:<kind>:<owner/repo>#<n> -->, and a second publication of the same PR edits that comment instead of adding one (proved by V2)",
+    "S3: each governance friction item is delivered to one Cursor-Governance intake issue per normalized friction id, a repeat from the same session adds no comment, and an unreachable intake falls back to the PR comment and is announced (proved by V2)",
+    "S4: GMP report publication keeps its existing commit path unchanged (proved by V1)",
+    "S5: install.py installs l9-ci at the 40-hex sdk-revision extracted from Core's org-ci.yml, records source ci_ref in state.json, and reinstalls when Core moves (proved by V3)",
+    "S6: when Core is unreadable the hand pin is installed with a WARN line, and manifest.load overlays a recorded tracked version so resolve() and run.py agree (proved by V3)",
+    "S7: validate_manifest --remote passes a tracked tool whose extract matches Core even when the hand pin differs, and fails when the extract no longer matches (proved by V3 and V4)",
+    "S8: the touched suites and the repository gate pass (proved by V5 and V6)"
+  ],
+  "scope": {
+    "in": [
+      "ops/reports/publish.py handoff delivery path",
+      "new ops/reports/handoff_delivery.py GitHub REST delivery",
+      "Claude Code governance handoff Stop hook passing structured friction items",
+      "ops/memory/HANDOFF_CONTRACT.md and skills/l9-end-session/SKILL.md delivery wording",
+      "ops/ci_parity tools.yaml, manifest.py, install.py, validate_manifest.py, README.md",
+      "tests for both changes"
+    ],
+    "out": [
+      "Infisical machine identity provisioning (operator action, fix #2)",
+      "git -C I017 guardrail fix and other runner-up friction",
+      "GMP report publication path",
+      "repository memory close and the governance memory record write",
+      "deleting historical reports/end-session files already on PR branches or main",
+      "AGENTS.md and Makefile (root files, append-only)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind workspace /home/user/Cursor-Governance on branch claude/cursor-governance-friction-analysis-34ht0q at origin/main f90e4e2e, clean tree",
+      "pass_criteria": "git status --short empty and HEAD equals origin/main",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 ops/ci_parity/validate_manifest.py --remote",
+      "pass_criteria": "PASS at f90e4e2 (current pin d09d3963 matches Core) so the baseline is green before tracking is introduced",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "read Core org-ci.yml at main through ops/scripts/docker_sandbox core_file and confirm the provision-sdk step names a full SHA default: sdk-revision: ${{ steps.runtime.outputs['sdk-revision'] || '<40-hex>' }}",
+      "pass_criteria": "exactly one 40-hex default found (line 362 at Core a715fac6)",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "GitHub REST contract read from docs.github.com (Context7 unavailable): issue comments list/create/update work for PRs; create-issue labels are dropped without push access and auto-creation is undocumented",
+      "pass_criteria": "intake lookup keys on a body marker, not on a label",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": ".venv/bin/python -m pytest tests/ops/reports tests/ops/ci_parity -q on f90e4e2 (hook catalog .pre-commit-config.yaml)",
+      "pass_criteria": "baseline recorded: 94 passed",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Create ops/reports/handoff_delivery.py: a GitHub REST transport over `gh api` (injectable for tests, never raises), upsert_pr_comment(repo, number, marker, body) keyed by an HTML marker, deliver_friction(items, occurrence) that finds or creates one open intake issue per normalized friction id by body marker in the intake repository (session_debt.GOVERNANCE_REPOSITORY, overridable by L9_FRICTION_INTAKE_REPO) and adds one occurrence comment per session, and local_copy_path(root, kind, filename) under the git dir. Transport failures (gh absent, non-2xx, timeout per call = GIT_TIMEOUT_S, pagination capped at 10 pages) return a failed result with the reason and never raise. The PR-comment marker is <!-- l9-handoff:<kind>:<owner/repo>#<n> --> so session and governance comments never match each other or a human comment. Outside a git work tree the local copy goes to <root>/.l9/reports/end-session/<kind>/. The intake repository identity is read from ops.autonomy.session_debt.GOVERNANCE_REPOSITORY (single owner) with L9_FRICTION_INTAKE_REPO as the only override",
+      "files": [
+        "ops/reports/handoff_delivery.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new module beside ops/reports/publish.py",
+      "layer": "ops",
+      "leverage_rank": 1,
+      "shared_root_cause": "handoffs routed to the PR head instead of their owner"
+    },
+    {
+      "id": "T2",
+      "task": "Replace commit+push in publish.py _publish_handoff with T1 delivery: write the local copy, upsert the session handoff PR comment, deliver governance friction items to the intake with PR-comment fallback; add a friction parameter to publish_governance_handoff; return a PublishResult with status delivered/failed; keep publish() and publish_gmp_report() unchanged; update module docstring and the handoffs CLI help. PublishResult gains statuses delivered and fallback (both ok); the result line names the comment or issue URLs. The local copy is not given an L9_META header because it is never tracked",
+      "files": [
+        "ops/reports/publish.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "def _publish_handoff and module docstring lines 1-30",
+      "layer": "ops",
+      "leverage_rank": 1,
+      "shared_root_cause": "handoffs routed to the PR head instead of their owner"
+    },
+    {
+      "id": "T3",
+      "task": "Pass the brief's environment_friction and workarounds as structured friction items from governance_handoff_writeback.py to publish_governance_handoff, and update the delivery wording in post_publish.publish_report and memory_writeback.py comments; the hook announcement carries the delivery line with the comment/issue URLs",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py",
+        "environment/agents/adapters/claude-code/memory/post_publish.py",
+        "environment/agents/adapters/claude-code/hooks/memory_writeback.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "pp.publish_report call sites and publish_report docstring",
+      "layer": "ops",
+      "leverage_rank": 2,
+      "shared_root_cause": "handoffs routed to the PR head instead of their owner"
+    },
+    {
+      "id": "T4",
+      "task": "Update tests/ops/reports/test_publish.py handoff cases to the new contract (no commit, head unchanged, fake transport) and add tests/ops/reports/test_handoff_delivery.py for comment upsert, per-id intake dedupe, per-session idempotence, unreachable-intake fallback and fail-open transport errors; move the three handoff L9_META header cases to write_report/GMP coverage (behavior kept for tracked reports); add a hook-level assertion in environment/agents/adapters/claude-code/tests/test_governance_handoff_writeback.py that the governance hook passes the brief's friction items to delivery",
+      "files": [
+        "tests/ops/reports/test_publish.py",
+        "tests/ops/reports/test_handoff_delivery.py",
+        "environment/agents/adapters/claude-code/tests/test_governance_handoff_writeback.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "handoff test cases; new test module",
+      "layer": "assurance",
+      "leverage_rank": 2
+    },
+    {
+      "id": "T5",
+      "task": "Update ops/memory/HANDOFF_CONTRACT.md step 4 (published report) and skills/l9-end-session/SKILL.md lines 115-116 to the new delivery: PR comment plus Cursor-Governance intake, nothing committed",
+      "files": [
+        "ops/memory/HANDOFF_CONTRACT.md",
+        "skills/l9-end-session/SKILL.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "HANDOFF_CONTRACT.md step 4; SKILL.md handoff publish lines",
+      "layer": "docs",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T6",
+      "task": "Add tracking to ops/ci_parity: Tool.track and ci_ref.extract in manifest.py (validated: track requires ci_ref.repo and an extract with a named group version), tracked_version(tool, text) returning a 40-hex SHA or None, and a load() overlay that applies a state.json entry with source ci_ref; declare track: ci_ref and the extract regex on l9-ci in tools.yaml",
+      "files": [
+        "ops/ci_parity/manifest.py",
+        "ops/ci_parity/tools.yaml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "class Tool, def load, tools.l9-ci",
+      "layer": "assurance",
+      "leverage_rank": 1,
+      "shared_root_cause": "l9-ci hand pin diverges from its source of truth in l9-ci-core"
+    },
+    {
+      "id": "T7",
+      "task": "In install.py resolve each tracked tool from Core through validate_manifest's Core reader before install, install at the resolved revision and record source/pinned in state.json, reinstall when the recorded tracked version differs, and fall back to the hand pin with a WARN line when Core is unreadable or the extract misses",
+      "files": [
+        "ops/ci_parity/install.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T6"
+      ],
+      "operation": "Insert",
+      "anchor": "def install_tool and def main",
+      "layer": "assurance",
+      "leverage_rank": 1,
+      "shared_root_cause": "l9-ci hand pin diverges from its source of truth in l9-ci-core"
+    },
+    {
+      "id": "T8",
+      "task": "In validate_manifest.py check a tracked tool by its extract (PASS with an INFO line naming the Core revision when the hand pin differs, FAIL when the extract no longer matches); update ops/ci_parity/README.md and the tools.yaml header comment. _blocking_identity is unchanged: ci_ref.contains stays as the exact evidence of the reviewed fallback pin, so the blocking semgrep-l9 lane keeps an exact CI identity",
+      "files": [
+        "ops/ci_parity/validate_manifest.py",
+        "ops/ci_parity/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T6"
+      ],
+      "operation": "Replace",
+      "anchor": "def check ci_ref branch; README pin section",
+      "layer": "assurance",
+      "leverage_rank": 2,
+      "shared_root_cause": "l9-ci hand pin diverges from its source of truth in l9-ci-core"
+    },
+    {
+      "id": "T9",
+      "task": "Add tracking tests to tests/ops/ci_parity/test_manifest_install.py: extract, overlay, reinstall on Core move, fallback WARN, validate pass-on-drift and fail-on-shape-change, schema refusal of a track without repo/extract",
+      "files": [
+        "tests/ops/ci_parity/test_manifest_install.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T7",
+        "T8"
+      ],
+      "operation": "Insert",
+      "anchor": "end of module",
+      "layer": "assurance",
+      "leverage_rank": 2
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "handoff delivery never touches the PR git tree and friction reaches the Cursor-Governance intake",
+      "unlocks": "Fix 1 tests and docs"
+    },
+    {
+      "id": "M2",
+      "outcome": "l9-ci installs Core's revision with hand-pin fallback",
+      "unlocks": "Fix 3 tests"
+    },
+    {
+      "id": "M3",
+      "outcome": "all touched suites and the repository gate pass",
+      "unlocks": "make pr"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "V1 and V2 pass",
+      "no_go_action": "stop and repair delivery before touching docs"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "V3 and V4 pass",
+      "no_go_action": "stop and repair ci_parity tracking"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "V5 and V6 pass",
+      "no_go_action": "do not publish; repair and re-authorize"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "no operating instruction names report publication onto the PR head or the l9-ci pin; root file is append-only"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "publication law (make pr) and merge authority unchanged; reports are not publication"
+    },
+    {
+      "surface": "ops/memory/HANDOFF_CONTRACT.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    },
+    {
+      "surface": "skills/l9-end-session/SKILL.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    },
+    {
+      "surface": "ops/ci_parity/README.md",
+      "action": "update",
+      "todo_ids": [
+        "T8"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Can a session attached only to a consumer repository reach the Cursor-Governance intake over REST, or will every delivery fall back?",
+      "Would tracking Core's main let an unreviewed SDK revision run locally that CI itself would not run?",
+      "Does any consumer CI or reviewer depend on the reports/end-session files appearing in the PR diff?",
+      "Can a PR comment upsert match a comment it does not own?",
+      "Does the overlay let run.py use a tracked version that install never verified?"
+    ],
+    "assumed_false_ifs": [
+      "the gateway refuses cross-repository issue writes for every consumer session - then the fallback PR comment is the only path and friction aggregation stays manual",
+      "Core stops naming the SDK revision as a full-SHA default - then the extract fails and validate_manifest FAILs loudly"
+    ],
+    "blast_radius": "every Claude Code publication in every governed repository (Stop hooks) and every make pr ci-parity wave; GMP report publication untouched",
+    "rollback": "revert the PR: publish.py returns to commit+push and tools.yaml loses track; state.json entries with source ci_ref are ignored by the reverted loader because it compares the hand pin and reinstalls"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T6",
+      "T7",
+      "T3",
+      "T8",
+      "T4",
+      "T9",
+      "T5"
+    ],
+    "shared_causes": [
+      "handoffs routed to the PR head instead of their owner",
+      "l9-ci hand pin diverges from its source of truth in l9-ci-core"
+    ],
+    "deletions_or_consolidations": [
+      "handoff commit/push path removed from _publish_handoff (publish() kept only for GMP reports)",
+      "manual l9-ci re-pin PRs eliminated (the #839 class of change)"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "cross-repository REST write to the intake is refused by the session gateway",
+      "mitigation": "fallback upserts the governance brief as a PR comment and the hook announcement names the refusal"
+    },
+    {
+      "risk": "intake issue spam from many friction ids",
+      "mitigation": "one issue per normalized id, one comment per session, marker-keyed lookup"
+    },
+    {
+      "risk": "tracking installs a Core revision the operator has not reviewed",
+      "mitigation": "Core's org-ci.yml change is itself reviewed in l9-ci-core and is exactly what CI runs; SHA must be 40-hex from the declared package URL"
+    },
+    {
+      "risk": "Stop hook timeout from extra REST calls",
+      "mitigation": "per-call timeout reuses GIT_TIMEOUT_S, bounded pagination, fail-open with an announced status"
+    },
+    {
+      "risk": "agent-authored brief text is posted to GitHub",
+      "mitigation": "no new exposure: the identical text is pushed as a tracked file today; briefs stay schema-capped by ops/memory/governance_handoff.py and session_handoff.py, which this change does not touch"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m pytest tests/ops/reports/test_publish.py -q",
+      "pass_criteria": "PASS; handoff cases assert no new commit and an unchanged remote PR head; GMP cases unchanged",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 -m pytest tests/ops/reports/test_handoff_delivery.py -q",
+      "pass_criteria": "PASS; upsert, per-id dedupe, per-session idempotence, fallback and fail-open cases",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 -m pytest tests/ops/ci_parity -q",
+      "pass_criteria": "PASS including the new tracking tests",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "python3 ops/ci_parity/validate_manifest.py --remote",
+      "pass_criteria": "PASS against live Core main with l9-ci tracked",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "python3 -m pytest tests/ops/memory environment/agents/adapters/claude-code/tests/test_governance_handoff_writeback.py environment/agents/adapters/claude-code/tests/test_post_publish_stop_state_machine.py -q",
+      "pass_criteria": "PASS including the new hook-level friction-items assertion",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": ".pre-commit-config.yaml via PR_REMEDIATE=0 make pr (L9_GOVERNANCE_SURFACE=claude-code)",
+      "pass_criteria": "gate PASS",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-pr-remediation",
+    "stop_reason": "plan validated; Build not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/reports/handoff_delivery.py",
+      "ops/reports/publish.py",
+      "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py",
+      "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
+      "environment/agents/adapters/claude-code/memory/post_publish.py",
+      "ops/memory/HANDOFF_CONTRACT.md",
+      "skills/l9-end-session/SKILL.md",
+      "ops/ci_parity/",
+      "tests/ops/reports/",
+      "tests/ops/ci_parity/",
+      "environment/agents/adapters/claude-code/tests/test_governance_handoff_writeback.py"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "Makefile",
+      "CANONICAL_LAW.md",
+      "ops/scripts/run_pr_gate.sh",
+      "ops/memory/governance_handoff.py",
+      "ops/memory/session_handoff.py"
+    ],
+    "preserved_contracts": [
+      "make pr is the only publication path; report delivery never pushes",
+      "Stop hooks stay fail-open and announce every outcome",
+      "governance memory record write unchanged",
+      "no force-push, no history rewrite",
+      "ci-parity tools stay SHA- or hash-exact",
+      "intake repository identity single-sourced from session_debt.GOVERNANCE_REPOSITORY"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/ops/reports tests/ops/ci_parity -q",
+      "python3 ops/ci_parity/validate_manifest.py --remote",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "handoff delivery module",
+    "publish.py rewire",
+    "hook friction items",
+    "contract docs",
+    "ci_parity tracking",
+    "tests"
+  ],
+  "estimate": "1 GMP",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {
+      "mode": "named_services_only",
+      "allowed_services": [
+        "api.github.com via gh api (REST)",
+        "github.com git read of Quantum-L9/l9-ci-core"
+      ]
+    },
+    "secrets": {
+      "access": "none"
+    }
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [
+      "consumer repository PR to Cursor-Governance intake",
+      "Cursor-Governance ci-parity to l9-ci-core workflow file"
+    ],
+    "external_systems_touched": [
+      "GitHub REST API"
+    ],
+    "migration_required": false
+  }
+}
