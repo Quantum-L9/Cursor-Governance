@@ -202,7 +202,9 @@ def test_fetch_receipt_sha_mismatch_is_not_reusable(tmp_path: Path) -> None:
 def test_open_pr_script_reuses_fetch_receipt() -> None:
     text = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     assert "fetch_receipt_reusable" in text
-    assert 'git fetch origin "$BASE_REF"' in text
+    # The base is fetched into refs/remotes/origin/$BASE_REF (fetch_origin_branch),
+    # not FETCH_HEAD, so a stacked base exists in a single-branch clone.
+    assert 'fetch_origin_branch "$WS" "$BASE_REF"' in text
 
 
 def test_security_skips_resolve_when_pr_changed_file(tmp_path: Path) -> None:
