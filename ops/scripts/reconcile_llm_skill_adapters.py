@@ -131,7 +131,13 @@ def reconcile_adapters(
             mount_roots += [
                 ancestor
                 for ancestor in adopted_projection_roots(
-                    workspace, str(raw_path), STATE_NAME, exclude_targets=user_targets
+                    workspace,
+                    str(raw_path),
+                    STATE_NAME,
+                    exclude_targets=user_targets,
+                    # Only a mirror THIS governance root wrote: a second
+                    # checkout must not take over the SSOT's container mirror.
+                    owner_root=root,
                 )
                 if ancestor not in mount_roots
             ]

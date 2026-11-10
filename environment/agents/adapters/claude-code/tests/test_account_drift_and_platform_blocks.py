@@ -30,10 +30,12 @@ import probe_network_posture  # noqa: E402
 from verify_account_env import (  # noqa: E402
     DELIBERATELY_ABSENT,
     PROHIBITED_PRESENT,
+    RETIRED_ACCOUNT_FIELDS,
     RUNTIME_MANAGED,
     account_fields_markdown,
     compare,
     parse_env_example,
+    retired_fields_present,
     retired_transport_present,
     run,
     setup_script_markdown,
@@ -99,6 +101,40 @@ class AccountEnvDriftTests(unittest.TestCase):
         self.assertEqual(result["retired_transport_present"], ["GRAPHITI_MCP_URL"])
         self.assertFalse(result["ok"])
         self.assertEqual(result["prohibited_present"], [])
+
+    def test_retired_account_fields_are_flagged(self) -> None:
+        """Leftover pastes that nothing reads fail the audit by name."""
+        env = {
+            **self.expected,
+            "L9_STUB_REVISION": stub_revision_expected(),
+            "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
+            "L9_MEMORY_SOURCE": "claude-code",
+        }
+        self.assertEqual(
+            retired_fields_present(env), ["L9_AUTONOMY_AUTONOMOUS_MERGE", "L9_MEMORY_SOURCE"]
+        )
+        result = run(env)
+        self.assertEqual(
+            result["retired_fields_present"], ["L9_AUTONOMY_AUTONOMOUS_MERGE", "L9_MEMORY_SOURCE"]
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["prohibited_present"], [])
+
+    def test_identity_the_hooks_stamp_is_not_a_retired_field(self) -> None:
+        """memory_state.bind_identity_env sets these itself; presence is not a paste."""
+        for key in ("L9_MEMORY_AGENT_ID", "USER_ID"):
+            self.assertNotIn(key, RETIRED_ACCOUNT_FIELDS)
+        env = {
+            **self.expected,
+            "L9_STUB_REVISION": stub_revision_expected(),
+            "L9_MEMORY_AGENT_ID": "claude-code",
+            "USER_ID": "claude-code",
+        }
+        self.assertEqual(run(env)["retired_fields_present"], [])
+
+    def test_retired_fields_are_never_expected(self) -> None:
+        for key in RETIRED_ACCOUNT_FIELDS:
+            self.assertNotIn(key, self.expected)
 
     def test_runtime_managed_keys_are_excluded(self) -> None:
         """The harness decrements spawn depth per nesting level; comparing it

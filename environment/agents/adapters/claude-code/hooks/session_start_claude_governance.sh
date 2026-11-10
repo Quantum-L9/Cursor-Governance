@@ -525,25 +525,6 @@ if GOV=$(resolve_governance_dir); then
     fi
   fi
   say "authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts"
-  if [ -d "$GOV/skills" ]; then
-    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
-    # add `find -L` counts over the workspace and user discovery paths, so each
-    # skill projected into both read twice (a "loadable" count of 119 for 59
-    # skills, issue #690). The census counts each canonical identity once,
-    # names missing / wrong-target / non-canonical entries separately, and
-    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
-    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
-    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
-    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
-    _census_rc=$?
-    if [ -n "$_census_out" ]; then
-      while IFS= read -r _census_line; do
-        say "$_census_line"
-      done <<<"$_census_out"
-    else
-      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
-    fi
-  fi
 
   # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
   if git -C "$WORKSPACE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -758,6 +739,31 @@ if GOV=$(resolve_governance_dir); then
     fi
   fi
 
+  if [ -d "$GOV/skills" ]; then
+    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
+    # add `find -L` counts over the workspace and user discovery paths, so each
+    # skill projected into both read twice (a "loadable" count of 119 for 59
+    # skills, issue #690). The census counts each canonical identity once,
+    # names missing / wrong-target / non-canonical entries separately, and
+    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
+    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
+    #
+    # It runs AFTER the installer / projection above, never before. Taken first,
+    # it reported the links as they were before this ceremony repaired them: a
+    # session whose installer replaced all 57 workspace links (projection
+    # receipt replaced_duplicates=57) still printed every one as wrong-target.
+    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
+    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
+    _census_rc=$?
+    if [ -n "$_census_out" ]; then
+      while IFS= read -r _census_line; do
+        say "$_census_line"
+      done <<<"$_census_out"
+    else
+      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
+    fi
+  fi
+
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
     PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
     if [ -n "$PROFILE_BLOCK" ]; then
@@ -849,6 +855,38 @@ _l9_door_status() {
   fi
   if [ -n "$_drift" ]; then
     say "memory identity: IGNORED configured L9_MEMORY_AGENT_ID=$_drift (the running surface is ${_agent:-unresolved}); remove it from the environment settings — the identity is derived, never configured"
+  fi
+  # The canonical identity assertion (l9.identity-assertion/v1) the memory store
+  # verifies against its pinned .github coordinates. Built read-only from the
+  # committed projection, exactly as the door would seal it: no HMAC, no key,
+  # no GitHub fetch. A projection whose bytes disagree with its receipt makes
+  # the builder refuse, and the store would refuse this identity the same way,
+  # so say so now rather than at the first write. Readiness of the assertion is
+  # not readiness of the transport: the Claude Code client is the account Memory
+  # connector (CANONICAL_LAW §8.10), whose activation stays UNKNOWN until seen.
+  if [ -n "$_agent" ]; then
+    local _assertion
+    _assertion="$(_l9_bounded 4 env PYTHONPATH="$GOV${PYTHONPATH:+:$PYTHONPATH}" "$PY" -c '
+import sys
+try:
+    from ops.memory.print_agent_assertion_env import build_runtime_identity_assertion
+    a = build_runtime_identity_assertion()
+    dims = a["resolved_dimensions"]
+    rev = a["governing_coordinates"]["global_identity_authority_revision"]
+    surface = dims["surface_identity"].rsplit("#", 1)[-1]
+    actor = dims["actor_identity"].rsplit("#", 1)[-1]
+    print(f"READY actor {actor}, surface {surface}, pinned to Quantum-L9/.github {rev[:7]}")
+except Exception as exc:  # noqa: BLE001 - a status probe reports, never raises
+    print(f"UNAVAILABLE {type(exc).__name__}: {exc}")
+' 2>/dev/null)"
+    case "$_assertion" in
+      READY*)
+        say "memory identity assertion: READY — ${_assertion#READY } via the committed projection (receipt digest verified); grants no credential, role or namespace. Memory transport is the account connector (CANONICAL_LAW §8.10), activation UNKNOWN until observed" ;;
+      UNAVAILABLE*)
+        say "memory identity assertion: UNAVAILABLE — ${_assertion#UNAVAILABLE }; the store refuses this identity until generated/governance/canonical_identity.yaml and its receipt agree (tools/authority/project_canonical_identity.py)" ;;
+      *)
+        say "memory identity assertion: UNKNOWN — probe produced no result" ;;
+    esac
   fi
   [ -n "${L9_MEMORY_AGENTS_DOOR_SECRET:-}" ] || missing+=(L9_MEMORY_AGENTS_DOOR_SECRET)
   [ -n "${L9_MEMORY_AGENT_ASSERTION:-}" ] || missing+=(L9_MEMORY_AGENT_ASSERTION)

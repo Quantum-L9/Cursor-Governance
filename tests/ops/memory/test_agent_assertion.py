@@ -319,6 +319,45 @@ def test_claude_cli_resolves_actor_and_surface() -> None:
     assert dims["surface_identity"] == "l9.surface-registry/global@1#claude-code-cli"
 
 
+def test_the_store_admits_the_assertion_the_bootstrap_builds_for_mobile() -> None:
+    """End to end against the installed store's own verifier, not a copy of it.
+
+    The store compares the governing coordinates to constants it pins
+    (GLOBAL_IDENTITY_AUTHORITY_REVISION and the projection, binding and
+    resolver refs) and never fetches .github. Re-projecting the identity
+    authority here without the store bumping its pin would make every Claude
+    Code memory write fail at the door; this test fails first.
+    """
+    from l9_graphite_memory.authz.signed_assertion import (
+        identity_assertion_hmac,
+        verify_canonical_identity_assertion,
+    )
+    from l9_graphite_memory.contracts.identity import GLOBAL_IDENTITY_AUTHORITY_REVISION
+
+    assertion = helper.build_runtime_identity_assertion(
+        {"CLAUDECODE": "1", "CLAUDE_CODE_REMOTE": "true", "CLAUDE_CODE_ENTRYPOINT": "remote_mobile"}
+    )
+    coordinates = assertion["governing_coordinates"]
+    assert coordinates["global_identity_authority_revision"] == GLOBAL_IDENTITY_AUTHORITY_REVISION
+    key = "test-only-signing-key"
+    parsed = verify_canonical_identity_assertion(
+        assertion,
+        supplied_hmac=identity_assertion_hmac(assertion["assertion_digest"], key),
+        agent_id="claude-code",
+        signing_key=key,
+    )
+    assert parsed.resolved_dimensions.surface_identity == (
+        "l9.surface-registry/global@1#claude-code-mobile"
+    )
+    with pytest.raises(AuthenticationError):
+        verify_canonical_identity_assertion(
+            assertion,
+            supplied_hmac=identity_assertion_hmac(assertion["assertion_digest"], key),
+            agent_id="claude-code-mobile",
+            signing_key=key,
+        )
+
+
 def test_claude_remote_mobile_resolves_mobile_surface() -> None:
     assertion = _resolved(
         {

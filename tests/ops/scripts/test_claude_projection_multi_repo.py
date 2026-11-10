@@ -133,6 +133,52 @@ def test_an_absolute_target_is_never_adopted(tmp_path: Path) -> None:
     assert adopted_projection_roots(repo, Path("/etc"), "passwd") == []
 
 
+def _mirror(parent: Path, governance_root: str | None) -> None:
+    import json
+
+    mirror = parent / ".claude" / "skills"
+    mirror.mkdir(parents=True)
+    payload = {} if governance_root is None else {"governance_root": governance_root}
+    (mirror / ".l9-managed-skills.json").write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_a_second_checkout_never_adopts_the_ssot_mirror(tmp_path: Path) -> None:
+    """Observed: a governance checkout nested in the container re-pointed the
+    container mirror the SSOT bootstrap wrote, every time it ran its generator."""
+    ssot, checkout = tmp_path / "ssot", make_repo(tmp_path, "Cursor-Governance")
+    _mirror(tmp_path, str(ssot))
+    relative = Path(".claude") / "skills"
+
+    assert (
+        adopted_projection_roots(checkout, relative, ".l9-managed-skills.json", owner_root=checkout)
+        == []
+    )
+    assert adopted_projection_roots(
+        checkout, relative, ".l9-managed-skills.json", owner_root=ssot
+    ) == [tmp_path]
+
+
+def test_an_ownerless_state_file_is_not_adopted_when_an_owner_is_required(
+    tmp_path: Path,
+) -> None:
+    repo = make_repo(tmp_path, "solo")
+    _mirror(tmp_path, None)
+    assert (
+        adopted_projection_roots(
+            repo, Path(".claude") / "skills", ".l9-managed-skills.json", owner_root=tmp_path
+        )
+        == []
+    )
+
+
+def test_both_adapters_adopt_only_their_own_mirror() -> None:
+    for script in (SKILL_ADAPTERS, COMMAND_ADAPTERS):
+        body = script.read_text(encoding="utf-8")
+        assert "owner_root=root" in body, (
+            f"{script.name} must adopt only a mirror its own governance root wrote"
+        )
+
+
 def test_both_adapters_adopt_an_ancestor_mirror() -> None:
     for script in (SKILL_ADAPTERS, COMMAND_ADAPTERS):
         body = script.read_text(encoding="utf-8")
@@ -146,7 +192,16 @@ def test_live_container_has_no_dangling_managed_links() -> None:
 
     Skipped where the workspace is not a multi-repo container, so the suite
     stays meaningful on a developer checkout instead of silently passing.
+
+    A link its repository COMMITTED is that repository's content, not a
+    projection link: reconcile_scope never creates, repoints or removes it, and
+    claude_projection reports it as consumer_owned. Counting one here failed this
+    suite on content no governance change can or should alter (IB-Odoo_19's
+    committed links to retired skills). Every link the projection could have
+    written is still checked.
     """
+    import subprocess
+
     import pytest
 
     container = REPO_ROOT.parent
@@ -154,11 +209,19 @@ def test_live_container_has_no_dangling_managed_links() -> None:
     if roots == [container]:
         pytest.skip("not a multi-repository container")
 
+    def committed(entry: Path) -> bool:
+        probe = subprocess.run(
+            ["git", "-C", str(entry.parent), "ls-files", "--error-unmatch", entry.name],
+            capture_output=True,
+            check=False,
+        )
+        return probe.returncode == 0
+
     dangling = [
         str(entry)
         for root in roots
         for sub in ("skills", "commands")
         for entry in (root / ".claude" / sub).glob("*")
-        if entry.is_symlink() and not entry.exists()
+        if entry.is_symlink() and not entry.exists() and not committed(entry)
     ]
     assert not dangling, "dangling projection links:\n" + "\n".join(dangling)
