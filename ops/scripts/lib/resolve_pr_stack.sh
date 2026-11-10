@@ -27,6 +27,8 @@ STACK_BASE_RECEIPT_TTL_S="${STACK_BASE_RECEIPT_TTL_S:-60}"
 STACK_BASE_RECEIPT_REL=".l9/pr/stack-base.json"
 
 _PR_STACK_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=git_remote_head.sh
+source "$_PR_STACK_SCRIPTS_DIR/lib/git_remote_head.sh"
 
 pr_stack_is_main_base() {
   case "${1#origin/}" in
@@ -204,13 +206,16 @@ pr_stack_apply_publish_base() {
     local parent
     for parent in $chain; do
       [ "$parent" = "${base#origin/}" ] && continue
-      git -C "$workspace" fetch -q origin "$parent" 2>/dev/null || true
+      fetch_origin_branch "$workspace" "$parent" >/dev/null 2>&1 || true
     done
     local_sha="$(git -C "$workspace" rev-parse --verify "$base" 2>/dev/null || true)"
     if [ -n "$sha" ] && [ "$local_sha" = "$sha" ]; then
       :
     else
-      if ! git -C "$workspace" fetch origin "${base#origin/}"; then
+      # Into refs/remotes/origin/<tip>, not FETCH_HEAD: a single-branch clone
+      # maps only main, so a bare `fetch origin <tip>` left $base missing and
+      # the SHA check below failed against a ref nobody had written.
+      if ! fetch_origin_branch "$workspace" "${base#origin/}"; then
         echo "FAIL: cannot fetch $base — stack tip unverifiable" >&2
         return 1
       fi

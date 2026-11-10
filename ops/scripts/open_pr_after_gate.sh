@@ -94,7 +94,10 @@ BASE_REF="${PR_BASE#origin/}"
 echo "--- refresh base ($PR_BASE) ---"
 if fetch_receipt_reusable "$WS" "$BASE_REF"; then
   echo "OK: reuse fetch-receipt (age < ${FETCH_RECEIPT_TTL_S}s, sha matches origin/$BASE_REF)"
-elif ! git fetch origin "$BASE_REF"; then
+# fetch_origin_branch (lib/git_remote_head.sh, via resolve_pr_stack.sh) writes
+# refs/remotes/origin/$BASE_REF itself: a bare `git fetch origin <base>` only
+# fills FETCH_HEAD in a single-branch clone, so a stacked base stayed missing.
+elif ! fetch_origin_branch "$WS" "$BASE_REF"; then
   echo "FAIL: cannot fetch origin/$BASE_REF — current-main collision state is"
   echo "      undeterminable, so publication is denied. Local work is unaffected."
   exit 1
@@ -244,6 +247,13 @@ _push_with_bounded_recover() {
   local attempt=1 max=2 prior_head
   while [ "$attempt" -le "$max" ]; do
     if git push -u origin HEAD; then
+      # Record what was pushed as refs/remotes/origin/$branch. `push -u` sets the
+      # upstream config, but a single-branch clone maps no tracking ref for the
+      # feature branch, so `@{u}` stayed unresolvable and every unpushed-commit
+      # check (Stop hooks, session_debt) reported the published branch as
+      # unpushed. Telemetry only: the push already succeeded.
+      fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 ||
+        echo "WARN: pushed, but could not record origin/$branch locally"
       return 0
     fi
     if [ "$attempt" -ge "$max" ]; then
@@ -252,11 +262,11 @@ _push_with_bounded_recover() {
     fi
     echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen + re-attest)"
     prior_head="$(git rev-parse HEAD)"
-    git fetch origin "$BASE_REF" || return 1
+    fetch_origin_branch "$WS" "$BASE_REF" || return 1
     # Also fetch the remote feature branch tip: a concurrent publisher advancing the
     # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
     # commits absent and the next push is rejected again.
-    git fetch origin "$branch" 2>/dev/null || true
+    fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 || true
     git merge --no-edit "origin/$BASE_REF" || return 1
     if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
        ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then

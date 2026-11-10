@@ -327,3 +327,75 @@ def test_apple_make_381_rejects_recursive_pr_stack_export(tmp_path: Path) -> Non
     result = _run([str(make), "-f", str(probe), "precommit-repo"], cwd=tmp_path)
     assert result.returncode != 0
     assert "Recursive variable" in (result.stderr or result.stdout)
+
+
+def _single_branch_clone_with_remote_tip(tmp_path: Path) -> tuple[Path, str]:
+    """A bare origin carrying main and a feature tip, cloned --single-branch.
+
+    The clone's fetch refspec maps main alone, the shape of a cloud session
+    checkout. A bare `git fetch origin <tip>` only writes FETCH_HEAD there.
+    """
+    seed = _init_repo(tmp_path)
+    git_in(seed, "checkout", "-b", "feat/parent")
+    (seed / "parent.txt").write_text("p\n", encoding="utf-8")
+    git_in(seed, "add", "parent.txt")
+    git_in(seed, "commit", "-m", "parent")
+    tip_sha = subprocess.check_output(
+        ["git", "-C", str(seed), "rev-parse", "HEAD"], text=True
+    ).strip()
+    origin = tmp_path / "origin.git"
+    subprocess.run(
+        ["git", "clone", "--bare", "-q", str(seed), str(origin)], check=True, capture_output=True
+    )
+    clone = tmp_path / "clone"
+    subprocess.run(
+        ["git", "clone", "-q", "--single-branch", "--branch", "main", str(origin), str(clone)],
+        check=True,
+        capture_output=True,
+    )
+    return clone, tip_sha
+
+
+def test_single_branch_clone_binds_the_stack_tip_tracking_ref(tmp_path: Path) -> None:
+    clone, tip_sha = _single_branch_clone_with_remote_tip(tmp_path)
+    missing = subprocess.run(
+        ["git", "-C", str(clone), "rev-parse", "--verify", "origin/feat/parent"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert missing.returncode != 0, "fixture must start without the tracking ref"
+    stub = tmp_path / "tip.py"
+    _write_tip_stub(stub, tip="feat/parent", sha=tip_sha, reason="unique_chain_tip")
+    result = _apply(clone, stub, {"PR_STACK": "auto"})
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, combined
+    assert "resolver reported" not in combined
+    assert "BOUND=origin/feat/parent" in result.stdout
+    bound = subprocess.check_output(
+        ["git", "-C", str(clone), "rev-parse", "origin/feat/parent"], text=True
+    ).strip()
+    assert bound == tip_sha
+
+
+def test_fetch_origin_branch_writes_the_tracking_ref(tmp_path: Path) -> None:
+    clone, tip_sha = _single_branch_clone_with_remote_tip(tmp_path)
+    helper = SCRIPTS / "lib" / "git_remote_head.sh"
+    script = f"source '{helper}' && fetch_origin_branch '{clone}' origin/feat/parent"
+    result = _run(["bash", "-c", script], cwd=clone)
+    assert result.returncode == 0, result.stdout + result.stderr
+    bound = subprocess.check_output(
+        ["git", "-C", str(clone), "rev-parse", "origin/feat/parent"], text=True
+    ).strip()
+    assert bound == tip_sha
+    bad = _run(["bash", "-c", f"source '{helper}' && fetch_origin_branch '{clone}' 'a..b'"], cwd=clone)
+    assert bad.returncode == 2
+
+
+def test_publish_path_fetches_bases_into_tracking_refs() -> None:
+    text = OPEN_PR.read_text(encoding="utf-8")
+    assert 'git fetch origin "$BASE_REF"' not in text
+    assert 'git fetch origin "$branch"' not in text
+    assert 'fetch_origin_branch "$WS" "$BASE_REF"' in text
+    push = text.index("if git push -u origin HEAD; then")
+    assert 'fetch_origin_branch "$WS" "$branch"' in text[push : push + 800]

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Bind refs/remotes/origin/HEAD after a prune, including shallow single-branch
-# checkouts where Git has not fetched the remote's advertised default branch.
+# checkouts where Git has not fetched the remote's advertised default branch,
+# and fetch any one origin branch into its remote-tracking ref
+# (fetch_origin_branch) in those same checkouts.
 #
 # This helper is deliberately fail-soft: callers use it for local telemetry,
 # not a publication or authorization decision. It never changes the remote.
@@ -55,6 +57,29 @@ bind_origin_head() {
     GIT_REMOTE_HEAD_ERROR="origin/HEAD remained unresolved after fetching '$default_branch'"
     return 1
   fi
+}
+
+# Fetch one origin branch into its remote-tracking ref.
+#
+# `git fetch origin <branch>` writes only FETCH_HEAD when the clone's fetch
+# refspec does not map that branch: a --single-branch cloud clone maps main
+# alone, so `origin/<branch>` never appears however often it is fetched. Every
+# caller that then reads `origin/<branch>` sees it missing. An explicit refspec
+# names the destination, so the ref exists after a successful fetch whatever
+# the configured refspec says. Returns git fetch's status; changes no config.
+fetch_origin_branch() {
+  local workspace="${1:-}" branch="${2:-}"
+  branch="${branch#origin/}"
+  if [ -z "$workspace" ] || [ -z "$branch" ]; then
+    echo "fetch_origin_branch: usage: fetch_origin_branch WORKSPACE BRANCH" >&2
+    return 2
+  fi
+  if ! git -C "$workspace" check-ref-format --branch "$branch" >/dev/null 2>&1; then
+    echo "fetch_origin_branch: invalid branch name '$branch'" >&2
+    return 2
+  fi
+  git -C "$workspace" fetch --no-tags origin \
+    "+refs/heads/$branch:refs/remotes/origin/$branch"
 }
 
 _git_remote_head_is_sourced() {
