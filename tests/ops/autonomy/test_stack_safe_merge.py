@@ -486,3 +486,137 @@ def test_f03_revocation_of_another_pr_does_not_block(tmp_path: Path, monkeypatch
     _revoke_store(tmp_path, monkeypatch, f"Do not merge {SLUG}#54.", now=time.time() - 60)
     code, runs = _merge_run(tmp_path, monkeypatch, probe=LEAF_MERGED, grant=_grant_file(tmp_path))
     assert code == 0 and runs
+
+
+# --- Long-lived heads: promotions merge with a merge commit and keep the head --
+# Regression for cryptoxdog/IB-Odoo_19#440: Staging -> Production had no stacked
+# children, so it was squashed (splitting the two histories) and the Staging ref
+# DELETE was attempted.
+
+PROMOTION = {"head": "Staging", "children": [], "default_branch": "Staging", "protected": True}
+
+
+def _select(tmp_path: Path, monkeypatch, entry: dict) -> dict:
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, {f"{SLUG}#53": entry}))
+    return select_merge_method(SLUG, "53")
+
+
+def _deletes(runs: list[list[str]]) -> list[str]:
+    joined = [" ".join(argv) for argv in runs]
+    return [
+        line
+        for line in joined
+        if "--delete-branch" in line or ("DELETE" in line and "refs/heads/" in line)
+    ]
+
+
+def test_promotion_from_default_branch_selects_merge_and_keeps_head(tmp_path, monkeypatch) -> None:
+    chosen = _select(tmp_path, monkeypatch, PROMOTION)
+    assert chosen["method"] == "merge"
+    assert chosen["head_long_lived"] is True
+    assert "default branch" in chosen["keep_head_reason"]
+    assert "--delete-branch" not in merge_argv(SLUG, "53", delete_branch=True, selection=chosen)
+
+
+def test_protected_head_selects_merge(tmp_path, monkeypatch) -> None:
+    chosen = _select(
+        tmp_path, monkeypatch, {"head": "integration", "children": [], "protected": True}
+    )
+    assert (chosen["method"], chosen["head_long_lived"]) == ("merge", True)
+    assert "protected" in chosen["keep_head_reason"]
+
+
+def test_head_whose_rules_forbid_deletion_selects_merge(tmp_path, monkeypatch) -> None:
+    entry = {"head": "integration", "children": [], "rules": ["pull_request", "non_fast_forward"]}
+    chosen = _select(tmp_path, monkeypatch, entry)
+    assert (chosen["method"], chosen["head_long_lived"]) == ("merge", True)
+    assert "non_fast_forward" in chosen["keep_head_reason"]
+
+
+def test_all_branch_org_rules_do_not_make_a_feature_leaf_long_lived(tmp_path, monkeypatch) -> None:
+    """An org ruleset on every branch carries workflows/required checks; squash must survive it."""
+    entry = {"head": "fix/leaf", "children": [], "rules": ["workflows", "required_status_checks"]}
+    chosen = _select(tmp_path, monkeypatch, entry)
+    assert (chosen["method"], chosen["head_long_lived"]) == ("squash", False)
+    assert "--delete-branch" in merge_argv(SLUG, "53", delete_branch=True, selection=chosen)
+
+
+def test_long_lived_name_alone_selects_merge(tmp_path, monkeypatch) -> None:
+    for head in ("Production", "main", "release/2026.11"):
+        chosen = _select(tmp_path, monkeypatch, {"head": head, "children": []})
+        assert (chosen["method"], chosen["head_long_lived"]) == ("merge", True), head
+
+
+def test_unreadable_long_lived_probe_fails_safe(monkeypatch) -> None:
+    monkeypatch.delenv("L9_STACK_PROBE_FILE", raising=False)
+    monkeypatch.setattr(stack_safe_merge, "_stacked_children", lambda repo, pr: ("feat/x", []))
+
+    def _refuse(path: str):
+        raise RuntimeError("HTTP 403 rules not enabled for this session")
+
+    monkeypatch.setattr(stack_safe_merge, "_gh_rest_json", _refuse)
+    chosen = select_merge_method(SLUG, "53")
+    assert (chosen["method"], chosen["head_long_lived"]) == ("merge", True)
+    assert "probe unavailable" in chosen["keep_head_reason"]
+
+
+def test_execute_never_deletes_a_long_lived_head(monkeypatch, capsys) -> None:
+    runs: list[list[str]] = []
+    monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: runs.append(argv) or 0)
+    selection = {
+        "repo": SLUG,
+        "pr": 440,
+        "method": "merge",
+        "head": "Staging",
+        "children": [],
+        "head_long_lived": True,
+        "keep_head_reason": "long-lived head: default branch",
+    }
+    assert _execute(selection, delete_branch=True) == 0
+    assert _deletes(runs) == []
+    assert "NOTE: head branch 'Staging' is kept" in capsys.readouterr().err
+
+
+def test_execute_keeps_a_long_lived_name_even_without_selection_flags(monkeypatch) -> None:
+    """Defence in depth: a hand-built selection naming Production still never deletes it."""
+    runs: list[list[str]] = []
+    monkeypatch.setattr(stack_safe_merge, "_run", lambda argv: runs.append(argv) or 0)
+    selection = {"repo": SLUG, "pr": 1, "method": "merge", "head": "Production", "children": []}
+    assert _execute(selection, delete_branch=True) == 0
+    assert _deletes(runs) == []
+
+
+def test_cli_fallback_never_deletes_a_long_lived_head(monkeypatch) -> None:
+    runs: list[list[str]] = []
+
+    def _run(argv: list[str]) -> int:
+        runs.append(argv)
+        return 1 if "api" in argv and any("pulls/440/merge" in a for a in argv) else 0
+
+    monkeypatch.setattr(stack_safe_merge, "_run", _run)
+    selection = {
+        "repo": SLUG,
+        "pr": 440,
+        "method": "merge",
+        "head": "Staging",
+        "children": [],
+        "head_long_lived": True,
+        "keep_head_reason": "long-lived head",
+    }
+    assert _execute(selection, delete_branch=True) == 0
+    cli = [argv for argv in runs if argv[:3] == ["gh", "pr", "merge"]]
+    assert cli and "--merge" in cli[0] and "--delete-branch" not in cli[0]
+
+
+def test_granted_promotion_run_merges_with_merge_commit_and_deletes_nothing(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    probe = {
+        f"{SLUG}#53": {**PROMOTION, "sha": SHA, "merged": True, "merge_commit_sha": MERGE_COMMIT}
+    }
+    code, runs = _merge_run(tmp_path, monkeypatch, probe=probe, grant=_grant_file(tmp_path))
+    assert code == 0
+    assert "merge_method=merge" in runs[0] and f"sha={SHA}" in runs[0]
+    assert _deletes(runs) == []
+    record = json.loads(capsys.readouterr().out)
+    assert (record["status"], record["method"]) == ("MERGED", "merge")
