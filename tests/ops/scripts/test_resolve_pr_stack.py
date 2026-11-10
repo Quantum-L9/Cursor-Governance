@@ -388,7 +388,9 @@ def test_fetch_origin_branch_writes_the_tracking_ref(tmp_path: Path) -> None:
         ["git", "-C", str(clone), "rev-parse", "origin/feat/parent"], text=True
     ).strip()
     assert bound == tip_sha
-    bad = _run(["bash", "-c", f"source '{helper}' && fetch_origin_branch '{clone}' 'a..b'"], cwd=clone)
+    bad = _run(
+        ["bash", "-c", f"source '{helper}' && fetch_origin_branch '{clone}' 'a..b'"], cwd=clone
+    )
     assert bad.returncode == 2
 
 

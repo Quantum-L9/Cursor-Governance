@@ -149,6 +149,32 @@ def parse_frontmatter(text: str) -> dict[str, Any]:
     return data
 
 
+def frontmatter_yaml_error(text: str) -> str | None:
+    """Why the frontmatter block is not a YAML mapping, or None when it is.
+
+    ``parse_frontmatter`` falls back to a line parser so a receipt can still be
+    produced, but that fallback reads nested lists as empty strings: a broken
+    block surfaced as ``missing or invalid todos`` while the real defect (an
+    unquoted ``name:`` containing ``": "``) was never named. A block that does
+    not load is reported for what it is.
+    """
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        return "G_FRONTMATTER_YAML: no --- frontmatter block at the top of the plan"
+    if yaml is None:
+        return None
+    try:
+        loaded = yaml.safe_load(match.group(1))
+    except yaml.YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        where = f" (frontmatter line {mark.line + 1})" if mark is not None else ""
+        problem = getattr(exc, "problem", None) or type(exc).__name__
+        return f"G_FRONTMATTER_YAML: frontmatter is not valid YAML{where}: {problem}"
+    if not isinstance(loaded, dict):
+        return "G_FRONTMATTER_YAML: frontmatter is not a YAML mapping"
+    return None
+
+
 def handoff_mode(text: str) -> str:
     """The plan's declared handoff mode; cursor-build is the default."""
     fm = parse_frontmatter(text)
@@ -245,12 +271,16 @@ UNBOUND_PROOF_MARK = "unbound — no "
 
 
 def projection_marker_errors(text: str) -> list[str]:
-    """Refuse a projection that still carries an unresolved fill marker.
+    """Refuse a projection that still carries an unresolved fill marker, or
+    whose frontmatter does not load as YAML (``G_FRONTMATTER_YAML``).
 
     The legend uses the ellipsis forms ``unknown — …`` and ``unbound — …``.
     Those are instructions, not the markers this function matches.
     """
     errors: list[str] = []
+    yaml_error = frontmatter_yaml_error(text)
+    if yaml_error:
+        errors.append(yaml_error)
     if NOT_DECLARED_MARK in text:
         errors.append("G_PROJECTION_MARKER: unknown — not declared")
     if UNBOUND_BASELINE_MARK in text:
