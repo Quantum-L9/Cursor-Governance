@@ -333,5 +333,6 @@ class WorkspaceReferencePlaneTests(unittest.TestCase):
         self.assertIn("warn ", block)
         self.assertNotIn("exit ", block)
 
+
 if __name__ == "__main__":
     unittest.main()
