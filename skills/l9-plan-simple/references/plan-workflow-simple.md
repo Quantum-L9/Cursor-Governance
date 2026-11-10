@@ -74,6 +74,8 @@ python3 "$GOV/skills/l9-plan-simple/scripts/run_plan_pipeline.py" \
   --gar-run <gar-run.json> --out-md .cursor/plans/<snake_slug>_<8hex>.plan.md
 ```
 
+**Where the files go.** In a Cursor-Governance checkout, worktrees included, write the plan and its GAR run into that checkout's tracked `docs/plans/`: `--gar-run docs/plans/<slug>.gar-run.json --out-md docs/plans/<slug>.plan.md`. There `.cursor/plans` is a symlink to the primary SSOT clone, so a plan written through it never reaches the branch and dirties the SSOT clone; the pipeline warns when that happens. A tracked plan is admitted only when its section receipt and the GAR run it names are tracked too, so commit all three together. In any other repository `.cursor/plans/` is the Cursor plans folder.
+
 The only writer is `skills/l9-plan-simple/scripts/run_plan_pipeline.py`. It runs the validator, then the renderer with the selected `--execute-via` and `--workspace .`, then the section receipt. Do not emit the markdown any other way. The renderer fills every template section from PLAN_DOCUMENT; the output carries no `<parameter>` slot. `--workspace .` binds the baseline from the current git work tree (read-only). A success criterion's proof is the `final_validation` entry it names by id (`V1`) or by a shared script/file name — name one in every criterion. Fields PLAN_DOCUMENT does not carry render `unknown — not declared` and the renderer exits non-zero: fix them in PLAN_DOCUMENT and re-run the pipeline rather than hand-editing the projection.
 
 Do **not** call `render_plan_pe_autonomy.py` without `--execute-via` for a simple plan (the default injects PE). Embedded is `--execute-via=embedded`.

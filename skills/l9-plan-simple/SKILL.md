@@ -117,7 +117,9 @@ Steps 0–9 are **identical in both modes**.
 
    The renderer fills **every** template section from PLAN_DOCUMENT. `--workspace .` binds the immutable baseline with read-only git probes. Each success property's proof is the `final_validation` entry it names (by id, e.g. `V1`, or by a shared script/file name). Resolve markers in PLAN_DOCUMENT and re-run the pipeline — do not hand-edit the projection.
 
-   `cursor-build` writes `.cursor/plans/<slug>_<8hex>.plan.md`. `embedded` (`--execute-via=embedded`) returns the projection to the caller. Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
+   **Where the files go.** In a Cursor-Governance checkout, worktrees included, write the plan and its GAR run into that checkout's tracked `docs/plans/`: `--gar-run docs/plans/<slug>.gar-run.json --out-md docs/plans/<slug>.plan.md`. There `.cursor/plans` is a symlink to the primary SSOT clone, so a plan written through it never reaches the branch and dirties the SSOT clone; the pipeline warns when that happens. A tracked plan is admitted only when its section receipt and the GAR run it names are tracked too, so commit all three together. In any other repository `.cursor/plans/` is the Cursor plans folder.
+
+   `cursor-build` writes the `--out-md` path. `embedded` (`--execute-via=embedded`) returns the projection to the caller. Frontmatter must carry `kind: simple`, the selected `execute_via`, and `status: current`. `harvested` is a tag, never a status.
 10. **Section receipt** — written only by the pipeline. It stamps `handoff_mode`, `gar_upstream.run_path`, and `gar_upstream.run_sha256`. Any template `<parameter>` slot left in the projection fails it (`G_UNFILLED_PARAMETER`). FAIL → not ready.
 11. **Admission** — `admit_plan.py` exits non-zero unless that receipt passes. A title and a paragraph is not a plan.
 12. **Handoff** — mode-specific, below.
