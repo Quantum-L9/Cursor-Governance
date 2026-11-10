@@ -15,10 +15,10 @@
       "upstream_revision_change": "evaluate_dependency_impact"
     }
   },
-  "projection_digest": "sha256:bdd41a354202a23ddea48be2fc33a0def29f9315e83b33edb55e200c81b3c04a",
+  "projection_digest": "sha256:735d44164bf7bec4db46c5c95af1f2851ea30b6e6c89dd8639c6562a7435b9f2",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:d48ad347e3c39c33274017ccca30843b4a11f5339c519cc957aaa057f0440a14",
+  "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
   "source_ref": "l9.source/semantic-dependency-model@1"
 }

@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:b6e5eda82b391918218d95c9aab58fec6be8aaa8b9e85f6c5441f6fc93879606",
+      "digest": "sha256:4b8e57b8a69e1d40a589e747542f9723b7508e3edebd19f58920b4e619d4dcc0",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/projection-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:eb2de48bbf14fb44846bec31be432e5d48ab3208ebcb6a0b43e2c8989fa9ae5d",
+      "digest": "sha256:58362ef71707dd9a3dcb9f833376de78af0e52838ab3400a090ee46594800d4e",
       "path": "semantics/projection_profiles.yaml",
       "ref": "l9.projection-profile-catalog/global@1"
     },
@@ -34,29 +34,29 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
       "ref": "l9.selector-model/global@1"
     },
     "source_registry": {
-      "digest": "sha256:140961c3ea9ddbcc2f6c28e0ff8dc85f5e90c8b3adcc6b3eefe28254a2db528d",
+      "digest": "sha256:860cd321665f911fd66f0adbec4ddbd7c364745b08928cdacfa047b3db8dee00",
       "path": "semantics/canonical_sources.yaml",
       "ref": "l9.canonical-sources/global@1"
     }
   },
   "inputs": [
     {
-      "digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+      "digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
       "path": "semantics/vocabulary.yaml",
       "ref": "l9.source/vocabulary@1",
-      "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb"
+      "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
     }
   ],
   "operation": "projection",
   "output": {
-    "digest": "sha256:80b20babcef083ac4b510ae4519fe895caa2543e01e4686eb3200487ca984cfd",
+    "digest": "sha256:bbf33858884fe7b29420548258bcf21b407b761651ed4d8ef9c6d89ad3a03382",
     "ref": "l9.projection/pr-audit@1#l9.source/vocabulary@1"
   },
   "producer_identity": {
@@ -67,8 +67,8 @@
     "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
     "ref": "l9.projection/pr-audit@1"
   },
-  "receipt_digest": "sha256:500fd6ecd16982c246f64193a81d82ff7023c3cbb14186ff28015b387043f385",
-  "receipt_identity": "l9.receipt-instance/d4969d9f8bf55e7686323bddc149ff1425786f0c27b683bdb12e087249a9f043",
+  "receipt_digest": "sha256:826229b853cd2b8d7db1049524547a15716713469c97b8f7d37216edb8cb8ed9",
+  "receipt_identity": "l9.receipt-instance/91c44b7c3683f380c8f7ec4d309a9066405c18d4cf96ea227f18d0ddc53aba99",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -101,7 +101,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:e7190f5d312adccf0af2c8602c1f260790ab86e949d42613cab5518568165f11",
+        "content_digest": "sha256:3f0192e5f8795d2a20302a0946ae2effea457322b2398945496f19b4988e6da9",
         "path": "l9.projection_pr-audit_1/l9.source_vocabulary_1.projection.json",
         "status": "pass"
       },
@@ -128,7 +128,7 @@
         "status": "pass"
       },
       "projection_digest": {
-        "digest": "sha256:80b20babcef083ac4b510ae4519fe895caa2543e01e4686eb3200487ca984cfd",
+        "digest": "sha256:bbf33858884fe7b29420548258bcf21b407b761651ed4d8ef9c6d89ad3a03382",
         "status": "pass"
       },
       "selection_equivalence": {
@@ -136,8 +136,8 @@
         "status": "pass"
       },
       "source_currentness": {
-        "digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
-        "revision": "bd3a0ccdfbf472e5b03c6a75c4175f1c726106eb",
+        "digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
+        "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
         "status": "pass"
       },
       "source_identity": {

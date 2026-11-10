@@ -18,10 +18,10 @@
       "unknown_capability": "unsupported_until_resolved"
     }
   },
-  "projection_digest": "sha256:cff9b725c6e8e49dd64537dfe49075c7e2a07dfcfeca7bd20ec67feb46fab00f",
+  "projection_digest": "sha256:4b3539b5df92e3c911d96bd16e9795450a2b2b100204d6d75ab5ce49dd5f6d4f",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:bc4da9f550be0dcc3f36d072b6ead000bf5f1eda51f84bdbcfb1d8cda81fd72f",
+  "source_digest": "sha256:8c9a3cd4370feed7118835cbaffa34f99372f8696ccf07917906501368c65eb9",
   "source_ref": "l9.source/binding-catalog@1"
 }

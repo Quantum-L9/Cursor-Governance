@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-10-27.1` · **Checksum:** `afa0fa274cabb071`
+**Revision:** `2026-11-10.1` · **Checksum:** `fcf33987fe2f7eb1`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -146,7 +146,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-10-27.1"
+L9_STUB_REVISION="2026-11-10.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -174,11 +174,15 @@ if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; th
 fi
 export L9_GOVERNANCE_DIR="$GOV_DIR"
 
-# The Autonomy Surface Profile matches on the exact surface id. claude-code-mobile
-# is not in the allow-list (ops/autonomy/surface_profile.yaml when:), so a
-# mobile-flavoured value silently drops the session out of standing A4.
+# L9_GOVERNANCE_SURFACE is the governance-profile selector the Autonomy Surface
+# Profile matches on (ops/autonomy/surface_profile.yaml when:). Its value is the
+# canonical ACTOR id claude-code (Quantum-L9/.github actor_registry), not a
+# canonical surface id: the surface (claude-code-mobile, -web, -cli, ...) is
+# derived per host from runtime markers by ops/memory/agent_identity.py. A
+# surface-flavoured value such as claude-code-mobile is not a selector and would
+# silently drop the session out of standing A4.
 if [ -n "${L9_GOVERNANCE_SURFACE:-}" ] && [ "$L9_GOVERNANCE_SURFACE" != "claude-code" ]; then
-  warn "L9_GOVERNANCE_SURFACE='${L9_GOVERNANCE_SURFACE}' is not the profile surface id; using claude-code"
+  warn "L9_GOVERNANCE_SURFACE='${L9_GOVERNANCE_SURFACE}' is not the governance-profile selector; using claude-code"
 fi
 export L9_GOVERNANCE_SURFACE="claude-code"
 
@@ -200,26 +204,24 @@ for oauth_secret in AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET \
   fi
 done
 
-# Infisical / capability plane (same contract as ops/scripts/bootstrap_agent_environment.sh).
-# Model-controlled surfaces never hold UA, password, PAT, or downstream tokens.
-# Credentials stay in Infisical behind the broker. A pasted "Infisical password"
-# configuration here is a master key — strip it.
+# Secrets plane (docs/DEGRADED_MODE_CONTRACT.md "Secrets plane, 2026-09-24";
+# same contract as ops/scripts/bootstrap_agent_environment.sh). This surface
+# holds exactly ONE bootstrap secret: its Infisical machine identity,
+# L9_INFISICAL_CLIENT_SECRET plus the non-secret L9_INFISICAL_CLIENT_ID, set
+# once in the Environment variables field. Every other secret is bound from
+# Infisical in-process (ops/secrets/capability_bind.py) and never exported.
+# The pair is deliberately NOT swept, here or in the unset list below. Any other
+# credential pasted into the field (a raw INFISICAL_CLIENT_SECRET, an Infisical
+# password or token, a downstream token, AWS keys) is stripped. The capability
+# broker is retired (never shipped) and plays no part.
 #
-# CONTEXT7_API_KEY is deliberately NOT in this list, for the same reason
-# GH_TOKEN is not (see the block below): it is an MCP transport credential the
-# platform may proxy, and sweeping the announcement disables the proxying
-# without removing any secret. It is never pasted into the account variables
-# field and never exported with a value by this script. mcp.template.json
-# references it as ${VAR}, so a proxied value reaches the MCP client and
-# nothing else; with no value proxied the (always rendered) Context7 server
-# fails to authenticate — a failure fixed by populating the secret. Memory holds
-# no transport credential on this surface at all: Memory 3.0 is the
-# account-managed OAuth connector, not a project MCP entry and not a secret
-# in this environment (memory ADR-016).
-# L9_INFISICAL_CLIENT_SECRET (+ the non-secret L9_INFISICAL_CLIENT_ID) is
-# deliberately NOT swept, here or in the unset list below: it is the one
-# sanctioned bootstrap secret, this surface's Infisical machine identity, from
-# which every other secret is bound in-process (ops/secrets/capability_bind.py).
+# CONTEXT7_API_KEY is deliberately NOT in this list and never pasted into the
+# field: Context7 is a governed vault bridge (mcp.template.json runs
+# ops/secrets/run_vault_mcp_bridge.sh context7), which binds the key from
+# Infisical inside the bridge process. The key is never in this environment,
+# argv, .mcp.json or a file. Memory holds no transport credential on this
+# surface at all: Memory 3.0 is the account-managed OAuth connector, not a
+# project MCP entry and not a secret in this environment (memory ADR-016).
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
@@ -330,11 +332,9 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
-  # No CONTEXT7_API_KEY export and no unset either, on the same GH_TOKEN
-  # reasoning above: it is a proxied MCP transport credential referenced as
-  # ${VAR} from mcp.template.json, this file is sourced unguarded by
-  # ~/.profile, and an unset here would strip a proxied value from every
-  # login shell — disabling the proxying rather than removing a secret.
+  # No CONTEXT7_API_KEY line at all: the Context7 vault bridge binds its key
+  # inside its own process, so this environment never carries one to export
+  # or to strip.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
   echo "unset GRAPHITI_MCP_URL GRAPHITI_MCP_TOKEN"
   echo "unset AUTH0_CLIENT_SECRET L9_MEMORY_OAUTH_CLIENT_SECRET"
@@ -377,11 +377,17 @@ fi
 # (memory-control-plane/v1). This hosted process does not receive a project
 # Memory MCP entry, an Auth0 client secret, or an access token. Native OAuth
 # belongs to the Claude account connector. A stdio package is not installed
-# from here. Do NOT paste CONTEXT7_API_KEY or an Infisical UA into the
-# variables field: the Context7 credential is proxied (mcp.template.json
-# references it as ${VAR}), never pasted.
+# from here. Never paste CONTEXT7_API_KEY or any downstream token into the
+# variables field; the only credential that belongs there is the Infisical
+# machine identity pair above. Status lines report names and sources only,
+# never a value.
 note "memory control plane: l9-graphite-memory (interpreter: ${L9_MEMORY_INTERPRETER:-unbound; make memory-readiness})"
-note "context7 mcp key: ${CONTEXT7_API_KEY:+proxied}${CONTEXT7_API_KEY:-none}"
+note "context7 mcp: vault bridge (ops/secrets/run_vault_mcp_bridge.sh context7; key bound from Infisical in-process)"
+if [ -n "${L9_INFISICAL_CLIENT_ID:-}" ] && [ -n "${L9_INFISICAL_CLIENT_SECRET:-}" ]; then
+  note "infisical machine identity: configured"
+else
+  warn "infisical machine identity: ABSENT — set L9_INFISICAL_CLIENT_ID and L9_INFISICAL_CLIENT_SECRET in Environment variables"
+fi
 note "capability plane: RETIRED (never shipped)"
 
 if [ "$SETUP_RC" -ne 0 ]; then
@@ -399,7 +405,7 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-10-27.1
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-11-10.1
 make claude-env                                    # structural + RUNTIME verdicts
 ```
 

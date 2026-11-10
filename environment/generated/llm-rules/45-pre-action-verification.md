@@ -71,7 +71,8 @@ Then:
 ## Validator construction — fail closed
 
 Downstream projection of `Quantum-L9/.github` `l9.contract/validation-and-correctness@1`
-(Semantic Foundation v3.9.0, `640fb4c`) through `l9.projection/cursor-governance-operating-plane@2`.
+(introduced in Semantic Foundation v3.9.0, `640fb4c`; unchanged through admitted v3.35.0) through
+`l9.projection/cursor-governance-operating-plane@2` (profile since v3.26.0; bundle bound at `.github` `dc96a8a`).
 The contract owns these semantics; this rule only delivers them. They bind any validator,
 conformance check, verification gate, or equivalent mechanism built or evaluated under this plane.
 

@@ -121,10 +121,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:0832ad89fdc7c88a6c7b6f835a3af07688553c935b0b60db89026b0b630882fc",
+  "projection_digest": "sha256:aff4cf255ab26b80f401a4e6d72258845034d3339ab01489960cda86e09bdd89",
   "projection_profile_digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
   "projection_profile_ref": "l9.projection/coding-agent-execution@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+  "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
   "source_ref": "l9.source/invariants@1"
 }

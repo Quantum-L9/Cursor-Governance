@@ -364,9 +364,10 @@ def main() -> int:
             outcome = _write(text, pub, session_id)
         message = compose_announcement(pub, session_id, brief, brief_error, observed, outcome)
         if reported or observed:
-            # The same content as the record, published as a markdown report in
-            # the clone (reports/end-session/governance-handoff/) and pushed to
-            # the PR branch (ops/reports/publish.py).
+            # The same content as the record. Its friction items go to the
+            # Cursor-Governance friction intake (one issue per friction id); a
+            # local copy stays under the git dir. Nothing is committed onto the
+            # PR (ops/reports/publish.py, ops/reports/handoff_delivery.py).
             body = (
                 governance_handoff.render_sections(brief)
                 if brief
@@ -379,6 +380,7 @@ def main() -> int:
                 body + governance_handoff.render_observed(observed),
                 session_id=session_id,
                 agent_id=os.environ.get("L9_MEMORY_AGENT_ID") or "unknown-agent",
+                brief=brief,
             )
         announcements.append(message)
         pp.write_ledger(

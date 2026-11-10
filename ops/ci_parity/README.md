@@ -123,3 +123,15 @@ L9_CI_PARITY=0                                # session kill switch
 When `validate_manifest.py` reports a moved CI pin: read the CI log for the
 version it now runs, update `version`, `url`, `sha256` and `ci_ref` in
 `tools.yaml` together, then `install.py` and re-run the parity replay.
+
+`l9-ci` is not re-pinned by hand. It declares `track: ci_ref`: `install.py`
+reads the SDK revision `org-ci.yml` provisions (the one full SHA
+`ci_ref.extract` finds there), installs exactly that commit and records
+`source: ci_ref` in `state.json`, so a Core bump reaches `make pr` on the next
+install with no change here. `validate_manifest.py --remote` prints an `INFO`
+line when Core has moved past the hand pin and fails only when `extract` no
+longer finds exactly one revision. When Core cannot be read, `install.py` keeps
+the revision it last read from CI, or installs the hand pin `version` when none
+was recorded, and prints a `WARN` line either way. `version` and `contains`
+remain the reviewed fallback and its exact evidence; update them only when you
+want a newer offline fallback.
