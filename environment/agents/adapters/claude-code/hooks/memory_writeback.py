@@ -542,8 +542,9 @@ def main() -> int:
             report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
         text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
         if handoff is not None:
-            # The brief, published as a markdown report in the clone
-            # (reports/end-session/session-handoff/) and pushed to the PR branch.
+            # The brief, delivered as the PR's handoff comment (edited in place on
+            # later publications); a local copy stays under the git dir. Nothing
+            # is committed onto the PR (ops/reports/handoff_delivery.py).
             text += "\n" + pp.publish_report(
                 "publish_session_handoff",
                 root,

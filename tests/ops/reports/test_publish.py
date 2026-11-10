@@ -67,9 +67,14 @@ def test_layout_is_created_when_absent(tmp_path: Path) -> None:
     assert rp.ensure_layout(tmp_path) == made
 
 
-def test_session_handoff_is_written_committed_alone_and_pushed(clone: Path) -> None:
+def _local(clone: Path, kind: str) -> Path:
+    return clone / ".git" / "l9-reports" / "end-session" / kind
+
+
+def test_session_handoff_is_a_pr_comment_and_never_committed(clone: Path, github) -> None:  # noqa: ANN001
     (clone / "unrelated.txt").write_text("staged by someone else\n", encoding="utf-8")
     _git(clone, "add", "--", "unrelated.txt")
+    head, remote = _git(clone, "rev-parse", "HEAD"), _git(clone, "rev-parse", f"origin/{BRANCH}")
 
     path, result = rp.publish_session_handoff(
         clone,
@@ -77,87 +82,99 @@ def test_session_handoff_is_written_committed_alone_and_pushed(clone: Path) -> N
         ["publication: 7", "objective: ship it", "completed:", "  - tests green"],
         session_id="s1",
         agent_id="claude-code",
+        transport=github,
     )
 
-    assert result.status == "pushed", result
-    assert path.parent == clone / "reports" / "end-session" / "session-handoff"
+    assert result.status == "delivered" and result.ok, result
+    assert path.parent == _local(clone, "session-handoff")
     assert path.name.endswith("-pr7-abcdef012345.md")
     text = path.read_text(encoding="utf-8")
     assert text.startswith("# Session handoff — Org/work#7\n")
     assert "**objective:** ship it" in text and "## Completed" in text
     assert "- tests green" in text and text.endswith("\n") and not text.endswith("\n\n")
-
-    rel = str(path.relative_to(clone))
-    assert _git(clone, "show", "--name-only", "--format=", "HEAD") == rel
-    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "HEAD")
-    # The foreign staged file was not scooped into the report commit.
-    assert _git(clone, "diff", "--cached", "--name-only") == "unrelated.txt"
-
-
-def test_governance_handoff_lands_in_its_own_folder(clone: Path) -> None:
-    path, result = rp.publish_governance_handoff(
-        clone, _pub(), ["environment friction:", "  - proxy 403"]
-    )
-    assert result.ok, result
-    assert path.parent == clone / "reports" / "end-session" / "governance-handoff"
+    # The PR head and the work tree are untouched: no commit, no push, no file.
+    assert _git(clone, "rev-parse", "HEAD") == head
+    assert _git(clone, "ls-remote", "origin", BRANCH).split()[0] == remote
+    assert not (clone / "reports").exists()
+    assert _git(clone, "status", "--porcelain") == "A  unrelated.txt"
+    # Delivered as the PR's one handoff comment.
+    [comment] = github.thread("Org/work", 7)
+    assert comment["body"].startswith("<!-- l9-handoff:session-handoff:org/work#7 -->\n")
+    assert "**objective:** ship it" in comment["body"]
+    assert result.urls == (comment["html_url"],)
 
 
-def test_republishing_identical_report_is_unchanged(clone: Path) -> None:
-    rp.publish_session_handoff(clone, _pub(), ["status: done"])
+def test_republishing_the_same_pr_edits_its_comment(clone: Path, github) -> None:  # noqa: ANN001
+    rp.publish_session_handoff(clone, _pub(), ["status: first"], transport=github)
+    rp.publish_session_handoff(clone, _pub(), ["status: second"], transport=github)
+    [comment] = github.thread("Org/work", 7)
+    assert "second" in comment["body"] and "first" not in comment["body"]
+
+
+def test_governance_handoff_goes_to_the_friction_intake_not_the_pr(
+    clone: Path,
+    github,  # noqa: ANN001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("L9_FRICTION_INTAKE_REPO", "Org/governance")
     head = _git(clone, "rev-parse", "HEAD")
-    # Same content (timestamp aside) on the same day overwrites the same file.
-    path = next((clone / "reports" / "end-session" / "session-handoff").iterdir())
-    result = rp.publish(clone, [path], message="noop", expected_branch=BRANCH)
-    assert result.status == "unchanged"
+    friction = [{"id": "proxy-403", "section": "environment friction", "detail": "403"}]
+
+    path, result = rp.publish_governance_handoff(
+        clone,
+        _pub(),
+        ["environment friction:", "  - proxy-403 — detail: 403"],
+        session_id="s1",
+        friction=friction,
+        transport=github,
+    )
+
+    assert result.status == "delivered", result
+    assert path.parent == _local(clone, "governance-handoff")
+    [issue] = github.issues["Org/governance"]
+    assert issue["title"] == "[session-friction] proxy-403"
+    assert result.urls == (issue["html_url"],)
+    assert github.thread("Org/work", 7) == []  # nothing on the consumer PR
     assert _git(clone, "rev-parse", "HEAD") == head
 
 
-def test_refuses_branch_other_than_pr_head(clone: Path) -> None:
-    path, result = rp.publish_session_handoff(clone, _pub(head="someone/else"), ["x: y"])
-    assert result.status == "skipped"
-    assert "PR head is someone/else" in result.detail
-    assert path.is_file()  # written, not committed
-    assert _git(clone, "log", "-1", "--format=%s") == "init"
+def test_handoff_never_moves_the_pr_head_with_unpublished_work_ahead(
+    clone: Path,
+    github,  # noqa: ANN001
+) -> None:
+    (clone / "feature.py").write_text("x = 1\n", encoding="utf-8")
+    _git(clone, "add", "--", "feature.py")
+    _git(clone, "commit", "-q", "-m", "unpublished work")
+    head = _git(clone, "rev-parse", "HEAD")
+    _, result = rp.publish_session_handoff(clone, _pub(), ["status: done"], transport=github)
+    assert result.status == "delivered"
+    assert _git(clone, "rev-parse", "HEAD") == head
+    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
 
 
-def test_refuses_default_branch(clone: Path) -> None:
-    _git(clone, "checkout", "-q", "main")
-    _, result = rp.publish_session_handoff(clone, _pub(head=""), ["x: y"])
-    assert result.status == "skipped" and "default branch main" in result.detail
-
-
-def test_rejected_push_keeps_commit_and_never_forces(clone: Path, tmp_path: Path) -> None:
-    other = tmp_path / "other"
-    subprocess.run(
-        ["git", "clone", "-q", "-b", BRANCH, str(tmp_path / "origin.git"), str(other)], check=True
-    )
-    _git(other, "config", "user.email", "o@example.com")
-    _git(other, "config", "user.name", "o")
-    (other / "moved.txt").write_text("remote moved\n", encoding="utf-8")
-    _git(other, "add", "--", "moved.txt")
-    _git(other, "commit", "-q", "-m", "remote moved")
-    _git(other, "push", "-q", "origin", BRANCH)
-    remote_tip = _git(other, "rev-parse", "HEAD")
-
-    _, result = rp.publish_session_handoff(clone, _pub(), ["x: y"])
-    assert result.status == "committed"
-    assert "never force" in result.detail
-    assert _git(other, "ls-remote", "origin", BRANCH).split()[0] == remote_tip
+def test_unreachable_github_is_reported_not_raised(clone: Path, github) -> None:  # noqa: ANN001
+    github.refuse.add("Org/work")
+    path, result = rp.publish_session_handoff(clone, _pub(), ["x: y"], transport=github)
+    assert result.status == "failed" and not result.ok
+    assert "PR comment failed" in result.detail
+    assert path.is_file()  # the local copy is kept
 
 
 @pytest.mark.parametrize(("mode", "status"), [("write", "written"), ("commit", "committed")])
-def test_publish_mode_env(
+def test_gmp_publish_mode_env(
     clone: Path, monkeypatch: pytest.MonkeyPatch, mode: str, status: str
 ) -> None:
     monkeypatch.setenv(rp.PUBLISH_ENV, mode)
-    _, result = rp.publish_governance_handoff(clone, _pub(), ["x: y"])
+    report = rp.write_report(clone, rp.ReportKind.GMP, "GMP-Report-001-Mode.md", "# GMP\n")
+    result = rp.publish(clone, [report], message="gmp", expected_branch=BRANCH)
     assert result.status == status
     assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
 
 
-def test_not_a_git_tree_is_skipped_but_written(tmp_path: Path) -> None:
-    path, result = rp.publish_session_handoff(tmp_path, _pub(), ["x: y"])
-    assert result.status == "skipped" and path.is_file()
+def test_outside_a_git_tree_the_local_copy_lands_under_dot_l9(tmp_path: Path, github) -> None:  # noqa: ANN001
+    path, result = rp.publish_session_handoff(tmp_path, _pub(), ["x: y"], transport=github)
+    assert result.status == "delivered"
+    assert path.parent == tmp_path / ".l9" / "reports" / "end-session" / "session-handoff"
 
 
 def test_filename_must_be_bare_markdown(tmp_path: Path) -> None:
@@ -190,11 +207,42 @@ def _load_file(name: str, path: Path):  # noqa: ANN202 - test helper
     return module
 
 
-def test_hook_glue_publishes_and_announces(clone: Path) -> None:
+def test_hook_glue_delivers_and_announces(
+    clone: Path,
+    github,  # noqa: ANN001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ops.reports import handoff_delivery
+
+    monkeypatch.setattr(handoff_delivery, "GhApi", lambda: github)
     pp = _load_file("l9_test_post_publish", CLAUDE_MEM / "post_publish.py")
     line = pp.publish_report("publish_session_handoff", clone, _pub(), ["status: done"])
-    assert line.startswith("• report pushed @ ")
-    assert "reports/end-session/session-handoff/" in line
+    assert line.startswith("• report delivered: ")
+    assert ".git/l9-reports/end-session/session-handoff/" in line
+    assert github.thread("Org/work", 7)[0]["html_url"] in line
+
+
+def test_hook_glue_turns_a_governance_brief_into_intake_items(
+    clone: Path,
+    github,  # noqa: ANN001
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ops.reports import handoff_delivery
+
+    monkeypatch.setattr(handoff_delivery, "GhApi", lambda: github)
+    monkeypatch.setenv("L9_FRICTION_INTAKE_REPO", "Org/governance")
+    pp = _load_file("l9_test_post_publish", CLAUDE_MEM / "post_publish.py")
+    brief = {
+        "environment_friction": [{"item": "Proxy 403", "detail": "blocked"}],
+        "workarounds": [{"item": "proxy-403", "workaround": "used REST"}],
+    }
+    line = pp.publish_report(
+        "publish_governance_handoff", clone, _pub(), ["x: y"], session_id="s9", brief=brief
+    )
+    assert line.startswith("• report delivered: "), line
+    [issue] = github.issues["Org/governance"]
+    [occurrence] = github.thread("Org/governance", issue["number"])
+    assert "Workaround: used REST" in occurrence["body"] and "Session: s9" in occurrence["body"]
 
 
 def test_hook_glue_is_fail_open_and_loud(tmp_path: Path) -> None:
@@ -280,16 +328,6 @@ def test_gmp_cli_refuses_non_gmp_markdown(clone: Path, tmp_path: Path) -> None:
     assert rp.main(["gmp", "--workspace", str(clone), str(other)]) == 2
 
 
-def test_push_refused_when_non_report_commit_is_ahead_of_pr_head(clone: Path) -> None:
-    (clone / "feature.py").write_text("x = 1\n", encoding="utf-8")
-    _git(clone, "add", "--", "feature.py")
-    _git(clone, "commit", "-q", "-m", "unpublished work")
-    _, result = rp.publish_session_handoff(clone, _pub(), ["status: done"])
-    assert result.status == "committed"
-    assert "non-report path(s) ahead of the PR head (e.g. feature.py)" in result.detail
-    assert _git(clone, "rev-parse", f"origin/{BRANCH}") == _git(clone, "rev-parse", "main")
-
-
 def test_misnamed_gmp_report_is_refused_and_left_in_place(clone: Path, tmp_path: Path) -> None:
     bad = tmp_path / "GMP_report_two.md"
     bad.write_text("any content is fine\n", encoding="utf-8")
@@ -351,22 +389,29 @@ def _expected_header(tag: str) -> str:
     )
 
 
-def test_handoff_copies_the_sibling_reports_l9_meta_header(clone: Path) -> None:
+def test_tracked_reports_copy_the_sibling_reports_l9_meta_header(clone: Path) -> None:
     sibling = clone / "reports" / "GAP-ANALYSIS.md"
     sibling.parent.mkdir(parents=True, exist_ok=True)
     sibling.write_text(_CONSUMER_HEADER + "\n# Gap analysis\n", encoding="utf-8")
 
-    session, result = rp.publish_session_handoff(clone, _pub(), ["status: done"])
-    governance, _ = rp.publish_governance_handoff(clone, _pub(), ["environment friction:"])
+    gmp = rp.write_report(clone, rp.ReportKind.GMP, "GMP-Report-001-x.md", "# GMP report — x\n")
+    session = rp.write_report(clone, rp.ReportKind.SESSION_HANDOFF, "x.md", "# Session handoff\n")
 
-    assert result.status == "pushed", result
     # The consumer's injector form: header, one blank line, then the report.
+    assert gmp.read_text(encoding="utf-8").startswith(
+        _expected_header("gmp-report") + "# GMP report — x\n"
+    )
     assert session.read_text(encoding="utf-8").startswith(
-        _expected_header("session-handoff") + "# Session handoff — Org/work#7\n"
+        _expected_header("session-handoff") + "# Session handoff\n"
     )
-    assert governance.read_text(encoding="utf-8").startswith(
-        _expected_header("governance-handoff") + "# Governance handoff — Org/work#7\n"
-    )
+
+
+def test_delivered_handoff_copy_is_untracked_so_gets_no_l9_meta(clone: Path, github) -> None:  # noqa: ANN001
+    sibling = clone / "reports" / "GAP-ANALYSIS.md"
+    sibling.parent.mkdir(parents=True, exist_ok=True)
+    sibling.write_text(_CONSUMER_HEADER + "\n# Gap analysis\n", encoding="utf-8")
+    path, _ = rp.publish_session_handoff(clone, _pub(), ["status: done"], transport=github)
+    assert path.read_text(encoding="utf-8").startswith("# Session handoff — Org/work#7\n")
 
 
 def test_header_convention_falls_back_to_tracked_markdown(clone: Path) -> None:
@@ -375,14 +420,14 @@ def test_header_convention_falls_back_to_tracked_markdown(clone: Path) -> None:
     _git(clone, "add", "--", "docs/GUIDE.md")
     _git(clone, "commit", "-q", "-m", "docs")
 
-    path, _ = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+    path = rp.write_report(clone, rp.ReportKind.SESSION_HANDOFF, "x.md", "# Session handoff\n")
 
     assert path.read_text(encoding="utf-8").startswith(_expected_header("session-handoff"))
 
 
 def test_repository_without_l9_meta_gets_no_header(clone: Path) -> None:
     # README.md exists but carries no header: nothing is invented.
-    path, _ = rp.publish_session_handoff(clone, _pub(), ["status: done"])
+    path = rp.write_report(clone, rp.ReportKind.SESSION_HANDOFF, "x.md", "# Session handoff\n")
 
     text = path.read_text(encoding="utf-8")
     assert "L9_META" not in text and text.startswith("# Session handoff")
