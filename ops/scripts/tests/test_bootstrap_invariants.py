@@ -295,5 +295,44 @@ class SecretAbsenceTests(unittest.TestCase):
             )
 
 
+class WorkspaceReferencePlaneTests(unittest.TestCase):
+    """The Claude installer wires the consumer reference plane (audit RA-08).
+
+    Cursor's sessionStart created ``.cursor-commands`` with
+    ensure_workspace_wired.sh; the Claude installer never did, so a consumer's
+    tracked ``.claude/skills`` links into it dangled in cloud containers and the
+    skill projection reported drift. The installer must call the same script
+    with the same links-only flags, before the projection reconciles skills, and
+    never in check mode (which must not write).
+    """
+
+    INSTALL = REPO / "environment/agents/adapters/claude-code/install.sh"
+
+    def setUp(self) -> None:
+        self.body = self.INSTALL.read_text(encoding="utf-8")
+
+    def _block(self) -> str:
+        start = self.body.index('stage "workspace-links"')
+        return self.body[start : self.body.index('stage "claude-projection"')]
+
+    def test_wiring_runs_before_the_skill_projection(self) -> None:
+        self.assertLess(
+            self.body.index('stage "workspace-links"'),
+            self.body.index('stage "claude-projection"'),
+        )
+
+    def test_wiring_reuses_the_cursor_links_only_mechanism(self) -> None:
+        block = self._block()
+        self.assertIn("ops/scripts/ensure_workspace_wired.sh", block)
+        self.assertIn("L9_WIRE_LINKS_ONLY=1", block)
+        self.assertIn("L9_PLANS_STORE_MODE=links-only", block)
+
+    def test_wiring_is_skipped_in_check_mode_and_never_blocks(self) -> None:
+        block = self._block()
+        self.assertIn('[ "$CHECK" != "1" ]', block)
+        self.assertIn("warn ", block)
+        self.assertNotIn("exit ", block)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -44,10 +44,10 @@
       "no_transition_order_is_defined_here"
     ]
   },
-  "projection_digest": "sha256:49e4934944852b18c0170b2d349bcbf614674517c6f7ea9e5f0d72fdaef6a3bd",
+  "projection_digest": "sha256:e5d69a2cd5c27e5d763df39c77bdda02440088f883e6fcb93ef29e12dbc74d69",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+  "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
   "source_ref": "l9.source/capabilities@1"
 }

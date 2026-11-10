@@ -3,13 +3,22 @@
 Every consumer (install.py, run.py, validate_manifest.py, the Claude hooks)
 reads tools and lanes through here so there is a single parser and a single
 notion of "installed at the pinned version".
+
+A tool declaring ``track: ci_ref`` takes its version from the CI file its
+``ci_ref`` names (``extract`` holds a regex with a ``version`` group), not from
+the hand pin: install.py resolves it, installs it and records it in state.json
+with ``source: ci_ref``. ``load()`` overlays that recorded version, so every
+reader sees the version actually installed; ``version`` stays the reviewed
+fallback used when the CI file cannot be read.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import fnmatch
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,6 +31,9 @@ SCHEMA = "l9.ci-parity.tools.v1"
 METHODS = frozenset({"release_archive", "release_binary", "uv_tool", "venv"})
 TIERS = frozenset({"fast", "heavy"})
 STATE_FILE = "state.json"
+TRACK_MODES = frozenset({"ci_ref"})
+#: A tracked revision is a full commit SHA, never a branch or a short SHA.
+TRACKED_VERSION = re.compile(r"[0-9a-f]{40}")
 
 
 class ManifestError(ValueError):
@@ -40,6 +52,31 @@ class Tool:
     sha256: str = ""
     package: str = ""
     ci_ref: dict[str, str] = field(default_factory=dict)
+    #: "ci_ref" when the version follows the CI file; "" for a hand pin.
+    track: str = ""
+    #: The hand pin when a recorded tracked version is overlaid on ``version``.
+    pinned: str = ""
+
+    @property
+    def fallback_version(self) -> str:
+        """The reviewed hand pin: what installs when the CI file is unreadable."""
+        return self.pinned or self.version
+
+
+def tracked_version(tool: Tool, text: str) -> str | None:
+    """The one full SHA ``tool.ci_ref['extract']`` finds in ``text``, else None.
+
+    Zero matches, or matches naming different revisions, are both None: the CI
+    file changed shape and nothing is guessed.
+    """
+    pattern = tool.ci_ref.get("extract", "")
+    if not tool.track or not pattern:
+        return None
+    found = {m.group("version") for m in re.finditer(pattern, text)}
+    if len(found) != 1:
+        return None
+    (version,) = found
+    return version if TRACKED_VERSION.fullmatch(version) else None
 
 
 @dataclass(frozen=True)
@@ -124,7 +161,9 @@ def load(path: Path = MANIFEST) -> Manifest:
             sha256=str(raw.get("sha256") or ""),
             package=str(raw.get("package") or ""),
             ci_ref={k: str(v) for k, v in (raw.get("ci_ref") or {}).items()},
+            track=str(raw.get("track") or ""),
         )
+        _check_track(tool, where)
         if method.startswith("release_") and (
             not tool.url.startswith("https://") or len(tool.sha256) != 64
         ):
@@ -154,13 +193,44 @@ def load(path: Path = MANIFEST) -> Manifest:
             weight=weight,
             extra={k: v for k, v in raw.items() if k not in known},
         )
-    return Manifest(
+    loaded = Manifest(
         install_root=_expand(data.get("install_root") or "~/.local/share/l9-ci-parity"),
         bin_dir=_expand(data.get("bin_dir") or "~/.local/bin"),
         cache_root=_expand(data.get("cache_root") or "~/.cache/l9-ci-parity"),
         tools=tools,
         lanes=lanes,
     )
+    return _overlay_tracked(loaded)
+
+
+def _check_track(tool: Tool, where: str) -> None:
+    if not tool.track:
+        return
+    if tool.track not in TRACK_MODES:
+        raise ManifestError(f"{where}: track must be one of {sorted(TRACK_MODES)}")
+    if not tool.ci_ref.get("repo"):
+        raise ManifestError(f"{where}: track: ci_ref needs a ci_ref with repo")
+    pattern = tool.ci_ref.get("extract", "")
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        raise ManifestError(f"{where}: ci_ref.extract is not a regex ({exc})") from exc
+    if not pattern or "version" not in compiled.groupindex:
+        raise ManifestError(f"{where}: ci_ref.extract needs a (?P<version>...) group")
+    if tool.method != "uv_tool" or not tool.package.startswith("git+"):
+        raise ManifestError(f"{where}: only a git-pinned uv_tool can track its CI revision")
+
+
+def _overlay_tracked(loaded: Manifest) -> Manifest:
+    """Show each tracked tool at the version install.py recorded from CI."""
+    state = loaded.read_state()
+    tools = dict(loaded.tools)
+    for name, tool in loaded.tools.items():
+        entry = state.get(name) or {}
+        version = str(entry.get("version") or "")
+        if tool.track and entry.get("source") == "ci_ref" and TRACKED_VERSION.fullmatch(version):
+            tools[name] = dataclasses.replace(tool, version=version, pinned=tool.version)
+    return dataclasses.replace(loaded, tools=tools)
 
 
 def disabled(env: dict[str, str] | None = None) -> bool:

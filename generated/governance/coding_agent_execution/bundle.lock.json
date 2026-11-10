@@ -1,25 +1,25 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd"
+    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
   },
   "components": [
     {
       "path": "projections/invariants.projection.json",
-      "projection_digest": "sha256:0832ad89fdc7c88a6c7b6f835a3af07688553c935b0b60db89026b0b630882fc",
+      "projection_digest": "sha256:aff4cf255ab26b80f401a4e6d72258845034d3339ab01489960cda86e09bdd89",
       "receipt": "receipts/invariants.receipt.json",
-      "sha256": "sha256:8ffa92a1c7bc6cb22879b416ef4c867877d2de81990ffaf2da61138ee3e8f581",
+      "sha256": "sha256:ed2bc89dbbc11ace17fe108568c9da2dee016a24af85a92f44e19ba4229f5830",
       "source_class": "invariants",
-      "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
       "source_ref": "l9.source/invariants@1"
     },
     {
       "path": "projections/contracts.projection.json",
-      "projection_digest": "sha256:f9ae8897731f3a47de1d6e1d331eb452f40927587e6389bb3aee0964e72627d2",
+      "projection_digest": "sha256:f36322d156a0d84f0716d681b6aca4bd3f12c3d9638feb073f444964ef5635c4",
       "receipt": "receipts/contracts.receipt.json",
-      "sha256": "sha256:217851d7c05a03deaabbe13c95bb00798d8f098281a563265c4cedf07769f125",
+      "sha256": "sha256:868307cbda46e04d9f79f4ebcde1745190f1365eb338447956a27585b249fc2d",
       "source_class": "contracts",
-      "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
       "source_ref": "l9.source/contracts@1"
     },
     {

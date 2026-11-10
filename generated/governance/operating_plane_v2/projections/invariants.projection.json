@@ -184,13 +184,31 @@
         "owner": "Quantum-L9/.github",
         "scope": "global",
         "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+      },
+      {
+        "id": "L9-SV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "For an assessment asserting quantified Strategic Value, declare the objective, compatible utility units, feasible counterfactual baseline, bounded horizon, applicable discount and utility-flow basis, model/evidence coordinates and material uncertainty. Unknown or incompatible inputs cannot establish a complete Strategic Value ranking. For a Strategic Value claim, a counterfactual comparison must identify the same decision-relevant initial conditions, utility measure, exogenous context and time basis across intervention and baseline worlds, or explicitly quantify their divergence. A convenient scenario pairing or historical correlation is not evidence of an identifiable causal intervention effect."
+      },
+      {
+        "id": "L9-SV-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "For an assessment asserting quantified Strategic Value, every material consequence must have an exhaustive, mutually exclusive accounting partition across IEV, SFV, DC, ERL and OC. Reconcile gross and net utility, common causal/time identities, separately subtracted versus embedded costs and losses, overlaps, attribution and probability weighting; conflicting or missing coverage remains Unknown or conditional, not zero."
+      },
+      {
+        "id": "L9-GT-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "For an assessment that asserts strategic interaction, model other actors' consequential responses as conditional on the focal action, their information available at each decision point, incentives and version-bound response assumptions, or preserve missing conditional behavior as Unknown. A passive-world approximation is only an explicit model assumption, never silently equivalent to adaptive response. This obligation does not by itself assert a quantified Strategic Value claim."
       }
     ]
   },
-  "projection_digest": "sha256:781c3f3cc8eadabf43e1a26075b7b9826e9bf3ddc2388f3501ce3b63853fe619",
+  "projection_digest": "sha256:3e747f9752ec1720d972e5f9f05a3c03a501d67bcffcefe3477da90d2096a27e",
   "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
   "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+  "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
   "source_ref": "l9.source/invariants@1"
 }

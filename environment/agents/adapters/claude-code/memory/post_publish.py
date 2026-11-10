@@ -96,20 +96,29 @@ def publication(root: Path, started_at: float) -> dict[str, Any] | None:
     }
 
 
-def publish_report(publisher: str, root: Path, pub: dict, lines: list[str], **meta: str) -> str:
-    """Write one handoff report under ``reports/end-session/`` and push it to the PR.
+def publish_report(
+    publisher: str, root: Path, pub: dict, lines: list[str], *, brief: Any = None, **meta: str
+) -> str:
+    """Deliver one end-session handoff and return its announcement line.
 
     ``publisher`` names the ``ops.reports.publish`` function
     (``publish_session_handoff`` / ``publish_governance_handoff``); the import
-    happens here, after the hook made the governance tree importable.
+    happens here, after the hook made the governance tree importable. A
+    governance ``brief`` is turned into friction-intake items here. Nothing is
+    committed or pushed: the session handoff becomes the PR's handoff comment
+    and governance friction goes to the Cursor-Governance intake.
 
     Fail-open: a Stop hook must never die on a report. The returned line is
     appended to the hook's announcement so the outcome is never silent.
     """
     try:
+        from ops.reports import handoff_delivery
         from ops.reports import publish as reports
 
-        path, result = getattr(reports, publisher)(root, pub, lines, **meta)
+        extra: dict[str, Any] = dict(meta)
+        if brief is not None:
+            extra["friction"] = handoff_delivery.friction_items(brief)
+        path, result = getattr(reports, publisher)(root, pub, lines, **extra)
         return "• " + result.line([path], root)
     except Exception as exc:  # noqa: BLE001 - reported in the announcement, never silent
         return f"• report NOT published ({type(exc).__name__}: {str(exc)[:200]})"

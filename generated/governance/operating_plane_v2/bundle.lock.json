@@ -1,25 +1,25 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "3dcdeaae355b6de08562993f705084d7a3714bfd"
+    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
   },
   "components": [
     {
       "path": "projections/vocabulary.projection.json",
-      "projection_digest": "sha256:a729eeea69960b4a98b93ca527715292708a60392cea727de48629e2b21e8e0e",
+      "projection_digest": "sha256:2173634deac7168807fbc0a584eed9678080a4cdfc7d9bea5df8cd4649c309b3",
       "receipt": "receipts/vocabulary.receipt.json",
-      "sha256": "sha256:470b4ab6abd01634f940b41e189482921e6b9aa64b2c59cc6aefa3bbf8c2833d",
+      "sha256": "sha256:6a82ced5089184544a03aa36948e84e65d0d28a1a7a98792a9b2e704f3a3adb5",
       "source_class": "vocabulary",
-      "source_digest": "sha256:d37536cdd7fdcb90fb6e054025fc67000773ec3899cc6f6d7f4d6d015cc58e02",
+      "source_digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
       "path": "projections/capabilities.projection.json",
-      "projection_digest": "sha256:986af7a7b9c4b8a8568a2efb753ce60a17307f71685458284e8910432fc35f43",
+      "projection_digest": "sha256:cce72354712ef6c5296badade8651c5a8dc9a45430bf331afc79d8cc0ea7750d",
       "receipt": "receipts/capabilities.receipt.json",
-      "sha256": "sha256:fe93a6d929df03a0f80d46594b78d1cc249b58b7f35de8b7d9c13912ba2fbdd2",
+      "sha256": "sha256:92ee4ade4618f766d406a5a4b5f148681654a805e1a11757b0180ae86fb37cb9",
       "source_class": "capabilities",
-      "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+      "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
       "source_ref": "l9.source/capabilities@1"
     },
     {
@@ -33,29 +33,29 @@
     },
     {
       "path": "projections/lifecycle.projection.json",
-      "projection_digest": "sha256:0e83d72597b31d2ee11d58913041d1b53375ee02638744866ce5bb7afd0aa819",
+      "projection_digest": "sha256:5eb7761dac96634b3d1509f6ecb1ebd24f0bbd62360cb89f8b780d4ab2c8e51a",
       "receipt": "receipts/lifecycle.receipt.json",
-      "sha256": "sha256:2a7a38bb87c250a18280a990b60f55de51e0e845c00679a8f780323e93024296",
+      "sha256": "sha256:93d3b2e317a059bc8e58d19ed9bb21bd86451730f2249adeff7ac35100c596d2",
       "source_class": "lifecycle",
-      "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+      "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
       "source_ref": "l9.source/lifecycle@1"
     },
     {
       "path": "projections/invariants.projection.json",
-      "projection_digest": "sha256:781c3f3cc8eadabf43e1a26075b7b9826e9bf3ddc2388f3501ce3b63853fe619",
+      "projection_digest": "sha256:3e747f9752ec1720d972e5f9f05a3c03a501d67bcffcefe3477da90d2096a27e",
       "receipt": "receipts/invariants.receipt.json",
-      "sha256": "sha256:80dd0352df748f7460167b1b55051ed95cc8a833c005954e18dfb50daa045013",
+      "sha256": "sha256:f6a7233d150ac652a55465d348a5b33bc9e089d5d1168cd5fd90b688035e7045",
       "source_class": "invariants",
-      "source_digest": "sha256:771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a",
+      "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
       "source_ref": "l9.source/invariants@1"
     },
     {
       "path": "projections/contracts.projection.json",
-      "projection_digest": "sha256:51cd9c6e68200545da2ae60ee7f521aab60c0fedd2d508c834b7eebdac9169f4",
+      "projection_digest": "sha256:976fc90de21c2ce7b7c0bfff86032d52cb05c9c71c4242038ac27bf276d360b7",
       "receipt": "receipts/contracts.receipt.json",
-      "sha256": "sha256:545f31df7e794c7826a56c68fa77d3e0b64e0f61afe5baf4f83bc647cf90668b",
+      "sha256": "sha256:61a083374b428995727fe873797798b9a880f6e8e4070f3659256345fc014b1a",
       "source_class": "contracts",
-      "source_digest": "sha256:f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79",
+      "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
       "source_ref": "l9.source/contracts@1"
     },
     {
@@ -69,11 +69,11 @@
     },
     {
       "path": "projections/receipt_catalog.projection.json",
-      "projection_digest": "sha256:ad9af1663c40e476028b0000bc323a92ac842e70824f148e1a574cd29eba4711",
+      "projection_digest": "sha256:b8852e072639b369beceae6764dafc480a0e752afd0e769b99d162ab31dbcbc8",
       "receipt": "receipts/receipt_catalog.receipt.json",
-      "sha256": "sha256:b929e4a3c8f36cfa728dc2302ac5c8799cc27b8930ae7aeb6930825336ba886f",
+      "sha256": "sha256:ef9c9582f28b1c32bccebbfb496db28c1a3e7843a5c9871f1e66730ac4e14e21",
       "source_class": "receipt_catalog",
-      "source_digest": "sha256:0dc3a305a53cbd6f2f1e0cba440d21cf7b3c6b241285a15be8bdb185babc1c84",
+      "source_digest": "sha256:d6a9dc96536fb2d20c30873df4789917d728d050fd13d4a75bbb29d5bf7ccd0c",
       "source_ref": "l9.source/receipt-catalog@1"
     }
   ],

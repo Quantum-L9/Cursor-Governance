@@ -66,10 +66,10 @@
       "unresolved": "required semantics_authority_or_evidence_cannot_be_resolved"
     }
   },
-  "projection_digest": "sha256:a64b22928e80884791d2fa3af33c2d34086e89aa0ba113ff54432e4d1dbb1da0",
+  "projection_digest": "sha256:eae5edc4352aaf2cf0e66f21275a6b800efd6fdde0a8fa244caabbbc7ce15b43",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:65285d583154cefa1623f9a93061a3413cef2d1dd26349accb80225ce866b1b5",
+  "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
   "source_ref": "l9.source/lifecycle@1"
 }
