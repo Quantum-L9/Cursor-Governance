@@ -525,25 +525,6 @@ if GOV=$(resolve_governance_dir); then
     fi
   fi
   say "authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts"
-  if [ -d "$GOV/skills" ]; then
-    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
-    # add `find -L` counts over the workspace and user discovery paths, so each
-    # skill projected into both read twice (a "loadable" count of 119 for 59
-    # skills, issue #690). The census counts each canonical identity once,
-    # names missing / wrong-target / non-canonical entries separately, and
-    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
-    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
-    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
-    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
-    _census_rc=$?
-    if [ -n "$_census_out" ]; then
-      while IFS= read -r _census_line; do
-        say "$_census_line"
-      done <<<"$_census_out"
-    else
-      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
-    fi
-  fi
 
   # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
   if git -C "$WORKSPACE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -755,6 +736,31 @@ if GOV=$(resolve_governance_dir); then
     overlay="$GOV/environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
     if [ -f "$overlay" ] && command -v "$PY" >/dev/null 2>&1; then
       "$PY" "$overlay" --workspace "$WORKSPACE" >/dev/null 2>&1 || true
+    fi
+  fi
+
+  if [ -d "$GOV/skills" ]; then
+    # Unique canonical coverage, not a sum of SKILL.md files. The banner used to
+    # add `find -L` counts over the workspace and user discovery paths, so each
+    # skill projected into both read twice (a "loadable" count of 119 for 59
+    # skills, issue #690). The census counts each canonical identity once,
+    # names missing / wrong-target / non-canonical entries separately, and
+    # reports claude.ai account copies under ~/.claude/skills/synced/ apart from
+    # coverage. Stdlib-only and read-only (~0.1 s), bounded like every probe here.
+    #
+    # It runs AFTER the installer / projection above, never before. Taken first,
+    # it reported the links as they were before this ceremony repaired them: a
+    # session whose installer replaced all 57 workspace links (projection
+    # receipt replaced_duplicates=57) still printed every one as wrong-target.
+    _census="$GOV/ops/scripts/reconcile_claude_l9_skills.py"
+    _census_out="$(_l9_bounded 2 "$PY" "$_census" --root "$GOV" --coverage --workspace "$WORKSPACE" 2>/dev/null)"
+    _census_rc=$?
+    if [ -n "$_census_out" ]; then
+      while IFS= read -r _census_line; do
+        say "$_census_line"
+      done <<<"$_census_out"
+    else
+      say "skills projected: UNKNOWN (coverage census unavailable, rc=$_census_rc)"
     fi
   fi
 
