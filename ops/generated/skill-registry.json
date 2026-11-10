@@ -1,5 +1,5 @@
 {
-  "generation_id": "caccb3ea7bd9379e9781721f4be7e43b29d264e0ccc265164b5ec68db55efa08",
+  "generation_id": "521fce2b51263f40c4e6f23fd8571b528246964acee9efe79d0984d6dfad1b9e",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "8c2f7c1776a1a9b54a3b5a0afdf71d9ab1e9d89c115daf617d6d669aeaf1b320"
+  "source_skill_corpus_sha256": "9cfd07cbf7d8dc042f2d398e208267e3601333b2ac6d2cf4deb2c0d73bfed55f"
 }
