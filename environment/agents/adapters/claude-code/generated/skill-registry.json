@@ -1,5 +1,5 @@
 {
-  "generation_id": "6f1942661a7e1cfc5044a1bf2825ac540439760e1bd17f19b6a1701877617d23",
+  "generation_id": "caccb3ea7bd9379e9781721f4be7e43b29d264e0ccc265164b5ec68db55efa08",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1336,7 +1336,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) \u2014 each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW \u00a76.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "90bd60e94f2c986d46f4e6dafeb43fb47733614e978b4f9a93599275b6b31b47",
+      "skill_sha256": "a6399efa7bddee67c2399902a38816c3c6cfc44273252fa7488725380de3d77a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "4da680b98d37070b750cef721add9e5b3fdd6a5b73747567ad684368ca237cb5"
+  "source_skill_corpus_sha256": "8c2f7c1776a1a9b54a3b5a0afdf71d9ab1e9d89c115daf617d6d669aeaf1b320"
 }

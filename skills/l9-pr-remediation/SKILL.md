@@ -209,8 +209,10 @@ Emit `RUN_CONTRACT` from the receipt including `hold_merge`.
 10. **MERGE_TRAIN starts from MERGE_NOW in parallel with remediation.** Walk `merge_now` (not the whole fleet). Immediately before each merge re-run `pr_board.py` for that head, re-query `reviewThreads`, and let `stack_safe_merge.py` probe children. `board=merge` and in `merge_now` → if a recorded instruction or invocation covers it, the parent transcribes it for `{head}`; then `stack_safe_merge.py --json --head-sha {head}`: `AUTHORIZED` → launch `--kind merge`; `MERGE_PENDING` → record it (law 19) and continue. `board=fix` → back to step 3 for that PR. `board=wait` → poll until `board=merge`. `board=leftover` → that PR only, with its declaration and issue handoff; independent trains continue. After any merge that touched generated paths, heal per [references/generated-heal.md](references/generated-heal.md). Re-plan when the fingerprint changes (a merge moves heads).
 
 ```bash
-# NEVER type --squash yourself. The helper emits --merge for a stack parent,
-# --squash only for an unstacked leaf. It merges only under human authorization (a grant the parent transcribed, or a GitHub record) for
+# NEVER type --squash yourself. The helper emits --merge for a stack parent and
+# for a long-lived head (a promotion such as Staging -> Production: default,
+# protected or deletion-ruled branch), never deletes such a head, and emits
+# --squash only for an unstacked feature leaf. It merges only under human authorization (a grant the parent transcribed, or a GitHub record) for
 # {head}; otherwise it prints MERGE_PENDING and exits 3.
 # Absolute paths: a merge lane may run in a consumer worktree, where neither
 # ops/autonomy/ nor $PWD/.venv belongs to governance.
