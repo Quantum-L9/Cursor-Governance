@@ -479,6 +479,27 @@ if [ -f "$GOV_DIR/ops/scripts/lib/bind_memory_interpreter.sh" ]; then
   bind_l9_memory_interpreter "$GOV_PY" "$GOV_DIR"
 fi
 
+# --- 0b) Workspace reference plane ------------------------------------------
+# Rule 06: a consumer workspace's .cursor-commands reference plane links the
+# governance clone root. Cursor's sessionStart wires it with
+# ops/scripts/ensure_workspace_wired.sh; this installer never did, so in a cloud
+# container a consumer's tracked .claude/skills links into .cursor-commands
+# dangled and the skill projection reported drift for the whole container
+# (alignment audit RA-08). Same script and same links-only flags as the Cursor
+# hook, over the roots the projection below reconciles. Its C10 guard leaves
+# governance checkouts (ssot, ssot_checkout) unlinked. Report, never block.
+stage "workspace-links"
+WIRE_SCRIPT="$GOV_DIR/ops/scripts/ensure_workspace_wired.sh"
+if [ "$CHECK" != "1" ] && [ -n "$GOV_PY" ] && [ -f "$WIRE_SCRIPT" ]; then
+  while IFS= read -r wire_root; do
+    [ -n "$wire_root" ] && [ -e "$wire_root/.git" ] || continue
+    if ! L9_WIRE_LINKS_ONLY=1 L9_PLANS_STORE_MODE=links-only \
+      bash "$WIRE_SCRIPT" "$wire_root" >/dev/null 2>&1; then
+      warn "workspace reference plane not wired for $wire_root (ensure_workspace_wired.sh)"
+    fi
+  done < <(receipt_covered_roots | "$GOV_PY" -c 'import json,sys; print("\n".join(json.load(sys.stdin)))' 2>/dev/null)
+fi
+
 # --- 1) Claude projection engine (settings, hooks, skills, commands, rules,
 #         plugins) ------------------------------------------------------------
 # ops/scripts/claude_projection.py is the one projection entrypoint: it drives
