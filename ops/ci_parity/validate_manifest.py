@@ -9,6 +9,11 @@ version it runs and the local pin no longer mirrors it: re-pin tools.yaml
 A ci_ref with `repo:` points into l9-ci-core, which pins what Analyze (central
 Core) runs. The offline check skips it; `--remote` reads it at `ref` through
 docker_sandbox's Core reader.
+
+A tool with `track: ci_ref` follows that file instead of its hand pin, so a
+moved pin is not a finding: it passes while `ci_ref.extract` still names exactly
+one revision there (an INFO line says which), and fails when it no longer does,
+because then install.py can only fall back to the hand pin.
 """
 
 from __future__ import annotations
@@ -47,7 +52,11 @@ def _remote_text(ref: dict[str, str]) -> str:
 
 
 def check(
-    repo_root: Path = REPO_ROOT, path: Path = manifest.MANIFEST, *, remote: bool = False
+    repo_root: Path = REPO_ROOT,
+    path: Path = manifest.MANIFEST,
+    *,
+    remote: bool = False,
+    notes: list[str] | None = None,
 ) -> list[str]:
     try:
         loaded = manifest.load(path)
@@ -70,6 +79,9 @@ def check(
         except OSError as exc:
             problems.append(f"{tool.name}: ci_ref {where!r} is unreadable ({exc})")
             continue
+        if tool.track:
+            problems.extend(_check_tracked(tool, where, text, notes))
+            continue
         if ref.get("contains", "") not in text:
             problems.append(
                 f"{tool.name}: {where} no longer contains {ref.get('contains')!r} — "
@@ -77,6 +89,23 @@ def check(
             )
     problems.extend(_blocking_identity(loaded))
     return problems
+
+
+def _check_tracked(
+    tool: manifest.Tool, where: str, text: str, notes: list[str] | None
+) -> list[str]:
+    version = manifest.tracked_version(tool, text)
+    if version is None:
+        return [
+            f"{tool.name}: {where} no longer names exactly one revision matching "
+            "ci_ref.extract — CI changed how it pins the tool; fix extract in tools.yaml"
+        ]
+    if notes is not None and version != tool.fallback_version:
+        notes.append(
+            f"{tool.name}: tracks {where} at {version} (hand pin {tool.fallback_version}; "
+            "install.py installs the tracked revision)"
+        )
+    return []
 
 
 _RANGE = re.compile(r">=|<=|<|>")
@@ -114,7 +143,10 @@ def main(argv: list[str] | None = None) -> int:
         help="also read ci_refs that name another repository (network)",
     )
     args = parser.parse_args(argv)
-    problems = check(args.repo_root, remote=args.remote)
+    notes: list[str] = []
+    problems = check(args.repo_root, remote=args.remote, notes=notes)
+    for note in notes:
+        print(f"INFO: {note}")
     for problem in problems:
         print(f"FAIL: {problem}")
     if problems:

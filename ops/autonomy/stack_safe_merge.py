@@ -5,6 +5,15 @@ Squash/rebase of a head that is the base of another open PR orphans the child
 and can delete-wins the child's unique files with no conflict. This helper is
 the only sanctioned way for l9-pr-remediation to choose a merge method.
 
+A long-lived head -- the default branch, a protected branch, a branch whose
+rules forbid deletion, force-push or update, or a long-lived name such as
+``Staging`` promoted into ``Production`` -- also merges with a merge commit and
+is never deleted, on either transport and whatever ``--keep-branch`` says.
+Squashing a promotion splits the two branches' histories (the next promotion
+re-lists shipped commits and conflicts on every line touched twice), and
+deleting its head removes a branch that is meant to last. When those signals
+cannot be read the head is treated as long-lived.
+
     select --json     machine record (method, children, argv, rest_argv, and
                       the live head plus its authorization status)
     select --print    argv only (default)
@@ -60,6 +69,7 @@ import os
 import pwd
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +92,14 @@ from merge_gate import (  # noqa: E402
 
 ANCESTRY_SAFE = "merge"
 UNSTACKED = "squash"
+#: Branch names that are long-lived by convention, compared case-insensitively.
+LONG_LIVED_NAMES = frozenset({"main", "master", "staging", "production", "develop", "development"})
+LONG_LIVED_PREFIXES = ("release/",)
+#: Branch rule types that only make sense on a branch meant to last. An org
+#: ruleset can put `workflows` or `required_status_checks` on every branch, so
+#: those are deliberately not on this list: they would make every feature PR
+#: look long-lived and stop squash everywhere.
+LONG_LIVED_RULE_TYPES = frozenset({"deletion", "non_fast_forward", "update"})
 #: Exit status for "remediated, not merged: a human grant is required".
 MERGE_PENDING_EXIT = 3
 #: Exit status for "the merge call returned success but GitHub does not show it merged".
@@ -205,24 +223,117 @@ def authorization_status(
     }
 
 
+def _long_lived_name(head: str) -> bool:
+    name = head.strip().lower()
+    return name in LONG_LIVED_NAMES or name.startswith(LONG_LIVED_PREFIXES)
+
+
+def long_lived_head(repo: str, pr: str, head: str) -> dict[str, Any]:
+    """Whether the PR's head branch is meant to outlive this merge.
+
+    A promotion (``Staging`` -> ``Production``) has no stacked children, yet
+    squashing it splits the two branches' histories and deleting its head
+    removes a long-lived branch. A head is long-lived when it is the
+    repository's default branch, GitHub reports it protected, its branch rules
+    forbid deletion, force-push or update, or its name is a long-lived
+    convention.
+
+    Fails safe: when the signals cannot be read the head counts as long-lived,
+    so the merge keeps ancestry and the branch survives. A merge commit is
+    never wrong; a deleted long-lived branch cannot be taken back.
+
+    ``L9_STACK_PROBE_FILE`` entries may carry ``default_branch``, ``protected``
+    and ``rules`` (rule type names) so tests stay offline; an entry without
+    them is read as an ordinary feature branch.
+    """
+    reasons: list[str] = []
+    if not head:
+        return {"long_lived": True, "reasons": ["head branch name is unknown"]}
+    if _long_lived_name(head):
+        reasons.append(f"'{head}' is a long-lived branch name")
+    entry = _probe_file_entry(repo, str(pr))
+    if entry is not None:
+        default = str(entry.get("default_branch") or "")
+        protected = bool(entry.get("protected"))
+        rules = {str(r) for r in entry.get("rules") or []}
+    else:
+        branch = urllib.parse.quote(head, safe="")
+        try:
+            meta = _gh_rest_json(f"repos/{repo}")
+            default = str((meta or {}).get("default_branch") or "")
+            info = _gh_rest_json(f"repos/{repo}/branches/{branch}")
+            protected = bool((info or {}).get("protected"))
+            listing = _gh_rest_json(f"repos/{repo}/rules/branches/{branch}")
+            rules = {
+                str(item.get("type"))
+                for item in (listing or [])
+                if isinstance(item, dict) and item.get("type")
+            }
+        except RuntimeError as exc:
+            reasons.append(f"long-lived probe unavailable ({exc}); treated as long-lived")
+            return {"long_lived": True, "reasons": reasons}
+    if default and head == default:
+        reasons.append(f"'{head}' is the repository default branch")
+    if protected:
+        reasons.append(f"GitHub reports '{head}' as protected")
+    guarded = sorted(rules & LONG_LIVED_RULE_TYPES)
+    if guarded:
+        reasons.append(f"'{head}' branch rules forbid {', '.join(guarded)}")
+    return {"long_lived": bool(reasons), "reasons": reasons}
+
+
 def select_merge_method(repo: str, pr: str) -> dict[str, Any]:
-    """Return method, head, children. Raises RuntimeError if the probe fails."""
+    """Return method, head, children and head retention. Raises RuntimeError if the probe fails."""
     head, children = _stacked_children(repo, str(pr))
-    method = ANCESTRY_SAFE if children else UNSTACKED
+    lived = long_lived_head(repo, str(pr), head)
+    long_lived = bool(lived["long_lived"])
+    method = ANCESTRY_SAFE if children or long_lived else UNSTACKED
+    if long_lived:
+        reason = (
+            f"head '{head}' is long-lived ({'; '.join(lived['reasons'])}); "
+            "--merge keeps both branches' history joined and the head is never deleted"
+        )
+    elif children:
+        reason = (
+            f"head '{head}' is the base of open PR(s) "
+            + ", ".join(f"#{c}" for c in children)
+            + "; --merge preserves ancestry"
+        )
+    else:
+        reason = "no open PR bases on this head and it is not long-lived; --squash is safe"
+    keep_head_reason = None
+    if long_lived:
+        keep_head_reason = "long-lived head: " + "; ".join(lived["reasons"])
+    elif children:
+        keep_head_reason = "head is the base of open PR(s)"
     return {
         "repo": repo,
         "pr": int(pr) if str(pr).isdigit() else pr,
         "head": head,
         "children": children,
+        "head_long_lived": long_lived,
+        "keep_head_reason": keep_head_reason,
         "method": method,
-        "reason": (
-            f"head '{head}' is the base of open PR(s) "
-            + ", ".join(f"#{c}" for c in children)
-            + "; --merge preserves ancestry"
-            if children
-            else "no open PR bases on this head; --squash is safe"
-        ),
+        "reason": reason,
     }
+
+
+def _keep_head(selection: dict[str, Any]) -> str | None:
+    """Why the head must survive this merge, or None when it may be deleted.
+
+    Checked at each delete site, not only at selection: a hand-built selection
+    without ``head_long_lived`` still never deletes a long-lived name.
+    """
+    if selection.get("keep_head_reason"):
+        return str(selection["keep_head_reason"])
+    if selection.get("head_long_lived"):
+        return "long-lived head"
+    if selection.get("children"):
+        return "head is the base of open PR(s)"
+    head = str(selection.get("head") or "")
+    if head and _long_lived_name(head):
+        return f"'{head}' is a long-lived branch name"
+    return None
 
 
 def merge_argv(
@@ -234,7 +345,7 @@ def merge_argv(
     head_sha: str = "",
 ) -> list[str]:
     chosen = selection or select_merge_method(repo, str(pr))
-    if chosen.get("children"):
+    if _keep_head(chosen):
         delete_branch = False
     argv = [
         "gh",
@@ -330,7 +441,9 @@ def _execute(selection: dict[str, Any], *, delete_branch: bool, head_sha: str = 
     pr = str(selection["pr"])
     method = str(selection["method"])
     head = str(selection.get("head") or "")
-    if selection.get("children"):
+    keep = _keep_head(selection)
+    if keep and delete_branch:
+        print(f"NOTE: head branch '{head}' is kept ({keep})", file=sys.stderr)
         delete_branch = False
 
     rc = _run(merge_rest_argv(repo, pr, method, head_sha))

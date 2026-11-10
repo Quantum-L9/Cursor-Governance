@@ -345,6 +345,27 @@ class CoverageCensusTests(unittest.TestCase):
         self.assertIn("runtime load not verified", result.stdout)
 
 
+class SessionStartCensusOrderTests(unittest.TestCase):
+    """The banner reports coverage after this ceremony projected, never before."""
+
+    HOOK = Path(__file__).resolve().parents[1] / "hooks" / "session_start_claude_governance.sh"
+
+    def test_census_runs_after_the_installer_and_projection(self) -> None:
+        body = self.HOOK.read_text(encoding="utf-8")
+        census = body.index('"$_census" --root "$GOV" --coverage')
+        installer = body.index('bash "$BOOTSTRAP_INSTALLER"')
+        engine = body.index("PROJECTION_LINE")
+        self.assertGreater(census, installer)
+        self.assertGreater(census, engine)
+        self.assertEqual(body.count('"$_census" --root "$GOV" --coverage'), 1)
+
+    def test_census_uses_the_resolved_interpreter(self) -> None:
+        body = self.HOOK.read_text(encoding="utf-8")
+        census = body.index('"$_census" --root "$GOV" --coverage')
+        venv = body.index('PY="$GOV/.venv/bin/python3"')
+        self.assertGreater(census, venv)
+
+
 import build_claude_skill_registry as registry_mod  # noqa: E402
 
 

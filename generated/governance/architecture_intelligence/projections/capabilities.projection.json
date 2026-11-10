@@ -132,15 +132,15 @@
           "admission": "canonical_active",
           "artifact": "invariants.yaml",
           "artifact_id": "l9.invariants/global@1",
-          "item_count": 31,
-          "sha256": "771e3509703ea7d177a4bbac965e126f77f390ec359d1544854d95ec4374082a"
+          "item_count": 34,
+          "sha256": "2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa"
         },
         {
           "admission": "canonical_active",
           "artifact": "contracts.yaml",
           "artifact_id": "l9.contracts/global@1",
-          "item_count": 26,
-          "sha256": "f1fcc979534d0aa34783710657ae36d765f7078e6ab20dc3b11a31d576539d79"
+          "item_count": 29,
+          "sha256": "86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7"
         }
       ]
     },
@@ -231,10 +231,10 @@
       "no_transition_order_is_defined_here"
     ]
   },
-  "projection_digest": "sha256:1b3bbf846d054ee48e50d4dd5a9313223c39442c5a51779409ae503bd1fc816c",
+  "projection_digest": "sha256:0f139ebfa57508d035d3af6574ea0983cf37a54137682f14e820e4084435ed7a",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:531e140166ed9efc44e74a7c9365d9b0f6f13a1bd91c9f87cd47167ec64fef71",
+  "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
   "source_ref": "l9.source/capabilities@1"
 }

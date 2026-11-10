@@ -258,6 +258,9 @@ def reconcile(
                     # checkout under $HOME would otherwise adopt it as a
                     # project mount root and reconcile user links as project.
                     exclude_targets=[Path.home() / ".claude" / "commands"],
+                    # Only a mirror THIS governance root wrote: a second
+                    # checkout must not take over the SSOT's container mirror.
+                    owner_root=root,
                 )
                 if ancestor not in mount_roots
             ]

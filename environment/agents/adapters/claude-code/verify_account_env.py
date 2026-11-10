@@ -255,6 +255,33 @@ def retired_transport_present(env: dict[str, str] | None = None) -> list[str]:
     return sorted(key for key in RETIRED_TRANSPORT if (live.get(key) or "").strip())
 
 
+#: Account fields that nothing on this surface reads any more. Not credentials
+#: (so not PROHIBITED_PRESENT) and not expected (the example file assigns none of
+#: them). A value here is a leftover paste: it changes nothing, so the only cost
+#: of leaving it is that the next reader mistakes it for configuration. Each key
+#: names why it is dead, so the report can say so instead of "unknown variable".
+#:
+#: L9_MEMORY_AGENT_ID and USER_ID are deliberately NOT here. The memory hooks
+#: stamp both into their own process from the derived identity
+#: (memory_state.bind_identity_env), so their runtime presence is not a paste,
+#: and SessionStart already reports a configured L9_MEMORY_AGENT_ID that
+#: disagrees with the derived identity.
+RETIRED_ACCOUNT_FIELDS: dict[str, str] = {
+    "L9_AUTONOMY_AUTONOMOUS_MERGE": (
+        "merge authority is ops/config/merge-authority.json, never a boolean"
+    ),
+    "L9_MEMORY_SOURCE": "memory identity is derived from host markers (agent_identity.py)",
+    "L9_MEMORY_HTTP_URL": "retired ADR-0006 memory side door",
+    "L9_CAPABILITY_BROKER_URL": "capability broker retired (never shipped)",
+}
+
+
+def retired_fields_present(env: dict[str, str] | None = None) -> list[str]:
+    """Retired account fields still set in the live runtime."""
+    live = os.environ if env is None else env
+    return sorted(key for key in RETIRED_ACCOUNT_FIELDS if (live.get(key) or "").strip())
+
+
 def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list[dict[str, str]]:
     """One row per deviation. Empty means the account field matches HEAD."""
     live = os.environ if env is None else env
@@ -333,12 +360,16 @@ Generated from `environment/agents/adapters/claude-code/web/environment.env.exam
 by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
 example and regenerate, or the two disagree and the drift check trusts the example.
 
-## Carries no credentials, by contract
+## Carries one credential, by contract
 
-No PAT, no Graphiti bearer, no Sonar or Semgrep token, no Infisical client
-secret, no AWS key. Everything in this field is readable by anything the model
-can run. A capability reporting DEGRADED is a broker-delivery problem; pasting a
-secret here to turn it green is a permanent compromise (contract S1/S2/S3).
+The only credential that belongs in this field is this surface's Infisical
+machine identity: `L9_INFISICAL_CLIENT_ID` plus `L9_INFISICAL_CLIENT_SECRET`
+(docs/DEGRADED_MODE_CONTRACT.md, "Secrets plane, 2026-09-24"). It is set once,
+by the operator, and is deliberately not listed below. Everything else is bound
+from Infisical in-process: no PAT, no Graphiti bearer, no Sonar, Semgrep or
+Context7 token, no AWS key. Everything in this field is readable by anything the
+model can run, so a capability reporting DEGRADED is fixed in Infisical, never
+by pasting its secret here (contract S1/S2/S3).
 
 `verify_account_env.py` now reports a prohibited credential it finds in the live
 runtime, so a paste of one does not pass silently.
@@ -455,6 +486,7 @@ def run(
     leaked = prohibited_present(env)
     pinned = pinned_opt_outs_present(env)
     retired = retired_transport_present(env)
+    stale_fields = retired_fields_present(env)
     return {
         "expected_keys": len(expected),
         "deviations": deviations,
@@ -464,8 +496,14 @@ def run(
         "stub_drift_direction": revision_direction(have_rev, want_rev) if drift else "same",
         "prohibited_present": leaked,
         "retired_transport_present": retired,
+        "retired_fields_present": stale_fields,
         "pinned_opt_outs": pinned,
-        "ok": not deviations and not drift and not leaked and not pinned and not retired,
+        "ok": not deviations
+        and not drift
+        and not leaked
+        and not pinned
+        and not retired
+        and not stale_fields,
     }
 
 
@@ -526,6 +564,9 @@ def main(argv: list[str] | None = None) -> int:
         print("           login is separate. Native Memory MCP activation is UNKNOWN")
         print("           until the account connector is observed. A setup-script")
         print("           revision match is not that proof.")
+    for key in result["retired_fields_present"]:
+        print(f"  RETIRED: {key} is set in this environment ({RETIRED_ACCOUNT_FIELDS[key]})")
+        print("           nothing reads it; delete it from the Environment variables field")
     if result["stub_drift"]:
         actual = result["stub_revision_actual"] or "<unrecorded>"
         print(

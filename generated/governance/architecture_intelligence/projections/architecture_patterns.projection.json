@@ -386,10 +386,12 @@
             {
               "from": "conformance_runner",
               "relation": "compares",
-              "to": [
-                "reference_model",
-                "candidate_implementation"
-              ]
+              "to": "reference_model"
+            },
+            {
+              "from": "conformance_runner",
+              "relation": "compares",
+              "to": "candidate_implementation"
             }
           ],
           "nodes": [
@@ -568,13 +570,15 @@
           "changed_candidate_requires_new_authority_decision"
         ],
         "id": "l9.pattern/authority-candidate-admission@1",
-        "lifecycle": [
-          "candidate",
-          "admission_evaluated",
-          "awaiting_authority",
-          "admitted",
-          "published"
-        ],
+        "lifecycle": {
+          "stages": [
+            "candidate",
+            "admission_evaluated",
+            "awaiting_authority",
+            "admitted",
+            "published"
+          ]
+        },
         "purpose": "Separate candidate generation from authoritative admission using immutable digest-bound decisions.\n"
       },
       {
@@ -1077,10 +1081,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:26b9ce9d87d7423f102f97779a4600c6002c68973e4f6f6c14b38e20b91eadd6",
+  "projection_digest": "sha256:2b892560a66c4aa5a3a6f808232b0d18787b6728e41b76a153b0b89e9779c920",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:7f41711e742dd4f9a40d10df856798999278349e8ed1855e5964601bbdc71c7a",
+  "source_digest": "sha256:c4adbeff6e953404aaafe275a13a387e9fdd0d9bd8dbe3adfa46af88cfe2a323",
   "source_ref": "l9.source/architecture-patterns@1"
 }

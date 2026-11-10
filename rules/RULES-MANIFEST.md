@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-04T01:25:01Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-10T13:59:47Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -38,7 +38,7 @@ Generated: `2026-11-04T01:25:01Z`. Source: `rules/*.mdc`.
 | `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 112 | `67418472f719` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | agent_requested | 54 | `3a3ff21bfdec` |
 | `44-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 39 | `4c064ea19ce3` |
-| `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 111 | `6012003b2d54` |
+| `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 112 | `135cbacb57a5` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `a56bd2ccf980` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 232 | `3448d30de87d` |

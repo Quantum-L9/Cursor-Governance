@@ -1,30 +1,35 @@
-"""Publish L9 reports into the work clone's ``reports/`` tree and onto its open PR.
+"""Publish L9 reports: GMP reports onto the open PR, end-session handoffs to their owners.
 
-One owner for the report layout, so the GMP executor and the end-session
-handoff hooks cannot drift apart:
+One owner for report rendering and placement, so the GMP executor and the
+end-session handoff hooks cannot drift apart:
 
     reports/
-      gmp/                              GMP execution reports
+      gmp/                              GMP execution reports (committed with the work)
       end-session/
-        session-handoff/                repository handoff (l9.session_handoff.v1)
-        governance-handoff/             governance handoff (l9.governance_handoff.v1)
+        session-handoff/                legacy location; handoffs are no longer committed
+        governance-handoff/             legacy location; handoffs are no longer committed
 
-Every subfolder is created on first write; none has to exist beforehand.
+End-session handoffs are delivered, never committed (``ops/reports/handoff_delivery.py``):
+the session handoff (l9.session_handoff.v1) becomes one PR comment, edited in
+place on later publications of the same PR; the governance handoff
+(l9.governance_handoff.v1) goes to the Cursor-Governance friction intake, one
+issue per friction id, with a PR comment as the fallback. A local copy is kept
+under the git directory. The PR head never moves for a handoff.
 
-Publication commits ONLY the report paths it was handed (``git commit -- <paths>``
+GMP report publication commits ONLY the report paths it was handed (``git commit -- <paths>``
 after ``git add -f -- <paths>``: ``reports/`` is commonly gitignored as local
 scratch, and these reports are deliberately published) and pushes the current
 branch to the PR's head branch without force. It refuses, and says why, when the
 checkout is not on that branch, is detached, or is on a default branch. It never
 rewrites history and never touches a path it was not given.
 
-``L9_REPORT_PUBLISH`` selects how far it goes: ``push`` (default), ``commit``
-(commit locally, no push) or ``write`` / ``0`` (write the file only).
+``L9_REPORT_PUBLISH`` selects how far a GMP report goes: ``push`` (default),
+``commit`` (commit locally, no push) or ``write`` / ``0`` (write the file only).
 
 CLI (any surface, e.g. Cursor or a manual ``/end-session``)::
 
     python -m ops.reports.publish dirs --workspace <repo>
-    python -m ops.reports.publish handoffs --workspace <repo>
+    python -m ops.reports.publish handoffs --workspace <repo>    # deliver, never commit
     python -m ops.reports.publish next-gmp-id --workspace <repo>
     python -m ops.reports.publish gmp --workspace <repo> <GMP-Report-NNN-Name.md>...
 """
@@ -260,19 +265,30 @@ def render_report(
 
 @dataclass(frozen=True)
 class PublishResult:
-    status: str  # pushed | committed | unchanged | written | skipped | failed
+    # pushed | committed | unchanged | written | skipped | failed (GMP reports)
+    # delivered | fallback | written | failed (end-session handoffs)
+    status: str
     detail: str = ""
     commit: str = ""
+    urls: tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
-        return self.status in {"pushed", "committed", "unchanged", "written"}
+        return self.status in {
+            "pushed",
+            "committed",
+            "unchanged",
+            "written",
+            "delivered",
+            "fallback",
+        }
 
     def line(self, paths: Sequence[Path], root: Path) -> str:
         rels = ", ".join(_rel(p, root) for p in paths)
         tail = f" ({self.detail})" if self.detail else ""
         sha = f" @ {self.commit[:12]}" if self.commit else ""
-        return f"report {self.status}{sha}: {rels}{tail}"
+        where = f" → {', '.join(self.urls)}" if self.urls else ""
+        return f"report {self.status}{sha}: {rels}{tail}{where}"
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -466,10 +482,17 @@ def publish_session_handoff(
     *,
     session_id: str = "",
     agent_id: str = "",
+    transport: Any = None,
 ) -> tuple[Path, PublishResult]:
-    """Write ``reports/end-session/session-handoff/<file>.md`` and publish it."""
+    """Keep a local copy and post the session handoff as the PR's handoff comment."""
     return _publish_handoff(
-        ReportKind.SESSION_HANDOFF, root, pub, body_lines, session_id=session_id, agent_id=agent_id
+        ReportKind.SESSION_HANDOFF,
+        root,
+        pub,
+        body_lines,
+        session_id=session_id,
+        agent_id=agent_id,
+        transport=transport,
     )
 
 
@@ -480,8 +503,14 @@ def publish_governance_handoff(
     *,
     session_id: str = "",
     agent_id: str = "",
+    friction: Sequence[dict[str, str]] | None = None,
+    transport: Any = None,
 ) -> tuple[Path, PublishResult]:
-    """Write ``reports/end-session/governance-handoff/<file>.md`` and publish it."""
+    """Keep a local copy and send ``friction`` to the Cursor-Governance intake.
+
+    ``friction`` is ``handoff_delivery.friction_items(brief)``. Without items
+    there is nothing for the intake (the memory record still carries the brief).
+    """
     return _publish_handoff(
         ReportKind.GOVERNANCE_HANDOFF,
         root,
@@ -489,6 +518,8 @@ def publish_governance_handoff(
         body_lines,
         session_id=session_id,
         agent_id=agent_id,
+        friction=friction,
+        transport=transport,
     )
 
 
@@ -500,7 +531,11 @@ def _publish_handoff(
     *,
     session_id: str,
     agent_id: str,
+    friction: Sequence[dict[str, str]] | None = None,
+    transport: Any = None,
 ) -> tuple[Path, PublishResult]:
+    from ops.reports import handoff_delivery
+
     number = int(pub["number"])
     head_sha = str(pub.get("head_sha") or "")
     label = str(pub.get("label") or f"{pub.get('repo', '')}#{number}")
@@ -518,14 +553,20 @@ def _publish_handoff(
         },
         body_lines=body_lines,
     )
-    path = write_report(root, kind, handoff_filename(number, head_sha), text)
-    result = publish(
-        root,
-        [path],
-        message=f"docs(reports): {TITLES[kind].lower()} for {label}",
-        expected_branch=str(pub.get("head") or ""),
+    # Never committed, so never given an L9_META header and never in the work tree.
+    path = handoff_delivery.write_local_copy(
+        root, kind.value, handoff_filename(number, head_sha), text
     )
-    return path, result
+    delivery = handoff_delivery.deliver(
+        kind.value,
+        pub,
+        text,
+        friction=friction,
+        session_id=session_id,
+        agent_id=agent_id,
+        transport=transport,
+    )
+    return path, PublishResult(delivery.status, delivery.detail, urls=delivery.urls)
 
 
 # --- GMP reports ---------------------------------------------------------------
@@ -601,6 +642,7 @@ def _publication_from_summary(root: Path) -> dict[str, Any]:
 
 def _cli_handoffs(root: Path, session_id: str, agent_id: str) -> int:
     from ops.memory import governance_handoff, session_handoff
+    from ops.reports import handoff_delivery
 
     pub = _publication_from_summary(root)
     rc = 0
@@ -631,6 +673,7 @@ def _cli_handoffs(root: Path, session_id: str, agent_id: str) -> int:
             governance_handoff.render_sections(gbrief),
             session_id=session_id,
             agent_id=agent_id,
+            friction=handoff_delivery.friction_items(gbrief),
         )
         print(result.line([path], root))
         rc |= 0 if result.ok else 1
@@ -643,7 +686,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (
         ("dirs", "create reports/gmp and reports/end-session/{session,governance}-handoff"),
-        ("handoffs", "publish .l9/memory handoff briefs to reports/end-session/ on the PR"),
+        (
+            "handoffs",
+            "deliver .l9/memory handoff briefs: PR comment + Cursor-Governance friction intake",
+        ),
         ("gmp", "validate, place in reports/gmp/ and commit GMP report(s); push if a PR is open"),
         ("next-gmp-id", "print the next GMP id for this clone (GMP-NNN)"),
     ):

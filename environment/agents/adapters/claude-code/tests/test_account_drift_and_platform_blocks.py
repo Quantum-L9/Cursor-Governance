@@ -13,6 +13,7 @@ than being absorbed into a green banner or misreported as configuration gaps.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -29,14 +30,18 @@ import probe_network_posture  # noqa: E402
 from verify_account_env import (  # noqa: E402
     DELIBERATELY_ABSENT,
     PROHIBITED_PRESENT,
+    RETIRED_ACCOUNT_FIELDS,
     RUNTIME_MANAGED,
     account_fields_markdown,
     compare,
     parse_env_example,
+    retired_fields_present,
     retired_transport_present,
     run,
+    setup_script_markdown,
     stub_revision_actual,
     stub_revision_expected,
+    variables_field_markdown,
 )
 
 #: Exactly what the audit measured in the live runtime.
@@ -96,6 +101,40 @@ class AccountEnvDriftTests(unittest.TestCase):
         self.assertEqual(result["retired_transport_present"], ["GRAPHITI_MCP_URL"])
         self.assertFalse(result["ok"])
         self.assertEqual(result["prohibited_present"], [])
+
+    def test_retired_account_fields_are_flagged(self) -> None:
+        """Leftover pastes that nothing reads fail the audit by name."""
+        env = {
+            **self.expected,
+            "L9_STUB_REVISION": stub_revision_expected(),
+            "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
+            "L9_MEMORY_SOURCE": "claude-code",
+        }
+        self.assertEqual(
+            retired_fields_present(env), ["L9_AUTONOMY_AUTONOMOUS_MERGE", "L9_MEMORY_SOURCE"]
+        )
+        result = run(env)
+        self.assertEqual(
+            result["retired_fields_present"], ["L9_AUTONOMY_AUTONOMOUS_MERGE", "L9_MEMORY_SOURCE"]
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["prohibited_present"], [])
+
+    def test_identity_the_hooks_stamp_is_not_a_retired_field(self) -> None:
+        """memory_state.bind_identity_env sets these itself; presence is not a paste."""
+        for key in ("L9_MEMORY_AGENT_ID", "USER_ID"):
+            self.assertNotIn(key, RETIRED_ACCOUNT_FIELDS)
+        env = {
+            **self.expected,
+            "L9_STUB_REVISION": stub_revision_expected(),
+            "L9_MEMORY_AGENT_ID": "claude-code",
+            "USER_ID": "claude-code",
+        }
+        self.assertEqual(run(env)["retired_fields_present"], [])
+
+    def test_retired_fields_are_never_expected(self) -> None:
+        for key in RETIRED_ACCOUNT_FIELDS:
+            self.assertNotIn(key, self.expected)
 
     def test_runtime_managed_keys_are_excluded(self) -> None:
         """The harness decrements spawn depth per nesting level; comparing it
@@ -157,6 +196,30 @@ class AccountFieldsDocumentTests(unittest.TestCase):
 
     def test_generated_document_is_committed(self) -> None:
         self.assertTrue((REPO / "docs" / "ACCOUNT_FIELDS.md").is_file())
+
+    def test_committed_documents_match_the_generator(self) -> None:
+        """The paste-ready docs are regenerated, never hand-maintained (audit RA-07).
+
+        They once still listed variables the example had retired, so the field a
+        human pastes from carried L9_MEMORY_AGENT_ID, USER_ID and L9_MEMORY_SOURCE.
+        Regenerate with ``verify_account_env.py --emit-fields``.
+        """
+        expected = parse_env_example()
+        revision = stub_revision_expected()
+        for path, text in (
+            (REPO / "docs" / "ACCOUNT_FIELDS.md", account_fields_markdown(expected, revision)),
+            (
+                REPO / "docs" / "account-fields" / "ENVIRONMENT_VARIABLES.md",
+                variables_field_markdown(expected),
+            ),
+            (
+                REPO / "docs" / "account-fields" / "SETUP_SCRIPT.md",
+                setup_script_markdown(revision),
+            ),
+        ):
+            self.assertEqual(
+                text, path.read_text(encoding="utf-8"), f"{path.name} is stale: run --emit-fields"
+            )
 
 
 class NetworkPostureTests(unittest.TestCase):
@@ -281,6 +344,31 @@ class PasteIntegrityTests(unittest.TestCase):
             "pasted markdown fence execute the surrounding comment prose as shell:\n"
             + "\n".join(offenders),
         )
+
+    def test_stub_never_prints_a_credential_value(self) -> None:
+        """A status line names a credential; it never expands one.
+
+        ``${KEY:+proxied}${KEY:-none}`` printed ``proxied<key>`` whenever the key
+        was set (audit RA-01). Output commands may mention a credential's name
+        and may test it for emptiness, but must not substitute its value.
+        """
+        credential = re.compile(
+            r"\$\{?!?[A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|CLIENT_ID)[A-Z0-9_]*"
+        )
+        output = re.compile(r"^\s*(?:note|warn|echo|printf)\b")
+        offenders = [
+            f"{n}: {line}"
+            for n, line in enumerate(self.body.splitlines(), 1)
+            if output.match(line) and credential.search(line)
+        ]
+        self.assertEqual([], offenders, "\n".join(offenders))
+
+    def test_stub_describes_the_current_secrets_plane(self) -> None:
+        """Comments match the 2026-09-24 secrets law and the Context7 vault bridge."""
+        for stale in ("behind the broker", "references it as ${VAR}", "Infisical UA into"):
+            self.assertNotIn(stale, self.body)
+        self.assertIn("run_vault_mcp_bridge.sh context7", self.body)
+        self.assertIn("L9_INFISICAL_CLIENT_SECRET", self.body)
 
     def test_stub_carries_both_paste_markers(self) -> None:
         """The docs tell a human to select between these; they must exist."""

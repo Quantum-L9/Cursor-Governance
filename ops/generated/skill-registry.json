@@ -1,5 +1,5 @@
 {
-  "generation_id": "335ce615b25d8306c4dcddacd8dae9316b0582cc5289845ca33302a2735f8848",
+  "generation_id": "521fce2b51263f40c4e6f23fd8571b528246964acee9efe79d0984d6dfad1b9e",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1050,7 +1050,7 @@
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "c95b3aff0e742349877fa5d4fdc809d447668cf1f5558763994a4c5a61176de0",
+      "skill_sha256": "5fd71a6672de73531990ca0e0325418cae53d35cd2c20aacd4f2c6e86326cd61",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1336,7 +1336,7 @@
       "path": "skills/l9-pr-remediation",
       "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked) \u2014 each PR only under human authorization bound to its exact head; the operator typing /l9-pr-remediation is that authorization for the repo's open PRs (CANONICAL_LAW \u00a76.2.15), an agent's own Skill call never is. The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Above-paygrade HUMAN / unfixable required CI / ENVIRONMENT after best-effort opens a GitHub issue and launches l9-issue-remediation via cursor-subagents; do not ask the human to unblock. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "skill_md": "skills/l9-pr-remediation/SKILL.md",
-      "skill_sha256": "90bd60e94f2c986d46f4e6dafeb43fb47733614e978b4f9a93599275b6b31b47",
+      "skill_sha256": "a6399efa7bddee67c2399902a38816c3c6cfc44273252fa7488725380de3d77a",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "9d23a9983233da350f2695923c2bb9a84e4cfdaed89c590b7fbce0deda5cd323"
+  "source_skill_corpus_sha256": "9cfd07cbf7d8dc042f2d398e208267e3601333b2ac6d2cf4deb2c0d73bfed55f"
 }
