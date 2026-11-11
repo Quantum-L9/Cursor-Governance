@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-10T13:59:47Z'
+generated_utc: '2026-11-11T15:39:45Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:395d3391c253203ef7bdb8edd8b798275e9574700a4653f2725474a88264c545
+source_tree_digest: sha256:bce299575e569aee1456eee290f57d5bf2bd2f65fe3f73ca5058e7e52a8b6b7e
 summary:
   total_mdc_files: 68
   always_apply_true: 35
@@ -485,7 +485,7 @@ rules:
   first_heading: Pre-Action Verification
   has_yaml_frontmatter: true
   line_count: 112
-  content_digest: sha256:135cbacb57a580aaaa9c3abf2e48ac9b1de4289032c16d16da14a93c86e76ab2
+  content_digest: sha256:88bb289a70a4da8310f11a6d6682c40b88fe7bc64782c61e512768f686ace877
   authority: canonical_global
   context_cost: moderate
   deprecated: false

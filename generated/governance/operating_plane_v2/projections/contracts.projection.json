@@ -1511,6 +1511,107 @@
           "L9-PROV-001",
           "L9-COORD-001"
         ]
+      },
+      {
+        "applies_to": [
+          "domain_projection_sets",
+          "domain_consumer_bindings",
+          "composition_engines",
+          "consumers"
+        ],
+        "forbidden": [
+          "silent_precedence_between_members",
+          "reconciliation_of_conflicting_identity_bearing_records",
+          "assumed_equivalence_of_different_revisions",
+          "authority_expansion_through_composition",
+          "promotion_of_a_composed_result_to_canonical_semantics",
+          "equating_different_claim_classes",
+          "treating_signal_evidence_as_strategic_value_evidence"
+        ],
+        "guarantees": [
+          "compatible_requires_every_required_check_to_be_satisfied",
+          "an_established_authoritative_conflict_is_incompatible",
+          "a_missing_required_rule_coordinate_or_evidence_is_unresolved_never_compatible",
+          "the_compatibility_result_is_a_derived_noncanonical_artifact",
+          "each_member_keeps_its_own_source_identity_and_digest"
+        ],
+        "id": "l9.contract/domain-composition-compatibility@1",
+        "outcomes": {
+          "satisfied": "compatible",
+          "unresolved": "unresolved",
+          "violated": "incompatible"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Decide whether a set of domain projections selected by one domain consumer binding can be used together at the requested governing coordinates, without synthesizing, reconciling, or promoting any selected meaning.",
+        "requires": [
+          "every_member_names_an_exact_domain_profile_id_profile_digest_canonical_source_coordinates_source_digests_and_output_schema",
+          "every_member_resolves_against_one_governing_revision_or_an_explicit_compatibility_declaration_between_its_revisions",
+          "an_identity_bearing_record_selected_by_two_members_is_canonically_equivalent_and_has_one_owner",
+          "every_required_member_and_its_required_semantic_dependencies_resolve_without_undeclared_substitution",
+          "every_material_unresolved_input_of_any_member_remains_unresolved_in_the_result",
+          "members_carrying_different_claim_classes_are_kept_distinct"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-OWNER-001",
+          "L9-COMPAT-001",
+          "L9-COORD-001",
+          "L9-REVISION-001",
+          "L9-DEGRADE-001",
+          "L9-AUTH-001",
+          "L9-UNKNOWN-001",
+          "L9-PROJECTION-001",
+          "L9-PROMOTION-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "domain_projection_sets",
+          "domain_consumer_bindings",
+          "composition_engines",
+          "receipts"
+        ],
+        "forbidden": [
+          "a_second_digest_subject_or_output_form_for_a_projection_artifact_or_its_receipt",
+          "timestamps_in_a_deterministic_content_identity",
+          "ambiguous_serialization",
+          "undeclared_transformation",
+          "presenting_a_stale_composition_as_current",
+          "provenance_as_proof_of_correctness"
+        ],
+        "guarantees": [
+          "the_content_digest_excludes_nondeterministic_metadata",
+          "the_content_digest_and_the_evaluation_receipt_digest_are_distinct",
+          "a_change_to_any_recorded_source_profile_binding_or_contract_digest_or_any_material_coordinate_requires_revalidation",
+          "replay_from_the_recorded_coordinates_reproduces_the_content_digest",
+          "material_unknowns_of_the_inputs_are_preserved"
+        ],
+        "id": "l9.contract/domain-composition-provenance@1",
+        "outcomes": {
+          "satisfied": "provenance_complete_and_current",
+          "unresolved": "required_coordinate_unavailable",
+          "violated": "provenance_incomplete_or_falsified"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Keep every composition of domain projections independently traceable to its exact inputs, the profiles and binding that selected them, the contracts that governed composition, and the engine that produced it, and make it non-current when any of those coordinates changes.",
+        "requires": [
+          "source_repository_and_source_commit_are_recorded",
+          "each_canonical_artifact_id_and_canonical_artifact_digest_is_recorded",
+          "each_profile_id_and_profile_digest_is_recorded",
+          "the_domain_consumer_binding_id_and_binding_digest_are_recorded",
+          "each_governing_composition_contract_id_and_its_catalog_digest_are_recorded",
+          "the_projection_and_composition_engine_identity_and_version_are_recorded",
+          "digests_use_the_canonical_json_and_semantic_digest_conventions_of_l9_compiler_projection_engine_at_1"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROV-001",
+          "L9-COORD-001",
+          "L9-REVISION-001",
+          "L9-DERIVED-001",
+          "L9-EVIDENCE-001",
+          "L9-UNKNOWN-001"
+        ]
       }
     ],
     "outcome_semantics": {
@@ -1519,10 +1620,10 @@
       "scope": "contract_local"
     }
   },
-  "projection_digest": "sha256:976fc90de21c2ce7b7c0bfff86032d52cb05c9c71c4242038ac27bf276d360b7",
+  "projection_digest": "sha256:f698fd7b3dcaf4c6b04e9387ea15b89dee08fe6835da2d530f38042cca80e533",
   "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
   "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
+  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
   "source_ref": "l9.source/contracts@1"
 }
