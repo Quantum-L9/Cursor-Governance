@@ -15,7 +15,7 @@ Value handling:
 * Values are bound in-process through ``capability_bind`` (Infisical, as this
   surface's machine identity). They are never exported, printed or written.
 * A value reaches ``gh secret set NAME --repo R`` on stdin only, never argv.
-* ``gh`` output is scrubbed of every bound value before any of it is printed.
+* ``gh secret set`` output is never printed; a failure reports its exit code.
 * ``--dry-run`` binds and writes nothing.
 * ``SDK_TOKEN`` is opt-in (``--with-sdk-token``). It is the Infisical
   ``GITHUB_TOKEN`` (never the shell's ``GH_TOKEN`` / ``GITHUB_TOKEN``) and is set
@@ -33,7 +33,6 @@ import os
 import re
 import subprocess
 import sys
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -51,11 +50,10 @@ except ImportError:  # pragma: no cover
 SCHEMA = "l9.actions-secret-sync.v1"
 DEFAULT_PLAN = HERE / "actions-secret-sync.json"
 DEFAULT_INVENTORY = HERE / "infisical-cursor-governance.yaml"
-SDK_SECRET_NAME = "SDK_TOKEN"
+SDK_TARGET_NAME = "SDK_TOKEN"
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SECRET_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _SHELL_GH_VARS = ("GITHUB_TOKEN", "GH_TOKEN")
-_REDACTED = "<redacted>"
 
 
 class PlanError(ValueError):
@@ -65,7 +63,7 @@ class PlanError(ValueError):
 @dataclass(frozen=True)
 class Entry:
     repo: str
-    secret: str
+    target_name: str  # JSON key "secret": the Actions secret's NAME, never a value
     vault_name: str
 
 
@@ -126,13 +124,13 @@ def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) ->
             raise PlanError(f"{where}: must be an object")
         entry = Entry(
             repo=_require_str(item, "repo", where, _REPO_RE),
-            secret=_require_str(item, "secret", where, _SECRET_RE),
+            target_name=_require_str(item, "secret", where, _SECRET_RE),
             vault_name=_require_str(item, "vault_name", where, _SECRET_RE),
         )
         _check_vault(entry.vault_name, allowed, where)
-        if (entry.repo, entry.secret) in seen:
-            raise PlanError(f"{where}: duplicate {entry.repo} {entry.secret}")
-        seen.add((entry.repo, entry.secret))
+        if (entry.repo, entry.target_name) in seen:
+            raise PlanError(f"{where}: duplicate {entry.repo} {entry.target_name}")
+        seen.add((entry.repo, entry.target_name))
         entries.append(entry)
 
     sdk: SdkToken | None = None
@@ -149,8 +147,8 @@ def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) ->
         vault_name = _require_str(block, "vault_name", where, _SECRET_RE)
         _check_vault(vault_name, allowed, where)
         for repo in repos:
-            if (repo, SDK_SECRET_NAME) in seen:
-                raise PlanError(f"{where}: {repo} {SDK_SECRET_NAME} also in 'secrets'")
+            if (repo, SDK_TARGET_NAME) in seen:
+                raise PlanError(f"{where}: {repo} {SDK_TARGET_NAME} also in 'secrets'")
         sdk = SdkToken(
             repos=tuple(repos),
             vault_name=vault_name,
@@ -158,18 +156,6 @@ def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) ->
         )
     names = {e.vault_name for e in entries} | ({sdk.vault_name} if sdk else set())
     return Plan(entries=tuple(entries), sdk_token=sdk, vault_names=frozenset(names))
-
-
-def _scrub(text: str, secrets: Iterable[str]) -> str:
-    for value in secrets:
-        if value:
-            text = text.replace(value, _REDACTED)
-    return text
-
-
-def _last_line(text: str) -> str:
-    lines = [ln for ln in text.strip().splitlines() if ln.strip()]
-    return lines[-1] if lines else ""
 
 
 def vault_pat(vault_name: str) -> str | None:
@@ -193,61 +179,60 @@ def pat_can_read(pat: str, repo: str) -> bool:
     return result.returncode == 0
 
 
-def set_secret(repo: str, name: str, value: str, secrets: Iterable[str]) -> bool:
-    """``gh secret set`` with the value on stdin only."""
+def set_secret(repo: str, target_name: str, value: str) -> bool:
+    """``gh secret set`` with the value on stdin only.
+
+    ``gh`` output is never printed: only the exit code is reported, so no
+    output can depend on a value.
+    """
     result = subprocess.run(
-        ["gh", "secret", "set", name, "--repo", repo],
+        ["gh", "secret", "set", target_name, "--repo", repo],
         input=value,
         capture_output=True,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        reason = _scrub(_last_line(result.stderr or ""), secrets) or f"exit {result.returncode}"
-        print(f"  FAIL {repo} {name}: {reason}")
+        print(f"  FAIL {repo} {target_name}: gh secret set exited {result.returncode}")
         return False
     return True
 
 
 def run(plan: Plan, *, dry_run: bool, with_sdk_token: bool) -> int:
     failures = 0
-    bound: list[str] = []
     for entry in plan.entries:
         value = cb.bind(entry.vault_name)
         if not value:
             source = cb._SOURCES.get(entry.vault_name, "unbound")
-            print(
-                f"  SKIP {entry.repo} {entry.secret}: vault {entry.vault_name} unbound ({source})"
-            )
+            target = f"{entry.repo} {entry.target_name}"
+            print(f"  SKIP {target}: vault {entry.vault_name} unbound ({source})")
             failures += 1
             continue
-        bound.append(value)
         if dry_run:
-            print(f"  would set {entry.repo} {entry.secret} <- vault {entry.vault_name}")
-        elif set_secret(entry.repo, entry.secret, value, bound):
-            print(f"  set  {entry.repo} {entry.secret} <- vault {entry.vault_name}")
+            print(f"  would set {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
+        elif set_secret(entry.repo, entry.target_name, value):
+            print(f"  set  {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
         else:
             failures += 1
 
     if with_sdk_token:
         sdk = plan.sdk_token
         if sdk is None:
-            print(f"  SKIP {SDK_SECRET_NAME}: plan has no sdk_token block")
+            print(f"  SKIP {SDK_TARGET_NAME}: plan has no sdk_token block")
             return 1
         pat = vault_pat(sdk.vault_name)
         if not pat:
-            print(f"  SKIP {SDK_SECRET_NAME}: vault {sdk.vault_name} unbound")
+            print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} unbound")
             failures += 1
         elif not pat_can_read(pat, sdk.must_read):
-            print(f"  SKIP {SDK_SECRET_NAME}: vault {sdk.vault_name} cannot read {sdk.must_read}")
+            print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} cannot read {sdk.must_read}")
             failures += 1
         else:
-            bound.append(pat)
             for repo in sdk.repos:
                 if dry_run:
-                    print(f"  would set {repo} {SDK_SECRET_NAME} <- vault {sdk.vault_name}")
-                elif set_secret(repo, SDK_SECRET_NAME, pat, bound):
-                    print(f"  set  {repo} {SDK_SECRET_NAME} <- vault {sdk.vault_name}")
+                    print(f"  would set {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
+                elif set_secret(repo, SDK_TARGET_NAME, pat):
+                    print(f"  set  {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
                 else:
                     failures += 1
     return 1 if failures else 0

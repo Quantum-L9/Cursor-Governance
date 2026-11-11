@@ -120,7 +120,7 @@ def test_value_reaches_gh_only_through_stdin(
     _assert_no_leak(out.out + out.err)
 
 
-def test_gh_failure_output_is_scrubbed(
+def test_gh_failure_output_is_never_printed(
     fake_bind: dict[str, str], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     runner = FakeRun(set_rc=1, set_stderr=f"HTTP 403 echoing {CANARIES['SONAR_TOKEN']}")
@@ -129,6 +129,7 @@ def test_gh_failure_output_is_scrubbed(
     assert rc == 1
     out = capsys.readouterr()
     assert "FAIL" in out.out
+    assert "HTTP 403 echoing" not in out.out + out.err
     _assert_no_leak(out.out + out.err)
 
 
