@@ -1,0 +1,85 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/cto-mode/bindings/technical-coordination.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: candidate
+#   version: 0.1.0
+#   updated: 2026-11-11
+# Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
+# and verified by the same adapter over the one shared consumer verifier.
+integration:
+  integration_id: L9.CG.CTO_MODE.TECHNICAL_COORDINATION_BINDING.001
+  version: 0.1.0
+  artifact_class: runtime_integration_binding
+  status: candidate
+  semantic_owner: governance/cto-mode/bindings/technical-coordination.yaml
+purpose:
+  assertion: >-
+    Bind the technical coordination role projection from Quantum-L9/.github into CTO mode as a
+    separate, explicitly loaded input: a bundle the canonical compiler produced and this
+    repository only verifies. It executes no selector, composes no payload, authors no schema,
+    and never substitutes another input when this one is unavailable.
+input:
+  name: technical_coordination
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/technical-coordination@1
+    # Candidate digests from the compile rehearsal (compiler eeac5d2, 0.10.0) over the
+    # Stage A + B + C candidate tree. Not admitted. Rebind to the admitted digests and add the
+    # owner's decision below once Quantum-L9/.github admits the profile pair.
+    projection_profile_digest: sha256:b4665769ea2fb536e101fdeafb50de4047a06f887b38b1953565916b94d597e5
+    projection_profile_class: consumer
+    projection_profile_consumer: technical_coordination_role
+    composition_profile_ref: l9.compose/technical-coordination@1
+    composition_profile_digest: sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb
+    projection_payload_schema: l9.projection.technical-coordination/v1
+    composed_payload_schema: l9.composed-projection.technical-coordination/v1
+    expected_source_classes:
+      - vocabulary
+      - invariants
+      - contracts
+      - authority_model
+      - strategic_cognition_model
+  bundle:
+    path: generated/governance/technical_coordination
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+    cg_produces: false
+    registration: >-
+      The bundle is registered with the driver and CI matrix only after the profile pair is
+      admitted on Quantum-L9/.github main; until then there is no bundle and the verifier
+      reports BLOCKED.
+  verifier: skills/l9-global-architect/scripts/verify_architecture_intelligence.py
+  shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+admission:
+  resolved_independently_of: bundle.lock.json
+  resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  authority_main_ref: refs/remotes/origin/main
+  effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
+  decisions: []
+load_condition:
+  when:
+    - cto_mode_active
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED: not admitted law; admitted mode reads nothing.
+  BLOCKED: proceed without technical coordination semantics; a claim that depends on them is a typed Unknown.
+  REJECTED: no part of the bundle may be read; report the refusal reason.
+  STALE: the bundle must not be treated as current; regeneration belongs to the producer.
+  fallback:
+    partial_bundle: forbidden
+    model_reconstruction_from_memory_or_repository_reads: forbidden
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_cursor_governance
+  - payload_schema_authoring_or_reinterpretation
