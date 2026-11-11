@@ -269,6 +269,79 @@ def test_gmp_executor_writes_into_reports_gmp(tmp_path: Path) -> None:
     assert gmp._next_gmp_id() == "GMP-131"
 
 
+# --- Repository-declared GMP report folder ----------------------------------------
+
+ODOO_ORIGIN = "https://github.com/cryptoxdog/IB-Odoo_19.git"
+ODOO_GMP_DIR = Path("docs") / "reports" / "gmp-reports"
+
+
+@pytest.fixture()
+def odoo_clone(tmp_path: Path) -> Path:
+    """A clone whose origin the real publish-authority registry gives a gmp_report_dir."""
+    work = tmp_path / "IB-Odoo_19"
+    subprocess.run(["git", "init", "-q", "-b", "feat/x", str(work)], check=True)
+    _git(work, "config", "user.email", "t@example.com")
+    _git(work, "config", "user.name", "t")
+    _git(work, "config", "commit.gpgsign", "false")
+    _git(work, "remote", "add", "origin", ODOO_ORIGIN)
+    (work / "README.md").write_text("x\n", encoding="utf-8")
+    _git(work, "add", "--", "README.md")
+    _git(work, "commit", "-q", "-m", "init")
+    return work
+
+
+def test_declared_gmp_report_dir_is_used(odoo_clone: Path) -> None:
+    from ops.reports import gmp
+
+    assert gmp.report_rel(odoo_clone) == ODOO_GMP_DIR
+    assert rp.report_dir(odoo_clone, rp.ReportKind.GMP) == odoo_clone / ODOO_GMP_DIR
+    # Handoff folders keep the shared layout.
+    assert rp.report_dir(odoo_clone, rp.ReportKind.SESSION_HANDOFF) == (
+        odoo_clone / "reports" / "end-session" / "session-handoff"
+    )
+
+
+def test_undeclared_repository_keeps_reports_gmp(clone: Path) -> None:
+    from ops.reports import gmp
+
+    assert gmp.report_rel(clone) == Path("reports") / "gmp"
+
+
+def test_next_gmp_id_scans_the_declared_dir(odoo_clone: Path) -> None:
+    from ops.reports import gmp
+
+    _report(odoo_clone / ODOO_GMP_DIR, "GMP-Report-358-Earlier-work.md")
+    assert gmp.next_gmp_number(odoo_clone, floor=129) == 359
+
+
+def test_gmp_executor_writes_and_commits_into_the_declared_dir(
+    odoo_clone: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_GMP_DRY_RUN", raising=False)
+    executor = _load_file(
+        "l9_test_gmp_executor_declared", REPO_ROOT / "workflows" / "gmp_executor.py"
+    )
+    (odoo_clone / "a.py").write_text("x = 1\n", encoding="utf-8")
+    runner = executor.GMPExecutor(odoo_clone)
+    runner.authorized = True
+    runner.commit_when_done = True
+    runner.state = executor.GMPState(
+        gmp_id=runner._next_gmp_id(),
+        tier="RUNTIME",
+        task="Declared folder",
+        started_at="2026-11-11T00:00:00",
+        current_step=executor.STEP_ORDER[0],
+        todo_plan=[{"id": "T1", "file": "a.py", "action": "Insert", "description": "x"}],
+    )
+    assert runner._step_generate_report().success
+    rel = (ODOO_GMP_DIR / "GMP-Report-129-Declared-folder.md").as_posix()
+    assert runner.state.report_path == rel
+    assert runner._step_commit_gate().output == "Committed"
+    committed = _git(odoo_clone, "show", "--name-only", "--format=", "HEAD").splitlines()
+    assert sorted(committed) == sorted(["a.py", rel])
+    assert not (odoo_clone / "reports").exists()
+
+
 # --- Agent-authored GMP reports ---------------------------------------------------
 
 

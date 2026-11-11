@@ -168,6 +168,60 @@ def test_required_git_hook_types_accepts_pre_push_and_commit_msg(tmp_path: Path)
     assert entry["required_git_hook_types"] == ["commit-msg", "pre-push"]
 
 
+# --- gmp_report_dir -----------------------------------------------------------------
+
+
+def test_registry_declares_odoo_gmp_report_dir() -> None:
+    entry = pa.load_registry(REGISTRY)["repositories"][ODOO_KEY]
+    assert entry["gmp_report_dir"] == "docs/reports/gmp-reports"
+    assert "AGENTS.md" in entry["gmp_report_authority"]
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "/abs/dir", "../out", "docs/../reports", "docs//reports", "./docs", "docs/", "a\\b", 3],
+)
+def test_gmp_report_dir_rejects_unsafe_paths(tmp_path: Path, value: object) -> None:
+    bad = tmp_path / "bad.json"
+    document = _native_document({"gmp_report_dir": value, "gmp_report_authority": "x"})
+    bad.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(pa.RegistryError, match="gmp_report_dir must be"):
+        pa.load_registry(bad)
+
+
+def test_gmp_report_dir_requires_its_authority(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text(
+        json.dumps(_native_document({"gmp_report_dir": "docs/reports/gmp-reports"})),
+        encoding="utf-8",
+    )
+    with pytest.raises(pa.RegistryError, match="gmp_report_authority"):
+        pa.load_registry(bad)
+
+
+def test_gmp_report_dir_resolves_by_origin(tmp_path: Path) -> None:
+    registry = tmp_path / "reg.json"
+    document = _native_document(
+        {"gmp_report_dir": "docs/reports/gmp-reports", "gmp_report_authority": "x"}
+    )
+    registry.write_text(json.dumps(document), encoding="utf-8")
+    odoo = _repo(tmp_path, "odoo", SPELLINGS[0])
+    other = _repo(tmp_path, "other", "https://github.com/acme/other")
+    bare = _repo(tmp_path, "bare", None)
+    assert pa.gmp_report_dir(odoo, registry) == "docs/reports/gmp-reports"
+    assert pa.gmp_report_dir(other, registry) is None
+    assert pa.gmp_report_dir(bare, registry) is None
+
+
+def test_gmp_report_dir_fails_closed_on_an_invalid_registry(tmp_path: Path) -> None:
+    """A silent default would write the report where the repository forbids it."""
+    broken = tmp_path / "broken.json"
+    broken.write_text("{", encoding="utf-8")
+    odoo = _repo(tmp_path, "odoo", SPELLINGS[1])
+    with pytest.raises(pa.RegistryError):
+        pa.gmp_report_dir(odoo, broken)
+
+
 def test_missing_registry_parse_governance_run_invalid(tmp_path: Path) -> None:
     """A clone that lost the registry has no policy, not an empty one."""
     repo = _repo(tmp_path, "odoo", SPELLINGS[1])

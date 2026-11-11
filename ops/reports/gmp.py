@@ -1,9 +1,11 @@
 """GMP report location and naming — the machine form of ``rules/81-gmp-audit.mdc``.
 
 Reports are optional. When one exists it lives in ``reports/gmp/`` of the work
-clone (``ops/reports/publish.py`` owns the folder) and is named
-``GMP-Report-<NNN>-<Description>.md``. Content is the author's choice; only the
-name is checked, so reports stay consistent and findable.
+clone, or in the directory the repository declares as ``gmp_report_dir`` in
+``ops/config/publish-authority.json`` (``ops/reports/publish.py`` owns the
+folder), and is named ``GMP-Report-<NNN>-<Description>.md``. Content is the
+author's choice; only the name is checked, so reports stay consistent and
+findable.
 """
 
 from __future__ import annotations
@@ -14,20 +16,36 @@ from pathlib import Path
 NAME_RE = re.compile(r"^GMP-Report-(\d{3,})-[A-Za-z0-9][A-Za-z0-9-]*\.md$")
 NAME_PATTERN = "GMP-Report-<NNN>-<Description>.md"
 
+#: The location when the repository declares none.
+DEFAULT_DIR = Path("reports") / "gmp"
+
 #: Every place a GMP report has been written in a clone, newest first. The
 #: legacy executor name ``GMP-<n>-<slug>.md`` is still counted for numbering.
 SCAN_DIRS: tuple[Path, ...] = (
-    Path("reports") / "gmp",
+    DEFAULT_DIR,
     Path("reports") / "GMP Reports",
     Path("reports"),
 )
 _NUMBER_RE = re.compile(r"^GMP-(?:Report-)?(\d+)\b")
 
 
+def report_rel(root: Path) -> Path:
+    """Where GMP reports go in ``root``: the declared directory, else ``reports/gmp``.
+
+    Raises ``RegistryError`` when the publish-authority registry is invalid.
+    """
+    from ops.autonomy.publish_authority import gmp_report_dir
+
+    declared = gmp_report_dir(Path(root))
+    return Path(declared) if declared else DEFAULT_DIR
+
+
 def next_gmp_number(root: Path, floor: int = 1) -> int:
     """Highest GMP number already in the clone + 1 (never below ``floor``)."""
     highest = floor - 1
-    for rel in SCAN_DIRS:
+    declared = report_rel(root)
+    scan = SCAN_DIRS if declared in SCAN_DIRS else (declared, *SCAN_DIRS)
+    for rel in scan:
         folder = Path(root) / rel
         if not folder.is_dir():
             continue

@@ -375,9 +375,9 @@
       "alias": null,
       "class": "paths",
       "output": "72-review-ergonomics.md",
-      "output_sha256": "0692f7ea80bad2e582e23b79d09672fb75251ebe192582829aee00cd6ab1545c",
+      "output_sha256": "cc473d974cbc813db0035569d58380351472fd92cfd5792fa5842c1cc13b112e",
       "source": "rules/72-review-ergonomics.mdc",
-      "source_sha256": "e31fd8743dbcbde42b8ac38459ff6991a639dc125e33695f5f6557ba11d9d239",
+      "source_sha256": "b55fa4821a9c20a25a1733d8879a6143e960165f193f14074e104936bb3c22b0",
       "stem": "72-review-ergonomics"
     },
     {
@@ -458,7 +458,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/81-gmp-audit.mdc",
-      "source_sha256": "5563e69a190e8fd4f6b36862b8fbe160cecbe8645c37f0af0b7c172f925e5f8f",
+      "source_sha256": "88df5734c81ac38f7c4d2cb167a5b3354e4f9e0e21f1167cf55e7d35e6d38d6e",
       "stem": "81-gmp-audit"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "db26889b9394f3bed750ff7d67935463e2c855b59c8378ad5e03c22514be6177"
+  "tree_sha256": "ef9e593a1aef1c34ae07667bd0a543cdcd6e6e2d58dc69f14b7eed002841bfd4"
 }
