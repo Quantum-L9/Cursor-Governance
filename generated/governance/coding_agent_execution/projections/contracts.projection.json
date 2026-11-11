@@ -435,10 +435,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:f36322d156a0d84f0716d681b6aca4bd3f12c3d9638feb073f444964ef5635c4",
+  "projection_digest": "sha256:0d4755d986488ce90682bfb75663fbedb98f752653faf34cef363d0d463ad5f8",
   "projection_profile_digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
   "projection_profile_ref": "l9.projection/coding-agent-execution@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
+  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
   "source_ref": "l9.source/contracts@1"
 }
