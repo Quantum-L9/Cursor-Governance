@@ -1,0 +1,106 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "invariants": [
+      {
+        "id": "L9-AUTH-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "No component may expand its own authority.\n"
+      },
+      {
+        "id": "L9-AUTH-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+      },
+      {
+        "id": "L9-EVIDENCE-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+      },
+      {
+        "id": "L9-ASSURANCE-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Normative requirement, implementation state, and assurance state are distinct. A claim that a requirement or control is implemented, verified, blocking, conformant, or complete requires current, independently verifiable evidence appropriate to that claim; missing, stale, or unverifiable required evidence leaves the claim unverified or unknown.\n"
+      },
+      {
+        "id": "L9-UNKNOWN-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+      },
+      {
+        "id": "L9-HARD-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "An applicable hard constraint is non-compensable; confidence, probability, utility, ranking, optimization, or other soft objectives cannot override it.\n"
+      },
+      {
+        "id": "L9-PROV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+      },
+      {
+        "id": "L9-COORD-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A derived result is valid only against its declared governing coordinates; a material coordinate change makes it non-current until compatibility is proven or it is recomputed.\n"
+      },
+      {
+        "id": "L9-COMPAT-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+      },
+      {
+        "id": "L9-PROJECTION-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+      },
+      {
+        "id": "L9-STRATEGY-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+      },
+      {
+        "id": "L9-SV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "For an assessment asserting quantified Strategic Value, declare the objective, compatible utility units, feasible counterfactual baseline, bounded horizon, applicable discount and utility-flow basis, model/evidence coordinates and material uncertainty. Unknown or incompatible inputs cannot establish a complete Strategic Value ranking. For a Strategic Value claim, a counterfactual comparison must identify the same decision-relevant initial conditions, utility measure, exogenous context and time basis across intervention and baseline worlds, or explicitly quantify their divergence. A convenient scenario pairing or historical correlation is not evidence of an identifiable causal intervention effect."
+      },
+      {
+        "id": "L9-SV-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "For an assessment asserting quantified Strategic Value, every material consequence must have an exhaustive, mutually exclusive accounting partition across IEV, SFV, DC, ERL and OC. Reconcile gross and net utility, common causal/time identities, separately subtracted versus embedded costs and losses, overlaps, attribution and probability weighting; conflicting or missing coverage remains Unknown or conditional, not zero."
+      },
+      {
+        "id": "L9-SVQ-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "When a consumer asserts a qualitative Strategic Value appraisal for a discretionary option, it must state the objective, beneficiary, feasible comparison or baseline, causal rationale, material beneficial and adverse effects (including displaced burdens on other affected beneficiaries), and which claims are observed, hypothesized, contradicted, or Unknown. An unquantified appraisal may express conditional direction or potential but must not be passed off as a computed Strategic Value, complete ranking, independently verified result, or action permission. Applicable mandatory obligations and hard constraints remain binding."
+      },
+      {
+        "id": "L9-SVQ-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A claim of realized Strategic Value compounding requires evidence that an attributable durable effect of an earlier intervention was consumed by a later authorized action or decision and produced a supported additional net objective improvement relative to a stated later comparison. Potential reuse, stored records, duplicated transmissions, feedback traffic, connectivity, or an unchanged repeated effect do not establish realized compounding; material offsetting consequences and Unknown attribution remain explicit."
+      }
+    ]
+  },
+  "projection_digest": "sha256:3ed989de19dc5660f78e5d99c782bf72e7db611c3e75cbe0092c53da97b8b006",
+  "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+  "projection_profile_ref": "l9.projection/strategic-value@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+  "source_ref": "l9.source/invariants@1"
+}

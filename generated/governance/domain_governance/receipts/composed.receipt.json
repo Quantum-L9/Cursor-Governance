@@ -1,0 +1,421 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.compose/governance@1#l9.projection/governance@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+      "path": "semantics/composed_projection.schema.yaml",
+      "ref": "l9.schema/composed-projection@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:dd1e859497d33f186ccbc2cacd8c179cd791c19d9541e1dbe130cc343846bf7d",
+      "path": "semantics/composition_engine_contract.yaml",
+      "ref": "l9.compiler/composition-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "path": "semantics/composition_profiles.yaml",
+      "ref": "l9.composition-profiles/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "source_registry": {
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:bd0b28a58a4897d5154b61fc2e0b49a389b86f33fbf37cbf7cfc6c4d2c156f76",
+      "ref": "l9.projection/governance@1#l9.source/authority-model@1"
+    },
+    {
+      "digest": "sha256:346b9249c090b7c7628d64bdec47c22d87c94a15c384aa454fc12834ccdf0a8d",
+      "ref": "l9.projection/governance@1#l9.source/lifecycle@1"
+    },
+    {
+      "digest": "sha256:ceef3451ce6364d92b77fc79884c8c3f0567dae4b8d113c2b37759989a6cd513",
+      "ref": "l9.projection/governance@1#l9.source/invariants@1"
+    },
+    {
+      "digest": "sha256:c017e0514a5ea046c4b98c28fdeba2d6fd53c59d370d4d0f41e9398591486c6f",
+      "ref": "l9.projection/governance@1#l9.source/contracts@1"
+    }
+  ],
+  "operation": "composition",
+  "output": {
+    "digest": "sha256:1b6ec60fdd9e3a9999941f3396873fcfcdf94b8d4028b6fe730011311b9d8754",
+    "ref": "l9.compose/governance@1#l9.projection/governance@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "profile": {
+    "digest": "sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70",
+    "ref": "l9.compose/governance@1"
+  },
+  "receipt_digest": "sha256:1f2cfa7a3e1ed2a03ad282f9a32b77c56374fd52214fd8f2453addc56e700765",
+  "receipt_identity": "l9.receipt-instance/88df8264aa1483ded7cff3cc763ffc108007d947ef220f4983632e439373e715",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "components": {
+      "l9.projection/governance@1#l9.source/authority-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 4,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.governance/v1",
+            "schema_artifact": {
+              "digest": "sha256:ece76ec1777dea499e87196147ba945d5dd6f85b60b49a1b92c209665531e9f6",
+              "path": "semantics/domain_governance_projection.schema.yaml",
+              "ref": "l9.schema/domain-governance-projection@1",
+              "schema_id": "l9.projection.domain.governance/v1"
+            },
+            "source_class": "authority_model",
+            "source_ref": "l9.source/authority-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+            "ref": "l9.projection/governance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:bd0b28a58a4897d5154b61fc2e0b49a389b86f33fbf37cbf7cfc6c4d2c156f76",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 6,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/authority_model.yaml",
+            "ref": "l9.source/authority-model@1",
+            "source_class": "authority_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+        "projection_profile_ref": "l9.projection/governance@1",
+        "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+        "source_ref": "l9.source/authority-model@1"
+      },
+      "l9.projection/governance@1#l9.source/contracts@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.governance/v1",
+            "schema_artifact": {
+              "digest": "sha256:ece76ec1777dea499e87196147ba945d5dd6f85b60b49a1b92c209665531e9f6",
+              "path": "semantics/domain_governance_projection.schema.yaml",
+              "ref": "l9.schema/domain-governance-projection@1",
+              "schema_id": "l9.projection.domain.governance/v1"
+            },
+            "source_class": "contracts",
+            "source_ref": "l9.source/contracts@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+            "ref": "l9.projection/governance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:c017e0514a5ea046c4b98c28fdeba2d6fd53c59d370d4d0f41e9398591486c6f",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 4,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/contracts.yaml",
+            "ref": "l9.source/contracts@1",
+            "source_class": "contracts",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+        "projection_profile_ref": "l9.projection/governance@1",
+        "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+        "source_ref": "l9.source/contracts@1"
+      },
+      "l9.projection/governance@1#l9.source/invariants@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 1,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.governance/v1",
+            "schema_artifact": {
+              "digest": "sha256:ece76ec1777dea499e87196147ba945d5dd6f85b60b49a1b92c209665531e9f6",
+              "path": "semantics/domain_governance_projection.schema.yaml",
+              "ref": "l9.schema/domain-governance-projection@1",
+              "schema_id": "l9.projection.domain.governance/v1"
+            },
+            "source_class": "invariants",
+            "source_ref": "l9.source/invariants@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+            "ref": "l9.projection/governance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:ceef3451ce6364d92b77fc79884c8c3f0567dae4b8d113c2b37759989a6cd513",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 15,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/invariants.yaml",
+            "ref": "l9.source/invariants@1",
+            "source_class": "invariants",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+        "projection_profile_ref": "l9.projection/governance@1",
+        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_ref": "l9.source/invariants@1"
+      },
+      "l9.projection/governance@1#l9.source/lifecycle@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.governance/v1",
+            "schema_artifact": {
+              "digest": "sha256:ece76ec1777dea499e87196147ba945d5dd6f85b60b49a1b92c209665531e9f6",
+              "path": "semantics/domain_governance_projection.schema.yaml",
+              "ref": "l9.schema/domain-governance-projection@1",
+              "schema_id": "l9.projection.domain.governance/v1"
+            },
+            "source_class": "lifecycle",
+            "source_ref": "l9.source/lifecycle@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+            "ref": "l9.projection/governance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:346b9249c090b7c7628d64bdec47c22d87c94a15c384aa454fc12834ccdf0a8d",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 1,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/lifecycle.yaml",
+            "ref": "l9.source/lifecycle@1",
+            "source_class": "lifecycle",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+        "projection_profile_ref": "l9.projection/governance@1",
+        "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
+        "source_ref": "l9.source/lifecycle@1"
+      }
+    },
+    "coverage": "complete",
+    "criteria": {
+      "component_freshness": {
+        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "status": "pass"
+      },
+      "component_provenance": {
+        "components": [
+          "l9.projection/governance@1#l9.source/authority-model@1",
+          "l9.projection/governance@1#l9.source/contracts@1",
+          "l9.projection/governance@1#l9.source/invariants@1",
+          "l9.projection/governance@1#l9.source/lifecycle@1"
+        ],
+        "status": "pass"
+      },
+      "composition_digest": {
+        "digest": "sha256:1b6ec60fdd9e3a9999941f3396873fcfcdf94b8d4028b6fe730011311b9d8754",
+        "status": "pass"
+      },
+      "composition_equivalence": {
+        "status": "pass"
+      },
+      "composition_profile_currentness": {
+        "digest": "sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70",
+        "ref": "l9.compose/governance@1",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:e0bb552346cb5643ff619d0f5aff9ef3341763414d256966331983af787dbf07",
+        "path": "composed/l9.compose_governance_1_l9.projection_governance_1.composed.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+          "path": "semantics/composed_projection.schema.yaml",
+          "ref": "l9.schema/composed-projection@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+        "namespaces": [
+          "authority_model",
+          "lifecycle",
+          "invariants",
+          "contracts"
+        ],
+        "protocol": "l9.payload-validation/source-class-dispatch@1",
+        "schema": "l9.composed-projection.domain.governance/v1",
+        "schema_artifact": {
+          "digest": "sha256:a45dff944664be7d84bf90a685488afe9221cf11925b4689b8ecfc76f97d2277",
+          "path": "semantics/domain_governance_composition.schema.yaml",
+          "ref": "l9.schema/domain-governance-composition@1",
+          "schema_id": "l9.composed-projection.domain.governance/v1"
+        },
+        "status": "pass"
+      }
+    },
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

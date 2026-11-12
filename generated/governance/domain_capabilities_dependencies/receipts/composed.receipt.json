@@ -1,0 +1,601 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.compose/capabilities-dependencies@1#l9.projection/capabilities-dependencies@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+      "path": "semantics/composed_projection.schema.yaml",
+      "ref": "l9.schema/composed-projection@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:dd1e859497d33f186ccbc2cacd8c179cd791c19d9541e1dbe130cc343846bf7d",
+      "path": "semantics/composition_engine_contract.yaml",
+      "ref": "l9.compiler/composition-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "path": "semantics/composition_profiles.yaml",
+      "ref": "l9.composition-profiles/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "source_registry": {
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:1e737f890501fbd75c4605811a09949dc64cf0c52780ac4ea4b9a78fd9385743",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1"
+    },
+    {
+      "digest": "sha256:d265a903045de6f59d84239a9817054971ed81f32039c12cc762b5dbb8823a51",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/capability-resolution@1"
+    },
+    {
+      "digest": "sha256:c31d74f86083399c345a1a3662dce7351c4d4775a6951b22e46c7126ac239bc3",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/semantic-dependency-model@1"
+    },
+    {
+      "digest": "sha256:6cb66a6e557a568f55de2862c06eb079b70773a0f05ebb1d7053c9c851220497",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1"
+    },
+    {
+      "digest": "sha256:506a2cd514646f1ed915d406cd8782d412a3ecb8cf777475bf4079857163fadf",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/invariants@1"
+    },
+    {
+      "digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+      "ref": "l9.projection/capabilities-dependencies@1#l9.source/contracts@1"
+    }
+  ],
+  "operation": "composition",
+  "output": {
+    "digest": "sha256:6352bd71c1f525ef693fb5f64ac602819ddf96d3fa60e51a4188199ced7404c5",
+    "ref": "l9.compose/capabilities-dependencies@1#l9.projection/capabilities-dependencies@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "profile": {
+    "digest": "sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3",
+    "ref": "l9.compose/capabilities-dependencies@1"
+  },
+  "receipt_digest": "sha256:fb452cc56326cffbf8b9d216073c1cb60044d8173442b242812bd31f2c22b82f",
+  "receipt_identity": "l9.receipt-instance/b959bc965d83a0945c3afd009b73aeaedecd9a19613fbfbe76fc53a6c68bdce6",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "components": {
+      "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "capabilities",
+            "source_ref": "l9.source/capabilities@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:1e737f890501fbd75c4605811a09949dc64cf0c52780ac4ea4b9a78fd9385743",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 6,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/capabilities.yaml",
+            "ref": "l9.source/capabilities@1",
+            "source_class": "capabilities",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
+        "source_ref": "l9.source/capabilities@1"
+      },
+      "l9.projection/capabilities-dependencies@1#l9.source/capability-resolution@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "capability_resolution",
+            "source_ref": "l9.source/capability-resolution@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:d265a903045de6f59d84239a9817054971ed81f32039c12cc762b5dbb8823a51",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 4,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/capability_resolution.yaml",
+            "ref": "l9.source/capability-resolution@1",
+            "source_class": "capability_resolution",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+        "source_ref": "l9.source/capability-resolution@1"
+      },
+      "l9.projection/capabilities-dependencies@1#l9.source/contracts@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "contracts",
+            "source_ref": "l9.source/contracts@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 2,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/contracts.yaml",
+            "ref": "l9.source/contracts@1",
+            "source_class": "contracts",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+        "source_ref": "l9.source/contracts@1"
+      },
+      "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "dependency_archetypes",
+            "source_ref": "l9.source/dependency-archetypes@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:6cb66a6e557a568f55de2862c06eb079b70773a0f05ebb1d7053c9c851220497",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 2,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/dependency_archetypes.yaml",
+            "ref": "l9.source/dependency-archetypes@1",
+            "source_class": "dependency_archetypes",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+        "source_ref": "l9.source/dependency-archetypes@1"
+      },
+      "l9.projection/capabilities-dependencies@1#l9.source/invariants@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "invariants",
+            "source_ref": "l9.source/invariants@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:506a2cd514646f1ed915d406cd8782d412a3ecb8cf777475bf4079857163fadf",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 8,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/invariants.yaml",
+            "ref": "l9.source/invariants@1",
+            "source_class": "invariants",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_ref": "l9.source/invariants@1"
+      },
+      "l9.projection/capabilities-dependencies@1#l9.source/semantic-dependency-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:target_rendering_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.capabilities-dependencies/v1",
+            "schema_artifact": {
+              "digest": "sha256:5c874c333a4be19b71a687101e52f54d26e6c6b8e03029e495511a7b02dcb3d5",
+              "path": "semantics/domain_capabilities_dependencies_projection.schema.yaml",
+              "ref": "l9.schema/domain-capabilities-dependencies-projection@1",
+              "schema_id": "l9.projection.domain.capabilities-dependencies/v1"
+            },
+            "source_class": "semantic_dependency_model",
+            "source_ref": "l9.source/semantic-dependency-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+            "ref": "l9.projection/capabilities-dependencies@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:c31d74f86083399c345a1a3662dce7351c4d4775a6951b22e46c7126ac239bc3",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 2,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/semantic_dependency_model.yaml",
+            "ref": "l9.source/semantic-dependency-model@1",
+            "source_class": "semantic_dependency_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+        "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+        "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
+        "source_ref": "l9.source/semantic-dependency-model@1"
+      }
+    },
+    "coverage": "complete",
+    "criteria": {
+      "component_freshness": {
+        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "status": "pass"
+      },
+      "component_provenance": {
+        "components": [
+          "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1",
+          "l9.projection/capabilities-dependencies@1#l9.source/capability-resolution@1",
+          "l9.projection/capabilities-dependencies@1#l9.source/contracts@1",
+          "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1",
+          "l9.projection/capabilities-dependencies@1#l9.source/invariants@1",
+          "l9.projection/capabilities-dependencies@1#l9.source/semantic-dependency-model@1"
+        ],
+        "status": "pass"
+      },
+      "composition_digest": {
+        "digest": "sha256:6352bd71c1f525ef693fb5f64ac602819ddf96d3fa60e51a4188199ced7404c5",
+        "status": "pass"
+      },
+      "composition_equivalence": {
+        "status": "pass"
+      },
+      "composition_profile_currentness": {
+        "digest": "sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3",
+        "ref": "l9.compose/capabilities-dependencies@1",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:cb0f80c194e9b752416cdf5d74207c79cc56d8c6adb9723b113b32f6aa03d45a",
+        "path": "composed/l9.compose_capabilities-dependencies_1_l9.projection_capabilities-dependencies_1.composed.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+          "path": "semantics/composed_projection.schema.yaml",
+          "ref": "l9.schema/composed-projection@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+        "namespaces": [
+          "capabilities",
+          "capability_resolution",
+          "semantic_dependency_model",
+          "dependency_archetypes",
+          "invariants",
+          "contracts"
+        ],
+        "protocol": "l9.payload-validation/source-class-dispatch@1",
+        "schema": "l9.composed-projection.domain.capabilities-dependencies/v1",
+        "schema_artifact": {
+          "digest": "sha256:1e6eec1461c9be5fe68dbc1c3e22124ebd5606a03c2ad858b03f93900be65e03",
+          "path": "semantics/domain_capabilities_dependencies_composition.schema.yaml",
+          "ref": "l9.schema/domain-capabilities-dependencies-composition@1",
+          "schema_id": "l9.composed-projection.domain.capabilities-dependencies/v1"
+        },
+        "status": "pass"
+      }
+    },
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

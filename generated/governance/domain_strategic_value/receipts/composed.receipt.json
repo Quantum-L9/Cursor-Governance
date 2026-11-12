@@ -1,0 +1,421 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.compose/strategic-value@1#l9.projection/strategic-value@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+      "path": "semantics/composed_projection.schema.yaml",
+      "ref": "l9.schema/composed-projection@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:dd1e859497d33f186ccbc2cacd8c179cd791c19d9541e1dbe130cc343846bf7d",
+      "path": "semantics/composition_engine_contract.yaml",
+      "ref": "l9.compiler/composition-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "path": "semantics/composition_profiles.yaml",
+      "ref": "l9.composition-profiles/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "source_registry": {
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:a67a9b2360e781d08f59cde47272b072c45a91b929a956fec71c3e2e1d196135",
+      "ref": "l9.projection/strategic-value@1#l9.source/strategic-value-model@1"
+    },
+    {
+      "digest": "sha256:2c876b24a03ec180318aa8daf43bb9c80c5bfdabf4b7b1eca664494b88dba7ce",
+      "ref": "l9.projection/strategic-value@1#l9.source/vocabulary@1"
+    },
+    {
+      "digest": "sha256:3ed989de19dc5660f78e5d99c782bf72e7db611c3e75cbe0092c53da97b8b006",
+      "ref": "l9.projection/strategic-value@1#l9.source/invariants@1"
+    },
+    {
+      "digest": "sha256:38bc3345f50b849bffa03675318c867eead36e9346015ce3b1e84bc7c588ba34",
+      "ref": "l9.projection/strategic-value@1#l9.source/contracts@1"
+    }
+  ],
+  "operation": "composition",
+  "output": {
+    "digest": "sha256:529d58f49e69d385e986aada59230720b650ce769302b29a2da274cc0d81127f",
+    "ref": "l9.compose/strategic-value@1#l9.projection/strategic-value@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "profile": {
+    "digest": "sha256:56098ba2ec5808c8cd4587ce1946045ef6f2d0abf535f6adbf048bfc8034adc4",
+    "ref": "l9.compose/strategic-value@1"
+  },
+  "receipt_digest": "sha256:fcf084604159c61bc4ec3b3902172a0466622f1a98e96ff5ecaa475391ca6cfb",
+  "receipt_identity": "l9.receipt-instance/99c20b37acee0449d3f7565cb7ed4715088ebae0e734db7e19260e4f037b5151",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "components": {
+      "l9.projection/strategic-value@1#l9.source/contracts@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.strategic-value/v1",
+            "schema_artifact": {
+              "digest": "sha256:9bcdb7ef0f3bd4163cd6e3c28762b09af60ad317c50ff253b3a77f295bbcca7e",
+              "path": "semantics/domain_strategic_value_projection.schema.yaml",
+              "ref": "l9.schema/domain-strategic-value-projection@1",
+              "schema_id": "l9.projection.domain.strategic-value/v1"
+            },
+            "source_class": "contracts",
+            "source_ref": "l9.source/contracts@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+            "ref": "l9.projection/strategic-value@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:38bc3345f50b849bffa03675318c867eead36e9346015ce3b1e84bc7c588ba34",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 1,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/contracts.yaml",
+            "ref": "l9.source/contracts@1",
+            "source_class": "contracts",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+        "projection_profile_ref": "l9.projection/strategic-value@1",
+        "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+        "source_ref": "l9.source/contracts@1"
+      },
+      "l9.projection/strategic-value@1#l9.source/invariants@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.strategic-value/v1",
+            "schema_artifact": {
+              "digest": "sha256:9bcdb7ef0f3bd4163cd6e3c28762b09af60ad317c50ff253b3a77f295bbcca7e",
+              "path": "semantics/domain_strategic_value_projection.schema.yaml",
+              "ref": "l9.schema/domain-strategic-value-projection@1",
+              "schema_id": "l9.projection.domain.strategic-value/v1"
+            },
+            "source_class": "invariants",
+            "source_ref": "l9.source/invariants@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+            "ref": "l9.projection/strategic-value@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:3ed989de19dc5660f78e5d99c782bf72e7db611c3e75cbe0092c53da97b8b006",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 15,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/invariants.yaml",
+            "ref": "l9.source/invariants@1",
+            "source_class": "invariants",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+        "projection_profile_ref": "l9.projection/strategic-value@1",
+        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_ref": "l9.source/invariants@1"
+      },
+      "l9.projection/strategic-value@1#l9.source/strategic-value-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.strategic-value/v1",
+            "schema_artifact": {
+              "digest": "sha256:9bcdb7ef0f3bd4163cd6e3c28762b09af60ad317c50ff253b3a77f295bbcca7e",
+              "path": "semantics/domain_strategic_value_projection.schema.yaml",
+              "ref": "l9.schema/domain-strategic-value-projection@1",
+              "schema_id": "l9.projection.domain.strategic-value/v1"
+            },
+            "source_class": "strategic_value_model",
+            "source_ref": "l9.source/strategic-value-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+            "ref": "l9.projection/strategic-value@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:a67a9b2360e781d08f59cde47272b072c45a91b929a956fec71c3e2e1d196135",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 18,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:28156a3363488861fe18ee1647f5851128402e4cac93dd68319a82dab42efc69",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/strategic_value_model.yaml",
+            "ref": "l9.source/strategic-value-model@1",
+            "source_class": "strategic_value_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+        "projection_profile_ref": "l9.projection/strategic-value@1",
+        "source_digest": "sha256:28156a3363488861fe18ee1647f5851128402e4cac93dd68319a82dab42efc69",
+        "source_ref": "l9.source/strategic-value-model@1"
+      },
+      "l9.projection/strategic-value@1#l9.source/vocabulary@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:provider_implementation_details": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.strategic-value/v1",
+            "schema_artifact": {
+              "digest": "sha256:9bcdb7ef0f3bd4163cd6e3c28762b09af60ad317c50ff253b3a77f295bbcca7e",
+              "path": "semantics/domain_strategic_value_projection.schema.yaml",
+              "ref": "l9.schema/domain-strategic-value-projection@1",
+              "schema_id": "l9.projection.domain.strategic-value/v1"
+            },
+            "source_class": "vocabulary",
+            "source_ref": "l9.source/vocabulary@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+            "ref": "l9.projection/strategic-value@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:2c876b24a03ec180318aa8daf43bb9c80c5bfdabf4b7b1eca664494b88dba7ce",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 13,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/vocabulary.yaml",
+            "ref": "l9.source/vocabulary@1",
+            "source_class": "vocabulary",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+        "projection_profile_ref": "l9.projection/strategic-value@1",
+        "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+        "source_ref": "l9.source/vocabulary@1"
+      }
+    },
+    "coverage": "complete",
+    "criteria": {
+      "component_freshness": {
+        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "status": "pass"
+      },
+      "component_provenance": {
+        "components": [
+          "l9.projection/strategic-value@1#l9.source/contracts@1",
+          "l9.projection/strategic-value@1#l9.source/invariants@1",
+          "l9.projection/strategic-value@1#l9.source/strategic-value-model@1",
+          "l9.projection/strategic-value@1#l9.source/vocabulary@1"
+        ],
+        "status": "pass"
+      },
+      "composition_digest": {
+        "digest": "sha256:529d58f49e69d385e986aada59230720b650ce769302b29a2da274cc0d81127f",
+        "status": "pass"
+      },
+      "composition_equivalence": {
+        "status": "pass"
+      },
+      "composition_profile_currentness": {
+        "digest": "sha256:56098ba2ec5808c8cd4587ce1946045ef6f2d0abf535f6adbf048bfc8034adc4",
+        "ref": "l9.compose/strategic-value@1",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:384a48c3efe663027a66e2f2ea3cf1eb390a31427ba9572bd54a886b4706bdc0",
+        "path": "composed/l9.compose_strategic-value_1_l9.projection_strategic-value_1.composed.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+          "path": "semantics/composed_projection.schema.yaml",
+          "ref": "l9.schema/composed-projection@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+        "namespaces": [
+          "strategic_value_model",
+          "vocabulary",
+          "invariants",
+          "contracts"
+        ],
+        "protocol": "l9.payload-validation/source-class-dispatch@1",
+        "schema": "l9.composed-projection.domain.strategic-value/v1",
+        "schema_artifact": {
+          "digest": "sha256:9262ff053ec0b75827f3292d62ab879cf345b25d69de407a13b1e1f2ce0ec604",
+          "path": "semantics/domain_strategic_value_composition.schema.yaml",
+          "ref": "l9.schema/domain-strategic-value-composition@1",
+          "schema_id": "l9.composed-projection.domain.strategic-value/v1"
+        },
+        "status": "pass"
+      }
+    },
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

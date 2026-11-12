@@ -1,0 +1,102 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "contracts": [
+      {
+        "applies_to": [
+          "missing_inputs",
+          "unresolved_results",
+          "conflicting_authoritative_claims",
+          "unavailable_capabilities",
+          "degraded_execution",
+          "fallback_paths"
+        ],
+        "forbidden": [
+          "coercing_unknown_to_default_value",
+          "coercing_unknown_to_success_failure_validity_or_authorization",
+          "silent_conflict_reconciliation",
+          "authority_declaration_as_substitute_for_missing_evidence",
+          "silent_semantic_fallback",
+          "cross_owner_impersonation_without_compatibility_and_authority"
+        ],
+        "guarantees": [
+          "unknown_remains_distinguishable_from_known_values_and_success",
+          "conflicting_semantics_are_not_silently_reconciled",
+          "conflict_resolution_does_not_manufacture_missing_evidence_or_prove_unproven_claims",
+          "unavailable_semantics_are_not_replaced_by_undeclared_fallbacks",
+          "authorized_compatible_substitution_preserves_declared_semantic_guarantees"
+        ],
+        "id": "l9.contract/unknown-and-degradation@1",
+        "outcomes": {
+          "refused": "requested_substitution_lacks_compatibility_or_authority",
+          "resolved": "required_semantics_are_known_or_validly_substituted_or_conflict_is_authoritatively_resolved",
+          "unresolved": "unknown_unavailable_or_conflicting_semantics_remain_explicit"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve unknown, unresolved, and conflicting semantics and constrain degraded behavior so unavailable capabilities cannot silently impersonate other semantic owners.\n",
+        "requires": [
+          "unknown_or_unavailable_state_is_explicit",
+          "conflicting_semantics_remain_explicit_until_resolved_by_applicable_authoritative_rule_or_decision",
+          "substitution_has_explicit_compatibility_contract_when_attempted",
+          "substitution_has_applicable_authority_when_attempted"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-UNKNOWN-001",
+          "L9-DEGRADE-001",
+          "L9-COMPAT-001",
+          "L9-AUTH-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "capability_catalogs",
+          "capability_admission",
+          "capability_availability",
+          "authorization",
+          "invocation"
+        ],
+        "forbidden": [
+          "treating_declaration_as_admission",
+          "treating_admission_as_availability",
+          "treating_availability_as_authorization",
+          "treating_authorization_as_availability",
+          "treating_any_single_state_as_invocability_without_required_contract_conditions"
+        ],
+        "guarantees": [
+          "declaration_admission_availability_authorization_and_invocability_remain_distinct",
+          "no_state_implies_another_without_declared_contract_semantics",
+          "invocation_does_not_create_missing_authorization_or_admission"
+        ],
+        "id": "l9.contract/capability-state@1",
+        "outcomes": {
+          "invocable": "all_contract_required_states_and_authority_are_satisfied",
+          "not_invocable": "one_or_more_required_states_or_authority_conditions_fail",
+          "unresolved": "one_or_more_required_capability_states_cannot_be_resolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve the distinction among capability declaration, admission, availability, authorization, and invocability.\n",
+        "requires": [
+          "each_relevant_capability_state_is_explicit",
+          "state_implications_are_defined_only_by_applicable_canonical_contract",
+          "invocation_satisfies_all_required_states_and_authority"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-CAPABILITY-001",
+          "L9-AUTH-001",
+          "L9-PROMOTION-001"
+        ]
+      }
+    ]
+  },
+  "projection_digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+  "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
+  "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+  "source_ref": "l9.source/contracts@1"
+}

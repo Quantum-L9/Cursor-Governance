@@ -1,0 +1,496 @@
+{
+  "claim": "declared semantic compilation executed against exact inputs and profile",
+  "diagnostics": [],
+  "exact_subject_ref": "l9.compose/contracts-conformance@1#l9.projection/contracts-conformance@1",
+  "governing_coordinates": {
+    "artifact_schema": {
+      "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+      "path": "semantics/composed_projection.schema.yaml",
+      "ref": "l9.schema/composed-projection@1"
+    },
+    "compiler_contract": {
+      "digest": "sha256:e2e5252d0971aff31ef66e26894b4fcf1b6d0aff4da6d2d242fdea964354d25c",
+      "path": "semantics/compiler_contract.yaml",
+      "ref": "l9.compiler/generic@1"
+    },
+    "compiler_manifest": {
+      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "path": "semantics/generic_compiler_manifest.yaml",
+      "ref": "l9.generic-compiler/global@1"
+    },
+    "engine_contract": {
+      "digest": "sha256:dd1e859497d33f186ccbc2cacd8c179cd791c19d9541e1dbe130cc343846bf7d",
+      "path": "semantics/composition_engine_contract.yaml",
+      "ref": "l9.compiler/composition-engine@1"
+    },
+    "profile_catalog": {
+      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "path": "semantics/composition_profiles.yaml",
+      "ref": "l9.composition-profiles/global@1"
+    },
+    "receipt_schema": {
+      "digest": "sha256:4343838434514717a9bbfbfa5a9f933444cc1d801cc579165aabc3afb7633626",
+      "path": "semantics/compiler_receipt.schema.yaml",
+      "ref": "l9.schema/compiler-receipt@1"
+    },
+    "repository": "Quantum-L9/.github",
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "source_registry": {
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
+      "path": "semantics/canonical_sources.yaml",
+      "ref": "l9.canonical-sources/global@1"
+    }
+  },
+  "inputs": [
+    {
+      "digest": "sha256:f2fc2fe2c5c747a38d48783dfd6948d253fcfead35c5a71373d5b083ac10423c",
+      "ref": "l9.projection/contracts-conformance@1#l9.source/conformance-model@1"
+    },
+    {
+      "digest": "sha256:71e6ae42a94c6f6a0d081595f961cfbd952afbde0ae7e5c1c15538a1b19035fc",
+      "ref": "l9.projection/contracts-conformance@1#l9.source/requirement-model@1"
+    },
+    {
+      "digest": "sha256:bde31acf332b0266eedcff8c7e2206c3ef77f1bd6f41d9d1dfd87737e08397d9",
+      "ref": "l9.projection/contracts-conformance@1#l9.source/resolution-model@1"
+    },
+    {
+      "digest": "sha256:bd2e0c617a6b2dd5437cb5e198edea428d2257fa010b1dbb64c05612d12eb3d7",
+      "ref": "l9.projection/contracts-conformance@1#l9.source/invariants@1"
+    },
+    {
+      "digest": "sha256:55f9bf82f0a0f164444501b57973626182befd660a9fa72b8feff6c8429ee7c1",
+      "ref": "l9.projection/contracts-conformance@1#l9.source/contracts@1"
+    }
+  ],
+  "operation": "composition",
+  "output": {
+    "digest": "sha256:19394cef09df860be467591b59cffe152b44e3d603f5264fde0c80845df522ff",
+    "ref": "l9.compose/contracts-conformance@1#l9.projection/contracts-conformance@1"
+  },
+  "producer_identity": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "profile": {
+    "digest": "sha256:2335519ed06fb37316baad61e7b57b80c38728c983711a1cafc48f6dd4a17056",
+    "ref": "l9.compose/contracts-conformance@1"
+  },
+  "receipt_digest": "sha256:8ee8c878011a73d037ee84ad37608291f4e57078979a3dad5c1e3be4fa9ffcb4",
+  "receipt_identity": "l9.receipt-instance/4271831a9cc288a17130ca22e89e41c22b7d86efd34df3c5b7deaa6e9805f258",
+  "receipt_type": "l9.receipt/compilation@1",
+  "result": "pass",
+  "schema": "l9.compiler-receipt/v1",
+  "verification_basis": {
+    "components": {
+      "l9.projection/contracts-conformance@1#l9.source/conformance-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.contracts-conformance/v1",
+            "schema_artifact": {
+              "digest": "sha256:698ecdc504fadf30d0c6bd878339aecb50c639ac5344157f739f9d4d01fb778c",
+              "path": "semantics/domain_contracts_conformance_projection.schema.yaml",
+              "ref": "l9.schema/domain-contracts-conformance-projection@1",
+              "schema_id": "l9.projection.domain.contracts-conformance/v1"
+            },
+            "source_class": "conformance_model",
+            "source_ref": "l9.source/conformance-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+            "ref": "l9.projection/contracts-conformance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:f2fc2fe2c5c747a38d48783dfd6948d253fcfead35c5a71373d5b083ac10423c",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 5,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/conformance_model.yaml",
+            "ref": "l9.source/conformance-model@1",
+            "source_class": "conformance_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+        "projection_profile_ref": "l9.projection/contracts-conformance@1",
+        "source_digest": "sha256:e777a3cb7b8d94e044934d4778045d697bcdd85ecb2ebe241e95fe60bd7141c5",
+        "source_ref": "l9.source/conformance-model@1"
+      },
+      "l9.projection/contracts-conformance@1#l9.source/contracts@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.contracts-conformance/v1",
+            "schema_artifact": {
+              "digest": "sha256:698ecdc504fadf30d0c6bd878339aecb50c639ac5344157f739f9d4d01fb778c",
+              "path": "semantics/domain_contracts_conformance_projection.schema.yaml",
+              "ref": "l9.schema/domain-contracts-conformance-projection@1",
+              "schema_id": "l9.projection.domain.contracts-conformance/v1"
+            },
+            "source_class": "contracts",
+            "source_ref": "l9.source/contracts@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+            "ref": "l9.projection/contracts-conformance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:55f9bf82f0a0f164444501b57973626182befd660a9fa72b8feff6c8429ee7c1",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 1,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/contracts.yaml",
+            "ref": "l9.source/contracts@1",
+            "source_class": "contracts",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+        "projection_profile_ref": "l9.projection/contracts-conformance@1",
+        "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+        "source_ref": "l9.source/contracts@1"
+      },
+      "l9.projection/contracts-conformance@1#l9.source/invariants@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 1,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.contracts-conformance/v1",
+            "schema_artifact": {
+              "digest": "sha256:698ecdc504fadf30d0c6bd878339aecb50c639ac5344157f739f9d4d01fb778c",
+              "path": "semantics/domain_contracts_conformance_projection.schema.yaml",
+              "ref": "l9.schema/domain-contracts-conformance-projection@1",
+              "schema_id": "l9.projection.domain.contracts-conformance/v1"
+            },
+            "source_class": "invariants",
+            "source_ref": "l9.source/invariants@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+            "ref": "l9.projection/contracts-conformance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:bd2e0c617a6b2dd5437cb5e198edea428d2257fa010b1dbb64c05612d12eb3d7",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 33,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/invariants.yaml",
+            "ref": "l9.source/invariants@1",
+            "source_class": "invariants",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+        "projection_profile_ref": "l9.projection/contracts-conformance@1",
+        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_ref": "l9.source/invariants@1"
+      },
+      "l9.projection/contracts-conformance@1#l9.source/requirement-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.contracts-conformance/v1",
+            "schema_artifact": {
+              "digest": "sha256:698ecdc504fadf30d0c6bd878339aecb50c639ac5344157f739f9d4d01fb778c",
+              "path": "semantics/domain_contracts_conformance_projection.schema.yaml",
+              "ref": "l9.schema/domain-contracts-conformance-projection@1",
+              "schema_id": "l9.projection.domain.contracts-conformance/v1"
+            },
+            "source_class": "requirement_model",
+            "source_ref": "l9.source/requirement-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+            "ref": "l9.projection/contracts-conformance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:71e6ae42a94c6f6a0d081595f961cfbd952afbde0ae7e5c1c15538a1b19035fc",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 4,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/requirement_model.yaml",
+            "ref": "l9.source/requirement-model@1",
+            "source_class": "requirement_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+        "projection_profile_ref": "l9.projection/contracts-conformance@1",
+        "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
+        "source_ref": "l9.source/requirement-model@1"
+      },
+      "l9.projection/contracts-conformance@1#l9.source/resolution-model@1": {
+        "criteria": {
+          "declared_constraint:forbidden:execution_publication_or_merge_authority_grant": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:obligation_not_admitted_in_a_selected_source": {
+            "criterion": "source_authority",
+            "owner": "Quantum-L9/.github",
+            "status": "pass"
+          },
+          "declared_constraint:forbidden:repository_local_policy_as_global_law": {
+            "applicable_selections": 0,
+            "criterion": "payload_excludes",
+            "status": "pass"
+          },
+          "envelope_schema": {
+            "schema": {
+              "digest": "sha256:92661e10377a296dc301e993cb1dd2abd14b3d5f4d2c58c801de6063b9ced25e",
+              "path": "semantics/projection_artifact.schema.yaml",
+              "ref": "l9.schema/projection-artifact@1"
+            },
+            "status": "pass"
+          },
+          "payload_schema": {
+            "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+            "protocol": "l9.payload-validation/source-class-dispatch@1",
+            "schema": "l9.projection.domain.contracts-conformance/v1",
+            "schema_artifact": {
+              "digest": "sha256:698ecdc504fadf30d0c6bd878339aecb50c639ac5344157f739f9d4d01fb778c",
+              "path": "semantics/domain_contracts_conformance_projection.schema.yaml",
+              "ref": "l9.schema/domain-contracts-conformance-projection@1",
+              "schema_id": "l9.projection.domain.contracts-conformance/v1"
+            },
+            "source_class": "resolution_model",
+            "source_ref": "l9.source/resolution-model@1",
+            "status": "pass"
+          },
+          "profile_currentness": {
+            "digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+            "ref": "l9.projection/contracts-conformance@1",
+            "status": "pass"
+          },
+          "projection_digest": {
+            "digest": "sha256:bde31acf332b0266eedcff8c7e2206c3ef77f1bd6f41d9d1dfd87737e08397d9",
+            "status": "pass"
+          },
+          "selection_equivalence": {
+            "selectors": 4,
+            "status": "pass"
+          },
+          "source_currentness": {
+            "digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "status": "pass"
+          },
+          "source_identity": {
+            "path": "semantics/resolution_model.yaml",
+            "ref": "l9.source/resolution-model@1",
+            "source_class": "resolution_model",
+            "status": "pass"
+          }
+        },
+        "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
+        "projection_profile_ref": "l9.projection/contracts-conformance@1",
+        "source_digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
+        "source_ref": "l9.source/resolution-model@1"
+      }
+    },
+    "coverage": "complete",
+    "criteria": {
+      "component_freshness": {
+        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "status": "pass"
+      },
+      "component_provenance": {
+        "components": [
+          "l9.projection/contracts-conformance@1#l9.source/conformance-model@1",
+          "l9.projection/contracts-conformance@1#l9.source/contracts@1",
+          "l9.projection/contracts-conformance@1#l9.source/invariants@1",
+          "l9.projection/contracts-conformance@1#l9.source/requirement-model@1",
+          "l9.projection/contracts-conformance@1#l9.source/resolution-model@1"
+        ],
+        "status": "pass"
+      },
+      "composition_digest": {
+        "digest": "sha256:19394cef09df860be467591b59cffe152b44e3d603f5264fde0c80845df522ff",
+        "status": "pass"
+      },
+      "composition_equivalence": {
+        "status": "pass"
+      },
+      "composition_profile_currentness": {
+        "digest": "sha256:2335519ed06fb37316baad61e7b57b80c38728c983711a1cafc48f6dd4a17056",
+        "ref": "l9.compose/contracts-conformance@1",
+        "status": "pass"
+      },
+      "delivered_bytes": {
+        "content_digest": "sha256:f16b7fdc1c91e195d51b7366e9003d8da4c75e5c7ae6f973df9a7d598ca7a7a3",
+        "path": "composed/l9.compose_contracts-conformance_1_l9.projection_contracts-conformance_1.composed.json",
+        "status": "pass"
+      },
+      "envelope_schema": {
+        "schema": {
+          "digest": "sha256:b5cf608fb33626dd6d8450040957e884c8ea3de49804895c98f2de03059c83f8",
+          "path": "semantics/composed_projection.schema.yaml",
+          "ref": "l9.schema/composed-projection@1"
+        },
+        "status": "pass"
+      },
+      "payload_schema": {
+        "dispatch_basis": "verified_profile_output_schema_and_verified_source_class",
+        "namespaces": [
+          "conformance_model",
+          "requirement_model",
+          "resolution_model",
+          "invariants",
+          "contracts"
+        ],
+        "protocol": "l9.payload-validation/source-class-dispatch@1",
+        "schema": "l9.composed-projection.domain.contracts-conformance/v1",
+        "schema_artifact": {
+          "digest": "sha256:d2df47dc734626f92228b5b872df99711bdb1aeb1da2bd58ebb0d71895c7f1e9",
+          "path": "semantics/domain_contracts_conformance_composition.schema.yaml",
+          "ref": "l9.schema/domain-contracts-conformance-composition@1",
+          "schema_id": "l9.composed-projection.domain.contracts-conformance/v1"
+        },
+        "status": "pass"
+      }
+    },
+    "unresolved_criteria": [],
+    "verification_mode": "independent_reresolution_from_governing_authority"
+  }
+}

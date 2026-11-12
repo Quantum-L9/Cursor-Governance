@@ -57,6 +57,36 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": "l9.compose/pr-audit@1",
         "output": Path("generated/governance/pr_audit"),
     },
+    # Domain projections (Quantum-L9/.github v3.36.0, ADR-033) bound by architect mode
+    # (governance/architect-mode/MODE.yaml).
+    "l9.projection/architecture@1": {
+        "composition_profile": "l9.compose/architecture@1",
+        "output": Path("generated/governance/domain_architecture"),
+    },
+    "l9.projection/governance@1": {
+        "composition_profile": "l9.compose/governance@1",
+        "output": Path("generated/governance/domain_governance"),
+    },
+    "l9.projection/evidence-provenance@1": {
+        "composition_profile": "l9.compose/evidence-provenance@1",
+        "output": Path("generated/governance/domain_evidence_provenance"),
+    },
+    "l9.projection/contracts-conformance@1": {
+        "composition_profile": "l9.compose/contracts-conformance@1",
+        "output": Path("generated/governance/domain_contracts_conformance"),
+    },
+    "l9.projection/capabilities-dependencies@1": {
+        "composition_profile": "l9.compose/capabilities-dependencies@1",
+        "output": Path("generated/governance/domain_capabilities_dependencies"),
+    },
+    "l9.projection/strategic-value@1": {
+        "composition_profile": "l9.compose/strategic-value@1",
+        "output": Path("generated/governance/domain_strategic_value"),
+    },
+    "l9.projection/signals@1": {
+        "composition_profile": "l9.compose/signals@1",
+        "output": Path("generated/governance/domain_signals"),
+    },
 }
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 

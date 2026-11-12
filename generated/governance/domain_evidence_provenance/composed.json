@@ -1,0 +1,943 @@
+{
+  "components": [
+    {
+      "projection_digest": "sha256:597ff3a590bb795ac38daec8867c51e30de6714794be4ced173a4e15bd3f3d8f",
+      "projection_ref": "l9.projection/evidence-provenance@1#l9.source/receipt-catalog@1",
+      "source_class": "receipt_catalog",
+      "source_digest": "sha256:ec7a06224263cad293b79f1f4f832bffc6b4f8eae4980bf8cbfc01bba8af8ca5",
+      "source_ref": "l9.source/receipt-catalog@1"
+    },
+    {
+      "projection_digest": "sha256:1e56111c93decbfaf646f5e78a14647dfd6303fc515a5b8fcd8bf14b69e03300",
+      "projection_ref": "l9.projection/evidence-provenance@1#l9.source/artifact-model@1",
+      "source_class": "artifact_model",
+      "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
+      "source_ref": "l9.source/artifact-model@1"
+    },
+    {
+      "projection_digest": "sha256:8bae26cd7f9051f50e2fa30abfc106eae2e041aadd3f0bafbe90a848450fc9ff",
+      "projection_ref": "l9.projection/evidence-provenance@1#l9.source/semantic-dependency-model@1",
+      "source_class": "semantic_dependency_model",
+      "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
+      "source_ref": "l9.source/semantic-dependency-model@1"
+    },
+    {
+      "projection_digest": "sha256:31a9eb936ad428c4899ab052cf6ef9ad4dc9bd47f63bb01c6ba0362746f9d8c9",
+      "projection_ref": "l9.projection/evidence-provenance@1#l9.source/invariants@1",
+      "source_class": "invariants",
+      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "projection_digest": "sha256:badcc468b04c20ae1443913481ac395552d0b5d6d1d6de607947ebc0cd169353",
+      "projection_ref": "l9.projection/evidence-provenance@1#l9.source/contracts@1",
+      "source_class": "contracts",
+      "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+      "source_ref": "l9.source/contracts@1"
+    }
+  ],
+  "composition_digest": "sha256:ebefe2969be1d460096c2ac02a5e43ce4e27c5346614c4b406134cb6af9dc217",
+  "composition_profile": {
+    "digest": "sha256:49dbb04dd497cbd5e0bd2f3d87556323e19d388eb2734d54b809e81ac25fc7a3",
+    "ref": "l9.compose/evidence-provenance@1"
+  },
+  "payload": {
+    "artifact_model": {
+      "artifacts": {
+        "candidate_artifact": {
+          "authority_class": "candidate",
+          "required": [
+            "source_refs",
+            "source_digests",
+            "compilation_profile_ref",
+            "payload",
+            "artifact_digest"
+          ]
+        },
+        "canonical_artifact": {
+          "authority_class": "canonical",
+          "immutable_by_digest": true
+        },
+        "compiled_artifact": {
+          "authority_class": "derived",
+          "required": [
+            "source_refs",
+            "source_digests",
+            "compiler_version",
+            "compilation_profile_ref",
+            "artifact_digest"
+          ]
+        },
+        "composed_projection": {
+          "authority_class": "derived",
+          "required": [
+            "component_projection_refs",
+            "component_projection_digests",
+            "composition_profile_ref",
+            "composition_profile_digest",
+            "payload",
+            "artifact_digest"
+          ]
+        },
+        "derived_artifact": {
+          "authority_class": "derived",
+          "required": [
+            "source_refs",
+            "source_digests",
+            "derivation_profile_ref",
+            "derivation_profile_digest",
+            "payload",
+            "artifact_digest"
+          ]
+        },
+        "distribution_packet": {
+          "authority_class": "derived",
+          "required": [
+            "profile_coordinates",
+            "digests",
+            "consumer_selectors",
+            "rollout_mode",
+            "distribution_metadata"
+          ]
+        },
+        "identity_assertion": {
+          "authority_class": "evidence",
+          "required": [
+            "subject_ref",
+            "product_ref",
+            "resolved_dimensions",
+            "evidence_refs",
+            "resolver_ref",
+            "governing_coordinates",
+            "result",
+            "assertion_digest"
+          ],
+          "rules": [
+            "identity_assertion_does_not_grant_authority",
+            "material_resolution_input_change_invalidates_currentness",
+            "consumer_must_not_silently_rewrite_asserted_identity"
+          ],
+          "schema_ref": "l9.schema/identity-assertion@1"
+        },
+        "product_manifest": {
+          "authority_class": "derived",
+          "required": [
+            "source_product_topology_ref",
+            "source_product_topology_digest",
+            "resolved_product_kind",
+            "resolved_product_archetype",
+            "resolved_requirement_closure",
+            "resolved_capability_closure",
+            "architecture",
+            "ports",
+            "adapters",
+            "relationships",
+            "provider_bindings",
+            "admission_requirements",
+            "conformance_requirements",
+            "compiler_profile_ref",
+            "provenance",
+            "manifest_digest"
+          ],
+          "rules": [
+            "product_manifest_is_non_owning",
+            "implementation_lowering_requires_resolved_manifest_gate",
+            "manifest_preserves_exact_source_topology_coordinates"
+          ],
+          "schema_ref": "l9.schema/product-manifest@1"
+        },
+        "product_topology": {
+          "authority_class": "candidate",
+          "required": [
+            "product_identity",
+            "identity_topology",
+            "product_kind",
+            "product_archetype",
+            "purpose",
+            "boundary",
+            "capability_refs",
+            "consumption_model",
+            "deployment_model",
+            "contracts",
+            "relationships",
+            "admission",
+            "lifecycle",
+            "conformance",
+            "source_coordinates",
+            "material_unknowns"
+          ],
+          "rules": [
+            "product_topology_is_authoritative_product_contract_when_admitted",
+            "candidate_revision_requires_admission_before_compilation_as_authoritative_input",
+            "product_kind_and_archetype_are_explicit",
+            "compiler_must_not_overwrite_declared_product_semantics"
+          ],
+          "schema_ref": "l9.schema/product-topology@1"
+        },
+        "projection_artifact": {
+          "authority_class": "derived",
+          "required": [
+            "source_ref",
+            "source_digest",
+            "projection_profile_ref",
+            "projection_profile_digest",
+            "payload",
+            "artifact_digest"
+          ]
+        },
+        "published_profile": {
+          "authority_class": "canonical",
+          "required": [
+            "profile_ref",
+            "version",
+            "digest",
+            "status"
+          ]
+        },
+        "receipt": {
+          "authority_class": "evidence",
+          "required": [
+            "receipt_type",
+            "exact_subject_ref",
+            "claim",
+            "governing_coordinates",
+            "observation_or_outcome",
+            "verification_basis",
+            "receipt_digest"
+          ],
+          "semantics_source": "receipt_catalog.yaml"
+        },
+        "validation_receipt": {
+          "authority_class": "evidence",
+          "required": [
+            "candidate_digest",
+            "solver_ref",
+            "solver_version",
+            "solver_profile_digest",
+            "result"
+          ]
+        }
+      },
+      "derivation_rules": [
+        "artifact_digest_is_deterministic",
+        "derived_artifact_never_implicitly_becomes_canonical",
+        "provenance_must_be_complete",
+        "authority_must_not_expand"
+      ]
+    },
+    "contracts": {
+      "contracts": [
+        {
+          "applies_to": [
+            "evidence",
+            "receipts",
+            "attestations",
+            "validation_results",
+            "conformance_results"
+          ],
+          "forbidden": [
+            "ambient_head_phase_or_flag_as_the_only_subject_binding",
+            "producer_verdict_as_the_only_verification_basis",
+            "evidence_as_authorization",
+            "receipt_as_canonical_semantic_authority",
+            "claim_replay_against_an_unbound_or_materially_changed_subject"
+          ],
+          "guarantees": [
+            "claim_scope_is_limited_to_the_declared_subject_and_declared_observation_or_outcome",
+            "verifier_can_resolve_the_subject_criteria_and_evidence_without_relying_only_on_the_recorded_verdict",
+            "receipt_or_evidence_confers_no_semantic_or_execution_authority",
+            "material_subject_change_invalidates_reuse_unless_compatibility_explicitly_preserves_it"
+          ],
+          "id": "l9.contract/evidence-and-receipt@1",
+          "outcomes": {
+            "attested": "claim_is_bound_and_independently_verifiable",
+            "invalid_binding": "claim_does_not_bind_the_subject_or_coordinates_it_asserts",
+            "unverified": "required_evidence_or_binding_is_missing_stale_or_unverifiable"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Bind an evidence or receipt claim to the exact subject, coordinates, criteria, and outcome it attests so the claim can be independently checked.\n",
+          "requires": [
+            "declared_claim",
+            "exact_subject_identity",
+            "governing_subject_coordinates_when_material",
+            "declared_observation_or_outcome",
+            "evidence_or_criteria_sufficient_for_independent_verification"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001",
+            "L9-PROV-001",
+            "L9-COORD-001",
+            "L9-ADMISSION-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "requirements",
+            "controls",
+            "implementations",
+            "verification_claims",
+            "conformance_claims",
+            "completion_claims"
+          ],
+          "forbidden": [
+            "self_attestation_as_the_sole_basis_for_verification",
+            "artifact_presence_as_proof_of_effectiveness",
+            "workflow_presence_as_proof_of_blocking_enforcement",
+            "pass_claim_without_required_evidence",
+            "unknown_or_unverified_as_verified"
+          ],
+          "guarantees": [
+            "requirement_truth_is_not_confused_with_implementation_state",
+            "implementation_presence_is_not_confused_with_verified_effectiveness",
+            "stronger_assurance_claims_require_correspondingly_sufficient_evidence",
+            "missing_stale_or_unverifiable_required_evidence_remains_unverified_or_unknown"
+          ],
+          "id": "l9.contract/assurance-and-verification@1",
+          "outcomes": {
+            "supported": "claim_has_current_sufficient_independently_verifiable_evidence",
+            "unsupported": "evidence_proves_the_claim_is_not_satisfied",
+            "unverified": "required_evidence_is_missing_stale_or_unverifiable"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Separate normative requirements, implementation state, and assurance claims and define when stronger assurance language is permitted.\n",
+          "requires": [
+            "claim_class_is_explicit",
+            "evidence_requirements_for_that_claim_class_are_known",
+            "current_independently_verifiable_evidence_for_every_required_condition"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-ASSURANCE-001",
+            "L9-CORRECTNESS-001",
+            "L9-EVIDENCE-001",
+            "L9-UNKNOWN-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "derived_results",
+            "compiled_artifacts",
+            "projections"
+          ],
+          "forbidden": [
+            "provenance_truncation_that_prevents_authority_resolution",
+            "silently_consuming_non_current_results_as_current",
+            "unbound_reuse_across_material_coordinate_change"
+          ],
+          "guarantees": [
+            "authoritative_inputs_and_transformations_are_resolvable",
+            "validity_is_evaluated_against_declared_coordinates",
+            "material_coordinate_change_makes_affected_results_non_current_until_recomputed_or_compatibility_is_proven"
+          ],
+          "id": "l9.contract/provenance-and-coordinate@1",
+          "outcomes": {
+            "current": "declared_coordinates_match_or_compatibility_is_proven",
+            "non_current": "a_material_governing_coordinate_changed_without_compatibility_proof",
+            "unresolved": "required_provenance_or_coordinate_cannot_be_resolved"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Bind derived validity to resolvable authoritative inputs, transformations, and governing coordinates.\n",
+          "requires": [
+            "authoritative_input_references",
+            "authoritative_input_revisions_or_digests_when_revisioned",
+            "declared_transformation_identity",
+            "all_governing_coordinates_material_to_validity"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROV-001",
+            "L9-COORD-001",
+            "L9-REVISION-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "admitted_semantic_revisions",
+            "corrected_semantics",
+            "superseding_semantics"
+          ],
+          "forbidden": [
+            "in_place_rewrite_of_admitted_semantic_content",
+            "revision_identity_reuse_for_changed_meaning",
+            "hidden_rebinding_of_prior_admission_or_evidence"
+          ],
+          "guarantees": [
+            "prior_admitted_meaning_remains_addressable",
+            "material_change_receives_a_distinct_revision_identity",
+            "decisions_bound_to_prior_revisions_are_not_silently_rebound"
+          ],
+          "id": "l9.contract/revision-and-supersession@1",
+          "outcomes": {
+            "preserved": "revision_semantics_are_unchanged",
+            "successor_required": "material_semantic_change_requires_new_revision_identity",
+            "violated": "admitted_history_was_rewritten_or_reused_for_changed_meaning"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Preserve admitted historical meaning by representing correction and change as successor or supersession rather than in-place semantic rewrite.\n",
+          "requires": [
+            "immutable_revision_identity_for_admitted_semantics",
+            "successor_or_supersession_relationship_for_material_semantic_change"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-REVISION-001",
+            "L9-ADMISSION-001",
+            "L9-COORD-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "domain_projection_sets",
+            "domain_consumer_bindings",
+            "composition_engines",
+            "receipts"
+          ],
+          "forbidden": [
+            "a_second_digest_subject_or_output_form_for_a_projection_artifact_or_its_receipt",
+            "timestamps_in_a_deterministic_content_identity",
+            "ambiguous_serialization",
+            "undeclared_transformation",
+            "presenting_a_stale_composition_as_current",
+            "provenance_as_proof_of_correctness"
+          ],
+          "guarantees": [
+            "the_content_digest_excludes_nondeterministic_metadata",
+            "the_content_digest_and_the_evaluation_receipt_digest_are_distinct",
+            "a_change_to_any_recorded_source_profile_binding_or_contract_digest_or_any_material_coordinate_requires_revalidation",
+            "replay_from_the_recorded_coordinates_reproduces_the_content_digest",
+            "material_unknowns_of_the_inputs_are_preserved"
+          ],
+          "id": "l9.contract/domain-composition-provenance@1",
+          "outcomes": {
+            "satisfied": "provenance_complete_and_current",
+            "unresolved": "required_coordinate_unavailable",
+            "violated": "provenance_incomplete_or_falsified"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Keep every composition of domain projections independently traceable to its exact inputs, the profiles and binding that selected them, the contracts that governed composition, and the engine that produced it, and make it non-current when any of those coordinates changes.",
+          "requires": [
+            "source_repository_and_source_commit_are_recorded",
+            "each_canonical_artifact_id_and_canonical_artifact_digest_is_recorded",
+            "each_profile_id_and_profile_digest_is_recorded",
+            "the_domain_consumer_binding_id_and_binding_digest_are_recorded",
+            "each_governing_composition_contract_id_and_its_catalog_digest_are_recorded",
+            "the_projection_and_composition_engine_identity_and_version_are_recorded",
+            "digests_use_the_canonical_json_and_semantic_digest_conventions_of_l9_compiler_projection_engine_at_1"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROV-001",
+            "L9-COORD-001",
+            "L9-REVISION-001",
+            "L9-DERIVED-001",
+            "L9-EVIDENCE-001",
+            "L9-UNKNOWN-001"
+          ]
+        }
+      ]
+    },
+    "invariants": {
+      "invariants": [
+        {
+          "id": "L9-AUTH-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "No component may expand its own authority.\n"
+        },
+        {
+          "id": "L9-DERIVED-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Derived artifacts do not become canonical authority automatically.\n"
+        },
+        {
+          "id": "L9-EVIDENCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+        },
+        {
+          "id": "L9-ASSURANCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Normative requirement, implementation state, and assurance state are distinct. A claim that a requirement or control is implemented, verified, blocking, conformant, or complete requires current, independently verifiable evidence appropriate to that claim; missing, stale, or unverifiable required evidence leaves the claim unverified or unknown.\n"
+        },
+        {
+          "id": "L9-UNKNOWN-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+        },
+        {
+          "id": "L9-PROV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+        },
+        {
+          "id": "L9-COORD-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A derived result is valid only against its declared governing coordinates; a material coordinate change makes it non-current until compatibility is proven or it is recomputed.\n"
+        },
+        {
+          "id": "L9-COMPAT-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+        },
+        {
+          "id": "L9-REVISION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "The semantic content of an admitted revision is immutable; correction or change creates a successor or supersession rather than rewriting prior meaning.\n"
+        },
+        {
+          "id": "L9-ADMISSION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Authority and admission decisions are bound to the exact subject revision they evaluate; a material change to that subject requires a new decision unless an explicit governing contract preserves compatibility.\n"
+        },
+        {
+          "id": "L9-PROJECTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+        },
+        {
+          "id": "L9-CORRECTNESS-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A candidate, implementation, or generated artifact cannot define or establish its own correctness; correctness must be evaluated against governing criteria whose authority does not derive from the candidate or the process that produced it.\n"
+        },
+        {
+          "id": "L9-IDENTITY-006",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "IdentityAssertion must preserve the exact evidence, resolver, governing coordinates, and provenance supporting the resolved identity dimensions; material evidence or coordinate change invalidates currentness."
+        }
+      ]
+    },
+    "receipt_catalog": {
+      "global_rules": {
+        "declared_observation_or_outcome_is_required": true,
+        "exact_subject_binding_is_required": true,
+        "material_subject_change_makes_prior_receipt_non_current_unless_compatibility_preserves_it": true,
+        "materially_governing_coordinates_must_be_bound": true,
+        "receipt_claim_scope_must_be_explicit": true,
+        "receipt_content_is_immutable_by_digest": true,
+        "receipt_digest_is_required": true,
+        "receipt_does_not_grant_execution_authority": true,
+        "receipt_does_not_grant_semantic_authority": true,
+        "receipt_family_registration_does_not_transfer_domain_semantic_ownership": true,
+        "receipt_is_evidence": true,
+        "receipt_lifecycle_is_defined_separately": true,
+        "receipt_presence_does_not_imply_capability_admission_availability_authorization_or_invocability": true,
+        "result_semantics_remain_owned_by_the_applicable_contract_or_taxonomy": true,
+        "verification_must_not_depend_only_on_the_recorded_verdict": true
+      },
+      "receipt_kernel": {
+        "authority": {
+          "class": "evidence",
+          "grants_execution_authority": false,
+          "grants_semantic_authority": false,
+          "may_replace_admission_decision": false
+        },
+        "currentness": {
+          "currentness_is_authority": false,
+          "rule": "Currentness is evaluated against the receipt's governing coordinates. A material coordinate or subject change makes the receipt non-current unless an explicit compatibility contract preserves applicability.\n"
+        },
+        "field_semantics": {
+          "claim": "Bounded assertion the receipt is evidence for. The claim must not exceed the observation, evaluation, or decision actually evidenced.\n",
+          "exact_subject_ref": "Exact artifact, operation, decision, implementation, repository revision, or other subject to which the receipt's claim applies.\n",
+          "governing_coordinates": "Revisions, digests, profiles, rulesets, bindings, source identities, or other coordinates material to the claim's validity.\n",
+          "observation_or_outcome": "The observation or outcome recorded under the applicable family contract. This field does not create a global result taxonomy.\n",
+          "producer_identity": "Identity of the component, authority, validator, or executor that emitted the receipt. Producer identity does not imply semantic ownership.\n",
+          "receipt_digest": "Deterministic content digest of the receipt under its applicable schema.\n",
+          "receipt_identity": "Stable identity of the emitted evidence artifact. Identity is distinct from the subject being evidenced.\n",
+          "receipt_type": "Versioned receipt-family identity registered in this catalog or in an explicitly owned domain extension.\n",
+          "verification_basis": "Evidence, criteria, references, proofs, or reproducible checks sufficient for an independent verifier to assess the receipt's bounded claim without relying only on the producer's recorded verdict.\n"
+        },
+        "forbidden": [
+          "ambient_head_phase_or_flag_as_only_subject_binding",
+          "producer_verdict_as_only_verification_basis",
+          "receipt_as_authorization",
+          "receipt_as_canonical_semantic_source",
+          "receipt_rebinding_to_materially_changed_subject",
+          "silent_result_semantic_reinterpretation"
+        ],
+        "required_semantics": [
+          "receipt_type",
+          "receipt_identity",
+          "exact_subject_ref",
+          "claim",
+          "governing_coordinates",
+          "observation_or_outcome",
+          "verification_basis",
+          "producer_identity",
+          "receipt_digest"
+        ]
+      },
+      "receipt_relations": {
+        "current_for": {
+          "object": "governing_coordinates",
+          "semantics": "receipt_is_current_only_when_declared_material_coordinates_match_or_compatibility_preserves_applicability",
+          "subject": "receipt"
+        },
+        "specializes": {
+          "object": "receipt_kernel",
+          "semantics": "specialization_inherits_and_may_strengthen_global_kernel",
+          "subject": "receipt_family"
+        },
+        "verifies": {
+          "object": "bounded_claim",
+          "semantics": "receipt_supplies_evidence_for_claim_without_becoming_claim_authority",
+          "subject": "receipt"
+        }
+      },
+      "receipts": {
+        "admission": {
+          "additional_required_semantics": [
+            "candidate_or_subject_ref",
+            "candidate_or_subject_digest",
+            "target_semantic_or_authority_class",
+            "decision_ref",
+            "decision_authority_ref",
+            "decision_result"
+          ],
+          "family_id": "l9.receipt/admission@1",
+          "forbidden": [
+            "receipt_as_admission_authority",
+            "floating_approval_across_revisions",
+            "producer_self_admission_without_target_class_authority"
+          ],
+          "purpose": "Evidence that an admission or promotion decision was evaluated and issued for an exact subject under exact authority and decision coordinates.\n",
+          "result_semantics_source": "l9.contract/admission-and-promotion@1",
+          "rules": [
+            "admission_receipt_is_evidence_of_decision_not_the_decision_authority_itself",
+            "changed_subject_requires_new_decision_or_explicit_compatibility"
+          ],
+          "semantic_owner": "applicable_target_class_authority"
+        },
+        "compilation": {
+          "additional_required_semantics": [
+            "operation",
+            "input_refs_and_digests",
+            "profile_ref_and_digest",
+            "output_ref_and_digest_when_applicable",
+            "compiler_identity_and_version",
+            "result"
+          ],
+          "family_id": "l9.receipt/compilation@1",
+          "forbidden": [
+            "compiler_receipt_as_global_law",
+            "compiler_receipt_as_self_admission",
+            "silent_profile_or_operation_switch"
+          ],
+          "purpose": "Evidence of a declared Semantic Compiler operation executed against exact inputs, profiles, outputs, and compiler coordinates.\n",
+          "result_semantics_source": "compiler_contract.yaml",
+          "rules": [
+            "compiler_receipt_does_not_admit_compiler_output",
+            "operation_validation_must_satisfy_validation_receipt_semantics",
+            "compiler_receipt_preserves_input_and_profile_provenance"
+          ],
+          "schema_ref": "compiler_receipt.schema.yaml",
+          "semantic_owner": "l9-semantic-compiler"
+        },
+        "conformance": {
+          "additional_required_semantics": [
+            "implementation_or_repository_revision",
+            "semantic_source_digests",
+            "resolved_profile_refs_and_digests",
+            "fixture_or_case_closure_digest",
+            "implementation_or_provider_identity",
+            "observed_results"
+          ],
+          "family_id": "l9.receipt/conformance@1",
+          "forbidden": [
+            "conformance_receipt_as_execution_authorization",
+            "stale_receipt_as_current_evidence",
+            "implementation_defined_correctness"
+          ],
+          "purpose": "Evidence binding an exact implementation or repository revision to the exact conformance/profile closure executed and the observed conformance outcome.\n",
+          "result_semantics_source": "l9-conformance",
+          "rules": [
+            "conformance_receipt_does_not_grant_authority",
+            "changed_subject_or_fixture_closure_requires_currentness_re_evaluation",
+            "system_under_test_must_not_define_expected_semantics"
+          ],
+          "semantic_owner": "l9-conformance"
+        },
+        "distribution": {
+          "additional_required_semantics": [
+            "published_artifact_or_profile_ref",
+            "published_digest",
+            "consumer_selector_or_target",
+            "distribution_coordinates",
+            "observed_distribution_result"
+          ],
+          "family_id": "l9.receipt/distribution@1",
+          "forbidden": [
+            "payload_semantic_mutation",
+            "distribution_receipt_as_consumer_acceptance_without_reconciliation"
+          ],
+          "purpose": "Evidence that an exact published artifact/profile release was dispatched or materialized for declared consumers under exact distribution coordinates.\n",
+          "result_semantics_source": "applicable_distribution_contract",
+          "rules": [
+            "distribution_does_not_reinterpret_payload_semantics",
+            "distribution_receipt_does_not_prove_consumer_conformance"
+          ],
+          "semantic_owner": "Quantum-L9/.github"
+        },
+        "reconciliation": {
+          "additional_required_semantics": [
+            "intended_state_ref_or_digest",
+            "observed_target_ref_or_revision",
+            "reconciliation_contract_ref",
+            "observed_reconciliation_result"
+          ],
+          "family_id": "l9.receipt/reconciliation@1",
+          "forbidden": [
+            "reconciliation_receipt_as_semantic_authority",
+            "unobserved_target_state_as_reconciled"
+          ],
+          "purpose": "Evidence comparing an exact intended state or release coordinate against an exact observed target state and recording the bounded reconciliation result.\n",
+          "result_semantics_source": "applicable_reconciliation_contract",
+          "rules": [
+            "reconciliation_evidence_is_bound_to_observed_target_coordinates",
+            "unknown_or_unobservable_target_state_remains_explicit"
+          ],
+          "semantic_owner": "applicable_reconciliation_semantic_owner"
+        },
+        "validation": {
+          "additional_required_semantics": [
+            "candidate_ref",
+            "candidate_digest",
+            "validator_or_solver_ref",
+            "validator_or_solver_version",
+            "validation_profile_or_ruleset_digest",
+            "applicable_constraint_refs",
+            "result",
+            "evidence"
+          ],
+          "family_id": "l9.receipt/validation@1",
+          "forbidden": [
+            "validation_receipt_as_admission",
+            "validation_receipt_as_authorization",
+            "validation_repair_hidden_inside_receipt"
+          ],
+          "purpose": "Evidence that an exact candidate was mechanically evaluated against exact validation criteria and governing solver/profile coordinates.\n",
+          "result_semantics_source": "error_taxonomy.result_domains.validation",
+          "rules": [
+            "validation_receipt_is_observational_and_non_mutating",
+            "unknown_must_remain_explicit",
+            "compiler_validation_may_emit_a_compiler_receipt_conforming_to_this_family"
+          ],
+          "semantic_owner": "applicable_validation_semantic_owner"
+        }
+      }
+    },
+    "semantic_dependency_model": {
+      "dependency_rules": {
+        "architecture_resolution": {
+          "change_effect": "ports_and_product_manifest_stale",
+          "depends_on": [
+            "requirement_closure",
+            "capability_closure",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "architecture_rules",
+            "architecture_patterns",
+            "node_archetypes",
+            "dependency_archetypes"
+          ]
+        },
+        "capability_closure": {
+          "change_effect": "architecture_and_conformance_resolution_stale",
+          "depends_on": [
+            "requirement_closure",
+            "capabilities",
+            "capability_resolution",
+            "contracts"
+          ]
+        },
+        "capability_declaration": {
+          "depends_on": [
+            "semantic_owner",
+            "semantic_scope",
+            "effect_class",
+            "required_capability_refs",
+            "applicable_contract_refs",
+            "authorization_requirement_refs"
+          ],
+          "material_change_effect": "new_admission_decision_required_unless_compatibility_preserves_prior_decision",
+          "provider_realization_change_alone_does_not_change_semantic_identity": true
+        },
+        "conformance": {
+          "depends_on": [
+            "resolved_profile_refs",
+            "resolved_profile_digests",
+            "fixture_refs",
+            "fixture_digests",
+            "binding_identity",
+            "implementation_or_repository_revision"
+          ],
+          "receipt_binds_exact_closure": true
+        },
+        "conformance_requirement_resolution": {
+          "change_effect": "product_manifest_and_conformance_closure_stale",
+          "depends_on": [
+            "invariants",
+            "contracts",
+            "capabilities",
+            "architecture_resolution",
+            "port_resolution",
+            "conformance_model"
+          ]
+        },
+        "fixture": {
+          "change_effect": "fixture_stale",
+          "depends_on": [
+            "source_law_identity",
+            "source_law_digest",
+            "derivation_profile_ref",
+            "derivation_profile_digest"
+          ]
+        },
+        "fixture_profile": {
+          "depends_on": [
+            "fixture_refs",
+            "fixture_digests"
+          ],
+          "existing_profile_versions_are_immutable": true,
+          "membership_change_requires_new_profile_version": true
+        },
+        "identity_topology_resolution": {
+          "change_effect": "requirement_product_manifest_and_identity_consumers_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "identity_model",
+            "contracts",
+            "authority_model"
+          ]
+        },
+        "implementation_ir": {
+          "change_effect": "implementation_ir_and_target_artifacts_stale",
+          "depends_on": [
+            "product_manifest",
+            "authority_revision",
+            "target_binding",
+            "behavior_contract_refs",
+            "behavior_contract_digests",
+            "compiler_coordinates"
+          ]
+        },
+        "port_resolution": {
+          "change_effect": "technology_binding_and_product_manifest_stale",
+          "depends_on": [
+            "architecture_resolution",
+            "port_catalog",
+            "contracts",
+            "capabilities"
+          ]
+        },
+        "product_archetype_resolution": {
+          "change_effect": "architecture_ports_and_manifest_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kind_resolution",
+            "node_archetypes",
+            "dependency_archetypes"
+          ]
+        },
+        "product_kind_resolution": {
+          "change_effect": "archetype_architecture_and_manifest_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kinds",
+            "repository_registry"
+          ]
+        },
+        "product_manifest": {
+          "change_effect": "implementation_and_target_artifacts_stale",
+          "depends_on": [
+            "product_topology",
+            "identity_topology_resolution",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "requirement_closure",
+            "capability_closure",
+            "architecture_resolution",
+            "port_resolution",
+            "provider_binding_resolution",
+            "conformance_requirement_resolution",
+            "compilation_profile",
+            "compiler_coordinates"
+          ]
+        },
+        "product_topology": {
+          "change_effect": "product_kind_archetype_requirement_and_resolution_closure_stale",
+          "depends_on": [
+            "vocabulary",
+            "invariants",
+            "contracts",
+            "authority_model",
+            "capability_semantics",
+            "product_kinds",
+            "node_archetypes",
+            "dependency_archetypes",
+            "technology_profile_semantics"
+          ]
+        },
+        "provider_binding_resolution": {
+          "change_effect": "product_manifest_and_implementation_stale",
+          "depends_on": [
+            "port_resolution",
+            "technology_profiles",
+            "technology_capabilities",
+            "binding_catalog"
+          ]
+        },
+        "receipt": {
+          "depends_on": [
+            "exact_subject_ref",
+            "governing_coordinates",
+            "claim",
+            "verification_basis"
+          ],
+          "material_subject_or_coordinate_change_effect": "non_current_unless_compatibility_preserves_applicability",
+          "prior_receipt_remains_immutable": true
+        },
+        "requirement_closure": {
+          "change_effect": "semantic_resolution_stale",
+          "depends_on": [
+            "product_topology",
+            "identity_topology_resolution",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "invariants",
+            "contracts",
+            "capabilities",
+            "authority_model",
+            "requirement_model"
+          ]
+        }
+      },
+      "invalidation_rules": {
+        "affected_expression": "Affected(change) = TransitiveDependents(changed_semantics)",
+        "historical_artifacts_are_immutable": true,
+        "profile_digest_change": "mark_profile_dependents_stale",
+        "repair_default": "repair_current_stage_when_upstream_assumptions_remain_valid",
+        "silent_consumption_of_stale_input_forbidden": true,
+        "source_digest_change": "mark_transitive_dependents_stale",
+        "upstream_conflict": "create_new_upstream_revision_then_invalidate_transitive_dependents",
+        "upstream_revision_change": "evaluate_dependency_impact"
+      }
+    }
+  },
+  "schema": "l9.composed-projection/v1"
+}

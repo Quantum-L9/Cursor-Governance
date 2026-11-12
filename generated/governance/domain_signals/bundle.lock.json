@@ -1,0 +1,49 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52"
+  },
+  "components": [
+    {
+      "path": "projections/vocabulary.projection.json",
+      "projection_digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+      "receipt": "receipts/vocabulary.receipt.json",
+      "sha256": "sha256:c8556691d8f9b77c59a969334a20163ab6cd24ab284645f9ab3cf8d57b26b066",
+      "source_class": "vocabulary",
+      "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+      "source_ref": "l9.source/vocabulary@1"
+    },
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:92467dbb21451ec500c7d9126d560688d85ffad44bc8e147d0f594973496b37b",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:5ee40759b9e42a41a28486cae8aded331f1b7a78308dfdea4c9f0ed2a3e6ad31",
+      "source_class": "invariants",
+      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_ref": "l9.source/invariants@1"
+    }
+  ],
+  "composed": {
+    "composition_digest": "sha256:92993e412ac6b599ade968a106fa00d846d65a6011e6b34e2a3c439aaf425f44",
+    "path": "composed.json",
+    "receipt": "receipts/composed.receipt.json",
+    "sha256": "sha256:472e68c1d37bb99c906c669dab3371fd6740d5c8bc5ca5d2c8f7ee2f6470d44e"
+  },
+  "composition_profile": {
+    "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",
+    "ref": "l9.compose/signals@1"
+  },
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "eeac5d28f9f1a44e72287190b9087d06aeb4d574",
+    "revision_basis": "caller_asserted",
+    "version": "0.10.0"
+  },
+  "projection_profile": {
+    "digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
+    "ref": "l9.projection/signals@1"
+  },
+  "schema": "l9.projection-bundle/v1"
+}

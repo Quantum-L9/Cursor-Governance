@@ -1,0 +1,36 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "terms": {
+      "signal": {
+        "definition": "Source-attributed information such as an observation, result, warning, correction, hypothesis, challenge, or learned constraint, capable of informing an eligible consumer. Its claim and any evidence, provenance, context, uncertainty, and semantic ownership remain distinguishable; the signal itself is not authoritative truth, permission, or proven value.",
+        "question": "What information is being communicated, from which source, under whose meaning, and with what supporting evidence and uncertainty?",
+        "semantic_class": "semantic_concept"
+      },
+      "signal_consumption": {
+        "definition": "Evidenced use of a previously delivered signal by an eligible actor or system in a later authorized decision, validation, or operation, distinct from receipt, storage, acknowledgement, or merely being technically reachable. Consumption alone does not prove a positive objective-relative result or transfer authority over the affected decision.",
+        "question": "Which later authorized action actually used the information, as opposed to merely receiving or storing it?",
+        "semantic_class": "semantic_concept"
+      },
+      "signal_feedback_episode": {
+        "definition": "A risk-bounded sequence in which returned evidence-bearing information can challenge or change state available to a later eligible consumer, with appropriate control of replay and unjustified convergence claims. Circular message flow and finite hop count alone do not establish learning, mathematical convergence, authorized write-back, or realized Strategic Value.",
+        "question": "What changed or was challenged for a later eligible consumer, and what bounds prevent unjustified recurrence or convergence claims?",
+        "semantic_class": "semantic_concept"
+      },
+      "signal_propagation": {
+        "definition": "Governed movement or availability of a signal from its source to an authorized eligible consumer through an existing interface, preserving the meaning and lineage needed for its intended use. Sending, delivery, acceptance, retention, and later consumption are different observations. Signal propagation does not itself assert causal value propagation.",
+        "question": "Which authorized consumer received which meaning-preserving information, and what actual delivery stage is supported by evidence?",
+        "semantic_class": "semantic_concept"
+      }
+    }
+  },
+  "projection_digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+  "projection_profile_digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
+  "projection_profile_ref": "l9.projection/signals@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+  "source_ref": "l9.source/vocabulary@1"
+}

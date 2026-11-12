@@ -1,0 +1,189 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "contracts": [
+      {
+        "applies_to": [
+          "components",
+          "capabilities",
+          "validators",
+          "executors",
+          "providers",
+          "consumers"
+        ],
+        "forbidden": [
+          "self_authorization",
+          "authority_inference_from_capability",
+          "authority_inference_from_execution_success",
+          "authority_expansion_by_consumer_or_provider"
+        ],
+        "guarantees": [
+          "functional_capability_does_not_transfer_governing_authority",
+          "successful_execution_does_not_expand_authority",
+          "delegated_authority_remains_bounded_by_its_declared_scope"
+        ],
+        "id": "l9.contract/authority-boundary@1",
+        "outcomes": {
+          "satisfied": "governing_action_remains_within_declared_authority",
+          "unresolved": "required_governing_authority_cannot_be_resolved",
+          "violated": "attempted_or_effective_authority_expansion"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Preserve governing authority boundaries when a component computes, validates, recommends, transports, or executes a function.\n",
+        "requires": [
+          "governing_authority_is_resolvable_for_decisions_or_actions_that_require_authority",
+          "component_behavior_remains_within_declared_authority"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-AUTH-001",
+          "L9-AUTH-002"
+        ]
+      },
+      {
+        "applies_to": [
+          "canonical_concepts",
+          "mirrors",
+          "projections",
+          "providers",
+          "consumers",
+          "implementations",
+          "dependencies",
+          "co_located_components",
+          "shared_execution_processes",
+          "generalized_global_laws"
+        ],
+        "forbidden": [
+          "competing_canonical_sources_within_one_scope_and_revision",
+          "provider_identity_as_semantic_ownership",
+          "consumer_identity_as_semantic_ownership",
+          "ownership_transfer_by_projection_or_consumption",
+          "ownership_transfer_by_dependency_colocation_or_shared_execution"
+        ],
+        "guarantees": [
+          "one_canonical_owner_per_semantic_scope_and_revision",
+          "mirrors_and_projections_remain_non_owning",
+          "provider_and_implementation_identity_remain_non_owning",
+          "dependency_colocation_or_shared_execution_do_not_transfer_ownership",
+          "global_admission_does_not_transfer_originating_domain_ownership"
+        ],
+        "id": "l9.contract/semantic-ownership@1",
+        "outcomes": {
+          "satisfied": "canonical_owner_is_unambiguous",
+          "unresolved": "canonical_owner_cannot_be_resolved",
+          "violated": "competing_or_implicit_semantic_ownership"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Keep canonical semantic ownership singular and explicit across mirrors, projections, providers, consumers, implementations, dependencies, co-location, execution, and scope changes.\n",
+        "requires": [
+          "semantic_scope_is_declared",
+          "semantic_revision_is_resolvable_when_revisioned",
+          "canonical_owner_is_resolvable"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-OWNER-001",
+          "L9-SEM-001",
+          "L9-SCOPE-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "subordinate_policy",
+          "domain_policy",
+          "project_contracts",
+          "local_governance"
+        ],
+        "forbidden": [
+          "weakening_canonical_law_without_delegated_authority",
+          "bypassing_canonical_law_without_delegated_authority",
+          "reinterpreting_or_shadowing_canonical_law_without_delegated_authority",
+          "replacing_canonical_law_without_delegated_authority",
+          "assuming_extension_permission_from_local_ownership"
+        ],
+        "guarantees": [
+          "permitted_extensions_remain_inside_delegated_scope",
+          "narrowing_or_strengthening_does_not_remove_canonical_obligations",
+          "canonical_owner_retains_authority_over_canonical_law"
+        ],
+        "id": "l9.contract/monotonic-subordination@1",
+        "outcomes": {
+          "satisfied": "subordinate_extension_is_monotonic_and_in_scope",
+          "unresolved": "extension_permission_or_delegated_scope_is_unknown",
+          "violated": "subordinate_extension_weakens_or_replaces_canonical_law"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Govern how subordinate policy or contracts may extend canonical law without weakening or replacing it.\n",
+        "requires": [
+          "canonical_extension_permission_when_extension_is_attempted",
+          "delegated_scope_is_explicit",
+          "inherited_canonical_obligations_are_resolvable"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-MONOTONIC-001",
+          "L9-AUTH-001",
+          "L9-OWNER-001"
+        ]
+      },
+      {
+        "applies_to": [
+          "admission_decisions",
+          "authority_decisions",
+          "semantic_class_promotion",
+          "globalization_candidates",
+          "derived_artifacts"
+        ],
+        "forbidden": [
+          "self_admission",
+          "admission_by_producer_or_consumer_without_target_class_authority",
+          "replaying_a_decision_against_a_materially_changed_subject_without_compatibility",
+          "treating_recurrence_as_global_admission",
+          "treating_hypothetical_reuse_repeated_assertion_or_single_domain_repetition_as_cross_domain_recurrence",
+          "treating_derivation_or_validation_as_automatic_canonicalization"
+        ],
+        "guarantees": [
+          "decisions_bind_only_the_exact_subject_evaluated",
+          "promotion_is_performed_only_by_target_class_authority",
+          "recurrence_or_validation_creates_no_implicit_promotion",
+          "cross_domain_recurrence_claims_are_evidence_bound_when_used_to_support_higher_scope_admission",
+          "independent_domain_witnesses_when_cross_domain_recurrence_is_asserted_as_admission_evidence",
+          "materially_changed_subjects_require_new_decisions_unless_compatibility_preserves_the_prior_decision"
+        ],
+        "id": "l9.contract/admission-and-promotion@1",
+        "outcomes": {
+          "admitted": "exact_subject_is_admitted_by_target_class_authority",
+          "new_decision_required": "subject_changed_materially_without_compatibility_preservation",
+          "refused": "exact_subject_is_not_admitted",
+          "unresolved": "subject_identity_or_target_class_authority_is_unresolved"
+        },
+        "owner": "Quantum-L9/.github",
+        "purpose": "Bind admission and semantic-class promotion to the exact subject evaluated and to the authority that owns the target class.\n",
+        "requires": [
+          "exact_subject_identity",
+          "exact_subject_revision_or_digest_when_revisioned",
+          "target_semantic_or_authority_class",
+          "target_class_authority",
+          "explicit_decision_record",
+          "explicit_compatibility_contract_when_reusing_prior_decision_after_material_change"
+        ],
+        "scope": "global",
+        "source_invariants": [
+          "L9-PROMOTION-001",
+          "L9-ADMISSION-001",
+          "L9-GLOBALIZATION-001",
+          "L9-DERIVED-001"
+        ]
+      }
+    ]
+  },
+  "projection_digest": "sha256:c017e0514a5ea046c4b98c28fdeba2d6fd53c59d370d4d0f41e9398591486c6f",
+  "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
+  "projection_profile_ref": "l9.projection/governance@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+  "source_ref": "l9.source/contracts@1"
+}
