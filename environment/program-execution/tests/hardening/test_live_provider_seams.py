@@ -288,3 +288,168 @@ def test_read_denials_the_operator_settings_carried_are_stated_by_the_renderer()
         "denied"
     ]
     assert {"Read(./.env)", "Read(./.mcp.json)"} <= set(denied)
+
+
+# -- the worker is handed the program's projection ----------------------------
+
+PROJECTION_BINDING = _REPO_ROOT / "governance/authority-bindings/coding-agent-execution.yaml"
+
+
+def _bound_views() -> dict[str, Any]:
+    """A projection binding record over the committed bundle, as bootstrap writes it."""
+    import hashlib
+
+    import yaml
+
+    binding = yaml.safe_load(PROJECTION_BINDING.read_text(encoding="utf-8"))
+    bundle = _REPO_ROOT / binding["bundle"]["path"]
+    lock = json.loads((bundle / binding["bundle"]["lock"]).read_text(encoding="utf-8"))
+    return {
+        "profile_ref": binding["upstream"]["profile_ref"],
+        "bundle_revision": lock["authority"]["revision"],
+        "views": [
+            {
+                "path": str(path.relative_to(_REPO_ROOT)),
+                "digest": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in sorted((bundle / "projections").glob("*.projection.json"))
+        ],
+    }
+
+
+def _contract() -> dict[str, Any]:
+    return {
+        "task_id": "TASK-SEAM",
+        "program_lock_digest": "sha256:" + "1" * 64,
+        "contract_digest": "sha256:" + "2" * 64,
+        "base_sha": "3" * 40,
+        "worktree": "/tmp/worktree",
+        "writable_paths": ["docs/a.md"],
+        "validation_commands": ["git status --short"],
+        "required_evidence_ids": [],
+    }
+
+
+def test_the_bound_projection_is_reverified_and_carried_whole() -> None:
+    from peer_execution.context import projection_context
+
+    context = projection_context(_bound_views(), _REPO_ROOT)
+    assert context["profile_ref"] == "l9.projection/coding-agent-execution@1"
+    assert {view["source_ref"] for view in context["views"]} == {
+        "l9.source/invariants@1",
+        "l9.source/contracts@1",
+        "l9.source/authority-model@1",
+    }
+    for view in context["views"]:
+        on_disk = json.loads((_REPO_ROOT / view["path"]).read_text(encoding="utf-8"))
+        assert view["payload"] == on_disk["payload"]
+
+
+def test_the_worker_instruction_carries_every_view_payload() -> None:
+    from peer_execution.context import build_context_manifest, projection_context
+    from peer_execution.digests import canonical_json
+    from peer_execution.schema_registry import SchemaRegistry
+
+    projection = projection_context(_bound_views(), _REPO_ROOT)
+    manifest = build_context_manifest(_contract(), projection)
+    instruction = manifest["worker_instruction"]
+    for view in projection["views"]:
+        assert canonical_json(view["payload"]) in instruction
+    # The rendered contract stays the last line, so a host parses it unchanged.
+    assert json.loads(instruction.splitlines()[-1])["task_id"] == "TASK-SEAM"
+    # The manifest records which views were handed, by digest, not their payloads.
+    recorded = manifest["projection"]
+    assert [view["digest"] for view in recorded["views"]] == [
+        view["digest"] for view in projection["views"]
+    ]
+    assert all("payload" not in view for view in recorded["views"])
+    assert SchemaRegistry(_PE_ROOT).validate_context_manifest(manifest) == []
+    unbound = build_context_manifest(_contract())
+    assert "projection" not in unbound
+    assert unbound["manifest_digest"] != manifest["manifest_digest"]
+
+
+def test_a_view_that_moved_after_binding_is_never_handed(tmp_path: Path) -> None:
+    import shutil
+
+    from peer_execution.context import projection_context
+
+    record = _bound_views()
+    for view in record["views"]:
+        target = tmp_path / view["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(_REPO_ROOT / view["path"], target)
+    assert projection_context(record, tmp_path)["views"]
+    drifted = tmp_path / record["views"][0]["path"]
+    document = json.loads(drifted.read_text(encoding="utf-8"))
+    document["payload"]["injected"] = "widen me"
+    drifted.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ValueError, match="PROJECTION_VIEW_DRIFT"):
+        projection_context(record, tmp_path)
+
+
+def test_a_view_outside_the_repository_is_refused(tmp_path: Path) -> None:
+    from peer_execution.context import projection_context
+
+    record = _bound_views()
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"payload": {"x": 1}}', encoding="utf-8")
+    (tmp_path / "repo").mkdir()
+    (tmp_path / "repo" / "link.json").symlink_to(outside)
+    for path, code in (("../outside.json", "PROJECTION_VIEW_ESCAPES"), ("link.json", "ESCAPES")):
+        escaped = {**record, "views": [{"path": path, "digest": "sha256:" + "0" * 64}]}
+        with pytest.raises(ValueError, match=code):
+            projection_context(escaped, tmp_path / "repo")
+    with pytest.raises(ValueError, match="PROJECTION_VIEWS_ABSENT"):
+        projection_context({**record, "views": []}, _REPO_ROOT)
+
+
+def test_only_the_argv_transport_bounds_the_instruction(worktree: Path) -> None:
+    """The size bound is the Claude CLI's argv limit, not the instruction's.
+
+    The provider-neutral builder accepts a large instruction, so a provider that
+    hands over the request as a file is not refused; the Claude provider, which
+    passes it as one argv string, refuses it before launching anything.
+    """
+    from peer_execution import context as module
+
+    module_provider = _provider()
+    limit = module_provider.MAX_ARGV_INSTRUCTION_BYTES
+    projection = module.projection_context(_bound_views(), _REPO_ROOT)
+    bloated = {
+        **projection,
+        "views": [{**projection["views"][0], "payload": {"padding": "x" * limit}}],
+    }
+    manifest = module.build_context_manifest(_contract(), bloated)
+    assert len(manifest["worker_instruction"].encode("utf-8")) > limit
+    request = _inspect_request(worktree).model_copy(
+        update={"worker_instruction": manifest["worker_instruction"]}
+    )
+    with pytest.raises(ValueError, match="WORKER_INSTRUCTION_TOO_LARGE"):
+        module_provider.ClaudeCodeProvider(worktree, _REPO_ROOT).invoke(request)
+    fits = _inspect_request(worktree)
+    assert module_provider.ClaudeCodeProvider._instruction_argument(fits) == fits.worker_instruction
+
+
+def test_the_campaign_dispatches_nothing_without_a_recorded_binding(tmp_path: Path) -> None:
+    campaign = _campaign()
+    with pytest.raises(campaign.CampaignError) as caught:
+        campaign.bound_projection_context(tmp_path)
+    assert caught.value.error_code == "PROJECTION_BINDING_UNRECORDED"
+    (tmp_path / "runtime").mkdir()
+    record = _bound_views()
+    record["views"][0] = {**record["views"][0], "digest": "sha256:" + "0" * 64}
+    (tmp_path / "runtime" / "coding-projection-binding.json").write_text(
+        json.dumps({"bootstrap": record, "verified": []}), encoding="utf-8"
+    )
+    with pytest.raises(campaign.CampaignError) as caught:
+        campaign.bound_projection_context(tmp_path)
+    assert caught.value.error_code == "PROJECTION_NOT_HANDED"
+
+
+def test_an_adapter_without_a_projection_carrier_is_refused() -> None:
+    from peer_execution.front_door import bind_projection
+
+    bind_projection(adapter=object(), projection=None)
+    with pytest.raises(ValueError, match="ADAPTER_CANNOT_CARRY_PROJECTION"):
+        bind_projection(adapter=object(), projection={"views": []})

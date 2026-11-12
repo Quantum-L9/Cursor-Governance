@@ -14,6 +14,25 @@ from unittest.mock import patch
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from test_run_campaign import _projection_ok  # type: ignore[import-not-found]  # noqa: E402
+
+
+def _bound_workspace() -> Path:
+    """A campaign workspace whose projection binding was recorded, as bootstrap does."""
+    import yaml
+
+    workspace = Path(tempfile.mkdtemp())
+    profile = yaml.safe_load(
+        (PE_ROOT.parents[1] / "ops/autonomy/surface_profile.yaml").read_text(encoding="utf-8")
+    )
+    record = {"bootstrap": _projection_ok(profile["campaign_execution"]), "verified": []}
+    (workspace / "runtime").mkdir()
+    (workspace / "runtime" / "coding-projection-binding.json").write_text(
+        json.dumps(record), encoding="utf-8"
+    )
+    return workspace
 
 
 def _load(name: str, path: Path):
@@ -64,7 +83,10 @@ class _FailingLifecycle:
     def probe_provider(self, **_kwargs):
         return _Probe()
 
-    def dispatch_provider(self, **_kwargs):
+    handed: list[object] = []
+
+    def dispatch_provider(self, **kwargs):
+        self.handed.append(kwargs.get("projection"))
         return "d-1", {"dispatch_id": "d-1"}, {"dispatch_id": "d-1", "status": "DISPATCHED"}
 
     def await_provider(self, **_kwargs):
@@ -112,7 +134,11 @@ class FailedResultHarvestTests(unittest.TestCase):
             patch.object(self.mod, "_peer_identity", return_value=("agent", "surface", None)),
             patch.object(self.mod, "_live_controller_attempt", return_value=None),
         ):
-            outcome = self.mod._run_peer_execution(Path(tempfile.mkdtemp()), contract)
+            outcome = self.mod._run_peer_execution(_bound_workspace(), contract)
+        # The window was handed the program's verified projection.
+        handed = _FailingLifecycle.handed[-1]
+        self.assertEqual(handed["profile_ref"], "l9.projection/coding-agent-execution@1")
+        self.assertEqual(len(handed["views"]), 3)
         self.assertEqual(outcome["status"], "FAIL")
         self.assertIn("peer_execution_timeout", outcome["reason"])
         self.assertEqual(

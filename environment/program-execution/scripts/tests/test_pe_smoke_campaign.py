@@ -472,6 +472,14 @@ class PeSmokeCampaignTests(unittest.TestCase):
             for context in contexts:
                 payload = json.loads(context.read_text(encoding="utf-8"))
                 self.assertEqual(payload["schema"], "l9.peer-execution.context-manifest.v1")
+                # Every window was handed the program's projection, payloads in its prompt.
+                self.assertEqual(
+                    payload["projection"]["profile_ref"], "l9.projection/coding-agent-execution@1"
+                )
+                self.assertEqual(len(payload["projection"]["views"]), 3)
+                self.assertIn(
+                    "PROJECTION VIEW l9.source/invariants@1", payload["worker_instruction"]
+                )
             # The source the compiler read must be the operator's, not a rebuild.
             # A closed campaign is archived under COMPLETED/, so accept either.
             campaigns = Path(report.worktree) / "environment/program-execution/campaigns"

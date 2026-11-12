@@ -51,6 +51,13 @@ WORKER_EFFECT_HOOK_TIMEOUT_SECONDS = 60
 #: every allowed effect to the root execution gate.
 WORKER_SETTING_SOURCES = "project,local"
 
+#: This provider passes the worker instruction to `claude -p` as one argv
+#: string, and Linux caps a single argument at 128 KiB (MAX_ARG_STRLEN). An
+#: instruction past this bound is refused before the window is launched rather
+#: than failing as E2BIG inside it. The bound is this transport's, not the
+#: instruction's: providers that hand over the request as a file have none.
+MAX_ARGV_INSTRUCTION_BYTES = 100_000
+
 #: Authority fields the live hook needs, and nothing else. The sidecar carries
 #: more (campaign/graph/action ids, capabilities, the peer binding); exporting
 #: those into a worker's environment would widen what a compromised worker can
@@ -184,6 +191,17 @@ class ClaudeCodeProvider:
             separators=(",", ":"),
         )
 
+    @staticmethod
+    def _instruction_argument(request: CanonicalExecutionRequest) -> str:
+        """The worker instruction as one argv string, or a refusal."""
+        size = len(request.worker_instruction.encode("utf-8"))
+        if size > MAX_ARGV_INSTRUCTION_BYTES:
+            raise ValueError(
+                f"WORKER_INSTRUCTION_TOO_LARGE: {size} bytes exceeds the "
+                f"{MAX_ARGV_INSTRUCTION_BYTES}-byte argv bound of the Claude CLI transport"
+            )
+        return request.worker_instruction
+
     def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
         permission_profile = dict(request.permission_profile)
         renderer = load_module(
@@ -197,7 +215,7 @@ class ClaudeCodeProvider:
         argv = [
             "claude",
             "-p",
-            request.worker_instruction,
+            self._instruction_argument(request),
             "--output-format",
             "json",
             "--max-turns",
