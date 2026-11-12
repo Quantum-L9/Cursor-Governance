@@ -69,7 +69,8 @@ jobs:
       fail-fast: false
       matrix:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
-                 domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals]
+                 domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
+                 technical_coordination]
     steps:
       - name: Checkout Cursor-Governance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -130,7 +131,7 @@ jobs:
       # Architect-mode domain bundles (governance/architect-mode/MODE.yaml) are verified by the
       # same binding-parameterized adapter, one binding per domain.
       - name: Verify the architect-mode domain bundle at the revision it names (candidate mode)
-        if: steps.lock.outputs.present == 'true' && startsWith(matrix.bundle, 'domain_')
+        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination')
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -139,9 +140,11 @@ jobs:
         shell: bash
         run: |
           name="${BUNDLE#domain_}"; name="${name//_/-}"
+          binding="governance/architect-mode/bindings/$name.yaml"
+          [[ "$BUNDLE" == technical_coordination ]] && binding="governance/cto-mode/bindings/technical-coordination.yaml"
           set +e
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
-            --binding "governance/architect-mode/bindings/$name.yaml" \
+            --binding "$binding" \
             --mode candidate \
             --authority-root ../org-authority \
             --expect-revision "$REVISION"
@@ -202,7 +205,7 @@ jobs:
       # ADMITTED_AND_CURRENT (exit 0); a fall back to BUNDLE_VERIFIED (exit 5), REJECTED,
       # BLOCKED or STALE fails the job, and the reason is reported, not hidden.
       - name: Checkout Quantum-L9/.github main independently of the lock
-        if: steps.lock.outputs.present == 'true' && (matrix.bundle == 'architecture_intelligence' || matrix.bundle == 'pr_audit' || matrix.bundle == 'operating_plane_v2' || startsWith(matrix.bundle, 'domain_'))
+        if: steps.lock.outputs.present == 'true' && (matrix.bundle == 'architecture_intelligence' || matrix.bundle == 'pr_audit' || matrix.bundle == 'operating_plane_v2' || (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination'))
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
@@ -226,7 +229,7 @@ jobs:
           python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
           [[ $code -eq 0 ]] || exit 1
       - name: Resolve architect-mode domain admission against authority main (admitted mode)
-        if: steps.lock.outputs.present == 'true' && startsWith(matrix.bundle, 'domain_')
+        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination')
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -234,10 +237,12 @@ jobs:
         shell: bash
         run: |
           name="${BUNDLE#domain_}"; name="${name//_/-}"
+          binding="governance/architect-mode/bindings/$name.yaml"
+          [[ "$BUNDLE" == technical_coordination ]] && binding="governance/cto-mode/bindings/technical-coordination.yaml"
           git -C ../org-main update-ref refs/remotes/origin/main HEAD
           set +e
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
-            --binding "governance/architect-mode/bindings/$name.yaml" \
+            --binding "$binding" \
             --authority-root ../org-main > admission.json
           code=$?
           set -e

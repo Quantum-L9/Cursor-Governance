@@ -83,6 +83,12 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": "l9.compose/strategic-value@1",
         "output": Path("generated/governance/domain_strategic_value"),
     },
+    # Technical coordination role projection (Quantum-L9/.github v3.39.0, ADR-036) bound by
+    # CTO mode (governance/cto-mode/MODE.yaml).
+    "l9.projection/technical-coordination@1": {
+        "composition_profile": "l9.compose/technical-coordination@1",
+        "output": Path("generated/governance/technical_coordination"),
+    },
     "l9.projection/signals@1": {
         "composition_profile": "l9.compose/signals@1",
         "output": Path("generated/governance/domain_signals"),
