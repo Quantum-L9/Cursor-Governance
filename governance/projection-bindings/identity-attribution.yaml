@@ -72,6 +72,7 @@ admission:
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for CTO mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR, which lists "identity-attribution@1 | Required | Actor identity, responsibility, accountability" among the CTO projections.
 load_condition:
   when:
+    - cursor_host_default
     - cto_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)

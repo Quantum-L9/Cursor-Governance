@@ -75,6 +75,7 @@ admission:
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
 load_condition:
   when:
+    - cursor_host_default
     - architect_mode_active
     - cto_mode_active
   requires_all:

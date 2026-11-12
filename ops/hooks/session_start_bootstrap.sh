@@ -647,6 +647,31 @@ if [ -f "$OPERATING_PLANE_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh
   unset _op_out _op_rc
 fi
 
+# Cursor host binding (report-only): the default domain projections every Cursor session
+# binds on top of the operating plane (governance/host-bindings/cursor.yaml, mirroring
+# l9.domain-consumer-binding/cursor@1), through ops/autonomy/host_binding.py. The base is
+# reported by the operating-plane block above, so --domains-only does not verify it twice.
+# Conditional domains are listed with their activation and not verified here. It never
+# releases payload, never fetches, never writes, and a timeout is reported, not hidden.
+HOST_BINDING_MD="### cursor host binding (report-only)
+- UNVERIFIED: host binding unavailable"
+HOST_BINDING_PY="$GC/ops/autonomy/host_binding.py"
+if [ -f "$HOST_BINDING_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$GC/ops/scripts/lib/run_with_timeout.sh"
+  # Four admitted-mode domain verifications against the authority checkout.
+  _hb_out="$(run_with_timeout 15 "$AUDIT_PY_BIN" "$HOST_BINDING_PY" \
+    --host cursor --domains-only --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
+  _hb_rc=$?
+  if [ "$_hb_rc" = 124 ]; then
+    HOST_BINDING_MD="### cursor host binding (report-only)
+- UNVERIFIED: TIMED OUT after 15 s"
+  elif [ -n "$_hb_out" ]; then
+    HOST_BINDING_MD="$_hb_out"
+  fi
+  unset _hb_out _hb_rc
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -665,6 +690,7 @@ ${HYDRATE_BLOCK}
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
 ${OPERATING_PLANE_MD}
+${HOST_BINDING_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"

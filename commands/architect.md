@@ -30,7 +30,7 @@ The set is the union of the required domains of the canonical bindings
 
 1. From the workspace you are working in (do not change directory), run:
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/architect_mode.py" on --workspace "$PWD"`.
-   Add `--authority-root <checkout>` (or set `L9_GITHUB_AUTHORITY_ROOT`) with a
+   Add `--authority-root <checkout>` (or set `L9_AUTHORITY_ROOT`; a `.github` checkout inside or beside the workspace is found on its own) with a
    `Quantum-L9/.github` checkout whose HEAD is its `main`; admission is resolved there.
    The request is bound to this host session.
 2. Read its JSON `mode`:

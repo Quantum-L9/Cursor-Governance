@@ -37,7 +37,6 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
     sys.exit(3)
 
 REPO = Path(__file__).resolve().parents[2]
-AUTHORITY_ENV = "L9_GITHUB_AUTHORITY_ROOT"
 # Host session identity, in order. An unresolvable session never activates a mode.
 SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
@@ -89,11 +88,19 @@ def run_verifier(binding: Path, authority_root: Path | None) -> dict[str, Any]:
     return report
 
 
-def _authority_root(explicit: Path | None) -> Path | None:
-    if explicit is not None:
-        return explicit
-    env = os.environ.get(AUTHORITY_ENV)
-    return Path(env) if env else None
+def resolve_authority(explicit: Path | None, workspace: Path | None) -> Path | None:
+    """The Quantum-L9/.github checkout, resolved like every other projection consumer here.
+
+    One order for all of them (ops/scripts/coding_projection_status.py `_authority`): an
+    explicit path, then L9_AUTHORITY_ROOT, then `.github` inside or beside the workspace,
+    each accepted only if it is a verified authority checkout. None when none is.
+    """
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from ops.scripts.coding_projection_status import _authority
+
+    root, _rejected = _authority(workspace, explicit)
+    return root
 
 
 @dataclass(frozen=True)
@@ -193,7 +200,7 @@ class ProjectionMode:
         if state.get("contract_digest") != _digest(contract_path):
             # The selection changed since the operator asked; ask again rather than widen.
             return {**report, "mode": "STALE", "reason": "MODE_CONTRACT_CHANGED_SINCE_REQUEST"}
-        root = _authority_root(authority_root)
+        root = resolve_authority(authority_root, workspace)
         projections, blockers, load = [], [], []
         for entry in contract["selection"]["projections"]:
             result = verify(REPO / entry["binding"], root)
@@ -271,7 +278,10 @@ class ProjectionMode:
         parser.add_argument(
             "--authority-root",
             type=Path,
-            help=f"Quantum-L9/.github checkout whose HEAD is its main (default: ${AUTHORITY_ENV})",
+            help=(
+                "Quantum-L9/.github checkout (default: $L9_AUTHORITY_ROOT, "
+                "then .github in or beside the workspace)"
+            ),
         )
         parser.add_argument(
             "--session-id", help=f"host session id (default: first of {', '.join(SESSION_ENVS)})"
