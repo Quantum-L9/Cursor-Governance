@@ -1,0 +1,78 @@
+{
+  "schema": "l9.gar_plan_run.v1",
+  "run_id": "gar-surface-profile-friction",
+  "governing_cause": "The Autonomy Surface Profile and its Claude adapter disagree with the surfaces they govern. (1) The review-thread helper ops/scripts/pr_threads.py proves PR ownership only from .l9/pr/pr-summary.json, which only ops/scripts/open_pr_after_gate.sh writes; a native publish route (ops/config/publish-authority.json, e.g. cryptoxdog/ib-odoo_19) is delegated by run_native_publish.sh to the consumer's own make pr, so the receipt never exists there and the helper fails closed. (2) The only allow rule for the helper is the cwd-relative command `python3 ops/scripts/pr_threads.py`, which does not exist in a consumer checkout, so the helper is unreachable without a permission prompt or classifier denial outside the governance clone. (3) Profile text drifted from rule 62 and the REST-only surface rule: pr_stacking.github_rest still names the legacy openclaw PAT ref and bare `gh`; post_push.required_command omits native routes; review approval is denied only in prose and in review_activity.denied, not in top-level forbid; the PR-watch policy (no Send Later) lives only as a hardcoded hook line; updated is stale.",
+  "intervention": "Architecture is settled; repair in place, no new framework. Fix the owner, not the symptom: (a) pr_thread_routes.require_own_pr falls back, only when the receipt is absent, to a live REST ownership proof - PR open, head repo equals origin, head ref equals the checkout's branch, and the PR head SHA is an ancestor of or equal to local HEAD - failing closed on any unreadable fact; the receipt path is unchanged. (b) Add one home-relative allow rule `Bash(python3 ~/.cursor-governance/ops/scripts/pr_threads.py:*)` to the adapter template and the profile's review_activity.allow_prefixes; arguments pass straight to argparse, no make-variable expansion, no protected root file edit. (c) Profile hygiene: add pull_request_review_approval to forbid, post_push.pr_watch naming the existing Send Later ban with the hook citing it, github_rest pat_ref to the Infisical GITHUB_TOKEN name with bare gh removed, required_command naming publish-authority native routes, updated bumped. Tests pin each change.",
+  "evidence_paths": [
+    "ops/autonomy/surface_profile.yaml",
+    "ops/scripts/pr_threads.py",
+    "ops/scripts/lib/pr_thread_routes.py",
+    "ops/scripts/tests/test_pr_threads.py",
+    "ops/scripts/open_pr_after_gate.sh",
+    "ops/scripts/run_native_publish.sh",
+    "ops/config/publish-authority.json",
+    "environment/agents/adapters/claude-code/settings.template.json",
+    "environment/agents/adapters/claude-code/hooks/bootstrap_capability_preflight.sh",
+    "tests/adapters/claude_code/test_capability_friction_contract.py",
+    "skills/l9-pr-remediation/references/review-replies.md"
+  ],
+  "load_order": [
+    {
+      "path": "catalogs/REASON_CODES.yaml",
+      "sha256": "89a082eb95f53f910a3a787398deedfa9305200b40f323e6d808dcb0ed672fbe"
+    },
+    {
+      "path": "runtime/EVALUATOR_REGISTRY.yaml",
+      "sha256": "639817f7680544fb5de905d23cfcd3d3b271f97c7710ff66264bb1cc11f7aafa"
+    },
+    {
+      "path": "contracts/EPISTEMIC_DISCIPLINE.yaml",
+      "sha256": "3aa8270db8f7d1cea4f751f39ec3c65bdf61aecbb6be4742a7a7e97bd782e48e"
+    },
+    {
+      "path": "contracts/L9_ARCHITECTURE_PROFILE.yaml",
+      "sha256": "e294baa756bcabc3bc76128c462eff7a949e25bacebe9e27bc41c66bdf4c0a38"
+    },
+    {
+      "path": "integrations/REASONING_FOURSOME_BINDING.yaml",
+      "sha256": "07052ae4f57bd64f9ceb68d3d73a5a118c55a773bd76cc91d1fa0e3c7bb89df7"
+    },
+    {
+      "path": "contracts/ARCHITECTURAL_INTEGRITY.yaml",
+      "sha256": "9ca1adb56b9a4ce310715d672bd8b28dd922c23c22d93a99f70bafd7e2143477"
+    },
+    {
+      "path": "contracts/OBJECTIVE_DERIVATION.yaml",
+      "sha256": "b170d9f5b7847e06fbf576ef2b6ddc38cc7f032ccbff1b98c2779d7d893f7cbe"
+    },
+    {
+      "path": "contracts/OUTCOME_OWNERSHIP.yaml",
+      "sha256": "205f1fae2469a5595e87e0a03779cbf34632ca0f0a6227fe73e6c3b20c752397"
+    },
+    {
+      "path": "contracts/CONVERGENCE.yaml",
+      "sha256": "a0a07e2d6b252070ff7a1762956383215e482562692e8ac43fc7bd0a02db1404"
+    },
+    {
+      "path": "kernels/ARCHITECT_KERNEL.yaml",
+      "sha256": "319801fd911e12bbdd0e83755b3b8dd2375033239d7cfa28fea5f11b04104390"
+    },
+    {
+      "path": "catalogs/KILL_PATTERNS.yaml",
+      "sha256": "ff0ab0c7f60a185b53109183581785b505e2db7439cfb74d36ef1ab7e486b92f"
+    },
+    {
+      "path": "runtime/RUN_STATE.yaml",
+      "sha256": "14bd0ffde3f3506253f0f564a9a38551c77929929d6780cc34715657a3aa4101"
+    },
+    {
+      "path": "integrations/L9_RUNTIME_BINDING.yaml",
+      "sha256": "820796f69885714b845d8bbad45ff9c0ab05c86c7d10384442060527ee0bfae3"
+    },
+    {
+      "path": "runtime/STATE_MACHINE.yaml",
+      "sha256": "fd629918e9a866eb8e92c059faf54131e7abf9c71ea02ffe6235524ecf854574"
+    }
+  ],
+  "load_order_digest": "8bc6a752ae96ec791f04d493648a67511eabadca0b0a2ab51d425f3ad965accc"
+}
