@@ -135,7 +135,7 @@
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "4a03ce04c118a05d2138c5ae2a6832861f4cc1675eb20b07a3b4a2d6680244ff"
+      "sha256": "7eae78bdad2aa071c0b9dd2d532ac3abeb2ee37ee327a29b55586cd680202201"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -1835,7 +1835,7 @@
     },
     {
       "path": "peer_execution/context.py",
-      "sha256": "6b0f76c947ce7eccafe2f61d5167ba4e14b90274eed434243811920433c6d564"
+      "sha256": "c5aa8ee1c455f97e5d5f4643cd98c03dea2e485fce3fcb18e0e4436d6b821997"
     },
     {
       "path": "peer_execution/contracts.py",
@@ -2347,7 +2347,7 @@
     },
     {
       "path": "tests/hardening/test_live_provider_seams.py",
-      "sha256": "00df765b2c1a6bf579f9d11ba4025c9e79bdd1685a8450e26a8ef7e03381e33f"
+      "sha256": "bde8d58f8f61ea8327a356062b4eb6bdd5e9e9f6f0437583467fcde35e6bfca1"
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",

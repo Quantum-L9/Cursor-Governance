@@ -34,11 +34,6 @@ def _string_list(name: str, value: object) -> list[str]:
 
 PROJECTION_CONTEXT_SCHEMA = "l9.peer-execution.projection-context.v1"
 
-#: The worker instruction travels as one argv string. Linux caps a single
-#: argument at 128 KiB (MAX_ARG_STRLEN); an instruction past this bound is
-#: refused here rather than failing as E2BIG inside the provider.
-MAX_WORKER_INSTRUCTION_BYTES = 100_000
-
 
 def projection_context(binding: Mapping[str, Any], repository_root: str | Path) -> dict[str, Any]:
     """The bound projection's views, re-verified and ready to hand to a worker.
@@ -221,11 +216,6 @@ def build_context_manifest(
             compact_contract,
         ]
     )
-    if len(instruction.encode("utf-8")) > MAX_WORKER_INSTRUCTION_BYTES:
-        raise ValueError(
-            "WORKER_INSTRUCTION_TOO_LARGE: the worker instruction exceeds "
-            f"{MAX_WORKER_INSTRUCTION_BYTES} bytes and cannot be passed to a provider window"
-        )
     body = {
         "schema": "l9.peer-execution.context-manifest.v1",
         "task_id": task_id,

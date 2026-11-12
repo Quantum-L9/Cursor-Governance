@@ -404,21 +404,31 @@ def test_a_view_outside_the_repository_is_refused(tmp_path: Path) -> None:
         projection_context({**record, "views": []}, _REPO_ROOT)
 
 
-def test_an_instruction_too_large_for_one_argument_is_refused() -> None:
+def test_only_the_argv_transport_bounds_the_instruction(worktree: Path) -> None:
+    """The size bound is the Claude CLI's argv limit, not the instruction's.
+
+    The provider-neutral builder accepts a large instruction, so a provider that
+    hands over the request as a file is not refused; the Claude provider, which
+    passes it as one argv string, refuses it before launching anything.
+    """
     from peer_execution import context as module
 
+    module_provider = _provider()
+    limit = module_provider.MAX_ARGV_INSTRUCTION_BYTES
     projection = module.projection_context(_bound_views(), _REPO_ROOT)
     bloated = {
         **projection,
-        "views": [
-            {
-                **projection["views"][0],
-                "payload": {"padding": "x" * module.MAX_WORKER_INSTRUCTION_BYTES},
-            }
-        ],
+        "views": [{**projection["views"][0], "payload": {"padding": "x" * limit}}],
     }
+    manifest = module.build_context_manifest(_contract(), bloated)
+    assert len(manifest["worker_instruction"].encode("utf-8")) > limit
+    request = _inspect_request(worktree).model_copy(
+        update={"worker_instruction": manifest["worker_instruction"]}
+    )
     with pytest.raises(ValueError, match="WORKER_INSTRUCTION_TOO_LARGE"):
-        module.build_context_manifest(_contract(), bloated)
+        module_provider.ClaudeCodeProvider(worktree, _REPO_ROOT).invoke(request)
+    fits = _inspect_request(worktree)
+    assert module_provider.ClaudeCodeProvider._instruction_argument(fits) == fits.worker_instruction
 
 
 def test_the_campaign_dispatches_nothing_without_a_recorded_binding(tmp_path: Path) -> None:
