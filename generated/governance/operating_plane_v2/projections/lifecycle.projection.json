@@ -309,10 +309,10 @@
       "unresolved": "required semantics_authority_or_evidence_cannot_be_resolved"
     }
   },
-  "projection_digest": "sha256:5eb7761dac96634b3d1509f6ecb1ebd24f0bbd62360cb89f8b780d4ab2c8e51a",
+  "projection_digest": "sha256:4c03769d87e6804f1cbd57ff96a54eea9579d460e00d20ce8433cf2b6f0e249b",
   "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
   "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
+  "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
   "source_ref": "l9.source/lifecycle@1"
 }
