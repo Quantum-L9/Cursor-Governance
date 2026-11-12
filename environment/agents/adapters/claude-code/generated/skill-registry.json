@@ -1,5 +1,5 @@
 {
-  "generation_id": "934dbc9143642a14f39200753e831cfb117a176e5172e55ed9e52a5d9c90c6bf",
+  "generation_id": "0b1d7f15e8d5e60315b63062235b5763a655dbf9e6aecb745c1d3f05396cf795",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1453,7 +1453,7 @@
       "path": "skills/l9-secrets",
       "reason": "",
       "skill_md": "skills/l9-secrets/SKILL.md",
-      "skill_sha256": "c5a0405c8099f7d108a3e173f65674e8d6987e57d9bf431384c553c59c152bc8",
+      "skill_sha256": "fc81ef346e116fe4992b84d07b91a5353465ec88879b5bfc65bc341f88a7638b",
       "user_invocable": true,
       "when_to_use": "a command must bind or check a named credential (api key, token, password) from Infisical, a new secret must be added, or a legacy openclaw-igorbot ref must be translated \u2014 never printing values"
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "7fc1b1d216cf20ea442b3cf09f7035784949026e66e70b92ede52e6624cab6c9"
+  "source_skill_corpus_sha256": "c3f1d1dd0bd5c8688e364e6406a41441e55e911286e4e9a9b2b960bc5202ca89"
 }
