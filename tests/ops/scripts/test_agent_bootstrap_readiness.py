@@ -57,7 +57,10 @@ def snapshot(root: Path) -> dict[str, tuple[int, int, bytes | str]]:
 
 def git(root: Path, *args: str) -> str:
     return subprocess.run(
-        [str(REAL_GIT), "-C", str(root), *args],
+        # Auto-maintenance off: git detaches `maintenance run --auto` after a
+        # commit, and its objects/maintenance.lock appearing and vanishing
+        # mid-copytree raced the fixture clone (shutil.Error in CI).
+        [str(REAL_GIT), "-c", "maintenance.auto=false", "-c", "gc.auto=0", "-C", str(root), *args],
         env={
             "PATH": "/usr/bin:/bin",
             "HOME": str(root),

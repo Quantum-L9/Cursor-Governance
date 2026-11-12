@@ -14,13 +14,16 @@ come from an independent record; the verifier binds bytes to the pin but
 cannot authenticate the pin itself. Nothing upstream is copied here. Constants
 below are identity coordinates, not doctrine.
 
-Exit codes: 0 BOUND/CURRENT, 1 REJECTED, 2 usage, 3 BLOCKED (Unknown), 4 STALE.
+Exit codes: 0 BOUND/CURRENT, 1 REJECTED, 2 usage, 3 BLOCKED (Unknown), 4 STALE,
+5 BUNDLE_VERIFIED (a domain binding bundle verified, never admitted or activated).
 
 Usage:
   verify_canonical_binding.py --authority-root DIR --artifact FILE --receipt FILE
       --expect-revision SHA [--require-invariant ID ...]
   verify_canonical_binding.py --authority-root DIR --prior-binding FILE
       --artifact FILE --receipt FILE --expect-revision SHA
+  verify_canonical_binding.py --authority-root DIR --binding-bundle DIR
+      --expect-revision SHA [--binding-ref REF]
 """
 
 from __future__ import annotations
@@ -66,7 +69,7 @@ PRODUCER_ROLE = "projection"
 GIT_TIMEOUT_S = 30
 # Replace refs would let a local ref swap object content; hashes are rechecked too.
 GIT_ENV = {**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"}
-EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4}
+EXIT = {"BOUND": 0, "CURRENT": 0, "REJECTED": 1, "BLOCKED": 3, "STALE": 4, "BUNDLE_VERIFIED": 5}
 # A consumer-committed bundle (Quantum-L9/.github ADR-021): every source class of the profile,
 # its receipt, and a lock naming the authority, producer and every file digest.
 BUNDLE_LOCK = "bundle.lock.json"
@@ -97,6 +100,18 @@ class ProfileSpec(NamedTuple):
 
 
 CODING_AGENT = ProfileSpec(PROFILE_REF, PROFILE_CLASS, PROFILE_CONSUMER, reselect=SOURCE_CLASS)
+
+# Domain consumer bindings (Quantum-L9/.github ADR-033). The binding entry, its domains and its
+# unresolved coordinates are read from the pinned catalog; these are identity coordinates only.
+BINDING_CATALOG_PATH = "semantics/domain_consumer_bindings.yaml"
+BINDING_LOCK = "binding.lock.json"
+BINDING_LOCK_SCHEMA = "l9.domain-binding-bundle/v1"
+CODING_AGENT_DOMAIN_BINDING = "l9.domain-consumer-binding/coding-agent@1"
+DOMAIN_CLASS = "domain"
+# v1 domain profiles are named l9.projection/<domain>@N with consumer semantic_domain.<domain>
+# (hyphens as underscores). A profile departing from that is BLOCKED, never accepted silently.
+_DOMAIN_REF = re.compile(r"l9\.projection/([a-z0-9]+(?:-[a-z0-9]+)*)@[0-9]+")
+CROSS_DOMAIN_COMPOSITION = "cross_domain_composition"
 # Exact host and repository; a suffix match would accept any path ending in it.
 _ORIGIN = re.compile(
     r"(?:https://(?:[^@/\s]+@)?github\.com/|ssh://git@github\.com/|git@github\.com:)"
@@ -1087,6 +1102,226 @@ def verify_bundle(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def domain_spec(profile_ref: str) -> tuple[ProfileSpec, str]:
+    """The ProfileSpec a domain profile is verified under, and its bundle directory name."""
+    match = _DOMAIN_REF.fullmatch(profile_ref)
+    if match is None:
+        raise Outcome("BLOCKED", "DOMAIN_PROFILE_REF_UNRESOLVED", profile_ref=profile_ref)
+    name = match.group(1).replace("-", "_")
+    return ProfileSpec(profile_ref, DOMAIN_CLASS, f"semantic_domain.{name}"), name
+
+
+def _binding_rules(tree: PinnedTree, catalog: dict[str, Any], binding: dict[str, Any]) -> None:
+    """BINDING-001..004 on the canonical entry. A violation is upstream's, so BLOCKED."""
+    ref = binding.get("id")
+    profiles = (tree.load(PROFILES_PATH, "PROFILE_CATALOG") or {}).get("projection_profiles", [])
+    required = binding.get("requires")
+    conditional = binding.get("conditional") or []
+    if not isinstance(required, list) or not required or not isinstance(conditional, list):
+        raise Outcome("BLOCKED", "BINDING_RULE_VIOLATED", rule="BINDING-001", binding_ref=ref)
+    conditional_refs = [c.get("profile") for c in conditional if isinstance(c, dict)]
+    for profile_ref in [*required, *conditional_refs]:
+        matches = [p for p in profiles if isinstance(p, dict) and p.get("id") == profile_ref]
+        if len(matches) != 1 or matches[0].get("class") != DOMAIN_CLASS:
+            raise Outcome(
+                "BLOCKED",
+                "BINDING_RULE_VIOLATED",
+                rule="BINDING-001",
+                binding_ref=ref,
+                profile_ref=profile_ref,
+            )
+    activations = set((catalog.get("activation_conditions") or {}).keys())
+    if (
+        len(set(required)) != len(required)
+        or len(set(conditional_refs)) != len(conditional_refs)
+        or len(conditional_refs) != len(conditional)
+        or set(required) & set(conditional_refs)
+        or any(c.get("activation") not in activations for c in conditional)
+    ):
+        raise Outcome("BLOCKED", "BINDING_RULE_VIOLATED", rule="BINDING-002", binding_ref=ref)
+    consumer = binding.get("consumer") or {}
+    kind = (catalog.get("consumer_kinds") or {}).get(consumer.get("kind"))
+    if (
+        not isinstance(kind, dict)
+        or any(consumer.get(k) in (None, "", []) for k in kind.get("requires") or [])
+        or any(k in consumer for k in kind.get("forbids") or [])
+    ):
+        raise Outcome("BLOCKED", "BINDING_RULE_VIOLATED", rule="BINDING-003", binding_ref=ref)
+    authority = binding.get("authority") or {}
+    if authority.get("binding_grants_permissions") is not False or (
+        authority.get("action_authority") != "externally_resolved"
+    ):
+        raise Outcome("BLOCKED", "BINDING_RULE_VIOLATED", rule="BINDING-004", binding_ref=ref)
+
+
+def verify_binding_bundle(
+    root: Path, bundle: Path, expect_revision: str | None, binding_ref: str
+) -> dict[str, Any]:
+    """Verify a consumer-committed domain binding bundle against an exact checkout.
+
+    The binding itself is re-read from the pinned catalog, never from the lock: its digest must
+    be current, the lock must materialize exactly its required domains in order, record exactly
+    its conditional domains (unmaterialized) and its unresolved coordinates, and claim neither a
+    composed view nor activation. Every domain bundle then goes through `verify_profile_bundle`,
+    the one bundle verification every consumer uses. Success is BUNDLE_VERIFIED: per-domain
+    projections are evidence, not a composed binding and not authority to act.
+    """
+    lock_path = bundle / BINDING_LOCK
+    if not lock_path.is_file():
+        raise Outcome(
+            "BLOCKED",
+            "BLOCKED_UPSTREAM_PROJECTION_PRODUCER",
+            detail="no consumer-committed binding bundle at this path; this run never produces one",
+            bundle=str(bundle),
+        )
+    lock = _load(lock_path, "BINDING_LOCK")
+    if not isinstance(lock, dict) or lock.get("schema") != BINDING_LOCK_SCHEMA:
+        raise Outcome("REJECTED", "LOCK_SCHEMA_MISMATCH", expected=[BINDING_LOCK_SCHEMA])
+    authority = _mapping(lock, "authority", "BINDING_LOCK")
+    if authority.get("repository") != OWNER_REPOSITORY or not (
+        isinstance(authority.get("revision"), str) and _SHA1.fullmatch(authority["revision"])
+    ):
+        raise Outcome("REJECTED", "LOCK_AUTHORITY_IDENTITY_MISMATCH", observed=authority)
+    coordinates = authority_root(root, expect_revision)
+    if authority["revision"] != coordinates["revision"] and (
+        _git_raw(
+            root, "merge-base", "--is-ancestor", authority["revision"], coordinates["revision"]
+        )[0]
+        != 0
+    ):
+        raise Outcome(
+            "STALE",
+            "LOCK_REVISION_NOT_IN_PIN_HISTORY",
+            lock_revision=authority["revision"],
+            pinned=coordinates["revision"],
+        )
+    tree = PinnedTree(root, coordinates["revision"])
+    catalog = tree.load(BINDING_CATALOG_PATH, "BINDING_CATALOG") or {}
+    entries = [
+        b for b in catalog.get("bindings", []) if isinstance(b, dict) and b.get("id") == binding_ref
+    ]
+    if len(entries) != 1:
+        raise Outcome(
+            "BLOCKED", "BINDING_UNRESOLVED", binding_ref=binding_ref, matches=len(entries)
+        )
+    binding = entries[0]
+    pin = _mapping(lock, "binding", "BINDING_LOCK")
+    if pin.get("ref") != binding_ref:
+        raise Outcome("REJECTED", "BINDING_IDENTITY_MISMATCH", observed=pin.get("ref"))
+    if pin.get("digest") != content_digest(binding):
+        raise Outcome(
+            "STALE",
+            "BINDING_DIGEST_NOT_CURRENT",
+            observed=pin.get("digest"),
+            current=content_digest(binding),
+        )
+    _binding_rules(tree, catalog, binding)
+
+    required = [str(r) for r in binding["requires"]]
+    conditional = [
+        {"ref": str(c["profile"]), "activation": str(c["activation"])}
+        for c in binding.get("conditional") or []
+    ]
+    unresolved = [
+        {"coordinate": str(u.get("coordinate")), "blocks": str(u.get("blocks"))}
+        for u in binding.get("unresolved") or []
+        if isinstance(u, dict)
+    ]
+    listed = lock.get("domains")
+    if not isinstance(listed, list) or not all(
+        isinstance(d, dict) and isinstance(d.get("profile"), dict) for d in listed
+    ):
+        raise Outcome("REJECTED", "LOCK_DOMAINS_MALFORMED")
+    observed = [d["profile"].get("ref") for d in listed]
+    promoted = [r for r in observed if r in {c["ref"] for c in conditional}]
+    on_disk = [c["ref"] for c in conditional if (bundle / domain_spec(c["ref"])[1]).exists()]
+    if promoted or on_disk:
+        raise Outcome(
+            "REJECTED",
+            "CONDITIONAL_DOMAIN_MATERIALIZED",
+            conditional=sorted(set(promoted) | set(on_disk)),
+        )
+    if observed != required:
+        raise Outcome("REJECTED", "BINDING_DOMAINS_MISMATCH", declared=required, observed=observed)
+    if lock.get("conditional") != conditional:
+        raise Outcome("REJECTED", "BINDING_CONDITIONAL_MISMATCH", declared=conditional)
+    if lock.get("unresolved") != unresolved:
+        raise Outcome(
+            "REJECTED",
+            "BINDING_UNRESOLVED_MISMATCH",
+            declared=unresolved,
+            observed=lock.get("unresolved"),
+        )
+    composition = lock.get("cross_domain_composition")
+    if (
+        not isinstance(composition, dict)
+        or composition.get("status") != "not_produced"
+        or (bundle / "composed.json").exists()
+    ):
+        raise Outcome(
+            "REJECTED",
+            "COMPOSITION_OVERCLAIMED",
+            detail="no producer composes a binding's domain set; a composed view is unverifiable",
+        )
+    blocked_by = [u["coordinate"] for u in unresolved] + [CROSS_DOMAIN_COMPOSITION]
+    if lock.get("activation") != {"status": "blocked", "blocked_by": blocked_by}:
+        raise Outcome(
+            "REJECTED",
+            "ACTIVATION_OVERCLAIMED",
+            expected={"status": "blocked", "blocked_by": blocked_by},
+            observed=lock.get("activation"),
+        )
+    lock_producer = _mapping(lock, "producer", "BINDING_LOCK")
+    domains: list[dict[str, Any]] = []
+    for entry, profile_ref in zip(listed, required):
+        spec, directory = domain_spec(profile_ref)
+        if entry.get("path") != directory or entry.get("lock") != f"{directory}/{BUNDLE_LOCK}":
+            raise Outcome(
+                "REJECTED", "DOMAIN_PATH_MISMATCH", profile_ref=profile_ref, expected=directory
+            )
+        domain_lock = bundle / directory / BUNDLE_LOCK
+        try:
+            raw = domain_lock.read_bytes()
+        except OSError as exc:
+            raise Outcome(
+                "REJECTED", "DOMAIN_BUNDLE_ABSENT", profile_ref=profile_ref, path=str(domain_lock)
+            ) from exc
+        if bytes_digest(raw) != entry.get("lock_sha256"):
+            raise Outcome("REJECTED", "DOMAIN_LOCK_BYTES_MISMATCH", profile_ref=profile_ref)
+        verified = verify_profile_bundle(root, bundle / directory, expect_revision, spec)
+        if verified["lock"]["authority"] != authority:
+            raise Outcome("REJECTED", "DOMAIN_REVISION_MISMATCH", profile_ref=profile_ref)
+        if verified["producer"] != lock_producer:
+            raise Outcome("REJECTED", "DOMAIN_PRODUCER_MISMATCH", profile_ref=profile_ref)
+        if entry["profile"] != verified["profile"]:
+            raise Outcome("REJECTED", "DOMAIN_PROFILE_PIN_MISMATCH", profile_ref=profile_ref)
+        domains.append(
+            {
+                "profile": verified["profile"],
+                "payload_schema": verified["payload_schema"],
+                "components": verified["components"],
+            }
+        )
+    return {
+        "status": "BUNDLE_VERIFIED",
+        "reason": "DOMAIN_BINDING_BUNDLE_VERIFIED",
+        "authority_root": coordinates,
+        "binding": {"ref": binding_ref, "digest": pin["digest"]},
+        "bundle": {
+            "path": str(bundle),
+            "lock_digest": bytes_digest(lock_path.read_bytes()),
+            "authority": {"repository": OWNER_REPOSITORY, "revision": authority["revision"]},
+            "producer": lock_producer,
+            "producer_authentication": "unauthenticated_unkeyed_receipt",
+        },
+        "domains": domains,
+        "conditional": conditional,
+        "cross_domain_composition": "not_produced",
+        "activation": {"status": "BLOCKED", "blocked_by": blocked_by},
+        "admitted": False,
+    }
+
+
 def _integrated(root: Path, revision: Any, main_tip: str) -> bool:
     return (
         isinstance(revision, str)
@@ -1243,9 +1478,25 @@ def main(argv: list[str] | None = None) -> int:
         "--require-invariant", action="append", help="applicable invariant id (repeatable)"
     )
     parser.add_argument("--prior-binding", help="earlier BOUND record to re-check for currentness")
+    parser.add_argument(
+        "--binding-bundle",
+        help="consumer-committed domain binding bundle directory (binding.lock.json)",
+    )
+    parser.add_argument(
+        "--binding-ref",
+        default=CODING_AGENT_DOMAIN_BINDING,
+        help="canonical domain consumer binding the bundle must materialize",
+    )
     args = parser.parse_args(argv)
     try:
-        if args.prior_binding:
+        if args.binding_bundle:
+            record = verify_binding_bundle(
+                Path(args.authority_root),
+                Path(args.binding_bundle),
+                args.expect_revision,
+                args.binding_ref,
+            )
+        elif args.prior_binding:
             record = verify_prior(args)
         elif args.bundle:
             record = verify_bundle(args)
