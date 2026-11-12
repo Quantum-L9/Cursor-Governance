@@ -17,6 +17,7 @@ from select_pr_pytest_paths import (  # noqa: E402
     _drop_unrunnable,
     root_addopts_ignores,
     root_collect_ignores,
+    root_norecursedirs,
     select_pr_pytest_paths,
     skill_mirror_tests,
 )
@@ -451,6 +452,40 @@ class CommandSuiteOwnershipTests(unittest.TestCase):
     def test_live_registry_never_selects_the_archived_test(self) -> None:
         selected = select_pr_pytest_paths(["skills/AUTONOMY_MANIFEST.yaml", self.ARCHIVED])
         self.assertNotIn(self.ARCHIVED, selected)
+
+
+class NorecursedirsTests(unittest.TestCase):
+    """A test under a `norecursedirs` directory is never a scoped target.
+
+    `skills/_archived/l9-idea-foundry/scripts/test_factory_qualification.py` is in
+    no conftest `collect_ignore` list; only `norecursedirs = ["_archived", ...]`
+    keeps root pytest out of it. A change to a file whose name this test mentions selected it,
+    the explicit argument overrode `norecursedirs`, and collection failed on
+    `import self_test`.
+    """
+
+    ARCHIVED = "skills/_archived/l9-idea-foundry/scripts/test_factory_qualification.py"
+    ROOT_ONLY = [{"id": "repo-root", "kind": "pytest", "owned_paths": ["."]}]
+
+    def test_norecursedirs_are_read_from_pyproject(self) -> None:
+        self.assertIn("_archived", root_norecursedirs())
+
+    def test_path_under_a_norecursedir_is_dropped(self) -> None:
+        self.assertNotIn(self.ARCHIVED, root_collect_ignores())
+        keep, dropped = _drop_unrunnable([self.ARCHIVED], self.ROOT_ONLY)
+        self.assertEqual((keep, dropped), ([], [self.ARCHIVED]))
+
+    def test_only_directory_components_match(self) -> None:
+        live = "tests/ops/scripts/test_select_pr_pytest_paths.py"
+        keep, dropped = _drop_unrunnable([live], self.ROOT_ONLY)
+        self.assertEqual((keep, dropped), ([live], []))
+
+    def test_live_registry_never_selects_it_for_a_name_match(self) -> None:
+        # The archived test names `architecture.yaml`; selection is by name, so this
+        # binding selected it before norecursedirs was honoured.
+        selected = select_pr_pytest_paths(["governance/architect-mode/bindings/architecture.yaml"])
+        self.assertNotIn(self.ARCHIVED, selected)
+        self.assertFalse(any("/_archived/" in item for item in selected))
 
 
 class SkillMirrorTestsTests(unittest.TestCase):
