@@ -97,10 +97,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:3ed989de19dc5660f78e5d99c782bf72e7db611c3e75cbe0092c53da97b8b006",
+  "projection_digest": "sha256:f2b8792b5e178b3ecaa458ee99ff165c45371eabf2b7ad9a8fa38aba01123e00",
   "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
   "projection_profile_ref": "l9.projection/strategic-value@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
   "source_ref": "l9.source/invariants@1"
 }

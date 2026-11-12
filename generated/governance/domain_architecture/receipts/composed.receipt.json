@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/composition-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "digest": "sha256:a6b8bd4305ffc509bc8c4904c4405e8fe4f828b69d79e1faa48cb0d66c25568c",
       "path": "semantics/composition_profiles.yaml",
       "ref": "l9.composition-profiles/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
     "source_registry": {
       "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
@@ -71,13 +71,13 @@
       "ref": "l9.projection/architecture@1#l9.source/port-catalog@1"
     },
     {
-      "digest": "sha256:f690e2b74cee6021cbb1485a9e9d60d63840e68d0076f3c6787dfcb25b79201e",
+      "digest": "sha256:667a5454d5ef76bf16a39185dd6e394030a0c32c93af73de4b4aac1ca887800a",
       "ref": "l9.projection/architecture@1#l9.source/invariants@1"
     }
   ],
   "operation": "composition",
   "output": {
-    "digest": "sha256:5230f88c6e0c80a87187234f019dec9a35317e2168d5fecde990d81a115a0b6d",
+    "digest": "sha256:47d9777a8fe1be4d9c98fec2e9c894da83b52fd39ac26528b53f12a95ef136d8",
     "ref": "l9.compose/architecture@1#l9.projection/architecture@1"
   },
   "producer_identity": {
@@ -88,8 +88,8 @@
     "digest": "sha256:cc7aaeb08ad637007b3539eaf9985a3c930a804fe98207524547e68b86ba56ea",
     "ref": "l9.compose/architecture@1"
   },
-  "receipt_digest": "sha256:e46d70e3060972555261360a14dff17472319dc6ec6967cf593105b425eef9f9",
-  "receipt_identity": "l9.receipt-instance/fd41ca9885b6ce2b4047e5d9e03be40190c9ddd8a02c6f7f64f1246c080aba42",
+  "receipt_digest": "sha256:8324ddceb26b45784f3dffc109bfc2c1e247eb2918e47d33bec016e9d266d4b3",
+  "receipt_identity": "l9.receipt-instance/11099623cdd8a9d70a972280203fb3543628a0f18e4053df8299684139767e79",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -159,7 +159,7 @@
           },
           "source_currentness": {
             "digest": "sha256:c4adbeff6e953404aaafe275a13a387e9fdd0d9bd8dbe3adfa46af88cfe2a323",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -238,7 +238,7 @@
           },
           "source_currentness": {
             "digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -317,7 +317,7 @@
           },
           "source_currentness": {
             "digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -387,7 +387,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:f690e2b74cee6021cbb1485a9e9d60d63840e68d0076f3c6787dfcb25b79201e",
+            "digest": "sha256:667a5454d5ef76bf16a39185dd6e394030a0c32c93af73de4b4aac1ca887800a",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -395,8 +395,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -408,7 +408,7 @@
         },
         "projection_profile_digest": "sha256:136dbe9d7e87e3ea4d8bae8a2ce9046880c820eab30c80ca8d81994028531c2a",
         "projection_profile_ref": "l9.projection/architecture@1",
-        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
         "source_ref": "l9.source/invariants@1"
       },
       "l9.projection/architecture@1#l9.source/node-archetypes@1": {
@@ -475,7 +475,7 @@
           },
           "source_currentness": {
             "digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -554,7 +554,7 @@
           },
           "source_currentness": {
             "digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -633,7 +633,7 @@
           },
           "source_currentness": {
             "digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -712,7 +712,7 @@
           },
           "source_currentness": {
             "digest": "sha256:a2510f4fc80b755d25b66c08f0d723e2f14b65966d6689b8b426ea23e5c3abf4",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -731,7 +731,7 @@
     "coverage": "complete",
     "criteria": {
       "component_freshness": {
-        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
         "status": "pass"
       },
       "component_provenance": {
@@ -748,7 +748,7 @@
         "status": "pass"
       },
       "composition_digest": {
-        "digest": "sha256:5230f88c6e0c80a87187234f019dec9a35317e2168d5fecde990d81a115a0b6d",
+        "digest": "sha256:47d9777a8fe1be4d9c98fec2e9c894da83b52fd39ac26528b53f12a95ef136d8",
         "status": "pass"
       },
       "composition_equivalence": {
@@ -760,7 +760,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:8f38b2b43c1ffa0f39bc8906edaa2b7d820f6a741721d09eb7af83afffa237a3",
+        "content_digest": "sha256:6ba4dc3dddf528567c189318af4944fe0f476ce27a73346a05cc532309d21c0a",
         "path": "composed/l9.compose_architecture_1_l9.projection_architecture_1.composed.json",
         "status": "pass"
       },

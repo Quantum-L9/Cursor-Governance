@@ -4,16 +4,16 @@
 #   path: governance/cto-mode/bindings/technical-coordination.yaml
 #   layer: governance
 #   owner: governance-control-plane
-#   status: candidate
-#   version: 0.1.0
-#   updated: 2026-11-11
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
 # Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
 # and verified by the same adapter over the one shared consumer verifier.
 integration:
   integration_id: L9.CG.CTO_MODE.TECHNICAL_COORDINATION_BINDING.001
-  version: 0.1.0
+  version: 1.0.0
   artifact_class: runtime_integration_binding
-  status: candidate
+  status: active
   semantic_owner: governance/cto-mode/bindings/technical-coordination.yaml
 purpose:
   assertion: >-
@@ -26,10 +26,7 @@ input:
   authority:
     repository: Quantum-L9/.github
     projection_profile_ref: l9.projection/technical-coordination@1
-    # Candidate digests of the profile pair in Quantum-L9/.github#246 (v3.39.0, approved tree
-    # d7f2fd0, compiled by eeac5d2 / 0.10.0). Not admitted until #244, #245 and #246 merge.
-    # Rebind to the admitted revision and add the
-    # owner's decision below once Quantum-L9/.github admits the profile pair.
+    # Admitted in Quantum-L9/.github v3.39.0 (ADR-036, #246, main f8e44d1).
     projection_profile_digest: sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036
     projection_profile_class: consumer
     projection_profile_consumer: technical_coordination_role
@@ -53,10 +50,6 @@ input:
     ci: .github/workflows/l9-projection-bundle-verify.yml
     trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
     cg_produces: false
-    registration: >-
-      The bundle is registered with the driver and CI matrix only after the profile pair is
-      admitted on Quantum-L9/.github main; until then there is no bundle and the verifier
-      reports BLOCKED.
   verifier: skills/l9-global-architect/scripts/verify_architecture_intelligence.py
   shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
 admission:
@@ -64,7 +57,21 @@ admission:
   resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
   authority_main_ref: refs/remotes/origin/main
   effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
-  decisions: []
+  decisions:
+    - candidate_ref: l9.projection/technical-coordination@1
+      candidate_digest: sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036
+      decision: admit
+      admitted_revision: f8e44d1536cb218de41dde4685c606a4d6460915
+      decided_at: "2026-11-12"
+      authority_ref: >-
+        Quantum-L9/.github ADR-036, Semantic Foundation v3.39.0, admitted by the repository owner in governed session session_017xwbxw3RduoWFP29VkobHR ("I want to formally admit these candidates"; "push Stages B and C as stacked branches") and merged to .github main as Quantum-L9/.github#246 (f8e44d1); bound into CTO mode on the owner's instruction "Merge the PR's in this seam enabling the projections" (2026-11-12).
+    - candidate_ref: l9.compose/technical-coordination@1
+      candidate_digest: sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb
+      decision: admit
+      admitted_revision: f8e44d1536cb218de41dde4685c606a4d6460915
+      decided_at: "2026-11-12"
+      authority_ref: >-
+        Quantum-L9/.github ADR-036, Semantic Foundation v3.39.0, admitted by the repository owner in governed session session_017xwbxw3RduoWFP29VkobHR ("I want to formally admit these candidates"; "push Stages B and C as stacked branches") and merged to .github main as Quantum-L9/.github#246 (f8e44d1); bound into CTO mode on the owner's instruction "Merge the PR's in this seam enabling the projections" (2026-11-12).
 load_condition:
   when:
     - cto_mode_active

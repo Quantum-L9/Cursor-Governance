@@ -205,10 +205,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:bd2e0c617a6b2dd5437cb5e198edea428d2257fa010b1dbb64c05612d12eb3d7",
+  "projection_digest": "sha256:7e9d8f568755a97bf9c0dea75ee6aeca79d133813b5fd446cb01c8a2b6171384",
   "projection_profile_digest": "sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312",
   "projection_profile_ref": "l9.projection/contracts-conformance@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
   "source_ref": "l9.source/invariants@1"
 }

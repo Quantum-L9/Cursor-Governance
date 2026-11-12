@@ -180,10 +180,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:c017e0514a5ea046c4b98c28fdeba2d6fd53c59d370d4d0f41e9398591486c6f",
+  "projection_digest": "sha256:5073b12754383a3f0d9ab74c28800724b396b224be564b89047f02c87d94ab84",
   "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
   "projection_profile_ref": "l9.projection/governance@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+  "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
   "source_ref": "l9.source/contracts@1"
 }

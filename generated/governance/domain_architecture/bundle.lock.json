@@ -1,7 +1,7 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52"
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
   },
   "components": [
     {
@@ -69,19 +69,19 @@
     },
     {
       "path": "projections/invariants.projection.json",
-      "projection_digest": "sha256:f690e2b74cee6021cbb1485a9e9d60d63840e68d0076f3c6787dfcb25b79201e",
+      "projection_digest": "sha256:667a5454d5ef76bf16a39185dd6e394030a0c32c93af73de4b4aac1ca887800a",
       "receipt": "receipts/invariants.receipt.json",
-      "sha256": "sha256:6f48af7fb720b6ca54d27a2307d6cff4a314bd4e512acc8016db42ad0cdad078",
+      "sha256": "sha256:58f1475325da8d818c69da12db0551408e879856d43f5863ab2605e5a1619a9c",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     }
   ],
   "composed": {
-    "composition_digest": "sha256:5230f88c6e0c80a87187234f019dec9a35317e2168d5fecde990d81a115a0b6d",
+    "composition_digest": "sha256:47d9777a8fe1be4d9c98fec2e9c894da83b52fd39ac26528b53f12a95ef136d8",
     "path": "composed.json",
     "receipt": "receipts/composed.receipt.json",
-    "sha256": "sha256:8f38b2b43c1ffa0f39bc8906edaa2b7d820f6a741721d09eb7af83afffa237a3"
+    "sha256": "sha256:6ba4dc3dddf528567c189318af4944fe0f476ce27a73346a05cc532309d21c0a"
   },
   "composition_profile": {
     "digest": "sha256:cc7aaeb08ad637007b3539eaf9985a3c930a804fe98207524547e68b86ba56ea",

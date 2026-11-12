@@ -267,10 +267,10 @@
       }
     }
   },
-  "projection_digest": "sha256:346b9249c090b7c7628d64bdec47c22d87c94a15c384aa454fc12834ccdf0a8d",
+  "projection_digest": "sha256:dec16fb3e1d9700666e651ecad879071b32530fb94562305dd479508ac7c7914",
   "projection_profile_digest": "sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d",
   "projection_profile_ref": "l9.projection/governance@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
+  "source_digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
   "source_ref": "l9.source/lifecycle@1"
 }

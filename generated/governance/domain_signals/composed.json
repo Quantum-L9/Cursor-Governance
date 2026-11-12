@@ -1,21 +1,21 @@
 {
   "components": [
     {
-      "projection_digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+      "projection_digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
       "projection_ref": "l9.projection/signals@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
-      "projection_digest": "sha256:92467dbb21451ec500c7d9126d560688d85ffad44bc8e147d0f594973496b37b",
+      "projection_digest": "sha256:5100d200cfc69703afe27925ddc6ac94f9db401d0fc0051583d913ce9057707f",
       "projection_ref": "l9.projection/signals@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     }
   ],
-  "composition_digest": "sha256:92993e412ac6b599ade968a106fa00d846d65a6011e6b34e2a3c439aaf425f44",
+  "composition_digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
   "composition_profile": {
     "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",
     "ref": "l9.compose/signals@1"

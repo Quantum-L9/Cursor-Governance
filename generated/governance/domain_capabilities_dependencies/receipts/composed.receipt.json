@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/composition-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "digest": "sha256:a6b8bd4305ffc509bc8c4904c4405e8fe4f828b69d79e1faa48cb0d66c25568c",
       "path": "semantics/composition_profiles.yaml",
       "ref": "l9.composition-profiles/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
     "source_registry": {
       "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
@@ -43,7 +43,7 @@
   },
   "inputs": [
     {
-      "digest": "sha256:1e737f890501fbd75c4605811a09949dc64cf0c52780ac4ea4b9a78fd9385743",
+      "digest": "sha256:b714510e9d988bd96872288c63b889743eb3a6a98c025a947a7fd658e26bf7d9",
       "ref": "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1"
     },
     {
@@ -59,17 +59,17 @@
       "ref": "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1"
     },
     {
-      "digest": "sha256:506a2cd514646f1ed915d406cd8782d412a3ecb8cf777475bf4079857163fadf",
+      "digest": "sha256:9af28569c9e4afd686f7932f2556ac5cd35db6281e910a2a706abf7817a4279f",
       "ref": "l9.projection/capabilities-dependencies@1#l9.source/invariants@1"
     },
     {
-      "digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+      "digest": "sha256:949d434175964bed17274fde934ba97db7c7654131533e41ceb63c4a25f783d4",
       "ref": "l9.projection/capabilities-dependencies@1#l9.source/contracts@1"
     }
   ],
   "operation": "composition",
   "output": {
-    "digest": "sha256:6352bd71c1f525ef693fb5f64ac602819ddf96d3fa60e51a4188199ced7404c5",
+    "digest": "sha256:a42f2987ac439d21b151db242b4bd782c3e591c2786f3a83a35f287e06b7f830",
     "ref": "l9.compose/capabilities-dependencies@1#l9.projection/capabilities-dependencies@1"
   },
   "producer_identity": {
@@ -80,8 +80,8 @@
     "digest": "sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3",
     "ref": "l9.compose/capabilities-dependencies@1"
   },
-  "receipt_digest": "sha256:fb452cc56326cffbf8b9d216073c1cb60044d8173442b242812bd31f2c22b82f",
-  "receipt_identity": "l9.receipt-instance/b959bc965d83a0945c3afd009b73aeaedecd9a19613fbfbe76fc53a6c68bdce6",
+  "receipt_digest": "sha256:ad5b6c4c9647fe16a0ae12d1d2c605ed6f096d0b2f43700c2ffd1bded96dc66a",
+  "receipt_identity": "l9.receipt-instance/f51342488bac07abb002dca498eff5e44abc8938f637521b75177268316ebf6a",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -137,7 +137,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:1e737f890501fbd75c4605811a09949dc64cf0c52780ac4ea4b9a78fd9385743",
+            "digest": "sha256:b714510e9d988bd96872288c63b889743eb3a6a98c025a947a7fd658e26bf7d9",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -145,8 +145,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -158,7 +158,7 @@
         },
         "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
         "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
-        "source_digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
+        "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
         "source_ref": "l9.source/capabilities@1"
       },
       "l9.projection/capabilities-dependencies@1#l9.source/capability-resolution@1": {
@@ -220,7 +220,7 @@
           },
           "source_currentness": {
             "digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -285,7 +285,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+            "digest": "sha256:949d434175964bed17274fde934ba97db7c7654131533e41ceb63c4a25f783d4",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -293,8 +293,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -306,7 +306,7 @@
         },
         "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
         "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
-        "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+        "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
         "source_ref": "l9.source/contracts@1"
       },
       "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1": {
@@ -368,7 +368,7 @@
           },
           "source_currentness": {
             "digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -433,7 +433,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:506a2cd514646f1ed915d406cd8782d412a3ecb8cf777475bf4079857163fadf",
+            "digest": "sha256:9af28569c9e4afd686f7932f2556ac5cd35db6281e910a2a706abf7817a4279f",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -441,8 +441,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -454,7 +454,7 @@
         },
         "projection_profile_digest": "sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302",
         "projection_profile_ref": "l9.projection/capabilities-dependencies@1",
-        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
         "source_ref": "l9.source/invariants@1"
       },
       "l9.projection/capabilities-dependencies@1#l9.source/semantic-dependency-model@1": {
@@ -516,7 +516,7 @@
           },
           "source_currentness": {
             "digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -535,7 +535,7 @@
     "coverage": "complete",
     "criteria": {
       "component_freshness": {
-        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
         "status": "pass"
       },
       "component_provenance": {
@@ -550,7 +550,7 @@
         "status": "pass"
       },
       "composition_digest": {
-        "digest": "sha256:6352bd71c1f525ef693fb5f64ac602819ddf96d3fa60e51a4188199ced7404c5",
+        "digest": "sha256:a42f2987ac439d21b151db242b4bd782c3e591c2786f3a83a35f287e06b7f830",
         "status": "pass"
       },
       "composition_equivalence": {
@@ -562,7 +562,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:cb0f80c194e9b752416cdf5d74207c79cc56d8c6adb9723b113b32f6aa03d45a",
+        "content_digest": "sha256:1f73647f0d43147666ad047d2bcfcc1efe93733a2479a06a6964910e579d5fae",
         "path": "composed/l9.compose_capabilities-dependencies_1_l9.projection_capabilities-dependencies_1.composed.json",
         "status": "pass"
       },

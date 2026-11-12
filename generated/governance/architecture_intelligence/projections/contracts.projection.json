@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "contracts": [
@@ -1619,8 +1619,8 @@
       "source_admission": "canonical_active",
       "source_artifact": "invariants.yaml",
       "source_artifact_id": "l9.invariants/global@1",
-      "source_digest_sha256": "dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
-      "source_invariant_count": 40
+      "source_digest_sha256": "d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_invariant_count": 44
     },
     "outcome_semantics": {
       "global_error_taxonomy_defined_here": false,
@@ -1628,10 +1628,10 @@
       "scope": "contract_local"
     }
   },
-  "projection_digest": "sha256:388449bf17a30315472c41133780000dba027a0d8e906b1fe9004a91110f4aac",
+  "projection_digest": "sha256:e738ddeb899e3a32fd74df98f45137d90f030b389ff766e2778b55b8c0b9628f",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+  "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
   "source_ref": "l9.source/contracts@1"
 }

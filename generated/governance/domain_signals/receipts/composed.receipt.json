@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:281873742face9b823440f88ed99aa9694e0869b94148fbd226aad0fc3892995",
+      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/composition-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:035e27b28ff00792f769940097f05ffbb48e060b529a935c05df00a98f8ed4b3",
+      "digest": "sha256:a6b8bd4305ffc509bc8c4904c4405e8fe4f828b69d79e1faa48cb0d66c25568c",
       "path": "semantics/composition_profiles.yaml",
       "ref": "l9.composition-profiles/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
     "source_registry": {
       "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
@@ -43,17 +43,17 @@
   },
   "inputs": [
     {
-      "digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+      "digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
       "ref": "l9.projection/signals@1#l9.source/vocabulary@1"
     },
     {
-      "digest": "sha256:92467dbb21451ec500c7d9126d560688d85ffad44bc8e147d0f594973496b37b",
+      "digest": "sha256:5100d200cfc69703afe27925ddc6ac94f9db401d0fc0051583d913ce9057707f",
       "ref": "l9.projection/signals@1#l9.source/invariants@1"
     }
   ],
   "operation": "composition",
   "output": {
-    "digest": "sha256:92993e412ac6b599ade968a106fa00d846d65a6011e6b34e2a3c439aaf425f44",
+    "digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
     "ref": "l9.compose/signals@1#l9.projection/signals@1"
   },
   "producer_identity": {
@@ -64,8 +64,8 @@
     "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",
     "ref": "l9.compose/signals@1"
   },
-  "receipt_digest": "sha256:ee090842d706ec1bcf085fcff55a0180228c510be04eebb943561310f99ef6e5",
-  "receipt_identity": "l9.receipt-instance/8fc43df932ab0e8c0c1697d87551fccd05528b8fff7102124050197db2ecf6db",
+  "receipt_digest": "sha256:47281d9aba47776eeb3605497d2e6b9c46c75abadbc54443f2667f10ce1219d0",
+  "receipt_identity": "l9.receipt-instance/8865e4d3efae6376a5a8b7c43cde54daba7faa379d646e2607540420cc6d51a7",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -116,7 +116,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:92467dbb21451ec500c7d9126d560688d85ffad44bc8e147d0f594973496b37b",
+            "digest": "sha256:5100d200cfc69703afe27925ddc6ac94f9db401d0fc0051583d913ce9057707f",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -124,8 +124,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -137,7 +137,7 @@
         },
         "projection_profile_digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
         "projection_profile_ref": "l9.projection/signals@1",
-        "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+        "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
         "source_ref": "l9.source/invariants@1"
       },
       "l9.projection/signals@1#l9.source/vocabulary@1": {
@@ -185,7 +185,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+            "digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -193,8 +193,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
-            "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+            "digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
             "status": "pass"
           },
           "source_identity": {
@@ -206,14 +206,14 @@
         },
         "projection_profile_digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
         "projection_profile_ref": "l9.projection/signals@1",
-        "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+        "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
         "source_ref": "l9.source/vocabulary@1"
       }
     },
     "coverage": "complete",
     "criteria": {
       "component_freshness": {
-        "revision": "dcd9d0092740756c19ac681d399bd438409bdc52",
+        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
         "status": "pass"
       },
       "component_provenance": {
@@ -224,7 +224,7 @@
         "status": "pass"
       },
       "composition_digest": {
-        "digest": "sha256:92993e412ac6b599ade968a106fa00d846d65a6011e6b34e2a3c439aaf425f44",
+        "digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
         "status": "pass"
       },
       "composition_equivalence": {
@@ -236,7 +236,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:472e68c1d37bb99c906c669dab3371fd6740d5c8bc5ca5d2c8f7ee2f6470d44e",
+        "content_digest": "sha256:980f842774e083267dd5e1710d50bfa321f255c72dd3cd3dca0b99013452a915",
         "path": "composed/l9.compose_signals_1_l9.projection_signals_1.composed.json",
         "status": "pass"
       },

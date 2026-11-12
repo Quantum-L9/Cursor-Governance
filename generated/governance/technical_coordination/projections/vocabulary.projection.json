@@ -1,0 +1,71 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "terms": {
+      "bounded_autonomy": {
+        "definition": "Authorization for an agent or compiler to act independently within an explicitly constrained semantic, capability, fixture-backed, and authority-valid region.\n",
+        "principle": [
+          "semantic_freedom_decreases_as_safe_automation_increases",
+          "conformance_evidence_does_not_replace_authority"
+        ],
+        "semantic_class": "execution_policy"
+      },
+      "decision_resolution_class": {
+        "definition": "Classification of a decision by the authoritative basis and boundary of its resolution. The classes distinguish evidence-determined, policy-determined, bounded realization choice, authority-reserved, and unresolved-required-input decisions. Classification directs the appropriate resolution or escalation path. It does not create authority, capability availability, or missing evidence.",
+        "question": "Can this decision be resolved under existing authority, or is a new governing decision required?",
+        "semantic_class": "semantic_concept"
+      },
+      "integration_responsibility": {
+        "definition": "An explicitly assigned, scope-bound accountability for reconciling independently produced contributions that jointly affect a shared acceptance subject. The responsible party identifies the exact combined revision, applicable interfaces and contracts, material conflicts and unresolved dependencies, and the evidence required to substantiate integrated correctness. This accountability is distinct from canonical semantic ownership, execution permission, and final decision authority.",
+        "question": "Who is accountable for verifying that the combined work satisfies its governing contracts?",
+        "rules": [
+          "integration_subject_and_scope_must_be_explicit",
+          "integration_acceptance_requires_combined_state_evidence",
+          "component_receipts_do_not_prove_integrated_correctness",
+          "integration_accountability_does_not_transfer_ownership",
+          "integration_accountability_does_not_grant_action_authority"
+        ],
+        "semantic_class": "semantic_concept"
+      },
+      "material_decision_escalation": {
+        "definition": "A request for a governing decision concerning an exact unresolved material question that cannot be settled within current authority and evidence. It identifies the affected subject, evidence, decision owner or unresolved ownership, blocked dependencies, and the boundary requiring resolution. It is distinct from an operational notification, routine progress report, or implementation preference.",
+        "question": "What exact decision requires whose authority, and which work is actually blocked?",
+        "semantic_class": "semantic_concept"
+      },
+      "plan_keeper": {
+        "definition": "The reasoning role that maintains the Strategic Plan within granted Strategic Authority. It is a semantic role, not an ActorIdentity.",
+        "detailed_model": "strategic_cognition_model.yaml",
+        "semantic_class": "semantic_role"
+      },
+      "signal_consumption": {
+        "definition": "Evidenced use of a previously delivered signal by an eligible actor or system in a later authorized decision, validation, or operation, distinct from receipt, storage, acknowledgement, or merely being technically reachable. Consumption alone does not prove a positive objective-relative result or transfer authority over the affected decision.",
+        "question": "Which later authorized action actually used the information, as opposed to merely receiving or storing it?",
+        "semantic_class": "semantic_concept"
+      },
+      "technical_coordination_role": {
+        "definition": "A scope-bound role that coordinates authorized technical work across independently responsible specialists, agents, or sessions. It interprets approved objectives and applicable architectural constraints, identifies dependencies and integration obligations, coordinates the assignment of bounded work to eligible executors within their existing authorization, reconciles evidence and blockers, and presents consequential decisions to their authoritative owners. The role does not itself own Strategy, canonical architecture, implementation truth, durable work state, or the authority to execute, admit, publish, or merge.",
+        "question": "Who coordinates the technical work while preserving the authority and ownership of its participants?",
+        "rules": [
+          "role_is_not_actor_identity",
+          "role_selection_does_not_grant_authority",
+          "delegation_requires_applicable_authorization",
+          "strategic_plan_remains_owned_by_plan_keeper",
+          "architecture_judgment_remains_with_its_owner",
+          "durable_work_state_remains_source_owned",
+          "specialist_results_require_applicable_verification",
+          "coordination_does_not_imply_acceptance_or_completion"
+        ],
+        "semantic_class": "semantic_role"
+      }
+    }
+  },
+  "projection_digest": "sha256:e17a2fb1a720e51b678bc5db46451568be6182a3075b7a823cd7438bcf682d23",
+  "projection_profile_digest": "sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036",
+  "projection_profile_ref": "l9.projection/technical-coordination@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+  "source_ref": "l9.source/vocabulary@1"
+}

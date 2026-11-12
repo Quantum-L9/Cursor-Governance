@@ -8,28 +8,28 @@
       "source_ref": "l9.source/authority-model@1"
     },
     {
-      "projection_digest": "sha256:346b9249c090b7c7628d64bdec47c22d87c94a15c384aa454fc12834ccdf0a8d",
+      "projection_digest": "sha256:dec16fb3e1d9700666e651ecad879071b32530fb94562305dd479508ac7c7914",
       "projection_ref": "l9.projection/governance@1#l9.source/lifecycle@1",
       "source_class": "lifecycle",
-      "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
+      "source_digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
       "source_ref": "l9.source/lifecycle@1"
     },
     {
-      "projection_digest": "sha256:ceef3451ce6364d92b77fc79884c8c3f0567dae4b8d113c2b37759989a6cd513",
+      "projection_digest": "sha256:b23f9369e40e4aae9fe1aa59a1ddc3f87a3e79c94cf4e927f688f7233112141d",
       "projection_ref": "l9.projection/governance@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     },
     {
-      "projection_digest": "sha256:c017e0514a5ea046c4b98c28fdeba2d6fd53c59d370d4d0f41e9398591486c6f",
+      "projection_digest": "sha256:5073b12754383a3f0d9ab74c28800724b396b224be564b89047f02c87d94ab84",
       "projection_ref": "l9.projection/governance@1#l9.source/contracts@1",
       "source_class": "contracts",
-      "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
       "source_ref": "l9.source/contracts@1"
     }
   ],
-  "composition_digest": "sha256:1b6ec60fdd9e3a9999941f3396873fcfcdf94b8d4028b6fe730011311b9d8754",
+  "composition_digest": "sha256:c5d80dbdb7d99eccebdaac663c5f1db8a24252db89b8135205e841d5468d1794",
   "composition_profile": {
     "digest": "sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70",
     "ref": "l9.compose/governance@1"

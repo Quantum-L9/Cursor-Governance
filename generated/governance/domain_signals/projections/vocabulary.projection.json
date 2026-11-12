@@ -27,10 +27,10 @@
       }
     }
   },
-  "projection_digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+  "projection_digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
   "projection_profile_digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
   "projection_profile_ref": "l9.projection/signals@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
   "source_ref": "l9.source/vocabulary@1"
 }

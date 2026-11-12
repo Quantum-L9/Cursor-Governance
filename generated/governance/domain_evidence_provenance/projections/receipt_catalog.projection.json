@@ -222,10 +222,10 @@
       }
     }
   },
-  "projection_digest": "sha256:597ff3a590bb795ac38daec8867c51e30de6714794be4ced173a4e15bd3f3d8f",
+  "projection_digest": "sha256:6c3f28da1c85395591bac87e71276a11790e509c1adf28432b401892be258aa5",
   "projection_profile_digest": "sha256:2719d0b29894950759445ae361831d3de6ec8662a5e91842d51c76cf241d224a",
   "projection_profile_ref": "l9.projection/evidence-provenance@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:ec7a06224263cad293b79f1f4f832bffc6b4f8eae4980bf8cbfc01bba8af8ca5",
+  "source_digest": "sha256:23df7e9faa58f487569ef18a0656a9f65af669f5d3be8903d4fc35972fc4b9f8",
   "source_ref": "l9.source/receipt-catalog@1"
 }

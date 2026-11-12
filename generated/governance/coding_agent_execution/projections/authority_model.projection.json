@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "admission_rules": {
@@ -39,7 +39,7 @@
       ]
     }
   },
-  "projection_digest": "sha256:85d3fa331ace18a6192f5d6eb05523773c6fbe9b651dbb07b92d1dd7d453e88f",
+  "projection_digest": "sha256:0c97e2e94517caf368843ed7d0002b73091c5411278b2632cde5715a3bffb37d",
   "projection_profile_digest": "sha256:27941a4987ec3861f4e312d991d8016e0769dafa5a5ed6026947c8dfdccc6346",
   "projection_profile_ref": "l9.projection/coding-agent-execution@1",
   "schema": "l9.projection-artifact/v1",

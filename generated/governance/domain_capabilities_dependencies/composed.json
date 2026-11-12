@@ -1,10 +1,10 @@
 {
   "components": [
     {
-      "projection_digest": "sha256:1e737f890501fbd75c4605811a09949dc64cf0c52780ac4ea4b9a78fd9385743",
+      "projection_digest": "sha256:b714510e9d988bd96872288c63b889743eb3a6a98c025a947a7fd658e26bf7d9",
       "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1",
       "source_class": "capabilities",
-      "source_digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
+      "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
       "source_ref": "l9.source/capabilities@1"
     },
     {
@@ -29,21 +29,21 @@
       "source_ref": "l9.source/dependency-archetypes@1"
     },
     {
-      "projection_digest": "sha256:506a2cd514646f1ed915d406cd8782d412a3ecb8cf777475bf4079857163fadf",
+      "projection_digest": "sha256:9af28569c9e4afd686f7932f2556ac5cd35db6281e910a2a706abf7817a4279f",
       "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     },
     {
-      "projection_digest": "sha256:1184c1f4588efd24eeec7f25ca3d9c9fcca2bda678591e81e526d0780e69b9e0",
+      "projection_digest": "sha256:949d434175964bed17274fde934ba97db7c7654131533e41ceb63c4a25f783d4",
       "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/contracts@1",
       "source_class": "contracts",
-      "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
       "source_ref": "l9.source/contracts@1"
     }
   ],
-  "composition_digest": "sha256:6352bd71c1f525ef693fb5f64ac602819ddf96d3fa60e51a4188199ced7404c5",
+  "composition_digest": "sha256:a42f2987ac439d21b151db242b4bd782c3e591c2786f3a83a35f287e06b7f830",
   "composition_profile": {
     "digest": "sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3",
     "ref": "l9.compose/capabilities-dependencies@1"

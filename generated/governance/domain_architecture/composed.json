@@ -50,14 +50,14 @@
       "source_ref": "l9.source/port-catalog@1"
     },
     {
-      "projection_digest": "sha256:f690e2b74cee6021cbb1485a9e9d60d63840e68d0076f3c6787dfcb25b79201e",
+      "projection_digest": "sha256:667a5454d5ef76bf16a39185dd6e394030a0c32c93af73de4b4aac1ca887800a",
       "projection_ref": "l9.projection/architecture@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     }
   ],
-  "composition_digest": "sha256:5230f88c6e0c80a87187234f019dec9a35317e2168d5fecde990d81a115a0b6d",
+  "composition_digest": "sha256:47d9777a8fe1be4d9c98fec2e9c894da83b52fd39ac26528b53f12a95ef136d8",
   "composition_profile": {
     "digest": "sha256:cc7aaeb08ad637007b3539eaf9985a3c930a804fe98207524547e68b86ba56ea",
     "ref": "l9.compose/architecture@1"

@@ -8,28 +8,28 @@
       "source_ref": "l9.source/strategic-value-model@1"
     },
     {
-      "projection_digest": "sha256:2c876b24a03ec180318aa8daf43bb9c80c5bfdabf4b7b1eca664494b88dba7ce",
+      "projection_digest": "sha256:f870129820382b2c78382d9141266d808beb14569e824653523a583223d50fcd",
       "projection_ref": "l9.projection/strategic-value@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
-      "projection_digest": "sha256:3ed989de19dc5660f78e5d99c782bf72e7db611c3e75cbe0092c53da97b8b006",
+      "projection_digest": "sha256:f2b8792b5e178b3ecaa458ee99ff165c45371eabf2b7ad9a8fa38aba01123e00",
       "projection_ref": "l9.projection/strategic-value@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     },
     {
-      "projection_digest": "sha256:38bc3345f50b849bffa03675318c867eead36e9346015ce3b1e84bc7c588ba34",
+      "projection_digest": "sha256:eb292dcf77d79e8b3f030a14627bed8e239df51c84738b39e76aa48fb2a7adaa",
       "projection_ref": "l9.projection/strategic-value@1#l9.source/contracts@1",
       "source_class": "contracts",
-      "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
       "source_ref": "l9.source/contracts@1"
     }
   ],
-  "composition_digest": "sha256:529d58f49e69d385e986aada59230720b650ce769302b29a2da274cc0d81127f",
+  "composition_digest": "sha256:c02e9edb1ef8c7672bd33e479d64bef92eed1e6cb4321b5099972462e931fe15",
   "composition_profile": {
     "digest": "sha256:56098ba2ec5808c8cd4587ce1946045ef6f2d0abf535f6adbf048bfc8034adc4",
     "ref": "l9.compose/strategic-value@1"

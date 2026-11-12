@@ -1,33 +1,33 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52"
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
   },
   "components": [
     {
       "path": "projections/vocabulary.projection.json",
-      "projection_digest": "sha256:4859d19e94099c8e66ff8a63871d4bf25bb8ace22405729c12cd754c2049b3c7",
+      "projection_digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
       "receipt": "receipts/vocabulary.receipt.json",
-      "sha256": "sha256:c8556691d8f9b77c59a969334a20163ab6cd24ab284645f9ab3cf8d57b26b066",
+      "sha256": "sha256:268d27fc53ad31ec9385fe73937488c6396b928850c438ad84bd05e3d044f764",
       "source_class": "vocabulary",
-      "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
       "path": "projections/invariants.projection.json",
-      "projection_digest": "sha256:92467dbb21451ec500c7d9126d560688d85ffad44bc8e147d0f594973496b37b",
+      "projection_digest": "sha256:5100d200cfc69703afe27925ddc6ac94f9db401d0fc0051583d913ce9057707f",
       "receipt": "receipts/invariants.receipt.json",
-      "sha256": "sha256:5ee40759b9e42a41a28486cae8aded331f1b7a78308dfdea4c9f0ed2a3e6ad31",
+      "sha256": "sha256:712cc113743a88a45731d14d89d060b5bf868297d907ca5b00be36cd79dcec34",
       "source_class": "invariants",
-      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     }
   ],
   "composed": {
-    "composition_digest": "sha256:92993e412ac6b599ade968a106fa00d846d65a6011e6b34e2a3c439aaf425f44",
+    "composition_digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
     "path": "composed.json",
     "receipt": "receipts/composed.receipt.json",
-    "sha256": "sha256:472e68c1d37bb99c906c669dab3371fd6740d5c8bc5ca5d2c8f7ee2f6470d44e"
+    "sha256": "sha256:980f842774e083267dd5e1710d50bfa321f255c72dd3cd3dca0b99013452a915"
   },
   "composition_profile": {
     "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",

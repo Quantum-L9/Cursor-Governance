@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "terms": {
@@ -210,10 +210,10 @@
       }
     }
   },
-  "projection_digest": "sha256:2f0aa8feb15dbc19392584564436a7842f13d0c0a25bc994769f5d1439a0ae83",
+  "projection_digest": "sha256:7e8cafa00ad8754e3c3e47b3ccbadb6357fa923cf20302bc5ab2ee9269843cfe",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
+  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
   "source_ref": "l9.source/vocabulary@1"
 }

@@ -162,7 +162,7 @@ def test_cli_on_blocks_without_admitted_bundle_then_off_removes_only_state(tmp_p
         check=False,
     )
     report = json.loads(on.stdout)
-    # No admitted technical-coordination bundle is committed yet: the real verifier blocks.
+    # Admission is resolved against an authority checkout; without one nothing is loaded.
     assert on.returncode == 3, on.stdout + on.stderr
     assert report["mode"] == "BLOCKED"
     assert report["load"] == []
