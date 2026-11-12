@@ -47,10 +47,11 @@ The executor enforces the lock and the outcome tokens. The agent owns the rest.
    locks the repository.
 5. **Verify.** Before finalize, `git -C "$WORK" status --porcelain` and
    `git -C "$WORK" diff --name-only` must name only locked files, the plan's
-   tests, `reports/`, and the executor's own runtime state under `.l9/`
+   tests, the GMP report folder, and the executor's own runtime state under `.l9/`
    (consumers that do not ignore `.l9/` show `.l9/gmp/executor-state.json`).
    Anything else: stop and report it.
-6. **Evidence.** The executor writes `$WORK/reports/gmp/GMP-Report-<NNN>-<Description>.md`
+6. **Evidence.** The executor writes `$WORK/reports/gmp/GMP-Report-<NNN>-<Description>.md`,
+   or into the repository's declared `gmp_report_dir` (`ops/config/publish-authority.json`)
    (folder created when absent; location and name per `rules/81-gmp-audit.mdc`) and
    commits it with the work, so `make pr` publishes it on the PR. The
    finish reply lists files changed, tests run with pass or fail, and the PR
