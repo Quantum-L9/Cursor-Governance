@@ -1,5 +1,5 @@
 {
-  "generation_id": "338f6bb4db139c1d39d477d7b479ac914781ed5b04cf586c9df9e7137126bef1",
+  "generation_id": "0b1d7f15e8d5e60315b63062235b5763a655dbf9e6aecb745c1d3f05396cf795",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -894,7 +894,7 @@
       "path": "skills/l9-bounded-autonomy",
       "reason": "parallel Tasks and background PR-poll under an explicit authorization packet \u2014 high blast radius, explicit only",
       "skill_md": "skills/l9-bounded-autonomy/SKILL.md",
-      "skill_sha256": "607e1543eb8a5bcf5fcfb591b6d6c909b8cd8a1a22766f4949e64a248e4f5358",
+      "skill_sha256": "06436f8670b00e97d901180f4ce4cdd3720b9cfa13c2b47f92cb3d7f97abc4ca",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "a169c4d9a538978d1bc8782952edab3d3a84c600ea77f05d0327df15c4a7a57b"
+  "source_skill_corpus_sha256": "c3f1d1dd0bd5c8688e364e6406a41441e55e911286e4e9a9b2b960bc5202ca89"
 }
