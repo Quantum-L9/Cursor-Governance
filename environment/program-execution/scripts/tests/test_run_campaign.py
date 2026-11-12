@@ -20,7 +20,18 @@ import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+
+#: Program Execution runs only on an explicit operator statement
+#: (`campaign_execution.stage: manual`). The suite states one for the fixture
+#: campaigns it drives; `test_campaign_authority.py` certifies the refusals.
+OPERATOR_INVOCATION_ENV = "L9_PE_OPERATOR_INVOCATION"
+os.environ.setdefault(
+    OPERATOR_INVOCATION_ENV, "test fixture: drive the Program Execution suite's campaigns"
+)
+ACTIVATE = (
+    PE_ROOT.parents[1]
+    / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
 
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
@@ -214,6 +225,27 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
         env=git_env,
     )
     return sha.stdout.strip()
+
+
+def _projection_ok(authority):
+    """Stand-in for the bootstrap projection binding.
+
+    The live binding needs a verified `Quantum-L9/.github` checkout, which a
+    unit suite does not have. Like `_stack_ok`, the stand-in is injected through
+    `Hooks`; the runner honors no environment skip.
+    """
+    declared = authority["projection_binding"]
+    return {
+        "schema": "l9.program-execution.coding-projection-binding.v1",
+        "profile_ref": declared["profile_ref"],
+        "binding": declared["binding"],
+        "status": "CURRENT",
+        "admission": "ADMITTED_AND_CURRENT",
+        "bundle_revision": "0" * 40,
+        "bundle_lock_digest": "sha256:" + "0" * 64,
+        "views": [],
+        "bound_at": "2026-01-01T00:00:00Z",
+    }
 
 
 def _stack_ok(seed, primed_dir):
@@ -603,6 +635,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=emit,
                     compile_source=lambda source, target: None,
@@ -699,6 +732,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                 ),
@@ -754,6 +788,7 @@ class RunCampaignTests(unittest.TestCase):
                 target_override="Quantum-L9/LLM-Router",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=_refuse_activation,
                     compile_architecture=_architecture_hook,
@@ -797,6 +832,7 @@ class RunCampaignTests(unittest.TestCase):
                 target_checkout=checkout,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_architecture=_architecture_hook,
                 ),
@@ -850,7 +886,11 @@ class RunCampaignTests(unittest.TestCase):
                     repo_root=root,
                     l9_root=l9_root,
                     target_override="Quantum-L9/LLM-Router",
-                    hooks=self.mod.Hooks(context7_stack=_stack_ok, compile_architecture=_fail),
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
+                        compile_architecture=_fail,
+                    ),
                 )
             self.assertIn("nothing_executed: true", str(ctx.exception))
             self.assertFalse((l9_root / "programs").exists())
@@ -971,6 +1011,7 @@ class RunCampaignTests(unittest.TestCase):
                     l9_root=Path(raw) / "l9",
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         write_task_output=_write_task_output,
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
@@ -1005,7 +1046,7 @@ class RunCampaignTests(unittest.TestCase):
     def test_until_activate_from_memo(self) -> None:
         fixture = (
             PE_ROOT.parents[1]
-            / "skills/l9-pe-campaign-activate/scripts/fixtures/pe-memory-class.md"
+            / "skills/_archived/l9-pe-campaign-activate/scripts/fixtures/pe-memory-class.md"
         )
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))
@@ -1021,6 +1062,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                 ),
@@ -1570,6 +1612,7 @@ class RunCampaignTests(unittest.TestCase):
                     l9_root=Path(raw) / "l9",
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         write_task_output=_write_task_output,
                         compile_activation=emit,
                         compile_source=lambda source, target: None,
@@ -1607,6 +1650,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=l9,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=emit,
                     compile_source=lambda source, target: calls.append("compile") or None,
@@ -1710,6 +1754,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=l9,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                 ),
@@ -2309,6 +2354,7 @@ class RunCampaignTests(unittest.TestCase):
                     l9_root=l9,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         write_task_output=_write_task_output,
                         compile_activation=self.activate.compile_activation,
                         make_pr=lambda worktree, campaign_id: (
@@ -2393,6 +2439,7 @@ class RunCampaignTests(unittest.TestCase):
                     l9_root=l9,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         write_task_output=_write_task_output,
                         compile_activation=self.activate.compile_activation,
                         make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
@@ -2527,6 +2574,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=l9,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                     make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
@@ -2593,6 +2641,7 @@ class RunCampaignTests(unittest.TestCase):
                     l9_root=l9,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         compile_activation=self.activate.compile_activation,
                         compile_source=_explode,
                     ),
@@ -2662,6 +2711,7 @@ class RunCampaignTests(unittest.TestCase):
                 l9_root=l9,
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     write_task_output=_write_task_output,
                     compile_activation=self.activate.compile_activation,
                 ),
@@ -3187,7 +3237,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=l9,
-                    hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                    hooks=self.mod.Hooks(context7_stack=_stack_ok, bind_projection=_projection_ok),
                 )
             # Nothing may exist: no runtime root, no blueprint, no pec workspace.
             self.assertFalse(l9.exists(), msg="rejection created runtime state")
@@ -3210,7 +3260,9 @@ class CampaignInputRoutingTests(unittest.TestCase):
                         primary=Path(raw) / "primary",
                         repo_root=root,
                         l9_root=l9,
-                        hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                        hooks=self.mod.Hooks(
+                            context7_stack=_stack_ok, bind_projection=_projection_ok
+                        ),
                     )
                 payload = ctx.exception.to_dict()
                 self.assertEqual(payload["schema"], schema)
@@ -3242,6 +3294,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_source=compile_source,
                     validate_blueprint=lambda target: [],
                 ),
@@ -3266,6 +3319,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_activation=explode,
                     plan_window=explode,
                     compile_source=lambda source, target: None,
@@ -3318,6 +3372,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_source=compile_source,
                     validate_blueprint=lambda target: [],
                 ),
@@ -3354,6 +3409,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_source=compile_source,
                     validate_blueprint=lambda target: [],
                 ),
@@ -3386,6 +3442,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_source=compile_source,
                     validate_blueprint=lambda target: [],
                 ),
@@ -3418,6 +3475,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                             l9_root=Path(raw) / "l9",
                             hooks=self.mod.Hooks(
                                 context7_stack=_stack_ok,
+                                bind_projection=_projection_ok,
                                 compile_source=compile_source,
                                 validate_blueprint=lambda target: [],
                             ),
@@ -3456,6 +3514,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                             l9_root=l9,
                             hooks=self.mod.Hooks(
                                 context7_stack=_stack_ok,
+                                bind_projection=_projection_ok,
                                 git=lambda *a, **k: git_calls.append(a) or "",
                                 compile_source=lambda source, target: compiled.append(source),
                                 validate_blueprint=lambda target: [],
@@ -3495,6 +3554,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                     l9_root=l9,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         git=lambda *a, **k: git_calls.append(a) or "",
                         compile_source=lambda source, target: compiled.append(source),
                         validate_blueprint=lambda target: [],
@@ -3574,6 +3634,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 l9_root=Path(raw) / "l9",
                 hooks=self.mod.Hooks(
                     context7_stack=_stack_ok,
+                    bind_projection=_projection_ok,
                     compile_source=compile_source,
                     validate_blueprint=lambda target: [],
                 ),

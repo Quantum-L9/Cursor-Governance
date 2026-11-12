@@ -39,6 +39,8 @@ commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 | `/l9-plan-build` | Plan-simple + kernels + Build DAG |
 | `/l9-audit-plans` | Leftover-todo refine (moves no plans) — skill `l9-audit-plans` (not `commands/`) |
 | `/lcto` | L CTO strategic mode |
+| `/architect` | Architect mode: opt-in architecture + strategic-planning projections |
+| `/coding-agent` | Coding-agent mode: opt-in coding-agent execution projection |
 | `/spec` | Specification generator |
 | `/rules` | List governance rules from `.cursor/rules/` |
 | `/update-command` | Slash-command minimizer DAG (legacy) |

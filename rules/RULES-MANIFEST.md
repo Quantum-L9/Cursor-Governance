@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-10T13:59:47Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-12T18:03:12Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -20,7 +20,7 @@ Generated: `2026-11-10T13:59:47Z`. Source: `rules/*.mdc`.
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 41 | `d92b573ca45a` |
 | `01-authority-chain.mdc` | `l9.rule.01.authority.chain` | global | general | always | 64 | `a2f5f3993a02` |
-| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `e8fb57d4d513` |
+| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 137 | `ef37b002dda4` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 127 | `d0a29ce05d89` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 72 | `97752a5553dd` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
@@ -38,7 +38,7 @@ Generated: `2026-11-10T13:59:47Z`. Source: `rules/*.mdc`.
 | `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 112 | `67418472f719` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | agent_requested | 54 | `3a3ff21bfdec` |
 | `44-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 39 | `4c064ea19ce3` |
-| `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 112 | `135cbacb57a5` |
+| `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 112 | `6888d44d3ebd` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `a56bd2ccf980` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 232 | `3448d30de87d` |

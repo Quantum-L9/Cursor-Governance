@@ -1,175 +1,175 @@
 {
   "components": [
     {
-      "projection_digest": "sha256:ed5f526b2795b1f6af59d8d02f48bcd36f3480bba03686b73f5e9576cf3580cd",
+      "projection_digest": "sha256:b089b9887ebace559506eb80b0438394f9e2fe34084a61e44385886077f1c7a7",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
-      "projection_digest": "sha256:83b755f688b905a79cf9fc1c2ae17a66e5abe6637dc1cbce49df60208fe75553",
+      "projection_digest": "sha256:3dd2f54545acddd22887070b3902bef653d47c63b9a19eb016a1172c10d06fdc",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/invariants@1",
       "source_class": "invariants",
-      "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
       "source_ref": "l9.source/invariants@1"
     },
     {
-      "projection_digest": "sha256:3add2dbe542ea1bff69303213ad80ff59694550ebb162dcd17a7c8a24a632134",
+      "projection_digest": "sha256:e738ddeb899e3a32fd74df98f45137d90f030b389ff766e2778b55b8c0b9628f",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/contracts@1",
       "source_class": "contracts",
-      "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
       "source_ref": "l9.source/contracts@1"
     },
     {
-      "projection_digest": "sha256:6a628c9fda186e999d6b1c25b46f0d6bce155c2626485ed65c04cd9fee2be75e",
+      "projection_digest": "sha256:66518a580d43e62828540744ef727600ddb8995a3842306f4dc08bae911ae6be",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/requirement-model@1",
       "source_class": "requirement_model",
       "source_digest": "sha256:7865723e78b7f02817db9d5f54aedb1350cb08b45d42759c8bdafeba1320c7c2",
       "source_ref": "l9.source/requirement-model@1"
     },
     {
-      "projection_digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+      "projection_digest": "sha256:ec1804cc6e3dc6acef4a05306e34d3401ba0180b75620c63de425d4a907d6cc8",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/resolution-model@1",
       "source_class": "resolution_model",
       "source_digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
       "source_ref": "l9.source/resolution-model@1"
     },
     {
-      "projection_digest": "sha256:497f40bd6ee129fc1fd0ff38c6455a4771948c346281e8b43259a549b60aa42e",
+      "projection_digest": "sha256:f44b8fee5de908bbe87b9609611ec00b50760dcf81ec5ededf0c43f7883eca2f",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/architecture-rules@1",
       "source_class": "architecture_rules",
       "source_digest": "sha256:7026597235f9a5ba168f325f92fcdb7f00c495cd04ce364ca4d70f4c51ccacbe",
       "source_ref": "l9.source/architecture-rules@1"
     },
     {
-      "projection_digest": "sha256:0880d3c7b491d97be448a84ad78a389fa1074b5b714807a203303385aab21884",
+      "projection_digest": "sha256:2590799b6c275f8da504666cd6575af77e73525783dd53d7b68b39c99e647fce",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/product-topology-schema@1",
       "source_class": "product_topology",
       "source_digest": "sha256:a2510f4fc80b755d25b66c08f0d723e2f14b65966d6689b8b426ea23e5c3abf4",
       "source_ref": "l9.source/product-topology-schema@1"
     },
     {
-      "projection_digest": "sha256:8d73cac9ffcaf47b08a00870127b7c60646cd37725ce8314eeed4750e4310f0f",
+      "projection_digest": "sha256:ead30862618221ff4f54a9c11c606044c87451a41f6e8b00bc55c73a32fa641c",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/product-kinds@1",
       "source_class": "product_kinds",
       "source_digest": "sha256:294ae7a47b93619bd655619874d962b244e5c027eb6dd31ea508c53d129ace13",
       "source_ref": "l9.source/product-kinds@1"
     },
     {
-      "projection_digest": "sha256:66ae9c9e5d11b02a63da3848cda2cf16d97a2ba636bdc860340cf51e1d352d94",
+      "projection_digest": "sha256:961bf798167f4d350f789c9cac6a717b5aad53642e54e1366a6cbbb43cea9f49",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/node-archetypes@1",
       "source_class": "node_archetypes",
       "source_digest": "sha256:57bb49405e9b888ad5bcfbc3d580755fb7c330e45983bb99821113bf930132bc",
       "source_ref": "l9.source/node-archetypes@1"
     },
     {
-      "projection_digest": "sha256:152547bcadb1463f8cc4fdffbd5988816a20fc9572815e2faa2196574814a818",
+      "projection_digest": "sha256:871ca961823ba3a594c4d922a26398e3dc9280af0fdc216e1d5a49a7403c27ab",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/dependency-archetypes@1",
       "source_class": "dependency_archetypes",
       "source_digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
       "source_ref": "l9.source/dependency-archetypes@1"
     },
     {
-      "projection_digest": "sha256:f94407106185d5ebb43bd65aebf328628282784f94affe4f6810278efa414ae3",
+      "projection_digest": "sha256:c7d1b163582a4c119b0fd9038cadbcc381f88d5c4774fca2cdf2643ae8b853a8",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/identity-model@1",
       "source_class": "identity_model",
       "source_digest": "sha256:b9245eca99501a38976e909e1d151942c1253b2eee2bd6bab9c6382687db4288",
       "source_ref": "l9.source/identity-model@1"
     },
     {
-      "projection_digest": "sha256:2b892560a66c4aa5a3a6f808232b0d18787b6728e41b76a153b0b89e9779c920",
+      "projection_digest": "sha256:beba80ccf6d8ddfc716ec4b49e96575f4d5b3b6461c00a7243eb8dae4c8692eb",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/architecture-patterns@1",
       "source_class": "architecture_patterns",
       "source_digest": "sha256:c4adbeff6e953404aaafe275a13a387e9fdd0d9bd8dbe3adfa46af88cfe2a323",
       "source_ref": "l9.source/architecture-patterns@1"
     },
     {
-      "projection_digest": "sha256:9db948b9bf19ffcb3b5916c521b4b6fbcfc80ac0c8763a3d29f1ce4a837e4a6d",
+      "projection_digest": "sha256:4c577377baaab8a3a24ada94c1f0684d1b27ef198720d32d871bf2ad822268ad",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/port-catalog@1",
       "source_class": "port_catalog",
       "source_digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
       "source_ref": "l9.source/port-catalog@1"
     },
     {
-      "projection_digest": "sha256:0f139ebfa57508d035d3af6574ea0983cf37a54137682f14e820e4084435ed7a",
+      "projection_digest": "sha256:bb63a10118f9b961344d89dd416538310ddc86752604d8d84b63e9ee115b7a66",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/capabilities@1",
       "source_class": "capabilities",
-      "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
+      "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
       "source_ref": "l9.source/capabilities@1"
     },
     {
-      "projection_digest": "sha256:9be0586972500d2b3a08ff185e6f17b6eda9d08a3d70c1b772bf741eb2d7634d",
+      "projection_digest": "sha256:5d7a07fb8cdfe5f7915f7ab0ca5e161b3c5292c09741ab26bc5b9ab9f87f6b49",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/capability-resolution@1",
       "source_class": "capability_resolution",
       "source_digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
       "source_ref": "l9.source/capability-resolution@1"
     },
     {
-      "projection_digest": "sha256:e74e00836c742d753758ec5b3184abe80475edc46e1b728c08a33e3811bcf228",
+      "projection_digest": "sha256:92c9a75b17d24cc778170d30c1a86d5c4599cba73005f9a5f920ddc9c80ceb47",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/technology-profiles@1",
       "source_class": "technology_profiles",
       "source_digest": "sha256:423a6da9cbf80f89d40fb3d524a5ee6c9ae7acff360fc89e25bb997014546246",
       "source_ref": "l9.source/technology-profiles@1"
     },
     {
-      "projection_digest": "sha256:c7fb53b80cfd24552b5f8f1f1937a877a184fa27670c6e28ea97b0a1c07d331c",
+      "projection_digest": "sha256:8974ccf5119189c94e3bf71dd47df6992698f48d0e3ea6cb96e5669bb687401c",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/technology-capabilities@1",
       "source_class": "technology_capabilities",
       "source_digest": "sha256:d2172c439b1fc221e9a599220065830187054747f263567e4061d8c95845ad0b",
       "source_ref": "l9.source/technology-capabilities@1"
     },
     {
-      "projection_digest": "sha256:4b3539b5df92e3c911d96bd16e9795450a2b2b100204d6d75ab5ce49dd5f6d4f",
+      "projection_digest": "sha256:b7ac027bb596c5c78de984334be020cbb11330a0199f66b484b33db7a3e9dcf7",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/binding-catalog@1",
       "source_class": "binding_catalog",
       "source_digest": "sha256:8c9a3cd4370feed7118835cbaffa34f99372f8696ccf07917906501368c65eb9",
       "source_ref": "l9.source/binding-catalog@1"
     },
     {
-      "projection_digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+      "projection_digest": "sha256:f4c8ea03537942c36c7c88e11421f9ee23667e7ccf7209556c75c26a7ca18092",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1",
       "source_class": "repository_registry",
       "source_digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
       "source_ref": "l9.source/repository-registry@1"
     },
     {
-      "projection_digest": "sha256:94c12b68b87b4c8e8622277a12eb7b4d26d5203bc69673292f8712d1ef338bd1",
+      "projection_digest": "sha256:82f4d90b732dcd5afef14cdb8eac4f142d1147712ccd050fcca9739d1972a2cb",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/artifact-model@1",
       "source_class": "artifact_model",
       "source_digest": "sha256:21f8bb783d7611ae1b3c60474c6ca31f6096f29d7ef0e94ef81f12e6d2defe09",
       "source_ref": "l9.source/artifact-model@1"
     },
     {
-      "projection_digest": "sha256:78f71e39b8046bd9f7cb57960cc112bfba84b1418c377c38b57b96b3bf373005",
+      "projection_digest": "sha256:d230632ca621d6a3d8fb01a693ee1e43eec789be37770267a054e2964eb4587e",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/product-manifest-schema@1",
       "source_class": "product_manifest",
       "source_digest": "sha256:3a2cbc316b090e59a06dcd7bb0393f4bc56b7f65e3a08c64403d815ce22e7ede",
       "source_ref": "l9.source/product-manifest-schema@1"
     },
     {
-      "projection_digest": "sha256:773fcaa04fe23b2a6c44b68f8be24916b57219a54500ddd3353e65631f408e12",
+      "projection_digest": "sha256:025048f1df36ce7da09d1d6c9e6eeb6c7648525319329a19ca07bef51f112395",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/authority-model@1",
       "source_class": "authority_model",
       "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
       "source_ref": "l9.source/authority-model@1"
     },
     {
-      "projection_digest": "sha256:e9048ab5971ffc45a1f57f3d1caaf65021bc88003a0377173f2f79c6722d4817",
+      "projection_digest": "sha256:10aba939febc4bbcaa439ffb639e6c5e4de8131b8f5bb81a9ac40ab107ee550e",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/lifecycle@1",
       "source_class": "lifecycle",
-      "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
+      "source_digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
       "source_ref": "l9.source/lifecycle@1"
     },
     {
-      "projection_digest": "sha256:782a29e7a94bc33648c5bac3def68e644b7cdfce2567b143a4e7bb62fbe5b9a1",
+      "projection_digest": "sha256:be62c5fe3de4c173b9723d24d18058677bc1a63ed3f7b0a09f2cb1e5829f59ad",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/semantic-dependency-model@1",
       "source_class": "semantic_dependency_model",
       "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
       "source_ref": "l9.source/semantic-dependency-model@1"
     }
   ],
-  "composition_digest": "sha256:d53152f592464407a7b9329ef901537dfbbde9706594568a163f5072ab1dc328",
+  "composition_digest": "sha256:dc3f847db31ef650d30506acc81e7a8ef72da83971f7133d3b9c1333042ef341",
   "composition_profile": {
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
     "ref": "l9.compose/architecture-intelligence@1"
@@ -1984,15 +1984,15 @@
             "admission": "canonical_active",
             "artifact": "invariants.yaml",
             "artifact_id": "l9.invariants/global@1",
-            "item_count": 34,
-            "sha256": "2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa"
+            "item_count": 44,
+            "sha256": "d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96"
           },
           {
             "admission": "canonical_active",
             "artifact": "contracts.yaml",
             "artifact_id": "l9.contracts/global@1",
-            "item_count": 29,
-            "sha256": "86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7"
+            "item_count": 31,
+            "sha256": "e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1"
           }
         ]
       },
@@ -3626,6 +3626,107 @@
             "L9-PROV-001",
             "L9-COORD-001"
           ]
+        },
+        {
+          "applies_to": [
+            "domain_projection_sets",
+            "domain_consumer_bindings",
+            "composition_engines",
+            "consumers"
+          ],
+          "forbidden": [
+            "silent_precedence_between_members",
+            "reconciliation_of_conflicting_identity_bearing_records",
+            "assumed_equivalence_of_different_revisions",
+            "authority_expansion_through_composition",
+            "promotion_of_a_composed_result_to_canonical_semantics",
+            "equating_different_claim_classes",
+            "treating_signal_evidence_as_strategic_value_evidence"
+          ],
+          "guarantees": [
+            "compatible_requires_every_required_check_to_be_satisfied",
+            "an_established_authoritative_conflict_is_incompatible",
+            "a_missing_required_rule_coordinate_or_evidence_is_unresolved_never_compatible",
+            "the_compatibility_result_is_a_derived_noncanonical_artifact",
+            "each_member_keeps_its_own_source_identity_and_digest"
+          ],
+          "id": "l9.contract/domain-composition-compatibility@1",
+          "outcomes": {
+            "satisfied": "compatible",
+            "unresolved": "unresolved",
+            "violated": "incompatible"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Decide whether a set of domain projections selected by one domain consumer binding can be used together at the requested governing coordinates, without synthesizing, reconciling, or promoting any selected meaning.",
+          "requires": [
+            "every_member_names_an_exact_domain_profile_id_profile_digest_canonical_source_coordinates_source_digests_and_output_schema",
+            "every_member_resolves_against_one_governing_revision_or_an_explicit_compatibility_declaration_between_its_revisions",
+            "an_identity_bearing_record_selected_by_two_members_is_canonically_equivalent_and_has_one_owner",
+            "every_required_member_and_its_required_semantic_dependencies_resolve_without_undeclared_substitution",
+            "every_material_unresolved_input_of_any_member_remains_unresolved_in_the_result",
+            "members_carrying_different_claim_classes_are_kept_distinct"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-OWNER-001",
+            "L9-COMPAT-001",
+            "L9-COORD-001",
+            "L9-REVISION-001",
+            "L9-DEGRADE-001",
+            "L9-AUTH-001",
+            "L9-UNKNOWN-001",
+            "L9-PROJECTION-001",
+            "L9-PROMOTION-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "domain_projection_sets",
+            "domain_consumer_bindings",
+            "composition_engines",
+            "receipts"
+          ],
+          "forbidden": [
+            "a_second_digest_subject_or_output_form_for_a_projection_artifact_or_its_receipt",
+            "timestamps_in_a_deterministic_content_identity",
+            "ambiguous_serialization",
+            "undeclared_transformation",
+            "presenting_a_stale_composition_as_current",
+            "provenance_as_proof_of_correctness"
+          ],
+          "guarantees": [
+            "the_content_digest_excludes_nondeterministic_metadata",
+            "the_content_digest_and_the_evaluation_receipt_digest_are_distinct",
+            "a_change_to_any_recorded_source_profile_binding_or_contract_digest_or_any_material_coordinate_requires_revalidation",
+            "replay_from_the_recorded_coordinates_reproduces_the_content_digest",
+            "material_unknowns_of_the_inputs_are_preserved"
+          ],
+          "id": "l9.contract/domain-composition-provenance@1",
+          "outcomes": {
+            "satisfied": "provenance_complete_and_current",
+            "unresolved": "required_coordinate_unavailable",
+            "violated": "provenance_incomplete_or_falsified"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Keep every composition of domain projections independently traceable to its exact inputs, the profiles and binding that selected them, the contracts that governed composition, and the engine that produced it, and make it non-current when any of those coordinates changes.",
+          "requires": [
+            "source_repository_and_source_commit_are_recorded",
+            "each_canonical_artifact_id_and_canonical_artifact_digest_is_recorded",
+            "each_profile_id_and_profile_digest_is_recorded",
+            "the_domain_consumer_binding_id_and_binding_digest_are_recorded",
+            "each_governing_composition_contract_id_and_its_catalog_digest_are_recorded",
+            "the_projection_and_composition_engine_identity_and_version_are_recorded",
+            "digests_use_the_canonical_json_and_semantic_digest_conventions_of_l9_compiler_projection_engine_at_1"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROV-001",
+            "L9-COORD-001",
+            "L9-REVISION-001",
+            "L9-DERIVED-001",
+            "L9-EVIDENCE-001",
+            "L9-UNKNOWN-001"
+          ]
         }
       ],
       "derivation": {
@@ -3633,8 +3734,8 @@
         "source_admission": "canonical_active",
         "source_artifact": "invariants.yaml",
         "source_artifact_id": "l9.invariants/global@1",
-        "source_digest_sha256": "2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
-        "source_invariant_count": 34
+        "source_digest_sha256": "d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+        "source_invariant_count": 44
       },
       "outcome_semantics": {
         "global_error_taxonomy_defined_here": false,
@@ -4139,6 +4240,66 @@
           "owner": "Quantum-L9/.github",
           "scope": "global",
           "statement": "For an assessment that asserts strategic interaction, model other actors' consequential responses as conditional on the focal action, their information available at each decision point, incentives and version-bound response assumptions, or preserve missing conditional behavior as Unknown. A passive-world approximation is only an explicit model assumption, never silently equivalent to adaptive response. This obligation does not by itself assert a quantified Strategic Value claim."
+        },
+        {
+          "id": "L9-SVQ-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When a consumer asserts a qualitative Strategic Value appraisal for a discretionary option, it must state the objective, beneficiary, feasible comparison or baseline, causal rationale, material beneficial and adverse effects (including displaced burdens on other affected beneficiaries), and which claims are observed, hypothesized, contradicted, or Unknown. An unquantified appraisal may express conditional direction or potential but must not be passed off as a computed Strategic Value, complete ranking, independently verified result, or action permission. Applicable mandatory obligations and hard constraints remain binding."
+        },
+        {
+          "id": "L9-SVQ-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A claim of realized Strategic Value compounding requires evidence that an attributable durable effect of an earlier intervention was consumed by a later authorized action or decision and produced a supported additional net objective improvement relative to a stated later comparison. Potential reuse, stored records, duplicated transmissions, feedback traffic, connectivity, or an unchanged repeated effect do not establish realized compounding; material offsetting consequences and Unknown attribution remain explicit."
+        },
+        {
+          "id": "L9-SIGNAL-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When evidence-bearing information crosses a semantic or participant boundary, a consequential signal claim must preserve or resolvably reference the producer, pertinent evidence and lineage, material context and uncertainty, and governing meaning needed by its authorized eligible consumer. Signal movement does not confer truth, ownership, authority, permission, or positive Strategic Value; an ineligible destination is not a valid route."
+        },
+        {
+          "id": "L9-SIGNAL-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A claim of stronger evidence through signal fan-out, reciprocal paths, or reconvergence must retain original-source dependence and distinguish nonredundant corroboration, interpretation, validation or resilience from repeated or correlated copies. Added branches and hops require a justified eligible consumer or distinct protective purpose; duplicate deliveries, message volume, and topology labels are not independent evidence."
+        },
+        {
+          "id": "L9-SIGNAL-003",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A signal feedback episode claimed to produce learning must identify an evidenced changed state consumable by a later eligible consumer; an unaccepted challenge remains a challenge, not completed learning. Such loops must use controls appropriate to their risks that prevent unbounded replay or unjustified convergence claims. Echoes, acknowledgments, finite hop limits, and cyclic routing alone do not establish learning, fixed-point convergence, or realized Strategic Value; no universal constellation-wide synchronization lap is required."
+        },
+        {
+          "id": "L9-SIGNAL-004",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A consequential signal outcome claim must distinguish production, attempted delivery, verified delivery, recipient acceptance, durable retention, actual later consumption, and any observed change in behavior or result. Evidence of an earlier stage does not establish a later one; a delivery or consumption observation alone is not a positive Strategic Value finding, and material failures or Unknown stages remain explicit."
+        },
+        {
+          "id": "L9-INTEGRATION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When independently produced contributions jointly determine one consequential artifact or acceptance subject, an accountable integration responsibility must be explicitly assigned for that subject and scope before integrated acceptance is claimed. A claim of integrated correctness or completion requires verification of the exact combined subject against its applicable contracts; evidence that individual contributions passed independently does not establish that their combination is correct. Integration responsibility does not transfer canonical semantic ownership or confer strategic, execution, publication, admission, or other governing decision authority."
+        },
+        {
+          "id": "L9-AUTONOMY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When current authorization and applicable policy permit autonomous decision resolution, an agent must resolve decisions determined by authoritative evidence or governing policy without requesting a new discretionary approval. The agent may independently choose and verify a reversible realization among compliant alternatives when the choice preserves the accepted objective, architecture, contracts, scope, constraints, and authorization ceiling. This discretion does not grant capability invocation authority, establish missing facts, alter accepted semantics, or authorize new risk acceptance."
+        },
+        {
+          "id": "L9-AUTONOMY-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A request for a governing decision must identify the smallest material unresolved authority question, required fact, contractual conflict, or boundary change that prevents an authorized consequence. The blocker applies to its affected dependency closure. Independent work whose prerequisites and authorization remain satisfied may continue. Novelty, model confidence, or non-authoritative implementation preference alone does not require a higher-authority decision. This rule does not suppress mandatory incident, safety, security, or operational notifications."
+        },
+        {
+          "id": "L9-AUTONOMY-003",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "An autonomous revision to future execution work must remain within its accepted objective, architecture, public contracts, permission ceiling, risk acceptance, and mandatory convergence gates. Material replanning requires an evidence-backed trigger and verification under the applicable governing contract. Historical outcomes and receipts must not be rewritten to justify the new plan."
         }
       ]
     },

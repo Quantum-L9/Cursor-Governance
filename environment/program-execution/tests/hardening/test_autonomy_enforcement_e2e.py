@@ -63,7 +63,7 @@ for _path in (str(_REPO_ROOT), str(_PE_ROOT), str(_INTEGRATION), str(_PEC_SCRIPT
 
 from peer_execution.imports import load_module  # noqa: E402
 
-WRAPPER = _REPO_ROOT / "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py"
+WRAPPER = _INTEGRATION / "worker_effect_hook.py"
 
 #: The stub stands in for `ops/autonomy/local_execution_gate.py` only so its
 #: stdin is observable. It exits 0 unconditionally, so every denial in this
