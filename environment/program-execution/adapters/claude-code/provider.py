@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
+import shlex
 import shutil
+import sys
 from pathlib import Path
 
 from peer_execution.imports import load_module
@@ -13,30 +16,41 @@ from peer_execution.provider import (
 )
 from peer_execution.subprocess_runner import run_argv
 
-#: The live enforcement surface a Claude worker window runs behind. Without
-#: both of these the PreToolUse wrapper has nothing to authorize through, so a
-#: window would write with root authority nobody checked.
+#: The PreToolUse hook Program Execution registers in every worker window it
+#: launches. PE carries its own enforcement into its own windows; the host-wide
+#: Claude wrapper does not reach Program Execution and is not relied on here.
+WORKER_EFFECT_HOOK = (
+    "environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py"
+)
+
+#: The enforcement surface a Claude worker window runs behind. Without all of
+#: these the hook has nothing to authorize through, so a window would write
+#: with root authority nobody checked.
 HOOK_SURFACE_PATHS = (
-    "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py",
+    WORKER_EFFECT_HOOK,
     "environment/program-execution/integrations/autonomy-control-plane/program_authority.py",
     "autonomy/adapters/tool_hook.py",
+    "ops/autonomy/local_execution_gate.py",
 )
+
+#: Every tool through which a window can cause an effect. A tool matched here
+#: that the root capability map does not know is refused by the hook, never
+#: defaulted to a read.
+WORKER_EFFECT_MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit"
+WORKER_EFFECT_HOOK_TIMEOUT_SECONDS = 60
 
 #: Authority fields the live hook needs, and nothing else. The sidecar carries
 #: more (campaign/graph/action ids, capabilities, the peer binding); exporting
 #: those into a worker's environment would widen what a compromised worker can
-#: read without widening anything it can do.
-_AUTHORITY_ENVIRONMENT = {
-    "L9_ADAPTER_SESSION_ID": "adapter_session_id",
-    "L9_LEASE_ID": "lease_id",
-    "L9_AGENT_ID": "agent_id",
-    "L9_AUTONOMY_DATABASE": "runtime_database",
-    "L9_AUTONOMY_ROOT": "repository_root",
-    "L9_PROGRAM_WORKSPACE": "workspace",
-    "L9_PROGRAM_TASK_ID": "task_id",
-    "L9_PROGRAM_ATTEMPT_NUMBER": "attempt_number",
-    "L9_AUTONOMY_AUTHORITY_DIGEST": "authority_digest",
-}
+#: read without widening anything it can do. The hook owns the mapping because
+#: it is the reader; the provider exports exactly what the hook will check.
+_AUTHORITY_ENVIRONMENT: dict[str, str] = dict(
+    load_module(
+        Path(__file__).resolve().parents[2]
+        / "integrations/autonomy-control-plane/worker_effect_hook.py",
+        "pes_claude_worker_effect_hook",
+    ).AUTHORITY_ENVIRONMENT
+)
 
 
 class ClaudeCodeProvider:
@@ -128,6 +142,36 @@ class ClaudeCodeProvider:
                 environment[name] = str(value)
         return environment
 
+    def _worker_settings(self) -> str:
+        """Session settings that put the effect hook in front of every effect.
+
+        Passed inline so the registration cannot be edited on disk between
+        render and launch. The hook runs on this interpreter: it is the one
+        that can import the root autonomy runtime the authorizer asks.
+        """
+        hook = self.repository_root / WORKER_EFFECT_HOOK
+        command = f"{shlex.quote(sys.executable)} {shlex.quote(str(hook))}"
+        return json.dumps(
+            {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": WORKER_EFFECT_MATCHER,
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": command,
+                                    "timeout": WORKER_EFFECT_HOOK_TIMEOUT_SECONDS,
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
     def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
         permission_profile = dict(request.permission_profile)
         renderer = load_module(
@@ -151,6 +195,9 @@ class ClaudeCodeProvider:
             "--disallowedTools",
             ",".join(permissions["denied"]),
         ]
+        authority_environment = self._authority_environment(request)
+        if authority_environment:
+            argv.extend(["--settings", self._worker_settings()])
         result = run_argv(
             argv,
             cwd=Path(request.worktree_ref).resolve(),
@@ -159,7 +206,7 @@ class ClaudeCodeProvider:
                 "L9_AUTONOMY_REQUIRED": "1",
                 "L9_PE_WORKER": "1",
                 "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
-                **self._authority_environment(request),
+                **authority_environment,
             },
         )
         excerpts = load_module(

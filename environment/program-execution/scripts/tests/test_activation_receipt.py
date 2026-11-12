@@ -16,7 +16,7 @@ import unittest
 from pathlib import Path
 
 PE_ROOT = Path(__file__).resolve().parents[2]
-ACTIVATE_DIR = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts"
+ACTIVATE_DIR = PE_ROOT.parents[1] / "skills/_archived/l9-pe-campaign-activate/scripts"
 
 
 def _load_activation():

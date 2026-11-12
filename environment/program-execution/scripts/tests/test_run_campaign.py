@@ -20,7 +20,10 @@ import yaml
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+ACTIVATE = (
+    PE_ROOT.parents[1]
+    / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
 
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
@@ -1005,7 +1008,7 @@ class RunCampaignTests(unittest.TestCase):
     def test_until_activate_from_memo(self) -> None:
         fixture = (
             PE_ROOT.parents[1]
-            / "skills/l9-pe-campaign-activate/scripts/fixtures/pe-memory-class.md"
+            / "skills/_archived/l9-pe-campaign-activate/scripts/fixtures/pe-memory-class.md"
         )
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw))

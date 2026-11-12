@@ -24,9 +24,9 @@ FORBIDDEN_IN_FENCE = (
     "continue L4",
 )
 AGENT_SURFACES = (
-    GOV_ROOT / "skills/l9-pe-campaign-activate/SKILL.md",
-    GOV_ROOT / "skills/l9-pe-campaign-activate/references/pipeline.md",
-    GOV_ROOT / "skills/l9-pe-campaign-activate/references/merge-authority.md",
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/SKILL.md",
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/references/pipeline.md",
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/references/merge-authority.md",
     GOV_ROOT / "skills/l9-plan/references/executable-plan.pe-autonomy.template.md",
     GOV_ROOT
     / "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",

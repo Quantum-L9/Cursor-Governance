@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
@@ -41,10 +42,14 @@ import pe_trace  # noqa: E402 - sibling module, imported after the sys.path guar
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 GOV_ROOT = PE_ROOT.parents[1]
-ACTIVATE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
-NUGGET_SCRIPT = GOV_ROOT / "skills/l9-pe-nuggets/scripts/extract_nuggets.py"
-AUTHORIZE_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
-BRIEF_SCRIPT = GOV_ROOT / "skills/l9-pe-campaign-activate/scripts/compile_brief.py"
+ACTIVATE_SCRIPT = (
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
+NUGGET_SCRIPT = GOV_ROOT / "skills/_archived/l9-pe-nuggets/scripts/extract_nuggets.py"
+AUTHORIZE_SCRIPT = (
+    GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py"
+)
+BRIEF_SCRIPT = GOV_ROOT / "skills/_archived/l9-pe-campaign-activate/scripts/compile_brief.py"
 COMPILE_SOURCE = PE_ROOT / "scripts/compile_campaign_source.py"
 CAMPAIGN_INPUT = PE_ROOT / "scripts/campaign_input.py"
 COLLECT_EVIDENCE = PE_ROOT / "scripts/collect_evidence.py"
@@ -667,6 +672,57 @@ def strip_session_residue(repo: Path) -> None:
         for path in receipts.glob("unknown-agent__*.json"):
             if proven_untracked(repo, path):
                 path.unlink()
+
+
+#: Where a host session keeps its own memory bookkeeping inside its cwd.
+HOST_SESSION_RECEIPTS = Path(".l9") / "memory" / "receipts"
+
+
+def relocate_host_session_residue(
+    worktree: Path,
+    destination: Path,
+    baseline: Mapping[str, str] | None = None,
+) -> list[str]:
+    """Move host session bookkeeping out of a task worktree before it is judged.
+
+    A real Claude host writes memory receipts under `.l9/memory/receipts/` in
+    its working directory as a session opens and closes. No tool call produces
+    them, so no PreToolUse authorization can ever cover them, and they are not
+    task output. Left in place they are indistinguishable from an unmediated
+    provider write, which is what mediation coverage refuses. A window that
+    was lost mid-flight leaves the same files under a session id nobody ever
+    reported, so the rule is by location and provenance, not by session.
+
+    Only files that are all of the following are moved, and they are moved
+    rather than deleted so the evidence survives beside the attempt:
+
+    * regular files directly inside the host receipt directory;
+    * absent from the pre-dispatch effect baseline;
+    * proven untracked by git.
+
+    Moving cannot hide an effect from the attempt: whatever is moved is no
+    longer in the worktree the Controller verifies and commits. Everything
+    else stays where it is and is judged by mediation coverage. Returns the
+    repo-relative paths that were moved.
+    """
+    receipts = worktree / HOST_SESSION_RECEIPTS
+    if not receipts.is_dir() or receipts.is_symlink():
+        return []
+    known = dict(baseline or {})
+    moved: list[str] = []
+    for path in sorted(receipts.iterdir()):
+        if path.is_symlink() or not path.is_file():
+            continue
+        relative = path.relative_to(worktree).as_posix()
+        if relative in known or not proven_untracked(worktree, path):
+            continue
+        destination.mkdir(parents=True, exist_ok=True)
+        target = destination / path.name
+        if target.exists():
+            target = destination / f"{path.name}.{time.time_ns()}"
+        shutil.move(str(path), str(target))
+        moved.append(relative)
+    return moved
 
 
 def normalize_remote_ref(value: str) -> str:
@@ -4540,6 +4596,20 @@ def _finish_peer_unit(
         if not receipt_path.is_file():
             raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
         _bind_dispatch_correlation(workspace, task_id, outcome)
+        residue = relocate_host_session_residue(
+            Path(str(worktree)),
+            workspace / "runtime" / "peer-execution" / "host-session-residue" / str(task_id),
+            unit.get("pre_dispatch_baseline"),
+        )
+        if residue:
+            emit(
+                trace,
+                "TASK_HOST_SESSION_RESIDUE",
+                "filesystem_write",
+                "host_session_residue_relocated",
+                task_id=task_id,
+                metadata={"paths": residue[:50]},
+            )
         # Mediation coverage precedes the Controller: an unmediated write must
         # never become a recorded Program attempt.
         actual_changed = _require_mediated_effects(unit, trace=trace)

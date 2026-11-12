@@ -139,6 +139,26 @@ def _mapping_list(
     return output
 
 
+_VALIDATION_CLAIM_KEYS = frozenset({"command", "status", "exit_code", "evidence"})
+_VALIDATION_CLAIM_STATUSES = frozenset({"PASS", "FAIL", "BLOCKED", "UNKNOWN"})
+
+
+def _is_validation_claim(item: Mapping[str, Any]) -> bool:
+    """Whether one worker-reported entry fits the attempt-receipt item schema."""
+    if set(item) != _VALIDATION_CLAIM_KEYS:
+        return False
+    command = item["command"]
+    exit_code = item["exit_code"]
+    evidence = item["evidence"]
+    return (
+        isinstance(command, str)
+        and bool(command)
+        and item["status"] in _VALIDATION_CLAIM_STATUSES
+        and (exit_code is None or (isinstance(exit_code, int) and not isinstance(exit_code, bool)))
+        and (evidence is None or isinstance(evidence, str))
+    )
+
+
 class PeerExecutionAdapter(BaseExecutionAdapter):
     """Provider-neutral lifecycle owner for peer/provider execution."""
 
@@ -478,6 +498,15 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             )
         except ValueError:
             validation_results = []
+            residuals.append("validation_results_unusable_shape")
+        conformant = [item for item in validation_results if _is_validation_claim(item)]
+        if len(conformant) != len(validation_results):
+            # A worker's validation results are claims, never the verdict: the
+            # Controller runs the declared commands itself. An entry the
+            # attempt-receipt schema cannot carry is dropped and recorded, the
+            # same way an unusable container is, instead of voiding an attempt
+            # whose effects already exist.
+            validation_results = conformant
             residuals.append("validation_results_unusable_shape")
         return attempt_receipt(
             contract,
