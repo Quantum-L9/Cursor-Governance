@@ -222,8 +222,14 @@ def classify(
     )
 
 
+#: The status words are verification verdicts (BOUND here means "verified against the
+#: checkout's origin/main"), not a session binding. SessionStart binds only the operating
+#: plane; this projection is bound only by /coding-agent, so the rendering says so.
+NOT_BOUND_NOTE = "verification only; not bound in this session — /coding-agent binds it"
+
+
 def render_line(result: dict[str, Any]) -> str:
-    return f"coding projection: {result['status']} — {result['detail']} (report-only)"
+    return f"coding projection: {result['status']} — {result['detail']} ({NOT_BOUND_NOTE})"
 
 
 def render_markdown(result: dict[str, Any]) -> str:
@@ -231,7 +237,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         [
             "### coding projection",
             f"- {result['status']}: {result['detail']}",
-            f"- profile: {result.get('profile_ref', 'unknown')} (consumer verifier; report-only)",
+            f"- profile: {result.get('profile_ref', 'unknown')} ({NOT_BOUND_NOTE})",
         ]
     )
 

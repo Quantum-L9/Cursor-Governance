@@ -1022,13 +1022,13 @@ emit_coding_projection() {
   out="$(_l9_bounded 2 "$py" "$reader" --workspace "$WORKSPACE" --format line 2>/dev/null)"
   rc=$?
   case "$rc" in
-    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
-    124) say "coding projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    125) say "coding projection: UNVERIFIED — DEFERRED: hook budget exhausted (verification only; not bound in this session — /coding-agent binds it)" ;;
+    124) say "coding projection: UNVERIFIED — TIMED OUT (verification only; not bound in this session — /coding-agent binds it)" ;;
     *)
       if [ -n "$out" ]; then
         say "$out"
       else
-        say "coding projection: UNVERIFIED — classifier printed nothing (report-only)"
+        say "coding projection: UNVERIFIED — classifier printed nothing (verification only; not bound in this session — /coding-agent binds it)"
       fi
       ;;
   esac
@@ -1040,15 +1040,17 @@ emit_coding_projection() {
 # and governance/host-bindings/claude-code.yaml; Cursor renders the same binding as
 # markdown. No skill or command is involved; /coding-agent, /lcto and /architect are the
 # manual bindings. BOUND only when the consumer adapter reports CURRENT in admitted mode;
-# the session then reads a source class through that adapter. Never fetches or writes;
-# anything else, a deferral or a timeout is NOT BOUND, never a claim.
+# the session then reads a source class through that adapter. DEGRADED keeps what verified.
+# Fail-open: a failed, degraded, deferred or timed-out binding never stops the session and is
+# reported as exactly that, never as bound. Never fetches or writes.
 emit_operating_plane_projection() {
   local py="$1"
   local control="$GOV/ops/autonomy/host_binding.py"
   local unbound="default projection binding (claude-code): NOT BOUND"
-  [ -f "$control" ] || { say "$unbound — host binding unavailable"; return 0; }
+  local nothing="nothing is bound (fail-open: the session continues; cite no operating-plane semantics)"
+  [ -f "$control" ] || { say "$unbound — host binding unavailable, so $nothing"; return 0; }
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || {
-    say "$unbound — interpreter unresolved"
+    say "$unbound — interpreter unresolved, so $nothing"
     return 0
   }
 
@@ -1056,15 +1058,15 @@ emit_operating_plane_projection() {
   out="$(_l9_bounded 2 "$py" "$control" --host claude-code --workspace "$WORKSPACE" --format line 2>/dev/null)"
   rc=$?
   case "$rc" in
-    125) say "$unbound — DEFERRED: hook budget exhausted. Cite no operating-plane semantics this session." ;;
-    124) say "$unbound — TIMED OUT. Cite no operating-plane semantics this session." ;;
+    125) say "$unbound — DEFERRED: hook budget exhausted, so $nothing" ;;
+    124) say "$unbound — TIMED OUT, so $nothing" ;;
     *)
       if [ -n "$out" ]; then
         while IFS= read -r line || [ -n "$line" ]; do
           say "$line"
         done <<< "$out"
       else
-        say "$unbound — host binding printed nothing. Cite no operating-plane semantics this session."
+        say "$unbound — host binding printed nothing, so $nothing"
       fi
       ;;
   esac
