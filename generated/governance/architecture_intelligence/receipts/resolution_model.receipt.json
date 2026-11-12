@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:4b8e57b8a69e1d40a589e747542f9723b7508e3edebd19f58920b4e619d4dcc0",
+      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/projection-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:58362ef71707dd9a3dcb9f833376de78af0e52838ab3400a090ee46594800d4e",
+      "digest": "sha256:b9991557fb0e671b20865652a6264dadf6c39939a5472d734cdb9fa8a92ecd57",
       "path": "semantics/projection_profiles.yaml",
       "ref": "l9.projection-profile-catalog/global@1"
     },
@@ -34,14 +34,14 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
       "ref": "l9.selector-model/global@1"
     },
     "source_registry": {
-      "digest": "sha256:860cd321665f911fd66f0adbec4ddbd7c364745b08928cdacfa047b3db8dee00",
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
       "ref": "l9.canonical-sources/global@1"
     }
@@ -51,24 +51,24 @@
       "digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
       "path": "semantics/resolution_model.yaml",
       "ref": "l9.source/resolution-model@1",
-      "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
+      "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
     }
   ],
   "operation": "projection",
   "output": {
-    "digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+    "digest": "sha256:ec1804cc6e3dc6acef4a05306e34d3401ba0180b75620c63de425d4a907d6cc8",
     "ref": "l9.projection/architecture-intelligence@1#l9.source/resolution-model@1"
   },
   "producer_identity": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "profile": {
     "digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
     "ref": "l9.projection/architecture-intelligence@1"
   },
-  "receipt_digest": "sha256:d0d3792556de3cd574430a2a6bd78b0407e335278f086a0fd26b45006af0c0b5",
-  "receipt_identity": "l9.receipt-instance/d33277fd7af3b1411707e0e6bf030a282ba463d669b2fa232b670ee8502f4314",
+  "receipt_digest": "sha256:0a9650df75ff5f84f3547f84d6c9beddaca1844b11756ce8c983c1b20fabc6cd",
+  "receipt_identity": "l9.receipt-instance/e09fdaae1155d7f207402e76db17fd5b03da6ba6862200d86c3aa7ee7cbf6306",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -91,7 +91,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:bb5871968329a54c27d009a6b7419c357ebf8162dec927262e18b6fb79e41a43",
+        "content_digest": "sha256:f8c72a7206d38c5c61e7c4e691ca3243ec6c4eb0a583af4e4571175e19f13473",
         "path": "l9.projection_architecture-intelligence_1/l9.source_resolution-model_1.projection.json",
         "status": "pass"
       },
@@ -118,7 +118,7 @@
         "status": "pass"
       },
       "projection_digest": {
-        "digest": "sha256:cb910522887e840e3b507acf5de92f5a4ad42fb26fe067ee852bd0fda8fd722b",
+        "digest": "sha256:ec1804cc6e3dc6acef4a05306e34d3401ba0180b75620c63de425d4a907d6cc8",
         "status": "pass"
       },
       "selection_equivalence": {
@@ -127,7 +127,7 @@
       },
       "source_currentness": {
         "digest": "sha256:3c0636b0eaca00789d6ced5425fb1c3a314319dd00525dd5f811f38f81c365fc",
-        "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
+        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
         "status": "pass"
       },
       "source_identity": {

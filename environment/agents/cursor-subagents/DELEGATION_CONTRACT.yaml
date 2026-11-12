@@ -50,8 +50,16 @@ authority:
       - artifact_acceptance
       - executor_reviewer_separation
   campaign_execution:
-    canonical_path: retired
-    owns_when_active: []
+    canonical_path: environment/program-execution/
+    stage: manual # CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1
+    invocation: explicit_operator_only
+    owns_when_active:
+      - formal_campaign_task_readiness
+      - campaign_lock
+      - campaign_attempts
+      - verification_receipts
+      - gate_evaluation
+    may_not_be_started_by_cursor_subagents: true
     may_not_be_advanced_by_cursor_subagent_documents: true
   generated_data:
     canonical_path: environment/agents/generated-data/

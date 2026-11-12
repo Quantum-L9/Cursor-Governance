@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import json
 import re
 import shlex
@@ -223,6 +224,37 @@ def root_addopts_ignores(repo_root: Path = REPO_ROOT) -> list[str]:
     return [item for item in ignores if item]
 
 
+def root_norecursedirs(repo_root: Path = REPO_ROOT) -> list[str]:
+    """`norecursedirs` globs from pyproject — the third form of what root pytest skips.
+
+    pytest never descends into a directory whose basename matches one of these
+    patterns, but an explicitly named file beneath it is still collected. The
+    conftest ``collect_ignore`` list and ``addopts --ignore`` were honoured and
+    this was not, so a changed path that a test under ``skills/_archived/``
+    mentioned by name selected that archived test, and repo-root pytest failed
+    importing it (``skills/_archived/l9-idea-foundry/.../test_factory_qualification.py``,
+    whose sibling module only resolves under its own loader).
+    """
+    pyproject = repo_root / "pyproject.toml"
+    if not pyproject.is_file():
+        return []
+    try:
+        config = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    raw = config.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("norecursedirs", [])
+    if isinstance(raw, str):
+        raw = raw.split()
+    return [str(item) for item in raw if str(item)]
+
+
+def _under_norecursedir(path: str, patterns: list[str]) -> bool:
+    """True when a directory component of *path* matches a `norecursedirs` glob."""
+    return any(
+        fnmatch.fnmatch(part, pattern) for part in Path(path).parts[:-1] for pattern in patterns
+    )
+
+
 def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
     """A non-root *pytest* suite owns ``path`` and can collect it.
 
@@ -252,15 +284,17 @@ def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str]
     exclusion and fails on import, so it is not a valid scoped publication-gate target unless a
     non-root suite owns it.
 
-    Both spellings of the exclusion count. A path ignored via pyproject
-    `addopts` is as unrunnable as one in the conftest's `collect_ignore`, and an
-    explicit argument overrides `--ignore` just as readily.
+    Every spelling of the exclusion counts. A path ignored via pyproject
+    `addopts` or under a `norecursedirs` directory is as unrunnable as one in the
+    conftest's `collect_ignore`, and an explicit argument overrides each of them.
     """
     ignores = root_collect_ignores() + root_addopts_ignores()
+    norecurse = root_norecursedirs()
     keep: list[str] = []
     dropped: list[str] = []
     for path in selected:
         ignored = any(path_under(path, root) or path == root for root in ignores)
+        ignored = ignored or _under_norecursedir(path, norecurse)
         if ignored and not _has_pytest_owner(path, suites):
             dropped.append(path)
         else:

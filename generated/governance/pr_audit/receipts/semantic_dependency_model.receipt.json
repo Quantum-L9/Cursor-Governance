@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:4b8e57b8a69e1d40a589e747542f9723b7508e3edebd19f58920b4e619d4dcc0",
+      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -24,7 +24,7 @@
       "ref": "l9.compiler/projection-engine@1"
     },
     "profile_catalog": {
-      "digest": "sha256:58362ef71707dd9a3dcb9f833376de78af0e52838ab3400a090ee46594800d4e",
+      "digest": "sha256:b9991557fb0e671b20865652a6264dadf6c39939a5472d734cdb9fa8a92ecd57",
       "path": "semantics/projection_profiles.yaml",
       "ref": "l9.projection-profile-catalog/global@1"
     },
@@ -34,14 +34,14 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
       "ref": "l9.selector-model/global@1"
     },
     "source_registry": {
-      "digest": "sha256:860cd321665f911fd66f0adbec4ddbd7c364745b08928cdacfa047b3db8dee00",
+      "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
       "ref": "l9.canonical-sources/global@1"
     }
@@ -51,24 +51,24 @@
       "digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
       "path": "semantics/semantic_dependency_model.yaml",
       "ref": "l9.source/semantic-dependency-model@1",
-      "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
+      "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
     }
   ],
   "operation": "projection",
   "output": {
-    "digest": "sha256:735d44164bf7bec4db46c5c95af1f2851ea30b6e6c89dd8639c6562a7435b9f2",
+    "digest": "sha256:1868a8abb93af5c5458b951e5754a9c526a01b009b69da197b1a32b700271c80",
     "ref": "l9.projection/pr-audit@1#l9.source/semantic-dependency-model@1"
   },
   "producer_identity": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "profile": {
     "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
     "ref": "l9.projection/pr-audit@1"
   },
-  "receipt_digest": "sha256:81371641805d66fc0be4aaec2c01b7ac2fad05e94233f5b00496dfba1294d2b9",
-  "receipt_identity": "l9.receipt-instance/91d7fc8c0f9fe1077683bfbd5e2054d6686be087a593f1ebce3ab1a7f6d23704",
+  "receipt_digest": "sha256:8a58c8ddb1527401af04abc6348d548c266ab87aae267eccfafdc0f42186ff9e",
+  "receipt_identity": "l9.receipt-instance/ca620a161e798551fcce4d6fad205801cf0563d7edc9a0690580331e28d2d7d6",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -101,7 +101,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:00fd1a575a26d1c12d2f335b8413fc48617a930996731f2a871a6dc0c0caf780",
+        "content_digest": "sha256:66326aebd1db9f13a29843603b22dfcceed5fe034d87d70e59122b0fdf862a1d",
         "path": "l9.projection_pr-audit_1/l9.source_semantic-dependency-model_1.projection.json",
         "status": "pass"
       },
@@ -128,7 +128,7 @@
         "status": "pass"
       },
       "projection_digest": {
-        "digest": "sha256:735d44164bf7bec4db46c5c95af1f2851ea30b6e6c89dd8639c6562a7435b9f2",
+        "digest": "sha256:1868a8abb93af5c5458b951e5754a9c526a01b009b69da197b1a32b700271c80",
         "status": "pass"
       },
       "selection_equivalence": {
@@ -137,7 +137,7 @@
       },
       "source_currentness": {
         "digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
-        "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99",
+        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
         "status": "pass"
       },
       "source_identity": {

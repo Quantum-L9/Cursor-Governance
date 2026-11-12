@@ -1,0 +1,39 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "global_rules": {
+      "port_compatibility_must_be_declared": true,
+      "port_identity_is_semantic_not_provider_specific": true,
+      "ports_require_contract_refs": true,
+      "ports_require_explicit_owner": true,
+      "provider_native_api_is_not_canonical_port_contract": true
+    },
+    "port_entry_contract": {
+      "optional": [
+        "input_semantics",
+        "output_semantics",
+        "failure_semantics",
+        "compatibility_refs",
+        "conformance_requirement_refs"
+      ],
+      "required": [
+        "id",
+        "semantic_owner",
+        "purpose",
+        "contract_refs",
+        "required_capabilities",
+        "effect_class"
+      ]
+    },
+    "ports": []
+  },
+  "projection_digest": "sha256:4cc00fc35dfdde3ade3f1521c9411472b2561fd48ff76a35c22b30e7d47c6cad",
+  "projection_profile_digest": "sha256:136dbe9d7e87e3ea4d8bae8a2ce9046880c820eab30c80ca8d81994028531c2a",
+  "projection_profile_ref": "l9.projection/architecture@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
+  "source_ref": "l9.source/port-catalog@1"
+}

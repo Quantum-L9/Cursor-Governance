@@ -94,6 +94,28 @@ class PromotionValidatorTest(unittest.TestCase):
             },
         )
 
+    def test_a_profile_that_promotes_nothing_is_reported_not_failed(self) -> None:
+        write(self.root / validator.SURFACE_PROFILE, "authority_order:\n  - CANONICAL_LAW\n")
+        report = validator.validate(self.root)
+        self.assertEqual(report["status"], "PASS", report["errors"])
+        self.assertTrue(
+            any("no campaign_execution block" in item for item in report["warnings"]),
+            report["warnings"],
+        )
+
+    def test_a_profile_that_promotes_nothing_still_validates_the_policy(self) -> None:
+        write(self.root / validator.SURFACE_PROFILE, "authority_order:\n  - CANONICAL_LAW\n")
+        policy = (self.root / validator.EXECUTION_POLICY).read_text(encoding="utf-8")
+        write(
+            self.root / validator.EXECUTION_POLICY,
+            policy.replace("campaign/alpha-v1", "campaign/someone-else", 1),
+        )
+        self.assertFailsWith(validator.validate(self.root), "!= 'campaign/alpha-v1'")
+
+    def test_a_present_but_malformed_block_still_fails(self) -> None:
+        write(self.root / validator.SURFACE_PROFILE, "campaign_execution: forbidden\n")
+        self.assertFailsWith(validator.validate(self.root), "campaign_execution must be a mapping")
+
     # -- condition 1: surface profile parses -------------------------------
 
     def test_unparseable_surface_profile_fails(self) -> None:
@@ -255,13 +277,27 @@ class RealRepositoryTest(unittest.TestCase):
         self.assertEqual(report["status"], "PASS", report["errors"])
 
     def test_every_registered_campaign_uses_its_own_branch(self) -> None:
+        """Wherever a campaign is registered, its branch is its own.
+
+        The policy is the registration record Program Execution owns. The
+        surface profile adds promoted registrations only while it carries a
+        `campaign_execution` block; when it does, those are held to the same
+        rule and must all appear in the policy.
+        """
+        policy = yaml.safe_load(
+            (REPO_ROOT / validator.EXECUTION_POLICY).read_text(encoding="utf-8")
+        )
+        registered = {entry["id"]: entry for entry in policy["campaigns"]}
+        self.assertIn("pe-router-capability-safety-v4", registered)
+        for campaign_id, entry in registered.items():
+            self.assertEqual(entry["integration_branch"], f"campaign/{campaign_id}")
         profile = yaml.safe_load(
             (REPO_ROOT / validator.SURFACE_PROFILE).read_text(encoding="utf-8")
         )
-        campaigns = profile["campaign_execution"]["campaigns"]
-        self.assertIn("pe-router-capability-safety-v4", campaigns)
-        for campaign_id, entry in campaigns.items():
+        promoted = (profile.get("campaign_execution") or {}).get("campaigns") or {}
+        for campaign_id, entry in promoted.items():
             self.assertEqual(entry["integration_branch"], f"campaign/{campaign_id}")
+            self.assertIn(campaign_id, registered)
 
 
 if __name__ == "__main__":

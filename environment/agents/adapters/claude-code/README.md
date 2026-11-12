@@ -51,6 +51,31 @@ context**, **reach shared memory** — without a human wiring step.
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
 | Reach shared memory | Canonical `l9-graphite-memory` control plane over stdio (`ops/memory`; bound per `ops/config/memory-binding.json`); readiness is `memory.cli` + control plane + `memory.mcp`; no URL, no bearer, broker retired | same; an unbound runtime is honest `memory-blind` — never paste a credential |
+| Bind default projections | the same SessionStart hook → `ops/autonomy/host_binding.py --host claude-code` with `governance/host-bindings/claude-code.yaml` | same |
+
+### Default projection binding (how it works)
+
+- `governance/host-bindings/claude-code.yaml` holds the binding: the operating plane
+  (`l9.projection/cursor-governance-operating-plane@2`) alone. The domain set of the
+  canonical `l9.domain-consumer-binding/claude-code@1` is not bound by default.
+- `ops/autonomy/host_binding.py` checks it using the verifier that already exists — the
+  operating plane's consumer adapter, `ops/scripts/operating_plane_v2_projection.py`, in
+  admitted mode. It adds no checking of its own, and reports `BOUND` only when that
+  adapter reports `CURRENT`.
+- `hooks/session_start_claude_governance.sh` (mirrored to `.claude/hooks/`) binds it
+  automatically in every session — `emit_operating_plane_projection` runs it with
+  `--format line`, inside the hook's own time budget; about 6 s in testing. When bound,
+  the context names the eight source classes and the exact command that releases one; the
+  adapter re-verifies before releasing anything.
+- Fail-open: a failed, deferred or timed-out binding never stops the session, and is
+  reported as `default projection binding (claude-code): NOT BOUND — ... (fail-open: the
+  session continues; cite no operating-plane semantics)`. Nothing that did not verify is
+  shown as bound.
+- The `coding projection:` line is verification only and says so; `/coding-agent` binds
+  that projection. No skill is involved anywhere: the manual bindings are `/coding-agent`,
+  `/lcto` and `/architect`.
+
+Full detail: `governance/host-bindings/README.md`.
 
 ### Proactive L9 skill discovery and routing
 
