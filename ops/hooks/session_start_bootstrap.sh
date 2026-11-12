@@ -598,12 +598,12 @@ if [ -f "$SESSION_LOCATOR_PY" ]; then
   ROUTE_LOCATOR_ENV="$("$AUDIT_PY_BIN" "$SESSION_LOCATOR_PY" --env 2>/dev/null || echo '{}')"
 fi
 
-# Coding projection (report-only): the same consumer-side classifier the Claude
+# Coding projection (verification only, not a binding: /coding-agent binds it): the same consumer-side classifier the Claude
 # hook prints as one line (ops/scripts/coding_projection_status.py); it verifies
 # l9-semantic-compiler pairs and never produces them. Bounded to 3 s; it never
 # fetches, writes or blocks, and a timeout is reported, not hidden.
 CODING_PROJECTION_MD="### coding projection
-- UNVERIFIED: classifier unavailable (report-only)"
+- UNVERIFIED: classifier unavailable (verification only; not bound in this session — /coding-agent binds it)"
 CODING_PROJECTION_PY="$GC/ops/scripts/coding_projection_status.py"
 if [ -f "$CODING_PROJECTION_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
   # shellcheck source=/dev/null
@@ -613,38 +613,40 @@ if [ -f "$CODING_PROJECTION_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.
   _cp_rc=$?
   if [ "$_cp_rc" = 124 ]; then
     CODING_PROJECTION_MD="### coding projection
-- UNVERIFIED: TIMED OUT after 3 s (report-only)"
+- UNVERIFIED: TIMED OUT after 3 s (verification only; not bound in this session — /coding-agent binds it)"
   elif [ -n "$_cp_out" ]; then
     CODING_PROJECTION_MD="$_cp_out"
   fi
   unset _cp_out _cp_rc
 fi
 
-# Operating-plane projection (report-only): the same shape for
-# l9.projection/cursor-governance-operating-plane@2 through its consumer adapter
-# (ops/scripts/operating_plane_v2_projection.py --format markdown). Admitted mode
-# against the checkout's own origin/main record; it never releases payload here,
-# never fetches, never writes, and a timeout is reported, not hidden.
-OPERATING_PLANE_MD="### operating-plane projection
-- UNVERIFIED: adapter unavailable (report-only)"
-OPERATING_PLANE_PY="$GC/ops/scripts/operating_plane_v2_projection.py"
-if [ -f "$OPERATING_PLANE_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
+# Default projection binding: every Cursor session is bound automatically to the admitted
+# operating plane (l9.projection/cursor-governance-operating-plane@2) plus the canonical
+# Cursor domain set, through ops/autonomy/host_binding.py and
+# governance/host-bindings/cursor.yaml. No skill or command is involved; /coding-agent,
+# /lcto and /architect are the manual bindings. The base is BOUND only when its consumer
+# adapter reports CURRENT in admitted mode, and the session then reads a source class
+# through that adapter. DEGRADED keeps what verified. Fail-open: a failed, degraded or
+# timed-out binding never stops the session and is reported as exactly that, never as
+# bound. It never fetches and never writes.
+DEFAULT_BINDING_MD="### default projection binding (cursor)
+- NOT BOUND — host binding unavailable, so nothing is bound (fail-open: the session continues; cite no operating-plane semantics)"
+HOST_BINDING_PY="$GC/ops/autonomy/host_binding.py"
+if [ -f "$HOST_BINDING_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
   # shellcheck source=/dev/null
   source "$GC/ops/scripts/lib/run_with_timeout.sh"
-  # Admitted mode builds two shared clones of the authority (pinned revision and
-  # main) and verifies eight receipts: ~3 s on a warm checkout, so the 3 s budget
-  # the lighter coding-projection reader uses times out here (stage-4 e2e,
-  # 2026-10-22). 10 s is the bound; a timeout is still reported, not hidden.
-  _op_out="$(run_with_timeout 10 "$AUDIT_PY_BIN" "$OPERATING_PLANE_PY" \
-    --mode admitted --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
-  _op_rc=$?
-  if [ "$_op_rc" = 124 ]; then
-    OPERATING_PLANE_MD="### operating-plane projection
-- UNVERIFIED: TIMED OUT after 10 s (report-only)"
-  elif [ -n "$_op_out" ]; then
-    OPERATING_PLANE_MD="$_op_out"
+  # The operating-plane adapter (~3-7 s: two shared authority clones, eight receipts) and
+  # four admitted-mode domain verifications. 30 s is the bound inside the 60 s hook.
+  _hb_out="$(run_with_timeout 30 "$AUDIT_PY_BIN" "$HOST_BINDING_PY" \
+    --host cursor --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
+  _hb_rc=$?
+  if [ "$_hb_rc" = 124 ]; then
+    DEFAULT_BINDING_MD="### default projection binding (cursor)
+- NOT BOUND — the host binding TIMED OUT after 30 s, so nothing is bound (fail-open: the session continues; cite no operating-plane semantics)"
+  elif [ -n "$_hb_out" ]; then
+    DEFAULT_BINDING_MD="$_hb_out"
   fi
-  unset _op_out _op_rc
+  unset _hb_out _hb_rc
 fi
 
 COMBINED="$(cat <<EOF
@@ -664,7 +666,7 @@ ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
-${OPERATING_PLANE_MD}
+${DEFAULT_BINDING_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"

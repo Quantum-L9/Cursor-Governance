@@ -1,0 +1,76 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+  },
+  "components": [
+    {
+      "path": "projections/identity_model.projection.json",
+      "projection_digest": "sha256:c5d478faf07131ae5ee16de61a815052105214633cd790145837ac8d150218fe",
+      "receipt": "receipts/identity_model.receipt.json",
+      "sha256": "sha256:0e58d6dd3ec7a44ae2b21b0218e461afc101dee52dd2f228f9042f0487bb1152",
+      "source_class": "identity_model",
+      "source_digest": "sha256:b9245eca99501a38976e909e1d151942c1253b2eee2bd6bab9c6382687db4288",
+      "source_ref": "l9.source/identity-model@1"
+    },
+    {
+      "path": "projections/actor_registry.projection.json",
+      "projection_digest": "sha256:1a57bbcfcf74e2644553cecf5a90d0dbae41f357493021450116cf301a03fd5c",
+      "receipt": "receipts/actor_registry.receipt.json",
+      "sha256": "sha256:89c909dba477fc151362c9176ec533d68b6c2e44ace7700205a1d4ed2987ad08",
+      "source_class": "actor_registry",
+      "source_digest": "sha256:34fbe4abc246e21c28401941025317be52c109c88335577616a2648cc93c6f6f",
+      "source_ref": "l9.source/actor-registry@1"
+    },
+    {
+      "path": "projections/surface_registry.projection.json",
+      "projection_digest": "sha256:3dffd61a7d592050a5635e18e0b4ad7d5bf6b37451428f3241309544d5770d9e",
+      "receipt": "receipts/surface_registry.receipt.json",
+      "sha256": "sha256:09d1cd6437c1d1965e44569bc31888af7e1e66ed7b2456f950be6e947cb90cc3",
+      "source_class": "surface_registry",
+      "source_digest": "sha256:d7200409ff02141a274ff8c9221d31429f6a6fae27539e6d9c8d20f1a6eba988",
+      "source_ref": "l9.source/surface-registry@1"
+    },
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:53904129254c1d1b5fa2e56311b7b7505f34ab873ee0931e6d8b3c35f6e6dc58",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:978ae808475bbeef336e6c618ea616668519501a8eebd693d02b478f0b93e493",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "path": "projections/contracts.projection.json",
+      "projection_digest": "sha256:8872a681f684edc2134d001cdb7835d15417e63aa8cbba6ff7fdf033701a6d32",
+      "receipt": "receipts/contracts.receipt.json",
+      "sha256": "sha256:c44e3a814d0d4c6d551cefd7475900bb24b6ef99448db1876b2e51cf46c83de2",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    }
+  ],
+  "composed": {
+    "composition_digest": "sha256:665c6d8e38d4246842d52042286fc9e53ab3773023a174b88b63f80e567e18f5",
+    "path": "composed.json",
+    "receipt": "receipts/composed.receipt.json",
+    "sha256": "sha256:f4ac71ed6eb154d79c59d13c7f3074d1fe5e53cc07d365c8aa2eb978a5f48697"
+  },
+  "composition_profile": {
+    "digest": "sha256:5ddee860ed80fb26b6f75d4a5453bdbbec27855f5e2df0d9280ef459baebca17",
+    "ref": "l9.compose/identity-attribution@1"
+  },
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "eeac5d28f9f1a44e72287190b9087d06aeb4d574",
+    "revision_basis": "caller_asserted",
+    "version": "0.10.0"
+  },
+  "projection_profile": {
+    "digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
+    "ref": "l9.projection/identity-attribution@1"
+  },
+  "schema": "l9.projection-bundle/v1"
+}

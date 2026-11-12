@@ -54,9 +54,41 @@ from environment.agents.runtime_paths import (  # noqa: E402
 _ORCHESTRATION = _HERE.parent / "orchestration"
 
 
+def _bind_orchestration_receipts() -> None:
+    """Make the bare name `receipts` mean `orchestration/receipts.py`.
+
+    Six orchestration modules do `from receipts import ProcessingReceiptChain`.
+    This directory also holds a `receipts.py`, and it is on `sys.path` too --
+    this module puts it there, and so does every caller that loads this file by
+    location. Whichever directory comes first on the path wins the bare name,
+    so the pipeline loaded or failed with an `ImportError` depending on which
+    unrelated module had touched `sys.path` earlier in the process. Nothing
+    imports the ingress module by the bare name (it has its own key above), so
+    the name is bound here, by file location, before its consumers load.
+    """
+    path = (_ORCHESTRATION / "receipts.py").resolve()
+    current = sys.modules.get("receipts")
+    current_file = getattr(current, "__file__", None)
+    if current_file and Path(current_file).resolve() == path:
+        return
+    spec = importlib.util.spec_from_file_location("receipts", path)
+    if spec is None or spec.loader is None:  # pragma: no cover - packaging error
+        raise ImportError("cannot load generated-data orchestration receipts module")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["receipts"] = module
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop("receipts", None)
+        if current is not None:
+            sys.modules["receipts"] = current
+        raise
+
+
 def _load_pipeline():
     if str(_ORCHESTRATION) not in sys.path:
         sys.path.insert(0, str(_ORCHESTRATION))
+    _bind_orchestration_receipts()
     from delivery_worker import (  # type: ignore[import-not-found]
         DeliveryWorker,
         DeliveryWorkerConfiguration,

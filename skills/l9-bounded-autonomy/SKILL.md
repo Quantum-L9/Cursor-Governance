@@ -25,7 +25,7 @@ metadata:
 
 ## Purpose
 
-Map ADR-0001 onto Cursor through root autonomy: fan out non-dependent work and deploy background PR-poll subagents while the main agent continues — without autonomous merge. Program Execution is not a runtime owner.
+Map ADR-0001 onto Cursor through root autonomy: fan out non-dependent work and deploy background PR-poll subagents while the main agent continues — without autonomous merge. Program Execution is a separate, operator-invoked consumer of root autonomy (CANONICAL_LAW `PROGRAM_EXECUTION_MANUAL_STAGE_V1`); this skill never starts one.
 
 ## Core Contract
 

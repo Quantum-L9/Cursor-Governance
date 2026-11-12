@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "capabilities": [],
@@ -117,10 +117,10 @@
       "rule": "A capability is invocable only when every state dimension required by its applicable canonical contracts is satisfied, all declared semantic requirements and applicable authorization requirements are satisfied for the invocation scope, and no applicable hard constraint is unresolved or violated.\n"
     }
   },
-  "projection_digest": "sha256:cce72354712ef6c5296badade8651c5a8dc9a45430bf331afc79d8cc0ea7750d",
+  "projection_digest": "sha256:d0b64fd8aba979a1775f561268bf0ac5f256b14da94b897210420e8938614f21",
   "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
   "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
+  "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
   "source_ref": "l9.source/capabilities@1"
 }

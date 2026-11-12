@@ -1,3 +1,8 @@
+---
+# Hand-maintained since 2026-11-12: the SessionStart binding section below is written by
+# hand, so the README generator must not overwrite this file.
+auto_generated: false
+---
 # Session hooks
 
 **Path:** `ops/hooks` | **Tier:** operations
@@ -7,6 +12,40 @@
 Activate governance, hydrate Graphiti, and deny mid-execution publish.
 
 SessionStart bootstrap and shell gates.
+
+## SessionStart projection binding (how it works)
+
+`session_start_bootstrap.sh` is Cursor's SessionStart hook (installed as
+`~/.cursor/hooks/session-start-bootstrap.sh`). It binds every Cursor session to its
+default projections; no skill or command is involved.
+
+- `governance/host-bindings/cursor.yaml` holds the binding: the operating plane
+  (`l9.projection/cursor-governance-operating-plane@2`) as the required base, plus the
+  canonical Cursor domain set.
+- The hook runs `ops/autonomy/host_binding.py --host cursor --format markdown`, which
+  checks the binding with the verifiers that already exist and adds no checking of its
+  own.
+  - It reports `BOUND` only when the operating plane is current and every active
+    projection is admitted and current; `DEGRADED` when the operating plane is bound and
+    some active domain is not (what verified stays bound); `NOT BOUND` when the operating
+    plane did not verify (nothing is bound).
+  - A conditional projection is loaded only when its condition is named with
+    `--activate`; otherwise it isn't even checked. SessionStart names none, so only the
+    `always` domains are checked there.
+- The report appears as `### default projection binding (cursor)`, after the
+  `### coding projection` block. It replaced the old report-only operating-plane block,
+  so the operating plane is checked once, not twice. 30 s limit inside the 60 s hook; it
+  took about 9 s in testing against an authority checkout at `main`.
+- Fail-open and honest: a binding that failed, degraded or timed out never stops the
+  session, and the block says exactly what is and is not bound. Its fallbacks read
+  `NOT BOUND — host binding unavailable` / `TIMED OUT after 30 s ... (fail-open: the
+  session continues; cite no operating-plane semantics)`.
+- The `### coding projection` block is verification only and says so: the coding-agent
+  execution projection is bound by `/coding-agent`, not here.
+
+Claude Code does the same from
+`environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`
+(`--host claude-code --format line`). Full detail: `governance/host-bindings/README.md`.
 
 ## Components
 
