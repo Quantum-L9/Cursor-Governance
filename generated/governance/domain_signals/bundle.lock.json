@@ -1,16 +1,16 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
   },
   "components": [
     {
       "path": "projections/vocabulary.projection.json",
-      "projection_digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
+      "projection_digest": "sha256:3eda8164d9b7b0336611ff35e2073648d1b2ebf2fd5381d406dfc5aebb257517",
       "receipt": "receipts/vocabulary.receipt.json",
-      "sha256": "sha256:268d27fc53ad31ec9385fe73937488c6396b928850c438ad84bd05e3d044f764",
+      "sha256": "sha256:39b9fe7e50321532da2aea7b2e4b49c79ea8a0a8c9c30da5d2e92d18e4d642a8",
       "source_class": "vocabulary",
-      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
@@ -24,10 +24,10 @@
     }
   ],
   "composed": {
-    "composition_digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
+    "composition_digest": "sha256:a6b4d4480a5964b19b02059e2813ad624999b28166e765a3be53740df2b611f2",
     "path": "composed.json",
     "receipt": "receipts/composed.receipt.json",
-    "sha256": "sha256:980f842774e083267dd5e1710d50bfa321f255c72dd3cd3dca0b99013452a915"
+    "sha256": "sha256:ccafff50a77b593685d9ca224920999fa33c0983132b9bffd84d9086fbc28a50"
   },
   "composition_profile": {
     "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",

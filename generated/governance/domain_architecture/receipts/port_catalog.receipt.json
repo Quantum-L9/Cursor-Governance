@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
+      "digest": "sha256:f6f10221c6bfbbd2382ba2f3dd80f5766b7836798556cac2ffcabb76080a3fde",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
@@ -51,7 +51,7 @@
       "digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
       "path": "semantics/port_catalog.yaml",
       "ref": "l9.source/port-catalog@1",
-      "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+      "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
     }
   ],
   "operation": "projection",
@@ -67,8 +67,8 @@
     "digest": "sha256:136dbe9d7e87e3ea4d8bae8a2ce9046880c820eab30c80ca8d81994028531c2a",
     "ref": "l9.projection/architecture@1"
   },
-  "receipt_digest": "sha256:405784a99aee22ff85da50c0a4aebff7886cbb0e7678f4906aae7abb3eb3d6d1",
-  "receipt_identity": "l9.receipt-instance/95c8d1cf1944ab0e1211f58ecaaa37740acb600e1979ff13c8bd85e97780b351",
+  "receipt_digest": "sha256:66a7d9175165e8b6b13adfac07cd57b17a0abbbbbce9fa6fdea3f0745c05e82b",
+  "receipt_identity": "l9.receipt-instance/c17c5d85a340b46a9d83f4352c5eb61f9b8ce50a7bdbe728619cb6a8df0fba3f",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -142,7 +142,7 @@
       },
       "source_currentness": {
         "digest": "sha256:f53354d355b2d1f5a2e69fb80a30eccb4e73fa8bacaea43071f12a0270a07098",
-        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+        "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
         "status": "pass"
       },
       "source_identity": {

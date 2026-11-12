@@ -1,10 +1,10 @@
 {
   "components": [
     {
-      "projection_digest": "sha256:c93c1972bc26cd975da99d33153d8ef9b845ee63a0e97ebf9ba8e7b9e74706c7",
+      "projection_digest": "sha256:3eda8164d9b7b0336611ff35e2073648d1b2ebf2fd5381d406dfc5aebb257517",
       "projection_ref": "l9.projection/signals@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
@@ -15,7 +15,7 @@
       "source_ref": "l9.source/invariants@1"
     }
   ],
-  "composition_digest": "sha256:91627fab3b7a2f72cd06c545923d74ae00398ff68ccf7332499077492af8e6f5",
+  "composition_digest": "sha256:a6b4d4480a5964b19b02059e2813ad624999b28166e765a3be53740df2b611f2",
   "composition_profile": {
     "digest": "sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94",
     "ref": "l9.compose/signals@1"

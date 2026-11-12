@@ -8,10 +8,10 @@
       "source_ref": "l9.source/strategic-value-model@1"
     },
     {
-      "projection_digest": "sha256:f870129820382b2c78382d9141266d808beb14569e824653523a583223d50fcd",
+      "projection_digest": "sha256:ce39b35e6f9cdf47b5a607d8cb8128e9ee2d73511ca1a93f7ebea9fdc2743bed",
       "projection_ref": "l9.projection/strategic-value@1#l9.source/vocabulary@1",
       "source_class": "vocabulary",
-      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
@@ -29,7 +29,7 @@
       "source_ref": "l9.source/contracts@1"
     }
   ],
-  "composition_digest": "sha256:c02e9edb1ef8c7672bd33e479d64bef92eed1e6cb4321b5099972462e931fe15",
+  "composition_digest": "sha256:cc362f794d51799fa223b3924f50be8aa116ffd8281beae2d697615cd231277b",
   "composition_profile": {
     "digest": "sha256:56098ba2ec5808c8cd4587ce1946045ef6f2d0abf535f6adbf048bfc8034adc4",
     "ref": "l9.compose/strategic-value@1"
