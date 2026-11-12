@@ -4,7 +4,9 @@ One owner for report rendering and placement, so the GMP executor and the
 end-session handoff hooks cannot drift apart:
 
     reports/
-      gmp/                              GMP execution reports (committed with the work)
+      gmp/                              GMP execution reports (committed with the work),
+                                        unless the repository declares gmp_report_dir
+                                        in ops/config/publish-authority.json
       end-session/
         session-handoff/                legacy location; handoffs are no longer committed
         governance-handoff/             legacy location; handoffs are no longer committed
@@ -86,8 +88,17 @@ TITLES: dict[ReportKind, str] = {
 
 
 def report_dir(root: Path, kind: ReportKind) -> Path:
-    """``<root>/reports/<subdir>`` for ``kind``, created when absent."""
-    path = Path(root) / SUBDIRS[kind]
+    """``<root>/reports/<subdir>`` for ``kind``, created when absent.
+
+    GMP reports go to the repository's declared ``gmp_report_dir``
+    (``ops/config/publish-authority.json``) when it has one.
+    """
+    if kind is ReportKind.GMP:
+        from ops.reports import gmp
+
+        path = Path(root) / gmp.report_rel(root)
+    else:
+        path = Path(root) / SUBDIRS[kind]
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -580,10 +591,12 @@ def current_branch(root: Path) -> str:
 
 
 def publish_gmp_report(root: Path, sources: Sequence[Path]) -> tuple[list[Path], PublishResult]:
-    """Place GMP reports in ``reports/gmp/`` and commit them with the work.
+    """Place GMP reports in the GMP report folder and commit them with the work.
 
-    A report written anywhere (scratchpad, repo root, legacy ``reports/``) is
-    copied into ``reports/gmp/`` under its own name. It is committed even when
+    The folder is ``reports/gmp/``, or the repository's declared
+    ``gmp_report_dir`` (``ops/config/publish-authority.json``). A report written
+    anywhere (scratchpad, repo root, legacy ``reports/``) is copied there under
+    its own name. It is committed even when
     ``reports/`` is gitignored. It is pushed only when this branch already has
     an open PR (``.l9/pr/pr-summary.json`` names it as head); otherwise the
     commit rides the next ``make pr``.
@@ -685,12 +698,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m ops.reports.publish", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (
-        ("dirs", "create reports/gmp and reports/end-session/{session,governance}-handoff"),
+        ("dirs", "create the GMP report folder and the end-session handoff folders"),
         (
             "handoffs",
             "deliver .l9/memory handoff briefs: PR comment + Cursor-Governance friction intake",
         ),
-        ("gmp", "validate, place in reports/gmp/ and commit GMP report(s); push if a PR is open"),
+        ("gmp", "validate, place in the GMP report folder and commit; push if a PR is open"),
         ("next-gmp-id", "print the next GMP id for this clone (GMP-NNN)"),
     ):
         cmd = sub.add_parser(name, help=help_text)

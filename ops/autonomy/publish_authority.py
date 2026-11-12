@@ -170,7 +170,51 @@ def load_registry(path: Path) -> dict:
                 )
             _check_helper_requires(path, key, ceremony)
         _check_required_git_hooks(path, key, entry)
+        _check_gmp_report_dir(path, key, entry)
     return document
+
+
+def _check_gmp_report_dir(path: Path, key: str, entry: dict) -> None:
+    """``gmp_report_dir`` is optional: a clean repository-relative directory.
+
+    A repository whose own law places GMP reports somewhere other than the
+    default ``reports/gmp/`` declares that directory here, Governance-side, with
+    the authority that requires it. Any route may carry it.
+    """
+    if "gmp_report_dir" not in entry:
+        return
+    value = entry["gmp_report_dir"]
+    parts = value.split("/") if isinstance(value, str) else []
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or value.startswith("/")
+        or "\\" in value
+        or any(part in ("", ".", "..") for part in parts)
+    ):
+        raise RegistryError(
+            f"{path}: {key}: gmp_report_dir must be a relative directory "
+            "with no empty, '.' or '..' parts"
+        )
+    authority = entry.get("gmp_report_authority")
+    if not isinstance(authority, str) or not authority.strip():
+        raise RegistryError(f"{path}: {key}: gmp_report_dir requires 'gmp_report_authority'")
+
+
+def gmp_report_dir(workspace: Path, registry: Path | None = None) -> str | None:
+    """The repository's declared GMP report directory, or None for the default.
+
+    Fails closed: an invalid registry raises :class:`RegistryError`, because a
+    silent fallback would write the report where the repository forbids it.
+    A workspace with no origin remote has no entry and keeps the default.
+    """
+    origin = origin_of(workspace)
+    if origin is None:
+        return None
+    document = load_registry(registry or DEFAULT_REGISTRY)
+    entry = document["repositories"].get(origin) or {}
+    value = entry.get("gmp_report_dir")
+    return value if isinstance(value, str) else None
 
 
 def _check_helper_requires(path: Path, key: str, ceremony: dict) -> None:
