@@ -34,6 +34,8 @@ on:
       - "generated/governance/coding_agent_execution/**"
       - "generated/governance/operating_plane_v2/**"
       - "generated/governance/pr_audit/**"
+      - "generated/governance/domain_*/**"
+      - "generated/governance/technical_coordination/**"
   push:
     branches:
       - main
@@ -42,6 +44,8 @@ on:
       - "generated/governance/coding_agent_execution/**"
       - "generated/governance/operating_plane_v2/**"
       - "generated/governance/pr_audit/**"
+      - "generated/governance/domain_*/**"
+      - "generated/governance/technical_coordination/**"
       - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
