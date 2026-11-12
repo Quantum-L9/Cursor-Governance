@@ -101,9 +101,11 @@ def test_requested_and_admitted_is_active_with_composed_view(tmp_path: Path) -> 
     report = cto_mode.evaluate(tmp_path, verify=_verify(ALL_ADMITTED), session_id=SID)
     assert report["mode"] == "ACTIVE"
     assert [item["ref"] for item in report["load"]] == CTO_SELECTION
+    composed = str(REPO / "generated/governance/technical_coordination/composed.json")
     assert report["load"][0] == {
         "ref": TC,
-        "composed_view": str(REPO / "generated/governance/technical_coordination/composed.json"),
+        "composed_view": composed,
+        "views": [composed],
         "provenance": None,
     }
     assert all(Path(item["composed_view"]).is_file() for item in report["load"])
