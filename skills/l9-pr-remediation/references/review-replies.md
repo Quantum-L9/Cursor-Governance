@@ -190,11 +190,13 @@ head repository is origin, whose head branch is the checked-out branch, and
 whose head commit is HEAD or an ancestor of it (read live; any unreadable fact
 refuses). It appends the attribution footer itself. Discover comment ids with
 GET; do not hand-roll `gh api --method POST`.
+The examples below use the home-relative form, which works from every
+checkout; inside the governance clone the relative form is the same command.
 
 ### Reply to inline (diff) comments
 
 ```bash
-python3 ops/scripts/pr_threads.py reply --pr {pr_number} --comment-id {comment_id} <<'EOF'
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py reply --pr {pr_number} --comment-id {comment_id} <<'EOF'
 {canonical_reply}
 EOF
 ```
@@ -205,7 +207,7 @@ EOF
 allowed. A PR comment is an issue comment. The helper posts that route:
 
 ```bash
-python3 ops/scripts/pr_threads.py comment --pr {pr_number} <<'EOF'
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py comment --pr {pr_number} <<'EOF'
 {reply}
 EOF
 ```
@@ -220,7 +222,7 @@ gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/ccr/review_threads
 # → [{resolved, outdated, path, line, comment_ids: [...]}, …]; bodies come from
 gh api --method GET /repos/{owner}/{repo}/pulls/{pr_number}/comments
 
-python3 ops/scripts/pr_threads.py resolve --pr {pr_number} --comment-id {comment_id}
+python3 ~/.cursor-governance/ops/scripts/pr_threads.py resolve --pr {pr_number} --comment-id {comment_id}
 ```
 
 ### Resolve a thread — local CLI / Desktop (GraphQL reachable)
