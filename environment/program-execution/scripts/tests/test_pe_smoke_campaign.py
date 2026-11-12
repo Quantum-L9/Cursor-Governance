@@ -51,6 +51,7 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
@@ -271,7 +272,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 repo_root=root,
                 l9_root=l9,
                 fast=fast,
-                hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, bind_projection=_projection_ok),
             )
             return report, l9, time.monotonic() - started
         l9 = raw / "l9"
@@ -288,6 +289,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             fast=fast,
             hooks=self.mod.Hooks(
                 context7_stack=_stack_ok,
+                bind_projection=_projection_ok,
                 compile_activation=self.activate.compile_activation,
             ),
         )
@@ -306,6 +308,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             fast=True,
             hooks=self.mod.Hooks(
                 context7_stack=_stack_ok,
+                bind_projection=_projection_ok,
                 compile_activation=self.activate.compile_activation,
             ),
         )
@@ -529,6 +532,16 @@ class PeSmokeCampaignTests(unittest.TestCase):
             progress = json.loads((workspace / "runtime/PROGRESS.json").read_text("utf-8"))
             self.assertEqual(progress["execution"], {"done": 2, "total": 2})
             self.assertLess(elapsed, 300, "smoke campaign must stay fast enough to run in dev")
+            # The run carries who asked for it and what the pipeline was bound to.
+            invocations = json.loads((workspace / "runtime/INVOCATION.json").read_text("utf-8"))
+            self.assertEqual(len(invocations["invocations"]), 1)
+            self.assertEqual(invocations["invocations"][0]["stage"], "manual")
+            binding = json.loads(
+                (workspace / "runtime/coding-projection-binding.json").read_text("utf-8")
+            )
+            self.assertEqual(
+                binding["bootstrap"]["profile_ref"], "l9.projection/coding-agent-execution@1"
+            )
 
     def test_a_direct_unmediated_write_never_becomes_a_program_attempt(self) -> None:
         """The negative control for the conformant host above.

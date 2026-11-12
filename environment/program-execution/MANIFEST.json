@@ -2026,6 +2026,10 @@
       "sha256": "df594c6fa619e35a0c1e502e052e909af546f72eba77eb380527b48ba5dbb51b"
     },
     {
+      "path": "scripts/campaign_authority.py",
+      "sha256": "e01fff383fac705eccf3e3810c82ed0b601e5520b28f2a75040846d94921235d"
+    },
+    {
       "path": "scripts/campaign_exec.py",
       "sha256": "c449b34630df393441c70d990c91004cee3e17f5d88760ddbf607f6e21fa0148"
     },
@@ -2115,7 +2119,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "37907faaaacf42c4a771b2be5dcd0352a8e933ad4711e88846124af233057d42"
+      "sha256": "c4df97fe18c81752c9b6dc789088556e378a152055299022b89fa004d01437cd"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2135,7 +2139,7 @@
     },
     {
       "path": "scripts/tests/pe_prepare_bench.py",
-      "sha256": "a3ed838f28bea5fbfd3c208d5204f390f9d50363f3e9ef175366eeb7d6b379fa"
+      "sha256": "8168c60f751ab950034ccbdc7a5e3dba903f6b5bde38ebe0c2b59f6353fc4685"
     },
     {
       "path": "scripts/tests/test_activation_receipt.py",
@@ -2144,6 +2148,10 @@
     {
       "path": "scripts/tests/test_blueprint_ops.py",
       "sha256": "4276b617a1ad3471e430b1dfdd3036d0d0d04caf494366af85c5d41eb18211ec"
+    },
+    {
+      "path": "scripts/tests/test_campaign_authority.py",
+      "sha256": "1af921009b12e1eff8665129bfb3e296bffb127a03ec511f761c4aa2b203e8e4"
     },
     {
       "path": "scripts/tests/test_campaign_input_front_door.py",
@@ -2195,7 +2203,7 @@
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
-      "sha256": "3c733f61ab3c6175d46005d8c247dbb66e2e8a08514c0ba667a083a6a7985e18"
+      "sha256": "f6b06e8e0c1a3602b933e4e44000be55c23f97159489e36154da646b32b2288c"
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
@@ -2207,7 +2215,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "014007242eafb0f7deb87af9da3613242add2c99c3b1d0b7276362f2dcf818ad"
+      "sha256": "b2909e6bebeb84717fa1a7cc48c2111f18819449b123f265f5d64300e96a3567"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2227,7 +2235,7 @@
     },
     {
       "path": "scripts/tests/test_prepare_resumable.py",
-      "sha256": "ca94761425164825963732f556faf3322ef4fd498fedb12ae8d77bdf5158298e"
+      "sha256": "29164d913fc0e43f10e1bce513c0661c58e0bf57c4395cbb3bf8a615b2ed5b2f"
     },
     {
       "path": "scripts/tests/test_probe_lock_binding.py",
@@ -2243,7 +2251,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "0f9b1972b1f088b913a687559f454ee3f68c00fc3cd7a42d5b0c385618f8494f"
+      "sha256": "85dba7d1b771b0791a3d74a0ac74a16e4e241c120b917b58e03ba1ab97b12654"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",

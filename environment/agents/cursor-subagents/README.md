@@ -43,8 +43,11 @@ Root `autonomy/` remains authoritative for:
 - executor and reviewer separation.
 This module does not inspect or mutate autonomy runtime storage directly.
 ### Campaign execution
-Program Execution is not a current delegation source. The Cursor subagent
-layer does not advance campaign state or evaluate gates.
+Program Execution runs only when the operator explicitly invokes a campaign
+(`CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`). While one is active it
+owns its task readiness, lock, attempts, verification receipts and gates. The
+Cursor subagent layer does not start a campaign, advance campaign state or
+evaluate gates.
 ### Generated-data pipeline
 Only accepted result documents are projected into the existing
 `environment/agents/generated-data/` packet format.

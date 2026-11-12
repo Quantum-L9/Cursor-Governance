@@ -2456,3 +2456,29 @@ scan used this repository's rules, not Core's.
   seven findings Core reported.
 - **Unchanged.** An absent tool or an unstageable gate is a reported skip, not
   a pass and not a block. `L9_CI_PARITY=0` disables it. CI stays authoritative.
+
+<!-- PROGRAM_EXECUTION_MANUAL_STAGE_V1 -->
+## Program Execution manual stage (2026-11-12) — supersedes "Program Execution eviction reachability (2026-10-07)" and item 6 of the 2026-10-06 L4 / publication assurance correction
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_MANUAL_STAGE_V1`.
+Items 1–5 of the 2026-10-06 correction are unchanged.
+
+- Program Execution is connected to root autonomy and runs **only when the
+  operator explicitly asks for a campaign**. Do not start, resume or offer to
+  run one on your own initiative. Do not set `L9_PE_OPERATOR_INVOCATION`
+  yourself: it carries the operator's words for that run, verbatim.
+- When the operator does ask, the entry is
+  `environment/program-execution/scripts/run_campaign.py`. There is still no
+  `make campaign` and no live `l9-pe-*` skill; `l9-plan`,
+  `l9-pe-campaign-activate` and `l9-pe-nuggets` stay archived.
+- The runner refuses, and the refusal is the answer, when: the surface profile
+  has no `campaign_execution` block or an unknown stage; no operator statement
+  is present; the coding-agent execution projection is not verified and
+  admitted (it needs a `Quantum-L9/.github` checkout whose HEAD is its main,
+  `L9_AUTHORITY_ROOT`); the concurrency policy exceeds the autonomy profile's
+  lanes. Do not work around any of them.
+- A campaign ends at verified local commits. Publish separately with
+  `PR_REMEDIATE=0 make pr`.
+- Root autonomy, L4, publication, readiness and the host hook wrapper still do
+  not require `environment/program-execution/`. Program Execution's tests are
+  not yet part of the generic `make pr` gate; run them directly.

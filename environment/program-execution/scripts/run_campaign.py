@@ -262,6 +262,7 @@ class Hooks:
     write_task_output: Callable[[Path, str, str], str] | None = None
     plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
     compile_architecture: Callable[..., dict[str, Any]] | None = None
+    bind_projection: Callable[[dict[str, Any]], dict[str, Any]] | None = None
 
 
 @dataclass
@@ -3300,9 +3301,20 @@ def _peer_concurrency_budget():
             "max_mutating_dispatches_per_target_lineage is enforced by exclusive "
             f"target-lineage write locks; only 1 is enforceable, got {lineage_limit}"
         )
+    # Program Execution's lanes are drawn from the autonomy profile of the
+    # surface it runs on. Its own policy may narrow them and may not exceed them.
+    authority = _campaign_authority_module()
+    try:
+        total_lanes, mutation_lanes = authority.narrowed_lanes(
+            authority.lane_ceiling(GOV_ROOT),
+            total_lanes=int(limits.get("max_active_dispatches") or 1),
+            mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
+        )
+    except authority.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
     return modules["ConcurrencyBudget"](
-        total_lanes=int(limits.get("max_active_dispatches") or 1),
-        mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
+        total_lanes=total_lanes,
+        mutation_lanes=mutation_lanes,
     )
 
 
@@ -5753,6 +5765,65 @@ def attest_resume_source(
     }
 
 
+def _campaign_authority_module() -> Any:
+    return _load_script("pe_campaign_authority", PE_ROOT / "scripts/campaign_authority.py")
+
+
+def admit_operator_invocation() -> tuple[dict[str, Any], dict[str, Any]]:
+    """The profile's campaign authority and the operator's invocation for this run.
+
+    Program Execution is connected to the Autonomy Surface Profile and runs
+    only at the stage that profile names. At the `manual` stage that means an
+    explicit operator statement for every run -- fresh or resumed -- so the
+    runner refuses here, before it compiles, writes or executes anything.
+    """
+    module = _campaign_authority_module()
+    try:
+        authority = module.load_campaign_authority(GOV_ROOT)
+        invocation = module.operator_invocation(authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+    return authority, invocation
+
+
+def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
+    # Live path never honors a skip env. Tests inject Hooks.bind_projection.
+    module = _campaign_authority_module()
+    try:
+        return module.bind_coding_projection(GOV_ROOT, authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+
+
+def record_campaign_admission(
+    pec_workspace: Path,
+    invocation: dict[str, Any],
+    binding: dict[str, Any],
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> None:
+    """Persist who asked for this run and what the pipeline was bound to."""
+    module = _campaign_authority_module()
+    try:
+        module.record_projection_binding(pec_workspace, binding)
+        module.record_invocation(pec_workspace, invocation)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+    emit(
+        trace,
+        "CAMPAIGN_ADMITTED",
+        "authority",
+        "operator_invocation_and_projection_binding",
+        metadata={
+            "stage": invocation.get("stage"),
+            "statement_digest": invocation.get("statement_digest"),
+            "profile_ref": binding.get("profile_ref"),
+            "bundle_revision": binding.get("bundle_revision"),
+            "projection_status": binding.get("status"),
+        },
+    )
+
+
 def resumed_stage_timer(timing: Any, pec_workspace: Path) -> Any:
     """A stage timer that continues the interrupted run's record.
 
@@ -5841,6 +5912,12 @@ def resume_live_campaign(
     # Program equivalence. Only EXACT_MATCH executes; TASK_SCOPED_DRIFT goes
     # through the canonical relock and is re-admitted; anything wider stops.
     admit_resume_identity(pec_workspace, campaign_id)
+    # A resumed run is a new run: it needs the operator's invocation again and
+    # the projection must still be the one this campaign was bootstrapped under.
+    campaign_authority, invocation = admit_operator_invocation()
+    with traced(trace, "bootstrap", "bind_coding_projection"):
+        projection_binding = (hooks.bind_projection or default_bind_projection)(campaign_authority)
+    record_campaign_admission(pec_workspace, invocation, projection_binding, trace=trace)
     log(f"resume {campaign_id} (runtime active; workspace kept, not quarantined)")
     report.stages_completed.append("resume")
     target = seed.get("target") if isinstance(seed.get("target"), dict) else {}
@@ -6630,6 +6707,16 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     write_root = run.write_root
     accepted_blueprint_inventory = run.accepted_blueprint_inventory
 
+    # The pipeline is bound to the coding-agent execution projection before a
+    # runtime exists for it: an unverified binding bootstraps nothing.
+    campaign_authority, invocation = admit_operator_invocation()
+    with traced(trace, "bootstrap", "bind_coding_projection"):
+        projection_binding = (hooks.bind_projection or default_bind_projection)(campaign_authority)
+    bound_revision = str(projection_binding.get("bundle_revision"))[:12]
+    log(
+        f"projection {projection_binding.get('profile_ref')} "
+        f"{projection_binding.get('status')} @ {bound_revision}"
+    )
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
     # Bootstrap requires an empty workspace, so the live runtime is both its
@@ -6672,6 +6759,9 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
+    record_campaign_admission(
+        Path(report.pec_workspace), invocation, projection_binding, trace=trace
+    )
     task_counts = assert_task_counts_agree(
         blueprint, report.launchability, Path(report.pec_workspace)
     )
@@ -6835,6 +6925,7 @@ def _run_campaign_stages(
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
+    admit_operator_invocation()
     fast = fast_mode(fast)
     timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
     timer = timing.StageTimer()

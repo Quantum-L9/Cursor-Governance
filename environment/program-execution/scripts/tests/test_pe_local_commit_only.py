@@ -46,6 +46,7 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
@@ -154,6 +155,7 @@ class LocalCommitOnlyTests(unittest.TestCase):
                     fast=True,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         compile_activation=self.activate.compile_activation,
                     ),
                 )

@@ -3,7 +3,7 @@
 # SessionStart, peer boot carriers, ADR-0001 (pointer).
 schema_version: 1
 id: autonomy_surface_profile
-updated: "2026-10-16"
+updated: "2026-11-12"
 
 when:
   L9_AUTONOMY_ENABLED: true
@@ -203,9 +203,71 @@ pr_stacking:
     executing: deny_remote
     release_authorized: allow_scoped_push_and_pr
 
+# Program Execution — connected to this profile, explicit operator invocation only.
+# Stage ladder: retired -> manual -> registered. `manual` is the stage in force
+# (CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1): the pipeline runs only when
+# the operator asks for it in their own words, no make target is registered, no
+# skill routes to it, and SessionStart does not advertise it. This block is the
+# authority the campaign runner reads; with the block absent, or its stage not
+# one the runner knows, Program Execution executes nothing.
+# SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+campaign_execution:
+  stage: manual
+  invocation: explicit_operator_only
+  ambient_routing: forbidden # no skill route, no SessionStart probe, no agent initiative
+  make_target: not_registered # the root Make graph does not compose the PE fragment
+  runner: environment/program-execution/scripts/run_campaign.py
+  # The operator's own words, verbatim, in the runner's environment. A bare flag
+  # (1 / true / yes) is refused, and an agent never sets it for itself.
+  invocation_evidence_env: L9_PE_OPERATOR_INVOCATION
+  invocation_record: runtime/INVOCATION.json # in the campaign's pec workspace
+  # Campaign execution is permanently local-commit-only: prepare, execute,
+  # validate, verify, local commits, STOP. Publication is never a campaign
+  # stage; it is root `make pr`, and merge is /l9-pr-remediation.
+  local_commit_only: true
+  completion_boundary: execute
+  push: forbidden
+  pull_request: forbidden
+  merge: forbidden
+  open_pr_against_main: forbidden
+  mix_with_other_feature_branches: forbidden
+  one_integration_branch_per_campaign: true
+  pr_base: campaign_integration_branch
+  exclusive_worktree_lease_per_agent: true
+  # Program Execution consumes root autonomy; root autonomy, L4 and publication
+  # never require Program Execution.
+  autonomy:
+    provider: root-autonomy-control-plane
+    authorization: subordinate_lease_per_task # never outlives the Program lease
+    owns_program_state: false
+    effect_enforcement: environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py
+    # Program Execution's own concurrency policy may narrow these lanes; a
+    # policy that exceeds them is refused.
+    lane_ceiling: claude_execution_profiles
+    concurrency_policy: environment/program-execution/registry/EXECUTION_CONCURRENCY_POLICY.yaml
+  # The coding pipeline is bound to the admitted execution projection before a
+  # campaign is bootstrapped or resumed; an unverified binding executes nothing.
+  projection_binding:
+    profile_ref: l9.projection/coding-agent-execution@1
+    binding: governance/authority-bindings/coding-agent-execution.yaml
+    required_at: bootstrap
+    record: runtime/coding-projection-binding.json
+  campaigns:
+    bounded-replanning-v1:
+      integration_branch: campaign/bounded-replanning-v1
+    cc-pe-intent-compiler-v1:
+      integration_branch: campaign/cc-pe-intent-compiler-v1
+    l9-devpack-program-execution-hardening:
+      integration_branch: campaign/l9-devpack-program-execution-hardening
+    l9-ecosystem-fix-plan:
+      integration_branch: campaign/l9-ecosystem-fix-plan
+    pe-router-capability-safety-v4:
+      integration_branch: campaign/pe-router-capability-safety-v4
+
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy
+  - CANONICAL_LAW.program_execution_manual_stage
   - ADR-0001
   - settings.allow_deny + ops.merge_gate + ops.local_execution_gate
   - AGENTS.md

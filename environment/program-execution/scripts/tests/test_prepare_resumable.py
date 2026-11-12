@@ -38,6 +38,7 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
@@ -73,7 +74,7 @@ class PrepareFixture(unittest.TestCase):
             repo_root=root,
             l9_root=l9,
             fast=True,
-            hooks=self.mod.Hooks(context7_stack=_stack_ok),
+            hooks=self.mod.Hooks(context7_stack=_stack_ok, bind_projection=_projection_ok),
         )
 
     def _prepare_twice(self, tmp: Path, *, mutate=None) -> tuple[Path, Path]:
