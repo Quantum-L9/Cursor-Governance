@@ -23,6 +23,8 @@
           ]
         }
       },
+      "gmp_report_dir": "docs/reports/gmp-reports",
+      "gmp_report_authority": "IB-Odoo_19 AGENTS.md 2026-10-21 corrections and CLAUDE.md References: GMP reports are saved in docs/reports/gmp-reports/ and committed; no root reports/ directory",
       "authority": "CANONICAL_LAW.md §13 (integration-branch-first); IB-Odoo_19 AGENTS.md 2026-10-07 correction (make pr is the sole publication SSOT)",
       "reason": "Repository declares Staging as its integration branch and owns a publication kernel (scripts/make_push_pipeline.sh) whose base check (scripts/pr_stack_parent.sh, since IB-Odoo_19 d0e1a37 on 2026-11-04) refuses Production, main and a bare staging spelling and admits only Staging or a stacked parent branch with an open PR into Staging. Governance delegates the pr ceremony to it exactly once; the consumer never gets to declare this itself (ORG L9-ORG-006)."
     }

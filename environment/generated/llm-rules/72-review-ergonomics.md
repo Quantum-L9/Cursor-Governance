@@ -54,7 +54,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): 
 
 ## GMP reports
 
-Optional — never required, never forbidden. Location (`reports/gmp/`) and name
+Optional — never required, never forbidden. Location (`reports/gmp/`, or a
+repository's declared `gmp_report_dir`) and name
 (`GMP-Report-<NNN>-<Description>.md`) are defined once in `81-gmp-audit.mdc`.
 
 ---

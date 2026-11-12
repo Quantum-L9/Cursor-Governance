@@ -68,7 +68,7 @@ findable across every repository:
 
 | | |
 |---|---|
-| **Where** | `reports/gmp/` in the **work clone** (created when absent) |
+| **Where** | `reports/gmp/` in the **work clone** (created when absent), or the repository's declared `gmp_report_dir` in `ops/config/publish-authority.json` |
 | **Name** | `GMP-Report-<NNN>-<Description>.md` |
 | `<NNN>` | next sequential number in that clone, zero-padded to 3 digits |
 | `<Description>` | letters, digits and hyphens, e.g. `GAR-Projection-Binding` |
@@ -87,7 +87,7 @@ rp gmp --workspace "$WS" <GMP-Report-NNN-Description.md>
 ```
 
 `rp gmp` checks the name, places a report written elsewhere (a scratchpad) in
-`reports/gmp/`, and commits only that file even when `reports/` is gitignored.
+the report folder, and commits only that file even when `reports/` is gitignored.
 With no PR open it rides the next `make pr`; with a PR open it pushes only when
 everything ahead of the PR head is under `reports/`. When a report is written,
 publish it this way so it rides the PR rather than staying in a scratchpad.

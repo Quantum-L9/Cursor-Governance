@@ -501,8 +501,10 @@ def test_memory_argv_targets_work_root(tmp_path: Path, monkeypatch: pytest.Monke
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
     monkeypatch.delenv("L9_GMP_DRY_RUN", raising=False)
-    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    # State first: numbering the GMP reads the repository's report folder
+    # (git config remote.origin.url); only the memory read is under test.
     executor._init_state("memory probe", "RUNTIME")
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
     executor._step_memory_read()
     assert calls
     for call_argv, cwd in calls:
