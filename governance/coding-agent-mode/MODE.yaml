@@ -1,0 +1,85 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/coding-agent-mode/MODE.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
+# Consumer-local contract for the opt-in coding-agent mode. It selects meaning; it is not
+# authority to admit a profile and it grants no permission.
+schema: l9.cursor-governance.coding-agent-mode/v1
+artifact_id: l9.cursor-governance/coding-agent-mode@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: coding_agent_mode_consumer_contract
+  authority_class: local_canonical_binding
+intended_consumer:
+  hosts: [claude-code, cursor]
+  role: bounded_code_realization
+  decided: >-
+    2026-11-12, governed session session_017xwbxw3RduoWFP29VkobHR: the repository owner made
+    /coding-agent, /lcto and /architect the manual bindings on top of the automatic
+    operating-plane default, and required that bindings not depend on a skill.
+  # The mode binds projections directly; it does not invoke or require the l9-coding-agent
+  # skill, whose runtime stays available on its own.
+  depends_on_skill: false
+  not: >-
+    the default operating plane (l9.projection/cursor-governance-operating-plane@2), which
+    SessionStart already binds in every session
+activation:
+  default: false
+  always_enabled: false
+  entrypoint: commands/coding-agent.md
+  control: ops/autonomy/coding_agent_mode.py
+  implementation: ops/autonomy/projection_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
+  state: <workspace>/.l9/coding-agent-mode/session.json
+  state_schema: l9.coding-agent-mode-session/v1
+  session_bound: true
+  repository_presence_alone_activates: false
+  skill_presence_alone_activates: false
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py off --workspace <workspace>
+# The selection is l9.projection/coding-agent-execution@1, the predecessor profile
+# Quantum-L9/.github l9.domain-consumer-binding/coding-agent@1 names, through its existing
+# admitted binding. That canonical binding's domain set is not selected: its own unresolved
+# coordinate added_selection_review ("none has been reviewed for authority neutrality")
+# blocks consumer_migration. Select it only once the owner resolves that review.
+selection:
+  owner: repository owner
+  status: complete
+  basis:
+    - l9.domain-consumer-binding/coding-agent@1 predecessor_profiles
+  projections:
+    - ref: l9.projection/coding-agent-execution@1
+      binding: governance/authority-bindings/coding-agent-execution.yaml
+      required: true
+      basis: l9.domain-consumer-binding/coding-agent@1 predecessor_profiles
+      purpose: Execution invariants, contracts and the authority model for bounded code changes
+role_activation:
+  activate_only_when:
+    - mode_requested_in_this_session
+    - every_required_projection_status_is_ADMITTED_AND_CURRENT
+  missing_or_stale_required_projection: block_role_activation
+  blocked_effect: >-
+    No claim may cite the coding-agent execution projection, and the session reports the exact
+    blocker. There is no fallback to memory, the skill pack or repository reads.
+behavioral_scope:
+  may:
+    - ground_implementation_decisions_in_the_bound_execution_invariants_and_contracts
+    - check_the_authority_model_before_a_mutation
+    - cite_each_claim_by_source_class_and_bundle_revision
+  must_not:
+    - treat_a_projection_as_authority_to_act
+    - revise_the_approved_design_or_contract
+    - reconstruct_a_blocked_projection_from_memory
+    - publish_merge_or_deploy_without_specific_authorization
+constraints:
+  - Activation changes what this session reads, never what it may do. Publication, merge,
+    push and deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's status reader reports it verified at main
+    and its admission decision admits the exact profile digest.
+  - The bundle is produced by tools/authority/produce_projection_bundle.py with the canonical
+    compiler and verified in CI; this mode never produces or edits it.

@@ -1,7 +1,7 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: governance/architect-mode/bindings/evidence-provenance.yaml
+#   path: governance/projection-bindings/signals.yaml
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
@@ -10,36 +10,33 @@
 # Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml and
 # verified by the same binding-parameterized adapter over the one shared consumer verifier.
 integration:
-  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_EVIDENCE_PROVENANCE.001
+  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_SIGNALS.001
   version: 1.0.0
   artifact_class: runtime_integration_binding
   status: active
-  semantic_owner: governance/architect-mode/bindings/evidence-provenance.yaml
+  semantic_owner: governance/projection-bindings/signals.yaml
 purpose:
   assertion: >-
-    Bind the evidence-provenance domain projection from Quantum-L9/.github into architect mode as a separate,
+    Bind the signals domain projection from Quantum-L9/.github into architect mode as a separate,
     explicitly loaded input: a bundle the canonical compiler produced and this repository only
     verifies. It executes no selector, composes no payload and authors no schema.
 input:
-  name: domain_evidence_provenance
+  name: domain_signals
   authority:
     repository: Quantum-L9/.github
-    projection_profile_ref: l9.projection/evidence-provenance@1
-    projection_profile_digest: sha256:2719d0b29894950759445ae361831d3de6ec8662a5e91842d51c76cf241d224a
+    projection_profile_ref: l9.projection/signals@1
+    projection_profile_digest: sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843
     projection_profile_class: domain
-    projection_profile_consumer: semantic_domain.evidence_provenance
-    composition_profile_ref: l9.compose/evidence-provenance@1
-    composition_profile_digest: sha256:49dbb04dd497cbd5e0bd2f3d87556323e19d388eb2734d54b809e81ac25fc7a3
-    projection_payload_schema: l9.projection.domain.evidence-provenance/v1
-    composed_payload_schema: l9.composed-projection.domain.evidence-provenance/v1
+    projection_profile_consumer: semantic_domain.signals
+    composition_profile_ref: l9.compose/signals@1
+    composition_profile_digest: sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94
+    projection_payload_schema: l9.projection.domain.signals/v1
+    composed_payload_schema: l9.composed-projection.domain.signals/v1
     expected_source_classes:
-      - receipt_catalog
-      - artifact_model
-      - semantic_dependency_model
+      - vocabulary
       - invariants
-      - contracts
   bundle:
-    path: generated/governance/domain_evidence_provenance
+    path: generated/governance/domain_signals
     lock: bundle.lock.json
     composed_view: composed.json
   producer:
@@ -56,15 +53,15 @@ admission:
   authority_main_ref: refs/remotes/origin/main
   effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
   decisions:
-    - candidate_ref: l9.projection/evidence-provenance@1
-      candidate_digest: sha256:2719d0b29894950759445ae361831d3de6ec8662a5e91842d51c76cf241d224a
+    - candidate_ref: l9.projection/signals@1
+      candidate_digest: sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
       authority_ref: >-
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
-    - candidate_ref: l9.compose/evidence-provenance@1
-      candidate_digest: sha256:49dbb04dd497cbd5e0bd2f3d87556323e19d388eb2734d54b809e81ac25fc7a3
+    - candidate_ref: l9.compose/signals@1
+      candidate_digest: sha256:7e1b0642487818cbfb740cdd8aa919d33dbe5f2b336761fcb578aa683ce5dd94
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
@@ -72,6 +69,7 @@ admission:
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
 load_condition:
   when:
+    - cursor_host_default
     - architect_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)

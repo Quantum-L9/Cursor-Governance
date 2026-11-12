@@ -1,7 +1,7 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: governance/architect-mode/bindings/capabilities-dependencies.yaml
+#   path: governance/projection-bindings/governance.yaml
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
@@ -10,37 +10,35 @@
 # Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml and
 # verified by the same binding-parameterized adapter over the one shared consumer verifier.
 integration:
-  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_CAPABILITIES_DEPENDENCIES.001
+  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_GOVERNANCE.001
   version: 1.0.0
   artifact_class: runtime_integration_binding
   status: active
-  semantic_owner: governance/architect-mode/bindings/capabilities-dependencies.yaml
+  semantic_owner: governance/projection-bindings/governance.yaml
 purpose:
   assertion: >-
-    Bind the capabilities-dependencies domain projection from Quantum-L9/.github into architect mode as a separate,
+    Bind the governance domain projection from Quantum-L9/.github into architect mode and CTO mode as a separate,
     explicitly loaded input: a bundle the canonical compiler produced and this repository only
     verifies. It executes no selector, composes no payload and authors no schema.
 input:
-  name: domain_capabilities_dependencies
+  name: domain_governance
   authority:
     repository: Quantum-L9/.github
-    projection_profile_ref: l9.projection/capabilities-dependencies@1
-    projection_profile_digest: sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302
+    projection_profile_ref: l9.projection/governance@1
+    projection_profile_digest: sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d
     projection_profile_class: domain
-    projection_profile_consumer: semantic_domain.capabilities_dependencies
-    composition_profile_ref: l9.compose/capabilities-dependencies@1
-    composition_profile_digest: sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3
-    projection_payload_schema: l9.projection.domain.capabilities-dependencies/v1
-    composed_payload_schema: l9.composed-projection.domain.capabilities-dependencies/v1
+    projection_profile_consumer: semantic_domain.governance
+    composition_profile_ref: l9.compose/governance@1
+    composition_profile_digest: sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70
+    projection_payload_schema: l9.projection.domain.governance/v1
+    composed_payload_schema: l9.composed-projection.domain.governance/v1
     expected_source_classes:
-      - capabilities
-      - capability_resolution
-      - semantic_dependency_model
-      - dependency_archetypes
+      - authority_model
+      - lifecycle
       - invariants
       - contracts
   bundle:
-    path: generated/governance/domain_capabilities_dependencies
+    path: generated/governance/domain_governance
     lock: bundle.lock.json
     composed_view: composed.json
   producer:
@@ -57,15 +55,15 @@ admission:
   authority_main_ref: refs/remotes/origin/main
   effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
   decisions:
-    - candidate_ref: l9.projection/capabilities-dependencies@1
-      candidate_digest: sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302
+    - candidate_ref: l9.projection/governance@1
+      candidate_digest: sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
       authority_ref: >-
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
-    - candidate_ref: l9.compose/capabilities-dependencies@1
-      candidate_digest: sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3
+    - candidate_ref: l9.compose/governance@1
+      candidate_digest: sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
@@ -73,7 +71,9 @@ admission:
         Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
 load_condition:
   when:
+    - cursor_host_default
     - architect_mode_active
+    - cto_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
   repository_presence_alone_loads: false

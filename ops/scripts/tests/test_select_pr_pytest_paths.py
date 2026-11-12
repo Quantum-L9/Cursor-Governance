@@ -483,7 +483,7 @@ class NorecursedirsTests(unittest.TestCase):
     def test_live_registry_never_selects_it_for_a_name_match(self) -> None:
         # The archived test names `architecture.yaml`; selection is by name, so this
         # binding selected it before norecursedirs was honoured.
-        selected = select_pr_pytest_paths(["governance/architect-mode/bindings/architecture.yaml"])
+        selected = select_pr_pytest_paths(["governance/projection-bindings/architecture.yaml"])
         self.assertNotIn(self.ARCHIVED, selected)
         self.assertFalse(any("/_archived/" in item for item in selected))
 
