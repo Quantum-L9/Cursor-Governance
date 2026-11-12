@@ -1835,7 +1835,7 @@
     },
     {
       "path": "peer_execution/context.py",
-      "sha256": "b4a99d21f9e476b8cb01dbc24ff9fcd8b459a51615464fd62415b544f5b19a55"
+      "sha256": "558050f3a3ca9c90b185e7f8ce17a76e207b0789b1e11a497c32821e472766a7"
     },
     {
       "path": "peer_execution/contracts.py",
