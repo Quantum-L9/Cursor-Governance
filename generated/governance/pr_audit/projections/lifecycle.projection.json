@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "global_rules": {
@@ -66,10 +66,10 @@
       "unresolved": "required semantics_authority_or_evidence_cannot_be_resolved"
     }
   },
-  "projection_digest": "sha256:447b536e58132f27c7c0aa0fdaf7dd66918f99beef65d61d429ea5a83aab3565",
+  "projection_digest": "sha256:c4518eec912ff54111e50971464115568db6a43821db756ea3a0610f4a0e556f",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
+  "source_digest": "sha256:bb288184aff9b35269b756672af48369bfc55a280bac8ab3bc4c91ef5ba27a14",
   "source_ref": "l9.source/lifecycle@1"
 }

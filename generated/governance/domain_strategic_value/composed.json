@@ -1,0 +1,790 @@
+{
+  "components": [
+    {
+      "projection_digest": "sha256:a67a9b2360e781d08f59cde47272b072c45a91b929a956fec71c3e2e1d196135",
+      "projection_ref": "l9.projection/strategic-value@1#l9.source/strategic-value-model@1",
+      "source_class": "strategic_value_model",
+      "source_digest": "sha256:28156a3363488861fe18ee1647f5851128402e4cac93dd68319a82dab42efc69",
+      "source_ref": "l9.source/strategic-value-model@1"
+    },
+    {
+      "projection_digest": "sha256:f870129820382b2c78382d9141266d808beb14569e824653523a583223d50fcd",
+      "projection_ref": "l9.projection/strategic-value@1#l9.source/vocabulary@1",
+      "source_class": "vocabulary",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "source_ref": "l9.source/vocabulary@1"
+    },
+    {
+      "projection_digest": "sha256:f2b8792b5e178b3ecaa458ee99ff165c45371eabf2b7ad9a8fa38aba01123e00",
+      "projection_ref": "l9.projection/strategic-value@1#l9.source/invariants@1",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "projection_digest": "sha256:eb292dcf77d79e8b3f030a14627bed8e239df51c84738b39e76aa48fb2a7adaa",
+      "projection_ref": "l9.projection/strategic-value@1#l9.source/contracts@1",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    }
+  ],
+  "composition_digest": "sha256:c02e9edb1ef8c7672bd33e479d64bef92eed1e6cb4321b5099972462e931fe15",
+  "composition_profile": {
+    "digest": "sha256:56098ba2ec5808c8cd4587ce1946045ef6f2d0abf535f6adbf048bfc8034adc4",
+    "ref": "l9.compose/strategic-value@1"
+  },
+  "payload": {
+    "contracts": {
+      "contracts": [
+        {
+          "applicability": {
+            "does_not_apply_to": [
+              "generic_numerical_reasoning_without_strategic_value_claim",
+              "unrelated_governed_decision_evaluation",
+              "unrelated_strategic_planning_activity"
+            ],
+            "method_conditional": "probability_mass_only_for_probabilistic_methods;_belief_state_QV_only_if_QV_selected;_portfolio_rules_only_for_joint_action_claims",
+            "trigger": "an_assessment_makes_a_material_strategic_value_claim",
+            "unavailable_claim": "conditional_or_unknown_without_imposing_unrelated_method"
+          },
+          "applies_to": [
+            "assessments_asserting_applicable_objective_relative_quantitative_strategic_value_claims"
+          ],
+          "forbidden": [
+            "separately_subtracting_direct_cost_or_risk_loss_already_embedded_in_utility_flows",
+            "treating_unmapped_material_accounting_consequences_as_zero",
+            "requiring_belief_state_QV_optimizer_for_every_legitimate_strategic_assessment",
+            "treating_any_supported_method_as_valid_for_claims_it_cannot_establish",
+            "demanding_mathematical_proof_of_general_real_world_forecast_adequacy",
+            "value_rank_overrides_hard_constraints",
+            "undefined_leverage_score_in_machine_contract",
+            "summing_period_stock_levels_as_if_new_flow_utility",
+            "inventing_missing_scenario_probability_or_unmodelled_future_as_zero",
+            "applying_realization_probability_twice_to_one_effect",
+            "treating_heuristic_pseudoreceipt_as_a_real_numerical_owner_result",
+            "declaring_a_truncated_future_or_unverified_actor_response_model_complete",
+            "double_counted_unattributed_or_unreconciled_material_state_delta",
+            "information_gain_as_automatic_positive_utility",
+            "forecast_claimed_as_observed_or_authoritative_truth",
+            "projected_semantics_redefined_by_consumer",
+            "evaluation_result_promoted_to_plan_commitment_or_action_authorization",
+            "treating_arbitrarily_paired_scenarios_as_identified_causal_effects",
+            "counting_third_party_benefits_without_authorized_welfare_aggregation",
+            "using_future_observations_to_rank_prior_action_policies",
+            "summing_jointly_interacting_action_values_as_independent",
+            "claiming_a_precise_winner_when_material_uncertainty_can_reverse_preference",
+            "treating_projection_attestation_as_executed_numerical_model_or_calibration_proof",
+            "imposing_strategic_value_specific_math_on_unrelated_evaluations"
+          ],
+          "guarantees": [
+            "assessment_is_derived_and_non_authoritative",
+            "assessment_preserves_question_appropriate_result_shape",
+            "declared_aggregate_distinguished_from_trajectory_calculation_and_verified_prediction",
+            "excluded_infeasible_actions_distinguished_from_unresolved_comparisons",
+            "source_and_evidence_revision_changes_invalidate_affected_evaluations"
+          ],
+          "id": "l9.contract/strategic-value-assessment@1",
+          "outcomes": {
+            "satisfied": "traceable_nonduplicative_evaluation_with_governed_authority_boundary",
+            "unresolved": "missing_evidence_probability_mass_causal_attribution_or_model_unknown",
+            "violated": "incompatible_or_double_counted_or_misrepresented_value_claim"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Govern objective-relative quantitative Strategic Value assessment without transferring Numerical Reasoning, business policy, planning authority, or execution authority to a projection or consumer.",
+          "requires": [
+            "explicit_objective_utility_units_and_feasible_baseline",
+            "declared_utility_flow_basis_and_mandatory_mutually_exclusive_exhaustive_accounting_partition",
+            "method_appropriate_probability_scenario_uncertainty_or_robustness_model_or_declared_only_status",
+            "applicable_future_counterfactual_valuation_under_owner_admitted_method_or_explicit_declared_only_status",
+            "compatible_temporal_utility_basis_and_declared_discount_where_applicable",
+            "complete_probability_mass_when_probabilistic_method_applies_or_explicit_unresolved_missing_mass",
+            "defensible_counterfactual_comparability_under_selected_method",
+            "legitimate_recurrence_identified_by_distinct_time_indexed_state_deltas",
+            "bounded_tail_and_early_stop_coverage_or_explicit_unresolved_consequences",
+            "bounded_horizon_and_revision_bound_model_inputs",
+            "formal_admissibility_and_mandatory_constraint_check",
+            "relevant_alternative_and_counterfactual_comparison",
+            "exactly_one_accounting_home_per_material_effect_with_gross_net_reconciliation",
+            "effect_identity_provenance_attribution_and_overlap_handling",
+            "explicit_material_unknowns_and_uncertainty",
+            "negative_propagation_and_coordinating_drag_where_material",
+            "separate_predicted_and_realized_outcomes",
+            "method_appropriate_handling_of_material_strategic_actor_responses_or_conditional_unknown",
+            "qv_belief_state_model_coordinates_only_when_qv_method_selected",
+            "finite_question_appropriate_bounds_with_qv_specific_branch_belief_controls_only_when_selected",
+            "numerical_owner_receipts_for_claims_of_executed_lookahead_or_calibration",
+            "no_novelty_echo_or_circular_value_inflation",
+            "counterfactual_worlds_share_defensible_initial_conditions_time_basis_and_identification_assumptions",
+            "beneficiary_scope_and_welfare_aggregation_when_cross_actor_effects_material",
+            "nonanticipative_conditional_policies_when_sequential_actions_are_evaluated",
+            "joint_portfolio_counterfactual_and_resource_interactions_for_nonadditive_actions",
+            "uncertainty_sensitivity_or_conditional_frontier_when_preference_can_flip",
+            "method_identity_input_lineage_executed_method_evidence_and_applicable_independently_reviewable_model_validation_evidence_for_strong_numerical_claims",
+            "model_coverage_ledger_has_nonoverlapping_IEV_SFV_DC_ERL_OC_effect_assignments",
+            "costs_risk_and_opportunity_losses_embedded_in_net_flows_are_excluded_from_separate_subtraction",
+            "unknown_or_unreconciled_accounting_effects_preclude_a_complete_sv_claim",
+            "numerical_method_selection_is_question_appropriate_not_universally_QV",
+            "applicable_independently_reviewable_validation_evidence_suitable_to_model_and_claim",
+            "interpret_retained_former_candidate_semantics_conditionally_under_strategic_value_model",
+            "when_learning_or_computing_is_an_alternative_compare_expected_marginal_decision_improvement_net_of_costs"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-SV-001",
+            "L9-SV-002",
+            "L9-AUTH-001",
+            "L9-AUTH-002",
+            "L9-HARD-001",
+            "L9-UNKNOWN-001",
+            "L9-STRATEGY-001",
+            "L9-PROJECTION-001",
+            "L9-PROV-001",
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001",
+            "L9-COORD-001"
+          ]
+        }
+      ]
+    },
+    "invariants": {
+      "invariants": [
+        {
+          "id": "L9-AUTH-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "No component may expand its own authority.\n"
+        },
+        {
+          "id": "L9-AUTH-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+        },
+        {
+          "id": "L9-EVIDENCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+        },
+        {
+          "id": "L9-ASSURANCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Normative requirement, implementation state, and assurance state are distinct. A claim that a requirement or control is implemented, verified, blocking, conformant, or complete requires current, independently verifiable evidence appropriate to that claim; missing, stale, or unverifiable required evidence leaves the claim unverified or unknown.\n"
+        },
+        {
+          "id": "L9-UNKNOWN-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+        },
+        {
+          "id": "L9-HARD-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "An applicable hard constraint is non-compensable; confidence, probability, utility, ranking, optimization, or other soft objectives cannot override it.\n"
+        },
+        {
+          "id": "L9-PROV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+        },
+        {
+          "id": "L9-COORD-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A derived result is valid only against its declared governing coordinates; a material coordinate change makes it non-current until compatibility is proven or it is recomputed.\n"
+        },
+        {
+          "id": "L9-COMPAT-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+        },
+        {
+          "id": "L9-PROJECTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+        },
+        {
+          "id": "L9-STRATEGY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+        },
+        {
+          "id": "L9-SV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "For an assessment asserting quantified Strategic Value, declare the objective, compatible utility units, feasible counterfactual baseline, bounded horizon, applicable discount and utility-flow basis, model/evidence coordinates and material uncertainty. Unknown or incompatible inputs cannot establish a complete Strategic Value ranking. For a Strategic Value claim, a counterfactual comparison must identify the same decision-relevant initial conditions, utility measure, exogenous context and time basis across intervention and baseline worlds, or explicitly quantify their divergence. A convenient scenario pairing or historical correlation is not evidence of an identifiable causal intervention effect."
+        },
+        {
+          "id": "L9-SV-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "For an assessment asserting quantified Strategic Value, every material consequence must have an exhaustive, mutually exclusive accounting partition across IEV, SFV, DC, ERL and OC. Reconcile gross and net utility, common causal/time identities, separately subtracted versus embedded costs and losses, overlaps, attribution and probability weighting; conflicting or missing coverage remains Unknown or conditional, not zero."
+        },
+        {
+          "id": "L9-SVQ-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When a consumer asserts a qualitative Strategic Value appraisal for a discretionary option, it must state the objective, beneficiary, feasible comparison or baseline, causal rationale, material beneficial and adverse effects (including displaced burdens on other affected beneficiaries), and which claims are observed, hypothesized, contradicted, or Unknown. An unquantified appraisal may express conditional direction or potential but must not be passed off as a computed Strategic Value, complete ranking, independently verified result, or action permission. Applicable mandatory obligations and hard constraints remain binding."
+        },
+        {
+          "id": "L9-SVQ-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A claim of realized Strategic Value compounding requires evidence that an attributable durable effect of an earlier intervention was consumed by a later authorized action or decision and produced a supported additional net objective improvement relative to a stated later comparison. Potential reuse, stored records, duplicated transmissions, feedback traffic, connectivity, or an unchanged repeated effect do not establish realized compounding; material offsetting consequences and Unknown attribution remain explicit."
+        }
+      ]
+    },
+    "strategic_value_model": {
+      "artifact_id": "l9.strategic.value@1",
+      "assessment_applicability": {
+        "claim_gate": "applies_only_to_assessments_asserting_objective_relative_quantitative_strategic_value",
+        "does_not_govern": [
+          "unrelated_numerical_reasoning_methods",
+          "unrelated_governed_decision_evaluations",
+          "any_evaluation_not_asserting_applicable_strategic_value"
+        ],
+        "method_applicability": "requirements_apply_only_when_the_selected_method_and_material_claim_trigger_them",
+        "non_claim": "a generic utility optimization or ranking is not automatically a Strategic Value claim",
+        "unsupported_claim": "conditional_or_unknown_not_imposed_method"
+      },
+      "assessment_claim_levels": {
+        "declared_aggregate": "Arithmetic over already supplied component values; not evidence that SFV was derived from counterfactual paths.",
+        "independently_verified_numerical_assessment": "Requires applicable, independently reviewable model-validation evidence, owner-produced method/execution records and source verification appropriate to the claim in addition to arithmetic; consumer cannot self-attest.",
+        "supplied_trajectory_calculation": "Verified arithmetic over declared, complete, bounded probability-weighted future deltas, not independently established probability or causality.",
+        "unknown_or_degraded": "Required evidence, scenario mass, causal identity, model, terminal bound, hard feasibility or material interactive-response inputs unresolved."
+      },
+      "authority": {
+        "authority_class": "canonical",
+        "owner": "Quantum-L9/.github",
+        "scope": "l9_global_strategic_value_semantics"
+      },
+      "canonical_source": {
+        "artifact": "strategic_value_model.yaml",
+        "format": "yaml"
+      },
+      "causal_accounting": {
+        "conditional_relevance": "Material topology claims require evidence and bounded horizon.",
+        "explicit_attribution_and_overlap_required": true,
+        "loops_unrolled_through_time": true,
+        "negative_drag_and_coordination_costs_preserved": true,
+        "shared_state_delta_booked_once": true,
+        "stable_effect_identity_required": true,
+        "topology_kinds": [
+          "ONE_WAY",
+          "BILATERAL",
+          "CLOSED_LOOP",
+          "MESH"
+        ],
+        "unchanged_echo_incremental_value": "zero"
+      },
+      "comparisons": {
+        "compatible_objective_and_units_required": true,
+        "may_return": [
+          "conditional_rank",
+          "tied_frontier",
+          "portfolio_or_allocation_vector",
+          "decision_boundary",
+          "unresolved"
+        ],
+        "output_is_not_authorization": true,
+        "output_is_not_strategic_commitment": true,
+        "output_is_not_strategic_plan_graph_content": true,
+        "relevant_meta_action_kinds": [
+          "ACT",
+          "LEARN",
+          "COMPUTE",
+          "WAIT",
+          "STOP"
+        ],
+        "stale_model_or_evidence_invalidates_affected_assessment": true,
+        "unknown_is_not_zero": true,
+        "valuation_does_not_override_mandatory_constraints": true
+      },
+      "counterfactual_mathematics": {
+        "bounded_expression": "SFV(a) = E[sum_{tau=t+1}^{H} d(tau-t) * (U_flow(S_tau | do(a)) - U_flow(S_tau | do(baseline)))] after effect-identity and booking reconciliation.",
+        "consumer_behavior": "A planner may verify arithmetic for declared scenarios but must not claim independent future-state prediction, scenario calibration, causal identification, attribution identification, or numerical method authority.",
+        "expectation_semantics": [
+          "declared_probability_uncertainty_or_robustness_model_appropriate_to_selected_method",
+          "scenario_probabilities_are_model_inputs_not_defaults",
+          "paired_scenario_differences_require_declared_counterfactual_coupling",
+          "differing_intervention_and_baseline_distributions_may_require_separate_expectations",
+          "incomplete_probability_mass_is_unknown_when_probabilistic_method_applies",
+          "approximation_pruning_or_tail_omission_requires_justified_bound_or_unresolved_result"
+        ],
+        "geometric_discount_special_case": "d(k) = gamma**k, with declared gamma in [0,1]",
+        "normative_meaning": "Systemic Future Value compares objective-relative future utility against a feasible counterfactual baseline under a bounded, question-appropriate numerical method, excluding immediate and already-booked effects. One supported probabilistic formulation is the expected discounted difference of intervention and baseline future utility flows. This formulation is not a universal algorithm mandate; modeled futures are claims, not observations.",
+        "numerical_owner": "Numerical Reasoning",
+        "utility_accounting": [
+          "declared_utility_flow_or_stock_semantics_required",
+          "summing_cumulative_stock_levels_as_if_period_flows_forbidden",
+          "same_underlying_utility_delta_never_rebooked_as_immediate_future_risk_option_or_cost",
+          "net_future_flows_require_explicit_partition_reconciliation_to_all_separate_buckets",
+          "expected_risk_losses_embedded_in_scenario_utility_must_not_be_subtracted_again",
+          "opportunity_and_direct_costs_embedded_in_net_utility_must_not_be_subtracted_again",
+          "incomplete_or_conflicting_bookings_yield_unknown_or_conditional_assessment",
+          "future_episode_identity_distinguishes_real_recurring_increment_from_unchanged_echo",
+          "path_conditioning_and_counterfactual_feasibility_require_applicable_evidence_or_remain_unknown",
+          "negative_downstream_utility_drag_remains_negative"
+        ]
+      },
+      "evaluation_integrity": {
+        "beneficiary_scope": [
+          "focal_beneficiary_and_welfare_aggregation_declared_before_cross_actor_valuation",
+          "externalities_and_transfers_exposed_without_double_crediting",
+          "incompatible_actor_utility_units_do_not_silently_sum"
+        ],
+        "counterfactual_identification": [
+          "intervention_and_baseline_share_declared_initial_state_and_exogenous_context_or_adjustment",
+          "common_objective_utility_horizon_and_observation_timing_required",
+          "correlation_or_arbitrary_paired_paths_do_not_prove_causal_identification"
+        ],
+        "independent_method_assurance": [
+          "versioned_numerical_method_and_model_identity",
+          "exact_input_and_assumption_lineage",
+          "executed_solver_or_evaluator_evidence_for_claims_of_executed_methods",
+          "applicable_independently_reviewable_model_validation_evidence_distinct_from_arithmetic_correctness",
+          "projection_receipt_not_a_numerical_reasoning_receipt",
+          "independent_assurance_required_for_independently_verified_claim",
+          "empirical_validation_may_use_calibration_backtesting_sensitivity_or_out_of_sample_evidence_when_applicable",
+          "mathematical_proof_of_general_real_world_forecast_adequacy_not_presumed"
+        ],
+        "joint_portfolio_valuation": [
+          "feasible_joint_action_set_and_resource_constraints_declared",
+          "shared_causes_synergy_substitution_and_cannibalization_reconciled",
+          "individual_action_sv_is_not_additive_without_independence_evidence"
+        ],
+        "nonanticipativity": [
+          "action_policy_conditioning_uses_only_information_available_at_decision_time",
+          "posterior_belief_update_preserves_observation_source_and_timestamp",
+          "hindsight_does_not_become_ex_ante_policy_value"
+        ],
+        "uncertainty_aware_selection": [
+          "material_preference_sensitive_uncertainty_preserved_as_range_or_conditional_frontier",
+          "sensitivity_and_decision_flip_conditions_evaluated_by_applicable_numerical_owner",
+          "precise_best_action_not_claimed_from_unbounded_or_unresolved_uncertainty"
+        ]
+      },
+      "explicit_non_ownership": [
+        "numerical_solver_implementation",
+        "agent_orchestration",
+        "strategic_authority",
+        "strategic_plan_admission",
+        "objective_or_domain_policy",
+        "external_truth_or_evidence_sources",
+        "value_projections_as_new_canonical_truth",
+        "execution_authorization"
+      ],
+      "forecast_and_realization": {
+        "predicted_value_is": "derived_model_forecast",
+        "realization_never_retroactively_proves_ex_ante_forecast": true,
+        "realized_value_is": "separately_observed_evidence"
+      },
+      "governed_by": {
+        "contracts": [
+          "l9.contract/authority-boundary@1",
+          "l9.contract/projection@1",
+          "l9.contract/strategic-value-assessment@1"
+        ],
+        "invariants": [
+          "L9-SV-001",
+          "L9-SV-002",
+          "L9-AUTH-001",
+          "L9-AUTH-002",
+          "L9-HARD-001",
+          "L9-UNKNOWN-001",
+          "L9-STRATEGY-001",
+          "L9-PROJECTION-001",
+          "L9-PROV-001",
+          "L9-EVIDENCE-001",
+          "L9-ASSURANCE-001",
+          "L9-COORD-001"
+        ]
+      },
+      "identity": {
+        "assessment_contract_ref": "l9.contract/strategic-value-assessment@1",
+        "canonical_term_ref": "vocabulary.yaml#terms.strategic_value",
+        "numerical_owner": "Numerical Reasoning",
+        "related_term_ref": "vocabulary.yaml#terms.systemic_future_value",
+        "semantic_ref": "l9.strategic.value@1",
+        "strategic_plan_owner_ref": "strategic_cognition_model.yaml#concepts.strategic_plan"
+      },
+      "purpose": "Govern the meaning and boundaries of objective-relative quantitative Strategic Value comparisons without creating a reasoning sibling, a Plan-owned semantic primitive, a universal utility weight or an autonomous strategy authority. Numerical Reasoning owns numerical evaluation methods and the declared DecisionModel. A consumer owns its business objective, baseline, candidates, policy and the authorization of any consequential action.",
+      "relocated_additional_candidate_semantics": {
+        "L9-SV-015": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "counterfactual_worlds_share_defensible_initial_conditions_time_basis_and_identification_assumptions",
+          "disposition": "MERGE",
+          "governing_invariants": [
+            "L9-SV-001"
+          ],
+          "meaning": "For a Strategic Value claim, a counterfactual comparison must identify the same decision-relevant initial conditions, utility measure, exogenous context and time basis across intervention and baseline worlds, or explicitly quantify their divergence. A convenient scenario pairing or historical correlation is not evidence of an identifiable causal intervention effect.",
+          "model_section": "evaluation_integrity.counterfactual_identification",
+          "source_candidate_id": "L9-SV-015",
+          "when": "causal_intervention_effect_is_claimed"
+        },
+        "L9-SV-016": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "beneficiary_scope_and_welfare_aggregation_when_cross_actor_effects_material",
+          "disposition": "CONTRACT",
+          "governing_invariants": [
+            "L9-SV-001",
+            "L9-SV-002",
+            "L9-AUTH-001"
+          ],
+          "meaning": "For a Strategic Value claim, the assessment must declare the focal beneficiary or authorized social-welfare aggregation before combining outcomes across actors. Benefits to counterparties, externalities, transfers and costs cannot be credited to the focal objective twice or silently converted between actors with incompatible utilities.",
+          "model_section": "evaluation_integrity.beneficiary_scope",
+          "source_candidate_id": "L9-SV-016",
+          "when": "material_cross_actor_valuation"
+        },
+        "L9-SV-017": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "nonanticipative_conditional_policies_when_sequential_actions_are_evaluated",
+          "disposition": "CONTRACT",
+          "governing_invariants": [
+            "L9-SV-001",
+            "L9-PROV-001"
+          ],
+          "meaning": "When a Strategic Value claim evaluates a sequential decision policy, the policy may condition each action only on observations and information available at the time of that action. A lookahead ranking must not exploit hindsight, future responses or post-action evidence as if they were known at decision time; posterior updates must preserve observation provenance.",
+          "model_section": "evaluation_integrity.nonanticipativity",
+          "source_candidate_id": "L9-SV-017",
+          "when": "sequential_policy_value_claimed"
+        },
+        "L9-SV-018": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "joint_portfolio_counterfactual_and_resource_interactions_for_nonadditive_actions",
+          "disposition": "CONTRACT",
+          "governing_invariants": [
+            "L9-SV-002",
+            "L9-HARD-001"
+          ],
+          "meaning": "For a Strategic Value claim about a portfolio or joint intervention, its value is evaluated against the joint feasible counterfactual and shared resource constraints. Standalone action values may be summed only with evidence of additive independence; shared dependencies, synergies, substitution, resource collision and cannibalization must be represented or remain unresolved.",
+          "model_section": "evaluation_integrity.joint_portfolio_valuation",
+          "source_candidate_id": "L9-SV-018",
+          "when": "joint_or_portfolio_value_claimed"
+        },
+        "L9-SV-019": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "uncertainty_sensitivity_or_conditional_frontier_when_preference_can_flip",
+          "disposition": "REUSE",
+          "governing_invariants": [
+            "L9-UNKNOWN-001",
+            "L9-SV-001"
+          ],
+          "meaning": "When uncertainty can change preference in a Strategic Value comparison, the evaluation must expose a bounded sensitivity or uncertainty result and conditional decision boundary, not an unjustified precise winner. A robustness claim requires declared uncertainty sets, bounds or probability models and an applicable comparison method.",
+          "model_section": "evaluation_integrity.uncertainty_aware_selection",
+          "source_candidate_id": "L9-SV-019",
+          "when": "material_preference_sensitive_uncertainty"
+        },
+        "L9-SV-020": {
+          "authority_status": "not_admitted_as_independent_invariant",
+          "contract_obligation": "method_identity_input_lineage_executed_method_evidence_and_applicable_independently_reviewable_model_validation_evidence_for_strong_numerical_claims",
+          "disposition": "REUSE",
+          "governing_invariants": [
+            "L9-EVIDENCE-001",
+            "L9-ASSURANCE-001",
+            "L9-PROV-001",
+            "L9-COORD-001"
+          ],
+          "meaning": "Claims of model-derived or independently verified Strategic Value require version-bound numerical method identity, input/assumption lineage, execution provenance and applicable, independently reviewable model-validation evidence appropriate to the claim. Empirical forecast validity may be supported by calibration, backtesting, sensitivity or out-of-sample evaluation where applicable, not presumed mathematical proof of general real-world adequacy. Arithmetic, projection receipts and model-validation evidence establish different things and cannot substitute for one another.",
+          "model_section": "evaluation_integrity.independent_method_assurance",
+          "source_candidate_id": "L9-SV-020",
+          "when": "model_derived_or_independently_verified_claim"
+        }
+      },
+      "retained_former_candidate_semantics": {
+        "L9-SV-003": {
+          "contract_obligation": "separate_predicted_and_realized_outcomes",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Predicted Strategic Value and observed realized outcomes are separate evidence classes. Observed results can calibrate later predictions but never retroactively establish an earlier forecast as fact or authorization.",
+          "model_section": "forecast_and_realization",
+          "source_candidate_id": "L9-SV-003",
+          "when": "applies_to_forecast_and_realized_comparison"
+        },
+        "L9-SV-004": {
+          "contract_obligation": "no_novelty_echo_or_circular_value_inflation",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Repeated propagation, feedback and reuse create incremental value only when they produce a new attributable future-state delta; unchanged echoes, circular recounting and duplicate observations create no new utility. A legitimate recurring effect must be represented as a distinct attributable period state change.",
+          "model_section": "causal_accounting",
+          "source_candidate_id": "L9-SV-004",
+          "when": "when_recurring_or_feedback_effects_are_claimed"
+        },
+        "L9-SV-005": {
+          "contract_obligation": "negative_propagation_and_coordinating_drag_where_material",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Bidirectional value propagation must distinguish forward and return effects as time-indexed state transitions and retain positive, zero or negative returns. A return path is not inherently beneficial.",
+          "model_section": "causal_accounting",
+          "source_candidate_id": "L9-SV-005",
+          "when": "when_bidirectional_causal_paths_are_material"
+        },
+        "L9-SV-006": {
+          "contract_obligation": "bounded_tail_and_early_stop_coverage_or_explicit_unresolved_consequences",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "A branching, reconvergent or mesh causal network must preserve contributor identity, shared effects, overlap, uncertainty, bounded stopping conditions, and material negative drag; reconvergence and loop traversal cannot duplicate value. Unknown probability mass or a material unbounded tail cannot be treated as zero.",
+          "model_section": "causal_accounting",
+          "source_candidate_id": "L9-SV-006",
+          "when": "when_mesh_or_feedback_paths_are_material"
+        },
+        "L9-SV-007": {
+          "contract_obligation": "effect_identity_provenance_attribution_and_overlap_handling",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Material future work eliminated by a proposed intervention is considered as an attributable counterfactual improvement, never an unsupported multiplier or a second booking of the same cost saving.",
+          "model_section": "valuation.explanatory_dimensions",
+          "source_candidate_id": "L9-SV-007",
+          "when": "when_future_work_elimination_is_material"
+        },
+        "L9-SV-008": {
+          "contract_obligation": "effect_identity_provenance_attribution_and_overlap_handling",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "When material, evaluation considers capability unlock, dependency removal, reusable assets and future option expansion as descriptions of state changes, not independent additive credits for shared consequences.",
+          "model_section": "valuation.explanatory_dimensions",
+          "source_candidate_id": "L9-SV-008",
+          "when": "when_capabilities_dependency_or_option_unlocks_are_material"
+        },
+        "L9-SV-009": {
+          "contract_obligation": "uncertainty_sensitivity_or_conditional_frontier_when_preference_can_flip",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "When material, evaluation considers future decision quality, learning, information and preserved or foreclosed options; entropy reduction alone does not prove decision value, and overlapping information and option effects cannot be booked twice.",
+          "model_section": "valuation.explanatory_dimensions",
+          "source_candidate_id": "L9-SV-009",
+          "when": "when_learning_information_or_option_value_is_claimed"
+        },
+        "L9-SV-010": {
+          "contract_obligation": "relevant_alternative_and_counterfactual_comparison",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "A value comparison considers feasible ACT, LEARN, COMPUTE, WAIT and STOP alternatives when relevant; all remain governed by authorization, mandatory constraints, and resource ceilings independent of utility.",
+          "model_section": "comparisons",
+          "source_candidate_id": "L9-SV-010",
+          "when": "when_meta_action_alternatives_are_material"
+        },
+        "L9-SV-011": {
+          "contract_obligation": "method_appropriate_handling_of_material_strategic_actor_responses_or_conditional_unknown",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Forecast downstream actors, responses and relationship effects remain explicitly uncertain and causally conditional under a bounded, revision-bound method appropriate to the material claim. Bounded scenario analysis, robust optimization or an owner-admitted alternative can be sufficient; a Q/V belief-state optimizer is not universally required. A single observed action or actor assertion cannot silently become a guaranteed response or durable actor trait. Unsupported claims remain conditional or Unknown.",
+          "model_section": "strategic_interaction_lookahead",
+          "source_candidate_id": "L9-SV-011",
+          "when": "when_actor_responses_are_material"
+        },
+        "L9-SV-012": {
+          "contract_obligation": "assessment_preserves_question_appropriate_result_shape",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "The assessment result preserves the shape of the decision question, including conditional ranking, frontier, allocation vector, and unresolved result; changing a material premise invalidates affected evaluation claims without silently changing unrelated claims.",
+          "model_section": "comparisons",
+          "source_candidate_id": "L9-SV-012",
+          "when": "when_the_question_requires_non_scalar_result"
+        },
+        "L9-SV-013": {
+          "contract_obligation": "when_learning_or_computing_is_an_alternative_compare_expected_marginal_decision_improvement_net_of_costs",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "Optional further learning or computing is evaluated against its expected marginal decision improvement, non-overlapping systemic effects, and costs; available compute or information gain alone does not establish positive marginal value; a budget or approximation stop does not prove unknown future branches have zero value.",
+          "model_section": "strategic_interaction_lookahead",
+          "source_candidate_id": "L9-SV-013",
+          "when": "when_further_learning_or_computation_is_an_alternative"
+        },
+        "L9-SV-014": {
+          "contract_obligation": "method_appropriate_handling_of_material_strategic_actor_responses_or_conditional_unknown",
+          "governing_layer": "strategic_value_model_and_assessment_contract_not_independent_global_invariant",
+          "meaning": "When responsive other actors are material, valuation considers conditional counteractions, incentives, commitments and relationship effects without converting uncertain strategy predictions into facts or execution authority.",
+          "model_section": "strategic_interaction_lookahead",
+          "source_candidate_id": "L9-SV-014",
+          "when": "when_responsive_strategic_actors_are_material"
+        }
+      },
+      "strategic_interaction_lookahead": {
+        "applies_when": "material_responsive_actors_or_actions_that_change_future_choices",
+        "bounded_recurrence": "Supported Q/V belief-state lookahead example, not a universal solver: Q(s_t,b_t,a_i) = E_{response,next_state}[ R(s_t,a_i,response) + gamma*V(s_{t+1},b_{t+1})]; V(s_t,b_t) = max over formally feasible actions Q(s_t,b_t,a); b_{t+1} is updated by an admitted probabilistic model.",
+        "method_policy": "supported_mathematical_formulation_not_universal_algorithm_requirement",
+        "ownership": {
+          "available_actions_and_execution_authority": "consumer_and_strategic_authority",
+          "belief_and_response_uncertainty": "Probabilistic Reasoning",
+          "formal_admissibility": "Formal Reasoning",
+          "objective_utility_and_lookahead_valuation": "Numerical Reasoning"
+        },
+        "qv_only_required_model_coordinates": [
+          "formal_feasibility_ref",
+          "versioned_actor_and_response_model_refs",
+          "belief_state_and_observation_model_refs",
+          "probability_or_strategy_model_and_utility_ref",
+          "bounded_time_horizon_and_maximum_belief_depth",
+          "branch_budget_and_resource_budget",
+          "convergence_terminal_and_approximation_policy"
+        ],
+        "qv_only_stopping_conditions": [
+          "formal_unsat_or_no_feasible_action",
+          "planning_horizon_exhausted",
+          "new_effect_novelty_exhausted_or_proven_convergence",
+          "explicit_approximation_with_bound",
+          "computation_budget_exhausted_with_unresolved_tail_when_material",
+          "optional_computation_expected_marginal_value_nonpositive"
+        ],
+        "rule": "Q/V recurrence and its belief-state, branching, and stopping coordinates apply only when that method is selected. They are neither required for bounded scenario analysis nor for an owner-admitted robust method. All methods remain evidence-bound, formally constrained and conservatively bounded; inability to establish a material claim means conditional or Unknown, not a fabricated optimal action. The model introduces neither a solver, algorithm provider, actor policy nor extra reasoning node. A static declared path distribution does not prove responsive-actor lookahead ran.",
+        "selection_requirements": [
+          "select_a_method_appropriate_to_the_decision_question_and_material_claim",
+          "preserve_formal_constraints_uncertainty_provenance_and_finite_resource_bounds",
+          "represent_material_actor_reactions_or_explain_conditional_unknowns",
+          "no_method_is_mandatory_when_another_owner_admitted_method_supports_the_claim",
+          "unsupported_material_claims_remain_conditional_or_unknown"
+        ],
+        "supported_method_families": [
+          "bounded_scenario_analysis",
+          "robust_optimization",
+          "bounded_QV_belief_state_lookahead",
+          "other_owner_admitted_question_appropriate_methods"
+        ]
+      },
+      "valuation": {
+        "accounting_partition_contract": {
+          "component_coverage_ledger": {
+            "embedded_cost_handling": "When a modeled future utility flow is already net of a DirectCost, ExpectedRiskLoss, OpportunityCost or other material consequence, that embedded contribution must be identified in the coverage ledger and excluded from separate subtraction. A separately reported bucket can contain only residual effects not already booked in a net flow.",
+            "incomplete_coverage_result": "unknown_or_conditional_not_complete_value",
+            "required_per_material_effect": [
+              "effect_identity_and_causal_attribution",
+              "scenario_and_period_scope_where_applicable",
+              "utility_unit_and_discount_basis",
+              "accounting_bucket_or_embedded_component_reference",
+              "included_or_excluded_status_with_evidence_ref",
+              "overlap_resolution_and_source_model_revision"
+            ],
+            "zero_bucket_semantics": "A zero separately subtracted bucket is permissible only when the ledger supports no applicable residual effect or shows all applicable effects were booked elsewhere; zero may not substitute for missing evidence."
+          },
+          "example_equivalence": {
+            "gross": "IEV=0, SFV=100, DC=20, ERL=0, OC=0 => SV=80",
+            "invalid": "SFV=80 net of a 20 DC, then subtracting that same DC again => 60 (double count; forbidden)",
+            "reconciled_net": "IEV=0, SFV=80, DC=0 (20 embedded in SFV), ERL=0, OC=0 => SV=80"
+          },
+          "negative_witnesses": {
+            "embedded_DC_subtracted_again": "forbidden_double_booking",
+            "embedded_expected_risk_loss_subtracted_again": "forbidden_double_booking",
+            "embedded_opportunity_cost_subtracted_again": "forbidden_double_booking",
+            "genuinely_distinct_recurring_period_effects": "book_each_increment_once",
+            "same_effect_in_mutually_exclusive_scenarios": "compare_conditionally_not_add_together",
+            "unclassified_material_consequence": "unknown_or_conditional",
+            "zero_subtraction_without_ledger_basis": "unknown_or_conditional"
+          },
+          "normative_partition": {
+            "common_utility_units_time_basis_and_discount_treatment_required": true,
+            "each_effect_requires_one_accounting_home_after_reconciliation": true,
+            "each_effect_requires_stable_causal_and_period_identity": true,
+            "exhaustive_material_consequence_coverage": true,
+            "losses_and_costs_already_reflected_in_utility_flows_cannot_be_subtracted_again": true,
+            "mutually_exclusive_booking": true,
+            "shared_or_overlapping_effects_require_explicit_attribution_and_exclusion": true,
+            "unknown_effect_booking_never_defaults_to_zero": true
+          },
+          "representation_modes": [
+            "gross_components_with_separate_cost_and_risk_bookings",
+            "net_utility_flows_with_auditable_embedded_component_reconciliation"
+          ],
+          "required_component_buckets": [
+            "ImmediateExpectedValue",
+            "SystemicFutureValue",
+            "DirectCost",
+            "ExpectedRiskLoss",
+            "OpportunityCost"
+          ],
+          "scope": "every_material_modeled_consequence_within_the_declared_objective_and_horizon",
+          "sign_and_expectation_discipline": [
+            "signed_incremental_benefits_and_harms_may_be_in_IEV_or_SFV",
+            "positive_magnitude_cost_buckets_are_subtracted_only_when_separately_booked",
+            "expected_losses_already_weighted_in_scenarios_cannot_be_reweighted_or_resubtracted",
+            "recurring_increment_is_distinct_from_recounted_stock_or_unchanged_echo"
+          ],
+          "status": "mandatory_precondition_for_complete_five_term_value_claim"
+        },
+        "conceptual_decomposition": "StrategicValue(a) = ImmediateExpectedValue(a) + SystemicFutureValue(a) - DirectCost(a) - ExpectedRiskLoss(a) - OpportunityCost(a)",
+        "explanatory_dimensions": [
+          "future_work_elimination",
+          "capability_unlock",
+          "recurring_cost_reduction",
+          "dependency_unlock",
+          "reusable_asset_value",
+          "future_decision_improvement",
+          "future_information_improvement",
+          "future_action_space_expansion",
+          "relationship_and_reputation_effect"
+        ],
+        "requires_declared": [
+          "objective_and_comparable_utility_unit",
+          "feasible_counterfactual_baseline",
+          "action_or_intervention_identity",
+          "evaluation_horizon",
+          "evidence_model_revision_and_uncertainty",
+          "applicable_hard_constraints_and_admissibility",
+          "material_alternatives_and_context",
+          "accounting_partition_complete_and_reconciled_for_full_claim"
+        ],
+        "rule": "Explanatory dimensions are not independent additive bonuses.",
+        "semantic_class": "numerical_valuation_composition",
+        "systemic_future_value_definition": "Expected counterfactual improvement in future reachable utility caused by an intervention relative to a feasible baseline, excluding immediate and already-booked changes. Positive and negative effects are both permitted."
+      }
+    },
+    "vocabulary": {
+      "terms": {
+        "bidirectional_value_propagation": {
+          "definition": "Temporally ordered causal effects between participants including a return to an earlier participant whose value may be positive, zero, or negative.",
+          "semantic_class": "causal_topology"
+        },
+        "capability_unlock": {
+          "definition": "An intervention enables a previously inaccessible future capability or feasible action with value derived from nonduplicated counterfactual effects.",
+          "semantic_class": "systemic_value_dimension"
+        },
+        "counterfactual_baseline": {
+          "definition": "Explicit feasible reference trajectory used to determine incremental value; it may include waiting or no intervention when feasible.",
+          "semantic_class": "decision_model"
+        },
+        "decision_boundary": {
+          "definition": "Conditions under which the preferred evaluated action changes, not a prediction that the conditions will occur.",
+          "semantic_class": "decision_analysis"
+        },
+        "decision_relevant_information_value": {
+          "definition": "Expected improvement in achievable decision utility due to additional evidence, distinct from information gain for its own sake.",
+          "semantic_class": "decision_valuation"
+        },
+        "future_effect_identity": {
+          "definition": "Stable causal identity of a material incremental future state delta within a time-indexed scenario; independently realized recurrence requires distinct period episode identities, whereas mutually exclusive scenario branches may reference the same underlying effect without adding their values together.",
+          "semantic_class": "evidence_identity"
+        },
+        "future_work_elimination": {
+          "definition": "Causally supported future labor or repeated effort avoided relative to a feasible baseline, booked once per underlying state delta.",
+          "semantic_class": "systemic_value_dimension"
+        },
+        "qualitative_strategic_value_screen": {
+          "definition": "A bounded, non-numerical, evidence- and uncertainty-explicit advisory appraisal of whether a feasible discretionary option could advance a specified objective for an identified beneficiary relative to a stated alternative or baseline, considering material adverse effects and displaced burdens. It may support a conditional directional claim but is not the quantified strategic_value_assessment, a computed optimum, verified causal forecast, Strategic Plan change, or action permission.",
+          "question": "Relative to what feasible alternative, for whose objective, with which supported effects, countervailing costs, and Unknowns might this option help?",
+          "semantic_class": "derived_assessment"
+        },
+        "realized_strategic_compounding": {
+          "definition": "An evidence-supported finding that a durable, attributable improvement from an earlier intervention was actually consumed by an authorized later decision or action and produced a distinct additional observed relevant net objective improvement relative to a stated later comparison, with material adverse effects, uncertainty and attribution limits preserved. Connectivity, signal delivery, storage, planned reuse, or unchanged echoes establish neither such consumption nor additional realized benefit. Any asserted numerical valuation separately invokes the admitted quantitative Strategic Value rules.",
+          "question": "What earlier improvement was later used, by whom, and what separately observable additional difference followed that use?",
+          "semantic_class": "derived_assessment"
+        },
+        "strategic_value": {
+          "artifact_id": "l9.strategic.value@1",
+          "definition": "Expected net objective-relative utility of an admissible action under a declared DecisionModel, baseline, horizon, compatible units and uncertainty, including mutually exclusive, exhaustively reconciled immediate, future, direct-cost, expected-risk-loss and opportunity-cost effects. Separately subtract only costs and losses not already embedded in net utility flows; evaluation is not authority.",
+          "detailed_model": "strategic_value_model.yaml",
+          "semantic_class": "optimization"
+        },
+        "strategic_value_assessment": {
+          "definition": "Evidence- and revision-bound quantitative comparison of admissible alternatives under a declared objective and compatible utility unit that preserves uncertainty and separates forecast from realization.",
+          "semantic_class": "derived_assessment"
+        },
+        "systemic_future_value": {
+          "definition": "Expected counterfactual change in future reachable utility caused by an intervention relative to an explicit feasible baseline, excluding immediate and already-booked changes, evaluated with a bounded, question-appropriate numerical method, including discounted scenario expectations when applicable, with evidence-based uncertainty and stopping controls.",
+          "detailed_model": "strategic_value_model.yaml",
+          "semantic_class": "optimization"
+        },
+        "value_propagation_mesh": {
+          "definition": "Bounded branching, reconvergent or feedback topology whose shared state deltas are valued once with explicit causation, attribution and stopping controls.",
+          "semantic_class": "causal_topology"
+        }
+      }
+    }
+  },
+  "schema": "l9.composed-projection/v1"
+}

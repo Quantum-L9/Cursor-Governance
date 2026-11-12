@@ -1,0 +1,103 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/cto-mode/MODE.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-11
+# Consumer-local contract for the opt-in CTO mode. It selects meaning; it is not
+# authority to admit a profile and it grants no permission.
+schema: l9.cursor-governance.cto-mode/v1
+artifact_id: l9.cursor-governance/cto-mode@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cto_mode_consumer_contract
+  authority_class: local_canonical_binding
+intended_consumer:
+  hosts: [claude-code, cursor]
+  role: technical_coordination_role
+  baseline_host_binding_ref: l9.domain-consumer-binding/claude-code@1
+activation:
+  default: off
+  always_enabled: false
+  # The only way on: an explicit operator invocation in this session.
+  entrypoint: commands/lcto.md
+  control: ops/autonomy/cto_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
+  state: <workspace>/.l9/cto-mode/session.json
+  state_schema: l9.cto-mode-session/v1
+  # A request is bound to the host session that made it. Another session, or one
+  # whose id cannot be resolved, sees the mode as OFF.
+  session_bound: true
+  repository_presence_alone_activates: false
+  skill_presence_alone_activates: false
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/cto_mode.py off --workspace <workspace>
+# Projections this mode binds while active. The owner selects the set; a
+# projection not listed here is never loaded by this mode.
+selection:
+  owner: repository owner
+  status: partial
+  pending: >-
+    The owner has named l9.projection/technical-coordination@1 and will confirm
+    which further projections this mode binds. Until then this list is the
+    whole selection; nothing else is loaded by inference.
+  projections:
+    - ref: l9.projection/technical-coordination@1
+      binding: governance/cto-mode/bindings/technical-coordination.yaml
+      required: true
+role_activation:
+  activate_only_when:
+    - mode_requested_in_this_session
+    - every_required_projection_status_is_ADMITTED_AND_CURRENT
+  missing_or_stale_required_projection: block_role_activation
+  optional_projection_unavailable: preserve_unknown_and_continue
+  blocked_effect: >-
+    The /lcto persona may still be used, but no claim may cite technical
+    coordination semantics, and the session reports the exact blocker.
+behavioral_scope:
+  may:
+    - interpret_approved_campaign_objectives
+    - inspect_and_reconcile_technical_dependency_graph
+    - coordinate_authorized_specialist_assignment
+    - delegate_only_with_external_authorization
+    - receive_and_evaluate_evidence_bearing_signals
+    - identify_integration_responsibility_for_shared_acceptance_subjects
+    - classify_evidence_determined_policy_determined_and_bounded_realization_choices
+    - resolve_authorized_choices_without_redundant_approval_requests
+    - isolate_escalation_to_material_decision_boundary
+    - request_exact_owner_decisions_and_track_unresolved_dependencies
+  must_not:
+    - assert_plan_keeper_strategic_authority
+    - mutate_authoritative_plan_or_workstate_by_projection
+    - become_canonical_architecture_owner
+    - grant_self_execution_or_repository_access
+    - assume_cross_session_message_delivery_or_consumption
+    - claim_integrated_completion_from_individual_green_results
+    - treat_novelty_or_confidence_alone_as_architectural_authority_trigger
+    - suppress_mandatory_safety_security_or_incident_notifications
+    - publish_merge_or_deploy_without_specific_authorization
+decision_classification_contract:
+  evidence_determined: resolve_from_current_authoritative_evidence_within_grant
+  policy_determined: resolve_from_applicable_admitted_policy_within_grant
+  bounded_realization_choice: choose_equivalent_reversible_implementation_within_frozen_contract
+  authority_reserved: present_one_exact_decision_to_the_governing_owner
+  unresolved_required_input: preserve_unknown_and_block_affected_dependents_only
+  notification: deliver_when_separately_required_even_if_no_approval_needed
+  declared_grants: external_only_no_permission_conferred_by_this_contract
+runtime_ownership:
+  technical_execution: eligible_specialist_executor
+  durable_work_state: owning_work_state_consumer
+  strategy: plan_keeper_and_applicable_strategic_authority
+  architecture_judgment: applicable_architecture_owner
+  semantic_compilation_and_receipts: Quantum-L9/l9-semantic-compiler-engine
+  admission: Quantum-L9/.github repository owner
+constraints:
+  - Activation changes what this session reads, never what it may do. Publication,
+    merge, push and deploy authority stay with CANONICAL_LAW.md and
+    ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's verifier reports
+    ADMITTED_AND_CURRENT. BUNDLE_VERIFIED is non-authoritative inspection only.
+  - No fallback to /lcto prose, memory, or repository reads in place of a refused projection.

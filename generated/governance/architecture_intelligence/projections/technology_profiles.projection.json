@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "global_rules": {
@@ -48,7 +48,7 @@
       "optimization_rule": "Preferences may rank only already compatible realizations."
     }
   },
-  "projection_digest": "sha256:e74e00836c742d753758ec5b3184abe80475edc46e1b728c08a33e3811bcf228",
+  "projection_digest": "sha256:92c9a75b17d24cc778170d30c1a86d5c4599cba73005f9a5f920ddc9c80ceb47",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",

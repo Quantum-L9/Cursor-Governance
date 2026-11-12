@@ -1,0 +1,93 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/cto-mode/bindings/technical-coordination.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
+# Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml
+# and verified by the same adapter over the one shared consumer verifier.
+integration:
+  integration_id: L9.CG.CTO_MODE.TECHNICAL_COORDINATION_BINDING.001
+  version: 1.0.0
+  artifact_class: runtime_integration_binding
+  status: active
+  semantic_owner: governance/cto-mode/bindings/technical-coordination.yaml
+purpose:
+  assertion: >-
+    Bind the technical coordination role projection from Quantum-L9/.github into CTO mode as a
+    separate, explicitly loaded input: a bundle the canonical compiler produced and this
+    repository only verifies. It executes no selector, composes no payload, authors no schema,
+    and never substitutes another input when this one is unavailable.
+input:
+  name: technical_coordination
+  authority:
+    repository: Quantum-L9/.github
+    projection_profile_ref: l9.projection/technical-coordination@1
+    # Admitted in Quantum-L9/.github v3.39.0 (ADR-036, #246, main f8e44d1).
+    projection_profile_digest: sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036
+    projection_profile_class: consumer
+    projection_profile_consumer: technical_coordination_role
+    composition_profile_ref: l9.compose/technical-coordination@1
+    composition_profile_digest: sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb
+    projection_payload_schema: l9.projection.technical-coordination/v1
+    composed_payload_schema: l9.composed-projection.technical-coordination/v1
+    expected_source_classes:
+      - vocabulary
+      - invariants
+      - contracts
+      - authority_model
+      - strategic_cognition_model
+  bundle:
+    path: generated/governance/technical_coordination
+    lock: bundle.lock.json
+    composed_view: composed.json
+  producer:
+    compiler: l9-semantic-compiler
+    driver: tools/authority/produce_projection_bundle.py
+    ci: .github/workflows/l9-projection-bundle-verify.yml
+    trusted_replay: .github/workflows/l9-projection-bundle-trusted-replay.yml
+    cg_produces: false
+  verifier: skills/l9-global-architect/scripts/verify_architecture_intelligence.py
+  shared_verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+admission:
+  resolved_independently_of: bundle.lock.json
+  resolver: skills/l9-coding-agent/scripts/verify_canonical_binding.py#resolve_admission
+  authority_main_ref: refs/remotes/origin/main
+  effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
+  decisions:
+    - candidate_ref: l9.projection/technical-coordination@1
+      candidate_digest: sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036
+      decision: admit
+      admitted_revision: f8e44d1536cb218de41dde4685c606a4d6460915
+      decided_at: "2026-11-12"
+      authority_ref: >-
+        Quantum-L9/.github ADR-036, Semantic Foundation v3.39.0, admitted by the repository owner in governed session session_017xwbxw3RduoWFP29VkobHR ("I want to formally admit these candidates"; "push Stages B and C as stacked branches") and merged to .github main as Quantum-L9/.github#246 (f8e44d1); bound into CTO mode on the owner's instruction "Merge the PR's in this seam enabling the projections" (2026-11-12).
+    - candidate_ref: l9.compose/technical-coordination@1
+      candidate_digest: sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb
+      decision: admit
+      admitted_revision: f8e44d1536cb218de41dde4685c606a4d6460915
+      decided_at: "2026-11-12"
+      authority_ref: >-
+        Quantum-L9/.github ADR-036, Semantic Foundation v3.39.0, admitted by the repository owner in governed session session_017xwbxw3RduoWFP29VkobHR ("I want to formally admit these candidates"; "push Stages B and C as stacked branches") and merged to .github main as Quantum-L9/.github#246 (f8e44d1); bound into CTO mode on the owner's instruction "Merge the PR's in this seam enabling the projections" (2026-11-12).
+load_condition:
+  when:
+    - cto_mode_active
+  requires_all:
+    - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
+  repository_presence_alone_loads: false
+  loads: the composed view only; each namespace is one source projection exactly as produced
+failure_behavior:
+  BUNDLE_VERIFIED: not admitted law; admitted mode reads nothing.
+  BLOCKED: proceed without technical coordination semantics; a claim that depends on them is a typed Unknown.
+  REJECTED: no part of the bundle may be read; report the refusal reason.
+  STALE: the bundle must not be treated as current; regeneration belongs to the producer.
+  fallback:
+    partial_bundle: forbidden
+    model_reconstruction_from_memory_or_repository_reads: forbidden
+forbidden_duplication:
+  - selector_execution
+  - projection_or_composition_by_cursor_governance
+  - payload_schema_authoring_or_reinterpretation

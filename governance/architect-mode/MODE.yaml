@@ -1,0 +1,110 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/architect-mode/MODE.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.0.0
+#   updated: 2026-11-12
+# Consumer-local contract for the opt-in architect mode. It selects meaning; it is not
+# authority to admit a profile and it grants no permission.
+schema: l9.cursor-governance.architect-mode/v1
+artifact_id: l9.cursor-governance/architect-mode@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: architect_mode_consumer_contract
+  authority_class: local_canonical_binding
+intended_consumer:
+  hosts: [claude-code, cursor]
+  role: architecture_and_strategic_planning
+  replaces: >-
+    Invoking /l9-global-architect to obtain architectural context. Architect mode binds the
+    canonical domain projections directly; the GAR skill pack stays available for its own
+    runtime (state machine, reasoning foursome, run state) and is not required for context.
+  not: the default operating plane (l9.projection/cursor-governance-operating-plane@2)
+activation:
+  default: false
+  always_enabled: false
+  entrypoint: commands/architect.md
+  control: ops/autonomy/architect_mode.py
+  implementation: ops/autonomy/projection_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
+  state: <workspace>/.l9/architect-mode/session.json
+  state_schema: l9.architect-mode-session/v1
+  session_bound: true
+  repository_presence_alone_activates: false
+  skill_presence_alone_activates: false
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/architect_mode.py off --workspace <workspace>
+# The selection is the union of the required domain sets of the two canonical consumer
+# bindings in Quantum-L9/.github semantics/domain_consumer_bindings.yaml:
+# l9.domain-consumer-binding/gar@1 (the global architect) and
+# l9.domain-consumer-binding/strategic-planner@1 (strategic planning). Every profile is an
+# admitted v3.36.0 domain projection (ADR-033). identity-attribution@1 is conditional in both
+# bindings and is not selected. Legacy consumer profiles (architecture-intelligence@1,
+# gar-architecture-observer@1, strategic-planner-*) and the operating plane are not selected.
+selection:
+  owner: repository owner
+  status: complete
+  basis:
+    - l9.domain-consumer-binding/gar@1
+    - l9.domain-consumer-binding/strategic-planner@1
+  projections:
+    - ref: l9.projection/architecture@1
+      binding: governance/architect-mode/bindings/architecture.yaml
+      required: true
+      basis: l9.domain-consumer-binding/gar@1 requires
+    - ref: l9.projection/governance@1
+      binding: governance/architect-mode/bindings/governance.yaml
+      required: true
+      basis: l9.domain-consumer-binding/gar@1 requires
+    - ref: l9.projection/evidence-provenance@1
+      binding: governance/architect-mode/bindings/evidence-provenance.yaml
+      required: true
+      basis: l9.domain-consumer-binding/gar@1 requires
+    - ref: l9.projection/contracts-conformance@1
+      binding: governance/architect-mode/bindings/contracts-conformance.yaml
+      required: true
+      basis: l9.domain-consumer-binding/gar@1 requires
+    - ref: l9.projection/capabilities-dependencies@1
+      binding: governance/architect-mode/bindings/capabilities-dependencies.yaml
+      required: true
+      basis: l9.domain-consumer-binding/gar@1 requires
+    - ref: l9.projection/strategic-value@1
+      binding: governance/architect-mode/bindings/strategic-value.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+    - ref: l9.projection/signals@1
+      binding: governance/architect-mode/bindings/signals.yaml
+      required: true
+      basis: l9.domain-consumer-binding/strategic-planner@1 requires
+role_activation:
+  activate_only_when:
+    - mode_requested_in_this_session
+    - every_required_projection_status_is_ADMITTED_AND_CURRENT
+  missing_or_stale_required_projection: block_role_activation
+  blocked_effect: >-
+    No claim may cite the blocked domain, and the session reports the exact blocker. There is
+    no fallback to architecture-intelligence@1, the observer projection, memory or repository
+    reads.
+behavioral_scope:
+  may:
+    - ground_architectural_judgment_in_the_bound_domain_projections
+    - evaluate_designs_against_admitted_architecture_patterns_rules_and_topology
+    - check_contract_and_conformance_obligations_before_proposing_changes
+    - assess_capability_and_dependency_impact
+    - appraise_strategic_value_qualitatively_and_trace_signal_consequences
+    - cite_each_claim_by_composition_digest_and_source_class
+  must_not:
+    - treat_a_projection_as_authority_to_act
+    - substitute_strategic_value_for_plan_keeper_strategic_authority
+    - infer_current_repositories_versions_or_topology_instances_from_projections
+    - reconstruct_a_blocked_domain_from_memory
+    - publish_merge_or_deploy_without_specific_authorization
+constraints:
+  - Activation changes what this session reads, never what it may do. Publication, merge,
+    push and deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's verifier reports ADMITTED_AND_CURRENT.
+  - Bundles are produced by tools/authority/produce_projection_bundle.py with the canonical
+    compiler and verified in CI; this mode never produces or edits them.

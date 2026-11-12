@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "capability_state_dimensions": {
@@ -44,10 +44,10 @@
       "no_transition_order_is_defined_here"
     ]
   },
-  "projection_digest": "sha256:3bc75cf69331e3ce9e6bfb44704811ed997dd914b3b6631de9c130cf995e3bda",
+  "projection_digest": "sha256:c1f27eddc14605c2048af0914b2b537d19c0f4561a9d1ce796ed814bf02cd6ca",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
+  "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
   "source_ref": "l9.source/capabilities@1"
 }
