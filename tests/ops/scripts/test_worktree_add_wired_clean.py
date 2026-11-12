@@ -141,14 +141,97 @@ def test_worktree_runs_venv_target_from_included_fragment(tmp_path: Path) -> Non
     _assert_stub_venv(proc, worktree)
 
 
-def test_uv_lock_without_venv_target_uses_ssot(tmp_path: Path) -> None:
+def _assert_not_linked_to_ssot(
+    proc: subprocess.CompletedProcess[str], worktree: Path, home: Path
+) -> None:
+    """A consumer's own `uv sync` must never reach the governance SSOT venv.
+
+    2026-11-11: an l9-constellation-topology worktree (pyproject.toml + uv.lock,
+    no venv target) got `.venv -> $HOME/.cursor-governance/.venv`; its documented
+    `uv sync --frozen --extra dev` followed the link and, syncing exactly,
+    replaced the SSOT's locked packages with the consumer's.
+    """
+    link = worktree / ".venv"
+    ssot_venv = (home / ".cursor-governance" / ".venv").resolve()
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "--- venv (SSOT " not in proc.stdout
+    assert "--- venv (own project: not linked to SSOT) ---" in proc.stdout
+    assert not link.is_symlink(), f".venv is a link to {os.readlink(link)}"
+    assert not (link.exists() and link.resolve() == ssot_venv)
+    assert (worktree / ".cursor-commands").is_symlink(), "links-only wiring did not run"
+
+
+def test_pyproject_and_uv_lock_without_venv_target_not_linked_to_ssot(
+    tmp_path: Path,
+) -> None:
+    """Regression: the l9-constellation-topology shape."""
     consumer, worktree, home = _init_consumer(
         tmp_path,
-        {"pyproject.toml": "[project]\nname = 'x'\n", "uv.lock": "version = 1\n"},
+        {
+            "pyproject.toml": "[project]\nname = 'topology'\nversion = '0'\n",
+            "uv.lock": "version = 1\n",
+            "Makefile": "test:\n\ttrue\n",
+        },
     )
     proc = _run_wired(consumer, worktree, home)
     assert "locked venv" not in proc.stdout
     assert "--- venv (make venv) ---" not in proc.stdout
+    _assert_not_linked_to_ssot(proc, worktree, home)
+
+
+def test_project_pyproject_without_lock_not_linked_to_ssot(tmp_path: Path) -> None:
+    consumer, worktree, home = _init_consumer(
+        tmp_path, {"pyproject.toml": "[project]\nname = 'x'\n"}
+    )
+    proc = _run_wired(consumer, worktree, home)
+    _assert_not_linked_to_ssot(proc, worktree, home)
+
+
+def test_tool_config_only_pyproject_not_linked_to_ssot(tmp_path: Path) -> None:
+    """uv syncs a pyproject.toml with no [project] table as a non-project workspace."""
+    consumer, worktree, home = _init_consumer(
+        tmp_path, {"pyproject.toml": "[tool.ruff]\nline-length = 100\n"}
+    )
+    proc = _run_wired(consumer, worktree, home)
+    _assert_not_linked_to_ssot(proc, worktree, home)
+
+
+def test_uv_lock_only_not_linked_to_ssot(tmp_path: Path) -> None:
+    consumer, worktree, home = _init_consumer(tmp_path, {"uv.lock": "version = 1\n"})
+    proc = _run_wired(consumer, worktree, home)
+    _assert_not_linked_to_ssot(proc, worktree, home)
+
+
+def test_own_project_venv_target_that_creates_no_venv_not_linked_to_ssot(
+    tmp_path: Path,
+) -> None:
+    consumer, worktree, home = _init_consumer(
+        tmp_path,
+        {"pyproject.toml": "[project]\nname = 'x'\n", "Makefile": "venv:\n\ttrue\n"},
+    )
+    proc = _run_wired(consumer, worktree, home)
+    assert "--- venv (make venv) ---" in proc.stdout
+    _assert_not_linked_to_ssot(proc, worktree, home)
+
+
+def test_own_project_venv_target_still_builds_its_venv(tmp_path: Path) -> None:
+    consumer, worktree, home = _init_consumer(
+        tmp_path,
+        {
+            "pyproject.toml": "[project]\nname = 'x'\n",
+            "uv.lock": "version = 1\n",
+            "Makefile": _STUB_VENV,
+        },
+    )
+    proc = _run_wired(consumer, worktree, home)
+    _assert_stub_venv(proc, worktree)
+
+
+def test_no_python_project_without_venv_target_uses_ssot(tmp_path: Path) -> None:
+    consumer, worktree, home = _init_consumer(tmp_path, {"README.md": "# consumer\n"})
+    proc = _run_wired(consumer, worktree, home)
+    assert "--- venv (make venv) ---" not in proc.stdout
+    assert "own project" not in proc.stdout
     _assert_ssot_venv(proc, worktree, home)
 
 
