@@ -427,10 +427,10 @@
       }
     }
   },
-  "projection_digest": "sha256:b089b9887ebace559506eb80b0438394f9e2fe34084a61e44385886077f1c7a7",
+  "projection_digest": "sha256:b17a1347f4244475800bffcd238d97cd4bdf333f811eb1a632e40432338fb91f",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+  "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
   "source_ref": "l9.source/vocabulary@1"
 }
