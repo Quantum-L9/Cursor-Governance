@@ -134,7 +134,8 @@ mkdir -p "$(dirname "$worktree")"
 
 # Wired add (never raw `git worktree add`: the new tree needs its gitignored
 # .cursor links — rule 49 — and a .venv from `make venv`, or the SSOT .venv
-# when this repo has no venv target or no .venv).
+# when this repo has no venv target or no .venv and is not its own Python
+# project; a pyproject.toml / uv.lock tree builds its own .venv).
 echo "--- create wired worktree ($branch @ ${base_sha:0:12}) ---"
 bash "$SCRIPT_DIR/worktree_add_wired.sh" -b "$branch" "$worktree" "$base_sha"
 
@@ -186,6 +187,6 @@ RESULT: PASS — agent task started
   base     : $base_ref @ $base_sha
 
 Next: cd "$worktree" && work only there. Publish with 'make pr' (never a raw push).
-  venv     : $worktree/.venv  (make venv, else SSOT ~/.cursor-governance/.venv; via worktree_add_wired.sh)
+  venv     : $worktree/.venv  (make venv; else own project builds its own; else SSOT ~/.cursor-governance/.venv link; via worktree_add_wired.sh)
 SUMMARY
 fi

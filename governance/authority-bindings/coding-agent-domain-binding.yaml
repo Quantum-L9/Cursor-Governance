@@ -1,0 +1,80 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/authority-bindings/coding-agent-domain-binding.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: candidate
+#   version: 0.1.0
+#   updated: 2026-11-11
+schema: l9.cursor-governance.domain-binding-pin/v1
+artifact_id: l9.cursor-governance/coding-agent-domain-binding-pin@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cursor_governance_downstream_domain_binding_pin
+  authority_class: local_canonical_binding
+purpose: >
+  Pin the canonical domain consumer binding Quantum-L9/.github declares for the
+  l9-coding-agent skill, so its domain projections can be materialized as a
+  consumer-committed bundle and verified. This file restates no binding
+  semantics: which domains the consumer requires or activates conditionally,
+  its identity and its unresolved coordinates are owned by
+  semantics/domain_consumer_bindings.yaml at the pinned revision, and the
+  verifier re-reads them from there. A domain binding grants no permission and
+  switches no consumer: l9.projection/coding-agent-execution@1
+  (coding-agent-execution.yaml) stays the coding agent's active binding.
+status: candidate
+upstream:
+  repository: Quantum-L9/.github
+  binding_catalog: semantics/domain_consumer_bindings.yaml
+  binding_ref: l9.domain-consumer-binding/coding-agent@1
+  # Canonical-JSON digest of the binding entry at authority_revision. A different digest at a
+  # later pin is STALE: rebind deliberately, never silently.
+  binding_digest: sha256:3b8ae0799cb8ebedb7ba55a22a111107284b89de9a7638a73574ab631b72e045
+  # Semantic Foundation v3.36.0 (ADR-033), merged as Quantum-L9/.github#239.
+  authority_revision: dcd9d0092740756c19ac681d399bd438409bdc52
+  # Canonical-JSON digests of each domain profile entry at authority_revision, in the
+  # binding's declared order. Pins only: the bundle lock records the digests it was cut at.
+  required_profile_digests:
+    l9.projection/architecture@1: sha256:136dbe9d7e87e3ea4d8bae8a2ce9046880c820eab30c80ca8d81994028531c2a
+    l9.projection/governance@1: sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d
+    l9.projection/evidence-provenance@1: sha256:2719d0b29894950759445ae361831d3de6ec8662a5e91842d51c76cf241d224a
+    l9.projection/contracts-conformance@1: sha256:b94e40e8e76cc9b7db97d5a1c15e9e64d090d9ba7869638796a85cd954a5d312
+    l9.projection/capabilities-dependencies@1: sha256:e17c474013e3a3a150c4eac3b67ed4f5118274e1fe599cb78655c081040e3302
+    l9.projection/identity-attribution@1: sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6
+  conditional_profile_digests:
+    l9.projection/strategic-value@1: sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4
+    l9.projection/signals@1: sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843
+  predecessor_profile: l9.projection/coding-agent-execution@1
+bundle:
+  path: generated/governance/domain_bindings/coding_agent
+  lock: binding.lock.json
+  lock_schema: l9.domain-binding-bundle/v1
+  domain_lock_schema: l9.projection-bundle/v1
+  producer: l9-semantic-compiler
+  driver: tools/authority/produce_projection_bundle.py --binding l9.domain-consumer-binding/coding-agent@1
+  # Not yet materialized (plan T4) and not yet covered by trusted replay (plan T5).
+  materialized: false
+verification:
+  verifier: skills/l9-coding-agent/scripts/verify_canonical_binding.py
+  mode: --binding-bundle
+  verdicts: [BUNDLE_VERIFIED, REJECTED, BLOCKED, STALE]
+  # The verifier never reports BOUND or CURRENT for a domain binding: per-domain projections
+  # are not a composed binding, and nothing here is admitted for use.
+  conventions: >
+    Exactly those of coding-agent-execution.yaml (projection_engine_contract
+    binding_conventions, ADR-021); every domain bundle is verified by the same
+    verify_profile_bundle the coding-agent and architecture-intelligence
+    consumers use.
+activation:
+  status: blocked
+  # Each item blocks what it names until closed upstream; none is closed by this repository.
+  blocked_by:
+    - coordinate: added_selection_review
+      owner: Quantum-L9/.github (domain_consumer_bindings.yaml unresolved coordinate)
+    - coordinate: cross_domain_composition
+      owner: Quantum-L9/l9-semantic-compiler-engine (binding-domain-set composition not implemented)
+    - coordinate: post_merge_trusted_replay
+      owner: Quantum-L9/.github v3.36.0 open blocker
+  plan: docs/plans/domain_consumer_projection_migration_311b4bcc.plan.md
