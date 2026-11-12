@@ -1,34 +1,34 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "dc96a8ae9f31e359bb0e52a0b1d778fc8f265d99"
+    "revision": "dcd9d0092740756c19ac681d399bd438409bdc52"
   },
   "components": [
     {
       "path": "projections/vocabulary.projection.json",
-      "projection_digest": "sha256:bbf33858884fe7b29420548258bcf21b407b761651ed4d8ef9c6d89ad3a03382",
+      "projection_digest": "sha256:2f0aa8feb15dbc19392584564436a7842f13d0c0a25bc994769f5d1439a0ae83",
       "receipt": "receipts/vocabulary.receipt.json",
-      "sha256": "sha256:3f0192e5f8795d2a20302a0946ae2effea457322b2398945496f19b4988e6da9",
+      "sha256": "sha256:2454284e5f56900cf344cb0f23f8f239629caf235ef9b12ef2b9162be9b8d6aa",
       "source_class": "vocabulary",
-      "source_digest": "sha256:e0e4cc60a1de94c3407e18826d40a2b8471d5690b4f393ddea181acbe6932797",
+      "source_digest": "sha256:76e24f641e9161fb7441ca46e5751c2e01ca152c3ea18c84e960b84271765d31",
       "source_ref": "l9.source/vocabulary@1"
     },
     {
       "path": "projections/invariants.projection.json",
-      "projection_digest": "sha256:62556cab54cb8c209156da883689848d7b815dc26a1d075059acc0462acde1ac",
+      "projection_digest": "sha256:74516cb80747df05e6079504d4ec60a680b65140c1bf5742288e4aa66da727d2",
       "receipt": "receipts/invariants.receipt.json",
-      "sha256": "sha256:80a6a356ad02109d2601bcafb83358eba4fd080d066934ee797adc584e625852",
+      "sha256": "sha256:afad380dca305ee505f2df0cbc5c5e38c9c8672c71d1f046131dc7c2b178e91f",
       "source_class": "invariants",
-      "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
+      "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
       "source_ref": "l9.source/invariants@1"
     },
     {
       "path": "projections/contracts.projection.json",
-      "projection_digest": "sha256:d2b9742b1d83b4e8505785d61f315fa7b8959918bfbdf325c7cae4ed2dab7e9a",
+      "projection_digest": "sha256:48991bc82663dd9134e5ea745bf9e7f2d19e8669679f40d6b6f74993466bc353",
       "receipt": "receipts/contracts.receipt.json",
-      "sha256": "sha256:1c85ab79a3b3278fc389ab2ba155f987cb8688eb4b3d08dcdd9c116a08206ffc",
+      "sha256": "sha256:c7ad2ae5d96266c32b39cd6c8fd05fc5884d212ae94d44dd6897f4d9b01af166",
       "source_class": "contracts",
-      "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
+      "source_digest": "sha256:f6af40e106da06f005ca57292cb69f48079df870ed45153565f844691a323993",
       "source_ref": "l9.source/contracts@1"
     },
     {
@@ -69,11 +69,11 @@
     },
     {
       "path": "projections/capabilities.projection.json",
-      "projection_digest": "sha256:e5d69a2cd5c27e5d763df39c77bdda02440088f883e6fcb93ef29e12dbc74d69",
+      "projection_digest": "sha256:3bc75cf69331e3ce9e6bfb44704811ed997dd914b3b6631de9c130cf995e3bda",
       "receipt": "receipts/capabilities.receipt.json",
-      "sha256": "sha256:ce7c261e5ad14c976ceaad1b6296b8fd0e1f376bdcc3cf6a4e5335ab73be5600",
+      "sha256": "sha256:4badd3f66e553c017103be088e6260aa7fc300ebc7b6f68db4da51de4b100ebf",
       "source_class": "capabilities",
-      "source_digest": "sha256:ab0cb6aa3e3935738be3f3863f2e89d7450c78da4e60528d8526cd511606992c",
+      "source_digest": "sha256:fe39a6b1e0a7dd17bcf917f3cdeed9425273e3e70a9a684fd9796fd2f4f8c5b3",
       "source_ref": "l9.source/capabilities@1"
     },
     {
@@ -87,20 +87,20 @@
     },
     {
       "path": "projections/receipt_catalog.projection.json",
-      "projection_digest": "sha256:0b7036bdc2135c3b3f64c3d1ec29c40ad8daa790d735f3bc339f551c37666389",
+      "projection_digest": "sha256:f9b1330cac092ccd9f68402b8e4ede8d21e48b41bb79bf8a0a0513f7b4eae834",
       "receipt": "receipts/receipt_catalog.receipt.json",
-      "sha256": "sha256:8cce54671b806e47baf2371d0f9b2a2e7727ff37999b3530b5edbebc0b6e8b96",
+      "sha256": "sha256:48cb1ae03adf74155295afcf4fbfbc025f25f667f8e6fe8181ca42e2a94d5238",
       "source_class": "receipt_catalog",
-      "source_digest": "sha256:d6a9dc96536fb2d20c30873df4789917d728d050fd13d4a75bbb29d5bf7ccd0c",
+      "source_digest": "sha256:ec7a06224263cad293b79f1f4f832bffc6b4f8eae4980bf8cbfc01bba8af8ca5",
       "source_ref": "l9.source/receipt-catalog@1"
     },
     {
       "path": "projections/lifecycle.projection.json",
-      "projection_digest": "sha256:eae5edc4352aaf2cf0e66f21275a6b800efd6fdde0a8fa244caabbbc7ce15b43",
+      "projection_digest": "sha256:447b536e58132f27c7c0aa0fdaf7dd66918f99beef65d61d429ea5a83aab3565",
       "receipt": "receipts/lifecycle.receipt.json",
-      "sha256": "sha256:a1fd401ec0fd4880166132452eb6a0a0f9cddc91fa052ea400c90737ed9397c0",
+      "sha256": "sha256:ba3319708f05c89af020f86e5715472dd6f8414c80c50b85465dc97659c9f578",
       "source_class": "lifecycle",
-      "source_digest": "sha256:b02724a80789276ce69d6a79bfc134db32895d072c3c04ff89ab0c323227679d",
+      "source_digest": "sha256:3463c5f44376bf566347008419becc900a761dd77d99691e983afc49c2f7231c",
       "source_ref": "l9.source/lifecycle@1"
     },
     {
@@ -123,10 +123,10 @@
     }
   ],
   "composed": {
-    "composition_digest": "sha256:72c4ab5fc3058d4b405f346c2437ed4a8f29546433b3630afc591b0284947b55",
+    "composition_digest": "sha256:e72c987267a7c4bf59be3bb779754529dde5bea85052ca6e3346eab9ea64e82d",
     "path": "composed.json",
     "receipt": "receipts/composed.receipt.json",
-    "sha256": "sha256:6565f5211564e487c9c3aaea5c4e0451fd7f930099330bab6d425de950570f01"
+    "sha256": "sha256:651373a057498afc1048cad574d6d079731c2632f8de5e24a5fad0ce0200781c"
   },
   "composition_profile": {
     "digest": "sha256:b5807ebc8cc2d4ddd918a42f527738fe16aff4eda9cfb1d46998a2a50297bb90",

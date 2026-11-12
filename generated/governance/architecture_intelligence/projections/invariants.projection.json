@@ -208,13 +208,49 @@
         "owner": "Quantum-L9/.github",
         "scope": "global",
         "statement": "For an assessment that asserts strategic interaction, model other actors' consequential responses as conditional on the focal action, their information available at each decision point, incentives and version-bound response assumptions, or preserve missing conditional behavior as Unknown. A passive-world approximation is only an explicit model assumption, never silently equivalent to adaptive response. This obligation does not by itself assert a quantified Strategic Value claim."
+      },
+      {
+        "id": "L9-SVQ-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "When a consumer asserts a qualitative Strategic Value appraisal for a discretionary option, it must state the objective, beneficiary, feasible comparison or baseline, causal rationale, material beneficial and adverse effects (including displaced burdens on other affected beneficiaries), and which claims are observed, hypothesized, contradicted, or Unknown. An unquantified appraisal may express conditional direction or potential but must not be passed off as a computed Strategic Value, complete ranking, independently verified result, or action permission. Applicable mandatory obligations and hard constraints remain binding."
+      },
+      {
+        "id": "L9-SVQ-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A claim of realized Strategic Value compounding requires evidence that an attributable durable effect of an earlier intervention was consumed by a later authorized action or decision and produced a supported additional net objective improvement relative to a stated later comparison. Potential reuse, stored records, duplicated transmissions, feedback traffic, connectivity, or an unchanged repeated effect do not establish realized compounding; material offsetting consequences and Unknown attribution remain explicit."
+      },
+      {
+        "id": "L9-SIGNAL-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "When evidence-bearing information crosses a semantic or participant boundary, a consequential signal claim must preserve or resolvably reference the producer, pertinent evidence and lineage, material context and uncertainty, and governing meaning needed by its authorized eligible consumer. Signal movement does not confer truth, ownership, authority, permission, or positive Strategic Value; an ineligible destination is not a valid route."
+      },
+      {
+        "id": "L9-SIGNAL-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A claim of stronger evidence through signal fan-out, reciprocal paths, or reconvergence must retain original-source dependence and distinguish nonredundant corroboration, interpretation, validation or resilience from repeated or correlated copies. Added branches and hops require a justified eligible consumer or distinct protective purpose; duplicate deliveries, message volume, and topology labels are not independent evidence."
+      },
+      {
+        "id": "L9-SIGNAL-003",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A signal feedback episode claimed to produce learning must identify an evidenced changed state consumable by a later eligible consumer; an unaccepted challenge remains a challenge, not completed learning. Such loops must use controls appropriate to their risks that prevent unbounded replay or unjustified convergence claims. Echoes, acknowledgments, finite hop limits, and cyclic routing alone do not establish learning, fixed-point convergence, or realized Strategic Value; no universal constellation-wide synchronization lap is required."
+      },
+      {
+        "id": "L9-SIGNAL-004",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A consequential signal outcome claim must distinguish production, attempted delivery, verified delivery, recipient acceptance, durable retention, actual later consumption, and any observed change in behavior or result. Evidence of an earlier stage does not establish a later one; a delivery or consumption observation alone is not a positive Strategic Value finding, and material failures or Unknown stages remain explicit."
       }
     ]
   },
-  "projection_digest": "sha256:83b755f688b905a79cf9fc1c2ae17a66e5abe6637dc1cbce49df60208fe75553",
+  "projection_digest": "sha256:0bb08db689fbcd4f2f06bcba4fb5e35f9ea81e052026294a19457fc60f0cbe43",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:2928b1206020490e80b18de3becfde0a2fbcd934b6e967a2c550be9c67c733aa",
+  "source_digest": "sha256:dcaf1085b3e38ed66e4884b1146deeced22be9466c6298f5a1621894bd564219",
   "source_ref": "l9.source/invariants@1"
 }
