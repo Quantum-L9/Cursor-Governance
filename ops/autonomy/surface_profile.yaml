@@ -60,6 +60,7 @@ forbid:
   - conflict_resolution_for_pr_stacking
   - pr_against_main_for_campaign_work
   - mix_campaign_work_onto_unrelated_feature_branch
+  - pull_request_review_approval # agents never approve; also surface_capabilities.github.review_activity.denied
 
 # Surface execution personality — Claude and Cursor both saturate (480/128).
 # Values live in ops/autonomy/claude-execution-profiles.json (stdlib-readable at
@@ -113,9 +114,16 @@ surface_capabilities:
     review_activity:
       command: ops/scripts/pr_threads.py
       receipt: .l9/pr/pr-summary.json # l9.pr_summary.v1; --pr matches number; repo matches origin; state is open
+      # Without the receipt (a native publish route writes none) ownership is
+      # read live; every fact must hold or the helper refuses before any POST.
+      ownership_fallback: >-
+        GET repos/{o}/{r}/pulls/{n}: state open, head repo equals origin, head
+        ref equals the checked-out branch, head SHA is HEAD or an ancestor of
+        HEAD. Nothing is fetched to make the proof pass.
       allow_prefixes:
         - "Bash(python3 ops/scripts/pr_threads.py:*)"
         - "Bash(python3 -u ops/scripts/pr_threads.py:*)"
+        - "Bash(python3 ~/.cursor-governance/ops/scripts/pr_threads.py:*)" # any other checkout
       routes:
         - "POST /repos/{o}/{r}/pulls/{n}/comments/{cid}/replies"
         - "POST /repos/{o}/{r}/pulls/{n}/ccr/comments/{cid}/resolve"
@@ -157,7 +165,11 @@ l4_local_autonomy:
     - push_and_open_pr_via_make_pr # remediates=1; checkers in Makefile
   pr_template: .github/pull_request_template.md
   post_push:
-    required_command: make pr
+    required_command: make pr # a native route runs the consumer's own pr target (native_routes)
+    native_routes: ops/config/publish-authority.json # run_native_publish.sh delegates once; no pr-summary receipt there
+    # PR watch: GitHub events wake the session. No Send Later / cron check-ins;
+    # bootstrap_capability_preflight.sh injects this line at SessionStart.
+    pr_watch: subscribe_pr_activity_events_only
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
@@ -194,10 +206,9 @@ pr_stacking:
     gate: ops/scripts/pr_overlap_check.py
   # GITHUB_REST_ROUTE_V1 — same openclaw PAT; not a second secret.
   github_rest:
-    pat_ref: openclaw-igorbot/github#token
+    pat_ref: GITHUB_TOKEN # Infisical cursor-governance (rule 62); legacy alias openclaw-igorbot/github#token; credential-holding surfaces only
     sanctioned_routes:
-      - gh
-      - gh api # REST fallback when GraphQL is 403; same token
+      - gh api # REST; bare gh pr/repo are GraphQL-backed and not sanctioned on hosted surfaces (surface_capabilities.github)
     second_pat: forbidden
   phases:
     executing: deny_remote
