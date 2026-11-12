@@ -51,12 +51,16 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+ACTIVATE = (
+    PE_ROOT.parents[1]
+    / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 
 # Deterministic fake Claude CLI, standing in for a *conformant* Claude host.
@@ -69,35 +73,49 @@ PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 # and that authorization is what campaign mediation coverage counts. A fake that
 # writes straight to the filesystem is not a Claude host at all -- it is exactly
 # the unmediated writer the enforcement seam exists to reject -- so on the
-# positive path this one invokes the *same live wrapper*, with the task-scoped
-# authority environment the provider exported, before each write and each
-# validation command. `SMOKE_ROGUE_TASK` turns that off for one task, which is
-# the negative control: a direct write with no hook in the loop must be refused
-# before PEC ever records a Program attempt.
+# positive path this one runs the PreToolUse hooks the provider registered for
+# the window (`--settings`), with the task-scoped authority environment the
+# provider exported, before each write and each validation command.
+# `SMOKE_ROGUE_TASK` turns that off for one task, which is the negative
+# control: a direct write with no hook in the loop must be refused before PEC
+# ever records a Program attempt.
 FAKE_CLAUDE = r"""#!/usr/bin/env python3
-import json, os, pathlib, subprocess, sys
+import json, os, pathlib, re, subprocess, sys
 
-HOOK_RELATIVE = "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py"
+
+def registered_hooks(tool_name):
+    # The PreToolUse commands this window was launched with (`--settings`),
+    # for one tool. A real host runs every registered hook whose matcher
+    # selects the tool; so does this one.
+    if "--settings" not in sys.argv:
+        return []
+    settings = json.loads(sys.argv[sys.argv.index("--settings") + 1])
+    commands = []
+    for entry in (settings.get("hooks") or {}).get("PreToolUse") or []:
+        if re.fullmatch(entry.get("matcher") or ".*", tool_name):
+            commands.extend(h["command"] for h in entry.get("hooks") or [] if h.get("command"))
+    return commands
 
 
 def mediate(tool_name, tool_input):
-    # Authorize one tool call through the live PreToolUse wrapper. Returns None
-    # when the effect may proceed, or the wrapper's stderr when it was refused.
-    # Nothing here decides anything: the verdict is the wrapper's, computed
-    # against the real root gateway and the live Program parent.
-    root = os.environ.get("L9_AUTONOMY_ROOT") or ""
-    hook = pathlib.Path(root) / HOOK_RELATIVE
-    if not hook.is_file():
-        return "conformant host cannot find the PreToolUse wrapper at %s" % hook
-    completed = subprocess.run(
-        [os.environ.get("SMOKE_HOST_PYTHON") or sys.executable, str(hook)],
-        input=json.dumps({"tool_name": tool_name, "tool_input": tool_input}),
-        text=True,
-        capture_output=True,
-    )
-    if completed.returncode == 0:
-        return None
-    return (completed.stderr or "denied").strip()
+    # Authorize one tool call through the hooks the provider registered for
+    # this window. Returns None when the effect may proceed, or the refusing
+    # hook's stderr. Nothing here decides anything: the verdict is the hook's,
+    # computed against the real root gateway and the live Program parent.
+    commands = registered_hooks(tool_name)
+    if not commands:
+        return "conformant host was given no PreToolUse hook for %s" % tool_name
+    for command in commands:
+        completed = subprocess.run(
+            command,
+            shell=True,
+            input=json.dumps({"tool_name": tool_name, "tool_input": tool_input}),
+            text=True,
+            capture_output=True,
+        )
+        if completed.returncode != 0:
+            return (completed.stderr or "denied").strip()
+    return None
 
 
 prompt = sys.argv[sys.argv.index("-p") + 1]
@@ -179,11 +197,6 @@ def _peer_test_env(tmp: Path) -> dict[str, str]:
         "L9_GOVERNANCE_SURFACE": "claude-code",
         "L9_PE_AGENT_REF": "claude-code",
         "L9_PE_SURFACE": "claude-code-cli",
-        # A real Claude host launches its hooks on the governance locked
-        # interpreter (`l9_hook_exec.sh`). The fake has no launcher, so it is
-        # told which interpreter can import the root autonomy runtime — the one
-        # already running this suite.
-        "SMOKE_HOST_PYTHON": sys.executable,
     }
 
 
@@ -259,7 +272,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 repo_root=root,
                 l9_root=l9,
                 fast=fast,
-                hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                hooks=self.mod.Hooks(context7_stack=_stack_ok, bind_projection=_projection_ok),
             )
             return report, l9, time.monotonic() - started
         l9 = raw / "l9"
@@ -276,6 +289,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             fast=fast,
             hooks=self.mod.Hooks(
                 context7_stack=_stack_ok,
+                bind_projection=_projection_ok,
                 compile_activation=self.activate.compile_activation,
             ),
         )
@@ -294,6 +308,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             fast=True,
             hooks=self.mod.Hooks(
                 context7_stack=_stack_ok,
+                bind_projection=_projection_ok,
                 compile_activation=self.activate.compile_activation,
             ),
         )
@@ -405,6 +420,14 @@ class PeSmokeCampaignTests(unittest.TestCase):
             states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
             self.assertEqual(states["TASK-001"], "COMPLETED")
             self.assertEqual(states["TASK-002"], "COMPLETED")
+            # A resumed campaign reports progress like a fresh one, and its
+            # timing record continues the interrupted run's instead of
+            # replacing it.
+            progress = json.loads((workspace / "runtime/PROGRESS.json").read_text("utf-8"))
+            self.assertEqual(progress["execution"], {"done": 2, "total": 2})
+            timings = json.loads((workspace / "runtime/TIMINGS.json").read_text("utf-8"))
+            recorded = [entry["stage"] for entry in timings["stages"]]
+            self.assertLessEqual({"compile", "bootstrap", "arm", "execute"}, set(recorded))
             # The resumed window ran under the lease its dispatch was granted,
             # and that lease holds no live authority once the task completed.
             grant = json.loads(
@@ -509,6 +532,16 @@ class PeSmokeCampaignTests(unittest.TestCase):
             progress = json.loads((workspace / "runtime/PROGRESS.json").read_text("utf-8"))
             self.assertEqual(progress["execution"], {"done": 2, "total": 2})
             self.assertLess(elapsed, 300, "smoke campaign must stay fast enough to run in dev")
+            # The run carries who asked for it and what the pipeline was bound to.
+            invocations = json.loads((workspace / "runtime/INVOCATION.json").read_text("utf-8"))
+            self.assertEqual(len(invocations["invocations"]), 1)
+            self.assertEqual(invocations["invocations"][0]["stage"], "manual")
+            binding = json.loads(
+                (workspace / "runtime/coding-projection-binding.json").read_text("utf-8")
+            )
+            self.assertEqual(
+                binding["bootstrap"]["profile_ref"], "l9.projection/coding-agent-execution@1"
+            )
 
     def test_a_direct_unmediated_write_never_becomes_a_program_attempt(self) -> None:
         """The negative control for the conformant host above.

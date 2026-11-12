@@ -1,0 +1,94 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "invariants": [
+      {
+        "id": "L9-AUTH-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "No component may expand its own authority.\n"
+      },
+      {
+        "id": "L9-AUTH-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+      },
+      {
+        "id": "L9-OWNER-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Within a given semantic scope and revision, each canonical concept has one authoritative owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution by another component does not by itself transfer ownership or create a competing canonical source.\n"
+      },
+      {
+        "id": "L9-EVIDENCE-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+      },
+      {
+        "id": "L9-UNKNOWN-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+      },
+      {
+        "id": "L9-PROV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+      },
+      {
+        "id": "L9-COMPAT-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+      },
+      {
+        "id": "L9-PROJECTION-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+      },
+      {
+        "id": "L9-IDENTITY-005",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Unknown or ambiguous ActorIdentity must remain explicit and fail closed when consequential authorship, authorization, memory attribution, or receipt attribution requires a resolved actor."
+      },
+      {
+        "id": "L9-SIGNAL-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "When evidence-bearing information crosses a semantic or participant boundary, a consequential signal claim must preserve or resolvably reference the producer, pertinent evidence and lineage, material context and uncertainty, and governing meaning needed by its authorized eligible consumer. Signal movement does not confer truth, ownership, authority, permission, or positive Strategic Value; an ineligible destination is not a valid route."
+      },
+      {
+        "id": "L9-SIGNAL-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A claim of stronger evidence through signal fan-out, reciprocal paths, or reconvergence must retain original-source dependence and distinguish nonredundant corroboration, interpretation, validation or resilience from repeated or correlated copies. Added branches and hops require a justified eligible consumer or distinct protective purpose; duplicate deliveries, message volume, and topology labels are not independent evidence."
+      },
+      {
+        "id": "L9-SIGNAL-003",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A signal feedback episode claimed to produce learning must identify an evidenced changed state consumable by a later eligible consumer; an unaccepted challenge remains a challenge, not completed learning. Such loops must use controls appropriate to their risks that prevent unbounded replay or unjustified convergence claims. Echoes, acknowledgments, finite hop limits, and cyclic routing alone do not establish learning, fixed-point convergence, or realized Strategic Value; no universal constellation-wide synchronization lap is required."
+      },
+      {
+        "id": "L9-SIGNAL-004",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A consequential signal outcome claim must distinguish production, attempted delivery, verified delivery, recipient acceptance, durable retention, actual later consumption, and any observed change in behavior or result. Evidence of an earlier stage does not establish a later one; a delivery or consumption observation alone is not a positive Strategic Value finding, and material failures or Unknown stages remain explicit."
+      }
+    ]
+  },
+  "projection_digest": "sha256:5100d200cfc69703afe27925ddc6ac94f9db401d0fc0051583d913ce9057707f",
+  "projection_profile_digest": "sha256:bf19a48c6d7c70dfedf9d295e6f88e43f7a80a255212a2bae4b109a371bce843",
+  "projection_profile_ref": "l9.projection/signals@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+  "source_ref": "l9.source/invariants@1"
+}

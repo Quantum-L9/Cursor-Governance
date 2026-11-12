@@ -474,6 +474,28 @@ def _admission_errors(blueprint: Path, *, admission_draft: bool) -> list[str]:
     return []
 
 
+_TEMPLATE_PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}")
+
+
+def _controller_identity(definition: dict[str, Any], program_id: str) -> str:
+    """The identity this runtime's receipts carry for their Controller.
+
+    An instantiated Controller declares its own id and that id is used as is.
+    A campaign hosted directly by the sealed template has no instantiation
+    step, so the declared id is still the unrendered template variable; every
+    handoff and closure receipt then named `{{CONTROLLER_ID}}` as its issuer.
+    A runtime hosted by the template is identified by the Program it was
+    bootstrapped for, in the form `TEMPLATE_VARIABLES.yaml` requires of an id.
+    """
+    declared = str(definition.get("id") or "").strip()
+    if declared and not _TEMPLATE_PLACEHOLDER.search(declared):
+        return declared
+    slug = re.sub(r"[^a-z0-9]+", "-", program_id.lower()).strip("-")
+    if not slug:
+        raise ControllerError("cannot derive a Controller id: the Program Lock names no program id")
+    return f"controller-{slug}"
+
+
 def bootstrap(
     workspace: Path,
     blueprint: Path,
@@ -524,7 +546,7 @@ def bootstrap(
         "schema": "program-execution-controller.runtime-config.v2",
         "template_root": str(template_root),
         "blueprint_root": str(blueprint),
-        "controller_id": controller_definition["id"],
+        "controller_id": _controller_identity(controller_definition, program_id),
         "controller_contract": controller_definition["contracts"]["controller"],
         "global_halt": False,
     }

@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "aliases": [],
@@ -398,7 +398,7 @@
       "superseded": "Repository identity replaced by another canonical coordinate while retained for historical resolution.\n"
     }
   },
-  "projection_digest": "sha256:1f92cae50afae63cc1552c37a11be38f9a712ff42c002dc4d00f47eab92ccf42",
+  "projection_digest": "sha256:f4c8ea03537942c36c7c88e11421f9ee23667e7ccf7209556c75c26a7ca18092",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",

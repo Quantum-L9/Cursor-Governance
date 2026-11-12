@@ -46,12 +46,16 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     _git_init,
     _host_repo,
     _load,
+    _projection_ok,
     _stack_ok,
 )
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
-ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+ACTIVATE = (
+    PE_ROOT.parents[1]
+    / "skills/_archived/l9-pe-campaign-activate/scripts/compile_activation_files.py"
+)
 
 # Records argv, then hands off to the real binary so the campaign still works.
 _RECORDING_SHIM = """#!/bin/sh
@@ -151,6 +155,7 @@ class LocalCommitOnlyTests(unittest.TestCase):
                     fast=True,
                     hooks=self.mod.Hooks(
                         context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
                         compile_activation=self.activate.compile_activation,
                     ),
                 )

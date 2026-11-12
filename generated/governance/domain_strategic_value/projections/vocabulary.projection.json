@@ -1,0 +1,73 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "terms": {
+      "bidirectional_value_propagation": {
+        "definition": "Temporally ordered causal effects between participants including a return to an earlier participant whose value may be positive, zero, or negative.",
+        "semantic_class": "causal_topology"
+      },
+      "capability_unlock": {
+        "definition": "An intervention enables a previously inaccessible future capability or feasible action with value derived from nonduplicated counterfactual effects.",
+        "semantic_class": "systemic_value_dimension"
+      },
+      "counterfactual_baseline": {
+        "definition": "Explicit feasible reference trajectory used to determine incremental value; it may include waiting or no intervention when feasible.",
+        "semantic_class": "decision_model"
+      },
+      "decision_boundary": {
+        "definition": "Conditions under which the preferred evaluated action changes, not a prediction that the conditions will occur.",
+        "semantic_class": "decision_analysis"
+      },
+      "decision_relevant_information_value": {
+        "definition": "Expected improvement in achievable decision utility due to additional evidence, distinct from information gain for its own sake.",
+        "semantic_class": "decision_valuation"
+      },
+      "future_effect_identity": {
+        "definition": "Stable causal identity of a material incremental future state delta within a time-indexed scenario; independently realized recurrence requires distinct period episode identities, whereas mutually exclusive scenario branches may reference the same underlying effect without adding their values together.",
+        "semantic_class": "evidence_identity"
+      },
+      "future_work_elimination": {
+        "definition": "Causally supported future labor or repeated effort avoided relative to a feasible baseline, booked once per underlying state delta.",
+        "semantic_class": "systemic_value_dimension"
+      },
+      "qualitative_strategic_value_screen": {
+        "definition": "A bounded, non-numerical, evidence- and uncertainty-explicit advisory appraisal of whether a feasible discretionary option could advance a specified objective for an identified beneficiary relative to a stated alternative or baseline, considering material adverse effects and displaced burdens. It may support a conditional directional claim but is not the quantified strategic_value_assessment, a computed optimum, verified causal forecast, Strategic Plan change, or action permission.",
+        "question": "Relative to what feasible alternative, for whose objective, with which supported effects, countervailing costs, and Unknowns might this option help?",
+        "semantic_class": "derived_assessment"
+      },
+      "realized_strategic_compounding": {
+        "definition": "An evidence-supported finding that a durable, attributable improvement from an earlier intervention was actually consumed by an authorized later decision or action and produced a distinct additional observed relevant net objective improvement relative to a stated later comparison, with material adverse effects, uncertainty and attribution limits preserved. Connectivity, signal delivery, storage, planned reuse, or unchanged echoes establish neither such consumption nor additional realized benefit. Any asserted numerical valuation separately invokes the admitted quantitative Strategic Value rules.",
+        "question": "What earlier improvement was later used, by whom, and what separately observable additional difference followed that use?",
+        "semantic_class": "derived_assessment"
+      },
+      "strategic_value": {
+        "artifact_id": "l9.strategic.value@1",
+        "definition": "Expected net objective-relative utility of an admissible action under a declared DecisionModel, baseline, horizon, compatible units and uncertainty, including mutually exclusive, exhaustively reconciled immediate, future, direct-cost, expected-risk-loss and opportunity-cost effects. Separately subtract only costs and losses not already embedded in net utility flows; evaluation is not authority.",
+        "detailed_model": "strategic_value_model.yaml",
+        "semantic_class": "optimization"
+      },
+      "strategic_value_assessment": {
+        "definition": "Evidence- and revision-bound quantitative comparison of admissible alternatives under a declared objective and compatible utility unit that preserves uncertainty and separates forecast from realization.",
+        "semantic_class": "derived_assessment"
+      },
+      "systemic_future_value": {
+        "definition": "Expected counterfactual change in future reachable utility caused by an intervention relative to an explicit feasible baseline, excluding immediate and already-booked changes, evaluated with a bounded, question-appropriate numerical method, including discounted scenario expectations when applicable, with evidence-based uncertainty and stopping controls.",
+        "detailed_model": "strategic_value_model.yaml",
+        "semantic_class": "optimization"
+      },
+      "value_propagation_mesh": {
+        "definition": "Bounded branching, reconvergent or feedback topology whose shared state deltas are valued once with explicit causation, attribution and stopping controls.",
+        "semantic_class": "causal_topology"
+      }
+    }
+  },
+  "projection_digest": "sha256:f870129820382b2c78382d9141266d808beb14569e824653523a583223d50fcd",
+  "projection_profile_digest": "sha256:1c417874bfc3a16648906d01bda3e80040269fab3120738aa29b932c4cc7f1d4",
+  "projection_profile_ref": "l9.projection/strategic-value@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+  "source_ref": "l9.source/vocabulary@1"
+}

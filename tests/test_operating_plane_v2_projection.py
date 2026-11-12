@@ -60,14 +60,16 @@ def test_json_format_keeps_the_status_exit_code(tmp_path: Path) -> None:
     assert '"status": "UNVERIFIED"' in completed.stdout
 
 
-def test_both_session_start_hooks_report_the_operating_plane_projection() -> None:
+def test_both_session_start_hooks_autobind_the_operating_plane_without_a_skill() -> None:
+    # Each host's SessionStart calls the host binding itself; no skill is involved.
     cursor = CURSOR_HOOK.read_text(encoding="utf-8")
-    assert "ops/scripts/operating_plane_v2_projection.py" in cursor
-    assert '--mode admitted --workspace "$WS_ROOT" --format markdown' in cursor
-    assert cursor.index("${CODING_PROJECTION_MD}") < cursor.index("${OPERATING_PLANE_MD}")
+    assert '"$HOST_BINDING_PY"' in cursor
+    assert '--host cursor --workspace "$WS_ROOT" --format markdown' in cursor
+    assert "--domains-only" not in cursor
+    assert cursor.index("${CODING_PROJECTION_MD}") < cursor.index("${DEFAULT_BINDING_MD}")
     claude = CLAUDE_HOOK.read_text(encoding="utf-8")
     assert "emit_operating_plane_projection() {" in claude
-    assert '--mode admitted --workspace "$WORKSPACE" --format line' in claude
+    assert '"$control" --host claude-code --workspace "$WORKSPACE" --format line' in claude
     assert claude.index('emit_coding_projection "$PY"') < claude.index(
         'emit_operating_plane_projection "$PY"'
     )

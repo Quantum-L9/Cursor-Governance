@@ -77,7 +77,30 @@ def build_context_manifest(contract: Mapping[str, Any]) -> dict[str, Any]:
             "Stay inside its worktree, requested actions, writable paths, and stop conditions.",
             "Return only JSON. changed_files MUST be a JSON array of repo-relative paths.",
             "candidate_sha MUST be JSON null — do not git add or git commit; PE commits later.",
-            "Also include validation_results (array) and residual_unknowns (array).",
+            "Also include validation_results (array) and residual_unknowns (array of strings).",
+            (
+                "validation_results MUST hold exactly one entry per command in the contract's "
+                "validation_commands, in that order, and no other entry: the Controller refuses "
+                "an attempt whose claimed commands differ from the contract's. Anything else "
+                "you ran or observed belongs in that entry's evidence text."
+            ),
+            (
+                "Each validation_results entry MUST be an object with exactly these four keys: "
+                'command (string), status ("PASS", "FAIL", "BLOCKED" or "UNKNOWN"), '
+                "exit_code (integer or null), evidence (string or null)."
+            ),
+            'claimed_status MUST be "completed" when the contract was executed.',
+            (
+                "residual_unknowns is a blocking field: every entry stops the Controller from "
+                "accepting this attempt. List only a fact you could not establish that leaves "
+                "the contract objective unmet; use [] when there is none."
+            ),
+            (
+                "Not residual unknowns: gate and acceptance-criteria evaluation (the "
+                "Controller's), pre-existing untracked worktree wiring (.cursor-commands, "
+                ".cursor/, .l9/), and anything outside writable_paths, which is refused and is "
+                "not yours to do."
+            ),
             "Do not claim independent verification or program convergence.",
             compact_contract,
         ]
