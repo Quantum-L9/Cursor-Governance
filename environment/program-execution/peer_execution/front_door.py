@@ -78,6 +78,9 @@ class PeerExecutionRequest:
     #: it a retry after any dispatch is refused for a mutating contract.
     fence_prior_attempt: Callable[[dict[str, Any]], bool] | None = None
     repository_root: Path | None = None
+    #: The verified projection the program is bound to
+    #: (`peer_execution.context.projection_context`). Handed to every window.
+    projection: Mapping[str, Any] | None = None
 
     @property
     def task_id(self) -> str:
@@ -203,14 +206,28 @@ def bind_root_authority(
     binder(dict(autonomy_authority))
 
 
+def bind_projection(*, adapter: Any, projection: Mapping[str, Any] | None) -> None:
+    """Attach the program's verified projection to the adapter, or fail closed."""
+    if projection is None:
+        return
+    binder = getattr(adapter, "bind_projection", None)
+    if not callable(binder):
+        raise ValueError(
+            f"ADAPTER_CANNOT_CARRY_PROJECTION: {type(adapter).__name__} has no projection carrier"
+        )
+    binder(dict(projection))
+
+
 def dispatch_provider(
     *,
     contract: Mapping[str, Any],
     adapter: Any,
     autonomy_authority: Mapping[str, Any] | None = None,
+    projection: Mapping[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """prepare + dispatch. Returns (dispatch_id, prepared, dispatched)."""
     bind_root_authority(adapter=adapter, contract=contract, autonomy_authority=autonomy_authority)
+    bind_projection(adapter=adapter, projection=projection)
     prepared = adapter.prepare(dict(contract))
     dispatched = adapter.dispatch({"dispatch_id": prepared.dispatch_id})
     return str(prepared.dispatch_id), prepared.to_dict(), dispatched.to_dict()
@@ -488,6 +505,7 @@ def execute(
                     contract=contract,
                     adapter=adapter,
                     autonomy_authority=request.autonomy_authority,
+                    projection=request.projection,
                 )
             except AdapterFailure as exc:
                 code = exc.code.value

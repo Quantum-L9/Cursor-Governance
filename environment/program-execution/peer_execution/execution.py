@@ -182,6 +182,10 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             if autonomy_authority is not None
             else None
         )
+        #: The projection this program is bound to, verified, handed to every
+        #: window this adapter opens. Like root authority it travels beside the
+        #: rendered contract, never inside it or its digest.
+        self.projection: dict[str, Any] | None = None
         self.adapter_id = _required_string("adapter_id", self.descriptor.get("adapter_id"))
         self.adapter_version = _required_string(
             "adapter_version",
@@ -230,6 +234,10 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         self.autonomy_authority = (
             validate_autonomy_authority(authority) if authority is not None else None
         )
+
+    def bind_projection(self, projection: Mapping[str, Any] | None) -> None:
+        """Carry the program's verified projection into the windows this adapter opens."""
+        self.projection = dict(projection) if projection is not None else None
 
     def _authority_for(self, contract: Mapping[str, Any]) -> dict[str, Any] | None:
         """This adapter's authority, refused when it belongs to another task."""
@@ -302,7 +310,9 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
     ) -> CanonicalExecutionRequest:
         contract = binding.raw
         dispatch_id = _required_string("dispatch_id", record.get("dispatch_id"))
-        context_path = write_context_manifest(self.runtime.root, dispatch_id, contract)
+        context_path = write_context_manifest(
+            self.runtime.root, dispatch_id, contract, self.projection
+        )
         context_value = json.loads(context_path.read_text(encoding="utf-8"))
         context_errors = self.schemas.validate_context_manifest(context_value)
         if context_errors:

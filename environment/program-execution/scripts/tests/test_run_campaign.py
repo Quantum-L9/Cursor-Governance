@@ -228,22 +228,37 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
 
 
 def _projection_ok(authority):
-    """Stand-in for the bootstrap projection binding.
+    """Stand-in for the verdict of the bootstrap projection binding.
 
-    The live binding needs a verified `Quantum-L9/.github` checkout, which a
+    The live verdict needs a verified `Quantum-L9/.github` checkout, which a
     unit suite does not have. Like `_stack_ok`, the stand-in is injected through
-    `Hooks`; the runner honors no environment skip.
+    `Hooks`; the runner honors no environment skip. Only the verdict is stood
+    in: the views are the committed bundle's own files with their real digests,
+    so every window still hands its worker the bytes that were bound.
     """
+    import hashlib
+
     declared = authority["projection_binding"]
+    gov = PE_ROOT.parents[1]
+    binding = yaml.safe_load((gov / declared["binding"]).read_text(encoding="utf-8"))
+    bundle = gov / binding["bundle"]["path"]
+    lock = bundle / binding["bundle"]["lock"]
+    views = [
+        {
+            "path": str(path.relative_to(gov)),
+            "digest": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        for path in sorted((bundle / "projections").glob("*.projection.json"))
+    ]
     return {
         "schema": "l9.program-execution.coding-projection-binding.v1",
         "profile_ref": declared["profile_ref"],
         "binding": declared["binding"],
         "status": "CURRENT",
         "admission": "ADMITTED_AND_CURRENT",
-        "bundle_revision": "0" * 40,
-        "bundle_lock_digest": "sha256:" + "0" * 64,
-        "views": [],
+        "bundle_revision": json.loads(lock.read_text(encoding="utf-8"))["authority"]["revision"],
+        "bundle_lock_digest": "sha256:" + hashlib.sha256(lock.read_bytes()).hexdigest(),
+        "views": views,
         "bound_at": "2026-01-01T00:00:00Z",
     }
 

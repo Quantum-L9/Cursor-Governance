@@ -3446,6 +3446,7 @@ def _run_peer_execution(
     front_door = _peer_pipeline()
     if autonomy_authority is None:
         autonomy_authority = _task_autonomy_authority(workspace, contract)
+    projection = bound_projection_context(workspace)
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
     attempt = _live_controller_attempt(workspace, str(task_id or ""))
@@ -3458,6 +3459,7 @@ def _run_peer_execution(
         autonomy_authority=autonomy_authority,
         attempt_id=(attempt or {}).get("attempt_id"),
         lease_id=(attempt or {}).get("lease_id"),
+        projection=projection,
     )
     try:
         outcome = front_door.execute(request)
@@ -3502,6 +3504,38 @@ def _run_peer_execution(
         "attempt_id": outcome.get("attempt_id"),
         "lease_id": outcome.get("lease_id"),
     }
+
+
+def bound_projection_context(workspace: Path) -> dict[str, Any]:
+    """The projection this campaign was bound to, re-verified for one window.
+
+    The binding is recorded when the campaign is bootstrapped or resumed
+    (`runtime/coding-projection-binding.json`). A campaign with no record was
+    never bound and dispatches nothing; a view whose bytes no longer carry the
+    bound digest is refused rather than handed to a worker.
+    """
+    path = workspace / "runtime" / "coding-projection-binding.json"
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignError(
+            f"no projection binding is recorded at {path}; a campaign that was not bound "
+            "to its execution projection dispatches no worker",
+            error_code="PROJECTION_BINDING_UNRECORDED",
+        ) from exc
+    verified = record.get("verified") if isinstance(record, dict) else None
+    binding = (verified or [None])[-1] or (record or {}).get("bootstrap")
+    if not isinstance(binding, dict):
+        raise CampaignError(
+            f"{path} carries no binding", error_code="PROJECTION_BINDING_UNRECORDED"
+        )
+    _peer_imports()
+    from peer_execution.context import projection_context  # noqa: PLC0415
+
+    try:
+        return projection_context(binding, GOV_ROOT)
+    except ValueError as exc:
+        raise CampaignError(str(exc), error_code="PROJECTION_NOT_HANDED") from exc
 
 
 def _live_controller_attempt(workspace: Path, task_id: str) -> dict[str, Any] | None:
