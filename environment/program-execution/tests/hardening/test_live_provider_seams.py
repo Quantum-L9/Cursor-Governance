@@ -119,6 +119,10 @@ def test_the_instruction_states_the_shape_the_receipt_schema_enforces() -> None:
     for field in ("command", "status", "exit_code", "evidence", "claimed_status"):
         assert field in instruction
     assert "residual_unknowns is a blocking field" in instruction
+    # The Controller's `worker_validation_claim` gate compares the claimed
+    # commands with the contract's; a live resumed window added its own.
+    assert "exactly one entry per command" in instruction
+    assert "no other entry" in instruction
 
 
 @pytest.mark.parametrize(

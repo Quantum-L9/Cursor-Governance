@@ -1835,7 +1835,7 @@
     },
     {
       "path": "peer_execution/context.py",
-      "sha256": "b74e3d0ba7d2719f72bce0610f7c640f0ca143a94a83e6b036a0944e23616eea"
+      "sha256": "b4a99d21f9e476b8cb01dbc24ff9fcd8b459a51615464fd62415b544f5b19a55"
     },
     {
       "path": "peer_execution/contracts.py",
@@ -2339,7 +2339,7 @@
     },
     {
       "path": "tests/hardening/test_live_provider_seams.py",
-      "sha256": "b76529ace9a95731814ba2f6f69c139dfb0f24e9e044907c1b8bc3a2dac84888"
+      "sha256": "56af17baebad84f655387b4d278932e4ac43a152e35263b0a91d91d9359b3b3c"
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",

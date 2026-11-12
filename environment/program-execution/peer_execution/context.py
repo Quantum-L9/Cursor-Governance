@@ -78,6 +78,10 @@ def build_context_manifest(contract: Mapping[str, Any]) -> dict[str, Any]:
             "Return only JSON. changed_files MUST be a JSON array of repo-relative paths.",
             "candidate_sha MUST be JSON null — do not git add or git commit; PE commits later.",
             "Also include validation_results (array) and residual_unknowns (array of strings).",
+            "validation_results MUST hold exactly one entry per command in the contract's "
+            "validation_commands, in that order, and no other entry: the Controller refuses an "
+            "attempt whose claimed commands differ from the contract's. Anything else you ran "
+            "or observed belongs in that entry's evidence text.",
             "Each validation_results entry MUST be an object with exactly these four keys: "
             'command (string), status ("PASS", "FAIL", "BLOCKED" or "UNKNOWN"), '
             "exit_code (integer or null), evidence (string or null).",
