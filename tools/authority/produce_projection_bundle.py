@@ -9,6 +9,13 @@ digest, composition and receipt comes from ``l9-semantic-compiler`` (``projectio
 stable names and writes ``bundle.lock.json`` (``l9.projection-bundle/v1``), which names each
 file with its sha256 and binds the authority, profile, composition and producer coordinates.
 
+``--binding`` takes a canonical domain consumer binding
+(``semantics/domain_consumer_bindings.yaml``, ADR-033) instead of a profile. It enforces
+BINDING-001..004 at the pinned revision, writes one such bundle per required domain under
+``<output>/<domain>/`` and a ``binding.lock.json`` (``l9.domain-binding-bundle/v1``) indexing
+them. It records conditional domains without materializing them, records cross-domain
+composition as not produced, and activates nothing.
+
 ``--check`` regenerates into a temporary directory and fails when any committed byte differs.
 Consumers verify the committed bundle with their own skill verifier:
 ``skills/l9-global-architect/scripts/verify_architecture_intelligence.py`` and
@@ -99,6 +106,25 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "output": Path("generated/governance/domain_signals"),
     },
 }
+
+# Canonical domain consumer bindings (Quantum-L9/.github ADR-033) this repository materializes,
+# and the directory each binding bundle is committed to. A binding is read from the authority at
+# the pinned revision; this map names only where its bundle lives.
+BINDING_CATALOG = "semantics/domain_consumer_bindings.yaml"
+BINDING_LOCK_SCHEMA = "l9.domain-binding-bundle/v1"
+DOMAIN_CLASS = "domain"
+BINDINGS: dict[str, dict[str, Any]] = {
+    "l9.domain-consumer-binding/coding-agent@1": {
+        "output": Path("generated/governance/domain_bindings/coding_agent"),
+    },
+}
+# No producer revision exposes composition of a binding's domain set (the compatibility and
+# provenance contracts); .github v3.36.0 records it as an open blocker. The lock says so instead
+# of implying a composed view.
+CROSS_DOMAIN_COMPOSITION_REASON = (
+    "the producer exposes no binding-domain-set composition; "
+    "Quantum-L9/.github docs/candidates/domain-projection-architecture-v1 open blocker"
+)
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -179,6 +205,159 @@ def composition_pin(authority_root: Path, revision: str, composition_ref: str) -
     if len(entries) != 1:
         raise ProductionError(f"{composition_ref} is not declared exactly once at {revision}")
     return {"ref": composition_ref, "digest": _canonical_digest(entries[0])}
+
+
+def domain_directory(profile_ref: str) -> str:
+    """``l9.projection/capabilities-dependencies@1`` -> ``capabilities_dependencies``."""
+    match = re.fullmatch(r"l9\.projection/([a-z0-9]+(?:-[a-z0-9]+)*)@[0-9]+", profile_ref)
+    if match is None:
+        raise ProductionError(f"{profile_ref} is not a projection profile ref")
+    return match.group(1).replace("-", "_")
+
+
+def binding_plan(authority_root: Path, revision: str, binding_ref: str) -> dict[str, Any]:
+    """Resolve *binding_ref* at *revision* and enforce BINDING-001..004 before producing anything.
+
+    Everything comes from the canonical catalogs at the pinned commit: the binding selects, the
+    driver only checks that the selection is well formed and grants nothing.
+    """
+    catalog = _git_show(authority_root, revision, BINDING_CATALOG) or {}
+    entries = [
+        b for b in catalog.get("bindings", []) if isinstance(b, dict) and b.get("id") == binding_ref
+    ]
+    if len(entries) != 1:
+        raise ProductionError(f"{binding_ref} is not declared exactly once at {revision}")
+    binding = entries[0]
+    profiles = (_git_show(authority_root, revision, PROFILE_CATALOG) or {}).get(
+        "projection_profiles", []
+    )
+
+    def _domain(ref: Any) -> dict[str, Any]:
+        matches = [p for p in profiles if isinstance(p, dict) and p.get("id") == ref]
+        if len(matches) != 1 or matches[0].get("class") != DOMAIN_CLASS:
+            msg = f"BINDING-001: {ref} does not resolve to exactly one domain profile"
+            raise ProductionError(msg)
+        return matches[0]
+
+    required = binding.get("requires")
+    conditional = binding.get("conditional") or []
+    if not isinstance(required, list) or not required or not isinstance(conditional, list):
+        raise ProductionError(f"{binding_ref} declares no required domain list")
+    if len(set(required)) != len(required):
+        raise ProductionError(f"BINDING-001: {binding_ref} requires a domain twice")
+    activations = set((catalog.get("activation_conditions") or {}).keys())
+    conditional_refs = []
+    for item in conditional:
+        ref = item.get("profile") if isinstance(item, dict) else None
+        if ref in required or ref in conditional_refs:
+            raise ProductionError(f"BINDING-002: {ref} is both required and conditional")
+        if item.get("activation") not in activations:
+            raise ProductionError(f"BINDING-002: {ref} names an undeclared activation condition")
+        conditional_refs.append(ref)
+    pinned = {str(ref): _canonical_digest(_domain(ref)) for ref in required}
+    for ref in conditional_refs:
+        _domain(ref)
+    consumer = binding.get("consumer") or {}
+    kind = (catalog.get("consumer_kinds") or {}).get(consumer.get("kind"))
+    if not isinstance(kind, dict):
+        raise ProductionError(f"BINDING-003: {binding_ref} names an undeclared consumer kind")
+    if any(consumer.get(k) in (None, "", []) for k in kind.get("requires") or []) or any(
+        k in consumer for k in kind.get("forbids") or []
+    ):
+        raise ProductionError(f"BINDING-003: {binding_ref} consumer identity has the wrong shape")
+    authority = binding.get("authority") or {}
+    if authority.get("binding_grants_permissions") is not False or (
+        authority.get("action_authority") != "externally_resolved"
+    ):
+        raise ProductionError(f"BINDING-004: {binding_ref} is not authority-neutral")
+    return {
+        "binding": {"ref": binding_ref, "digest": _canonical_digest(binding)},
+        "consumer": {"kind": consumer.get("kind"), "identity": consumer.get("identity")},
+        "required": [{"ref": str(ref), "digest": pinned[str(ref)]} for ref in required],
+        "conditional": [
+            {"ref": str(item["profile"]), "activation": str(item["activation"])}
+            for item in conditional
+        ],
+        "unresolved": [
+            {"coordinate": str(u.get("coordinate")), "blocks": str(u.get("blocks"))}
+            for u in binding.get("unresolved") or []
+            if isinstance(u, dict)
+        ],
+        "composition": catalog.get("composition") or {},
+    }
+
+
+def produce_binding(
+    *,
+    compiler: list[str],
+    authority_root: Path,
+    revision: str,
+    compiler_revision: str,
+    binding_ref: str,
+    output: Path,
+) -> None:
+    """One per-domain bundle for every required domain of *binding_ref*, plus binding.lock.json.
+
+    Each domain bundle is exactly what ``produce`` writes for that profile (no per-domain
+    composition). Conditional domains are recorded, never materialized. The binding lock indexes
+    the domain locks by digest; it composes nothing and activates nothing.
+    """
+    if not _SHA.match(revision) or not _SHA.match(compiler_revision):
+        raise ProductionError("--authority-revision and --compiler-revision are full 40-hex SHAs")
+    if _git_head(authority_root) != revision:
+        raise ProductionError(f"authority checkout HEAD is not {revision}")
+    plan = binding_plan(authority_root, revision, binding_ref)
+    output.mkdir(parents=True)
+    domains: list[dict[str, Any]] = []
+    producer: dict[str, Any] | None = None
+    for domain in plan["required"]:
+        directory = domain_directory(domain["ref"])
+        produce(
+            compiler=compiler,
+            authority_root=authority_root,
+            revision=revision,
+            compiler_revision=compiler_revision,
+            profile_ref=domain["ref"],
+            composition_ref=None,
+            output=output / directory,
+        )
+        lock_path = output / directory / "bundle.lock.json"
+        lock = json.loads(lock_path.read_text())
+        if lock["projection_profile"] != domain:
+            raise ProductionError(f"the compiler bound {domain['ref']} to another profile digest")
+        if producer is not None and lock["producer"] != producer:
+            raise ProductionError("the domain bundles were cut by different producers")
+        producer = lock["producer"]
+        domains.append(
+            {
+                "profile": domain,
+                "path": directory,
+                "lock": f"{directory}/bundle.lock.json",
+                "lock_sha256": _sha256(lock_path),
+            }
+        )
+    blocked_by = [u["coordinate"] for u in plan["unresolved"]] + ["cross_domain_composition"]
+    binding_lock: dict[str, Any] = {
+        "schema": BINDING_LOCK_SCHEMA,
+        "authority": {"repository": REPOSITORY, "revision": revision},
+        "producer": producer,
+        "generated_by": GENERATED_BY,
+        "binding": plan["binding"],
+        "consumer": plan["consumer"],
+        "domains": domains,
+        "conditional": plan["conditional"],
+        "unresolved": plan["unresolved"],
+        "cross_domain_composition": {
+            "status": "not_produced",
+            "compatibility_contract": plan["composition"].get("compatibility_contract"),
+            "provenance_contract": plan["composition"].get("provenance_contract"),
+            "reason": CROSS_DOMAIN_COMPOSITION_REASON,
+        },
+        "activation": {"status": "blocked", "blocked_by": blocked_by},
+    }
+    (output / "binding.lock.json").write_text(
+        json.dumps(binding_lock, indent=2, sort_keys=True) + "\n"
+    )
 
 
 def produce(
@@ -356,8 +535,12 @@ def _tree(root: Path) -> dict[str, bytes]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Produce a consumer-committed projection bundle.")
-    parser.add_argument(
-        "--profile", required=True, choices=sorted(BUNDLES), help="projection profile ref"
+    subject = parser.add_mutually_exclusive_group(required=True)
+    subject.add_argument("--profile", choices=sorted(BUNDLES), help="projection profile ref")
+    subject.add_argument(
+        "--binding",
+        choices=sorted(BINDINGS),
+        help="canonical domain consumer binding ref: one bundle per required domain",
     )
     parser.add_argument(
         "--composition-profile",
@@ -377,26 +560,39 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
-    declared = BUNDLES[args.profile]
-    composition_ref = (
-        declared["composition_profile"]
-        if args.composition_profile is None
-        else (None if args.composition_profile == "none" else args.composition_profile)
-    )
+    if args.binding is not None and args.composition_profile is not None:
+        parser.error("--composition-profile applies to --profile only")
+    label = args.profile or args.binding
+    declared = BUNDLES[args.profile] if args.profile else BINDINGS[args.binding]
     output: Path = args.output if args.output is not None else declared["output"]
     compiler = shlex.split(args.compiler)
     try:
         with tempfile.TemporaryDirectory() as scratch_name:
             fresh = Path(scratch_name) / "bundle"
-            produce(
-                compiler=compiler,
-                authority_root=args.authority_root.resolve(),
-                revision=args.authority_revision,
-                compiler_revision=args.compiler_revision,
-                profile_ref=args.profile,
-                composition_ref=composition_ref,
-                output=fresh,
-            )
+            if args.binding is not None:
+                produce_binding(
+                    compiler=compiler,
+                    authority_root=args.authority_root.resolve(),
+                    revision=args.authority_revision,
+                    compiler_revision=args.compiler_revision,
+                    binding_ref=args.binding,
+                    output=fresh,
+                )
+            else:
+                composition_ref = (
+                    declared["composition_profile"]
+                    if args.composition_profile is None
+                    else (None if args.composition_profile == "none" else args.composition_profile)
+                )
+                produce(
+                    compiler=compiler,
+                    authority_root=args.authority_root.resolve(),
+                    revision=args.authority_revision,
+                    compiler_revision=args.compiler_revision,
+                    profile_ref=args.profile,
+                    composition_ref=composition_ref,
+                    output=fresh,
+                )
             if args.check:
                 committed = _tree(output) if output.is_dir() else {}
                 regenerated = _tree(fresh)
@@ -407,13 +603,13 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 if drift:
                     print(
-                        f"stale projection bundle {args.profile}:",
+                        f"stale projection bundle {label}:",
                         *drift,
                         sep="\n  ",
                         file=sys.stderr,
                     )
                     return 1
-                print(f"projection bundle {args.profile} is current at {args.authority_revision}")
+                print(f"projection bundle {label} is current at {args.authority_revision}")
                 return 0
             if output.exists():
                 shutil.rmtree(output)
