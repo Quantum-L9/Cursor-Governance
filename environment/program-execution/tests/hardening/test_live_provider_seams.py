@@ -218,3 +218,69 @@ def test_a_symlinked_receipt_directory_is_never_followed(worktree: Path, tmp_pat
     (worktree / RECEIPTS).symlink_to(outside, target_is_directory=True)
     assert campaign.relocate_host_session_residue(worktree, tmp_path / "residue", {}) == []
     assert (outside / "keep.json").is_file()
+
+
+# -- a worker window is not an operator session ------------------------------
+
+
+def _inspect_request(worktree: Path) -> Any:
+    from peer_execution.provider import CanonicalExecutionRequest
+
+    digest = "sha256:" + "0" * 64
+    return CanonicalExecutionRequest(
+        execution_id="exec-seam",
+        task_id="TASK-SEAM",
+        program_lock_digest=digest,
+        rendered_contract_digest=digest,
+        worktree_ref=str(worktree),
+        objective="Inspect",
+        context_manifest_ref=str(worktree / "context.json"),
+        context_manifest_digest=digest,
+        rendered_contract={"task_id": "TASK-SEAM", "validation_commands": []},
+        worker_instruction="inspect",
+        permission_profile_ref="profile-seam",
+        permission_profile={"profile_ref": "profile-seam", "allowed_actions": ["inspect"]},
+        inference_budget={"max_turns": 2},
+        timeout_budget={"dispatch_seconds": 30, "poll_seconds": 5},
+        requested_capabilities=("inspect",),
+        telemetry_context={"task_id": "TASK-SEAM"},
+        agent_ref="claude-code",
+        surface="claude-code-cli",
+        provider_ref="claude-code-direct",
+        execution_profile_ref="claude-code-autonomous",
+        autonomy_authority=None,
+    )
+
+
+def test_the_window_loads_no_operator_settings_and_no_mcp_server(
+    worktree: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _provider()
+    launched: dict[str, Any] = {}
+
+    def capture(argv: list[str], **kwargs: Any) -> Any:
+        launched["argv"] = list(argv)
+        raise RuntimeError("captured before launch")
+
+    monkeypatch.setattr(module, "run_argv", capture)
+    with pytest.raises(RuntimeError, match="captured before launch"):
+        module.ClaudeCodeProvider(worktree, _REPO_ROOT).invoke(_inspect_request(worktree))
+    argv = launched["argv"]
+    assert argv[argv.index("--setting-sources") + 1] == "project,local"
+    assert "user" not in argv[argv.index("--setting-sources") + 1].split(",")
+    assert "--strict-mcp-config" in argv
+    assert "--mcp-config" not in argv
+    # No authority, so no mutation tools and no effect hook to register.
+    assert "--settings" not in argv
+    allowed = argv[argv.index("--allowedTools") + 1].split(",")
+    assert "Write" not in allowed and "Edit" not in allowed
+
+
+def test_read_denials_the_operator_settings_carried_are_stated_by_the_renderer() -> None:
+    renderer = load_module(
+        _PE_ROOT / "adapters/claude-code/permission_renderer.py", "seams_permission_renderer"
+    )
+    denied = renderer.render_permissions({"allowed_actions": ["inspect", "local_write"]}, {})[
+        "denied"
+    ]
+    assert {"Read(./.env)", "Read(./.mcp.json)"} <= set(denied)

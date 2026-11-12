@@ -39,6 +39,18 @@ HOOK_SURFACE_PATHS = (
 WORKER_EFFECT_MATCHER = "Bash|Edit|Write|MultiEdit|NotebookEdit"
 WORKER_EFFECT_HOOK_TIMEOUT_SECONDS = 60
 
+#: A worker window executes one rendered contract; it is not an operator
+#: session. Loading the operator's user-level settings gave every window the
+#: whole interactive surface -- plugins, MCP servers, session hooks and the
+#: full rule corpus -- which measured ~107k tokens of context creation per
+#: window against ~8k without it, and is where the host session receipts in a
+#: task worktree came from. The window therefore loads the target repository's
+#: own settings only, and no MCP server at all. What governs its effects is
+#: explicit and travels with it: the tool allowlist rendered from the
+#: contract, and the effect hook registered through `--settings`, which hands
+#: every allowed effect to the root execution gate.
+WORKER_SETTING_SOURCES = "project,local"
+
 #: Authority fields the live hook needs, and nothing else. The sidecar carries
 #: more (campaign/graph/action ids, capabilities, the peer binding); exporting
 #: those into a worker's environment would widen what a compromised worker can
@@ -194,6 +206,9 @@ class ClaudeCodeProvider:
             ",".join(permissions["allowed"]),
             "--disallowedTools",
             ",".join(permissions["denied"]),
+            "--setting-sources",
+            WORKER_SETTING_SOURCES,
+            "--strict-mcp-config",
         ]
         authority_environment = self._authority_environment(request)
         if authority_environment:

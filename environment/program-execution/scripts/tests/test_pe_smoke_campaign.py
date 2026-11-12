@@ -417,6 +417,14 @@ class PeSmokeCampaignTests(unittest.TestCase):
             states = {i["id"]: i["runtime_state"] for i in _pec(workspace, "status")["tasks"]}
             self.assertEqual(states["TASK-001"], "COMPLETED")
             self.assertEqual(states["TASK-002"], "COMPLETED")
+            # A resumed campaign reports progress like a fresh one, and its
+            # timing record continues the interrupted run's instead of
+            # replacing it.
+            progress = json.loads((workspace / "runtime/PROGRESS.json").read_text("utf-8"))
+            self.assertEqual(progress["execution"], {"done": 2, "total": 2})
+            timings = json.loads((workspace / "runtime/TIMINGS.json").read_text("utf-8"))
+            recorded = [entry["stage"] for entry in timings["stages"]]
+            self.assertLessEqual({"compile", "bootstrap", "arm", "execute"}, set(recorded))
             # The resumed window ran under the lease its dispatch was granted,
             # and that lease holds no live authority once the task completed.
             grant = json.loads(

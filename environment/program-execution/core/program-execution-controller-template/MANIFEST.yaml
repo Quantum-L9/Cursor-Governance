@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
 - path: scripts/pec/controller.py
-  sha256: b87fe377738c61ce9cae9fa0b739d362fef8f26f0f5503189c15c0d37260b4ca
+  sha256: 299c0ee2a6ce6104f1ff66ad34055688a0eeceeb8441b2d6c6499fd8a98ce07d
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -148,6 +148,8 @@ files:
   sha256: 31cb4d4d20f262bc3eacc1a3c2d19628bb47ff105c9e9d36213e8a8943e9cb49
 - path: scripts/tests/test_changed_files.py
   sha256: c189ec7f2e7988066e935d03f3d6a4dd82f7c9c91e133822898d1b65d6560551
+- path: scripts/tests/test_controller_identity.py
+  sha256: e92cdb296eaf5711f7a9f420e7630639a9ec9bf4dfdcfcdb87245f469af566f1
 - path: scripts/tests/test_controller_success.py
   sha256: 77fd8817dbeb512ef455dc72acb1a82d9de173c5b835e652aacae848911fa78f
 - path: scripts/tests/test_decision_unknown.py

@@ -131,11 +131,11 @@
     },
     {
       "path": "adapters/claude-code/permission_renderer.py",
-      "sha256": "cd401a416d4da5e0fae33dbd8bb119ca8f208a2f3bd55700567e3c245a0cdbd7"
+      "sha256": "c10ce5eb541bf467b3d04f6afd3d91634b0adab48ae467002620a50fcf6e5465"
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "e962d95c77e0274f065ac096d694277433948981380b41b17d3aabf237495f97"
+      "sha256": "4a03ce04c118a05d2138c5ae2a6832861f4cc1675eb20b07a3b4a2d6680244ff"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -2115,7 +2115,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "9e956a92786beccdc0a6693720100df39c65a809a9cbc8d6b51c343afeda9a7b"
+      "sha256": "37907faaaacf42c4a771b2be5dcd0352a8e933ad4711e88846124af233057d42"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2155,7 +2155,7 @@
     },
     {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
-      "sha256": "2ca77d5e3a5a26dc530e276b3f5abbbb2d755e18d71768c0ac998c360b657907"
+      "sha256": "59fdff64d01605e7c39797983a062362812272129eee5fc75f10f9cb28aadad2"
     },
     {
       "path": "scripts/tests/test_collect_evidence_memory_lookup.py",
@@ -2207,7 +2207,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "142594b97cf5599b5210b36ec0bf498c8c120ff96e0eb722a0a90591fcf979e6"
+      "sha256": "014007242eafb0f7deb87af9da3613242add2c99c3b1d0b7276362f2dcf818ad"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2263,11 +2263,11 @@
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
-      "sha256": "66370314563cea2b5f8c3ea90d6f2405f66597c8f02eb79751f05b3c1740a61f"
+      "sha256": "c5c1a3e7261d7b117047ee94d61a0654300fc394d51c3c6527155ea755df43fc"
     },
     {
       "path": "scripts/validate_campaign_promotion.py",
-      "sha256": "af97f62fedf96f213e93d11220df3dc8c0bb7f76647af9fd3add737e61d7f3c7"
+      "sha256": "01b5b999623a8f179dff7a07b28aa9443e76dee23fcc7bd7f2503d9332cc637c"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
@@ -2339,7 +2339,7 @@
     },
     {
       "path": "tests/hardening/test_live_provider_seams.py",
-      "sha256": "7b9e76479702764871994fb83b23af26ee5d851af88351d78981e126b4d09954"
+      "sha256": "b76529ace9a95731814ba2f6f69c139dfb0f24e9e044907c1b8bc3a2dac84888"
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",

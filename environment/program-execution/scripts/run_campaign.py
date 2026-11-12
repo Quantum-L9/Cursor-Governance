@@ -5753,6 +5753,26 @@ def attest_resume_source(
     }
 
 
+def resumed_stage_timer(timing: Any, pec_workspace: Path) -> Any:
+    """A stage timer that continues the interrupted run's record.
+
+    A fresh `StageTimer(workspace)` starts empty and its first flush replaces
+    `runtime/TIMINGS.json`, so resuming used to erase how long preparation and
+    the completed tasks took. The stages already recorded are carried forward;
+    an unreadable record is not trusted and the timer starts empty.
+    """
+    timer = timing.StageTimer(pec_workspace)
+    recorded = pec_workspace / "runtime" / "TIMINGS.json"
+    try:
+        prior = json.loads(recorded.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return timer
+    stages = prior.get("stages") if isinstance(prior, dict) else None
+    if isinstance(stages, list):
+        timer.stages = [dict(item) for item in stages if isinstance(item, dict) and "stage" in item]
+    return timer
+
+
 def resume_live_campaign(
     *,
     campaign_id: str,
@@ -5841,21 +5861,38 @@ def resume_live_campaign(
             with traced(trace, "reconcile", "ensure_target_history"):
                 ensure_target_history(target_path, repository_id)
     log(f"execute {campaign_id}")
-    with traced(trace, "execute", "execute"):
-        if hooks.execute is not None:
-            hooks.execute(pec_workspace, campaign_id)
-        elif (pec_workspace / "runtime" / "program-lock.json").is_file():
-            default_execute(
-                pec_workspace,
-                campaign_id,
-                hooks=hooks,
-                live_prs=should_run(until, "pr") and hooks.make_pr is None,
-                trace=trace,
-            )
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = resumed_stage_timer(timing, pec_workspace)
+    with timer.stage("execute", resumed=True):
+        with traced(trace, "execute", "execute"):
+            if hooks.execute is not None:
+                hooks.execute(pec_workspace, campaign_id)
+            elif (pec_workspace / "runtime" / "program-lock.json").is_file():
+                default_execute(
+                    pec_workspace,
+                    campaign_id,
+                    hooks=hooks,
+                    live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                    trace=trace,
+                    timer=timer,
+                )
     assert_blueprint_immutable(resume_blueprint, resume_blueprint_inventory, phase="resume_execute")
     executed = False
     if (pec_workspace / "runtime" / "program-lock.json").is_file():
         executed = all_required_tasks_completed(pec_workspace)
+    report.timings = timer.report()
+    # A resumed campaign reports the same progress projection a fresh one does.
+    # Without it `runtime/PROGRESS.json` was missing after an interrupted run,
+    # or kept the counts of the run that was interrupted.
+    log(
+        render_progress(
+            pec_workspace,
+            campaign_id=campaign_id,
+            timer=timer,
+            timing=timing,
+            published="PENDING" if should_run(until, "pr") else "NOT STARTED",
+        )
+    )
     report.program_blockers = default_program_blockers(campaign_id, armed=True, executed=executed)
     report.stages_completed.append("execute")
     with traced(trace, "commit", "commit_host_emit"):

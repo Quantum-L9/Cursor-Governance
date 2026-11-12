@@ -50,9 +50,12 @@ class CampaignTunnelAirtightTests(unittest.TestCase):
     def test_agent_surfaces_name_the_only_front_door(self) -> None:
         for path in AGENT_SURFACES:
             text = path.read_text(encoding="utf-8")
+            # A plan template names the governance root as a slot it renders
+            # (`<governance_root>`); every other surface names the literal.
             self.assertRegex(
                 text,
-                r"make(?:\s+-C\s+\"\$HOME/\.cursor-governance\")?\s+campaign INTENT=",
+                r"make(?:\s+-C\s+\"(?:\$HOME/\.cursor-governance|<governance_root>)\")?"
+                r"\s+campaign INTENT=",
                 f"{path.name} must name the live front door",
             )
 
