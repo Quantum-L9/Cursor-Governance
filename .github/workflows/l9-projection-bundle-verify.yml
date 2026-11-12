@@ -15,6 +15,9 @@ on:
       - "generated/governance/coding_agent_execution/**"
       - "generated/governance/operating_plane_v2/**"
       - "generated/governance/pr_audit/**"
+      - "generated/governance/domain_*/**"
+      - "generated/governance/technical_coordination/**"
+      - "governance/projection-bindings/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
       - "skills/l9-pr-audit/integrations/CANONICAL_AUTHORITY_BINDING.yaml"
@@ -36,6 +39,9 @@ on:
       - "generated/governance/coding_agent_execution/**"
       - "generated/governance/operating_plane_v2/**"
       - "generated/governance/pr_audit/**"
+      - "generated/governance/domain_*/**"
+      - "generated/governance/technical_coordination/**"
+      - "governance/projection-bindings/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
       - "skills/l9-pr-audit/integrations/CANONICAL_AUTHORITY_BINDING.yaml"
@@ -70,6 +76,7 @@ jobs:
       matrix:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
                  domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
+                 domain_identity_attribution,
                  technical_coordination]
     steps:
       - name: Checkout Cursor-Governance
@@ -140,8 +147,7 @@ jobs:
         shell: bash
         run: |
           name="${BUNDLE#domain_}"; name="${name//_/-}"
-          binding="governance/architect-mode/bindings/$name.yaml"
-          [[ "$BUNDLE" == technical_coordination ]] && binding="governance/cto-mode/bindings/technical-coordination.yaml"
+          binding="governance/projection-bindings/$name.yaml"
           set +e
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \
             --binding "$binding" \
@@ -237,8 +243,7 @@ jobs:
         shell: bash
         run: |
           name="${BUNDLE#domain_}"; name="${name//_/-}"
-          binding="governance/architect-mode/bindings/$name.yaml"
-          [[ "$BUNDLE" == technical_coordination ]] && binding="governance/cto-mode/bindings/technical-coordination.yaml"
+          binding="governance/projection-bindings/$name.yaml"
           git -C ../org-main update-ref refs/remotes/origin/main HEAD
           set +e
           python skills/l9-global-architect/scripts/verify_architecture_intelligence.py \

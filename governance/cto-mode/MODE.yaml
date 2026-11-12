@@ -39,15 +39,44 @@ activation:
 # projection not listed here is never loaded by this mode.
 selection:
   owner: repository owner
-  status: partial
-  pending: >-
-    The owner has named l9.projection/technical-coordination@1 and will confirm
-    which further projections this mode binds. Until then this list is the
-    whole selection; nothing else is loaded by inference.
+  status: complete
+  decided: >-
+    2026-11-12, governed session session_017xwbxw3RduoWFP29VkobHR: the owner named
+    l9.projection/technical-coordination@1 for this mode and then confirmed the seven
+    further canonical profiles below, each required.
   projections:
     - ref: l9.projection/technical-coordination@1
-      binding: governance/cto-mode/bindings/technical-coordination.yaml
+      binding: governance/projection-bindings/technical-coordination.yaml
       required: true
+      purpose: Technical coordination role, integration responsibility, decision resolution and escalation
+    - ref: l9.projection/architecture@1
+      binding: governance/projection-bindings/architecture.yaml
+      required: true
+      purpose: Architectural integrity, ownership boundaries, integration
+    - ref: l9.projection/governance@1
+      binding: governance/projection-bindings/governance.yaml
+      required: true
+      purpose: Authority, delegation, permissions, escalation
+    - ref: l9.projection/evidence-provenance@1
+      binding: governance/projection-bindings/evidence-provenance.yaml
+      required: true
+      purpose: Verified progress, receipts, truthful completion
+    - ref: l9.projection/contracts-conformance@1
+      binding: governance/projection-bindings/contracts-conformance.yaml
+      required: true
+      purpose: Acceptance criteria, verification, compatibility
+    - ref: l9.projection/capabilities-dependencies@1
+      binding: governance/projection-bindings/capabilities-dependencies.yaml
+      required: true
+      purpose: Assignable capabilities, readiness, dependencies
+    - ref: l9.projection/identity-attribution@1
+      binding: governance/projection-bindings/identity-attribution.yaml
+      required: true
+      purpose: Actor identity, responsibility, accountability
+    - ref: l9.projection/strategic-value@1
+      binding: governance/projection-bindings/strategic-value.yaml
+      required: true
+      purpose: Portfolio prioritization, value tradeoffs
 role_activation:
   activate_only_when:
     - mode_requested_in_this_session
@@ -55,8 +84,8 @@ role_activation:
   missing_or_stale_required_projection: block_role_activation
   optional_projection_unavailable: preserve_unknown_and_continue
   blocked_effect: >-
-    The /lcto persona may still be used, but no claim may cite technical
-    coordination semantics, and the session reports the exact blocker.
+    The /lcto persona may still be used, but no claim may cite a blocked
+    projection, and the session reports the exact blocker.
 behavioral_scope:
   may:
     - interpret_approved_campaign_objectives

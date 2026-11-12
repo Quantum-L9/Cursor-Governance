@@ -1,0 +1,94 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "invariants": [
+      {
+        "id": "L9-AUTH-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "No component may expand its own authority.\n"
+      },
+      {
+        "id": "L9-EVIDENCE-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+      },
+      {
+        "id": "L9-UNKNOWN-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+      },
+      {
+        "id": "L9-PROV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+      },
+      {
+        "id": "L9-COORD-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A derived result is valid only against its declared governing coordinates; a material coordinate change makes it non-current until compatibility is proven or it is recomputed.\n"
+      },
+      {
+        "id": "L9-IDENTITY-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A change of representation, provider, implementation, transport, or storage does not by itself change semantic identity.\n"
+      },
+      {
+        "id": "L9-COMPAT-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+      },
+      {
+        "id": "L9-PROJECTION-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+      },
+      {
+        "id": "L9-IDENTITY-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Identity dimensions including product, release, runtime, constellation, actor, and surface identity have distinct semantics; equality of string representation does not make two identity kinds equivalent."
+      },
+      {
+        "id": "L9-IDENTITY-003",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Governance profile, adapter identity, provider identity, transport identity, and surface identity must not be substituted for ActorIdentity or used as consequential operation authorship."
+      },
+      {
+        "id": "L9-IDENTITY-004",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Dynamic identity resolution must be evidence-bound and canonical for its scope; downstream consumers must consume a valid IdentityAssertion rather than independently re-derive identity from the same runtime evidence."
+      },
+      {
+        "id": "L9-IDENTITY-005",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Unknown or ambiguous ActorIdentity must remain explicit and fail closed when consequential authorship, authorization, memory attribution, or receipt attribution requires a resolved actor."
+      },
+      {
+        "id": "L9-IDENTITY-006",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "IdentityAssertion must preserve the exact evidence, resolver, governing coordinates, and provenance supporting the resolved identity dimensions; material evidence or coordinate change invalidates currentness."
+      }
+    ]
+  },
+  "projection_digest": "sha256:53904129254c1d1b5fa2e56311b7b7505f34ab873ee0931e6d8b3c35f6e6dc58",
+  "projection_profile_digest": "sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6",
+  "projection_profile_ref": "l9.projection/identity-attribution@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+  "source_ref": "l9.source/invariants@1"
+}

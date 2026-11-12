@@ -52,6 +52,44 @@ def test_contract_is_opt_in_and_selects_technical_coordination() -> None:
     assert refs[0] == TC
 
 
+CTO_SELECTION = [
+    TC,
+    "l9.projection/architecture@1",
+    "l9.projection/governance@1",
+    "l9.projection/evidence-provenance@1",
+    "l9.projection/contracts-conformance@1",
+    "l9.projection/capabilities-dependencies@1",
+    "l9.projection/identity-attribution@1",
+    "l9.projection/strategic-value@1",
+]
+
+
+ALL_ADMITTED = dict.fromkeys(CTO_SELECTION, cto_mode.ADMITTED)
+
+
+def test_selection_is_the_owner_confirmed_set_all_required() -> None:
+    doc = cto_mode.load_contract()
+    projections = doc["selection"]["projections"]
+    assert [p["ref"] for p in projections] == CTO_SELECTION
+    assert all(p["required"] is True for p in projections)
+    assert doc["selection"]["status"] == "complete"
+
+
+@pytest.mark.parametrize("ref", CTO_SELECTION)
+def test_each_selected_binding_names_cto_mode_and_pins_its_bundle(ref: str) -> None:
+    entry = next(p for p in cto_mode.load_contract()["selection"]["projections"] if p["ref"] == ref)
+    binding = yaml.safe_load((REPO / entry["binding"]).read_text())
+    assert "cto_mode_active" in binding["load_condition"]["when"]
+    assert binding["load_condition"]["repository_presence_alone_loads"] is False
+    pins = binding["input"]["authority"]
+    lock = json.loads((REPO / binding["input"]["bundle"]["path"] / "bundle.lock.json").read_text())
+    assert lock["projection_profile"] == {"ref": ref, "digest": pins["projection_profile_digest"]}
+    decided = {
+        (d["candidate_ref"], d["candidate_digest"]) for d in binding["admission"]["decisions"]
+    }
+    assert (ref, pins["projection_profile_digest"]) in decided
+
+
 def test_off_by_default(tmp_path: Path) -> None:
     report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID)
     assert report["mode"] == "OFF"
@@ -60,17 +98,17 @@ def test_off_by_default(tmp_path: Path) -> None:
 
 def test_requested_and_admitted_is_active_with_composed_view(tmp_path: Path) -> None:
     cto_mode.request(tmp_path, session_id=SID)
-    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID)
+    report = cto_mode.evaluate(tmp_path, verify=_verify(ALL_ADMITTED), session_id=SID)
     assert report["mode"] == "ACTIVE"
-    assert report["load"] == [
-        {
-            "ref": TC,
-            "composed_view": str(
-                REPO / "generated/governance/technical_coordination/composed.json"
-            ),
-            "provenance": None,
-        }
-    ]
+    assert [item["ref"] for item in report["load"]] == CTO_SELECTION
+    composed = str(REPO / "generated/governance/technical_coordination/composed.json")
+    assert report["load"][0] == {
+        "ref": TC,
+        "composed_view": composed,
+        "views": [composed],
+        "provenance": None,
+    }
+    assert all(Path(item["composed_view"]).is_file() for item in report["load"])
 
 
 @pytest.mark.parametrize("status", ["BUNDLE_VERIFIED", "BLOCKED", "REJECTED", "STALE"])
@@ -78,7 +116,9 @@ def test_required_projection_not_admitted_blocks_and_loads_nothing(
     tmp_path: Path, status: str
 ) -> None:
     cto_mode.request(tmp_path, session_id=SID)
-    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: status}), session_id=SID)
+    report = cto_mode.evaluate(
+        tmp_path, verify=_verify({**ALL_ADMITTED, TC: status}), session_id=SID
+    )
     assert report["mode"] == "BLOCKED"
     assert report["load"] == []
     assert [b["ref"] for b in report["blockers"]] == [TC]
@@ -90,9 +130,14 @@ def test_optional_projection_unavailable_does_not_block(tmp_path: Path) -> None:
     path = tmp_path / "MODE.yaml"
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
     cto_mode.request(tmp_path, contract_path=path, session_id=SID)
-    report = cto_mode.evaluate(tmp_path, contract_path=path, verify=_verify({}), session_id=SID)
+    report = cto_mode.evaluate(
+        tmp_path,
+        contract_path=path,
+        verify=_verify({**ALL_ADMITTED, TC: "BLOCKED"}),
+        session_id=SID,
+    )
     assert report["mode"] == "ACTIVE"
-    assert report["load"] == []
+    assert [item["ref"] for item in report["load"]] == CTO_SELECTION[1:]
     assert report["projections"][0]["status"] == "BLOCKED"
 
 
@@ -122,7 +167,7 @@ def test_contract_change_after_request_is_stale(tmp_path: Path) -> None:
                     "projections": [
                         {
                             "ref": "l9.projection/other@1",
-                            "binding": "governance/cto-mode/bindings/technical-coordination.yaml",
+                            "binding": "governance/projection-bindings/technical-coordination.yaml",
                             "required": True,
                         }
                     ]

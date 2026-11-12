@@ -25,6 +25,9 @@ commands:
 - slash: /clean
   file: commands/clean.md
   enabled: true
+- slash: /coding-agent
+  file: commands/coding-agent.md
+  enabled: true
 - slash: /end-session
   file: commands/end-session.md
   enabled: true

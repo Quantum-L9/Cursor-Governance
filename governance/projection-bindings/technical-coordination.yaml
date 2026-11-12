@@ -1,7 +1,7 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: governance/cto-mode/bindings/technical-coordination.yaml
+#   path: governance/projection-bindings/technical-coordination.yaml
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
@@ -14,7 +14,7 @@ integration:
   version: 1.0.0
   artifact_class: runtime_integration_binding
   status: active
-  semantic_owner: governance/cto-mode/bindings/technical-coordination.yaml
+  semantic_owner: governance/projection-bindings/technical-coordination.yaml
 purpose:
   assertion: >-
     Bind the technical coordination role projection from Quantum-L9/.github into CTO mode as a

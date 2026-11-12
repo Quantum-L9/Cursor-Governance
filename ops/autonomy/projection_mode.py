@@ -37,13 +37,35 @@ except ImportError:  # pragma: no cover - interpreter without PyYAML
     sys.exit(3)
 
 REPO = Path(__file__).resolve().parents[2]
-AUTHORITY_ENV = "L9_GITHUB_AUTHORITY_ROOT"
 # Host session identity, in order. An unresolvable session never activates a mode.
 SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
 ADMITTED = "ADMITTED_AND_CURRENT"
+# The coding-agent execution projection keeps its own binding
+# (governance/authority-bindings/coding-agent-execution.yaml) and status reader; a mode binds
+# it through those instead of a second binding for the same projection.
+CODING_BINDING_SCHEMA = "l9.cursor-governance.coding-projection-binding/v3"
+CODING_BOUND = ("CURRENT", "BOUND")
 
 Verify = Callable[[Path, Path | None], dict[str, Any]]
+
+
+def binding_profile(doc: dict[str, Any]) -> tuple[str | None, str | None]:
+    """(profile ref, verifier path) a binding declares, whichever binding shape it is."""
+    if doc.get("schema") == CODING_BINDING_SCHEMA:
+        return (doc.get("upstream") or {}).get("profile_ref"), (doc.get("verification") or {}).get(
+            "status_reader"
+        )
+    pins = doc.get("input") or {}
+    return (pins.get("authority") or {}).get("projection_profile_ref"), pins.get("verifier")
+
+
+def binding_views(doc: dict[str, Any]) -> list[Path]:
+    """The files a session reads once the binding verified."""
+    if doc.get("schema") == CODING_BINDING_SCHEMA:
+        return sorted((REPO / doc["bundle"]["path"] / "projections").glob("*.projection.json"))
+    bundle = doc["input"]["bundle"]
+    return [REPO / bundle["path"] / bundle["composed_view"]]
 
 
 class ContractError(Exception):
@@ -64,15 +86,15 @@ def resolve_session_id(explicit: str | None = None) -> str | None:
 
 def run_verifier(binding: Path, authority_root: Path | None) -> dict[str, Any]:
     """The binding's own verifier, admitted mode. No second verification lives here."""
-    pins = yaml.safe_load(binding.read_text(encoding="utf-8"))["input"]
-    cmd = [
-        sys.executable,
-        str(REPO / pins["verifier"]),
-        "--binding",
-        str(binding),
-        "--mode",
-        "admitted",
-    ]
+    doc = yaml.safe_load(binding.read_text(encoding="utf-8"))
+    coding = doc.get("schema") == CODING_BINDING_SCHEMA
+    _ref, verifier = binding_profile(doc)
+    cmd = [sys.executable, str(REPO / str(verifier))]
+    if coding:
+        # The shared coding-projection classifier: the same verdict SessionStart reports.
+        cmd += ["--format", "json"]
+    else:
+        cmd += ["--binding", str(binding), "--mode", "admitted"]
     if authority_root is not None:
         cmd += ["--authority-root", str(authority_root)]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -86,14 +108,37 @@ def run_verifier(binding: Path, authority_root: Path | None) -> dict[str, Any]:
             "reason": "VERIFIER_OUTPUT_UNREADABLE",
             "exit": proc.returncode,
         }
-    return report
+    return coding_verdict(report) if coding else report
 
 
-def _authority_root(explicit: Path | None) -> Path | None:
-    if explicit is not None:
-        return explicit
-    env = os.environ.get(AUTHORITY_ENV)
-    return Path(env) if env else None
+def coding_verdict(report: dict[str, Any]) -> dict[str, Any]:
+    """Map the coding classifier onto the verifier verdict a mode judges.
+
+    ADMITTED_AND_CURRENT only when the bundle verifies at main (CURRENT, or BOUND against the
+    checkout's origin/main) AND its admission decision admits the exact profile digest.
+    """
+    status, detail = report["status"], report.get("detail")
+    admission = (report.get("admission") or {}).get("status")
+    if status in CODING_BOUND and admission == ADMITTED:
+        return {"status": ADMITTED, "reason": f"{status}: {detail}"}
+    if status in CODING_BOUND:
+        return {"status": "BLOCKED", "reason": f"ADMISSION_NOT_PROVED: {admission}"}
+    return {"status": status, "reason": detail}
+
+
+def resolve_authority(explicit: Path | None, workspace: Path | None) -> Path | None:
+    """The Quantum-L9/.github checkout, resolved like every other projection consumer here.
+
+    One order for all of them (ops/scripts/coding_projection_status.py `_authority`): an
+    explicit path, then L9_AUTHORITY_ROOT, then `.github` inside or beside the workspace,
+    each accepted only if it is a verified authority checkout. None when none is.
+    """
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from ops.scripts.coding_projection_status import _authority
+
+    root, _rejected = _authority(workspace, explicit)
+    return root
 
 
 @dataclass(frozen=True)
@@ -149,10 +194,12 @@ class ProjectionMode:
             binding = REPO / entry["binding"]
             if not binding.is_file():
                 raise ContractError(f"BINDING_ABSENT: {entry['binding']}")
-            pins = (yaml.safe_load(binding.read_text(encoding="utf-8")) or {}).get("input", {})
-            if (pins.get("authority") or {}).get("projection_profile_ref") != entry["ref"]:
+            ref, verifier = binding_profile(
+                yaml.safe_load(binding.read_text(encoding="utf-8")) or {}
+            )
+            if ref != entry["ref"]:
                 raise ContractError(f"BINDING_REF_MISMATCH: {entry['binding']}")
-            if not isinstance(pins.get("verifier"), str):
+            if not isinstance(verifier, str) or not (REPO / verifier).is_file():
                 raise ContractError(f"BINDING_VERIFIER_UNDECLARED: {entry['binding']}")
         return doc
 
@@ -193,7 +240,7 @@ class ProjectionMode:
         if state.get("contract_digest") != _digest(contract_path):
             # The selection changed since the operator asked; ask again rather than widen.
             return {**report, "mode": "STALE", "reason": "MODE_CONTRACT_CHANGED_SINCE_REQUEST"}
-        root = _authority_root(authority_root)
+        root = resolve_authority(authority_root, workspace)
         projections, blockers, load = [], [], []
         for entry in contract["selection"]["projections"]:
             result = verify(REPO / entry["binding"], root)
@@ -207,14 +254,15 @@ class ProjectionMode:
             projections.append(record)
             if status == ADMITTED:
                 binding = yaml.safe_load((REPO / entry["binding"]).read_text("utf-8"))
-                bundle = binding["input"]["bundle"]
-                load.append(
-                    {
-                        "ref": entry["ref"],
-                        "composed_view": str(REPO / bundle["path"] / bundle["composed_view"]),
-                        "provenance": result.get("architecture_intelligence"),
-                    }
-                )
+                views = [str(path) for path in binding_views(binding)]
+                item: dict[str, Any] = {
+                    "ref": entry["ref"],
+                    "views": views,
+                    "provenance": result.get("architecture_intelligence"),
+                }
+                if binding.get("schema") != CODING_BINDING_SCHEMA:
+                    item["composed_view"] = views[0]
+                load.append(item)
             elif entry["required"]:
                 blockers.append(record)
         mode = "ACTIVE" if not blockers else "BLOCKED"
@@ -271,7 +319,10 @@ class ProjectionMode:
         parser.add_argument(
             "--authority-root",
             type=Path,
-            help=f"Quantum-L9/.github checkout whose HEAD is its main (default: ${AUTHORITY_ENV})",
+            help=(
+                "Quantum-L9/.github checkout (default: $L9_AUTHORITY_ROOT, "
+                "then .github in or beside the workspace)"
+            ),
         )
         parser.add_argument(
             "--session-id", help=f"host session id (default: first of {', '.join(SESSION_ENVS)})"
