@@ -26,10 +26,11 @@ input:
   authority:
     repository: Quantum-L9/.github
     projection_profile_ref: l9.projection/technical-coordination@1
-    # Candidate digests from the compile rehearsal (compiler eeac5d2, 0.10.0) over the
-    # Stage A + B + C candidate tree. Not admitted. Rebind to the admitted digests and add the
+    # Candidate digests of the profile pair in Quantum-L9/.github#246 (v3.39.0, approved tree
+    # d7f2fd0, compiled by eeac5d2 / 0.10.0). Not admitted until #244, #245 and #246 merge.
+    # Rebind to the admitted revision and add the
     # owner's decision below once Quantum-L9/.github admits the profile pair.
-    projection_profile_digest: sha256:b4665769ea2fb536e101fdeafb50de4047a06f887b38b1953565916b94d597e5
+    projection_profile_digest: sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036
     projection_profile_class: consumer
     projection_profile_consumer: technical_coordination_role
     composition_profile_ref: l9.compose/technical-coordination@1
