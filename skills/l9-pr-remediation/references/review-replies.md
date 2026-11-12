@@ -181,10 +181,15 @@ forbidden is a **hand-rolled per-thread `gh` loop outside the helper** on any
 surface, and any `gh pr …` / `gh api graphql` call on a REST-only surface.
 
 Single-thread writes go through `ops/scripts/pr_threads.py`. That command is
-the standing Claude Code allow. It posts only to the open PR named by
-`.l9/pr/pr-summary.json` in this checkout, and it appends the attribution
-footer itself. Discover comment ids with GET; do not hand-roll
-`gh api --method POST`.
+the standing Claude Code allow: `python3 ops/scripts/pr_threads.py` inside the
+governance clone, `python3 ~/.cursor-governance/ops/scripts/pr_threads.py`
+from any other checkout (a consumer repository, including a native publish
+route). It posts only to this checkout's open PR: the one named by
+`.l9/pr/pr-summary.json` when that receipt exists, otherwise the open PR whose
+head repository is origin, whose head branch is the checked-out branch, and
+whose head commit is HEAD or an ancestor of it (read live; any unreadable fact
+refuses). It appends the attribution footer itself. Discover comment ids with
+GET; do not hand-roll `gh api --method POST`.
 
 ### Reply to inline (diff) comments
 

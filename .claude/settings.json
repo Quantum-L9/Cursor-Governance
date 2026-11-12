@@ -208,6 +208,7 @@
       "Bash(gh api --method GET:*)",
       "Bash(python3 ops/scripts/pr_threads.py:*)",
       "Bash(python3 -u ops/scripts/pr_threads.py:*)",
+      "Bash(python3 ~/.cursor-governance/ops/scripts/pr_threads.py:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run watch:*)",

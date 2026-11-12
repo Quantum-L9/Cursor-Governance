@@ -115,6 +115,23 @@ def test_preflight_routes_platform_helpers_to_l9_owners() -> None:
     assert "graphiti_memory_client.py" not in text
 
 
+def test_preflight_send_later_line_cites_the_profile_pr_watch_key() -> None:
+    """The Send Later ban is profile policy; the hook only delivers it."""
+    import yaml
+
+    profile = yaml.safe_load(
+        (ROOT / "ops/autonomy/surface_profile.yaml").read_text(encoding="utf-8")
+    )
+    pr_watch = profile["l4_local_autonomy"]["post_push"]["pr_watch"]
+    assert pr_watch == "subscribe_pr_activity_events_only"
+    line = next(
+        row
+        for row in PREFLIGHT.read_text(encoding="utf-8").splitlines()
+        if "Do not invoke Send Later" in row
+    )
+    assert f"post_push.pr_watch: {pr_watch}" in line
+
+
 def test_primary_checkout_does_not_probe_or_request_add_repo(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
