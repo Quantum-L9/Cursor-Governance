@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "architecture_synthesis": {
@@ -1081,7 +1081,7 @@
       }
     ]
   },
-  "projection_digest": "sha256:2b892560a66c4aa5a3a6f808232b0d18787b6728e41b76a153b0b89e9779c920",
+  "projection_digest": "sha256:beba80ccf6d8ddfc716ec4b49e96575f4d5b3b6461c00a7243eb8dae4c8692eb",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",

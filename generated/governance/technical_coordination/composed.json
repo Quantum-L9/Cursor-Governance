@@ -1,0 +1,535 @@
+{
+  "components": [
+    {
+      "projection_digest": "sha256:e17a2fb1a720e51b678bc5db46451568be6182a3075b7a823cd7438bcf682d23",
+      "projection_ref": "l9.projection/technical-coordination@1#l9.source/vocabulary@1",
+      "source_class": "vocabulary",
+      "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "source_ref": "l9.source/vocabulary@1"
+    },
+    {
+      "projection_digest": "sha256:40f59d26192d5dd4e8acb9fd8a2c560cb15aff1a472c9e71aeff32a0c02fc275",
+      "projection_ref": "l9.projection/technical-coordination@1#l9.source/invariants@1",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "projection_digest": "sha256:54e3e936bd79359068bbe6024ba19f52ed8dc1c2cc1fa592deedac0bb35d61a1",
+      "projection_ref": "l9.projection/technical-coordination@1#l9.source/contracts@1",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    },
+    {
+      "projection_digest": "sha256:2f3f3e1ee6396739be8da030bd4000eba5e3903d206dca894482166466777e80",
+      "projection_ref": "l9.projection/technical-coordination@1#l9.source/authority-model@1",
+      "source_class": "authority_model",
+      "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+      "source_ref": "l9.source/authority-model@1"
+    },
+    {
+      "projection_digest": "sha256:2060f1b27971e5b65be743e7fd2d00543d63c011f55c21f11d110a7f7c42855b",
+      "projection_ref": "l9.projection/technical-coordination@1#l9.source/strategic-cognition-model@1",
+      "source_class": "strategic_cognition_model",
+      "source_digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
+      "source_ref": "l9.source/strategic-cognition-model@1"
+    }
+  ],
+  "composition_digest": "sha256:62f2660952e363c4537f5537a6c8812716072363fc655eeda0315abe37ae0857",
+  "composition_profile": {
+    "digest": "sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb",
+    "ref": "l9.compose/technical-coordination@1"
+  },
+  "payload": {
+    "authority_model": {
+      "agent_authority": {
+        "rules": [
+          "authority_must_be_explicit",
+          "agent_must_not_self_expand_authority",
+          "bounded_autonomy_requires_explicit_scope",
+          "conformance_evidence_does_not_grant_authority"
+        ]
+      },
+      "escalation_rules": {
+        "authority_missing": "block",
+        "changed_candidate_after_decision": "require_new_decision",
+        "semantic_conflict": "block",
+        "unknown": "remain_unknown"
+      }
+    },
+    "contracts": {
+      "contracts": [
+        {
+          "applies_to": [
+            "components",
+            "capabilities",
+            "validators",
+            "executors",
+            "providers",
+            "consumers"
+          ],
+          "forbidden": [
+            "self_authorization",
+            "authority_inference_from_capability",
+            "authority_inference_from_execution_success",
+            "authority_expansion_by_consumer_or_provider"
+          ],
+          "guarantees": [
+            "functional_capability_does_not_transfer_governing_authority",
+            "successful_execution_does_not_expand_authority",
+            "delegated_authority_remains_bounded_by_its_declared_scope"
+          ],
+          "id": "l9.contract/authority-boundary@1",
+          "outcomes": {
+            "satisfied": "governing_action_remains_within_declared_authority",
+            "unresolved": "required_governing_authority_cannot_be_resolved",
+            "violated": "attempted_or_effective_authority_expansion"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Preserve governing authority boundaries when a component computes, validates, recommends, transports, or executes a function.\n",
+          "requires": [
+            "governing_authority_is_resolvable_for_decisions_or_actions_that_require_authority",
+            "component_behavior_remains_within_declared_authority"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-AUTH-001",
+            "L9-AUTH-002"
+          ]
+        },
+        {
+          "applies_to": [
+            "canonical_concepts",
+            "mirrors",
+            "projections",
+            "providers",
+            "consumers",
+            "implementations",
+            "dependencies",
+            "co_located_components",
+            "shared_execution_processes",
+            "generalized_global_laws"
+          ],
+          "forbidden": [
+            "competing_canonical_sources_within_one_scope_and_revision",
+            "provider_identity_as_semantic_ownership",
+            "consumer_identity_as_semantic_ownership",
+            "ownership_transfer_by_projection_or_consumption",
+            "ownership_transfer_by_dependency_colocation_or_shared_execution"
+          ],
+          "guarantees": [
+            "one_canonical_owner_per_semantic_scope_and_revision",
+            "mirrors_and_projections_remain_non_owning",
+            "provider_and_implementation_identity_remain_non_owning",
+            "dependency_colocation_or_shared_execution_do_not_transfer_ownership",
+            "global_admission_does_not_transfer_originating_domain_ownership"
+          ],
+          "id": "l9.contract/semantic-ownership@1",
+          "outcomes": {
+            "satisfied": "canonical_owner_is_unambiguous",
+            "unresolved": "canonical_owner_cannot_be_resolved",
+            "violated": "competing_or_implicit_semantic_ownership"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Keep canonical semantic ownership singular and explicit across mirrors, projections, providers, consumers, implementations, dependencies, co-location, execution, and scope changes.\n",
+          "requires": [
+            "semantic_scope_is_declared",
+            "semantic_revision_is_resolvable_when_revisioned",
+            "canonical_owner_is_resolvable"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-OWNER-001",
+            "L9-SEM-001",
+            "L9-SCOPE-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "requirements",
+            "controls",
+            "implementations",
+            "verification_claims",
+            "conformance_claims",
+            "completion_claims"
+          ],
+          "forbidden": [
+            "self_attestation_as_the_sole_basis_for_verification",
+            "artifact_presence_as_proof_of_effectiveness",
+            "workflow_presence_as_proof_of_blocking_enforcement",
+            "pass_claim_without_required_evidence",
+            "unknown_or_unverified_as_verified"
+          ],
+          "guarantees": [
+            "requirement_truth_is_not_confused_with_implementation_state",
+            "implementation_presence_is_not_confused_with_verified_effectiveness",
+            "stronger_assurance_claims_require_correspondingly_sufficient_evidence",
+            "missing_stale_or_unverifiable_required_evidence_remains_unverified_or_unknown"
+          ],
+          "id": "l9.contract/assurance-and-verification@1",
+          "outcomes": {
+            "supported": "claim_has_current_sufficient_independently_verifiable_evidence",
+            "unsupported": "evidence_proves_the_claim_is_not_satisfied",
+            "unverified": "required_evidence_is_missing_stale_or_unverifiable"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Separate normative requirements, implementation state, and assurance claims and define when stronger assurance language is permitted.\n",
+          "requires": [
+            "claim_class_is_explicit",
+            "evidence_requirements_for_that_claim_class_are_known",
+            "current_independently_verifiable_evidence_for_every_required_condition"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-ASSURANCE-001",
+            "L9-CORRECTNESS-001",
+            "L9-EVIDENCE-001",
+            "L9-UNKNOWN-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "derived_results",
+            "compiled_artifacts",
+            "projections"
+          ],
+          "forbidden": [
+            "provenance_truncation_that_prevents_authority_resolution",
+            "silently_consuming_non_current_results_as_current",
+            "unbound_reuse_across_material_coordinate_change"
+          ],
+          "guarantees": [
+            "authoritative_inputs_and_transformations_are_resolvable",
+            "validity_is_evaluated_against_declared_coordinates",
+            "material_coordinate_change_makes_affected_results_non_current_until_recomputed_or_compatibility_is_proven"
+          ],
+          "id": "l9.contract/provenance-and-coordinate@1",
+          "outcomes": {
+            "current": "declared_coordinates_match_or_compatibility_is_proven",
+            "non_current": "a_material_governing_coordinate_changed_without_compatibility_proof",
+            "unresolved": "required_provenance_or_coordinate_cannot_be_resolved"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Bind derived validity to resolvable authoritative inputs, transformations, and governing coordinates.\n",
+          "requires": [
+            "authoritative_input_references",
+            "authoritative_input_revisions_or_digests_when_revisioned",
+            "declared_transformation_identity",
+            "all_governing_coordinates_material_to_validity"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROV-001",
+            "L9-COORD-001",
+            "L9-REVISION-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "projection_engines",
+            "projection_profiles",
+            "projection_artifacts"
+          ],
+          "forbidden": [
+            "semantic_invention",
+            "semantic_reconciliation",
+            "semantic_reinterpretation",
+            "semantic_derivation_or_synthesis_misclassified_as_projection",
+            "authority_expansion",
+            "projection_as_admission_or_promotion"
+          ],
+          "guarantees": [
+            "output_is_bounded_by_source_semantics_and_declared_selection",
+            "source_lineage_remains_resolvable",
+            "projection_remains_derived_and_non_authoritative",
+            "transformations_that_add_semantic_consequences_are_classified_under_another_governed_operation"
+          ],
+          "id": "l9.contract/projection@1",
+          "outcomes": {
+            "invalid_projection": "output_invents_reinterprets_reconciles_or_expands_source_semantics",
+            "unresolved": "source_or_projection_contract_cannot_be_resolved",
+            "valid_projection": "output_is_a_bounded_semantics_preserving_view"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Define projection as a bounded source-derived view that may select or reshape representation without creating new meaning or authority.\n",
+          "requires": [
+            "source_identity",
+            "source_revision_or_digest_when_revisioned",
+            "declared_projection_profile_or_selector_contract",
+            "projection_provenance"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROJECTION-001",
+            "L9-DERIVED-001",
+            "L9-PROV-001",
+            "L9-AUTH-001"
+          ]
+        }
+      ]
+    },
+    "invariants": {
+      "invariants": [
+        {
+          "id": "L9-AUTH-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "No component may expand its own authority.\n"
+        },
+        {
+          "id": "L9-AUTH-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+        },
+        {
+          "id": "L9-OWNER-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Within a given semantic scope and revision, each canonical concept has one authoritative owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution by another component does not by itself transfer ownership or create a competing canonical source.\n"
+        },
+        {
+          "id": "L9-SEM-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Provider identity does not imply semantic ownership.\n"
+        },
+        {
+          "id": "L9-SCOPE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Global admission of a generalized law does not transfer ownership of the originating domain semantics; the admitted global law and the originating domain semantics remain separately owned.\n"
+        },
+        {
+          "id": "L9-MONOTONIC-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Where canonical law permits subordinate extension, a subordinate policy may narrow permissions or strengthen applicable constraints within its delegated scope; it must not weaken, bypass, reinterpret, shadow, or replace canonical law except through authority explicitly delegated by the canonical owner.\n"
+        },
+        {
+          "id": "L9-DERIVED-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Derived artifacts do not become canonical authority automatically.\n"
+        },
+        {
+          "id": "L9-EVIDENCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Evidence and receipts attest only to the observations or outcomes declared by their contracts; they confer neither semantic nor execution authority.\n"
+        },
+        {
+          "id": "L9-ASSURANCE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Normative requirement, implementation state, and assurance state are distinct. A claim that a requirement or control is implemented, verified, blocking, conformant, or complete requires current, independently verifiable evidence appropriate to that claim; missing, stale, or unverifiable required evidence leaves the claim unverified or unknown.\n"
+        },
+        {
+          "id": "L9-UNKNOWN-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+        },
+        {
+          "id": "L9-HARD-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "An applicable hard constraint is non-compensable; confidence, probability, utility, ranking, optimization, or other soft objectives cannot override it.\n"
+        },
+        {
+          "id": "L9-PROV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+        },
+        {
+          "id": "L9-COORD-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A derived result is valid only against its declared governing coordinates; a material coordinate change makes it non-current until compatibility is proven or it is recomputed.\n"
+        },
+        {
+          "id": "L9-REVISION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "The semantic content of an admitted revision is immutable; correction or change creates a successor or supersession rather than rewriting prior meaning.\n"
+        },
+        {
+          "id": "L9-PROJECTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+        },
+        {
+          "id": "L9-CORRECTNESS-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A candidate, implementation, or generated artifact cannot define or establish its own correctness; correctness must be evaluated against governing criteria whose authority does not derive from the candidate or the process that produced it.\n"
+        },
+        {
+          "id": "L9-CAPABILITY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Declared, admitted, available, authorized, and invocable are distinct capability states; no state implies another unless a canonical contract explicitly defines that implication.\n"
+        },
+        {
+          "id": "L9-STRATEGY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+        },
+        {
+          "id": "L9-SIGNAL-004",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A consequential signal outcome claim must distinguish production, attempted delivery, verified delivery, recipient acceptance, durable retention, actual later consumption, and any observed change in behavior or result. Evidence of an earlier stage does not establish a later one; a delivery or consumption observation alone is not a positive Strategic Value finding, and material failures or Unknown stages remain explicit."
+        },
+        {
+          "id": "L9-INTEGRATION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When independently produced contributions jointly determine one consequential artifact or acceptance subject, an accountable integration responsibility must be explicitly assigned for that subject and scope before integrated acceptance is claimed. A claim of integrated correctness or completion requires verification of the exact combined subject against its applicable contracts; evidence that individual contributions passed independently does not establish that their combination is correct. Integration responsibility does not transfer canonical semantic ownership or confer strategic, execution, publication, admission, or other governing decision authority."
+        },
+        {
+          "id": "L9-AUTONOMY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "When current authorization and applicable policy permit autonomous decision resolution, an agent must resolve decisions determined by authoritative evidence or governing policy without requesting a new discretionary approval. The agent may independently choose and verify a reversible realization among compliant alternatives when the choice preserves the accepted objective, architecture, contracts, scope, constraints, and authorization ceiling. This discretion does not grant capability invocation authority, establish missing facts, alter accepted semantics, or authorize new risk acceptance."
+        },
+        {
+          "id": "L9-AUTONOMY-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A request for a governing decision must identify the smallest material unresolved authority question, required fact, contractual conflict, or boundary change that prevents an authorized consequence. The blocker applies to its affected dependency closure. Independent work whose prerequisites and authorization remain satisfied may continue. Novelty, model confidence, or non-authoritative implementation preference alone does not require a higher-authority decision. This rule does not suppress mandatory incident, safety, security, or operational notifications."
+        }
+      ]
+    },
+    "strategic_cognition_model": {
+      "authority_separation": {
+        "invariant_ref": "L9-STRATEGY-001",
+        "resolution_ref": "authority_model.yaml#strategic_cognition_authority",
+        "strategic_plan_owner": "plan_keeper",
+        "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner",
+        "teaching_relation": {
+          "authority_effect": "none",
+          "carries": "planning_cognition_lessons",
+          "from": "strategic_plan_metacognitive_reasoner",
+          "to": "plan_keeper"
+        }
+      },
+      "global_rules": {
+        "metacognition_is_advisory_to_strategic_authority": true,
+        "metacognitive_analysis_is_advisory_and_cannot_mutate_strategy": true,
+        "plan_revision_candidate_is_not_strategy_until_admitted_under_strategic_authority": true,
+        "planning_episode_is_non_authoritative_reasoning_record": true,
+        "projection_consumption_does_not_transfer_truth_source_ownership": true,
+        "reasoning_capability_does_not_confer_strategic_authority": true,
+        "semantic_compiler_remains_independent_of_reasoning_plane": true,
+        "strategic_cognition_does_not_own_runtime_execution": true,
+        "strategic_cognition_does_not_own_underlying_truth_sources": true,
+        "strategic_label_does_not_create_authority_or_ownership": true,
+        "strategic_roles_are_semantic_roles_not_actor_identities": true
+      },
+      "roles": {
+        "plan_keeper": {
+          "actor_identity_binding": "none",
+          "authority_source": "strategic_authority",
+          "definition": "The reasoning role responsible for maintaining the Strategic Plan within granted Strategic Authority.",
+          "does_not_own": [
+            "underlying_truth_sources",
+            "capability_semantics",
+            "evidence",
+            "memory",
+            "architecture",
+            "execution",
+            "environment_truth"
+          ],
+          "may": [
+            "revise_strategic_plan_within_granted_strategic_authority",
+            "emit_strategic_planning_episode",
+            "emit_strategic_plan_revision_candidate",
+            "consume_planning_cognition_lessons"
+          ],
+          "may_not": [
+            "acquire_truth_source_ownership_by_consuming_projections",
+            "derive_authority_from_reasoning_capability",
+            "become_execution_or_implementation_authority_by_implication",
+            "treat_planning_episode_as_strategic_plan_content",
+            "treat_revision_candidate_as_authorized_plan_revision_without_admission",
+            "revise_strategic_plan_beyond_granted_strategic_authority"
+          ],
+          "owns": [
+            "strategic_plan"
+          ],
+          "reasons_over": [
+            "current_meta_view",
+            "strategic_intent",
+            "strategic_plan"
+          ],
+          "role_kind": "semantic_role"
+        }
+      }
+    },
+    "vocabulary": {
+      "terms": {
+        "bounded_autonomy": {
+          "definition": "Authorization for an agent or compiler to act independently within an explicitly constrained semantic, capability, fixture-backed, and authority-valid region.\n",
+          "principle": [
+            "semantic_freedom_decreases_as_safe_automation_increases",
+            "conformance_evidence_does_not_replace_authority"
+          ],
+          "semantic_class": "execution_policy"
+        },
+        "decision_resolution_class": {
+          "definition": "Classification of a decision by the authoritative basis and boundary of its resolution. The classes distinguish evidence-determined, policy-determined, bounded realization choice, authority-reserved, and unresolved-required-input decisions. Classification directs the appropriate resolution or escalation path. It does not create authority, capability availability, or missing evidence.",
+          "question": "Can this decision be resolved under existing authority, or is a new governing decision required?",
+          "semantic_class": "semantic_concept"
+        },
+        "integration_responsibility": {
+          "definition": "An explicitly assigned, scope-bound accountability for reconciling independently produced contributions that jointly affect a shared acceptance subject. The responsible party identifies the exact combined revision, applicable interfaces and contracts, material conflicts and unresolved dependencies, and the evidence required to substantiate integrated correctness. This accountability is distinct from canonical semantic ownership, execution permission, and final decision authority.",
+          "question": "Who is accountable for verifying that the combined work satisfies its governing contracts?",
+          "rules": [
+            "integration_subject_and_scope_must_be_explicit",
+            "integration_acceptance_requires_combined_state_evidence",
+            "component_receipts_do_not_prove_integrated_correctness",
+            "integration_accountability_does_not_transfer_ownership",
+            "integration_accountability_does_not_grant_action_authority"
+          ],
+          "semantic_class": "semantic_concept"
+        },
+        "material_decision_escalation": {
+          "definition": "A request for a governing decision concerning an exact unresolved material question that cannot be settled within current authority and evidence. It identifies the affected subject, evidence, decision owner or unresolved ownership, blocked dependencies, and the boundary requiring resolution. It is distinct from an operational notification, routine progress report, or implementation preference.",
+          "question": "What exact decision requires whose authority, and which work is actually blocked?",
+          "semantic_class": "semantic_concept"
+        },
+        "plan_keeper": {
+          "definition": "The reasoning role that maintains the Strategic Plan within granted Strategic Authority. It is a semantic role, not an ActorIdentity.",
+          "detailed_model": "strategic_cognition_model.yaml",
+          "semantic_class": "semantic_role"
+        },
+        "signal_consumption": {
+          "definition": "Evidenced use of a previously delivered signal by an eligible actor or system in a later authorized decision, validation, or operation, distinct from receipt, storage, acknowledgement, or merely being technically reachable. Consumption alone does not prove a positive objective-relative result or transfer authority over the affected decision.",
+          "question": "Which later authorized action actually used the information, as opposed to merely receiving or storing it?",
+          "semantic_class": "semantic_concept"
+        },
+        "technical_coordination_role": {
+          "definition": "A scope-bound role that coordinates authorized technical work across independently responsible specialists, agents, or sessions. It interprets approved objectives and applicable architectural constraints, identifies dependencies and integration obligations, coordinates the assignment of bounded work to eligible executors within their existing authorization, reconciles evidence and blockers, and presents consequential decisions to their authoritative owners. The role does not itself own Strategy, canonical architecture, implementation truth, durable work state, or the authority to execute, admit, publish, or merge.",
+          "question": "Who coordinates the technical work while preserving the authority and ownership of its participants?",
+          "rules": [
+            "role_is_not_actor_identity",
+            "role_selection_does_not_grant_authority",
+            "delegation_requires_applicable_authorization",
+            "strategic_plan_remains_owned_by_plan_keeper",
+            "architecture_judgment_remains_with_its_owner",
+            "durable_work_state_remains_source_owned",
+            "specialist_results_require_applicable_verification",
+            "coordination_does_not_imply_acceptance_or_completion"
+          ],
+          "semantic_class": "semantic_role"
+        }
+      }
+    }
+  },
+  "schema": "l9.composed-projection/v1"
+}

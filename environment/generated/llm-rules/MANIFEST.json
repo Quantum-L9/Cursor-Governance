@@ -24,9 +24,9 @@
       "alias": null,
       "class": "always",
       "output": "02-slash-commands.md",
-      "output_sha256": "9e501cc20494aebb37ef452aea5a3e10a0d92dc50e53e9be46f097d10573e13b",
+      "output_sha256": "2f721f84acc34c2f486f82a08ba6b87657ae6c782093d25e403df05ca1f3876b",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "e8fb57d4d513ece89aebb271aad891a023dbc073a15d6b952332b6eb7815b573",
+      "source_sha256": "eca28dcf9fa5aefabd6d927da8cfe9c90cabeb87cd9a56b7cbe658cc505cef78",
       "stem": "02-slash-commands"
     },
     {
@@ -186,9 +186,9 @@
       "alias": null,
       "class": "always",
       "output": "45-pre-action-verification.md",
-      "output_sha256": "f1dba8fde0395ec41b9390fca599c06f098628d9cee60599a3a810040b09e0d3",
+      "output_sha256": "04e833c4310c6fd38ce5844b43e85aa063b83df81fcd261b9eca1a08aa90e428",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "135cbacb57a580aaaa9c3abf2e48ac9b1de4289032c16d16da14a93c86e76ab2",
+      "source_sha256": "6888d44d3ebde40f7cc4ed08874e2788e7e28b6a4b06acc40ee97a74420a2f76",
       "stem": "45-pre-action-verification"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "db26889b9394f3bed750ff7d67935463e2c855b59c8378ad5e03c22514be6177"
+  "tree_sha256": "2499ffcd83a957f5653d2bfd516f3be84ae32c43f6a09586e7249b19b6bd6f41"
 }

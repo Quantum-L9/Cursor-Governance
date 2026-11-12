@@ -1,0 +1,661 @@
+{
+  "components": [
+    {
+      "projection_digest": "sha256:b714510e9d988bd96872288c63b889743eb3a6a98c025a947a7fd658e26bf7d9",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/capabilities@1",
+      "source_class": "capabilities",
+      "source_digest": "sha256:086652d2b67d65a13ff3e263611a821145da500c29e61dcc9cc322a6dd4c56d8",
+      "source_ref": "l9.source/capabilities@1"
+    },
+    {
+      "projection_digest": "sha256:d265a903045de6f59d84239a9817054971ed81f32039c12cc762b5dbb8823a51",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/capability-resolution@1",
+      "source_class": "capability_resolution",
+      "source_digest": "sha256:7063ca77d6fa9253cd1a71839f50960d2109d6afb32dda1c609b057008e36954",
+      "source_ref": "l9.source/capability-resolution@1"
+    },
+    {
+      "projection_digest": "sha256:c31d74f86083399c345a1a3662dce7351c4d4775a6951b22e46c7126ac239bc3",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/semantic-dependency-model@1",
+      "source_class": "semantic_dependency_model",
+      "source_digest": "sha256:b6204c0128ba0493c6e70dfd6976fd409efdc6e8a68b70fac8ea9226833fcf9c",
+      "source_ref": "l9.source/semantic-dependency-model@1"
+    },
+    {
+      "projection_digest": "sha256:6cb66a6e557a568f55de2862c06eb079b70773a0f05ebb1d7053c9c851220497",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/dependency-archetypes@1",
+      "source_class": "dependency_archetypes",
+      "source_digest": "sha256:31d846c51c4f83c87c3ce697e720e73921d108a1946ed81e121f7bfa61e0a8d7",
+      "source_ref": "l9.source/dependency-archetypes@1"
+    },
+    {
+      "projection_digest": "sha256:9af28569c9e4afd686f7932f2556ac5cd35db6281e910a2a706abf7817a4279f",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/invariants@1",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "projection_digest": "sha256:949d434175964bed17274fde934ba97db7c7654131533e41ceb63c4a25f783d4",
+      "projection_ref": "l9.projection/capabilities-dependencies@1#l9.source/contracts@1",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    }
+  ],
+  "composition_digest": "sha256:a42f2987ac439d21b151db242b4bd782c3e591c2786f3a83a35f287e06b7f830",
+  "composition_profile": {
+    "digest": "sha256:9a7a9d953896b69a0d670b5cd9dcf22190a5d602af330f110c15011efab6b0e3",
+    "ref": "l9.compose/capabilities-dependencies@1"
+  },
+  "payload": {
+    "capabilities": {
+      "capabilities": [],
+      "capability_entry_contract": {
+        "field_semantics": {
+          "authorization_requirements": "Explicit authority conditions that apply to invocation. These requirements do not themselves constitute an authorization decision.\n",
+          "effect_class": "Explicit semantic classification of the kind of governed effect the capability may produce. The class must resolve within the capability's semantic scope. Effect class informs applicable contracts and policy but does not itself grant authority or imply global scope.\n",
+          "id": "Stable semantic capability identity. Provider, implementation, transport, or storage identity must not define this identity.\n",
+          "purpose": "Bounded description of the semantic function exposed by the capability.\n",
+          "requires": "Explicit semantic capability dependencies and global contract dependencies that must be satisfied for applicable use.\n",
+          "semantic_owner": "Authority that owns the capability meaning. Registration in this global catalog does not transfer that ownership to the catalog owner.\n",
+          "semantic_scope": "Scope within which the capability meaning is authoritative. Global registration does not imply global semantic scope.\n"
+        },
+        "prohibited_fields": [
+          "provider_as_semantic_owner",
+          "implicit_authorization",
+          "implicit_availability",
+          "implicit_admission",
+          "inline_provider_implementation"
+        ],
+        "required_fields": [
+          "id",
+          "semantic_owner",
+          "semantic_scope",
+          "purpose",
+          "effect_class",
+          "requires",
+          "authorization_requirements"
+        ]
+      },
+      "capability_relations": {
+        "compatible_with": {
+          "authority_implication": "none",
+          "object": "semantic_capability",
+          "semantics": "Capability compatibility exists only when an applicable declared compatibility contract establishes it. Similarity or successful execution is insufficient. Compatibility among concrete realizations is outside this relation and remains owned by binding_catalog.yaml.\n",
+          "subject": "semantic_capability"
+        },
+        "realized_by": {
+          "authority_implication": "none",
+          "object": "provider_binding",
+          "ownership_implication": "none",
+          "semantics": "A provider binding realizes the semantic capability without changing the capability identity or semantic owner.\n",
+          "subject": "semantic_capability"
+        },
+        "requires": {
+          "authority_implication": "none",
+          "object": "semantic_capability",
+          "semantics": "The subject capability depends on the object capability being satisfied according to the subject capability's applicable contracts.\n",
+          "state_implication": "none",
+          "subject": "semantic_capability"
+        }
+      },
+      "capability_state_dimensions": {
+        "admitted": {
+          "authority_source": "applicable_admission_authority",
+          "definition": "The exact capability declaration has been accepted by the applicable admission authority for the relevant semantic scope.\n",
+          "implies": []
+        },
+        "authorized": {
+          "authority_source": "governing_authority",
+          "definition": "The governing authority permits the subject to invoke the capability within the declared scope and context.\n",
+          "implies": []
+        },
+        "available": {
+          "authority_source": "applicable_availability_fact_source",
+          "definition": "A realization is reported as currently usable at the relevant runtime coordinates. Availability is a runtime fact and does not itself establish authorization, conformance, or semantic ownership.\n",
+          "implies": []
+        },
+        "declared": {
+          "authority_source": "semantic_owner",
+          "definition": "The semantic owner has explicitly defined the capability identity and its semantic definition at an exact version or revision.\n",
+          "implies": []
+        },
+        "invocable": {
+          "authority_source": "derived_contract_evaluation",
+          "definition": "A derived evaluation that all capability states, requirements, authority, and preconditions required by the applicable canonical contracts are satisfied for a specific invocation attempt.\n",
+          "derived": true,
+          "implies": []
+        }
+      },
+      "global_rules": {
+        "capability_identity_is_not_provider_identity": true,
+        "capability_identity_is_semantic": true,
+        "catalog_registration_does_not_expand_authority": true,
+        "component_capabilities_are_not_globalized_by_recurrence": true,
+        "declaration_admission_availability_authorization_and_invocability_are_distinct": true,
+        "effect_class_does_not_grant_authority": true,
+        "effect_class_must_be_explicit": true,
+        "invocability_is_derived_not_self_granted": true,
+        "provider_realization_does_not_transfer_semantic_ownership": true,
+        "provider_realization_is_separate_from_semantic_capability_identity": true,
+        "requirements_must_be_declared": true,
+        "semantic_owner_must_be_explicit": true,
+        "semantic_scope_must_be_explicit": true,
+        "state_dimensions_do_not_imply_a_lifecycle_order": true,
+        "technology_registration_does_not_authorize_capability_use": true,
+        "unknown_state_must_remain_explicit": true
+      },
+      "invocability_contract": {
+        "forbidden": [
+          "self_authorization",
+          "inference_from_declaration_only",
+          "inference_from_availability_only",
+          "inference_from_provider_presence",
+          "inference_from_previous_success",
+          "inference_from_unknown_or_unresolved_state"
+        ],
+        "kind": "derived_predicate",
+        "rule": "A capability is invocable only when every state dimension required by its applicable canonical contracts is satisfied, all declared semantic requirements and applicable authorization requirements are satisfied for the invocation scope, and no applicable hard constraint is unresolved or violated.\n"
+      }
+    },
+    "capability_resolution": {
+      "inputs": [
+        "desired_capability_refs",
+        "capability_catalog_projection",
+        "applicable_contract_projection",
+        "authority_projection",
+        "requirement_closure"
+      ],
+      "outputs": {
+        "capability_closure_ir": "Exact desired and transitive semantic capability closure with provenance.",
+        "unresolved_capability_refs": "Capabilities whose meaning, owner, dependency, or governing contract cannot be resolved."
+      },
+      "resolution_order": [
+        "resolve_semantic_identity",
+        "resolve_semantic_owner",
+        "resolve_required_capabilities",
+        "resolve_applicable_contracts",
+        "resolve_authorization_requirements",
+        "emit_capability_closure"
+      ],
+      "rules": [
+        "capability_identity_is_provider_independent",
+        "dependency_closure_does_not_imply_availability_or_authorization",
+        "unregistered_component_local_capability_may_be_resolved_only_from_its_semantic_owner_source",
+        "missing_capability_semantics_remain_unresolved",
+        "closure_preserves_all_source_coordinates"
+      ]
+    },
+    "contracts": {
+      "contracts": [
+        {
+          "applies_to": [
+            "missing_inputs",
+            "unresolved_results",
+            "conflicting_authoritative_claims",
+            "unavailable_capabilities",
+            "degraded_execution",
+            "fallback_paths"
+          ],
+          "forbidden": [
+            "coercing_unknown_to_default_value",
+            "coercing_unknown_to_success_failure_validity_or_authorization",
+            "silent_conflict_reconciliation",
+            "authority_declaration_as_substitute_for_missing_evidence",
+            "silent_semantic_fallback",
+            "cross_owner_impersonation_without_compatibility_and_authority"
+          ],
+          "guarantees": [
+            "unknown_remains_distinguishable_from_known_values_and_success",
+            "conflicting_semantics_are_not_silently_reconciled",
+            "conflict_resolution_does_not_manufacture_missing_evidence_or_prove_unproven_claims",
+            "unavailable_semantics_are_not_replaced_by_undeclared_fallbacks",
+            "authorized_compatible_substitution_preserves_declared_semantic_guarantees"
+          ],
+          "id": "l9.contract/unknown-and-degradation@1",
+          "outcomes": {
+            "refused": "requested_substitution_lacks_compatibility_or_authority",
+            "resolved": "required_semantics_are_known_or_validly_substituted_or_conflict_is_authoritatively_resolved",
+            "unresolved": "unknown_unavailable_or_conflicting_semantics_remain_explicit"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Preserve unknown, unresolved, and conflicting semantics and constrain degraded behavior so unavailable capabilities cannot silently impersonate other semantic owners.\n",
+          "requires": [
+            "unknown_or_unavailable_state_is_explicit",
+            "conflicting_semantics_remain_explicit_until_resolved_by_applicable_authoritative_rule_or_decision",
+            "substitution_has_explicit_compatibility_contract_when_attempted",
+            "substitution_has_applicable_authority_when_attempted"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-UNKNOWN-001",
+            "L9-DEGRADE-001",
+            "L9-COMPAT-001",
+            "L9-AUTH-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "capability_catalogs",
+            "capability_admission",
+            "capability_availability",
+            "authorization",
+            "invocation"
+          ],
+          "forbidden": [
+            "treating_declaration_as_admission",
+            "treating_admission_as_availability",
+            "treating_availability_as_authorization",
+            "treating_authorization_as_availability",
+            "treating_any_single_state_as_invocability_without_required_contract_conditions"
+          ],
+          "guarantees": [
+            "declaration_admission_availability_authorization_and_invocability_remain_distinct",
+            "no_state_implies_another_without_declared_contract_semantics",
+            "invocation_does_not_create_missing_authorization_or_admission"
+          ],
+          "id": "l9.contract/capability-state@1",
+          "outcomes": {
+            "invocable": "all_contract_required_states_and_authority_are_satisfied",
+            "not_invocable": "one_or_more_required_states_or_authority_conditions_fail",
+            "unresolved": "one_or_more_required_capability_states_cannot_be_resolved"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Preserve the distinction among capability declaration, admission, availability, authorization, and invocability.\n",
+          "requires": [
+            "each_relevant_capability_state_is_explicit",
+            "state_implications_are_defined_only_by_applicable_canonical_contract",
+            "invocation_satisfies_all_required_states_and_authority"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-CAPABILITY-001",
+            "L9-AUTH-001",
+            "L9-PROMOTION-001"
+          ]
+        }
+      ]
+    },
+    "dependency_archetypes": {
+      "archetypes": [
+        {
+          "forbidden": [
+            "implicit_gate_registration",
+            "consumer_semantic_ownership_capture",
+            "provider_becomes_semantic_owner"
+          ],
+          "id": "l9.dependency-archetype/semantic-subsystem@1",
+          "optional_patterns": [
+            "l9.pattern/semantic-core-provider-adapter@1",
+            "l9.pattern/reference-model-conformance@1",
+            "l9.pattern/fixture-backed-conformance@1"
+          ],
+          "properties": [
+            "owned_reusable_semantics",
+            "public_programmatic_contract",
+            "consumer_bound_runtime",
+            "independent_release_identity"
+          ],
+          "purpose": "Reusable installable subsystem that owns a bounded semantic domain while executing inside a consuming product's runtime boundary.\n",
+          "requires": {
+            "architecture_patterns": [
+              "l9.pattern/dependency-package@1"
+            ],
+            "conformance_classes": [
+              "core"
+            ]
+          }
+        },
+        {
+          "forbidden": [
+            "implicit_domain_ownership",
+            "implicit_gate_registration"
+          ],
+          "id": "l9.dependency-archetype/infrastructure@1",
+          "properties": [
+            "reusable_mechanism",
+            "public_programmatic_contract",
+            "consumer_bound_runtime"
+          ],
+          "purpose": "Reusable installable infrastructure mechanism with an L9-owned public contract and no independent Constellation identity.\n",
+          "requires": {
+            "architecture_patterns": [
+              "l9.pattern/dependency-package@1"
+            ],
+            "conformance_classes": [
+              "core"
+            ]
+          }
+        },
+        {
+          "forbidden": [
+            "provider_api_promoted_to_owner_contract",
+            "consumer_semantics_redefined_by_adapter"
+          ],
+          "id": "l9.dependency-archetype/adapter-package@1",
+          "properties": [
+            "adapter_implementation",
+            "explicit_port_conformance",
+            "provider_binding"
+          ],
+          "purpose": "Reusable installable package whose primary responsibility is a concrete realization of one or more owner-defined ports.\n",
+          "requires": {
+            "architecture_patterns": [
+              "l9.pattern/dependency-package@1",
+              "l9.pattern/semantic-core-provider-adapter@1"
+            ],
+            "conformance_classes": [
+              "core",
+              "adapter"
+            ]
+          }
+        },
+        {
+          "forbidden": [
+            "hidden_runtime_side_effects",
+            "implicit_process_ownership"
+          ],
+          "id": "l9.dependency-archetype/contract-package@1",
+          "properties": [
+            "stable_contract_surface",
+            "minimal_runtime",
+            "independent_release_identity"
+          ],
+          "purpose": "Reusable installable package whose primary public surface is canonical or owner-admitted types, schemas, contracts, validators, and compatibility machinery with minimal runtime behavior.\n",
+          "requires": {
+            "architecture_patterns": [
+              "l9.pattern/dependency-package@1"
+            ],
+            "conformance_classes": [
+              "core"
+            ]
+          }
+        },
+        {
+          "forbidden": [
+            "consumer_domain_semantic_ownership",
+            "implicit_constellation_identity"
+          ],
+          "id": "l9.dependency-archetype/chassis@1",
+          "properties": [
+            "reusable_runtime_substrate",
+            "consumer_bound_runtime",
+            "domain_semantic_non_ownership"
+          ],
+          "purpose": "Reusable installable runtime substrate providing common bootstrap, configuration, health, observability, security, or lifecycle mechanics without acquiring the consumer's domain semantics.\n",
+          "requires": {
+            "architecture_patterns": [
+              "l9.pattern/dependency-package@1"
+            ],
+            "conformance_classes": [
+              "core"
+            ]
+          }
+        }
+      ],
+      "global_rules": {
+        "archetype_does_not_create_semantic_ownership": true,
+        "archetype_does_not_define_consumer_semantics": true,
+        "archetype_obligations_apply_unmodified_unless_an_admitted_product_kind_exception_displaces_them_for_its_exact_product": true,
+        "archetype_specializes_dependency_kind": true,
+        "catalog_applies_only_to_product_kind_dependency": true,
+        "dependencies_are_locally_composed": true,
+        "dependency_runtime_identity_is_consumer_bound": true,
+        "package_complexity_does_not_imply_node_kind": true
+      }
+    },
+    "invariants": {
+      "invariants": [
+        {
+          "id": "L9-AUTH-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "No component may expand its own authority.\n"
+        },
+        {
+          "id": "L9-PROMOTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A semantic artifact or result does not acquire a stronger semantic or authority class merely by being produced, consumed, repeated, or validated; promotion requires explicit admission by the authority that owns the target semantic or authority class.\n"
+        },
+        {
+          "id": "L9-UNKNOWN-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+        },
+        {
+          "id": "L9-DEGRADE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Unavailability of one semantic capability does not authorize another to impersonate or substitute its semantics; substitution requires an explicit compatibility contract and applicable authority.\n"
+        },
+        {
+          "id": "L9-PROV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+        },
+        {
+          "id": "L9-COMPAT-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+        },
+        {
+          "id": "L9-PROJECTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+        },
+        {
+          "id": "L9-CAPABILITY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Declared, admitted, available, authorized, and invocable are distinct capability states; no state implies another unless a canonical contract explicitly defines that implication.\n"
+        }
+      ]
+    },
+    "semantic_dependency_model": {
+      "dependency_rules": {
+        "architecture_resolution": {
+          "change_effect": "ports_and_product_manifest_stale",
+          "depends_on": [
+            "requirement_closure",
+            "capability_closure",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "architecture_rules",
+            "architecture_patterns",
+            "node_archetypes",
+            "dependency_archetypes"
+          ]
+        },
+        "capability_closure": {
+          "change_effect": "architecture_and_conformance_resolution_stale",
+          "depends_on": [
+            "requirement_closure",
+            "capabilities",
+            "capability_resolution",
+            "contracts"
+          ]
+        },
+        "capability_declaration": {
+          "depends_on": [
+            "semantic_owner",
+            "semantic_scope",
+            "effect_class",
+            "required_capability_refs",
+            "applicable_contract_refs",
+            "authorization_requirement_refs"
+          ],
+          "material_change_effect": "new_admission_decision_required_unless_compatibility_preserves_prior_decision",
+          "provider_realization_change_alone_does_not_change_semantic_identity": true
+        },
+        "conformance": {
+          "depends_on": [
+            "resolved_profile_refs",
+            "resolved_profile_digests",
+            "fixture_refs",
+            "fixture_digests",
+            "binding_identity",
+            "implementation_or_repository_revision"
+          ],
+          "receipt_binds_exact_closure": true
+        },
+        "conformance_requirement_resolution": {
+          "change_effect": "product_manifest_and_conformance_closure_stale",
+          "depends_on": [
+            "invariants",
+            "contracts",
+            "capabilities",
+            "architecture_resolution",
+            "port_resolution",
+            "conformance_model"
+          ]
+        },
+        "fixture": {
+          "change_effect": "fixture_stale",
+          "depends_on": [
+            "source_law_identity",
+            "source_law_digest",
+            "derivation_profile_ref",
+            "derivation_profile_digest"
+          ]
+        },
+        "fixture_profile": {
+          "depends_on": [
+            "fixture_refs",
+            "fixture_digests"
+          ],
+          "existing_profile_versions_are_immutable": true,
+          "membership_change_requires_new_profile_version": true
+        },
+        "identity_topology_resolution": {
+          "change_effect": "requirement_product_manifest_and_identity_consumers_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "identity_model",
+            "contracts",
+            "authority_model"
+          ]
+        },
+        "implementation_ir": {
+          "change_effect": "implementation_ir_and_target_artifacts_stale",
+          "depends_on": [
+            "product_manifest",
+            "authority_revision",
+            "target_binding",
+            "behavior_contract_refs",
+            "behavior_contract_digests",
+            "compiler_coordinates"
+          ]
+        },
+        "port_resolution": {
+          "change_effect": "technology_binding_and_product_manifest_stale",
+          "depends_on": [
+            "architecture_resolution",
+            "port_catalog",
+            "contracts",
+            "capabilities"
+          ]
+        },
+        "product_archetype_resolution": {
+          "change_effect": "architecture_ports_and_manifest_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kind_resolution",
+            "node_archetypes",
+            "dependency_archetypes"
+          ]
+        },
+        "product_kind_resolution": {
+          "change_effect": "archetype_architecture_and_manifest_stale",
+          "depends_on": [
+            "product_topology",
+            "product_kinds",
+            "repository_registry"
+          ]
+        },
+        "product_manifest": {
+          "change_effect": "implementation_and_target_artifacts_stale",
+          "depends_on": [
+            "product_topology",
+            "identity_topology_resolution",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "requirement_closure",
+            "capability_closure",
+            "architecture_resolution",
+            "port_resolution",
+            "provider_binding_resolution",
+            "conformance_requirement_resolution",
+            "compilation_profile",
+            "compiler_coordinates"
+          ]
+        },
+        "product_topology": {
+          "change_effect": "product_kind_archetype_requirement_and_resolution_closure_stale",
+          "depends_on": [
+            "vocabulary",
+            "invariants",
+            "contracts",
+            "authority_model",
+            "capability_semantics",
+            "product_kinds",
+            "node_archetypes",
+            "dependency_archetypes",
+            "technology_profile_semantics"
+          ]
+        },
+        "provider_binding_resolution": {
+          "change_effect": "product_manifest_and_implementation_stale",
+          "depends_on": [
+            "port_resolution",
+            "technology_profiles",
+            "technology_capabilities",
+            "binding_catalog"
+          ]
+        },
+        "receipt": {
+          "depends_on": [
+            "exact_subject_ref",
+            "governing_coordinates",
+            "claim",
+            "verification_basis"
+          ],
+          "material_subject_or_coordinate_change_effect": "non_current_unless_compatibility_preserves_applicability",
+          "prior_receipt_remains_immutable": true
+        },
+        "requirement_closure": {
+          "change_effect": "semantic_resolution_stale",
+          "depends_on": [
+            "product_topology",
+            "identity_topology_resolution",
+            "product_kind_resolution",
+            "product_archetype_resolution",
+            "invariants",
+            "contracts",
+            "capabilities",
+            "authority_model",
+            "requirement_model"
+          ]
+        }
+      },
+      "invalidation_rules": {
+        "affected_expression": "Affected(change) = TransitiveDependents(changed_semantics)",
+        "historical_artifacts_are_immutable": true,
+        "profile_digest_change": "mark_profile_dependents_stale",
+        "repair_default": "repair_current_stage_when_upstream_assumptions_remain_valid",
+        "silent_consumption_of_stale_input_forbidden": true,
+        "source_digest_change": "mark_transitive_dependents_stale",
+        "upstream_conflict": "create_new_upstream_revision_then_invalidate_transitive_dependents",
+        "upstream_revision_change": "evaluate_dependency_impact"
+      }
+    }
+  },
+  "schema": "l9.composed-projection/v1"
+}

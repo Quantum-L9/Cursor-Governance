@@ -73,6 +73,22 @@ jobs:
             profile: l9.projection/cursor-governance-operating-plane@2
           - bundle: pr_audit
             profile: l9.projection/pr-audit@1
+          - bundle: domain_architecture
+            profile: l9.projection/architecture@1
+          - bundle: domain_governance
+            profile: l9.projection/governance@1
+          - bundle: domain_evidence_provenance
+            profile: l9.projection/evidence-provenance@1
+          - bundle: domain_contracts_conformance
+            profile: l9.projection/contracts-conformance@1
+          - bundle: domain_capabilities_dependencies
+            profile: l9.projection/capabilities-dependencies@1
+          - bundle: domain_strategic_value
+            profile: l9.projection/strategic-value@1
+          - bundle: domain_signals
+            profile: l9.projection/signals@1
+          - bundle: technical_coordination
+            profile: l9.projection/technical-coordination@1
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -276,7 +292,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2]
+        bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
+                 domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
+                 technical_coordination]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)
         shell: bash

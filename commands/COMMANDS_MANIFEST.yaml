@@ -19,6 +19,9 @@ resolution_order:
 - .cursor-commands/commands/{cmd}.md
 - L9 skill (skills/AUTONOMY_MANIFEST.yaml) when file absent
 commands:
+- slash: /architect
+  file: commands/architect.md
+  enabled: true
 - slash: /clean
   file: commands/clean.md
   enabled: true
