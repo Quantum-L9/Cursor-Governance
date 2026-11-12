@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
+      "digest": "sha256:f6f10221c6bfbbd2382ba2f3dd80f5766b7836798556cac2ffcabb76080a3fde",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
     "source_registry": {
       "digest": "sha256:28038459d4201ba391f01ac16802195245aac939efb3c34f4ac9e71098528dfe",
       "path": "semantics/canonical_sources.yaml",
@@ -43,7 +43,7 @@
   },
   "inputs": [
     {
-      "digest": "sha256:e17a2fb1a720e51b678bc5db46451568be6182a3075b7a823cd7438bcf682d23",
+      "digest": "sha256:85f9c1696a67289903ba4734dc53b63813afa1f00e11b4b08e5c73623a515039",
       "ref": "l9.projection/technical-coordination@1#l9.source/vocabulary@1"
     },
     {
@@ -65,7 +65,7 @@
   ],
   "operation": "composition",
   "output": {
-    "digest": "sha256:62f2660952e363c4537f5537a6c8812716072363fc655eeda0315abe37ae0857",
+    "digest": "sha256:9c159475edeb9a71b50242f51169675a8badd8a897ea9bf83fdda3eb236c6df4",
     "ref": "l9.compose/technical-coordination@1#l9.projection/technical-coordination@1"
   },
   "producer_identity": {
@@ -76,8 +76,8 @@
     "digest": "sha256:d41f63be6862c01c83f7fab2068af4046a9161d86435dd043bd1f0b4bde34afb",
     "ref": "l9.compose/technical-coordination@1"
   },
-  "receipt_digest": "sha256:c2e380591a45bb81976980b7118c9878d1389eaa6dbf834f13a1315723d828cf",
-  "receipt_identity": "l9.receipt-instance/ab36ef7bc82281f512dab66c2fc4025a487b0cbc56a6ef595e581029682186ab",
+  "receipt_digest": "sha256:e81e56dc0b027f5a6b1afe21d08158da66997babe1d089cc0bb5c38cc2b88494",
+  "receipt_identity": "l9.receipt-instance/2e5b88966b1862ef58cdda483936e320a6932502b48879db9c4c0be4cacd3b7d",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -142,7 +142,7 @@
           },
           "source_currentness": {
             "digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
-            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+            "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
             "status": "pass"
           },
           "source_identity": {
@@ -216,7 +216,7 @@
           },
           "source_currentness": {
             "digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
-            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+            "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
             "status": "pass"
           },
           "source_identity": {
@@ -290,7 +290,7 @@
           },
           "source_currentness": {
             "digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
-            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+            "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
             "status": "pass"
           },
           "source_identity": {
@@ -364,7 +364,7 @@
           },
           "source_currentness": {
             "digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
-            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+            "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
             "status": "pass"
           },
           "source_identity": {
@@ -429,7 +429,7 @@
             "status": "pass"
           },
           "projection_digest": {
-            "digest": "sha256:e17a2fb1a720e51b678bc5db46451568be6182a3075b7a823cd7438bcf682d23",
+            "digest": "sha256:85f9c1696a67289903ba4734dc53b63813afa1f00e11b4b08e5c73623a515039",
             "status": "pass"
           },
           "selection_equivalence": {
@@ -437,8 +437,8 @@
             "status": "pass"
           },
           "source_currentness": {
-            "digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
-            "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+            "digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
+            "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
             "status": "pass"
           },
           "source_identity": {
@@ -450,14 +450,14 @@
         },
         "projection_profile_digest": "sha256:68c2727e15edebb7b60bf30bb15e6aa1b00e0ef3967a5e194f37842741d5c036",
         "projection_profile_ref": "l9.projection/technical-coordination@1",
-        "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+        "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
         "source_ref": "l9.source/vocabulary@1"
       }
     },
     "coverage": "complete",
     "criteria": {
       "component_freshness": {
-        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+        "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
         "status": "pass"
       },
       "component_provenance": {
@@ -471,7 +471,7 @@
         "status": "pass"
       },
       "composition_digest": {
-        "digest": "sha256:62f2660952e363c4537f5537a6c8812716072363fc655eeda0315abe37ae0857",
+        "digest": "sha256:9c159475edeb9a71b50242f51169675a8badd8a897ea9bf83fdda3eb236c6df4",
         "status": "pass"
       },
       "composition_equivalence": {
@@ -483,7 +483,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:a26ff552be5b37271e1a3127bcda0fe64daff8a15ce5984bfd260be51f97231f",
+        "content_digest": "sha256:a606b725abd23785fd84be89f365f96dee57e503e80c27907a3794b773af7a3a",
         "path": "composed/l9.compose_technical-coordination_1_l9.projection_technical-coordination_1.composed.json",
         "status": "pass"
       },

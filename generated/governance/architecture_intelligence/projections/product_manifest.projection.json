@@ -33,6 +33,9 @@
       "capabilities": {
         "type": "object"
       },
+      "closure_digest": {
+        "type": "semantic_digest"
+      },
       "communication": {
         "type": "object"
       },
@@ -52,6 +55,23 @@
         "type": "object"
       },
       "conformance": {
+        "properties": {
+          "compilation": {
+            "properties": {
+              "conformance_ir_digest": {
+                "type": "semantic_digest"
+              },
+              "fixture_ir_digest": {
+                "type": "semantic_digest"
+              }
+            },
+            "required": [
+              "fixture_ir_digest",
+              "conformance_ir_digest"
+            ],
+            "type": "object"
+          }
+        },
         "type": "object"
       },
       "distribution": {
@@ -206,14 +226,16 @@
       "implementation_lowering_takes_inbound_action_routing_only_from_manifest_interfaces",
       "implementation_lowering_takes_consequential_operation_idempotency_only_from_manifest_effects",
       "an_interface_action_or_consequential_operation_absent_from_the_manifest_is_not_lowered",
-      "manifest_preserves_each_port_and_adapter_implementation_ref_exactly_from_the_source_topology"
+      "manifest_preserves_each_port_and_adapter_implementation_ref_exactly_from_the_source_topology",
+      "manifest_closure_digest_is_the_semantic_digest_of_the_manifest_without_manifest_digest_closure_digest_and_conformance_compilation",
+      "a_manifest_that_records_conformance_compilation_records_closure_digest_and_the_compiled_fixture_and_conformance_ir_digests"
     ],
     "type": "object"
   },
-  "projection_digest": "sha256:d230632ca621d6a3d8fb01a693ee1e43eec789be37770267a054e2964eb4587e",
+  "projection_digest": "sha256:274ab95b8ed819c2e48dcd637f5761bbf042012cf586c9723300800c107e8903",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:3a2cbc316b090e59a06dcd7bb0393f4bc56b7f65e3a08c64403d815ce22e7ede",
+  "source_digest": "sha256:f2e29e7b16b1259b39c14cf5116aa49027879a940425858cee71442e7deecddc",
   "source_ref": "l9.source/product-manifest-schema@1"
 }

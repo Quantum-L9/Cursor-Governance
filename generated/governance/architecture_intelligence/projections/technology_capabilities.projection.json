@@ -11,6 +11,96 @@
       "provider_compatibility": {
         "expression": "RequiredCapabilities ⊆ ProviderCapabilities\n"
       },
+      "provider_compatibility_tiers": {
+        "admitted_definition_does_not_imply_runtime_qualification": true,
+        "definitions_ref": "technology_capabilities.yaml#capability_definitions",
+        "empty_required_capabilities": "incompatible_until_resolved",
+        "order": [
+          "incompatible",
+          "incompatible_until_resolved",
+          "semantically_compatible",
+          "runtime_qualified"
+        ],
+        "overall": [
+          "any_token_incompatible_gives_incompatible",
+          "otherwise_any_token_incompatible_until_resolved_gives_incompatible_until_resolved",
+          "otherwise_every_token_runtime_qualified_gives_runtime_qualified",
+          "otherwise_semantically_compatible"
+        ],
+        "provider_facts_ref": "binding_catalog.yaml#bindings[class=provider].facts",
+        "provider_name_never_implies_a_token": true,
+        "purpose": "Decide RequiredCapabilities ⊆ ProviderCapabilities per capability token in two separate tiers. Semantic admission of definitions and provider facts needs no live receipt; runtime qualification of a deployed provider needs a passing live conformance receipt. A missing live receipt never blocks admission of a definition, and an admitted definition never implies runtime qualification.\n",
+        "rule_order": [
+          "D2-EVAL-01",
+          "D2-EVAL-02",
+          "D2-EVAL-03",
+          "D2-EVAL-06",
+          "D2-EVAL-10",
+          "D2-EVAL-04",
+          "D2-EVAL-05",
+          "D2-EVAL-08",
+          "D2-EVAL-07"
+        ],
+        "runtime_qualification_is_not_an_admission_precondition": true,
+        "technology_binding_outcomes": {
+          "incompatible": "incompatible",
+          "incompatible_until_resolved": "unresolved",
+          "runtime_qualified": "resolved",
+          "semantically_compatible": "resolved"
+        },
+        "token_rules": [
+          {
+            "id": "D2-EVAL-01",
+            "result": "incompatible_until_resolved",
+            "when": "the token has no admitted definition, directly or through an alias"
+          },
+          {
+            "id": "D2-EVAL-02",
+            "result": "incompatible_until_resolved",
+            "when": "the provider binding has no admitted fact for the token, or its status is unknown"
+          },
+          {
+            "id": "D2-EVAL-03",
+            "result": "incompatible",
+            "when": "the admitted fact has status not_provided"
+          },
+          {
+            "id": "D2-EVAL-04",
+            "result": "incompatible_until_resolved",
+            "when": "the fact declares requires_deployment and the deployment profile is unknown"
+          },
+          {
+            "id": "D2-EVAL-05",
+            "result": "incompatible",
+            "when": "the fact declares requires_deployment and the deployment profile is not listed"
+          },
+          {
+            "id": "D2-EVAL-06",
+            "result": "incompatible_until_resolved",
+            "when": "the fact has status provided but no vendor citation"
+          },
+          {
+            "id": "D2-EVAL-07",
+            "result": "semantically_compatible",
+            "when": "admitted definition and admitted, cited, deployment-satisfied fact, with no qualifying passing receipt"
+          },
+          {
+            "id": "D2-EVAL-08",
+            "result": "runtime_qualified",
+            "when": "as D2-EVAL-07, and the newest receipt (ordered by the parsed execution instant, not its text) bound to the exact provider binding id and digest, token, probe, deployment profile and deployed server version passes; the digest is computed over the canonical binding entry exactly as registered"
+          },
+          {
+            "id": "D2-EVAL-09",
+            "result": "receipt_ignored",
+            "when": "a receipt is not of family l9.receipt/conformance@1, names no executor_identity, records an executed_at that is missing or not a timezone-aware ISO-8601 instant, binds a different binding digest or deployment profile, records a provider_server_version that is missing, unparseable, outside the binding's server_version_range or different from the deployed server version, or names an in-memory, fake or mock subject"
+          },
+          {
+            "id": "D2-EVAL-10",
+            "result": "incompatible_until_resolved",
+            "when": "the provider binding declares a server_version_range and the deployed server version is unknown or outside it"
+          }
+        ]
+      },
       "target_compatibility": {
         "expression": "RequiredTargetCapabilities ⊆ TargetCapabilities\n"
       },
@@ -188,10 +278,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:8974ccf5119189c94e3bf71dd47df6992698f48d0e3ea6cb96e5669bb687401c",
+  "projection_digest": "sha256:1f02702d3f7fc59fba6acca8f93c5c0d695064e4089fcaea43cac4e08feb49ee",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:d2172c439b1fc221e9a599220065830187054747f263567e4061d8c95845ad0b",
+  "source_digest": "sha256:2c7f8c3f7f98bc48fe782cc72a62d676541f2abfe9c38ba55a8eb948edff3ed6",
   "source_ref": "l9.source/technology-capabilities@1"
 }

@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
+      "digest": "sha256:f6f10221c6bfbbd2382ba2f3dd80f5766b7836798556cac2ffcabb76080a3fde",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
@@ -48,15 +48,15 @@
   },
   "inputs": [
     {
-      "digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+      "digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
       "path": "semantics/vocabulary.yaml",
       "ref": "l9.source/vocabulary@1",
-      "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+      "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
     }
   ],
   "operation": "projection",
   "output": {
-    "digest": "sha256:7e8cafa00ad8754e3c3e47b3ccbadb6357fa923cf20302bc5ab2ee9269843cfe",
+    "digest": "sha256:4db68420fd4b3502cb03e7ce0fa40816d7e0a4c2afceb04afbc94d24ba245260",
     "ref": "l9.projection/pr-audit@1#l9.source/vocabulary@1"
   },
   "producer_identity": {
@@ -67,8 +67,8 @@
     "digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
     "ref": "l9.projection/pr-audit@1"
   },
-  "receipt_digest": "sha256:0a04f0eca14d2412d450a1a244e5b6b3b08e3931c86b927795c64530d10ae254",
-  "receipt_identity": "l9.receipt-instance/563393d6d35f5f7148ce3a9d99ae620423985fc543291078e6afa127ff6b0ea9",
+  "receipt_digest": "sha256:47b1bffeac915af4e6203113eac56689cf4390229327a5bb31fd99375dc8b1be",
+  "receipt_identity": "l9.receipt-instance/99c76cafde663d5cfb54edb085fb88224de4594d0689c44b9af8f6110537ef25",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -101,7 +101,7 @@
         "status": "pass"
       },
       "delivered_bytes": {
-        "content_digest": "sha256:b8a25c29d48ddaa686677d004d0810d5edde77a6056c5463ab91c7b6c997e5d8",
+        "content_digest": "sha256:9f8be1dc0d9da2a23ef34b5a6e3a9852c474fcdc900b51a108d7c993a73daea9",
         "path": "l9.projection_pr-audit_1/l9.source_vocabulary_1.projection.json",
         "status": "pass"
       },
@@ -128,7 +128,7 @@
         "status": "pass"
       },
       "projection_digest": {
-        "digest": "sha256:7e8cafa00ad8754e3c3e47b3ccbadb6357fa923cf20302bc5ab2ee9269843cfe",
+        "digest": "sha256:4db68420fd4b3502cb03e7ce0fa40816d7e0a4c2afceb04afbc94d24ba245260",
         "status": "pass"
       },
       "selection_equivalence": {
@@ -136,8 +136,8 @@
         "status": "pass"
       },
       "source_currentness": {
-        "digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
-        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+        "digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
+        "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
         "status": "pass"
       },
       "source_identity": {
