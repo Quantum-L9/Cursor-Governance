@@ -250,6 +250,9 @@ campaign_execution:
   projection_binding:
     profile_ref: l9.projection/coding-agent-execution@1
     binding: governance/authority-bindings/coding-agent-execution.yaml
+    # The same selection /coding-agent binds for a session; the pipeline binds
+    # it for a campaign, without a session and without the skill.
+    mode_contract: governance/coding-agent-mode/MODE.yaml
     required_at: bootstrap
     record: runtime/coding-projection-binding.json
   campaigns:

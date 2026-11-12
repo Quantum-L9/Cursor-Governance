@@ -72,6 +72,15 @@ class ProfileBlockTests(unittest.TestCase):
         ):
             self.assertTrue((GOV_ROOT / relative).is_file(), relative)
 
+    def test_the_pipeline_binds_what_the_coding_agent_mode_selects(self) -> None:
+        """One selection, two consumers: a session (/coding-agent) and a campaign."""
+        declared = LIVE["projection_binding"]
+        mode = yaml.safe_load((GOV_ROOT / declared["mode_contract"]).read_text("utf-8"))
+        selected = {item["ref"]: item for item in mode["selection"]["projections"]}
+        self.assertIn(declared["profile_ref"], selected)
+        self.assertEqual(selected[declared["profile_ref"]]["binding"], declared["binding"])
+        self.assertIs(selected[declared["profile_ref"]]["required"], True)
+
     def test_the_session_start_block_does_not_advertise_program_execution(self) -> None:
         """Connected is not ambient: no session is told the pipeline exists."""
         profile = yaml.safe_load((GOV_ROOT / authority.SURFACE_PROFILE).read_text("utf-8"))

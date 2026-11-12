@@ -2151,7 +2151,7 @@
     },
     {
       "path": "scripts/tests/test_campaign_authority.py",
-      "sha256": "1af921009b12e1eff8665129bfb3e296bffb127a03ec511f761c4aa2b203e8e4"
+      "sha256": "b72b62d6e8a077dca37027240590d32e3f277f1fe0647bddbf84555af230639e"
     },
     {
       "path": "scripts/tests/test_campaign_input_front_door.py",
