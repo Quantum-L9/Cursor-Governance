@@ -24,9 +24,9 @@
       "alias": null,
       "class": "always",
       "output": "02-slash-commands.md",
-      "output_sha256": "9e501cc20494aebb37ef452aea5a3e10a0d92dc50e53e9be46f097d10573e13b",
+      "output_sha256": "17c79cd7d59ac4dbf521ef94684b37cfb58bcfd5635e14568d17f5e9145b5f3b",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "e8fb57d4d513ece89aebb271aad891a023dbc073a15d6b952332b6eb7815b573",
+      "source_sha256": "ef37b002dda4f9398e8804ec4ab69914a60b16be72a3f07f6db86543b97c0dc4",
       "stem": "02-slash-commands"
     },
     {
@@ -186,9 +186,9 @@
       "alias": null,
       "class": "always",
       "output": "45-pre-action-verification.md",
-      "output_sha256": "f1dba8fde0395ec41b9390fca599c06f098628d9cee60599a3a810040b09e0d3",
+      "output_sha256": "04e833c4310c6fd38ce5844b43e85aa063b83df81fcd261b9eca1a08aa90e428",
       "source": "rules/45-pre-action-verification.mdc",
-      "source_sha256": "135cbacb57a580aaaa9c3abf2e48ac9b1de4289032c16d16da14a93c86e76ab2",
+      "source_sha256": "6888d44d3ebde40f7cc4ed08874e2788e7e28b6a4b06acc40ee97a74420a2f76",
       "stem": "45-pre-action-verification"
     },
     {
@@ -620,7 +620,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "ceb1283a8d2dba934224c421afd27317303bc4d61678dea71292d9149e1ba3d8",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "771c1ee84755bee3e0d1b841651ee25d3d19af6f875e16c1376eda84ba9f9f37",
+      "source_sha256": "dfb60ce02fb60fa36ac5d1ed4993224c08ca37f3f0b526915d36ff51b154acb5",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "ef9e593a1aef1c34ae07667bd0a543cdcd6e6e2d58dc69f14b7eed002841bfd4"
+  "tree_sha256": "8b7defa9c539cd4525fd40f0bb10e4099f0de84a7897e765c8b10d5d73ce91a9"
 }

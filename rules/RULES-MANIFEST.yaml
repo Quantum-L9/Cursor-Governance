@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-11-11T19:20:30Z'
+generated_utc: '2026-11-12T22:56:38Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:47399d2c12a4cbf335035e0dc1e44efbd8f115cb7807140fb02045cdb1cc53f8
+source_tree_digest: sha256:5406c8f49947b91a635baa581f3a59b2447358b054e52ab1c9431514aae894df
 summary:
   total_mdc_files: 68
   always_apply_true: 35
@@ -69,8 +69,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 135
-  content_digest: sha256:e8fb57d4d513ece89aebb271aad891a023dbc073a15d6b952332b6eb7815b573
+  line_count: 137
+  content_digest: sha256:ef37b002dda4f9398e8804ec4ab69914a60b16be72a3f07f6db86543b97c0dc4
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -485,7 +485,7 @@ rules:
   first_heading: Pre-Action Verification
   has_yaml_frontmatter: true
   line_count: 112
-  content_digest: sha256:135cbacb57a580aaaa9c3abf2e48ac9b1de4289032c16d16da14a93c86e76ab2
+  content_digest: sha256:6888d44d3ebde40f7cc4ed08874e2788e7e28b6a4b06acc40ee97a74420a2f76
   authority: canonical_global
   context_cost: moderate
   deprecated: false
