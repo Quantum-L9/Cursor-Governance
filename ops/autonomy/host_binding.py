@@ -20,8 +20,17 @@ binding declares. `always` domains are loaded in every session; a conditional do
 (`hosted_skill_requirement`, `explicit_task_requirement`) is loaded only when that activation
 is named, and is otherwise neither verified nor loaded.
 
-The overall status is BOUND when the base is CURRENT and every activated domain is
-ADMITTED_AND_CURRENT, otherwise BLOCKED with each exact reason. It changes what a session
+Status, each only with the proof named:
+
+* ``BOUND``      the base is CURRENT and every activated domain is ADMITTED_AND_CURRENT.
+* ``DEGRADED``   the base is CURRENT and at least one activated domain is not; the base and
+                 the domains that verified stay bound, the others are not.
+* ``NOT_BOUND``  the base is not CURRENT (or the adapter could not be run); nothing is bound.
+* ``REJECTED``   the contract or an activation is malformed; nothing is bound.
+
+Failure is fail-open: a binding that failed or degraded never stops the session. The
+SessionStart renderings say exactly what is and is not bound, never claim a projection that
+did not verify, and exit 0 even if this module itself raises. It changes what a session
 reads, never what it may do. Other projections are bound only by the manual modes
 (`/coding-agent`, `/lcto`, `/architect`).
 
@@ -29,8 +38,8 @@ Usage:
   host_binding.py [--host cursor|claude-code] [--activate ACTIVATION ...] [--workspace DIR]
                   [--authority-root DIR] [--domains-only] [--format json|markdown|line]
 
-json exits 0 BOUND, 3 BLOCKED, 1 REJECTED; markdown and line are SessionStart renderings and
-exit 0.
+json exits 0 BOUND, 3 DEGRADED or NOT_BOUND, 1 REJECTED; markdown and line are SessionStart
+renderings and always exit 0.
 """
 
 from __future__ import annotations
@@ -56,12 +65,12 @@ from projection_mode import (  # noqa: E402
 try:
     import yaml
 except ImportError:  # pragma: no cover - interpreter without PyYAML
-    print(json.dumps({"status": "BLOCKED", "reason": "INTERPRETER_UNRESOLVED"}))
+    print(json.dumps({"status": "NOT_BOUND", "reason": "INTERPRETER_UNRESOLVED"}))
     sys.exit(3)
 
 SCHEMA = "l9.cursor-governance.host-binding/v1"
 ACTIVATIONS = ("always", "hosted_skill_requirement", "explicit_task_requirement")
-EXIT = {"BOUND": 0, "BLOCKED": 3, "REJECTED": 1}
+EXIT = {"BOUND": 0, "DEGRADED": 3, "NOT_BOUND": 3, "REJECTED": 1}
 BASE_CURRENT = "CURRENT"
 
 Verify = Callable[[Path, Path | None], dict[str, Any]]
@@ -128,13 +137,20 @@ def run_base(
         cmd += ["--workspace", str(workspace)]
     if authority is not None:
         cmd += ["--authority-root", str(authority)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return {"status": "UNVERIFIED", "reason": f"ADAPTER_NOT_RUNNABLE: {exc}"}
     try:
         report = json.loads(proc.stdout)
     except json.JSONDecodeError:
         report = None
     if not isinstance(report, dict) or not isinstance(report.get("status"), str):
-        return {"status": "BLOCKED", "reason": "ADAPTER_OUTPUT_UNREADABLE", "exit": proc.returncode}
+        return {
+            "status": "UNVERIFIED",
+            "reason": "ADAPTER_OUTPUT_UNREADABLE",
+            "exit": proc.returncode,
+        }
     return report
 
 
@@ -179,7 +195,7 @@ def evaluate(
     verify: Verify = run_verifier,
     verify_base: VerifyBase = run_base,
 ) -> dict[str, Any]:
-    report: dict[str, Any] = {"schema": "l9.host-binding-status/v1", "host": host}
+    report: dict[str, Any] = {"schema": "l9.host-binding-status/v2", "host": host}
     unknown = sorted(activations - set(ACTIVATIONS) - {"always"})
     if unknown:
         return {**report, "status": "REJECTED", "reason": f"ACTIVATION_UNKNOWN: {unknown}"}
@@ -190,22 +206,24 @@ def evaluate(
     authority = resolve_authority(authority_root, workspace)
     active = {"always", *activations}
     blockers: list[dict[str, Any]] = []
-    load: list[dict[str, Any]] = []
     base = contract["base"]
     if domains_only:
         report["base"] = {"ref": base["ref"], "status": "NOT_EVALUATED", "reason": "DOMAINS_ONLY"}
         report["default"] = {"ref": base["ref"], "status": "NOT_EVALUATED"}
+        base_bound = True
     else:
         result = verify_base(base, workspace, authority)
         report["base"] = {
             "ref": base["ref"],
-            "status": result["status"],
+            "status": result.get("status"),
             "reason": result.get("reason"),
         }
         report["default"] = default_binding(base, result, workspace, authority)
-        if result["status"] != BASE_CURRENT:
+        base_bound = report["default"]["status"] == "BOUND"
+        if not base_bound:
             blockers.append(report["base"])
-    domains = []
+    domains: list[dict[str, Any]] = []
+    verified: list[dict[str, Any]] = []
     for entry in contract["domains"]:
         record: dict[str, Any] = {"ref": entry["ref"], "activation": entry["activation"]}
         if entry["activation"] not in active:
@@ -213,63 +231,99 @@ def evaluate(
             continue
         result = verify(REPO / entry["binding"], authority)
         record.update(status=result.get("status"), reason=result.get("reason"))
-        domains.append(record)
         if result.get("status") == ADMITTED:
             bundle = yaml.safe_load((REPO / entry["binding"]).read_text("utf-8"))["input"]["bundle"]
-            load.append(
-                {
-                    "ref": entry["ref"],
-                    "composed_view": str(REPO / bundle["path"] / bundle["composed_view"]),
-                }
-            )
+            view = str(REPO / bundle["path"] / bundle["composed_view"])
+            verified.append({"ref": entry["ref"], "composed_view": view})
+            record["composed_view"] = view
         else:
             blockers.append(record)
-    status = "BOUND" if not blockers else "BLOCKED"
+        domains.append(record)
+    if not base_bound:
+        # The base is required: without it nothing is bound, whatever else verified.
+        status, load = "NOT_BOUND", []
+    else:
+        status, load = ("BOUND" if not blockers else "DEGRADED"), verified
+    for record in domains:
+        if record["status"] != "NOT_ACTIVATED":
+            record["bound"] = any(item["ref"] == record["ref"] for item in load)
     return {
         **report,
         "status": status,
+        "fail_open": True,
         "canonical_binding_ref": contract.get("canonical_binding_ref"),
         "activations": sorted(active),
         "authority_root": str(authority) if authority else None,
         "domains": domains,
         "blockers": blockers,
-        "load": load if status == "BOUND" else [],
+        "load": load,
     }
 
 
 MANUAL = "/coding-agent, /lcto, /architect"
+CONTINUES = "fail-open: the session continues"
 
 
 def _quote(arg: str) -> str:
     return f'"{arg}"' if " " in arg else arg
 
 
+def _headline(report: dict[str, Any]) -> str:
+    status = report["status"]
+    if status == "REJECTED":
+        return (
+            f"NOT BOUND — host binding contract rejected: {report['reason']} ({CONTINUES}; "
+            "cite no operating-plane semantics)"
+        )
+    if status == "NOT_BOUND" and str(report.get("reason", "")).startswith("HOST_BINDING_ERROR"):
+        return (
+            f"NOT BOUND — the host binding failed: {report['reason']} ({CONTINUES}; "
+            "cite no operating-plane semantics)"
+        )
+    if status == "NOT_BOUND":
+        return (
+            "NOT BOUND — the operating plane did not verify, so nothing is bound "
+            f"({CONTINUES}; cite no operating-plane semantics)"
+        )
+    if status == "DEGRADED":
+        failed = sum(1 for item in report["domains"] if item.get("bound") is False)
+        return (
+            "DEGRADED — partly bound: only the projections marked BOUND below are bound; "
+            f"{failed} default domain(s) failed verification and are not ({CONTINUES})"
+        )
+    return "BOUND — every default projection verified and is bound for this session"
+
+
 def _items(report: dict[str, Any]) -> list[str]:
     """The binding as plain items; markdown prefixes them, line indents them."""
+    items = [_headline(report)]
     if report["status"] == "REJECTED":
-        return [f"REJECTED: {report['reason']}"]
-    items: list[str] = []
+        return [*items, f"manual bindings: {MANUAL}"]
     default = report.get("default") or {}
+    ref = default.get("ref")
     if default.get("status") == "BOUND":
         main = str(default.get("authority_main") or "")[:12]
         items += [
-            f"BOUND (automatic at session start): {default['ref']} at authority main {main}",
-            "source classes: " + ", ".join(default["source_classes"]),
-            "read a class before deciding a question it governs, and cite the profile and "
+            f"operating plane {ref}: BOUND at authority main {main}",
+            "  source classes: " + ", ".join(default["source_classes"]),
+            "  read a class before deciding a question it governs, and cite the profile and "
             "authority main: `" + " ".join(_quote(a) for a in default["read"]) + "`",
         ]
     elif default.get("status") == "NOT_BOUND":
-        items.append(
-            f"NOT BOUND: {default['ref']} {default['reason']}. Cite no operating-plane "
-            "semantics this session."
-        )
+        items.append(f"operating plane {ref}: NOT BOUND ({default['reason']})")
+    else:
+        items.append(f"operating plane {ref}: not evaluated here (domains only)")
     if report["domains"]:
-        items.append(f"domains ({report.get('canonical_binding_ref')}): {report['status']}")
+        items.append(f"domains ({report.get('canonical_binding_ref')}):")
         for item in report["domains"]:
-            detail = (
-                item["status"] if item["status"] != "NOT_ACTIVATED" else f"on {item['activation']}"
-            )
-            items.append(f"  {item['ref']} [{item['activation']}]: {detail}")
+            label = f"  {item['ref']} [{item['activation']}]"
+            if item["status"] == "NOT_ACTIVATED":
+                items.append(f"{label}: not activated, not bound (loads on {item['activation']})")
+            elif item.get("bound"):
+                items.append(f"{label}: BOUND — read {item['composed_view']}")
+            else:
+                why = item["status"] if item["status"] != ADMITTED else "base not bound"
+                items.append(f"{label}: NOT BOUND ({why}: {item.get('reason')})")
     items.append(f"manual bindings: {MANUAL}")
     return items
 
@@ -292,6 +346,25 @@ def line(report: dict[str, Any]) -> str:
     return "\n".join(out)
 
 
+def failed_report(host: str, exc: BaseException) -> dict[str, Any]:
+    """What a SessionStart rendering shows when this module itself fails: never a claim."""
+    return {
+        "schema": "l9.host-binding-status/v2",
+        "host": host,
+        "status": "NOT_BOUND",
+        "fail_open": True,
+        "reason": f"HOST_BINDING_ERROR: {type(exc).__name__}: {exc}",
+        "default": {
+            "ref": "l9.projection/cursor-governance-operating-plane@2",
+            "status": "NOT_BOUND",
+            "reason": f"HOST_BINDING_ERROR: {type(exc).__name__}",
+        },
+        "domains": [],
+        "blockers": [],
+        "load": [],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--host", default="cursor", choices=("cursor", "claude-code"))
@@ -307,18 +380,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--domains-only",
         action="store_true",
-        help="skip the base (SessionStart reports it through its own adapter block)",
+        help="verify the domains without the base (diagnostics; SessionStart binds the base)",
     )
     parser.add_argument("--format", choices=("json", "markdown", "line"), default="json")
     args = parser.parse_args(argv)
-    report = evaluate(
-        args.host,
-        activations=frozenset(args.activate),
-        workspace=args.workspace.resolve(),
-        authority_root=args.authority_root,
-        domains_only=args.domains_only,
-    )
-    if args.format in ("markdown", "line"):
+    rendering = args.format in ("markdown", "line")
+    try:
+        report = evaluate(
+            args.host,
+            activations=frozenset(args.activate),
+            workspace=args.workspace.resolve(),
+            authority_root=args.authority_root,
+            domains_only=args.domains_only,
+        )
+    except Exception as exc:  # noqa: BLE001 - fail open: report it, never break SessionStart
+        report = failed_report(args.host, exc)
+    if rendering:
         print(markdown(report) if args.format == "markdown" else line(report))
         return 0
     print(json.dumps(report, indent=2, sort_keys=True))

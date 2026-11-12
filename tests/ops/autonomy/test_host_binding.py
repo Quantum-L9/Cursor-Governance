@@ -118,19 +118,29 @@ def test_conditional_domain_not_activated_is_not_verified() -> None:
     assert sorted(seen) == sorted(f"{ref.split('/')[1].split('@')[0]}.yaml" for ref in ALWAYS)
 
 
-def test_base_not_current_blocks_and_loads_nothing() -> None:
+def test_base_not_current_is_not_bound_and_loads_nothing() -> None:
+    # The base is required: admitted domains are not bound without it.
     report = _evaluate(verify_base=_base("STALE"))
-    assert report["status"] == "BLOCKED"
+    assert report["status"] == "NOT_BOUND"
+    assert report["fail_open"] is True
     assert report["load"] == []
     assert report["blockers"][0]["ref"] == BASE
+    assert all(d.get("bound") is False for d in report["domains"] if "bound" in d)
 
 
 @pytest.mark.parametrize("status", ["BUNDLE_VERIFIED", "BLOCKED", "REJECTED", "STALE"])
-def test_activated_domain_not_admitted_blocks(status: str) -> None:
+def test_activated_domain_not_admitted_degrades_and_keeps_what_verified(status: str) -> None:
     report = _evaluate(verify=_verify({"l9.projection/governance@1": status}))
-    assert report["status"] == "BLOCKED"
-    assert report["load"] == []
+    assert report["status"] == "DEGRADED"
+    assert report["default"]["status"] == "BOUND"
+    # Fail-open: the base and every domain that verified stay bound; the failed one is not.
+    assert [item["ref"] for item in report["load"]] == [
+        ref for ref in ALWAYS if ref != "l9.projection/governance@1"
+    ]
     assert [b["ref"] for b in report["blockers"]] == ["l9.projection/governance@1"]
+    bound = {d["ref"]: d.get("bound") for d in report["domains"]}
+    assert bound["l9.projection/governance@1"] is False
+    assert bound["l9.projection/architecture@1"] is True
 
 
 def test_unactivated_failure_does_not_block() -> None:
@@ -238,20 +248,64 @@ def test_contract_that_could_gate_on_a_skill_is_rejected(tmp_path: Path, start) 
     assert "SESSION_START_AUTOBIND_REQUIRED" in report["reason"]
 
 
-def test_renderings_state_the_binding_and_the_manual_modes() -> None:
+def test_renderings_state_exactly_what_is_bound() -> None:
     cursor = host_binding.markdown(_evaluate())
-    assert cursor.startswith("### default projection binding (cursor)\n- BOUND (automatic")
-    assert f"{BASE} at authority main {MAIN[:12]}" in cursor
-    assert "- source classes: vocabulary, capabilities, invariants" in cursor
-    assert "  - l9.projection/governance@1 [always]: ADMITTED_AND_CURRENT" in cursor
+    assert cursor.startswith("### default projection binding (cursor)\n- BOUND — every")
+    assert f"- operating plane {BASE}: BOUND at authority main {MAIN[:12]}" in cursor
+    assert "  - source classes: vocabulary, capabilities, invariants" in cursor
+    assert "  - l9.projection/governance@1 [always]: BOUND — read " in cursor
+    assert (
+        "  - l9.projection/signals@1 [explicit_task_requirement]: not activated, not bound"
+        in cursor
+    )
     assert cursor.endswith("- manual bindings: /coding-agent, /lcto, /architect")
     claude = host_binding.line(_evaluate("claude-code")).splitlines()
-    assert claude[0].startswith("default projection binding (claude-code): BOUND (automatic")
+    assert claude[0].startswith("default projection binding (claude-code): BOUND — every")
     assert all(item.startswith("  ") for item in claude[1:])
     assert not any("domains" in item for item in claude)
-    stale = host_binding.line(_evaluate("claude-code", verify_base=_base("STALE")))
-    assert stale.startswith("default projection binding (claude-code): NOT BOUND:")
-    assert "Cite no operating-plane semantics" in stale
+
+
+def test_degraded_rendering_names_the_unbound_domain_and_continues() -> None:
+    report = _evaluate(verify=_verify({"l9.projection/architecture@1": "STALE"}))
+    text = host_binding.markdown(report)
+    assert "- DEGRADED — partly bound" in text
+    assert "1 default domain(s) failed verification and are not" in text
+    assert "fail-open: the session continues" in text
+    assert "  - l9.projection/architecture@1 [always]: NOT BOUND (STALE: STALE)" in text
+    assert f"- operating plane {BASE}: BOUND" in text
+
+
+@pytest.mark.parametrize("host", ["cursor", "claude-code"])
+def test_not_bound_rendering_claims_nothing_and_continues(host: str) -> None:
+    report = _evaluate(host, verify_base=_base("STALE"))
+    text = host_binding.line(report)
+    assert text.startswith(f"default projection binding ({host}): NOT BOUND — ")
+    assert "fail-open: the session continues; cite no operating-plane semantics" in text
+    assert f"operating plane {BASE}: NOT BOUND (STALE: STALE)" in text
+    assert ": BOUND" not in text and "BOUND —" not in text.replace("NOT BOUND —", "")
+    assert "source classes" not in text
+
+
+def test_rejected_contract_renders_not_bound_and_continues(tmp_path: Path) -> None:
+    path = tmp_path / "cursor.yaml"
+    path.write_text("schema: wrong\n")
+    text = host_binding.markdown(_evaluate(path=path))
+    assert "- NOT BOUND — host binding contract rejected: HOST_BINDING_SCHEMA_MISMATCH" in text
+    assert "fail-open: the session continues" in text
+
+
+def test_module_failure_still_renders_not_bound(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(host_binding, "evaluate", explode)
+    for fmt in ("markdown", "line"):
+        assert host_binding.main(["--host", "claude-code", "--format", fmt]) == 0
+        out = capsys.readouterr().out
+        assert "NOT BOUND — the host binding failed: HOST_BINDING_ERROR: RuntimeError: boom" in out
+        assert "fail-open: the session continues" in out
+    assert host_binding.main(["--host", "cursor", "--format", "json"]) == 3
+    assert json.loads(capsys.readouterr().out)["status"] == "NOT_BOUND"
 
 
 @pytest.mark.parametrize("host, fmt", [("cursor", "markdown"), ("claude-code", "line")])
@@ -276,5 +330,6 @@ def test_session_start_cli_reports_not_bound_without_authority(
     )
     # No authority checkout is reachable: the session is not bound, and the rendering exits 0.
     assert proc.returncode == 0, proc.stderr
-    assert "NOT BOUND" in proc.stdout
-    assert "BOUND (automatic" not in proc.stdout
+    assert "NOT BOUND — the operating plane did not verify" in proc.stdout
+    assert "fail-open: the session continues" in proc.stdout
+    assert "BOUND at authority main" not in proc.stdout
