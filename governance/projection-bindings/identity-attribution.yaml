@@ -1,7 +1,7 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: governance/architect-mode/bindings/governance.yaml
+#   path: governance/projection-bindings/identity-attribution.yaml
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
@@ -10,35 +10,36 @@
 # Same shape as skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml and
 # verified by the same binding-parameterized adapter over the one shared consumer verifier.
 integration:
-  integration_id: L9.CG.ARCHITECT_MODE.DOMAIN_GOVERNANCE.001
+  integration_id: L9.CG.CTO_MODE.DOMAIN_IDENTITY_ATTRIBUTION.001
   version: 1.0.0
   artifact_class: runtime_integration_binding
   status: active
-  semantic_owner: governance/architect-mode/bindings/governance.yaml
+  semantic_owner: governance/projection-bindings/identity-attribution.yaml
 purpose:
   assertion: >-
-    Bind the governance domain projection from Quantum-L9/.github into architect mode as a separate,
+    Bind the identity-attribution domain projection from Quantum-L9/.github into CTO mode as a separate,
     explicitly loaded input: a bundle the canonical compiler produced and this repository only
     verifies. It executes no selector, composes no payload and authors no schema.
 input:
-  name: domain_governance
+  name: domain_identity_attribution
   authority:
     repository: Quantum-L9/.github
-    projection_profile_ref: l9.projection/governance@1
-    projection_profile_digest: sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d
+    projection_profile_ref: l9.projection/identity-attribution@1
+    projection_profile_digest: sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6
     projection_profile_class: domain
-    projection_profile_consumer: semantic_domain.governance
-    composition_profile_ref: l9.compose/governance@1
-    composition_profile_digest: sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70
-    projection_payload_schema: l9.projection.domain.governance/v1
-    composed_payload_schema: l9.composed-projection.domain.governance/v1
+    projection_profile_consumer: semantic_domain.identity_attribution
+    composition_profile_ref: l9.compose/identity-attribution@1
+    composition_profile_digest: sha256:5ddee860ed80fb26b6f75d4a5453bdbbec27855f5e2df0d9280ef459baebca17
+    projection_payload_schema: l9.projection.domain.identity-attribution/v1
+    composed_payload_schema: l9.composed-projection.domain.identity-attribution/v1
     expected_source_classes:
-      - authority_model
-      - lifecycle
+      - identity_model
+      - actor_registry
+      - surface_registry
       - invariants
       - contracts
   bundle:
-    path: generated/governance/domain_governance
+    path: generated/governance/domain_identity_attribution
     lock: bundle.lock.json
     composed_view: composed.json
   producer:
@@ -55,23 +56,23 @@ admission:
   authority_main_ref: refs/remotes/origin/main
   effect_when_absent: ADMISSION_UNRESOLVED (ADMISSION_DECISION_RECORD_ABSENT); integration is never admission.
   decisions:
-    - candidate_ref: l9.projection/governance@1
-      candidate_digest: sha256:e3867848e5846d41c332fc6bcc8b404cba53c73167615d9df057b0f97d87dc2d
+    - candidate_ref: l9.projection/identity-attribution@1
+      candidate_digest: sha256:062a28729209c9857cf70f3068ea6d565bb1ce54c765ace52b92afaa5d09e5b6
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
       authority_ref: >-
-        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
-    - candidate_ref: l9.compose/governance@1
-      candidate_digest: sha256:1a3f782e94b60e3cbb9b50c43d7056a2eb08820efd899436510a12966593ed70
+        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for CTO mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR, which lists "identity-attribution@1 | Required | Actor identity, responsibility, accountability" among the CTO projections.
+    - candidate_ref: l9.compose/identity-attribution@1
+      candidate_digest: sha256:5ddee860ed80fb26b6f75d4a5453bdbbec27855f5e2df0d9280ef459baebca17
       decision: admit
       admitted_revision: dcd9d0092740756c19ac681d399bd438409bdc52
       decided_at: "2026-11-11"
       authority_ref: >-
-        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for architect mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR: "Make an architect mode so I don't need the /l9-global-architect skill ... Select the optimal combination of profiles and add architect_mode.py and wire it up."
+        Quantum-L9/.github ADR-033, admitted by the repository owner on 2026-11-11 in governed session session_017xwbxxt7rGKHw3NhwSXSP4 (Quantum-L9/.github#239, Semantic Foundation v3.36.0); bound for CTO mode by the owner's instruction of 2026-11-12 in governed session session_017xwbxw3RduoWFP29VkobHR, which lists "identity-attribution@1 | Required | Actor identity, responsibility, accountability" among the CTO projections.
 load_condition:
   when:
-    - architect_mode_active
+    - cto_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
   repository_presence_alone_loads: false

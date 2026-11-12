@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.1.0"
+version: "1.2.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -34,6 +34,19 @@ Activate L (CTO) persona for strategic decisions:
 `/lcto` is the only way CTO mode turns on. It is never always enabled, and a
 repository or skill being present does not turn it on. Contract:
 `governance/cto-mode/MODE.yaml`.
+
+Bound projections (all required):
+
+| Projection | Purpose |
+|---|---|
+| `l9.projection/technical-coordination@1` | Technical coordination role, integration responsibility, decision resolution and escalation |
+| `l9.projection/architecture@1` | Architectural integrity, ownership boundaries, integration |
+| `l9.projection/governance@1` | Authority, delegation, permissions, escalation |
+| `l9.projection/evidence-provenance@1` | Verified progress, receipts, truthful completion |
+| `l9.projection/contracts-conformance@1` | Acceptance criteria, verification, compatibility |
+| `l9.projection/capabilities-dependencies@1` | Assignable capabilities, readiness, dependencies |
+| `l9.projection/identity-attribution@1` | Actor identity, responsibility, accountability |
+| `l9.projection/strategic-value@1` | Portfolio prioritization, value tradeoffs |
 
 1. From the workspace you are working in (do not change directory), run the
    governance clone's script with its locked interpreter:

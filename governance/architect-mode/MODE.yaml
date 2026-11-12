@@ -52,31 +52,31 @@ selection:
     - l9.domain-consumer-binding/strategic-planner@1
   projections:
     - ref: l9.projection/architecture@1
-      binding: governance/architect-mode/bindings/architecture.yaml
+      binding: governance/projection-bindings/architecture.yaml
       required: true
       basis: l9.domain-consumer-binding/gar@1 requires
     - ref: l9.projection/governance@1
-      binding: governance/architect-mode/bindings/governance.yaml
+      binding: governance/projection-bindings/governance.yaml
       required: true
       basis: l9.domain-consumer-binding/gar@1 requires
     - ref: l9.projection/evidence-provenance@1
-      binding: governance/architect-mode/bindings/evidence-provenance.yaml
+      binding: governance/projection-bindings/evidence-provenance.yaml
       required: true
       basis: l9.domain-consumer-binding/gar@1 requires
     - ref: l9.projection/contracts-conformance@1
-      binding: governance/architect-mode/bindings/contracts-conformance.yaml
+      binding: governance/projection-bindings/contracts-conformance.yaml
       required: true
       basis: l9.domain-consumer-binding/gar@1 requires
     - ref: l9.projection/capabilities-dependencies@1
-      binding: governance/architect-mode/bindings/capabilities-dependencies.yaml
+      binding: governance/projection-bindings/capabilities-dependencies.yaml
       required: true
       basis: l9.domain-consumer-binding/gar@1 requires
     - ref: l9.projection/strategic-value@1
-      binding: governance/architect-mode/bindings/strategic-value.yaml
+      binding: governance/projection-bindings/strategic-value.yaml
       required: true
       basis: l9.domain-consumer-binding/strategic-planner@1 requires
     - ref: l9.projection/signals@1
-      binding: governance/architect-mode/bindings/signals.yaml
+      binding: governance/projection-bindings/signals.yaml
       required: true
       basis: l9.domain-consumer-binding/strategic-planner@1 requires
 role_activation:

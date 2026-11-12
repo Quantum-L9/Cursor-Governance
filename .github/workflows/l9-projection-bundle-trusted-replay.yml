@@ -87,6 +87,8 @@ jobs:
             profile: l9.projection/strategic-value@1
           - bundle: domain_signals
             profile: l9.projection/signals@1
+          - bundle: domain_identity_attribution
+            profile: l9.projection/identity-attribution@1
           - bundle: technical_coordination
             profile: l9.projection/technical-coordination@1
     steps:
@@ -294,6 +296,7 @@ jobs:
       matrix:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
                  domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
+                 domain_identity_attribution,
                  technical_coordination]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)

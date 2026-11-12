@@ -89,6 +89,11 @@ BUNDLES: dict[str, dict[str, Any]] = {
         "composition_profile": "l9.compose/technical-coordination@1",
         "output": Path("generated/governance/technical_coordination"),
     },
+    # Bound by CTO mode only (governance/cto-mode/MODE.yaml).
+    "l9.projection/identity-attribution@1": {
+        "composition_profile": "l9.compose/identity-attribution@1",
+        "output": Path("generated/governance/domain_identity_attribution"),
+    },
     "l9.projection/signals@1": {
         "composition_profile": "l9.compose/signals@1",
         "output": Path("generated/governance/domain_signals"),

@@ -1,7 +1,7 @@
 # L9_META
 #   l9_schema: 1
 #   repo: Quantum-L9/Cursor-Governance
-#   path: governance/architect-mode/bindings/evidence-provenance.yaml
+#   path: governance/projection-bindings/evidence-provenance.yaml
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
@@ -14,10 +14,10 @@ integration:
   version: 1.0.0
   artifact_class: runtime_integration_binding
   status: active
-  semantic_owner: governance/architect-mode/bindings/evidence-provenance.yaml
+  semantic_owner: governance/projection-bindings/evidence-provenance.yaml
 purpose:
   assertion: >-
-    Bind the evidence-provenance domain projection from Quantum-L9/.github into architect mode as a separate,
+    Bind the evidence-provenance domain projection from Quantum-L9/.github into architect mode and CTO mode as a separate,
     explicitly loaded input: a bundle the canonical compiler produced and this repository only
     verifies. It executes no selector, composes no payload and authors no schema.
 input:
@@ -73,6 +73,7 @@ admission:
 load_condition:
   when:
     - architect_mode_active
+    - cto_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)
   repository_presence_alone_loads: false
