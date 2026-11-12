@@ -55,7 +55,7 @@ When a command needs generator scripts:
 
 ## Available Slash Commands (enabled)
 
-Live commands match `commands/COMMANDS_MANIFEST.yaml` (**18** — skill wrappers retired to `commands/_archived/`). For remediators, planners, CI, wiring, and analysis, invoke the **skill** directly (`skills/<name>/SKILL.md`).
+Live commands match `commands/COMMANDS_MANIFEST.yaml` (**23** — skill wrappers retired to `commands/_archived/`). For remediators, planners, CI, wiring, and analysis, invoke the **skill** directly (`skills/<name>/SKILL.md`).
 
 | Command | File | Description |
 |---------|------|-------------|
@@ -74,6 +74,8 @@ Live commands match `commands/COMMANDS_MANIFEST.yaml` (**18** — skill wrappers
 | `/l9-plan-build` | `commands/l9-plan-build.md` | Plan-simple + kernels + Build DAG |
 | `/l9-audit-plans` | `skills/l9-audit-plans/SKILL.md` | Leftover-todo refine; moves no plans (not pipeline audit) |
 | `/lcto` | `commands/lcto.md` | L CTO strategic mode |
+| `/architect` | `commands/architect.md` | Architect mode: opt-in architecture + strategic-planning projections |
+| `/coding-agent` | `commands/coding-agent.md` | Coding-agent mode: opt-in coding-agent execution projection |
 | `/spec` | `commands/spec.md` | Specification generator |
 | `/rules` | `commands/rules.md` | List governance rules |
 | `/update-command` | `commands/update-command.md` | Slash minimizer DAG (legacy) |

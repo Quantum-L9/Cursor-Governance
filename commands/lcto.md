@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.0.0"
+version: "1.2.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -26,6 +26,52 @@ Activate L (CTO) persona for strategic decisions:
 | Technology evaluation | Coding |
 | System design | Bug fixes |
 | Strategic planning | Feature work |
+
+---
+
+## CTO MODE (opt-in projection binding)
+
+`/lcto` is the only way CTO mode turns on. It is never always enabled, and a
+repository or skill being present does not turn it on. Contract:
+`governance/cto-mode/MODE.yaml`.
+
+Bound projections (all required):
+
+| Projection | Purpose |
+|---|---|
+| `l9.projection/technical-coordination@1` | Technical coordination role, integration responsibility, decision resolution and escalation |
+| `l9.projection/architecture@1` | Architectural integrity, ownership boundaries, integration |
+| `l9.projection/governance@1` | Authority, delegation, permissions, escalation |
+| `l9.projection/evidence-provenance@1` | Verified progress, receipts, truthful completion |
+| `l9.projection/contracts-conformance@1` | Acceptance criteria, verification, compatibility |
+| `l9.projection/capabilities-dependencies@1` | Assignable capabilities, readiness, dependencies |
+| `l9.projection/identity-attribution@1` | Actor identity, responsibility, accountability |
+| `l9.projection/strategic-value@1` | Portfolio prioritization, value tradeoffs |
+
+1. From the workspace you are working in (do not change directory), run the
+   governance clone's script with its locked interpreter:
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" on --workspace "$PWD"`.
+   Add `--authority-root <checkout>` (or set `L9_AUTHORITY_ROOT`; a `.github` checkout inside or beside the workspace is found on its own) when a
+   `Quantum-L9/.github` checkout whose HEAD is its `main` is available. The
+   request is bound to this host session; a later session starts OFF.
+2. Read its JSON `mode`:
+   - `ACTIVE`: read each `load[].composed_view` before deciding, and cite its
+     composition digest. Those projections are the role's semantics
+     (`technical_coordination_role`, `integration_responsibility`, and the
+     other selected records).
+   - `BLOCKED`: report every `blockers[]` entry verbatim. Continue as the
+     plain persona below. Do not cite technical-coordination semantics, and do
+     not reconstruct them from memory or repository reads.
+   - `REJECTED` or `STALE`: stop and report. `STALE` means the mode contract
+     changed after the request; run `on` again.
+3. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
+
+The mode changes what the session reads, never what it may do. Publication,
+merge, push and deploy authority are unchanged. The role coordinates the
+assignment of bounded work within existing authorization. It resolves
+evidence-determined and policy-determined choices without new approval
+requests. It escalates one exact material decision to its owner. It never
+claims integrated completion from individually green results.
 
 ---
 

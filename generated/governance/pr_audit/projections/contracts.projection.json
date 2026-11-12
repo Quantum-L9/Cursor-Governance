@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "contracts": [
@@ -675,10 +675,10 @@
       }
     ]
   },
-  "projection_digest": "sha256:d2b9742b1d83b4e8505785d61f315fa7b8959918bfbdf325c7cae4ed2dab7e9a",
+  "projection_digest": "sha256:63870e63604ef8bfdfac51696ae71240e5726a1d86f1cd1dc48ccca6bb8caa78",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:86f6df1466e7e47f5e7e8a438c62ffdcf2a97835e9e49ecd4a4eb2dec88be0e7",
+  "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
   "source_ref": "l9.source/contracts@1"
 }

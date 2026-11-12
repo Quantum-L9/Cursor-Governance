@@ -1846,3 +1846,54 @@ new secrets are added there. Where §12 or §14 says AWS Secrets Manager or
 `l9-aws-secrets`, read Infisical and `l9-secrets`: §14's PAT is Infisical
 `GITHUB_TOKEN`. AWS Secrets Manager remains Cursor's bootstrap credential
 source (in place of a `.env`), unchanged. ADR-0053.
+
+<!-- PROGRAM_EXECUTION_MANUAL_STAGE_V1 -->
+## Program Execution manual stage (2026-11-12) — supersedes PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 and item 5 of PUBLISH_ASSURANCE_DECOUPLING_V1 where they make Program Execution an inert eviction target
+
+Append-only. Operator decision, 2026-11-12. The eviction sections stay on disk
+as the record of the retirement. Every other item of
+PUBLISH_ASSURANCE_DECOUPLING_V1 is unchanged: L4 authorizes and does not
+validate, the tree-kernel latch stays retired, preparation and validation stay
+separate, repair stays outside validation, and `make pr` remains the single
+publication ceremony.
+
+Program Execution moves along one ladder: `retired` → `manual` → `registered`.
+This section puts it at `manual`.
+
+1. **Connected, one way.** Program Execution consumes root autonomy. It reads
+   its standing authority from the `campaign_execution` block of
+   `ops/autonomy/surface_profile.yaml`, takes one subordinate root lease per
+   task that never outlives the Program lease, authorizes every worker effect
+   through the root gateway, and stays inside the lanes the autonomy execution
+   profile grants. Root autonomy, L4 and publication never require, import or
+   resolve through `environment/program-execution/`. That direction is not
+   relaxed by this section.
+2. **Explicit operator invocation only.** A campaign runs only when the
+   operator asks for it in their own words, for that run, fresh or resumed.
+   The runner refuses without that statement and records it beside the
+   campaign. An agent never starts, resumes or proposes-and-runs a campaign on
+   its own initiative, and never supplies the statement for itself.
+3. **Not ambient.** No skill routes to Program Execution, no SessionStart text
+   advertises or probes it, and its skills stay archived. The host-wide
+   PreToolUse wrapper does not reach it: Program Execution registers its own
+   effect hook in the worker windows it launches.
+4. **No make target.** The root Make graph does not compose
+   `ops/make/program-execution.mk`. Registering `make campaign` is the
+   `registered` stage and needs its own decision.
+5. **Local commits only.** A campaign prepares, executes, validates, verifies
+   and commits locally, then stops. It never pushes, opens or updates a pull
+   request, or merges. Publication stays `make pr`; merge stays
+   `/l9-pr-remediation`.
+6. **Bound at bootstrap.** Before a campaign is bootstrapped or resumed the
+   pipeline is bound to `l9.projection/coding-agent-execution@1` through
+   `governance/authority-bindings/coding-agent-execution.yaml`, judged by that
+   binding's own status reader. A bundle that is not verified at main and
+   admitted executes nothing, and a campaign is not resumed across a rebind.
+7. **Absence is retirement.** With the `campaign_execution` block removed, or
+   its stage one the runner does not know, Program Execution executes nothing.
+   Returning it to `retired` is deleting the block.
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
+`environment/contracts/autonomy/MANIFEST.yaml`
+(`program-execution-autonomy-consumer`),
+`environment/program-execution/scripts/campaign_authority.py`.

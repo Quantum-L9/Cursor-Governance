@@ -1,12 +1,13 @@
 schema: l9.autonomy-contracts.manifest.v1
-schema_version: 2.1.0
+schema_version: 2.2.0
 family: l9_autonomy_architecture
 status: active
-updated: "2026-10-06"
+updated: "2026-11-12"
 purpose: >
   First-class autonomy family registry. Root autonomy owns the provider-neutral
   authorization and bounded-concurrency runtime. Provider adapters remain thin
-  and no external execution subsystem is required to provide autonomy.
+  and no external execution subsystem is required to provide autonomy. Program
+  Execution is registered as an optional consumer of it, never a dependency.
 law:
   subordinate_invariant: owns_program_state_false
 artifacts:
@@ -23,6 +24,7 @@ artifacts:
       - environment/agents/PEER_EXECUTION.md
       - commands/autonomy.md
       - skills/l9-bounded-autonomy
+      - environment/program-execution/integrations/autonomy-control-plane # optional consumer; see program-execution-autonomy-consumer
     not_for:
       - owning_program_state
       - free_form_mutation_without_program_lease
@@ -35,6 +37,7 @@ artifacts:
     meta: meta/autonomy-surface-profile.meta.md
     consumed_by:
       - CANONICAL_LAW.md
+      - environment/program-execution/scripts/campaign_authority.py # reads campaign_execution; refuses without it
       - ops/scripts/project_llm_rules.py
       - environment/generated/llm-rules/zz-autonomy-surface-override.md
       - skills/l9-pr-remediation
@@ -67,6 +70,35 @@ artifacts:
       - ops/scripts/run_native_publish.sh
     not_for:
       - mid_execution_push_before_release_authorized
+  - artifact_id: program-execution-autonomy-consumer
+    kind: consumer_binding
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    stage: manual # retired -> manual -> registered; CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1
+    canonical_path: environment/program-execution/integrations/autonomy-control-plane/
+    provider_manifest: environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml
+    provider_id: root-autonomy-control-plane
+    profile_fragment: campaign_execution
+    profile_path: ops/autonomy/surface_profile.yaml
+    authority_reader: environment/program-execution/scripts/campaign_authority.py
+    effect_hook: environment/program-execution/integrations/autonomy-control-plane/worker_effect_hook.py
+    invocation: explicit_operator_only
+    note: >
+      Program Execution consumes root autonomy: it reads its standing authority
+      from the surface profile, takes one subordinate root lease per task, and
+      authorizes every worker effect through the root gateway. The dependency
+      runs one way. Root autonomy, L4 and publication do not require, import
+      or resolve through Program Execution, and this entry is not a required
+      artifact: deleting Program Execution leaves this registry valid once the
+      entry is removed with it.
+    meta: meta/program-execution-autonomy-consumer.meta.md
+    consumed_by:
+      - environment/program-execution/scripts/run_campaign.py
+    not_for:
+      - ambient_or_agent_initiated_campaigns
+      - a_root_make_target_before_the_registered_stage
+      - root_autonomy_depending_on_program_execution
   - artifact_id: context-sensitive-git-guardrails
     kind: destructive_risk_gate
     first_class_artifact: true

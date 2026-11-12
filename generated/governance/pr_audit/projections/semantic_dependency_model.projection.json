@@ -1,7 +1,7 @@
 {
   "generated_by": {
     "compiler": "l9-semantic-compiler",
-    "version": "0.9.3"
+    "version": "0.10.0"
   },
   "payload": {
     "invalidation_rules": {
@@ -15,7 +15,7 @@
       "upstream_revision_change": "evaluate_dependency_impact"
     }
   },
-  "projection_digest": "sha256:735d44164bf7bec4db46c5c95af1f2851ea30b6e6c89dd8639c6562a7435b9f2",
+  "projection_digest": "sha256:1868a8abb93af5c5458b951e5754a9c526a01b009b69da197b1a32b700271c80",
   "projection_profile_digest": "sha256:f38e47275f08cfe0d14af80d470a7e90af645d9e4612860062c16cbc57812941",
   "projection_profile_ref": "l9.projection/pr-audit@1",
   "schema": "l9.projection-artifact/v1",

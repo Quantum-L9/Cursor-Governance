@@ -1,0 +1,58 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "invariants": [
+      {
+        "id": "L9-AUTH-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "No component may expand its own authority.\n"
+      },
+      {
+        "id": "L9-OWNER-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Within a given semantic scope and revision, each canonical concept has one authoritative owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution by another component does not by itself transfer ownership or create a competing canonical source.\n"
+      },
+      {
+        "id": "L9-UNKNOWN-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+      },
+      {
+        "id": "L9-HARD-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "An applicable hard constraint is non-compensable; confidence, probability, utility, ranking, optimization, or other soft objectives cannot override it.\n"
+      },
+      {
+        "id": "L9-PROV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+      },
+      {
+        "id": "L9-COMPAT-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Semantic equivalence and compatibility must be declared by the applicable type or contract; similarity, convenience, or successful execution must not substitute for them.\n"
+      },
+      {
+        "id": "L9-PROJECTION-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+      }
+    ]
+  },
+  "projection_digest": "sha256:667a5454d5ef76bf16a39185dd6e394030a0c32c93af73de4b4aac1ca887800a",
+  "projection_profile_digest": "sha256:136dbe9d7e87e3ea4d8bae8a2ce9046880c820eab30c80ca8d81994028531c2a",
+  "projection_profile_ref": "l9.projection/architecture@1",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+  "source_ref": "l9.source/invariants@1"
+}

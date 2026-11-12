@@ -16,6 +16,34 @@ setup.bootstrap chain. Activation is the standing wiring:
 | Reference plane | workspace `.cursor-commands` → `$HOME/.cursor-governance` (consumers only) |
 | Memory | Package-owned native Auth0 OAuth via [`ops/memory/mcp_instantiation.py`](../../../../ops/memory/mcp_instantiation.py). The resource identifier is `https://memory.quantumaipartners.com/mcp`. A stdio-only package is `UPSTREAM_BLOCKED`. Tenant domain and client ids stay unbound. |
 | Receipt | `~/.l9/cursor/bootstrap-state.json` (schema `l9.cursor-bootstrap.v2`; reader still accepts v1), written on every SessionStart / `make start` / `/start-session` |
+| Default projection binding | SessionStart → [`ops/autonomy/host_binding.py`](../../../../ops/autonomy/host_binding.py) `--host cursor` with [`governance/host-bindings/cursor.yaml`](../../../../governance/host-bindings/cursor.yaml); manual: `/coding-agent`, `/lcto`, `/architect` |
+
+## Default projection binding (how it works)
+
+- [`governance/host-bindings/cursor.yaml`](../../../../governance/host-bindings/cursor.yaml)
+  holds the binding: the operating plane
+  (`l9.projection/cursor-governance-operating-plane@2`) as the required base, plus the
+  canonical Cursor domain set (`l9.domain-consumer-binding/cursor@1`).
+- `ops/autonomy/host_binding.py` checks it using the verifiers that already exist; it
+  adds no checking of its own.
+  - It reports `BOUND` only when the operating plane is current and every active
+    projection is admitted and current. `DEGRADED` when the operating plane is bound and
+    some active domain is not: what verified stays bound and each failure is named.
+    `NOT BOUND` when the operating plane did not verify: nothing is bound.
+  - A conditional projection is loaded only when its condition is named with
+    `--activate`; otherwise it isn't even checked.
+- Cursor's SessionStart (`ops/hooks/session_start_bootstrap.sh`) binds it automatically
+  in every session and reports it as `### default projection binding (cursor)`, right
+  after the `### coding projection` block. That block replaced the old report-only
+  operating-plane report, so the operating plane is checked once. 30 s limit inside the
+  60 s hook; about 9 s in testing.
+- Fail-open: a failed, degraded or timed-out binding never stops the session, and the
+  block says exactly what is and is not bound. Nothing that did not verify is shown as
+  bound.
+- No skill is involved. Everything else is bound per session by `/coding-agent`, `/lcto`
+  or `/architect`.
+
+Full detail: [`governance/host-bindings/README.md`](../../../../governance/host-bindings/README.md).
 
 ## Install / verify
 

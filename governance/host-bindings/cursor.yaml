@@ -1,0 +1,93 @@
+# L9_META
+#   l9_schema: 1
+#   repo: Quantum-L9/Cursor-Governance
+#   path: governance/host-bindings/cursor.yaml
+#   layer: governance
+#   owner: governance-control-plane
+#   status: active
+#   version: 1.1.0
+#   updated: 2026-11-12
+# The Cursor host's default projection binding: what every Cursor session reads without
+# opting in. SessionStart binds it automatically; no skill or command is involved.
+# It selects meaning; it grants no permission and admits nothing.
+schema: l9.cursor-governance.host-binding/v1
+artifact_id: l9.cursor-governance/host-binding-cursor@1
+canonical: true
+authority:
+  owner: Quantum-L9/Cursor-Governance
+  scope: cursor_host_default_binding
+  authority_class: local_canonical_binding
+host:
+  identity: cursor
+  actor_ref: l9.actor-registry/global@1#cursor
+  surface_refs:
+    - l9.surface-registry/global@1#cursor-ide
+# Mirrors Quantum-L9/.github semantics/domain_consumer_bindings.yaml
+# l9.domain-consumer-binding/cursor@1 exactly: its requires are always bound, its
+# conditional entries keep their declared activation.
+canonical_binding_ref: l9.domain-consumer-binding/cursor@1
+decided: >-
+  2026-11-12, governed session session_017xwbxw3RduoWFP29VkobHR: the repository owner set the
+  Cursor default to the operating plane plus the canonical Cursor host binding's domains, each
+  with the activation listed below. Later the same day the owner directed that Cursor and
+  Claude Code bootstrap both autobind the operating plane as the session default, with
+  /coding-agent, /lcto and /architect as the manual bindings, and that the default binding
+  depend on no skill. This settles the canonical binding's unresolved
+  predecessor_correspondence for this repository: the operating plane is not replaced.
+# Bound by SessionStart (ops/hooks/session_start_bootstrap.sh) through the control below.
+session_start:
+  autobind: true
+  depends_on_skill: false
+  manual_bindings: [/coding-agent, /lcto, /architect]
+# The admitted operating-plane profile stays the base. It keeps its own binding
+# (governance/authority-bindings/operating-plane-v2.yaml) and consumer adapter; this file
+# adds the domain projections on top of it and does not replace it.
+base:
+  ref: l9.projection/cursor-governance-operating-plane@2
+  binding: governance/authority-bindings/operating-plane-v2.yaml
+  adapter: ops/scripts/operating_plane_v2_projection.py
+  required: true
+activations:
+  always: loaded in every Cursor session once verified
+  hosted_skill_requirement: loaded only while a hosted skill that requires it is running
+  explicit_task_requirement: loaded only when the task explicitly calls for it
+domains:
+  - ref: l9.projection/governance@1
+    binding: governance/projection-bindings/governance.yaml
+    activation: always
+    purpose: Authority, permissions, escalation and admission boundaries
+  - ref: l9.projection/architecture@1
+    binding: governance/projection-bindings/architecture.yaml
+    activation: always
+    purpose: Architectural correctness and semantic ownership
+  - ref: l9.projection/contracts-conformance@1
+    binding: governance/projection-bindings/contracts-conformance.yaml
+    activation: always
+    purpose: Contract obligations, correctness and verification
+  - ref: l9.projection/capabilities-dependencies@1
+    binding: governance/projection-bindings/capabilities-dependencies.yaml
+    activation: always
+    purpose: Capability eligibility, prerequisites and dependencies
+  - ref: l9.projection/evidence-provenance@1
+    binding: governance/projection-bindings/evidence-provenance.yaml
+    activation: hosted_skill_requirement
+    purpose: Verified evidence, receipts and traceability
+  - ref: l9.projection/identity-attribution@1
+    binding: governance/projection-bindings/identity-attribution.yaml
+    activation: hosted_skill_requirement
+    purpose: Actor identity and accountability
+  - ref: l9.projection/strategic-value@1
+    binding: governance/projection-bindings/strategic-value.yaml
+    activation: explicit_task_requirement
+    purpose: Value-based evaluation and prioritization
+  - ref: l9.projection/signals@1
+    binding: governance/projection-bindings/signals.yaml
+    activation: explicit_task_requirement
+    purpose: Feedback, emerging risks and learning signals
+control: ops/autonomy/host_binding.py
+constraints:
+  - Binding changes what a session reads, never what it may do. Publication, merge, push and
+    deploy authority stay with CANONICAL_LAW.md and ops/autonomy/surface_profile.yaml.
+  - A projection is read only after its binding's verifier reports ADMITTED_AND_CURRENT, and
+    the base only after its adapter reports CURRENT.
+  - A conditional projection is never loaded by inference; its activation must be named.
