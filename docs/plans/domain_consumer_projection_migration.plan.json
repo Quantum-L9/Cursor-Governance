@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Domain consumer projection migration — binding-keyed bundles, coding-agent pilot",
+  "objective": "Make every domain consumer binding declared in Quantum-L9/.github semantics/domain_consumer_bindings.yaml (v3.36.0, dcd9d00) materializable, verifiable, and replayable in Cursor-Governance through the existing projection-publication path, prove it end to end on l9.domain-consumer-binding/coding-agent@1, and activate a consumer only once its canonical unresolved coordinates, compiler binding composition, and post-merge trusted replay are closed. Consumers do not author binding semantics locally.",
+  "success_criteria": [
+    "Binding-keyed driver mode produces generated/governance/domain_bindings/coding_agent/ with one per-domain bundle for each of the 6 required domains plus binding.lock.json pinning authority dcd9d00, compiler revision, binding ref, and every domain profile digest; proof V1",
+    "Fresh regeneration is byte-identical (--check) and the trusted-replay workflow covers the new bundle; proof V2",
+    "Verifier rejects a stale authority revision, a missing required domain, a conditional domain promoted to required, a digest mismatch, and a lock that claims cross-domain composition compiler 0.10.0 cannot produce; proof V3",
+    "Existing four profile-keyed bundles still pass --check unchanged and coding-agent-execution@1 remains the active coding-agent binding; proof V4",
+    "Activation status is reported per binding as BLOCKED with the exact canonical unresolved coordinate, never as active, until U1-U4 close; proof V5",
+    "Changed paths pass the repo hook catalog; proof V6"
+  ],
+  "scope": {
+    "in": [
+      "binding-keyed mode in tools/authority/produce_projection_bundle.py",
+      "binding bundle verification in skills/l9-coding-agent/scripts/verify_canonical_binding.py and tools/authority/verify_coding_projection.py",
+      "local pin governance/authority-bindings/coding-agent-domain-binding.yaml (references the canonical binding by ref; status candidate)",
+      "generated/governance/domain_bindings/coding_agent/ pilot bundle",
+      "l9-projection-bundle-verify.yml and l9-projection-bundle-trusted-replay.yml coverage",
+      "activation-status reporting in ops/scripts/coding_projection_status.py",
+      "rollout order and blocker ledger for gar, simple-plan, claude-code, cursor, strategic-planner"
+    ],
+    "out": [
+      "editing the 8 domain profiles, domain_projection_model.yaml, or domain_consumer_bindings.yaml in Quantum-L9/.github",
+      "authoring consumer binding semantics in any consumer repository (canonical ledger owns them)",
+      "deleting or superseding predecessor profiles (immutable, historically resolvable)",
+      "switching any consumer off its predecessor profile in this plan",
+      "implementing binding-domain-set composition in Quantum-L9/l9-semantic-compiler-engine",
+      "migration-disposition or authority-neutrality decisions (owner decisions)",
+      "the L9_SV_Signal_Versioned_Successor_Profiles_v4 candidate pack (CANDIDATE_NOT_ADMITTED, superseded by v3.36.0 domain profiles)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {"id": "P0", "command_or_action": "bind workspace /home/user/Cursor-Governance on claude-mobile/vibrant-goodall-ckgkem at 1d79d50, clean tree", "pass_criteria": "single root, porcelain empty", "status": "passed"},
+    {"id": "P1", "command_or_action": "git -C ../.github merge-base --is-ancestor dc96a8a dcd9d00 and grep class: domain semantics/projection_profiles.yaml", "pass_criteria": "dc96a8a is ancestor; 8 domain profiles at L2900-3351", "status": "passed"},
+    {"id": "P2", "command_or_action": "read semantics/domain_consumer_bindings.yaml at dcd9d00", "pass_criteria": "6 bindings; unresolved coordinates recorded per binding", "status": "passed"},
+    {"id": "P3", "command_or_action": "read tools/authority/produce_projection_bundle.py BUNDLES and generated/governance/*/bundle.lock.json", "pass_criteria": "4 profile-keyed bundles, all at authority dc96a8a, compiler e07a143 v0.9.3", "status": "passed"},
+    {"id": "P4", "command_or_action": "list_repos Quantum-L9/l9-semantic-compiler-engine", "pass_criteria": "repository visible to this account; checkout not yet attached", "status": "passed"},
+    {"id": "P5", "command_or_action": ".pre-commit-config.yaml named as hook catalog for changed paths", "pass_criteria": "file present", "status": "passed"}
+  ],
+  "todos": [
+    {"id": "T1", "task": "C0 census lock: write the local pin naming the canonical binding l9.domain-consumer-binding/coding-agent@1, authority Quantum-L9/.github@dcd9d00, compiler repository and revision, the 6 required and 2 conditional domain profile refs with canonical-JSON digests, predecessor coding-agent-execution@1, status candidate, activation blocked_by the canonical unresolved coordinate added_selection_review. Reuse the coding-agent-execution.yaml binding shape; restate no binding semantics.", "files": ["governance/authority-bindings/coding-agent-domain-binding.yaml"], "effort": "S", "risk": "low", "dependencies": [], "operation": "Create", "anchor": "new file beside governance/authority-bindings/coding-agent-execution.yaml", "layer": "policy", "leverage_rank": 3, "shared_root_cause": "no consumer-side pin for a canonical domain binding"},
+    {"id": "T2", "task": "C1/C4 driver: add a --binding <ref> mode to produce_projection_bundle.py that loads semantics/domain_consumer_bindings.yaml at the pinned authority revision, enforces BINDING-001..004 (unique resolution, conditional not required, skill/host identity shape, no permission grant), runs projection-coordinates/project/compose per required domain with each domain's declared l9.compose/<domain>@1, writes generated/governance/domain_bindings/<consumer>/<domain>/ bundles plus binding.lock.json, and records cross-domain composition as not_produced with the compiler version. --check regenerates and diffs byte for byte. Profile-keyed mode unchanged.", "files": ["tools/authority/produce_projection_bundle.py", "tests/tools/authority/test_produce_binding_bundle.py"], "effort": "M", "risk": "high", "dependencies": ["T1"], "operation": "Insert", "anchor": "BUNDLES registry and main() argument parser", "layer": "assurance", "leverage_rank": 1, "shared_root_cause": "driver is keyed by profile, not by canonical consumer binding"},
+    {"id": "T3", "task": "Verifier: add binding-bundle verification to verify_canonical_binding.py (--binding-bundle) delegated through tools/authority/verify_coding_projection.py: lock schema, authority/profile/binding digests, per-domain receipts, required-domain coverage, conditional domains absent unless activated, composition claim matches compiler capability; verdicts REJECTED / STALE / BLOCKED / BUNDLE_VERIFIED, never ADMITTED_AND_CURRENT before trusted replay on main. Negative fixtures for stale, incomplete, conflicting, unauthorized.", "files": ["skills/l9-coding-agent/scripts/verify_canonical_binding.py", "tools/authority/verify_coding_projection.py", "skills/l9-coding-agent/tests/test_coding_agent_canonical_binding.py"], "effort": "M", "risk": "medium", "dependencies": ["T1"], "operation": "Insert", "anchor": "after the existing --bundle verification path", "layer": "assurance", "leverage_rank": 2, "shared_root_cause": "no fail-closed check for binding bundles"},
+    {"id": "T4", "task": "C4 materialize pilot: attach Quantum-L9/l9-semantic-compiler-engine read-only, run the T2 driver for coding-agent@1 at authority dcd9d00 and compiler eeac5d2 (0.10.0, the v3.36.0 rehearsal revision) and commit the generated bundle. Generated bytes are never hand-edited.", "files": ["generated/governance/domain_bindings/coding_agent/binding.lock.json"], "effort": "S", "risk": "medium", "dependencies": ["T2", "T3"], "operation": "Create", "anchor": "new generated directory", "blocker": "U5: compiler checkout must be attached to the executing session (add_repo read) and its revision confirmed on protected main", "layer": "data_plane", "leverage_rank": 4},
+    {"id": "T5", "task": "CI coverage: add the binding bundle to the l9-projection-bundle-verify.yml path triggers and verifier invocation, and to the l9-projection-bundle-trusted-replay.yml bundle matrix so replay publishes l9/projection-bundle-trusted-replay/domain_bindings/coding_agent.", "files": [".github/workflows/l9-projection-bundle-verify.yml", ".github/workflows/l9-projection-bundle-trusted-replay.yml"], "effort": "S", "risk": "medium", "dependencies": ["T4"], "operation": "Insert", "anchor": "existing bundle matrix / path filters", "layer": "ops", "leverage_rank": 5},
+    {"id": "T6", "task": "Activation status: make coding_projection_status.py report each domain binding with its canonical unresolved coordinates and verifier verdict (BLOCKED, never active) at SessionStart, beside the unchanged coding-agent-execution@1 status, so loss of the old context is visible and no implicit switch can occur.", "files": ["ops/scripts/coding_projection_status.py"], "effort": "S", "risk": "low", "dependencies": ["T3"], "operation": "Insert", "anchor": "status rendering for coding_agent_execution", "layer": "ops", "leverage_rank": 6},
+    {"id": "T7", "task": "Docs: record the binding-bundle mode, verdict ladder, and rollout blocker ledger in the coding-agent VALIDATION.md and CHANGELOG.md.", "files": ["skills/l9-coding-agent/VALIDATION.md", "skills/l9-coding-agent/CHANGELOG.md"], "effort": "S", "risk": "low", "dependencies": ["T3", "T6"], "operation": "Insert", "anchor": "canonical binding section", "layer": "docs", "leverage_rank": 7},
+    {"id": "T8", "task": "C5 activation (deferred, gated): switch coding-agent integrations/L9_RUNTIME_BINDING.yaml from coding-agent-execution@1 to the domain binding bundle, with a test that removes the predecessor bundle and proves the binding bundle alone satisfies bootstrap. Not executed by this Build.", "files": ["skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml"], "effort": "M", "risk": "high", "dependencies": ["T4", "T5", "T6"], "operation": "Replace", "anchor": "profile pin lines 37-39", "blocker": "U1 added_selection_review disposition (133 added nodes) + U2 compiler binding composition + U3 post-merge trusted replay on .github main", "layer": "runtime", "leverage_rank": 8},
+    {"id": "T9", "task": "Rollout (deferred, per consumer, same driver/verifier): simple-plan@1 and claude-code@1 next (unresolved: [], no predecessor), then gar@1 (123 predecessor nodes need dispositions), cursor@1 (predecessor_correspondence decision), strategic-planner@1 last (no repository or entrypoint). Each is one materialize + verify PR; activation follows its own coordinate closure.", "files": ["tools/authority/produce_projection_bundle.py"], "effort": "L", "risk": "medium", "dependencies": ["T8"], "operation": "Insert", "anchor": "binding registry added in T2", "blocker": "U1-U4 per consumer; strategic-planner blocked on repository_ref and entrypoint", "layer": "assurance", "leverage_rank": 9}
+  ],
+  "critical_path": ["T1", "T2", "T4", "T5", "T8"],
+  "milestones": [
+    {"id": "M1", "outcome": "binding-keyed driver and verifier with negative tests green, no bundle yet", "unlocks": "materialization"},
+    {"id": "M2", "outcome": "coding-agent@1 bundle committed, byte-identical on --check, covered by trusted replay", "unlocks": "rollout PRs for simple-plan and claude-code"},
+    {"id": "M3", "outcome": "U1-U3 closed; coding agent activated on domain binding", "unlocks": "remaining consumer activations"}
+  ],
+  "checkpoints": [
+    {"id": "C1", "after": "M1", "evidence_required": "pytest for T2/T3 plus every pre-existing profile-keyed --check unchanged (V3, V4)", "no_go_action": "stop; do not materialize"},
+    {"id": "C2", "after": "M2", "evidence_required": "V1, V2 PASS and verifier verdict BUNDLE_VERIFIED, status BLOCKED with named coordinate (V5)", "no_go_action": "remove the generated directory from the branch; keep driver"},
+    {"id": "C3", "after": "M3", "evidence_required": "recorded disposition in .github for added_selection_review, compiler release implementing binding composition, trusted-replay PASS on main", "no_go_action": "keep coding-agent-execution@1 active; T8 not started"}
+  ],
+  "doc_root_surface_impact": [
+    {"surface": "AGENTS.md", "action": "n_a", "reason": "publication path and authority chain unchanged; bundle publication already governed by CANONICAL_LAW §6.2"},
+    {"surface": "CANONICAL_LAW.md", "action": "n_a", "reason": "no new law; canonical binding semantics stay in Quantum-L9/.github"},
+    {"surface": "skills/l9-coding-agent/VALIDATION.md", "action": "update", "todo_ids": ["T7"]},
+    {"surface": "skills/l9-coding-agent/CHANGELOG.md", "action": "update", "todo_ids": ["T7"]},
+    {"surface": "skills/l9-coding-agent/SKILL.md", "action": "n_a", "reason": "bootstrap router unchanged until T8 activation"}
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does a consumer-authored binding file duplicate domain_consumer_bindings.yaml and become a second SSOT? (T1 pins by ref only)",
+      "Can a lock claim a composed binding that compiler 0.10.0 cannot produce? (T3 rejects it)",
+      "Would re-pinning existing bundles to dcd9d00 silently change GAR/coding-agent behaviour? (out of scope; existing bundles stay at dc96a8a)",
+      "Is per-domain materialization without cross-domain composition semantically usable? (no: verdict stays BUNDLE_VERIFIED, activation BLOCKED)",
+      "Does simple-plan or claude-code make a cheaper first activation than coding-agent? (yes for activation; coding-agent stays the materialization pilot because its verifier and gate already exist)"
+    ],
+    "assumed_false_ifs": [
+      "compiler eeac5d2 is not on protected main, so trusted replay cannot attest it",
+      "v3.36.0 is not owner-admitted at dcd9d00 despite the ADR-033 merge"
+    ],
+    "blast_radius": "coding-agent PreToolUse binding gate and SessionStart status in every Cursor-Governance session if T6/T8 misreport; GAR via shared verifier imports",
+    "rollback": "revert the PR; profile-keyed bundles and coding-agent-execution@1 remain the active path, no consumer was switched"
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T2", "T3", "T1", "T4", "T5", "T6", "T7", "T8", "T9"],
+    "shared_causes": [
+      "profile-keyed driver cannot express a canonical consumer binding",
+      "every bundle pinned before the domain admission"
+    ],
+    "deletions_or_consolidations": [
+      "no skill-local semantic-binding.yaml or projections/v1/ tree: one driver, one generated/governance root, one verifier per consumer",
+      "no per-host duplicate bundles when cursor and claude-code bindings select identical domains"
+    ]
+  },
+  "risks": [
+    {"risk": "local lock schema drifts from upstream bundle conventions", "mitigation": "reuse l9.projection-bundle/v1 per domain; binding.lock.json only indexes them and is checked by T3"},
+    {"risk": "compiler access unavailable in the executing session", "mitigation": "T4 carries blocker U5; driver and verifier land independently"},
+    {"risk": "an executor treats BUNDLE_VERIFIED as activation", "mitigation": "T6 reports BLOCKED with the named coordinate; T8 is gated and not part of this Build"}
+  ],
+  "unknowns": [
+    {"id": "U1", "question": "Owner disposition for coding-agent added_selection_review (133 added nodes) recorded in Quantum-L9/.github", "decision_effect": "gates T8 activation", "resolution": "block"},
+    {"id": "U2", "question": "Which l9-semantic-compiler-engine release implements binding-domain-set composition (compatibility + provenance contracts)?", "decision_effect": "gates DOWNSTREAM_USABLE for every binding", "resolution": "block"},
+    {"id": "U3", "question": "Post-merge trusted replay of v3.36.0 on .github main", "decision_effect": "verifier cannot reach ADMITTED_AND_CURRENT before it", "resolution": "probe"},
+    {"id": "U4", "question": "Strategic-planner repository and entrypoint; cursor@1 predecessor correspondence; GAR dispositions (123 nodes)", "decision_effect": "orders T9 rollout", "resolution": "ask"},
+    {"id": "U5", "question": "Is compiler revision eeac5d2 on protected main and attachable to the executing session?", "decision_effect": "gates T4 materialization", "resolution": "probe"}
+  ],
+  "final_validation": [
+    {"id": "V1", "command": "python3 tools/authority/produce_projection_bundle.py --binding l9.domain-consumer-binding/coding-agent@1 --authority-root ../.github --authority-revision <dcd9d00 full sha> --compiler-revision <compiler full sha> --check", "pass_criteria": "bundle current at dcd9d00", "status": "pending"},
+    {"id": "V2", "command": "python3 -m pytest tests/tools/authority/test_produce_binding_bundle.py -q", "pass_criteria": "PASS including byte-identical regeneration case", "status": "pending"},
+    {"id": "V3", "command": "python3 -m pytest skills/l9-coding-agent/tests/test_coding_agent_canonical_binding.py -q", "pass_criteria": "PASS including stale, incomplete, conflicting, unauthorized, overclaimed-composition rejections", "status": "pending"},
+    {"id": "V4", "command": "python3 -m pytest tests/skills/l9_global_architect tests/skills/l9_pr_audit -q", "pass_criteria": "PASS; profile-keyed bundles unchanged", "status": "pending"},
+    {"id": "V5", "command": "python3 ops/scripts/coding_projection_status.py", "pass_criteria": "coding-agent-execution@1 active; coding-agent@1 domain binding BLOCKED: added_selection_review", "status": "pending"},
+    {"id": "V6", "command": "OPEN_PR=0 make pr  # runs .pre-commit-config.yaml hooks on changed paths", "pass_criteria": "PASS", "status": "pending"}
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2", "U3", "U4", "U5"],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated; T1-T7 executable via Build, T4 needs compiler access, T8-T9 gated on canonical owner decisions and compiler release"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "tools/authority/produce_projection_bundle.py",
+      "tools/authority/verify_coding_projection.py",
+      "tests/tools/authority/",
+      "governance/authority-bindings/coding-agent-domain-binding.yaml",
+      "generated/governance/domain_bindings/",
+      "skills/l9-coding-agent/scripts/verify_canonical_binding.py",
+      "skills/l9-coding-agent/tests/",
+      "skills/l9-coding-agent/VALIDATION.md",
+      "skills/l9-coding-agent/CHANGELOG.md",
+      "ops/scripts/coding_projection_status.py",
+      ".github/workflows/l9-projection-bundle-verify.yml",
+      ".github/workflows/l9-projection-bundle-trusted-replay.yml"
+    ],
+    "must_not_modify": [
+      "generated/governance/architecture_intelligence/",
+      "generated/governance/coding_agent_execution/",
+      "generated/governance/operating_plane_v2/",
+      "generated/governance/pr_audit/",
+      "governance/authority-bindings/coding-agent-execution.yaml",
+      "skills/l9-coding-agent/integrations/L9_RUNTIME_BINDING.yaml",
+      "skills/l9-global-architect/",
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Quantum-L9/.github semantics/"
+    ],
+    "preserved_contracts": [
+      "l9.compiler/projection-engine@1: projection consumed only from a committed bundle cut by a pinned producer and attested by replay",
+      "domain_consumer_bindings global_rules: a binding creates no semantics, grants no permission, switches no existing consumer profile; unresolved coordinates block what they name",
+      "existing profile versions immutable and historically resolvable",
+      "ops/scripts/org_dotgithub.py is the single .github reader",
+      "publication only via make pr"
+    ],
+    "validation_commands": [
+      "python3 -m pytest tests/tools/authority/test_produce_binding_bundle.py skills/l9-coding-agent/tests -q",
+      "python3 -m pytest tests/skills/l9_global_architect tests/skills/l9_pr_audit -q",
+      "python3 ops/scripts/coding_projection_status.py",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "deep",
+  "checklist": ["census pin", "binding-keyed driver", "fail-closed verifier", "pilot bundle", "replay coverage", "blocked activation status", "gated activation", "rollout ledger"],
+  "estimate": "3 GMPs for T1-T7; T8-T9 one PR per consumer after its gates close",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {"mode": "named_services_only", "allowed_services": ["github.com/Quantum-L9/.github (read)", "github.com/Quantum-L9/l9-semantic-compiler-engine (read)"]},
+    "secrets": {"access": "none"}
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": ["Quantum-L9/.github canonical semantics -> Cursor-Governance consumer bundle", "l9-semantic-compiler-engine producer -> Cursor-Governance driver"],
+    "external_systems_touched": ["Quantum-L9/.github", "Quantum-L9/l9-semantic-compiler-engine", "GitHub Actions"],
+    "migration_required": true
+  }
+}
