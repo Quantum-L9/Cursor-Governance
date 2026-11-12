@@ -1034,29 +1034,37 @@ emit_coding_projection() {
   esac
 }
 
-# --- Operating-plane projection (report-only) --------------------------------
-# One line from the consumer adapter for l9.projection/cursor-governance-
-# operating-plane@2 (ops/scripts/operating_plane_v2_projection.py; Cursor renders
-# the same verdict as markdown). Admitted mode against the checkout's own
-# origin/main record; it never releases payload here, never fetches or writes.
-# No committed bundle or binding is UNVERIFIED, never a claim.
+# --- Default projection binding (automatic) ---------------------------------
+# Every Claude Code session is bound automatically to the admitted operating plane
+# (l9.projection/cursor-governance-operating-plane@2) through ops/autonomy/host_binding.py
+# and governance/host-bindings/claude-code.yaml; Cursor renders the same binding as
+# markdown. No skill or command is involved; /coding-agent, /lcto and /architect are the
+# manual bindings. BOUND only when the consumer adapter reports CURRENT in admitted mode;
+# the session then reads a source class through that adapter. Never fetches or writes;
+# anything else, a deferral or a timeout is NOT BOUND, never a claim.
 emit_operating_plane_projection() {
   local py="$1"
-  local adapter="$GOV/ops/scripts/operating_plane_v2_projection.py"
-  [ -f "$adapter" ] || return 0
-  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+  local control="$GOV/ops/autonomy/host_binding.py"
+  local unbound="default projection binding (claude-code): NOT BOUND"
+  [ -f "$control" ] || { say "$unbound — host binding unavailable"; return 0; }
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || {
+    say "$unbound — interpreter unresolved"
+    return 0
+  }
 
   local out rc
-  out="$(_l9_bounded 2 "$py" "$adapter" --mode admitted --workspace "$WORKSPACE" --format line 2>/dev/null)"
+  out="$(_l9_bounded 2 "$py" "$control" --host claude-code --workspace "$WORKSPACE" --format line 2>/dev/null)"
   rc=$?
   case "$rc" in
-    125) say "operating-plane projection: UNVERIFIED — DEFERRED: hook budget exhausted (report-only)" ;;
-    124) say "operating-plane projection: UNVERIFIED — TIMED OUT (report-only)" ;;
+    125) say "$unbound — DEFERRED: hook budget exhausted. Cite no operating-plane semantics this session." ;;
+    124) say "$unbound — TIMED OUT. Cite no operating-plane semantics this session." ;;
     *)
       if [ -n "$out" ]; then
-        say "$out"
+        while IFS= read -r line || [ -n "$line" ]; do
+          say "$line"
+        done <<< "$out"
       else
-        say "operating-plane projection: UNVERIFIED — adapter printed nothing (report-only)"
+        say "$unbound — host binding printed nothing. Cite no operating-plane semantics this session."
       fi
       ;;
   esac

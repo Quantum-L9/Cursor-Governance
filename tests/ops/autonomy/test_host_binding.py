@@ -41,14 +41,24 @@ def _verify(statuses: dict[str, str] | None = None, default: str = host_binding.
     return verify
 
 
+MAIN = "f8e44d1536cb218de41dde4685c606a4d6460915"
+CLASSES = ["vocabulary", "capabilities", "invariants"]
+
+
 def _base(status: str = host_binding.BASE_CURRENT):
-    return lambda _base, _ws, _root: {"status": status, "reason": status}
+    def verify_base(_base, _ws, _root) -> dict:
+        result = {"status": status, "reason": status}
+        if status == host_binding.BASE_CURRENT:
+            result.update(authority_main=MAIN, source_classes=CLASSES)
+        return result
+
+    return verify_base
 
 
-def _evaluate(**kwargs):
+def _evaluate(host: str = "cursor", **kwargs):
     kwargs.setdefault("verify", _verify())
     kwargs.setdefault("verify_base", _base())
-    return host_binding.evaluate("cursor", **kwargs)
+    return host_binding.evaluate(host, **kwargs)
 
 
 def test_contract_mirrors_the_canonical_cursor_binding_on_the_operating_plane() -> None:
@@ -158,23 +168,113 @@ def test_malformed_contract_is_rejected(tmp_path: Path, mutate, reason: str) -> 
     assert reason in report["reason"]
 
 
-def test_markdown_cli_is_report_only(tmp_path: Path) -> None:
+@pytest.mark.parametrize("host", ["cursor", "claude-code"])
+def test_every_host_autobinds_at_session_start_without_a_skill(host: str) -> None:
+    doc = host_binding.load_contract(host_binding.contract_path(host))
+    assert doc["session_start"]["autobind"] is True
+    assert doc["session_start"]["depends_on_skill"] is False
+    assert doc["session_start"]["manual_bindings"] == ["/coding-agent", "/lcto", "/architect"]
+    assert doc["base"]["ref"] == BASE
+    assert doc["base"]["required"] is True
+
+
+def test_claude_code_binds_the_operating_plane_alone() -> None:
+    doc = host_binding.load_contract(host_binding.contract_path("claude-code"))
+    assert doc["domains"] == []
+    report = _evaluate("claude-code")
+    assert report["status"] == "BOUND"
+    assert report["default"]["status"] == "BOUND"
+    assert report["load"] == []
+
+
+@pytest.mark.parametrize("host", ["cursor", "claude-code"])
+def test_default_is_bound_only_on_a_current_base(host: str) -> None:
+    bound = _evaluate(host)["default"]
+    assert bound["status"] == "BOUND"
+    assert bound["automatic"] is True
+    assert bound["authority_main"] == MAIN
+    assert bound["source_classes"] == CLASSES
+    read = bound["read"]
+    assert read[1].endswith("ops/scripts/operating_plane_v2_projection.py")
+    assert read[-2:] == ["--source-class", "<class>"]
+    assert "--mode" in read and read[read.index("--mode") + 1] == "admitted"
+    for status in ("STALE", "BLOCKED", "UNVERIFIED", "REJECTED", "BOUND"):
+        unbound = _evaluate(host, verify_base=_base(status))["default"]
+        assert unbound["status"] == "NOT_BOUND"
+        assert unbound["reason"].startswith(f"{status}:")
+        assert "read" not in unbound
+
+
+def test_read_command_pins_the_resolved_authority(tmp_path: Path) -> None:
+    def verify_base(_base, _ws, _root) -> dict:
+        return {"status": host_binding.BASE_CURRENT, "authority_main": MAIN, "source_classes": []}
+
+    base = host_binding.load_contract(host_binding.contract_path("claude-code"))["base"]
+    result = verify_base(base, None, None)
+    bound = host_binding.default_binding(base, result, tmp_path, tmp_path / "authority")
+    assert bound["read"][bound["read"].index("--authority-root") + 1] == str(tmp_path / "authority")
+    assert bound["read"][bound["read"].index("--workspace") + 1] == str(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "start",
+    [
+        None,
+        {"autobind": False, "depends_on_skill": False},
+        {"autobind": True, "depends_on_skill": True},
+        {"autobind": True},
+    ],
+)
+def test_contract_that_could_gate_on_a_skill_is_rejected(tmp_path: Path, start) -> None:
+    doc = yaml.safe_load(host_binding.contract_path("claude-code").read_text())
+    if start is None:
+        doc.pop("session_start")
+    else:
+        doc["session_start"] = start
+    path = tmp_path / "claude-code.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    report = _evaluate("claude-code", path=path)
+    assert report["status"] == "REJECTED"
+    assert "SESSION_START_AUTOBIND_REQUIRED" in report["reason"]
+
+
+def test_renderings_state_the_binding_and_the_manual_modes() -> None:
+    cursor = host_binding.markdown(_evaluate())
+    assert cursor.startswith("### default projection binding (cursor)\n- BOUND (automatic")
+    assert f"{BASE} at authority main {MAIN[:12]}" in cursor
+    assert "- source classes: vocabulary, capabilities, invariants" in cursor
+    assert "  - l9.projection/governance@1 [always]: ADMITTED_AND_CURRENT" in cursor
+    assert cursor.endswith("- manual bindings: /coding-agent, /lcto, /architect")
+    claude = host_binding.line(_evaluate("claude-code")).splitlines()
+    assert claude[0].startswith("default projection binding (claude-code): BOUND (automatic")
+    assert all(item.startswith("  ") for item in claude[1:])
+    assert not any("domains" in item for item in claude)
+    stale = host_binding.line(_evaluate("claude-code", verify_base=_base("STALE")))
+    assert stale.startswith("default projection binding (claude-code): NOT BOUND:")
+    assert "Cite no operating-plane semantics" in stale
+
+
+@pytest.mark.parametrize("host, fmt", [("cursor", "markdown"), ("claude-code", "line")])
+def test_session_start_cli_reports_not_bound_without_authority(
+    tmp_path: Path, host: str, fmt: str
+) -> None:
     proc = subprocess.run(
         [
             sys.executable,
             str(REPO / "ops/autonomy/host_binding.py"),
-            "--domains-only",
+            "--host",
+            host,
             "--workspace",
             str(tmp_path),
             "--format",
-            "markdown",
+            fmt,
         ],
         capture_output=True,
         text=True,
         check=False,
         env={"PATH": "/usr/bin:/bin"},
     )
-    # No authority checkout is reachable: every always domain blocks, and the report still exits 0.
+    # No authority checkout is reachable: the session is not bound, and the rendering exits 0.
     assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.startswith("### cursor host binding (report-only)")
-    assert "- status: BLOCKED" in proc.stdout
+    assert "NOT BOUND" in proc.stdout
+    assert "BOUND (automatic" not in proc.stdout

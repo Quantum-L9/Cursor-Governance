@@ -620,54 +620,30 @@ if [ -f "$CODING_PROJECTION_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.
   unset _cp_out _cp_rc
 fi
 
-# Operating-plane projection (report-only): the same shape for
-# l9.projection/cursor-governance-operating-plane@2 through its consumer adapter
-# (ops/scripts/operating_plane_v2_projection.py --format markdown). Admitted mode
-# against the checkout's own origin/main record; it never releases payload here,
-# never fetches, never writes, and a timeout is reported, not hidden.
-OPERATING_PLANE_MD="### operating-plane projection
-- UNVERIFIED: adapter unavailable (report-only)"
-OPERATING_PLANE_PY="$GC/ops/scripts/operating_plane_v2_projection.py"
-if [ -f "$OPERATING_PLANE_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
-  # shellcheck source=/dev/null
-  source "$GC/ops/scripts/lib/run_with_timeout.sh"
-  # Admitted mode builds two shared clones of the authority (pinned revision and
-  # main) and verifies eight receipts: ~3 s on a warm checkout, so the 3 s budget
-  # the lighter coding-projection reader uses times out here (stage-4 e2e,
-  # 2026-10-22). 10 s is the bound; a timeout is still reported, not hidden.
-  _op_out="$(run_with_timeout 10 "$AUDIT_PY_BIN" "$OPERATING_PLANE_PY" \
-    --mode admitted --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
-  _op_rc=$?
-  if [ "$_op_rc" = 124 ]; then
-    OPERATING_PLANE_MD="### operating-plane projection
-- UNVERIFIED: TIMED OUT after 10 s (report-only)"
-  elif [ -n "$_op_out" ]; then
-    OPERATING_PLANE_MD="$_op_out"
-  fi
-  unset _op_out _op_rc
-fi
-
-# Cursor host binding (report-only): the default domain projections every Cursor session
-# binds on top of the operating plane (governance/host-bindings/cursor.yaml, mirroring
-# l9.domain-consumer-binding/cursor@1), through ops/autonomy/host_binding.py. The base is
-# reported by the operating-plane block above, so --domains-only does not verify it twice.
-# Conditional domains are listed with their activation and not verified here. It never
-# releases payload, never fetches, never writes, and a timeout is reported, not hidden.
-HOST_BINDING_MD="### cursor host binding (report-only)
-- UNVERIFIED: host binding unavailable"
+# Default projection binding: every Cursor session is bound automatically to the admitted
+# operating plane (l9.projection/cursor-governance-operating-plane@2) plus the canonical
+# Cursor domain set, through ops/autonomy/host_binding.py and
+# governance/host-bindings/cursor.yaml. No skill or command is involved; /coding-agent,
+# /lcto and /architect are the manual bindings. The base is BOUND only when its consumer
+# adapter reports CURRENT in admitted mode, and the session then reads a source class
+# through that adapter. It never fetches and never writes; a timeout is reported as
+# NOT BOUND, not hidden.
+DEFAULT_BINDING_MD="### default projection binding (cursor)
+- NOT BOUND: host binding unavailable. Cite no operating-plane semantics this session."
 HOST_BINDING_PY="$GC/ops/autonomy/host_binding.py"
 if [ -f "$HOST_BINDING_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
   # shellcheck source=/dev/null
   source "$GC/ops/scripts/lib/run_with_timeout.sh"
-  # Four admitted-mode domain verifications against the authority checkout.
-  _hb_out="$(run_with_timeout 15 "$AUDIT_PY_BIN" "$HOST_BINDING_PY" \
-    --host cursor --domains-only --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
+  # The operating-plane adapter (~3-7 s: two shared authority clones, eight receipts) and
+  # four admitted-mode domain verifications. 30 s is the bound inside the 60 s hook.
+  _hb_out="$(run_with_timeout 30 "$AUDIT_PY_BIN" "$HOST_BINDING_PY" \
+    --host cursor --workspace "$WS_ROOT" --format markdown 2>/dev/null)"
   _hb_rc=$?
   if [ "$_hb_rc" = 124 ]; then
-    HOST_BINDING_MD="### cursor host binding (report-only)
-- UNVERIFIED: TIMED OUT after 15 s"
+    DEFAULT_BINDING_MD="### default projection binding (cursor)
+- NOT BOUND: TIMED OUT after 30 s. Cite no operating-plane semantics this session."
   elif [ -n "$_hb_out" ]; then
-    HOST_BINDING_MD="$_hb_out"
+    DEFAULT_BINDING_MD="$_hb_out"
   fi
   unset _hb_out _hb_rc
 fi
@@ -689,8 +665,7 @@ ${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
-${OPERATING_PLANE_MD}
-${HOST_BINDING_MD}
+${DEFAULT_BINDING_MD}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"
