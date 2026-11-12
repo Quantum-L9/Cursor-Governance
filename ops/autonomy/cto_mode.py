@@ -2,7 +2,9 @@
 """CTO mode — opt-in, per-workspace binding of selected L9 projections.
 
 Contract: governance/cto-mode/MODE.yaml (`l9.cursor-governance.cto-mode/v1`).
-State: <workspace>/.l9/cto-mode/session.json (`l9.cto-mode-session/v1`, gitignored).
+State: <workspace>/.l9/cto-mode/session.json (`l9.cto-mode-session/v1`, gitignored),
+bound to the host session that requested it. Another session, or one whose id
+cannot be resolved, sees the mode as OFF.
 
 The mode is off unless an operator turns it on (`/lcto` runs `on`). While it is
 requested, every projection the contract selects is checked by the verifier its
@@ -44,6 +46,8 @@ MODE_SCHEMA = "l9.cursor-governance.cto-mode/v1"
 STATE_SCHEMA = "l9.cto-mode-session/v1"
 STATE_REL = Path(".l9/cto-mode/session.json")
 AUTHORITY_ENV = "L9_GITHUB_AUTHORITY_ROOT"
+# Host session identity, in order. An unresolvable session never activates the mode.
+SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
 ADMITTED = "ADMITTED_AND_CURRENT"
 
@@ -127,6 +131,14 @@ def _authority_root(explicit: Path | None) -> Path | None:
     return Path(env) if env else None
 
 
+def resolve_session_id(explicit: str | None = None) -> str | None:
+    """The host session this command runs in, or None when it cannot be proven."""
+    for candidate in (explicit, *(os.environ.get(name) for name in SESSION_ENVS)):
+        if isinstance(candidate, str) and candidate.strip() and candidate.strip() != "default":
+            return candidate.strip()
+    return None
+
+
 def state_path(workspace: Path) -> Path:
     return workspace / STATE_REL
 
@@ -137,8 +149,9 @@ def evaluate(
     authority_root: Path | None = None,
     contract_path: Path = MODE_CONTRACT,
     verify: Verify = run_verifier,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
-    """Mode status for *workspace*. Reads state; never writes it."""
+    """Mode status for *workspace* in the current session. Reads state; never writes it."""
     report: dict[str, Any] = {"schema": "l9.cto-mode-status/v1", "workspace": str(workspace)}
     try:
         contract = load_contract(contract_path)
@@ -153,6 +166,12 @@ def evaluate(
         return {**report, "mode": "REJECTED", "reason": "STATE_UNREADABLE"}
     if not isinstance(state, dict) or state.get("schema") != STATE_SCHEMA:
         return {**report, "mode": "REJECTED", "reason": "STATE_SCHEMA_MISMATCH"}
+    current = resolve_session_id(session_id)
+    if current is None:
+        return {**report, "mode": "OFF", "reason": "SESSION_UNRESOLVED"}
+    if state.get("session_id") != current:
+        # A request belongs to the session that made it; it never carries over.
+        return {**report, "mode": "OFF", "reason": "REQUESTED_IN_ANOTHER_SESSION"}
     if state.get("contract_digest") != _digest(contract_path):
         # The selection changed since the operator asked; ask again rather than widen.
         return {**report, "mode": "STALE", "reason": "MODE_CONTRACT_CHANGED_SINCE_REQUEST"}
@@ -174,7 +193,7 @@ def evaluate(
             load.append(
                 {
                     "ref": entry["ref"],
-                    "composed_view": str(Path(bundle["path"]) / bundle["composed_view"]),
+                    "composed_view": str(REPO / bundle["path"] / bundle["composed_view"]),
                     "provenance": result.get("architecture_intelligence"),
                 }
             )
@@ -192,13 +211,19 @@ def evaluate(
     }
 
 
-def request(workspace: Path, contract_path: Path = MODE_CONTRACT) -> Path:
+def request(
+    workspace: Path, contract_path: Path = MODE_CONTRACT, session_id: str | None = None
+) -> Path:
     load_contract(contract_path)
+    current = resolve_session_id(session_id)
+    if current is None:
+        raise ContractError("SESSION_UNRESOLVED: pass --session-id or run inside a host session")
     path = state_path(workspace)
     path.parent.mkdir(parents=True, exist_ok=True)
     state = {
         "schema": STATE_SCHEMA,
         "requested_at": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "session_id": current,
         "contract": str(contract_path),
         "contract_digest": _digest(contract_path),
     }
@@ -225,6 +250,9 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help=f"Quantum-L9/.github checkout whose HEAD is its main (default: ${AUTHORITY_ENV})",
     )
+    parser.add_argument(
+        "--session-id", help=f"host session id (default: first of {', '.join(SESSION_ENVS)})"
+    )
     args = parser.parse_args(argv)
     workspace = args.workspace.resolve()
     if args.command == "off":
@@ -233,11 +261,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "on":
         try:
-            request(workspace)
+            request(workspace, session_id=args.session_id)
         except ContractError as exc:
             print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
             return EXIT["REJECTED"]
-    report = evaluate(workspace, authority_root=args.authority_root)
+    report = evaluate(workspace, authority_root=args.authority_root, session_id=args.session_id)
     print(json.dumps(report, indent=2, sort_keys=True))
     return EXIT[report["mode"]]
 

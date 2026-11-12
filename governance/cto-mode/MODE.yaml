@@ -26,11 +26,15 @@ activation:
   # The only way on: an explicit operator invocation in this session.
   entrypoint: commands/lcto.md
   control: ops/autonomy/cto_mode.py
+  interpreter: $HOME/.cursor-governance/.venv/bin/python
   state: <workspace>/.l9/cto-mode/session.json
   state_schema: l9.cto-mode-session/v1
+  # A request is bound to the host session that made it. Another session, or one
+  # whose id cannot be resolved, sees the mode as OFF.
+  session_bound: true
   repository_presence_alone_activates: false
   skill_presence_alone_activates: false
-  off: python3 ops/autonomy/cto_mode.py off
+  off: $HOME/.cursor-governance/.venv/bin/python $HOME/.cursor-governance/ops/autonomy/cto_mode.py off --workspace <workspace>
 # Projections this mode binds while active. The owner selects the set; a
 # projection not listed here is never loaded by this mode.
 selection:

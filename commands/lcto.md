@@ -35,10 +35,12 @@ Activate L (CTO) persona for strategic decisions:
 repository or skill being present does not turn it on. Contract:
 `governance/cto-mode/MODE.yaml`.
 
-1. Run `python3 ops/autonomy/cto_mode.py on` from the governance clone
-   (`$HOME/.cursor-governance`), passing `--workspace "$PWD"` and, when a
-   `Quantum-L9/.github` checkout whose HEAD is its `main` is available,
-   `--authority-root <that checkout>` (or set `L9_GITHUB_AUTHORITY_ROOT`).
+1. From the workspace you are working in (do not change directory), run the
+   governance clone's script with its locked interpreter:
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" on --workspace "$PWD"`.
+   Add `--authority-root <checkout>` (or set `L9_GITHUB_AUTHORITY_ROOT`) when a
+   `Quantum-L9/.github` checkout whose HEAD is its `main` is available. The
+   request is bound to this host session; a later session starts OFF.
 2. Read its JSON `mode`:
    - `ACTIVE`: read each `load[].composed_view` before deciding, and cite its
      composition digest. Those projections are the role's semantics
@@ -49,7 +51,7 @@ repository or skill being present does not turn it on. Contract:
      not reconstruct them from memory or repository reads.
    - `REJECTED` or `STALE`: stop and report. `STALE` means the mode contract
      changed after the request; run `on` again.
-3. `/lcto off` runs `python3 ops/autonomy/cto_mode.py off --workspace "$PWD"`.
+3. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
 merge, push and deploy authority are unchanged. The role coordinates the

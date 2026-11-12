@@ -16,6 +16,13 @@ sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 import cto_mode  # noqa: E402
 
 TC = "l9.projection/technical-coordination@1"
+SID = "session-a"
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in cto_mode.SESSION_ENVS:
+        monkeypatch.delenv(name, raising=False)
 
 
 def _verify(status_by_ref: dict[str, str]):
@@ -46,19 +53,21 @@ def test_contract_is_opt_in_and_selects_technical_coordination() -> None:
 
 
 def test_off_by_default(tmp_path: Path) -> None:
-    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}))
+    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID)
     assert report["mode"] == "OFF"
     assert "load" not in report
 
 
 def test_requested_and_admitted_is_active_with_composed_view(tmp_path: Path) -> None:
-    cto_mode.request(tmp_path)
-    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}))
+    cto_mode.request(tmp_path, session_id=SID)
+    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID)
     assert report["mode"] == "ACTIVE"
     assert report["load"] == [
         {
             "ref": TC,
-            "composed_view": "generated/governance/technical_coordination/composed.json",
+            "composed_view": str(
+                REPO / "generated/governance/technical_coordination/composed.json"
+            ),
             "provenance": None,
         }
     ]
@@ -68,8 +77,8 @@ def test_requested_and_admitted_is_active_with_composed_view(tmp_path: Path) -> 
 def test_required_projection_not_admitted_blocks_and_loads_nothing(
     tmp_path: Path, status: str
 ) -> None:
-    cto_mode.request(tmp_path)
-    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: status}))
+    cto_mode.request(tmp_path, session_id=SID)
+    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: status}), session_id=SID)
     assert report["mode"] == "BLOCKED"
     assert report["load"] == []
     assert [b["ref"] for b in report["blockers"]] == [TC]
@@ -80,8 +89,8 @@ def test_optional_projection_unavailable_does_not_block(tmp_path: Path) -> None:
     doc["selection"]["projections"][0]["required"] = False
     path = tmp_path / "MODE.yaml"
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
-    cto_mode.request(tmp_path, contract_path=path)
-    report = cto_mode.evaluate(tmp_path, contract_path=path, verify=_verify({}))
+    cto_mode.request(tmp_path, contract_path=path, session_id=SID)
+    report = cto_mode.evaluate(tmp_path, contract_path=path, verify=_verify({}), session_id=SID)
     assert report["mode"] == "ACTIVE"
     assert report["load"] == []
     assert report["projections"][0]["status"] == "BLOCKED"
@@ -89,10 +98,10 @@ def test_optional_projection_unavailable_does_not_block(tmp_path: Path) -> None:
 
 def test_contract_change_after_request_is_stale(tmp_path: Path) -> None:
     path = _contract(tmp_path)
-    cto_mode.request(tmp_path, contract_path=path)
+    cto_mode.request(tmp_path, contract_path=path, session_id=SID)
     path.write_text(path.read_text() + "# widened\n")
     report = cto_mode.evaluate(
-        tmp_path, contract_path=path, verify=_verify({TC: cto_mode.ADMITTED})
+        tmp_path, contract_path=path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID
     )
     assert report["mode"] == "STALE"
 
@@ -130,7 +139,7 @@ def test_malformed_contract_fails_closed(tmp_path: Path, mutation: dict, reason:
     (tmp_path / cto_mode.STATE_REL).parent.mkdir(parents=True)
     (tmp_path / cto_mode.STATE_REL).write_text("{}")
     report = cto_mode.evaluate(
-        tmp_path, contract_path=path, verify=_verify({TC: cto_mode.ADMITTED})
+        tmp_path, contract_path=path, verify=_verify({TC: cto_mode.ADMITTED}), session_id=SID
     )
     assert report["mode"] == "REJECTED"
 
@@ -138,7 +147,7 @@ def test_malformed_contract_fails_closed(tmp_path: Path, mutation: dict, reason:
 def test_corrupt_state_is_rejected(tmp_path: Path) -> None:
     (tmp_path / cto_mode.STATE_REL).parent.mkdir(parents=True)
     (tmp_path / cto_mode.STATE_REL).write_text('{"schema": "other"}')
-    assert cto_mode.evaluate(tmp_path, verify=_verify({}))["mode"] == "REJECTED"
+    assert cto_mode.evaluate(tmp_path, verify=_verify({}), session_id=SID)["mode"] == "REJECTED"
 
 
 def test_cli_on_blocks_without_admitted_bundle_then_off_removes_only_state(tmp_path: Path) -> None:
@@ -147,7 +156,7 @@ def test_cli_on_blocks_without_admitted_bundle_then_off_removes_only_state(tmp_p
     keep.write_text("unrelated")
     script = REPO / "ops/autonomy/cto_mode.py"
     on = subprocess.run(
-        [sys.executable, str(script), "on", "--workspace", str(tmp_path)],
+        [sys.executable, str(script), "on", "--workspace", str(tmp_path), "--session-id", SID],
         capture_output=True,
         text=True,
         check=False,
@@ -166,3 +175,33 @@ def test_cli_on_blocks_without_admitted_bundle_then_off_removes_only_state(tmp_p
     assert json.loads(off.stdout) == {"mode": "OFF", "state_removed": True}
     assert not (tmp_path / cto_mode.STATE_REL).exists()
     assert keep.read_text() == "unrelated"
+
+
+def test_request_from_another_session_does_not_carry_over(tmp_path: Path) -> None:
+    cto_mode.request(tmp_path, session_id=SID)
+    report = cto_mode.evaluate(
+        tmp_path, verify=_verify({TC: cto_mode.ADMITTED}), session_id="session-b"
+    )
+    assert report["mode"] == "OFF"
+    assert report["reason"] == "REQUESTED_IN_ANOTHER_SESSION"
+    assert "load" not in report
+
+
+def test_unresolvable_session_never_activates(tmp_path: Path) -> None:
+    with pytest.raises(cto_mode.ContractError, match="SESSION_UNRESOLVED"):
+        cto_mode.request(tmp_path)
+    cto_mode.request(tmp_path, session_id=SID)
+    report = cto_mode.evaluate(tmp_path, verify=_verify({TC: cto_mode.ADMITTED}))
+    assert report["mode"] == "OFF"
+    assert report["reason"] == "SESSION_UNRESOLVED"
+
+
+def test_session_resolves_from_host_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert cto_mode.resolve_session_id() is None
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "default")
+    assert cto_mode.resolve_session_id() is None
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "cc-1")
+    assert cto_mode.resolve_session_id() == "cc-1"
+    monkeypatch.setenv("CURSOR_SESSION_ID", "cur-1")
+    assert cto_mode.resolve_session_id() == "cur-1"
+    assert cto_mode.resolve_session_id("explicit") == "explicit"
