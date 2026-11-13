@@ -86,6 +86,29 @@ def _status(state: str, reason: str, **detail: Any) -> dict[str, Any]:
     return {"profile_ref": PROFILE_REF, "status": state, "reason": reason, **detail}
 
 
+# Diagnostic keys the shared verifier's Outcome carries for a STALE refusal: the reason the
+# revision is not current (e.g. MATERIAL_CHANGE) and the source classes that moved.
+_OUTCOME_DIAGNOSTICS = ("cause", "changed")
+
+
+def _outcome_detail(exc: BaseException) -> dict[str, Any]:
+    """Surface the shared verifier's Outcome cause and changed classes, never a verdict.
+
+    The admission adapter re-raises the verifier's Outcome as ``Rejected(f"{status} {reason}")``
+    chained ``from outcome``, which flattens away *why* a revision is stale. Only the
+    diagnostic keys are lifted; status and reason stay exactly the adapter's.
+    """
+    detail = getattr(exc.__cause__, "detail", None)
+    if not isinstance(detail, dict):
+        return {}
+    return {key: detail[key] for key in _OUTCOME_DIAGNOSTICS if key in detail}
+
+
+def _diagnosis(result: dict[str, Any]) -> str:
+    parts = [f"{key}: {result[key]}" for key in _OUTCOME_DIAGNOSTICS if key in result]
+    return f" [{'; '.join(parts)}]" if parts else ""
+
+
 def _payload(bundle: Path, verified: dict[str, Any], cls: str, record_id: str | None) -> Any:
     """Read ONLY the component already authenticated by the shared verifier."""
     entry = verified["entries"].get(cls)
@@ -196,7 +219,7 @@ def classify(
     except Unobserved as exc:
         return _status("UNVERIFIED", str(exc))
     except Rejected as exc:
-        return _status("REJECTED", str(exc))
+        return _status("REJECTED", str(exc), **_outcome_detail(exc))
     except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
         return _status("BLOCKED", "REQUIRED_INPUT_UNRESOLVED", detail=str(exc))
     except Exception as exc:
@@ -210,14 +233,17 @@ def classify(
 
 def render_line(result: dict[str, Any]) -> str:
     """One SessionStart line; the Claude hook prints it, the Cursor hook renders markdown."""
-    return f"operating-plane projection: {result['status']} — {result['reason']} (report-only)"
+    return (
+        f"operating-plane projection: {result['status']} — {result['reason']}"
+        f"{_diagnosis(result)} (report-only)"
+    )
 
 
 def render_markdown(result: dict[str, Any]) -> str:
     return "\n".join(
         [
             "### operating-plane projection",
-            f"- {result['status']}: {result['reason']}",
+            f"- {result['status']}: {result['reason']}{_diagnosis(result)}",
             f"- profile: {PROFILE_REF} (consumer verifier; report-only)",
         ]
     )
