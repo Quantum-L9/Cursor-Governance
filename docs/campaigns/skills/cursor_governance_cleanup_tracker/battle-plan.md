@@ -26,8 +26,8 @@ Acceptance is not "files moved". Acceptance is "nothing live can route, import, 
 6. Auto-load Authority Resolver only when exact L9 authority/currentness is material; auto-load Work State Router only for continuity/resume/handoff/next-transition work.
 7. Preserve one primary plus at most two supporting skills; do not preload the four-skill family.
 8. Verify the provider for `evidence.review` before declaring GAR integration complete.
-9. Restore lightweight planning and make it the single canonical `l9-plan`.
-10. Remove the PE-aware plan implementation from Cursor-Governance with the PE corpus.
+9. ~~Restore lightweight planning and make it the single canonical `l9-plan`.~~ Withdrawn 2026-11-13: ordinary planning stays `l9-plan-simple`; `l9-plan` is the Program Execution campaign planner (`PROGRAM_EXECUTION_PLANNER_V1`).
+10. ~~Remove the PE-aware plan implementation from Cursor-Governance with the PE corpus.~~ Withdrawn 2026-11-13 (`PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1`): the PE-aware planner renders `campaign-source.v2` for `make campaign`.
 
 ## Wave 3 - Refresh / consolidate governance specialists
 
@@ -38,8 +38,8 @@ Acceptance is not "files moved". Acceptance is "nothing live can route, import, 
 ## Wave 4 - Domain eviction
 
 1. Move idea-owned skills/history to IdeaOS.
-2. Create `Quantum-L9/l9-campaign-execution`.
-3. Move Program Execution, PE skills, PE-specific planning/execution support, and only their true owned dependencies.
+2. ~~Create `Quantum-L9/l9-campaign-execution`.~~ Withdrawn 2026-11-13.
+3. ~~Move Program Execution, PE skills, PE-specific planning/execution support, and only their true owned dependencies.~~ Withdrawn 2026-11-13 (`PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1`): Program Execution is reinstated and registered (`make campaign`) and stays in Cursor-Governance.
 
 ## Wave 5 - Wire cleanup
 
@@ -81,7 +81,7 @@ If no, assign a destination or REVIEW disposition.
 - PR Audit has one current owner.
 - CI has one routing surface with lazy concern loading.
 - IdeaOS owns idea lifecycle capabilities.
-- l9-campaign-execution owns campaign/program execution capabilities.
+- ~~l9-campaign-execution owns campaign/program execution capabilities.~~ Withdrawn 2026-11-13: Program Execution in this repository owns them (`make campaign`).
 - no active registry, command, hook, test, or adapter points at a retired identity.
 
 

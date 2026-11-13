@@ -278,8 +278,8 @@ def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
 def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str], list[str]]:
     """Split off targets no pytest suite can actually collect.
 
-    A path the root conftest excludes belongs to a non-pytest loader (the
-    Program Execution adapter layer runs under `make program-execution-conformance`).
+    A path the root conftest excludes belongs to a dedicated suite (Program
+    Execution's tests run under their own python-contract suites).
     Handing it to the repo-root suite as an explicit argument overrides that
     exclusion and fails on import, so it is not a valid scoped publication-gate target unless a
     non-root suite owns it.

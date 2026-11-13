@@ -147,3 +147,11 @@ def _merge_authority_strict(monkeypatch: pytest.MonkeyPatch) -> None:
     itself set their own mode.
     """
     monkeypatch.setenv("L9_MERGE_AUTHORITY_MODE", "strict")
+
+# 2026-11-13 (CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1): the
+# "Program Execution is an eviction target ... Remove with the eviction slice"
+# comment above is superseded. Program Execution is registered (`make
+# campaign`) and its tests are owned by the claude-code-autonomy and
+# program-execution-controller suites in ops/config/python-contract.json. The
+# collect_ignore entries stay: they keep root pytest from double-collecting or
+# shadowing those suites' packages. They are not scheduled for removal.

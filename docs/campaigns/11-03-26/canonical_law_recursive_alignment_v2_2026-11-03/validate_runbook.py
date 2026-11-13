@@ -205,8 +205,8 @@ def validate(d: dict) -> dict:
         "worker local-write grant incorrectly changed",
     )
     check(
-        changes["D07"]["operation"] == "CENSUS_THEN_CONDITIONAL_OWNER_RETIREMENT",
-        "PE entrypoint retirement is not consumer-censused",
+        changes["D07"]["operation"] == "RETAIN_REGISTERED_ENTRYPOINT",
+        "PE entrypoint must be retained as registered (PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1)",
     )
     check(
         changes["D14"]["operation"] == "UPDATE_HAND_AUTHORED_COMMENTS_PRESERVE_GENERATED_OVERRIDES",

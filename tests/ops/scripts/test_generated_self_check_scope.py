@@ -35,7 +35,7 @@ def test_unrelated_sync_does_not_write_skill_registry(monkeypatch) -> None:
 
 
 def test_generic_sync_has_no_program_execution_surface() -> None:
-    """Program Execution is an eviction target; the generic helper owns none of it."""
+    """Program Execution owns its own generated artifacts; the generic helper owns none of it."""
     module = _sync_module()
     assert not hasattr(module, "sync_pe_adapters")
     assert not hasattr(module, "sync_pe_core")
