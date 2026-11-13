@@ -79,7 +79,7 @@ tiers:
     use_when: writing or running Python tests under uv — red-green-refactor, vertical slicing, or uv project setup
   explicit_only:
   - skill: l9-plan
-    reason: live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing — user-invoked only
+    reason: Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) — renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged — and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing — user-invoked only
   - skill: l9-forge
     reason: zero-pause batch execution
   - skill: l9-end-session
@@ -173,9 +173,9 @@ tiers:
   - item: skills/_archived/l9-wire-skill-into-repo/
     reason: superseded by skills/l9-wire-into-repo/; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-campaign-activate/
-    reason: Program Execution campaign front door retired with no replacement; archived out of live skills/ discovery — never auto-invoke or reconcile
+    reason: superseded as the campaign front door by make campaign (PROGRAM_EXECUTION_REGISTERED_STAGE_V1) and l9-plan's campaign-source.v2 renderer (PROGRAM_EXECUTION_PLANNER_V1); its scripts remain Program Execution's compile library, read by path from environment/program-execution/scripts/run_campaign.py — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-pe-nuggets/
-    reason: Program Execution nugget extraction retired with the campaign front door; archived out of live skills/ discovery — never auto-invoke or reconcile
+    reason: Program Execution nugget extraction is a library of the registered campaign runner (read by path from run_campaign.py), not a skill; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-setting-up-ci/
     reason: CI bootstrap procedure predates consumer-owned l9-lint-test.yml; archived out of live skills/ discovery — never auto-invoke or reconcile. No successor skill.
   - item: skills/_archived/l9-ci-ops/
@@ -407,7 +407,7 @@ claude_routing:
     - /l9-plan
     supporting:
     - l9-structured-reasoning
-    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.
+    note: 'Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. Campaign planning for make campaign, Program Lock and PE+autonomy belongs to the explicit-only /l9-plan (PROGRAM_EXECUTION_PLANNER_V1), which is never routed ambiently. l9-plan-simple does not absorb it. Negative signals keep those requests off this route.
 
       '
   - id: skill_compiler
