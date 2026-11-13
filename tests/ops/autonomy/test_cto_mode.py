@@ -250,3 +250,63 @@ def test_session_resolves_from_host_environment(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("CURSOR_SESSION_ID", "cur-1")
     assert cto_mode.resolve_session_id() == "cur-1"
     assert cto_mode.resolve_session_id("explicit") == "explicit"
+
+
+# --- operating protocol: the CTO swarm invariants (operator-directed 2026-11-13) ---
+
+SWARM_INVARIANTS = {
+    "minimal_operator_pings",
+    "swarm_never_pings_operator",
+    "frictionless_cto_swarm_channel",
+}
+
+
+def test_contract_carries_the_swarm_invariants_and_grants_no_permission() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["grants_permission"] is False
+    assert SWARM_INVARIANTS <= set(protocol["invariants"])
+    assert "cannot be delegated" in protocol["roles"]["cto"]
+    briefs = " ".join(protocol["child_brief_must_include"])
+    assert "coding-agent mode" in briefs
+    assert "non-shallow" in briefs
+    assert "never a cross-session send tool" in briefs
+    claude = protocol["transport"]["claude-code"]
+    assert claude["cto_to_swarm"] == "mcp__claude-code-remote__send_message"
+    assert "list_events" in claude["swarm_to_cto"]
+    # Safety notifications are never suppressed by the minimal-ping invariant.
+    assert "never suppressed" in protocol["invariants"]["minimal_operator_pings"]
+
+
+@pytest.mark.parametrize("statuses", ["admitted", "blocked"])
+def test_operating_protocol_is_emitted_when_active_or_blocked(
+    tmp_path: Path, statuses: str
+) -> None:
+    cto_mode.request(tmp_path, session_id=SID)
+    by_ref = ALL_ADMITTED if statuses == "admitted" else {**ALL_ADMITTED, TC: "BLOCKED"}
+    report = cto_mode.evaluate(tmp_path, verify=_verify(by_ref), session_id=SID)
+    assert report["mode"] == ("ACTIVE" if statuses == "admitted" else "BLOCKED")
+    assert report["operating_protocol"] == cto_mode.load_contract()["operating_protocol"]
+
+
+def test_operating_protocol_is_not_emitted_when_off(tmp_path: Path) -> None:
+    report = cto_mode.evaluate(tmp_path, verify=_verify(ALL_ADMITTED), session_id=SID)
+    assert report["mode"] == "OFF"
+    assert "operating_protocol" not in report
+
+
+@pytest.mark.parametrize(
+    ("protocol", "reason"),
+    [
+        ("text", "OPERATING_PROTOCOL_MALFORMED"),
+        ({"grants_permission": True, "invariants": {"x": "y"}}, "MUST_GRANT_NO_PERMISSION"),
+        ({"invariants": {"x": "y"}}, "MUST_GRANT_NO_PERMISSION"),
+        ({"grants_permission": False, "invariants": {}}, "INVARIANTS_EMPTY"),
+        ({"grants_permission": False, "invariants": {"x": " "}}, "INVARIANT_MALFORMED"),
+    ],
+)
+def test_malformed_operating_protocol_fails_closed(
+    tmp_path: Path, protocol: object, reason: str
+) -> None:
+    path = _contract(tmp_path, operating_protocol=protocol)
+    with pytest.raises(cto_mode.ContractError, match=reason):
+        cto_mode.load_contract(path)

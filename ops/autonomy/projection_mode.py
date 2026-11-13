@@ -76,6 +76,25 @@ def _digest(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def check_operating_protocol(protocol: Any) -> None:
+    """Fail closed on a malformed operating protocol, or one that claims authority.
+
+    A mode contract may carry behavioral defaults for the session that activates it. They
+    are emitted with the mode status; they must declare that they grant no permission, and
+    every invariant must be a non-empty statement.
+    """
+    if not isinstance(protocol, dict):
+        raise ContractError("OPERATING_PROTOCOL_MALFORMED")
+    if protocol.get("grants_permission") is not False:
+        raise ContractError("OPERATING_PROTOCOL_MUST_GRANT_NO_PERMISSION")
+    invariants = protocol.get("invariants")
+    if not isinstance(invariants, dict) or not invariants:
+        raise ContractError("OPERATING_PROTOCOL_INVARIANTS_EMPTY")
+    for name, statement in invariants.items():
+        if not isinstance(name, str) or not isinstance(statement, str) or not statement.strip():
+            raise ContractError(f"OPERATING_PROTOCOL_INVARIANT_MALFORMED: {name}")
+
+
 def resolve_session_id(explicit: str | None = None) -> str | None:
     """The host session this command runs in, or None when it cannot be proven."""
     for candidate in (explicit, *(os.environ.get(name) for name in SESSION_ENVS)):
@@ -201,6 +220,8 @@ class ProjectionMode:
                 raise ContractError(f"BINDING_REF_MISMATCH: {entry['binding']}")
             if not isinstance(verifier, str) or not (REPO / verifier).is_file():
                 raise ContractError(f"BINDING_VERIFIER_UNDECLARED: {entry['binding']}")
+        if "operating_protocol" in doc:
+            check_operating_protocol(doc["operating_protocol"])
         return doc
 
     def evaluate(
@@ -266,7 +287,7 @@ class ProjectionMode:
             elif entry["required"]:
                 blockers.append(record)
         mode = "ACTIVE" if not blockers else "BLOCKED"
-        return {
+        result_report = {
             **report,
             "mode": mode,
             "requested_at": state.get("requested_at"),
@@ -275,6 +296,11 @@ class ProjectionMode:
             "blockers": blockers,
             "load": load if mode == "ACTIVE" else [],
         }
+        if "operating_protocol" in contract:
+            # Behavior, not projection semantics: it applies whether or not every
+            # projection is admitted, because the persona still runs when BLOCKED.
+            result_report["operating_protocol"] = contract["operating_protocol"]
+        return result_report
 
     def request(
         self,

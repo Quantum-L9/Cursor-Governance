@@ -5,8 +5,8 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-11-11
+#   version: 1.1.0
+#   updated: 2026-11-13
 # Consumer-local contract for the opt-in CTO mode. It selects meaning; it is not
 # authority to admit a profile and it grants no permission.
 schema: l9.cursor-governance.cto-mode/v1
@@ -123,6 +123,70 @@ runtime_ownership:
   architecture_judgment: applicable_architecture_owner
   semantic_compilation_and_receipts: Quantum-L9/l9-semantic-compiler-engine
   admission: Quantum-L9/.github repository owner
+# How an active CTO runs a swarm of coding agents. Operator-directed defaults
+# (2026-11-13, governed session session_017xwbxxupo1nc2CvFZN6ewa): applied every time
+# the mode is requested, so the operator never re-explains them and the CTO never
+# relaunches agents to add them. They are behavior, not authority: they grant no
+# permission, widen no scope and admit nothing. Emitted verbatim with `on` / `status`.
+operating_protocol:
+  version: 1
+  grants_permission: false
+  invariants:
+    minimal_operator_pings: >-
+      The CTO contacts the operator only for: (a) one batched pre-launch decision set,
+      (b) an authority-reserved decision not covered by recorded operator decisions,
+      (c) a blocker no lane can route around, (d) a permission prompt that stalls a
+      child session, naming the exact session and prompt, (e) the final integrated
+      report, and (f) mandatory safety, security or incident notifications, which are
+      never suppressed. No progress narration.
+    swarm_never_pings_operator: >-
+      Swarm agents never address the operator. Every question, blocker and status goes
+      to the CTO. Swarm agents never call cross-session messaging tools, because those
+      calls require operator approval in the child session.
+    frictionless_cto_swarm_channel: >-
+      The CTO sends directives with the host's cross-session send tool. Swarm agents
+      reply by writing prefixed lines in their own transcript, which the CTO reads with
+      the host's transcript tools. Neither direction may require an operator approval.
+  roles:
+    cto: the activating session only; it cannot be delegated to a swarm agent
+    swarm: coding agents with no CTO, coordination, integration or merge authority
+    integration_agent: the CTO, which proves the combined revision before any claim
+  pre_launch:
+    - Resolve evidence-determined, policy-determined and bounded realization choices
+      yourself; record them.
+    - Put every authority-reserved question to the operator in ONE batched question set
+      before any dispatch. Fold the answers into every child brief verbatim.
+    - Assign disjoint path ownership per lane and a stacking chain for every lane that
+      shares files; overlap is resolved by sequencing, never by concurrent edits.
+  child_brief_must_include:
+    - 'ROLE: coding agent; the CTO session id; no CTO, coordination, integration or merge authority.'
+    - 'FIRST ACTION: enable coding-agent mode (commands/coding-agent.md) against a Quantum-L9/.github checkout with non-shallow history; a shallow clone yields a false ADMITTED_REVISION_NOT_INTEGRATED. On BLOCKED from a deep checkout, report verbatim and do not cite the projection.'
+    - 'REPORTING: lines prefixed CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER: in its own transcript; never a cross-session send tool; never address the operator.'
+    - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
+    - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
+    - The operator decisions recorded before launch.
+  transport:
+    claude-code:
+      cto_to_swarm: mcp__claude-code-remote__send_message
+      swarm_to_cto: transcript lines read with mcp__claude-code-remote__get_session and list_events
+      cto_wakeup: mcp__claude-code-remote__send_later into the CTO session, about every 20 minutes while any lane is open; stop after three consecutive check-ins with no activity
+      child_launch: mcp__claude-code-remote__create_session with extra_allowed_tools for the child's tools (effective only for tools pre-approved for the CTO)
+      permission_precondition: >-
+        A child session that still prompts (for example add_repo for a private
+        repository) needs Auto mode or repository permissions.allow rules. Report it to
+        the operator once, at launch, with the exact session ids; never relaunch agents
+        to work around a prompt.
+    cursor:
+      cto_to_swarm: Task tool briefs
+      swarm_to_cto: the Task result document (l9.cursor-subagent.result.v1)
+  check_in:
+    - Read every child's new CTO-* lines and its status; answer each question under the
+      decision-classification contract above.
+    - Audit scope; stop and revert any write outside a lane's paths or to a read-only
+      repository, and any merge.
+    - Send GATE (exact base branch) when a parent lane pushes with its own tests green.
+    - Integration-test the combined stack in a disposable worktree before any merge or
+      completion claim.
 constraints:
   - Activation changes what this session reads, never what it may do. Publication,
     merge, push and deploy authority stay with CANONICAL_LAW.md and

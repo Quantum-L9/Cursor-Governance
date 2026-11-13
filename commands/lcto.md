@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.2.0"
+version: "1.3.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -64,7 +64,14 @@ Bound projections (all required):
      not reconstruct them from memory or repository reads.
    - `REJECTED` or `STALE`: stop and report. `STALE` means the mode contract
      changed after the request; run `on` again.
-3. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
+3. Whenever the JSON carries `operating_protocol` (ACTIVE or BLOCKED), adopt it as this
+   session's standing defaults for running a swarm, without asking the operator to restate
+   them: the three `invariants` (minimal operator pings; the swarm never addresses the
+   operator; a CTO↔swarm channel that needs no operator approval), the `roles` (only this
+   session is CTO; swarm agents are coding agents), `pre_launch`, every
+   `child_brief_must_include` item in each child brief, the host `transport`, and the
+   `check_in` routine. It grants no permission (`grants_permission: false`).
+4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
 merge, push and deploy authority are unchanged. The role coordinates the
