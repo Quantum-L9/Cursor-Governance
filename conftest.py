@@ -148,6 +148,7 @@ def _merge_authority_strict(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setenv("L9_MERGE_AUTHORITY_MODE", "strict")
 
+
 # 2026-11-13 (CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1): the
 # "Program Execution is an eviction target ... Remove with the eviction slice"
 # comment above is superseded. Program Execution is registered (`make
