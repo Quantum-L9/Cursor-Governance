@@ -142,3 +142,38 @@ def test_the_target_comes_from_the_checkouts_origin_when_undeclared() -> None:
     plan = _plan()
     del plan["campaign"]["target_repository"]
     assert render.resolve_target(plan, None, REPO) == "Quantum-L9/Cursor-Governance"
+
+
+def test_a_blocked_todo_is_refused() -> None:
+    plan = _plan()
+    plan["todos"][0]["files"] = []
+    plan["todos"][0]["blocker"] = "awaiting the vendor schema"
+    with pytest.raises(render.RenderError) as caught:
+        render.render(plan, target="Quantum-L9/Cursor-Governance", campaign_id="x-plan")
+    assert "is blocked (awaiting the vendor schema)" in str(caught.value)
+
+
+def test_a_refused_rerender_keeps_the_admitted_source(tmp_path: Path) -> None:
+    code, out = _run(tmp_path, _plan())
+    assert code == 0
+    admitted = out.read_bytes()
+    plan = _plan()
+    plan["todos"][0]["validation"] = ["test -s a.md && test -s b.md"]
+    code, _ = _run(tmp_path, plan)
+    assert code == 1
+    assert out.read_bytes() == admitted
+    assert not [path for path in out.parent.iterdir() if ".staged-" in path.name]
+
+
+def test_the_handoff_carries_the_operator_invocation_and_mode(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "CAMPAIGN_SOURCE.yaml"
+    code = render.main(
+        [str(_write(tmp_path, _plan())), "--out", str(out), "--repo-root", str(REPO), "--json"]
+    )
+    assert code == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["next"][0].startswith("/coding-agent on")
+    assert 'L9_PE_OPERATOR_INVOCATION="<your own words' in result["next"][1]
+    assert f"INTENT={out}" in result["next"][1]

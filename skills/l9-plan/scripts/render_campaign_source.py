@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -194,6 +195,12 @@ def render(
         deps[todo_id] = [dep for dep in listed if dep in known]
         files = [str(path) for path in todo.get("files") or [] if str(path).strip()]
         commands = [str(cmd).strip() for cmd in todo.get("validation") or [] if str(cmd).strip()]
+        blocker = _one_line(todo.get("blocker"))
+        if blocker:
+            errors.append(
+                f"todo {todo_id!r} is blocked ({blocker}); resolve the blocker before rendering "
+                "a campaign, or a dependent task would run past missing ground truth"
+            )
         if files and not commands:
             errors.append(
                 f"todo {todo_id!r} writes {files} but declares no validation command; add "
@@ -544,11 +551,19 @@ def main(argv: list[str] | None = None) -> int:
             args.out or repo_root / ".l9" / "plans" / campaign_id / "CAMPAIGN_SOURCE.yaml"
         ).resolve()
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(
+        # Judge a staged copy; only an admitted source replaces the handoff path,
+        # so a refused re-render never destroys a previously admitted one.
+        staged = out.with_name(f".{out.stem}.staged-{os.getpid()}{out.suffix or '.yaml'}")
+        staged.write_text(
             yaml.safe_dump(source, sort_keys=False, allow_unicode=True, width=100),
             encoding="utf-8",
         )
-        admission = {"skipped": True} if args.no_check else check_admission(out, repo_root)
+        try:
+            admission = {"skipped": True} if args.no_check else check_admission(staged, repo_root)
+        except BaseException:
+            staged.unlink(missing_ok=True)
+            raise
+        os.replace(staged, out)
     except RenderError as exc:
         if args.json:
             print(json.dumps({"status": "REFUSED", "errors": exc.errors}, indent=2))
@@ -563,14 +578,20 @@ def main(argv: list[str] | None = None) -> int:
         "target": target,
         "source": str(out),
         "admission": admission,
-        "next": f'make -C "$HOME/.cursor-governance" campaign INTENT={out} WS="$PWD"',
+        "next": [
+            "/coding-agent on   # in the workspace you run make campaign from",
+            'L9_PE_OPERATOR_INVOCATION="<your own words asking for this campaign>" '
+            f'make -C "$HOME/.cursor-governance" campaign INTENT={out} WS="$PWD"',
+        ],
     }
     if args.json:
         print(json.dumps(result, indent=2))
     else:
         print(f"{result['status']}: {out}")
         print(f"  campaign_id: {campaign_id}  target: {target}")
-        print(f"  next: {result['next']}")
+        print("  next (operator only; an agent never sets the invocation):")
+        for line in result["next"]:
+            print(f"    {line}")
     return 0
 
 
