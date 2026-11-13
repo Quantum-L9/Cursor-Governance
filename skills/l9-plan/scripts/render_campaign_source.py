@@ -560,10 +560,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         try:
             admission = {"skipped": True} if args.no_check else check_admission(staged, repo_root)
-        except BaseException:
+            os.replace(staged, out)
+        finally:
+            # Admitted: already moved onto --out. Refused or interrupted: discard.
             staged.unlink(missing_ok=True)
-            raise
-        os.replace(staged, out)
     except RenderError as exc:
         if args.json:
             print(json.dumps({"status": "REFUSED", "errors": exc.errors}, indent=2))
