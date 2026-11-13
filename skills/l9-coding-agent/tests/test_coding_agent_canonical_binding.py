@@ -981,3 +981,54 @@ def test_bundle_goes_stale_when_a_non_invariant_source_changes(
     )
     assert (rc, record["status"], record["reason"]) == (4, "STALE", "SOURCE_DIGEST_NOT_CURRENT")
     assert record["source_class"] == "contracts"
+
+
+def _linear_history(root: Path, commits: int) -> list[str]:
+    root.mkdir()
+    git(root, "init", "-q", "-b", "main")
+    shas = []
+    for index in range(commits):
+        (root / "f.txt").write_text(f"{index}\n")
+        shas.append(commit_all(root, f"c{index}", publish=False))
+    return shas
+
+
+def test_a_shallow_checkout_cannot_report_an_integrated_revision_as_not_integrated(
+    tmp_path: Path,
+) -> None:
+    """A revision below the shallow graft is Unknown here, never NOT_INTEGRATED: the
+    2026-11-12 diagnosis of coding-agent-execution@1 read a shallow .github clone and
+    misreported an admitted revision that is on main."""
+    full = tmp_path / "full"
+    first, _, head = _linear_history(full, 3)
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", full.as_uri(), str(shallow)],
+        check=True,
+        capture_output=True,
+    )
+    assert git(shallow, "rev-parse", "--is-shallow-repository") == "true"
+
+    with pytest.raises(verifier.Outcome) as caught:
+        verifier._integrated(shallow, first, head)
+    assert (caught.value.status, caught.value.reason) == ("BLOCKED", "AUTHORITY_CHECKOUT_SHALLOW")
+    assert caught.value.detail["revision"] == first
+    # Proof that is present is still proof: the tip is integrated in the shallow checkout.
+    assert verifier._integrated(shallow, head, head) is True
+    # The full history proves the same revision integrated.
+    assert verifier._integrated(full, first, head) is True
+
+
+def test_a_complete_checkout_still_reports_an_unmerged_revision_as_not_integrated(
+    tmp_path: Path,
+) -> None:
+    full = tmp_path / "full"
+    _, head = _linear_history(full, 2)
+    git(full, "checkout", "-q", "-b", "side", f"{head}~1")
+    (full / "side.txt").write_text("side\n")
+    side = commit_all(full, "side", publish=False)
+
+    assert git(full, "rev-parse", "--is-shallow-repository") == "false"
+    assert verifier._integrated(full, side, head) is False
+    assert verifier._integrated(full, "0" * 40, head) is False
+    assert verifier._integrated(full, "not-a-sha", head) is False

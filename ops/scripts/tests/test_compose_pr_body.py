@@ -17,6 +17,9 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
 from compose_pr_body import (  # noqa: E402
+    BODY_BUDGET,
+    COMPACT_FIX_NOTE,
+    COMPACT_INTENT_NOTE,
     COMPLETION_DERIVED,
     COMPLETION_NOT_APPLICABLE,
     COMPLETION_UNVERIFIED,
@@ -25,6 +28,7 @@ from compose_pr_body import (  # noqa: E402
     EDIT_MODE_STALE_PREFIX,
     ERROR_FENCE,
     GATE_UNVERIFIED,
+    GITHUB_BODY_LIMIT,
     LEGACY_THIN_PROBLEM_NOTE,
     NO_OWN_COMMIT,
     NO_SUBJECT,
@@ -2485,6 +2489,78 @@ class TypeEvidenceReportTests(unittest.TestCase):
         field = compose_pr_body(facts, CANONICAL_TEMPLATE).fields["type_of_change"]
         self.assertEqual(field["status"], COMPLETION_VERIFIED, field)
         self.assertIn("commit types", field["detail"])
+
+
+def _big_facts(paths: int, commits: int, body_lines: int) -> MechanicalFacts:
+    """A range shaped like a long-running campaign merge: many paths and long commit bodies."""
+    changed = [
+        f"M\tplasticos_module_{i % 7}/models/feature_file_number_{i:04d}.py" for i in range(paths)
+    ]
+    subjects = [
+        f"feat(module): change number {i} with a reasonably descriptive subject"
+        for i in range(commits)
+    ]
+    bodies = [
+        "Why the work started.\n\n"
+        + "\n".join(f"Detail line {j} explaining the change in prose." for j in range(body_lines))
+        for _ in range(commits)
+    ]
+    return MechanicalFacts(
+        commits=subjects,
+        commit_bodies=bodies,
+        changed_files=changed,
+        path_subjects={row.split("\t")[1]: subjects[i % commits] for i, row in enumerate(changed)},
+        head="d" * 40,
+        shortstat=f"{paths} files changed",
+    )
+
+
+class GithubBodyLimitTests(unittest.TestCase):
+    """GitHub refuses a PR body over 65,536 characters with HTTP 422; the composer must fit."""
+
+    def test_small_body_is_not_compacted(self) -> None:
+        facts = _facts(["M\tops/a.py", "A\tops/b.py"])
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertEqual(facts.compact, 0)
+        self.assertNotIn(COMPACT_FIX_NOTE, result.body)
+        self.assertNotIn(COMPACT_INTENT_NOTE, result.body)
+        self.assertIn("Why the work started.", result.body)
+
+    def test_long_commit_bodies_compact_only_the_fix(self) -> None:
+        facts = _big_facts(paths=40, commits=120, body_lines=12)
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertEqual(facts.compact, 1)
+        self.assertIn(COMPACT_FIX_NOTE, result.body)
+        self.assertNotIn(COMPACT_INTENT_NOTE, result.body)
+        self.assertNotIn("Detail line 3 explaining", result.body)
+        for subject in facts.commits:
+            self.assertIn(f"- {subject}", result.body)
+        self.assertTrue(any("compacted to GitHub" in item for item in result.mechanical_filled))
+
+    def test_moderate_paths_drop_reasons_and_keep_every_path(self) -> None:
+        facts = _big_facts(paths=290, commits=150, body_lines=6)
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertLess(BODY_BUDGET, GITHUB_BODY_LIMIT)
+        self.assertEqual(facts.compact, 2)
+        self.assertIn(COMPACT_INTENT_NOTE, result.body)
+        intent = region_content(result.body, REGION_INTENT) or ""
+        for row in facts.changed_files:
+            self.assertIn(f"`{row.split(chr(9))[1]}`", intent)
+        self.assertEqual(
+            check_inventory(result.body, [parse_row(r) for r in facts.changed_files]), ([], [])
+        )
+
+    def test_refresh_of_an_oversized_range_stays_under_the_limit(self) -> None:
+        small = compose_pr_body(_facts(["M\tops/a.py"]), CANONICAL_TEMPLATE).body
+        later = _big_facts(paths=290, commits=150, body_lines=6)
+        body, status = refresh_body(small, later)
+        self.assertIn(status, ("updated", "migrated"))
+        self.assertLessEqual(len(body), BODY_BUDGET)
+        self.assertEqual(
+            check_inventory(body, [parse_row(r) for r in later.changed_files]), ([], [])
+        )
 
 
 if __name__ == "__main__":

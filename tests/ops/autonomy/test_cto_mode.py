@@ -250,3 +250,204 @@ def test_session_resolves_from_host_environment(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("CURSOR_SESSION_ID", "cur-1")
     assert cto_mode.resolve_session_id() == "cur-1"
     assert cto_mode.resolve_session_id("explicit") == "explicit"
+
+
+# --- operating protocol: the CTO swarm invariants (operator-directed 2026-11-13) ---
+
+SWARM_INVARIANTS = {
+    "minimal_operator_pings",
+    "swarm_never_pings_operator",
+    "frictionless_cto_swarm_channel",
+    "operator_approves_merges_only",
+}
+
+
+def test_child_launch_puts_reporting_in_the_system_prompt_and_never_a_send_tool() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    rules = " ".join(protocol["child_launch_rules"])
+    assert "launch system prompt" in rules
+    assert "never instructs" in rules
+    briefs = " ".join(protocol["child_brief_must_include"])
+    assert "never ask the operator to approve publishing" in briefs
+
+
+def test_contract_carries_the_swarm_invariants_and_grants_no_permission() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["grants_permission"] is False
+    assert SWARM_INVARIANTS <= set(protocol["invariants"])
+    assert "cannot be delegated" in protocol["roles"]["cto"]
+    briefs = " ".join(protocol["child_brief_must_include"])
+    assert "coding-agent mode" in briefs.lower()
+    assert "non-shallow" in briefs
+    assert "never a cross-session send tool" in briefs
+    claude = protocol["transport"]["claude-code"]
+    assert claude["cto_to_swarm"] == "mcp__claude-code-remote__send_message"
+    assert "list_events" in claude["swarm_to_cto"]
+    # Safety notifications are never suppressed by the minimal-ping invariant.
+    assert "never suppressed" in protocol["invariants"]["minimal_operator_pings"]
+
+
+@pytest.mark.parametrize("statuses", ["admitted", "blocked"])
+def test_operating_protocol_is_emitted_when_active_or_blocked(
+    tmp_path: Path, statuses: str
+) -> None:
+    cto_mode.request(tmp_path, session_id=SID)
+    by_ref = ALL_ADMITTED if statuses == "admitted" else {**ALL_ADMITTED, TC: "BLOCKED"}
+    report = cto_mode.evaluate(tmp_path, verify=_verify(by_ref), session_id=SID)
+    assert report["mode"] == ("ACTIVE" if statuses == "admitted" else "BLOCKED")
+    assert report["operating_protocol"] == cto_mode.load_contract()["operating_protocol"]
+
+
+def test_operating_protocol_is_not_emitted_when_off(tmp_path: Path) -> None:
+    report = cto_mode.evaluate(tmp_path, verify=_verify(ALL_ADMITTED), session_id=SID)
+    assert report["mode"] == "OFF"
+    assert "operating_protocol" not in report
+
+
+@pytest.mark.parametrize(
+    ("protocol", "reason"),
+    [
+        ("text", "OPERATING_PROTOCOL_MALFORMED"),
+        ({"grants_permission": True, "invariants": {"x": "y"}}, "MUST_GRANT_NO_PERMISSION"),
+        ({"invariants": {"x": "y"}}, "MUST_GRANT_NO_PERMISSION"),
+        ({"grants_permission": False, "invariants": {}}, "INVARIANTS_EMPTY"),
+        ({"grants_permission": False, "invariants": {"x": " "}}, "INVARIANT_MALFORMED"),
+    ],
+)
+def test_malformed_operating_protocol_fails_closed(
+    tmp_path: Path, protocol: object, reason: str
+) -> None:
+    path = _contract(tmp_path, operating_protocol=protocol)
+    with pytest.raises(cto_mode.ContractError, match=reason):
+        cto_mode.load_contract(path)
+
+
+# --- canonical child launch prompt (rendered, never hand-written) ---
+
+import projection_mode  # noqa: E402
+
+
+def test_child_prompt_renders_the_reporting_route_and_names_no_send_tool() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "session_cto_x")
+    assert "session_cto_x" in text
+    assert "{cto_session}" not in text
+    for prefix in ("CTO-STATUS:", "CTO-QUESTION:", "CTO-BLOCKER:"):
+        assert prefix in text
+    assert "send_message" not in text
+    assert "never call a cross-session messaging tool" in text
+    assert "Never ask the operator to approve publishing" in text
+    assert "a shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED" in text
+
+
+def test_child_prompt_cli_prints_plain_text(tmp_path: Path) -> None:
+    out = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "ops/autonomy/cto_mode.py"),
+            "child-prompt",
+            "--cto-session",
+            "session_cto_y",
+            "--workspace",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert out.startswith("ROLE: CODING AGENT")
+    assert "session_cto_y" in out
+
+
+def test_child_prompt_requires_a_cto_session() -> None:
+    with pytest.raises(cto_mode.ContractError, match="CTO_SESSION_UNRESOLVED"):
+        projection_mode.render_child_prompt(cto_mode.load_contract(), " ")
+
+
+@pytest.mark.parametrize(
+    ("template", "reason"),
+    [
+        ("", "CHILD_SYSTEM_PROMPT_MALFORMED"),
+        ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
+        (
+            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
+            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; report via send_message',
+            "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
+        ),
+    ],
+)
+def test_malformed_child_prompt_fails_closed(tmp_path: Path, template: str, reason: str) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    doc["operating_protocol"]["child_system_prompt"] = template
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match=reason):
+        cto_mode.load_contract(path)
+
+
+def test_child_prompt_deploys_agents_with_coding_agent_mode_enabled() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "session_cto_z")
+    assert 'ops/autonomy/coding_agent_mode.py" on --workspace' in text
+    assert "Make NO code change until it reports ACTIVE" in text
+    assert "WITHOUT --depth" in text
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert "not counted as deployed until" in " ".join(protocol["child_launch_rules"])
+    assert "coding-agent mode is ACTIVE" in " ".join(protocol["check_in"])
+
+
+def test_child_prompt_without_coding_agent_mode_fails_closed(tmp_path: Path) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    doc["operating_protocol"]["child_system_prompt"] = (
+        "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: ACTIVE, start coding now."
+    )
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match="CHILD_SYSTEM_PROMPT_INCOMPLETE"):
+        cto_mode.load_contract(path)
+
+
+# --- complete-protocol validation and per-host continuation (Codex review on #968) ---
+
+
+@pytest.mark.parametrize(
+    "section", ["roles", "pre_launch", "child_brief_must_include", "child_launch_rules", "check_in"]
+)
+def test_missing_or_mistyped_protocol_section_fails_closed(tmp_path: Path, section: str) -> None:
+    for broken in (None, "text", [] if section != "roles" else {}):
+        doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+        if broken is None:
+            del doc["operating_protocol"][section]
+        else:
+            doc["operating_protocol"][section] = broken
+        path = tmp_path / "MODE.yaml"
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+        with pytest.raises(cto_mode.ContractError, match=f"SECTION_MALFORMED: {section}"):
+            cto_mode.load_contract(path)
+
+
+@pytest.mark.parametrize("host", ["claude-code", "cursor"])
+def test_every_host_transport_declares_how_a_stopped_child_is_continued(
+    tmp_path: Path, host: str
+) -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["transport"][host]["continuation"].strip()
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    del doc["operating_protocol"]["transport"][host]["continuation"]
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match=f"TRANSPORT_INCOMPLETE: {host}"):
+        cto_mode.load_contract(path)
+
+
+def test_cursor_continuation_is_re_dispatch_not_wakeup() -> None:
+    cursor = cto_mode.load_contract()["operating_protocol"]["transport"]["cursor"]
+    assert "re-dispatching the same lane" in cursor["continuation"]
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "re-dispatching your lane" in text
+
+
+def test_swarm_uses_the_coding_agent_mode_and_projection_never_the_skill() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "l9.projection/coding-agent-execution@1" in text
+    assert "Never invoke the l9-coding-agent skill" in text
+    briefs = " ".join(cto_mode.load_contract()["operating_protocol"]["child_brief_must_include"])
+    assert "never the l9-coding-agent skill" in briefs

@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.2.0"
+version: "1.3.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -64,7 +64,20 @@ Bound projections (all required):
      not reconstruct them from memory or repository reads.
    - `REJECTED` or `STALE`: stop and report. `STALE` means the mode contract
      changed after the request; run `on` again.
-3. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
+3. Whenever the JSON carries `operating_protocol` (ACTIVE or BLOCKED), adopt it as this
+   session's standing defaults for running a swarm, without asking the operator to restate
+   them: the four `invariants` (minimal operator pings; the swarm never addresses the
+   operator; a CTO↔swarm channel that needs no operator approval; the operator approves
+   merges only, so publishing a PR is never put to the operator), the `roles` (only this
+   session is CTO; swarm agents are coding agents), `pre_launch`, every
+   `child_brief_must_include` item in each child brief, the `child_launch_rules` (the
+   reporting rule goes in the child's launch system prompt, never a cross-session send
+   tool), the host `transport`, and the `check_in` routine. It grants no permission
+   (`grants_permission: false`). Every child's launch system prompt is the verbatim
+   output of
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
+   never hand-write it. Lane scope goes in the child's task prompt.
+4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
 merge, push and deploy authority are unchanged. The role coordinates the

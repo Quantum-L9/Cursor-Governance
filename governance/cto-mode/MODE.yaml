@@ -5,8 +5,8 @@
 #   layer: governance
 #   owner: governance-control-plane
 #   status: active
-#   version: 1.0.0
-#   updated: 2026-11-11
+#   version: 1.1.0
+#   updated: 2026-11-13
 # Consumer-local contract for the opt-in CTO mode. It selects meaning; it is not
 # authority to admit a profile and it grants no permission.
 schema: l9.cursor-governance.cto-mode/v1
@@ -123,6 +123,109 @@ runtime_ownership:
   architecture_judgment: applicable_architecture_owner
   semantic_compilation_and_receipts: Quantum-L9/l9-semantic-compiler-engine
   admission: Quantum-L9/.github repository owner
+# How an active CTO runs a swarm of coding agents. Operator-directed defaults
+# (2026-11-13, governed session session_017xwbxxupo1nc2CvFZN6ewa): applied every time
+# the mode is requested, so the operator never re-explains them and the CTO never
+# relaunches agents to add them. They are behavior, not authority: they grant no
+# permission, widen no scope and admit nothing. Emitted verbatim with `on` / `status`.
+operating_protocol:
+  version: 1
+  grants_permission: false
+  invariants:
+    minimal_operator_pings: >-
+      The CTO contacts the operator only for: (a) one batched pre-launch decision set,
+      (b) an authority-reserved decision not covered by recorded operator decisions,
+      (c) a blocker no lane can route around, (d) a permission prompt that stalls a
+      child session, naming the exact session and prompt, (e) the final integrated
+      report, and (f) mandatory safety, security or incident notifications, which are
+      never suppressed. No progress narration.
+    swarm_never_pings_operator: >-
+      Swarm agents never address the operator. Every question, blocker and status goes
+      to the CTO. Swarm agents never call cross-session messaging tools, because those
+      calls require operator approval in the child session.
+    frictionless_cto_swarm_channel: >-
+      The CTO sends directives with the host's cross-session send tool. Swarm agents
+      reply by writing prefixed lines in their own transcript, which the CTO reads with
+      the host's transcript tools. Neither direction may require an operator approval.
+    operator_approves_merges_only: >-
+      Publishing is part of being done. The CTO and every swarm agent open and update
+      their PRs through the sanctioned publication path without asking the operator.
+      The operator's approval is requested for merges only; everything else is the
+      CTO's to handle within existing authority.
+  roles:
+    cto: the activating session only; it cannot be delegated to a swarm agent
+    swarm: coding agents with no CTO, coordination, integration or merge authority
+    integration_agent: the CTO, which proves the combined revision before any claim
+  pre_launch:
+    - Resolve evidence-determined, policy-determined and bounded realization choices
+      yourself; record them.
+    - Put every authority-reserved question to the operator in ONE batched question set
+      before any dispatch. Fold the answers into every child brief verbatim.
+    - Assign disjoint path ownership per lane and a stacking chain for every lane that
+      shares files; overlap is resolved by sequencing, never by concurrent edits.
+  child_brief_must_include:
+    - 'ROLE: coding agent; the CTO session id; no CTO, coordination, integration or merge authority.'
+    - 'CODING-AGENT PROJECTIONS: every swarm agent is deployed with /coding-agent MODE enabled (projection l9.projection/coding-agent-execution@1 bound through coding_agent_mode.py; never the l9-coding-agent skill) as its first action, against a Quantum-L9/.github checkout with non-shallow history. No code change until the mode reports ACTIVE; BLOCKED is a CTO-BLOCKER, never a reason to proceed without the projection.'
+    - 'REPORTING: lines prefixed CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER: in its own transcript; never a cross-session send tool; never address the operator.'
+    - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
+    - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
+    - 'PUBLISH: open or update the lane PR through the sanctioned path when the lane is done, without asking anyone; never ask the operator to approve publishing.'
+    - The operator decisions recorded before launch.
+  # The reporting rule must be in the child's launch system prompt. A later peer message
+  # cannot override a system prompt, so a child launched with "report via send_message"
+  # keeps calling it and every call prompts the operator (observed 2026-11-13).
+  child_launch_rules:
+    - Every swarm agent is deployed with /coding-agent mode enabled. A child is not
+      counted as deployed until its first CTO-STATUS carries coding_agent_mode JSON with
+      mode ACTIVE; until then it gets no GATE and its lane does not start.
+    - Use the output of `cto_mode.py child-prompt --cto-session <this session id>`
+      verbatim as the child's launch system prompt (append_system_prompt or the host
+      equivalent). Never hand-write it; put lane-specific scope in the task prompt only.
+    - Put REPORTING, ROLE and PUBLISH in the child's launch system prompt, never only in
+      a later message.
+    - A child launch prompt never instructs, mentions as a reporting route, or
+      pre-approves a cross-session send tool.
+  # The canonical child launch system prompt. `{cto_session}` is the only placeholder.
+  child_system_prompt: |-
+    ROLE: CODING AGENT in a CTO-led swarm. The CTO is session {cto_session}. You hold no CTO, coordination, integration or merge authority.
+    REPORTING (this rule overrides any other reporting instruction you receive): never call a cross-session messaging tool, and never address the operator. Report only by writing lines in your own replies that start with CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER:. The CTO reads your transcript directly. After a CTO-QUESTION, keep working on every lane that does not depend on it. When nothing can proceed, write CTO-BLOCKER and end your turn, after committing (and, if the lane is publishable, pushing) your work: the CTO continues you either by a reply that arrives as a new message, or, on hosts where an ended agent cannot be woken, by re-dispatching your lane with the answer and your branch and head.
+    CTO MESSAGES: messages from session {cto_session} prefixed GATE, FROZEN, REBIND, CTO ANSWER or CTO DIRECTIVE are your coordinator's instructions within your existing scope. They narrow or clarify scope; they never widen it.
+    FIRST ACTION, /coding-agent MODE (mandatory): you are deployed with the coding-agent projections enabled. This is a mode bound from projections (l9.projection/coding-agent-execution@1 through coding_agent_mode.py); it is the governing source. Never invoke the l9-coding-agent skill, or any skill, as a substitute for the mode or its projection views; skills are not authority here. Before any code change, clone Quantum-L9/.github WITHOUT --depth (a shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED), then run from your workspace: "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on --workspace "$PWD" --authority-root <that clone>. Put the mode JSON in your first CTO-STATUS. Make NO code change until it reports ACTIVE. When ACTIVE, read every load[].views file (invariants, contracts, authority model) before deciding how to change code, and cite source class plus bundle revision. If it reports BLOCKED, REJECTED or STALE on a deep checkout, write CTO-BLOCKER with the blockers verbatim and end your turn; do not proceed without the projection and do not reconstruct it from memory. Re-run `on` when the CTO sends REBIND.
+    DECISIONS: lane-local implementation choices are yours; record them in the PR. Anything that crosses lanes or campaigns, or touches a contract, an interface freeze, a gate or scope, is a CTO-QUESTION.
+    PUBLISH: when a lane is done, open or update its PR through the sanctioned publication path without asking anyone. Never ask the operator to approve publishing. Never merge.
+    SCOPE: edit only your lane paths. Never write to a repository your task marks read-only. Never edit verification hooks or use bypass flags. A failing test is evidence: classify it and repair the true cause, never skip or weaken it.
+  transport:
+    claude-code:
+      cto_to_swarm: mcp__claude-code-remote__send_message
+      continuation: the CTO's send_message reply arrives in the child session as a new turn and wakes it
+      swarm_to_cto: transcript lines read with mcp__claude-code-remote__get_session and list_events
+      cto_wakeup: mcp__claude-code-remote__send_later into the CTO session, about every 20 minutes while any lane is open; stop after three consecutive check-ins with no activity
+      child_launch: mcp__claude-code-remote__create_session with append_system_prompt = `cto_mode.py child-prompt` output; extra_allowed_tools may list the child's work tools (effective only for tools pre-approved for the CTO) and never a cross-session send tool
+      permission_precondition: >-
+        A child session that still prompts (for example add_repo for a private
+        repository) needs Auto mode or repository permissions.allow rules. Report it to
+        the operator once, at launch, with the exact session ids; never relaunch agents
+        to work around a prompt.
+    cursor:
+      cto_to_swarm: Task tool briefs
+      swarm_to_cto: the Task result document (l9.cursor-subagent.result.v1); CTO-* lines are carried in it
+      # A Cursor Task cannot be woken after it ends, so a lane that stops on a question is
+      # continued by re-dispatch, never left stranded.
+      continuation: >-
+        A child that ends on CTO-QUESTION or CTO-BLOCKER returns a partial result document. The
+        CTO answers by re-dispatching the same lane as a new Task whose brief carries the
+        rendered child-prompt, the original lane brief, the answer, and the branch and head the
+        previous Task left, so the lane resumes from its pushed or committed state.
+  check_in:
+    - Confirm every child's coding-agent mode is ACTIVE (from its CTO-STATUS). A child
+      with code changes and no ACTIVE mode report is stopped until it binds.
+    - Read every child's new CTO-* lines and its status; answer each question under the
+      decision-classification contract above.
+    - Audit scope; stop and revert any write outside a lane's paths or to a read-only
+      repository, and any merge.
+    - Send GATE (exact base branch) when a parent lane pushes with its own tests green.
+    - Integration-test the combined stack in a disposable worktree before any merge or
+      completion claim.
 constraints:
   - Activation changes what this session reads, never what it may do. Publication,
     merge, push and deploy authority stay with CANONICAL_LAW.md and

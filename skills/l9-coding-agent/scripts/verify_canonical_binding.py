@@ -1323,12 +1323,32 @@ def verify_binding_bundle(
 
 
 def _integrated(root: Path, revision: Any, main_tip: str) -> bool:
-    return (
-        isinstance(revision, str)
-        and _SHA1.fullmatch(revision) is not None
-        and _git_raw(root, "cat-file", "-e", f"{revision}^{{commit}}")[0] == 0
+    """Whether *revision* is an ancestor of *main_tip*, proved from the authority's history.
+
+    A shallow checkout cannot prove the negative: its history stops at the graft boundary,
+    so a revision that is on main reads as absent or unreachable. That is Unknown, not a
+    contradiction, and it is raised as BLOCKED instead of being reported as not integrated.
+    A positive answer from a shallow checkout is still proof, so it is never refused.
+    """
+    if not isinstance(revision, str) or _SHA1.fullmatch(revision) is None:
+        return False
+    if (
+        _git_raw(root, "cat-file", "-e", f"{revision}^{{commit}}")[0] == 0
         and _git_raw(root, "merge-base", "--is-ancestor", revision, main_tip)[0] == 0
-    )
+    ):
+        return True
+    code, out, _ = _git_raw(root, "rev-parse", "--is-shallow-repository")
+    if code != 0 or out.strip() not in (b"true", b"false"):
+        raise Outcome("BLOCKED", "AUTHORITY_SHALLOWNESS_UNKNOWN", root=str(root))
+    if out.strip() == b"true":
+        raise Outcome(
+            "BLOCKED",
+            "AUTHORITY_CHECKOUT_SHALLOW",
+            root=str(root),
+            revision=revision,
+            authority_main=main_tip,
+        )
+    return False
 
 
 def resolve_authority_main(root: Path, override: str | None = None) -> str:
