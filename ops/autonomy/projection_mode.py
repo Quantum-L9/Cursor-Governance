@@ -150,6 +150,8 @@ CHILD_PROMPT_REQUIRED = (
     # Every swarm agent is deployed with the coding-agent projections enabled.
     'coding_agent_mode.py" on',
     "ACTIVE",
+    # Projections and modes govern the swarm; a skill is never a substitute.
+    "Never invoke the l9-coding-agent skill",
 )
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
 

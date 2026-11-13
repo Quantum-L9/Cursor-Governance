@@ -277,7 +277,7 @@ def test_contract_carries_the_swarm_invariants_and_grants_no_permission() -> Non
     assert SWARM_INVARIANTS <= set(protocol["invariants"])
     assert "cannot be delegated" in protocol["roles"]["cto"]
     briefs = " ".join(protocol["child_brief_must_include"])
-    assert "coding-agent mode" in briefs
+    assert "coding-agent mode" in briefs.lower()
     assert "non-shallow" in briefs
     assert "never a cross-session send tool" in briefs
     claude = protocol["transport"]["claude-code"]
@@ -369,8 +369,8 @@ def test_child_prompt_requires_a_cto_session() -> None:
         ("", "CHILD_SYSTEM_PROMPT_MALFORMED"),
         ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
         (
-            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: "
-            'coding_agent_mode.py" on ACTIVE; report via send_message',
+            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
+            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; report via send_message',
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
         ),
     ],
@@ -443,3 +443,11 @@ def test_cursor_continuation_is_re_dispatch_not_wakeup() -> None:
     assert "re-dispatching the same lane" in cursor["continuation"]
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
     assert "re-dispatching your lane" in text
+
+
+def test_swarm_uses_the_coding_agent_mode_and_projection_never_the_skill() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "l9.projection/coding-agent-execution@1" in text
+    assert "Never invoke the l9-coding-agent skill" in text
+    briefs = " ".join(cto_mode.load_contract()["operating_protocol"]["child_brief_must_include"])
+    assert "never the l9-coding-agent skill" in briefs
