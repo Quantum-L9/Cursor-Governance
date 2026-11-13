@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-11-12T22:56:38Z",
+  "generated_utc": "2026-11-13T01:07:59Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:5406c8f49947b91a635baa581f3a59b2447358b054e52ab1c9431514aae894df",
+  "source_tree_digest": "sha256:a4e2a93c8a56a759a637c8fd58d9a35e73a169bdc1352fabccb78a0b07c1a086",
   "summary": {
     "total_mdc_files": 68,
     "always_apply_true": 35,
@@ -608,8 +608,8 @@
       "globs": null,
       "first_heading": "make pr → green merge-ready; /l9-pr-remediation → merge under human authorization, else MERGE_PENDING",
       "has_yaml_frontmatter": true,
-      "line_count": 232,
-      "content_digest": "sha256:3448d30de87d33f2bd51828c9465b49335540f477a35a3a41d565d020b1e6bb6",
+      "line_count": 234,
+      "content_digest": "sha256:f7f1b98f7a86ded87bf4c12c5b77f7b999595f496c7648e40bbd86b7223fbab7",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,
