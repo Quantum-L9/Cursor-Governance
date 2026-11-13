@@ -152,6 +152,16 @@ operating_protocol:
       their PRs through the sanctioned publication path without asking the operator.
       The operator's approval is requested for merges only; everything else is the
       CTO's to handle within existing authority.
+    swarm_publishes_then_stands_down: >-
+      A swarm agent's work ends when its assigned lanes are published. It does not watch,
+      remediate or re-test its PRs, does not run integration tests, and stands down
+      (CTO-STATUS: stood-down) after its last lane is published. The CTO never adds scope
+      to a running agent; new work is the CTO's own or a new launch.
+    cto_integrates_and_fixes_surgically: >-
+      The CTO runs integration testing itself, in its own session, never through a
+      subagent or a swarm agent, and makes small surgical fixes (a renamed constant, a
+      stale fixture, a CI break in a published lane) itself instead of delegating them.
+      Only lane-sized work is dispatched.
   roles:
     cto: the activating session only; it cannot be delegated to a swarm agent
     swarm: coding agents with no CTO, coordination, integration or merge authority
@@ -170,6 +180,7 @@ operating_protocol:
     - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
     - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
     - 'PUBLISH: open or update the lane PR through the sanctioned path when the lane is done, without asking anyone; never ask the operator to approve publishing.'
+    - 'STAND DOWN: publication ends the lane; no PR watching, remediation, re-testing or integration testing; stood-down after the last lane; no added scope.'
     - The operator decisions recorded before launch.
   # The reporting rule must be in the child's launch system prompt. A later peer message
   # cannot override a system prompt, so a child launched with "report via send_message"
@@ -193,6 +204,7 @@ operating_protocol:
     FIRST ACTION, /coding-agent MODE (mandatory): you are deployed with the coding-agent projections enabled. This is a mode bound from projections (l9.projection/coding-agent-execution@1 through coding_agent_mode.py); it is the governing source. Never invoke the l9-coding-agent skill, or any skill, as a substitute for the mode or its projection views; skills are not authority here. Before any code change, clone Quantum-L9/.github WITHOUT --depth (a shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED), then run from your workspace: "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on --workspace "$PWD" --authority-root <that clone>. Put the mode JSON in your first CTO-STATUS. Make NO code change until it reports ACTIVE. When ACTIVE, read every load[].views file (invariants, contracts, authority model) before deciding how to change code, and cite source class plus bundle revision. If it reports BLOCKED, REJECTED or STALE on a deep checkout, write CTO-BLOCKER with the blockers verbatim and end your turn; do not proceed without the projection and do not reconstruct it from memory. Re-run `on` when the CTO sends REBIND.
     DECISIONS: lane-local implementation choices are yours; record them in the PR. Anything that crosses lanes or campaigns, or touches a contract, an interface freeze, a gate or scope, is a CTO-QUESTION.
     PUBLISH: when a lane is done, open or update its PR through the sanctioned publication path without asking anyone. Never ask the operator to approve publishing. Never merge.
+    STAND DOWN: publication ends your work on a lane. Do not subscribe to, watch, remediate or re-test a published PR, and do not run integration tests; the CTO owns integration and remediation. Take no work beyond your assigned lanes. When your last lane is published, write CTO-STATUS: stood-down (listing any unpushed work) and end your turn.
     SCOPE: edit only your lane paths. Never write to a repository your task marks read-only. Never edit verification hooks or use bypass flags. A failing test is evidence: classify it and repair the true cause, never skip or weaken it.
   transport:
     claude-code:
@@ -217,6 +229,8 @@ operating_protocol:
         rendered child-prompt, the original lane brief, the answer, and the branch and head the
         previous Task left, so the lane resumes from its pushed or committed state.
   check_in:
+    - Fix CI breaks and integration findings in published lanes yourself, surgically, on the
+      lane's branch; dispatch only lane-sized work, and never to a stood-down agent.
     - Confirm every child's coding-agent mode is ACTIVE (from its CTO-STATUS). A child
       with code changes and no ACTIVE mode report is stopped until it binds.
     - Read every child's new CTO-* lines and its status; answer each question under the
