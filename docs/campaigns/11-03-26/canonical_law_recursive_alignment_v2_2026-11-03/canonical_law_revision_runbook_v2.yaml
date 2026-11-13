@@ -6,7 +6,9 @@ objective: Resolve identified conflicts between the effective CANONICAL_LAW and 
   memory, planning, secret and adapter consumers without editing historical law or manufacturing a second authority.
 operator_decisions_preserved:
 - CANONICAL_LAW.md is an additive_only protected root file.
-- Program Execution is retired as live authority; retain its corpus as inert evidence.
+- 'Program Execution is retired as live authority; retain its corpus as inert evidence. [WITHDRAWN 2026-11-13 by
+  operator decision: CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1 — Program Execution is reinstated, registered
+  as make campaign and planned by l9-plan (PROGRAM_EXECUTION_PLANNER_V1); every PE-retirement item below is withdrawn]'
 - The single governed publication ceremony remains make pr, with one registered native route.
 - An in-scope open-PR remediation may push after local verification; expansion needs a new PR.
 - Merge-authorization enforcement remains disabled until separately authorized to reenable.
@@ -462,11 +464,11 @@ canonical_append:
        executor intentionally returns control after its scoped commit so
        the caller publishes exactly once; adapter finalize may publish in
        its own boundary. No tree-kernel stamp or mandatory latch is restored.
-    2. Program Execution, `l9-plan` and the PE Controller remain retired
-       live authorities. An executable legacy Make target is not permission
-       to reactivate them. Before physically removing a compatibility entry,
-       inventory actual consumers and then fail closed or route it at its
-       existing owner; retain historical corpus evidence.
+    2. [WITHDRAWN 2026-11-13, PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1]
+       Program Execution, `l9-plan` and the PE Controller are live again:
+       `make campaign` is the registered entry (operator words, /coding-agent
+       on); `l9-plan` is the explicit-only campaign planner. Root autonomy,
+       L4 and publication still never require Program Execution.
     3. Memory native authenticated Streamable HTTP in section 8.10 is the
        selected agent transport. A stdio-only package is UPSTREAM_BLOCKED;
        a declared OAuth resource URL is metadata, not a live network egress
@@ -514,7 +516,8 @@ findings:
 - id: F04
   severity: HIGH
   summary: Retired Program Execution remains callable through Make.
-  status: CONFIRMED_SOURCE
+  status: WITHDRAWN_BY_OPERATOR_DECISION_2026_11_13
+  resolution: Program Execution is reinstated; make campaign is its registered, explicit-only entry (PROGRAM_EXECUTION_REGISTERED_STAGE_V1).
   law_refs:
   - Program Execution eviction
   - proposed 6.2.19
@@ -834,20 +837,16 @@ downstream_changes:
   - 1-26
   - 28-53
   - 84-147
-  operation: CENSUS_THEN_CONDITIONAL_OWNER_RETIREMENT
+  operation: RETAIN_REGISTERED_ENTRYPOINT
+  withdrawn_operation: CENSUS_THEN_CONDITIONAL_OWNER_RETIREMENT
   required_code_delta:
-  - Before changing any target, map exact Make invocations, included Make fragments, CI references and target-specific
-    historical/fixture contracts; classify active behavior separately from archived evidence.
-  - Reject live execution through retired PE authority unless a separately authorized compatibility need is verified.
-    Preserve legitimate historical test tooling where its ownership is inert.
-  - If target removal breaks active external consumers, stop and record a compatibility decision instead of silently
-    removing or inventing replacement aliases.
+  - None. Withdrawn 2026-11-13 (PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1); make campaign and campaign-check-input are registered
+    from ops/make/campaign.mk and the rest of ops/make/program-execution.mk stays uncomposed.
   acceptance:
-  - '`make campaign` cannot silently launch PE as a live program owner.'
+  - '`make campaign` runs only on the operator''s own words with /coding-agent ACTIVE (PROGRAM_EXECUTION_REGISTERED_STAGE_V1).'
   - '`make peer-execution-conformance` cannot be a live success prerequisite.'
-  - '`l9-plan-simple` remains an ordinary planning owner without PE authority.'
-  decision_boundary: If active external consumers actually rely on these targets, stop and obtain a separate compatibility/retirement
-    decision rather than deleting them.
+  - '`l9-plan-simple` remains an ordinary planning owner without PE authority; `l9-plan` owns campaign planning.'
+  decision_boundary: No retirement. A future retirement needs its own operator decision.
   expected_blob_sha1: 3fd1a0bec33e0b7b86c04e8f28017fe225baa6f9
   blocked_dependency: 'U03: exact live direct/indirect Make entrypoint consumers not censused'
 - id: D08
@@ -867,7 +866,8 @@ downstream_changes:
     witness.
   acceptance:
   - Live ordinary planning is possible without Program Execution.
-  - Archived l9-plan is never advertised as a live execution authority.
+  - l9-plan is the explicit-only Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1); l9-plan-simple never
+    advertises PE planning as its own.
 - id: D09
   finding_ids:
   - F05
@@ -989,8 +989,8 @@ downstream_changes:
     - `workflows/` is active source, not a scratch blanket. Tracked or
       intentionally published `reports/` files participate in change-set
       validation. Unknown changed-file comparisons fail closed.
-    - Program Execution remains retired as live authority. Old Make targets
-      or archived skill files do not grant execution or validation authority.
+    - [WITHDRAWN 2026-11-13] Program Execution is registered (`make campaign`);
+      archived skill files still grant no execution or validation authority.
     - The root-file contract is `ops/config/root-file-protection.json`.
       Pure locked version-pin bumps in its declared manifest paths are
       conditionally exempt from the deletion marker and protected-root PR
@@ -1600,8 +1600,9 @@ validation_matrix:
   expected: PASS
 - id: V15
   target: Program_Execution
-  test: Retired Make targets cannot launch new PE work as an authority.
-  expected: PASS_OR_DOCUMENTED_COMPATIBILITY_BLOCK
+  test: make campaign launches PE work only on an operator invocation with /coding-agent ACTIVE; no other Make target launches
+    it.
+  expected: PASS
 - id: V16
   target: Memory_3_native
   test: Stdio-only package is UPSTREAM_BLOCKED; no fallback installed.
@@ -1713,8 +1714,7 @@ execution_runbook:
 - stage: 2
   name: RECONCILE_SOURCE_OF_EFFECTIVE_DOCTRINE
   tasks:
-  - Census PE direct and indirect consumers before any conditional entrypoint retirement; preserve inert test/archive
-    paths (D07-D08).
+  - '[WITHDRAWN 2026-11-13] PE entrypoint retirement census (D07-D08): Program Execution is reinstated and registered.'
   - Reconcile active source rule and Profile D09, D11-D12.
   - Apply only append-only changes LAW-APPEND-001 and D13.
   - Reconcile Memory/Secrets consumers D14-D20 and narrow scanner D17.
@@ -1749,8 +1749,8 @@ unknowns_and_stop_conditions:
   effect: No live native MCP readiness or fallback claim.
 - id: U03
   subject: PE targets consumed by external repositories
-  status: NOT_CENSUSED
-  effect: No destructive physical removal without exact external-consumer census.
+  status: NOT_REQUIRED
+  effect: Withdrawn 2026-11-13 — no PE removal is planned (PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1).
 - id: U04
   subject: Enforcement of organization-wide human merge authority vs local disabled switch
   status: ACCEPTED_GAP_NOT_REMEDIATED

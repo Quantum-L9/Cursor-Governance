@@ -2516,3 +2516,26 @@ Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_REGISTERED_STAGE
   did not turn it on in.
 - Do not start, resume or offer to run a campaign on your own initiative, and
   never set `L9_PE_OPERATOR_INVOCATION` yourself.
+
+<!-- PROGRAM_EXECUTION_PLANNER_V1 -->
+## l9-plan plans campaigns; Program Execution eviction withdrawn (2026-11-13) — supersedes the "stay archived" clause of the 2026-11-12 manual-stage section, "Program Execution's tests are not yet part of the generic `make pr` gate", the 2026-10-07 eviction-reachability section, and the `make campaign INTENT=` → `l9-pe-campaign-activate` row
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_PLANNER_V1` and
+`PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1`.
+
+- When the operator invokes `/l9-plan` for a campaign, write the PLAN_DOCUMENT
+  with per-todo `validation` and `acceptance`, then run
+  `python3 skills/l9-plan/scripts/render_campaign_source.py <plan.json>`. Only
+  `ADMITTED` is a deliverable; hand the operator the printed `make campaign`
+  line. Do not run it yourself.
+- `make campaign` runs the campaign itself (`ops/make/campaign.mk`); it no longer
+  routes through the archived `l9-pe-campaign-activate` skill. Those archived
+  packs are the runner's compile library, not skills to invoke.
+- Program Execution's tests are part of the generic gate: the
+  `claude-code-autonomy` and `program-execution-controller` suites in
+  `ops/config/python-contract.json` run them in `make pr` and CI.
+- Program Execution is not an eviction target. Do not plan its removal. Keep
+  root autonomy, L4 and publication independent of it.
+- The `make program-execution-*` targets in §13 live in the uncomposed
+  `ops/make/program-execution.mk`; run them from the governance root as
+  `make -f ops/make/program-execution.mk PYTHON=.venv/bin/python <target>`.

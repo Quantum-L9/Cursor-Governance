@@ -42,3 +42,13 @@ The root-file exception is important: this **append-only** law change has a diff
 ## Package verification
 
 Run `python validate_runbook.py canonical_law_revision_runbook_v2.yaml` from this directory, with PyYAML installed. This validates the **artifact structure and amendment guards**, not live GitHub or runtime operation. `python validate_runbook.py --self-test` runs negative-fixture tests. The package SHA256 manifest checks delivered bytes.
+
+## Revision 2026-11-13 — Program Execution retirement withdrawn
+
+Operator decision: Program Execution is reinstated and registered as `make campaign`, and
+`l9-plan` is its explicit-only campaign planner (CANONICAL_LAW
+`PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1`, `PROGRAM_EXECUTION_PLANNER_V1`). Every PE-retirement
+item in this runbook (operator decision 2, proposed 6.2.19 item 2, F04, D07, D08, V15, the stage 2
+census task and U03) is marked withdrawn in place. D07 is now `RETAIN_REGISTERED_ENTRYPOINT` and
+`validate_runbook.py` pins that. The proposed law payload keeps its line coordinates, so
+`validate_runbook.py --self-test` still reproduces `VALIDATION_RESULT.json` exactly.

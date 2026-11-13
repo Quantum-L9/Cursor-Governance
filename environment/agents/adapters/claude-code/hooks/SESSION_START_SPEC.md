@@ -104,7 +104,7 @@ and retired (gates dispatch only through the launcher, INV-1).
 3. Emit Claude SessionStart JSON envelope with `additionalContext`.
 4. **Mobile-safe** — committed consumer copy must not require `~/.cursor`.
 5. **No new brains** under `environment/agents/adapters/claude-code/` — call `ops/autonomy/*` only.
-   SessionStart never probes `environment/program-execution/` (an eviction target).
+   SessionStart never probes `environment/program-execution/`: Program Execution is registered (`make campaign`) but never ambient (CANONICAL_LAW `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`).
 6. Reconcile (`reconcile_claude_settings`) is **install-time**, not SessionStart-critical.
 
 ## Must emit when governance found

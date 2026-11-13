@@ -1970,3 +1970,57 @@ are unchanged.
 
 SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
 `ops/make/campaign.mk`, `environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_PLANNER_V1 -->
+## l9-plan is the Program Execution campaign planner (2026-11-13) — supersedes PROGRAM_EXECUTION_MANUAL_STAGE_V1 item 3 and PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 where they leave Program Execution planning with no live owner
+
+Append-only. Operator decision, 2026-11-13.
+
+1. **Owner.** `skills/l9-plan` is the Program Execution campaign planner. It
+   stays `explicit_only` (`disable-model-invocation: true`): it acts only when
+   the operator invokes `/l9-plan`, no route selects it, and it never runs
+   `make campaign` or supplies `L9_PE_OPERATOR_INVOCATION`.
+2. **Deliverable.** A campaign plan is a validated PLAN_DOCUMENT rendered by
+   `skills/l9-plan/scripts/render_campaign_source.py` as an
+   `l9.program-execution.campaign-source.v2`. The renderer refuses a writing
+   todo without a terminal validation command, an unknown or cyclic
+   dependency, and an unresolved `ask`/`block` unknown, and synthesizes
+   nothing. The plan's own dependencies become dependency edges and waves.
+3. **Judged by Program Execution.** A render is a deliverable only when
+   Program Execution's own front door (`campaign_input.classify` +
+   `preflight`), compiler (`compile_campaign_source`, with the stack proof the
+   runner primes) and launchability (inference off) admit it. Such a source is
+   fed to `make campaign` unchanged.
+4. **Separation kept.** `l9-plan-simple` remains ordinary planning and hands
+   campaign requests to `/l9-plan`. The archived `l9-pe-campaign-activate` and
+   `l9-pe-nuggets` packs stay out of skill discovery; their scripts remain the
+   runner's compile library, read by path.
+
+SSOT: `skills/l9-plan/SKILL.md`, `skills/l9-plan/scripts/render_campaign_source.py`,
+`skills/AUTONOMY_MANIFEST.yaml` (`explicit_only` reason).
+
+<!-- PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1 -->
+## Program Execution eviction withdrawn (2026-11-13) — supersedes PUBLISH_ASSURANCE_DECOUPLING_V1 item 5 and PROGRAM_EXECUTION_EVICTION_REACHABILITY_V1 wherever they schedule, plan or assume Program Execution's removal
+
+Append-only. Operator decision, 2026-11-13. Program Execution is reinstated:
+connected to root autonomy, registered as `make campaign`, finishing through
+the SSOT `make pr`, and planned by `l9-plan`.
+
+1. **No eviction is planned.** Program Execution, its tests and its
+   compile-library packs stay in this repository. No eviction slice, move to
+   another repository, or physical removal remains in force. Plans that
+   scheduled one (`docs/campaigns/skills/cursor_governance_cleanup_tracker/`,
+   `docs/campaigns/11-03-26/canonical_law_recursive_alignment_v2_2026-11-03/`)
+   are revised in place with their items marked withdrawn.
+2. **The one-way dependency stands.** Root autonomy, L4, publication,
+   readiness and the host hook wrapper still never require, import or resolve
+   through `environment/program-execution/`. Guards and tests that enforce
+   that direction are correct and stay.
+3. **Containment is ownership, not quarantine.** Root `conftest.py`
+   `collect_ignore` keeps root pytest off Program Execution's tests because
+   their own python-contract suites own them, not because they await removal.
+   `ops/make/program-execution.mk` stays uncomposed; only `ops/make/campaign.mk`
+   is in the root Make graph.
+
+SSOT: this section; `ops/config/python-contract.json` (`claude-code-autonomy`,
+`program-execution-controller`); `ops/make/campaign.mk`.

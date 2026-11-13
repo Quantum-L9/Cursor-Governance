@@ -19,37 +19,38 @@ items:
 
   - id: PE-001
     subject: environment/program-execution/**
-    disposition: EVICT
-    destination: Quantum-L9/l9-campaign-execution
-    destination_exists: false
-    rationale: campaign/program execution is a distinct domain owner
+    disposition: RETAIN
+    status: "withdrawn 2026-11-13 — CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1; Program Execution is reinstated and registered (make campaign, PROGRAM_EXECUTION_REGISTERED_STAGE_V1) and stays in Cursor-Governance"
+    superseded_disposition: EVICT to Quantum-L9/l9-campaign-execution (never created)
+    rationale: Program Execution is the registered campaign pipeline of this repository; root autonomy, L4 and publication still never require it (one-way dependency stands)
 
   - id: PE-002
-    subject: skills/l9-pe-campaign-activate
-    disposition: EVICT
-    destination: Quantum-L9/l9-campaign-execution
+    subject: skills/_archived/l9-pe-campaign-activate
+    disposition: RETAIN
+    status: "withdrawn 2026-11-13 — CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1; Program Execution is reinstated and registered (make campaign, PROGRAM_EXECUTION_REGISTERED_STAGE_V1) and stays in Cursor-Governance"
+    superseded_disposition: EVICT to Quantum-L9/l9-campaign-execution
+    rationale: archived as a skill but its scripts are Program Execution's compile library, read by path from run_campaign.py
 
   - id: PE-003
-    subject: skills/l9-pe-nuggets
-    disposition: EVICT
-    destination: Quantum-L9/l9-campaign-execution
+    subject: skills/_archived/l9-pe-nuggets
+    disposition: RETAIN
+    status: "withdrawn 2026-11-13 — CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1; Program Execution is reinstated and registered (make campaign, PROGRAM_EXECUTION_REGISTERED_STAGE_V1) and stays in Cursor-Governance"
+    superseded_disposition: EVICT to Quantum-L9/l9-campaign-execution
+    rationale: archived as a skill but read by path from run_campaign.py as the plan-window library
 
   - id: PLAN-001
     subject: current skills/l9-plan
-    disposition: EVICT
-    destination: Quantum-L9/l9-campaign-execution
-    rationale: current implementation carries PE/campaign semantics
+    disposition: RETAIN
+    status: withdrawn 2026-11-13 — CANONICAL_LAW PROGRAM_EXECUTION_PLANNER_V1 makes l9-plan the explicit-only Program Execution campaign planner (renders campaign-source.v2 for make campaign)
+    superseded_disposition: EVICT to Quantum-L9/l9-campaign-execution
 
   - id: PLAN-002
     subject: skills/l9-plan-simple capability
     disposition: REFRESH
-    result: canonical skills/l9-plan
-    rationale: restore ordinary planning as the single Cursor-Governance plan capability
+    rationale: ordinary planning stays l9-plan-simple; the PE campaign planner is l9-plan (PROGRAM_EXECUTION_PLANNER_V1)
     notes:
-      - remove the simple distinction
-      - restore only needed archived/original planning behavior
-      - remove PE coupling
-      - eliminate compatibility routing that exists only because two plan identities coexist
+      - revised 2026-11-13 — the two plan identities are deliberate (ordinary vs campaign); the earlier result "canonical skills/l9-plan" and "remove PE coupling" are withdrawn
+      - keep l9-plan-simple free of Program Execution semantics; it hands campaign requests to /l9-plan
 
   - id: DAG-001
     subject: workflows/**

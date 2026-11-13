@@ -3023,6 +3023,37 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 )
             else:
                 gates["validation"] = "INCOMPLETE"
+            if not changed:
+                # A writing task that changes nothing has normally not done its
+                # work, so `scope` is FAIL above. The one exception is a task
+                # whose objective already holds on its base (the change landed on
+                # the target before the campaign ran): the Controller's own run
+                # of the task's validation commands passes on the unchanged
+                # worktree and the worker declared no changed files. That is
+                # proof the change is unnecessary, not a claim, so it is the
+                # in-scope outcome `already_satisfied`. With no commands, or a
+                # failing one, a do-nothing attempt still FAILs.
+                #
+                # "Unchanged" must mean the base itself: HEAD is the task's base
+                # and the tree carries nothing uncommitted. An earlier attempt's
+                # leftover can make validation pass while this attempt changes
+                # nothing against its own baseline; that work would integrate as
+                # nothing and be lost, so it is not `already_satisfied`.
+                at_base = (
+                    run_git(worktree, "rev-parse", "HEAD", check=False).stdout.strip()
+                    == str(task["base_sha"])
+                    and not run_git(
+                        worktree, "status", "--porcelain", "--untracked-files=all", check=False
+                    ).stdout.strip()
+                )
+                satisfied = (
+                    at_base
+                    and bool(required_commands)
+                    and gates.get("validation") == "PASS"
+                    and gates.get("changed_files_exact") == "PASS"
+                )
+                gates["scope"] = "PASS" if satisfied else "FAIL"
+                gates["no_change_required"] = "PASS" if satisfied else "FAIL"
             gates["wiring"] = _wiring_gate(contract, task)
             # Controller-owned candidate identity. The worker cannot git add or
             # git commit (permission_renderer denials) and must return
@@ -3050,6 +3081,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "candidate_sha": candidate_sha,
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
+            "outcome": (
+                "already_satisfied" if gates.get("no_change_required") == "PASS" else "changed"
+            ),
             "observed_file_digests": observed_digests,
             "validations": validations,
             "unenforced_prohibitions": unenforced_prohibitions,

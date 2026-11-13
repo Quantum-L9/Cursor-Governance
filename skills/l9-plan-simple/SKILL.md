@@ -149,7 +149,7 @@ Return the validated PLAN_DOCUMENT and the embedded projection to the invoking c
 - [`../l9-plan/scripts/validate_plan_document.py`](../l9-plan/scripts/validate_plan_document.py)
 - [`../l9-plan/scripts/render_plan_pe_autonomy.py`](../l9-plan/scripts/render_plan_pe_autonomy.py) — `--execute-via=cursor-build` | `--execute-via=embedded`
 - [`../l9-plan/scripts/route_plan.py`](../l9-plan/scripts/route_plan.py)
-- `l9-plan` is archived. PE/campaign planning has no live owner.
+- PE/campaign planning belongs to the explicit-only `l9-plan` (CANONICAL_LAW `PROGRAM_EXECUTION_PLANNER_V1`), which renders a `campaign-source.v2` for `make campaign`. This skill does not absorb it.
 
 ## Validation
 
@@ -179,8 +179,8 @@ A delivered `embedded` plan is incomplete unless `validate_plan_document.py` PAS
 - Ambiguous objective → STOP; ask.
 - Validator or section-receipt FAIL → fix or set `convergence.status=blocked`; do not claim ready.
 - GAR skipped → not ready; load `l9-global-architect` before emit, in either mode.
-- User asks for PE / campaign / `make campaign` / Program Lock → reject as retired/unavailable. Do not absorb PE semantics and do not invent a PE lock here.
-- KERNEL / PE overlay landing → unavailable. Program Execution planning is retired. Do not absorb it here.
+- User asks for PE / campaign / `make campaign` / Program Lock → hand off: tell the user to invoke `/l9-plan`. Do not absorb PE semantics and do not invent a PE lock here.
+- KERNEL / PE overlay landing → not this skill: Program Execution planning is `/l9-plan`. Do not absorb it here.
 - Execution tooling unavailable in `cursor-build` → report the blocker. Do not silently switch to `embedded`.
 - Caller requests `embedded` but expects mutation → STOP; the modes are not interchangeable and embedded confers no authority.
 - User presses Build → if any open PR exists, execute on the unique chain tip (never `origin/main`); after todos `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the **PR URL**; do not run `make campaign`.

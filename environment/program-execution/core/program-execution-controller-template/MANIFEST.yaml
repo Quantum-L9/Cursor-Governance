@@ -85,7 +85,7 @@ files:
 - path: schemas/task-contract.schema.json
   sha256: 08dd769b01fcca140d0b43647ddce142ea3fd07384e2f7ba26bf8fa658d3f919
 - path: schemas/verification-receipt.schema.json
-  sha256: ca8b3a924c46f1d3823d12245a8166b429d546e8ae56e9251cfa5a2284bb32a1
+  sha256: 21c7e97cd549ee6a1552d820ed57c15850617dc0b3a766878e4490e699e6e546
 - path: schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
 - path: scripts/instantiate.py
@@ -103,7 +103,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
 - path: scripts/pec/controller.py
-  sha256: 299c0ee2a6ce6104f1ff66ad34055688a0eeceeb8441b2d6c6499fd8a98ce07d
+  sha256: b30c9fcb49efd7644b3b7390d962ae3805c9f5910d75becc0786f28a9b78e616
 - path: scripts/pec/dispatch.py
   sha256: 87e8619e49131144071d7eff92100888241b4903e742c68a2cf09ffbb2603fb7
 - path: scripts/pec/exec_env.py
@@ -134,6 +134,8 @@ files:
   sha256: b3d9da00e556b20d1376da61c9bfaeaac4dbf491395335dcfcf6e82e326c7c93
 - path: scripts/tests/helpers.py
   sha256: fca60da4d908e66faf0376d5bb4b586c468cc7cb668c690fa3f5321b01cd934e
+- path: scripts/tests/test_already_satisfied.py
+  sha256: 461a5d5b9986cbc646ab108c172da22a9cf6c73efb2a9bf4004d3542290e74e0
 - path: scripts/tests/test_approval.py
   sha256: fe0af2376fe8d861074474c1f586a9a7c1f8abc06c85aadc320bb6d35e09f1bb
 - path: scripts/tests/test_authority_and_kernel_lineage.py

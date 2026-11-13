@@ -166,4 +166,4 @@ Additionally in `embedded` — the projection must carry **no live instruction**
 - start a phased execution protocol
 - deploy
 
-KERNEL pack / PE overlay landings: Program Execution planning is retired/unavailable. Do not absorb it here and do not invent a SHA lock. `rules/46-kernel-pack-new-branch.mdc` remains negative containment for where a kernel pack may land.
+KERNEL pack / PE overlay landings: Program Execution planning is the explicit-only `/l9-plan` (`PROGRAM_EXECUTION_PLANNER_V1`), not this workflow. Do not absorb it here and do not invent a SHA lock. `rules/46-kernel-pack-new-branch.mdc` remains negative containment for where a kernel pack may land.

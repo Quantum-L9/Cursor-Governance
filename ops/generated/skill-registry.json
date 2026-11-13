@@ -1,5 +1,5 @@
 {
-  "generation_id": "0b1d7f15e8d5e60315b63062235b5763a655dbf9e6aecb745c1d3f05396cf795",
+  "generation_id": "f5de0f0490c871d878df05f48d1c450a2e68bbfce079f0b4a0601fa18ae778c5",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -181,7 +181,7 @@
           "pe autonomy",
           "/l9-plan"
         ],
-        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. /l9-plan, make campaign, Program Lock, and PE+autonomy have no live owner. l9-plan-simple does not absorb them. Negative signals keep those requests off this route.\n",
+        "note": "Ordinary implementation plans, Build-button plans, and Cursor Plan mode are l9-plan-simple. Campaign planning for make campaign, Program Lock and PE+autonomy belongs to the explicit-only /l9-plan (PROGRAM_EXECUTION_PLANNER_V1), which is never routed ambiently. l9-plan-simple does not absorb it. Negative signals keep those requests off this route.\n",
         "positive_signals": [
           "create an execution plan",
           "write a plan first",
@@ -1264,14 +1264,14 @@
     },
     {
       "composition_role": "general",
-      "description": "explicit-only owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs. use when the user explicitly invokes /l9-plan or a task must change that schema, validator or renderer. Program Execution planning (PE+autonomy, make campaign) has no live successor; ordinary plans are l9-plan-simple.",
+      "description": "explicit-only Program Execution campaign planner and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs. use when the user explicitly invokes /l9-plan to plan a make campaign (it renders the validated plan as a campaign-source.v2 that make campaign admits unchanged) or a task must change that schema, validator or renderer. ordinary plans are l9-plan-simple.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan",
       "path": "skills/l9-plan",
-      "reason": "live owner of the PLAN_DOCUMENT schema, validator and projection renderer that l9-plan-simple runs; its Program Execution planning has no live successor and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
+      "reason": "Program Execution campaign planner (PROGRAM_EXECUTION_PLANNER_V1) \u2014 renders a PLAN_DOCUMENT as a campaign-source.v2 that make campaign admits unchanged \u2014 and owner of the PLAN_DOCUMENT schema, validator and renderers that l9-plan-simple runs; a campaign runs only on the operator's own words and its broad planning description would hijack l9-plan-simple routing \u2014 user-invoked only",
       "skill_md": "skills/l9-plan/SKILL.md",
-      "skill_sha256": "00bbc652be530af0503b4fc404d976ee0de8036774554a075aef39b192f2a999",
+      "skill_sha256": "d8420b247a63f6be029a1b77b1d4029018d49213458a6a47d2e2957f0f1cfd76",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1284,7 +1284,7 @@
       "path": "skills/l9-plan-simple",
       "reason": "",
       "skill_md": "skills/l9-plan-simple/SKILL.md",
-      "skill_sha256": "5f55dec768f49b0bc3087dcbb6909b3bc1b2b6db863a93c12a0c20848d16163a",
+      "skill_sha256": "60b90982550d9d204909cb0f8a3ca74bf69da5655095267658d6b6913e569029",
       "user_invocable": true,
       "when_to_use": "an ordinary execution plan or spec is needed, scope is unclear, or Plan mode is on \u2014 rules/23-l9-skill-routing.mdc already routes every ordinary planning deliverable here, so the model must be able to select it"
     },
@@ -1563,6 +1563,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "c3f1d1dd0bd5c8688e364e6406a41441e55e911286e4e9a9b2b960bc5202ca89"
+  "source_manifest_sha256": "beef631acdce6eda03a0afd8a78040d4a56821c13a8969ed2b5e0eb3688af25f",
+  "source_skill_corpus_sha256": "4cb9482873bc99566d0eb14ea0532caac339ede6ad2f8c21bac9d3f75bbc2941"
 }

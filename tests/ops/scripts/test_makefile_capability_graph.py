@@ -113,7 +113,7 @@ def _consumer_safe_targets() -> list[str]:
 # Program Execution's own fragment stays uncomposed: at the registered stage
 # (CANONICAL_LAW PROGRAM_EXECUTION_REGISTERED_STAGE_V1) only `campaign` and
 # `campaign-check-input` join the root graph, from ops/make/campaign.mk.
-EVICTED_FRAGMENTS = {"ops/make/program-execution.mk"}
+UNCOMPOSED_FRAGMENTS = {"ops/make/program-execution.mk"}
 
 
 def test_root_composes_every_live_make_fragment_once() -> None:
@@ -121,11 +121,11 @@ def test_root_composes_every_live_make_fragment_once() -> None:
     live = sorted(
         rel
         for rel in (path.relative_to(ROOT).as_posix() for path in MAKE_DIR.glob("*.mk"))
-        if rel not in EVICTED_FRAGMENTS
+        if rel not in UNCOMPOSED_FRAGMENTS
     )
     assert len(fragments) == len(set(fragments)), "fragment composition contains duplicates"
     assert sorted(fragments) == live
-    assert not EVICTED_FRAGMENTS & set(fragments), "an evicted fragment is still composed"
+    assert not UNCOMPOSED_FRAGMENTS & set(fragments), "an uncomposed fragment is composed"
 
     root = REPO_MK.read_text(encoding="utf-8")
     assert "include $(MAKE_FRAGMENTS)" in root

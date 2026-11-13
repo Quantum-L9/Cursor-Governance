@@ -92,8 +92,8 @@ def test_root_suite_ignores_are_withheld_whatever_kind_owns_them() -> None:
 def test_the_registry_withholds_the_controller_tests_from_root_pytest() -> None:
     selector = _load_selector()
     suites = validate_registry(_load_json(REGISTRY_PATH))
-    # Program Execution is an eviction target withheld through root conftest
-    # collect_ignore, so the selector drops it before the runner sees it.
+    # Program Execution's tests are withheld from root pytest through root
+    # conftest collect_ignore; their own suites run them, never the root suite.
     assert any(
         selector.path_under(CONTROLLER_TESTS, root) for root in selector.root_collect_ignores()
     )
