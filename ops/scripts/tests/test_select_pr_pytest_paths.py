@@ -42,6 +42,25 @@ def _registry(path: Path) -> Path:
     return path
 
 
+LIVE_REGISTRY = SCRIPT_DIR.parent / "config" / "python-contract.json"
+
+
+def _pytest_owner_id(path: str) -> str | None:
+    """The one non-root pytest suite in the live registry that owns *path*, if any."""
+    suites = json.loads(LIVE_REGISTRY.read_text(encoding="utf-8")).get("suites") or []
+    owners = [
+        str(suite.get("id"))
+        for suite in suites
+        if str(suite.get("kind") or "pytest") == "pytest"
+        and "." not in (suite.get("owned_paths") or [])
+        and any(
+            path == str(root) or path.startswith(str(root).rstrip("/") + "/")
+            for root in (suite.get("owned_paths") or [])
+        )
+    ]
+    return owners[0] if len(owners) == 1 else None
+
+
 class SelectPrPytestPathsTests(unittest.TestCase):
     def test_autonomy_only_change_excludes_pe_and_generated_data(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -134,13 +153,18 @@ class UncollectableTargetTests(unittest.TestCase):
             msg=f"emitted an uncollectable peer_execution target: {selected}",
         )
 
-    def test_eviction_target_autonomy_change_is_not_routed_to_generic_pytest(self) -> None:
-        """Program Execution is an eviction target; no generic suite runs its tests."""
-        selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
-        self.assertFalse(
-            [item for item in selected if item.startswith(self.PEER_CORE)],
-            msg=f"routed an eviction-target test into the generic gate: {selected}",
+    def test_changed_autonomy_test_is_kept_for_the_claude_code_autonomy_suite(self) -> None:
+        """Root-ignored, but the registered claude-code-autonomy pytest suite collects it."""
+        changed = f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py"
+        self.assertEqual(
+            [_pytest_owner_id(changed)],
+            ["claude-code-autonomy"],
         )
+        self.assertIn(changed, select_pr_pytest_paths([changed]))
+
+    def test_autonomy_source_change_selects_its_twin_test(self) -> None:
+        selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
+        self.assertIn(f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py", selected)
 
     def test_root_conftest_change_is_not_a_collect_target(self) -> None:
         selected = select_pr_pytest_paths(["conftest.py"])
@@ -268,13 +292,30 @@ class FixtureAndCampaignScopeTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.COMPILER_SRC])
         self.assertNotIn(self.CAMPAIGN_TEST, selected)
 
-    def test_eviction_target_sources_select_no_eviction_target_tests(self) -> None:
-        """Program Execution is an eviction target; the generic gate runs none of its tests."""
-        for source in (self.CAMPAIGN_SRC, self.COMPILER_SRC):
+    def test_pe_source_selects_the_suite_collectable_tests_that_name_it(self) -> None:
+        """A PE source with no test twin selects the tests naming it that a suite collects."""
+        autonomy = "environment/program-execution/peer_execution/autonomy"
+        selected = select_pr_pytest_paths([f"{autonomy}/merge_coordinator.py"])
+        self.assertIn(f"{autonomy}/tests/test_join_merge.py", selected)
+
+    def test_pe_sources_select_only_tests_a_pytest_suite_can_collect(self) -> None:
+        """A PE test no registered pytest suite owns is still dropped, never handed to root."""
+        sources = (
+            self.CAMPAIGN_SRC,
+            self.COMPILER_SRC,
+            "environment/program-execution/peer_execution/autonomy/merge_coordinator.py",
+        )
+        for source in sources:
             selected = select_pr_pytest_paths([source])
+            orphaned = [
+                item
+                for item in selected
+                if item.startswith("environment/program-execution/")
+                and _pytest_owner_id(item) is None
+            ]
             self.assertFalse(
-                [item for item in selected if item.startswith("environment/program-execution/")],
-                msg=f"{source} routed eviction-target tests into the generic gate: {selected}",
+                orphaned,
+                msg=f"{source} selected PE tests no pytest suite collects: {selected}",
             )
 
 

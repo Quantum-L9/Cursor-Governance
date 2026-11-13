@@ -101,7 +101,7 @@ def test_the_registry_withholds_the_controller_tests_from_root_pytest() -> None:
     assert not [
         p for p in selector.select_pr_pytest_paths(changed) if p.startswith(CONTROLLER_TESTS)
     ]
-    # Program Execution is an eviction target: withheld from root pytest and
-    # owned by no suite, so no generic topology executes it.
+    # The controller tests are owned by exactly the program-execution-controller
+    # suite, which runs them in fresh processes; root pytest still withholds them.
     owners = [s["id"] for s in suites if CONTROLLER_TESTS in s.get("owned_paths", [])]
-    assert owners == [], "an eviction-target suite is back in generic topology"
+    assert owners == ["program-execution-controller"]
