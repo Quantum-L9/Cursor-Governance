@@ -152,6 +152,8 @@ CHILD_PROMPT_REQUIRED = (
     "ACTIVE",
     # Projections and modes govern the swarm; a skill is never a substitute.
     "Never invoke the l9-coding-agent skill",
+    # Agents publish and stand down; the CTO owns integration and remediation.
+    "CTO-STATUS: stood-down",
 )
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
 

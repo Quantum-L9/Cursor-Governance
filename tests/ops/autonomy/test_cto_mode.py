@@ -259,6 +259,8 @@ SWARM_INVARIANTS = {
     "swarm_never_pings_operator",
     "frictionless_cto_swarm_channel",
     "operator_approves_merges_only",
+    "swarm_publishes_then_stands_down",
+    "cto_integrates_and_fixes_surgically",
 }
 
 
@@ -370,7 +372,8 @@ def test_child_prompt_requires_a_cto_session() -> None:
         ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
         (
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
-            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; report via send_message',
+            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: stood-down; '
+            "report via send_message",
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
         ),
     ],
@@ -451,3 +454,18 @@ def test_swarm_uses_the_coding_agent_mode_and_projection_never_the_skill() -> No
     assert "Never invoke the l9-coding-agent skill" in text
     briefs = " ".join(cto_mode.load_contract()["operating_protocol"]["child_brief_must_include"])
     assert "never the l9-coding-agent skill" in briefs
+
+
+# --- stand-down and CTO-owned integration (operator directive 2026-11-13) ---
+
+
+def test_agents_stand_down_after_publishing_and_the_cto_integrates_itself() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    invariants = protocol["invariants"]
+    assert "stands down" in invariants["swarm_publishes_then_stands_down"]
+    assert "never adds scope" in invariants["swarm_publishes_then_stands_down"]
+    cto = invariants["cto_integrates_and_fixes_surgically"]
+    assert "never through a subagent" in cto and "surgical" in cto
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "Do not subscribe to, watch, remediate or re-test a published PR" in text
+    assert "CTO-STATUS: stood-down" in text
