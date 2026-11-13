@@ -40,6 +40,10 @@ ROOT_AUTONOMY_PROVIDER = "root-autonomy-control-plane"
 #: a stage this runner does not know is refused rather than guessed at.
 EXECUTABLE_STAGES = frozenset({"manual"})
 INVOCATION_MODE = "explicit_operator_only"
+#: PROGRAM_EXECUTION_MAKE_PR_FINISH_V1: push and pull_request happen only inside
+#: the governance SSOT `make pr` that campaign_publish.py runs.
+PUBLISH_VIA = "via_make_pr_only"
+PUBLICATION_ROUTE = "make_pr_ssot"
 DEFAULT_INVOCATION_ENV = "L9_PE_OPERATOR_INVOCATION"
 #: A flag is not a statement. The operator's own words are required.
 BARE_FLAGS = frozenset({"1", "true", "yes", "on", "y", "ok", "enabled"})
@@ -104,13 +108,19 @@ def load_campaign_authority(governance_root: Path) -> dict[str, Any]:
             "CAMPAIGN_INVOCATION_MODE_UNKNOWN",
             f"stage {stage!r} requires invocation: {INVOCATION_MODE}",
         )
-    if block.get("local_commit_only") is not True or any(
-        block.get(action) != "forbidden" for action in ("push", "pull_request", "merge")
+    publication = block.get("publication")
+    if (
+        block.get("merge") != "forbidden"
+        or any(block.get(action) != PUBLISH_VIA for action in ("push", "pull_request"))
+        or not isinstance(publication, dict)
+        or publication.get("route") != PUBLICATION_ROUTE
+        or any(publication.get(raw) != "forbidden" for raw in ("raw_push", "raw_pull_request"))
     ):
         raise CampaignAuthorityError(
             "CAMPAIGN_AUTHORITY_WIDENED",
-            "campaign_execution must stay local_commit_only with push, pull_request and "
-            "merge forbidden; the runner holds no publication authority to match anything else",
+            f"campaign_execution must publish only {PUBLISH_VIA} (publication.route "
+            f"{PUBLICATION_ROUTE}, raw push and raw pull_request forbidden) and keep merge "
+            "forbidden; the runner holds no other publication authority",
         )
     autonomy = block.get("autonomy")
     if (

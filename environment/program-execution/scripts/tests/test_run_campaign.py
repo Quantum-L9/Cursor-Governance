@@ -461,11 +461,15 @@ class RunCampaignTests(unittest.TestCase):
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.refuse_live_until_shortcut("activate")
             self.assertIn("CAMPAIGN_UNTIL is not a live campaign path", str(ctx.exception))
-            # Running past it is publication, which autonomy may not do.
-            for stage in ("pr", "close", "merge"):
+            # Running past `pr` is merge, which belongs to /l9-pr-remediation.
+            for stage in ("close", "merge"):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     self.mod.refuse_live_until_shortcut(stage)
-                self.assertIn("local-commit-only", str(ctx.exception))
+                self.assertIn(
+                    "publishes only through the governance SSOT make pr", str(ctx.exception)
+                )
+            # The campaign finish (SSOT make pr) and the local-only stop are both live.
+            self.mod.refuse_live_until_shortcut("pr")
             self.mod.refuse_live_until_shortcut("execute")
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
@@ -1055,7 +1059,7 @@ class RunCampaignTests(unittest.TestCase):
                     ),
                 )
             self.assertEqual(ctx.exception.exit_code, 2)
-            self.assertIn("permanently local-commit-only", str(ctx.exception))
+            self.assertIn("publishes only through the governance SSOT make pr", str(ctx.exception))
             self.assertEqual(merged, [])
 
     def test_until_activate_from_memo(self) -> None:
@@ -2711,6 +2715,7 @@ class RunCampaignTests(unittest.TestCase):
                 "bootstrap",
                 "arm",
                 "execute",
+                "pr",
             ),
         )
 

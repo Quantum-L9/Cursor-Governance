@@ -113,7 +113,28 @@ class ProfileBlockTests(unittest.TestCase):
     def test_a_block_that_widens_publication_authority_is_refused(self) -> None:
         for action in ("push", "pull_request", "merge"):
             self._refused({**LIVE, action: "allowed"}, "CAMPAIGN_AUTHORITY_WIDENED")
-        self._refused({**LIVE, "local_commit_only": False}, "CAMPAIGN_AUTHORITY_WIDENED")
+        # Merge is never a campaign act, even through the make pr route.
+        self._refused({**LIVE, "merge": "via_make_pr_only"}, "CAMPAIGN_AUTHORITY_WIDENED")
+        # The only publication route is the governance SSOT make pr.
+        publication = LIVE["publication"]
+        self._refused({**LIVE, "publication": None}, "CAMPAIGN_AUTHORITY_WIDENED")
+        self._refused(
+            {**LIVE, "publication": {**publication, "route": "raw_push"}},
+            "CAMPAIGN_AUTHORITY_WIDENED",
+        )
+        for raw in ("raw_push", "raw_pull_request"):
+            self._refused(
+                {**LIVE, "publication": {**publication, raw: "allowed"}},
+                "CAMPAIGN_AUTHORITY_WIDENED",
+            )
+
+    def test_the_live_block_publishes_only_through_the_ssot_make_pr(self) -> None:
+        self.assertEqual(LIVE["push"], "via_make_pr_only")
+        self.assertEqual(LIVE["pull_request"], "via_make_pr_only")
+        self.assertEqual(LIVE["merge"], "forbidden")
+        self.assertEqual(LIVE["completion_boundary"], "pr")
+        self.assertEqual(LIVE["publication"]["route"], "make_pr_ssot")
+        self.assertEqual(LIVE["publication"]["remediate"], "0")
 
     def test_a_block_naming_another_autonomy_provider_is_refused(self) -> None:
         self._refused(
