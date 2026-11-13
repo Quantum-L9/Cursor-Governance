@@ -22,7 +22,7 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
 
 #: Program Execution runs only on an explicit operator statement
-#: (`campaign_execution.stage: manual`). The suite states one for the fixture
+#: (`campaign_execution.invocation: explicit_operator_only`). The suite states one for the fixture
 #: campaigns it drives; `test_campaign_authority.py` certifies the refusals.
 OPERATOR_INVOCATION_ENV = "L9_PE_OPERATOR_INVOCATION"
 os.environ.setdefault(
@@ -3034,6 +3034,10 @@ class RunCampaignTests(unittest.TestCase):
                     repo_root=root,
                     l9_root=l9,
                     hooks=self.mod.Hooks(
+                        # The binding (and the /coding-agent gate in front of it)
+                        # is certified in test_campaign_authority; this test is
+                        # about resume versus quarantine, not the live session.
+                        bind_projection=_projection_ok,
                         execute=lambda space, campaign_id: (
                             executed.append((str(space), campaign_id)) or {}
                         ),

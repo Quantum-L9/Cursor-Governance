@@ -55,10 +55,10 @@ def _profile(tmp: Path, block: object) -> Path:
 
 class ProfileBlockTests(unittest.TestCase):
     def test_the_live_profile_connects_program_execution_at_the_manual_stage(self) -> None:
-        self.assertEqual(LIVE["stage"], "manual")
+        self.assertEqual(LIVE["stage"], "registered")
         self.assertEqual(LIVE["invocation"], "explicit_operator_only")
         self.assertEqual(LIVE["ambient_routing"], "forbidden")
-        self.assertEqual(LIVE["make_target"], "not_registered")
+        self.assertEqual(LIVE["make_target"], "campaign")
         self.assertEqual(LIVE["autonomy"]["provider"], "root-autonomy-control-plane")
         self.assertIs(LIVE["autonomy"]["owns_program_state"], False)
         self.assertEqual(
@@ -88,11 +88,17 @@ class ProfileBlockTests(unittest.TestCase):
             self.assertNotIn("program-execution", profile[key])
             self.assertNotIn("run_campaign", profile[key])
 
-    def test_the_root_make_graph_still_does_not_compose_program_execution(self) -> None:
+    def test_the_root_make_graph_registers_only_the_campaign_targets(self) -> None:
         for name in ("Makefile", "Repo.mk"):
             self.assertNotIn(
                 "ops/make/program-execution.mk", (GOV_ROOT / name).read_text("utf-8"), name
             )
+        self.assertIn("\ninclude ops/make/campaign.mk\n", (GOV_ROOT / "Repo.mk").read_text("utf-8"))
+        fragment = (GOV_ROOT / "ops/make/campaign.mk").read_text("utf-8")
+        self.assertIn("L9_TARGETS += \\\n\tcampaign \\\n\tcampaign-check-input\n", fragment)
+        # The registered target finishes at `pr` and reads the mode where it was invoked.
+        self.assertIn('--until "$(or $(CAMPAIGN_UNTIL),pr)"', fragment)
+        self.assertIn('L9_PE_MODE_WORKSPACE="$(WS)"', fragment)
 
     def _refused(self, block: object, code: str) -> None:
         import tempfile
@@ -107,7 +113,7 @@ class ProfileBlockTests(unittest.TestCase):
         self._refused(None, "CAMPAIGN_AUTHORITY_ABSENT")
 
     def test_an_unknown_stage_executes_nothing(self) -> None:
-        for stage in ("retired", "registered", "", "autonomous"):
+        for stage in ("retired", "", "autonomous", "Registered"):
             self._refused({**LIVE, "stage": stage}, "CAMPAIGN_STAGE_NOT_EXECUTABLE")
 
     def test_a_block_that_widens_publication_authority_is_refused(self) -> None:
@@ -169,7 +175,7 @@ class OperatorInvocationTests(unittest.TestCase):
             },
         )
         self.assertEqual(record["statement"], statement)
-        self.assertEqual(record["stage"], "manual")
+        self.assertEqual(record["stage"], "registered")
         self.assertEqual(record["host_session_id"], "session-x")
         self.assertTrue(record["statement_digest"].startswith("sha256:"))
 
@@ -327,6 +333,133 @@ class ProjectionBindingTests(unittest.TestCase):
         start = source.index("def default_bind_projection(")
         body = source[start : source.index("\ndef ", start + 1)]
         self.assertNotIn("os.environ", body)
+
+
+BUNDLE = GOV_ROOT / "generated/governance/coding_agent_execution"
+
+
+def _active(views: list[Path] | None = None) -> dict:
+    return {
+        "mode": "ACTIVE",
+        "requested_at": "2026-11-13T00:00:00Z",
+        "load": [
+            {
+                "ref": "l9.projection/coding-agent-execution@1",
+                "views": [
+                    str(view) for view in views or sorted((BUNDLE / "projections").glob("*.json"))
+                ],
+            }
+        ],
+    }
+
+
+def _ours() -> dict:
+    lock = json.loads((BUNDLE / "bundle.lock.json").read_text("utf-8"))
+    return {
+        "bundle_revision": lock["authority"]["revision"],
+        "views": [
+            {"path": str(view.relative_to(GOV_ROOT)), "digest": authority._digest_file(view)}
+            for view in sorted((BUNDLE / "projections").glob("*.json"))
+        ],
+    }
+
+
+class CodingAgentModeTests(unittest.TestCase):
+    """The operator's /coding-agent switch gates the pipeline's projection binding."""
+
+    def _mode(self, report: dict, environ: dict | None = None) -> tuple[dict, list]:
+        seen: list = []
+
+        def status(runner: str, ssot: Path, workspace: Path) -> dict:
+            seen.append((runner, ssot, workspace))
+            return report
+
+        return authority.coding_agent_mode(LIVE, environ=environ or {}, status=status), seen
+
+    def test_the_live_profile_requires_the_coding_agent_mode(self) -> None:
+        binding = LIVE["projection_binding"]
+        self.assertEqual(binding["required_mode"], "coding-agent")
+        self.assertEqual(binding["mode_runner"], "ops/autonomy/coding_agent_mode.py")
+        self.assertTrue((GOV_ROOT / binding["mode_runner"]).is_file())
+
+    def test_a_block_that_drops_the_mode_requirement_is_refused(self) -> None:
+        import tempfile
+
+        for projection in (
+            {**LIVE["projection_binding"], "required_mode": None},
+            {**LIVE["projection_binding"], "required_mode": "architect"},
+            {**LIVE["projection_binding"], "mode_runner": ""},
+        ):
+            with tempfile.TemporaryDirectory() as raw:
+                root = _profile(Path(raw), {**LIVE, "projection_binding": projection})
+                with self.assertRaises(authority.CampaignAuthorityError) as caught:
+                    authority.load_campaign_authority(root)
+                self.assertEqual(caught.exception.code, "PROJECTION_MODE_UNDECLARED")
+
+    def test_anything_but_active_executes_nothing(self) -> None:
+        for report in (
+            {"mode": "OFF", "reason": "NOT_REQUESTED_IN_THIS_WORKSPACE"},
+            {"mode": "OFF", "reason": "REQUESTED_IN_ANOTHER_SESSION"},
+            {"mode": "STALE", "reason": "MODE_CONTRACT_CHANGED_SINCE_REQUEST"},
+            {"mode": "REJECTED", "reason": "STATE_UNREADABLE"},
+            {"mode": "BLOCKED", "blockers": [{"ref": "x", "reason": "ADMISSION_NOT_PROVED"}]},
+        ):
+            with self.assertRaises(authority.CampaignAuthorityError) as caught:
+                self._mode(report)
+            self.assertEqual(caught.exception.code, "CODING_AGENT_MODE_OFF", report)
+            self.assertIn(report["mode"], str(caught.exception))
+
+    def test_the_mode_is_read_in_the_invoking_workspace_from_the_ssot(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw:
+            record, seen = self._mode(
+                _active(), {"L9_PE_MODE_WORKSPACE": raw, "L9_GOVERNANCE_DIR": str(GOV_ROOT)}
+            )
+        self.assertEqual(
+            seen, [("ops/autonomy/coding_agent_mode.py", GOV_ROOT.resolve(), Path(raw).resolve())]
+        )
+        self.assertEqual(record["mode"], "ACTIVE")
+        self.assertEqual(record["bundle_revision"], _ours()["bundle_revision"])
+
+    def test_an_active_mode_with_the_same_revision_and_views_binds(self) -> None:
+        mode, _ = self._mode(_active())
+        bound = authority.bind_with_mode(_ours(), mode)
+        self.assertEqual(bound["coding_agent_mode"]["bundle_revision"], _ours()["bundle_revision"])
+
+    def test_a_mode_on_another_revision_is_refused(self) -> None:
+        mode, _ = self._mode(_active())
+        with self.assertRaises(authority.CampaignAuthorityError) as caught:
+            authority.bind_with_mode({**_ours(), "bundle_revision": "b" * 40}, mode)
+        self.assertEqual(caught.exception.code, "CODING_AGENT_MODE_MISMATCH")
+
+    def test_a_mode_loading_different_views_is_refused(self) -> None:
+        mode, _ = self._mode(_active())
+        ours = _ours()
+        ours["views"][0] = {**ours["views"][0], "digest": "sha256:" + "0" * 64}
+        with self.assertRaises(authority.CampaignAuthorityError) as caught:
+            authority.bind_with_mode(ours, mode)
+        self.assertEqual(caught.exception.code, "CODING_AGENT_MODE_MISMATCH")
+
+    def test_the_real_mode_command_reports_off_without_a_request(self) -> None:
+        """No stub: the SSOT's own /coding-agent status, in a workspace that never asked."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw:
+            with self.assertRaises(authority.CampaignAuthorityError) as caught:
+                authority.coding_agent_mode(
+                    LIVE,
+                    environ={"L9_PE_MODE_WORKSPACE": raw, "L9_GOVERNANCE_DIR": str(GOV_ROOT)},
+                )
+        self.assertEqual(caught.exception.code, "CODING_AGENT_MODE_OFF")
+        self.assertIn("NOT_REQUESTED_IN_THIS_WORKSPACE", str(caught.exception))
+
+    def test_the_live_bind_reads_the_mode_before_binding(self) -> None:
+        source = SCRIPT.read_text("utf-8")
+        start = source.index("def default_bind_projection(")
+        body = source[start : source.index("\ndef ", start + 1)]
+        self.assertLess(body.index("coding_agent_mode("), body.index("bind_coding_projection("))
+        self.assertIn("bind_with_mode(", body)
 
 
 if __name__ == "__main__":

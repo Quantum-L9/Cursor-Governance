@@ -5846,11 +5846,28 @@ def admit_operator_invocation() -> tuple[dict[str, Any], dict[str, Any]]:
     return authority, invocation
 
 
-def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
-    # Live path never honors a skip env. Tests inject Hooks.bind_projection.
+def require_coding_agent_mode(authority: dict[str, Any]) -> dict[str, Any]:
+    """The operator's /coding-agent session mode, or CODING_AGENT_MODE_OFF."""
     module = _campaign_authority_module()
     try:
-        return module.bind_coding_projection(GOV_ROOT, authority)
+        return module.coding_agent_mode(authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+
+
+def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
+    """Bind at bootstrap and resume, only while the operator has /coding-agent on.
+
+    The session mode is read first (CODING_AGENT_MODE_OFF unless ACTIVE), the
+    pipeline then binds through the profile's own status reader, and the two
+    must name the same bundle revision and view digests
+    (CODING_AGENT_MODE_MISMATCH). Live path never honors a skip env; tests
+    inject Hooks.bind_projection.
+    """
+    module = _campaign_authority_module()
+    try:
+        mode = module.coding_agent_mode(authority)
+        return module.bind_with_mode(module.bind_coding_projection(GOV_ROOT, authority), mode)
     except module.CampaignAuthorityError as exc:
         raise CampaignError(str(exc), error_code=exc.code) from exc
 
@@ -6975,7 +6992,7 @@ def _run_campaign_stages(
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
-    admit_operator_invocation()
+    campaign_authority, _invocation = admit_operator_invocation()
     fast = fast_mode(fast)
     timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
     timer = timing.StageTimer()
@@ -7004,8 +7021,16 @@ def _run_campaign_stages(
         until=until,
         worktree=worktree,
     )
+    finished = _stage_classify_and_prime(run)
+    if finished is not None:
+        return finished
+    if hooks.bind_projection is None:
+        # The input is classified (a rejected input is answered first); refuse
+        # before isolation, compile or any write when the operator's
+        # /coding-agent mode is off. Bootstrap and resume check it again and
+        # bind against it, so a mode turned off mid-campaign still stops.
+        require_coding_agent_mode(campaign_authority)
     for stage in (
-        _stage_classify_and_prime,
         _stage_isolate_and_emit,
         _stage_blueprint,
         _stage_admit,
