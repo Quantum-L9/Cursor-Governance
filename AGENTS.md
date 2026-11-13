@@ -2482,3 +2482,21 @@ Items 1–5 of the 2026-10-06 correction are unchanged.
 - Root autonomy, L4, publication, readiness and the host hook wrapper still do
   not require `environment/program-execution/`. Program Execution's tests are
   not yet part of the generic `make pr` gate; run them directly.
+
+<!-- PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 -->
+## Program Execution finishes with the SSOT make pr (2026-11-13) — supersedes "A campaign ends at verified local commits" in the 2026-11-12 manual-stage section and the §3.3 campaign `PR_BASE` rule for Program Execution
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`.
+
+- A campaign the operator asked for runs to its `pr` stage by default and
+  publishes itself: the runner calls the governance SSOT
+  `make -C <SSOT> pr WS=<campaign integration worktree>` with
+  `PR_REMEDIATE=0`. Do not publish a campaign by hand, and do not open a
+  second pull request for it.
+- The pull request's head is `campaign/<campaign_id>`; its base is the
+  target's remote default (`origin/main` here). It is converged and merged
+  like any other pull request, through `/l9-pr-remediation`.
+- `until=execute` still stops at verified local commits.
+- When the `pr` stage fails, read `runtime/publication.log` in the campaign's
+  pec workspace and repair what the gate reported, then resume the campaign.
+  Do not push or open the pull request another way.

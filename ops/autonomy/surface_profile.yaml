@@ -232,18 +232,31 @@ campaign_execution:
   # (1 / true / yes) is refused, and an agent never sets it for itself.
   invocation_evidence_env: L9_PE_OPERATOR_INVOCATION
   invocation_record: runtime/INVOCATION.json # in the campaign's pec workspace
-  # Campaign execution is permanently local-commit-only: prepare, execute,
-  # validate, verify, local commits, STOP. Publication is never a campaign
-  # stage; it is root `make pr`, and merge is /l9-pr-remediation.
-  local_commit_only: true
-  completion_boundary: execute
-  push: forbidden
-  pull_request: forbidden
+  # PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 (supersedes local-commit-only):
+  # prepare, execute, validate, verify, local commits, then publish once through
+  # the governance SSOT `make pr` (org PR template + composer), and STOP.
+  # PE never pushes, opens a PR or merges any other way; merge is
+  # /l9-pr-remediation. Workers never publish (their contracts forbid it).
+  local_commit_only: false
+  completion_boundary: pr
+  push: via_make_pr_only
+  pull_request: via_make_pr_only
   merge: forbidden
-  open_pr_against_main: forbidden
+  publication:
+    route: make_pr_ssot # make -C <SSOT> pr WS=<campaign integration worktree>
+    runner: environment/program-execution/scripts/campaign_publish.py
+    ssot_env: L9_GOVERNANCE_DIR # else $HOME/.cursor-governance
+    remediate: "0" # PR_REMEDIATE=0; convergence and merge are /l9-pr-remediation
+    head: campaign_integration_branch # campaign/<campaign_id>, verified task fan-in
+    base: target_remote_default # origin/main for Cursor-Governance
+    l4_release: verified_campaign_head # begin + authorize-release on that exact tree
+    intent: .l9/pr/pr-intent.json # program name, objective and task cards
+    record: runtime/PUBLICATION.json # in the campaign's pec workspace
+    raw_push: forbidden
+    raw_pull_request: forbidden
   mix_with_other_feature_branches: forbidden
   one_integration_branch_per_campaign: true
-  pr_base: campaign_integration_branch
+  pr_base: target_remote_default
   exclusive_worktree_lease_per_agent: true
   # Program Execution consumes root autonomy; root autonomy, L4 and publication
   # never require Program Execution.

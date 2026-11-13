@@ -1897,3 +1897,45 @@ SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
 `environment/contracts/autonomy/MANIFEST.yaml`
 (`program-execution-autonomy-consumer`),
 `environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 -->
+## Program Execution finishes with the SSOT make pr (2026-11-13) — supersedes item 5 of PROGRAM_EXECUTION_MANUAL_STAGE_V1, and §6.2.2 item 3 / §6.2.3 where they bind Program Execution campaigns to a `campaign/<campaign_id>` PR base
+
+Append-only. Operator decision, 2026-11-13: when a campaign is finished,
+Program Execution publishes it through the governance SSOT `make pr`, which
+fires the org PR template and its composer. Agents and operators do not
+hand-publish a campaign. Every other item of PROGRAM_EXECUTION_MANUAL_STAGE_V1
+is unchanged: explicit operator invocation, no ambient routing, no make
+target, the projection binding at bootstrap, and absence as retirement.
+
+1. **One finish, one route.** After every task is COMPLETED (executed in its
+   worker window, verified by the Controller, integrated into
+   `campaign/<campaign_id>`), the runner's `pr` stage runs exactly
+   `make -C <SSOT> pr WS=<campaign integration worktree>` with
+   `PR_REMEDIATE=0`, `PR_BASE=<target remote default>` and an empty
+   `PR_STACK`. The SSOT is `L9_GOVERNANCE_DIR`, else
+   `$HOME/.cursor-governance`. That `make pr` owns the gate, the push, the org
+   template and the composer; Program Execution owns none of them.
+2. **Head and base.** The head is the campaign integration branch
+   `campaign/<campaign_id>`, built from the target's remote default and
+   carrying only verified task fan-in. The base is that remote default
+   (`origin/main` for Cursor-Governance). One campaign, one pull request. A
+   remote `origin/campaign/<campaign_id>` is not created.
+3. **What the runner does before the ceremony.** It refuses a dirty or empty
+   integration tree, runs `l4_local.py begin` and `authorize-release` on that
+   exact verified tree, and writes `.l9/pr/pr-intent.json` from the accepted
+   Blueprint (program name, objective, task cards) bound to the head. It
+   records the result in `runtime/PUBLICATION.json` and the ceremony's output
+   in `runtime/publication.log`. A failed `make pr` is the campaign's failure;
+   it is not retried by another route.
+4. **Nothing else publishes.** Raw `git push`, `gh pr create`, REST pull
+   request writes, `make pr` from any other checkout or argv, task pull
+   requests, and every merge transport stay refused at the runner's `run_cmd`
+   choke point. Worker windows never publish. Merge stays
+   `/l9-pr-remediation`, under that path's own authority.
+5. **Stopping early stays possible.** `until=execute` ends at verified local
+   commits and publishes nothing.
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution.publication`),
+`environment/program-execution/scripts/campaign_publish.py`,
+`environment/program-execution/scripts/campaign_authority.py`.

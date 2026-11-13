@@ -5,7 +5,7 @@ first_class_artifact: true
 schema_family: l9_autonomy_architecture
 version: 1.0.0
 status: active
-updated: 2026-11-12
+updated: 2026-11-13
 owner: platform
 layer: program-execution
 tags: [l9, autonomy, program-execution, consumer_binding, first_class]
@@ -15,7 +15,7 @@ tags: [l9, autonomy, program-execution, consumer_binding, first_class]
 
 **SSOT path:** `environment/program-execution/integrations/autonomy-control-plane/`
 **Stage:** `manual` (`ops/autonomy/surface_profile.yaml` → `campaign_execution`)
-**Law:** `CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`
+**Law:** `CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`, `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`
 
 ## Purpose
 
@@ -34,4 +34,6 @@ publication never require, import or resolve through Program Execution.
 
 - a campaign no operator explicitly asked for;
 - a root make target before the `registered` stage;
-- making root autonomy depend on Program Execution.
+- making root autonomy depend on Program Execution;
+- publishing a campaign any way but its own `pr` stage through the governance
+  SSOT `make pr`.
