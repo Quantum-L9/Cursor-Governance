@@ -1,22 +1,28 @@
-"""Autonomous Program Execution is local-commit-only.
+"""Program Execution publishes only through the governance SSOT `make pr`.
 
-Every other PE test replaces the remote actions with `Hooks`, so a regression
-that swapped one remote action for another would go unnoticed: the hook absorbs
-it either way. This fixture asserts on the *executed subprocesses* instead.
+PROGRAM_EXECUTION_MAKE_PR_FINISH_V1. Every other PE test replaces the remote
+actions with `Hooks`, so a regression that swapped one remote action for
+another would go unnoticed: the hook absorbs it either way. This fixture
+asserts on the *executed subprocesses* instead.
 
 A PATH shim in front of `git`, `gh`, and `make` records every invocation made
 during a real smoke campaign — by the runner and by every child process it
-spawns, since PATH is inherited. The recording is the evidence:
+spawns, since PATH is inherited. The recording is the evidence.
 
-    git commit:   YES
-    git push:     NO
-    gh pr create: NO
-    make pr:      NO
-    gh pr merge:  NO
+Stopped at `execute` (local only):
 
-The boundary is enforced in three places and each is covered here: the stage
-machine (execution ends at `execute`), the `run_cmd` choke point (no campaign
-subprocess reaches a remote), and the individual publication functions.
+    git commit:   YES      git push: NO      gh: NO      make: NO
+
+Finished at `pr` (the campaign finish):
+
+    make -C <SSOT> pr WS=<integration worktree>, PR_REMEDIATE=0:  exactly once
+    git push / gh pr create / gh pr merge by PE itself:            NO
+
+The push, PR template and composer belong to that `make pr`; here a stand-in
+SSOT records the call instead of performing it. The boundary is enforced in
+three places and each is covered: the stage machine (nothing runs past `pr`),
+the `run_cmd` choke point (no campaign subprocess publishes), and
+campaign_publish (the one sanctioned argv).
 """
 
 from __future__ import annotations
@@ -64,8 +70,23 @@ _RECORDING_SHIM = """#!/bin/sh
 exec {real} "$@"
 """
 
-# `gh` and `make` must never run during autonomous execution. Recording and then
-# failing turns a silent regression into a loud one without hiding the record.
+# Stands in for `make`: records argv and the publication environment, then
+# writes the summary the SSOT `make pr` would leave in the published workspace.
+_MAKE_PR_SHIM = """#!/bin/sh
+{{ printf 'make'; for arg in "$@"; do printf ' %s' "$arg"; done; \
+printf ' |PR_REMEDIATE=%s PR_BASE=%s PR_STACK=%s' "$PR_REMEDIATE" "$PR_BASE" "$PR_STACK"; \
+printf '\\n'; }} >> "$L9_TEST_SUBPROCESS_LOG"
+for arg in "$@"; do case "$arg" in WS=*) ws="${{arg#WS=}}";; esac; done
+mkdir -p "$ws/.l9/pr"
+head=$(git -C "$ws" rev-parse HEAD)
+pr='"number":4242,"url":"https://example.test/pull/4242"'
+printf '{{"repo":"o/r",%s,"head_sha":"%s","source":"github_api"}}' "$pr" "$head" \
+> "$ws/.l9/pr/pr-summary.json"
+"""
+
+# `gh` must never run during Program Execution, and `make` must not run when the
+# campaign stops at `execute`. Recording and then failing turns a silent
+# regression into a loud one without hiding the record.
 _REFUSING_SHIM = """#!/bin/sh
 {{ printf '{name}'; for arg in "$@"; do printf ' %s' "$arg"; done; printf '\\n'; }} \
 >> "$L9_TEST_SUBPROCESS_LOG"
@@ -74,7 +95,7 @@ exit 97
 """
 
 
-def _install_shims(bin_dir: Path) -> None:
+def _install_shims(bin_dir: Path, *, make_pr: bool = False) -> None:
     """Put recording wrappers for git/gh/make ahead of the real binaries."""
     bin_dir.mkdir(parents=True, exist_ok=True)
     real_git = shutil.which("git")
@@ -83,10 +104,37 @@ def _install_shims(bin_dir: Path) -> None:
     (bin_dir / "git").write_text(
         _RECORDING_SHIM.format(name="git", real=real_git), encoding="utf-8"
     )
-    for name in ("gh", "make"):
-        (bin_dir / name).write_text(_REFUSING_SHIM.format(name=name), encoding="utf-8")
+    (bin_dir / "gh").write_text(_REFUSING_SHIM.format(name="gh"), encoding="utf-8")
+    make = _MAKE_PR_SHIM.format() if make_pr else _REFUSING_SHIM.format(name="make")
+    (bin_dir / "make").write_text(make, encoding="utf-8")
     for name in ("git", "gh", "make"):
         (bin_dir / name).chmod(0o755)
+
+
+def _stand_in_ssot(root: Path, log: Path) -> Path:
+    """A directory carrying every marker campaign_publish requires of the SSOT.
+
+    `l4_local.py` records its call; `make` is the shim above. Nothing here
+    pushes or opens anything: the assertion is on what Program Execution asked
+    the SSOT to do, which is the whole of its publication authority.
+    """
+    for marker in campaign_publish_module().SSOT_MARKERS:
+        path = root / marker
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    python = root / ".venv" / "bin" / "python"
+    python.unlink()
+    python.symlink_to(sys.executable)
+    (root / "ops" / "autonomy" / "l4_local.py").write_text(
+        "import sys\n"
+        f"open({str(log)!r}, 'a').write('l4_local ' + ' '.join(sys.argv[1:]) + '\\n')\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+def campaign_publish_module():
+    return _load("campaign_publish_commit_only", PE_ROOT / "scripts/campaign_publish.py")
 
 
 class SubprocessRecord:
@@ -114,7 +162,7 @@ class SubprocessRecord:
         return [line for line in self.lines if all(token in line.split() for token in tokens)]
 
 
-class LocalCommitOnlyTests(unittest.TestCase):
+class PublicationBoundaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.mod = _load("run_campaign_commit_only", SCRIPT)
@@ -122,8 +170,8 @@ class LocalCommitOnlyTests(unittest.TestCase):
 
     # ---- the mandatory regression: a real campaign, recorded ----------------
 
-    def test_autonomous_smoke_campaign_commits_and_never_publishes(self) -> None:
-        """Run a complete autonomous campaign; assert on what it actually ran."""
+    def test_campaign_stopped_at_execute_commits_and_never_publishes(self) -> None:
+        """Run a complete campaign to `execute`; assert on what it actually ran."""
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
             root = _host_repo(tmp / "host")
@@ -149,6 +197,7 @@ class LocalCommitOnlyTests(unittest.TestCase):
                 os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
                 report = self.mod.run_campaign(
                     root / "intent.yaml",
+                    until="execute",
                     primary=tmp / "primary",
                     repo_root=root,
                     l9_root=l9,
@@ -206,6 +255,93 @@ class LocalCommitOnlyTests(unittest.TestCase):
                 msg=f"campaign invoked the publish path: {record.matching('make')}",
             )
 
+    def test_campaign_finish_publishes_only_through_the_ssot_make_pr(self) -> None:
+        """Run a complete campaign to `pr`; the only publication act is the SSOT make pr."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            root = _host_repo(tmp / "host")
+            _dump(root / "intent.yaml", READY_SEED)
+            l9 = tmp / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+
+            log = tmp / "subprocesses.log"
+            log.write_text("", encoding="utf-8")
+            bin_dir = tmp / "shim-bin"
+            _install_shims(bin_dir, make_pr=True)
+            ssot = _stand_in_ssot(tmp / "ssot", log)
+
+            env = {
+                **_peer_test_env(tmp),
+                "L9_TEST_SUBPROCESS_LOG": str(log),
+                "L9_GOVERNANCE_DIR": str(ssot),
+                "PATH": f"{bin_dir}{os.pathsep}{_peer_test_env(tmp)['PATH']}",
+            }
+            with unittest.mock.patch.dict("os.environ", env):
+                os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    primary=tmp / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    fast=True,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        bind_projection=_projection_ok,
+                        compile_activation=self.activate.compile_activation,
+                    ),
+                )
+
+            record = SubprocessRecord(
+                [
+                    line.strip()
+                    for line in log.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
+            )
+            pec_workspace = Path(report.pec_workspace)
+            publication = json.loads(
+                (pec_workspace / "runtime" / "PUBLICATION.json").read_text(encoding="utf-8")
+            )
+            workspace = Path(publication["workspace"])
+
+            self.assertEqual(report.stages_completed[-2:], ["execute", "pr"])
+            self.assertEqual(report.host_pr, "https://example.test/pull/4242")
+            self.assertEqual(report.host_pr_number, 4242)
+            self.assertTrue(record.ran("git", "commit"), msg=record.lines)
+            # Exactly one make, and it is the sanctioned SSOT ceremony.
+            makes = [line for line in record.lines if line.startswith("make ")]
+            self.assertEqual(
+                makes,
+                [
+                    f"make -C {ssot.resolve()} pr WS={workspace} "
+                    "|PR_REMEDIATE=0 PR_BASE=origin/main PR_STACK="
+                ],
+            )
+            # The exact verified tree was authorized for L4 release first.
+            l4 = [line for line in record.lines if line.startswith("l4_local ")]
+            self.assertEqual(len(l4), 2, msg=l4)
+            self.assertIn("begin --contract-id pe-demo-activate-v1 --base origin/main", l4[0])
+            self.assertIn("authorize-release", l4[1])
+            # PE itself never pushes, opens or merges: that is make pr's, and merge
+            # is /l9-pr-remediation's.
+            self.assertFalse(record.ran("git", "push"), msg=record.matching("push"))
+            self.assertEqual([line for line in record.lines if line.startswith("gh ")], [])
+            # The head is the verified campaign integration branch, base the remote default.
+            self.assertEqual(publication["head_branch"], "campaign/demo-activate-v1")
+            self.assertEqual(publication["base"], "origin/main")
+            self.assertEqual(publication["route"], "make_pr_ssot")
+            self.assertEqual(publication["merge"], "not_performed")
+            # The composer's intent is bound to that head.
+            intent = json.loads(
+                (workspace / ".l9" / "pr" / "pr-intent.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(intent["schema"], "l9.pr_intent.v1")
+            self.assertEqual(intent["head"], publication["head_sha"])
+            self.assertTrue(intent["title"])
+            self.assertIn("TASK-001", intent["reviewer_focus"])
+
     # ---- the choke point ----------------------------------------------------
 
     def test_publication_command_names_every_remote_action(self) -> None:
@@ -250,19 +386,46 @@ class LocalCommitOnlyTests(unittest.TestCase):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.run_cmd(["git", "-C", ".", "push", "origin", "main"], timeout=5)
-            self.assertIn("local-commit-only", str(ctx.exception))
+            self.assertIn("publishes only through the governance SSOT make pr", str(ctx.exception))
+            # `make pr` through the choke point is refused too: the one sanctioned
+            # spawn is campaign_publish's, never run_cmd's.
+            with self.assertRaises(self.mod.CampaignError):
+                self.mod.run_cmd(["make", "-C", "/ssot", "pr", "WS=/ws"], timeout=5)
+
+    def test_default_make_pr_only_hands_off_to_campaign_publish(self) -> None:
+        import inspect
+
+        source = inspect.getsource(self.mod.default_make_pr)
+        self.assertIn("campaign_publish", source)
+        for token in ("run_cmd(", '"gh"', '"push"', '"make"', "AUTHORIZE_SCRIPT"):
+            self.assertNotIn(token, source, msg=f"default_make_pr carries {token}")
+        publish = campaign_publish_module()
+        ssot, workspace = Path("/ssot"), Path("/ws")
+        argv = publish.sanctioned_make_pr_argv(ssot, workspace)
+        self.assertEqual(argv, ["make", "-C", "/ssot", "pr", "WS=/ws"])
+        self.assertTrue(publish.is_sanctioned_make_pr(argv, ssot, workspace))
+        for other in (
+            ["make", "pr"],
+            ["make", "-C", "/ssot", "pr", "WS=/ws", "PR_STACK=auto"],
+            ["make", "-C", "/elsewhere", "pr", "WS=/ws"],
+            ["l9", "pr"],
+        ):
+            self.assertFalse(publish.is_sanctioned_make_pr(other, ssot, workspace), other)
+        publish_source = (PE_ROOT / "scripts/campaign_publish.py").read_text(encoding="utf-8")
+        for token in ('"push"', '"gh"', '"create"', "stack_safe_merge", "merge_method"):
+            self.assertNotIn(token, publish_source, msg=f"campaign_publish carries {token}")
 
     def test_refused_publication_functions_carry_no_publication_machinery(self) -> None:
         """Audit Y7: the refusal is the whole function, not a guard over live code.
 
-        `make pr`, `git push`, `gh pr create` and `gh pr merge` implementations
-        used to sit under `refuse_publication()`, unreachable but readable as a
-        live publication path. The runner now carries none of it.
+        `git push`, `gh pr create` and `gh pr merge` implementations used to sit
+        under `refuse_publication()`, unreachable but readable as a live
+        publication path. The runner carries none of it; its one publication
+        act is campaign_publish's SSOT `make pr`.
         """
         import inspect
 
         for function in (
-            self.mod.default_make_pr,
             self.mod.default_authorize_and_merge,
             self.mod.push_integration_branch,
             self.mod.maybe_open_task_pr,
@@ -277,13 +440,10 @@ class LocalCommitOnlyTests(unittest.TestCase):
             function
             for _, function in inspect.getmembers(self.mod, inspect.isfunction)
             if function.__module__ == self.mod.__name__
-            and (
-                'refuse_publication("publish the campaign")' in inspect.getsource(function)
-                or 'refuse_publication("merge recorded stack pull requests")'
-                in inspect.getsource(function)
-            )
+            and 'refuse_publication("merge recorded stack pull requests")'
+            in inspect.getsource(function)
         ]
-        self.assertGreaterEqual(len(refusing), 2, [f.__name__ for f in refusing])
+        self.assertGreaterEqual(len(refusing), 1, [f.__name__ for f in refusing])
         for function in refusing:
             source = inspect.getsource(function)
             after = source.split("refuse_publication(", 1)[1]
@@ -304,32 +464,37 @@ class LocalCommitOnlyTests(unittest.TestCase):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             for call in (
                 lambda: self.mod.push_integration_branch(Path("/tmp"), "demo-activate-v1"),
-                lambda: self.mod.default_make_pr(Path("/tmp"), "demo-activate-v1"),
                 lambda: self.mod.default_authorize_and_merge("o/r", 7),
             ):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     call()
-                self.assertIn("local-commit-only", str(ctx.exception))
+                self.assertIn(
+                    "publishes only through the governance SSOT make pr", str(ctx.exception)
+                )
 
     # ---- the boundary -------------------------------------------------------
 
-    def test_autonomous_default_stops_at_execute(self) -> None:
+    def test_campaign_default_finishes_with_the_ssot_make_pr(self) -> None:
         import inspect
 
         signature = inspect.signature(self.mod.run_campaign)
-        self.assertEqual(signature.parameters["until"].default, "execute")
-        self.assertEqual(self.mod.AUTONOMOUS_LAST_STAGE, "execute")
+        self.assertEqual(signature.parameters["until"].default, "pr")
+        self.assertEqual(self.mod.AUTONOMOUS_LAST_STAGE, "pr")
+        self.assertEqual(self.mod.LOCAL_LAST_STAGE, "execute")
         parsed = self.mod.build_parser().parse_args([])
-        self.assertEqual(parsed.until, "execute")
+        self.assertEqual(parsed.until, "pr")
 
-    def test_publication_stage_requires_the_release_transition(self) -> None:
+    def test_nothing_runs_past_the_pr_stage(self) -> None:
         with unittest.mock.patch.dict("os.environ", {}, clear=False):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             self.mod.refuse_live_until_shortcut("execute")
-            for stage in ("pr", "close", "merge"):
+            self.mod.refuse_live_until_shortcut("pr")
+            for stage in ("close", "merge"):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     self.mod.refuse_live_until_shortcut(stage)
-                self.assertIn("local-commit-only", str(ctx.exception))
+                self.assertIn(
+                    "publishes only through the governance SSOT make pr", str(ctx.exception)
+                )
 
     def test_no_pre_execution_push_of_the_integration_branch(self) -> None:
         """The integration branch is never pushed to set work up."""
@@ -346,13 +511,14 @@ class LocalCommitOnlyTests(unittest.TestCase):
             self.assertFalse(self.mod.release_authorized())
             for call in (
                 lambda: self.mod.refuse_publication("push a branch"),
-                lambda: self.mod.refuse_live_until_shortcut("pr"),
                 lambda: self.mod.refuse_live_until_shortcut("close"),
                 lambda: self.mod.refuse_live_until_shortcut("merge"),
             ):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     call()
-                self.assertIn("permanently local-commit-only", str(ctx.exception))
+                self.assertIn(
+                    "publishes only through the governance SSOT make pr", str(ctx.exception)
+                )
 
 
 class FastModeDoesNotWidenAuthorityTests(unittest.TestCase):
@@ -372,23 +538,24 @@ class FastModeDoesNotWidenAuthorityTests(unittest.TestCase):
         prepare_state = PE_ROOT / "scripts/pe_prepare_state.py"
         cls.prepare = _load("pe_prepare_state_fast_authority", prepare_state)
 
-    def test_fast_does_not_open_the_publish_path(self) -> None:
+    def test_fast_does_not_open_another_publish_path(self) -> None:
         with unittest.mock.patch.dict("os.environ", {"L9_PE_FAST": "1"}, clear=False):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
-            for call in (
-                lambda: self.mod.push_integration_branch(Path("/tmp"), "demo-activate-v1"),
-                lambda: self.mod.default_make_pr(Path("/tmp"), "demo-activate-v1"),
-            ):
-                with self.assertRaises(self.mod.CampaignError) as ctx:
-                    call()
-                self.assertIn("local-commit-only", str(ctx.exception))
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.push_integration_branch(Path("/tmp"), "demo-activate-v1")
+            self.assertIn("publishes only through the governance SSOT make pr", str(ctx.exception))
+            # The finish under FAST is the same SSOT make pr, refused without a
+            # launch pointer rather than improvised.
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.default_make_pr(Path("/tmp/no-such-pec"), "demo-activate-v1")
+            self.assertIn("launch pointer", str(ctx.exception))
 
     def test_fast_does_not_open_the_merge_path(self) -> None:
         with unittest.mock.patch.dict("os.environ", {"L9_PE_FAST": "1"}, clear=False):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.default_authorize_and_merge("o/r", 7)
-            self.assertIn("local-commit-only", str(ctx.exception))
+            self.assertIn("publishes only through the governance SSOT make pr", str(ctx.exception))
             self.assertIsNotNone(
                 self.mod.publication_command(["gh", "pr", "merge", "7", "--squash"])
             )
@@ -424,6 +591,10 @@ class FastModeDoesNotWidenAuthorityTests(unittest.TestCase):
                 inspect.getsource(function),
                 msg=f"{function.__name__} consults a local acceptance",
             )
+        self.assertNotIn(
+            "LOCAL_ACCEPT",
+            (PE_ROOT / "scripts/campaign_publish.py").read_text(encoding="utf-8"),
+        )
         merge_gate = PE_ROOT.parents[1] / "ops/autonomy/merge_gate.py"
         if merge_gate.is_file():
             self.assertNotIn("LOCAL_ACCEPT", merge_gate.read_text(encoding="utf-8"))

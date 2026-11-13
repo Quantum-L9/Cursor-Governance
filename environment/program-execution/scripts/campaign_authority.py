@@ -38,8 +38,12 @@ ROOT_AUTONOMY_PROVIDER = "root-autonomy-control-plane"
 
 #: Stages at which the runner executes. `retired` is the absence of the block;
 #: a stage this runner does not know is refused rather than guessed at.
-EXECUTABLE_STAGES = frozenset({"manual"})
+EXECUTABLE_STAGES = frozenset({"manual", "registered"})
 INVOCATION_MODE = "explicit_operator_only"
+#: PROGRAM_EXECUTION_MAKE_PR_FINISH_V1: push and pull_request happen only inside
+#: the governance SSOT `make pr` that campaign_publish.py runs.
+PUBLISH_VIA = "via_make_pr_only"
+PUBLICATION_ROUTE = "make_pr_ssot"
 DEFAULT_INVOCATION_ENV = "L9_PE_OPERATOR_INVOCATION"
 #: A flag is not a statement. The operator's own words are required.
 BARE_FLAGS = frozenset({"1", "true", "yes", "on", "y", "ok", "enabled"})
@@ -50,6 +54,13 @@ BINDING_SCHEMA = "l9.program-execution.coding-projection-binding.v1"
 CODING_BINDING_SCHEMA = "l9.cursor-governance.coding-projection-binding/v3"
 BOUND_STATUSES = frozenset({"CURRENT", "BOUND"})
 ADMITTED = "ADMITTED_AND_CURRENT"
+#: The session mode that must be on before a campaign is bound (projection_binding.required_mode).
+REQUIRED_MODE = "coding-agent"
+MODE_ACTIVE = "ACTIVE"
+MODE_BINDING_SCHEMA = "l9.program-execution.coding-agent-mode-binding.v1"
+#: The workspace whose `/coding-agent` session state counts; else the invoking cwd.
+MODE_WORKSPACE_ENV = "L9_PE_MODE_WORKSPACE"
+SSOT_ENV = "L9_GOVERNANCE_DIR"
 SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 
 
@@ -104,13 +115,19 @@ def load_campaign_authority(governance_root: Path) -> dict[str, Any]:
             "CAMPAIGN_INVOCATION_MODE_UNKNOWN",
             f"stage {stage!r} requires invocation: {INVOCATION_MODE}",
         )
-    if block.get("local_commit_only") is not True or any(
-        block.get(action) != "forbidden" for action in ("push", "pull_request", "merge")
+    publication = block.get("publication")
+    if (
+        block.get("merge") != "forbidden"
+        or any(block.get(action) != PUBLISH_VIA for action in ("push", "pull_request"))
+        or not isinstance(publication, dict)
+        or publication.get("route") != PUBLICATION_ROUTE
+        or any(publication.get(raw) != "forbidden" for raw in ("raw_push", "raw_pull_request"))
     ):
         raise CampaignAuthorityError(
             "CAMPAIGN_AUTHORITY_WIDENED",
-            "campaign_execution must stay local_commit_only with push, pull_request and "
-            "merge forbidden; the runner holds no publication authority to match anything else",
+            f"campaign_execution must publish only {PUBLISH_VIA} (publication.route "
+            f"{PUBLICATION_ROUTE}, raw push and raw pull_request forbidden) and keep merge "
+            "forbidden; the runner holds no other publication authority",
         )
     autonomy = block.get("autonomy")
     if (
@@ -122,6 +139,18 @@ def load_campaign_authority(governance_root: Path) -> dict[str, Any]:
             "CAMPAIGN_AUTONOMY_PROVIDER_INVALID",
             f"campaign_execution.autonomy must name provider {ROOT_AUTONOMY_PROVIDER} with "
             "owns_program_state: false",
+        )
+    projection = block.get("projection_binding")
+    if (
+        not isinstance(projection, dict)
+        or projection.get("required_mode") != REQUIRED_MODE
+        or not projection.get("mode_runner")
+    ):
+        raise CampaignAuthorityError(
+            "PROJECTION_MODE_UNDECLARED",
+            "campaign_execution.projection_binding must require the operator's "
+            f"/{REQUIRED_MODE} session mode (required_mode: {REQUIRED_MODE}, mode_runner); "
+            "Program Execution binds the projection only while the operator has it on",
         )
     return dict(block)
 
@@ -361,6 +390,130 @@ def bind_coding_projection(
         "status_reader": str(reader),
         "bound_at": _now(),
     }
+
+
+# -- /coding-agent, the session switch ----------------------------------------
+
+
+def _mode_runner(runner: str, ssot: Path, workspace: Path) -> dict[str, Any]:
+    """`coding_agent_mode.py status` as the operator ran it: the SSOT's, for this session."""
+    python = ssot / ".venv" / "bin" / "python"
+    command = [
+        str(python) if python.is_file() else sys.executable,
+        str(ssot / runner),
+        "status",
+        "--workspace",
+        str(workspace),
+    ]
+    completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        command, capture_output=True, text=True, check=False, timeout=180, cwd=str(workspace)
+    )
+    try:
+        report = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        report = None
+    if not isinstance(report, dict) or not isinstance(report.get("mode"), str):
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_UNREADABLE",
+            f"{runner} status produced no mode (exit {completed.returncode})",
+        )
+    return report
+
+
+def coding_agent_mode(
+    authority: Mapping[str, Any],
+    *,
+    environ: Mapping[str, str] | None = None,
+    status: Any = None,
+) -> dict[str, Any]:
+    """`/coding-agent` must be ACTIVE for the invoking session before PE binds.
+
+    The operator's session switch is the one that turns the projection on: PE
+    reads the same session state `/coding-agent status` reads
+    (`.l9/coding-agent-mode/session.json` in the invoking workspace, bound to
+    the host session id), through the SSOT's own mode command. OFF, BLOCKED,
+    STALE or REJECTED executes nothing (CODING_AGENT_MODE_OFF). On ACTIVE it
+    returns the mode's bundle revision and view digests so the caller can
+    prove PE binds the same revision the session does.
+    """
+    declared = authority.get("projection_binding")
+    if not isinstance(declared, Mapping) or declared.get("required_mode") != REQUIRED_MODE:
+        raise CampaignAuthorityError(
+            "PROJECTION_MODE_UNDECLARED",
+            f"campaign_execution.projection_binding.required_mode must be {REQUIRED_MODE!r}",
+        )
+    runner = str(declared.get("mode_runner") or "")
+    if not runner:
+        raise CampaignAuthorityError(
+            "PROJECTION_MODE_UNDECLARED", "projection_binding names no mode_runner"
+        )
+    env = os.environ if environ is None else environ
+    workspace = Path(str(env.get(MODE_WORKSPACE_ENV) or os.getcwd())).expanduser().resolve()
+    raw_ssot = str(env.get(SSOT_ENV) or "").strip()
+    ssot = (Path(raw_ssot) if raw_ssot else Path.home() / ".cursor-governance").resolve()
+    report = (status or _mode_runner)(runner, ssot, workspace)
+    mode = str(report.get("mode") or "")
+    if mode != MODE_ACTIVE:
+        blockers = "; ".join(
+            f"{item.get('ref')}: {item.get('reason')}" for item in report.get("blockers") or []
+        )
+        why = report.get("reason") or blockers or "no reason"
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_OFF",
+            f"/coding-agent is {mode or 'unknown'} ({why}) "
+            f"for this session in {workspace}. Program Execution binds the coding-agent "
+            "execution projection only while the operator has it on: run /coding-agent on "
+            f"in that workspace (or set {MODE_WORKSPACE_ENV} to the workspace where it is on).",
+        )
+    profile_ref = declared.get("profile_ref")
+    loaded = [item for item in report.get("load") or [] if item.get("ref") == profile_ref]
+    views = [Path(str(view)) for item in loaded for view in item.get("views") or []]
+    if not views or not all(view.is_file() for view in views):
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_UNREADABLE",
+            f"/coding-agent is ACTIVE but loads no readable {profile_ref} views",
+        )
+    lock = views[0].parent.parent / "bundle.lock.json"
+    try:
+        revision = (json.loads(lock.read_text(encoding="utf-8")).get("authority") or {}).get(
+            "revision"
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_UNREADABLE", f"cannot read the mode's bundle lock {lock}: {exc}"
+        ) from exc
+    return {
+        "schema": MODE_BINDING_SCHEMA,
+        "mode": MODE_ACTIVE,
+        "workspace": str(workspace),
+        "ssot": str(ssot),
+        "requested_at": report.get("requested_at"),
+        "profile_ref": profile_ref,
+        "bundle_revision": revision,
+        "views": [{"name": view.name, "digest": _digest_file(view)} for view in sorted(views)],
+    }
+
+
+def bind_with_mode(binding: Mapping[str, Any], mode: Mapping[str, Any]) -> dict[str, Any]:
+    """PE's binding, with the session mode it agreed with; refused when they disagree."""
+    if mode.get("bundle_revision") != binding.get("bundle_revision"):
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_MISMATCH",
+            f"/coding-agent is bound at bundle {mode.get('bundle_revision')} but Program "
+            f"Execution binds {binding.get('bundle_revision')}; one campaign runs under one "
+            "revision of the execution contract",
+        )
+    ours = {Path(str(view["path"])).name: view["digest"] for view in binding.get("views") or []}
+    theirs = {str(view["name"]): view["digest"] for view in mode.get("views") or []}
+    if ours != theirs:
+        differing = sorted(
+            name for name in set(ours) | set(theirs) if ours.get(name) != theirs.get(name)
+        )
+        raise CampaignAuthorityError(
+            "CODING_AGENT_MODE_MISMATCH",
+            f"/coding-agent and Program Execution load different projection views: {differing}",
+        )
+    return {**dict(binding), "coding_agent_mode": dict(mode)}
 
 
 def record_projection_binding(workspace: Path, binding: Mapping[str, Any]) -> Path:

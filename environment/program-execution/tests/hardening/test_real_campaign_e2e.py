@@ -663,7 +663,7 @@ def test_program_execution_refuses_every_publication_verb() -> None:
     ):
         with pytest.raises(module.CampaignError) as excinfo:
             module.refuse_publication(verb)
-        assert "local-commit-only" in str(excinfo.value)
+        assert "publishes only through the governance SSOT make pr" in str(excinfo.value)
 
 
 def test_no_role_may_hold_a_publication_capability() -> None:

@@ -39,8 +39,10 @@ preparation before an observational validation wave; it runs no kernel.
    The standing finish path is `PR_REMEDIATE=0 make pr` at the **call site**
    (campaign / L4 authorize-release). Unset remediates is 1 only when that
    invocation omits the opt-out. `verify_account_env.py` fails closed on a pin.
-3. For Program Execution campaigns, set `PR_BASE` to
-   `origin/campaign/<campaign_id>` — never open those PRs against `main`.
+3. Program Execution campaigns publish themselves: the runner's `pr` stage
+   runs the SSOT `make pr` with head `campaign/<campaign_id>` and base the
+   target's remote default (`origin/main` here). Do not hand-publish a
+   campaign (CANONICAL_LAW `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`).
 4. Campaign / `make pr` end state: every published PR is **green and
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill

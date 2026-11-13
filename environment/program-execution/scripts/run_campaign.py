@@ -67,24 +67,27 @@ UNTIL_STAGES = (
     "bootstrap",
     "arm",
     "execute",
+    "pr",
 )
 UNTIL_ALIASES = {"bootstrap": "arm"}
-# Kept only so unreachable compatibility helpers can compare their historical
-# stages without becoming public runner stages again.
-LEGACY_PUBLICATION_STAGES = ("pr", "close", "merge")
-STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES + ("pr", "close"))}
+# Stages past `pr` stay refused: merge is /l9-pr-remediation's, never a campaign stage.
+LEGACY_PUBLICATION_STAGES = ("close", "merge")
+STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES + ("close",))}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 FIRST_TASK_ID = "TASK-001"
 PE_MODE_ENV = "L9_PE_MODE"
-# Program Execution is permanently local-commit-only. The historical
-# release variable is retained as a diagnostic compatibility name only; it can
-# never widen runner authority. Publication belongs to root `make pr`; merge
-# belongs to /l9-pr-remediation.
+# PROGRAM_EXECUTION_MAKE_PR_FINISH_V1: a campaign finishes by publishing its
+# verified integration branch through the governance SSOT `make pr`
+# (campaign_publish.py), and only that way. No other publication path exists:
+# run_cmd still refuses every push, PR verb and `make pr`, and merge belongs to
+# /l9-pr-remediation. The historical release variable is a diagnostic
+# compatibility name only; it never widens runner authority.
 PE_RELEASE_ENV = "L9_PE_RELEASE_AUTHORIZED"
-AUTONOMOUS_LAST_STAGE = "execute"
-PUBLICATION_STAGES = ("pr", "close")
+AUTONOMOUS_LAST_STAGE = "pr"
+LOCAL_LAST_STAGE = "execute"
+PUBLICATION_STAGES = ("close",)
 PREPARATION_STAGES = (
     "stack_proof",
     "isolate",
@@ -134,9 +137,9 @@ def release_authorized() -> bool:
 def refuse_publication(action: str) -> None:
     """Fail closed on every remote publication attempt from Program Execution."""
     raise CampaignError(
-        f"Program Execution is permanently local-commit-only; refusing to {action}. "
-        f"Campaign execution ends at '{AUTONOMOUS_LAST_STAGE}' with verified local commits. "
-        "Publish separately with `PR_REMEDIATE=0 make pr`; merge only through "
+        f"Program Execution publishes only through the governance SSOT make pr; refusing to "
+        f"{action}. A campaign ends at '{AUTONOMOUS_LAST_STAGE}', where campaign_publish runs "
+        "`make -C <SSOT> pr WS=<integration worktree>`; merge only through "
         "/l9-pr-remediation. L9_PE_RELEASE_AUTHORIZED cannot widen PE authority."
     )
 
@@ -2019,16 +2022,39 @@ def default_arm(
     }
 
 
-def default_make_pr(worktree: Path, campaign_id: str) -> dict[str, Any]:
-    """Refused. Program Execution never opens a host PR; `make pr` is the operator's.
+def default_make_pr(pec_workspace: Path, campaign_id: str) -> dict[str, Any]:
+    """Publish the completed campaign through the governance SSOT `make pr`.
 
-    The `make pr` implementation that used to sit under this refusal (audit
-    Y7) was unreachable and misread as a live publication path; the runner's
-    only publication behavior is the refusal itself.
+    PROGRAM_EXECUTION_MAKE_PR_FINISH_V1. The target checkout and accepted
+    Blueprint come from the launch pointer the runner wrote at arm; the base is
+    the target's remote default (origin/main for Cursor-Governance). The
+    ceremony, the push, the org PR template and its composer all belong to the
+    SSOT `make pr`; this runner only hands it the verified tree.
     """
-    del worktree, campaign_id
-    refuse_publication("open a host pull request")
-    raise AssertionError("unreachable: refuse_publication raises")  # pragma: no cover
+    module = _load_script("campaign_publish", PE_ROOT / "scripts" / "campaign_publish.py")
+    launch_path = pec_workspace / "runtime" / "LAUNCH.json"
+    try:
+        launch = json.loads(launch_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CampaignError(f"cannot publish: launch pointer unreadable at {launch_path}") from exc
+    target = Path(str(launch.get("target_worktree") or launch.get("target_tree") or ""))
+    blueprint = Path(str(launch.get("blueprint") or ""))
+    if not target.is_dir() or not blueprint.is_dir():
+        raise CampaignError(
+            f"cannot publish: launch pointer names no target/blueprint ({launch_path})"
+        )
+    authority, _invocation = admit_operator_invocation()
+    try:
+        return module.publish_campaign(
+            pec_workspace=pec_workspace,
+            campaign_id=campaign_id,
+            target=target,
+            blueprint=blueprint,
+            base_ref=remote_lineage_ref(target),
+            authority=authority,
+        )
+    except module.PublicationError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
 
 
 def default_pr_status(host_repo: str, number: int | None) -> dict[str, Any]:
@@ -5820,11 +5846,28 @@ def admit_operator_invocation() -> tuple[dict[str, Any], dict[str, Any]]:
     return authority, invocation
 
 
-def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
-    # Live path never honors a skip env. Tests inject Hooks.bind_projection.
+def require_coding_agent_mode(authority: dict[str, Any]) -> dict[str, Any]:
+    """The operator's /coding-agent session mode, or CODING_AGENT_MODE_OFF."""
     module = _campaign_authority_module()
     try:
-        return module.bind_coding_projection(GOV_ROOT, authority)
+        return module.coding_agent_mode(authority)
+    except module.CampaignAuthorityError as exc:
+        raise CampaignError(str(exc), error_code=exc.code) from exc
+
+
+def default_bind_projection(authority: dict[str, Any]) -> dict[str, Any]:
+    """Bind at bootstrap and resume, only while the operator has /coding-agent on.
+
+    The session mode is read first (CODING_AGENT_MODE_OFF unless ACTIVE), the
+    pipeline then binds through the profile's own status reader, and the two
+    must name the same bundle revision and view digests
+    (CODING_AGENT_MODE_MISMATCH). Live path never honors a skip env; tests
+    inject Hooks.bind_projection.
+    """
+    module = _campaign_authority_module()
+    try:
+        mode = module.coding_agent_mode(authority)
+        return module.bind_with_mode(module.bind_coding_projection(GOV_ROOT, authority), mode)
     except module.CampaignAuthorityError as exc:
         raise CampaignError(str(exc), error_code=exc.code) from exc
 
@@ -5876,6 +5919,42 @@ def resumed_stage_timer(timing: Any, pec_workspace: Path) -> Any:
     if isinstance(stages, list):
         timer.stages = [dict(item) for item in stages if isinstance(item, dict) and "stage" in item]
     return timer
+
+
+def publish_completed_campaign(
+    report: CampaignReport,
+    pec_workspace: Path,
+    campaign_id: str,
+    *,
+    executed: bool,
+    hooks: Hooks,
+    trace: pe_trace.ExecutionTrace | None,
+) -> CampaignReport:
+    """The `pr` stage: every task COMPLETED, then the governance SSOT `make pr`.
+
+    The campaign's last act. Nothing merges here; the PR it opens is handed to
+    /l9-pr-remediation like any other.
+    """
+    if not executed:
+        raise CampaignError(
+            "refuse to publish before every task is COMPLETED",
+            exit_code=2,
+            error_code="CAMPAIGN_NOT_COMPLETE",
+        )
+    log(f"publish {campaign_id} through the governance SSOT make pr")
+    with traced(trace, "pr", "make_pr_ssot"):
+        publication = (hooks.make_pr or default_make_pr)(pec_workspace, campaign_id)
+    report.host_pr = str(publication.get("url") or "")
+    number = publication.get("number")
+    report.host_pr_number = int(number) if number is not None else None
+    report.program_blockers = []
+    report.stages_completed.append("pr")
+    log(
+        f"campaign complete: published {report.host_pr} "
+        f"(head {publication.get('head_branch')} -> {publication.get('base')}); "
+        "merge stays /l9-pr-remediation"
+    )
+    return report
 
 
 def resume_live_campaign(
@@ -5983,7 +6062,7 @@ def resume_live_campaign(
                     pec_workspace,
                     campaign_id,
                     hooks=hooks,
-                    live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                    live_prs=False,
                     trace=trace,
                     timer=timer,
                 )
@@ -6009,30 +6088,11 @@ def resume_live_campaign(
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
+        log("campaign complete: local commits only (until=execute); not published")
         return report
-    if not executed:
-        raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
-    # Everything past this line is publication and the runner refuses it. The
-    # push / make pr / PR-report block that used to follow was unreachable
-    # (audit Y7) and read as a live publication path; it is gone.
-    refuse_publication("publish the campaign")
-    if not should_run(until, "close"):
-        return report  # pragma: no cover - refuse_publication raises
-    with traced(trace, "close", "close"):
-        if hooks.close is not None:
-            hooks.close(pec_workspace, campaign_id)
-        else:
-            default_close(
-                pec_workspace,
-                campaign_id,
-                write_root=write_root,
-                host_repo=host_repo,
-                hooks=hooks,
-                merge_recorded=requested_until in {"merge", "close"},
-            )
-    report.program_blockers = []
-    report.stages_completed.append("close")
+    report = publish_completed_campaign(
+        report, pec_workspace, campaign_id, executed=executed, hooks=hooks, trace=trace
+    )
     return report
 
 
@@ -6724,10 +6784,8 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     compile_generation = run.compile_generation
     ensure_target_checkout_once = run.ensure_target_checkout_once
     hooks = run.hooks
-    host_repo = run.host_repo
     report = run.report
     repository_id = run.repository_id
-    requested_until = run.requested_until
     reuse = run.reuse
     scoped_resume = run.scoped_resume
     seed = run.seed
@@ -6886,7 +6944,7 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
                     pec_workspace,
                     campaign_id,
                     hooks=hooks,
-                    live_prs=should_run(until, "pr") and hooks.make_pr is None,
+                    live_prs=False,
                     trace=trace,
                     timer=timer,
                 )
@@ -6909,36 +6967,11 @@ def _stage_runtime(run: _CampaignRun) -> CampaignReport:
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
+        log("campaign complete: local commits only (until=execute); not published")
         return report
-
-    if not executed:
-        raise CampaignError(
-            "refuse host-only merge before all tasks COMPLETED",
-            exit_code=2,
-        )
-    # Publication is refused here; the push / make pr / PR-report block that
-    # used to follow was unreachable (audit Y7) and is gone.
-    refuse_publication("publish the campaign")
-    if not should_run(until, "close"):
-        return report  # pragma: no cover - refuse_publication raises
-
-    close = hooks.close or default_close
-    with traced(trace, "close", "close"):
-        if hooks.close is not None:
-            close(pec_workspace, campaign_id)
-        else:
-            default_close(
-                pec_workspace,
-                campaign_id,
-                write_root=write_root,
-                host_repo=host_repo,
-                hooks=hooks,
-                merge_recorded=requested_until in {"merge", "close"},
-            )
-    report.program_blockers = []
-    report.stages_completed.append("close")
-    return report
+    return publish_completed_campaign(
+        report, pec_workspace, campaign_id, executed=executed, hooks=hooks, trace=trace
+    )
 
 
 def _run_campaign_stages(
@@ -6959,7 +6992,7 @@ def _run_campaign_stages(
     requested_until = until
     until = normalize_until(until)
     hooks = hooks or Hooks()
-    admit_operator_invocation()
+    campaign_authority, _invocation = admit_operator_invocation()
     fast = fast_mode(fast)
     timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
     timer = timing.StageTimer()
@@ -6988,8 +7021,16 @@ def _run_campaign_stages(
         until=until,
         worktree=worktree,
     )
+    finished = _stage_classify_and_prime(run)
+    if finished is not None:
+        return finished
+    if hooks.bind_projection is None:
+        # The input is classified (a rejected input is answered first); refuse
+        # before isolation, compile or any write when the operator's
+        # /coding-agent mode is off. Bootstrap and resume check it again and
+        # bind against it, so a mode turned off mid-campaign still stops.
+        require_coding_agent_mode(campaign_authority)
     for stage in (
-        _stage_classify_and_prime,
         _stage_isolate_and_emit,
         _stage_blueprint,
         _stage_admit,
@@ -7062,9 +7103,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
         default=AUTONOMOUS_LAST_STAGE,
         help=(
-            "Last stage to run. Autonomous execution ends at "
-            f"'{AUTONOMOUS_LAST_STAGE}' with local commits; {PUBLICATION_STAGES} "
-            f"require the release transition ({PE_RELEASE_ENV})"
+            "Last stage to run. A campaign ends at "
+            f"'{AUTONOMOUS_LAST_STAGE}', publishing through the governance SSOT make pr; "
+            f"'{LOCAL_LAST_STAGE}' stops at verified local commits. {PUBLICATION_STAGES} "
+            "and merge are refused"
         ),
     )
     parser.add_argument("--primary", type=Path, default=None)
@@ -7106,13 +7148,14 @@ def refuse_live_until_shortcut(until: str) -> None:
         # Reaching a publication stage at all requires the release transition.
         refuse_publication(f"run the campaign through '{resolved}'")
         return
-    if resolved == AUTONOMOUS_LAST_STAGE:
+    if resolved in {AUTONOMOUS_LAST_STAGE, LOCAL_LAST_STAGE}:
         return
     if os.environ.get("L9_CAMPAIGN_UNTIL_DEBUG") == "1":
         return
     raise CampaignError(
-        "CAMPAIGN_UNTIL is not a live campaign path; make campaign runs through "
-        f"'{AUTONOMOUS_LAST_STAGE}' and stops at local commits. "
+        "CAMPAIGN_UNTIL is not a live campaign path; a campaign runs through "
+        f"'{AUTONOMOUS_LAST_STAGE}' (SSOT make pr) or stops at '{LOCAL_LAST_STAGE}' "
+        "with local commits. "
         "Set L9_CAMPAIGN_UNTIL_DEBUG=1 only for runner tests."
     )
 

@@ -1897,3 +1897,76 @@ SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
 `environment/contracts/autonomy/MANIFEST.yaml`
 (`program-execution-autonomy-consumer`),
 `environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_MAKE_PR_FINISH_V1 -->
+## Program Execution finishes with the SSOT make pr (2026-11-13) — supersedes item 5 of PROGRAM_EXECUTION_MANUAL_STAGE_V1, and §6.2.2 item 3 / §6.2.3 where they bind Program Execution campaigns to a `campaign/<campaign_id>` PR base
+
+Append-only. Operator decision, 2026-11-13: when a campaign is finished,
+Program Execution publishes it through the governance SSOT `make pr`, which
+fires the org PR template and its composer. Agents and operators do not
+hand-publish a campaign. Every other item of PROGRAM_EXECUTION_MANUAL_STAGE_V1
+is unchanged: explicit operator invocation, no ambient routing, no make
+target, the projection binding at bootstrap, and absence as retirement.
+
+1. **One finish, one route.** After every task is COMPLETED (executed in its
+   worker window, verified by the Controller, integrated into
+   `campaign/<campaign_id>`), the runner's `pr` stage runs exactly
+   `make -C <SSOT> pr WS=<campaign integration worktree>` with
+   `PR_REMEDIATE=0`, `PR_BASE=<target remote default>` and an empty
+   `PR_STACK`. The SSOT is `L9_GOVERNANCE_DIR`, else
+   `$HOME/.cursor-governance`. That `make pr` owns the gate, the push, the org
+   template and the composer; Program Execution owns none of them.
+2. **Head and base.** The head is the campaign integration branch
+   `campaign/<campaign_id>`, built from the target's remote default and
+   carrying only verified task fan-in. The base is that remote default
+   (`origin/main` for Cursor-Governance). One campaign, one pull request. A
+   remote `origin/campaign/<campaign_id>` is not created.
+3. **What the runner does before the ceremony.** It refuses a dirty or empty
+   integration tree, runs `l4_local.py begin` and `authorize-release` on that
+   exact verified tree, and writes `.l9/pr/pr-intent.json` from the accepted
+   Blueprint (program name, objective, task cards) bound to the head. It
+   records the result in `runtime/PUBLICATION.json` and the ceremony's output
+   in `runtime/publication.log`. A failed `make pr` is the campaign's failure;
+   it is not retried by another route.
+4. **Nothing else publishes.** Raw `git push`, `gh pr create`, REST pull
+   request writes, `make pr` from any other checkout or argv, task pull
+   requests, and every merge transport stay refused at the runner's `run_cmd`
+   choke point. Worker windows never publish. Merge stays
+   `/l9-pr-remediation`, under that path's own authority.
+5. **Stopping early stays possible.** `until=execute` ends at verified local
+   commits and publishes nothing.
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution.publication`),
+`environment/program-execution/scripts/campaign_publish.py`,
+`environment/program-execution/scripts/campaign_authority.py`.
+
+<!-- PROGRAM_EXECUTION_REGISTERED_STAGE_V1 -->
+## Program Execution registered stage, gated by /coding-agent (2026-11-13) — supersedes item 4 of PROGRAM_EXECUTION_MANUAL_STAGE_V1 and moves Program Execution from `manual` to `registered`
+
+Append-only. Operator decision, 2026-11-13. Items 1–3 and 5–7 of
+PROGRAM_EXECUTION_MANUAL_STAGE_V1 and all of PROGRAM_EXECUTION_MAKE_PR_FINISH_V1
+are unchanged.
+
+1. **`make campaign` is registered.** The root Make graph composes
+   `ops/make/campaign.mk`, which carries exactly `campaign` and
+   `campaign-check-input`. `ops/make/program-execution.mk` stays uncomposed,
+   and root autonomy, L4 and publication still never require Program
+   Execution.
+2. **Still explicit.** Registration adds a front door, not a trigger. A
+   campaign runs only on the operator's own words for that run
+   (`L9_PE_OPERATOR_INVOCATION`), no skill routes to it, SessionStart does not
+   advertise it, and an agent never starts one on its own initiative.
+3. **`/coding-agent` is the switch.** At bootstrap and at every resume the
+   runner reads the operator's `/coding-agent` session mode for the invoking
+   workspace (`.l9/coding-agent-mode/session.json`, bound to the host session
+   that turned it on) through the SSOT's own mode command. Anything but
+   `ACTIVE` refuses with `CODING_AGENT_MODE_OFF`. The runner then binds the
+   coding-agent execution projection itself and refuses with
+   `CODING_AGENT_MODE_MISMATCH` unless the mode's bundle revision and view
+   digests equal its own. Both are recorded with the campaign.
+4. **Declared, not assumed.** `campaign_execution.projection_binding` declares
+   `required_mode: coding-agent` and the mode runner; the runner's authority
+   check refuses a profile that drops either (`PROJECTION_MODE_UNDECLARED`).
+
+SSOT: `ops/autonomy/surface_profile.yaml` (`campaign_execution`),
+`ops/make/campaign.mk`, `environment/program-execution/scripts/campaign_authority.py`.

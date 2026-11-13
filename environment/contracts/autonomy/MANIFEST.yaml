@@ -75,7 +75,7 @@ artifacts:
     first_class_artifact: true
     version: 1.0.0
     status: active
-    stage: manual # retired -> manual -> registered; CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1
+    stage: registered # retired -> manual -> registered; CANONICAL_LAW PROGRAM_EXECUTION_REGISTERED_STAGE_V1
     canonical_path: environment/program-execution/integrations/autonomy-control-plane/
     provider_manifest: environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml
     provider_id: root-autonomy-control-plane
@@ -91,13 +91,17 @@ artifacts:
       runs one way. Root autonomy, L4 and publication do not require, import
       or resolve through Program Execution, and this entry is not a required
       artifact: deleting Program Execution leaves this registry valid once the
-      entry is removed with it.
+      entry is removed with it. A finished campaign publishes once, through the
+      governance SSOT make pr (PROGRAM_EXECUTION_MAKE_PR_FINISH_V1); publication
+      still never depends on Program Execution.
     meta: meta/program-execution-autonomy-consumer.meta.md
     consumed_by:
       - environment/program-execution/scripts/run_campaign.py
     not_for:
       - ambient_or_agent_initiated_campaigns
-      - a_root_make_target_before_the_registered_stage
+      - a_root_make_target_other_than_make_campaign
+      - a_campaign_while_the_operator_session_has_coding_agent_off
+      - publication_other_than_the_ssot_make_pr
       - root_autonomy_depending_on_program_execution
   - artifact_id: context-sensitive-git-guardrails
     kind: destructive_risk_gate

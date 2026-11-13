@@ -141,5 +141,8 @@ contract digest the lease was issued for.
 - `requested_actions` is the ceiling: `local_write` never implies `commit`,
   Program Execution retains `commit`, and the provider receives only delegated
   actions.
-- Push, pull request, and merge stay forbidden on this autonomous path.
-- Program Execution remains local-commit-only.
+- Push, pull request, and merge stay forbidden on this autonomous path:
+  worker windows never publish.
+- The campaign's one publication is the runner's own `pr` stage through the
+  governance SSOT `make pr` (`PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`); it is not
+  a worker effect and no worker grant authorizes it.

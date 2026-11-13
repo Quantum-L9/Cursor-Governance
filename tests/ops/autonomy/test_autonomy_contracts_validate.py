@@ -68,7 +68,7 @@ def test_the_consumer_entry_agrees_with_the_surface_profile() -> None:
 def test_a_consumer_that_disagrees_with_the_profile_fails() -> None:
     mod = _load()
     for key, value, needle in (
-        ("stage", "registered", "disagrees with the surface profile"),
+        ("stage", "manual", "disagrees with the surface profile"),
         ("invocation", "ambient", "invocation must be explicit_operator_only"),
         ("provider_id", "someone-else", "provider_id must be root-autonomy-control-plane"),
         ("effect_hook", "missing/hook.py", "missing effect_hook path"),

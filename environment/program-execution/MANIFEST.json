@@ -19,7 +19,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "29f58e93992ca11ca9ece8a66a88718b5daebadb2c11f11da39b5c621aaeb849"
+      "sha256": "b49d14b085c801ba79831ce41a643c43b54295f0f669e678b531d41b8bc079fd"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -459,7 +459,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "100a7e12b6c5a40eea558daf6b47edc53d80d10f60fc2d957d4a264cb09f4bc6"
+      "sha256": "63f43c56fb04b1e582d4804264a0f12bbf1b4fda42f1c69a9c4b82f156a4882b"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -495,7 +495,7 @@
     },
     {
       "path": "campaigns/README.md",
-      "sha256": "26434fa8d579b13ce0aaf5aa6d88923ecf3527b6523ccbc62f43ef8afccaff48"
+      "sha256": "183037af2f7fb89538a817e80ede8396bf4c109ff9eb8b4065ecf59431ac1ccd"
     },
     {
       "path": "campaigns/adr-identity-integrity-v1/CAMPAIGN_SOURCE.yaml",
@@ -1531,7 +1531,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/README.md",
-      "sha256": "7b0de0a0073210408075e30d43dc3381371bde68715ba0d6c2a783a20092093a"
+      "sha256": "11fad4ed4c05e43448d7e3edcc5efa8502eb97aa43d32226542e46605e345e84"
     },
     {
       "path": "integrations/autonomy-control-plane/bridge.py",
@@ -2027,7 +2027,7 @@
     },
     {
       "path": "scripts/campaign_authority.py",
-      "sha256": "e01fff383fac705eccf3e3810c82ed0b601e5520b28f2a75040846d94921235d"
+      "sha256": "c5fdb95b9a81a744c0feff02f64a2ef2420aacf0262beafd2c2cfb20e4eebbf6"
     },
     {
       "path": "scripts/campaign_exec.py",
@@ -2040,6 +2040,10 @@
     {
       "path": "scripts/campaign_pr_copy.py",
       "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
+    },
+    {
+      "path": "scripts/campaign_publish.py",
+      "sha256": "1fb7461da4365d7c5c2ca844ea147520fd0a2394166fde149b6b5582783d5b83"
     },
     {
       "path": "scripts/collect_evidence.py",
@@ -2119,7 +2123,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "e9953c0bd567556eedf5518d2b3413c009e054b2ad021f2ac2ffa7e54b1a536f"
+      "sha256": "d411bc78f2910e7b8f33eefa81c56aefebd982d84082293b85ec689627537ce1"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2151,7 +2155,7 @@
     },
     {
       "path": "scripts/tests/test_campaign_authority.py",
-      "sha256": "b72b62d6e8a077dca37027240590d32e3f277f1fe0647bddbf84555af230639e"
+      "sha256": "6061860551b64145f50784b1debebf15a71ab62b4861f16b51f1ed1df9d67c73"
     },
     {
       "path": "scripts/tests/test_campaign_input_front_door.py",
@@ -2160,6 +2164,10 @@
     {
       "path": "scripts/tests/test_campaign_pr_copy.py",
       "sha256": "ead6054e3c6332980b8083cedc4cf296355d1ef681248d3b247035fd650c8144"
+    },
+    {
+      "path": "scripts/tests/test_campaign_publish.py",
+      "sha256": "84679d1bedacd4f7edb1be89e05dd635e33f6b7462368993ff480795f0ed18d3"
     },
     {
       "path": "scripts/tests/test_campaign_tunnel_airtight.py",
@@ -2203,7 +2211,7 @@
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
-      "sha256": "f6b06e8e0c1a3602b933e4e44000be55c23f97159489e36154da646b32b2288c"
+      "sha256": "4d4c1e6e45982e561b5a3f111e76d34f3f75522d158fc3cc0e77f1270be73c06"
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
@@ -2215,7 +2223,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "13a67fe2798702afb6483d9dde4967ae8b7d720ca8ffeae2f557cf93e979af25"
+      "sha256": "85aef7d829e96504efa4111182fcde12a0cf8e7834d84dcdc77476405efd91c0"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -2251,7 +2259,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "2187d57a8d43f7496d07e7b81e6248800473d8704762249556113031995c3c14"
+      "sha256": "e7dda71cc8a52e6ecb5e749a4c845ae92ca58ac254c4505994a9c4d14fe7a3d0"
     },
     {
       "path": "scripts/tests/test_run_campaign_repairs.py",
@@ -2351,7 +2359,7 @@
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "99b9aacbaff0ec80b0d1cdbf878bd093488af3f9e42591e6146a8b6f980e8f94"
+      "sha256": "5de456b9b572cccfba076fdec2bff8076217dd99cec1d37f1a3c9377b5f39123"
     },
     {
       "path": "tests/test_adapter_cli.py",

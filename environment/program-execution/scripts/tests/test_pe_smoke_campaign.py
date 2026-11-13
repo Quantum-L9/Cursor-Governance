@@ -543,7 +543,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             # The run carries who asked for it and what the pipeline was bound to.
             invocations = json.loads((workspace / "runtime/INVOCATION.json").read_text("utf-8"))
             self.assertEqual(len(invocations["invocations"]), 1)
-            self.assertEqual(invocations["invocations"][0]["stage"], "manual")
+            self.assertEqual(invocations["invocations"][0]["stage"], "registered")
             binding = json.loads(
                 (workspace / "runtime/coding-projection-binding.json").read_text("utf-8")
             )
