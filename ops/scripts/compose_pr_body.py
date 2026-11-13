@@ -193,6 +193,24 @@ REQUIRED_TEMPLATE_HEADINGS = (
 REQUIRED_TEMPLATE_REGIONS = (REGION_FILES,)
 #: pr-files.yml wrapped the inventory in <details> past this many rows.
 COLLAPSE_AFTER = 60
+#: GitHub refuses a pull-request body longer than this (HTTP 422 "Validation Failed").
+GITHUB_BODY_LIMIT = 65536
+#: The composer keeps its body under this, leaving room for what the publish
+#: scripts append (stack note, protected-root stamp) below the 65,536 limit.
+BODY_BUDGET = 60000
+#: Compaction levels, applied in order only while a body is over BODY_BUDGET:
+#: 1 = Fix lists commit subjects without bodies; 2 = Changes by intent lists
+#: every path without its per-path reason. Path rows are never dropped:
+#: --check-body proves every changed path is declared in both inventories.
+COMPACT_LEVELS = (0, 1, 2)
+COMPACT_FIX_NOTE = (
+    "_Commit messages are omitted: the full body exceeds GitHub's 65,536-character limit. "
+    "Read them with `git log`._"
+)
+COMPACT_INTENT_NOTE = (
+    "_Per-path reasons are omitted: the full body exceeds GitHub's 65,536-character limit. "
+    "Every changed path is still listed once._"
+)
 STATUS_WORDS = {
     "A": "added",
     "M": "modified",
@@ -316,6 +334,8 @@ class MechanicalFacts:
     breakglass: dict[str, Any] | None = None
     head: str = ""
     campaign_body: str = ""
+    # How far the body was compacted to fit GitHub's limit (COMPACT_LEVELS).
+    compact: int = 0
     template_path: str = ""
     # "<owner>/.github@<commit>" of the canonical template, when resolved.
     template_revision: str = ""
@@ -960,8 +980,12 @@ def range_fix(facts: MechanicalFacts) -> str:
     lines: list[str] = []
     for subject, body in zip(facts.commits, bodies, strict=False):
         lines.append(f"- {subject}")
+        if facts.compact >= 1:
+            continue
         for para in _later_paragraphs(body):
             lines.extend(f"  {line}" for line in para.splitlines())
+    if facts.compact >= 1:
+        lines += ["", COMPACT_FIX_NOTE]
     return "\n".join(lines)
 
 
@@ -1541,10 +1565,10 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
         # words: it is remeasured every refresh, so an own commit that now
         # touches the path replaces it instead of leaving a false "no commit".
         if not why or why.startswith((NO_OWN_COMMIT, LEGACY_NO_OWN_COMMIT)):
-            why = path_why(facts, row.path)
+            why = "" if facts.compact >= 2 else path_why(facts, row.path)
             if row.old_path:
-                why = f"{why} ({row.word})"
-        bullet = f"- `{row.key}` — {why}"
+                why = f"{why} ({row.word})" if why else row.word
+        bullet = f"- `{row.key}` — {why}" if why else f"- `{row.key}`"
         if row.old_path:
             groups["Renamed"].append(bullet)
         elif row.status.startswith("A"):
@@ -1554,6 +1578,8 @@ def render_changes_by_intent(facts: MechanicalFacts, keep_why: dict[str, str] | 
         else:
             groups["Modified"].append(bullet)
     block = [INTENT_PROVENANCE, INTENT_NOTE, ""]
+    if facts.compact >= 2:
+        block += [COMPACT_INTENT_NOTE, ""]
     for heading, bullets in groups.items():
         # Renamed/copied is the one group the template never had; show it only
         # when it has rows so a rename-free body keeps the template's shape.
@@ -2324,6 +2350,19 @@ def _refresh_derived(body: str, facts: MechanicalFacts, template: Callable[[], s
 
 
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
+    """Compose the body, compacting it only as far as GitHub's size limit needs."""
+    result = _compose_pr_body_once(facts, template)
+    for level in COMPACT_LEVELS[1:]:
+        if len(result.body) <= BODY_BUDGET:
+            break
+        facts.compact = level
+        result = _compose_pr_body_once(facts, template)
+    if facts.compact:
+        result.mechanical_filled.append(f"compacted to GitHub's body limit (level {facts.compact})")
+    return result
+
+
+def _compose_pr_body_once(facts: MechanicalFacts, template: str | None) -> ComposeResult:
     parts: list[str] = []
     filled = [
         "commits",
@@ -2391,6 +2430,26 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
 
 
 def refresh_body(
+    existing: str,
+    facts: MechanicalFacts,
+    *,
+    remote: bool = False,
+    template: Callable[[], str] | None = None,
+) -> tuple[str, str]:
+    """Refresh the machine-owned regions, compacted as far as GitHub's limit needs.
+
+    See ``_refresh_body_once`` for the region rules.
+    """
+    body, status = _refresh_body_once(existing, facts, remote=remote, template=template)
+    for level in COMPACT_LEVELS[1:]:
+        if status == "unmanaged" or len(body) <= BODY_BUDGET:
+            break
+        facts.compact = level
+        body, status = _refresh_body_once(existing, facts, remote=remote, template=template)
+    return body, status
+
+
+def _refresh_body_once(
     existing: str,
     facts: MechanicalFacts,
     *,
