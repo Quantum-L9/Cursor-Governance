@@ -100,7 +100,15 @@ def check_operating_protocol(protocol: Any) -> None:
 CTO_SESSION_PLACEHOLDER = "{cto_session}"
 # A child launch prompt must carry the transcript reporting route and must never name a
 # cross-session send tool: a later message cannot override a launch system prompt.
-CHILD_PROMPT_REQUIRED = ("CTO-STATUS:", "CTO-QUESTION:", "CTO-BLOCKER:", CTO_SESSION_PLACEHOLDER)
+CHILD_PROMPT_REQUIRED = (
+    "CTO-STATUS:",
+    "CTO-QUESTION:",
+    "CTO-BLOCKER:",
+    CTO_SESSION_PLACEHOLDER,
+    # Every swarm agent is deployed with the coding-agent projections enabled.
+    'coding_agent_mode.py" on',
+    "ACTIVE",
+)
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
 
 

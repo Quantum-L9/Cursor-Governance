@@ -336,7 +336,7 @@ def test_child_prompt_renders_the_reporting_route_and_names_no_send_tool() -> No
     assert "send_message" not in text
     assert "never call a cross-session messaging tool" in text
     assert "Never ask the operator to approve publishing" in text
-    assert "non-shallow" in text
+    assert "a shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED" in text
 
 
 def test_child_prompt_cli_prints_plain_text(tmp_path: Path) -> None:
@@ -369,7 +369,8 @@ def test_child_prompt_requires_a_cto_session() -> None:
         ("", "CHILD_SYSTEM_PROMPT_MALFORMED"),
         ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
         (
-            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: report via send_message",
+            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: "
+            'coding_agent_mode.py" on ACTIVE; report via send_message',
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
         ),
     ],
@@ -380,4 +381,25 @@ def test_malformed_child_prompt_fails_closed(tmp_path: Path, template: str, reas
     path = tmp_path / "MODE.yaml"
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
     with pytest.raises(cto_mode.ContractError, match=reason):
+        cto_mode.load_contract(path)
+
+
+def test_child_prompt_deploys_agents_with_coding_agent_mode_enabled() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "session_cto_z")
+    assert 'ops/autonomy/coding_agent_mode.py" on --workspace' in text
+    assert "Make NO code change until it reports ACTIVE" in text
+    assert "WITHOUT --depth" in text
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert "not counted as deployed until" in " ".join(protocol["child_launch_rules"])
+    assert "coding-agent mode is ACTIVE" in " ".join(protocol["check_in"])
+
+
+def test_child_prompt_without_coding_agent_mode_fails_closed(tmp_path: Path) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    doc["operating_protocol"]["child_system_prompt"] = (
+        "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: ACTIVE, start coding now."
+    )
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match="CHILD_SYSTEM_PROMPT_INCOMPLETE"):
         cto_mode.load_contract(path)
