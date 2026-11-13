@@ -75,7 +75,7 @@ artifacts:
     first_class_artifact: true
     version: 1.0.0
     status: active
-    stage: manual # retired -> manual -> registered; CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1
+    stage: registered # retired -> manual -> registered; CANONICAL_LAW PROGRAM_EXECUTION_REGISTERED_STAGE_V1
     canonical_path: environment/program-execution/integrations/autonomy-control-plane/
     provider_manifest: environment/program-execution/integrations/autonomy-control-plane/PROVIDER.yaml
     provider_id: root-autonomy-control-plane
@@ -99,7 +99,8 @@ artifacts:
       - environment/program-execution/scripts/run_campaign.py
     not_for:
       - ambient_or_agent_initiated_campaigns
-      - a_root_make_target_before_the_registered_stage
+      - a_root_make_target_other_than_make_campaign
+      - a_campaign_while_the_operator_session_has_coding_agent_off
       - publication_other_than_the_ssot_make_pr
       - root_autonomy_depending_on_program_execution
   - artifact_id: context-sensitive-git-guardrails

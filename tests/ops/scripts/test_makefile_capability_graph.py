@@ -92,7 +92,11 @@ def _make_fragments() -> list[str]:
         re.MULTILINE,
     )
     assert match is not None, "Repo.mk must declare the fragment composition list"
-    return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
+    listed = [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
+    # Repo.mk is additive_only: a fragment registered after the list was frozen
+    # is composed by an appended `include` line instead of a rewritten list.
+    appended = re.findall(r"^include (ops/make/[A-Za-z0-9_.-]+\.mk)$", text, re.MULTILINE)
+    return [*listed, *appended]
 
 
 def _consumer_safe_targets() -> list[str]:
@@ -106,9 +110,9 @@ def _consumer_safe_targets() -> list[str]:
     return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
 
 
-# Program Execution is an eviction target (CANONICAL_LAW
-# PUBLISH_ASSURANCE_DECOUPLING_V1): its fragment stays on disk until its own
-# eviction slice, but the surviving root capability graph must not require it.
+# Program Execution's own fragment stays uncomposed: at the registered stage
+# (CANONICAL_LAW PROGRAM_EXECUTION_REGISTERED_STAGE_V1) only `campaign` and
+# `campaign-check-input` join the root graph, from ops/make/campaign.mk.
 EVICTED_FRAGMENTS = {"ops/make/program-execution.mk"}
 
 

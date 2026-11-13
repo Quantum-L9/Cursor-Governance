@@ -14,8 +14,8 @@ tags: [l9, autonomy, program-execution, consumer_binding, first_class]
 # Program Execution autonomy consumer — metadata
 
 **SSOT path:** `environment/program-execution/integrations/autonomy-control-plane/`
-**Stage:** `manual` (`ops/autonomy/surface_profile.yaml` → `campaign_execution`)
-**Law:** `CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`, `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`
+**Stage:** `registered` (`make campaign`) (`ops/autonomy/surface_profile.yaml` → `campaign_execution`)
+**Law:** `CANONICAL_LAW.md` `PROGRAM_EXECUTION_MANUAL_STAGE_V1`, `PROGRAM_EXECUTION_MAKE_PR_FINISH_V1`, `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`
 
 ## Purpose
 
@@ -33,7 +33,8 @@ publication never require, import or resolve through Program Execution.
 ## Not for
 
 - a campaign no operator explicitly asked for;
-- a root make target before the `registered` stage;
+- a root make target other than `make campaign`;
+- a campaign while the operator's session has `/coding-agent` off;
 - making root autonomy depend on Program Execution;
 - publishing a campaign any way but its own `pr` stage through the governance
   SSOT `make pr`.

@@ -215,18 +215,20 @@ pr_stacking:
     release_authorized: allow_scoped_push_and_pr
 
 # Program Execution — connected to this profile, explicit operator invocation only.
-# Stage ladder: retired -> manual -> registered. `manual` is the stage in force
-# (CANONICAL_LAW PROGRAM_EXECUTION_MANUAL_STAGE_V1): the pipeline runs only when
-# the operator asks for it in their own words, no make target is registered, no
-# skill routes to it, and SessionStart does not advertise it. This block is the
+# Stage ladder: retired -> manual -> registered. `registered` is the stage in
+# force (CANONICAL_LAW PROGRAM_EXECUTION_REGISTERED_STAGE_V1, 2026-11-13): the
+# root Make graph composes `make campaign` (ops/make/campaign.mk), and the
+# pipeline still runs only when the operator asks for it in their own words and
+# has /coding-agent on; no skill routes to it, and SessionStart does not
+# advertise it. This block is the
 # authority the campaign runner reads; with the block absent, or its stage not
 # one the runner knows, Program Execution executes nothing.
 # SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
 campaign_execution:
-  stage: manual
+  stage: registered
   invocation: explicit_operator_only
   ambient_routing: forbidden # no skill route, no SessionStart probe, no agent initiative
-  make_target: not_registered # the root Make graph does not compose the PE fragment
+  make_target: campaign # ops/make/campaign.mk; ops/make/program-execution.mk stays uncomposed
   runner: environment/program-execution/scripts/run_campaign.py
   # The operator's own words, verbatim, in the runner's environment. A bare flag
   # (1 / true / yes) is refused, and an agent never sets it for itself.
@@ -274,9 +276,17 @@ campaign_execution:
   projection_binding:
     profile_ref: l9.projection/coding-agent-execution@1
     binding: governance/authority-bindings/coding-agent-execution.yaml
-    # The same selection /coding-agent binds for a session; the pipeline binds
-    # it for a campaign, without a session and without the skill.
+    # The same selection /coding-agent binds for a session. The operator's
+    # /coding-agent switch gates the pipeline: at bootstrap and resume the
+    # runner reads that session's mode (.l9/coding-agent-mode/session.json in
+    # the invoking workspace, via mode_runner) and refuses CODING_AGENT_MODE_OFF
+    # unless it is ACTIVE, then refuses CODING_AGENT_MODE_MISMATCH unless the
+    # mode's bundle revision and view digests equal the pipeline's own binding.
     mode_contract: governance/coding-agent-mode/MODE.yaml
+    required_mode: coding-agent
+    mode_runner: ops/autonomy/coding_agent_mode.py # the SSOT's, as /coding-agent runs it
+    mode_state: .l9/coding-agent-mode/session.json
+    mode_workspace_env: L9_PE_MODE_WORKSPACE # else the invoking working directory
     required_at: bootstrap
     record: runtime/coding-projection-binding.json
   campaigns:

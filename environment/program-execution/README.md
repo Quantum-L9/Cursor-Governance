@@ -45,6 +45,13 @@ make -C "$HOME/.cursor-governance" campaign INTENT=<path>
 `campaign-architecture` is retained only as a compatibility alias to this same
 front door. It does not force or override input classification.
 
+Entry (registered stage, `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`): with
+`/coding-agent on` in the invoking session and workspace,
+`L9_PE_OPERATOR_INVOCATION="<operator's words>" make -C "$HOME/.cursor-governance"
+campaign INTENT=<path> WS="$PWD"`. The runner refuses `CODING_AGENT_MODE_OFF`
+unless that mode is ACTIVE, and `CODING_AGENT_MODE_MISMATCH` unless it binds the
+same projection revision and views the pipeline does.
+
 `run_campaign.py` compiles seeds, admits the Blueprint, boots
 pec without a draft flag, and executes every task to **verified local
 commits** on `campaign/<campaign_id>`, then finishes with its `pr` stage

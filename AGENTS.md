@@ -2500,3 +2500,19 @@ Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_MAKE_PR_FINISH_V
 - When the `pr` stage fails, read `runtime/publication.log` in the campaign's
   pec workspace and repair what the gate reported, then resume the campaign.
   Do not push or open the pull request another way.
+
+<!-- PROGRAM_EXECUTION_REGISTERED_STAGE_V1 -->
+## Program Execution registered stage (2026-11-13) — supersedes "There is still no `make campaign`" in the 2026-11-12 manual-stage section
+
+Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_REGISTERED_STAGE_V1`.
+
+- When the operator asks for a campaign, the entry is:
+  `L9_PE_OPERATOR_INVOCATION="<their words>" make -C "$HOME/.cursor-governance" campaign INTENT=<path> WS="$PWD"`.
+  Classify the input first with `make campaign-check-input INTENT=<path> WS="$PWD"`.
+  `INTENT` is resolved against `WS` when relative.
+- `/coding-agent on` must be active in that session and that `WS` first. The
+  runner refuses `CODING_AGENT_MODE_OFF` otherwise; turn it on, do not work
+  around it, and never set `L9_PE_MODE_WORKSPACE` to a workspace the operator
+  did not turn it on in.
+- Do not start, resume or offer to run a campaign on your own initiative, and
+  never set `L9_PE_OPERATOR_INVOCATION` yourself.
