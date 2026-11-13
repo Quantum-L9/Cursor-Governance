@@ -60,6 +60,59 @@ def test_json_format_keeps_the_status_exit_code(tmp_path: Path) -> None:
     assert '"status": "UNVERIFIED"' in completed.stdout
 
 
+def test_stale_refusal_surfaces_the_outcome_cause_and_changed_classes(monkeypatch) -> None:
+    """A STALE admission refusal names why: the adapter's flattened reason is kept verbatim,
+    and the chained Outcome's cause and changed source classes are reported beside it."""
+    sys.path.insert(0, str(REPO))
+    from ops.scripts import operating_plane_v2_projection as adapter
+
+    class Outcome(Exception):  # the shared verifier's shape: status, reason, **detail
+        def __init__(self, status: str, reason: str, **detail: object) -> None:
+            super().__init__(reason)
+            self.status, self.reason, self.detail = status, reason, detail
+
+    def stale(_bundle: Path) -> dict[str, object]:
+        outcome = Outcome(
+            "STALE",
+            "NOT_CURRENT_AT_AUTHORITY_MAIN",
+            authority_main="f" * 40,
+            cause="MATERIAL_CHANGE",
+            changed=["vocabulary"],
+        )
+        raise adapter.Rejected(f"{outcome.status} {outcome.reason}") from outcome
+
+    monkeypatch.setattr(adapter, "_binding", lambda _path: {})
+    monkeypatch.setattr(adapter, "read_lock", stale)
+    result = adapter.classify(repo_root=REPO, mode="admitted")
+
+    assert result["status"] == "REJECTED"
+    assert result["reason"] == "STALE NOT_CURRENT_AT_AUTHORITY_MAIN"
+    assert result["cause"] == "MATERIAL_CHANGE"
+    assert result["changed"] == ["vocabulary"]
+    assert "authority_main" not in result  # only diagnostics are lifted, never a verdict
+    line = adapter.render_line(result)
+    assert "[cause: MATERIAL_CHANGE; changed: ['vocabulary']]" in line
+    assert line.endswith("(report-only)")
+    assert "cause: MATERIAL_CHANGE" in adapter.render_markdown(result).splitlines()[1]
+
+
+def test_a_refusal_without_an_outcome_reports_no_diagnosis(monkeypatch) -> None:
+    sys.path.insert(0, str(REPO))
+    from ops.scripts import operating_plane_v2_projection as adapter
+
+    def rejected(_bundle: Path) -> dict[str, object]:
+        raise adapter.Rejected("LOCK_UNREADABLE")
+
+    monkeypatch.setattr(adapter, "_binding", lambda _path: {})
+    monkeypatch.setattr(adapter, "read_lock", rejected)
+    result = adapter.classify(repo_root=REPO, mode="admitted")
+
+    assert result == {"profile_ref": PROFILE, "status": "REJECTED", "reason": "LOCK_UNREADABLE"}
+    assert adapter.render_line(result) == (
+        "operating-plane projection: REJECTED — LOCK_UNREADABLE (report-only)"
+    )
+
+
 def test_both_session_start_hooks_autobind_the_operating_plane_without_a_skill() -> None:
     # Each host's SessionStart calls the host binding itself; no skill is involved.
     cursor = CURSOR_HOOK.read_text(encoding="utf-8")

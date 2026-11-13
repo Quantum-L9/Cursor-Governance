@@ -130,10 +130,10 @@
       }
     }
   },
-  "projection_digest": "sha256:efe217d3fd3d9f3262cd5f75b918faf64fae1d103761d8e9fcd318e7afc7d27d",
+  "projection_digest": "sha256:438d60db9e0f861c2c316e2b3a27bea016658b2c5bac61915d28f30432d1df79",
   "projection_profile_digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
   "projection_profile_ref": "l9.projection/cursor-governance-operating-plane@2",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:28ee4c5346858746345b8270ffc9ea31e1e066a08b301eaf1f7e3679613c259e",
+  "source_digest": "sha256:413f7ad8d7a1e4e4cede7d0b5ae23523b5a84cb08010280f6d5682ed5cd4084b",
   "source_ref": "l9.source/vocabulary@1"
 }

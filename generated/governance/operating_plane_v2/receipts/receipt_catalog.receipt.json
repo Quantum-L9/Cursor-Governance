@@ -14,7 +14,7 @@
       "ref": "l9.compiler/generic@1"
     },
     "compiler_manifest": {
-      "digest": "sha256:c824e3cf5babd7ff42cc76fd2b0c60a8441eb294293384ddeb7683d3b669340f",
+      "digest": "sha256:f6f10221c6bfbbd2382ba2f3dd80f5766b7836798556cac2ffcabb76080a3fde",
       "path": "semantics/generic_compiler_manifest.yaml",
       "ref": "l9.generic-compiler/global@1"
     },
@@ -34,7 +34,7 @@
       "ref": "l9.schema/compiler-receipt@1"
     },
     "repository": "Quantum-L9/.github",
-    "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
     "selector_model": {
       "digest": "sha256:2c2e221c3e5455f3359723d0e1b4da2cdbd02542782b7cd4bb22bfb7cd5aad56",
       "path": "semantics/selector_model.yaml",
@@ -51,7 +51,7 @@
       "digest": "sha256:23df7e9faa58f487569ef18a0656a9f65af669f5d3be8903d4fc35972fc4b9f8",
       "path": "semantics/receipt_catalog.yaml",
       "ref": "l9.source/receipt-catalog@1",
-      "revision": "f8e44d1536cb218de41dde4685c606a4d6460915"
+      "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
     }
   ],
   "operation": "projection",
@@ -67,8 +67,8 @@
     "digest": "sha256:eeb6ccea032035aaf48436abf8e76b6adeeac2f4c281dba9fbf549ab4aa387c8",
     "ref": "l9.projection/cursor-governance-operating-plane@2"
   },
-  "receipt_digest": "sha256:452909d699804dad477a81f3465959f44cdabda902d9b5c25f43d0542227ca07",
-  "receipt_identity": "l9.receipt-instance/33d428bf81d4d23e1b9451665a60df8ea2213e07c178f9e3e3176e9627f302cc",
+  "receipt_digest": "sha256:a81308a36977cebedda6a221a48d944bea00fc22ba6cd78552c734676fd8e6cc",
+  "receipt_identity": "l9.receipt-instance/b506838f083d28f012e1bcafbb09d0addb259ba629c6ba4a8083f2507e9a5bb0",
   "receipt_type": "l9.receipt/compilation@1",
   "result": "pass",
   "schema": "l9.compiler-receipt/v1",
@@ -127,7 +127,7 @@
       },
       "source_currentness": {
         "digest": "sha256:23df7e9faa58f487569ef18a0656a9f65af669f5d3be8903d4fc35972fc4b9f8",
-        "revision": "f8e44d1536cb218de41dde4685c606a4d6460915",
+        "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b",
         "status": "pass"
       },
       "source_identity": {
