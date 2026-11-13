@@ -2539,3 +2539,29 @@ Append-only. Operating form of CANONICAL_LAW `PROGRAM_EXECUTION_PLANNER_V1` and
 - The `make program-execution-*` targets in §13 live in the uncomposed
   `ops/make/program-execution.mk`; run them from the governance root as
   `make -f ops/make/program-execution.mk PYTHON=.venv/bin/python <target>`.
+
+<!-- CI_PARITY_CONSTELLATION_SCOPE_V1 -->
+## `semgrep-l9` stages Core's constellation-scoped policy (2026-11-13) — amends CI_PARITY_HOSTED_CLAUDE_V1 and its 2026-11-06 amendment
+
+Append-only. l9-ci-core #237 (activated by #238) binds the four Gate routing
+rules (`requests-direct-node-dispatch`, `httpx-direct-node-dispatch`,
+`hardcoded-peer-node-url`, `gateclient-bypass-execute`) only to a repository
+whose `.l9/ci.json` declares `product_kind: node`. The lane kept staging the
+unscoped policy, so `make pr` blocked Gate_SDK and Constellation.Gate on rules
+Analyze (central Core) does not block them on.
+
+- **Core's resolver, not a copy.** `semgrep-l9` fetches Core's
+  `resolve-consumer-metadata` and `resolve-governance` actions at `core_ref`
+  (byte for byte, cached per Core commit) and runs them the way org-ci does:
+  the first reads the scanned tree's `.l9/ci.json`, the second takes its
+  `product-kind` and stages the policy and identity maps. No rule list or
+  scoping logic lives in this repository.
+- **Non-node.** The Gate routing rules run and are reported as `note`; they
+  cannot block. Every other rule blocks exactly as before.
+- **Node.** The policy is unchanged; the routing rules block.
+- **Refusal blocks.** When a Core action exits non-zero (for example an
+  inadmissible `product_kind`), Core fails the job before Semgrep runs, so the
+  lane blocks with Core's message (`core/resolve-consumer-metadata` or
+  `core/resolve-governance`). This narrows the 2026-11-06 "an unstageable gate
+  is a reported skip" only for Core's own refusal; failing to fetch Core or the
+  SDK is still a reported skip.
