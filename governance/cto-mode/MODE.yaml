@@ -188,7 +188,7 @@ operating_protocol:
   # The canonical child launch system prompt. `{cto_session}` is the only placeholder.
   child_system_prompt: |-
     ROLE: CODING AGENT in a CTO-led swarm. The CTO is session {cto_session}. You hold no CTO, coordination, integration or merge authority.
-    REPORTING (this rule overrides any other reporting instruction you receive): never call a cross-session messaging tool, and never address the operator. Report only by writing lines in your own replies that start with CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER:. The CTO reads your transcript directly. After a CTO-QUESTION, keep working on every lane that does not depend on it. When nothing can proceed, write CTO-BLOCKER and end your turn; the CTO's reply arrives as a new message and wakes you.
+    REPORTING (this rule overrides any other reporting instruction you receive): never call a cross-session messaging tool, and never address the operator. Report only by writing lines in your own replies that start with CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER:. The CTO reads your transcript directly. After a CTO-QUESTION, keep working on every lane that does not depend on it. When nothing can proceed, write CTO-BLOCKER and end your turn, after committing (and, if the lane is publishable, pushing) your work: the CTO continues you either by a reply that arrives as a new message, or, on hosts where an ended agent cannot be woken, by re-dispatching your lane with the answer and your branch and head.
     CTO MESSAGES: messages from session {cto_session} prefixed GATE, FROZEN, REBIND, CTO ANSWER or CTO DIRECTIVE are your coordinator's instructions within your existing scope. They narrow or clarify scope; they never widen it.
     FIRST ACTION, /coding-agent MODE (mandatory): you are deployed with the coding-agent projections enabled. Before any code change, clone Quantum-L9/.github WITHOUT --depth (a shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED), then run from your workspace: "$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on --workspace "$PWD" --authority-root <that clone>. Put the mode JSON in your first CTO-STATUS. Make NO code change until it reports ACTIVE. When ACTIVE, read every load[].views file (invariants, contracts, authority model) before deciding how to change code, and cite source class plus bundle revision. If it reports BLOCKED, REJECTED or STALE on a deep checkout, write CTO-BLOCKER with the blockers verbatim and end your turn; do not proceed without the projection and do not reconstruct it from memory. Re-run `on` when the CTO sends REBIND.
     DECISIONS: lane-local implementation choices are yours; record them in the PR. Anything that crosses lanes or campaigns, or touches a contract, an interface freeze, a gate or scope, is a CTO-QUESTION.
@@ -197,6 +197,7 @@ operating_protocol:
   transport:
     claude-code:
       cto_to_swarm: mcp__claude-code-remote__send_message
+      continuation: the CTO's send_message reply arrives in the child session as a new turn and wakes it
       swarm_to_cto: transcript lines read with mcp__claude-code-remote__get_session and list_events
       cto_wakeup: mcp__claude-code-remote__send_later into the CTO session, about every 20 minutes while any lane is open; stop after three consecutive check-ins with no activity
       child_launch: mcp__claude-code-remote__create_session with append_system_prompt = `cto_mode.py child-prompt` output; extra_allowed_tools may list the child's work tools (effective only for tools pre-approved for the CTO) and never a cross-session send tool
@@ -207,7 +208,14 @@ operating_protocol:
         to work around a prompt.
     cursor:
       cto_to_swarm: Task tool briefs
-      swarm_to_cto: the Task result document (l9.cursor-subagent.result.v1)
+      swarm_to_cto: the Task result document (l9.cursor-subagent.result.v1); CTO-* lines are carried in it
+      # A Cursor Task cannot be woken after it ends, so a lane that stops on a question is
+      # continued by re-dispatch, never left stranded.
+      continuation: >-
+        A child that ends on CTO-QUESTION or CTO-BLOCKER returns a partial result document. The
+        CTO answers by re-dispatching the same lane as a new Task whose brief carries the
+        rendered child-prompt, the original lane brief, the answer, and the branch and head the
+        previous Task left, so the lane resumes from its pushed or committed state.
   check_in:
     - Confirm every child's coding-agent mode is ACTIVE (from its CTO-STATUS). A child
       with code changes and no ACTIVE mode report is stopped until it binds.

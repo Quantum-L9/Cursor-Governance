@@ -403,3 +403,43 @@ def test_child_prompt_without_coding_agent_mode_fails_closed(tmp_path: Path) -> 
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
     with pytest.raises(cto_mode.ContractError, match="CHILD_SYSTEM_PROMPT_INCOMPLETE"):
         cto_mode.load_contract(path)
+
+
+# --- complete-protocol validation and per-host continuation (Codex review on #968) ---
+
+
+@pytest.mark.parametrize(
+    "section", ["roles", "pre_launch", "child_brief_must_include", "child_launch_rules", "check_in"]
+)
+def test_missing_or_mistyped_protocol_section_fails_closed(tmp_path: Path, section: str) -> None:
+    for broken in (None, "text", [] if section != "roles" else {}):
+        doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+        if broken is None:
+            del doc["operating_protocol"][section]
+        else:
+            doc["operating_protocol"][section] = broken
+        path = tmp_path / "MODE.yaml"
+        path.write_text(yaml.safe_dump(doc, sort_keys=False))
+        with pytest.raises(cto_mode.ContractError, match=f"SECTION_MALFORMED: {section}"):
+            cto_mode.load_contract(path)
+
+
+@pytest.mark.parametrize("host", ["claude-code", "cursor"])
+def test_every_host_transport_declares_how_a_stopped_child_is_continued(
+    tmp_path: Path, host: str
+) -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["transport"][host]["continuation"].strip()
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    del doc["operating_protocol"]["transport"][host]["continuation"]
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match=f"TRANSPORT_INCOMPLETE: {host}"):
+        cto_mode.load_contract(path)
+
+
+def test_cursor_continuation_is_re_dispatch_not_wakeup() -> None:
+    cursor = cto_mode.load_contract()["operating_protocol"]["transport"]["cursor"]
+    assert "re-dispatching the same lane" in cursor["continuation"]
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "re-dispatching your lane" in text

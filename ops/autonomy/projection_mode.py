@@ -93,8 +93,50 @@ def check_operating_protocol(protocol: Any) -> None:
     for name, statement in invariants.items():
         if not isinstance(name, str) or not isinstance(statement, str) or not statement.strip():
             raise ContractError(f"OPERATING_PROTOCOL_INVARIANT_MALFORMED: {name}")
+    check_protocol_sections(protocol)
     if "child_system_prompt" in protocol:
         check_child_system_prompt(protocol["child_system_prompt"])
+
+
+# Every section /lcto tells the CTO to adopt. A protocol is consumed whole, so a missing
+# or mistyped section fails closed instead of silently dropping a coordination rule.
+PROTOCOL_LIST_SECTIONS = (
+    "pre_launch",
+    "child_brief_must_include",
+    "child_launch_rules",
+    "check_in",
+)
+PROTOCOL_MAP_SECTIONS = ("roles",)
+# Each declared host transport must say how the CTO reaches a child and how the child
+# reaches the CTO, and how a child that stopped on a question is continued.
+TRANSPORT_KEYS = ("cto_to_swarm", "swarm_to_cto", "continuation")
+
+
+def _nonempty_str(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def check_protocol_sections(protocol: dict[str, Any]) -> None:
+    for name in PROTOCOL_LIST_SECTIONS:
+        items = protocol.get(name)
+        if not isinstance(items, list) or not items or not all(map(_nonempty_str, items)):
+            raise ContractError(f"OPERATING_PROTOCOL_SECTION_MALFORMED: {name}")
+    for name in PROTOCOL_MAP_SECTIONS:
+        entries = protocol.get(name)
+        if (
+            not isinstance(entries, dict)
+            or not entries
+            or not all(_nonempty_str(k) and _nonempty_str(v) for k, v in entries.items())
+        ):
+            raise ContractError(f"OPERATING_PROTOCOL_SECTION_MALFORMED: {name}")
+    transport = protocol.get("transport")
+    if not isinstance(transport, dict) or not transport:
+        raise ContractError("OPERATING_PROTOCOL_SECTION_MALFORMED: transport")
+    for host, spec in transport.items():
+        if not isinstance(spec, dict) or not all(
+            _nonempty_str(spec.get(k)) for k in TRANSPORT_KEYS
+        ):
+            raise ContractError(f"OPERATING_PROTOCOL_TRANSPORT_INCOMPLETE: {host}")
 
 
 CTO_SESSION_PLACEHOLDER = "{cto_session}"
