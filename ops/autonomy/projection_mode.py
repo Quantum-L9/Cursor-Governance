@@ -76,6 +76,107 @@ def _digest(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def check_operating_protocol(protocol: Any) -> None:
+    """Fail closed on a malformed operating protocol, or one that claims authority.
+
+    A mode contract may carry behavioral defaults for the session that activates it. They
+    are emitted with the mode status; they must declare that they grant no permission, and
+    every invariant must be a non-empty statement.
+    """
+    if not isinstance(protocol, dict):
+        raise ContractError("OPERATING_PROTOCOL_MALFORMED")
+    if protocol.get("grants_permission") is not False:
+        raise ContractError("OPERATING_PROTOCOL_MUST_GRANT_NO_PERMISSION")
+    invariants = protocol.get("invariants")
+    if not isinstance(invariants, dict) or not invariants:
+        raise ContractError("OPERATING_PROTOCOL_INVARIANTS_EMPTY")
+    for name, statement in invariants.items():
+        if not isinstance(name, str) or not isinstance(statement, str) or not statement.strip():
+            raise ContractError(f"OPERATING_PROTOCOL_INVARIANT_MALFORMED: {name}")
+    check_protocol_sections(protocol)
+    if "child_system_prompt" in protocol:
+        check_child_system_prompt(protocol["child_system_prompt"])
+
+
+# Every section /lcto tells the CTO to adopt. A protocol is consumed whole, so a missing
+# or mistyped section fails closed instead of silently dropping a coordination rule.
+PROTOCOL_LIST_SECTIONS = (
+    "pre_launch",
+    "child_brief_must_include",
+    "child_launch_rules",
+    "check_in",
+)
+PROTOCOL_MAP_SECTIONS = ("roles",)
+# Each declared host transport must say how the CTO reaches a child and how the child
+# reaches the CTO, and how a child that stopped on a question is continued.
+TRANSPORT_KEYS = ("cto_to_swarm", "swarm_to_cto", "continuation")
+
+
+def _nonempty_str(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def check_protocol_sections(protocol: dict[str, Any]) -> None:
+    for name in PROTOCOL_LIST_SECTIONS:
+        items = protocol.get(name)
+        if not isinstance(items, list) or not items or not all(map(_nonempty_str, items)):
+            raise ContractError(f"OPERATING_PROTOCOL_SECTION_MALFORMED: {name}")
+    for name in PROTOCOL_MAP_SECTIONS:
+        entries = protocol.get(name)
+        if (
+            not isinstance(entries, dict)
+            or not entries
+            or not all(_nonempty_str(k) and _nonempty_str(v) for k, v in entries.items())
+        ):
+            raise ContractError(f"OPERATING_PROTOCOL_SECTION_MALFORMED: {name}")
+    transport = protocol.get("transport")
+    if not isinstance(transport, dict) or not transport:
+        raise ContractError("OPERATING_PROTOCOL_SECTION_MALFORMED: transport")
+    for host, spec in transport.items():
+        if not isinstance(spec, dict) or not all(
+            _nonempty_str(spec.get(k)) for k in TRANSPORT_KEYS
+        ):
+            raise ContractError(f"OPERATING_PROTOCOL_TRANSPORT_INCOMPLETE: {host}")
+
+
+CTO_SESSION_PLACEHOLDER = "{cto_session}"
+# A child launch prompt must carry the transcript reporting route and must never name a
+# cross-session send tool: a later message cannot override a launch system prompt.
+CHILD_PROMPT_REQUIRED = (
+    "CTO-STATUS:",
+    "CTO-QUESTION:",
+    "CTO-BLOCKER:",
+    CTO_SESSION_PLACEHOLDER,
+    # Every swarm agent is deployed with the coding-agent projections enabled.
+    'coding_agent_mode.py" on',
+    "ACTIVE",
+    # Projections and modes govern the swarm; a skill is never a substitute.
+    "Never invoke the l9-coding-agent skill",
+)
+CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
+
+
+def check_child_system_prompt(template: Any) -> None:
+    if not isinstance(template, str) or not template.strip():
+        raise ContractError("CHILD_SYSTEM_PROMPT_MALFORMED")
+    missing = [token for token in CHILD_PROMPT_REQUIRED if token not in template]
+    if missing:
+        raise ContractError(f"CHILD_SYSTEM_PROMPT_INCOMPLETE: {', '.join(missing)}")
+    named = [token for token in CHILD_PROMPT_FORBIDDEN if token in template]
+    if named:
+        raise ContractError(f"CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL: {', '.join(named)}")
+
+
+def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
+    """The canonical child launch system prompt, with the CTO session filled in."""
+    template = (contract.get("operating_protocol") or {}).get("child_system_prompt")
+    if template is None:
+        raise ContractError("CHILD_SYSTEM_PROMPT_UNDECLARED")
+    if not cto_session.strip():
+        raise ContractError("CTO_SESSION_UNRESOLVED")
+    return str(template).replace(CTO_SESSION_PLACEHOLDER, cto_session.strip())
+
+
 def resolve_session_id(explicit: str | None = None) -> str | None:
     """The host session this command runs in, or None when it cannot be proven."""
     for candidate in (explicit, *(os.environ.get(name) for name in SESSION_ENVS)):
@@ -201,6 +302,8 @@ class ProjectionMode:
                 raise ContractError(f"BINDING_REF_MISMATCH: {entry['binding']}")
             if not isinstance(verifier, str) or not (REPO / verifier).is_file():
                 raise ContractError(f"BINDING_VERIFIER_UNDECLARED: {entry['binding']}")
+        if "operating_protocol" in doc:
+            check_operating_protocol(doc["operating_protocol"])
         return doc
 
     def evaluate(
@@ -266,7 +369,7 @@ class ProjectionMode:
             elif entry["required"]:
                 blockers.append(record)
         mode = "ACTIVE" if not blockers else "BLOCKED"
-        return {
+        result_report = {
             **report,
             "mode": mode,
             "requested_at": state.get("requested_at"),
@@ -275,6 +378,11 @@ class ProjectionMode:
             "blockers": blockers,
             "load": load if mode == "ACTIVE" else [],
         }
+        if "operating_protocol" in contract:
+            # Behavior, not projection semantics: it applies whether or not every
+            # projection is admitted, because the persona still runs when BLOCKED.
+            result_report["operating_protocol"] = contract["operating_protocol"]
+        return result_report
 
     def request(
         self,
@@ -314,7 +422,11 @@ class ProjectionMode:
         parser = argparse.ArgumentParser(
             description=f"{self.name} mode: opt-in, session-bound projection binding"
         )
-        parser.add_argument("command", choices=("on", "off", "status"))
+        parser.add_argument("command", choices=("on", "off", "status", "child-prompt"))
+        parser.add_argument(
+            "--cto-session",
+            help="child-prompt: the CTO session id (default: this host session)",
+        )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
             "--authority-root",
@@ -329,6 +441,15 @@ class ProjectionMode:
         )
         args = parser.parse_args(argv)
         workspace = args.workspace.resolve()
+        if args.command == "child-prompt":
+            # Plain text on stdout, to be passed verbatim as the child's launch system prompt.
+            try:
+                session = args.cto_session or resolve_session_id(args.session_id) or ""
+                print(render_child_prompt(self.load_contract(), session))
+            except ContractError as exc:
+                print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+                return EXIT["REJECTED"]
+            return 0
         if args.command == "off":
             removed = self.release(workspace)
             print(json.dumps({"mode": "OFF", "state_removed": removed}, sort_keys=True))
