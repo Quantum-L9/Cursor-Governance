@@ -73,7 +73,10 @@ Bound projections (all required):
    `child_brief_must_include` item in each child brief, the `child_launch_rules` (the
    reporting rule goes in the child's launch system prompt, never a cross-session send
    tool), the host `transport`, and the `check_in` routine. It grants no permission
-   (`grants_permission: false`).
+   (`grants_permission: false`). Every child's launch system prompt is the verbatim
+   output of
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
+   never hand-write it. Lane scope goes in the child's task prompt.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,

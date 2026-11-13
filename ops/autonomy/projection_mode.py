@@ -93,6 +93,36 @@ def check_operating_protocol(protocol: Any) -> None:
     for name, statement in invariants.items():
         if not isinstance(name, str) or not isinstance(statement, str) or not statement.strip():
             raise ContractError(f"OPERATING_PROTOCOL_INVARIANT_MALFORMED: {name}")
+    if "child_system_prompt" in protocol:
+        check_child_system_prompt(protocol["child_system_prompt"])
+
+
+CTO_SESSION_PLACEHOLDER = "{cto_session}"
+# A child launch prompt must carry the transcript reporting route and must never name a
+# cross-session send tool: a later message cannot override a launch system prompt.
+CHILD_PROMPT_REQUIRED = ("CTO-STATUS:", "CTO-QUESTION:", "CTO-BLOCKER:", CTO_SESSION_PLACEHOLDER)
+CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
+
+
+def check_child_system_prompt(template: Any) -> None:
+    if not isinstance(template, str) or not template.strip():
+        raise ContractError("CHILD_SYSTEM_PROMPT_MALFORMED")
+    missing = [token for token in CHILD_PROMPT_REQUIRED if token not in template]
+    if missing:
+        raise ContractError(f"CHILD_SYSTEM_PROMPT_INCOMPLETE: {', '.join(missing)}")
+    named = [token for token in CHILD_PROMPT_FORBIDDEN if token in template]
+    if named:
+        raise ContractError(f"CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL: {', '.join(named)}")
+
+
+def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
+    """The canonical child launch system prompt, with the CTO session filled in."""
+    template = (contract.get("operating_protocol") or {}).get("child_system_prompt")
+    if template is None:
+        raise ContractError("CHILD_SYSTEM_PROMPT_UNDECLARED")
+    if not cto_session.strip():
+        raise ContractError("CTO_SESSION_UNRESOLVED")
+    return str(template).replace(CTO_SESSION_PLACEHOLDER, cto_session.strip())
 
 
 def resolve_session_id(explicit: str | None = None) -> str | None:
@@ -340,7 +370,11 @@ class ProjectionMode:
         parser = argparse.ArgumentParser(
             description=f"{self.name} mode: opt-in, session-bound projection binding"
         )
-        parser.add_argument("command", choices=("on", "off", "status"))
+        parser.add_argument("command", choices=("on", "off", "status", "child-prompt"))
+        parser.add_argument(
+            "--cto-session",
+            help="child-prompt: the CTO session id (default: this host session)",
+        )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
             "--authority-root",
@@ -355,6 +389,15 @@ class ProjectionMode:
         )
         args = parser.parse_args(argv)
         workspace = args.workspace.resolve()
+        if args.command == "child-prompt":
+            # Plain text on stdout, to be passed verbatim as the child's launch system prompt.
+            try:
+                session = args.cto_session or resolve_session_id(args.session_id) or ""
+                print(render_child_prompt(self.load_contract(), session))
+            except ContractError as exc:
+                print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+                return EXIT["REJECTED"]
+            return 0
         if args.command == "off":
             removed = self.release(workspace)
             print(json.dumps({"mode": "OFF", "state_removed": removed}, sort_keys=True))

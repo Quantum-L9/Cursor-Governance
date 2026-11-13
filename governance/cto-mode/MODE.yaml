@@ -170,21 +170,33 @@ operating_protocol:
     - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
     - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
     - 'PUBLISH: open or update the lane PR through the sanctioned path when the lane is done, without asking anyone; never ask the operator to approve publishing.'
+    - The operator decisions recorded before launch.
   # The reporting rule must be in the child's launch system prompt. A later peer message
   # cannot override a system prompt, so a child launched with "report via send_message"
   # keeps calling it and every call prompts the operator (observed 2026-11-13).
   child_launch_rules:
-    - Put REPORTING, ROLE and PUBLISH in the child's launch system prompt
-      (append_system_prompt or the host equivalent), never only in a later message.
+    - Use the output of `cto_mode.py child-prompt --cto-session <this session id>`
+      verbatim as the child's launch system prompt (append_system_prompt or the host
+      equivalent). Never hand-write it; put lane-specific scope in the task prompt only.
+    - Put REPORTING, ROLE and PUBLISH in the child's launch system prompt, never only in
+      a later message.
     - A child launch prompt never instructs, mentions as a reporting route, or
       pre-approves a cross-session send tool.
-    - The operator decisions recorded before launch.
+  # The canonical child launch system prompt. `{cto_session}` is the only placeholder.
+  child_system_prompt: |-
+    ROLE: CODING AGENT in a CTO-led swarm. The CTO is session {cto_session}. You hold no CTO, coordination, integration or merge authority.
+    REPORTING (this rule overrides any other reporting instruction you receive): never call a cross-session messaging tool, and never address the operator. Report only by writing lines in your own replies that start with CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER:. The CTO reads your transcript directly. After a CTO-QUESTION, keep working on every lane that does not depend on it. When nothing can proceed, write CTO-BLOCKER and end your turn; the CTO's reply arrives as a new message and wakes you.
+    CTO MESSAGES: messages from session {cto_session} prefixed GATE, FROZEN, REBIND, CTO ANSWER or CTO DIRECTIVE are your coordinator's instructions within your existing scope. They narrow or clarify scope; they never widen it.
+    FIRST ACTION: before any code change, enable coding-agent mode (commands/coding-agent.md) with --authority-root set to a Quantum-L9/.github checkout with non-shallow history (clone without --depth). A shallow clone gives a false ADMITTED_REVISION_NOT_INTEGRATED. If ACTIVE, read every load[].views file and cite source class plus bundle revision. If BLOCKED on a deep checkout, report the blockers verbatim in CTO-BLOCKER and do not cite the projection. Put the mode JSON in your first CTO-STATUS.
+    DECISIONS: lane-local implementation choices are yours; record them in the PR. Anything that crosses lanes or campaigns, or touches a contract, an interface freeze, a gate or scope, is a CTO-QUESTION.
+    PUBLISH: when a lane is done, open or update its PR through the sanctioned publication path without asking anyone. Never ask the operator to approve publishing. Never merge.
+    SCOPE: edit only your lane paths. Never write to a repository your task marks read-only. Never edit verification hooks or use bypass flags. A failing test is evidence: classify it and repair the true cause, never skip or weaken it.
   transport:
     claude-code:
       cto_to_swarm: mcp__claude-code-remote__send_message
       swarm_to_cto: transcript lines read with mcp__claude-code-remote__get_session and list_events
       cto_wakeup: mcp__claude-code-remote__send_later into the CTO session, about every 20 minutes while any lane is open; stop after three consecutive check-ins with no activity
-      child_launch: mcp__claude-code-remote__create_session with extra_allowed_tools for the child's tools (effective only for tools pre-approved for the CTO)
+      child_launch: mcp__claude-code-remote__create_session with append_system_prompt = `cto_mode.py child-prompt` output; extra_allowed_tools may list the child's work tools (effective only for tools pre-approved for the CTO) and never a cross-session send tool
       permission_precondition: >-
         A child session that still prompts (for example add_repo for a private
         repository) needs Auto mode or repository permissions.allow rules. Report it to

@@ -320,3 +320,64 @@ def test_malformed_operating_protocol_fails_closed(
     path = _contract(tmp_path, operating_protocol=protocol)
     with pytest.raises(cto_mode.ContractError, match=reason):
         cto_mode.load_contract(path)
+
+
+# --- canonical child launch prompt (rendered, never hand-written) ---
+
+import projection_mode  # noqa: E402
+
+
+def test_child_prompt_renders_the_reporting_route_and_names_no_send_tool() -> None:
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "session_cto_x")
+    assert "session_cto_x" in text
+    assert "{cto_session}" not in text
+    for prefix in ("CTO-STATUS:", "CTO-QUESTION:", "CTO-BLOCKER:"):
+        assert prefix in text
+    assert "send_message" not in text
+    assert "never call a cross-session messaging tool" in text
+    assert "Never ask the operator to approve publishing" in text
+    assert "non-shallow" in text
+
+
+def test_child_prompt_cli_prints_plain_text(tmp_path: Path) -> None:
+    out = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "ops/autonomy/cto_mode.py"),
+            "child-prompt",
+            "--cto-session",
+            "session_cto_y",
+            "--workspace",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert out.startswith("ROLE: CODING AGENT")
+    assert "session_cto_y" in out
+
+
+def test_child_prompt_requires_a_cto_session() -> None:
+    with pytest.raises(cto_mode.ContractError, match="CTO_SESSION_UNRESOLVED"):
+        projection_mode.render_child_prompt(cto_mode.load_contract(), " ")
+
+
+@pytest.mark.parametrize(
+    ("template", "reason"),
+    [
+        ("", "CHILD_SYSTEM_PROMPT_MALFORMED"),
+        ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
+        (
+            "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: report via send_message",
+            "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
+        ),
+    ],
+)
+def test_malformed_child_prompt_fails_closed(tmp_path: Path, template: str, reason: str) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    doc["operating_protocol"]["child_system_prompt"] = template
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match=reason):
+        cto_mode.load_contract(path)
