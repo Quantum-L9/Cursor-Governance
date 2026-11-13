@@ -147,6 +147,11 @@ operating_protocol:
       The CTO sends directives with the host's cross-session send tool. Swarm agents
       reply by writing prefixed lines in their own transcript, which the CTO reads with
       the host's transcript tools. Neither direction may require an operator approval.
+    operator_approves_merges_only: >-
+      Publishing is part of being done. The CTO and every swarm agent open and update
+      their PRs through the sanctioned publication path without asking the operator.
+      The operator's approval is requested for merges only; everything else is the
+      CTO's to handle within existing authority.
   roles:
     cto: the activating session only; it cannot be delegated to a swarm agent
     swarm: coding agents with no CTO, coordination, integration or merge authority
@@ -164,6 +169,15 @@ operating_protocol:
     - 'REPORTING: lines prefixed CTO-STATUS:, CTO-QUESTION: or CTO-BLOCKER: in its own transcript; never a cross-session send tool; never address the operator.'
     - 'After a CTO-QUESTION, continue every lane that does not depend on it; when nothing can proceed, end the turn — the CTO reply wakes it.'
     - 'SCOPE: lane path lists, non-goals, read-only repositories, stacking base per lane, publication path; never merge unless the operator granted it for that PR.'
+    - 'PUBLISH: open or update the lane PR through the sanctioned path when the lane is done, without asking anyone; never ask the operator to approve publishing.'
+  # The reporting rule must be in the child's launch system prompt. A later peer message
+  # cannot override a system prompt, so a child launched with "report via send_message"
+  # keeps calling it and every call prompts the operator (observed 2026-11-13).
+  child_launch_rules:
+    - Put REPORTING, ROLE and PUBLISH in the child's launch system prompt
+      (append_system_prompt or the host equivalent), never only in a later message.
+    - A child launch prompt never instructs, mentions as a reporting route, or
+      pre-approves a cross-session send tool.
     - The operator decisions recorded before launch.
   transport:
     claude-code:

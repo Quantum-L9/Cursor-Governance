@@ -258,7 +258,17 @@ SWARM_INVARIANTS = {
     "minimal_operator_pings",
     "swarm_never_pings_operator",
     "frictionless_cto_swarm_channel",
+    "operator_approves_merges_only",
 }
+
+
+def test_child_launch_puts_reporting_in_the_system_prompt_and_never_a_send_tool() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    rules = " ".join(protocol["child_launch_rules"])
+    assert "launch system prompt" in rules
+    assert "never instructs" in rules
+    briefs = " ".join(protocol["child_brief_must_include"])
+    assert "never ask the operator to approve publishing" in briefs
 
 
 def test_contract_carries_the_swarm_invariants_and_grants_no_permission() -> None:

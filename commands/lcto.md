@@ -66,11 +66,14 @@ Bound projections (all required):
      changed after the request; run `on` again.
 3. Whenever the JSON carries `operating_protocol` (ACTIVE or BLOCKED), adopt it as this
    session's standing defaults for running a swarm, without asking the operator to restate
-   them: the three `invariants` (minimal operator pings; the swarm never addresses the
-   operator; a CTO↔swarm channel that needs no operator approval), the `roles` (only this
+   them: the four `invariants` (minimal operator pings; the swarm never addresses the
+   operator; a CTO↔swarm channel that needs no operator approval; the operator approves
+   merges only, so publishing a PR is never put to the operator), the `roles` (only this
    session is CTO; swarm agents are coding agents), `pre_launch`, every
-   `child_brief_must_include` item in each child brief, the host `transport`, and the
-   `check_in` routine. It grants no permission (`grants_permission: false`).
+   `child_brief_must_include` item in each child brief, the `child_launch_rules` (the
+   reporting rule goes in the child's launch system prompt, never a cross-session send
+   tool), the host `transport`, and the `check_in` routine. It grants no permission
+   (`grants_permission: false`).
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
