@@ -230,6 +230,33 @@ def _memory_health(session_id: str) -> dict[str, str]:
     return {"status": status, "detail": detail[:300]}
 
 
+def _close_gaps(roots: list[Path], session_id: str) -> list[str]:
+    """Open this session per root and name any prior session left unclosed.
+
+    Local receipts only — no memory call, so SessionStart stays health-only
+    (CANONICAL_LAW §8.9). Writing the open latch rotates the previous session
+    into ``previous_opened.json``; a prior session with no successful close
+    receipt is a lifecycle CLOSE_GAP (ADR-0032), repaired by ``/end-session``.
+    Before this, a Claude session never wrote an open latch, so a failed close
+    could not be detected at all. ``.l9/`` is git-excluded in every governed
+    workspace (``ops/scripts/lib/session_git_excludes.sh``).
+    """
+    try:
+        from ops.graphiti.hydration.session_latches import close_gap_reason, write_open_latch
+    except Exception:  # noqa: BLE001 - visibility aid, never a SessionStart failure
+        return []
+    gaps: list[str] = []
+    for root in roots:
+        try:
+            write_open_latch(root, session_id)
+            reason = close_gap_reason(root, session_id)
+        except (OSError, ValueError):
+            continue
+        if reason:
+            gaps.append(f"{root.name}: {reason}")
+    return gaps
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_prefetch")
     parser.add_argument(
@@ -353,6 +380,11 @@ def main() -> int:
             "isolation=dedicated worktree + branch off origin/main + publication gate",
             "phase_lock=not required",
         ]
+        gaps = _close_gaps(roots, session_id)
+        for gap in gaps:
+            lines.insert(1, f"CLOSE_GAP {gap}")
+        if gaps:
+            lines.insert(1 + len(gaps), "REPAIR: /end-session")
         if len(roots) > 1:
             dropped_note = _dropped_summary(dropped)
             lines.insert(
@@ -372,6 +404,11 @@ def main() -> int:
                 )
                 + ". Repository work is unaffected; memory reads and writes may fail. "
                 "Repair: make memory-readiness."
+            )
+        if gaps:
+            loud = (loud + " " if loud else "") + _loud_status(
+                f"CLOSE_GAP: {len(gaps)} prior session(s) left unclosed "
+                f"({'; '.join(gaps)}). Repair: /end-session."
             )
         if dropped:
             loud = (loud + " " if loud else "") + _loud_status(

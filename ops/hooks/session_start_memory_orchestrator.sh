@@ -160,6 +160,23 @@ else
   HYDRATE_MD="Graphiti disabled — no resume memory"
 fi
 
+# Close-gap visibility (local receipts only; no memory call, so SessionStart
+# stays health-only under CANONICAL_LAW §8.9). The open latch above rotated the
+# prior session into previous_opened.json; a prior session with no successful
+# close receipt is a lifecycle CLOSE_GAP (ADR-0032), repaired by /end-session.
+# classify_hydrate_state.py types the leading CLOSE_GAP marker for the runtime
+# report. Without this line a failed sessionEnd close was invisible.
+if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/session_latches.py" ]; then
+  CLOSE_GAP_TEXT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -c 'import sys
+from pathlib import Path
+from ops.graphiti.hydration.session_latches import close_gap_reason
+print(close_gap_reason(Path(sys.argv[1]), sys.argv[2]))' "$REPO" "$CURSOR_SESSION_ID" 2>/dev/null || true)"
+  if [ -n "$CLOSE_GAP_TEXT" ]; then
+    HYDRATE_MD="$(printf '%s\nCLOSE_GAP %s\nREPAIR: /end-session' "$HYDRATE_MD" "$CLOSE_GAP_TEXT")"
+  fi
+fi
+
 # Never emit memory-bank as a resume path
 HYDRATE_MD="$(printf '%s' "$HYDRATE_MD" | sed 's/memory-bank/Graphiti/g')"
 COMBINED="$(printf '%s\n---\n%s' "$HYDRATE_MD" "$CODEGRAPH_MD")"
