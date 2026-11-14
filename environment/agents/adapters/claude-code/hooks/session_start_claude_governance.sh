@@ -1034,6 +1034,24 @@ emit_coding_projection() {
   esac
 }
 
+# --- Authority checkout (shared by every workspace) --------------------------
+# The default binding verifies against a Quantum-L9/.github checkout. Without a
+# managed one it resolved only a `.github` clone beside the workspace, so a session
+# bound in one repository and was NOT BOUND in the next. ensure_authority_checkout.sh
+# provisions ~/.l9/authority/.github (full clone, fast-forward only, never destructive);
+# the binding below stays read-only. Fail-open and bounded by the hook budget.
+emit_authority_checkout() {
+  local ensure="$GOV/ops/scripts/ensure_authority_checkout.sh" out rc
+  [ -f "$ensure" ] || { say "authority checkout: provisioner unavailable"; return 0; }
+  out="$(_l9_bounded 4 bash "$ensure" 2>/dev/null)"
+  rc=$?
+  case "$rc" in
+    125) say "authority checkout: DEFERRED — hook budget exhausted" ;;
+    124) say "authority checkout: TIMED OUT — resumes next session" ;;
+    *) say "authority checkout: $(printf '%s\n' "$out" | sed -n 's/^AUTHORITY: //p' | tail -n 1)" ;;
+  esac
+}
+
 # --- Default projection binding (automatic) ---------------------------------
 # Every Claude Code session is bound automatically to the admitted operating plane
 # (l9.projection/cursor-governance-operating-plane@2) through ops/autonomy/host_binding.py
@@ -1171,6 +1189,7 @@ emit_readiness_receipt() {
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_readiness_receipt "$PY"
+emit_authority_checkout
 emit_coding_projection "$PY"
 emit_operating_plane_projection "$PY"
 emit_capability_readiness "$PY"

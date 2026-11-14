@@ -1,6 +1,6 @@
 ---
 name: start-session
-version: "3.6.0"
+version: "4.0.0"
 description: "Run the L9 sessionStart bootstrap for the open workspace (same path as Cursor hooks + make start)"
 auto_chain: null
 ---
@@ -9,34 +9,40 @@ auto_chain: null
 
 ## WHAT IT DOES
 
-Runs the **same** sessionStart bootstrap Cursor already uses on hook fire —
-wiring, canonical memory hydrate, IDE/plugin reconcile — without the user locating
-any script. Local `memory-bank/` T0 is **retired**; resume SSOT is the canonical continuation record (`ContinuationCapsuleV2`).
+Runs the **same** sessionStart bootstrap Cursor runs on hook fire, so every
+repository opens on the same primed operating plane:
 
-Canonical implementation (single source of truth):
+1. SSOT tip reported against `origin/main` (never moved — catch-up is `/ff`).
+2. Workspace links healed (links-only, one retry).
+3. Runtime probes: venv, IDE profile, memory **health only**, publish path,
+   secrets plane, wiring, backup.
+4. **Default projection binding** — `l9.projection/cursor-governance-operating-plane@2`
+   plus the `always` Cursor domains (`governance/host-bindings/cursor.yaml`),
+   verified against the governance-managed authority checkout
+   `~/.l9/authority/.github`, which SessionStart provisions itself
+   (`ops/scripts/ensure_authority_checkout.sh`). No skill or command is needed;
+   `/coding-agent`, `/lcto`, `/architect` are the manual bindings.
+5. Route locator for this conversation.
+
+SessionStart does **not** hydrate memory, read `memory-bank/` (retired), or read,
+rank or display plans. Resume is on demand:
+`python -m ops.memory.cli hydrate "<task>" --workspace <repo>` (CANONICAL_LAW §8.9).
+
+Canonical implementation (single source of truth — do not re-implement its steps here):
 
 - Source: `$HOME/.cursor-governance/ops/hooks/session_start_bootstrap.sh`
 - Installed hook copy: `$HOME/.cursor/hooks/session-start-bootstrap.sh`
 - Human/agent entry: `make -C "$HOME/.cursor-governance" start WS="<repo>"`
 
-Do **not** re-implement wiring / memory hydrate steps in this command. The bootstrap owns them.
-
-`governance_activate_fresh.sh` (called by this command) must **not** drop
-`.venv`, `.env.local`, `env.local`, `.env.*.local`, or
-`.claude/settings.local.json` on a shallow-clone swap. Those paths are
-carried from the bak onto the new live tree (`ops/scripts/lib/ssot_machine_local_keep.sh`).
-
 ---
 
 ## EXECUTION (MANDATORY)
 
-Agent runs this from the **open consumer workspace** (never ask the user for the bootstrap path):
+Run from the **open workspace** (never ask the user for the bootstrap path):
 
 ```bash
 REPO="${CURSOR_PROJECT_DIR:-$(pwd)}"
 GC="$HOME/.cursor-governance"
-
-# Prefer make start (renders hook JSON for humans). Fallback = hook binary + renderer.
 if [ -f "$GC/Makefile" ]; then
   make -C "$GC" start WS="$REPO"
 else
@@ -49,23 +55,47 @@ fi
 | Flag / env | Meaning |
 |------------|---------|
 | `L9_BOOTSTRAP_SYNC=1` | Foreground reconcilers (set by `make start`) |
-| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires + memory-resolves |
+| `CURSOR_PROJECT_DIR` | Workspace the bootstrap wires and reports on |
+| `L9_AUTHORITY_ROOT` | Operator-chosen authority checkout; the managed one is then not used |
 
-### After bootstrap output
+### Remediation — follow the remedy the report names, once
 
-1. Parse the rendered `env:` + `context:` lines (or raw JSON if renderer skipped).
-2. SessionStart already realpath-heals links (links-only + one retry).
-   If `wiring: FAIL` / `exhausted auto-repair` still appears → fallback `/wire`:
+| Report says | Do |
+|---|---|
+| `wiring: … remedy: /ff` (SSOT tip not `origin/main`) | Tell the user; `/ff` parks unique commits then fast-forwards. Do not `git checkout`, reset, or run `governance_activate_fresh.sh`. |
+| `wiring: … exhausted auto-repair; remedy: /wire` | `bash "$GC/ops/scripts/wire_governance_workspace.sh" "$REPO"`, then re-run `make start` once. |
+| `authority checkout: UNAVAILABLE` / `TIMED OUT` | Report it. Binding stays NOT BOUND; the next session resumes provisioning. |
+| `default projection binding: NOT BOUND` / `DEGRADED` | Report the named reason. Cite **no** operating-plane semantics that did not verify. |
 
-```bash
-bash "$GC/ops/scripts/wire_governance_workspace.sh" "$REPO"
-make -C "$GC" start WS="$REPO"
+Do not re-diagnose what the report already classified, and do not run a second
+check grid.
+
+---
+
+## OUTPUT — STATE_SYNC (concise, each fact once)
+
+Render from bootstrap `additional_context`. One line per fact; never repeat a
+line that appears in another section; omit healthy detail.
+
+```markdown
+## SESSION STARTED — {workspace basename} @ {branch}
+
+**Plane:** {BOUND | DEGRADED | NOT BOUND} — operating-plane@2 at authority main {sha12}; domains {list of BOUND domains | reason}
+**SSOT:** {sha7} vs origin/main {sha7} ({match | N ahead / M behind})
+
+{### Needs attention — ONLY the ### FAILED and ### Degraded lines, verbatim, each with its remedy; omit the section when both say none}
+
+**Healthy:** {comma-separated names of the ### Runtime lines, e.g. venv, ide-profile, memory, publish-path, secrets-bind}
+
+→ `/ynp` next action · `/gmp "{task}"` phased work · `commands/commands-index.md` full library
 ```
 
-3. Present the **STATE_SYNC** block below from bootstrap context (do not invent checks the bootstrap did not run).
-4. Print the **full** `### memory hydrate` block (all facts + JSON fence). Do not summarize.
-5. Resume from hydration `next=` (canonical continuation) — do **not** read `memory-bank/`.
-   Do not read, rank, or display plans. Plan harvest stays `/l9-pipeline-audit`.
+Rules:
+
+- The binding line is mandatory. It is the answer to "what may this session cite".
+- Do not print the `### memory status` block or invent a `next=`; memory is health-only.
+- Do not print `n/a` lines, the route locator, or code-graph unless they are the cause of a fault.
+- No narrative below the block. If a fault needs explanation, the remedy column above is the explanation.
 
 ---
 
@@ -75,40 +105,17 @@ make -C "$GC" start WS="$REPO"
 /start-session --quick
 ```
 
-Same bootstrap; agent may skip re-printing full memory prefetch bodies (still run `make start`).
-
----
-
-## OUTPUT — STATE_SYNC
-
-Print these sections from bootstrap `additional_context`. Do not invent a
-second check grid. If a section is absent, say so.
-
-```markdown
-## SESSION STARTED
-
-{### FAILED — if present; else omit}
-{### Runtime}
-{### Degraded}
-{### memory hydrate — full packet; do not truncate}
-
-### Ready For
-→ `/ynp` — next action
-→ `/l9-audit-plans` — refine leftover plan todos (moves no plans)
-→ `/l9-pipeline-audit` — plans audit + harvest (`/plan-audit` alias)
-→ `/gmp "{task}"` — phased work
-→ `/commands-index` or read `commands/commands-index.md` — full slash library
-```
+Same bootstrap; print only the **Plane** line and **Needs attention**.
 
 ---
 
 ## NOTES
 
-- Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
-- Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
-- Resume stack is canonical memory only (`ContinuationCapsuleV2`; `ops/graphiti/MEMORY_BANK_POLICY.md` is archival).
-- `/start-session` **is** the bootstrap ceremony (`make start` → `session_start_bootstrap.sh`). Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`).
-- SessionStart does not read, rank, or display plans. Full harvest (and `--archive-spent` moves) remains `/l9-pipeline-audit`. Leftover-todo refine is `/l9-audit-plans`.
-- Tip activation compares the SSOT clone to GitHub `main` and reports commits ahead and behind. It does not fetch, pull, reset, or swap that clone, and it does not name a catch-up command.
+- Cursor runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`;
+  Claude Code runs the equivalent binding from `session_start_claude_governance.sh`.
+  `/start-session` is the manual / repair / new-window entry to the identical script.
+- Every run writes `~/.l9/cursor/bootstrap-state.json` (`l9.cursor-bootstrap.v2`). Its
+  `cursor-adapter` line aggregates other lines and is not a second fault when they are.
+- Plan harvest stays `/l9-pipeline-audit`; leftover-todo refine is `/l9-audit-plans`.
 
 --- End Command ---
