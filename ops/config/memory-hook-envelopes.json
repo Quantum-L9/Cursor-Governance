@@ -106,7 +106,7 @@
     },
     "claude-session-end": {
       "callers": [
-        "environment/agents/adapters/claude-code/hooks/memory_writeback.py -> ops/graphiti/hydration/close_session.py"
+        "environment/agents/adapters/claude-code/hooks/memory_writeback.py -> ops/graphiti/hydration/close_session.py", "environment/agents/adapters/claude-code/hooks/session_end_close.py -> ops/graphiti/hydration/close_session.py (SessionEnd: every session, Cursor sessionEnd parity)"
       ],
       "allowed_operations": [
         "resolve",
