@@ -469,3 +469,21 @@ def test_agents_stand_down_after_publishing_and_the_cto_integrates_itself() -> N
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
     assert "Do not subscribe to, watch, remediate or re-test a published PR" in text
     assert "CTO-STATUS: stood-down" in text
+
+
+def test_cto_to_swarm_transport_is_pre_approved_in_the_claude_settings_template() -> None:
+    """Invariant frictionless_cto_swarm_channel: the CTO's send tool never waits on the operator.
+
+    The tool the contract names for CTO -> swarm messages on Claude Code must be
+    allowed outright in the settings every Claude Code session is projected from,
+    and never routed back to a prompt by an ask or deny rule.
+    """
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    tool = protocol["transport"]["claude-code"]["cto_to_swarm"]
+    template = json.loads(
+        (REPO / "environment/agents/adapters/claude-code/settings.template.json").read_text()
+    )
+    permissions = template["permissions"]
+    assert tool in permissions["allow"]
+    assert tool not in permissions.get("ask", [])
+    assert tool not in permissions.get("deny", [])
