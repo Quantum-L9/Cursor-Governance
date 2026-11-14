@@ -1,5 +1,5 @@
 {
-  "generation_id": "f5de0f0490c871d878df05f48d1c450a2e68bbfce079f0b4a0601fa18ae778c5",
+  "generation_id": "20674b81e934f6de02f2fd76bb557e400daa122e06bc0efe38541c70ae8b2750",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1043,14 +1043,14 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 canonical repair-write of the continuation record plus governed learning writes when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "repair a session close that did not land \u2014 canonical repair-write of the continuation record (receipt stamped) plus optional governed lesson writes, when SessionStart printed CLOSE_GAP or the automatic sessionEnd / SessionEnd close failed. never pushes. not required for a normal session end.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
       "path": "skills/l9-end-session",
       "reason": "session lifecycle boundary",
       "skill_md": "skills/l9-end-session/SKILL.md",
-      "skill_sha256": "5fd71a6672de73531990ca0e0325418cae53d35cd2c20aacd4f2c6e86326cd61",
+      "skill_sha256": "8bcdbed6bebaa625b7a67156373a36f03ec35374eddfe052d368e6cc4c08ae1d",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "beef631acdce6eda03a0afd8a78040d4a56821c13a8969ed2b5e0eb3688af25f",
-  "source_skill_corpus_sha256": "4cb9482873bc99566d0eb14ea0532caac339ede6ad2f8c21bac9d3f75bbc2941"
+  "source_skill_corpus_sha256": "7f5fa4702cdf77c4416523d5cc6d18874c719138244264304558258e59bd601c"
 }
