@@ -1029,7 +1029,9 @@ def test_resumed_session_close_supersedes_the_earlier_continuation(
     first = _close(workspace)
     assert first["status"] == STATUS_CLOSED_CANONICALLY
     monkeypatch.setattr(
-        cs, "load_transcript_excerpt", lambda **_k: ("user: ship the PR\nuser: and fix more", "test")
+        cs,
+        "load_transcript_excerpt",
+        lambda **_k: ("user: ship the PR\nuser: and fix more", "test"),
     )
     second = _close(workspace)
     assert second["status"] == STATUS_CLOSED_CANONICALLY

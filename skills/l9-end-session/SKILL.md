@@ -1,6 +1,6 @@
 ---
 name: l9-end-session
-description: repair a session close that did not land — canonical repair-write of the continuation record (receipt stamped) plus optional governed lesson writes, when SessionStart printed CLOSE_GAP or the automatic sessionEnd / SessionEnd close failed. never pushes. not required for a normal session end.
+description: repair a session close that did not land — canonical repair-write of the continuation record (receipt stamped) plus optional governed lesson writes. use when SessionStart printed CLOSE_GAP or the automatic sessionEnd / SessionEnd close failed. never pushes; not required for a normal session end.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
