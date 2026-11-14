@@ -202,7 +202,7 @@ def test_setuptools_sdist_rebuilds_are_byte_identical_after_normalisation(
         python_project(src, "1.0.0")
         out = tmp_path / f"out-{label}"
         subprocess.run(
-            ["uv", "build", "--sdist", "--out-dir", str(out)],
+            ["uv", "build", "--sdist", "--out-dir", str(out), str(src)],
             cwd=src,
             check=True,
             capture_output=True,
@@ -222,8 +222,11 @@ def test_setuptools_sdist_rebuilds_are_byte_identical_after_normalisation(
 def test_isolated_env_drops_governance_make_state(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MAKEFLAGS", "WS=/gov VERSION=1.0.0")
     monkeypatch.setenv("PYTHON", "/gov/.venv/bin/python")
+    monkeypatch.setenv("UV_PROJECT", "/gov")
+    monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", "/gov/.venv")
     env = l9_release.isolated_env({"SOURCE_DATE_EPOCH": "1"})
-    assert "MAKEFLAGS" not in env and "PYTHON" not in env
+    for leaked in ("MAKEFLAGS", "PYTHON", "UV_PROJECT", "UV_PROJECT_ENVIRONMENT"):
+        assert leaked not in env
     assert env["SOURCE_DATE_EPOCH"] == "1"
 
 
@@ -268,6 +271,10 @@ def test_python_uv_release_end_to_end(release_env, monkeypatch: pytest.MonkeyPat
     commit = repo.git("rev-parse", "HEAD")
     repo.authorize("v1.0.0", commit)
     _slow_second_checkout(monkeypatch)
+    # The governance toolchain exports these; they must not redirect the
+    # released repository's build to Cursor-Governance.
+    monkeypatch.setenv("UV_PROJECT", str(ROOT))
+    monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", str(ROOT / ".venv"))
 
     code, receipt = _release(repo, version="1.0.0")
 

@@ -72,9 +72,15 @@ EXIT_VERIFY = 6
 
 #: Variables the governance Make invocation carries that must not leak into the
 #: released repository's own Make or build (command-line overrides propagate
-#: through MAKEFLAGS; Repo.mk exports PYTHON as the governance interpreter).
+#: through MAKEFLAGS; Repo.mk exports PYTHON as the governance interpreter; the
+#: governance toolchain exports UV_PROJECT / UV_PROJECT_ENVIRONMENT, which would
+#: point the released repository's `uv sync` / `uv build` at Cursor-Governance).
 _ISOLATED_ENV_DROP = frozenset(
     {
+        "UV_PROJECT",
+        "UV_PROJECT_ENVIRONMENT",
+        "UV_WORKING_DIRECTORY",
+        "UV_PYTHON",
         "MAKEFLAGS",
         "MFLAGS",
         "MAKELEVEL",
@@ -393,7 +399,7 @@ def _build_once(rel: Release, label: str) -> dict[str, tuple[str, Path]]:
         out = rel.work / f"out-{label}" / eco.kind
         out.mkdir(parents=True)
         if eco.kind == "python-uv":
-            argv = ["uv", "build", "--out-dir", str(out)]
+            argv = ["uv", "build", "--out-dir", str(out), str(source)]
         elif eco.kind == "node-npm":
             argv = ["npm", "pack", "--pack-destination", str(out)]
         else:  # pragma: no cover - schema enum
