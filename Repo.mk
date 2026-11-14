@@ -173,3 +173,10 @@ repo-test: pytest-suites ## Run the registry-driven pytest suites
 # stays uncomposed.
 # ---------------------------------------------------------------------------
 include ops/make/campaign.mk
+# ---------------------------------------------------------------------------
+# Release (docs/L9_RELEASE.md). Appended because Repo.mk is additive_only: the
+# fragment list and the CONSUMER_SAFE list above are not rewritten. `release`
+# is consumer-safe so `l9 release` reaches it from any L9 repository.
+# ---------------------------------------------------------------------------
+include ops/make/release.mk
+L9_CONSUMER_SAFE_TARGETS += release release-declaration-check

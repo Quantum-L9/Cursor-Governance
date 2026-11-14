@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Quantum-L9/Cursor-Governance/ops/schemas/l9.release.v1.schema.json",
+  "title": "l9.release/v1 — repository release declaration",
+  "description": "Read by `make release` (ops/scripts/l9_release.py) from <repo>/.l9/release.json. Declares what one L9 repository releases and how; it grants no publication authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "ecosystems", "artifacts", "major_tag", "notes"],
+  "properties": {
+    "schema": {"const": "l9.release/v1"},
+    "repository": {
+      "description": "owner/name on GitHub. Must equal the workspace's origin.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "default_branch": {
+      "description": "Branch a release is cut from. Defaults to main.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._/-]+$",
+      "default": "main"
+    },
+    "ecosystems": {
+      "description": "Build adapters, run in order. Every declared version authority must carry the same version.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "version_authority"],
+        "properties": {
+          "kind": {"enum": ["python-uv", "node-npm"]},
+          "version_authority": {
+            "description": "Repository-relative file holding the version: pyproject.toml [project].version for python-uv, package.json .version for node-npm.",
+            "type": "string",
+            "pattern": "^[^/\\\\][^\\\\]*$"
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "description": "Exact asset file names the build must produce, `{version}` substituted. The build must produce exactly this set; each is uploaded to the Release.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_.{}+-]+$"}
+    },
+    "major_tag": {
+      "description": "none: never touch a vN tag. advance: create vN when absent; when present and behind, hand the operator the lease command (make release never force-pushes).",
+      "enum": ["none", "advance"]
+    },
+    "notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changelog"],
+      "properties": {
+        "changelog": {
+          "description": "Repository-relative changelog with a dated `## X.Y.Z - YYYY-MM-DD` section for the release.",
+          "type": "string",
+          "pattern": "^[^/\\\\][^\\\\]*$"
+        }
+      }
+    },
+    "pre_release": {
+      "description": "Optional repository-specific gate run in the clean gate checkout after `make setup validate check test`. argv, never a shell string.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv"],
+      "properties": {
+        "argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}
