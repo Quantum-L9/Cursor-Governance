@@ -1,0 +1,27 @@
+{
+  "schema": "l9.release/v1",
+  "repository": "Quantum-L9/l9-constellation-topology",
+  "default_branch": "main",
+  "ecosystems": [
+    {
+      "kind": "python-uv",
+      "version_authority": "pyproject.toml"
+    }
+  ],
+  "artifacts": [
+    "l9_constellation_topology-{version}-py3-none-any.whl",
+    "l9_constellation_topology-{version}.tar.gz"
+  ],
+  "major_tag": "none",
+  "notes": {
+    "changelog": "CHANGELOG.md"
+  },
+  "pre_release": {
+    "argv": [
+      "uv",
+      "run",
+      "python",
+      "scripts/validate_release_readiness.py"
+    ]
+  }
+}

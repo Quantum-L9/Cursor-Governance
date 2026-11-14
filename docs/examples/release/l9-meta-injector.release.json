@@ -1,0 +1,18 @@
+{
+  "schema": "l9.release/v1",
+  "repository": "Quantum-L9/l9-meta-injector",
+  "default_branch": "main",
+  "ecosystems": [
+    {
+      "kind": "node-npm",
+      "version_authority": "package.json"
+    }
+  ],
+  "artifacts": [
+    "l9-meta-injector-{version}.tgz"
+  ],
+  "major_tag": "advance",
+  "notes": {
+    "changelog": "CHANGELOG.md"
+  }
+}

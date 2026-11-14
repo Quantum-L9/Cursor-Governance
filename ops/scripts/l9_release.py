@@ -403,10 +403,23 @@ def _build_once(rel: Release, label: str) -> dict[str, tuple[str, Path]]:
             tail = "\n".join((proc.stdout + proc.stderr).strip().splitlines()[-20:])
             raise Stop(EXIT_REFUSED, "REFUSED", f"{' '.join(argv)} failed:\n{tail}")
         for path in sorted(out.iterdir()):
+            if _is_uv_out_dir_sentinel(eco.kind, path):
+                continue
             if path.name in produced:
                 raise Stop(EXIT_REFUSED, "REFUSED", f"two ecosystems produced {path.name}")
             produced[path.name] = (eco.kind, path)
     return produced
+
+
+def _is_uv_out_dir_sentinel(kind: str, path: Path) -> bool:
+    """``uv build --out-dir`` writes a ``.gitignore`` containing exactly ``*`` so the
+    output directory ignores itself. It is build plumbing, not an artifact; any
+    other stray file still fails the exact-artifact-set check."""
+    return (
+        kind == "python-uv"
+        and path.name == ".gitignore"
+        and path.read_text(encoding="utf-8", errors="replace").strip() == "*"
+    )
 
 
 def stage_build(rel: Release) -> None:
