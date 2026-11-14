@@ -1,7 +1,7 @@
 {
   "authority": {
     "repository": "Quantum-L9/.github",
-    "revision": "f585547ca027eaf7e1e7f7faab34457dda7a0f7b"
+    "revision": "496842bf029996a75f17fd1533baa79029bc95db"
   },
   "components": [
     {
@@ -168,11 +168,11 @@
     },
     {
       "path": "projections/repository_registry.projection.json",
-      "projection_digest": "sha256:f4c8ea03537942c36c7c88e11421f9ee23667e7ccf7209556c75c26a7ca18092",
+      "projection_digest": "sha256:7e8d02d39439e8661e3b293b0a77850edef24486be8cb2b70503ec1edd7667ce",
       "receipt": "receipts/repository_registry.receipt.json",
-      "sha256": "sha256:f9ed7f21a5af5bdb5e99f05183e55237c284ee811a303522c99adacf977e83c0",
+      "sha256": "sha256:01d10a9a09d957631fa27d0b348fc8c2a8e5970bf8d963cd23123af1226f8b7e",
       "source_class": "repository_registry",
-      "source_digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+      "source_digest": "sha256:1c46e31f17a5c63ecd11db407ff210d4f6959fd1a4b86012306369eff38cd0ce",
       "source_ref": "l9.source/repository-registry@1"
     },
     {
@@ -222,10 +222,10 @@
     }
   ],
   "composed": {
-    "composition_digest": "sha256:305fd6ef55aed7cbbd818560aa2065b6979d9298919ff06cb0dac3c64b077752",
+    "composition_digest": "sha256:4b1cc3c4ede6996cd7dd86669858a7e2e126c488ac6435eb2c911e5163d34ee8",
     "path": "composed.json",
     "receipt": "receipts/composed.receipt.json",
-    "sha256": "sha256:cf75531dd5c0e0947949251ebd06f84168595999581b83f1af5167424a5f4c13"
+    "sha256": "sha256:e4bb12777148fe64126c5a4ffe93469c522b5fe97348832db52176ef8f411100"
   },
   "composition_profile": {
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
