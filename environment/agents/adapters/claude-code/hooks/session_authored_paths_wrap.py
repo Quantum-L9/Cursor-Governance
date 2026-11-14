@@ -33,7 +33,9 @@ def main() -> int:
     try:
         runpy.run_path(str(recorder), run_name="__main__")
     except SystemExit:
-        pass
+        # The recorder ends with raise SystemExit(main()); its exit code is not
+        # this hook's verdict. A ledger aid always lets the tool call continue.
+        return 0
     except Exception as exc:  # noqa: BLE001 - a ledger aid never fails a tool call
         print(f"session-authored-paths: {type(exc).__name__}; not recorded", file=sys.stderr)
     return 0

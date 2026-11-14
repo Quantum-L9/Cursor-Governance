@@ -120,7 +120,8 @@ def test_close_writes_nothing_without_a_derived_identity(monkeypatch: pytest.Mon
     hook = _load()
     monkeypatch.setattr(hook.st, "bind_identity_env", lambda: "")
     monkeypatch.setattr(hook.st, "unresolved_identity_reason", lambda: "no host markers")
-    assert hook.close({"session_id": "s"}, "s") == ["identity_unresolved (no host markers)"]
+    statuses = hook.close({"session_id": "s"}, "s")
+    assert statuses == ["identity_unresolved (no host markers)"]
 
 
 @pytest.mark.parametrize(
