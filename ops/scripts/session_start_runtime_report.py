@@ -221,12 +221,22 @@ _COMPONENT_TO_LINE = {
     "memory_mcp": "memory",
     "mcp": "memory",
 }
-#: Receipt probes the report has no line of its own for.
-_INDEPENDENT_PROBES = ("hooks", "plugin", "plugins", "commands_link")
+#: Receipt probes the report has no line of its own for, keyed to one finding each:
+#: `plugin` and `plugins` are the same probe written under two keys.
+_INDEPENDENT_PROBES = (("hooks", "hooks"), ("plugin", "plugin"), ("plugins", "plugin"))
+#: A probe the wiring check also covers (the `.cursor-commands` link): it repeats the
+#: wiring line when that line is already flagged, and is its own finding otherwise.
+_WIRING_COVERED_PROBES = ("commands_link",)
 
 
-def receipt_causes(payload: dict[str, Any] | None) -> tuple[list[str], list[str]]:
-    """(report lines the receipt repeats, independent probe findings) for a non-READY receipt."""
+def receipt_causes(
+    payload: dict[str, Any] | None, flagged: frozenset[str] = frozenset()
+) -> tuple[list[str], list[str]]:
+    """(report lines the receipt repeats, independent findings) for a non-READY receipt.
+
+    *flagged* names the report lines already in ``### Degraded``. Each underlying probe
+    yields at most one finding, however many receipt keys carry it.
+    """
     if not isinstance(payload, dict):
         return [], []
     reasons = payload.get("reasons") if isinstance(payload.get("reasons"), dict) else {}
@@ -234,13 +244,19 @@ def receipt_causes(payload: dict[str, Any] | None) -> tuple[list[str], list[str]
     for key, line in _COMPONENT_TO_LINE.items():
         if payload.get(key) not in (None, "READY") and line not in repeated:
             repeated.append(line)
-    independent: list[str] = []
-    for key in _INDEPENDENT_PROBES:
-        if payload.get(key) not in (None, "READY"):
-            note = f"{key}: {reasons.get(key) or payload.get(key)}"
-            if note not in independent:
-                independent.append(note)
-    return repeated, independent
+    independent: dict[str, str] = {}
+    for key, probe in _INDEPENDENT_PROBES:
+        if payload.get(key) not in (None, "READY") and probe not in independent:
+            independent[probe] = f"{probe}: {reasons.get(key) or payload.get(key)}"
+    for key in _WIRING_COVERED_PROBES:
+        if payload.get(key) in (None, "READY"):
+            continue
+        if "wiring" in flagged:
+            if "wiring" not in repeated:
+                repeated.append("wiring")
+        else:
+            independent[key] = f"{key}: {reasons.get(key) or payload.get(key)}"
+    return repeated, list(independent.values())
 
 
 def classify_cursor_adapter(
@@ -249,6 +265,7 @@ def classify_cursor_adapter(
     receipt: dict[str, Any],
     workspace: str = "",
     payload: dict[str, Any] | None = None,
+    flagged: frozenset[str] = frozenset(),
 ) -> list[dict[str, Any]]:
     """Cursor's own receipt (~/.l9/cursor/bootstrap-state.json).
 
@@ -302,7 +319,7 @@ def classify_cursor_adapter(
             )
         ]
     klass = FAILED if state in {"failed", "blocked"} else DEGRADED
-    repeated, independent = receipt_causes(payload)
+    repeated, independent = receipt_causes(payload, flagged)
     if independent:
         return [_line("cursor-adapter", klass, f"{state} — " + "; ".join(independent))]
     if repeated:
@@ -864,6 +881,9 @@ def collect(
                     receipt=cursor_receipt,
                     workspace=workspace,
                     payload=written_payload,
+                    flagged=frozenset(
+                        item["name"] for item in lines if item.get("include_in_degraded")
+                    ),
                 )
             )
     else:

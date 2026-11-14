@@ -1086,3 +1086,27 @@ class SinglePrintTests(unittest.TestCase):
         )
         self.assertIn("hooks: hooks.json missing", lines[0]["summary"])
         self.assertTrue(lines[0]["include_in_degraded"])
+
+
+class ReceiptAliasTests(unittest.TestCase):
+    """One underlying probe is one finding, however many receipt keys carry it."""
+
+    def test_plugin_and_plugins_are_one_finding(self) -> None:
+        payload = {
+            "plugin": "DEGRADED",
+            "plugins": "DEGRADED",
+            "reasons": {"plugin": "l9-governance plugin missing", "plugins": "x"},
+        }
+        repeated, independent = report.receipt_causes(payload)
+        self.assertEqual(repeated, [])
+        self.assertEqual(independent, ["plugin: l9-governance plugin missing"])
+
+    def test_commands_link_repeats_a_flagged_wiring_line(self) -> None:
+        payload = {"commands": "BLOCKED", "commands_link": "DEGRADED"}
+        repeated, independent = report.receipt_causes(payload, frozenset({"wiring"}))
+        self.assertEqual((repeated, independent), (["wiring"], []))
+
+    def test_commands_link_is_its_own_finding_when_wiring_passed(self) -> None:
+        payload = {"commands_link": "DEGRADED", "reasons": {"commands_link": "no link"}}
+        repeated, independent = report.receipt_causes(payload, frozenset())
+        self.assertEqual((repeated, independent), ([], ["commands_link: no link"]))
