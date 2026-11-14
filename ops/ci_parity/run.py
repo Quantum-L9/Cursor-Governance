@@ -372,6 +372,37 @@ def sdk_blocking_findings(gate: dict[str, Any], bundle: dict[str, Any]) -> list[
     return out
 
 
+def sdk_disabled_findings(bundle: dict[str, Any]) -> list[fnd.Finding]:
+    """Findings Core's policy classified `disabled`: reported, never blocking.
+
+    For a repository that is not a Constellation node, Core's scoped policy
+    disables exactly the Gate routing rules; the SDK still runs them and records
+    the classification, which is the only thing read here.
+    """
+    disabled = {
+        c.get("finding_id"): str(c.get("policy_key") or "disabled")
+        for c in bundle.get("classifications") or []
+        if c.get("mode") == "disabled"
+    }
+    out: list[fnd.Finding] = []
+    for found in bundle.get("findings") or []:
+        key = disabled.get(found.get("finding_id"))
+        if key is None:
+            continue
+        where = (found.get("locations") or [{}])[0]
+        out.append(
+            fnd.Finding(
+                "semgrep-l9",
+                str(found.get("provider_rule_id") or found.get("finding_id")),
+                DISABLED_SEVERITY,
+                str(where.get("normalized_path") or "?"),
+                int(where.get("start_line") or 0),
+                f"{found.get('message') or 'finding'} (Core policy {key}: reported, not blocking)",
+            )
+        )
+    return out
+
+
 def _provider_failure(bundle_path: Path) -> str:
     try:
         bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
@@ -397,15 +428,43 @@ SDK_BOOTSTRAP = (
 )
 
 
+#: Core's consumer-metadata action: reads `.l9/ci.json` and emits `product-kind`,
+#: which org-ci hands to resolve-governance as its `product-kind` input.
+METADATA_ROOT = ".github/actions/resolve-consumer-metadata"
+#: The org-ci event class the lane's Core profile is evaluated under.
+DEFAULT_CORE_EVENT = "pull_request"
+#: A rule Core's scoped policy classified `disabled` (the Gate routing rules for
+#: a repository that is not a Constellation node) runs and is reported, but
+#: cannot fail Core's gate; the lane reports it at this non-blocking severity.
+DISABLED_SEVERITY = "note"
+
+
 @dataclass(frozen=True)
 class CoreGovernance:
-    """What resolve-governance emits for one Core profile."""
+    """What resolve-governance emits for one Core profile and one consumer."""
 
     core_sha: str
     strict: bool
     required: bool
     policy: Path  # staged, relative to the checkout
     identity_maps: Path  # staged directory, relative to the checkout
+    #: `node` or `non-node`: Core's Gate routing scope for this consumer.
+    scope: str = ""
+    enabled: bool = True
+    digest: str = ""
+
+
+class CoreRefusal(Exception):
+    """A Core governance action refused this consumer: Core fails the job."""
+
+    def __init__(self, action: str, message: str) -> None:
+        super().__init__(message)
+        self.action = action
+        self.message = message
+
+    def finding(self) -> fnd.Finding:
+        path = ".l9/ci.json" if self.action == "resolve-consumer-metadata" else "."
+        return fnd.Finding("semgrep-l9", f"core/{self.action}", "error", path, 0, self.message)
 
 
 def _core_reader() -> Any:
@@ -417,55 +476,113 @@ def _core_reader() -> Any:
     return docker_sandbox
 
 
-def _profile_value(text: str, profile: str, key: str) -> Any:
-    import yaml  # noqa: PLC0415
+def core_actions(cache_root: Path, sha: str) -> Path:
+    """Core's two governance actions at exactly `sha`, byte for byte, cached per commit.
 
-    data = yaml.safe_load(text) or {}
-    entry = (data.get("profiles") or {}).get(profile)
-    if not isinstance(entry, dict) or key not in entry:
-        raise ValueError(f"Core governance has no {key!r} for profile {profile!r}")
-    return entry[key]
-
-
-def stage_core_governance(
-    ctx: Context, profile: str, languages: Sequence[str], core_ref: str = "main"
-) -> CoreGovernance:
-    """Read Core's bundled governance at `core_ref` and stage it like resolve-governance.
-
-    Core never uses a consumer's own governance files for this gate; it ships
-    the execution profile, policy and identity maps with its action.
+    The lane runs Core's own resolver rather than re-implementing it, so the
+    whole action directory is needed (its bundled defaults, policy, identity
+    maps and Gate routing scope sit beside `resolve.py`).
     """
-    reader = _core_reader()
-    sha = reader.core_commit(core_ref)
-    cached = ctx.loaded.cache_root / "core" / sha
-    files = {
-        "profiles": f"{GOVERNANCE_ROOT}/defaults/execution-profiles.yaml",
-        "required": f"{GOVERNANCE_ROOT}/defaults/provider-requiredness.yaml",
-        "thresholds": f"{GOVERNANCE_ROOT}/defaults/quality-thresholds.yaml",
-    }
+    root = cache_root / "core-actions" / sha
+    if (root / GOVERNANCE_ROOT / "resolve.py").is_file() and (
+        root / METADATA_ROOT / "metadata.py"
+    ).is_file():
+        return root
+    mirror = cache_root / "l9-ci-core.git"
+    if not (mirror / "HEAD").is_file():
+        mirror.mkdir(parents=True, exist_ok=True)
+        _git(mirror, "init", "-q", "--bare")
+    probe = subprocess.run(
+        ["git", "-C", str(mirror), "cat-file", "-e", f"{sha}^{{commit}}"],
+        capture_output=True,
+        check=False,
+    )
+    if probe.returncode != 0:
+        _git(mirror, "fetch", "-q", "--depth=1", _core_reader().CORE_GIT_URL, sha)
+    archive = subprocess.run(
+        ["git", "-C", str(mirror), "archive", "--format=tar", sha, METADATA_ROOT, GOVERNANCE_ROOT],
+        capture_output=True,
+        check=True,
+    )
+    partial = root.with_name(f"{sha}.partial-{os.getpid()}")
+    shutil.rmtree(partial, ignore_errors=True)
+    partial.mkdir(parents=True)
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
+        extract_tar_inside(tar, partial)
+    shutil.rmtree(root, ignore_errors=True)
+    os.replace(partial, root)
+    return root
 
-    def read(rel: str) -> str:
-        path = cached / rel
-        if not path.is_file():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(reader.core_file(sha, rel), encoding="utf-8")
-        return path.read_text(encoding="utf-8")
 
-    strict = bool(_profile_value(read(files["profiles"]), profile, "strict"))
-    required = bool(_profile_value(read(files["required"]), profile, "semgrep"))
-    policy_name = Path(str(_profile_value(read(files["thresholds"]), profile, "sdk_policy"))).name
-    staged = ctx.scan_dir / ORG_GOVERNANCE
-    (staged / "semgrep-identity-maps").mkdir(parents=True, exist_ok=True)
-    (staged / policy_name).write_text(read(f"{GOVERNANCE_ROOT}/{policy_name}"), encoding="utf-8")
-    for language in languages:
-        text = read(f"{GOVERNANCE_ROOT}/identity-maps/{language}.yaml")
-        (staged / "semgrep-identity-maps" / f"{language}.yaml").write_text(text, encoding="utf-8")
+def _core_action(script: Path, ctx: Context, work: Path, extra: dict[str, str]) -> dict[str, str]:
+    """Run one Core action script the way its composite action does.
+
+    GITHUB_WORKSPACE is the snapshot (so it stages where org-ci stages) and its
+    outputs are read from GITHUB_OUTPUT. `-I`: the scanned tree is untrusted and
+    must not shadow a module the script imports. A non-zero exit is Core
+    refusing this consumer, carried as CoreRefusal with Core's own message.
+    """
+    output = work / f"{script.parent.name}.github-output"
+    output.unlink(missing_ok=True)
+    env = {k: v for k in ("PATH", "HOME", "LANG", "TMPDIR") if (v := os.environ.get(k))}
+    env.update(GITHUB_WORKSPACE=str(ctx.scan_dir), GITHUB_OUTPUT=str(output), **extra)
+    proc = _run([sys.executable, "-I", str(script)], ctx.scan_dir, ctx, env=env)
+    if proc.returncode != 0:
+        lines = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise CoreRefusal(script.parent.name, lines[-1] if lines else f"exit {proc.returncode}")
+    outputs: dict[str, str] = {}
+    if output.is_file():
+        for line in output.read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            if sep:
+                outputs[key] = value
+    return outputs
+
+
+def resolve_core_governance(
+    ctx: Context,
+    work: Path,
+    profile: str,
+    core_ref: str = "main",
+    event: str = DEFAULT_CORE_EVENT,
+) -> CoreGovernance:
+    """Resolve Core's governance for this consumer with Core's own actions at `core_ref`.
+
+    Exactly org-ci's two steps: resolve-consumer-metadata reads the consumer's
+    `.l9/ci.json`, then resolve-governance takes its `product-kind` and stages
+    the execution profile's policy (scoped to the consumer's Constellation
+    role) and identity maps under `.l9/runtime/org-governance`. Core never
+    reads a consumer's own governance files for this gate.
+    """
+    sha = _core_reader().core_commit(core_ref)
+    actions = core_actions(ctx.loaded.cache_root, sha)
+    consumer = _core_action(actions / METADATA_ROOT / "metadata.py", ctx, work, {})
+    gov = _core_action(
+        actions / GOVERNANCE_ROOT / "resolve.py",
+        ctx,
+        work,
+        {
+            "L9_PROFILE": profile,
+            "L9_PROVIDER": "semgrep",
+            "L9_EVENT_NAME": event,
+            "L9_REPOSITORY": ctx.slug,
+            # Selects waivers only; org-ci's waiver-pointer check is not part of this lane.
+            "L9_REF": ctx.sha,
+            "L9_PRODUCT_KIND": consumer.get("product-kind", ""),
+        },
+    )
+    missing = [k for k in ("sdk-policy", "identity-map-directory", "strict") if k not in gov]
+    if missing:
+        raise ValueError(f"Core resolve-governance emitted no {', '.join(missing)}")
     return CoreGovernance(
         core_sha=sha,
-        strict=strict,
-        required=required,
-        policy=ORG_GOVERNANCE / policy_name,
-        identity_maps=ORG_GOVERNANCE / "semgrep-identity-maps",
+        strict=gov["strict"] == "true",
+        required=gov.get("required-provider") == "true",
+        policy=Path(gov["sdk-policy"]),
+        identity_maps=Path(gov["identity-map-directory"]),
+        scope=gov.get("constellation-scope", ""),
+        enabled=gov.get("enabled", "true") == "true",
+        digest=gov.get("governance-digest", ""),
     )
 
 
@@ -548,18 +665,30 @@ def _lane_semgrep_l9(
     languages = sdk_languages(files)
     profile = str(lane.extra.get("core_profile") or "pr_fast")
     core_ref = str(lane.extra.get("core_ref") or "main")
+    event = str(lane.extra.get("core_event") or DEFAULT_CORE_EVENT)
+    work = ctx.cache / "semgrep-l9"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
     try:
-        gov = stage_core_governance(ctx, profile, languages, core_ref)
-        ctx.facts["core_sha"] = gov.core_sha
+        gov = resolve_core_governance(ctx, work, profile, core_ref, event)
+    except CoreRefusal as refusal:
+        # Core fails the job before Semgrep runs; so does the lane.
+        return [refusal.finding()]
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
+        ctx.notices.append(f"semgrep-l9: cannot stage Core's gate — {exc}")
+        return []
+    ctx.facts["core_sha"] = gov.core_sha
+    ctx.facts["constellation_scope"] = gov.scope
+    if not gov.enabled:
+        ctx.notices.append(f"semgrep-l9: SKIP — Core resolves semgrep disabled for {profile}")
+        return []
+    try:
         source = stage_sdk_source(ctx, ctx.loaded.tools[lane.tool])
         python = sdk_python(binary)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         ctx.notices.append(f"semgrep-l9: cannot stage Core's gate — {exc}")
         return []
-    work = ctx.cache / "semgrep-l9"
-    if work.exists():
-        shutil.rmtree(work)
-    work.mkdir(parents=True)
     env = dict(os.environ)
     env["PATH"] = provider_path(work, semgrep, env)
     cli = [python, "-c", SDK_BOOTSTRAP, str(source)]
@@ -596,11 +725,13 @@ def _sdk_gate(
         gate_argv = [*cli, "gate", "evaluate", "--bundle", str(bundle), "--output", str(gate_out)]
         gate_argv.append("--strict-unresolved" if gov.strict else "--no-strict-unresolved")
         verdict = GATE_EXIT.get(_run(gate_argv, ctx.scan_dir, ctx, env=env).returncode)
+        data = json.loads(bundle.read_text(encoding="utf-8"))
+        out.extend(sdk_disabled_findings(data))
         if verdict == "pass":
             continue
         if verdict == "fail" and gate_out.is_file():
             gate = json.loads(gate_out.read_text(encoding="utf-8"))
-            out.extend(sdk_blocking_findings(gate, json.loads(bundle.read_text(encoding="utf-8"))))
+            out.extend(sdk_blocking_findings(gate, data))
             continue
         reason = _provider_failure(bundle)
         ctx.notices.append(f"semgrep-l9 ({language}): gate {verdict or 'error'} — {reason}")
