@@ -134,13 +134,13 @@ def already_closed(
             data = json.load(handle)
     except (OSError, json.JSONDecodeError):
         return False
-    if strict:
-        # A publication-scoped close (post-publish handoff) is done only when
-        # THIS publication closed — an earlier close of the session is not it.
-        return _latches.receipt_is_successful_close(data) and data.get("head_hash") == head_hash
-    return _latches.receipt_is_successful_close(data) and (
-        data.get("head_hash") == head_hash or data.get("status") == STATUS_CLOSED_CANONICALLY
-    )
+    # Done only when THIS transcript head closed. A conversation that was
+    # reopened after a canonical close has a new head; its close runs and
+    # supersedes the earlier continuation instead of being skipped (the work
+    # done after reopening was otherwise never captured). ``strict`` is kept
+    # for callers; both paths now key on the head.
+    del strict
+    return _latches.receipt_is_successful_close(data) and data.get("head_hash") == head_hash
 
 
 def _previous_continuation(project_dir: Path, session_id: str) -> str | None:
@@ -493,13 +493,17 @@ def close_session(
 
     ``handoff`` + ``publication``: the post-publish close. The capsule carries
     the agent's comprehensive brief (``l9.session_handoff.v1``) losslessly, its
-    headline fields come from that brief, idempotency is scoped to the
-    publication (one close per publication, not one per session), and the
-    session's previous continuation is superseded so exactly one stays ACTIVE.
+    headline fields come from that brief, and idempotency is scoped to the
+    publication.
+
+    Every close is idempotent per transcript head only: an identical head is an
+    ``idempotent_skip``, and a new head (a resumed conversation, or a later
+    publication) closes again and supersedes the session's previous
+    continuation, so exactly one stays ACTIVE.
 
     ``surface`` names the hook-lane envelope this close runs under when no
     ``client`` is injected (``cursor-session-end`` by default,
-    ``claude-session-end`` from the Claude Stop hook).
+    ``claude-session-end`` from the Claude Stop and SessionEnd hooks).
 
     ``dry_run`` admits nothing and commits nothing: the capsule and the close
     pass memory's admission dry runs and the obligation is not persisted.
@@ -628,7 +632,9 @@ def close_session(
         task_signature=task_signature,
         handoff=({**handoff, "publication": publication} if handoff else None),
     )
-    previous = _previous_continuation(project, session_id) if handoff else None
+    # Every close supersedes this session's previous continuation, so a resumed
+    # conversation leaves exactly one ACTIVE continuation (post-publish or not).
+    previous = _previous_continuation(project, session_id)
     candidate = capsule.to_governed_candidate(
         namespace=namespace,
         source_sha=head or "0" * 40,

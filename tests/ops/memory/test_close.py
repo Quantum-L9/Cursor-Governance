@@ -971,7 +971,9 @@ def test_the_capsule_headline_comes_from_the_agents_brief() -> None:
 def test_a_publication_close_is_idempotent_per_publication_not_per_session(
     tmp_path: Path,
 ) -> None:
-    """strict: an earlier close of the session is not THIS publication's close."""
+    """An earlier close of the session is not THIS head's close, strict or not:
+    a resumed conversation supersedes rather than skips (2026-11-14 operator
+    decision: supersede the earlier continuation on resume)."""
     closes = tmp_path / ".l9" / "memory" / "closes"
     closes.mkdir(parents=True)
     (closes / "sess.json").write_text(
@@ -984,7 +986,7 @@ def test_a_publication_close_is_idempotent_per_publication_not_per_session(
         ),
         encoding="utf-8",
     )
-    assert cs.already_closed(tmp_path, "sess", "second-publication") is True
+    assert cs.already_closed(tmp_path, "sess", "second-publication") is False
     assert cs.already_closed(tmp_path, "sess", "second-publication", strict=True) is False
     assert cs.already_closed(tmp_path, "sess", "first-publication", strict=True) is True
 
@@ -1010,3 +1012,36 @@ def test_the_next_session_hydrate_renders_the_full_handoff() -> None:
     assert "publication: Org/repo#42@abc" in text
     assert "payments — no key | unblock: add key" in text
     assert "add key @ Infisical" in text
+
+
+# ---------------------------------------------------------------------------
+# Resumed conversation: a new transcript head supersedes the earlier close
+# ---------------------------------------------------------------------------
+
+
+def test_resumed_session_close_supersedes_the_earlier_continuation(
+    workspace, scripted, fake_cli, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A conversation reopened after a canonical close has a new transcript
+    head. Its close must run (not ``idempotent_skip``) and supersede the first
+    continuation, so the work done after reopening is captured and exactly one
+    continuation stays ACTIVE."""
+    first = _close(workspace)
+    assert first["status"] == STATUS_CLOSED_CANONICALLY
+    monkeypatch.setattr(
+        cs, "load_transcript_excerpt", lambda **_k: ("user: ship the PR\nuser: and fix more", "test")
+    )
+    second = _close(workspace)
+    assert second["status"] == STATUS_CLOSED_CANONICALLY
+    assert second["head_hash"] != first["head_hash"]
+    assert second["supersedes"] == RECORD
+    ingests = [c for c in fake_cli.calls if c[0][1] == "ingest-governed-candidate"]
+    assert len(ingests) == 2
+    assert RECORD in ingests[-1][2]
+
+
+def test_unchanged_head_after_a_canonical_close_is_still_an_idempotent_skip(
+    workspace, scripted, fake_cli
+) -> None:
+    _close(workspace)
+    assert _close(workspace)["status"] == "idempotent_skip"
