@@ -483,11 +483,11 @@ def main() -> int:
         except session_handoff.HandoffError as exc:
             missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
         ledger_rel = HANDOFF_LEDGER_REL
-        if (
-            missing
-            and not pp.ledger(root, ledger_rel, key).get("requested")
-            and not event.get("stop_hook_active")
-        ):
+        # ``requested`` alone bounds the ask to once per publication.
+        # ``stop_hook_active`` is not consulted: Claude Code sets it when ANY
+        # Stop hook caused the continuation (e.g. a cloud "please push" hook),
+        # and honouring it skipped the request and closed without a brief.
+        if missing and not pp.ledger(root, ledger_rel, key).get("requested"):
             # Ask ONCE, for both handoffs in one reason: this is the only hook
             # that blocks (the governance hook runs in parallel and never does).
             # Blocking hands the agent the schemas and one more turn; the next
@@ -509,6 +509,7 @@ def main() -> int:
                             pr_label=pub["label"],
                             pr_number=pub["number"],
                             missing=missing,
+                            workspace=str(root),
                             governance=(
                                 gov_rel,
                                 governance_handoff.GOVERNANCE_SCHEMA,

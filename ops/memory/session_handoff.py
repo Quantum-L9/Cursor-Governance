@@ -265,6 +265,7 @@ def request_reason(
     pr_number: int,
     missing: dict[str, str],
     governance: tuple[str, str, dict[str, Any]] | None = None,
+    workspace: str | None = None,
 ) -> str:
     """What the Stop hook hands the agent, ONCE, when a post-publish handoff is missing.
 
@@ -279,8 +280,13 @@ def request_reason(
         "then stop. Each is written ONCE to memory. Empty sections are []."
         "\nGenerate both from the debt ledger instead of writing them by hand "
         "(record friction first with `session_debt.py friction <id> --detail ...`): "
-        f"python3 ops/autonomy/session_debt.py handoff --pr {pr_number} "
-        '--objective "..." --status "..." [--next "..."]'
+        # Absolute governance path: the published repository is usually not
+        # Cursor-Governance, so a repo-relative ops/ path does not exist there.
+        "$HOME/.cursor-governance/.venv/bin/python "
+        "$HOME/.cursor-governance/ops/autonomy/session_debt.py handoff "
+        + f"--pr {pr_number} "
+        + (f'--workspace "{workspace}" ' if workspace else "")
+        + '--objective "..." --status "..." [--next "..."]'
     ]
     if str(HANDOFF_REL) in missing:
         parts.append(
