@@ -621,7 +621,7 @@ else
 fi
 
 if [ -d "$WORKSPACE/memory-bank" ]; then
-  warn "memory-bank/ still present — deprecated; remove after Graphiti migrate (do not scaffold)"
+  warn "memory-bank/ still present — retired and never read (canonical memory is the resume SSOT); delete it when convenient (do not scaffold)"
 else
   pass "memory-bank/ absent (retired)"
 fi
