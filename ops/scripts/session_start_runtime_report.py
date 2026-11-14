@@ -207,13 +207,56 @@ def classify_claude_adapter(
     ]
 
 
+#: Receipt component -> the report line it is derived from. The receipt aggregates
+#: lines this report already prints; these keys must not be counted a second time.
+_COMPONENT_TO_LINE = {
+    "shared_bootstrap": "venv",
+    "settings": "ide-profile",
+    "skills": "skill-usage",
+    "commands": "wiring",
+    "rules": "wiring",
+    "capabilities": "secrets-bind",
+    "memory": "memory",
+    "memory_cli": "memory",
+    "memory_mcp": "memory",
+    "mcp": "memory",
+}
+#: Receipt probes the report has no line of its own for.
+_INDEPENDENT_PROBES = ("hooks", "plugin", "plugins", "commands_link")
+
+
+def receipt_causes(payload: dict[str, Any] | None) -> tuple[list[str], list[str]]:
+    """(report lines the receipt repeats, independent probe findings) for a non-READY receipt."""
+    if not isinstance(payload, dict):
+        return [], []
+    reasons = payload.get("reasons") if isinstance(payload.get("reasons"), dict) else {}
+    repeated: list[str] = []
+    for key, line in _COMPONENT_TO_LINE.items():
+        if payload.get(key) not in (None, "READY") and line not in repeated:
+            repeated.append(line)
+    independent: list[str] = []
+    for key in _INDEPENDENT_PROBES:
+        if payload.get(key) not in (None, "READY"):
+            note = f"{key}: {reasons.get(key) or payload.get(key)}"
+            if note not in independent:
+                independent.append(note)
+    return repeated, independent
+
+
 def classify_cursor_adapter(
     *,
     surface: str,
     receipt: dict[str, Any],
     workspace: str = "",
+    payload: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Cursor's own receipt (~/.l9/cursor/bootstrap-state.json).
+
+    When *payload* (the receipt this run just wrote) is given and the receipt is not
+    READY only because of lines this report already prints, the adapter line names
+    those lines and stays out of ``### Degraded``: the receipt is an aggregate, and
+    "installer failed at stage 'complete'" once re-reported a wiring failure as a
+    second, unrelated fault.
 
     `make start` / `/start-session` / the SessionStart hook write this
     receipt every bootstrap. never_ran or TTL-unknown after that run is a
@@ -259,6 +302,18 @@ def classify_cursor_adapter(
             )
         ]
     klass = FAILED if state in {"failed", "blocked"} else DEGRADED
+    repeated, independent = receipt_causes(payload)
+    if independent:
+        return [_line("cursor-adapter", klass, f"{state} — " + "; ".join(independent))]
+    if repeated:
+        return [
+            _line(
+                "cursor-adapter",
+                klass,
+                f"{state} — aggregates {', '.join(repeated)} (reported on its own line)",
+                include_in_degraded=False,
+            )
+        ]
     return [_line("cursor-adapter", klass, f"{state} — {reason or 'receipt state=' + state}")]
 
 
@@ -693,30 +748,44 @@ def receipt_log(receipt: dict[str, Any]) -> tuple[str, str]:
 
 
 def format_markdown(lines: list[dict[str, Any]]) -> str:
-    parts: list[str] = []
+    """Each component is printed exactly once.
+
+    ``### FAILED`` leads with a failed machine identity, ``### Degraded`` carries every
+    other line that needs attention (with its evidence), and ``### Runtime`` carries
+    the rest. A component used to appear in Runtime *and* Degraded (and an identity
+    failure in all three), so one fault read as two or three.
+    """
     failed_identity = [
         item
         for item in lines
         if item["name"] in {"infisical-identity", "aws-cli"} and item["class"] == FAILED
     ]
+    leading = {id(item) for item in failed_identity}
+    degraded = [
+        item for item in lines if item.get("include_in_degraded") and id(item) not in leading
+    ]
+    flagged = leading | {id(item) for item in degraded}
+    parts: list[str] = []
     if failed_identity:
         parts.append("### FAILED")
         for item in failed_identity:
             parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
         parts.append("")
-    runtime = ["### Runtime"]
-    for item in lines:
-        runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}")
-    degraded = [item for item in lines if item.get("include_in_degraded")]
-    runtime.append("### Degraded")
+    parts.append("### Runtime")
+    healthy = [item for item in lines if id(item) not in flagged]
+    if not healthy:
+        parts.append("- none healthy (see below)")
+    for item in healthy:
+        parts.append(f"- {item['name']}: {item['class']} — {item['summary']}")
+    parts.append("### Degraded")
     if not degraded:
-        runtime.append("- none")
-        return "\n".join(parts + runtime)
+        parts.append("- none")
+        return "\n".join(parts)
     for item in degraded:
         ev = item.get("evidence") or ""
         extra = f" Evidence: {ev}" if ev and ev not in item["summary"] else ""
-        runtime.append(f"- {item['name']}: {item['class']} — {item['summary']}.{extra}".rstrip("."))
-    return "\n".join(parts + runtime)
+        parts.append(f"- {item['name']}: {item['class']} — {item['summary']}.{extra}".rstrip("."))
+    return "\n".join(parts)
 
 
 def collect(
@@ -775,6 +844,10 @@ def collect(
         try:
             written = write_cursor_bootstrap_receipt(home=root, workspace=workspace, lines=lines)
             cursor_receipt = read_claude_receipt(path=written, surface="cursor")
+            try:
+                written_payload = json.loads(written.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                written_payload = None
         except OSError as exc:
             lines.append(
                 _line(
@@ -790,6 +863,7 @@ def collect(
                     surface=surface,
                     receipt=cursor_receipt,
                     workspace=workspace,
+                    payload=written_payload,
                 )
             )
     else:
