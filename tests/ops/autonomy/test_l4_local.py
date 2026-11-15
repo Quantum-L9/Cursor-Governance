@@ -699,3 +699,20 @@ def test_receipt_and_phase_carry_the_workspace_they_authorize(stacked_repo: Path
     identity = workspace_identity(stacked_repo)
     assert receipt["workspace"] == identity
     assert json.loads(state_path(stacked_repo).read_text(encoding="utf-8"))["workspace"] == identity
+
+
+def test_branch_drift_names_the_begin_remedy(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#957: a drift refusal says how to re-begin the phase on the current branch."""
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="c1")
+    subprocess.run(
+        ["git", "-C", str(stacked_repo), "switch", "-q", "-c", "feature/other"], check=True
+    )
+    with pytest.raises(RuntimeError) as excinfo:
+        authorize_release(stacked_repo)
+    message = str(excinfo.value)
+    assert "branch drift" in message
+    assert "l4_local.py begin" in message
+    assert "'feature/other'" in message
