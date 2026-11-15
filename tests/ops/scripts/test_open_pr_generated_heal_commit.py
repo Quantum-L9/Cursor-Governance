@@ -8,8 +8,10 @@ commits exactly the generated paths and leaves any other dirt for the WARN.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -44,6 +46,10 @@ def test_generated_heal_is_committed_and_other_dirt_is_left(tmp_path: Path) -> N
     (repo / "ops" / "generated" / "skill-registry.json").write_text('{"v": 2}\n', encoding="utf-8")
     (repo / "notes.py").write_text("a = 2\n", encoding="utf-8")
 
+    # The script's preamble puts the project interpreter first on PATH before any
+    # function runs; the extracted function needs the same, or `python3` is the
+    # runner's system interpreter without the project's dependencies (PyYAML).
+    env = {**os.environ, "PATH": f"{Path(sys.executable).parent}:{os.environ.get('PATH', '')}"}
     proc = subprocess.run(
         ["bash", "-c", f'set -u\nGOV_ROOT="{ROOT}"\n{funcs}\n_commit_generated_heal'],
         cwd=repo,
@@ -51,6 +57,7 @@ def test_generated_heal_is_committed_and_other_dirt_is_left(tmp_path: Path) -> N
         text=True,
         check=False,
         timeout=120,
+        env=env,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "OK: committed generated heal" in proc.stdout
