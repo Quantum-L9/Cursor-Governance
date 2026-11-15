@@ -267,10 +267,32 @@ _push_with_bounded_recover() {
     # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
     # commits absent and the next push is rejected again.
     fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 || true
-    git merge --no-edit "origin/$BASE_REF" || return 1
+    if ! git merge --no-edit "origin/$BASE_REF"; then
+      if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+      echo "FAIL: push recovery could not merge origin/$BASE_REF cleanly — merge aborted, tree restored" >&2
+      return 1
+    fi
     if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
        ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then
-      git merge --no-edit "origin/$branch" || return 1
+      # #935: merge the remote branch only when it is this PR's live head (a
+      # concurrent publisher advanced it). With no open PR, origin/$branch is a
+      # spent name -- typically a squash-merged PR whose branch was not deleted --
+      # and merging it imports already-merged history into a new PR.
+      if [[ -z "${pr_number:-}" ]]; then
+        echo "FAIL: origin/$branch exists but has no open PR — the branch name is spent (reused_after_merge); not merging it, never forcing." >&2
+        echo "Move the new commits to a fresh branch and publish from there:" >&2
+        echo "  git checkout -b ${branch}-followup && PR_REMEDIATE=0 make pr" >&2
+        return 1
+      fi
+      if ! git merge --no-edit "origin/$branch"; then
+        if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+        echo "FAIL: push recovery could not merge origin/$branch (PR #${pr_number}) cleanly — merge aborted, tree restored" >&2
+        return 1
+      fi
     fi
     if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
       python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1
@@ -790,13 +812,31 @@ if [[ -f "$_pr_summary_py" ]]; then
     echo "WARN: pr summary receipt not written (continuing)"
 fi
 
-echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
-# PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
-# the live path (ops/scripts/lib/gh_subscribe_pr.sh).
-# shellcheck source=lib/gh_subscribe_pr.sh
-source "$SCRIPT_DIR/lib/gh_subscribe_pr.sh"
-if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
-  echo "WARN: could not subscribe to PR #$pr_number (continuing)"
+# A registered /lcto swarm child stands down at publication
+# (governance/cto-mode/MODE.yaml STAND DOWN): no PR watching and no remediation
+# handoff -- the CTO owns both. ops/autonomy/session_role.py `status` exits 0
+# only for a session that registered itself as a child; every other session,
+# or a probe that cannot run, keeps the solo behaviour.
+_swarm_child=0
+_role_py="$GOV_ROOT/.venv/bin/python"
+[[ -x "$_role_py" ]] || _role_py="$(command -v python3)"
+if [[ -f "$GOV_ROOT/ops/autonomy/session_role.py" ]] &&
+  "$_role_py" "$GOV_ROOT/ops/autonomy/session_role.py" status >/dev/null 2>&1; then
+  _swarm_child=1
+  PR_REMEDIATE=0
+fi
+
+if [[ "$_swarm_child" == "1" ]]; then
+  echo "--- subscribe: skipped (registered /lcto swarm child; the CTO watches PR #$pr_number) ---"
+else
+  echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
+  # PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
+  # the live path (ops/scripts/lib/gh_subscribe_pr.sh).
+  # shellcheck source=lib/gh_subscribe_pr.sh
+  source "$SCRIPT_DIR/lib/gh_subscribe_pr.sh"
+  if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
+    echo "WARN: could not subscribe to PR #$pr_number (continuing)"
+  fi
 fi
 
 handoff_dir="$WS/.l9/pr"
@@ -871,6 +911,9 @@ INSTRUCTIONS:
 
 EOF
   echo "RESULT: PASS — PR open + subscribed; agent must spawn l9-pr-remediation"
+elif [[ "$_swarm_child" == "1" ]]; then
+  echo "swarm child — skipped remediation handoff marker; write CTO-STATUS: and stand down"
+  echo "RESULT: PASS — PR open; lane published"
 else
   echo "PR_REMEDIATE=0 — skipped remediation handoff marker (PR still open/subscribed)"
   echo "RESULT: PASS — PR open + subscribed"

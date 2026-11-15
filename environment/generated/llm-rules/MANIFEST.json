@@ -276,9 +276,9 @@
       "alias": null,
       "class": "always",
       "output": "55-ff-only-ssot-sync.md",
-      "output_sha256": "c45ab331339344ce2d5cf15cb0a0bd5909b099738e0307e26162c4ca26d14438",
+      "output_sha256": "6b32a534ac564af9f69a85129eb7c31e0297011d876df9a1f2b68ff0d831b03a",
       "source": "rules/55-ff-only-ssot-sync.mdc",
-      "source_sha256": "51910ece34bf961386c1aa736d086052de2b04a18e2ca2227b9d6a281813f603",
+      "source_sha256": "34cd8743591b029d9850892a1ccd21915c0acb8140fcbe1f0c7890f825a0b2f1",
       "stem": "55-ff-only-ssot-sync"
     },
     {
@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "8f43aad5659ec82d18c1902f89a0cd0de9a1e013891f6d153d75b180851c6e28",
+      "output_sha256": "fa81931550276d9e59243eea4fe7adbcb6220eec3dd1feac80ea2f9718e8cb14",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "83dbe49136ba4310e7e7655e62db2500589c3bb92c6f6184fb00c7cc0337424b",
+      "source_sha256": "ac112bfaa2026b5fa0b9676ebecb672fec14c1ff2c051e29c20f094c7dfd9fcd",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 15,
     "source_mdc": 68
   },
-  "tree_sha256": "ef86b39dfefe82a635ee0fa458409b8ff93a5e09bf99b5102c9c3426384cca6a"
+  "tree_sha256": "b76f5e9c29d73b6c3038aa4c37f8495de7aee9d0eef698242d39c17c876258ee"
 }

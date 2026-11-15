@@ -1092,3 +1092,35 @@ def test_reuse_fresh_rebuilds_when_the_sha_moved(tmp_path: Path, monkeypatch, ca
     assert len(calls) == 1, "a moved SHA must rebuild"
     assert "receipt_source=rebuilt" in capsys.readouterr().out
     assert json.loads(path.read_text(encoding="utf-8"))["governance_SHA"] == "new"
+
+
+@pytest.mark.parametrize(
+    ("env", "status", "fragment"),
+    [
+        (
+            {"L9_INFISICAL_CLIENT_ID": "id", "L9_INFISICAL_CLIENT_SECRET": "s"},
+            "READY",
+            "Infisical machine identity present",
+        ),
+        ({}, "READY", "no Infisical machine identity in this environment"),
+        ({"L9_INFISICAL_CLIENT_ID": "id"}, "DEGRADED", "L9_INFISICAL_CLIENT_SECRET unset"),
+    ],
+)
+def test_secret_boundary_reports_the_machine_identity_it_finds(
+    env: dict[str, str], status: str, fragment: str
+) -> None:
+    """#865: the note said "no Infisical secret" while capability_bind used the identity."""
+    got_status, note = er._secret_boundary_status(env)
+    assert (got_status, fragment in note) == (status, True), note
+    assert note.startswith("model-controlled")
+    for value in env.values():  # names are reported, never values
+        assert f"={value}" not in note
+
+
+def test_session_start_prints_the_receipts_boundary_not_a_constant() -> None:
+    hook = (
+        Path(__file__).resolve().parents[3]
+        / "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+    ).read_text(encoding="utf-8")
+    assert "no broker/Infisical/Graphiti secret in this environment" not in hook
+    assert 'notes.get("secret_boundary_status")' in hook

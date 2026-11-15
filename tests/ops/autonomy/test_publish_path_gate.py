@@ -927,3 +927,19 @@ def test_f1_closures_hold_under_f2(
     ):
         reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
         assert reason is not None and "gh pr create" in reason, command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git push origin agent/x 2>&1 | tail -3",
+        "git push origin agent/x >/dev/null 2>&1",
+        "git push origin agent/x > push.log",
+        "git push -u origin agent/x 2> err.log",
+        "git push &>log origin agent/x",
+        "git push origin agent/x >> push.log 2>&1",
+    ],
+)
+def test_a_redirection_is_never_read_as_a_push_refspec(command: str) -> None:
+    """#710: shlex keeps `2>&1` / `>` as words; they are the shell's, not git's."""
+    assert [form["branch"] for form in publication_forms(command)] == ["agent/x"]

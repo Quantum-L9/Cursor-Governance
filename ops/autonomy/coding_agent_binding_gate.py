@@ -38,12 +38,24 @@ Decision:
 * anything else, including a malformed event, run or record, an absent
   authority checkout, or a verifier that cannot run: deny, naming the fix.
 
+/lcto swarm children (``ops/autonomy/session_role.py``): the CTO operating protocol
+requires a child to turn coding-agent mode ACTIVE before any code change
+(``governance/cto-mode/MODE.yaml`` child prompt). For a registered child the file tools
+are additionally denied unless the nearest ``.l9/coding-agent-mode/session.json`` above
+the mutated path was requested by this same session, carries ``last_mode: ACTIVE``, and
+was evaluated against the current ``governance/coding-agent-mode/MODE.yaml`` digest; and
+a child may not write that state through a file tool. This is a guard rail against a
+child forgetting the mode, not a proof against a child that forges its own state: the
+role is self-declared and only ever narrows (L9-MONOTONIC-001). Solo sessions are
+unaffected.
+
 Operator breakglass (human/ops only, a reason, never a bare flag):
 ``L9_CODING_BINDING_AUTHORIZED=<reason>``.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -75,6 +87,21 @@ REBIND_HINT = (
     "<.github checkout> --expect-revision <pin>, save its output unchanged as {record}, and "
     "name that checkout as authority_root in {run}. Only the operator may carry the run past an "
     f"Unknown, with {REAUTHORIZED_ENV}=<the user's instruction verbatim> in the hook environment."
+)
+
+MODE_STATE_DIR = Path(".l9") / "coding-agent-mode"
+MODE_STATE_FILE = "session.json"
+MODE_STATE_SCHEMA = "l9.coding-agent-mode-session/v1"
+MODE_CONTRACT = GOV_ROOT / "governance" / "coding-agent-mode" / "MODE.yaml"
+CHILD_LAW = (
+    "governance/cto-mode/MODE.yaml child prompt: a /lcto swarm child turns coding-agent "
+    "mode ACTIVE before any code change"
+)
+CHILD_HINT = (
+    'Run "$HOME/.cursor-governance/.venv/bin/python" '
+    '"$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on in the repository you '
+    "are changing, and confirm it reports ACTIVE, then retry. If it reports BLOCKED, report "
+    "that as a CTO-BLOCKER: line instead of editing."
 )
 
 Reverify = Callable[..., dict[str, Any]]
@@ -181,6 +208,76 @@ def reverify(
     return verdict
 
 
+def _session_role() -> Any:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import session_role
+
+    return session_role
+
+
+def locate_mode_state(start: Path) -> Path | None:
+    for parent in (start, *start.parents):
+        candidate = parent / MODE_STATE_DIR / MODE_STATE_FILE
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def child_mode_decision(anchor: Path, target: Path | None, session_id: str | None) -> Decision:
+    """The coding-agent-mode precondition for a registered swarm child's file mutation."""
+    start = anchor.parent if target is not None else anchor
+    if target is not None:
+        resolved = anchor.resolve()
+        for parent in resolved.parents:
+            if (
+                parent.name == MODE_STATE_DIR.name
+                and parent.parent.name == MODE_STATE_DIR.parent.name
+            ):
+                return Decision(
+                    False,
+                    f"{resolved} is coding-agent mode state; a swarm child changes it only "
+                    f"through coding_agent_mode.py, never a file tool. {CHILD_LAW}.",
+                )
+    state_path = locate_mode_state(start)
+    if state_path is None:
+        return Decision(
+            False,
+            f"this session is a registered /lcto swarm child and coding-agent mode is not on "
+            f"above {start}. {CHILD_LAW}. {CHILD_HINT}",
+        )
+    try:
+        state = _load(state_path)
+    except (OSError, ValueError) as exc:
+        return Decision(False, f"{state_path} is unreadable ({exc}). {CHILD_HINT}")
+    if not isinstance(state, dict) or state.get("schema") != MODE_STATE_SCHEMA:
+        return Decision(False, f"{state_path} is not {MODE_STATE_SCHEMA}. {CHILD_HINT}")
+    if not session_id or state.get("session_id") != session_id:
+        return Decision(
+            False,
+            f"coding-agent mode at {state_path} was requested by another session; a request "
+            f"never carries over. {CHILD_HINT}",
+        )
+    try:
+        digest = "sha256:" + hashlib.sha256(MODE_CONTRACT.read_bytes()).hexdigest()
+    except OSError as exc:
+        return Decision(
+            False, f"the coding-agent mode contract is unreadable ({exc}); mode is Unknown."
+        )
+    if state.get("last_contract_digest") != digest or state.get("contract_digest") != digest:
+        return Decision(
+            False,
+            f"coding-agent mode at {state_path} was evaluated against an older contract. "
+            f"{CHILD_HINT}",
+        )
+    if state.get("last_mode") != "ACTIVE":
+        return Decision(
+            False,
+            f"coding-agent mode at {state_path} is {state.get('last_mode') or 'not evaluated'}, "
+            f"not ACTIVE. {CHILD_LAW}. {CHILD_HINT}",
+        )
+    return Decision(True, f"swarm child: coding-agent mode ACTIVE ({state_path})")
+
+
 def evaluate(
     tool_name: str,
     tool_input: Any,
@@ -188,6 +285,8 @@ def evaluate(
     cwd: Path,
     env: dict[str, str] | None = None,
     reverify_fn: Reverify = reverify,
+    session_id: str | None = None,
+    is_child: Callable[[str | None], bool] | None = None,
 ) -> Decision:
     env = os.environ if env is None else env
     if tool_name not in MUTATING_TOOLS:
@@ -200,6 +299,12 @@ def evaluate(
     anchor = target if target is not None else cwd
     if not anchor.is_absolute():
         anchor = cwd / anchor
+    child_probe = is_child if is_child is not None else _session_role().is_child
+    if child_probe(session_id):
+        child = child_mode_decision(anchor, target, session_id)
+        if not child.allow:
+            return child
+
     run_path = locate_run(anchor.parent if target is not None else anchor)
     if run_path is None:
         return Decision(True, "no active coding-agent run")
@@ -362,6 +467,7 @@ def main(stdin: Any = None) -> int:
         str(event.get("tool_name", "")),
         event.get("tool_input") or {},
         cwd=Path(cwd_raw),
+        session_id=str(event.get("session_id") or "") or None,
     )
     if not decision.allow:
         _deny(decision.reason)
