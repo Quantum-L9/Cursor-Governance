@@ -547,8 +547,9 @@ def reconcile_gov_claude(root: Path, template: dict[str, Any], *, check: bool) -
     hooks_src = root / HOOKS_SRC_REL
     hooks_dest = root / ".claude" / "hooks"
     # The governance tree's own `.claude/hooks/` is a committed MIRROR of the
-    # hook sources beside it, owned by this reconciler: it always converges,
-    # and CI's `--check` is what catches a mirror that was not regenerated.
+    # hook sources beside it, owned by this reconciler: it always converges.
+    # `--check` reports a mirror that was not regenerated; CI does not run it
+    # (governance-self-check.yml diffs only the manifest and llm-rules paths).
     for name in CONSUMER_HOOK_FILES:
         drift.extend(sync_hook_file(hooks_src / name, hooks_dest / name, check=check, wrote=wrote))
     drift.extend(prune_retired_hooks(hooks_dest, root, check=check, wrote=wrote, removed=removed))

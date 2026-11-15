@@ -9,7 +9,9 @@ auto_generated: false
 
 ## Purpose
 
-Activate governance, hydrate Graphiti, and deny mid-execution publish.
+Activate governance, report memory health (SessionStart is health-only,
+CANONICAL_LAW §8.9; resume is an on-demand `python -m ops.memory.cli hydrate`), and
+deny mid-execution publish.
 
 SessionStart bootstrap and shell gates.
 

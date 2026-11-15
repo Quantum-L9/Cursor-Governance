@@ -126,3 +126,18 @@ surface's *memory front door* is the same door (`ops/memory`), so "memory front
 door" in item 3 names where a surface wires it, not a surface-local transport.
 The receipt-unification seam in item 4 is unchanged. Nothing in this ADR
 authorizes a provider call or a second memory stack.
+
+## Amendment (2026-11-15) — the gate table follows `l9_hook_exec.sh`
+
+Decision item 2's lists drifted from the launcher. As executed:
+
+- **Claude-only gates** (skip on a known non-Claude surface):
+  `local_execution_gate_wrap.py`, `memory_gate.py` and
+  `coding_agent_binding_gate_wrap.py`.
+- **Shared gates:** `merge_gate_wrap.py`, `swarm_role_gate_wrap.py` (registered only on
+  `mcp__claude-code-remote__.*`) and `context7_stack_pretool.py`.
+  `session_debt_wrap.py` is gate-classified but not registered: `session_debt.py`
+  runs on demand, not as a Stop gate (`rules/42-no-abandoned-work`).
+
+`environment/agents/SURFACE_BOOTSTRAP_CONTRACT.md` carries the same table; the
+launcher's `l9_required_class` and Claude-only `case` are the authority for both.
