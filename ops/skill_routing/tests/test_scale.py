@@ -42,6 +42,25 @@ CEILING_ROUTE = {100: 0.5, 500: 0.75, 1000: 1.0, 5000: 2.5, 10000: 5.0}
 TARGET_ROUTE_5000_MS = 100
 TARGET_MATERIALIZE_RECEIPT_MS = 50
 TARGET_HOOK_MS = 500
+#: Line tracing roughly doubles pure-Python routing time (measured locally at
+#: n=10000: 0.60 s plain, 1.27 s under coverage). The SonarCloud job runs this
+#: suite under coverage on shared runners, where 5.29 s breached the plain 5.0 s
+#: ceiling on 2026-11-15. The ceiling bounds the algorithm, not the tracer.
+COVERAGE_SLOWDOWN = 2.5
+
+
+def coverage_active() -> bool:
+    """True when a coverage tracer is measuring this process (pytest-cov or `coverage run`)."""
+    try:
+        import coverage
+    except ImportError:
+        return False
+    return coverage.Coverage.current() is not None
+
+
+def route_ceiling(count: int, *, traced: bool) -> float:
+    """The route p95 ceiling for ``count`` skills, widened only while a tracer runs."""
+    return CEILING_ROUTE[count] * (COVERAGE_SLOWDOWN if traced else 1.0)
 
 
 def tok(i: int) -> str:
@@ -239,7 +258,7 @@ def test_scale_pipeline(roots, count: int, capsys):
             f"targets: route5000<{TARGET_ROUTE_5000_MS}ms mat+receipt<"
             f"{TARGET_MATERIALIZE_RECEIPT_MS}ms hook<{TARGET_HOOK_MS}ms"
         )
-    assert route_p95 < CEILING_ROUTE[count]
+    assert route_p95 < route_ceiling(count, traced=coverage_active())
     assert mat_p95 + rcpt_p95 < 1.0
     assert hook_p95 < 10.0
 
@@ -264,6 +283,14 @@ def test_one_stalled_write_does_not_set_the_durable_p95(monkeypatch) -> None:
     assert median == pytest.approx(0.005)
     assert p95 == pytest.approx(0.005), "a single stall must not be the p95"
     assert p95 < 1.0
+
+
+def test_route_ceiling_widens_only_under_a_tracer() -> None:
+    """Plain runs keep the original ceilings; only a coverage tracer widens them."""
+    for count, ceiling in CEILING_ROUTE.items():
+        assert route_ceiling(count, traced=False) == ceiling
+        assert route_ceiling(count, traced=True) == pytest.approx(ceiling * COVERAGE_SLOWDOWN)
+    assert route_ceiling(10000, traced=True) > 5.29, "the 2026-11-15 SonarCloud sample"
 
 
 def test_native_count_is_constant_across_scale(roots):
