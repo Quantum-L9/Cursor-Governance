@@ -107,6 +107,9 @@ def test_preflight_routes_platform_helpers_to_l9_owners() -> None:
     assert "Do not invoke Register Repo Root" in text
     assert "canonical l9-graphite-memory control plane" in text
     assert "memory.phase_lock then memory.write_governed" in text
+    # ADR-0031: the ordinary agent write takes no phase lock.
+    assert "ordinary facts use memory.write_agent" in text
+    assert "cto_wakeup" in text  # the /lcto check-in is not PR watching
     assert "Do not invoke Send Later" in text
     assert "publication is make pr only" in text
     assert "Do not invoke Add Repo for this repository at SessionStart" in text

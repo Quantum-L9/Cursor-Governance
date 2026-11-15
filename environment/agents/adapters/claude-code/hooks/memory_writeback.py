@@ -344,6 +344,11 @@ def main() -> int:
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
         return 0
+    if pp.is_swarm_child(event):
+        # A /lcto swarm child stands down at publication: no handoff request, no
+        # PR handoff comment. Its continuation still closes at SessionEnd.
+        _record(contract, session_id, status="skipped_swarm_child")
+        return 0
     # The prefetch receipt is keyed by the writer-scoped id
     # (``<writer_agent>__<chat>``, memory_state.resolve_receipt_id), the one
     # key prefetch stamps and the write gate reads. This hook looked it up by

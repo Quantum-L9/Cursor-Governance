@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -994,6 +995,29 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     assert '-X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription"' not in script
     assert "updateSubscription" in helper
     assert '-X PUT "repos/' not in helper
+
+
+def test_a_swarm_child_publishes_without_watching_or_a_remediation_marker(
+    tmp_path: Path,
+) -> None:
+    """governance/cto-mode/MODE.yaml STAND DOWN: the CTO owns PR watching and remediation."""
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    probe = script.index('ops/autonomy/session_role.py" status')
+    assert probe < script.index('gh_subscribe_pr "$owner"')
+    assert probe < script.index("=== L9_AGENT_REQUIRED ===")
+    subscribe = script[script.index('if [[ "$_swarm_child" == "1" ]]; then') :]
+    assert subscribe.index("subscribe: skipped") < subscribe.index('gh_subscribe_pr "$owner"')
+    assert "PR_REMEDIATE=0" in script[probe : script.index("subscribe: skipped")]
+
+    # The probe the script runs: exit 0 only for a registered child.
+    role = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "session_role.py"
+    env = {**os.environ, "L9_SESSION_ROLE_DIR": str(tmp_path), "CLAUDE_CODE_SESSION_ID": "s1"}
+    env.pop("CURSOR_SESSION_ID", None)
+    status = [sys.executable, str(role), "status"]
+    assert subprocess.run(status, env=env, capture_output=True, check=False).returncode == 1
+    register = [sys.executable, str(role), "register-child", "--cto-session", "session_cto"]
+    subprocess.run(register, env=env, capture_output=True, check=True)
+    assert subprocess.run(status, env=env, capture_output=True, check=False).returncode == 0
 
 
 def _gate_function(gate: str, name: str) -> str:
