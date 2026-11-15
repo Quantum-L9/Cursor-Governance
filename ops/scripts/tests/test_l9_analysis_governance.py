@@ -51,5 +51,6 @@ class L9AnalysisGovernanceTests(unittest.TestCase):
         )
         self.assertEqual(offenders, [], "repo-local Core analysis callers")
 
+
 if __name__ == "__main__":
     unittest.main()
