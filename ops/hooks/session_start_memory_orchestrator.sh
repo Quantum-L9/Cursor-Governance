@@ -12,8 +12,9 @@ source "$HOOK_DIR/graphiti_common.sh"
 
 REPO="${CURSOR_PROJECT_DIR:-}"
 
-export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
-export USER_ID="${USER_ID:-cursor_agent}"
+# Memory identity is DERIVED from host markers (ops/memory/agent_identity.py:
+# CURSOR_AGENT -> cursor), never configured; a default exported here would only be
+# reported as static drift (rules/03, rules/64).
 # SessionStart owns session_id (once per session). conversation_id is a later
 # chat key and must not become the session id — that lets every agent share one
 # write-gate pass.
@@ -187,8 +188,6 @@ print(json.dumps({
     "env": {
         "GRAPHITI_MEMORY_ENABLED": os.environ.get("GRAPHITI_MEMORY_ENABLED", "1"),
         "GRAPHITI_WRITE_GATES": os.environ.get("GRAPHITI_WRITE_GATES", "0"),
-        "L9_MEMORY_AGENT_ID": os.environ.get("L9_MEMORY_AGENT_ID", "cursor"),
-        "USER_ID": os.environ.get("USER_ID", "cursor_agent"),
     },
     "hydrate_markdown": os.environ.get("HYDRATE_MD", ""),
     "codegraph_markdown": os.environ.get("CODEGRAPH_MD", "skipped"),
