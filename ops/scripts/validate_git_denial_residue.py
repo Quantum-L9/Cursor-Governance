@@ -112,6 +112,21 @@ ALLOW_LINE = re.compile(
 #: this validator exists to catch, so the exemption is only valid while it exists.
 PUBLICATION_GATE = ROOT / "ops" / "autonomy" / "first_publication_gate.py"
 
+#: Program Execution's runner refuses every publication at its own ``run_cmd`` choke
+#: point (``refuse_publication``). A denial scoped to that runner is a live gate in
+#: Program Execution, not the retired agent-side name gate, so it is truthful — but
+#: only while that refusal exists, and only when the unit names the choke point.
+RUNNER_SCOPE = re.compile(r"(?i)runner'?s?\s+[`*]*run_cmd[`*]*\s+choke\s+point")
+RUNNER_GATE = ROOT / "environment" / "program-execution" / "scripts" / "run_campaign.py"
+RUNNER_REFUSAL = "def refuse_publication("
+
+
+def _runner_gate_live() -> bool:
+    try:
+        return RUNNER_REFUSAL in RUNNER_GATE.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
 
 def _candidates() -> list[Path]:
     seen: list[Path] = []
@@ -187,6 +202,8 @@ def scan(paths: list[Path]) -> list[str]:
             if not any(DENIAL_CLAIM.search(clause) for clause in _clauses(unit)):
                 continue
             if ALLOW_LINE.search(unit):
+                continue
+            if RUNNER_SCOPE.search(unit) and _runner_gate_live():
                 continue
             findings.append(f"{rel}:{number}: {unit.strip()[:160]}")
     return findings

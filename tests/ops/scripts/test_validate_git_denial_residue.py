@@ -193,3 +193,21 @@ def test_publication_plane_exemption_vouches_for_a_gate_that_exists() -> None:
     assert validator.PUBLICATION_GATE.is_file(), validator.PUBLICATION_GATE
     source = validator.PUBLICATION_GATE.read_text(encoding="utf-8")
     assert "def first_publication_verdict" in source
+
+
+def test_a_denial_scoped_to_the_program_execution_runner_is_truthful(tmp_path: Path) -> None:
+    """CANONICAL_LAW PROGRAM_EXECUTION publication item 4: run_cmd refuses publication."""
+    line = (
+        "Raw `git push`, `gh pr create` and every merge transport stay refused at the "
+        "runner's `run_cmd` choke point."
+    )
+    assert _scan_line(tmp_path, line) == [], f"gate false-positived on: {line}"
+    assert validator.RUNNER_REFUSAL in validator.RUNNER_GATE.read_text(encoding="utf-8")
+
+
+def test_the_runner_exemption_lapses_without_the_runner_refusal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(validator, "RUNNER_GATE", tmp_path / "missing.py")
+    line = "Raw `git push` stays refused at the runner's `run_cmd` choke point."
+    assert _scan_line(tmp_path, line), "exemption survived the gate it vouches for"
