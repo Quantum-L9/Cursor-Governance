@@ -149,6 +149,24 @@ def _merge_authority_strict(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("L9_MERGE_AUTHORITY_MODE", "strict")
 
 
+@pytest.fixture(autouse=True)
+def _no_ambient_authority_or_role(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Isolate every test from two machine-level stores SessionStart provisions.
+
+    ``~/.l9/authority/.github`` (ops/scripts/ensure_authority_checkout.sh) is a real
+    authority checkout the shared resolver tries before workspace guesses, so a test
+    asserting "no authority checkout" saw one and went ACTIVE. ``~/.l9/cto/roles``
+    (ops/autonomy/session_role.py) would let a developer's own registered role leak into
+    gate tests. Both point at empty per-session directories; tests of those stores set
+    their own paths. Gate subprocesses inherit the override.
+    """
+    isolated = tmp_path_factory.getbasetemp() / "isolated-machine-stores"
+    monkeypatch.setenv("L9_AUTHORITY_MANAGED_ROOT", str(isolated / "authority" / ".github"))
+    monkeypatch.setenv("L9_SESSION_ROLE_DIR", str(isolated / "roles"))
+
+
 # 2026-11-13 (CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1): the
 # "Program Execution is an eviction target ... Remove with the eviction slice"
 # comment above is superseded. Program Execution is registered (`make
