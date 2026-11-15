@@ -110,6 +110,8 @@ def main() -> int:
 
     merge_base = git(repo, "merge-base", base, "HEAD").stdout.strip()
     if not merge_base:
+        merge_base = _deepen_and_retry(repo, base)
+    if not merge_base:
         return _fail(
             f"no merge base between HEAD and '{base}' — this branch does not share history "
             "with its integration target (E2), failing closed"
@@ -137,6 +139,27 @@ def main() -> int:
         f"base is {behind} commit(s) ahead of the fork point)"
     )
     return 0
+
+
+def _deepen_and_retry(repo: Path, base: str) -> str:
+    """On a shallow clone, fetch the missing history once and retry merge-base (#979).
+
+    A cloud clone can be re-shallowed after task start, so the shared ancestor is
+    missing locally rather than absent. Deepening only adds evidence: when the
+    retry still finds nothing the caller fails closed exactly as before.
+    """
+    shallow = git(repo, "rev-parse", "--is-shallow-repository").stdout.strip()
+    if shallow != "true":
+        return ""
+    print(f"NOTE: shallow clone and no local merge base with '{base}' — deepening before deciding")
+    remote_branch = base.removeprefix("origin/")
+    if git(repo, "fetch", "--deepen=200", "origin", remote_branch).returncode != 0:
+        print("NOTE: --deepen fetch failed; trying --unshallow")
+    merge_base = git(repo, "merge-base", base, "HEAD").stdout.strip()
+    if merge_base:
+        return merge_base
+    git(repo, "fetch", "--unshallow", "origin")
+    return git(repo, "merge-base", base, "HEAD").stdout.strip()
 
 
 def _recorded_base_sha(repo: Path, branch: str) -> str:
