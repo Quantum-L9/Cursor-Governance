@@ -17,5 +17,5 @@
       "sdk_policy": "semgrep-finding-policy.yaml"
     }
   },
-  "note": "Core selects an SDK policy file but never evaluates finding thresholds itself. sdk_policy is the bare semgrep-finding-policy.yaml filename, which the pinned resolver resolves under .github/governance before the SDK reads it; strict profiles reject a run whose findings that policy does not classify. The companion semgrep-identity-map.yaml is passed by .github/workflows/l9-analysis.yml."
+  "note": "Core selects an SDK policy file but never evaluates finding thresholds itself. sdk_policy is the bare semgrep-finding-policy.yaml filename, which the pinned resolver resolves under .github/governance before the SDK reads it; strict profiles reject a run whose findings that policy does not classify. The repo-local caller .github/workflows/l9-analysis.yml is retired (#732); analysis runs as the org-required 'Analyze (central Core)' check."
 }

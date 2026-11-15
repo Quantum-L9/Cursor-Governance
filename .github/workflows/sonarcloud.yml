@@ -1,0 +1,89 @@
+# SonarCloud CI scan (#717), modelled on the org SonarCloud workflow in
+# Quantum-L9/Enrichment.Inference.Engine (.github/workflows/sonarcloud.yml).
+#
+# Organization quantum-l9 / project Quantum-L9_Cursor-Governance, read from
+# sonar-project.properties (the CI-scanner config; .sonarcloud.properties is
+# the Automatic Analysis config). A CI scan and Automatic Analysis cannot both
+# be enabled on one SonarCloud project: Automatic Analysis must be turned off
+# in the project's SonarCloud settings for this job to analyze anything.
+#
+# SONAR_TOKEN is the org Actions secret (ops/secrets/actions-secret-sync.json
+# org_secrets, visibility all, because this repository is public). The first
+# step fails closed without it: no token means no analysis and no quality-gate
+# proof, never a silent pass.
+#
+# Fork pull requests skip this entire secret-bearing job. A skipped job is not
+# a quality-gate PASS and provides no analysis proof.
+#
+# Unlike EIE this job runs no test suite: the repository's suites are owned by
+# ops/scripts/run_python_test_suites.py in l9-lint-test.yml, and #717 needs the
+# PR-scoped issue census, not a second test run. Coverage is not reported.
+
+name: SonarCloud
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarcloud-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarqube:
+    name: SonarCloud Scan
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Require SonarCloud analysis token
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [[ ! "${SONAR_TOKEN:-}" =~ [^[:space:]] ]]; then
+            echo "::error::SONAR_TOKEN is required for native SonarCloud analysis; no analysis or quality-gate proof was produced."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Coverage for the quality gate's "coverage on new code" condition. Same
+      # interpreter setup and runner as the Test Suite job (l9-lint-test.yml); the
+      # ci profile's repo-root suite writes coverage.xml at the repository root.
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install test tools
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          bash ops/scripts/ensure_gov_python.sh "$PWD"
+      - name: Tests with coverage (Cobertura XML)
+        env:
+          TESTING: "true"
+        run: |
+          set -euo pipefail
+          .venv/bin/python ops/scripts/run_python_test_suites.py --profile ci
+          test -s coverage.xml
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65  # v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300

@@ -157,11 +157,16 @@ def _write_plan(tmp_path: Path, vault_name: str, sdk_vault: str = "GITHUB_TOKEN"
     return path
 
 
-def test_plan_entry_outside_root_env_keys_fails_on_load(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("vault_name", "sdk_vault"),
+    [("NOT_A_VAULT_KEY", "GITHUB_TOKEN"), ("SONAR_TOKEN", "NOT_A_VAULT_KEY")],
+)
+def test_plan_entry_outside_root_env_keys_fails_on_load(
+    tmp_path: Path, vault_name: str, sdk_vault: str
+) -> None:
+    plan = _write_plan(tmp_path, vault_name, sdk_vault=sdk_vault)
     with pytest.raises(sas.PlanError, match="NOT_A_VAULT_KEY"):
-        sas.load_plan(_write_plan(tmp_path, "NOT_A_VAULT_KEY"))
-    with pytest.raises(sas.PlanError, match="NOT_A_VAULT_KEY"):
-        sas.load_plan(_write_plan(tmp_path, "SONAR_TOKEN", sdk_vault="NOT_A_VAULT_KEY"))
+        sas.load_plan(plan)
 
 
 def test_bad_plan_exits_two_before_binding(
@@ -171,7 +176,8 @@ def test_bad_plan_exits_two_before_binding(
         raise AssertionError("bind must not run for an invalid plan")
 
     monkeypatch.setattr(sas.cb, "bind", no_bind)
-    rc = sas.main(["--plan", str(_write_plan(tmp_path, "NOT_A_VAULT_KEY"))])
+    monkeypatch.setattr(sas, "DEFAULT_PLAN", _write_plan(tmp_path, "NOT_A_VAULT_KEY"))
+    rc = sas.main([])
     assert rc == 2
     assert fake_run.calls == []
 

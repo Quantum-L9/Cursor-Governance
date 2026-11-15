@@ -7,15 +7,45 @@ pinned here.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO / "skills" / "l9-plan" / "scripts"))
+SCRIPTS = REPO / "skills" / "l9-plan" / "scripts"
 
-import validate_plan_kernel_receipt as v  # noqa: E402
+
+def _load_validator() -> ModuleType:
+    """Load the pack's validator without leaking its sibling modules.
+
+    The pack imports bare names (``paths``) that other skill packs also define
+    (``skills/l9-plan-simple/scripts/paths.py``). Leaving this directory on
+    ``sys.path`` or its modules in ``sys.modules`` made a later test in the same
+    worker import the wrong ``paths`` (full-suite ImportError on main).
+    """
+    before = set(sys.modules)
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_plan_kernel_receipt_either_or", SCRIPTS / "validate_plan_kernel_receipt.py"
+        )
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path.remove(str(SCRIPTS))
+        for name in set(sys.modules) - before:
+            origin = getattr(sys.modules[name], "__file__", None) or ""
+            if Path(origin).resolve().parent == SCRIPTS.resolve():
+                del sys.modules[name]
+
+
+v = _load_validator()
 
 
 def _either_errors(body: str) -> list[str]:
