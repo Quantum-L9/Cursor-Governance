@@ -171,12 +171,18 @@ REGION_FILES = "FILES-TOUCHED"
 #: The composer's ranked Reviewer focus. Machine-owned so it follows every push
 #: like the inventory; text a reviewer writes outside it survives refresh.
 REGION_REVIEWER = "REVIEWER-FOCUS"
+#: The author's Reviewer focus from pr-intent.json. Intent-owned: a later intent
+#: replaces it, no intent leaves it, and a person's text outside it survives
+#: (#912). Without its own markers the first intent's text became
+#: indistinguishable from a person's and froze on re-publish.
+REGION_REVIEWER_INTENT = "REVIEWER-FOCUS-INTENT"
 MACHINE_REGIONS = (
     REGION_PROTECTED_PATHS,
     REGION_EVIDENCE,
     REGION_INTENT,
     REGION_FILES,
     REGION_REVIEWER,
+    REGION_REVIEWER_INTENT,
 )
 #: Headings and regions the canonical template must carry. A template that
 #: lacks one cannot be refreshed safely, so resolution fails closed on it.
@@ -2214,7 +2220,9 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
         # written; without one the composer ranks it in a refreshed region.
         text = text.replace(
             REVIEWER_PLACEHOLDER,
-            intent.reviewer_focus or wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
+            wrap_region(REGION_REVIEWER_INTENT, intent.reviewer_focus)
+            if intent.reviewer_focus
+            else wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
             1,
         )
     text = _put_region(text, REGION_INTENT, render_changes_by_intent(facts), _INTENT_PH)
@@ -2564,14 +2572,20 @@ def _refresh_body_once(
             body = _replace_composed_problem(body, facts, facts.intent.problem)
         if facts.intent.reviewer_focus:
             # The composer's ranked region (or the older unresolved marker) is
-            # the composer's own text; the author's focus replaces it.
+            # the composer's own text; the author's focus replaces it inside an
+            # intent-owned region, so a later intent can replace it again (#912).
+            focus = facts.intent.reviewer_focus
             span = _region_span(body, REGION_REVIEWER)
-            if span is not None:
+            if _region_span(body, REGION_REVIEWER_INTENT) is not None:
+                body = set_region(body, REGION_REVIEWER_INTENT, focus)
+            elif span is not None:
                 open_marker, close_marker = region_markers(REGION_REVIEWER)
                 start, end = span[0] - len(open_marker), span[1] + len(close_marker)
-                body = body[:start] + facts.intent.reviewer_focus + body[end:]
+                body = body[:start] + wrap_region(REGION_REVIEWER_INTENT, focus) + body[end:]
             elif REVIEWER_UNRESOLVED in body:
-                body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
+                body = body.replace(
+                    REVIEWER_UNRESOLVED, wrap_region(REGION_REVIEWER_INTENT, focus), 1
+                )
     body = _refresh_derived(body, facts, template)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
