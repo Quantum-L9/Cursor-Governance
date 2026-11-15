@@ -1115,12 +1115,12 @@ print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
 print("memory_control_plane=" + str(d.get("memory_control_plane_status", "UNKNOWN")))
 print("memory_transport=" + str(d.get("memory_transport", "UNKNOWN")))
 notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
+print("secret_boundary_status=" + str(notes.get("secret_boundary_status") or "UNKNOWN"))
 print("primary_blocker=" + str(notes.get("memory_control_plane_status") or "none"))
 ' 2>/dev/null || true)"
   [ -n "$parsed" ] || return 0
   say "--- capability plane readiness ---"
   say "capability_broker=retired (never shipped; not probed)"
-  say "secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)"
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && say "$line"
   done <<< "$parsed"
