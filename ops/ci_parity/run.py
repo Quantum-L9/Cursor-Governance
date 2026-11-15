@@ -57,6 +57,7 @@ YAMLLINT_CONFIG = HERE / "lanes" / "yamllint.yaml"
 FILE_MODE_TIMEOUT = 8
 LANE_TIMEOUT = 1800
 KEEP_RECEIPTS = 5
+ADVISORY_PRINT_CAP = 15
 DEFAULT_WAIT = 600
 
 
@@ -1173,10 +1174,17 @@ def summarize(ctx: Context, records: Sequence[dict[str, Any]], *, label: str) ->
         f"ci-parity {label} {ctx.sha[:8]} base {ctx.base[:8]}: lanes={len(records)} "
         f"blocking={len(blocking)} advisory={len(advisory)} skipped={len(skipped)}"
     ]
-    for item in blocking[:40]:
+    # Every BLOCK line is printed (#950): a truncated list hid 53 of 93
+    # findings with no sign they existed. Advisory notes stay capped, but the
+    # hidden count is named.
+    for item in blocking:
         lines.append("  BLOCK " + fnd.Finding.from_dict(item).render())
-    for item in advisory[:15]:
+    for item in advisory[:ADVISORY_PRINT_CAP]:
         lines.append("  note  " + fnd.Finding.from_dict(item).render())
+    if len(advisory) > ADVISORY_PRINT_CAP:
+        lines.append(
+            f"  ...   {len(advisory) - ADVISORY_PRINT_CAP} more advisory note(s) not shown"
+        )
     for record in skipped:
         lines.append(
             f"  skip  {record.get('notice') or record['lane'] + ': ' + str(record.get('status'))}"

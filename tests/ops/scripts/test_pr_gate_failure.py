@@ -380,3 +380,32 @@ def test_content_change_still_releases_regardless_of_head(tmp_path: Path) -> Non
     _receipt(path, head_sha="same-head")
     proc = _refuse(path, "different 456 origin/main", head_sha="same-head")
     assert proc.returncode == 0
+
+
+_COMMITTED_THEN_OVERLAP = "\n".join(
+    [
+        "NON_GENERATED_NEW_DIRTY:",
+        "  src/l9_semantic_compiler/cli.py",
+        "  src/l9_semantic_compiler/io.py",
+        "OK: committed 2 writer-rewrite path(s) — continuing this make pr",
+        "BLOCK: PR overlap (non-generated files)",
+        "FAIL: early overlap blocked publish (PR_OVERLAP=block)",
+    ]
+)
+
+
+def test_dirt_the_gate_already_committed_is_not_source_dirty() -> None:
+    """#734 defect 2: a later writer-rewrite commit line clears earlier dirt."""
+    log = _COMMITTED_THEN_OVERLAP
+    dirty = mod.parse_dirty_paths(log)
+    assert dirty == []
+    cls = mod.classify_failure(nodes=[], hooks=[], dirty_paths=dirty, log_text=log)
+    assert cls != "source_dirty"
+
+
+def test_dirt_after_the_writer_commit_is_still_source_dirty() -> None:
+    log = _COMMITTED_THEN_OVERLAP + "\nNON_GENERATED_NEW_DIRTY:\n  src/late.py\n"
+    dirty = mod.parse_dirty_paths(log)
+    assert dirty == ["src/late.py"]
+    cls = mod.classify_failure(nodes=[], hooks=[], dirty_paths=dirty, log_text=log)
+    assert cls == "source_dirty"

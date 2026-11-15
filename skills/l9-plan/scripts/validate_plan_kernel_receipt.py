@@ -25,7 +25,10 @@ SLUG_RE = re.compile(
 )
 ETC_RE = re.compile(r"\betc\.|…|\band similar\b", re.I)
 OWNED_LINE_RE = re.compile(r"owned_paths|\bexclusive\b", re.I)
-EITHER_RE = re.compile(r"\beither\b|drop or keep|fold or exempt", re.I)
+# An open exclusive choice: "either <X> or <Y>" within one clause, or the fixed
+# "drop or keep" / "fold or exempt" forms. A bare determiner ("either handoff",
+# "either way") locks nothing and must not fire (#864).
+EITHER_RE = re.compile(r"\beither\b[^.;:\n]*?\bor\b|\bdrop or keep\b|\bfold or exempt\b", re.I)
 BLOCKER_RE = re.compile(r"\bblocker\b", re.I)
 STATUS_EXECUTABLE_RE = re.compile(r"(?im)^\s*status\s*:\s*executable\s*$")
 

@@ -192,6 +192,45 @@ def _rest_workflow_names(repo: str, sha: str) -> dict[str, str]:
     return names
 
 
+def _check_run_rank(run: dict[str, Any]) -> tuple[int, str, int]:
+    """Order check runs oldest -> newest: started_at, then id.
+
+    A run not yet started (queued re-run) ranks newest: it can only make the
+    check pending, never green, so treating it as latest fails safe.
+    """
+    started = run.get("started_at")
+    run_id = run.get("id")
+    return (
+        0 if started else 1,
+        str(started or ""),
+        run_id if isinstance(run_id, int) else -1,
+    )
+
+
+def _latest_check_runs(runs: list[Any]) -> list[dict[str, Any]]:
+    """Keep only the latest run per (name, app id) (#797).
+
+    Every workflow run is its own check suite, so the endpoint's default
+    `filter=latest` does not merge a concurrency-cancelled run with the run that
+    superseded it. Branch protection judges each check by its latest run; so
+    does the board.
+    """
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for run in runs:
+        if not isinstance(run, dict):
+            continue
+        name = str(run.get("name") or "").strip()
+        if not name:
+            continue
+        app = run.get("app")
+        app_id = str(app.get("id")) if isinstance(app, dict) and app.get("id") is not None else ""
+        key = (name, app_id)
+        prior = latest.get(key)
+        if prior is None or _check_run_rank(run) >= _check_run_rank(prior):
+            latest[key] = run
+    return list(latest.values())
+
+
 def _rest_rollup(repo: str, sha: str) -> list[dict[str, Any]]:
     """`statusCheckRollup` parity: REST check runs plus legacy commit statuses."""
     workflow_names = _rest_workflow_names(repo, sha)
@@ -200,9 +239,7 @@ def _rest_rollup(repo: str, sha: str) -> list[dict[str, Any]]:
     except RuntimeError as exc:
         raise BoardError(f"check-runs probe failed: {exc}") from exc
     nodes: list[dict[str, Any]] = []
-    for run in (payload or {}).get("check_runs") or []:
-        if not isinstance(run, dict):
-            continue
+    for run in _latest_check_runs((payload or {}).get("check_runs") or []):
         name = str(run.get("name") or "").strip()
         if not name:
             continue

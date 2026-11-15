@@ -630,3 +630,54 @@ def test_task_start_pr_stack_auto_siblings_exit_closed(upstream: Path, tmp_path:
     assert "feat/one" in combined
     assert "feat/two" in combined
     assert "could not resolve a unique stack tip" in combined
+
+
+def test_shallow_clone_deepens_before_judging_ancestry(upstream: Path, tmp_path: Path) -> None:
+    """#979: a re-shallowed clone has missing history, not absent history.
+
+    The branch and origin/main are each fetched at depth 1, so their shared
+    commit is not local and `git merge-base` finds nothing. The check deepens
+    first, then decides; an orphan branch (above) still fails closed.
+    """
+    full = clone_agent(upstream, tmp_path, "full")
+    git_in(full, "checkout", "-q", "-b", "agent/claude/T5", "origin/main")
+    (full / "feature.py").write_text("feature = 1\n", encoding="utf-8")
+    git_in(full, "add", "feature.py")
+    git_in(full, "commit", "-q", "-m", "feature")
+    git_in(full, "push", "-q", "origin", "agent/claude/T5")
+    git_in(full, "checkout", "-q", "main")
+    for n in range(2):
+        (full / f"main_{n}.py").write_text(f"m = {n}\n", encoding="utf-8")
+        git_in(full, "add", f"main_{n}.py")
+        git_in(full, "commit", "-q", "-m", f"main {n}")
+    git_in(full, "push", "-q", "origin", "main")
+
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        [
+            "git",
+            "clone",
+            "-q",
+            "--depth",
+            "1",
+            "--branch",
+            "agent/claude/T5",
+            f"file://{upstream}",
+            str(shallow),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    git_in(shallow, "fetch", "-q", "--depth", "1", "origin", "main:refs/remotes/origin/main")
+    probe = subprocess.run(
+        ["git", "-C", str(shallow), "merge-base", "origin/main", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert not probe.stdout.strip(), "fixture must start with no local merge base"
+
+    result = run_gate(MAIN_BOUND, shallow, "origin/main")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS: main-bound" in result.stdout
+    assert "shallow" in result.stdout

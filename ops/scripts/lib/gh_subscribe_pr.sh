@@ -172,7 +172,7 @@ gh_subscribe_pr() {
     echo "NOTE: skip subscribe for ${owner}/${name}#${pr} — ${GH_GRAPHQL_CLASSIFICATION}"
     echo "NEXT: GitHub per-PR subscribe is GraphQL-only (no REST, no ccr route)."
     echo "      Subscribe this session instead:"
-    echo "      mcp__github__subscribe_pr_activity {owner: ${owner}, repo: ${name}, pullNumber: ${pr}}"
+    echo "      mcp__claude-code-remote__subscribe_pr_activity {owner: ${owner}, repo: ${name}, pullNumber: ${pr}}"
     return 0
   fi
   if [[ "$gql_rc" -ne 0 ]]; then
