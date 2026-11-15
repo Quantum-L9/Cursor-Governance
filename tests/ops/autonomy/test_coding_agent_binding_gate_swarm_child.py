@@ -61,7 +61,8 @@ def write(workspace: Path, rel: str = "src/app.py", **kw: object) -> gate.Decisi
 
 
 def test_solo_session_is_unaffected_without_mode(tmp_path: Path) -> None:
-    assert write(tmp_path, is_child=solo).allow
+    decision = write(tmp_path, is_child=solo)
+    assert decision.allow
 
 
 def test_child_without_mode_is_denied_with_the_fix(tmp_path: Path) -> None:
@@ -72,7 +73,8 @@ def test_child_without_mode_is_denied_with_the_fix(tmp_path: Path) -> None:
 
 def test_child_with_active_mode_for_this_session_is_allowed(tmp_path: Path) -> None:
     mode_state(tmp_path)
-    assert write(tmp_path, is_child=child).allow
+    decision = write(tmp_path, is_child=child)
+    assert decision.allow
 
 
 @pytest.mark.parametrize(
@@ -103,7 +105,8 @@ def test_child_cannot_write_its_mode_state_through_a_file_tool(tmp_path: Path) -
 
 
 def test_non_mutating_tools_and_breakglass_pass_for_a_child(tmp_path: Path) -> None:
-    assert gate.evaluate("Read", {}, cwd=tmp_path, env={}, session_id=SID, is_child=child).allow
+    read = gate.evaluate("Read", {}, cwd=tmp_path, env={}, session_id=SID, is_child=child)
+    assert read.allow
     decision = gate.evaluate(
         "Write",
         {"file_path": str(tmp_path / "a.py")},
@@ -127,17 +130,20 @@ def test_main_reads_the_payload_session_and_the_role_registry(
         "tool_name": "Write",
         "tool_input": {"file_path": str(tmp_path / "a.py"), "content": "x"},
     }
-    assert gate.main(io.StringIO(json.dumps(event))) == 0
+    code = gate.main(io.StringIO(json.dumps(event)))
+    assert code == 0
     out = json.loads(capsys.readouterr().out)
     assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
 
     mode_state(tmp_path)
-    assert gate.main(io.StringIO(json.dumps(event))) == 0
+    code = gate.main(io.StringIO(json.dumps(event)))
+    assert code == 0
     assert capsys.readouterr().out == ""
 
     event["session_id"] = "solo-session"
     (tmp_path / gate.MODE_STATE_DIR / gate.MODE_STATE_FILE).unlink()
-    assert gate.main(io.StringIO(json.dumps(event))) == 0
+    code = gate.main(io.StringIO(json.dumps(event)))
+    assert code == 0
     assert capsys.readouterr().out == ""
 
 
@@ -179,7 +185,8 @@ def test_wrapper_turns_a_brain_fault_into_a_deny(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], brain_main: object
 ) -> None:
     wrap = _wrap_with_brain(monkeypatch, brain_main)
-    assert wrap.main() == 0  # type: ignore[attr-defined]
+    code = wrap.main()  # type: ignore[attr-defined]
+    assert code == 0
     out = json.loads(capsys.readouterr().out)
     assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
     assert "failing closed" in out["hookSpecificOutput"]["permissionDecisionReason"]
@@ -189,5 +196,6 @@ def test_wrapper_passes_a_brain_decision_through(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     wrap = _wrap_with_brain(monkeypatch, lambda: 0)
-    assert wrap.main() == 0  # type: ignore[attr-defined]
+    code = wrap.main()  # type: ignore[attr-defined]
+    assert code == 0
     assert capsys.readouterr().out == ""
