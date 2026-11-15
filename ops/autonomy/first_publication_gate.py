@@ -104,6 +104,28 @@ def _split_words(segment: str) -> list[str]:
         return segment.split()
 
 
+#: A shell redirection word: an optional fd (``2``) or ``&``, an operator, and an
+#: optional attached target (``>/dev/null``, ``2>&1``, ``&>log``). shlex keeps these
+#: as words, so before #710 ``git push origin x 2>&1`` read as two refspecs and the
+#: redirection was judged as a branch that would be a first publication.
+_REDIRECTION = re.compile(r"^(?:\d+|&)?(?:>>|>&|>\||>|<<<|<<|<&|<>|<)(?P<target>.*)$")
+
+
+def _strip_redirections(words: list[str]) -> list[str]:
+    """``words`` without shell redirections; a bare operator also drops its target."""
+    kept: list[str] = []
+    index = 0
+    while index < len(words):
+        match = _REDIRECTION.match(words[index])
+        if match is None:
+            kept.append(words[index])
+            index += 1
+            continue
+        # `>` / `2>` with the target as the next word; `2>&1`, `>/dev/null` carry it.
+        index += 1 if match.group("target") else 2
+    return kept
+
+
 #: Fallback builtin list, used only when `git --list-cmds=builtins` cannot be
 #: read. Any word not in the live/fallback set is treated as a possible alias
 #: and resolved through git config, never assumed harmless.
@@ -389,7 +411,7 @@ def publication_forms(command: str, root: Path | None = None) -> list[dict[str, 
         name = PurePosixPath(head).name
         if name not in {"git", "gh"}:
             continue
-        words = _split_words(segment)
+        words = _strip_redirections(_split_words(segment))
         if not words:
             continue
         if name == "gh":
