@@ -169,6 +169,41 @@ def _no_ambient_authority_or_role(
     monkeypatch.setenv("L9_SESSION_ROLE_DIR", str(isolated / "roles"))
 
 
+#: Where friction intake goes under pytest: a repository that does not exist, so a
+#: delivery that slips past the in-process guard 404s instead of filing an issue.
+TEST_FRICTION_SINK = "l9-test-sink/no-such-intake"
+
+
+@pytest.fixture(autouse=True)
+def _no_live_handoff_delivery(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test delivers a handoff or friction report to the live GitHub tracker.
+
+    The post-publish Stop hooks deliver through ``ops.reports.handoff_delivery``,
+    whose default transport is the real ``gh``. A harness that did not stub it filed
+    fixture friction (``Org/website-bot#42``, ``sess-state-machine``) as real
+    ``[session-friction]`` issues in Cursor-Governance (#846-#855). Two layers:
+    the intake points at a repository that does not exist (subprocesses inherit it),
+    and the default ``GhApi`` refuses to resolve the real ``gh``. A test that wants a
+    transport passes one, or a stub ``gh`` path, explicitly.
+    """
+    monkeypatch.setenv("L9_FRICTION_INTAKE_REPO", TEST_FRICTION_SINK)
+    try:
+        from ops.reports import handoff_delivery as hd
+    except Exception:  # noqa: BLE001 - a tree without the module has nothing to guard
+        return
+    original = hd.GhApi.request
+
+    def guarded(self: object, method: str, path: str, body: object = None) -> object:
+        if getattr(self, "gh", None) is None and hd.shutil.which("gh"):
+            raise hd.TransportError(
+                f"{method} {path}: live GitHub delivery is disabled under pytest "
+                "(conftest._no_live_handoff_delivery); pass a transport or a stub gh"
+            )
+        return original(self, method, path, body)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(hd.GhApi, "request", guarded)
+
+
 # 2026-11-13 (CANONICAL_LAW PROGRAM_EXECUTION_EVICTION_WITHDRAWN_V1): the
 # "Program Execution is an eviction target ... Remove with the eviction slice"
 # comment above is superseded. Program Execution is registered (`make
