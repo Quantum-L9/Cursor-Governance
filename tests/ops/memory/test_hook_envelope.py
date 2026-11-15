@@ -564,6 +564,7 @@ HOOK_LANE_CALLERS: dict[str, str] = {
     "ops/graphiti/hydration/compile_session_packet.py": "cursor-session-start",
     "ops/graphiti/hydration/close_session.py": "cursor-session-end",
     "environment/agents/adapters/claude-code/hooks/memory_writeback.py": "claude-session-end",
+    "environment/agents/adapters/claude-code/hooks/session_end_close.py": "claude-session-end",
     "environment/agents/adapters/claude-code/hooks/governance_handoff_writeback.py": (
         "claude-governance-handoff"
     ),

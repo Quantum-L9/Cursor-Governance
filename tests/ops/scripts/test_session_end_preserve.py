@@ -363,10 +363,11 @@ def test_template_retired_hygiene_and_has_ledger_hook() -> None:
 def test_backup_hook_does_not_call_github_or_gate() -> None:
     text = (REPO / "ops" / "hooks" / "session_end_governance_backup.sh").read_text(encoding="utf-8")
     assert 'PRESERVE="$GLOBAL_COMMANDS/ops/scripts/session_end_preserve.py"' in text
-    assert "backup_to_github.sh" not in [
-        line for line in text.splitlines() if not line.lstrip().startswith("#")
-    ]
+    # Substring checks over code lines. The former ``not in [lines]`` compared
+    # whole lines to a fragment and could never fail.
+    code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    assert "backup_to_github.sh" not in code
     assert "backup_gate.sh" not in text
-    assert "git add" not in [
-        line for line in text.splitlines() if not line.lstrip().startswith("#")
-    ]
+    assert "git add" not in code
+    assert "git push" not in code
+    assert "git commit" not in code

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # sessionEnd — canonical close (continuation capsule + memory.close); fail-open
-# Budget: hooks.json sessionEnd timeout is 30s (Phase A ≤8s, B ≤18s).
+# Budget: hooks.json sessionEnd timeout is 30s for the close and its single
+# retry (local Phase B was deleted at C15; distill runs in l9-memory).
 # Since stage C6 every write here crosses the memory control plane; nothing
 # writes a provider, and the fallback is an idempotent canonical close retry.
 set -uo pipefail

@@ -322,6 +322,23 @@ class StopStateMachineTest(unittest.TestCase):
         self.assertIsNotNone(h.closes[0]["handoff"])
         self.settle(h)
 
+    def test_a_foreign_hook_continuation_does_not_skip_the_one_request(self) -> None:
+        """``stop_hook_active`` is set when ANY Stop hook caused the continuation.
+        The first post-publish Stop may carry it (another hook blocked earlier);
+        the brief is still requested exactly once, never closed without asking."""
+        h = self.harness()
+        h.write(MISSING, MISSING)
+        outputs = h.stop(stop_hook_active=True)
+        self.assertEqual(len(h.blocks(REPO_HOOK)), 1)
+        self.assertIn(str(HANDOFF.HANDOFF_REL), outputs[REPO_HOOK][0]["reason"])
+        self.assertEqual(h.closes, [], "asked first, not closed without a brief")
+        h.write(VALID, VALID)
+        h.stop(stop_hook_active=True)
+        self.assertEqual(len(h.blocks()), 1, "never a second block")
+        self.assertEqual(len(h.closes), 1)
+        self.assertIsNotNone(h.closes[0]["handoff"])
+        self.settle(h)
+
     def test_an_invalid_governance_brief_is_asked_for_only_by_the_repository_hook(self) -> None:
         h = self.harness()
         h.write(VALID, INVALID)

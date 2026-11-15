@@ -90,6 +90,7 @@ def written_rels(event: dict[str, Any], workspace: Path) -> list[str]:
                 tool_input.get("file_path"),
                 tool_input.get("filePath"),
                 tool_input.get("target_file"),
+                tool_input.get("notebook_path"),
             ]
         )
         files = tool_input.get("files")
