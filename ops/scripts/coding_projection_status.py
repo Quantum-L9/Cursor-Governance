@@ -62,6 +62,7 @@ from tools.authority.verify_coding_projection import (  # noqa: E402
 BINDING_PATH = Path("governance/authority-bindings/coding-agent-execution.yaml")
 BINDING_SCHEMA = "l9.cursor-governance.coding-projection-binding/v3"
 ENV_AUTHORITY_ROOT = "L9_AUTHORITY_ROOT"
+ENV_MANAGED_AUTHORITY_ROOT = "L9_AUTHORITY_MANAGED_ROOT"
 STATUSES = ("CURRENT", "BOUND", "STALE", "UNVERIFIED", "BLOCKED")
 
 
@@ -85,9 +86,24 @@ def load_binding(path: Path) -> dict[str, Any]:
     return binding
 
 
+def managed_authority_root() -> Path:
+    """The governance-managed Quantum-L9/.github checkout every workspace shares.
+
+    SessionStart provisions it (ops/scripts/ensure_authority_checkout.sh): a full clone kept
+    on `main` by fast-forward only. It is what makes the default projection binding resolve
+    identically in every repository, instead of only where a `.github` clone happens to sit
+    beside the workspace. `L9_AUTHORITY_MANAGED_ROOT` relocates it.
+    """
+    override = os.environ.get(ENV_MANAGED_AUTHORITY_ROOT, "").strip()
+    return Path(override) if override else Path.home() / ".l9" / "authority" / ".github"
+
+
 def _authority(workspace: Path | None, explicit: Path | None) -> tuple[Path | None, list[str]]:
+    """Resolve the authority checkout: explicit, L9_AUTHORITY_ROOT, the managed checkout,
+    then `.github` inside or beside the workspace. The managed checkout precedes the
+    workspace guesses so a session binds the same authority in every repository."""
     env_root = os.environ.get(ENV_AUTHORITY_ROOT, "").strip()
-    raw = [explicit, Path(env_root) if env_root else None]
+    raw = [explicit, Path(env_root) if env_root else None, managed_authority_root()]
     if workspace is not None:
         raw += [workspace / ".github", workspace.parent / ".github"]
     seen: list[Path] = []

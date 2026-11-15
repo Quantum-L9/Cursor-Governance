@@ -127,10 +127,10 @@
       "source_ref": "l9.source/binding-catalog@1"
     },
     {
-      "projection_digest": "sha256:f4c8ea03537942c36c7c88e11421f9ee23667e7ccf7209556c75c26a7ca18092",
+      "projection_digest": "sha256:7e8d02d39439e8661e3b293b0a77850edef24486be8cb2b70503ec1edd7667ce",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1",
       "source_class": "repository_registry",
-      "source_digest": "sha256:0b8d3df4da548e0f5f511bbc19c233d19bce478515217cbfe507014674295cb2",
+      "source_digest": "sha256:1c46e31f17a5c63ecd11db407ff210d4f6959fd1a4b86012306369eff38cd0ce",
       "source_ref": "l9.source/repository-registry@1"
     },
     {
@@ -169,7 +169,7 @@
       "source_ref": "l9.source/semantic-dependency-model@1"
     }
   ],
-  "composition_digest": "sha256:305fd6ef55aed7cbbd818560aa2065b6979d9298919ff06cb0dac3c64b077752",
+  "composition_digest": "sha256:4b1cc3c4ede6996cd7dd86669858a7e2e126c488ac6435eb2c911e5163d34ee8",
   "composition_profile": {
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
     "ref": "l9.compose/architecture-intelligence@1"
