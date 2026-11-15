@@ -577,11 +577,8 @@ if [ -f "$MEMORY_BOUNDARY" ]; then
   else
     fail "plan-kernel-gate.py missing under ~/.cursor/hooks"
   fi
-  if [ -x "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ] || [ -L "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ]; then
-    pass "plan-kernel-execute-gate.sh installed under ~/.cursor/hooks"
-  else
-    fail "plan-kernel-execute-gate.sh missing under ~/.cursor/hooks"
-  fi
+  # plan-kernel-execute-gate.sh is a retired beforeShellExecution predecessor:
+  # its registration fails above, so its install is not required here.
   else
     cursor_host_skip "hooks.json sessionStart, prompt and shell gate registrations"
   fi
