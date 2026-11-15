@@ -1,28 +1,22 @@
 L9_TARGETS += \
-	release \
-	release-declaration-check
+	release
 # ---------------------------------------------------------------------------
-# Release — the sibling of `make pr` (docs/L9_RELEASE.md).
+# Release — thin front door to Core's release engine (docs/L9_RELEASE.md).
 #
-# Releases the workspace repository from a clean origin/<default> commit as
-# declared by <repo>/.l9/release.json (schema l9.release/v1):
+# The engine (tools.l9_release, schema l9.release/v1) and the release runner
+# live in Quantum-L9/l9-ci-core, pinned in ops/config/release-core.json.
 #
-#   l9 release [VERSION=X.Y.Z] [DRY_RUN=1]
-#   make -C "$$HOME/.cursor-governance" release WS="$$(pwd)" [VERSION=X.Y.Z] [DRY_RUN=1]
+#   l9 release                 # engine `plan` (read-only)
+#   l9 release DRY_RUN=1       # engine `plan` + `build`, locally; publishes nothing
+#   l9 release DISPATCH=1      # workflow_dispatch Core's release runner for this repo
+#   make -C "$$HOME/.cursor-governance" release WS="$$(pwd)" [DRY_RUN=1] [DISPATCH=1]
 #
-# DRY_RUN=1 runs declaration, preflight, the make-v1 gate and the reproducible
-# double build, then stops before any tag or Release. Publication requires the
-# operator's publish-path breakglass receipt naming the exact tag and commit;
-# this target never force-pushes and never publishes to npm or PyPI. Receipt:
-# <repo>/.l9/release/release-receipt.json.
+# Cursor-Governance never tags or publishes: publication is Core's runner.
 # ---------------------------------------------------------------------------
-VERSION ?=
 DRY_RUN ?= 0
+DISPATCH ?= 0
 release:
 	$(PYTHON) ops/scripts/l9_release.py \
 		--workspace "$(WS)" \
-		$(if $(VERSION),--version "$(VERSION)",) \
-		$(if $(filter 1,$(DRY_RUN)),--dry-run,)
-# Read-only: validate the workspace's .l9/release.json against l9.release/v1.
-release-declaration-check:
-	$(PYTHON) ops/scripts/release_declaration.py --workspace "$(WS)"
+		$(if $(filter 1,$(DRY_RUN)),--dry-run,) \
+		$(if $(filter 1,$(DISPATCH)),--dispatch,)
