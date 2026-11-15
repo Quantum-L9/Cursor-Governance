@@ -99,6 +99,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 import merge_authority_switch  # noqa: E402
+import session_role  # noqa: E402
 from command_parse import (  # noqa: E402
     segment_words,
     split_segments,
@@ -197,6 +198,12 @@ ANCESTRY_BREAKING = {"squash", "rebase", "unspecified"}
 
 GH_TIMEOUT_SECONDS = 20
 
+SWARM_CHILD_MERGE_REASON = (
+    "merge denied: this session is a registered /lcto swarm child "
+    "(ops/autonomy/session_role.py). Swarm agents hold no merge authority "
+    "(governance/cto-mode/MODE.yaml roles.swarm); publish the lane and write "
+    "CTO-STATUS — the CTO integrates and the operator approves merges."
+)
 NEVER_WAIVE_REASON = (
     "Autonomy Surface Profile never waives force-push, hard-reset, "
     "destructive clean, or admin-merge."
@@ -1407,6 +1414,22 @@ def _is_merge_tool(tool_name: str) -> bool:
     return tool_name in DENY_TOOL_NAMES or tool_name.endswith(MERGE_TOOL_SUFFIX)
 
 
+def _is_merge_attempt(tool_name: str, tool_input: dict[str, Any]) -> bool:
+    """Any merge transport or merge-authorizing step, in any switch mode."""
+    if _is_merge_tool(tool_name) or tool_name.endswith(AUTO_MERGE_TOOL_SUFFIX):
+        return True
+    if tool_name not in SHELL_TOOL_NAMES:
+        return False
+    command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+    return bool(
+        MERGE_BASH.search(command)
+        or _command_is_pr_merge(command)
+        or _command_enables_auto_merge(command)
+        or _script_argvs(command, "stack_safe_merge.py")
+        or _script_argvs(command, "authorize_merge.py")
+    )
+
+
 def _stack_safe_run_reason(argv: list[str]) -> str | None:
     """Deny a ``stack_safe_merge.py --run`` that no human grant covers.
 
@@ -1542,6 +1565,13 @@ def evaluate(
     never-waive set is denied.
     """
     del root  # signature kept for hook callers
+
+    # A registered swarm child never merges, whatever the switch says: the role
+    # narrows authority (L9-MONOTONIC-001), so it applies before the disabled
+    # short-circuit that otherwise allows every merge outside the never-waive set.
+    session_id = str((event or {}).get("session_id") or "") or None
+    if _is_merge_attempt(tool_name, tool_input) and session_role.is_child(session_id):
+        return SWARM_CHILD_MERGE_REASON
 
     if merge_authority_switch.disabled():
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
