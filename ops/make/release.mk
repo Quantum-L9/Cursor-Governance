@@ -8,7 +8,7 @@ L9_TARGETS += \
 #
 #   l9 release                 # engine `plan` (read-only)
 #   l9 release DRY_RUN=1       # engine `plan` + `build`, locally; publishes nothing
-#   l9 release DISPATCH=1      # workflow_dispatch Core's release runner for this repo
+#   l9 release DISPATCH=1      # dispatch the factory release schedule (calls Core's runner)
 #   make -C "$$HOME/.cursor-governance" release WS="$$(pwd)" [DRY_RUN=1] [DISPATCH=1]
 #
 # Cursor-Governance never tags or publishes: publication is Core's runner.

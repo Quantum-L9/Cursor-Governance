@@ -9,10 +9,14 @@ locally or asks Core's release runner to release this repository::
 
     l9 release                    # plan (read-only): what would be released
     l9 release DRY_RUN=1          # plan + reproducible build, locally; publishes nothing
-    l9 release DISPATCH=1         # workflow_dispatch Core's release runner for this repo
+    l9 release DISPATCH=1         # dispatch the factory's release schedule for this repo
     make -C "$GOV" release WS="$PWD" [DRY_RUN=1] [DISPATCH=1]
 
 It never tags, pushes a tag, or creates a Release: publication is Core's runner.
+``DISPATCH=1`` dispatches the release schedule hosted by the pin's
+``runner_repository`` (Quantum-L9/l9-repo-template, the holder of the repo-birth
+App credential), which calls Core's reusable ``release-runner.yml``; Core's
+runner is never dispatched directly (it is ``workflow_call`` only).
 
 Exit codes: 0 done; 1 refused (engine precondition, or this front door's own
 input checks); 2 engine tool/transport/contract failure; 3 transport failure of
@@ -93,9 +97,11 @@ def load_pin(path: Path = PIN_PATH) -> dict[str, str]:
         problems.append(f"schema is not {PIN_SCHEMA}")
     if not _SLUG.match(str(pin.get("repository", ""))):
         problems.append("repository is not owner/name")
+    if not _SLUG.match(str(pin.get("runner_repository", ""))):
+        problems.append("runner_repository is not owner/name")
     if not _SHA.match(str(pin.get("revision", ""))):
         problems.append("revision is not a 40-hex commit")
-    for key in ("engine_module", "runner_workflow", "runner_ref"):
+    for key in ("engine_module", "runner_workflow", "runner_ref", "runner_input"):
         if not str(pin.get(key, "")).strip():
             problems.append(f"{key} is empty")
     if problems:
@@ -186,8 +192,8 @@ def _gh(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def dispatch(pin: dict[str, str], slug: str, *, attempts: int = 10, wait: float = 3.0) -> str:
-    """workflow_dispatch Core's release runner for ``slug``; return the run URL."""
-    core, workflow, ref = pin["repository"], pin["runner_workflow"], pin["runner_ref"]
+    """workflow_dispatch the factory's release schedule for ``slug``; return the run URL."""
+    core, workflow, ref = pin["runner_repository"], pin["runner_workflow"], pin["runner_ref"]
     started = datetime.now(UTC) - timedelta(seconds=30)
     proc = _gh(
         "api",
@@ -197,7 +203,7 @@ def dispatch(pin: dict[str, str], slug: str, *, attempts: int = 10, wait: float 
         "-f",
         f"ref={ref}",
         "-f",
-        f"inputs[repository]={slug}",
+        f"inputs[{pin['runner_input']}]={slug}",
     )
     if proc.returncode != 0:
         raise Refused(

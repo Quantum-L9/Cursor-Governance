@@ -10,7 +10,7 @@ like `make pr`:
 ```bash
 l9 release                 # Core engine `plan` (read-only): what would be released
 l9 release DRY_RUN=1       # `plan` + reproducible `build`, locally; publishes nothing
-l9 release DISPATCH=1      # workflow_dispatch Core's release runner for this repository
+l9 release DISPATCH=1      # dispatch the factory's release schedule for this repository
 make -C "$HOME/.cursor-governance" release WS="$PWD" [DRY_RUN=1] [DISPATCH=1]
 ```
 
@@ -37,7 +37,7 @@ fetchable is a transport failure (exit 3); one that lacks the engine is refused
 |---|---|
 | default | `python -m tools.l9_release --workspace WS --repository <origin slug> plan` |
 | `DRY_RUN=1` | `plan`, then `build --out … --scratch … --phases run` (Core runs the repository's make-v1 phases and two reproducible build rounds). Artifacts land in `${XDG_CACHE_HOME:-~/.cache}/l9-release/build/<owner>__<name>/<commit>/dist`, outside the workspace. |
-| `DISPATCH=1` | `POST repos/Quantum-L9/l9-ci-core/actions/workflows/release-runner.yml/dispatches` with `ref=main` and `inputs.repository=<origin slug>` over `gh api` (REST), then prints the run URL. |
+| `DISPATCH=1` | `POST repos/Quantum-L9/l9-repo-template/actions/workflows/release-schedule.yml/dispatches` with `ref=main` and `inputs.repo=<origin slug>` over `gh api` (REST), then prints the run URL. That factory workflow calls Core's reusable `release-runner.yml` at a pinned Core commit; Core's runner is `workflow_call` only and is never dispatched directly (pin keys `runner_repository`, `runner_workflow`, `runner_input`, `runner_ref`). |
 
 `DRY_RUN=1` and `DISPATCH=1` are exclusive. The engine runs with Core as its
 working directory and with the governance invocation state removed from its
@@ -54,7 +54,7 @@ transport or contract failure); the front door adds `1` for its own input checks
 ## Publication
 
 Publication is Core's release runner, under the authority Core configures for it
-(`release-runner` environment, per-repository App token). `DISPATCH=1` asks it to
+(the factory's existing `repo-birth` environment supplies the repo-birth App credential to Core's reusable runner; per-repository App token). `DISPATCH=1` asks it to
 run; it does not grant or carry any publication authority itself. A repository
 releases only once it carries a `.l9/release.json` that conforms to Core's
 `l9.release/v1` (`tools/l9_release/release.schema.json` in Core).
