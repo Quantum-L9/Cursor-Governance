@@ -40,7 +40,7 @@ jobs:
     name: SonarCloud Scan
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Require SonarCloud analysis token
@@ -59,11 +59,31 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Coverage for the quality gate's "coverage on new code" condition. Same
+      # interpreter setup and runner as the Test Suite job (l9-lint-test.yml); the
+      # ci profile's repo-root suite writes coverage.xml at the repository root.
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install test tools
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          bash ops/scripts/ensure_gov_python.sh "$PWD"
+      - name: Tests with coverage (Cobertura XML)
+        env:
+          TESTING: "true"
+        run: |
+          set -euo pipefail
+          .venv/bin/python ops/scripts/run_python_test_suites.py --profile ci
+          test -s coverage.xml
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65  # v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300

@@ -567,15 +567,39 @@ def _org_main(args: argparse.Namespace, plan: Plan) -> int:
     return 0 if all(r["verdict"] == "in_sync" for r in rows) else 1
 
 
+#: GitHub's own naming rules: an org login, and an Actions/Dependabot secret name.
+#: Validated at parse time so no CLI value that looks like an option or a path can
+#: reach a ``gh`` argument list (SonarCloud pythonsecurity:S8705).
+_ORG_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+_SECRET_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
+
+
+def _org_login(value: str) -> str:
+    if not _ORG_LOGIN_RE.fullmatch(value):
+        raise argparse.ArgumentTypeError(f"not a GitHub organization login: {value!r}")
+    return value
+
+
+def _secret_name(value: str) -> str:
+    if not _SECRET_NAME_RE.fullmatch(value) or value.upper().startswith("GITHUB_"):
+        raise argparse.ArgumentTypeError(f"not a valid GitHub secret name: {value!r}")
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
+    ap = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0] if __doc__ else None,
+        allow_abbrev=False,  # "--repo=x" must not silently become --report-json
+    )
     ap.add_argument("--dry-run", action="store_true", help="bind and report; write nothing")
     ap.add_argument(
         "--with-sdk-token",
         action="store_true",
         help="also set SDK_TOKEN from the vault GITHUB_TOKEN after a read probe",
     )
-    ap.add_argument("--org", help="org mode: set (or --check) the plan's org secrets for ORG")
+    ap.add_argument(
+        "--org", type=_org_login, help="org mode: set (or --check) the plan's org secrets for ORG"
+    )
     ap.add_argument("--app", choices=ORG_APPS, help="org secret store (required with --org)")
     ap.add_argument(
         "--check",
@@ -583,9 +607,9 @@ def main(argv: list[str] | None = None) -> int:
         help="org mode: compare names and timestamps only; write nothing",
     )
     ap.add_argument("--report-json", type=Path, help="org --check: write l9.secret-drift.v1")
-    ap.add_argument("names", nargs="*", metavar="NAME", help="org mode: limit to these names")
-    ap.add_argument("--plan", type=Path, default=DEFAULT_PLAN, help=argparse.SUPPRESS)
-    ap.add_argument("--inventory", type=Path, default=DEFAULT_INVENTORY, help=argparse.SUPPRESS)
+    ap.add_argument(
+        "names", nargs="*", metavar="NAME", type=_secret_name, help="org mode: limit to these names"
+    )
     args = ap.parse_args(argv)
     if bool(args.org) != bool(args.app):
         ap.error("--org and --app go together")
@@ -598,7 +622,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.report_json and not args.check:
         ap.error("--report-json needs --check")
     try:
-        plan = load_plan(args.plan, args.inventory)
+        # The plan and inventory are this module's own files, never a CLI path
+        # (SonarCloud pythonsecurity:S8707); tests patch the module defaults.
+        plan = load_plan(DEFAULT_PLAN, DEFAULT_INVENTORY)
     except PlanError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2

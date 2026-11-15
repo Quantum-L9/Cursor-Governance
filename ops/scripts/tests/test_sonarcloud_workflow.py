@@ -87,3 +87,14 @@ class SonarSourcesExistTests(unittest.TestCase):
             for entry in match.group(1).split(","):
                 with self.subTest(file=name, source=entry):
                     self.assertTrue((ROOT / entry.strip()).is_dir(), f"{name}: {entry} missing")
+
+
+class SonarCoverageTests(unittest.TestCase):
+    """The gate's coverage-on-new-code condition needs a report produced before the scan."""
+
+    def test_coverage_report_is_produced_before_the_scan_and_passed_to_it(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "sonarcloud.yml").read_text(encoding="utf-8")
+        produce = text.index("run_python_test_suites.py --profile ci")
+        scan = text.index("SonarSource/sonarqube-scan-action@")
+        self.assertLess(produce, scan)
+        self.assertIn("-Dsonar.python.coverage.reportPaths=coverage.xml", text[scan:])

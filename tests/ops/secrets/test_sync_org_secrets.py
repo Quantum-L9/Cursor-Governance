@@ -427,7 +427,8 @@ def test_set_selected_visibility_passes_repo_names(
 ) -> None:
     gh = _install(monkeypatch, FakeGh())
     plan = _org_plan(tmp_path, visibility="selected", repositories=["o/a", "o/b"])
-    assert sas.main(["--plan", str(plan), "--org", "o", "--app", "actions"]) == 0
+    monkeypatch.setattr(sas, "DEFAULT_PLAN", plan)
+    assert sas.main(["--org", "o", "--app", "actions"]) == 0
     (call,) = gh.secret_sets()
     assert call["argv"][-4:] == ["--visibility", "selected", "--repos", "a,b"]
 
@@ -468,3 +469,21 @@ def test_org_mode_leaves_repo_targets_alone(
 )
 def test_drift_log_prints_only_re_rendered_timestamps(value: str | None, expected: str) -> None:
     assert sas._stamp(value) == expected
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--org", "-oops", "--app", "actions", "--check"],
+        ["--org", "Quantum-L9/../x", "--app", "actions", "--check"],
+        ["--org", "Quantum-L9", "--app", "actions", "--check", "--repo=evil"],
+        ["--org", "Quantum-L9", "--app", "actions", "--check", "GITHUB_TOKEN"],
+        ["--org", "Quantum-L9", "--app", "actions", "--check", "BAD NAME"],
+        ["--plan", "/etc/passwd"],
+    ],
+)
+def test_cli_rejects_values_that_could_reach_gh_or_the_filesystem(argv: list[str]) -> None:
+    """S8705/S8707: org, names and plan paths never flow from the CLI unchecked."""
+    with pytest.raises(SystemExit) as exc:
+        sas.main(argv)
+    assert exc.value.code == 2

@@ -171,7 +171,8 @@ def test_bad_plan_exits_two_before_binding(
         raise AssertionError("bind must not run for an invalid plan")
 
     monkeypatch.setattr(sas.cb, "bind", no_bind)
-    rc = sas.main(["--plan", str(_write_plan(tmp_path, "NOT_A_VAULT_KEY"))])
+    monkeypatch.setattr(sas, "DEFAULT_PLAN", _write_plan(tmp_path, "NOT_A_VAULT_KEY"))
+    rc = sas.main([])
     assert rc == 2
     assert fake_run.calls == []
 
