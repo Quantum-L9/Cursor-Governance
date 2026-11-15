@@ -24,7 +24,7 @@ import post_issue_comment as pic  # noqa: E402
     "text",
     [
         "fixed in PR #12, see `ops/x.py` (line 4)",
-        'renamed "foo" to \'bar\'; tests green!',
+        "renamed \"foo\" to 'bar'; tests green!",
         "https://github.com/o/r/pull/5 - merged [a1b2c3d]",
     ],
 )
@@ -58,7 +58,7 @@ def test_posted_body_carries_attribution_footer(monkeypatch: pytest.MonkeyPatch)
     class _Resp:
         status = 201
 
-        def __enter__(self) -> "_Resp":
+        def __enter__(self) -> _Resp:
             return self
 
         def __exit__(self, *_: object) -> None:

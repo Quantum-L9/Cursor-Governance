@@ -17,7 +17,11 @@ _SCRIPT = f"""
 set -u
 source "{LIB}"
 gh() {{ echo PR_node_1; }}
-gh_graphql() {{ GH_GRAPHQL_UNSUPPORTED=1; GH_GRAPHQL_CLASSIFICATION=SURFACE_UNSUPPORTED_GRAPHQL; return 1; }}
+gh_graphql() {{
+  GH_GRAPHQL_UNSUPPORTED=1
+  GH_GRAPHQL_CLASSIFICATION=SURFACE_UNSUPPORTED_GRAPHQL
+  return 1
+}}
 gh_subscribe_pr Quantum-L9 Cursor-Governance 7
 """
 
