@@ -107,7 +107,15 @@ def _consumer_safe_targets() -> list[str]:
         re.MULTILINE,
     )
     assert match is not None, "Repo.mk must own the consumer-safe target list"
-    return [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
+    listed = [line.strip().removesuffix("\\").strip() for line in match.group("body").splitlines()]
+    # Repo.mk is additive_only: a consumer-safe target registered after the list
+    # was frozen is appended with a single-line `+=` in Repo.mk itself.
+    appended = [
+        target
+        for line in re.findall(r"^L9_CONSUMER_SAFE_TARGETS \+= (.+)$", text, re.MULTILINE)
+        for target in line.split()
+    ]
+    return [*listed, *appended]
 
 
 # Program Execution's own fragment stays uncomposed: at the registered stage
