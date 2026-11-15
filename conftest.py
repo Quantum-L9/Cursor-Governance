@@ -159,10 +159,12 @@ def _no_ambient_authority_or_role(
     authority checkout the shared resolver tries before workspace guesses, so a test
     asserting "no authority checkout" saw one and went ACTIVE. ``~/.l9/cto/roles``
     (ops/autonomy/session_role.py) would let a developer's own registered role leak into
-    gate tests. Both point at empty per-session directories; tests of those stores set
-    their own paths. Gate subprocesses inherit the override.
+    gate tests. Both point at empty per-TEST directories (a SessionStart test provisions
+    a real checkout into whatever root it inherits, so a shared root leaks into later
+    tests); tests of those stores set their own paths. Gate subprocesses inherit the
+    override.
     """
-    isolated = tmp_path_factory.getbasetemp() / "isolated-machine-stores"
+    isolated = tmp_path_factory.mktemp("isolated-machine-stores")
     monkeypatch.setenv("L9_AUTHORITY_MANAGED_ROOT", str(isolated / "authority" / ".github"))
     monkeypatch.setenv("L9_SESSION_ROLE_DIR", str(isolated / "roles"))
 

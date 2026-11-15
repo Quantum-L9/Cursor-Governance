@@ -142,7 +142,9 @@ def test_cli_without_authority_checkout_blocks(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=False,
-        env={"PATH": "/usr/bin:/bin"},
+        # An empty HOME: without it the resolver falls back to the real machine's
+        # managed checkout (~/.l9/authority/.github) and the session binds.
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path / "home")},
     )
     report = json.loads(proc.stdout)
     assert proc.returncode == 3, proc.stdout + proc.stderr
