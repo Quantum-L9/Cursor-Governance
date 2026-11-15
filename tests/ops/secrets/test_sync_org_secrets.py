@@ -456,3 +456,15 @@ def test_org_mode_leaves_repo_targets_alone(
     gh = _install(monkeypatch, FakeGh())
     sas.main(["--org", ORG, "--app", "actions"])
     assert all("--repo" not in c["argv"] for c in gh.secret_sets())
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-11-15T10:00:00Z", "2026-11-15T10:00:00+00:00"),
+        (None, "-"),
+        ("not-a-timestamp ghp_examplevalue", "<unparseable>"),
+    ],
+)
+def test_drift_log_prints_only_re_rendered_timestamps(value: str | None, expected: str) -> None:
+    assert sas._stamp(value) == expected

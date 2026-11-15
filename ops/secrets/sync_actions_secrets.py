@@ -486,6 +486,16 @@ def _instant(stamp: str) -> datetime:
     return parsed
 
 
+def _stamp(value: str | None) -> str:
+    """A timestamp for the log, re-rendered from its parsed instant; never raw text."""
+    if value is None:
+        return "-"
+    try:
+        return _instant(value).isoformat()
+    except ValueError:
+        return "<unparseable>"
+
+
 def check_org(targets: list[OrgSecret], org: str, app: str) -> list[dict[str, str | None]]:
     """One drift row per target. Raises TransportError when a row cannot be decided."""
     rows: list[dict[str, str | None]] = []
@@ -544,9 +554,12 @@ def _org_main(args: argparse.Namespace, plan: Plan) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     for row in rows:
+        # Only re-rendered timestamps reach the log: check_org reads Infisical
+        # metadata with viewSecretValue=false, and printing a value parsed back
+        # from a datetime keeps any other payload text out of the output.
         print(
             f"  {row['verdict']:<16} {row['name']} "
-            f"org={row['org_updated_at']} vault={row['vault_updated_at']}"
+            f"org={_stamp(row['org_updated_at'])} vault={_stamp(row['vault_updated_at'])}"
         )
     if report is not None:
         document = {"schema": DRIFT_SCHEMA, "org": args.org, "app": args.app, "rows": rows}

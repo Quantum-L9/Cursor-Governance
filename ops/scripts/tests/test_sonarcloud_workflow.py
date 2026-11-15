@@ -73,3 +73,17 @@ class SonarCloudWorkflowTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SonarSourcesExistTests(unittest.TestCase):
+    """The scanner fails the whole analysis on a missing source folder (PR #998: 'hooks')."""
+
+    def test_every_sonar_source_directory_exists(self) -> None:
+        for name in ("sonar-project.properties", ".sonarcloud.properties"):
+            text = (ROOT / name).read_text(encoding="utf-8")
+            match = re.search(r"^sonar\.sources=(.+)$", text, re.MULTILINE)
+            self.assertIsNotNone(match, name)
+            assert match is not None
+            for entry in match.group(1).split(","):
+                with self.subTest(file=name, source=entry):
+                    self.assertTrue((ROOT / entry.strip()).is_dir(), f"{name}: {entry} missing")
