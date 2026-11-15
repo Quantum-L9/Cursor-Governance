@@ -268,7 +268,9 @@ _push_with_bounded_recover() {
     # commits absent and the next push is rejected again.
     fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 || true
     if ! git merge --no-edit "origin/$BASE_REF"; then
-      git merge --abort 2>/dev/null || true
+      if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
       echo "FAIL: push recovery could not merge origin/$BASE_REF cleanly — merge aborted, tree restored" >&2
       return 1
     fi
@@ -285,7 +287,9 @@ _push_with_bounded_recover() {
         return 1
       fi
       if ! git merge --no-edit "origin/$branch"; then
-        git merge --abort 2>/dev/null || true
+        if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
         echo "FAIL: push recovery could not merge origin/$branch (PR #${pr_number}) cleanly — merge aborted, tree restored" >&2
         return 1
       fi
