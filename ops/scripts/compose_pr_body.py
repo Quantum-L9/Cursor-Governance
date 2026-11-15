@@ -278,12 +278,55 @@ class PrIntent:
     reviewer_focus: str = ""
 
 
-def load_intent(path: Path | None, head: str) -> PrIntent | None:
+#: Subjects of the commits the publish machinery itself adds after the author
+#: has written pr-intent.json (#861): the gate's writer-rewrite commit
+#: (run_pr_gate.sh), the generated-heal and push-recovery commits
+#: (open_pr_after_gate.sh), the GMP report publication (ops/reports/publish.py),
+#: GMP finalize (workflows/gmp_executor.py) and the push-recovery merge of the base.
+_MACHINE_COMMIT_SUBJECTS = re.compile(
+    r"^(?:style: commit gate writer rewrites so make pr finishes once"
+    r"|chore\(generated\): commit generated heal before publish"
+    r"|chore\(generated\): heal artifacts after push-recovery merge"
+    r"|docs\(reports\): GMP report .+"
+    r"|GMP-\d+: .+"
+    r"|Merge remote-tracking branch 'origin/[^']+'(?: into .+)?)$"
+)
+
+
+def _only_machine_commits_since(workspace: Path, named: str, head: str) -> bool:
+    """True when *named* is an ancestor of *head* and every commit between them
+    is one the publish machinery wrote. Any doubt (unresolvable ref, git error,
+    an author commit) answers False, so the intent stays refused."""
+    full = _run_git(workspace, "rev-parse", "--verify", "--quiet", f"{named}^{{commit}}").strip()
+    if not full:
+        return False
+    probe = subprocess.run(
+        ["git", "-C", str(workspace), "merge-base", "--is-ancestor", full, head],
+        check=False,
+        capture_output=True,
+    )
+    if probe.returncode != 0:
+        return False
+    proc = subprocess.run(
+        ["git", "-C", str(workspace), "log", "--format=%s", f"{full}..{head}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    subjects = [line for line in proc.stdout.splitlines() if line.strip()]
+    return bool(subjects) and all(_MACHINE_COMMIT_SUBJECTS.match(s) for s in subjects)
+
+
+def load_intent(path: Path | None, head: str, *, workspace: Path | None = None) -> PrIntent | None:
     """The intent at *path* when it names *head*, else None (with a WARN).
 
     Bound to HEAD like every other receipt here: an intent written for an
     earlier branch or head must not describe this one. ``head`` in the file may
-    be abbreviated to 7+ characters.
+    be abbreviated to 7+ characters. With *workspace*, an intent naming an
+    ancestor of HEAD is still honoured when every commit since is one the publish
+    machinery added (#861); an author commit in between still refuses it.
     """
     if path is None or not path.is_file():
         return None
@@ -296,7 +339,20 @@ def load_intent(path: Path | None, head: str) -> PrIntent | None:
         print(f"WARN: {path} is not schema {INTENT_SCHEMA}; intent ignored", file=sys.stderr)
         return None
     named = str(doc.get("head") or "").strip().lower()
-    if len(named) < 7 or not head or not head.lower().startswith(named):
+    drifted_by_machine = (
+        workspace is not None
+        and len(named) >= 7
+        and bool(head)
+        and not head.lower().startswith(named)
+        and _only_machine_commits_since(workspace, named, head)
+    )
+    if drifted_by_machine:
+        print(
+            f"NOTE: {path} names head {named[:12]}; only publish-machinery commits "
+            f"follow it up to {head[:12]} — intent kept",
+            file=sys.stderr,
+        )
+    elif len(named) < 7 or not head or not head.lower().startswith(named):
         print(
             f"WARN: {path} names head {named or '(none)'}, not {head[:12] or '(unknown)'}; "
             "intent ignored — rewrite it for this head",
@@ -2964,7 +3020,7 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         # own `git log base..HEAD | head -1`, a second copy of the range rule
         # that titled PR #602 with a main commit.
         facts = collect_mechanical(workspace, pr_base=args.pr_base, verify=False)
-        facts.intent = load_intent(args.intent_file, facts.head)
+        facts.intent = load_intent(args.intent_file, facts.head, workspace=workspace)
         if args.print_intent_title:
             print(facts.intent.title if facts.intent is not None else "")
         else:
@@ -3009,7 +3065,7 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         facts.l4_receipt = None
         facts.breakglass = None
     else:
-        facts.intent = load_intent(args.intent_file, facts.head)
+        facts.intent = load_intent(args.intent_file, facts.head, workspace=workspace)
 
     if args.refresh_body is not None:
         existing = args.refresh_body.read_text(encoding="utf-8")
