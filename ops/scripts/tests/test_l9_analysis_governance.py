@@ -10,7 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 GOVERNANCE_ROOT = ROOT / ".github" / "governance"
 QUALITY_THRESHOLDS = GOVERNANCE_ROOT / "quality-thresholds.yaml"
-L9_ANALYSIS = ROOT / ".github" / "workflows" / "l9-analysis.yml"
+WORKFLOWS = ROOT / ".github" / "workflows"
+L9_ANALYSIS = WORKFLOWS / "l9-analysis.yml"
 
 
 class L9AnalysisGovernanceTests(unittest.TestCase):
@@ -33,17 +34,22 @@ class L9AnalysisGovernanceTests(unittest.TestCase):
                     f"sdk policy for {profile_name} must exist under .github/governance",
                 )
 
-    def test_normalization_receives_observed_provider_version(self) -> None:
-        """Keep SDK evidence complete when the pinned SDK requires a version."""
-        workflow = L9_ANALYSIS.read_text(encoding="utf-8")
-        self.assertIn("- id: semgrep", workflow)
-        self.assertIn('provider_version="$(semgrep --version | head -n1)"', workflow)
-        self.assertIn('echo "provider-version=${provider_version}" >> "$GITHUB_OUTPUT"', workflow)
-        self.assertIn(
-            "provider-version: ${{ steps.semgrep.outputs.provider-version }}",
-            workflow,
-        )
+    def test_no_repo_local_core_analysis_caller(self) -> None:
+        """#732 option B: analysis runs only as the org-required central check.
 
+        Core's release plane forbids consumer workflow copies
+        (``consumer.workflow_copy_allowed=false``) and consumer pin selection
+        (``core_revision_selection_allowed=false``). The org ruleset's
+        "Analyze (central Core)" check runs on every PR, so a repo-local
+        caller is a second, drifting pin of the same analysis.
+        """
+        self.assertFalse(L9_ANALYSIS.exists(), f"{L9_ANALYSIS} is retired (#732)")
+        offenders = sorted(
+            path.name
+            for path in WORKFLOWS.glob("*.y*ml")
+            if "Quantum-L9/l9-ci-core/" in path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(offenders, [], "repo-local Core analysis callers")
 
 if __name__ == "__main__":
     unittest.main()
