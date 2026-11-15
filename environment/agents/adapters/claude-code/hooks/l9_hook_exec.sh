@@ -85,7 +85,7 @@ esac
 # being wrong is silent.
 l9_required_class() {
   case "$1" in
-    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py)
+    merge_gate_wrap.py|local_execution_gate_wrap.py|memory_gate.py|coding_agent_binding_gate_wrap.py|session_debt_wrap.py|swarm_role_gate_wrap.py|context7_stack_pretool.py)
       printf 'gate' ;;
     *) printf '' ;;
   esac

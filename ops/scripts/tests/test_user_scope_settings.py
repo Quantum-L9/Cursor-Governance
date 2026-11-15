@@ -106,11 +106,15 @@ class UserScopeSettingsTests(unittest.TestCase):
         # session_end_close.py (SessionEnd) and session_authored_paths_wrap.py
         # (PostToolUse on the file tools) are observers: Claude Code parity with
         # Cursor's sessionEnd close + authored-path preserve (2026-11-14).
-        self.assertEqual(len(commands), 22, "every L9 hook registration must reach user scope")
-        self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 18)
+        # swarm_role_gate_wrap.py (PreToolUse on mcp__claude-code-remote__.*) is a gate
+        # for /lcto swarm children, and context7_stack_pretool.py is registered as the
+        # gate it always behaved as (it denies) — 2026-11-15.
+        self.assertEqual(len(commands), 23, "every L9 hook registration must reach user scope")
+        self.assertEqual(sum("--class gate" in c for c in commands), 6)
+        self.assertEqual(sum("--class observer" in c for c in commands), 17)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 20, "twenty distinct hook scripts")
+        self.assertEqual(len(names), 21, "twenty-one distinct hook scripts")
+        self.assertIn("swarm_role_gate_wrap.py", names)
         self.assertIn("session_end_close.py", names)
         self.assertIn("session_authored_paths_wrap.py", names)
         session_start_commands = [

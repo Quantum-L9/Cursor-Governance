@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """PreToolUse observer that no longer scans a push.
 
-Registered on PreToolUse (Bash) as `--class observer`. It used to wait up to
-600 seconds on a whole-tree scan, which made Claude's `make pr` a different
-ceremony from Cursor's. CI remains the CodeQL and Semgrep authority. This
-file stays registered so a missing hook still fails open through the
-launcher; it does not start a scan.
+Registered on PreToolUse (Edit|Write|NotebookEdit|Bash|mcp__github__.*) as
+`--class observer`, timeout 5 s. It used to wait up to 600 seconds on a
+whole-tree scan, which made Claude's `make pr` a different ceremony from
+Cursor's. CI remains the CodeQL and Semgrep authority. This file stays
+registered so a missing hook still fails open through the launcher; it does
+not start a scan, decides nothing, and main() returns 0.
 """
 
 from __future__ import annotations

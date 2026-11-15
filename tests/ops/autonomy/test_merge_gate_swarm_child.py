@@ -56,4 +56,22 @@ def test_a_non_child_session_is_unaffected_while_disabled(
 
 def test_a_child_may_still_run_non_merge_commands(child: str) -> None:
     for command in ("git status", "gh api repos/o/r/pulls/12", "make pr"):
-        assert merge_gate.evaluate("Bash", {"command": command}, event={"session_id": child}) is None
+        assert (
+            merge_gate.evaluate("Bash", {"command": command}, event={"session_id": child}) is None
+        )
+
+
+def test_a_swarm_child_cannot_reach_across_sessions(child: str) -> None:
+    import swarm_role_gate  # noqa: PLC0415
+
+    event = {"session_id": child}
+    for tool in ("send_message", "create_session", "send_later", "create_trigger"):
+        name = f"mcp__claude-code-remote__{tool}"
+        assert swarm_role_gate.evaluate(name, event) == swarm_role_gate.REASON, tool
+    for tool in ("get_session", "list_events", "list_sessions"):
+        assert swarm_role_gate.evaluate(f"mcp__claude-code-remote__{tool}", event) is None
+    assert swarm_role_gate.evaluate("mcp__claude-code-remote__send_message", {}) is None
+    assert (
+        swarm_role_gate.evaluate("mcp__claude-code-remote__send_message", {"session_id": "the-cto"})
+        is None
+    )
