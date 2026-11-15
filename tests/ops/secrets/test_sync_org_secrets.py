@@ -186,11 +186,14 @@ def _org_plan(tmp_path: Path, **override: Any) -> Path:
         ({"vault_name": "NOT_A_VAULT_KEY"}, "NOT_A_VAULT_KEY"),
         ({"must_read": "o/r"}, "must_read"),
         ({"org": "bad org"}, "org"),
+        ({"org": "trailing-"}, "org"),
+        ({"secret": "SONAR_TOKEN\n"}, "secret"),
     ],
 )
 def test_org_target_schema_rejects(tmp_path: Path, override: dict[str, Any], match: str) -> None:
+    plan = _org_plan(tmp_path, **override)
     with pytest.raises(sas.PlanError, match=match):
-        sas.load_plan(_org_plan(tmp_path, **override))
+        sas.load_plan(plan)
 
 
 def test_org_target_schema_accepts_selected(tmp_path: Path) -> None:
@@ -487,3 +490,70 @@ def test_cli_rejects_values_that_could_reach_gh_or_the_filesystem(argv: list[str
     with pytest.raises(SystemExit) as exc:
         sas.main(argv)
     assert exc.value.code == 2
+
+
+@pytest.mark.parametrize(
+    ("call", "match"),
+    [
+        (lambda: sas.org_secret_updated_at("-oops", "actions", "SONAR_TOKEN"), "organization"),
+        (lambda: sas.org_secret_updated_at("o/../x", "actions", "SONAR_TOKEN"), "organization"),
+        (lambda: sas.org_secret_updated_at(ORG, "../actions", "SONAR_TOKEN"), "app"),
+        (lambda: sas.org_secret_updated_at(ORG, "actions", "../SONAR_TOKEN"), "secret name"),
+        (lambda: sas.org_secret_updated_at(ORG, "actions", "GITHUB_TOKEN"), "secret name"),
+        (lambda: sas.org_secret_updated_at(ORG, "actions", "X\n"), "secret name"),
+    ],
+)
+def test_metadata_sink_revalidates_every_gh_argument(
+    monkeypatch: pytest.MonkeyPatch, call: Any, match: str
+) -> None:
+    """S8705: the ``gh api`` sink re-validates; parse-time checks are not the only guard."""
+    gh = _install(monkeypatch, FakeGh())
+    with pytest.raises(ValueError, match=match):
+        call()
+    assert gh.calls == []
+
+
+def _target(**override: Any) -> sas.OrgSecret:
+    fields: dict[str, Any] = {
+        "org": ORG,
+        "target_name": "SONAR_TOKEN",
+        "vault_name": "SONAR_TOKEN",
+        "apps": ("actions",),
+        "visibility": "all",
+    }
+    fields.update(override)
+    return sas.OrgSecret(**fields)
+
+
+@pytest.mark.parametrize(
+    ("target", "app", "match"),
+    [
+        (_target(org="--repo"), "actions", "organization"),
+        (_target(target_name="--body"), "actions", "secret name"),
+        (_target(), "--env", "app"),
+        (_target(visibility="public"), "actions", "visibility"),
+        (
+            _target(visibility="selected", repositories=("o/--x", "o/a/b")),
+            "actions",
+            "repository",
+        ),
+    ],
+)
+def test_set_sink_revalidates_every_gh_argument(
+    monkeypatch: pytest.MonkeyPatch, target: sas.OrgSecret, app: str, match: str
+) -> None:
+    """S8705: ``gh secret set`` argv holds only constants or sink-validated values."""
+    gh = _install(monkeypatch, FakeGh())
+    with pytest.raises(ValueError, match=match):
+        sas.set_org_secret(target, app, CANARIES["SONAR_TOKEN"])
+    assert gh.calls == []
+
+
+def test_set_sink_passes_module_constant_for_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    gh = _install(monkeypatch, FakeGh())
+    app = "".join(["depend", "abot"])  # equal to, but not, the module constant
+    assert sas.set_org_secret(_target(apps=("dependabot",)), app, "v")
+    (call,) = gh.secret_sets()
+    passed = call["argv"][call["argv"].index("--app") + 1]
+    assert passed == "dependabot"
+    assert passed is sas.ORG_APPS[1]

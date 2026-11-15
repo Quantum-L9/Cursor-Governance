@@ -32,7 +32,8 @@ def _load_validator() -> ModuleType:
         spec = importlib.util.spec_from_file_location(
             "_plan_kernel_receipt_either_or", SCRIPTS / "validate_plan_kernel_receipt.py"
         )
-        assert spec and spec.loader
+        assert spec is not None
+        assert spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module

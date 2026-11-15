@@ -77,13 +77,20 @@ SCHEMA = "l9.actions-secret-sync.v1"
 DEFAULT_PLAN = HERE / "actions-secret-sync.json"
 DEFAULT_INVENTORY = HERE / "infisical-cursor-governance.yaml"
 SDK_TARGET_NAME = "SDK_TOKEN"
-_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
-_SECRET_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# re.ASCII keeps ``\w`` to [A-Za-z0-9_]; patterns are applied with fullmatch.
+_REPO_RE = re.compile(r"[\w.-]+/[\w.-]+", re.ASCII)
+_SECRET_RE = re.compile(r"[A-Za-z_]\w*", re.ASCII)
 _SHELL_GH_VARS = ("GITHUB_TOKEN", "GH_TOKEN")
-_ORG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*$")
+_ORG_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")  # = _ORG_LOGIN_RE
 ORG_APPS = ("actions", "dependabot")
 ORG_VISIBILITIES = ("all", "private", "selected")
 DRIFT_SCHEMA = "l9.secret-drift.v1"
+#: GitHub's own naming rules: an org login, and an Actions/Dependabot secret name.
+#: Validated at parse time and again at every ``gh`` sink, so no CLI value that
+#: looks like an option or a path can reach a ``gh`` argument list
+#: (SonarCloud pythonsecurity:S8705).
+_ORG_LOGIN_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
+_SECRET_NAME_RE = re.compile(r"[A-Za-z_]\w{0,254}", re.ASCII)
 _HTTP_STATUS_RE = re.compile(r"\(HTTP (\d{3})\)")
 
 
@@ -144,7 +151,7 @@ def root_env_keys(inventory: Path = DEFAULT_INVENTORY) -> frozenset[str]:
 
 def _require_str(obj: dict, key: str, where: str, pattern: re.Pattern[str]) -> str:
     value = obj.get(key)
-    if not isinstance(value, str) or not pattern.match(value):
+    if not isinstance(value, str) or not pattern.fullmatch(value):
         raise PlanError(f"{where}: {key!r} missing or malformed")
     return value
 
@@ -156,15 +163,17 @@ def _check_vault(name: str, allowed: frozenset[str], where: str) -> None:
         )
 
 
-def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) -> Plan:
-    allowed = root_env_keys(inventory)
+def _read_plan(path: Path) -> dict:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise PlanError(f"{path}: unreadable plan ({type(exc).__name__})") from exc
     if not isinstance(raw, dict) or raw.get("schema") != SCHEMA:
         raise PlanError(f"{path}: schema must be {SCHEMA!r}")
-    items = raw.get("secrets")
+    return raw
+
+
+def _load_entries(items: object, path: Path, allowed: frozenset[str]) -> tuple[Entry, ...]:
     if not isinstance(items, list):
         raise PlanError(f"{path}: 'secrets' must be a list")
     entries: list[Entry] = []
@@ -183,28 +192,36 @@ def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) ->
             raise PlanError(f"{where}: duplicate {entry.repo} {entry.target_name}")
         seen.add((entry.repo, entry.target_name))
         entries.append(entry)
+    return tuple(entries)
 
-    sdk: SdkToken | None = None
-    block = raw.get("sdk_token")
-    if block is not None:
-        where = f"{path.name}: sdk_token"
-        if not isinstance(block, dict):
-            raise PlanError(f"{where}: must be an object")
-        repos = block.get("repos")
-        if not isinstance(repos, list) or not all(
-            isinstance(r, str) and _REPO_RE.match(r) for r in repos
-        ):
-            raise PlanError(f"{where}: 'repos' must be a list of owner/name")
-        vault_name = _require_str(block, "vault_name", where, _SECRET_RE)
-        _check_vault(vault_name, allowed, where)
-        for repo in repos:
-            if (repo, SDK_TARGET_NAME) in seen:
-                raise PlanError(f"{where}: {repo} {SDK_TARGET_NAME} also in 'secrets'")
-        sdk = SdkToken(
-            repos=tuple(repos),
-            vault_name=vault_name,
-            must_read=_require_str(block, "must_read", where, _REPO_RE),
-        )
+
+def _load_sdk_token(
+    block: object, path: Path, allowed: frozenset[str], entries: tuple[Entry, ...]
+) -> SdkToken | None:
+    if block is None:
+        return None
+    where = f"{path.name}: sdk_token"
+    if not isinstance(block, dict):
+        raise PlanError(f"{where}: must be an object")
+    repos = _repo_list(block, "repos", where, allow_duplicates=True, required=True)
+    vault_name = _require_str(block, "vault_name", where, _SECRET_RE)
+    _check_vault(vault_name, allowed, where)
+    planned = {(e.repo, e.target_name) for e in entries}
+    for repo in repos:
+        if (repo, SDK_TARGET_NAME) in planned:
+            raise PlanError(f"{where}: {repo} {SDK_TARGET_NAME} also in 'secrets'")
+    return SdkToken(
+        repos=repos,
+        vault_name=vault_name,
+        must_read=_require_str(block, "must_read", where, _REPO_RE),
+    )
+
+
+def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) -> Plan:
+    allowed = root_env_keys(inventory)
+    raw = _read_plan(path)
+    entries = _load_entries(raw.get("secrets"), path, allowed)
+    sdk = _load_sdk_token(raw.get("sdk_token"), path, allowed, entries)
     org_secrets = _load_org_secrets(raw.get("org_secrets"), path, allowed)
     names = (
         {e.vault_name for e in entries}
@@ -212,22 +229,72 @@ def load_plan(path: Path = DEFAULT_PLAN, inventory: Path = DEFAULT_INVENTORY) ->
         | {t.vault_name for t in org_secrets}
     )
     return Plan(
-        entries=tuple(entries),
+        entries=entries,
         sdk_token=sdk,
         vault_names=frozenset(names),
         org_secrets=org_secrets,
     )
 
 
-def _repo_list(item: dict, key: str, where: str) -> tuple[str, ...]:
-    value = item.get(key, [])
+def _repo_list(
+    item: dict, key: str, where: str, *, allow_duplicates: bool = False, required: bool = False
+) -> tuple[str, ...]:
+    value = item.get(key) if required else item.get(key, [])
     if not isinstance(value, list) or not all(
-        isinstance(r, str) and _REPO_RE.match(r) for r in value
+        isinstance(r, str) and _REPO_RE.fullmatch(r) for r in value
     ):
         raise PlanError(f"{where}: {key!r} must be a list of owner/name")
-    if len(set(value)) != len(value):
+    if not allow_duplicates and len(set(value)) != len(value):
         raise PlanError(f"{where}: {key!r} has duplicates")
     return tuple(value)
+
+
+def _org_apps(item: dict, where: str) -> tuple[str, ...]:
+    apps = item.get("apps")
+    if (
+        not isinstance(apps, list)
+        or not apps
+        or not all(a in ORG_APPS for a in apps)
+        or len(set(apps)) != len(apps)
+    ):
+        raise PlanError(f"{where}: 'apps' must be a non-empty unique subset of {ORG_APPS}")
+    return tuple(apps)
+
+
+def _org_visibility(item: dict, org: str, where: str) -> tuple[str, tuple[str, ...]]:
+    visibility = item.get("visibility")
+    if visibility not in ORG_VISIBILITIES:
+        raise PlanError(f"{where}: 'visibility' must be one of {ORG_VISIBILITIES}")
+    repositories = _repo_list(item, "repositories", where)
+    if visibility != "selected":
+        if repositories:
+            raise PlanError(f"{where}: 'repositories' is only valid with visibility 'selected'")
+        return visibility, repositories
+    if not repositories:
+        raise PlanError(f"{where}: visibility 'selected' needs 'repositories'")
+    if any(r.split("/", 1)[0].lower() != org.lower() for r in repositories):
+        raise PlanError(f"{where}: 'repositories' must belong to org {org}")
+    return visibility, repositories
+
+
+def _load_org_secret(item: object, where: str, allowed: frozenset[str]) -> OrgSecret:
+    if not isinstance(item, dict):
+        raise PlanError(f"{where}: must be an object")
+    org = _require_str(item, "org", where, _ORG_RE)
+    target_name = _require_str(item, "secret", where, _SECRET_RE)
+    vault_name = _require_str(item, "vault_name", where, _SECRET_RE)
+    _check_vault(vault_name, allowed, where)
+    apps = _org_apps(item, where)
+    visibility, repositories = _org_visibility(item, org, where)
+    return OrgSecret(
+        org=org,
+        target_name=target_name,
+        vault_name=vault_name,
+        apps=apps,
+        visibility=visibility,
+        repositories=repositories,
+        must_read=_repo_list(item, "must_read", where),
+    )
 
 
 def _load_org_secrets(items: object, path: Path, allowed: frozenset[str]) -> tuple[OrgSecret, ...]:
@@ -239,48 +306,13 @@ def _load_org_secrets(items: object, path: Path, allowed: frozenset[str]) -> tup
     seen: set[tuple[str, str, str]] = set()
     for i, item in enumerate(items):
         where = f"{path.name}: org_secrets[{i}]"
-        if not isinstance(item, dict):
-            raise PlanError(f"{where}: must be an object")
-        org = _require_str(item, "org", where, _ORG_RE)
-        target_name = _require_str(item, "secret", where, _SECRET_RE)
-        vault_name = _require_str(item, "vault_name", where, _SECRET_RE)
-        _check_vault(vault_name, allowed, where)
-        apps = item.get("apps")
-        if (
-            not isinstance(apps, list)
-            or not apps
-            or not all(a in ORG_APPS for a in apps)
-            or len(set(apps)) != len(apps)
-        ):
-            raise PlanError(f"{where}: 'apps' must be a non-empty unique subset of {ORG_APPS}")
-        visibility = item.get("visibility")
-        if visibility not in ORG_VISIBILITIES:
-            raise PlanError(f"{where}: 'visibility' must be one of {ORG_VISIBILITIES}")
-        repositories = _repo_list(item, "repositories", where)
-        if visibility == "selected":
-            if not repositories:
-                raise PlanError(f"{where}: visibility 'selected' needs 'repositories'")
-            if any(r.split("/", 1)[0].lower() != org.lower() for r in repositories):
-                raise PlanError(f"{where}: 'repositories' must belong to org {org}")
-        elif repositories:
-            raise PlanError(f"{where}: 'repositories' is only valid with visibility 'selected'")
-        must_read = _repo_list(item, "must_read", where)
-        for app in apps:
-            key = (org.lower(), app, target_name)
+        target = _load_org_secret(item, where, allowed)
+        for app in target.apps:
+            key = (target.org.lower(), app, target.target_name)
             if key in seen:
-                raise PlanError(f"{where}: duplicate {org} {app} {target_name}")
+                raise PlanError(f"{where}: duplicate {target.org} {app} {target.target_name}")
             seen.add(key)
-        targets.append(
-            OrgSecret(
-                org=org,
-                target_name=target_name,
-                vault_name=vault_name,
-                apps=tuple(apps),
-                visibility=visibility,
-                repositories=repositories,
-                must_read=must_read,
-            )
-        )
+        targets.append(target)
     return tuple(targets)
 
 
@@ -329,54 +361,98 @@ def set_secret(repo: str, target_name: str, value: str) -> bool:
     return True
 
 
-def run(plan: Plan, *, dry_run: bool, with_sdk_token: bool) -> int:
+def _run_entry(entry: Entry, *, dry_run: bool) -> bool:
+    value = cb.bind(entry.vault_name)
+    if not value:
+        source = cb._SOURCES.get(entry.vault_name, "unbound")
+        print(
+            f"  SKIP {entry.repo} {entry.target_name}: vault {entry.vault_name} unbound ({source})"
+        )
+        return False
+    if dry_run:
+        print(f"  would set {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
+        return True
+    if set_secret(entry.repo, entry.target_name, value):
+        print(f"  set  {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
+        return True
+    return False
+
+
+def _run_sdk_token(sdk: SdkToken, *, dry_run: bool) -> int:
+    """SDK_TOKEN fan-out; returns the number of failures."""
+    pat = vault_pat(sdk.vault_name)
+    if not pat:
+        print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} unbound")
+        return 1
+    if not pat_can_read(pat, sdk.must_read):
+        print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} cannot read {sdk.must_read}")
+        return 1
     failures = 0
-    for entry in plan.entries:
-        value = cb.bind(entry.vault_name)
-        if not value:
-            source = cb._SOURCES.get(entry.vault_name, "unbound")
-            target = f"{entry.repo} {entry.target_name}"
-            print(f"  SKIP {target}: vault {entry.vault_name} unbound ({source})")
-            failures += 1
-            continue
+    for repo in sdk.repos:
         if dry_run:
-            print(f"  would set {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
-        elif set_secret(entry.repo, entry.target_name, value):
-            print(f"  set  {entry.repo} {entry.target_name} <- vault {entry.vault_name}")
+            print(f"  would set {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
+        elif set_secret(repo, SDK_TARGET_NAME, pat):
+            print(f"  set  {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
         else:
             failures += 1
+    return failures
 
+
+def run(plan: Plan, *, dry_run: bool, with_sdk_token: bool) -> int:
+    failures = sum(not _run_entry(entry, dry_run=dry_run) for entry in plan.entries)
     if with_sdk_token:
-        sdk = plan.sdk_token
-        if sdk is None:
+        if plan.sdk_token is None:
             print(f"  SKIP {SDK_TARGET_NAME}: plan has no sdk_token block")
             return 1
-        pat = vault_pat(sdk.vault_name)
-        if not pat:
-            print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} unbound")
-            failures += 1
-        elif not pat_can_read(pat, sdk.must_read):
-            print(f"  SKIP {SDK_TARGET_NAME}: vault {sdk.vault_name} cannot read {sdk.must_read}")
-            failures += 1
-        else:
-            for repo in sdk.repos:
-                if dry_run:
-                    print(f"  would set {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
-                elif set_secret(repo, SDK_TARGET_NAME, pat):
-                    print(f"  set  {repo} {SDK_TARGET_NAME} <- vault {sdk.vault_name}")
-                else:
-                    failures += 1
+        failures += _run_sdk_token(plan.sdk_token, dry_run=dry_run)
     return 1 if failures else 0
+
+
+def _canonical(value: str, choices: tuple[str, ...], what: str) -> str:
+    """Return the module constant in ``choices`` equal to ``value``; never the caller's string.
+
+    Every ``gh`` argv element in org mode is either a module constant or a value
+    re-validated at the sink, so no CLI-supplied text reaches ``gh`` unchecked
+    (SonarCloud pythonsecurity:S8705).
+    """
+    for known in choices:
+        if value == known:
+            return known
+    raise ValueError(f"not an org secret {what}: {value!r}")
+
+
+def _canonical_app(app: str) -> str:
+    return _canonical(app, ORG_APPS, "app")
+
+
+def _sink_org(org: str) -> str:
+    if not _ORG_LOGIN_RE.fullmatch(org):
+        raise ValueError(f"not a GitHub organization login: {org!r}")
+    return org
+
+
+def _sink_secret_name(name: str) -> str:
+    if not _SECRET_NAME_RE.fullmatch(name) or name.upper().startswith("GITHUB_"):
+        raise ValueError(f"not a valid GitHub secret name: {name!r}")
+    return name
+
+
+def _sink_repo_name(repo: str) -> str:
+    """The name part of ``owner/name``, re-validated as a single path segment."""
+    if not _REPO_RE.fullmatch(repo):
+        raise ValueError(f"not an owner/name repository: {repo!r}")
+    return repo.split("/", 1)[1]
 
 
 def set_org_secret(target: OrgSecret, app: str, value: str) -> bool:
     """``gh secret set NAME --org ORG --app APP``; value on stdin only, output never printed."""
     argv = [
-        "gh", "secret", "set", target.target_name,
-        "--org", target.org, "--app", app, "--visibility", target.visibility,
+        "gh", "secret", "set", _sink_secret_name(target.target_name),
+        "--org", _sink_org(target.org), "--app", _canonical_app(app),
+        "--visibility", _canonical(target.visibility, ORG_VISIBILITIES, "visibility"),
     ]  # fmt: skip
     if target.visibility == "selected":
-        argv += ["--repos", ",".join(r.split("/", 1)[1] for r in target.repositories)]
+        argv += ["--repos", ",".join(_sink_repo_name(r) for r in target.repositories)]
     result = subprocess.run(argv, input=value, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         print(
@@ -420,8 +496,9 @@ class TransportError(RuntimeError):
 
 def org_secret_updated_at(org: str, app: str, name: str) -> str | None:
     """The org secret's ``updated_at``; None on 404. Metadata only, never a value."""
+    endpoint = f"orgs/{_sink_org(org)}/{_canonical_app(app)}/secrets/{_sink_secret_name(name)}"
     result = subprocess.run(
-        ["gh", "api", f"orgs/{org}/{app}/secrets/{name}"],
+        ["gh", "api", endpoint],
         capture_output=True,
         text=True,
         check=False,
@@ -496,33 +573,37 @@ def _stamp(value: str | None) -> str:
         return "<unparseable>"
 
 
+def _verdict(org_at: str | None, vault_at: str | None, name: str) -> str:
+    if vault_at is None:
+        return "missing_in_vault"
+    if org_at is None:
+        return "missing_in_org"
+    try:
+        stale = _instant(org_at) < _instant(vault_at)
+    except ValueError as exc:
+        raise TransportError(f"{name}: unparseable timestamp") from exc
+    return "drift" if stale else "in_sync"
+
+
+def _vault_updated_at(vault_name: str) -> str | None:
+    meta = vault_metadata(vault_name)
+    if meta.status not in (200, 404) or (meta.status == 200 and not meta.updated_at):
+        raise TransportError(f"vault {vault_name}: metadata read failed (status {meta.status})")
+    return meta.updated_at if meta.status == 200 else None
+
+
 def check_org(targets: list[OrgSecret], org: str, app: str) -> list[dict[str, str | None]]:
     """One drift row per target. Raises TransportError when a row cannot be decided."""
     rows: list[dict[str, str | None]] = []
     for target in targets:
         org_at = org_secret_updated_at(org, app, target.target_name)
-        meta = vault_metadata(target.vault_name)
-        if meta.status not in (200, 404) or (meta.status == 200 and not meta.updated_at):
-            raise TransportError(
-                f"vault {target.vault_name}: metadata read failed (status {meta.status})"
-            )
-        vault_at = meta.updated_at if meta.status == 200 else None
-        if vault_at is None:
-            verdict = "missing_in_vault"
-        elif org_at is None:
-            verdict = "missing_in_org"
-        else:
-            try:
-                stale = _instant(org_at) < _instant(vault_at)
-            except ValueError as exc:
-                raise TransportError(f"{target.target_name}: unparseable timestamp") from exc
-            verdict = "drift" if stale else "in_sync"
+        vault_at = _vault_updated_at(target.vault_name)
         rows.append(
             {
                 "name": target.target_name,
                 "org_updated_at": org_at,
                 "vault_updated_at": vault_at,
-                "verdict": verdict,
+                "verdict": _verdict(org_at, vault_at, target.target_name),
             }
         )
     return rows
@@ -565,13 +646,6 @@ def _org_main(args: argparse.Namespace, plan: Plan) -> int:
         document = {"schema": DRIFT_SCHEMA, "org": args.org, "app": args.app, "rows": rows}
         report.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     return 0 if all(r["verdict"] == "in_sync" for r in rows) else 1
-
-
-#: GitHub's own naming rules: an org login, and an Actions/Dependabot secret name.
-#: Validated at parse time so no CLI value that looks like an option or a path can
-#: reach a ``gh`` argument list (SonarCloud pythonsecurity:S8705).
-_ORG_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
-_SECRET_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,254}$")
 
 
 def _org_login(value: str) -> str:

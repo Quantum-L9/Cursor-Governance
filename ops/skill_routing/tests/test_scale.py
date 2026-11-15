@@ -182,7 +182,8 @@ def test_scale_pipeline(roots, count: int, capsys):
 
     route_med, route_p95 = timed(lambda: rp.route_prompt(explicit_prompt, loaded.data))
     decision = rp.route_prompt(explicit_prompt, loaded.data)
-    assert decision is not None and decision["primary"] == f"l9-synth-{target:05d}"
+    assert decision is not None
+    assert decision["primary"] == f"l9-synth-{target:05d}"
     assert decision["source"] == "route"
 
     # Description fallback scores every model_allowed skill (n-gram matching), so
@@ -192,7 +193,8 @@ def test_scale_pipeline(roots, count: int, capsys):
     if count <= 1000 or os.environ.get("L9_VSP_SCALE_FULL") == "1":
         fb_med, fb_p95 = timed(lambda: rp.route_prompt(fallback_prompt, loaded.data), repeat=3)
         fallback = rp.route_prompt(fallback_prompt, loaded.data)
-        assert fallback is not None and fallback["primary"] == f"l9-synth-{target:05d}"
+        assert fallback is not None
+        assert fallback["primary"] == f"l9-synth-{target:05d}"
 
     mat_med, mat_p95 = timed(lambda: mat.materialize_route(decision, loaded), DURABLE_REPEAT)
     materialized = mat.materialize_route(decision, loaded)
@@ -316,4 +318,5 @@ def test_no_network_or_model_dependencies_in_prompt_path():
         imports = [line for line in text.splitlines() if line.startswith(("import ", "from "))]
         for line in imports:
             for token in forbidden:
-                assert f" {token}" not in line and f".{token}" not in line, (rel, line)
+                assert f" {token}" not in line, (rel, line)
+                assert f".{token}" not in line, (rel, line)
