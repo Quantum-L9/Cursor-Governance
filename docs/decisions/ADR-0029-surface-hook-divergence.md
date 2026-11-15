@@ -98,6 +98,22 @@ canonical `close_session`, and `graphiti-session-end.sh` uses
 `hydration.cli close`. Wrapper budget / `skipped_no_prefetch` policy does not
 justify a second close implementation. No `session_close.py` is introduced.
 
+## Options Considered
+
+Recorded 2026-11-15 from the alternatives this record's Context and Decision
+already name; the decision itself is unchanged.
+
+1. **Keep a Claude predicate in each consumer** (`memory_prefetch.py`,
+   `session_start_claude_governance.sh`, `execution_profile.classify()`). The
+   status quo, and the defect: a projected `L9_GOVERNANCE_SURFACE=claude-code`
+   made Cursor look like Claude in some consumers and not others. Rejected.
+2. **No-op every gate-class hook outside Claude.** Simple, but false for the live
+   launcher: shared gates such as the merge gate must keep enforcing on every
+   surface, and an `unknown` surface must fail toward closed. Rejected (Decision §2).
+3. **One upstream detector plus a named Claude-only gate table in the launcher.**
+   Identity has one SSOT (`surface_detect`), observers skip off Claude, and only
+   the named gates skip on a known non-Claude surface. Chosen.
+
 ## Consequences
 
 - Cursor sessions cannot be hijacked by the projected Claude surface id.
