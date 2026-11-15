@@ -101,10 +101,13 @@ As a result, a degraded bootstrap is recorded even when the agent wrote no brief
    session's only if that file post-dates the session's prefetch receipt.
 2. **First Stop after the publication.** If either file is missing or invalid,
    `memory_writeback.py` blocks that Stop **once**. Its single request gives both
-   shapes and says why each file was refused. Only this hook ever blocks, because
-   Claude Code does not document how two parallel `decision: block` outputs
-   combine. `governance_handoff_writeback.py` only arms its ledger and stays
-   silent.
+   shapes and says why each file was refused. Of the two handoff hooks only this
+   one blocks, because Claude Code does not document how two parallel
+   `decision: block` outputs combine. `governance_handoff_writeback.py` only
+   arms its ledger and stays silent. Other Stop hooks may block too (a cloud
+   launcher registers its own git check), and Claude Code then sets
+   `stop_hook_active` on the next Stop; the request is bounded by this
+   publication's ledger, never by that flag, so it is still made once.
 3. **Next Stop.**
    - The repository close runs with the brief if it is valid; otherwise it
      closes without it and says so.

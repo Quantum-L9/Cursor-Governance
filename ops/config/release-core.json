@@ -1,0 +1,11 @@
+{
+  "schema": "l9.release-core-pin/v1",
+  "description": "Pinned Quantum-L9/l9-ci-core revision whose release engine (tools/l9_release) `make release DRY_RUN=1` runs locally. `make release DISPATCH=1` dispatches the release schedule hosted by runner_repository (the factory, which holds the repo-birth App credential), which calls Core's reusable release-runner.yml; it never dispatches Core directly. Cursor-Governance holds no release engine of its own. Re-pin by changing revision to a Core main commit that carries tools/l9_release.",
+  "repository": "Quantum-L9/l9-ci-core",
+  "revision": "499268ce2b26acd36fb11b3c6e42d42a66719077",
+  "engine_module": "tools.l9_release",
+  "runner_repository": "Quantum-L9/l9-repo-template",
+  "runner_workflow": "release-schedule.yml",
+  "runner_input": "repo",
+  "runner_ref": "main"
+}

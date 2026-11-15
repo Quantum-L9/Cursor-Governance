@@ -229,9 +229,15 @@ lanes:
     # from l9-ci-core at `core_ref` and staged where org-ci stages it. Core
     # judges the whole tree, so this lane does too: a rule or policy change can
     # make untouched lines block (it did on #829).
+    # The governance is resolved by Core's own actions at `core_ref`
+    # (resolve-consumer-metadata, then resolve-governance with its
+    # `product-kind`), so a repository that does not declare `product_kind:
+    # node` in .l9/ci.json gets Core's constellation-scoped policy: the Gate
+    # routing rules run and are reported but cannot block (Core #237).
     tool: l9-ci
     provider: semgrep
     core_profile: pr_fast
+    core_event: pull_request
     core_ref: main
     tier: heavy
     globs: ["*.py", "*.pyi", "*.js", "*.jsx", "*.ts", "*.tsx"]

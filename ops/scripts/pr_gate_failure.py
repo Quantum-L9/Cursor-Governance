@@ -24,6 +24,9 @@ HOOK_ID_RE = re.compile(r"^- hook id:\s+(\S+)", re.M)
 HOOK_EXIT_RE = re.compile(r"^- exit code:\s+(\d+)", re.M)
 DIRTY_SECTION_RE = re.compile(r"^(?:GENERATED|NON_GENERATED|SCRATCH)_NEW_DIRTY")
 HEAL_FAIL_RE = re.compile(r"^FAIL: generated heal exited", re.M)
+# run_pr_gate.sh commits the writer rewrites it classified and continues; dirt
+# named before that line is no longer in the tree (#734 defect 2).
+WRITER_COMMIT_RE = re.compile(r"^OK: committed \d+ writer-rewrite path\(s\)", re.M)
 MAKE_PR_RE = re.compile(
     r"\bmake(?:\s+-C\s+\S+)?\s+pr(?:-check)?(?:\s|$|[;&])",
     re.I,
@@ -98,11 +101,25 @@ def parse_failed_hooks(log_text: str) -> list[str]:
     return hooks
 
 
+def _after_writer_commit(log_text: str) -> str:
+    """Log text after the gate's last writer-rewrite commit (whole log if none)."""
+    last = None
+    for last in WRITER_COMMIT_RE.finditer(log_text):
+        pass
+    if last is None:
+        return log_text
+    return log_text[last.end() :]
+
+
 def parse_dirty_paths(log_text: str) -> list[str]:
-    """Paths named by classify_generated_dirtiness.sh after a heal rewrite."""
+    """Paths named by classify_generated_dirtiness.sh after a heal rewrite.
+
+    Paths the gate committed in the same run are not dirt: only sections after
+    the last writer-rewrite commit line count.
+    """
     seen: list[str] = []
     grabbing = False
-    for line in log_text.splitlines():
+    for line in _after_writer_commit(log_text).splitlines():
         if DIRTY_SECTION_RE.match(line):
             grabbing = True
             continue
@@ -127,9 +144,10 @@ def classify_failure(
         return "pytest"
     if hooks:
         return "hook"
-    if "NON_GENERATED_NEW_DIRTY:" in log_text:
+    live = _after_writer_commit(log_text)
+    if "NON_GENERATED_NEW_DIRTY:" in live:
         return "source_dirty"
-    if dirty_paths or "GENERATED_NEW_DIRTY:" in log_text:
+    if dirty_paths or "GENERATED_NEW_DIRTY:" in live:
         return "generated_heal"
     if HEAL_FAIL_RE.search(log_text):
         return "generated_heal"

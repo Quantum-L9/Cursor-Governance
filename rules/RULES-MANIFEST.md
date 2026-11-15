@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-11-13T01:49:04Z`. Source: `rules/*.mdc`.
+Generated: `2026-11-15T14:47:59Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -48,7 +48,7 @@ Generated: `2026-11-13T01:49:04Z`. Source: `rules/*.mdc`.
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
 | `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 134 | `8ae918ee5bdc` |
 | `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `62a85fb76752` |
-| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 67 | `51910ece34bf` |
+| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 70 | `34cd8743591b` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
@@ -74,7 +74,7 @@ Generated: `2026-11-13T01:49:04Z`. Source: `rules/*.mdc`.
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 93 | `85f59ed0e275` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 251 | `020c59e6f580` |
-| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 93 | `83dbe49136ba` |
+| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 96 | `ac112bfaa202` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | agent_requested | 40 | `3b1b5e0cfd03` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 106 | `0e67f1cc2c17` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 70 | `5043e3374dca` |

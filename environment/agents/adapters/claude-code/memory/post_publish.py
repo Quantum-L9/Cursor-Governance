@@ -131,6 +131,34 @@ def is_subagent(event: dict) -> bool:
     return str(event.get("agent_type") or event.get("agentType") or "").lower() == "subagent"
 
 
+def _session_role_module() -> Any | None:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "ops" / "autonomy" / "session_role.py"
+        if candidate.is_file():
+            autonomy = str(candidate.parent)
+            if autonomy not in sys.path:
+                sys.path.insert(0, autonomy)
+            try:
+                import session_role
+            except Exception:  # noqa: BLE001 - a role probe never breaks a hook
+                return None
+            return session_role
+    return None
+
+
+def is_swarm_child(event: dict) -> bool:
+    """A registered /lcto swarm child has no post-publish handoff duty.
+
+    The CTO operating protocol ends a child's lane at publication (governance/cto-mode/
+    MODE.yaml ``STAND DOWN``); the CTO owns integration and the handoff. The role is
+    recorded by ``ops/autonomy/session_role.py``; an unregistered session is unaffected.
+    """
+    module = _session_role_module()
+    if module is None:
+        return False
+    return bool(module.is_child(str(event.get("session_id") or "") or None))
+
+
 def session_roots(contract: dict, receipt_id: str, fallback: Any, workspace: Path) -> list[Path]:
     """Repositories this session put in scope, else ``fallback(workspace)``.
 

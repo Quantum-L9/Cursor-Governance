@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Thin Claude Stop hook wrapper → ops/autonomy/session_debt.py (§2.1).
 
-Registered `--class gate`: exit 2 blocks the turn from ending and returns
-stderr to the model, so a session cannot close over unpushed commits or open
-findings (rules/42-no-abandoned-work.mdc).
+NOT registered on Stop (rules/42-no-abandoned-work.mdc: session_debt.py is
+invoked on demand; ``test_hook_exec_failclosed.py`` asserts the absence). If it
+is ever registered, it must be ``--class gate`` (``l9_hook_exec.sh``
+``l9_required_class``): exit 2 blocks the turn and returns stderr to the model.
 """
 
 from __future__ import annotations

@@ -60,8 +60,10 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from command_parse import (  # noqa: E402
+    git_toplevel,
     segment_head,
     segment_words,
+    segments_with_directories,
     split_segments,
     strip_heredoc_bodies,
     wrapper_subcommands,
@@ -2362,9 +2364,15 @@ def command_requires_human(command: str, *, root: Path | None = None) -> str | N
     it, and only an unprovable sensitive mutation is denied.
     """
     try:
-        ctx = live_context(root)
-        decision = evaluate_command(command, ctx)
-        result = run_guards(decision, ctx)
+        groups = _repository_groups(command, root)
+        for group_root, group_command in groups:
+            ctx = live_context(group_root)
+            decision = evaluate_command(group_command, ctx)
+            result = run_guards(decision, ctx)
+            if not result.allowed:
+                return f"git guardrails ({CONTRACT_ID}): {result.reason}"
+            if result.receipt is not None:
+                print(f"git guardrails: {result.reason}", file=sys.stderr)
     except Exception as exc:  # noqa: BLE001 - gate boundary: never fail open
         if _looks_provably_read_only(command):
             return None
@@ -2372,11 +2380,33 @@ def command_requires_human(command: str, *, root: Path | None = None) -> str | N
             f"git guardrails: evaluation faulted ({type(exc).__name__}: {exc}); "
             "a sensitive mutation cannot be ruled out, so it fails closed (I017)."
         )
-    if result.allowed:
-        if result.receipt is not None:
-            print(f"git guardrails: {result.reason}", file=sys.stderr)
-        return None
-    return f"git guardrails ({CONTRACT_ID}): {result.reason}"
+    return None
+
+
+def _repository_groups(command: str, root: Path | None) -> list[tuple[Path | None, str]]:
+    """The command split by the repository each segment actually runs in (#971).
+
+    ``git -C <repo> ...`` and ``cd <repo> && git ...`` act on <repo>, not on the
+    session root: probing the session root judged a scratch clone by the session
+    checkout's dirt, and from a non-repository cwd faulted every such mutation
+    (I017). Each group is evaluated -- and recovery captured -- in its own
+    repository. A segment whose directory is unknown (dynamic) or not inside a
+    work tree stays with the session root, so an unknown target never widens the
+    gate. A command that names no other repository is one group: the old path.
+    """
+    order: list[Path | None] = []
+    segments: dict[Path | None, list[str]] = {}
+    for segment, directory in segments_with_directories(command, root, nested=False):
+        key: Path | None = root
+        if directory is not None and directory != root:
+            key = git_toplevel(directory) or root
+        if key not in segments:
+            order.append(key)
+            segments[key] = []
+        segments[key].append(segment)
+    if len(order) <= 1:
+        return [(order[0] if order else root, command)]
+    return [(key, " && ".join(segments[key])) for key in order]
 
 
 __all__ = [

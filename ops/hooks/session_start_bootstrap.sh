@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # sessionStart bootstrap — works before repo symlinks exist.
 # Foreground-activates GitHub-tip governance (governance_activate_fresh.sh), then
-# wires runtime probes + Graphiti hydrate into a sectioned L9 session state report.
-# Resume SSOT is Graphiti only (no memory-bank). Exit 0 always.
+# wires runtime probes + a memory health check (health-only, CANONICAL_LAW §8.9;
+# nothing is hydrated) into a sectioned L9 session state report. Resume is an
+# on-demand canonical hydrate (python -m ops.memory.cli hydrate). Exit 0 always.
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
 set -uo pipefail
 
@@ -396,8 +397,21 @@ elif [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
   if [ "$WIRE_RC" -eq 0 ]; then
     [ "$WIRING_CHECK" = "skipped" ] && WIRING_CHECK="PASS"
   else
-    WIRE_TAIL="$(printf '%s\n' "$WIRE_OUT" | tail -n 4 | tr '\n' ' ')"
-    WIRING_CHECK="FAIL rc=${WIRE_RC} — ${WIRE_TAIL} — exhausted auto-repair; fallback: /wire or bash \"$WIRE_FALLBACK\" \"$REPO\""
+    # Report the checker's FAIL lines, never its tail: the tail is the RESULT line
+    # plus whatever non-blocking WARN printed last (a leftover memory-bank/ once
+    # read as the cause of a failure it had nothing to do with).
+    WIRE_FAILS="$(printf '%s\n' "$WIRE_OUT" | sed -n 's/^  FAIL: //p' | tr '\n' ';' | sed 's/;$//; s/;/; /g')"
+    [ -n "$WIRE_FAILS" ] || WIRE_FAILS="$(printf '%s\n' "$WIRE_OUT" | grep '^RESULT:' | tr '\n' ' ')"
+    # The remedy follows the failure class. Links-only repair already ran above;
+    # /wire repairs links, and only /ff moves the SSOT tip (rules/55).
+    WIRE_REMEDY=""
+    if printf '%s\n' "$WIRE_OUT" | grep -q '^RESULT: FAIL — SSOT tip'; then
+      WIRE_REMEDY="/ff"
+    fi
+    if printf '%s\n' "$WIRE_OUT" | grep '^RESULT: FAIL' | grep -vq 'SSOT tip'; then
+      WIRE_REMEDY="${WIRE_REMEDY:+$WIRE_REMEDY, then }/wire (bash \"$WIRE_FALLBACK\" \"$REPO\")"
+    fi
+    WIRING_CHECK="FAIL — ${WIRE_FAILS} — exhausted auto-repair; remedy: ${WIRE_REMEDY:-/wire}"
   fi
 fi
 
@@ -431,7 +445,6 @@ if [ -n "$ACTIVATE_SHA" ] && [ -n "$ACTIVATE_REMOTE_SHA" ] \
     REMOTE_MATCH="behind_or_diverged"
   fi
 fi
-DIVERGENCE_NOTE="- ssot divergence: ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}"
 
 # Orchestrator: memory health + code-graph as structured fields
 HYDRATE_MD="Graphiti disabled — no resume memory"
@@ -629,6 +642,27 @@ fi
 # through that adapter. DEGRADED keeps what verified. Fail-open: a failed, degraded or
 # timed-out binding never stops the session and is reported as exactly that, never as
 # bound. It never fetches and never writes.
+# The authority checkout the binding verifies against is provisioned here, once, for
+# every workspace: a governance-managed full clone of Quantum-L9/.github at
+# ~/.l9/authority/.github, fast-forwarded on main (ops/scripts/ensure_authority_checkout.sh).
+# Without it the binding resolved only a `.github` clone beside the workspace and was
+# NOT BOUND in every repository that had none. The provisioner fetches and never
+# destroys; the binding below stays read-only.
+AUTHORITY_NOTE="provisioner unavailable"
+ENSURE_AUTHORITY="$GC/ops/scripts/ensure_authority_checkout.sh"
+if [ -f "$ENSURE_AUTHORITY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$GC/ops/scripts/lib/run_with_timeout.sh"
+  _au_out="$(run_with_timeout 15 bash "$ENSURE_AUTHORITY" 2>/dev/null)"
+  if [ "$?" = 124 ]; then
+    AUTHORITY_NOTE="TIMED OUT after 15 s — resumes next session"
+  else
+    AUTHORITY_NOTE="$(printf '%s\n' "$_au_out" | sed -n 's/^AUTHORITY: //p' | tail -n 1)"
+    [ -n "$AUTHORITY_NOTE" ] || AUTHORITY_NOTE="provisioner printed nothing"
+  fi
+  unset _au_out
+fi
+
 DEFAULT_BINDING_MD="### default projection binding (cursor)
 - NOT BOUND — host binding unavailable, so nothing is bound (fail-open: the session continues; cite no operating-plane semantics)"
 HOST_BINDING_PY="$GC/ops/autonomy/host_binding.py"
@@ -649,17 +683,21 @@ if [ -f "$HOST_BINDING_PY" ] && [ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ]
   unset _hb_out _hb_rc
 fi
 
+# Each fact is printed once. Wiring and backup verdicts belong to ### Runtime
+# (and, when failing, ### Degraded); this section carries only the SSOT tip and
+# the link state those verdicts do not show. The self-alias line appears only
+# when one exists.
+SELF_LINK_LINE=""
+# Activation detail only when activation is not clean (fresh/swapped are clean).
+ACTIVATE_NOTE=""
+case "$ACTIVATE_ACTION" in fresh|swapped) ;; *) ACTIVATE_NOTE=" — ${ACTIVATE_DETAIL}" ;; esac
+[ "$SELF_LINK" = "absent" ] || SELF_LINK_LINE="- ssot self-link: ${SELF_LINK}"
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
-- tip: ${GOV_HEAD} action=${ACTIVATE_ACTION} detail=${ACTIVATE_DETAIL}
-- ssot: ~/.cursor-governance
-- remote: origin/${GOVERNANCE_BRANCH} @ ${REMOTE_HEAD} (${REMOTE_MATCH})
-${DIVERGENCE_NOTE}
-- wiring: ${WIRING_CHECK} | .cursor-commands → ${CC_TARGET}
-- self-link: ${SELF_LINK}
-- wire: ${WIRE_NOTE}
-- backup: ${BACKUP_NOTE}
+- ssot: ~/.cursor-governance @${GOV_HEAD} vs origin/${GOVERNANCE_BRANCH} @${REMOTE_HEAD} (${REMOTE_MATCH}; ahead=${ACTIVATE_AHEAD} behind=${ACTIVATE_BEHIND}; activation ${ACTIVATE_ACTION}${ACTIVATE_NOTE})
+- links: ${WIRE_NOTE}; .cursor-commands → ${CC_TARGET}
+${SELF_LINK_LINE}
 ${TWO_CLONE_NOTE}
 ${RUNTIME_MD}
 ${HYDRATE_BLOCK}
@@ -667,6 +705,7 @@ ${HYDRATE_BLOCK}
 ${CODEGRAPH_MD}
 ${CODING_PROJECTION_MD}
 ${DEFAULT_BINDING_MD}
+- authority checkout: ${AUTHORITY_NOTE}
 ${ROUTE_LOCATOR_MD}
 EOF
 )"

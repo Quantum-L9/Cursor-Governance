@@ -94,3 +94,18 @@ def test_one_request_carries_only_the_missing_handoffs() -> None:
 
 def test_the_example_is_itself_a_valid_brief() -> None:
     assert sh.normalize(sh.example(7), pr_number=7)["objective"]
+
+
+def test_the_generator_command_works_from_any_repository() -> None:
+    """The published repository is usually not Cursor-Governance: the command
+    names the governance clone's script and interpreter, and the workspace."""
+    reason = sh.request_reason(
+        pr_label="Org/repo#7",
+        pr_number=7,
+        missing={str(sh.HANDOFF_REL): "absent"},
+        workspace="/work/repo",
+    )
+    assert "$HOME/.cursor-governance/ops/autonomy/session_debt.py handoff --pr 7" in reason
+    assert "$HOME/.cursor-governance/.venv/bin/python" in reason
+    assert '--workspace "/work/repo"' in reason
+    assert "python3 ops/autonomy/session_debt.py" not in reason

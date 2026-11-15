@@ -32,15 +32,17 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from command_parse import (  # noqa: E402
+    git_toplevel,
     segment_head,
     segment_words,
+    segments_with_directories,
     split_segments,
     strip_heredoc_bodies,
     wrapper_subcommands,
@@ -178,9 +180,39 @@ def _deny_raw_worktree_add(command: str) -> str | None:
     return None
 
 
+#: git options that precede the subcommand and take a separate value.
+_GIT_GLOBAL_WITH_ARG = frozenset({"-C", "-c", "--git-dir", "--work-tree", "--namespace"})
+
+
+def _without_git_globals(segment: str) -> str:
+    """``git -C <dir> -c k=v checkout x`` as ``git checkout x``.
+
+    Every matcher below expects the subcommand right after ``git``, so before
+    this a ``git -C <repo> checkout|reset|revert|add -A`` slipped past the whole
+    gate (found while fixing #971). Global options never change which
+    subcommand runs; the repository they name is resolved separately.
+    """
+    import shlex
+
+    words = segment_words(segment)
+    head = 0
+    while head < len(words) and "=" in words[head] and not words[head].startswith("-"):
+        head += 1
+    if head >= len(words) or PurePosixPath(words[head]).name != "git":
+        return segment
+    index = head + 1
+    while index < len(words) and words[index].startswith("-"):
+        word = words[index]
+        index += 2 if word in _GIT_GLOBAL_WITH_ARG else 1
+    if index == head + 1:
+        return segment
+    return shlex.join([*words[: head + 1], *words[index:]])
+
+
 def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
     # Subcommand-position checks: only argv[1] can trigger revert/reset, so a
     # commit message like `git commit -m "mention git revert"` never matches.
+    command = _without_git_globals(command)
     words = segment_words(command)
     subcommand = words[1] if len(words) > 1 else None
     if subcommand == "revert" and not _authorized("L9_GIT_REVERT_AUTHORIZED"):
@@ -263,15 +295,35 @@ def command_violates_worktree_isolation(command: str, *, root: Path | None = Non
     """Return deny reason if command is a known foreign-work destroyer."""
     if isolation_disabled() or not command.strip():
         return None
-    dirty = _working_tree_dirty(root)
     sanitized = strip_heredoc_bodies(command)
+    # #971/#961: a segment's dirt is the dirt of the repository it runs in. A
+    # `cd <scratch clone> && git checkout --detach <sha>` was judged by the
+    # session checkout's dirt and refused. Unknown targets keep the session root.
+    targets: dict[str, list[Path | None]] = {}
+    for segment, directory in segments_with_directories(command, root):
+        if segment_head(segment) == "git":
+            targets.setdefault(segment, []).append(directory)
+    dirt: dict[Path | None, bool] = {}
+
+    def dirty_for(segment: str) -> bool:
+        # The same text can run in several repositories; any dirty one counts.
+        verdict = False
+        for directory in targets.get(segment) or [root]:
+            repo = root
+            if directory is not None and directory != root:
+                repo = git_toplevel(directory) or root
+            if repo not in dirt:
+                dirt[repo] = _working_tree_dirty(repo)
+            verdict = verdict or dirt[repo]
+        return verdict
+
     # Never-lose scratch patterns (forced clean, public-temp hold creation) span
     # whole pipelines and match the sanitized full text; git-subcommand patterns
     # match per git segment so message text in unrelated segments can never trip
     # them. The diff-pipe scoop loop is inherently cross-segment and keeps the
     # full-text check.
     for segment in _git_command_segments(command):
-        reason = _deny_shared_git(segment, dirty=dirty)
+        reason = _deny_shared_git(segment, dirty=dirty_for(segment))
         if reason:
             return reason
         reason = _deny_raw_worktree_add(segment)

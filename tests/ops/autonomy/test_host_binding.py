@@ -326,7 +326,9 @@ def test_session_start_cli_reports_not_bound_without_authority(
         capture_output=True,
         text=True,
         check=False,
-        env={"PATH": "/usr/bin:/bin"},
+        # An empty HOME: without it the resolver falls back to the real machine's
+        # managed checkout (~/.l9/authority/.github) and the session binds.
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path / "home")},
     )
     # No authority checkout is reachable: the session is not bound, and the rendering exits 0.
     assert proc.returncode == 0, proc.stderr

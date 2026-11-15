@@ -9,7 +9,8 @@ by this file when it imports it. The brain
 denies only while a run is active (``.l9/coding-agent/run.json``) and its
 canonical binding is neither BOUND/CURRENT nor explicitly reauthorized by the
 user. Exit 0 always: a denial is the JSON decision on stdout; a brain that
-cannot be resolved is a denial (a gate that cannot evaluate has not passed).
+cannot be resolved, raises, or exits non-zero is a denial (a gate that cannot
+evaluate has not passed).
 """
 
 from __future__ import annotations
@@ -60,7 +61,19 @@ def main() -> int:
             f"coding-agent binding gate: brain unresolved ({exc}); failing closed. "
             "Operator override: L9_CODING_BINDING_AUTHORIZED=<reason>."
         )
-    return brain.main()
+    try:
+        code = brain.main()
+    except Exception as exc:  # noqa: BLE001 - a brain fault has not evaluated; it never allows
+        return _deny(
+            f"coding-agent binding gate: brain raised {type(exc).__name__}: {exc}; failing "
+            "closed. Operator override: L9_CODING_BINDING_AUTHORIZED=<reason>."
+        )
+    if code != 0:
+        return _deny(
+            f"coding-agent binding gate: brain exited {code!r} without a decision; failing "
+            "closed. Operator override: L9_CODING_BINDING_AUTHORIZED=<reason>."
+        )
+    return 0
 
 
 if __name__ == "__main__":

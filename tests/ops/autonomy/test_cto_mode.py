@@ -373,6 +373,7 @@ def test_child_prompt_requires_a_cto_session() -> None:
         (
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
             'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: stood-down; '
+            'session_role.py" register-child --cto-session {cto_session} PR_REMEDIATE=0; '
             "report via send_message",
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
         ),
@@ -469,3 +470,21 @@ def test_agents_stand_down_after_publishing_and_the_cto_integrates_itself() -> N
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
     assert "Do not subscribe to, watch, remediate or re-test a published PR" in text
     assert "CTO-STATUS: stood-down" in text
+
+
+def test_cto_to_swarm_transport_is_pre_approved_in_the_claude_settings_template() -> None:
+    """Invariant frictionless_cto_swarm_channel: the CTO's send tool never waits on the operator.
+
+    The tool the contract names for CTO -> swarm messages on Claude Code must be
+    allowed outright in the settings every Claude Code session is projected from,
+    and never routed back to a prompt by an ask or deny rule.
+    """
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    tool = protocol["transport"]["claude-code"]["cto_to_swarm"]
+    template = json.loads(
+        (REPO / "environment/agents/adapters/claude-code/settings.template.json").read_text()
+    )
+    permissions = template["permissions"]
+    assert tool in permissions["allow"]
+    assert tool not in permissions.get("ask", [])
+    assert tool not in permissions.get("deny", [])

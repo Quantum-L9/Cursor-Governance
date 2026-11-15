@@ -366,7 +366,16 @@ def _compound_stage_note(command: str) -> str:
     """Name that a compound command stopped before later stages ran."""
     if "&&" not in command and ";" not in command:
         return ""
-    return " Refused stage of a compound command; later stages did not run."
+    # #933: the gate judges the whole command before any stage runs, so an
+    # earlier stage (e.g. `l4_local.py authorize-release`) has not taken effect
+    # when a later one (`make pr`) is judged. Name the split; allow nothing new.
+    return (
+        " Refused stage of a compound command; later stages did not run."
+        " The gate judges the whole command before any stage runs, so an earlier"
+        " stage (such as `l4_local.py authorize-release`) has not taken effect yet:"
+        " run that stage as its own call, then run the refused stage"
+        " (such as the publish step) as its own call."
+    )
 
 
 def _publish_deny_reason(what: str) -> str:

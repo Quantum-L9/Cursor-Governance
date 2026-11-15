@@ -82,8 +82,16 @@ The named gate table is narrower and must remain narrow:
 |---|---|---|
 | `local_execution_gate_wrap.py` | skip | run |
 | `memory_gate.py` | skip | skip unless a Claude runtime marker is set |
+| `coding_agent_binding_gate_wrap.py` | skip | run |
 | `merge_gate_wrap.py` | run | run |
+| `swarm_role_gate_wrap.py` | run | run |
+| `context7_stack_pretool.py` | run | run |
 | `session_debt_wrap.py` | run | run |
+
+The authority for this table is `l9_hook_exec.sh` (`l9_required_class` and the
+Claude-only `case`). `session_debt_wrap.py` is classified as a gate but is not
+registered in `settings.template.json`: `session_debt.py` runs on demand
+(`rules/42-no-abandoned-work`), never as a Stop gate.
 
 `memory_gate.py` runs only when `claude_runtime_present` is true
 (`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, `CLAUDE_CODE_SESSION_ID`, or

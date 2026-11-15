@@ -72,7 +72,13 @@ into context up front. A bound domain is listed with its composed view to read.
 ### Authority checkout
 
 Admission is resolved against a `Quantum-L9/.github` checkout: `--authority-root`, then
-`L9_AUTHORITY_ROOT`, then `.github` inside or beside the workspace. The domain verifiers
+`L9_AUTHORITY_ROOT`, then the governance-managed checkout `~/.l9/authority/.github`
+(relocate with `L9_AUTHORITY_MANAGED_ROOT`), then `.github` inside or beside the workspace.
+Both SessionStart hooks provision the managed checkout before binding
+(`ops/scripts/ensure_authority_checkout.sh`: full clone, fetched at most every 900 s,
+fast-forward only on a clean `main`, never reset or deleted), so the binding resolves the
+same authority in every repository instead of only where a `.github` clone happens to sit
+beside the workspace. The domain verifiers
 need that checkout's `HEAD` to be its `main`; a checkout left on another branch makes the
 domains `STALE` (`AUTHORITY_REVISION_MISMATCH`) and the Cursor binding `DEGRADED`, while
 the operating plane still binds.
