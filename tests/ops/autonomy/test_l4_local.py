@@ -716,3 +716,24 @@ def test_branch_drift_names_the_begin_remedy(
     assert "branch drift" in message
     assert "l4_local.py begin" in message
     assert "'feature/other'" in message
+
+
+def test_compound_authorize_then_make_pr_names_the_split_remedy(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#933: the gate judges a compound command before any stage runs.
+
+    `authorize-release && make pr` is refused whole because authorize-release has
+    not taken effect when the gate evaluates. The refusal must say so and name the
+    split remedy; what is allowed does not change.
+    """
+    monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+    monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+    begin(stacked_repo, contract_id="c1")
+    command = "python3 ops/autonomy/l4_local.py authorize-release && PR_REMEDIATE=0 make pr"
+    reason = evaluate("Bash", {"command": command}, root=stacked_repo)
+    assert reason is not None and "L4" in reason
+    assert "before any stage runs" in reason
+    assert "as its own call" in reason
+    # Message-only: the single-stage form is still denied before release.
+    assert evaluate("Bash", {"command": "make pr"}, root=stacked_repo) is not None
