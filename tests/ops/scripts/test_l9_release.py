@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT / "ops" / "scripts"))
 import l9_release  # noqa: E402
 
 CORE_SLUG = "Quantum-L9/l9-ci-core"
+FACTORY_SLUG = "Quantum-L9/l9-repo-template"
 CONSUMER_URL = "https://github.com/acme/widget"
 
 FAKE_ENGINE = textwrap.dedent(
@@ -101,8 +102,10 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
                 "repository": CORE_SLUG,
                 "revision": revision,
                 "engine_module": "tools.l9_release",
-                "runner_workflow": "release-runner.yml",
+                "runner_repository": FACTORY_SLUG,
+                "runner_workflow": "release-schedule.yml",
                 "runner_ref": "main",
+                "runner_input": "repo",
             }
         )
     )
@@ -118,7 +121,7 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     state.mkdir()
     bindir = tmp_path / "bin"
     bindir.mkdir()
-    (bindir / "gh").write_text(FAKE_GH.format(python=sys.executable, core=CORE_SLUG))
+    (bindir / "gh").write_text(FAKE_GH.format(python=sys.executable, core=FACTORY_SLUG))
     (bindir / "gh").chmod(0o755)
     monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("FAKE_GH_STATE", str(state))
@@ -152,7 +155,20 @@ def test_shipped_pin_names_a_core_commit() -> None:
     assert pin["repository"] == CORE_SLUG
     assert len(pin["revision"]) == 40
     assert pin["engine_module"] == "tools.l9_release"
-    assert pin["runner_workflow"] == "release-runner.yml"
+    # DISPATCH=1 goes to the factory caller, never to Core (workflow_call only).
+    assert pin["runner_repository"] == FACTORY_SLUG
+    assert pin["runner_workflow"] == "release-schedule.yml"
+    assert pin["runner_input"] == "repo"
+    assert pin["runner_ref"] == "main"
+
+
+def test_pin_without_a_runner_repository_is_refused(tmp_path: Path) -> None:
+    pin = json.loads(l9_release.PIN_PATH.read_text(encoding="utf-8"))
+    del pin["runner_repository"]
+    bad = tmp_path / "pin.json"
+    bad.write_text(json.dumps(pin))
+    with pytest.raises(l9_release.Refused, match="runner_repository"):
+        l9_release.load_pin(bad)
 
 
 def test_malformed_pin_is_refused(tmp_path: Path) -> None:
@@ -253,7 +269,7 @@ def test_dry_run_and_dispatch_are_exclusive(env: dict[str, Path]) -> None:
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
-def test_dispatch_triggers_cores_release_runner(env: dict[str, Path], capsys) -> None:
+def test_dispatch_triggers_the_factory_release_schedule(env: dict[str, Path], capsys) -> None:
     assert _run(env, "--dispatch") == 0
     calls = [json.loads(line) for line in (env["state"] / "calls.log").read_text().splitlines()]
     post = calls[0]
@@ -261,10 +277,11 @@ def test_dispatch_triggers_cores_release_runner(env: dict[str, Path], capsys) ->
         "api",
         "--method",
         "POST",
-        f"repos/{CORE_SLUG}/actions/workflows/release-runner.yml/dispatches",
+        f"repos/{FACTORY_SLUG}/actions/workflows/release-schedule.yml/dispatches",
     ]
-    assert "ref=main" in post and "inputs[repository]=acme/widget" in post
-    assert f"https://github.com/{CORE_SLUG}/actions/runs/42" in capsys.readouterr().out
+    assert "ref=main" in post and "inputs[repo]=acme/widget" in post
+    assert not any(CORE_SLUG in arg for call in calls for arg in call), "never Core directly"
+    assert f"https://github.com/{FACTORY_SLUG}/actions/runs/42" in capsys.readouterr().out
     assert not _engine_calls(env["log"]), "dispatch runs no local engine stage"
 
 
