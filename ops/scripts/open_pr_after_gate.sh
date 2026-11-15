@@ -267,10 +267,32 @@ _push_with_bounded_recover() {
     # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
     # commits absent and the next push is rejected again.
     fetch_origin_branch "$WS" "$branch" >/dev/null 2>&1 || true
-    git merge --no-edit "origin/$BASE_REF" || return 1
+    if ! git merge --no-edit "origin/$BASE_REF"; then
+      if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+      echo "FAIL: push recovery could not merge origin/$BASE_REF cleanly — merge aborted, tree restored" >&2
+      return 1
+    fi
     if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
        ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then
-      git merge --no-edit "origin/$branch" || return 1
+      # #935: merge the remote branch only when it is this PR's live head (a
+      # concurrent publisher advanced it). With no open PR, origin/$branch is a
+      # spent name -- typically a squash-merged PR whose branch was not deleted --
+      # and merging it imports already-merged history into a new PR.
+      if [[ -z "${pr_number:-}" ]]; then
+        echo "FAIL: origin/$branch exists but has no open PR — the branch name is spent (reused_after_merge); not merging it, never forcing." >&2
+        echo "Move the new commits to a fresh branch and publish from there:" >&2
+        echo "  git checkout -b ${branch}-followup && PR_REMEDIATE=0 make pr" >&2
+        return 1
+      fi
+      if ! git merge --no-edit "origin/$branch"; then
+        if ! git merge --abort 2>/dev/null; then
+        echo "WARN: git merge --abort failed — inspect the tree before retrying" >&2
+      fi
+        echo "FAIL: push recovery could not merge origin/$branch (PR #${pr_number}) cleanly — merge aborted, tree restored" >&2
+        return 1
+      fi
     fi
     if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
       python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1

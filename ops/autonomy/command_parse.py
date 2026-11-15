@@ -17,7 +17,7 @@ Design constraints (fail-closed):
 from __future__ import annotations
 
 import re
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 # Opener only — no repeating optional-quantifier group. CodeQL 410/412 flagged
 # both `\S+` and `[^\s>|&;]+` after `[0-9]?>>?` inside `*`: `>a>a…` / `!0>`
@@ -288,3 +288,98 @@ def extract_named_roots(command: str) -> list[str]:
                 continue
             roots.append(candidate)
     return roots
+
+
+# --- Effective directory per segment (#971) -----------------------------------
+
+_DYNAMIC_PATH_CHARS = frozenset("$`()*?[]{}~")
+
+
+def _static_path(token: str) -> str | None:
+    value = _dequote(token)
+    if not value or any(ch in _DYNAMIC_PATH_CHARS for ch in value):
+        return None
+    return value
+
+
+def _git_dash_c(words: list[str], cwd: Path) -> Path | None:
+    """The directory a ``git`` word list runs in after its ``-C`` options."""
+    index = 1
+    here = cwd
+    while index < len(words):
+        word = words[index]
+        if word == "-C" and index + 1 < len(words):
+            path = _static_path(words[index + 1])
+            if path is None:
+                return None
+            here = here / path
+            index += 2
+            continue
+        if word.startswith("-"):
+            index += 1
+            continue
+        break
+    return here
+
+
+def segments_with_directories(
+    command: str, root: Path | None, *, nested: bool = True
+) -> list[tuple[str, Path | None]]:
+    """Every executable segment paired with the directory it effectively runs in.
+
+    Starts at ``root``. A ``cd <dir>`` segment moves later segments (the common
+    ``cd X && git ...`` chain); ``git -C <dir>`` moves its own segment (cumulative,
+    relative to the current directory). A dynamic or absent ``cd`` target, or a
+    dynamic ``-C``, makes the directory unknown (None) -- callers keep their
+    session root then, so an unknown target never widens a gate. Wrapper-nested
+    segments (``bash -c '...'``) inherit their parent's directory. Heredoc bodies
+    are data, not commands.
+    """
+    found: list[tuple[str, Path | None]] = []
+    cwd: Path | None = root
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        words = segment_words(segment)
+        index = 0
+        while index < len(words) and "=" in words[index] and not words[index].startswith("-"):
+            index += 1
+        words = words[index:]
+        here = cwd
+        if words and words[0] == "cd":
+            target = _static_path(words[1]) if len(words) > 1 else None
+            if not target:
+                cwd = None
+            elif Path(target).is_absolute():
+                cwd = Path(target)
+            else:
+                cwd = cwd / target if cwd is not None else None
+            here = cwd
+        elif words and PurePosixPath(words[0]).name == "git" and here is not None:
+            here = _git_dash_c(words, here)
+        found.append((segment, here))
+        if not nested:
+            continue
+        for inner in wrapper_subcommands(segment):
+            inner_words = segment_words(inner)
+            inner_here = here
+            if inner_words and PurePosixPath(inner_words[0]).name == "git" and inner_here:
+                inner_here = _git_dash_c(inner_words, inner_here)
+            found.append((inner, inner_here))
+    return found
+
+
+def git_toplevel(path: Path) -> Path | None:
+    """The work-tree root containing ``path``, or None when it is not in one."""
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    top = proc.stdout.strip()
+    return Path(top) if proc.returncode == 0 and top else None

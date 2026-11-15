@@ -137,8 +137,27 @@ def _is_main(ref: str) -> bool:
     return ref.strip().removeprefix("origin/") in MAIN_ALIASES or ref.strip() in MAIN_ALIASES
 
 
+def _narrow(candidates: list[OpenPR], descends: Callable[[str], bool] | None) -> list[OpenPR]:
+    """Of several candidate PRs, the ones whose head commit HEAD already contains.
+
+    #921: an unrelated open PR -- a Dependabot bump, another agent's chain -- is a
+    sibling root that HEAD never built on, and refusing to stack because it exists
+    blocked every PR_STACK=auto publish while one was open. Ancestry is the fact that
+    names the chain this branch belongs to. Only a tie-break: one candidate is never
+    narrowed, and when ancestry does not leave exactly one, the caller still refuses.
+    """
+    if descends is None or len(candidates) < 2:
+        return candidates
+    mine = [pr for pr in candidates if pr.sha and descends(pr.sha)]
+    return mine if len(mine) == 1 else candidates
+
+
 def resolve_from_prs(
-    prs: list[OpenPR], *, default_ref: str, branch: str | None = None
+    prs: list[OpenPR],
+    *,
+    default_ref: str,
+    branch: str | None = None,
+    descends: Callable[[str], bool] | None = None,
 ) -> TipResult:
     """Pure topology. Callers supply the live PR list.
 
@@ -158,7 +177,7 @@ def resolve_from_prs(
     if branch and branch in by_head:
         return _open_pr_base(by_head, by_head[branch], default_ref=default_ref)
 
-    roots = [pr for pr in prs if _is_main(pr.base)]
+    roots = _narrow([pr for pr in prs if _is_main(pr.base)], descends)
     if not roots:
         heads = ", ".join(sorted(by_head))
         raise TipError(f"open PRs exist but none target main: {heads}")
@@ -170,7 +189,7 @@ def resolve_from_prs(
     seen: set[str] = {current.head}
     chain: list[str] = [current.head]
     while True:
-        children = [pr for pr in prs if pr.base == current.head]
+        children = _narrow([pr for pr in prs if pr.base == current.head], descends)
         if not children:
             return TipResult(
                 ref=current.head,
@@ -249,7 +268,12 @@ def resolve_stack_tip(
         if loaded is None:
             raise TipError("could not enumerate open PRs (gh api failed)")
         prs = loaded
-    result = resolve_from_prs(prs, default_ref=default_ref, branch=branch)
+    result = resolve_from_prs(
+        prs,
+        default_ref=default_ref,
+        branch=branch,
+        descends=lambda sha: head_descends_from(repo, sha),
+    )
     if result.ref == default_ref and not result.sha:
         return TipResult(
             ref=default_ref,
@@ -258,6 +282,11 @@ def resolve_stack_tip(
             chain=result.chain,
         )
     return result
+
+
+def head_descends_from(repo: Path, sha: str) -> bool:
+    """HEAD contains ``sha``. A commit that is not even local is not an ancestor."""
+    return run_git(repo, "merge-base", "--is-ancestor", sha, "HEAD").returncode == 0
 
 
 def current_branch(repo: Path) -> str:
