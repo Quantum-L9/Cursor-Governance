@@ -726,11 +726,33 @@ def _memory_transport() -> str:
     return MEMORY_TRANSPORT
 
 
-def _secret_boundary_status() -> tuple[str, str]:
-    # This surface holds no credentials. Memory is the bound control-plane
-    # runtime, not a broker-mediated probe and not a provider URL.
+#: The machine identity ops/secrets/capability_bind.py binds secrets with. Only the
+#: variable NAMES are read here, never their values.
+_MACHINE_IDENTITY_ENV = ("L9_INFISICAL_CLIENT_ID", "L9_INFISICAL_CLIENT_SECRET")
+
+
+def _secret_boundary_status(env: dict[str, str] | None = None) -> tuple[str, str]:
+    """Model-controlled either way: no raw secret enters the model's context.
+
+    What differs is whether this environment carries the Infisical machine identity.
+    The note used to say "no Infisical secret in this environment" unconditionally,
+    so SessionStart denied a configured identity while capability_bind used it.
+    """
+    source = os.environ if env is None else env
     boundary = _SECRET_BOUNDARY_VOCAB["model-controlled"]
-    return READY, f"{boundary} (no broker/Infisical/memory secret in this environment)"
+    present = [name for name in _MACHINE_IDENTITY_ENV if (source.get(name) or "").strip()]
+    if len(present) == len(_MACHINE_IDENTITY_ENV):
+        return READY, (
+            f"{boundary} (Infisical machine identity present; secrets bind in-process via "
+            "ops/secrets/capability_bind.py, never into the environment)"
+        )
+    if present:
+        missing = ", ".join(n for n in _MACHINE_IDENTITY_ENV if n not in present)
+        return DEGRADED, f"{boundary} (Infisical machine identity incomplete: {missing} unset)"
+    return READY, (
+        f"{boundary} (no Infisical machine identity in this environment; capability binds "
+        "fail closed)"
+    )
 
 
 def _aggregate(statuses: dict[str, str]) -> str:
