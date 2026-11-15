@@ -3,8 +3,8 @@
 
 The wrapper does not authorize and does not schedule. It resolves the existing
 ``ops/autonomy`` execution gate, sends the byte-identical hook stdin, and
-propagates that gate's exit code. A gate that cannot be resolved or invoked
-is a denial.
+propagates that gate's verdict (0 or 2). A gate that cannot be resolved or
+invoked, or that exits with any other status, is a denial.
 
 Exit codes are Claude Code's hook contract: 0 proceed, 2 block.
 """
@@ -80,7 +80,13 @@ def main() -> int:
         )
     except OSError as exc:
         return _deny(f"ops local execution gate could not be invoked: {exc}")
-    return int(completed.returncode)
+    code = int(completed.returncode)
+    if code in (0, 2):
+        return code
+    # Any other status is a gate that crashed before deciding (an import-time error,
+    # an interpreter fault). Claude Code treats a non-2 exit as non-blocking, so
+    # propagating it would turn a broken gate into an allow.
+    return _deny(f"ops local execution gate exited {code} without a decision")
 
 
 if __name__ == "__main__":

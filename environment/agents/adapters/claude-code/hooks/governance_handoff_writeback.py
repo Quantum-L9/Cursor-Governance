@@ -287,7 +287,8 @@ def main() -> int:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
         return 0
-    if pp.is_subagent(event):
+    if pp.is_subagent(event) or pp.is_swarm_child(event):
+        # Neither a subagent nor a /lcto swarm child owns a governance handoff.
         return 0
     try:
         receipt_id = st.resolve_receipt_id(event=event)

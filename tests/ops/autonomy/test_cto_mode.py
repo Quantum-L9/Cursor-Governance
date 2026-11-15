@@ -373,6 +373,7 @@ def test_child_prompt_requires_a_cto_session() -> None:
         (
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
             'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: stood-down; '
+            'session_role.py" register-child --cto-session {cto_session} PR_REMEDIATE=0; '
             "report via send_message",
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
         ),

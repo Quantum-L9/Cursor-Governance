@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # sessionStart bootstrap — works before repo symlinks exist.
 # Foreground-activates GitHub-tip governance (governance_activate_fresh.sh), then
-# wires runtime probes + Graphiti hydrate into a sectioned L9 session state report.
-# Resume SSOT is Graphiti only (no memory-bank). Exit 0 always.
+# wires runtime probes + a memory health check (health-only, CANONICAL_LAW §8.9;
+# nothing is hydrated) into a sectioned L9 session state report. Resume is an
+# on-demand canonical hydrate (python -m ops.memory.cli hydrate). Exit 0 always.
 # Installed as a REAL file at ~/.cursor/hooks/session-start-bootstrap.sh (not a symlink).
 set -uo pipefail
 

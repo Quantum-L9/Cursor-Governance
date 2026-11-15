@@ -439,6 +439,23 @@ class StopStateMachineTest(unittest.TestCase):
                 h.stop()
                 self.assertEqual(len(h.blocks(REPO_HOOK)), 1)
 
+    def test_a_registered_swarm_child_neither_asks_closes_nor_writes(self) -> None:
+        # governance/cto-mode/MODE.yaml STAND DOWN: a /lcto child's lane ends at
+        # publication; the CTO owns the handoff. Its SessionEnd close still runs.
+        sys.path.insert(0, str(REPO_ROOT / "ops" / "autonomy"))
+        import session_role
+
+        h = self.harness("child")
+        roles = self.base / "roles"
+        with mock.patch.dict(os.environ, {"L9_SESSION_ROLE_DIR": str(roles)}):
+            session_role.register_child("session_cto", session_id=SESSION)
+            h.write(MISSING, MISSING)
+            for _ in range(3):
+                outputs = h.stop()
+                self.assertEqual(outputs, {REPO_HOOK: [], GOV_HOOK: []})
+        self.assertEqual((h.closes, h.gov_writes, h.blocks()), ([], [], []))
+        self.assertEqual(h.persisted(), {}, "no ledger advanced by a swarm child")
+
     def test_a_degraded_but_usable_hydration_still_closes(self) -> None:
         h = self.harness(degraded=True)
         h.write(VALID, MISSING)

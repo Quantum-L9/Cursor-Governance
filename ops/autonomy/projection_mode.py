@@ -154,6 +154,10 @@ CHILD_PROMPT_REQUIRED = (
     "Never invoke the l9-coding-agent skill",
     # Agents publish and stand down; the CTO owns integration and remediation.
     "CTO-STATUS: stood-down",
+    # The child registers its role so hooks enforce it (ops/autonomy/session_role.py),
+    # and publishes without spawning remediation or PR watching.
+    'session_role.py" register-child --cto-session {cto_session}',
+    "PR_REMEDIATE=0",
 )
 CHILD_PROMPT_FORBIDDEN = ("send_message", "SendMessage")
 
@@ -413,6 +417,33 @@ class ProjectionMode:
         tmp.replace(path)
         return path
 
+    def record_outcome(
+        self, workspace: Path, report: dict[str, Any], session_id: str | None = None
+    ) -> None:
+        """Stamp the last evaluated mode on this session's own request.
+
+        Gates read it cheaply (``last_mode`` + ``last_contract_digest``) instead of re-running
+        the verifiers on every tool call; the stamp is only written onto a request made by
+        the same session, so it never vouches for another session. Best-effort.
+        """
+        path = self.state_path(workspace)
+        try:
+            state = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        current = resolve_session_id(session_id)
+        if not isinstance(state, dict) or state.get("session_id") != current:
+            return
+        state["last_mode"] = report.get("mode")
+        state["last_evaluated_at"] = _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        state["last_contract_digest"] = state.get("contract_digest")
+        tmp = path.with_suffix(".tmp")
+        try:
+            tmp.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            tmp.replace(path)
+        except OSError:
+            return
+
     def release(self, workspace: Path) -> bool:
         path = self.state_path(workspace)
         if path.is_file():
@@ -427,7 +458,10 @@ class ProjectionMode:
         parser.add_argument("command", choices=("on", "off", "status", "child-prompt"))
         parser.add_argument(
             "--cto-session",
-            help="child-prompt: the CTO session id (default: this host session)",
+            help=(
+                "child-prompt: the CTO session id (default: this host session's "
+                "cross-session id, session_<suffix>, else its local id)"
+            ),
         )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
@@ -446,7 +480,13 @@ class ProjectionMode:
         if args.command == "child-prompt":
             # Plain text on stdout, to be passed verbatim as the child's launch system prompt.
             try:
-                session = args.cto_session or resolve_session_id(args.session_id) or ""
+                # Default to the id cross-session tools address (session_<suffix>), not the
+                # local host id: children must recognize the CTO's messages by it.
+                from session_role import remote_session_id  # noqa: PLC0415
+
+                session = (
+                    args.cto_session or remote_session_id() or resolve_session_id(args.session_id)
+                ) or ""
                 print(render_child_prompt(self.load_contract(), session))
             except ContractError as exc:
                 print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
@@ -465,5 +505,7 @@ class ProjectionMode:
         report = self.evaluate(
             workspace, authority_root=args.authority_root, session_id=args.session_id
         )
+        if args.command in ("on", "status"):
+            self.record_outcome(workspace, report, session_id=args.session_id)
         print(json.dumps(report, indent=2, sort_keys=True))
         return EXIT[report["mode"]]

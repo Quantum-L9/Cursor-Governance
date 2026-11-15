@@ -293,27 +293,27 @@ install_session_end_governance_hook() {
     link_or_update "$orchestrator_link" "$orchestrator_src" "~/.cursor/hooks/session-start-memory-orchestrator.sh"
   fi
 
+  # Retired and never linked: graphiti-gate-shell.sh, graphiti-gate-subagent.sh and
+  # plan-kernel-execute-gate.sh (collapsed into before-shell-execution-gate.sh),
+  # session-end-repo-hygiene.sh (sessionEnd preserve is session-scoped, rules/49).
+  # ops/scripts/reconcile_hooks_registry.py prunes their registrations.
   for pair in \
     "graphiti-prefetch.sh:graphiti-prefetch.sh" \
     "graphiti-session-end.sh:graphiti-session-end.sh" \
     "graphiti-reset-generation.sh:graphiti-reset-generation.sh" \
     "graphiti-mark-ok.sh:graphiti-mark-ok.sh" \
     "graphiti-gate-edits.sh:graphiti-gate-edits.sh" \
-    "graphiti-gate-shell.sh:graphiti-gate-shell.sh" \
-    "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh" \
     "lifecycle-subagent-start.sh:lifecycle-subagent-start.sh" \
     "lifecycle-subagent-stop.sh:lifecycle-subagent-stop.sh" \
     "l4-local-execution-gate-shell.sh:l4-local-execution-gate-shell.sh" \
     "before-shell-execution-gate.sh:before-shell-execution-gate.sh" \
     "before_shell_execution_gate.py:before_shell_execution_gate.py" \
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
-    "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
     "session_authored_paths.py:session-authored-paths.py" \
     "before_submit_skill_router.py:before-submit-skill-router.py" \
     "before_submit_merge_instruction.py:before-submit-merge-instruction.py" \
     "plan_memory_prefetch.py:plan-memory-prefetch.py" \
-    "plan_kernel_gate.py:plan-kernel-gate.py" \
-    "plan-kernel-execute-gate.sh:plan-kernel-execute-gate.sh"; do
+    "plan_kernel_gate.py:plan-kernel-gate.py"; do
     src_name="${pair%%:*}"
     link_name="${pair##*:}"
     src_path="$GLOBAL_COMMANDS/ops/hooks/$src_name"

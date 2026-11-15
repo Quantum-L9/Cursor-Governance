@@ -40,23 +40,26 @@ GATES = (
     "memory_gate.py",
     "coding_agent_binding_gate_wrap.py",
     "session_debt_wrap.py",
+    "swarm_role_gate_wrap.py",
+    "context7_stack_pretool.py",
 )
 REGISTERED_GATES = (
     "merge_gate_wrap.py",
     "local_execution_gate_wrap.py",
     "memory_gate.py",
     "coding_agent_binding_gate_wrap.py",
+    "swarm_role_gate_wrap.py",
+    "context7_stack_pretool.py",
 )
 OBSERVERS = (
     "skill_usage_logger.py",
     "user_prompt_skill_router.py",
     "operator_merge_instruction_wrap.py",
-    "context7_stack_pretool.py",
     "memory_prefetch.py",
     "memory_writeback.py",
     "ci_parity_posttool.py",
-    # Blocks by exit 2 when it evaluates, fails OPEN when it cannot (CI stays
-    # authoritative): see the ci_parity_push_gate.py docstring.
+    # Kept registered but scans nothing (its main() returns 0; CI is the
+    # authority): see the ci_parity_push_gate.py docstring.
     "ci_parity_push_gate.py",
 )
 
@@ -342,6 +345,9 @@ sys.stderr.write("gate denied\\n")
 raise SystemExit(2)
 """
 
+STUB_CRASH = """raise ImportError("gate dependency missing at import time")
+"""
+
 
 def _load(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, str(path))
@@ -400,6 +406,14 @@ class RootGateForwardingTests(unittest.TestCase):
     def test_root_gate_success_propagates(self) -> None:
         code, _replayed = self._run(self.allow)
         self.assertEqual(code, 0)
+
+    def test_root_gate_crash_blocks_instead_of_allowing(self) -> None:
+        # A Python crash exits 1, which Claude Code treats as non-blocking; the
+        # wrapper must not let a gate that never decided become an allow.
+        crash = Path(self._tmp.name) / "crash_gate.py"
+        crash.write_text(STUB_CRASH, encoding="utf-8")
+        code, _replayed = self._run(crash)
+        self.assertEqual(code, 2)
 
     def test_wrapper_source_does_not_reach_program_execution(self) -> None:
         text = WRAPPER.read_text(encoding="utf-8")
