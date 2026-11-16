@@ -1,0 +1,5 @@
+# Working-plan stewardship and integrity
+
+Only update when requested or a clear continuing working-artifact contract exists. Bind predecessor exact bytes/digest and current owner/schema. If missing, search authorized files; otherwise stop before fabricating a successor. Preserve all unrelated members, history, locked commitments and parked branches. Compute the affected closure; edit the canonical owner first; regenerate derivative views, indexes and narrative. Do not claim a new admitted Plan without external admission.
+
+Completion: compare predecessor/successor members, digests and documented deletions; run native plan schema/graph validators; verify node identity, edge endpoints, edge semantics, dependency direction, owner uniqueness, priority representation and stage references. Verify any package checksum manifest and ZIP integrity. Structural PASS is not semantic PASS; semantic PASS is not runtime proof. Check final human-facing recommendation against the updated artifact. If a validator is missing, report the exact gap and withhold its PASS.

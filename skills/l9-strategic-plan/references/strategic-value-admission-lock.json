@@ -1,0 +1,30 @@
+{
+  "schema": "l9.planner-strategic-value-admission-lock/v1",
+  "status": "admitted_source_digests_from_public_postmerge_replay_not_consumer_binding",
+  "repository": "Quantum-L9/.github",
+  "release": "v3.32.0",
+  "admission_revision": "64d8b8598300f94c3201f26866f73be6895dab60",
+  "adr": "ADR-029",
+  "projection_profile": "l9.projection/strategic-planner-value@1",
+  "composition_profile": "l9.compose/strategic-planner-value@1",
+  "model": "l9.strategic.value@1",
+  "contract": "l9.contract/strategic-value-assessment@1",
+  "new_global_invariants": ["L9-SV-001", "L9-SV-002"],
+  "required_source_classes": ["authority_model", "contracts", "invariants", "strategic_value_model", "vocabulary"],
+  "producer_projection_digests": {
+    "authority_model": "sha256:9de2c2f140c2a709cee4eb098cd9f8f8fa42544d507ee1a35fd28cdf1082070e",
+    "contracts": "sha256:7b100a7b5314130901faa964e71a76a9c9d3c2d9f6f0f98831bab954ab13887e",
+    "invariants": "sha256:bbcfd561f7fb691a917250d181b38e93ba8642fd296f04154d649e4a2c5947e5",
+    "strategic_value_model": "sha256:19562c93cb676476929d49560cd0a0f1ea36c57ebbc125e6a605fa629a55f3f4",
+    "vocabulary": "sha256:b7b11fb6a37bd3a444d06db287d158214fea5c3cc6e1f29a5c6d43fe4bc1ac3e"
+  },
+  "producer_composition_digest": "sha256:7e93f3afe35bc5d628ac716952088bf02ddb1bef0c32fc6a1528f915108e38e7",
+  "composition_profile_digest": "sha256:d2227cf302c5c12fc2ba360d5fb4f1304eb9bf35d6312986c50736b06b00fd14",
+  "producer_compiler_revision": "33e4c5832bf73c7d9b0b70854af011e9582f1ab2",
+  "evidence_paths": [
+    "docs/evidence/sv-campaign-closeout/final-receipt.yaml",
+    "docs/evidence/sv-campaign-closeout/post-merge-replay/producer-summary-33e4c58.json",
+    "docs/evidence/sv-campaign-closeout/post-merge-replay/provenance-verifier.json",
+    "docs/evidence/sv-campaign-closeout/post-merge-replay/admission-closure.json"
+  ]
+}
