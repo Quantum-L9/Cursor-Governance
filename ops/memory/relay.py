@@ -170,7 +170,45 @@ def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
             return existing[ident]
         row = {"id": ident, "receipt_id": receipt, "acked_at": datetime.now(UTC).isoformat()}
         _append(directory / ACKS_NAME, row)
+        entry = next(r for r in _read(directory / OUTBOX_NAME) if r.get("id") == ident)
+    if entry.get("operation") == "close":
+        _discharge_close(Path(workspace), entry.get("arguments") or {}, receipt)
     return row
+
+
+def _discharge_close(workspace: Path, arguments: Mapping[str, Any], receipt: str) -> None:
+    """Promote the session's local close obligation once its relayed close is acked.
+
+    ``close_session`` persists ``close_incomplete`` for a ``RELAYED`` close, because
+    nothing was committed then. The hosted close receipt is what commits it; without
+    this the next SessionStart reports a CLOSE_GAP for a session that did close.
+    Only an obligation for the same session and idempotency key is promoted.
+    """
+    session_id = str(arguments.get("session_id") or "")
+    key = str(arguments.get("idempotency_key") or "")
+    if not session_id or not key:
+        return
+    try:
+        from ops.graphiti.hydration import session_latches as latches
+    except Exception:  # noqa: BLE001 - the ack stands; the obligation stays visible
+        return
+    current = latches.load_close_receipt(workspace, session_id)
+    if not current or str(current.get("close_idempotency_key") or "") != key:
+        return
+    if latches.receipt_is_successful_close(current):
+        return
+    latches.write_receipt(
+        workspace,
+        session_id,
+        {
+            **current,
+            "status": latches.STATUS_CLOSED_CANONICALLY,
+            "canonical_operation_id": receipt,
+            "write_count": max(1, int(current.get("write_count") or 0)),
+            "failure_class": None,
+            "last_error_code": None,
+        },
+    )
 
 
 def instruction(workspace: str | Path, entries: Sequence[Mapping[str, Any]]) -> str:
@@ -202,11 +240,15 @@ def instruction(workspace: str | Path, entries: Sequence[Mapping[str, Any]]) -> 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m ops.memory.relay", description=__doc__)
     parser.add_argument("--workspace", default=".", help="repository root holding .l9/")
+    # Accepted after the subcommand too (the Stop hook's instruction puts it there);
+    # SUPPRESS keeps a value given before the subcommand from being overwritten.
+    after = argparse.ArgumentParser(add_help=False)
+    after.add_argument("--workspace", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("pending", help="print owed entries as JSON")
-    sub.add_parser("status", help="print counts")
-    sub.add_parser("instructions", help="print the connector calls still owed")
-    ack_p = sub.add_parser("ack", help="record the connector receipt for one entry")
+    sub.add_parser("pending", parents=[after], help="print owed entries as JSON")
+    sub.add_parser("status", parents=[after], help="print counts")
+    sub.add_parser("instructions", parents=[after], help="print the connector calls still owed")
+    ack_p = sub.add_parser("ack", parents=[after], help="record the connector receipt")
     ack_p.add_argument("id")
     ack_p.add_argument("--receipt", required=True)
     args = parser.parse_args(argv)

@@ -238,3 +238,87 @@ def test_instruction_names_the_tool_arguments_and_ack(tmp_path) -> None:
     assert '"content": "c"' in text
     assert f"python -m ops.memory.relay ack {ident} --receipt <receipt_id>" in text
     assert "no memory.ingest, no operator CLI write" in text
+
+
+# --- review findings on #1008 -------------------------------------------------
+
+
+def test_workspace_is_accepted_before_or_after_the_subcommand(tmp_path, capsys) -> None:
+    ident = _queue(tmp_path)
+    receipt = str(uuid.uuid4())
+    # The order the Stop hook's instruction uses, and the order this module documents.
+    assert relay.main(["ack", ident, "--receipt", receipt, "--workspace", str(tmp_path)]) == 0
+    capsys.readouterr()
+    assert relay.main(["--workspace", str(tmp_path), "status"]) == 0
+    assert json.loads(capsys.readouterr().out)["pending"] == 0
+
+
+def test_the_instruction_command_parses_as_printed(tmp_path, capsys) -> None:
+    import shlex
+
+    ident = _queue(tmp_path)
+    text = relay.instruction(tmp_path, relay.pending(tmp_path))
+    line = next(row for row in text.splitlines() if "ops.memory.relay" in row)
+    argv = shlex.split(line.split("then:", 1)[1])[3:]  # drop "python -m ops.memory.relay"
+    receipt = str(uuid.uuid4())
+    argv = [receipt if part == "<receipt_id>" else part for part in argv]
+    assert relay.main(argv) == 0
+    assert relay.pending(tmp_path) == []
+    assert ident in capsys.readouterr().out
+
+
+def _obligation(tmp_path: Path, *, key: str) -> None:
+    from ops.graphiti.hydration import session_latches as latches
+
+    latches.write_receipt(
+        tmp_path,
+        "sess-1",
+        {
+            "status": latches.STATUS_CLOSE_INCOMPLETE,
+            "close_idempotency_key": key,
+            "failure_class": "pending_close",
+            "write_count": 0,
+        },
+    )
+
+
+def test_acking_a_relayed_close_discharges_the_session_obligation(tmp_path) -> None:
+    from ops.graphiti.hydration import session_latches as latches
+
+    _obligation(tmp_path, key="close:1")
+    entry = relay.enqueue(
+        tmp_path,
+        surface="claude-session-end",
+        operation="close",
+        arguments={
+            "namespace": NS,
+            "summary": "s",
+            "session_id": "sess-1",
+            "idempotency_key": "close:1",
+        },
+    )
+    assert latches.receipt_is_close_gap(latches.load_close_receipt(tmp_path, "sess-1"))
+    receipt = str(uuid.uuid4())
+    relay.ack(tmp_path, str(entry["id"]), receipt)
+    closed = latches.load_close_receipt(tmp_path, "sess-1")
+    assert latches.receipt_is_successful_close(closed)
+    assert closed["canonical_operation_id"] == receipt
+
+
+def test_a_close_ack_for_another_key_leaves_the_obligation_open(tmp_path) -> None:
+    from ops.graphiti.hydration import session_latches as latches
+
+    _obligation(tmp_path, key="close:other")
+    entry = relay.enqueue(
+        tmp_path,
+        surface="claude-session-end",
+        operation="close",
+        arguments={
+            "namespace": NS,
+            "summary": "s",
+            "session_id": "sess-1",
+            "idempotency_key": "close:1",
+        },
+    )
+    relay.ack(tmp_path, str(entry["id"]), str(uuid.uuid4()))
+    assert latches.receipt_is_close_gap(latches.load_close_receipt(tmp_path, "sess-1"))

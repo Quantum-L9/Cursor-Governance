@@ -350,7 +350,19 @@ def _relay_gate(workspace: Path) -> str | None:
         return None
     reasons: list[str] = []
     exhausted: list[str] = []
-    for root in _shared_workspace_roots(workspace, cap=64) or [workspace]:
+    roots: list[Path] = []
+    candidates = list(_shared_workspace_roots(workspace, cap=64) or [workspace])
+    try:
+        # governance_handoff_writeback queues under the governance clone, which a
+        # consumer workspace's roots do not include.
+        candidates.append(Path(mb.find_governance_root()))
+    except Exception:  # noqa: BLE001 - fail-open
+        pass
+    for candidate in candidates:
+        resolved = Path(candidate).resolve()
+        if resolved not in roots:
+            roots.append(resolved)
+    for root in roots:
         try:
             owed = relay.pending(root)
         except OSError:
@@ -643,6 +655,24 @@ def main() -> int:
         )
 
     announcement = "\n\n".join(announcements)
+    # The close above may itself have queued relay records (continuation + close);
+    # they are owed now, not on some later Stop that may never come.
+    relay_after_close = _relay_gate(st.workspace_root())
+    if relay_after_close:
+        _record(
+            contract,
+            session_id,
+            announcement=announcement,
+            status="relay_requested_after_close",
+            publications=[pub["key"] for _, pub in pending],
+        )
+        print(
+            json.dumps(
+                {"decision": "block", "reason": f"{announcement}\n\n{relay_after_close}"},
+                ensure_ascii=False,
+            )
+        )
+        return 0
     _emit(announcement)
     _record(
         contract,

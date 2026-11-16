@@ -188,7 +188,9 @@ jobs:
           # The coding verifier binds law bytes to the pin from commit objects, requires the
           # checkout's HEAD to be the pin (the checkout above is exactly that revision), and
           # refuses a pin no fetched origin ref contains, so the canonical main is fetched first.
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           python skills/l9-coding-agent/scripts/verify_canonical_binding.py \
             --authority-root ../org-authority \
             --bundle generated/governance/coding_agent_execution \
@@ -200,7 +202,9 @@ jobs:
         env:
           REVISION: ${{ steps.lock.outputs.revision }}
         run: |
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           set +e
           python ops/scripts/operating_plane_v2_projection.py \
             --authority-root ../org-authority --mode candidate > operating_plane_v2_candidate.json
@@ -283,7 +287,9 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         shell: bash
         run: |
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           main="$(git -C ../org-authority rev-parse refs/remotes/origin/main)"
           python ops/scripts/coding_projection_status.py \
             --authority-root ../org-authority --expect-main "$main" \

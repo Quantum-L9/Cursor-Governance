@@ -49,6 +49,8 @@ class RelayGateTests(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.root = Path(self._tmp.name) / "repo"
         (self.root / ".git").mkdir(parents=True)
+        self.gov = Path(self._tmp.name) / "governance"
+        (self.gov / ".git").mkdir(parents=True)
         self.relay = _tree_relay()
         import memory_writeback as wb  # noqa: PLC0415
 
@@ -56,6 +58,7 @@ class RelayGateTests(unittest.TestCase):
         self._patches = [
             mock.patch.dict(sys.modules, {"ops.memory.relay": self.relay}),
             mock.patch.object(wb.mb, "ensure_importable", lambda *a, **k: REPO_ROOT),
+            mock.patch.object(wb.mb, "find_governance_root", lambda *a, **k: self.gov),
             mock.patch.object(wb, "_shared_workspace_roots", lambda ws, cap=64: [self.root]),
         ]
         for patcher in self._patches:
@@ -112,6 +115,20 @@ class RelayGateTests(unittest.TestCase):
         self.assertIsNotNone(reason)
         assert reason is not None
         self.assertIn(new, reason)
+
+    def test_the_governance_writers_outbox_is_scanned_too(self) -> None:
+        """Review finding on #1008: governance_handoff_writeback queues under the
+        governance clone, which a consumer workspace's roots do not include."""
+        entry = self.relay.enqueue(
+            self.gov,
+            surface="claude-governance-handoff",
+            operation="write",
+            arguments={"namespace": "cursor-governance", "content": "friction"},
+        )
+        reason = self.wb._relay_gate(self.root)
+        self.assertIsNotNone(reason)
+        assert reason is not None
+        self.assertIn(str(entry["id"]), reason)
 
 
 if __name__ == "__main__":
