@@ -207,9 +207,14 @@ def test_trusted_workflow_reads_pull_requests_only_as_data() -> None:
         for step in job["steps"]:
             with_ = step.get("with") or {}
             if "secrets.GH_TOKEN" in json.dumps(step):
-                # The credential appears only on the private compiler checkout, never persisted.
+                # The credential appears only on checkouts of the two private repositories
+                # replay reads (the pinned compiler, and Quantum-L9/.github since it went
+                # private on 2026-11-16), and is never persisted.
                 assert step["uses"].startswith("actions/checkout@")
-                assert with_["repository"] == "Quantum-L9/l9-semantic-compiler-engine"
+                assert with_["repository"] in {
+                    "Quantum-L9/l9-semantic-compiler-engine",
+                    "Quantum-L9/.github",
+                }
                 assert with_["persist-credentials"] is False
             if str(step.get("uses", "")).startswith("actions/checkout@"):
                 ref = str(with_.get("ref", ""))
