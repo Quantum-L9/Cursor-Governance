@@ -101,23 +101,32 @@ that one as its source and nothing else. Where a pool agent needs more than one,
 action, before registering its role. Any `add_repo` or clone prompt then falls
 in the bootstrap sitting, never mid-campaign.
 
-**The org rules and operating-plane repositories never need `add_repo`
-(operator ruling, 2026-11-16).** Every coding agent must have
-`Quantum-L9/.github` and `Quantum-L9/Cursor-Governance`. After this campaign
-closed, the UI-polish agent still raised an `add_repo` prompt for `.github`. It
-did not need one: SessionStart already clones Cursor-Governance to
-`$HOME/.cursor-governance` in every session on this environment, and git serves
-`https://github.com/Quantum-L9/.github` with no attachment (`git ls-remote`
-answers; `ops/scripts/org_dotgithub.read_org_file` is the sanctioned reader).
-The child system prompt and the coding-agent mode bootstrap must therefore name
-those two paths, and forbid `add_repo` for either. Attaching them is for pushing
-to them, which an agent working in another repository does not do.
+**The org rules and operating-plane repositories (operator ruling, 2026-11-16).**
+Every coding agent must have `Quantum-L9/.github` and
+`Quantum-L9/Cursor-Governance` without an approval prompt. After this campaign
+closed, the UI-polish agent showed what that takes:
+
+- **Cursor-Governance** is cloned by SessionStart to `$HOME/.cursor-governance` in
+  every session on this environment. It never needs `add_repo`.
+- **`Quantum-L9/.github`** cannot be attached mid-session: `add_repo` refuses a
+  repository whose name starts with a dot. A cloud container reaches a private
+  repository only when the session was started with it. The UI-polish agent,
+  launched with only `IB-Odoo_19`, failed to read it by REST (403, "not enabled for
+  this session") and by git (no credentials), so `make pr` could not read the org
+  PR template and refused to publish. It reached `.github` from the CTO session only
+  because that session was started with it. An earlier draft of this brief said git
+  serves it without attachment; that was wrong.
+
+So `Quantum-L9/.github` must be among the repositories every pool agent's session
+starts with: the campaign environment's repository list, which is an operator
+setting. Protocol v2 (Cursor-Governance PR #1004) makes the rest binding: never
+`add_repo` for either repository, and an unreadable `.github` is a `CTO-BLOCKER`,
+never a raw push.
 
 **Contract changes.**
 
 - The child system prompt adds: _never `add_repo` for `Quantum-L9/.github` or
-  `Quantum-L9/Cursor-Governance`; read them at `$HOME/.cursor-governance` and
-  through a git clone of `https://github.com/Quantum-L9/.github`._
+  `Quantum-L9/Cursor-Governance`; an unreadable `.github` is a `CTO-BLOCKER`._
 - `pre_launch` adds: _compute `campaign_repositories`; put it in every child
   brief._
 - The child system prompt's first-action block adds: _attach and clone every
