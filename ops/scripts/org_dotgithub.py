@@ -105,9 +105,13 @@ SESSION_SCOPE_HINT = (
 )
 
 
-def git_credential_args(which: Callable[[str], str | None] = shutil.which) -> list[str]:
-    """``-c`` options that let git authenticate with gh's credential, when gh exists."""
-    if which("gh") is None:
+def git_credential_args(which: Callable[[str], str | None] | None = None) -> list[str]:
+    """``-c`` options that let git authenticate with gh's credential, when gh exists.
+
+    ``shutil.which`` is looked up per call, not bound as a default, so the lookup
+    follows the PATH (and any test patch) in force when git actually runs.
+    """
+    if (which or shutil.which)("gh") is None:
         return []
     return ["-c", f"credential.helper={GH_CREDENTIAL_HELPER}"]
 
