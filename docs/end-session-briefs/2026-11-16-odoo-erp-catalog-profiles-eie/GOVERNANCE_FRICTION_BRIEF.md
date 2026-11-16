@@ -19,11 +19,16 @@ brief proposes. "Observed" means a tool output or a log line seen in this sessio
 - **Cost.** The two fix PRs were blocked for 8 hours; the operator was told three
   times; three scheduled check-ins found no change.
 - **Proposed fix.**
-  1. Add a degraded-mode row to `docs/DEGRADED_MODE_CONTRACT.md`: when checkout
+  1. Add a degraded-mode row to `docs/DEGRADED_MODE_CONTRACT.md`. When checkout
      fails with "Repository not found" while the token shows `Contents: read`, the
-     cause is outside the repository. The agent says so once on the PR and asks the
-     operator for exactly three checks (Actions settings, Actions billing, account
-     email). This session improvised that path.
+     agent first rules out in-repository causes: the checkout step's `repository`
+     and `ref` inputs, and any `token` override. `Contents: read` alone does not
+     prove the cause is outside the repository. Only when those are correct and
+     unchanged since the last green run does the agent say so once on the PR, keep
+     the root cause marked Unknown, and ask the operator for exactly three checks
+     (Actions settings, Actions billing, account email). This session improvised
+     that path. Neither #513 nor #514 touched `.github/workflows/`, and the same
+     workflow checked out normally at 11:32.
   2. Ask whether the session gateway can expose `GET actions/permissions` and
      `GET actions/permissions/workflow` read-only. Both are diagnostics, not
      mutations.

@@ -180,6 +180,26 @@ mods = env["ir.module.module"].search(
 )
 print({m.name: (m.state, m.latest_version) for m in mods})
 assert dict((m.name, m.state) for m in mods).get("plasticos_export", "uninstalled") == "uninstalled"
+# Safety checks run BEFORE any write. Any failure rolls back and aborts:
+# report the settings, never change them here, and do not continue to P4 or P5.
+expect = {
+    "plasticos.gate.matching_enabled": "1",
+    "plasticos.gate.timeout_seconds": "30",
+    "plasticos.gate.auto_writeback": "0",
+    "plasticos.gate.allow_insecure_http": None,
+    "plasticos.gate.sweep_enabled": "0",
+}
+drift = {k: icp.get_param(k) for k, v in expect.items() if (icp.get_param(k) or None) != v}
+print("DRIFT", drift)
+print(
+    "enrichment_enabled =", icp.get_param("plasticos.gate.enrichment_enabled")
+)  # report, leave as is
+crons = env["ir.cron"].with_context(active_test=False).search([("name", "ilike", "sweep")])
+active_crons = [c.name for c in crons if c.active]
+print("sweep crons", [(c.name, c.active) for c in crons])  # all must be False
+if drift or active_crons:
+    env.cr.rollback()
+    raise SystemExit(f"ABORT: drift={drift} active_sweep_crons={active_crons}; nothing written")
 # tenant
 icp.set_param("plasticos.gate.org_id", "plasticos")
 # v2 converge contract against cartridge plasticos 0.6.0
@@ -190,20 +210,6 @@ icp.set_param(
     "plasticos.gate.converge_cartridge_sha256",
     "590f0fdb6ce1181b4a716f3e00512bf5425ba42d266208aa4dab18afca8dafdb",
 )
-# verify-only: these must already hold their seeded values; report any difference, do not change it
-expect = {
-    "plasticos.gate.matching_enabled": "1",
-    "plasticos.gate.timeout_seconds": "30",
-    "plasticos.gate.auto_writeback": "0",
-    "plasticos.gate.allow_insecure_http": None,
-    "plasticos.gate.sweep_enabled": "0",
-}
-print("DRIFT", {k: icp.get_param(k) for k, v in expect.items() if (icp.get_param(k) or None) != v})
-print(
-    "enrichment_enabled =", icp.get_param("plasticos.gate.enrichment_enabled")
-)  # report, leave as is
-crons = env["ir.cron"].with_context(active_test=False).search([("name", "ilike", "sweep")])
-print("sweep crons", [(c.name, c.active) for c in crons])  # all must be False
 from odoo.addons.plasticos_gate.services.gate_config import (
     resolve_converge_contract,
     resolve_tenant,
@@ -216,10 +222,12 @@ print("AFTER", {k: icp.get_param(k) for k in KEYS})
 ```
 
 `resolve_tenant` must print `plasticos`. The resolver must print `contract='v2'`, `0.6.0`, and the sha above.
+If the block prints `ABORT`, nothing was written: report DRIFT and the sweep crons, and stop. Do not run P4 or P5.
 
 ## P4: Production System Parameters (gate G1 must hold)
 
-Same block on the Production host (tenant `plasticos`). Before writing, the module line it prints must show
+Same block on the Production host (tenant `plasticos`), with the same abort: drift or an active sweep cron stops
+P4 with nothing written, and P5 does not run. Before writing, the module line it prints must show
 `plasticos_gate` at `19.0.1.11.0` or later. That version exists on Production only after the Staging→Production
 promotion. If it is older, set only `org_id` and report. Leave the four v2 keys unset, because older code must not
 be pointed at the v2 contract.
