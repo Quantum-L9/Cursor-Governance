@@ -185,5 +185,5 @@ def test_a_failed_first_fetch_names_the_private_repository_causes(tmp_path: Path
 
 def test_fetches_offer_the_gh_credential_helper() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
-    assert 'credential.helper=!gh auth git-credential' in text
+    assert "credential.helper=!gh auth git-credential" in text
     assert text.count('git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch') == 2
