@@ -110,7 +110,17 @@ Remaining, in order:
 
 ## 6. Hand-off to L CTO
 
-The swarm is fully archived and no PR is open. Next work, in priority order:
+The campaign swarm is fully archived and no campaign PR is open. Two sessions were
+launched at close, at the operator's request. The operator drives each one
+directly, and this CTO does not track them:
+
+| Session                             | Id                                 | Mode                    | Owns                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PlasticOS Odoo UI polish            | `session_017xwbxyk6BYspwHQPVKAFxs` | coding                  | Production layout and aesthetic fixes, one item at a time, views and assets only, PRs to `Staging`. First item: the contact form's half-width Sites list. |
+| PlasticOS Odoo architect (advisory) | `session_017xwbxuGBnqXGLob4ewjdtZ` | `/architect`, no coding | Advice and ADRs on request: the Gate settings carrier (D5), data decisions D1–D3 and D7, the untested runtime risks, UI consistency                       |
+
+Both run Opus 5.5 at medium effort on `cryptoxdog/IB-Odoo_19` `Staging`, under
+this campaign's standing constraints. Next work, in priority order:
 
 1. Confirm the Production build and the Bales log counts (operator, about 5 minutes).
 2. D5 ADR, then Gate wiring §3.

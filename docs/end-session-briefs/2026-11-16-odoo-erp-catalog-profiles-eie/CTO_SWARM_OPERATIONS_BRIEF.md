@@ -31,20 +31,34 @@ fixes (#503), enrichment consumer v2 (#506, #507), cartridge facility fields (EI
 
 ## 2. The operator's approval cost
 
-Approvals this campaign required from the operator, by kind. The counts are of
-calls the CTO made, not of prompts observed. Some kinds may already be
-pre-approved on this host; confirm against the host's permission log.
+Cross-session tool calls the CTO session made, counted from its own transcript
+(2026-11-13 to 2026-11-16). A call is counted as succeeded unless it returned an
+error or "did not run". These are calls, not observed prompts: tools already
+pre-approved on the host prompted nothing. Prompts raised inside child sessions
+are not in this transcript and are not counted.
 
-| Kind                            | Count   | Why it was needed                                                                                                                               |
-| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create_session` (new agent)    | 11      | one agent per lane, by protocol                                                                                                                 |
-| `archive_session`               | 11+     | one per finished agent, some retried after worker restarts                                                                                      |
-| `add_repo` inside a child       | several | agents needing EIE / Gate / `.github` clones after launch (the sweep lane hit a Register Repo Root prompt and stalled until directed around it) |
-| Re-opening a stood-down lane    | 1       | #517: scope corrections arrived after publish (F9 in the friction brief)                                                                        |
-| Relays the operator did by hand | 4+      | Copilot comments pasted as text or screenshots; Odoo.sh logs and cards pasted                                                                   |
+| Tool                                     | Calls | Succeeded | Why                                                                                                                                       |
+| ---------------------------------------- | ----- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_session`                         | 13    | 13        | 11 campaign lanes, one agent per lane by protocol, plus 2 operator-requested sessions at close (UI polish, architect)                     |
+| `archive_session`                        | 14    | 11        | one per finished lane; 3 calls lost to worker restarts or interruptions and re-issued                                                     |
+| `add_repo` + `register_repo_root` (CTO)  | 2 + 2 | 4         | the CTO attaching EIE and Constellation.Gate to read cross-repo contracts mid-campaign                                                    |
+| `send_message` (directives, cross-CTO)   | 27    | 22        | lane directives and CTO EIE / State Node / CEG exchanges; 5 lost to restarts and re-sent                                                  |
+| `send_later` (self check-ins)            | 19    | 19        | swarm wake-ups; `delete_trigger` 4 calls, 2 succeeded                                                                                     |
+| `subscribe_pr_activity`                  | 7     | 7         | subscriptions taken late, after the operator relayed comments (F4)                                                                        |
+| `add_repo` inside a child (not in count) | —     | —         | children needing EIE / Gate / `.github` after launch; the sweep lane hit a Register Repo Root prompt and stalled until directed around it |
+| Re-opening a stood-down lane             | 1     | —         | #517: scope corrections arrived after publish (F9)                                                                                        |
+| Relays the operator did by hand          | 4+    | —         | Copilot comments pasted as text or screenshots; Odoo.sh logs and cards pasted                                                             |
 
-The first three rows are pure overhead once a campaign is running: no decision is
-made, only a tool is let through. Removing them is the goal of §3.
+Launching, archiving and repo attachment are pure overhead once a campaign is
+running: no decision is made, only a tool is let through. Removing them is the
+goal of §3.
+
+**Observed at close (operator, 2026-11-16).** The two sessions launched at close
+raised no repository-attachment prompt. All 13 launches passed the target
+repository as `create_session` `source_url` plus `source_revision`; a repository
+attached that way needs no separate approval. The prompts came only from a
+**second** repository added after launch (`add_repo` in the CTO or in a child).
+The operator ruled that this launch pattern is the standard (A2).
 
 ## 3. Proposed amendments
 
@@ -63,10 +77,10 @@ such as F6's venv drift.
 
 **Contract changes** (`MODE.yaml` `operating_protocol`):
 
-- `swarm_publishes_then_stands_down` becomes: _a pool agent's work on a lane ends
-  at publication, and the agent returns to idle (`CTO-STATUS: idle`). It does not
-  watch its PR._
-- `cto_integrates_and_fixes_surgically`: unchanged.
+- `swarm_publishes_then_stands_down` is replaced by A6: a pool agent's lane ends
+  when its PR is ready to merge, and the agent then returns to idle
+  (`CTO-STATUS: idle`).
+- `cto_integrates_and_fixes_surgically` loses "fixes" (A6).
 - `invariants` add `pool_size_max: 5` and `no_launch_after_bootstrap: true`. The
   exception is one replacement launch for a dead or wedged pool agent, reported to
   the operator.
@@ -74,13 +88,18 @@ such as F6's venv drift.
   one record per agent: session id, model, repos attached, current lane, state.
   `status` prints it, and it is handed to L CTO at hand-off (A7).
 
-### A2. Every repository attached at bootstrap
+### A2. Every repository attached at launch (operator ruling: the standard pattern)
 
-**Rule.** Before launch the CTO computes the campaign's repository set: the target
-repo, every repo a lane may read, `Quantum-L9/.github` (coding-agent mode needs a
-deep clone), and `Quantum-L9/Cursor-Governance`. Every pool agent attaches the
-whole set as its first action, before registering its role. Any `add_repo` or
-clone prompts therefore all happen in the bootstrap sitting, never mid-campaign.
+**Rule.** Launch every agent with its primary repository as `create_session`
+`source_url` and `source_revision` (the branch it works from). That attachment
+raises no approval prompt (observed, §2). Before launch the CTO computes the
+campaign's repository set: the target repo, every repo a lane may read,
+`Quantum-L9/.github` (coding-agent mode needs a deep clone), and
+`Quantum-L9/Cursor-Governance`. Where a lane needs only one repository, it gets
+that one as its source and nothing else. Where a pool agent needs more than one,
+`create_session` takes one `source_url`, so it attaches the rest as its first
+action, before registering its role. Any `add_repo` or clone prompt then falls
+in the bootstrap sitting, never mid-campaign.
 
 **Contract changes.**
 
@@ -132,20 +151,33 @@ It also lets one agent serve many lanes in sequence.
 `priority: now`. The child prompt adds: _before running the publication command,
 read any pending CTO message_. F9's 14-minute race would then not have happened.
 
-### A6. The owning agent remediates review findings on its own PR
+### A6. The publishing agent owns its PR until it is green (operator ruling)
 
-The protocol today has the CTO fix CI breaks surgically and never re-tasks a
-stood-down agent. Review-bot findings on a large lane (the Copilot finding on
-#517) are not surgical, and the owning agent holds the context.
+**Ruling (operator, 2026-11-16).** The agent that publishes a PR owns it: CI
+green, every review thread fixed or answered and resolved, no merge conflict. The
+CTO does **not** remediate PRs. This campaign the CTO fixed a lane's test defect
+itself (#511) and launched fresh agents to remediate PRs other agents had opened
+(#509, #517). Both stop.
 
-**Change.** Add `CTO REMEDIATE <pr> <thread-ids>`. It re-activates the idle pool
-agent that published that PR, scoped to those threads and the files they cite.
-The agent fixes, re-runs the lane's checks and pushes to the same PR. The CTO
-answers and resolves the threads; reviewer replies stay with the CTO, under the
-operator's identity.
+**Change.**
 
-The CTO also subscribes to the PR at publication time (friction brief F4), so
-findings arrive without the operator relaying them.
+- `swarm_publishes_then_stands_down` becomes _a pool agent's lane ends when its
+  PR is green, thread-clean and conflict-free, not at publication._ On publish
+  the agent subscribes to its own PR (`subscribe_pr_activity`), fixes CI
+  failures at the root, fixes real review findings, answers and resolves every
+  thread, then writes `CTO-STATUS: ready-to-merge <pr> <head-sha>` and goes idle.
+- `cto_integrates_and_fixes_surgically` loses "fixes": the CTO reads the diff
+  against the lane brief, merges on the operator's authority, and sends a
+  `CTO DIRECTIVE` back to the owner when something is wrong. It never pushes to
+  a lane's branch.
+- A finding that would widen the lane's scope is a `CTO-QUESTION`, not a fix.
+  The CTO answers it, or assigns the work as a new lane with `CTO ASSIGN` (A4).
+- A pool agent that owns an open PR is not idle and receives no `CTO ASSIGN`
+  until that PR is ready to merge. Pool size (A1) bounds how many PRs are open at
+  once.
+
+The ruling also removes the operator's relays: the owner, not the operator or the
+CTO, receives the PR's review events (friction brief F4).
 
 ### A7. Hand-off to L CTO keeps the pool
 
@@ -200,6 +232,9 @@ made achievable.
 
 - **Launching an agent per PR**, including for remediation of a PR an earlier
   agent opened (#509, #517). Use A1 and A6.
+- **The CTO remediating PRs** (#511's test fix, and the CI and review follow-up
+  on #513 and #514). The publishing agent owns its PR until it is green (A6).
+- **Adding a repository after launch.** Pass it as `source_url` at launch (A2).
 - **Sending scope corrections at default priority** (A5).
 - **Subscribing to a PR only after the operator relays a comment** (A6, F4).
 - **Writing operator runbooks only to session scratch.** The Gate wiring runbook
@@ -216,4 +251,5 @@ permission log:
 - zero `add_repo` or clone approvals after bootstrap;
 - zero archive approvals before close;
 - zero operator relays of bot review comments;
+- zero CTO pushes to a lane's branch, and every lane PR made green by its owner;
 - operator messages limited to the four kinds in A8.
