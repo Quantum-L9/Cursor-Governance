@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from ops.memory.canonical_validation import CanonicalValidator, ValidationUnavailable
+from ops.memory.hook_carrier import RELAY, CarrierError, resolve_carrier
 from ops.memory.hook_envelope import HookEnvelope, envelope_for, operator_principal
 from ops.memory.receipts import (
     CandidateReceipt,
@@ -122,6 +123,11 @@ class OutcomeStatus(StrEnum):
     #: caller requires that identity. A receipt whose selectors *contradict*
     #: the request is INVALID_RECEIPT instead: that one is provably wrong.
     REQUEST_IDENTITY_UNPROVEN = "REQUEST_IDENTITY_UNPROVEN"
+    #: Relay carrier (CANONICAL_LAW §8.11): the record passed its envelope and
+    #: is queued for the agent to write through the account connector. It is
+    #: NOT committed — ``ok`` stays false until the hosted receipt exists, so
+    #: no close obligation is discharged by a queue entry.
+    RELAYED = "RELAYED"
 
 
 #: Fault classes (ADR-0032). A memory operation that did not answer is one of
@@ -141,7 +147,12 @@ FAULT_ENVIRONMENT = "environment"
 FAULT_CANONICAL = "canonical"
 
 _NO_FAULT_STATUSES = frozenset(
-    {OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.PARTIAL_PROJECTION_DEGRADED}
+    {
+        OutcomeStatus.OK,
+        OutcomeStatus.NO_HITS,
+        OutcomeStatus.PARTIAL_PROJECTION_DEGRADED,
+        OutcomeStatus.RELAYED,
+    }
 )
 _ENVIRONMENT_FAULT_STATUSES = frozenset({OutcomeStatus.BINDING_FAILED})
 
@@ -248,6 +259,73 @@ class MemoryControlPlaneClient:
         self._last_validation: str | None = None
         self._last_search_identity: Any = None
         self._v2_store_prepared = False
+        #: Resolved per call from this client's environment, so a carrier
+        #: override cannot be cached past the process that set it.
+        self._carrier_env = self._env
+
+    # ------------------------------------------------------------------
+    # Relay carrier (CANONICAL_LAW §8.11, ops/memory/hook_carrier.py)
+    # ------------------------------------------------------------------
+    def _carrier(self) -> str:
+        return resolve_carrier(self._carrier_env)
+
+    def _relayed(
+        self,
+        operation: str,
+        *,
+        workspace: str,
+        arguments: dict[str, Any],
+        namespaces: Sequence[str],
+        dry_run: bool,
+    ) -> OperationOutcome | None:
+        """``None`` on a local surface; otherwise the relay verdict.
+
+        Runs after ``_guard`` (the envelope still bounds what may be queued)
+        and before any process: a relay surface never opens a local store,
+        not even for a dry run, because that store is not the authority.
+        """
+
+        try:
+            carrier = self._carrier()
+        except CarrierError as exc:
+            return self._outcome(
+                operation,
+                OutcomeStatus.BINDING_FAILED,
+                _Raw(None, None, "CarrierError", str(exc), 0),
+                namespaces=namespaces,
+            )
+        if carrier != RELAY:
+            return None
+        if dry_run:
+            return self._outcome(
+                operation,
+                OutcomeStatus.NOT_COMMITTED,
+                _Raw(EXIT_DRY_RUN, None, None, "relay carrier: dry run, nothing queued", 0),
+                namespaces=namespaces,
+            )
+        from ops.memory import relay
+
+        try:
+            entry = relay.enqueue(
+                workspace, surface=self.surface, operation=operation, arguments=arguments
+            )
+        except (OSError, relay.RelayError) as exc:
+            return self._outcome(
+                operation,
+                OutcomeStatus.BINDING_FAILED,
+                _Raw(None, None, type(exc).__name__, f"relay outbox not written: {exc}", 0),
+                namespaces=namespaces,
+            )
+        if self.envelope is not None:
+            # A queued record is a record this surface asked for: it counts
+            # against max_records exactly as a committed one would.
+            self._records_committed += 1
+        return self._outcome(
+            operation,
+            OutcomeStatus.RELAYED,
+            _Raw(None, None, None, f"queued for {entry['tool']} as relay entry {entry['id']}", 0),
+            namespaces=namespaces,
+        )
 
     def _checked(self, payload: Any, model_name: str, parser: Any) -> Any:
         """Canonical validation, then the structural view — in that order.
@@ -762,6 +840,24 @@ class MemoryControlPlaneClient:
             namespace=namespace,
         ):
             return guard
+        relay_arguments: dict[str, Any] = {
+            "namespace": namespace,
+            "content": content,
+            "memory_class": memory_class,
+            "tags": [*tags, "carrier:relay", f"hook-surface:{self.surface or 'operator'}"],
+        }
+        if idempotency_key:
+            relay_arguments["idempotency_key"] = idempotency_key
+        if source_id:
+            relay_arguments["source_id"] = source_id
+        if relayed := self._relayed(
+            "write",
+            workspace=workspace,
+            arguments=relay_arguments,
+            namespaces=(namespace,),
+            dry_run=dry_run,
+        ):
+            return relayed
         argv = [
             "write",
             content,
@@ -824,8 +920,16 @@ class MemoryControlPlaneClient:
         ):
             return guard
         namespace = str((candidate.get("source") or {}).get("namespace") or "")
-        raw = self._invoke(["ingest-governed-candidate"], cwd=workspace, input_text=body)
         namespaces = (namespace,) if namespace else ()
+        if relayed := self._relayed(
+            "ingest_candidate",
+            workspace=workspace,
+            arguments={"candidate": dict(candidate)},
+            namespaces=namespaces,
+            dry_run=False,
+        ):
+            return relayed
+        raw = self._invoke(["ingest-governed-candidate"], cwd=workspace, input_text=body)
         if raw.payload is None:
             return self._outcome(
                 "ingest_candidate", self._classify_failure(raw), raw, namespaces=namespaces
@@ -878,6 +982,21 @@ class MemoryControlPlaneClient:
             provenance=bool(session_id or self.session_id),
         ):
             return guard
+        close_arguments: dict[str, Any] = {"namespace": namespace, "summary": summary}
+        if session_id or self.session_id:
+            close_arguments["session_id"] = str(session_id or self.session_id)
+        if capsule_digest:
+            close_arguments["capsule_digest"] = capsule_digest
+        if idempotency_key:
+            close_arguments["idempotency_key"] = idempotency_key
+        if relayed := self._relayed(
+            "close",
+            workspace=workspace,
+            arguments=close_arguments,
+            namespaces=(namespace,),
+            dry_run=dry_run,
+        ):
+            return relayed
         argv = ["close", "--summary", summary, "--group-id", namespace]
         if session_id or self.session_id:
             argv += ["--session-id", str(session_id or self.session_id)]
@@ -974,6 +1093,25 @@ class MemoryControlPlaneClient:
             provenance=bool(namespace and source_bytes is not None),
         ):
             return guard
+        try:
+            relay_surface = self._carrier() == RELAY
+        except CarrierError as exc:
+            return self._outcome(
+                "distill",
+                OutcomeStatus.BINDING_FAILED,
+                _Raw(None, None, "CarrierError", str(exc), 0),
+                namespaces=(namespace,),
+            )
+        if relay_surface:
+            # Distill extracts and admits records inside the runtime it runs
+            # in; locally that is container scratch, and the hosted service
+            # distills server-side only (§8.10 item 7). Not relayed, not run.
+            return self._outcome(
+                "distill",
+                OutcomeStatus.NOT_COMMITTED,
+                _Raw(None, None, None, "relay carrier: distill is not run on a relay surface", 0),
+                namespaces=(namespace,),
+            )
         namespaces = (namespace,)
         argv = self._distill_argv(source_path, namespace, repository, dry_run=dry_run)
         if self.envelope is not None and not dry_run:

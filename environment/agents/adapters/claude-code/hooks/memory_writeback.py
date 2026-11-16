@@ -328,6 +328,64 @@ def _writeback_roots(contract: dict, receipt_id: str, workspace: Path) -> list[P
     return pp.session_roots(contract, receipt_id, _shared_workspace_roots, workspace)
 
 
+#: How many Stops may be blocked for one relay entry before the gate stops
+#: asking and only announces it (a gate the agent cannot clear teaches bypass;
+#: rule 42 "Satisfiability"). The entry stays owed and visible either way.
+RELAY_MAX_ASKS = 3
+RELAY_GATE_NAME = "gate.json"
+
+
+def _relay_gate(workspace: Path) -> str | None:
+    """Block reason for owed relay entries (CANONICAL_LAW §8.11), or ``None``.
+
+    Runs on every Stop of a parent session, independent of publication: a
+    relay entry is owed from the moment a hook queued it. Fail-open by
+    contract — an unreadable outbox never blocks a Stop.
+    """
+
+    try:
+        mb.ensure_importable()
+        from ops.memory import relay
+    except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return None
+    reasons: list[str] = []
+    exhausted: list[str] = []
+    for root in _shared_workspace_roots(workspace, cap=64) or [workspace]:
+        try:
+            owed = relay.pending(root)
+        except OSError:
+            continue
+        if not owed:
+            continue
+        gate_path = relay.relay_dir(root) / RELAY_GATE_NAME
+        try:
+            asks = json.loads(gate_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            asks = {}
+        if not isinstance(asks, dict):
+            asks = {}
+        askable = [row for row in owed if int(asks.get(str(row.get("id")), 0)) < RELAY_MAX_ASKS]
+        if not askable:
+            exhausted.append(f"{root}: {len(owed)} entr(ies)")
+            continue
+        for row in askable:
+            ident = str(row.get("id"))
+            asks[ident] = int(asks.get(ident, 0)) + 1
+        try:
+            gate_path.write_text(json.dumps(asks, sort_keys=True), encoding="utf-8")
+        except OSError:
+            pass
+        reasons.append(relay.instruction(root, askable))
+    if exhausted:
+        print(
+            "memory-relay: STILL OWED after "
+            f"{RELAY_MAX_ASKS} requests, no longer blocking — {'; '.join(exhausted)} "
+            "(python -m ops.memory.relay instructions --workspace <repo>)",
+            file=sys.stderr,
+        )
+    return "\n\n".join(reasons) or None
+
+
 def main() -> int:
     try:
         event = json.load(sys.stdin)
@@ -348,6 +406,14 @@ def main() -> int:
         # A /lcto swarm child stands down at publication: no handoff request, no
         # PR handoff comment. Its continuation still closes at SessionEnd.
         _record(contract, session_id, status="skipped_swarm_child")
+        return 0
+    # Relay carrier (CANONICAL_LAW §8.11): hook records queued for the shared
+    # store are written by this agent through the account connector. Owed
+    # entries block this Stop (bounded), ahead of the post-publish close.
+    relay_reason = _relay_gate(st.workspace_root())
+    if relay_reason:
+        _record(contract, session_id, status="relay_requested")
+        print(json.dumps({"decision": "block", "reason": relay_reason}, ensure_ascii=False))
         return 0
     # The prefetch receipt is keyed by the writer-scoped id
     # (``<writer_agent>__<chat>``, memory_state.resolve_receipt_id), the one

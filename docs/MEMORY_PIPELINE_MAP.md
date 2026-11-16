@@ -48,6 +48,18 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2 / §8.5, ADR-0005, ADR-0028, ADR-00
 
 Cursor-Governance gates **repository edits** on hydration (Claude `memory_gate` on `Edit|Write`, Cursor "edit-other"); it never gates a memory write. `memory_gate.py` exempts `l9-memory` / `python -m ops.memory.cli` from its `Bash` matcher the way it exempts git/gh.
 
+## Hook carrier on cloud sessions (CANONICAL_LAW §8.11, ADR-0054)
+
+On a Claude Code cloud container the local runtime's store is container scratch,
+and the shared Memory 3.0 store admits only the account connector's person
+principal. Hook-lane writes there use the **relay** carrier
+(`ops/memory/hook_carrier.py`): envelope admission as usual, then a queue entry in
+`<repo>/.l9/memory/relay/outbox.jsonl` with the connector call
+(`memory.write_agent` / `memory.ingest_governed_candidate` / `memory.close`). The
+Stop hook asks the agent to make each call and acknowledge it
+(`python -m ops.memory.relay ack <id> --receipt <uuid>`). Local surfaces are
+unchanged. The relay retires when the memory service ships a hook principal.
+
 ## Write paths (caller taxonomy)
 
 | Caller | Path | Operation | Note |
