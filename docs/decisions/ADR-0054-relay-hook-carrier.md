@@ -25,6 +25,27 @@ is discarded with the container. Observed in session
 handoffs were reported `OK` and existed only in that file, while the shared store
 held two records.
 
+## Options Considered
+
+1. **Relay through the agent now, hook principal later (chosen; operator
+   decision 2026-11-16).** Works today with no memory-service change: the
+   account connector's person principal is already admitted. Costs one agent
+   turn per Stop with owed entries, and records are attributed to the agent's
+   actor rather than a hook principal until the second step ships.
+2. **Hook principal only.** Narrow ADR-103 in `l9-graphiti-memory` to admit
+   an envelope-bound client-credentials principal and give the CLI an OAuth
+   token source, then point the hook lane at the hosted service. The right
+   end state, but hooks keep writing to container scratch and losing records
+   until a memory release is deployed on C1 and bound here.
+3. **Relay through the agent permanently.** Keeps ADR-103's machine-access
+   closure intact and needs no memory-service change, but every hook write
+   depends on the agent completing it and principal type `hook` is never
+   representable.
+4. **Rejected outright:** a person's OAuth refresh token for hooks (forbidden
+   on hosted surfaces, which strip OAuth credentials) and pointing the CLI's
+   signed-agent `--remote-url` at the hosted service (refused there by
+   ADR-100).
+
 ## Decision
 
 Operator decision (2026-11-16): relay now, then a hook principal.
