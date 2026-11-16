@@ -101,8 +101,23 @@ that one as its source and nothing else. Where a pool agent needs more than one,
 action, before registering its role. Any `add_repo` or clone prompt then falls
 in the bootstrap sitting, never mid-campaign.
 
+**The org rules and operating-plane repositories never need `add_repo`
+(operator ruling, 2026-11-16).** Every coding agent must have
+`Quantum-L9/.github` and `Quantum-L9/Cursor-Governance`. After this campaign
+closed, the UI-polish agent still raised an `add_repo` prompt for `.github`. It
+did not need one: SessionStart already clones Cursor-Governance to
+`$HOME/.cursor-governance` in every session on this environment, and git serves
+`https://github.com/Quantum-L9/.github` with no attachment (`git ls-remote`
+answers; `ops/scripts/org_dotgithub.read_org_file` is the sanctioned reader).
+The child system prompt and the coding-agent mode bootstrap must therefore name
+those two paths, and forbid `add_repo` for either. Attaching them is for pushing
+to them, which an agent working in another repository does not do.
+
 **Contract changes.**
 
+- The child system prompt adds: _never `add_repo` for `Quantum-L9/.github` or
+  `Quantum-L9/Cursor-Governance`; read them at `$HOME/.cursor-governance` and
+  through a git clone of `https://github.com/Quantum-L9/.github`._
 - `pre_launch` adds: _compute `campaign_repositories`; put it in every child
   brief._
 - The child system prompt's first-action block adds: _attach and clone every
