@@ -172,3 +172,18 @@ def test_a_shallow_checkout_is_unshallowed(tmp_path: Path, upstream: Path) -> No
     assert _git(root, "rev-parse", "--is-shallow-repository") == "true"
     assert _run(env).startswith("AUTHORITY: READY")
     assert _git(root, "rev-parse", "--is-shallow-repository") == "false"
+
+
+def test_a_failed_first_fetch_names_the_private_repository_causes(tmp_path: Path) -> None:
+    """Quantum-L9/.github is private: an unreachable fetch must say how to fix it, not just 'offline?'."""
+    env = _env(tmp_path, tmp_path / "no-such-upstream")
+    line = _run(env)
+    assert line.startswith("AUTHORITY: UNAVAILABLE first fetch")
+    assert "no GitHub credential for the private repository" in line
+    assert "not started with Quantum-L9/.github selected" in line
+
+
+def test_fetches_offer_the_gh_credential_helper() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'credential.helper=!gh auth git-credential' in text
+    assert text.count('git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch') == 2

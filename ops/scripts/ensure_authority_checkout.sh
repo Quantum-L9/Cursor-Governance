@@ -49,12 +49,22 @@ origin_ok() {
   return 1
 }
 
+# Quantum-L9/.github is private (2026-11-16): an anonymous fetch fails. gh's
+# credential is offered after any helper the user configured (never instead of
+# one), the same transport ops/scripts/org_dotgithub.py uses.
+AUTH=()
+if command -v gh >/dev/null 2>&1; then
+  AUTH=(-c "credential.helper=!gh auth git-credential")
+fi
+# Why a fetch can fail, named once for both messages below.
+FETCH_CAUSE="offline, no GitHub credential for the private repository, or a Claude Code cloud session not started with Quantum-L9/.github selected"
+
 fetch_main() {
   # A full fetch of main; unshallows a shallow checkout in the same call.
   if [ "$(g "$1" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
-    g "$1" fetch --quiet --unshallow origin "+refs/heads/main:refs/remotes/origin/main"
+    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch --quiet --unshallow origin "+refs/heads/main:refs/remotes/origin/main"
   else
-    g "$1" fetch --quiet origin "+refs/heads/main:refs/remotes/origin/main"
+    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch --quiet origin "+refs/heads/main:refs/remotes/origin/main"
   fi
 }
 
@@ -76,7 +86,7 @@ if [ ! -e "$ROOT" ]; then
     fi
   fi
   if ! fetch_main "$STAGING"; then
-    say "UNAVAILABLE first fetch of $AUTHORITY_REMOTE failed (offline?) — staged at $STAGING, resumes next session"
+    say "UNAVAILABLE first fetch of $AUTHORITY_REMOTE failed ($FETCH_CAUSE) — staged at $STAGING, resumes next session"
     exit 0
   fi
   if ! { g "$STAGING" checkout --quiet -B main refs/remotes/origin/main \
@@ -100,7 +110,7 @@ if [ -f "$ROOT/.git/FETCH_HEAD" ]; then
   age=$(( $(date +%s) - $(stat -c %Y "$ROOT/.git/FETCH_HEAD" 2>/dev/null || stat -f %m "$ROOT/.git/FETCH_HEAD" 2>/dev/null || echo 0) ))
 fi
 if [ "$age" -ge "$TTL" ] || [ "$(g "$ROOT" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
-  if fetch_main "$ROOT"; then fetched="fetched"; else fetched="fetch-failed(offline?)"; fi
+  if fetch_main "$ROOT"; then fetched="fetched"; else fetched="fetch-failed($FETCH_CAUSE)"; fi
 fi
 
 branch="$(g "$ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || echo DETACHED)"
