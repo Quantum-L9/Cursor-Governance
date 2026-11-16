@@ -272,14 +272,19 @@ def _carrier_lines(namespaces: list[str]) -> list[str]:
     if carrier != RELAY:
         return []
     targets = json.dumps(namespaces or ["<namespace>"])
-    return [
+    carrier_line = (
         "hook_carrier=relay — the shared Memory 3.0 store is the account-managed L9 Memory "
-        "connector; the local runtime health above is container scratch, not that store",
+        + "connector; the local runtime health above is container scratch, not that store"
+    )
+    hydrate_line = (
         f'hydrate_shared=call memory_hydrate {{"task": "<task>", "namespaces": {targets}}} '
-        "on the account connector (not the operator CLI)",
+        + "on the account connector (not the operator CLI)"
+    )
+    relay_line = (
         "relay_writes=hook records are queued for you; the Stop hook lists each connector "
-        "call to make and the `python -m ops.memory.relay ack` to run",
-    ]
+        + "call to make and the `python -m ops.memory.relay ack` to run"
+    )
+    return [carrier_line, hydrate_line, relay_line]
 
 
 def main() -> int:

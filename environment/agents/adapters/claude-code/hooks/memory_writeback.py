@@ -385,8 +385,10 @@ def _relay_gate(workspace: Path) -> str | None:
             asks[ident] = int(asks.get(ident, 0)) + 1
         try:
             gate_path.write_text(json.dumps(asks, sort_keys=True), encoding="utf-8")
-        except OSError:
-            pass
+        except OSError as exc:
+            # Fail-open: the request still goes out; only the ask count is not
+            # persisted, so this entry may be asked for once more than the cap.
+            print(f"memory-relay: ask count not saved ({exc}); continuing", file=sys.stderr)
         reasons.append(relay.instruction(root, askable))
     if exhausted:
         print(
