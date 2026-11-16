@@ -160,6 +160,10 @@ CHILD_PROMPT_REQUIRED = (
     "CTO ASSIGN",
     # The org rules repository is never attached with add_repo (it refuses dot names).
     "Never call add_repo for Quantum-L9/Cursor-Governance",
+    # A pool outlives its CTO: coordinator transfer is explicit and re-registers the role,
+    # and a published PR stays repairable by its owner after the owner takes another lane.
+    "CTO TRANSFER <new session id>",
+    "You own every PR you published until it merges",
     # The child registers its role so hooks enforce it (ops/autonomy/session_role.py),
     # and publishes without spawning remediation or PR watching.
     'session_role.py" register-child --cto-session {cto_session}',

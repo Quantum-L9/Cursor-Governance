@@ -378,6 +378,7 @@ def test_child_prompt_requires_a_cto_session() -> None:
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
             'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: ready-to-merge; '
             "CTO-STATUS: idle; CTO ASSIGN; Never call add_repo for Quantum-L9/Cursor-Governance; "
+            "CTO TRANSFER <new session id>; You own every PR you published until it merges; "
             'session_role.py" register-child --cto-session {cto_session} PR_REMEDIATE=0; '
             "report via send_message",
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
@@ -488,7 +489,7 @@ def test_publisher_owns_its_pr_and_the_cto_never_remediates() -> None:
 def test_pool_is_capped_at_five_and_reused_never_relaunched() -> None:
     protocol = cto_mode.load_contract()["operating_protocol"]
     pool = protocol["invariants"]["fixed_reusable_pool"]
-    assert "at most five" in pool and "no agent is launched after bootstrap" in pool
+    assert "at most five" in pool and "no session is launched after bootstrap" in pool
     assert "at most five" in protocol["roles"]["swarm"]
     assert "launch nothing" in " ".join(protocol["check_in"])
     assert any("at most five" in rule for rule in protocol["child_launch_rules"])
@@ -520,7 +521,36 @@ def test_scope_corrections_interrupt_and_handoff_keeps_the_pool() -> None:
     assert protocol["transport"]["claude-code"]["scope_correction_priority"] == "now"
     assert "before it publishes" in protocol["invariants"]["scope_corrections_interrupt"]
     handoff = " ".join(protocol["handoff"])
-    assert "adopts the pool" in handoff and "Nothing is relaunched" in handoff
+    assert "adopts the pool" in handoff and "nothing is relaunched" in handoff
+
+
+def test_cursor_slots_continue_by_re_dispatch_within_the_five_slot_cap() -> None:
+    """Copilot on #1004: a Cursor Task ends, so reuse is per logical slot, not per session."""
+    pool = cto_mode.load_contract()["operating_protocol"]["invariants"]["fixed_reusable_pool"]
+    assert "five logical pool" in pool
+    assert "re-dispatching it as a new Task" in pool and "not a new pool member" in pool
+
+
+def test_owner_keeps_a_repair_path_after_taking_another_lane() -> None:
+    """Copilot on #1004: a late finding on a ready lane goes back to its owner."""
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "You own every PR you published until it merges" in text
+    assert "CTO REMEDIATE <pr> restores that PR's lane scope" in text
+    assert "ready to merge but not yet merged does not make you non-idle" in text
+    assert "after that agent has taken another lane" in " ".join(protocol["check_in"])
+
+
+def test_coordinator_transfer_is_explicit_and_re_registers_the_role() -> None:
+    """Copilot on #1004: a successor CTO needs a defined way to take the pool."""
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s_old")
+    assert "until it sends CTO TRANSFER <new session id>" in text
+    assert "re-run the ROLE REGISTRATION command below with --cto-session <new session id>" in text
+    assert "a TRANSFER from any other session is ignored" in text
+    handoff = " ".join(protocol["handoff"])
+    assert "CTO TRANSFER" in handoff and "register-child --cto-session" in handoff
+    assert "never changes who the coordinator is" in handoff
 
 
 def test_missing_handoff_section_fails_closed(tmp_path: Path) -> None:
