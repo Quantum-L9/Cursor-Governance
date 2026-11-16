@@ -119,6 +119,10 @@ jobs:
           path: org-authority
           fetch-depth: 0
           persist-credentials: false
+          # Quantum-L9/.github is private: a pull-request workflow may hold exactly one
+          # secret, this read-only token scoped to that repository, never persisted
+          # (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16; the bundle contract tests pin it).
+          token: ${{ secrets.L9_GITHUB_READ_TOKEN }}
       - name: Verify the architecture-intelligence bundle at the revision it names (candidate mode)
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
@@ -184,7 +188,9 @@ jobs:
           # The coding verifier binds law bytes to the pin from commit objects, requires the
           # checkout's HEAD to be the pin (the checkout above is exactly that revision), and
           # refuses a pin no fetched origin ref contains, so the canonical main is fetched first.
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           python skills/l9-coding-agent/scripts/verify_canonical_binding.py \
             --authority-root ../org-authority \
             --bundle generated/governance/coding_agent_execution \
@@ -196,7 +202,9 @@ jobs:
         env:
           REVISION: ${{ steps.lock.outputs.revision }}
         run: |
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           set +e
           python ops/scripts/operating_plane_v2_projection.py \
             --authority-root ../org-authority --mode candidate > operating_plane_v2_candidate.json
@@ -219,6 +227,10 @@ jobs:
           path: org-main
           fetch-depth: 0
           persist-credentials: false
+          # Quantum-L9/.github is private: a pull-request workflow may hold exactly one
+          # secret, this read-only token scoped to that repository, never persisted
+          # (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16; the bundle contract tests pin it).
+          token: ${{ secrets.L9_GITHUB_READ_TOKEN }}
       - name: Resolve admission against authority main (admitted mode)
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
@@ -275,7 +287,9 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         shell: bash
         run: |
-          git -C ../org-authority fetch -q origin main
+          # fetch-depth: 0 already fetched every ref seconds ago; a second fetch has no
+          # credential (persist-credentials: false) against the private repository.
+          git -C ../org-authority rev-parse --verify -q refs/remotes/origin/main >/dev/null
           main="$(git -C ../org-authority rev-parse refs/remotes/origin/main)"
           python ops/scripts/coding_projection_status.py \
             --authority-root ../org-authority --expect-main "$main" \
