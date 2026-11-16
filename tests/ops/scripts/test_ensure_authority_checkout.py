@@ -175,7 +175,7 @@ def test_a_shallow_checkout_is_unshallowed(tmp_path: Path, upstream: Path) -> No
 
 
 def test_a_failed_first_fetch_names_the_private_repository_causes(tmp_path: Path) -> None:
-    """Quantum-L9/.github is private: an unreachable fetch must say how to fix it, not just 'offline?'."""
+    """Quantum-L9/.github is private: a failed fetch names how to fix it, not just 'offline?'."""
     env = _env(tmp_path, tmp_path / "no-such-upstream")
     line = _run(env)
     assert line.startswith("AUTHORITY: UNAVAILABLE first fetch")
