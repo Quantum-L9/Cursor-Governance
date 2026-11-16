@@ -119,6 +119,10 @@ jobs:
           path: org-authority
           fetch-depth: 0
           persist-credentials: false
+          # Quantum-L9/.github is private: a pull-request workflow may hold exactly one
+          # secret, this read-only token scoped to that repository, never persisted
+          # (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16; the bundle contract tests pin it).
+          token: ${{ secrets.L9_GITHUB_READ_TOKEN }}
       - name: Verify the architecture-intelligence bundle at the revision it names (candidate mode)
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
@@ -219,6 +223,10 @@ jobs:
           path: org-main
           fetch-depth: 0
           persist-credentials: false
+          # Quantum-L9/.github is private: a pull-request workflow may hold exactly one
+          # secret, this read-only token scoped to that repository, never persisted
+          # (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16; the bundle contract tests pin it).
+          token: ${{ secrets.L9_GITHUB_READ_TOKEN }}
       - name: Resolve admission against authority main (admitted mode)
         if: steps.lock.outputs.present == 'true' && matrix.bundle == 'architecture_intelligence'
         working-directory: governance
