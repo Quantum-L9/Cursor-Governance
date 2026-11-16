@@ -60,7 +60,7 @@ dev = [
 # Portable UI Operator / AWS secrets resolve — NOT required for make pr.
 # Install: uv sync --extra ui-operator && playwright install
 ui-operator = [
-    "playwright==1.64.1",
+    "playwright==1.65.0",
     "boto3>=1.34,<2",
 ]
 # Claude Agent SDK adapter (environment/agents/adapters/claude-agent-sdk) — NOT
