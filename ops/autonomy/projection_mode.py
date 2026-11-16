@@ -105,6 +105,7 @@ PROTOCOL_LIST_SECTIONS = (
     "child_brief_must_include",
     "child_launch_rules",
     "check_in",
+    "handoff",
 )
 PROTOCOL_MAP_SECTIONS = ("roles",)
 # Each declared host transport must say how the CTO reaches a child and how the child
@@ -152,8 +153,13 @@ CHILD_PROMPT_REQUIRED = (
     "ACTIVE",
     # Projections and modes govern the swarm; a skill is never a substitute.
     "Never invoke the l9-coding-agent skill",
-    # Agents publish and stand down; the CTO owns integration and remediation.
-    "CTO-STATUS: stood-down",
+    # The publishing agent owns its PR until it is ready to merge, then returns to the
+    # pool idle; the CTO owns integration and never remediates (protocol v2, 2026-11-16).
+    "CTO-STATUS: ready-to-merge",
+    "CTO-STATUS: idle",
+    "CTO ASSIGN",
+    # The org rules repository is never attached with add_repo (it refuses dot names).
+    "Never call add_repo for Quantum-L9/Cursor-Governance",
     # The child registers its role so hooks enforce it (ops/autonomy/session_role.py),
     # and publishes without spawning remediation or PR watching.
     'session_role.py" register-child --cto-session {cto_session}',

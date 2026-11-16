@@ -259,8 +259,12 @@ SWARM_INVARIANTS = {
     "swarm_never_pings_operator",
     "frictionless_cto_swarm_channel",
     "operator_approves_merges_only",
-    "swarm_publishes_then_stands_down",
-    "cto_integrates_and_fixes_surgically",
+    "publisher_owns_its_pr",
+    "cto_integrates_never_remediates",
+    "fixed_reusable_pool",
+    "repositories_attached_at_launch",
+    "every_launched_session_reports_by_transcript",
+    "scope_corrections_interrupt",
 }
 
 
@@ -372,7 +376,8 @@ def test_child_prompt_requires_a_cto_session() -> None:
         ("CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: only", "CHILD_SYSTEM_PROMPT_INCOMPLETE"),
         (
             "{cto_session} CTO-STATUS: CTO-QUESTION: CTO-BLOCKER: Never invoke the "
-            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: stood-down; '
+            'l9-coding-agent skill; coding_agent_mode.py" on ACTIVE; CTO-STATUS: ready-to-merge; '
+            "CTO-STATUS: idle; CTO ASSIGN; Never call add_repo for Quantum-L9/Cursor-Governance; "
             'session_role.py" register-child --cto-session {cto_session} PR_REMEDIATE=0; '
             "report via send_message",
             "CHILD_SYSTEM_PROMPT_NAMES_SEND_TOOL",
@@ -457,19 +462,74 @@ def test_swarm_uses_the_coding_agent_mode_and_projection_never_the_skill() -> No
     assert "never the l9-coding-agent skill" in briefs
 
 
-# --- stand-down and CTO-owned integration (operator directive 2026-11-13) ---
+# --- protocol v2: fixed pool, publisher-owned PRs, CTO never remediates (2026-11-16) ---
 
 
-def test_agents_stand_down_after_publishing_and_the_cto_integrates_itself() -> None:
+def test_publisher_owns_its_pr_and_the_cto_never_remediates() -> None:
     protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["version"] == 2
     invariants = protocol["invariants"]
-    assert "stands down" in invariants["swarm_publishes_then_stands_down"]
-    assert "never adds scope" in invariants["swarm_publishes_then_stands_down"]
-    cto = invariants["cto_integrates_and_fixes_surgically"]
-    assert "never through a subagent" in cto and "surgical" in cto
+    owner = invariants["publisher_owns_its_pr"]
+    assert "ready to merge" in owner and "never merges" in owner.lower()
+    assert "never adds scope to a running lane" in owner
+    cto = invariants["cto_integrates_never_remediates"]
+    assert "never through a subagent" in cto
+    assert "never pushes to a lane's branch" in cto and "never remediates" in cto
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
-    assert "Do not subscribe to, watch, remediate or re-test a published PR" in text
-    assert "CTO-STATUS: stood-down" in text
+    assert "OWN YOUR PR" in text
+    assert "CTO-STATUS: ready-to-merge" in text and "CTO-STATUS: idle" in text
+    assert "never rebase or force-push" in text
+    assert "Do not subscribe to" not in text
+    check_in = " ".join(protocol["check_in"])
+    assert "CTO REMEDIATE" in check_in and "Never push to a lane's branch" in check_in
+    assert "yourself, surgically" not in check_in
+
+
+def test_pool_is_capped_at_five_and_reused_never_relaunched() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    pool = protocol["invariants"]["fixed_reusable_pool"]
+    assert "at most five" in pool and "no agent is launched after bootstrap" in pool
+    assert "at most five" in protocol["roles"]["swarm"]
+    assert "launch nothing" in " ".join(protocol["check_in"])
+    assert any("at most five" in rule for rule in protocol["child_launch_rules"])
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    # ASSIGN is the only widening verb, and only for an idle agent.
+    assert "CTO ASSIGN <lane-id>" in text and "valid only while you are idle" in text
+    assert "They narrow or clarify scope; they never widen it" in text
+
+
+def test_repositories_come_at_launch_and_org_repos_are_never_add_repo() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    launch = protocol["transport"]["claude-code"]["child_launch"]
+    assert "source_url" in launch and "source_revision" in launch
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "Never call add_repo for Quantum-L9/Cursor-Governance" in text
+    assert "or for Quantum-L9/.github" in text
+    assert "never work around it with a raw push" in text
+
+
+def test_every_launched_session_gets_the_rendered_prompt() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    rule = protocol["invariants"]["every_launched_session_reports_by_transcript"]
+    assert "operator drives directly" in rule and "never asks for, or invites, a reply" in rule
+    assert any("including one the operator will drive" in r for r in protocol["child_launch_rules"])
+
+
+def test_scope_corrections_interrupt_and_handoff_keeps_the_pool() -> None:
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    assert protocol["transport"]["claude-code"]["scope_correction_priority"] == "now"
+    assert "before it publishes" in protocol["invariants"]["scope_corrections_interrupt"]
+    handoff = " ".join(protocol["handoff"])
+    assert "adopts the pool" in handoff and "Nothing is relaunched" in handoff
+
+
+def test_missing_handoff_section_fails_closed(tmp_path: Path) -> None:
+    doc = yaml.safe_load(cto_mode.MODE_CONTRACT.read_text())
+    del doc["operating_protocol"]["handoff"]
+    path = tmp_path / "MODE.yaml"
+    path.write_text(yaml.safe_dump(doc, sort_keys=False))
+    with pytest.raises(cto_mode.ContractError, match="SECTION_MALFORMED: handoff"):
+        cto_mode.load_contract(path)
 
 
 def test_cto_to_swarm_transport_is_pre_approved_in_the_claude_settings_template() -> None:
