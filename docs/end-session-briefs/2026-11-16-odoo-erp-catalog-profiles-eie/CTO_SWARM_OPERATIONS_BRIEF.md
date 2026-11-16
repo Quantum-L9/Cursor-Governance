@@ -11,17 +11,17 @@ them grants authority by appearing here.
 
 ## 1. What the CTO did
 
-| Duty | How it ran |
-|---|---|
-| Lane design | 11 lanes, each one agent and one PR; disjoint paths; stacking avoided |
-| Dispatch | `create_session` with Opus 5.5 at medium effort; the child prompt carried the CTO preamble plus the lane brief |
-| Directives | `send_message` into child sessions |
-| Reading children | `list_events` / `get_session` on child transcripts (`CTO-STATUS`, `CTO-QUESTION`, `CTO-BLOCKER` lines) |
-| Wake-ups | `send_later` check-ins at 20–35 minutes, stopping after three empty runs |
-| Review | The CTO read every lane diff against its brief before merging, and itself fixed the one test defect that broke a lane (#511) |
-| Merge | `stack_safe_merge.py --run` once green with zero open threads. The merge-authority switch was `disabled`; the operator's asks and `/l9-pr-remediation` were the authority. |
-| Cross-CTO | Directives and answers exchanged with CTO EIE, CTO State Node and CTO CEG over `send_message` |
-| Operator hand-offs | Three Cursor runbooks for SSH work the cloud session cannot do: v2 ICPs on Staging, a Staging drift diagnosis, and Gate wiring |
+| Duty               | How it ran                                                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lane design        | 11 lanes, each one agent and one PR; disjoint paths; stacking avoided                                                                                                      |
+| Dispatch           | `create_session` with Opus 5.5 at medium effort; the child prompt carried the CTO preamble plus the lane brief                                                             |
+| Directives         | `send_message` into child sessions                                                                                                                                         |
+| Reading children   | `list_events` / `get_session` on child transcripts (`CTO-STATUS`, `CTO-QUESTION`, `CTO-BLOCKER` lines)                                                                     |
+| Wake-ups           | `send_later` check-ins at 20–35 minutes, stopping after three empty runs                                                                                                   |
+| Review             | The CTO read every lane diff against its brief before merging, and itself fixed the one test defect that broke a lane (#511)                                               |
+| Merge              | `stack_safe_merge.py --run` once green with zero open threads. The merge-authority switch was `disabled`; the operator's asks and `/l9-pr-remediation` were the authority. |
+| Cross-CTO          | Directives and answers exchanged with CTO EIE, CTO State Node and CTO CEG over `send_message`                                                                              |
+| Operator hand-offs | Three Cursor runbooks for SSH work the cloud session cannot do: v2 ICPs on Staging, a Staging drift diagnosis, and Gate wiring                                             |
 
 Lanes launched (all archived): ERP material-profile loader (#502), export surgical
 fixes (#503), enrichment consumer v2 (#506, #507), cartridge facility fields (EIE
@@ -35,13 +35,13 @@ Approvals this campaign required from the operator, by kind. The counts are of
 calls the CTO made, not of prompts observed. Some kinds may already be
 pre-approved on this host; confirm against the host's permission log.
 
-| Kind | Count | Why it was needed |
-|---|---|---|
-| `create_session` (new agent) | 11 | one agent per lane, by protocol |
-| `archive_session` | 11+ | one per finished agent, some retried after worker restarts |
-| `add_repo` inside a child | several | agents needing EIE / Gate / `.github` clones after launch (the sweep lane hit a Register Repo Root prompt and stalled until directed around it) |
-| Re-opening a stood-down lane | 1 | #517: scope corrections arrived after publish (F9 in the friction brief) |
-| Relays the operator did by hand | 4+ | Copilot comments pasted as text or screenshots; Odoo.sh logs and cards pasted |
+| Kind                            | Count   | Why it was needed                                                                                                                               |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_session` (new agent)    | 11      | one agent per lane, by protocol                                                                                                                 |
+| `archive_session`               | 11+     | one per finished agent, some retried after worker restarts                                                                                      |
+| `add_repo` inside a child       | several | agents needing EIE / Gate / `.github` clones after launch (the sweep lane hit a Register Repo Root prompt and stalled until directed around it) |
+| Re-opening a stood-down lane    | 1       | #517: scope corrections arrived after publish (F9 in the friction brief)                                                                        |
+| Relays the operator did by hand | 4+      | Copilot comments pasted as text or screenshots; Odoo.sh logs and cards pasted                                                                   |
 
 The first three rows are pure overhead once a campaign is running: no decision is
 made, only a tool is let through. Removing them is the goal of §3.
@@ -63,9 +63,9 @@ such as F6's venv drift.
 
 **Contract changes** (`MODE.yaml` `operating_protocol`):
 
-- `swarm_publishes_then_stands_down` becomes: *a pool agent's work on a lane ends
+- `swarm_publishes_then_stands_down` becomes: _a pool agent's work on a lane ends
   at publication, and the agent returns to idle (`CTO-STATUS: idle`). It does not
-  watch its PR.*
+  watch its PR._
 - `cto_integrates_and_fixes_surgically`: unchanged.
 - `invariants` add `pool_size_max: 5` and `no_launch_after_bootstrap: true`. The
   exception is one replacement launch for a dead or wedged pool agent, reported to
@@ -84,11 +84,11 @@ clone prompts therefore all happen in the bootstrap sitting, never mid-campaign.
 
 **Contract changes.**
 
-- `pre_launch` adds: *compute `campaign_repositories`; put it in every child
-  brief.*
-- The child system prompt's first-action block adds: *attach and clone every
+- `pre_launch` adds: _compute `campaign_repositories`; put it in every child
+  brief._
+- The child system prompt's first-action block adds: _attach and clone every
   repository in `campaign_repositories` (deep clone for `Quantum-L9/.github`),
-  then write `CTO-STATUS: bootstrapped` listing them.*
+  then write `CTO-STATUS: bootstrapped` listing them._
 - A lane needing a repository outside the set is a `CTO-QUESTION`, answered by
   adding the repository to the set at the next bootstrap. It is never a
   mid-campaign `add_repo`.
@@ -111,8 +111,8 @@ operator's decisions, not tool plumbing.
 
 ### A4. An explicit verb that assigns new work to a pool agent
 
-Today the child prompt says CTO messages *"narrow or clarify scope; they never
-widen it"*. That made the #517 agent rightly refuse widened scope after
+Today the child prompt says CTO messages _"narrow or clarify scope; they never
+widen it"_. That made the #517 agent rightly refuse widened scope after
 publishing, and it forces a new launch for every new piece of work.
 
 **Change.** Add `CTO ASSIGN` to the recognised prefixes:
@@ -129,8 +129,8 @@ It also lets one agent serve many lanes in sequence.
 
 **Change.** In `transport.claude-code`, a directive that changes or freezes scope
 (`FROZEN`, a corrective `CTO DIRECTIVE`, `REBIND`) is sent with
-`priority: now`. The child prompt adds: *before running the publication command,
-read any pending CTO message*. F9's 14-minute race would then not have happened.
+`priority: now`. The child prompt adds: _before running the publication command,
+read any pending CTO message_. F9's 14-minute race would then not have happened.
 
 ### A6. The owning agent remediates review findings on its own PR
 
@@ -155,7 +155,7 @@ means the CTO session id changes; the agents need nothing new. A `REBIND` naming
 the new CTO session is the only message each pool agent receives.
 
 **Change.** `child_system_prompt` replaces the fixed `{cto_session}` authority
-with: *the CTO session named in the most recent `REBIND` from your current CTO*.
+with: _the CTO session named in the most recent `REBIND` from your current CTO_.
 `cto_mode.py` gains `handoff --to <session>`, which writes the pool record and
 emits the `REBIND` messages for the outgoing CTO to send.
 

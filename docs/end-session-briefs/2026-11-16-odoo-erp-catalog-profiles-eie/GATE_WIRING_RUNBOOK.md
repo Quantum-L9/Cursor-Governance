@@ -2,6 +2,7 @@
 
 > **Status at campaign close (2026-11-16).** This is the runbook as issued, with SSH
 > hostnames removed.
+>
 > - P0 returned verdict **M3** on both hosts: there is no build-persistent process
 >   environment.
 > - P1 is done: the public key for `odoo-plasticos-v1` is recorded with CTO CEG.
@@ -13,6 +14,7 @@
 >   ADR picks.
 
 ## MANIFEST
+
 - Repo: `cryptoxdog/IB-Odoo_19`. Staging = `0445b30` (#509 and #512 merged 2026-11-15).
 - Hosts (SSH, from Odoo.sh → Branches → <branch> → latest build → SSH tab):
   - Staging: `<from Odoo.sh → Branches → branch → SSH tab>`
@@ -24,6 +26,7 @@
   `plasticos_gate/services/gate_config.py`, `plasticos_gate/data/gate_icp_seed.xml`.
 
 ## APPROVED VALUES (operator approval 2026-11-15: "approve")
+
 ```
 TENANT_PRODUCTION = plasticos
 TENANT_STAGING    = plasticos
@@ -33,6 +36,7 @@ GATE_URL          = <unset>       # from CTO CEG; proposed https://gate.quantuma
 GATE_KEY_ID       = <unset>       # from CTO CEG
 GATE_PUBLIC_KEY   = <unset>       # from CTO CEG; public, not a secret
 ```
+
 **If any value you need for a phase reads `<unset>`, do not run that phase.** Phases P0 and P1 need none of them.
 The tenant is fixed by the engines, not chosen. EIE (EIE-IDENT-02) and CEG (HEALTH-05) both bind tenant id = domain
 spec id = Neo4j database name, and the only PlasticOS domain is `plasticos`. Any other tenant is refused. This
@@ -46,8 +50,10 @@ engine data and the sweep budget. Staging gets wired only when a separate stagin
 Gate itself is not deployed yet: P2 and P5 wait for CTO CEG.
 
 ## OBJECTIVE
+
 Odoo calls EIE (`converge`, `enrichment-sweep`, `enrichment-sweep-results`) and CEG (`match`) only through Gate,
 with no hand-typed configuration by the operator:
+
 1. Find out how process environment variables persist on Odoo.sh builds (P0, read only).
 2. Generate Production's ed25519 key pair on this workstation. Hand back only the public half (P1).
 3. Install Odoo's Gate environment on the **Production** build through the mechanism P0 proved (P2).
@@ -55,6 +61,7 @@ with no hand-typed configuration by the operator:
 5. Run smoke checks on Production (P5).
 
 ## NON-GOALS
+
 - No code, commits, pushes or PRs. No `-u`, no module install. `plasticos_export` stays **uninstalled**.
 - Gate's own environment is out of scope. It belongs to CTO CEG, and you only hand back the public keys.
 - Do not turn on the sweep (`plasticos.gate.sweep_enabled` stays `0`; both sweep crons stay inactive).
@@ -63,6 +70,7 @@ with no hand-typed configuration by the operator:
 - No `make import-*`, no `scripts/deployment/10X_Deploy_Script.sh`.
 
 ## CONSTRAINTS
+
 - **Secrets.** A private key never appears in chat, a report, a log you paste, a commit, an `ir.config_parameter`,
   or any file inside a git checkout. Print only public keys and key ids. Report environment variables by name, never by value.
 - Read before writing. Record the "before" value of every key you change.
@@ -74,10 +82,12 @@ with no hand-typed configuration by the operator:
 ---
 
 ## P0: How does the environment reach the Odoo process on Odoo.sh? (read only, both hosts)
+
 `gate_config.py` reads `GATE_URL` and `L9_*` from the **process environment only**. Odoo.sh documents no setting
 for that. Prove the mechanism before writing anything.
 
 On each host:
+
 ```bash
 # names only, never values
 for p in $(pgrep -f 'odoo-bin|odoo.service|/odoo/odoo' ); do tr '\0' '\n' < /proc/$p/environ 2>/dev/null | cut -d= -f1; done | grep -E '^(GATE_URL|L9_)' | sort -u
@@ -85,10 +95,12 @@ ls -la ~ ~/.config/odoo 2>/dev/null; grep -lE 'GATE_URL|L9_' ~/.bashrc ~/.profil
 grep -nE '^\s*\[|^\s*(addons_path|db_name)' ~/.config/odoo/odoo.conf 2>/dev/null | head
 cat /etc/os-release | head -2; id -un
 ```
+
 Also check the Odoo.sh UI, read only: Branches → <branch> → **Settings**, and project **Settings**. Look for any
 "environment variables" or similar field.
 
 Classify each host:
+
 - **M1, already set.** The variables are in the process environment. Find where they come from, and whether that
   source survives a new build (the Odoo.sh UI, or a file outside the build container).
 - **M2, persistent UI or project setting found.** Name the exact click path.
@@ -98,7 +110,9 @@ Classify each host:
 `odoo.conf`, which needs an ADR. Do not edit `odoo.conf` or a shell rc file as a workaround for M3.
 
 ## P1: Key pairs (this workstation, outside every git checkout)
+
 Production only (key id `odoo-plasticos-v1`).
+
 ```bash
 mkdir -p ~/.l9/gate-keys && chmod 700 ~/.l9/gate-keys && cd ~/.l9/gate-keys && umask 077
 for ENV in production; do ENV=$ENV python3 - <<'PY'
@@ -115,11 +129,13 @@ print(f"{env} public (base64):", base64.b64encode(pub).decode())
 PY
 done
 ```
+
 Report the public key and key id `odoo-plasticos-v1`. The CTO sends them to CTO CEG, which adds them in one Gate
 deploy together with the caller policy. Keep the private files until P2 is done. Delete them only when
 the CTO says so, because CEG's deploy must have the matching public key first.
 
 ## P2: Odoo process environment (Production only; mechanism from P0)
+
 **Gate G1.** Production's live code must contain Staging `0445b30`. Check with
 `git -C ~/src/user merge-base --is-ancestor 0445b30 HEAD && echo OK`. If it doesn't, stop and report.
 **Gate G2.** CTO CEG has confirmed that Gate is deployed with `odoo-plasticos-v1`, and `GATE_URL`, `GATE_KEY_ID` and
@@ -141,6 +157,7 @@ Then restart the Odoo server through the Odoo.sh-supported route the mechanism r
 All seven names must be present.
 
 ## P3: Staging System Parameters (`odoo-bin shell` on the Staging host)
+
 ```python
 icp = env['ir.config_parameter'].sudo()
 KEYS = ['plasticos.gate.org_id','plasticos.gate.matching_enabled','plasticos.gate.enrichment_enabled',
@@ -172,15 +189,18 @@ print('tenant', resolve_tenant(env)); print(resolve_converge_contract(env))
 env.cr.commit()
 print('AFTER', {k: icp.get_param(k) for k in KEYS})
 ```
+
 `resolve_tenant` must print `plasticos`. The resolver must print `contract='v2'`, `0.6.0`, and the sha above.
 
 ## P4: Production System Parameters (gate G1 must hold)
+
 Same block on the Production host (tenant `plasticos`). Before writing, the module line it prints must show
 `plasticos_gate` at `19.0.1.11.0` or later. That version exists on Production only after the Staging→Production
 promotion. If it is older, set only `org_id` and report. Leave the four v2 keys unset, because older code must not
 be pointed at the v2 contract.
 
 ## P5: Smoke checks (runbook §4; Production only)
+
 - **Staging check.** On Staging, the P0 names-only probe must print **nothing**: no `GATE_URL` and no `L9_*`.
 - **O1 (offline).** `cfg.admission_problems()` must print `[]`. `cfg.signing_key_id` must equal `odoo-plasticos-v1`,
   and `signing_algorithm` must be `ed25519`. Print no key values.
@@ -191,6 +211,7 @@ be pointed at the v2 contract.
   fields changed. Report run ids only, no partner names.
 
 ## DONE-CRITERIA
+
 - P0 has a verdict (M1, M2 or M3) for each host, with evidence.
 - Production's public key and key id have been handed back. No private key appeared anywhere.
 - The seven environment names are present on Production (names only), and none are present on Staging.
@@ -198,6 +219,7 @@ be pointed at the v2 contract.
 - O1, O2 and O3 have results, or the gate that stopped them is named.
 
 ## ACTIVATION: report back (paste into the CTO session)
+
 ```
 GATE-WIRING-RESULT
 P0 staging=<M1|M2|M3 + evidence>  production=<M1|M2|M3 + evidence>

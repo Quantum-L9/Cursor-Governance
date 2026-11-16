@@ -1,14 +1,14 @@
 # Session brief: Odoo campaign "ERP Catalog → Profiles → EIE"
 
-| Field | Value |
-|---|---|
-| Repository | `cryptoxdog/IB-Odoo_19` (branches `Staging`, `Production`) |
-| CTO session | `session_017xwbxuHzgYyNp8PADvkSnt` (Claude Code cloud, `/lcto` CTO mode) |
-| Period | 2026-11-13 to 2026-11-16 (UTC) |
-| Swarm | 11 coding agents (Opus 5.5, medium effort), all archived |
-| Staging head at close | `42db406` (#517) |
+| Field                    | Value                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Repository               | `cryptoxdog/IB-Odoo_19` (branches `Staging`, `Production`)                                                    |
+| CTO session              | `session_017xwbxuHzgYyNp8PADvkSnt` (Claude Code cloud, `/lcto` CTO mode)                                      |
+| Period                   | 2026-11-13 to 2026-11-16 (UTC)                                                                                |
+| Swarm                    | 11 coding agents (Opus 5.5, medium effort), all archived                                                      |
+| Staging head at close    | `42db406` (#517)                                                                                              |
 | Production head at close | `93c34c6`, "Merge Staging into Production"; contains `42db406` (verified with `git merge-base --is-ancestor`) |
-| Hand-off | to L CTO; this campaign has converged |
+| Hand-off                 | to L CTO; this campaign has converged                                                                         |
 
 ## 1. Outcome
 
@@ -16,36 +16,36 @@ The campaign's code is merged and promoted. On 2026-11-16 Production went from
 `cfbe504` (2026-11-10) to `93c34c6`: about 300 commits, 25+ module version bumps
 and more than 26 migrations. The merge used a merge commit, not a rebase.
 
-| Area | Delivered | PRs |
-|---|---|---|
-| ERP catalog → material profiles | Loader puts ERP material profiles on the exact ERP site partner; production refusal and single-run lock | #502 |
-| Matching hygiene | Match and offers are refused until the intake or lot has polymer and form. The refusal also covers manual drafts and send. | #504, #509 |
-| Escalation | Unresolved exceptions route to an Operations Manager, never the salesperson | #505 |
-| Gate converge v2 (EIE) | v2 codec (request builder, response parser, mapping table); typed, reviewed profile writeback against cartridge `plasticos` 0.6.0 | #506, #507; EIE cartridge PR #348 |
-| Enrichment sweep | Odoo side of the scheduled EIE buyer sweep. It follows the contract at `EIE@a606791:docs/contracts/enrichment-sweep.md` and ships **off** (ICP `plasticos.gate.sweep_enabled=0`, both crons inactive). | #512 |
-| Export module | Surgical fixes (stale booking confirmation, counts, holds, commit replay) | #503 |
-| Staging upgradability | Strip the stale inherited-view xpath that broke the upgrade; repair a broken crm_bridge anchor | #510 |
-| Clean build log | `res.partner.user_id` declared `recursive=True`; duplicate field labels removed | #511 |
-| Clean build log | Base modules stop declaring `partner_id` NOT NULL. The owner rule moves to an extensible constraint (partner, or a CRM-lead owner from crm_bridge). New CI test against relaxing a required field from a downstream module. | #514 |
-| Dev environment | `requirements-dev.txt` now pins the packages `ci.yml` installs (pyyaml, pre-commit, lxml), so `make venv` runs the CI suite | #513 |
-| Bales is packaging, never a form | Operator ruling 2026-11-16. Bales is retired as a form in profiles, the mapping sheet and its builder, `form_codes`, both form masters and the Gate payload. Colliding profiles are merged onto the form-less survivor; pairs it cannot merge are logged; the upgrade never aborts. Recurrence test added. | #517 |
-| Closed-offer integrity | `transaction_id` on a closed offer accepts only the first link of an accepted offer, including during state changes. A raw write can no longer cancel, reject or expire an accepted offer. | #517 |
+| Area                             | Delivered                                                                                                                                                                                                                                                                                                  | PRs                               |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| ERP catalog → material profiles  | Loader puts ERP material profiles on the exact ERP site partner; production refusal and single-run lock                                                                                                                                                                                                    | #502                              |
+| Matching hygiene                 | Match and offers are refused until the intake or lot has polymer and form. The refusal also covers manual drafts and send.                                                                                                                                                                                 | #504, #509                        |
+| Escalation                       | Unresolved exceptions route to an Operations Manager, never the salesperson                                                                                                                                                                                                                                | #505                              |
+| Gate converge v2 (EIE)           | v2 codec (request builder, response parser, mapping table); typed, reviewed profile writeback against cartridge `plasticos` 0.6.0                                                                                                                                                                          | #506, #507; EIE cartridge PR #348 |
+| Enrichment sweep                 | Odoo side of the scheduled EIE buyer sweep. It follows the contract at `EIE@a606791:docs/contracts/enrichment-sweep.md` and ships **off** (ICP `plasticos.gate.sweep_enabled=0`, both crons inactive).                                                                                                     | #512                              |
+| Export module                    | Surgical fixes (stale booking confirmation, counts, holds, commit replay)                                                                                                                                                                                                                                  | #503                              |
+| Staging upgradability            | Strip the stale inherited-view xpath that broke the upgrade; repair a broken crm_bridge anchor                                                                                                                                                                                                             | #510                              |
+| Clean build log                  | `res.partner.user_id` declared `recursive=True`; duplicate field labels removed                                                                                                                                                                                                                            | #511                              |
+| Clean build log                  | Base modules stop declaring `partner_id` NOT NULL. The owner rule moves to an extensible constraint (partner, or a CRM-lead owner from crm_bridge). New CI test against relaxing a required field from a downstream module.                                                                                | #514                              |
+| Dev environment                  | `requirements-dev.txt` now pins the packages `ci.yml` installs (pyyaml, pre-commit, lxml), so `make venv` runs the CI suite                                                                                                                                                                                | #513                              |
+| Bales is packaging, never a form | Operator ruling 2026-11-16. Bales is retired as a form in profiles, the mapping sheet and its builder, `form_codes`, both form masters and the Gate payload. Colliding profiles are merged onto the form-less survivor; pairs it cannot merge are logged; the upgrade never aborts. Recurrence test added. | #517                              |
+| Closed-offer integrity           | `transaction_id` on a closed offer accepts only the first link of an accepted offer, including during state changes. A raw write can no longer cancel, reject or expire an accepted offer.                                                                                                                 | #517                              |
 
 Every PR merged with CI Gate Result green. Every Copilot review thread on #516 and
 #517 was answered with the fixing commit and resolved.
 
 ## 2. Live state at close
 
-| Item | State | Evidence |
-|---|---|---|
-| Production code | `93c34c6`, containing Staging `42db406` | git ancestry, read 2026-11-16 |
-| Production Odoo.sh build of `93c34c6` | **Not observed by this session.** The operator owns this check. | — |
-| Bales retirement on real data | **Not observed.** Pure tests only; its first real runs are the Staging and Production upgrades. The update log carries the moved, merged and unresolved counts. | `plasticos_material_profile/bales_retirement.py` |
-| `plasticos_export` | Uninstalled, by operator decision 2026-11-15. Still uninstalled when last checked (Staging rebuild of 2026-11-16). | operator decision |
-| Gate (Constellation.Gate) | Not deployed. The operator **deferred** the deploy until testing is done and GitHub settings, keys and key ids are confirmed. | CTO CEG message, 2026-11-16 |
-| Odoo → Gate wiring | Blocked: Odoo.sh has no build-persistent process environment (Cursor probe P0 verdict **M3** on both hosts) | `GATE-WIRING-RESULT`, 2026-11-16 |
-| Converge contract on Production | v1 (seed default). The v2 ICP keys were never written to a surviving database (Staging's database was replaced by the 2026-11-16 rebuild). | — |
-| Enrichment sweep | Off everywhere | #512 defaults |
+| Item                                  | State                                                                                                                                                           | Evidence                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Production code                       | `93c34c6`, containing Staging `42db406`                                                                                                                         | git ancestry, read 2026-11-16                    |
+| Production Odoo.sh build of `93c34c6` | **Not observed by this session.** The operator owns this check.                                                                                                 | —                                                |
+| Bales retirement on real data         | **Not observed.** Pure tests only; its first real runs are the Staging and Production upgrades. The update log carries the moved, merged and unresolved counts. | `plasticos_material_profile/bales_retirement.py` |
+| `plasticos_export`                    | Uninstalled, by operator decision 2026-11-15. Still uninstalled when last checked (Staging rebuild of 2026-11-16).                                              | operator decision                                |
+| Gate (Constellation.Gate)             | Not deployed. The operator **deferred** the deploy until testing is done and GitHub settings, keys and key ids are confirmed.                                   | CTO CEG message, 2026-11-16                      |
+| Odoo → Gate wiring                    | Blocked: Odoo.sh has no build-persistent process environment (Cursor probe P0 verdict **M3** on both hosts)                                                     | `GATE-WIRING-RESULT`, 2026-11-16                 |
+| Converge contract on Production       | v1 (seed default). The v2 ICP keys were never written to a surviving database (Staging's database was replaced by the 2026-11-16 rebuild).                      | —                                                |
+| Enrichment sweep                      | Off everywhere                                                                                                                                                  | #512 defaults                                    |
 
 ## 3. Gate wiring: decisions recorded, work remaining
 
@@ -86,15 +86,15 @@ Remaining, in order:
 
 ## 4. Operator decisions owed
 
-| # | Decision | Context |
-|---|---|---|
-| D1 | #502: ERP product ids vs names in the loader input | raised during #502; unresolved |
-| D2 | 17 rejected ERP rows (OPAQUE, TRANSLUCENT, RESIN values) | the loader rejects them by design; mapping or exclusion is the operator's call |
-| D3 | Running the ERP material-profile loader on Production | the loader refuses production databases on purpose; a run needs an explicit permit and a code path |
-| D4 | Odoo Enterprise runtime tests | Operator constraint in force all campaign: none run. TransactionCase tests that exist but have **never run**: offer link freeze, raw-close transitions, Bales runtime, #507 lane B, #505. |
-| D5 | Gate settings carrier (§3 step 1) | ADR needed before any Odoo↔Gate traffic |
-| D6 | Gate deploy go-ahead (C1) | deferred by the operator |
-| D7 | Orphan material/facility profiles with no partner and no lead | #514's upgrade report logs any it finds; the operator decides what to do with them |
+| #   | Decision                                                      | Context                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | #502: ERP product ids vs names in the loader input            | raised during #502; unresolved                                                                                                                                                            |
+| D2  | 17 rejected ERP rows (OPAQUE, TRANSLUCENT, RESIN values)      | the loader rejects them by design; mapping or exclusion is the operator's call                                                                                                            |
+| D3  | Running the ERP material-profile loader on Production         | the loader refuses production databases on purpose; a run needs an explicit permit and a code path                                                                                        |
+| D4  | Odoo Enterprise runtime tests                                 | Operator constraint in force all campaign: none run. TransactionCase tests that exist but have **never run**: offer link freeze, raw-close transitions, Bales runtime, #507 lane B, #505. |
+| D5  | Gate settings carrier (§3 step 1)                             | ADR needed before any Odoo↔Gate traffic                                                                                                                                                   |
+| D6  | Gate deploy go-ahead (C1)                                     | deferred by the operator                                                                                                                                                                  |
+| D7  | Orphan material/facility profiles with no partner and no lead | #514's upgrade report logs any it finds; the operator decides what to do with them                                                                                                        |
 
 ## 5. Risks carried into Production
 
