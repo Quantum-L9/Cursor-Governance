@@ -189,6 +189,31 @@ def idempotency_key(summary: dict[str, Any], fallback: dict[str, Any]) -> str:
 OWN_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _derived_agent_id() -> str:
+    """The writing agent derived from host markers (ops/memory/agent_identity.py).
+
+    The fallback used to be the literal ``cursor``, so every Claude Code publish
+    fact was tagged ``agent:cursor``. Derivation comes first; "" when unknown.
+    """
+    try:
+        if str(OWN_ROOT) not in sys.path:
+            sys.path.insert(0, str(OWN_ROOT))
+        from ops.memory.agent_identity import resolve_agent_id  # noqa: PLC0415
+
+        return resolve_agent_id()
+    except Exception:  # noqa: BLE001 - attribution falls back, never blocks publish
+        return ""
+
+
+def _outcome_status(stdout: str) -> str:
+    """The CLI document's ``status`` (e.g. ``RELAYED``), or "" when unparseable."""
+    try:
+        document = json.loads(stdout)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return ""
+    return str(document.get("status") or "") if isinstance(document, dict) else ""
+
+
 def _interpreter(gov_root: Path) -> Path:
     for root in (OWN_ROOT, gov_root):
         locked = root / ".venv" / "bin" / "python"
@@ -308,7 +333,9 @@ def main(argv: list[str] | None = None) -> int:
         "head_sha": args.head_sha,
     }
     remediates = str(args.pr_remediate).strip() == "1"
-    agent_id = args.agent_id or os.environ.get("L9_MEMORY_AGENT_ID") or "cursor"
+    agent_id = (
+        args.agent_id or _derived_agent_id() or os.environ.get("L9_MEMORY_AGENT_ID") or "cursor"
+    )
 
     if not _enabled():
         print("pr publish memory: SKIP (disabled)")
@@ -356,10 +383,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     proc = run_write(argv_write, cwd=OWN_ROOT)
     status = "OK" if proc.returncode == 0 else "WARN"
+    if proc.returncode == 0 and _outcome_status(proc.stdout or "") == "RELAYED":
+        # CANONICAL_LAW §8.11: queued for the account connector; the Stop hook
+        # asks the agent to write it to the shared store and ack the receipt.
+        status = "RELAYED"
     preview = (proc.stdout or proc.stderr or "").strip().splitlines()
     tail = preview[-1] if preview else f"exit {proc.returncode}"
+    if status == "RELAYED":
+        tail = "queued for the account Memory connector; the Stop hook will ask for it"
     print(f"pr publish memory: {status} ({tail[:200]})")
-    if status != "OK":
+    if status not in {"OK", "RELAYED"}:
         _loud(
             f"publish fact for {args.repo}#{args.number} was NOT written to memory "
             f"(exit {proc.returncode}): {tail[:200]}"
