@@ -159,35 +159,60 @@ All seven names must be present.
 ## P3: Staging System Parameters (`odoo-bin shell` on the Staging host)
 
 ```python
-icp = env['ir.config_parameter'].sudo()
-KEYS = ['plasticos.gate.org_id','plasticos.gate.matching_enabled','plasticos.gate.enrichment_enabled',
-        'plasticos.gate.timeout_seconds','plasticos.gate.auto_writeback','plasticos.gate.auto_writeback_operator_approved',
-        'plasticos.gate.allow_insecure_http','plasticos.gate.sweep_enabled',
-        'plasticos.gate.converge_contract','plasticos.gate.converge_cartridge_id',
-        'plasticos.gate.converge_cartridge_version','plasticos.gate.converge_cartridge_sha256']
-print('BEFORE', {k: icp.get_param(k) for k in KEYS})
-mods = env['ir.module.module'].search([('name','in',['plasticos_gate','plasticos_enrichment','plasticos_export'])])
+icp = env["ir.config_parameter"].sudo()
+KEYS = [
+    "plasticos.gate.org_id",
+    "plasticos.gate.matching_enabled",
+    "plasticos.gate.enrichment_enabled",
+    "plasticos.gate.timeout_seconds",
+    "plasticos.gate.auto_writeback",
+    "plasticos.gate.auto_writeback_operator_approved",
+    "plasticos.gate.allow_insecure_http",
+    "plasticos.gate.sweep_enabled",
+    "plasticos.gate.converge_contract",
+    "plasticos.gate.converge_cartridge_id",
+    "plasticos.gate.converge_cartridge_version",
+    "plasticos.gate.converge_cartridge_sha256",
+]
+print("BEFORE", {k: icp.get_param(k) for k in KEYS})
+mods = env["ir.module.module"].search(
+    [("name", "in", ["plasticos_gate", "plasticos_enrichment", "plasticos_export"])]
+)
 print({m.name: (m.state, m.latest_version) for m in mods})
-assert dict((m.name, m.state) for m in mods).get('plasticos_export', 'uninstalled') == 'uninstalled'
+assert dict((m.name, m.state) for m in mods).get("plasticos_export", "uninstalled") == "uninstalled"
 # tenant
-icp.set_param('plasticos.gate.org_id', 'plasticos')
+icp.set_param("plasticos.gate.org_id", "plasticos")
 # v2 converge contract against cartridge plasticos 0.6.0
-icp.set_param('plasticos.gate.converge_contract', 'v2')
-icp.set_param('plasticos.gate.converge_cartridge_id', 'plasticos')
-icp.set_param('plasticos.gate.converge_cartridge_version', '0.6.0')
-icp.set_param('plasticos.gate.converge_cartridge_sha256', '590f0fdb6ce1181b4a716f3e00512bf5425ba42d266208aa4dab18afca8dafdb')
+icp.set_param("plasticos.gate.converge_contract", "v2")
+icp.set_param("plasticos.gate.converge_cartridge_id", "plasticos")
+icp.set_param("plasticos.gate.converge_cartridge_version", "0.6.0")
+icp.set_param(
+    "plasticos.gate.converge_cartridge_sha256",
+    "590f0fdb6ce1181b4a716f3e00512bf5425ba42d266208aa4dab18afca8dafdb",
+)
 # verify-only: these must already hold their seeded values; report any difference, do not change it
-expect = {'plasticos.gate.matching_enabled': '1', 'plasticos.gate.timeout_seconds': '30',
-          'plasticos.gate.auto_writeback': '0', 'plasticos.gate.allow_insecure_http': None,
-          'plasticos.gate.sweep_enabled': '0'}
-print('DRIFT', {k: icp.get_param(k) for k, v in expect.items() if (icp.get_param(k) or None) != v})
-print('enrichment_enabled =', icp.get_param('plasticos.gate.enrichment_enabled'))   # report, leave as is
-crons = env['ir.cron'].with_context(active_test=False).search([('name','ilike','sweep')])
-print('sweep crons', [(c.name, c.active) for c in crons])   # all must be False
-from odoo.addons.plasticos_gate.services.gate_config import resolve_converge_contract, resolve_tenant
-print('tenant', resolve_tenant(env)); print(resolve_converge_contract(env))
+expect = {
+    "plasticos.gate.matching_enabled": "1",
+    "plasticos.gate.timeout_seconds": "30",
+    "plasticos.gate.auto_writeback": "0",
+    "plasticos.gate.allow_insecure_http": None,
+    "plasticos.gate.sweep_enabled": "0",
+}
+print("DRIFT", {k: icp.get_param(k) for k, v in expect.items() if (icp.get_param(k) or None) != v})
+print(
+    "enrichment_enabled =", icp.get_param("plasticos.gate.enrichment_enabled")
+)  # report, leave as is
+crons = env["ir.cron"].with_context(active_test=False).search([("name", "ilike", "sweep")])
+print("sweep crons", [(c.name, c.active) for c in crons])  # all must be False
+from odoo.addons.plasticos_gate.services.gate_config import (
+    resolve_converge_contract,
+    resolve_tenant,
+)
+
+print("tenant", resolve_tenant(env))
+print(resolve_converge_contract(env))
 env.cr.commit()
-print('AFTER', {k: icp.get_param(k) for k in KEYS})
+print("AFTER", {k: icp.get_param(k) for k in KEYS})
 ```
 
 `resolve_tenant` must print `plasticos`. The resolver must print `contract='v2'`, `0.6.0`, and the sha above.
