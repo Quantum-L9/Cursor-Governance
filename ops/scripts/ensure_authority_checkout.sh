@@ -61,10 +61,11 @@ FETCH_CAUSE="offline, no GitHub credential for the private repository, or a Clau
 
 fetch_main() {
   # A full fetch of main; unshallows a shallow checkout in the same call.
-  if [ "$(g "$1" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
-    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch --quiet --unshallow origin "+refs/heads/main:refs/remotes/origin/main"
+  local repo="$1"
+  if [ "$(g "$repo" rev-parse --is-shallow-repository 2>/dev/null)" = "true" ]; then
+    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$repo" fetch --quiet --unshallow origin "+refs/heads/main:refs/remotes/origin/main"
   else
-    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$1" fetch --quiet origin "+refs/heads/main:refs/remotes/origin/main"
+    GIT_TERMINAL_PROMPT=0 git ${AUTH[@]+"${AUTH[@]}"} -C "$repo" fetch --quiet origin "+refs/heads/main:refs/remotes/origin/main"
   fi
 }
 
