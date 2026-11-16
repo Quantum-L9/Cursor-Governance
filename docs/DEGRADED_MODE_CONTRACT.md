@@ -480,3 +480,38 @@ throwaway bare repository). Both transports failing is still an error. Callers:
 back to the governance fork's copy on this surface). The guard in
 `ops/scripts/tests/test_org_dotgithub.py` fails any other module that calls the
 REST route directly.
+
+## Org `.github` reads, 2026-11-16 — `Quantum-L9/.github` is private; supersedes the git and raw rows of 2026-10-21
+
+The owner made `Quantum-L9/.github` private. The 2026-10-21 git row (`ls-remote`
+answered with no credential) and raw row (`200`) held only because the repository
+was public, so the anonymous transport the reader fell back to no longer exists.
+
+| Probe | Session started **without** `.github` (owner's screenshot, 2026-11-16) | Session started **with** `.github` (this container, `Quantum-L9/Cursor-Governance` @ `890c2ba`) |
+|---|---|---|
+| `gh api repos/Quantum-L9/.github/contents/.github/pull_request_template.md` | `403` — "GitHub access to this repository is not enabled for this session" | `200`; `repos/Quantum-L9/.github` reports `private: true` |
+| `git ls-remote https://github.com/Quantum-L9/.github HEAD`, `GIT_TERMINAL_PROMPT=0` | `fatal: could not read Username for 'https://github.com': terminal prompts disabled` | `dd780b9…` |
+| `add_repo Quantum-L9/.github` | refused: name begins with `.` | not needed |
+| same `ls-remote` with `-c credential.helper='!gh auth git-credential'` | not probed | `dd780b9…` (the helper does not disturb the proxy's own git credential) |
+| `gh api repos/Quantum-L9/.github/actions/permissions/access` | not probed | `403` — "Access to this GitHub Actions path is not permitted through this proxy" |
+
+**Consequence.**
+
+- On a Claude Code cloud session `<owner>/.github` is reachable only when the
+  session was **started** with it selected; nothing inside the session can widen
+  that. `org_dotgithub.read_org_file` now says so in its error when REST reports
+  the session-scope refusal and git also fails.
+- Both readers (`org_dotgithub.git_read`, `ensure_authority_checkout.sh`) offer
+  `gh auth git-credential` after any helper already configured, so local surfaces
+  whose `gh` can read the repository keep working. Still fail-closed; still no
+  stale fallback.
+- In GitHub Actions a repository's `GITHUB_TOKEN` cannot read `.github`. Trusted
+  (non-PR) checkouts pass `secrets.GH_TOKEN`, never persisted. PR-triggered verify
+  jobs hold no secret by contract and cannot read it; that needs an owner decision.
+- GitHub serves org-wide default community-health files only from a **public**
+  `.github` (GitHub docs, "Creating a default community health file"). Repositories
+  without their own copies stop inheriting them.
+- Reusable workflows under `Quantum-L9/.github/.github/workflows/` resolve for
+  other repositories only when the repository's Actions access setting is
+  "Accessible from repositories in the organization" — a human setting this
+  surface cannot read or change.
