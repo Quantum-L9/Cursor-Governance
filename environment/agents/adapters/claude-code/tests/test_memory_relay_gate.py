@@ -57,8 +57,8 @@ class RelayGateTests(unittest.TestCase):
         self.wb = wb
         self._patches = [
             mock.patch.dict(sys.modules, {"ops.memory.relay": self.relay}),
-            mock.patch.object(wb.mb, "ensure_importable", lambda *a, **k: REPO_ROOT),
-            mock.patch.object(wb.mb, "find_governance_root", lambda *a, **k: self.gov),
+            mock.patch.object(wb.mb, "ensure_importable", return_value=REPO_ROOT),
+            mock.patch.object(wb.mb, "find_governance_root", return_value=self.gov),
             mock.patch.object(wb, "_shared_workspace_roots", lambda ws, cap=64: [self.root]),
         ]
         for patcher in self._patches:

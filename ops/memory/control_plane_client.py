@@ -269,6 +269,32 @@ class MemoryControlPlaneClient:
     def _carrier(self) -> str:
         return resolve_carrier(self._carrier_env)
 
+    def _distill_on_relay(self, namespace: str) -> OperationOutcome | None:
+        """Distill is not run on a relay surface; ``None`` on a local one.
+
+        Distill extracts and admits records inside the runtime it runs in;
+        locally that is container scratch, and the hosted service distills
+        server-side only (§8.10 item 7). Not relayed, not run.
+        """
+
+        try:
+            relay_surface = self._carrier() == RELAY
+        except CarrierError as exc:
+            return self._outcome(
+                "distill",
+                OutcomeStatus.BINDING_FAILED,
+                _Raw(None, None, "CarrierError", str(exc), 0),
+                namespaces=(namespace,),
+            )
+        if not relay_surface:
+            return None
+        return self._outcome(
+            "distill",
+            OutcomeStatus.NOT_COMMITTED,
+            _Raw(None, None, None, "relay carrier: distill is not run on a relay surface", 0),
+            namespaces=(namespace,),
+        )
+
     def _relayed(
         self,
         operation: str,
@@ -1093,25 +1119,8 @@ class MemoryControlPlaneClient:
             provenance=bool(namespace and source_bytes is not None),
         ):
             return guard
-        try:
-            relay_surface = self._carrier() == RELAY
-        except CarrierError as exc:
-            return self._outcome(
-                "distill",
-                OutcomeStatus.BINDING_FAILED,
-                _Raw(None, None, "CarrierError", str(exc), 0),
-                namespaces=(namespace,),
-            )
-        if relay_surface:
-            # Distill extracts and admits records inside the runtime it runs
-            # in; locally that is container scratch, and the hosted service
-            # distills server-side only (§8.10 item 7). Not relayed, not run.
-            return self._outcome(
-                "distill",
-                OutcomeStatus.NOT_COMMITTED,
-                _Raw(None, None, None, "relay carrier: distill is not run on a relay surface", 0),
-                namespaces=(namespace,),
-            )
+        if skipped := self._distill_on_relay(namespace):
+            return skipped
         namespaces = (namespace,)
         argv = self._distill_argv(source_path, namespace, repository, dry_run=dry_run)
         if self.envelope is not None and not dry_run:

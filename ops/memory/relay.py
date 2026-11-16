@@ -35,6 +35,7 @@ import contextlib
 import fcntl
 import hashlib
 import json
+import os
 import sys
 import uuid
 from collections.abc import Iterator, Mapping, Sequence
@@ -60,8 +61,40 @@ class RelayError(ValueError):
     """An outbox operation was refused; the message says why."""
 
 
+#: Files the relay may open, by fixed name only.
+RELAY_FILES = frozenset({OUTBOX_NAME, ACKS_NAME, ".lock", "gate.json"})
+
+
 def relay_dir(workspace: str | Path) -> Path:
-    return Path(workspace) / RELAY_REL
+    """``<workspace>/.l9/memory/relay``, bounded to a real repository root.
+
+    ``workspace`` reaches here from hook state and from the ``--workspace`` the
+    agent passes, so it is never trusted as given: it must resolve to a git
+    repository root, and the relay directory must resolve inside it.
+    """
+    root_r = os.path.realpath(os.path.expanduser(str(workspace)))
+    if not os.path.exists(os.path.join(root_r, ".git")):
+        msg = f"{workspace} is not a repository root (no .git); refusing to place a relay outbox"
+        raise RelayError(msg)
+    relay_r = os.path.realpath(os.path.join(root_r, *RELAY_REL.parts))
+    if os.path.commonpath([root_r, relay_r]) != root_r:
+        msg = f"relay directory escapes {root_r}"
+        raise RelayError(msg)
+    return Path(relay_r)
+
+
+def relay_file(directory: Path, name: str) -> Path:
+    """One of the relay's fixed files, resolved inside ``directory``."""
+
+    if name not in RELAY_FILES:
+        msg = f"{name!r} is not a relay file"
+        raise RelayError(msg)
+    dir_r = os.path.realpath(str(directory))
+    path_r = os.path.realpath(os.path.join(dir_r, name))
+    if os.path.commonpath([dir_r, path_r]) != dir_r:
+        msg = f"{name!r} escapes {dir_r}"
+        raise RelayError(msg)
+    return Path(path_r)
 
 
 def entry_id(operation: str, tool: str, arguments: Mapping[str, Any]) -> str:
@@ -78,8 +111,10 @@ def entry_id(operation: str, tool: str, arguments: Mapping[str, Any]) -> str:
 
 @contextlib.contextmanager
 def _locked(directory: Path) -> Iterator[None]:
-    directory.mkdir(parents=True, exist_ok=True)
-    with (directory / ".lock").open("a", encoding="utf-8") as handle:
+    # directory is relay_dir()'s bounded result; the lock is a fixed relay file.
+    directory.mkdir(parents=True, exist_ok=True)  # NOSONAR pythonsecurity:S8707
+    lock = relay_file(directory, ".lock")
+    with lock.open("a", encoding="utf-8") as handle:  # NOSONAR pythonsecurity:S8707
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             yield
@@ -91,7 +126,8 @@ def _read(path: Path) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
     rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    # path is relay_file()'s bounded result (fixed name inside relay_dir()).
+    for line in path.read_text(encoding="utf-8").splitlines():  # NOSONAR pythonsecurity:S8707
         line = line.strip()
         if not line:
             continue
@@ -106,7 +142,8 @@ def _read(path: Path) -> list[dict[str, Any]]:
 
 
 def _append(path: Path, row: Mapping[str, Any]) -> None:
-    with path.open("a", encoding="utf-8") as handle:
+    # path is relay_file()'s bounded result (fixed name inside relay_dir()).
+    with path.open("a", encoding="utf-8") as handle:  # NOSONAR pythonsecurity:S8707
         handle.write(json.dumps(dict(row), sort_keys=True, ensure_ascii=False) + "\n")
 
 
@@ -126,7 +163,7 @@ def enqueue(
     directory = relay_dir(workspace)
     ident = entry_id(operation, tool, arguments)
     with _locked(directory):
-        for row in _read(directory / OUTBOX_NAME):
+        for row in _read(relay_file(directory, OUTBOX_NAME)):
             if row.get("id") == ident:
                 return row
         row = {
@@ -137,19 +174,23 @@ def enqueue(
             "arguments": dict(arguments),
             "created_at": datetime.now(UTC).isoformat(),
         }
-        _append(directory / OUTBOX_NAME, row)
+        _append(relay_file(directory, OUTBOX_NAME), row)
     return row
 
 
 def acks(workspace: str | Path) -> dict[str, dict[str, Any]]:
-    return {str(row.get("id")): row for row in _read(relay_dir(workspace) / ACKS_NAME)}
+    return {str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), ACKS_NAME))}
 
 
 def pending(workspace: str | Path) -> list[dict[str, Any]]:
     """Outbox entries with no acknowledgement, oldest first."""
 
     acked = acks(workspace)
-    return [row for row in _read(relay_dir(workspace) / OUTBOX_NAME) if row.get("id") not in acked]
+    return [
+        row
+        for row in _read(relay_file(relay_dir(workspace), OUTBOX_NAME))
+        if row.get("id") not in acked
+    ]
 
 
 def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
@@ -162,15 +203,15 @@ def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
         raise RelayError(msg) from exc
     directory = relay_dir(workspace)
     with _locked(directory):
-        if not any(row.get("id") == ident for row in _read(directory / OUTBOX_NAME)):
+        if not any(row.get("id") == ident for row in _read(relay_file(directory, OUTBOX_NAME))):
             msg = f"no outbox entry {ident!r} in {directory}"
             raise RelayError(msg)
-        existing = {str(row.get("id")): row for row in _read(directory / ACKS_NAME)}
+        existing = {str(row.get("id")): row for row in _read(relay_file(directory, ACKS_NAME))}
         if ident in existing:
             return existing[ident]
         row = {"id": ident, "receipt_id": receipt, "acked_at": datetime.now(UTC).isoformat()}
-        _append(directory / ACKS_NAME, row)
-        entry = next(r for r in _read(directory / OUTBOX_NAME) if r.get("id") == ident)
+        _append(relay_file(directory, ACKS_NAME), row)
+        entry = next(r for r in _read(relay_file(directory, OUTBOX_NAME)) if r.get("id") == ident)
     if entry.get("operation") == "close":
         _discharge_close(Path(workspace), entry.get("arguments") or {}, receipt)
     return row
@@ -252,25 +293,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     ack_p.add_argument("id")
     ack_p.add_argument("--receipt", required=True)
     args = parser.parse_args(argv)
-    workspace = Path(args.workspace).resolve()
-    if args.command == "pending":
-        print(json.dumps(pending(workspace), indent=2, sort_keys=True, ensure_ascii=False))
-        return 0
-    if args.command == "status":
-        owed = pending(workspace)
-        total = len(_read(relay_dir(workspace) / OUTBOX_NAME))
-        print(json.dumps({"total": total, "acked": total - len(owed), "pending": len(owed)}))
-        return 0
-    if args.command == "instructions":
-        owed = pending(workspace)
-        print(instruction(workspace, owed) if owed else "L9 MEMORY RELAY — nothing owed")
-        return 0
     try:
-        row = ack(workspace, args.id, args.receipt)
+        return _run(args.command, Path(args.workspace), args)
     except RelayError as exc:
         print(f"relay: REFUSED — {exc}", file=sys.stderr)
         return 1
-    print(json.dumps(row, sort_keys=True))
+
+
+def _run(command: str, workspace: Path, args: argparse.Namespace) -> int:
+    if command == "pending":
+        print(json.dumps(pending(workspace), indent=2, sort_keys=True, ensure_ascii=False))
+    elif command == "status":
+        owed = pending(workspace)
+        total = len(_read(relay_file(relay_dir(workspace), OUTBOX_NAME)))
+        print(json.dumps({"total": total, "acked": total - len(owed), "pending": len(owed)}))
+    elif command == "instructions":
+        owed = pending(workspace)
+        print(instruction(workspace, owed) if owed else "L9 MEMORY RELAY — nothing owed")
+    else:
+        print(json.dumps(ack(workspace, args.id, args.receipt), sort_keys=True))
     return 0
 
 

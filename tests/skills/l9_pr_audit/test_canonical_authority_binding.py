@@ -9,7 +9,6 @@ import hashlib
 import importlib.util
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -18,6 +17,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dotgithub_read_secret import assert_only_dotgithub_read_secret  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[3]
 PACK = REPO / "skills/l9-pr-audit"
@@ -893,26 +895,6 @@ def test_citation_pointer_must_resolve() -> None:
     assert report["citation"]["refused"] == "CITATION_SOURCE_CLASS_UNKNOWN"
 
 
-#: The one secret a pull-request workflow may hold: a read-only token scoped to the
-#: private Quantum-L9/.github (docs/DEGRADED_MODE_CONTRACT.md, 2026-11-16). It may
-#: appear only as the token of a non-persisted checkout of that repository.
-DOTGITHUB_READ_SECRET = "secrets.L9_GITHUB_READ_TOKEN"
-
-
-def _assert_only_dotgithub_read_secret(workflow: dict, text: str) -> None:
-    assert set(re.findall(r"secrets\.[A-Za-z0-9_]+", text)) <= {DOTGITHUB_READ_SECRET}
-    for job in workflow["jobs"].values():
-        for step in job.get("steps", []):
-            if DOTGITHUB_READ_SECRET not in json.dumps(step):
-                continue
-            with_ = step.get("with") or {}
-            assert str(step.get("uses", "")).startswith("actions/checkout@")
-            assert with_.get("repository") == "Quantum-L9/.github"
-            assert with_.get("token") == "${{ " + DOTGITHUB_READ_SECRET + " }}"
-            assert with_.get("persist-credentials") is False
-            assert set(step) <= {"name", "if", "uses", "with"}, "only the checkout sees it"
-
-
 def test_generation_holds_no_repository_publication_authority() -> None:
     """The bundle workflow and driver generate and verify; they never publish a change."""
     workflow_path = REPO / ".github/workflows/l9-projection-bundle-verify.yml"
@@ -922,7 +904,7 @@ def test_generation_holds_no_repository_publication_authority() -> None:
     assert workflow["permissions"] == {"contents": "read"}
     for job in workflow["jobs"].values():
         assert job["permissions"] == {"contents": "read"}
-    _assert_only_dotgithub_read_secret(workflow, workflow_path.read_text())
+    assert_only_dotgithub_read_secret(workflow, workflow_path.read_text())
     assert "secrets." not in PRODUCER.read_text()
     for text in (workflow_path.read_text(), PRODUCER.read_text()):
         for forbidden in ("git push", '"push"', "git commit", '"commit"', "gh pr", '"gh"'):

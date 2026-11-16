@@ -201,7 +201,8 @@ def _derived_agent_id() -> str:
         from ops.memory.agent_identity import resolve_agent_id  # noqa: PLC0415
 
         return resolve_agent_id()
-    except Exception:  # noqa: BLE001 - attribution falls back, never blocks publish
+    except Exception:  # noqa: BLE001
+        # Attribution falls back to the configured value; it never blocks a publish.
         return ""
 
 
@@ -209,7 +210,7 @@ def _outcome_status(stdout: str) -> str:
     """The CLI document's ``status`` (e.g. ``RELAYED``), or "" when unparseable."""
     try:
         document = json.loads(stdout)
-    except (json.JSONDecodeError, TypeError, ValueError):
+    except (TypeError, ValueError):  # json.JSONDecodeError is a ValueError
         return ""
     return str(document.get("status") or "") if isinstance(document, dict) else ""
 

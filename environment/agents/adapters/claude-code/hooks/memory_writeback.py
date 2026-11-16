@@ -335,6 +335,46 @@ RELAY_MAX_ASKS = 3
 RELAY_GATE_NAME = "gate.json"
 
 
+def _relay_roots(workspace: Path) -> list[Path]:
+    """Repository roots whose outbox the gate reads, governance clone included.
+
+    ``governance_handoff_writeback`` queues under the governance clone, which a
+    consumer workspace's roots do not include.
+    """
+    candidates = list(_shared_workspace_roots(workspace, cap=64) or [workspace])
+    try:
+        candidates.append(Path(mb.find_governance_root()))
+    except Exception:  # noqa: BLE001 - fail-open; the workspace roots still count
+        pass
+    roots: list[Path] = []
+    for candidate in candidates:
+        resolved = Path(candidate).resolve()
+        if resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def _load_asks(gate_path: Path) -> dict[str, int]:
+    """How often each entry was asked for; empty when unreadable."""
+    try:
+        # gate_path is relay.relay_file()'s bounded result (fixed name in relay_dir()).
+        asks = json.loads(gate_path.read_text(encoding="utf-8"))  # NOSONAR pythonsecurity:S2083
+    except (OSError, ValueError):
+        return {}
+    return asks if isinstance(asks, dict) else {}
+
+
+def _save_asks(gate_path: Path, asks: dict[str, int]) -> None:
+    try:
+        # gate_path is relay.relay_file()'s bounded result (fixed name in relay_dir()).
+        body = json.dumps(asks, sort_keys=True)
+        gate_path.write_text(body, encoding="utf-8")  # NOSONAR pythonsecurity:S2083
+    except OSError as exc:
+        # Fail-open: the request still goes out; only the ask count is not
+        # persisted, so this entry may be asked for once more than the cap.
+        print(f"memory-relay: ask count not saved ({exc}); continuing", file=sys.stderr)
+
+
 def _relay_gate(workspace: Path) -> str | None:
     """Block reason for owed relay entries (CANONICAL_LAW §8.11), or ``None``.
 
@@ -350,32 +390,15 @@ def _relay_gate(workspace: Path) -> str | None:
         return None
     reasons: list[str] = []
     exhausted: list[str] = []
-    roots: list[Path] = []
-    candidates = list(_shared_workspace_roots(workspace, cap=64) or [workspace])
-    try:
-        # governance_handoff_writeback queues under the governance clone, which a
-        # consumer workspace's roots do not include.
-        candidates.append(Path(mb.find_governance_root()))
-    except Exception:  # noqa: BLE001 - fail-open
-        pass
-    for candidate in candidates:
-        resolved = Path(candidate).resolve()
-        if resolved not in roots:
-            roots.append(resolved)
-    for root in roots:
+    for root in _relay_roots(workspace):
         try:
             owed = relay.pending(root)
-        except OSError:
+            gate_path = relay.relay_file(relay.relay_dir(root), RELAY_GATE_NAME)
+        except (OSError, relay.RelayError):
             continue
         if not owed:
             continue
-        gate_path = relay.relay_dir(root) / RELAY_GATE_NAME
-        try:
-            asks = json.loads(gate_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            asks = {}
-        if not isinstance(asks, dict):
-            asks = {}
+        asks = _load_asks(gate_path)
         askable = [row for row in owed if int(asks.get(str(row.get("id")), 0)) < RELAY_MAX_ASKS]
         if not askable:
             exhausted.append(f"{root}: {len(owed)} entr(ies)")
@@ -383,18 +406,13 @@ def _relay_gate(workspace: Path) -> str | None:
         for row in askable:
             ident = str(row.get("id"))
             asks[ident] = int(asks.get(ident, 0)) + 1
-        try:
-            gate_path.write_text(json.dumps(asks, sort_keys=True), encoding="utf-8")
-        except OSError as exc:
-            # Fail-open: the request still goes out; only the ask count is not
-            # persisted, so this entry may be asked for once more than the cap.
-            print(f"memory-relay: ask count not saved ({exc}); continuing", file=sys.stderr)
+        _save_asks(gate_path, asks)
         reasons.append(relay.instruction(root, askable))
     if exhausted:
         print(
             "memory-relay: STILL OWED after "
             f"{RELAY_MAX_ASKS} requests, no longer blocking — {'; '.join(exhausted)} "
-            "(python -m ops.memory.relay instructions --workspace <repo>)",
+            "(python -m ops.memory.relay --workspace <repo> instructions)",
             file=sys.stderr,
         )
     return "\n\n".join(reasons) or None

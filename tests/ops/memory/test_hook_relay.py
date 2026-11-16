@@ -23,6 +23,12 @@ from ops.memory.runtime_binding import RuntimeBinding
 NS = "cursor-governance"
 
 
+@pytest.fixture(autouse=True)
+def _repository_root(tmp_path: Path) -> None:
+    """The relay places its outbox only in a repository root (relay_dir bound)."""
+    (tmp_path / ".git").mkdir()
+
+
 @pytest.fixture
 def relay_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(CARRIER_ENV, "relay")
@@ -322,3 +328,35 @@ def test_a_close_ack_for_another_key_leaves_the_obligation_open(tmp_path) -> Non
     )
     relay.ack(tmp_path, str(entry["id"]), str(uuid.uuid4()))
     assert latches.receipt_is_close_gap(latches.load_close_receipt(tmp_path, "sess-1"))
+
+
+# --- path bounds (SonarCloud S2083 / S8707 on #1008) --------------------------
+
+
+def test_relay_dir_refuses_a_directory_that_is_not_a_repository(tmp_path) -> None:
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    with pytest.raises(relay.RelayError, match="not a repository root"):
+        relay.relay_dir(plain)
+
+
+def test_relay_dir_refuses_a_relay_path_that_escapes_the_repository(tmp_path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    (tmp_path / ".l9").mkdir()
+    (tmp_path / ".l9" / "memory").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(relay.RelayError, match="escapes"):
+        relay.relay_dir(tmp_path)
+
+
+@pytest.mark.parametrize("name", ["../outbox.jsonl", "other.json", "/etc/passwd"])
+def test_relay_file_opens_only_its_fixed_names(tmp_path, name) -> None:
+    with pytest.raises(relay.RelayError):
+        relay.relay_file(relay.relay_dir(tmp_path), name)
+
+
+def test_cli_refuses_a_workspace_that_is_not_a_repository(tmp_path, capsys) -> None:
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert relay.main(["--workspace", str(plain), "status"]) == 1
+    assert "not a repository root" in capsys.readouterr().err
