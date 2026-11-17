@@ -4,8 +4,17 @@
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import sys
+
+
+def safe_path(path):
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(os.getcwd())
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
 
 
 def evaluate(cases, receipts):
@@ -87,18 +96,18 @@ def evaluate(cases, receipts):
     }
 
 
-def main():
+def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--cases", required=True)
     p.add_argument("--receipts")
     p.add_argument("--out")
-    a = p.parse_args()
-    cases = json.loads(pathlib.Path(a.cases).read_text())
-    receipts = json.loads(pathlib.Path(a.receipts).read_text()) if a.receipts else []
+    a = p.parse_args(argv)
+    cases = json.loads(pathlib.Path(safe_path(a.cases)).read_text())
+    receipts = json.loads(pathlib.Path(safe_path(a.receipts)).read_text()) if a.receipts else []
     result = evaluate(cases, receipts)
     data = json.dumps(result, indent=2)
     if a.out:
-        pathlib.Path(a.out).write_text(data + "\n")
+        pathlib.Path(safe_path(a.out)).write_text(data + "\n")
     print(data)
     return (
         0

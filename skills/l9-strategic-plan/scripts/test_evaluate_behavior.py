@@ -1,31 +1,19 @@
 import hashlib
-import sys
+import json
+import os
+import tempfile
 from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-evaluate = _load_sibling("evaluate_behavior").evaluate
+_behavior = load_sibling("evaluate_behavior")
+evaluate = _behavior.evaluate
+safe_path = _behavior.safe_path
 
 CASES = [{"id": "X"}]
 
 
-def run():
+def test_receipt_ledger():
     assert evaluate(CASES, [])["cases"][0]["status"] == "NOT_RUN"
     r = {
         "case_id": "X",
@@ -68,8 +56,70 @@ def run():
         raise AssertionError("duplicate accepted")
     except ValueError:
         pass
-    print("PASS evaluator unit checks; no independent model behavior tested")
+
+
+def _passing_receipt():
+    response = "text"
+    return {
+        "case_id": "X",
+        "actual_response": response,
+        "run_context": "isolated session",
+        "observed_positive": True,
+        "observed_forbidden": False,
+        "reviewer_verdict": "PASS",
+        "independent_reviewer": "reviewer-1",
+        "evidence_refs": ["response:1"],
+        "run_id": "run1",
+        "skill_sha256": "a" * 64,
+        "source_snapshot_refs": ["snapshot:1"],
+        "reviewer_identity": "reviewer",
+        "executor_identity": "executor",
+        "reviewer_evidence_refs": ["review:1"],
+        "actual_response_sha256": hashlib.sha256(response.encode("utf-8")).hexdigest(),
+        "artifact_sha256_by_path": {},
+    }
+
+
+def test_cli_confines_paths_and_writes_ledger():
+    previous = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as temporary:
+            os.chdir(temporary)
+            Path("cases.json").write_text(json.dumps(CASES))
+            Path("receipts.json").write_text(json.dumps([_passing_receipt()]))
+            code = _behavior.main(
+                ["--cases", "cases.json", "--receipts", "receipts.json", "--out", "out.json"]
+            )
+            assert code == 0
+            assert "RECORDED_PASS" in Path("out.json").read_text()
+            try:
+                safe_path("/etc/passwd")
+                raise AssertionError("path outside the working directory was accepted")
+            except ValueError as exc:
+                assert "outside the allowed directory" in str(exc)
+    finally:
+        os.chdir(previous)
+
+
+def test_unknown_case_and_incomplete_receipts():
+    try:
+        evaluate(CASES, [{"case_id": "missing"}])
+        raise AssertionError("unknown case accepted")
+    except ValueError as exc:
+        assert "UNKNOWN_CASE" in str(exc)
+    incomplete = evaluate(CASES, [{"case_id": "X"}])
+    assert incomplete["cases"][0]["status"] == "INCOMPLETE"
+    missing_map = _passing_receipt()
+    missing_map["artifact_sha256_by_path"] = []
+    assert evaluate(CASES, [missing_map])["cases"][0]["status"] == "INCOMPLETE"
+    unresolved = _passing_receipt()
+    unresolved["observed_positive"] = None
+    unresolved["observed_forbidden"] = None
+    unresolved["reviewer_verdict"] = "HOLD"
+    assert evaluate(CASES, [unresolved])["cases"][0]["status"] == "REVIEW_REQUIRED"
 
 
 if __name__ == "__main__":
-    run()
+    test_receipt_ledger()
+    test_cli_confines_paths_and_writes_ledger()
+    test_unknown_case_and_incomplete_receipts()

@@ -1,31 +1,14 @@
 """Synthetic orchestration tests. These do not constitute independent canonical replay."""
 
 import json
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_binding = _load_sibling("verify_sv_binding")
+_binding = load_sibling("verify_sv_binding")
 COMPOSITION = _binding.COMPOSITION
 CONTRACT = _binding.CONTRACT
 MODEL = _binding.MODEL

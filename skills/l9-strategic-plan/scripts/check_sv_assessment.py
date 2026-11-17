@@ -10,9 +10,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+
+
+def safe_path(path):
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(os.getcwd())
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
+
 
 BUCKETS = ("IEV", "SFV", "DC", "ERL", "OC")
 COSTS = {"DC", "ERL", "OC"}
@@ -206,7 +216,7 @@ def main(argv=None) -> int:
     p.add_argument("input", type=Path)
     a = p.parse_args(argv)
     try:
-        result = check(json.loads(a.input.read_text(encoding="utf-8")))
+        result = check(json.loads(Path(safe_path(a.input)).read_text(encoding="utf-8")))
         print(json.dumps(result, indent=2))
         return 0
     except (ClaimBlocked, ValueError, OSError) as e:

@@ -1,29 +1,15 @@
 """Purpose-built contract falsifiers. They do not authenticate external evidence."""
 
 import copy
-import sys
+import json
+import os
+import tempfile
 import unittest
 from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_assessment = _load_sibling("check_sv_assessment")
+_assessment = load_sibling("check_sv_assessment")
 ClaimBlocked = _assessment.ClaimBlocked
 check = _assessment.check
 
@@ -189,6 +175,18 @@ class StrategicValueAssessmentTests(unittest.TestCase):
         a = fixture()
         self.assertTrue(check(a)["requires_owner_evidence_validation"])
         self.assertNotIn("CANONICAL_BINDING_VERIFIED", str(check(a)))
+
+    def test_cli_reads_claim_inside_workdir(self):
+        previous = os.getcwd()
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                os.chdir(temporary)
+                Path("claim.json").write_text(json.dumps(fixture()))
+                self.assertEqual(_assessment.main(["claim.json"]), 0)
+                with self.assertRaises(ValueError):
+                    _assessment.safe_path("/etc/passwd")
+        finally:
+            os.chdir(previous)
 
 
 if __name__ == "__main__":

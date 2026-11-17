@@ -1,30 +1,15 @@
 #!/usr/bin/env python3
+import io
 import json
-import subprocess
-import sys
+import os
 import tempfile
 import zipfile
+from contextlib import redirect_stdout
 from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_plan = _load_sibling("validate_working_plan")
+_plan = load_sibling("validate_working_plan")
 check_graph = _plan.check_graph
 read_zip = _plan.read_zip
 
@@ -35,8 +20,24 @@ def pack(path, files):
             z.writestr("plan/" + k, v)
 
 
-def test():
+def _invoke(argv):
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        code = _plan.main(argv)
+    return code, buffer.getvalue()
+
+
+def test_structural_package():
+    previous = os.getcwd()
+    try:
+        _structural_package()
+    finally:
+        os.chdir(previous)
+
+
+def _structural_package():
     with tempfile.TemporaryDirectory() as t:
+        os.chdir(t)
         d = Path(t)
         good = d / "good.zip"
         bad = d / "bad.zip"
@@ -95,18 +96,8 @@ def test():
         except ValueError as e:
             assert "unsafe" in str(e)
         pack(bad, {"graph.json": g})
-        proc = subprocess.run(
-            [
-                sys.executable,
-                str(Path(__file__).with_name("validate_working_plan.py")),
-                str(bad),
-                "--predecessor",
-                str(good),
-            ],
-            capture_output=True,
-            text=True,
-        )
-        assert proc.returncode == 1 and "undocumented" in proc.stdout
+        code, out = _invoke([bad.name, "--predecessor", good.name])
+        assert code == 1 and "undocumented" in out
         policy = d / "policy.json"
         policy.write_text(
             json.dumps(
@@ -117,20 +108,14 @@ def test():
                 }
             )
         )
-        proc = subprocess.run(
-            [
-                sys.executable,
-                str(Path(__file__).with_name("validate_working_plan.py")),
-                str(good),
-                "--policy",
-                str(policy),
-            ],
-            capture_output=True,
-            text=True,
-        )
-        assert proc.returncode == 1 and "predecessor required" in proc.stdout
-        print("PASS structural tests including negative controls")
+        code, out = _invoke([good.name, "--policy", policy.name])
+        assert code == 1 and "predecessor required" in out
+        try:
+            _plan.safe_path("/etc/passwd")
+            raise AssertionError("path outside the working directory was accepted")
+        except ValueError as exc:
+            assert "outside the allowed directory" in str(exc)
 
 
 if __name__ == "__main__":
-    test()
+    test_structural_package()
