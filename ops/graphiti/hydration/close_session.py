@@ -158,12 +158,16 @@ def _previous_continuation(
 ) -> str | None:
     """This session's last admitted continuation record, to supersede.
 
-    Only a reference admitted by the same carrier is returned: an id from the
+    Only a reference admitted into the same store is returned: an id from the
     container-local store does not exist in the hosted store, which refuses the
     whole candidate when asked to supersede it (observed 2026-11-17,
-    "supersession refused: superseded record does not exist"). A receipt
-    written before the carrier was recorded counts as local.
+    "supersession refused: superseded record does not exist"). ``relay`` and
+    ``hosted`` are two routes into the same hosted store, so they supersede
+    each other (``hook_carrier.store_of``, ADR-0055). A receipt written before
+    the carrier was recorded counts as local.
     """
+    from ops.memory.hook_carrier import store_of  # noqa: PLC0415
+
     try:
         path_r = _latches.receipt_path(project_dir, session_id)
         with open(path_r, encoding="utf-8") as handle:  # NOSONAR python:S2083
@@ -175,7 +179,8 @@ def _previous_continuation(
     ref = str(data.get("continuation_reference") or "").strip()
     if not ref:
         return None
-    if carrier is not None and (data.get("continuation_carrier") or "local") != carrier:
+    recorded = str(data.get("continuation_carrier") or "local")
+    if carrier is not None and store_of(recorded) != store_of(carrier):
         return None
     return ref
 

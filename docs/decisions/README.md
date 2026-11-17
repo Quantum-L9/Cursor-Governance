@@ -64,6 +64,7 @@ may share a number only when the filename slug is the same decision.
 | ADR-0052 | Accepted | Immutable PR Remediation via Stacked Publish and Universal Gate Enforcement | `docs/decisions/ADR-0052-immutable-pr-remediation-via-stacked-publish.md` |
 | ADR-0053 | Accepted | Infisical is the secret store; AWS Secrets Manager stays Cursor's bootstrap | `docs/decisions/ADR-0053-infisical-is-the-secret-store.md` |
 | ADR-0054 | Accepted | Relay hook carrier for the shared Memory 3.0 store | `docs/decisions/ADR-0054-relay-hook-carrier.md` |
+| ADR-0055 | Accepted | Hosted hook carrier; relay becomes the fallback | `docs/decisions/ADR-0055-hosted-hook-carrier.md` |
 
 <!-- END L9 ADR INDEX -->
 

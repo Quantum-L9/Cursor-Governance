@@ -2069,3 +2069,67 @@ relay.
 
 SSOT: this section; `ops/memory/hook_carrier.py`, `ops/memory/relay.py`;
 `docs/decisions/ADR-0054-relay-hook-carrier.md`.
+
+<!-- MEMORY_HOOK_HOSTED_V1 -->
+## 8.12 Hosted hook carrier; relay becomes the fallback (2026-11-17) — amends §8.11
+
+Append-only. Operator decisions, 2026-11-17: "memory reads and writes must be
+frictionless and 90% + of the time triggered with a hook not manually written
+although there is the 10% which i don't want to manually approve either", and
+"stop with the memories i'm tired of approving things just fix it up stream so i
+don't ever have to again".
+
+1. **Why.** Under §8.11 every hook record on a cloud surface waited for the
+   agent to carry it through the account connector, whose tools are
+   permissioned per tool in claude.ai: each relayed call could raise an
+   operator approval prompt no local allow rule suppresses. The memory service
+   now admits a machine hook principal (Auth0 client credentials of the
+   `l9-memory-hooks` application, bound server-side in
+   `L9_MEMORY_HOOK_PRINCIPALS_JSON`) — the exit §8.11 item 6 named.
+2. **One carrier decision** (supersedes §8.11 item 2).
+   `ops/memory/hook_carrier.py` resolves `hosted`, `relay` or `local`:
+   `L9_MEMORY_HOOK_CARRIER` when set (an unknown value is refused, never
+   guessed); otherwise `hosted` when both `L9_MEMORY_HOOK_CLIENT_ID` and
+   `L9_MEMORY_HOOK_CLIENT_SECRET` bind through `ops/secrets/capability_bind.py`
+   (Infisical `cursor-governance`, `/`; root keys, not operator-only); otherwise
+   `relay` when `CLAUDE_CODE_REMOTE=true`; otherwise `local`.
+3. **Hosted.** `MemoryControlPlaneClient` admits each hook record against its
+   envelope exactly as before, then `ops/memory/hosted_hook_transport.py` sends
+   it to the Memory MCP endpoint (`resource.identifier` of
+   `ops/config/memory-auth0-onboarding.yaml`, also the token audience) with one
+   `initialize` and one `tools/call` naming the relay's connector tool. HTTPS
+   only, through `ops/lib/safe_https.py`; the token endpoint comes from the
+   onboarding issuer, else RFC 9728 metadata then OIDC discovery, and must sit
+   on the issuer's host; the token is cached in-process only. `OK` only for a
+   UUID hosted receipt that proves the commit (transport `hosted-mcp`). A
+   refusal — tool error, JSON-RPC error on the call, HTTP 403, receipt status
+   `rejected` / `quarantined` / `failed` — is `REJECTED` and is never rerouted.
+   A transport failure is not a verdict: the record goes to the relay outbox
+   with its reason and the outcome is `RELAYED`.
+4. **Nobody is asked** (supersedes §8.11 item 4, "The agent carries it"). The
+   Claude Stop hook never blocks a turn and never asks the agent to make a
+   connector call. On `hosted` it drains owed outbox entries through the hosted
+   transport, acknowledging each with the hosted receipt or recording the
+   refusal. On `relay` the entries stay in the outbox, one non-blocking line per
+   session reports how many are owed, and `python -m ops.memory.relay status`
+   keeps them visible. Carrying an entry by hand remains possible
+   (`python -m ops.memory.relay instructions`) and is never required.
+5. **Attribution.** Hosted records carry `carrier:hosted` and
+   `hook-surface:<surface>` and are written by the hook principal; relayed
+   records keep `carrier:relay`.
+6. **One store, one supersession chain.** `relay` and `hosted` both land in the
+   hosted `MemoryService`, so a continuation admitted by either supersedes the
+   other's; neither supersedes a `local` reference, nor the reverse.
+7. **Boundary.** `ops/memory/hosted_hook_transport.py` is the single memory-path
+   module allowed a network transport (`urllib` request/error types through
+   `safe_https`, to hosts read from configuration). The hosted `MemoryService`
+   is the canonical authority, not a provider; INV-03 holds.
+8. **Provisioning.** The `l9-memory-hooks` application, its server-side binding,
+   the two Infisical values and its onboarding client row are the operator
+   provisioning runbook's job. Until both values bind, `relay` applies and
+   nothing is asked.
+
+SSOT: this section; `ops/memory/hook_carrier.py`,
+`ops/memory/hosted_hook_transport.py`, `ops/memory/relay.py`,
+`environment/agents/adapters/claude-code/hooks/memory_writeback.py`;
+`docs/decisions/ADR-0055-hosted-hook-carrier.md`.
