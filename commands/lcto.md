@@ -51,8 +51,8 @@ Bound projections (all required):
 1. From the workspace you are working in (do not change directory), run the
    governance clone's script with its locked interpreter:
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" on --workspace "$PWD"`.
-   Add `--authority-root <checkout>` (or set `L9_AUTHORITY_ROOT`; otherwise the managed `~/.l9/authority/.github` that SessionStart provisions, then a `.github` checkout inside or beside the workspace, is found on its own) when a
-   `Quantum-L9/.github` checkout whose HEAD is its `main` is available. The
+   Add `--authority-root <checkout>` (or set `L9_AUTHORITY_ROOT`; otherwise the managed `~/.l9/authority/.github` that SessionStart provisions, then a `.github` checkout inside or beside the workspace, is found on its own).
+   Admission is resolved against that checkout's `origin/main`, read from a detached snapshot, so the clone does not have to be on `main`. The
    request is bound to this host session; a later session starts OFF.
 2. Read its JSON `mode`:
    - `ACTIVE`: read each `load[].composed_view` before deciding, and cite its
