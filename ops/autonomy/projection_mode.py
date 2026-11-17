@@ -158,8 +158,10 @@ CHILD_PROMPT_REQUIRED = (
     "CTO-STATUS: ready-to-merge",
     "CTO-STATUS: idle",
     "CTO ASSIGN",
-    # The org rules repository is never attached with add_repo (it refuses dot names).
-    "Never call add_repo for Quantum-L9/Cursor-Governance",
+    # Quantum-L9/.github is the session source (add_repo refuses dot names); the primary
+    # repository and Cursor-Governance are attached before role registration (2026-11-17).
+    "never call add_repo for it",
+    "Attach your primary repository (access push) and Quantum-L9/Cursor-Governance",
     # A pool outlives its CTO: coordinator transfer is explicit and re-registers the role,
     # and a published PR stays repairable by its owner after the owner takes another lane.
     "CTO TRANSFER <new session id>",
@@ -191,6 +193,111 @@ def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
     if not cto_session.strip():
         raise ContractError("CTO_SESSION_UNRESOLVED")
     return str(template).replace(CTO_SESSION_PLACEHOLDER, cto_session.strip())
+
+
+LAUNCH_SPEC_SCHEMA = "l9.cto-child-launch-spec/v1"
+LAUNCH_HOST = "claude-code"
+_CHILD_SESSION_KEYS = ("source_url", "permission_mode", "governance_repository")
+
+
+def _repo_coordinate(value: str) -> tuple[str, str]:
+    parts = value.strip().split("/")
+    if len(parts) != 2 or not all(part.strip() for part in parts):
+        raise ContractError(f"LANE_REPO_MALFORMED: {value}")
+    return parts[0].strip(), parts[1].strip()
+
+
+def _declared_child_session(contract: dict[str, Any]) -> dict[str, Any]:
+    transport = ((contract.get("operating_protocol") or {}).get("transport") or {}).get(
+        LAUNCH_HOST
+    ) or {}
+    child = transport.get("child_session")
+    if not isinstance(child, dict) or not all(
+        _nonempty_str(child.get(key)) for key in _CHILD_SESSION_KEYS
+    ):
+        raise ContractError("CHILD_SESSION_UNDECLARED")
+    return child
+
+
+def _source_repo(source_url: str) -> str:
+    return "/".join(source_url.rstrip("/").removesuffix(".git").split("/")[-2:]).lower()
+
+
+def _attachment_list(
+    source_url: str, governance: str, lane_repos: list[str]
+) -> list[dict[str, str]]:
+    """Push attachments for lane repos, plus governance read when it is not a lane."""
+    if not lane_repos:
+        raise ContractError("LANE_REPO_REQUIRED")
+    source_repo = _source_repo(source_url)
+    attach: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for value in lane_repos:
+        owner, repo = _repo_coordinate(value)
+        key = f"{owner}/{repo}".lower()
+        # The source repository is read-only to every child, and add_repo refuses it.
+        if key == source_repo:
+            raise ContractError(f"LANE_REPO_IS_SESSION_SOURCE: {value}")
+        if key not in seen:
+            seen.add(key)
+            attach.append({"owner": owner, "repo": repo, "access": "push"})
+    if governance.lower() not in seen:
+        owner, repo = governance.split("/")
+        attach.append({"owner": owner, "repo": repo, "access": "read"})
+    return attach
+
+
+def _session_tags(cto_session: str, tags: list[str] | None) -> list[str]:
+    session_tags = [f"cto:{cto_session.strip()}"]
+    for tag in tags or []:
+        if _nonempty_str(tag) and tag.strip() not in session_tags:
+            session_tags.append(tag.strip())
+    return session_tags
+
+
+def _create_session_args(
+    child: dict[str, Any],
+    prompt: str,
+    cto_session: str,
+    *,
+    title: str | None,
+    tags: list[str] | None,
+) -> dict[str, Any]:
+    create: dict[str, Any] = {
+        "source_url": str(child["source_url"]).strip(),
+        "append_system_prompt": prompt,
+        "permission_mode": str(child["permission_mode"]).strip(),
+        "tags": _session_tags(cto_session, tags),
+    }
+    if _nonempty_str(title):
+        create["title"] = str(title).strip()
+    return create
+
+
+def build_launch_spec(
+    contract: dict[str, Any],
+    cto_session: str,
+    lane_repos: list[str],
+    *,
+    title: str | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """The create_session arguments and the add_repo list for one swarm child.
+
+    Every value comes from the mode contract or the arguments; nothing is inferred. It
+    grants nothing: the CTO still makes the call, and the child still attaches.
+    """
+    child = _declared_child_session(contract)
+    prompt = render_child_prompt(contract, cto_session)
+    source = str(child["source_url"]).strip()
+    governance = "/".join(_repo_coordinate(str(child["governance_repository"])))
+    return {
+        "schema": LAUNCH_SPEC_SCHEMA,
+        "grants_permission": False,
+        "host": LAUNCH_HOST,
+        "create_session": _create_session_args(child, prompt, cto_session, title=title, tags=tags),
+        "add_repo": _attachment_list(source, governance, lane_repos),
+    }
 
 
 def resolve_session_id(explicit: str | None = None) -> str | None:
@@ -461,11 +568,15 @@ class ProjectionMode:
             return True
         return False
 
-    def main(self, argv: list[str] | None = None) -> int:
+    def _parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             description=f"{self.name} mode: opt-in, session-bound projection binding"
         )
-        parser.add_argument("command", choices=("on", "off", "status", "child-prompt"))
+        commands = ["on", "off", "status", "child-prompt"]
+        # Launching swarm children is the CTO's alone; other modes keep their commands.
+        if self.name == "cto":
+            commands.append("launch-spec")
+        parser.add_argument("command", choices=commands)
         parser.add_argument(
             "--cto-session",
             help=(
@@ -473,6 +584,17 @@ class ProjectionMode:
                 "cross-session id, session_<suffix>, else its local id)"
             ),
         )
+        if self.name == "cto":
+            parser.add_argument(
+                "--lane-repo",
+                action="append",
+                default=[],
+                help="launch-spec: owner/name of a lane repository the child attaches (push)",
+            )
+            parser.add_argument("--title", help="launch-spec: the child session title")
+            parser.add_argument(
+                "--tag", action="append", default=[], help="launch-spec: an extra session tag"
+            )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
             "--authority-root",
@@ -485,33 +607,68 @@ class ProjectionMode:
         parser.add_argument(
             "--session-id", help=f"host session id (default: first of {', '.join(SESSION_ENVS)})"
         )
+        return parser
+
+    def _print_child_prompt(self, args: argparse.Namespace) -> int:
+        """Plain text on stdout: the child's launch system prompt, verbatim."""
+        try:
+            # Default to the id cross-session tools address (session_<suffix>), not the
+            # local host id: children must recognize the CTO's messages by it.
+            from session_role import remote_session_id  # noqa: PLC0415
+
+            session = (
+                args.cto_session or remote_session_id() or resolve_session_id(args.session_id)
+            ) or ""
+            print(render_child_prompt(self.load_contract(), session))
+        except ContractError as exc:
+            print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+            return EXIT["REJECTED"]
+        return 0
+
+    def _print_launch_spec(self, parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+        """JSON on stdout: the create_session arguments and the child's add_repo list."""
+        if not args.cto_session or not args.cto_session.strip():
+            parser.error("launch-spec requires --cto-session")
+        if not args.lane_repo:
+            parser.error("launch-spec requires at least one --lane-repo")
+        try:
+            spec = build_launch_spec(
+                self.load_contract(),
+                args.cto_session,
+                args.lane_repo,
+                title=args.title,
+                tags=args.tag,
+            )
+        except ContractError as exc:
+            print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+            return EXIT["REJECTED"]
+        print(json.dumps(spec, indent=2, sort_keys=True))
+        return 0
+
+    def _request_on(self, workspace: Path, args: argparse.Namespace) -> int | None:
+        try:
+            self.request(workspace, session_id=args.session_id)
+        except ContractError as exc:
+            print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+            return EXIT["REJECTED"]
+        return None
+
+    def main(self, argv: list[str] | None = None) -> int:
+        parser = self._parser()
         args = parser.parse_args(argv)
         workspace = args.workspace.resolve()
         if args.command == "child-prompt":
-            # Plain text on stdout, to be passed verbatim as the child's launch system prompt.
-            try:
-                # Default to the id cross-session tools address (session_<suffix>), not the
-                # local host id: children must recognize the CTO's messages by it.
-                from session_role import remote_session_id  # noqa: PLC0415
-
-                session = (
-                    args.cto_session or remote_session_id() or resolve_session_id(args.session_id)
-                ) or ""
-                print(render_child_prompt(self.load_contract(), session))
-            except ContractError as exc:
-                print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
-                return EXIT["REJECTED"]
-            return 0
+            return self._print_child_prompt(args)
+        if args.command == "launch-spec":
+            return self._print_launch_spec(parser, args)
         if args.command == "off":
             removed = self.release(workspace)
             print(json.dumps({"mode": "OFF", "state_removed": removed}, sort_keys=True))
             return 0
         if args.command == "on":
-            try:
-                self.request(workspace, session_id=args.session_id)
-            except ContractError as exc:
-                print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
-                return EXIT["REJECTED"]
+            rejected = self._request_on(workspace, args)
+            if rejected is not None:
+                return rejected
         report = self.evaluate(
             workspace, authority_root=args.authority_root, session_id=args.session_id
         )
