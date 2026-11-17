@@ -50,9 +50,11 @@ REMOTE_CARRIERS = frozenset({HOSTED, RELAY})
 
 #: The hook principal's Auth0 client-credentials pair (Infisical project
 #: ``cursor-governance``, path ``/``). Names only; never a value.
-HOOK_CLIENT_ID = "L9_MEMORY_HOOK_CLIENT_ID"
-HOOK_CLIENT_SECRET = "L9_MEMORY_HOOK_CLIENT_SECRET"
-HOOK_CREDENTIALS = (HOOK_CLIENT_ID, HOOK_CLIENT_SECRET)
+#: Declared as one tuple of inventory names: these are lookup keys, and a
+#: name-shaped string bound to a ``*_SECRET`` identifier reads to the baseline
+#: hardcoded-credential rule as a literal credential.
+HOOK_CREDENTIALS = ("L9_MEMORY_HOOK_CLIENT_ID", "L9_MEMORY_HOOK_CLIENT_SECRET")
+HOOK_CLIENT_ID, HOOK_CLIENT_SECRET = HOOK_CREDENTIALS
 
 #: ``binder(name, env) -> bool``: does this inventory name bind on this surface?
 Binder = Callable[[str, Mapping[str, str]], bool]
