@@ -997,17 +997,23 @@ def test_open_pr_after_gate_subscribes_via_graphql() -> None:
     assert '-X PUT "repos/' not in helper
 
 
-def test_a_swarm_child_publishes_without_watching_or_a_remediation_marker(
+def test_a_swarm_child_owns_its_pr_without_a_remediation_marker(
     tmp_path: Path,
 ) -> None:
-    """governance/cto-mode/MODE.yaml STAND DOWN: the CTO owns PR watching and remediation."""
+    """governance/cto-mode/MODE.yaml OWN YOUR PR (protocol v2): the publisher remediates.
+
+    A registered child subscribes to the PR it published, like any session, and is told it
+    owns the PR until it is ready to merge. It gets no remediation handoff marker, because
+    it remediates in its own session instead of handing off to a subagent.
+    """
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
     probe = script.index('ops/autonomy/session_role.py" status')
     assert probe < script.index('gh_subscribe_pr "$owner"')
     assert probe < script.index("=== L9_AGENT_REQUIRED ===")
-    subscribe = script[script.index('if [[ "$_swarm_child" == "1" ]]; then') :]
-    assert subscribe.index("subscribe: skipped") < subscribe.index('gh_subscribe_pr "$owner"')
-    assert "PR_REMEDIATE=0" in script[probe : script.index("subscribe: skipped")]
+    assert "subscribe: skipped" not in script
+    child = script[script.index('elif [[ "$_swarm_child" == "1" ]]; then') :]
+    assert child.index("CTO-STATUS: ready-to-merge") < child.index("\nfi\n")
+    assert "PR_REMEDIATE=0" in script[probe : script.index('gh_subscribe_pr "$owner"')]
 
     # The probe the script runs: exit 0 only for a registered child.
     role = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "session_role.py"
