@@ -37,11 +37,11 @@ EXPECTED_RULES = [
     "mcp__claude-code-remote__add_repo",
     "mcp__claude-code-remote__register_repo_root",
     'Bash("$HOME/.cursor-governance/.venv/bin/python" '
-    '"$HOME/.cursor-governance/ops/autonomy/session_role.py" register-child:*)',
+    + '"$HOME/.cursor-governance/ops/autonomy/session_role.py" register-child:*)',
     'Bash("$HOME/.cursor-governance/.venv/bin/python" '
-    '"$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on:*)',
+    + '"$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on:*)',
     "Bash(GOVERNANCE_SYNC_PUSH=0 GOVERNANCE_SYNC_HARD_RESET=0 bash "
-    '"$HOME/.cursor-governance/skills/l9-repo-sync/scripts/ff.sh" --ssot:*)',
+    + '"$HOME/.cursor-governance/skills/l9-repo-sync/scripts/ff.sh" --ssot:*)',
 ]
 
 HEREDOC = re.compile(
