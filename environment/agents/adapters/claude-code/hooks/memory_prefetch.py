@@ -257,6 +257,36 @@ def _close_gaps(roots: list[Path], session_id: str) -> list[str]:
     return gaps
 
 
+def _carrier_lines(namespaces: list[str]) -> list[str]:
+    """SessionStart lines for the relay carrier; empty on a local surface."""
+
+    try:
+        mb.ensure_importable()
+        from ops.memory.hook_carrier import RELAY, CarrierError, resolve_carrier
+    except Exception:  # noqa: BLE001 - SessionStart is fail-open
+        return []
+    try:
+        carrier = resolve_carrier()
+    except CarrierError as exc:
+        return [f"hook_carrier=INVALID ({exc}); hook-lane writes are refused"]
+    if carrier != RELAY:
+        return []
+    targets = json.dumps(namespaces or ["<namespace>"])
+    carrier_line = (
+        "hook_carrier=relay — the shared Memory 3.0 store is the account-managed L9 Memory "
+        + "connector; the local runtime health above is container scratch, not that store"
+    )
+    hydrate_line = (
+        f'hydrate_shared=call memory_hydrate {{"task": "<task>", "namespaces": {targets}}} '
+        + "on the account connector (not the operator CLI)"
+    )
+    relay_line = (
+        "relay_writes=hook records are queued for you; the Stop hook lists each connector "
+        + "call to make and the `python -m ops.memory.relay ack` to run"
+    )
+    return [carrier_line, hydrate_line, relay_line]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="memory_prefetch")
     parser.add_argument(
@@ -380,6 +410,11 @@ def main() -> int:
             "isolation=dedicated worktree + branch off origin/main + publication gate",
             "phase_lock=not required",
         ]
+        carrier_lines = _carrier_lines(group_ids)
+        if carrier_lines:
+            # Relay carrier (CANONICAL_LAW §8.11): health above is the LOCAL
+            # runtime's, which is container scratch here, not the shared store.
+            lines[1:1] = carrier_lines
         gaps = _close_gaps(roots, session_id)
         for gap in gaps:
             lines.insert(1, f"CLOSE_GAP {gap}")

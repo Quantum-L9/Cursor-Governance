@@ -67,6 +67,43 @@ def test_canonical_memory_operations_are_no_prompt() -> None:
     assert required <= allow
 
 
+HOSTED_MEMORY_PREFIX = "mcp__L9-Memory__"
+
+
+def test_relay_connector_calls_are_no_prompt_on_the_hosted_connector() -> None:
+    """Every call the relay obliges the agent to make must already be approved.
+
+    The Stop hook blocks the turn until each relayed record is carried to the
+    account connector, so a call that prompts turns every turn into an operator
+    dialog. Derived from the relay's own tool map, not restated.
+    """
+    from ops.memory.relay import CONNECTOR_TOOLS
+
+    permissions = _settings(TEMPLATE)["permissions"]
+    allow = set(permissions["allow"])  # type: ignore[index]
+    deny = set(permissions["deny"])  # type: ignore[index]
+    for tool in CONNECTOR_TOOLS.values():
+        entry = HOSTED_MEMORY_PREFIX + tool.replace(".", "_")
+        assert entry in allow, f"{entry}: relay requires it, so it must not prompt"
+        assert entry not in deny, f"{entry}: relay requires it, so it must not be denied"
+
+
+def test_hosted_connector_keeps_admin_and_generic_ingest_denied() -> None:
+    permissions = _settings(TEMPLATE)["permissions"]
+    allow = set(permissions["allow"])  # type: ignore[index]
+    deny = set(permissions["deny"])  # type: ignore[index]
+    for tool in (
+        "memory_ingest",
+        "memory_delete",
+        "memory_promote",
+        "memory_bootstrap",
+        "memory_distill",
+        "memory_invalidate_source",
+    ):
+        assert HOSTED_MEMORY_PREFIX + tool in deny
+        assert HOSTED_MEMORY_PREFIX + tool not in allow
+
+
 def test_graphql_and_raw_publish_are_not_standing_approvals() -> None:
     allow = set(_settings(TEMPLATE)["permissions"]["allow"])  # type: ignore[index]
     forbidden = {
