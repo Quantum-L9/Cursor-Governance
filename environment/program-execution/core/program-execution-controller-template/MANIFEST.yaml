@@ -101,7 +101,7 @@ files:
 - path: scripts/pec/common.py
   sha256: 3b5abe5832329ba6f0f6df7cf457f65ea2e26a476d6f2495e4dcb6776bd9c258
 - path: scripts/pec/contracts.py
-  sha256: 949dc350361c43754353102992e6cbdd39c92a66c31152732cd27a418c41e403
+  sha256: fdd601d8a585ea34aaca1697920e454fc484434698a38d7236c5121160ac4ea0
 - path: scripts/pec/controller.py
   sha256: b30c9fcb49efd7644b3b7390d962ae3805c9f5910d75becc0786f28a9b78e616
 - path: scripts/pec/dispatch.py
@@ -234,6 +234,8 @@ files:
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
 - path: scripts/tests/test_wave_dependency.py
   sha256: 271268dca078c50de977eb2b940d96c224c79bd62d76140de216591b36399538
+- path: scripts/tests/test_worker_brief_target_paths.py
+  sha256: 96b6117454ae6ed0e0e1d75e52a978488e86c01aa351f67c09511670e144f4cc
 - path: scripts/validate_controller.py
   sha256: 2e865213f2d054f47c49a869e4eb3cbcc1c935ce75519715527f2ea1657b9252
 integrity:

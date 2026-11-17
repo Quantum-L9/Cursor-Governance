@@ -1,8 +1,6 @@
 schema: l9.program-execution.ai-control-plane.project-policy.v1
 schema_version: 1.0.0
 adr_refs:
-  - ADR-0023
-  - ADR-0024
   - ADR-0010
   - ADR-0022
 law: kernels_compile_they_do_not_run
@@ -12,8 +10,8 @@ authority_order:
   - applicable_safety_legal_security_requirements
   - cursor_governance_canonical_law
   - program_execution_interface_contract
-  - adr_0023_kernels_compile
-  - adr_0024_worker_ticket
+  - kernels_compile_they_do_not_run
+  - worker_context_is_the_ticket
   - accepted_program_definition
   - implementation
   - UNKNOWN
@@ -58,12 +56,3 @@ diagnose_first:
     - revalidate_before_execution
     - drift_returns_to_rediscover
     - RolledBack_is_terminal
-
-worker_brief_forbidden_filenames:
-  - AUDIT.md
-  - PLAN.md
-  - BUILD.md
-  - CHANGE.md
-  - VALIDATION.md
-  - DEFINITION_OF_DONE.md
-  - RELEASE.md
