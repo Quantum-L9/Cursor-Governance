@@ -164,6 +164,9 @@ jobs:
           path: authority
           fetch-depth: 0
           persist-credentials: false
+          # Quantum-L9/.github is private (2026-11-16): this repo's GITHUB_TOKEN cannot
+          # read it. Same credential the pinned-compiler checkout already uses.
+          token: ${{ secrets.GH_TOKEN }}
       - name: Checkout the pinned private compiler
         if: steps.pins.outputs.present == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1

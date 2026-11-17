@@ -127,6 +127,54 @@ if [[ "${ahead:-0}" -eq 0 ]]; then
   exit 1
 fi
 
+# Generated-heal paths left dirty by deterministic preparation are committed
+# before publication (#862): the gate validated the tree WITH them, so pushing
+# without them publishes a tree nothing validated. Content is unchanged by the
+# commit, so the L4 tree digest below still binds the same bytes. Any other
+# dirt keeps the WARN. A classification or commit failure blocks publication.
+# BEGIN generated-heal-commit
+_commit_generated_heal() {
+  local prefixes path prefix line
+  local -a heal=()
+  if ! prefixes="$(python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --print-generated-prefixes)"; then
+    echo "FAIL: cannot list generated prefixes; refusing to publish a tree with unclassified dirt"
+    return 1
+  fi
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    path="${line:3}"
+    path="${path#\"}"
+    path="${path%\"}"
+    while IFS= read -r prefix; do
+      [[ -z "$prefix" ]] && continue
+      if [[ "$path" == "$prefix"* ]]; then
+        heal+=("$path")
+        break
+      fi
+    done <<<"$prefixes"
+  done <<<"$(_meaningful_dirty)"
+  if [[ ${#heal[@]} -eq 0 ]]; then
+    return 0
+  fi
+  echo "--- commit generated heal (${#heal[@]} path(s)) ---"
+  printf '  %s\n' "${heal[@]}"
+  if ! git add -- "${heal[@]}"; then
+    echo "FAIL: could not stage generated-heal paths; nothing pushed"
+    return 1
+  fi
+  if ! git diff --cached --quiet -- "${heal[@]}"; then
+    if ! git commit --no-edit -q -m "chore(generated): commit generated heal before publish" -- "${heal[@]}"; then
+      echo "FAIL: could not commit generated-heal paths; nothing pushed"
+      return 1
+    fi
+  fi
+  echo "OK: committed generated heal — publishing the tree the gate validated"
+}
+# END generated-heal-commit
+if [[ -n "$(_meaningful_dirty)" ]]; then
+  _commit_generated_heal || exit 1
+fi
+
 meaningful="$(_meaningful_dirty || true)"
 if [[ -n "$meaningful" ]]; then
   echo "WARN: working tree has non-scratch dirty paths — PR will only include committed changes on '$branch'"
@@ -514,13 +562,12 @@ _compose_title_and_body() {
     _additive_measured=1
     _touched_additive=""
   fi
-  # The body is composed from ONE template: the org's canonical
-  # <owner>/.github .github/pull_request_template.md, resolved by the composer
-  # at an exact commit (compose_pr_body.py resolve_template). A consumer's local
-  # copy and the governance checkout's copy are never read: a divergent copy
-  # must not change what the body says, and an unreachable org template is an
-  # error rather than a silent switch to stale bytes. Org-managed sync
-  # (Quantum-L9/.github continuous-sync.yml) reconciles the local copies.
+  # The body is composed from ONE template at an exact commit, resolved by
+  # compose_pr_body.py resolve_template (operator directive 2026-11-17): the
+  # repository's own committed .github/pull_request_template.md when it passes
+  # validation, else the org's <owner>/.github template read live, else the copy
+  # pinned in this governance tree while it matches its receipt. Nothing usable
+  # is an error. Org-managed sync (continuous-sync.yml) seeds the local copies.
   if [[ -z "${owner:-}" || -z "${name:-}" ]]; then
     echo "ERROR: cannot resolve owner/repo, so the org PR template has no source" >&2
     exit 1

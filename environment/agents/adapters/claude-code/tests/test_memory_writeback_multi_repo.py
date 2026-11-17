@@ -107,6 +107,8 @@ class WritebackFanOutTest(unittest.TestCase):
         close_impl,
         env_extra: dict[str, str] | None = None,
         publish_in: list[Path] | None = None,
+        relay_gate=None,
+        stdout: io.StringIO | None = None,
     ) -> tuple[dict, list[dict]]:
         """Import the hook fresh, stub close_session, run main(), return receipt."""
         calls: list[dict] = []
@@ -159,7 +161,11 @@ class WritebackFanOutTest(unittest.TestCase):
             import memory_writeback as wb  # noqa: PLC0415
 
             event = json.dumps({"session_id": self.session_id, "reason": "completed"})
-            with mock.patch.object(sys, "stdin", io.StringIO(event)):
+            with (
+                mock.patch.object(sys, "stdin", io.StringIO(event)),
+                mock.patch.object(wb, "_relay_gate", relay_gate or (lambda _ws: None)),
+                mock.patch.object(sys, "stdout", stdout or io.StringIO()),
+            ):
                 rc = wb.main()
             self.assertEqual(rc, 0, "Stop hook must stay fail-open")
 
@@ -202,6 +208,32 @@ class WritebackFanOutTest(unittest.TestCase):
             publish_in=[repos[1]],
         )
         self.assertEqual([Path(c["project_dir"]).name for c in calls], ["two"])
+
+    def test_relay_records_queued_by_the_close_block_the_same_stop(self) -> None:
+        """Review finding on #1008: the pre-close gate saw an empty outbox, the close
+        then queued its continuation and close, and the Stop finished without asking
+        for them. The gate is consulted again after the close."""
+        repos = [_make_repo(self.workspace, "solo")]
+        asked: list[int] = []
+
+        def gate(_workspace):
+            asked.append(len(asked))
+            return None if len(asked) == 1 else "L9 MEMORY RELAY — 2 hook record(s) are owed"
+
+        out = io.StringIO()
+        receipt, calls = self._run_hook(
+            hydrated_roots=repos,
+            close_impl=lambda **k: {"status": "close_incomplete", "writes": []},
+            publish_in=repos,
+            relay_gate=gate,
+            stdout=out,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(asked), 2, "consulted before and after the close")
+        self.assertEqual(receipt["status"], "relay_requested_after_close")
+        decision = json.loads(out.getvalue().strip().splitlines()[-1])
+        self.assertEqual(decision["decision"], "block")
+        self.assertIn("2 hook record(s) are owed", decision["reason"])
 
     def test_one_failing_publication_root_does_not_lose_the_others(self) -> None:
         repos = [_make_repo(self.workspace, n) for n in ("ok1", "boom")]

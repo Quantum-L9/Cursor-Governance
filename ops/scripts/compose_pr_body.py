@@ -171,12 +171,18 @@ REGION_FILES = "FILES-TOUCHED"
 #: The composer's ranked Reviewer focus. Machine-owned so it follows every push
 #: like the inventory; text a reviewer writes outside it survives refresh.
 REGION_REVIEWER = "REVIEWER-FOCUS"
+#: The author's Reviewer focus from pr-intent.json. Intent-owned: a later intent
+#: replaces it, no intent leaves it, and a person's text outside it survives
+#: (#912). Without its own markers the first intent's text became
+#: indistinguishable from a person's and froze on re-publish.
+REGION_REVIEWER_INTENT = "REVIEWER-FOCUS-INTENT"
 MACHINE_REGIONS = (
     REGION_PROTECTED_PATHS,
     REGION_EVIDENCE,
     REGION_INTENT,
     REGION_FILES,
     REGION_REVIEWER,
+    REGION_REVIEWER_INTENT,
 )
 #: Headings and regions the canonical template must carry. A template that
 #: lacks one cannot be refreshed safely, so resolution fails closed on it.
@@ -278,12 +284,55 @@ class PrIntent:
     reviewer_focus: str = ""
 
 
-def load_intent(path: Path | None, head: str) -> PrIntent | None:
+#: Subjects of the commits the publish machinery itself adds after the author
+#: has written pr-intent.json (#861): the gate's writer-rewrite commit
+#: (run_pr_gate.sh), the generated-heal and push-recovery commits
+#: (open_pr_after_gate.sh), the GMP report publication (ops/reports/publish.py),
+#: GMP finalize (workflows/gmp_executor.py) and the push-recovery merge of the base.
+_MACHINE_COMMIT_SUBJECTS = re.compile(
+    r"^(?:style: commit gate writer rewrites so make pr finishes once"
+    r"|chore\(generated\): commit generated heal before publish"
+    r"|chore\(generated\): heal artifacts after push-recovery merge"
+    r"|docs\(reports\): GMP report .+"
+    r"|GMP-\d+: .+"
+    r"|Merge remote-tracking branch 'origin/[^']+'(?: into .+)?)$"
+)
+
+
+def _only_machine_commits_since(workspace: Path, named: str, head: str) -> bool:
+    """True when *named* is an ancestor of *head* and every commit between them
+    is one the publish machinery wrote. Any doubt (unresolvable ref, git error,
+    an author commit) answers False, so the intent stays refused."""
+    full = _run_git(workspace, "rev-parse", "--verify", "--quiet", f"{named}^{{commit}}").strip()
+    if not full:
+        return False
+    probe = subprocess.run(
+        ["git", "-C", str(workspace), "merge-base", "--is-ancestor", full, head],
+        check=False,
+        capture_output=True,
+    )
+    if probe.returncode != 0:
+        return False
+    proc = subprocess.run(
+        ["git", "-C", str(workspace), "log", "--format=%s", f"{full}..{head}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return False
+    subjects = [line for line in proc.stdout.splitlines() if line.strip()]
+    return bool(subjects) and all(_MACHINE_COMMIT_SUBJECTS.match(s) for s in subjects)
+
+
+def load_intent(path: Path | None, head: str, *, workspace: Path | None = None) -> PrIntent | None:
     """The intent at *path* when it names *head*, else None (with a WARN).
 
     Bound to HEAD like every other receipt here: an intent written for an
     earlier branch or head must not describe this one. ``head`` in the file may
-    be abbreviated to 7+ characters.
+    be abbreviated to 7+ characters. With *workspace*, an intent naming an
+    ancestor of HEAD is still honoured when every commit since is one the publish
+    machinery added (#861); an author commit in between still refuses it.
     """
     if path is None or not path.is_file():
         return None
@@ -296,7 +345,20 @@ def load_intent(path: Path | None, head: str) -> PrIntent | None:
         print(f"WARN: {path} is not schema {INTENT_SCHEMA}; intent ignored", file=sys.stderr)
         return None
     named = str(doc.get("head") or "").strip().lower()
-    if len(named) < 7 or not head or not head.lower().startswith(named):
+    drifted_by_machine = (
+        workspace is not None
+        and len(named) >= 7
+        and bool(head)
+        and not head.lower().startswith(named)
+        and _only_machine_commits_since(workspace, named, head)
+    )
+    if drifted_by_machine:
+        print(
+            f"NOTE: {path} names head {named[:12]}; only publish-machinery commits "
+            f"follow it up to {head[:12]} — intent kept",
+            file=sys.stderr,
+        )
+    elif len(named) < 7 or not head or not head.lower().startswith(named):
         print(
             f"WARN: {path} names head {named or '(none)'}, not {head[:12] or '(unknown)'}; "
             "intent ignored — rewrite it for this head",
@@ -2158,7 +2220,9 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
         # written; without one the composer ranks it in a refreshed region.
         text = text.replace(
             REVIEWER_PLACEHOLDER,
-            intent.reviewer_focus or wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
+            wrap_region(REGION_REVIEWER_INTENT, intent.reviewer_focus)
+            if intent.reviewer_focus
+            else wrap_region(REGION_REVIEWER, render_reviewer_focus(facts)),
             1,
         )
     text = _put_region(text, REGION_INTENT, render_changes_by_intent(facts), _INTENT_PH)
@@ -2508,14 +2572,20 @@ def _refresh_body_once(
             body = _replace_composed_problem(body, facts, facts.intent.problem)
         if facts.intent.reviewer_focus:
             # The composer's ranked region (or the older unresolved marker) is
-            # the composer's own text; the author's focus replaces it.
+            # the composer's own text; the author's focus replaces it inside an
+            # intent-owned region, so a later intent can replace it again (#912).
+            focus = facts.intent.reviewer_focus
             span = _region_span(body, REGION_REVIEWER)
-            if span is not None:
+            if _region_span(body, REGION_REVIEWER_INTENT) is not None:
+                body = set_region(body, REGION_REVIEWER_INTENT, focus)
+            elif span is not None:
                 open_marker, close_marker = region_markers(REGION_REVIEWER)
                 start, end = span[0] - len(open_marker), span[1] + len(close_marker)
-                body = body[:start] + facts.intent.reviewer_focus + body[end:]
+                body = body[:start] + wrap_region(REGION_REVIEWER_INTENT, focus) + body[end:]
             elif REVIEWER_UNRESOLVED in body:
-                body = body.replace(REVIEWER_UNRESOLVED, facts.intent.reviewer_focus, 1)
+                body = body.replace(
+                    REVIEWER_UNRESOLVED, wrap_region(REGION_REVIEWER_INTENT, focus), 1
+                )
     body = _refresh_derived(body, facts, template)
     if status == "updated" and body == existing.replace("\r\n", "\n"):
         return existing, "unchanged"
@@ -2818,6 +2888,56 @@ class TemplateSource:
     revision: str
 
 
+#: Where ``ops/scripts/sync_org_pr_template.py`` pins ``<owner>/.github``'s
+#: template inside this governance tree (one directory per owner).
+PINNED_TEMPLATE_ROOT = Path(__file__).resolve().parents[2] / "generated/governance/org_pr_template"
+
+PinnedLoader = Callable[[str], "tuple[str, str] | None"]
+
+
+def pinned_template(owner: str, root: Path = PINNED_TEMPLATE_ROOT) -> tuple[str, str] | None:
+    """``(revision, text)`` of the pinned template for ``owner``, or ``None``.
+
+    Only bytes that still match the sha256 their receipt recorded are returned:
+    a pinned copy edited by hand is no copy of the authority at all.
+    """
+    # GitHub owner names are case-insensitive; a remote spelled "quantum-l9"
+    # still finds the pin committed under "Quantum-L9".
+    matches = (
+        [d for d in root.iterdir() if d.is_dir() and d.name.casefold() == owner.casefold()]
+        if root.is_dir()
+        else []
+    )
+    if len(matches) != 1:
+        return None
+    directory = matches[0]
+    try:
+        receipt = json.loads((directory / "pull_request_template.receipt.json").read_text("utf-8"))
+        text = (directory / "pull_request_template.md").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(receipt, dict):
+        return None
+    actual = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+    revision = str(receipt.get("revision") or "")
+    if actual != receipt.get("sha256") or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        return None
+    return revision, text
+
+
+def _repository_template(workspace: Path) -> tuple[str, str] | None:
+    """The repository's own template as committed at HEAD, or None when absent.
+
+    Committed bytes only: an uncommitted edit is not part of the PR.
+    """
+    try:
+        sha = _run_git_strict(workspace, "rev-parse", "HEAD").strip()
+        text = _run_git_strict(workspace, "show", f"HEAD:{TEMPLATE_PATH}")
+    except GitRangeError:
+        return None
+    return sha, text
+
+
 def resolve_template(
     workspace: Path,
     owner: str,
@@ -2825,14 +2945,23 @@ def resolve_template(
     *,
     gh: org_dotgithub.GhApi = org_dotgithub.gh_api,
     git: org_dotgithub.GitRead = org_dotgithub.git_read,
+    pinned: PinnedLoader = pinned_template,
 ) -> TemplateSource:
-    """The organization's canonical PR template at one exact commit.
+    """The PR template this body is composed from, at one exact commit.
 
-    ``<owner>/.github`` owns the template. A consumer's local copy is never
-    read here — a divergent copy must not change what the body is composed
-    from — and there is no stale fallback: an unreachable or invalid template
-    is an error, not a silent switch to some other bytes. The org repository
-    composes its own PRs from the template at its own PR head.
+    Order (operator directive 2026-11-17, superseding the 2026-10-13 rule that
+    the repository's own copy is never read):
+
+    1. the repository's own ``.github/pull_request_template.md`` as committed at
+       HEAD, when it exists and passes ``validate_template``; every governed
+       repository is seeded with it, so a PR never needs another repository;
+    2. the organization's ``<owner>/.github`` template, read live;
+    3. the copy of that template pinned in this governance tree, only while its
+       bytes match their receipt.
+
+    A repository copy that fails validation falls through to the org template
+    with a NOTE. With nothing usable the result is still an error. The org
+    repository itself composes from the template at its own PR head.
     """
     if not owner:
         msg = "cannot resolve the repository owner, so the org PR template has no source"
@@ -2844,11 +2973,41 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
+        own = _repository_template(workspace)
+        if own is not None:
+            own_sha, own_text = own
+            own_errors = validate_template(own_text)
+            if not own_errors:
+                return TemplateSource(text=own_text, revision=f"{owner}/{name}@{own_sha}")
+            print(
+                f"NOTE: {owner}/{name}'s own {TEMPLATE_PATH} at {own_sha[:12]} is not usable "
+                f"({'; '.join(own_errors)}); falling back to the {owner}/.github template",
+                file=sys.stderr,
+            )
+        source = "live"
         try:
             org = org_dotgithub.read_org_file(owner, TEMPLATE_PATH, gh=gh, git=git)
+            sha, text = org.sha, org.text
         except org_dotgithub.OrgFileError as exc:
-            raise TemplateError(str(exc)) from exc
-        sha, text = org.sha, org.text
+            held = pinned(owner)
+            if held is None:
+                raise TemplateError(f"{exc}; no pinned template for {owner}") from exc
+            sha, text = held
+            source = "pinned"
+            print(
+                f"NOTE: {owner}/.github is unreachable from this session; composing from the "
+                f"template pinned in Cursor-Governance at {sha[:12]} "
+                "(generated/governance/org_pr_template)",
+                file=sys.stderr,
+            )
+        revision = f"{owner}/.github@{sha}" + (" (pinned)" if source == "pinned" else "")
+        errors = validate_template(text)
+        if errors:
+            msg = f"canonical PR template {revision}:{TEMPLATE_PATH} is not usable: " + "; ".join(
+                errors
+            )
+            raise TemplateError(msg)
+        return TemplateSource(text=text, revision=revision)
     revision = f"{owner}/.github@{sha}"
     errors = validate_template(text)
     if errors:
@@ -2964,7 +3123,7 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         # own `git log base..HEAD | head -1`, a second copy of the range rule
         # that titled PR #602 with a main commit.
         facts = collect_mechanical(workspace, pr_base=args.pr_base, verify=False)
-        facts.intent = load_intent(args.intent_file, facts.head)
+        facts.intent = load_intent(args.intent_file, facts.head, workspace=workspace)
         if args.print_intent_title:
             print(facts.intent.title if facts.intent is not None else "")
         else:
@@ -3009,7 +3168,7 @@ def _main(args: argparse.Namespace, workspace: Path) -> int:
         facts.l4_receipt = None
         facts.breakglass = None
     else:
-        facts.intent = load_intent(args.intent_file, facts.head)
+        facts.intent = load_intent(args.intent_file, facts.head, workspace=workspace)
 
     if args.refresh_body is not None:
         existing = args.refresh_body.read_text(encoding="utf-8")

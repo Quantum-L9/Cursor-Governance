@@ -2024,3 +2024,48 @@ the SSOT `make pr`, and planned by `l9-plan`.
 
 SSOT: this section; `ops/config/python-contract.json` (`claude-code-autonomy`,
 `program-execution-controller`); `ops/make/campaign.mk`.
+
+<!-- MEMORY_HOOK_RELAY_V1 -->
+## 8.11 Relay hook carrier for the shared Memory 3.0 store (2026-11-16) — amends §8.6 (hook lane transport) and §8.10 item 7
+
+Append-only. Operator decision, 2026-11-16: hook and memory writes go to the
+shared Memory 3.0 store on the Hetzner host as designed — first through the agent
+(relay), then through a hook principal on the memory service, which retires the
+relay.
+
+1. **Why.** The hosted service (`l9-graphiti-memory` 3.0) admits only an OAuth
+   principal that is a person with an operator-bound actor; client-credentials
+   tokens are refused (memory ADR-100, ADR-103). The hook lane's transport A
+   spawns the bound local runtime, whose store on a Claude Code cloud container
+   is container scratch. Hook records written there were reported `OK` and lost
+   with the container.
+2. **One carrier decision.** `ops/memory/hook_carrier.py` resolves `relay` or
+   `local`: `L9_MEMORY_HOOK_CARRIER` when set (an unknown value is refused, never
+   guessed), otherwise `relay` when `CLAUDE_CODE_REMOTE=true` and `local`
+   elsewhere.
+3. **Relay.** On `relay`, `MemoryControlPlaneClient` admits a hook record against
+   its envelope exactly as before, then queues it in
+   `<repo>/.l9/memory/relay/outbox.jsonl` with the arguments for the account
+   connector's `memory.write_agent` (hook `write`),
+   `memory.ingest_governed_candidate` (`ingest_candidate`) or `memory.close`
+   (`close`). It opens no local store, not even for a dry run, and reports
+   `RELAYED`, which is not `OK`: no obligation is discharged by a queue entry.
+   Distill is not run on a relay surface (§8.10 item 7).
+4. **The agent carries it.** The Claude Stop hook (`memory_writeback.py`) blocks
+   while an entry is unacknowledged and lists each connector call. The agent
+   makes the call and records the returned receipt id with
+   `python -m ops.memory.relay ack <id> --receipt <uuid>`; the hosted receipt is
+   the authority, the acknowledgement is the agent's record of it. The gate asks
+   at most three times per entry, then only announces it (rule 42
+   satisfiability). A connector refusal is the verdict: never rerouted through
+   `memory.ingest` or the operator CLI.
+5. **Attribution.** Relayed records are written by the agent's bound actor and
+   carry `carrier:relay` and `hook-surface:<surface>` tags. Hook provenance stays
+   visible; the principal is the agent's until a hook principal exists.
+6. **Exit.** This carrier is interim. It is retired when the memory service ships
+   an envelope-bound hook principal and Cursor-Governance binds 3.0 with the
+   CLI's remote mode against the hosted service; that cutover is its own dated
+   section.
+
+SSOT: this section; `ops/memory/hook_carrier.py`, `ops/memory/relay.py`;
+`docs/decisions/ADR-0054-relay-hook-carrier.md`.

@@ -143,8 +143,27 @@ def already_closed(
     return _latches.receipt_is_successful_close(data) and data.get("head_hash") == head_hash
 
 
-def _previous_continuation(project_dir: Path, session_id: str) -> str | None:
-    """This session's last admitted continuation record, to supersede."""
+def _hook_carrier() -> str | None:
+    """The hook carrier this close runs under, or None when it cannot be resolved."""
+    from ops.memory.hook_carrier import CarrierError, resolve_carrier  # noqa: PLC0415
+
+    try:
+        return resolve_carrier(os.environ)
+    except CarrierError:
+        return None
+
+
+def _previous_continuation(
+    project_dir: Path, session_id: str, carrier: str | None = None
+) -> str | None:
+    """This session's last admitted continuation record, to supersede.
+
+    Only a reference admitted by the same carrier is returned: an id from the
+    container-local store does not exist in the hosted store, which refuses the
+    whole candidate when asked to supersede it (observed 2026-11-17,
+    "supersession refused: superseded record does not exist"). A receipt
+    written before the carrier was recorded counts as local.
+    """
     try:
         path_r = _latches.receipt_path(project_dir, session_id)
         with open(path_r, encoding="utf-8") as handle:  # NOSONAR python:S2083
@@ -154,7 +173,11 @@ def _previous_continuation(project_dir: Path, session_id: str) -> str | None:
     if data.get("status") != STATUS_CLOSED_CANONICALLY:
         return None
     ref = str(data.get("continuation_reference") or "").strip()
-    return ref or None
+    if not ref:
+        return None
+    if carrier is not None and (data.get("continuation_carrier") or "local") != carrier:
+        return None
+    return ref
 
 
 def _handoff_pickup(handoff: dict[str, Any], pickup: dict[str, Any]) -> dict[str, Any]:
@@ -465,6 +488,8 @@ def _persist_obligation(
         "retry_count": int(report.get("retry_count") or 0),
         **fields,
     }
+    if receipt.get("continuation_reference") and "continuation_carrier" not in receipt:
+        receipt["continuation_carrier"] = _hook_carrier()
     report["receipt"] = receipt
     if not dry_run:
         try:
@@ -634,7 +659,8 @@ def close_session(
     )
     # Every close supersedes this session's previous continuation, so a resumed
     # conversation leaves exactly one ACTIVE continuation (post-publish or not).
-    previous = _previous_continuation(project, session_id)
+    carrier = _hook_carrier()
+    previous = _previous_continuation(project, session_id, carrier) if carrier else None
     candidate = capsule.to_governed_candidate(
         namespace=namespace,
         source_sha=head or "0" * 40,

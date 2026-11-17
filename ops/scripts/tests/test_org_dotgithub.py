@@ -71,6 +71,53 @@ class ReadOrgFileTests(unittest.TestCase):
         ):
             org_dotgithub.read_org_file("Quantum-L9", PATH, gh=scoped, git=git_down)
 
+    def test_session_scope_refusal_names_the_fix_when_both_transports_fail(self) -> None:
+        """A private <owner>/.github outside the cloud session's scope: say how to fix it."""
+
+        def git_down(owner: str, path: str) -> tuple[str, str]:
+            raise org_dotgithub.OrgFileError("could not read Username: terminal prompts disabled")
+
+        with self.assertRaisesRegex(
+            org_dotgithub.OrgFileError,
+            r"git transport also failed.*start a new session with Quantum-L9/\.github selected",
+        ):
+            org_dotgithub.read_org_file("Quantum-L9", PATH, gh=scoped, git=git_down)
+
+    def test_other_rest_failures_carry_no_session_hint(self) -> None:
+        def gh_down(endpoint: str) -> object:
+            raise org_dotgithub.OrgFileError("gh api failed: HTTP 404")
+
+        def git_down(owner: str, path: str) -> tuple[str, str]:
+            raise org_dotgithub.OrgFileError("git ls-remote failed")
+
+        with self.assertRaises(org_dotgithub.OrgFileError) as caught:
+            org_dotgithub.read_org_file("Quantum-L9", PATH, gh=gh_down, git=git_down)
+        self.assertNotIn("new session", str(caught.exception))
+
+    def test_git_uses_the_gh_credential_helper_when_gh_exists(self) -> None:
+        self.assertEqual(
+            org_dotgithub.git_credential_args(which=lambda name: "/usr/bin/gh"),
+            ["-c", "credential.helper=!gh auth git-credential"],
+        )
+        self.assertEqual(org_dotgithub.git_credential_args(which=lambda name: None), [])
+
+    def test_git_read_passes_the_credential_helper_to_every_git_call(self) -> None:
+        seen: list[list[str]] = []
+
+        def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            seen.append(argv)
+            out = f"{SHA}\tHEAD\n" if "ls-remote" in argv else "body"
+            return subprocess.CompletedProcess(argv, 0, stdout=out, stderr="")
+
+        with (
+            unittest.mock.patch.object(org_dotgithub.shutil, "which", return_value="/usr/bin/gh"),
+            unittest.mock.patch.object(org_dotgithub.subprocess, "run", side_effect=fake_run),
+        ):
+            self.assertEqual(org_dotgithub.git_read("Quantum-L9", PATH), (SHA, "body"))
+        self.assertTrue(seen)
+        for argv in seen:
+            self.assertEqual(argv[:3], ["git", "-c", "credential.helper=!gh auth git-credential"])
+
     def test_git_read_pins_the_head_commit_and_reads_that_commit(self) -> None:
         """git_read against a local bare 'org repo', with the github.com URL rewritten to it."""
         with tempfile.TemporaryDirectory() as tmp:

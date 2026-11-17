@@ -82,3 +82,22 @@ def test_the_repair_is_repair_write() -> None:
         if "ops.memory.cli write" in step:
             pytest.fail(f"{rel}: ops.memory.cli write stamps no close receipt; use repair-write")
     assert any("repair-write" in step for _rel, step in _executable_steps())
+
+
+def test_handoffs_are_delivered_by_ops_reports_publish() -> None:
+    """#952: every step-bearing surface generates handoffs, then delivers them
+    with ``python -m ops.reports.publish handoffs``; none writes a committed
+    ``reports/end-session/`` file as the destination."""
+    by_surface: dict[str, str] = {}
+    for rel, step in _executable_steps():
+        by_surface[rel] = by_surface.get(rel, "") + "\n" + step
+    for rel in (
+        "commands/end-session.md",
+        "skills/l9-end-session/references/end-session-protocol.md",
+        "end-session.yaml",
+    ):
+        steps = by_surface.get(rel, "")
+        assert 'session_debt.py" handoff' in steps or "session_debt.py handoff" in steps, rel
+        assert "-m ops.reports.publish handoffs" in steps, rel
+        assert steps.index("handoff --workspace") < steps.index("ops.reports.publish handoffs"), rel
+        assert "reports/end-session/" not in steps, rel

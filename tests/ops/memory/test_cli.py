@@ -65,6 +65,13 @@ def test_exit_codes_follow_the_outcome_taxonomy() -> None:
     assert cli.exit_code_for(unbound) == cli.EXIT_UNBOUND
 
 
+def test_a_relayed_write_exits_zero_but_is_not_ok() -> None:
+    """CANONICAL_LAW §8.11: queued for the account connector is done, not committed."""
+    relayed = OperationOutcome("write", OutcomeStatus.RELAYED)
+    assert cli.exit_code_for(relayed) == cli.EXIT_OK
+    assert cli.outcome_document(relayed)["ok"] is False
+
+
 def test_outcome_document_names_the_authority_and_transport() -> None:
     outcome = OperationOutcome("health", OutcomeStatus.CANONICAL_UNAVAILABLE, error="down")
     document = cli.outcome_document(outcome)

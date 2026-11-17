@@ -1,8 +1,9 @@
 # Canonical rule identity for Semgrep findings in this repository.
 #
-# Consumed by the pinned l9-ci-sdk (`semgrep normalize --identity-map`), wired
-# from `.github/workflows/l9-analysis.yml`. Schema and conventions follow the
-# SDK's own `.l9/semgrep-identity-map.yaml`.
+# Read by the l9-ci-sdk (`semgrep normalize --identity-map`). It was wired from
+# the repo-local `.github/workflows/l9-analysis.yml`, retired in #732: analysis
+# now runs as the org-required `Analyze (central Core)` check. Schema and
+# conventions follow the SDK's own `.l9/semgrep-identity-map.yaml`.
 #
 # WHY THIS FILE IS REQUIRED, NOT OPTIONAL
 #
@@ -15,7 +16,7 @@
 #
 # MAINTENANCE OBLIGATION — read this before deleting a "noisy" entry
 #
-# A rule that starts firing and is absent here turns `Analyze (semgrep -> SDK)`
+# A rule that starts firing and is absent here turns the analysis check
 # red until someone adds it. That is the intended fail-closed behavior: a new
 # class of finding gets a human decision instead of silently averaging into a
 # score. Add the rule here AND in semgrep-finding-policy.yaml (identity says

@@ -2565,3 +2565,13 @@ Analyze (central Core) does not block them on.
   `core/resolve-governance`). This narrows the 2026-11-06 "an unstageable gate
   is a reported skip" only for Core's own refusal; failing to fetch Core or the
   SDK is still a reported skip.
+
+## Memory hook relay on cloud sessions (2026-11-16) — CANONICAL_LAW §8.11
+
+Append-only. On a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`) hook-lane
+memory writes are not written locally: they are queued in
+`<repo>/.l9/memory/relay/outbox.jsonl`, and the Stop hook asks you to make each
+listed call on the account-managed L9 Memory connector and acknowledge it with
+`python -m ops.memory.relay ack <id> --receipt <receipt_id>`. Shared-store
+hydration is `memory_hydrate` on that connector. `L9_MEMORY_HOOK_CARRIER=local|relay`
+overrides the default. ADR-0054.
