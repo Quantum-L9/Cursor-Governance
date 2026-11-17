@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import sys
 import types
 import unittest
@@ -122,47 +123,101 @@ class RelayGateTests(unittest.TestCase):
         self.relay.refuse(self.root, ident, receipt, "namespace did not match any write grant")
         return receipt
 
+    def _main(self, stop_output: str = "") -> dict:
+        """Run the Stop hook's ``main`` with ``_stop`` printing ``stop_output``."""
+
+        def fake_stop(_event: dict) -> int:
+            if stop_output:
+                print(stop_output)
+            return 0
+
+        out = io.StringIO()
+        with (
+            mock.patch.object(sys, "stdin", io.StringIO('{"session_id": "s"}')),
+            mock.patch.object(sys, "stdout", out),
+            mock.patch.object(self.wb, "_stop", fake_stop),
+            mock.patch.object(self.wb.st, "workspace_root", return_value=self.root),
+        ):
+            self.assertEqual(self.wb.main(), 0)
+        text = out.getvalue().strip()
+        return json.loads(text) if text else {}
+
     def test_refused_entry_no_longer_blocks(self) -> None:
         ident = self._queue()
         self.assertIsNotNone(self.wb._relay_gate(self.root))
         receipt = self._refuse(ident)
+        self.assertIsNone(self.wb._relay_gate(self.root))
+        notice = self.wb._relay_refusal_notice(self.root)
+        assert notice is not None
+        self.assertIn("REFUSED by the connector, not blocking", notice)
+        self.assertIn(ident, notice)
+        self.assertIn(receipt, notice)
+
+    def test_refused_only_stop_announces_to_the_user(self) -> None:
+        """Copilot review on #1018: stderr reaches no one, so a refused-only Stop
+        must still emit a user-visible systemMessage, and must not block."""
+        ident = self._queue()
+        receipt = self._refuse(ident)
+        payload = self._main()
+        self.assertNotIn("decision", payload)
+        self.assertIn(ident, payload["systemMessage"])
+        self.assertIn(receipt, payload["systemMessage"])
+
+    def test_refusal_notice_merges_into_an_existing_system_message(self) -> None:
+        ident = self._queue()
+        self._refuse(ident)
+        payload = self._main(json.dumps({"systemMessage": "write-back announced"}))
+        self.assertTrue(payload["systemMessage"].startswith("write-back announced\n\n"))
+        self.assertIn(ident, payload["systemMessage"])
+
+    def test_refusal_notice_rides_alongside_a_block_once(self) -> None:
+        refused = self._queue("refused")
+        self._refuse(refused)
+        owed = self._queue("owed")
+        reason = self.wb._relay_gate(self.root)
+        assert reason is not None
+        self.assertIn(f"python -m ops.memory.relay ack {owed}", reason)
+        self.assertNotIn(f"python -m ops.memory.relay ack {refused}", reason)
+        payload = self._main(json.dumps({"decision": "block", "reason": reason}))
+        self.assertEqual(payload["decision"], "block")
+        self.assertEqual(payload["reason"], reason, "the block reason is left as the gate wrote it")
+        self.assertEqual(payload["systemMessage"].count(f"[{refused}]"), 1)
+
+    def test_subagent_stop_carries_no_refusal_notice(self) -> None:
+        self._refuse(self._queue())
+        out = io.StringIO()
+        with (
+            mock.patch.object(sys, "stdin", io.StringIO('{"session_id": "s"}')),
+            mock.patch.object(sys, "stdout", out),
+            mock.patch.object(self.wb, "_stop", lambda _e: 0),
+            mock.patch.object(self.wb.pp, "is_subagent", return_value=True),
+        ):
+            self.assertEqual(self.wb.main(), 0)
+        self.assertEqual(out.getvalue(), "")
+
+    def test_unparseable_stop_output_is_never_rewritten(self) -> None:
+        self._refuse(self._queue())
         err = io.StringIO()
         with redirect_stderr(err):
-            self.assertIsNone(self.wb._relay_gate(self.root))
-        self.assertIn("REFUSED by the connector, not blocking", err.getvalue())
-        self.assertIn(ident, err.getvalue())
-        self.assertIn(receipt, err.getvalue())
+            merged = self.wb._with_notice("not json\n", "NOTICE")
+        self.assertEqual(merged, "not json\n")
+        self.assertIn("NOTICE", err.getvalue())
 
     def test_refused_entry_stays_listed_on_every_stop(self) -> None:
         ident = self._queue()
         self._refuse(ident)
         for _ in range(self.wb.RELAY_MAX_ASKS + 2):
-            err = io.StringIO()
-            with redirect_stderr(err):
-                self.assertIsNone(self.wb._relay_gate(self.root))
-            self.assertIn(ident, err.getvalue(), "announced, never silently dropped")
+            self.assertIsNone(self.wb._relay_gate(self.root))
+            self.assertIn(ident, self._main().get("systemMessage", ""), "never silently dropped")
         self.assertEqual([r["id"] for r in self.relay.pending(self.root)], [ident])
-
-    def test_refused_entry_is_named_alongside_a_blocking_one(self) -> None:
-        refused = self._queue("refused")
-        self._refuse(refused)
-        owed = self._queue("owed")
-        with redirect_stderr(io.StringIO()):
-            reason = self.wb._relay_gate(self.root)
-        self.assertIsNotNone(reason)
-        assert reason is not None
-        self.assertIn(f"python -m ops.memory.relay ack {owed}", reason)
-        self.assertNotIn(f"python -m ops.memory.relay ack {refused}", reason)
-        self.assertIn(f"[{refused}]", reason)
 
     def test_ack_after_refusal_clears_it(self) -> None:
         ident = self._queue()
         self._refuse(ident)
         self.relay.ack(self.root, ident, str(uuid.uuid4()))
-        err = io.StringIO()
-        with redirect_stderr(err):
-            self.assertIsNone(self.wb._relay_gate(self.root))
-        self.assertEqual(err.getvalue(), "")
+        self.assertIsNone(self.wb._relay_gate(self.root))
+        self.assertIsNone(self.wb._relay_refusal_notice(self.root))
+        self.assertEqual(self._main(), {}, "nothing to announce once acked")
         self.assertEqual(self.relay.pending(self.root), [])
 
     def test_block_reason_names_the_refuse_verb(self) -> None:

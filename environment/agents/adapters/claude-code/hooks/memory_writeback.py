@@ -37,6 +37,8 @@ narrowing, stage C8).
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -384,8 +386,9 @@ def _relay_gate(workspace: Path) -> str | None:
 
     An entry the connector refused (``python -m ops.memory.relay refuse``)
     never blocks: the refusal is the verdict, and no correct action could clear
-    it (rule 42 "Satisfiability"). It is still announced on every Stop until a
-    later ack supersedes it — discharged for the turn, not closed.
+    it (rule 42 "Satisfiability"). ``main`` still announces it on every Stop
+    (``_relay_refusal_notice``) until a later ack supersedes it — discharged
+    for the turn, not closed.
     """
 
     try:
@@ -395,15 +398,12 @@ def _relay_gate(workspace: Path) -> str | None:
         return None
     reasons: list[str] = []
     exhausted: list[str] = []
-    refused_notes: list[str] = []
     for root in _relay_roots(workspace):
         try:
             owed = relay.pending(root)
             gate_path = relay.relay_file(relay.relay_dir(root), RELAY_GATE_NAME)
         except (OSError, relay.RelayError):
             continue
-        refused = [row for row in owed if row.get("refusal")]
-        refused_notes.extend(_refusal_note(root, row) for row in refused)
         owed = [row for row in owed if not row.get("refusal")]
         if not owed:
             continue
@@ -424,18 +424,63 @@ def _relay_gate(workspace: Path) -> str | None:
             "(python -m ops.memory.relay --workspace <repo> instructions)",
             file=sys.stderr,
         )
-    if refused_notes:
-        announcement = (
-            "memory-relay: REFUSED by the connector, not blocking (a later "
-            "`python -m ops.memory.relay ack` supersedes) — " + "; ".join(refused_notes)
-        )
-        print(announcement, file=sys.stderr)
-        if reasons:
-            reasons.append(announcement)
     return "\n\n".join(reasons) or None
 
 
-def _refusal_note(root: Path, row: dict) -> str:
+def _relay_refusal_notice(workspace: Path) -> str | None:
+    """The refused relay entries, announced on every Stop, or ``None``.
+
+    A refusal stops the entry from blocking but never silences it. Stop-hook
+    stderr reaches no one (see Announcement above), so ``main`` carries this
+    into the hook's user-visible ``systemMessage``. Fail-open.
+    """
+
+    try:
+        mb.ensure_importable()
+        from ops.memory import relay
+    except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+        return None
+    notes: list[str] = []
+    for root in _relay_roots(workspace):
+        try:
+            owed = relay.pending(root)
+        except (OSError, relay.RelayError):
+            continue
+        notes.extend(_refusal_note(root, row) for row in owed if row.get("refusal"))
+    if not notes:
+        return None
+    return (
+        "L9 MEMORY RELAY — REFUSED by the connector, not blocking (a later "
+        "`python -m ops.memory.relay ack` supersedes): " + "; ".join(notes)
+    )
+
+
+def _with_notice(output: str, notice: str | None) -> str:
+    """Merge ``notice`` into the hook's single JSON output as a ``systemMessage``.
+
+    A Stop hook prints at most one JSON object; a second would corrupt it. An
+    output that is not one JSON object is passed through unchanged and the
+    notice goes to stderr rather than risk breaking the hook's verdict.
+    """
+
+    if not notice:
+        return output
+    text = output.strip()
+    if not text:
+        return json.dumps({"systemMessage": notice}, ensure_ascii=False) + "\n"
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        payload = None
+    if not isinstance(payload, dict):
+        print(notice, file=sys.stderr)
+        return output
+    existing = payload.get("systemMessage")
+    payload["systemMessage"] = f"{existing}\n\n{notice}" if existing else notice
+    return json.dumps(payload, ensure_ascii=False) + "\n"
+
+
+def _refusal_note(root: Path, row: dict[str, Any]) -> str:
     refusal = row.get("refusal") or {}
     return (
         f"{root}: [{row.get('id')}] {row.get('tool')} "
@@ -448,6 +493,24 @@ def main() -> int:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
+    if not isinstance(event, dict):
+        event = {}
+    buffer = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buffer):
+            code = _stop(event)
+    finally:
+        notice = None
+        try:
+            if not (pp.is_subagent(event) or pp.is_swarm_child(event)):
+                notice = _relay_refusal_notice(st.workspace_root())
+        except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
+            notice = None
+        sys.stdout.write(_with_notice(buffer.getvalue(), notice))
+    return code
+
+
+def _stop(event: dict[str, Any]) -> int:
     session_id = str(event.get("session_id", "")) or "unknown-session"
 
     try:
