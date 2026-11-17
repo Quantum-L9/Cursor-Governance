@@ -158,6 +158,13 @@ def test_v3_pipeline_passes_when_the_gar_run_and_declarations_are_present() -> N
         _clear(hold)
 
 
+def test_admit_exempts_built_shelf_regardless_of_case(tmp_path: Path) -> None:
+    plan = tmp_path / "BUILT" / "already_filed.plan.md"
+    plan.parent.mkdir()
+    plan.write_text("# Filed\n\nAlready on the built shelf.\n", encoding="utf-8")
+    assert check_plan(plan) == []
+
+
 def test_v4_admit_rejects_a_title_and_paragraph() -> None:
     hold = _hold("v4")
     hold.mkdir(parents=True, exist_ok=True)

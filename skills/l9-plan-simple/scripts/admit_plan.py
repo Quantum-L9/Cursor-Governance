@@ -3,8 +3,8 @@
 
 A title and a paragraph, a ``kind: simple`` plan with no receipt, and a
 receipt whose GAR run file is missing all exit non-zero. ``_TEMPLATE.plan.md``
-and plans already filed under built or archive shelves are exempt. This
-script does not delete a plan file.
+and plans already filed under built or archive shelves are exempt, in any
+case (`BUILT` is the same shelf). This script does not delete a plan file.
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ def _index_proof_errors(plan: Path, receipt: Path) -> list[str]:
 def check_plan(path: Path, *, require_index: bool = False) -> list[str]:
     if path.name in EXEMPT_NAMES:
         return []
-    posix = path.as_posix()
+    posix = path.as_posix().lower()
     if any(part in posix for part in SHELVED):
         return []
     if not path.is_file():
