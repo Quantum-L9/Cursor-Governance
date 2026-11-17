@@ -450,6 +450,20 @@ def test_every_host_transport_declares_how_a_stopped_child_is_continued(
         cto_mode.load_contract(path)
 
 
+def test_cursor_registers_from_the_local_checkout_without_add_repo() -> None:
+    """Copilot on #1020: the shared prompt must not require Claude cloud attachment."""
+    protocol = cto_mode.load_contract()["operating_protocol"]
+    invariant = protocol["invariants"]["repositories_attached_at_launch"]
+    assert "On Cursor" in invariant
+    assert "does not call add_repo" in invariant
+    brief = " ".join(protocol["child_brief_must_include"])
+    assert "skip add_repo and register_repo_root" in brief
+    text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
+    assert "On Cursor the workspace is already a local checkout" in text
+    assert "do not call add_repo or register_repo_root" in text
+    assert text.index("L9_AUTHORITY_ROOT") < text.index("L9_AUTHORITY_MANAGED_ROOT")
+
+
 def test_cursor_continuation_is_re_dispatch_not_wakeup() -> None:
     cursor = cto_mode.load_contract()["operating_protocol"]["transport"]["cursor"]
     assert "re-dispatching the same lane" in cursor["continuation"]
@@ -514,7 +528,8 @@ def test_dot_github_is_the_source_and_lane_repos_are_attached_before_registratio
     assert "source_url https://github.com/Quantum-L9/.github" in launch
     assert "source_revision" not in launch
     invariant = protocol["invariants"]["repositories_attached_at_launch"]
-    assert "does not attach" in invariant and "never mid-campaign" in invariant
+    assert "does not attach" in invariant
+    assert "never mid-campaign" in invariant
     text = projection_mode.render_child_prompt(cto_mode.load_contract(), "s")
     assert "Attach your primary repository (access push) and Quantum-L9/Cursor-Governance" in text
     assert "never call add_repo for it" in text
@@ -617,7 +632,8 @@ def test_child_launch_names_the_dot_github_source() -> None:
     assert GITHUB_SOURCE in rules
     for reason in ("private", "dot-named", "add_repo refuses", "fixed at"):
         assert reason in rules
-    assert "ff.sh --ssot" in rules and "launch-spec" in rules
+    assert "ff.sh --ssot" in rules
+    assert "launch-spec" in rules
 
 
 def test_child_prompt_never_clones_dot_github_and_keeps_the_frozen_prefixes() -> None:
@@ -627,7 +643,11 @@ def test_child_prompt_never_clones_dot_github_and_keeps_the_frozen_prefixes() ->
     assert "never clone, branch or push it" in text
     for prefix in FROZEN_PREFIXES:
         assert prefix in text
-    assert '--authority-root "$HOME/.l9/authority/.github"' in text
+    assert "--authority-root <resolved>" in text
+    assert "L9_AUTHORITY_ROOT" in text
+    assert "L9_AUTHORITY_MANAGED_ROOT" in text
+    assert "coding_projection_status.py" in text
+    assert "missing default path is not by itself a CTO-BLOCKER" in text
     assert "ensure_authority_checkout.sh" in text
     # Attaching repositories precedes role registration.
     assert text.index("REPOSITORIES (precondition of role registration") < text.index(
