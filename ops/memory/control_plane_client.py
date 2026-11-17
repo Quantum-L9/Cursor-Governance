@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from ops.memory.canonical_validation import CanonicalValidator, ValidationUnavailable
-from ops.memory.hook_carrier import RELAY, CarrierError, resolve_carrier
+from ops.memory.hook_carrier import HOSTED, REMOTE_CARRIERS, CarrierError, resolve_carrier
 from ops.memory.hook_envelope import HookEnvelope, envelope_for, operator_principal
 from ops.memory.receipts import (
     CandidateReceipt,
@@ -52,6 +52,8 @@ from ops.memory.search_identity import (
 from ops.memory.venv_ready import governance_root_for_cli, venv_ready
 
 TRANSPORT = "cli"
+#: The hosted hook carrier's transport (ops/memory/hosted_hook_transport.py).
+TRANSPORT_HOSTED = "hosted-mcp"
 
 # Exit codes the memory CLI documents in its capabilities receipt.
 EXIT_COMMITTED = 0
@@ -126,7 +128,8 @@ class OutcomeStatus(StrEnum):
     #: Relay carrier (CANONICAL_LAW §8.11): the record passed its envelope and
     #: is queued for the agent to write through the account connector. It is
     #: NOT committed — ``ok`` stays false until the hosted receipt exists, so
-    #: no close obligation is discharged by a queue entry.
+    #: no close obligation is discharged by a queue entry. The hosted carrier
+    #: reports it too when a transport failure parked the record (ADR-0055).
     RELAYED = "RELAYED"
 
 
@@ -240,6 +243,7 @@ class MemoryControlPlaneClient:
         session_id: str | None = None,
         validator: CanonicalValidator | None = None,
         surface: str | None = None,
+        hosted_transport: Any = None,
     ) -> None:
         self.binding = binding
         self._run = runner or default_runner
@@ -262,6 +266,9 @@ class MemoryControlPlaneClient:
         #: Resolved per call from this client's environment, so a carrier
         #: override cannot be cached past the process that set it.
         self._carrier_env = self._env
+        #: The hosted carrier's transport (ADR-0055); built on first use so a
+        #: local or relay surface never loads it.
+        self._hosted_transport = hosted_transport
 
     # ------------------------------------------------------------------
     # Relay carrier (CANONICAL_LAW §8.11, ops/memory/hook_carrier.py)
@@ -270,15 +277,15 @@ class MemoryControlPlaneClient:
         return resolve_carrier(self._carrier_env)
 
     def _distill_on_relay(self, namespace: str) -> OperationOutcome | None:
-        """Distill is not run on a relay surface; ``None`` on a local one.
+        """Distill is not run on a relay or hosted surface; ``None`` on a local one.
 
         Distill extracts and admits records inside the runtime it runs in;
         locally that is container scratch, and the hosted service distills
-        server-side only (§8.10 item 7). Not relayed, not run.
+        server-side only (§8.10 item 7). Not relayed, not sent, not run.
         """
 
         try:
-            relay_surface = self._carrier() == RELAY
+            carrier = self._carrier()
         except CarrierError as exc:
             return self._outcome(
                 "distill",
@@ -286,12 +293,14 @@ class MemoryControlPlaneClient:
                 _Raw(None, None, "CarrierError", str(exc), 0),
                 namespaces=(namespace,),
             )
-        if not relay_surface:
+        if carrier not in REMOTE_CARRIERS:
             return None
         return self._outcome(
             "distill",
             OutcomeStatus.NOT_COMMITTED,
-            _Raw(None, None, None, "relay carrier: distill is not run on a relay surface", 0),
+            _Raw(
+                None, None, None, f"{carrier} carrier: distill is not run on a {carrier} surface", 0
+            ),
             namespaces=(namespace,),
         )
 
@@ -303,12 +312,15 @@ class MemoryControlPlaneClient:
         arguments: dict[str, Any],
         namespaces: Sequence[str],
         dry_run: bool,
+        carrier_tags: bool = False,
     ) -> OperationOutcome | None:
-        """``None`` on a local surface; otherwise the relay verdict.
+        """``None`` on a local surface; otherwise the relay or hosted verdict.
 
-        Runs after ``_guard`` (the envelope still bounds what may be queued)
-        and before any process: a relay surface never opens a local store,
-        not even for a dry run, because that store is not the authority.
+        Runs after ``_guard`` (the envelope still bounds what may be queued or
+        sent) and before any process: neither remote carrier opens a local
+        store, not even for a dry run, because that store is not the authority.
+        ``carrier_tags`` stamps ``carrier:<carrier>`` and ``hook-surface:<surface>``
+        onto the record's tags.
         """
 
         try:
@@ -320,20 +332,55 @@ class MemoryControlPlaneClient:
                 _Raw(None, None, "CarrierError", str(exc), 0),
                 namespaces=namespaces,
             )
-        if carrier != RELAY:
+        if carrier not in REMOTE_CARRIERS:
             return None
+        if carrier_tags:
+            arguments = {
+                **arguments,
+                "tags": [
+                    *arguments.get("tags", ()),
+                    f"carrier:{carrier}",
+                    f"hook-surface:{self.surface or 'operator'}",
+                ],
+            }
         if dry_run:
+            verb = "sent" if carrier == HOSTED else "queued"
             return self._outcome(
                 operation,
                 OutcomeStatus.NOT_COMMITTED,
-                _Raw(EXIT_DRY_RUN, None, None, "relay carrier: dry run, nothing queued", 0),
+                _Raw(EXIT_DRY_RUN, None, None, f"{carrier} carrier: dry run, nothing {verb}", 0),
                 namespaces=namespaces,
             )
+        if carrier == HOSTED:
+            return self._hosted(
+                operation, workspace=workspace, arguments=arguments, namespaces=namespaces
+            )
+        return self._enqueue(
+            operation, workspace=workspace, arguments=arguments, namespaces=namespaces
+        )
+
+    def _enqueue(
+        self,
+        operation: str,
+        *,
+        workspace: str,
+        arguments: dict[str, Any],
+        namespaces: Sequence[str],
+        carrier: str | None = None,
+        reason: str | None = None,
+    ) -> OperationOutcome:
+        """Queue one record in the relay outbox; ``RELAYED`` (never ``OK``)."""
+
         from ops.memory import relay
 
         try:
             entry = relay.enqueue(
-                workspace, surface=self.surface, operation=operation, arguments=arguments
+                workspace,
+                surface=self.surface,
+                operation=operation,
+                arguments=arguments,
+                carrier=carrier,
+                reason=reason,
             )
         except (OSError, relay.RelayError) as exc:
             return self._outcome(
@@ -346,11 +393,86 @@ class MemoryControlPlaneClient:
             # A queued record is a record this surface asked for: it counts
             # against max_records exactly as a committed one would.
             self._records_committed += 1
+        message = f"queued for {entry['tool']} as relay entry {entry['id']}"
+        if reason:
+            message = f"hosted transport unavailable ({reason}); {message}"
         return self._outcome(
             operation,
             OutcomeStatus.RELAYED,
-            _Raw(None, None, None, f"queued for {entry['tool']} as relay entry {entry['id']}", 0),
+            _Raw(None, None, None, message, 0),
             namespaces=namespaces,
+            transport=TRANSPORT_HOSTED if carrier == HOSTED else TRANSPORT,
+        )
+
+    def _hosted(
+        self,
+        operation: str,
+        *,
+        workspace: str,
+        arguments: dict[str, Any],
+        namespaces: Sequence[str],
+    ) -> OperationOutcome:
+        """Send one record to the hosted ``MemoryService`` as the hook principal.
+
+        ``OK`` only for a hosted receipt with a UUID id that proves the commit.
+        A refusal is the verdict (``REJECTED``), never rerouted. Anything that
+        is not a verdict parks the record in the relay outbox with its reason.
+        """
+
+        if self._hosted_transport is None:
+            from ops.memory.hosted_hook_transport import HostedHookTransport
+
+            self._hosted_transport = HostedHookTransport(self._carrier_env)
+        result = self._hosted_transport.call(operation, arguments)
+        # The bound release's schema does not describe a hosted receipt.
+        self._last_validation = None
+        raw = _Raw(None, result.payload, None, result.reason, result.latency_ms)
+        if result.refused:
+            return self._outcome(
+                operation,
+                OutcomeStatus.REJECTED,
+                raw,
+                namespaces=namespaces,
+                transport=TRANSPORT_HOSTED,
+                error_override=f"hosted refusal: {result.reason}",
+            )
+
+        def park(reason: str) -> OperationOutcome:
+            return self._enqueue(
+                operation,
+                workspace=workspace,
+                arguments=arguments,
+                namespaces=namespaces,
+                carrier=HOSTED,
+                reason=reason,
+            )
+
+        if not result.ok or result.payload is None:
+            return park(result.reason or "hosted transport unavailable")
+        try:
+            receipt = _HOSTED_RECEIPTS[operation](result.payload)
+        except (InvalidReceiptError, KeyError) as exc:
+            return park(f"unreadable hosted receipt: {exc}")
+        status = _hosted_status(operation, receipt)
+        if status is None:
+            return park(f"hosted receipt does not prove a commit (status {receipt.status})")
+        conflict = None
+        if status is OutcomeStatus.IDEMPOTENCY_CONFLICT:
+            conflict = (
+                "the hosted service already committed a different close under this "
+                "idempotency key; the returned record is the first close, not this request"
+            )
+        return self._count_committed(
+            self._outcome(
+                operation,
+                status,
+                raw,
+                receipt,
+                namespaces=namespaces,
+                transport=TRANSPORT_HOSTED,
+                canonical_receipt_id=result.receipt_id,
+                error_override=conflict,
+            )
         )
 
     def _checked(self, payload: Any, model_name: str, parser: Any) -> Any:
@@ -519,10 +641,12 @@ class MemoryControlPlaneClient:
         task_signature: str | None = None,
         projection_status: str | None = None,
         error_override: str | None = None,
+        transport: str = TRANSPORT,
+        canonical_receipt_id: str | None = None,
     ) -> OperationOutcome:
         receipt_raw = getattr(receipt, "raw", None)
-        canonical_id = None
-        if isinstance(receipt_raw, dict):
+        canonical_id = canonical_receipt_id
+        if canonical_id is None and isinstance(receipt_raw, dict):
             canonical_id = receipt_raw.get("receipt_id") or receipt_raw.get("write_receipt_id")
         integration = {
             "operation": operation,
@@ -531,7 +655,7 @@ class MemoryControlPlaneClient:
             "task_signature": task_signature,
             "requested_namespaces": list(namespaces),
             "memory_package_version": self.binding.memory_version,
-            "transport": TRANSPORT,
+            "transport": transport,
             "status": status.value,
             "fault_class": fault_class_for(status),
             "environment_heal": self.binding.environment_heal,
@@ -870,7 +994,7 @@ class MemoryControlPlaneClient:
             "namespace": namespace,
             "content": content,
             "memory_class": memory_class,
-            "tags": [*tags, "carrier:relay", f"hook-surface:{self.surface or 'operator'}"],
+            "tags": list(tags),
         }
         if idempotency_key:
             relay_arguments["idempotency_key"] = idempotency_key
@@ -882,6 +1006,7 @@ class MemoryControlPlaneClient:
             arguments=relay_arguments,
             namespaces=(namespace,),
             dry_run=dry_run,
+            carrier_tags=True,
         ):
             return relayed
         argv = [
@@ -1564,3 +1689,24 @@ __all__ = [
     "OperationOutcome",
     "OutcomeStatus",
 ]
+
+
+#: Hosted receipt -> the same structural view the local transport returns.
+_HOSTED_RECEIPTS: Mapping[str, Any] = {
+    "write": WriteReceipt.parse,
+    "ingest_candidate": CandidateReceipt.parse,
+    "close": CloseReceipt.parse,
+}
+
+
+def _hosted_status(operation: str, receipt: Any) -> OutcomeStatus | None:
+    """``OK`` (or a replay conflict) when the hosted receipt proves the commit."""
+
+    if operation == "write":
+        accepted = receipt.accepted or receipt.status == "superseded"
+        return OutcomeStatus.OK if accepted else None
+    if operation == "ingest_candidate":
+        return OutcomeStatus.OK if receipt.accepted else None
+    if receipt.payload_drifted:
+        return OutcomeStatus.IDEMPOTENCY_CONFLICT
+    return OutcomeStatus.OK if receipt.committed else None

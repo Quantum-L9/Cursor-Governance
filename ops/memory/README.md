@@ -53,6 +53,9 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests, explicit task satisfactions; `authority: none`; the hydration-only predicate the Cursor write gates read | any claim of memory truth; any lock |
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
+| `hook_carrier.py` | the one hook-carrier decision: `hosted` (hook credential binds) / `relay` (cloud, unbound) / `local`; `L9_MEMORY_HOOK_CARRIER` override, unknown refused; `store_of` for supersession | reading or printing a credential value |
+| `hosted_hook_transport.py` | the hosted carrier (ADR-0055): client-credentials token for the `l9-memory-hooks` hook principal, one MCP `initialize` + `tools/call` per record to the onboarding `resource.identifier`, verdict `ok` / `refused` / `unavailable`; `drain` for the Stop hook | a host literal, a redirect, a cached token outside the process, a second door after a refusal |
+| `relay.py` | the relay outbox: queue, ack (hosted receipt UUID), reject (refusal), status | talking to memory |
 
 ## Caller taxonomy (ADR-0033 two lanes; ADR-0030 items 7–9 as amended; CANONICAL_LAW §8.3 / §8.6)
 
@@ -268,6 +271,14 @@ identity), `mcp_instantiation.py` (the memory-owned MCP installer),
 `MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
 operation.
 
+One named exception (ADR-0055, CANONICAL_LAW §8.12):
+`hosted_hook_transport.py` carries hook records to the hosted `MemoryService` —
+the canonical store, not a provider — and may import `urllib` request/error
+types, used only through `ops/lib/safe_https.py` (verified TLS, no redirects)
+to hosts read from `ops/config/memory-auth0-onboarding.yaml` and its discovery
+documents. The boundary test pins the exception to exactly that module and that
+root; the semgrep rule excludes exactly that file.
+
 ## Continuation capsule (plan §12)
 
 `ContinuationCapsuleV2` is the structured successor of the provider-only
@@ -444,8 +455,11 @@ Both agents must use that exact compatible package via their existing managed
 stdio MCP launchers, with each agent independently authenticated and authorized.
 
 The staged target is ONE shared PostgreSQL canonical store on authorized
-Hetzner infrastructure. That store does not exist yet: nothing has been
-provisioned, inventoried or bound, and this section names no live database.
+Hetzner infrastructure. Observed 2026-11-15, after its own provision approval:
+container `l9-graphiti-memory-postgres` on Docker network `l9-runtime`, image
+`postgres:16`, database `l9_memory`, role `l9_memory`, no published port.
+Infisical project `l9-graphite-memory` (`l9-graphite-memory-4b-bv`, id
+`f182da62-fe69-476a-95e0-305282eedab9`), environment `prod`, path `/`.
 Each agent runs its own package-owned local stdio MCP process, which composes
 its own MemoryService, signs with that agent's own unique identity, and uses
 product-supported configuration to select that same canonical store.
@@ -474,14 +488,14 @@ deletes nothing: existing memory data stay where they are, and retiring or
 deleting them needs its own inventoried, separately authorized destructive
 campaign.
 
-Store identity is pending. Both agents must resolve the exact same store: one
-resource identity, not two stores that each count as authorized Hetzner
-infrastructure. After the store is provisioned under its own approval, record
-here its non-secret identifier and named environment, and its Infisical
-reference paths only (never values) in the existing
-`ops/secrets/infisical-cursor-governance.yaml` inventory, with evidence that
-both independently launched agents resolved that one store. Until that
-inventory is observed, the shared-store proof stays open.
+Both agents must resolve the exact same store: one resource identity, not two
+stores that each count as authorized Hetzner infrastructure. The non-secret
+identity is recorded above. The five prod names added 2026-11-15, and the
+connection name already present, are reference paths in
+`ops/secrets/infisical-cursor-governance.yaml` under `memory_prod_secret_refs`.
+That inventory holds names only. Those names stay out of `root_env_keys` and
+out of Infisical project `cursor-governance`. The shared-store proof stays open
+until both independently launched agents resolve this one store.
 
 First E2E: Claude Code creates a new canonical memory via package MCP and
 retains the server-issued record ID/receipt. After the writer exits, Cursor

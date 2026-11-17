@@ -22,6 +22,10 @@ rules:
       Memory-path modules cross the boundary only through the bound l9-memory
       console script's stdio (INV-03). No urllib/http/socket/ssl/requests/httpx/
       aiohttp/websockets, no MCP client SDK, no graphiti_core or neo4j driver here.
+      One named exception: ops/memory/hosted_hook_transport.py, the hosted hook
+      carrier (ADR-0055), may use urllib request/error types through
+      ops/lib/safe_https; tests/ops/memory/test_transport_boundary.py pins it to
+      exactly that module and that root.
     languages: [python]
     severity: ERROR
     metadata:
@@ -37,6 +41,7 @@ rules:
         - environment/agents/adapters/claude-code/memory/
       exclude:
         - "**/test_*.py"
+        - ops/memory/hosted_hook_transport.py
     pattern-either:
       - pattern: import urllib
       - pattern: import urllib.request

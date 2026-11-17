@@ -163,7 +163,9 @@ class WritebackFanOutTest(unittest.TestCase):
             event = json.dumps({"session_id": self.session_id, "reason": "completed"})
             with (
                 mock.patch.object(sys, "stdin", io.StringIO(event)),
-                mock.patch.object(wb, "_relay_gate", relay_gate or (lambda _ws: None)),
+                mock.patch.object(
+                    wb, "_relay_gate", relay_gate or (lambda _ws, _marker=None: None)
+                ),
                 mock.patch.object(sys, "stdout", stdout or io.StringIO()),
             ):
                 rc = wb.main()
@@ -209,16 +211,17 @@ class WritebackFanOutTest(unittest.TestCase):
         )
         self.assertEqual([Path(c["project_dir"]).name for c in calls], ["two"])
 
-    def test_relay_records_queued_by_the_close_block_the_same_stop(self) -> None:
-        """Review finding on #1008: the pre-close gate saw an empty outbox, the close
-        then queued its continuation and close, and the Stop finished without asking
-        for them. The gate is consulted again after the close."""
+    def test_relay_records_queued_by_the_close_are_handled_the_same_stop_without_a_block(
+        self,
+    ) -> None:
+        """Review finding on #1008: the close can queue its continuation and close
+        after the pre-close gate ran, so the gate is consulted again after the close.
+        Since ADR-0055 neither consultation may block the Stop or ask for anything."""
         repos = [_make_repo(self.workspace, "solo")]
-        asked: list[int] = []
+        asked: list[object] = []
 
-        def gate(_workspace):
-            asked.append(len(asked))
-            return None if len(asked) == 1 else "L9 MEMORY RELAY — 2 hook record(s) are owed"
+        def gate(_workspace, marker=None):
+            asked.append(marker)
 
         out = io.StringIO()
         receipt, calls = self._run_hook(
@@ -230,10 +233,9 @@ class WritebackFanOutTest(unittest.TestCase):
         )
         self.assertEqual(len(calls), 1)
         self.assertEqual(len(asked), 2, "consulted before and after the close")
-        self.assertEqual(receipt["status"], "relay_requested_after_close")
-        decision = json.loads(out.getvalue().strip().splitlines()[-1])
-        self.assertEqual(decision["decision"], "block")
-        self.assertIn("2 hook record(s) are owed", decision["reason"])
+        self.assertEqual(asked[0], asked[1], "one notice marker per session")
+        self.assertEqual(receipt["status"], "ran")
+        self.assertNotIn('"decision": "block"', out.getvalue())
 
     def test_one_failing_publication_root_does_not_lose_the_others(self) -> None:
         repos = [_make_repo(self.workspace, n) for n in ("ok1", "boom")]

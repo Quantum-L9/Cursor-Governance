@@ -258,31 +258,41 @@ def _close_gaps(roots: list[Path], session_id: str) -> list[str]:
 
 
 def _carrier_lines(namespaces: list[str]) -> list[str]:
-    """SessionStart lines for the relay carrier; empty on a local surface."""
+    """SessionStart lines for the relay / hosted carrier; empty on a local surface."""
 
     try:
         mb.ensure_importable()
-        from ops.memory.hook_carrier import RELAY, CarrierError, resolve_carrier
+        from ops.memory.hook_carrier import HOSTED, RELAY, CarrierError, resolve_carrier
     except Exception:  # noqa: BLE001 - SessionStart is fail-open
         return []
     try:
         carrier = resolve_carrier()
     except CarrierError as exc:
         return [f"hook_carrier=INVALID ({exc}); hook-lane writes are refused"]
-    if carrier != RELAY:
+    if carrier not in {RELAY, HOSTED}:
         return []
     targets = json.dumps(namespaces or ["<namespace>"])
-    carrier_line = (
-        "hook_carrier=relay — the shared Memory 3.0 store is the account-managed L9 Memory "
-        + "connector; the local runtime health above is container scratch, not that store"
-    )
     hydrate_line = (
         f'hydrate_shared=call memory_hydrate {{"task": "<task>", "namespaces": {targets}}} '
         + "on the account connector (not the operator CLI)"
     )
+    if carrier == HOSTED:
+        return [
+            "hook_carrier=hosted — hook records go straight to the shared Memory 3.0 store as "
+            + "the hook principal (ADR-0055); the local runtime health above is container "
+            + "scratch, not that store",
+            hydrate_line,
+            "relay_writes=only records the hosted transport could not carry are queued; the "
+            + "Stop hook drains them itself and never asks you for them",
+        ]
+    carrier_line = (
+        "hook_carrier=relay — the shared Memory 3.0 store is the account-managed L9 Memory "
+        + "connector; the local runtime health above is container scratch, not that store"
+    )
     relay_line = (
-        "relay_writes=hook records are queued for you; the Stop hook lists each connector "
-        + "call to make and the `python -m ops.memory.relay ack` to run"
+        "relay_writes=hook records are kept in the relay outbox (no hook credential bound); "
+        + "nothing is asked of you and the Stop hook never blocks for them (ADR-0055) — "
+        + "`python -m ops.memory.relay status` shows what is owed"
     )
     return [carrier_line, hydrate_line, relay_line]
 
