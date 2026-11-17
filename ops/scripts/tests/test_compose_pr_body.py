@@ -1230,9 +1230,11 @@ class TemplateResolutionTests(unittest.TestCase):
         def git_down(owner: str, path: str) -> tuple[str, str]:
             raise TemplateError(f"git ls-remote https://github.com/{owner}/.github failed")
 
-        # Both transports unreachable: no template, no stale fallback.
-        with self.assertRaisesRegex(TemplateError, "git transport also failed"):
-            resolve_template(Path("."), "Quantum-L9", "consumer", gh=down, git=git_down)
+        # Both transports unreachable and no usable pinned copy: no template.
+        with self.assertRaisesRegex(TemplateError, "git transport also failed.*no pinned template"):
+            resolve_template(
+                Path("."), "Quantum-L9", "consumer", gh=down, git=git_down, pinned=lambda o: None
+            )
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
             resolve_template(Path("."), "Quantum-L9", "consumer", gh=self._gh(broken, []))
@@ -1309,7 +1311,7 @@ class CheckTemplateTests(unittest.TestCase):
 
     SHA = "2" * 40
 
-    def _run(self, gh, git) -> tuple[int, str, str]:
+    def _run(self, gh, git, pinned=lambda owner: None) -> tuple[int, str, str]:
         import contextlib
         import io
         from unittest import mock
@@ -1321,7 +1323,9 @@ class CheckTemplateTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as tmp,
             mock.patch.object(
-                module, "resolve_template", lambda ws, o, n: real(ws, o, n, gh=gh, git=git)
+                module,
+                "resolve_template",
+                lambda ws, o, n: real(ws, o, n, gh=gh, git=git, pinned=pinned),
             ),
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(err),
@@ -1368,6 +1372,124 @@ class CheckTemplateTests(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertEqual(out, "")
         self.assertIn("HTTP 404", err)
+
+
+class PinnedTemplateTests(unittest.TestCase):
+    """2026-11-17: Quantum-L9/.github is private and most agent sessions cannot reach
+    it (add_repo refuses dot-named repositories), so make pr refused to push in every
+    one of them. A copy pinned in this governance tree at an exact commit is the
+    fallback, used only while its bytes match their receipt."""
+
+    SHA = "3" * 40
+
+    def _pin(self, root: Path, text: str, *, sha256: str | None = None) -> None:
+        import hashlib
+
+        target = root / "Quantum-L9"
+        target.mkdir(parents=True)
+        (target / "pull_request_template.md").write_text(text, encoding="utf-8")
+        digest = sha256 or "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+        (target / "pull_request_template.receipt.json").write_text(
+            json.dumps({"revision": self.SHA, "sha256": digest}), encoding="utf-8"
+        )
+
+    @staticmethod
+    def _unreachable():
+        def gh(endpoint: str) -> object:
+            raise TemplateError(
+                f"gh api {endpoint} failed: not enabled for this session (HTTP 403)"
+            )
+
+        def git(owner: str, path: str) -> tuple[str, str]:
+            raise TemplateError("git ls-remote failed: could not read Username")
+
+        return gh, git
+
+    def test_unreachable_live_template_falls_back_to_the_pinned_copy(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            source = resolve_template(
+                Path("."),
+                "Quantum-L9",
+                "consumer",
+                gh=gh,
+                git=git,
+                pinned=lambda owner: pinned_template(owner, Path(tmp)),
+            )
+        self.assertEqual(source.text, CANONICAL_TEMPLATE)
+        self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA} (pinned)")
+
+    def test_the_live_template_wins_when_it_is_reachable(self) -> None:
+        def never(owner: str) -> tuple[str, str]:
+            raise AssertionError("pinned copy read while the live template answered")
+
+        source = resolve_template(
+            Path("."),
+            "Quantum-L9",
+            "consumer",
+            gh=TemplateResolutionTests._gh(TemplateResolutionTests(), CANONICAL_TEMPLATE, []),
+            pinned=never,
+        )
+        self.assertNotIn("(pinned)", source.revision)
+
+    def test_a_pinned_copy_that_no_longer_matches_its_receipt_is_refused(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE, sha256="sha256:" + "0" * 64)
+            with self.assertRaisesRegex(TemplateError, "no pinned template"):
+                resolve_template(
+                    Path("."),
+                    "Quantum-L9",
+                    "consumer",
+                    gh=gh,
+                    git=git,
+                    pinned=lambda owner: pinned_template(owner, Path(tmp)),
+                )
+
+    def test_an_invalid_pinned_template_is_refused(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), broken)
+            with self.assertRaisesRegex(TemplateError, r"\(pinned\).*missing heading"):
+                resolve_template(
+                    Path("."),
+                    "Quantum-L9",
+                    "consumer",
+                    gh=gh,
+                    git=git,
+                    pinned=lambda owner: pinned_template(owner, Path(tmp)),
+                )
+
+    def test_the_committed_pin_is_a_valid_template_matching_its_receipt(self) -> None:
+        from compose_pr_body import pinned_template
+
+        held = pinned_template("Quantum-L9")
+        self.assertIsNotNone(held, "generated/governance/org_pr_template/Quantum-L9 is missing")
+        assert held is not None
+        from compose_pr_body import validate_template
+
+        self.assertEqual(validate_template(held[1]), [])
+
+    def test_check_template_passes_on_the_pinned_copy_so_make_pr_can_push(self) -> None:
+        from compose_pr_body import pinned_template
+
+        gh, git = self._unreachable()
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            rc, out, err = CheckTemplateTests._run(
+                CheckTemplateTests(), gh, git, lambda owner: pinned_template(owner, Path(tmp))
+            )
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out.strip(), f"TEMPLATE_OK Quantum-L9/.github@{self.SHA} (pinned)")
+        self.assertIn("unreachable from this session", err)
 
 
 class CliTests(unittest.TestCase):

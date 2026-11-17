@@ -2888,6 +2888,34 @@ class TemplateSource:
     revision: str
 
 
+#: Where ``ops/scripts/sync_org_pr_template.py`` pins ``<owner>/.github``'s
+#: template inside this governance tree (one directory per owner).
+PINNED_TEMPLATE_ROOT = Path(__file__).resolve().parents[2] / "generated/governance/org_pr_template"
+
+PinnedLoader = Callable[[str], "tuple[str, str] | None"]
+
+
+def pinned_template(owner: str, root: Path = PINNED_TEMPLATE_ROOT) -> tuple[str, str] | None:
+    """``(revision, text)`` of the pinned template for ``owner``, or ``None``.
+
+    Only bytes that still match the sha256 their receipt recorded are returned:
+    a pinned copy edited by hand is no copy of the authority at all.
+    """
+    directory = root / owner
+    try:
+        receipt = json.loads((directory / "pull_request_template.receipt.json").read_text("utf-8"))
+        text = (directory / "pull_request_template.md").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(receipt, dict):
+        return None
+    actual = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+    revision = str(receipt.get("revision") or "")
+    if actual != receipt.get("sha256") or not re.fullmatch(r"[0-9a-f]{40}", revision):
+        return None
+    return revision, text
+
+
 def resolve_template(
     workspace: Path,
     owner: str,
@@ -2895,14 +2923,18 @@ def resolve_template(
     *,
     gh: org_dotgithub.GhApi = org_dotgithub.gh_api,
     git: org_dotgithub.GitRead = org_dotgithub.git_read,
+    pinned: PinnedLoader = pinned_template,
 ) -> TemplateSource:
     """The organization's canonical PR template at one exact commit.
 
     ``<owner>/.github`` owns the template. A consumer's local copy is never
     read here — a divergent copy must not change what the body is composed
-    from — and there is no stale fallback: an unreachable or invalid template
-    is an error, not a silent switch to some other bytes. The org repository
-    composes its own PRs from the template at its own PR head.
+    from. The live template comes first. When neither transport can read it
+    (``<owner>/.github`` is private and most agent sessions cannot reach it),
+    the copy pinned in this governance tree at an exact commit is used, and
+    only while its bytes match their receipt; its revision says so. With no
+    usable pinned copy an unreachable or invalid template is still an error.
+    The org repository composes its own PRs from the template at its own PR head.
     """
     if not owner:
         msg = "cannot resolve the repository owner, so the org PR template has no source"
@@ -2914,11 +2946,30 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
+        source = "live"
         try:
             org = org_dotgithub.read_org_file(owner, TEMPLATE_PATH, gh=gh, git=git)
+            sha, text = org.sha, org.text
         except org_dotgithub.OrgFileError as exc:
-            raise TemplateError(str(exc)) from exc
-        sha, text = org.sha, org.text
+            held = pinned(owner)
+            if held is None:
+                raise TemplateError(f"{exc}; no pinned template for {owner}") from exc
+            sha, text = held
+            source = "pinned"
+            print(
+                f"NOTE: {owner}/.github is unreachable from this session; composing from the "
+                f"template pinned in Cursor-Governance at {sha[:12]} "
+                "(generated/governance/org_pr_template)",
+                file=sys.stderr,
+            )
+        revision = f"{owner}/.github@{sha}" + (" (pinned)" if source == "pinned" else "")
+        errors = validate_template(text)
+        if errors:
+            msg = f"canonical PR template {revision}:{TEMPLATE_PATH} is not usable: " + "; ".join(
+                errors
+            )
+            raise TemplateError(msg)
+        return TemplateSource(text=text, revision=revision)
     revision = f"{owner}/.github@{sha}"
     errors = validate_template(text)
     if errors:
