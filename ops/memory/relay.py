@@ -20,9 +20,11 @@ CANONICAL_LAW §8.11 item 4) the Stop hook (``memory_writeback._relay_gate``)
 never blocks a turn and never asks the agent to make the call: on a hosted
 surface it drains the outbox itself; on a relay surface it keeps the entries and
 prints one non-blocking notice per session. ``instructions`` remains for an
-operator who chooses to carry entries by hand. Nothing here talks to memory; the outbox is a queue of obligations,
-not a store, and an acknowledgement records the agent's claim of the hosted
-receipt id — the hosted receipt itself is the authority (L9-EVIDENCE-001).
+operator who chooses to carry entries by hand.
+
+Nothing here talks to memory; the outbox is a queue of obligations, not a
+store, and an acknowledgement records the claim of the hosted receipt id — the
+hosted receipt itself is the authority (L9-EVIDENCE-001).
 
 Files, both append-only JSON Lines under ``<workspace>/.l9/memory/relay/``:
 
