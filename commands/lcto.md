@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.4.0"
+version: "1.5.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -85,6 +85,12 @@ Bound projections (all required):
    operator will drive directly, is the verbatim output of
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
    never hand-write it. Lane scope goes in the child's task prompt.
+   **Hard rule (operator, 2026-11-17): coding agents never message any session and report
+   only in their own transcript, which the CTO reads.** `ops/autonomy/swarm_role_gate.py`
+   enforces it on both sides: a registered child is denied every cross-session tool, and a
+   `create_session` whose `append_system_prompt` lacks the child prompt's REPORTING rule is
+   denied, so an agent launched from a hand-written brief cannot exist. Human breakglass only:
+   `L9_UNBRIEFED_LAUNCH_AUTHORIZED=<reason>`.
    On Claude Code cloud, build each child's launch with
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" launch-spec --cto-session <this session id> --lane-repo <owner/name> [--lane-repo …] [--title T] [--tag T …]`.
    It prints JSON: `create_session` (pass its fields unchanged to
