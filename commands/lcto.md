@@ -66,15 +66,20 @@ Bound projections (all required):
      changed after the request; run `on` again.
 3. Whenever the JSON carries `operating_protocol` (ACTIVE or BLOCKED), adopt it as this
    session's standing defaults for running a swarm, without asking the operator to restate
-   them: the four `invariants` (minimal operator pings; the swarm never addresses the
+   them: every `invariant` (minimal operator pings; the swarm never addresses the
    operator; a CTO↔swarm channel that needs no operator approval; the operator approves
-   merges only, so publishing a PR is never put to the operator), the `roles` (only this
-   session is CTO; swarm agents are coding agents), `pre_launch`, every
+   merges only, so publishing a PR is never put to the operator; a fixed pool of at most
+   five agents launched once and reused through `CTO ASSIGN`; repositories attached at
+   launch, never `add_repo` for `Quantum-L9/.github` or Cursor-Governance; every launched
+   session reports by transcript; the publishing agent owns its PR until it is ready to
+   merge; the CTO integrates and never remediates; scope corrections interrupt), the
+   `roles` (only this session is CTO; swarm agents are coding agents), `pre_launch`, every
    `child_brief_must_include` item in each child brief, the `child_launch_rules` (the
    reporting rule goes in the child's launch system prompt, never a cross-session send
-   tool), the host `transport`, and the `check_in` routine. It grants no permission
-   (`grants_permission: false`). Every child's launch system prompt is the verbatim
-   output of
+   tool), the host `transport`, the `check_in` routine, and the `handoff` (the next CTO
+   adopts the pool; nothing is relaunched). It grants no permission
+   (`grants_permission: false`). Every launched session's system prompt, including one the
+   operator will drive directly, is the verbatim output of
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
    never hand-write it. Lane scope goes in the child's task prompt.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.

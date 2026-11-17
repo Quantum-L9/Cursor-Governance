@@ -435,8 +435,9 @@ def main() -> int:
         _record(contract, session_id, status="skipped_subagent")
         return 0
     if pp.is_swarm_child(event):
-        # A /lcto swarm child stands down at publication: no handoff request, no
-        # PR handoff comment. Its continuation still closes at SessionEnd.
+        # A /lcto swarm child reports to its CTO by transcript and owns its PR in its
+        # own session: no handoff request, no PR handoff comment. Its continuation
+        # still closes at SessionEnd.
         _record(contract, session_id, status="skipped_swarm_child")
         return 0
     # Relay carrier (CANONICAL_LAW §8.11): hook records queued for the shared
