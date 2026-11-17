@@ -69,5 +69,28 @@ def test_the_receipt_records_the_carrier_that_admitted_the_reference(
 
 
 def test_an_unresolvable_carrier_supersedes_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(CARRIER_ENV, "hosted")
+    monkeypatch.setenv(CARRIER_ENV, "remote")
     assert cs._hook_carrier() is None
+
+
+@pytest.mark.parametrize(
+    ("recorded", "current"),
+    [("relay", "hosted"), ("hosted", "relay"), ("hosted", "hosted")],
+)
+def test_relay_and_hosted_supersede_each_other(project: Path, recorded: str, current: str) -> None:
+    """Both carriers land in the hosted MemoryService (ADR-0055): one store, one chain."""
+    _receipt(project, continuation_carrier=recorded)
+    assert cs._previous_continuation(project, SESSION, current) == REF
+
+
+@pytest.mark.parametrize("current", ["relay", "hosted"])
+def test_a_local_reference_is_superseded_by_neither_remote_carrier(
+    project: Path, current: str
+) -> None:
+    _receipt(project, continuation_carrier="local")
+    assert cs._previous_continuation(project, SESSION, current) is None
+
+
+def test_a_hosted_reference_is_not_superseded_by_a_local_close(project: Path) -> None:
+    _receipt(project, continuation_carrier="hosted")
+    assert cs._previous_continuation(project, SESSION, "local") is None

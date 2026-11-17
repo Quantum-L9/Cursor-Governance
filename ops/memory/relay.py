@@ -13,18 +13,29 @@ hook-lane operation    connector tool
 ``close``              ``memory.close``
 =====================  =====================================
 
-The agent makes each call and acknowledges it with the receipt id the
-connector returned (``python -m ops.memory.relay ack``). An entry without an
-acknowledgement is still owed: the Stop hook (``memory_relay_gate.py``) asks
-for it. Nothing here talks to memory; the outbox is a queue of obligations,
+An entry is settled by an acknowledgement carrying the hosted receipt id
+(``python -m ops.memory.relay ack``) or a recorded refusal. An entry without
+either is still owed. Since ADR-0055 (operator decision 2026-11-17, superseding
+CANONICAL_LAW §8.11 item 4) the Stop hook (``memory_writeback._relay_gate``)
+never blocks a turn and never asks the agent to make the call: on a hosted
+surface it drains the outbox itself; on a relay surface it keeps the entries and
+prints one non-blocking notice per session. ``instructions`` remains for an
+operator who chooses to carry entries by hand. Nothing here talks to memory; the outbox is a queue of obligations,
 not a store, and an acknowledgement records the agent's claim of the hosted
 receipt id — the hosted receipt itself is the authority (L9-EVIDENCE-001).
 
 Files, both append-only JSON Lines under ``<workspace>/.l9/memory/relay/``:
 
-- ``outbox.jsonl`` — ``{id, surface, operation, tool, arguments, created_at}``.
-  ``id`` is a digest of operation + tool + arguments, so re-enqueueing the same
-  record (a retried hook) is a no-op rather than a duplicate obligation.
+- ``outbox.jsonl`` — ``{id, surface, operation, tool, arguments, created_at}``,
+  plus ``carrier`` and ``reason`` when the hosted carrier parked the record
+  after a transport failure (ADR-0055). ``id`` is a digest of operation + tool
+  + arguments, so re-enqueueing the same record (a retried hook) is a no-op
+  rather than a duplicate obligation.
+
+On a hosted surface the Stop hook first drains owed entries through the hosted
+transport (``ops/memory/hosted_hook_transport.py`` ``drain``), acknowledging
+each with the hosted receipt or recording the refusal, and only then asks the
+agent for what is still owed.
 - ``acks.jsonl`` — ``{id, receipt_id, acked_at}``.
 """
 
@@ -156,8 +167,15 @@ def enqueue(
     surface: str | None,
     operation: str,
     arguments: Mapping[str, Any],
+    carrier: str | None = None,
+    reason: str | None = None,
 ) -> dict[str, Any]:
-    """Queue one record for the agent; returns the (possibly existing) entry."""
+    """Queue one record for the agent; returns the (possibly existing) entry.
+
+    ``carrier`` and ``reason`` record why a hosted record was parked here (the
+    transport failure, never a refusal). They are evidence, not part of the
+    entry's identity: the same record parked twice is still one obligation.
+    """
 
     tool = CONNECTOR_TOOLS.get(operation)
     if tool is None:
@@ -177,6 +195,10 @@ def enqueue(
             "arguments": dict(arguments),
             "created_at": datetime.now(UTC).isoformat(),
         }
+        if carrier:
+            row["carrier"] = carrier
+        if reason:
+            row["reason"] = str(reason)[:2000]
         _append(relay_file(directory, OUTBOX_NAME), row)
     return row
 
