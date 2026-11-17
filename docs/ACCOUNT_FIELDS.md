@@ -44,8 +44,8 @@ PYTHONUNBUFFERED=1
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-11-10.1`
-- Checksum: `fcf33987fe2f7eb1`
+- Revision: `2026-11-17.1`
+- Checksum: `b58d0c06d0fe5eb5`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.
