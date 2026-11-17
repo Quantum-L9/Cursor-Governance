@@ -562,13 +562,12 @@ _compose_title_and_body() {
     _additive_measured=1
     _touched_additive=""
   fi
-  # The body is composed from ONE template: the org's canonical
-  # <owner>/.github .github/pull_request_template.md, resolved by the composer
-  # at an exact commit (compose_pr_body.py resolve_template). A consumer's local
-  # copy and the governance checkout's copy are never read: a divergent copy
-  # must not change what the body says, and an unreachable org template is an
-  # error rather than a silent switch to stale bytes. Org-managed sync
-  # (Quantum-L9/.github continuous-sync.yml) reconciles the local copies.
+  # The body is composed from ONE template at an exact commit, resolved by
+  # compose_pr_body.py resolve_template (operator directive 2026-11-17): the
+  # repository's own committed .github/pull_request_template.md when it passes
+  # validation, else the org's <owner>/.github template read live, else the copy
+  # pinned in this governance tree while it matches its receipt. Nothing usable
+  # is an error. Org-managed sync (continuous-sync.yml) seeds the local copies.
   if [[ -z "${owner:-}" || -z "${name:-}" ]]; then
     echo "ERROR: cannot resolve owner/repo, so the org PR template has no source" >&2
     exit 1
