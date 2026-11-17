@@ -2195,7 +2195,7 @@
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
-      "sha256": "affced42d8d309a850750f01d9d69cea621c5fd7278ff7fa93fbb59209d1d44e"
+      "sha256": "58ac3afc42d60b4482e3cba47e651946cf055f2f269c1598739697f176d05756"
     },
     {
       "path": "scripts/tests/test_gate_s0_baseline.py",
@@ -2223,7 +2223,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "85aef7d829e96504efa4111182fcde12a0cf8e7834d84dcdc77476405efd91c0"
+      "sha256": "c255e1e36d5dbdff55e70771059d33451d2e21da9f660ba598a12d51a051eaed"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
