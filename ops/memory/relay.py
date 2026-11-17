@@ -46,6 +46,9 @@ from typing import Any
 RELAY_REL = Path(".l9") / "memory" / "relay"
 OUTBOX_NAME = "outbox.jsonl"
 ACKS_NAME = "acks.jsonl"
+#: The connector refused the call. A refusal is the verdict (no retry through
+#: another door), so a refused entry is no longer owed; ``status`` keeps it visible.
+REJECTS_NAME = "rejects.jsonl"
 
 #: Hook-lane operation -> account-connector tool. The only operations that
 #: write; reads keep their local transport and distill is not relayed (the
@@ -62,7 +65,7 @@ class RelayError(ValueError):
 
 
 #: Files the relay may open, by fixed name only.
-RELAY_FILES = frozenset({OUTBOX_NAME, ACKS_NAME, ".lock", "gate.json"})
+RELAY_FILES = frozenset({OUTBOX_NAME, ACKS_NAME, ".lock", "gate.json", REJECTS_NAME})
 
 
 def relay_dir(workspace: str | Path) -> Path:
@@ -182,15 +185,44 @@ def acks(workspace: str | Path) -> dict[str, dict[str, Any]]:
     return {str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), ACKS_NAME))}
 
 
-def pending(workspace: str | Path) -> list[dict[str, Any]]:
-    """Outbox entries with no acknowledgement, oldest first."""
+def rejects(workspace: str | Path) -> dict[str, dict[str, Any]]:
+    return {
+        str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), REJECTS_NAME))
+    }
 
-    acked = acks(workspace)
+
+def pending(workspace: str | Path) -> list[dict[str, Any]]:
+    """Outbox entries with neither an acknowledgement nor a recorded refusal."""
+
+    settled = set(acks(workspace)) | set(rejects(workspace))
     return [
         row
         for row in _read(relay_file(relay_dir(workspace), OUTBOX_NAME))
-        if row.get("id") not in acked
+        if row.get("id") not in settled
     ]
+
+
+def reject(workspace: str | Path, ident: str, refusal: str) -> dict[str, Any]:
+    """Record the connector's refusal of one entry, verbatim. Never a success."""
+
+    text = str(refusal).strip()
+    if not text:
+        msg = "a refusal must quote the connector's reason"
+        raise RelayError(msg)
+    directory = relay_dir(workspace)
+    with _locked(directory):
+        if not any(row.get("id") == ident for row in _read(relay_file(directory, OUTBOX_NAME))):
+            msg = f"no outbox entry {ident!r} in {directory}"
+            raise RelayError(msg)
+        if any(row.get("id") == ident for row in _read(relay_file(directory, ACKS_NAME))):
+            msg = f"entry {ident!r} is already acknowledged with a receipt"
+            raise RelayError(msg)
+        existing = {str(r.get("id")): r for r in _read(relay_file(directory, REJECTS_NAME))}
+        if ident in existing:
+            return existing[ident]
+        row = {"id": ident, "refusal": text[:2000], "rejected_at": datetime.now(UTC).isoformat()}
+        _append(relay_file(directory, REJECTS_NAME), row)
+    return row
 
 
 def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
@@ -273,7 +305,9 @@ def instruction(workspace: str | Path, entries: Sequence[Mapping[str, Any]]) -> 
         )
     lines.append(
         "A refusal from the connector is the verdict: report it, do not retry through another "
-        "door (no memory.ingest, no operator CLI write)."
+        "door (no memory.ingest, no operator CLI write). Record it verbatim so the entry "
+        "is settled but stays visible: python -m ops.memory.relay reject <id> "
+        f'--refusal "<reason>" --workspace "{workspace}"'
     )
     return "\n".join(lines)
 
@@ -292,6 +326,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     ack_p = sub.add_parser("ack", parents=[after], help="record the connector receipt")
     ack_p.add_argument("id")
     ack_p.add_argument("--receipt", required=True)
+    rej_p = sub.add_parser("reject", parents=[after], help="record the connector's refusal")
+    rej_p.add_argument("id")
+    rej_p.add_argument("--refusal", required=True)
     args = parser.parse_args(argv)
     try:
         return _run(args.command, Path(args.workspace), args)
@@ -306,10 +343,19 @@ def _run(command: str, workspace: Path, args: argparse.Namespace) -> int:
     elif command == "status":
         owed = pending(workspace)
         total = len(_read(relay_file(relay_dir(workspace), OUTBOX_NAME)))
-        print(json.dumps({"total": total, "acked": total - len(owed), "pending": len(owed)}))
+        refused = len(rejects(workspace))
+        counts = {
+            "total": total,
+            "acked": total - len(owed) - refused,
+            "rejected": refused,
+            "pending": len(owed),
+        }
+        print(json.dumps(counts))
     elif command == "instructions":
         owed = pending(workspace)
         print(instruction(workspace, owed) if owed else "L9 MEMORY RELAY — nothing owed")
+    elif command == "reject":
+        print(json.dumps(reject(workspace, args.id, args.refusal), sort_keys=True))
     else:
         print(json.dumps(ack(workspace, args.id, args.receipt), sort_keys=True))
     return 0
