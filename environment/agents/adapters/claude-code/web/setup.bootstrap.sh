@@ -96,7 +96,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-11-17.2"
+L9_STUB_REVISION="2026-11-17.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -269,66 +269,6 @@ SETUP_RC=$?
 # environment as a successful build (audit B-02). The durable env below is
 # still written, because a half-built environment is easier to diagnose with
 # its variables in place than without them; the exit code carries the verdict.
-
-# --- 2b) Swarm-child pre-approvals ------------------------------------------
-# Since 2026-11-16 Quantum-L9/.github and Quantum-L9/Cursor-Governance are
-# private. A /lcto swarm child is launched with Quantum-L9/.github as its only
-# session source (a dot-named repository cannot be attached later), and must
-# then attach its lane repositories and Cursor-Governance with add_repo before
-# it can register its role and bind coding-agent mode. In auto mode that
-# add_repo, issued from the CTO's launch brief rather than a human turn, is
-# denied by the classifier unless a permission rule allows it.
-#
-# The rule already lives in settings.template.json, but a child cannot get it
-# from there: the governance clone in its container comes from the environment
-# snapshot and cannot be fetched while Cursor-Governance is private and not yet
-# attached. This stub is the only bootstrap code that is current in every
-# container, so it merges the same rules into each workspace's
-# .claude/settings.json here, after the adapter wiring above and before Claude
-# starts. A one-repository cloud session reads permission rules from that file.
-# The reconciler unions workspace permissions, so a later re-projection keeps
-# them. Union only: nothing is removed or reordered. Keep this list identical to
-# the five entries in settings.template.json (enforced by
-# environment/agents/adapters/claude-code/tests/test_setup_stub_child_allow_rules.py).
-if command -v python3 >/dev/null 2>&1; then
-  for _l9_ws in ./*/ ./.*/ ./; do
-    case "$_l9_ws" in ././|./../) continue ;; esac
-    if [ "$_l9_ws" != "./" ] && [ ! -d "$_l9_ws/.git" ]; then continue; fi
-    python3 - "$_l9_ws/.claude/settings.json" <<'L9_CHILD_ALLOW_PY' \
-      || warn "swarm-child pre-approvals: could not merge into $_l9_ws/.claude/settings.json"
-import json, os, sys
-CHILD_ALLOW_RULES = [
-    "mcp__claude-code-remote__add_repo",
-    "mcp__claude-code-remote__register_repo_root",
-    'Bash("$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/session_role.py" register-child:*)',
-    'Bash("$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/coding_agent_mode.py" on:*)',
-    'Bash(GOVERNANCE_SYNC_PUSH=0 GOVERNANCE_SYNC_HARD_RESET=0 bash "$HOME/.cursor-governance/skills/l9-repo-sync/scripts/ff.sh" --ssot:*)',
-]
-path = sys.argv[1]
-data = {}
-if os.path.exists(path):
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh)
-    if not isinstance(data, dict):
-        sys.exit("not a JSON object: " + path)
-perms = data.setdefault("permissions", {})
-allow = perms.setdefault("allow", [])
-added = [rule for rule in CHILD_ALLOW_RULES if rule not in allow]
-if added:
-    allow.extend(added)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".l9tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2, ensure_ascii=False)
-        fh.write("\n")
-    os.replace(tmp, path)
-print("swarm-child pre-approvals: %s +%d" % (path, len(added)))
-L9_CHILD_ALLOW_PY
-  done
-  unset _l9_ws
-else
-  warn "swarm-child pre-approvals: python3 not found; children will need add_repo approved by hand"
-fi
 
 # --- 3) Durable exports for in-session Bash --------------------------------
 # CLAUDE_ENV_FILE is not present in every cloud runtime, so write our own env
