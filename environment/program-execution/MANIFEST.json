@@ -35,7 +35,7 @@
     },
     {
       "path": "adapters/ai-control-plane.project-policy.yaml",
-      "sha256": "6a28e7e6e5b99e90f4819a9cb06f7ad278efecdc7637b6698908e19a39add302"
+      "sha256": "e666294cf996288a061a06c87a8efb1bbbb42fa95405503537c90e75f4e25861"
     },
     {
       "path": "adapters/chatgpt/ADAPTER.yaml",

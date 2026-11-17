@@ -5,7 +5,9 @@ Contract: governance/cto-mode/MODE.yaml (`l9.cursor-governance.cto-mode/v1`).
 State: <workspace>/.l9/cto-mode/session.json (`l9.cto-mode-session/v1`, gitignored).
 Entrypoint: commands/lcto.md. The implementation is ops/autonomy/projection_mode.py.
 
-Commands: on | off | status. Exit codes: 0 ACTIVE or OFF, 3 BLOCKED, 1 REJECTED or STALE.
+Commands: on | off | status | child-prompt | launch-spec. launch-spec prints the
+create_session arguments and the child's add_repo list (CTO mode only).
+Exit codes: 0 ACTIVE or OFF, 3 BLOCKED, 1 REJECTED or STALE, 2 usage.
 """
 
 from __future__ import annotations

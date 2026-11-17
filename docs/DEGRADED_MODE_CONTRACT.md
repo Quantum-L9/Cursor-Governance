@@ -515,3 +515,48 @@ was public, so the anonymous transport the reader fell back to no longer exists.
   other repositories only when the repository's Actions access setting is
   "Accessible from repositories in the organization" — a human setting this
   surface cannot read or change.
+
+## Swarm child launch, 2026-11-17 — coding-agent mode binds only when the child starts from `.github`
+
+Evidence for the `child_launch` rule and the `repositories_attached_at_launch`
+invariant in `governance/cto-mode/MODE.yaml` 1.3.0, and for
+`cto_mode.py launch-spec`. Rows record what each session observed; earlier rows
+stand as written. This section contradicts three statements of the protocol v2
+text it amends: that a child is launched with its primary repository as the
+session source, that `.github` reaches every pool agent through the campaign
+environment's repository list, and that a child never calls `add_repo` for
+Cursor-Governance.
+
+| Session | Sources at start | Observed |
+|---|---|---|
+| `session_017xwbxuuFEgQyuo4WWHaGNH` | `[l9-graphiti-memory]` | coding-agent mode BLOCKED on `l9.projection/coding-agent-execution@1`: no reachable `Quantum-L9/.github` authority checkout (as reported to the CTO session) |
+| `session_017xwbxuvTfannDBGFVqH8ct` | `[.github]`, then `cursor-governance` via `add_repo` | `.github` reachable at `dd780b9` (as reported to the CTO session) |
+| `session_017xwbxuvn1zQGzdYT5aPg5e` (this lane) | `[.github]`, created in environment `env_01MraPSE4aEFGiZ9G917SNR6`, whose repository list is `[.github, Cursor-Governance]` (environment listing as reported by the CTO session) | Only `.github` was attached at start, so the environment's repository list did not attach Cursor-Governance to this `create_session` child. SessionStart governance refresh `fetch-failed`; `/root/.cursor-governance` at the snapshot `1d79d50`, lacking `ops/autonomy/session_role.py`; `ff.sh --ssot` failed `could not read Username for 'https://github.com': terminal prompts disabled` until Cursor-Governance was attached. The first `add_repo Quantum-L9/Cursor-Governance` (push), issued on a system-notification turn, was refused by the auto-mode classifier; after the operator allowed `add_repo` it attached. `ff.sh --ssot` then reached `005f3ca`; `ensure_authority_checkout.sh` printed `AUTHORITY: PROVISIONED path=/root/.l9/authority/.github main=dd780b9`, non-shallow, HEAD = origin/main; `coding_agent_mode.py on` reported `ACTIVE`, `ADMITTED_AND_CURRENT`, bundle `@f8e44d1536cb` at origin/main `@dd780b957b30` |
+
+**Consequence.**
+
+- A Claude Code cloud swarm child is created with `source_url`
+  `https://github.com/Quantum-L9/.github`. Nothing inside a session can add it later
+  (`add_repo` refuses dot-named repositories; scope is fixed at start), and an
+  environment's repository list does not attach it.
+- In the bootstrap sitting, before role registration, the child attaches its
+  primary repository (push) and Cursor-Governance (read, or push when primary) with
+  `add_repo`, then catches its governance clone up with `ff.sh --ssot` when
+  `session_role.py` is missing. Attachment stays in the bootstrap sitting, never
+  mid-lane.
+- The authority checkout is resolved in the same order as
+  `ops/scripts/coding_projection_status.py`: an explicit path, then
+  `L9_AUTHORITY_ROOT`, then `L9_AUTHORITY_MANAGED_ROOT` or the managed
+  `$HOME/.l9/authority/.github`, then `.github` inside or beside the workspace.
+  The child passes that resolved path to both the non-shallow check and
+  `--authority-root`. `ensure_authority_checkout.sh` does not create the default
+  path when `L9_AUTHORITY_ROOT` is set, and it provisions `L9_AUTHORITY_MANAGED_ROOT`
+  when that variable relocates the managed checkout. The row above records the
+  default path this container provisioned; that path is the fallback. The child
+  never clones `.github` itself.
+- A Cursor Task is not a Claude Code cloud session. It does not call `add_repo`
+  or `register_repo_root`. It registers its role from the local lane checkout the
+  Task was given. The attachment bullets above are the Claude Code cloud path.
+- `add_repo` may still prompt or be refused by the host's permission layer
+  (observed above). That is the `permission_precondition` in the contract: reported
+  once at launch, not worked around.

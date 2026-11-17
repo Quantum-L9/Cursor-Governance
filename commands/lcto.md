@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.3.0"
+version: "1.4.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -66,17 +66,36 @@ Bound projections (all required):
      changed after the request; run `on` again.
 3. Whenever the JSON carries `operating_protocol` (ACTIVE or BLOCKED), adopt it as this
    session's standing defaults for running a swarm, without asking the operator to restate
-   them: the four `invariants` (minimal operator pings; the swarm never addresses the
+   them: every `invariant` (minimal operator pings; the swarm never addresses the
    operator; a CTO↔swarm channel that needs no operator approval; the operator approves
-   merges only, so publishing a PR is never put to the operator), the `roles` (only this
-   session is CTO; swarm agents are coding agents), `pre_launch`, every
+   merges only, so publishing a PR is never put to the operator; a fixed pool of at most
+   five agents launched once and reused through `CTO ASSIGN`; on Claude Code cloud
+   `Quantum-L9/.github` is every child's session source, and its primary repository and
+   Cursor-Governance are attached with `add_repo` in the bootstrap sitting, before role
+   registration; a Cursor Task already has a local lane checkout, skips `add_repo` and
+   `register_repo_root`, and registers its role from that checkout; every launched
+   session reports by transcript; the publishing agent owns its PR until it is ready to
+   merge; the CTO integrates and never remediates; scope corrections interrupt), the
+   `roles` (only this session is CTO; swarm agents are coding agents), `pre_launch`, every
    `child_brief_must_include` item in each child brief, the `child_launch_rules` (the
    reporting rule goes in the child's launch system prompt, never a cross-session send
-   tool), the host `transport`, and the `check_in` routine. It grants no permission
-   (`grants_permission: false`). Every child's launch system prompt is the verbatim
-   output of
+   tool), the host `transport`, the `check_in` routine, and the `handoff` (the next CTO
+   adopts the pool; nothing is relaunched). It grants no permission
+   (`grants_permission: false`). Every launched session's system prompt, including one the
+   operator will drive directly, is the verbatim output of
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
    never hand-write it. Lane scope goes in the child's task prompt.
+   On Claude Code cloud, build each child's launch with
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" launch-spec --cto-session <this session id> --lane-repo <owner/name> [--lane-repo …] [--title T] [--tag T …]`.
+   It prints JSON: `create_session` (pass its fields unchanged to
+   `mcp__claude-code-remote__create_session` — `source_url` is
+   `https://github.com/Quantum-L9/.github`, which a session can reach only as a
+   start source because it is private and dot-named, `add_repo` refuses it, and an
+   environment's repository list does not attach it; `append_system_prompt` is the
+   rendered child prompt; `permission_mode`; `tags` including `cto:<id>`) and `add_repo`
+   (the primary/lane repositories with push, plus `Quantum-L9/Cursor-Governance` read
+   unless it is a lane), which the child attaches itself before role registration. It
+   grants no permission. `launch-spec` exists only in CTO mode.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
