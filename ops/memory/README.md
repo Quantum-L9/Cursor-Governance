@@ -444,8 +444,11 @@ Both agents must use that exact compatible package via their existing managed
 stdio MCP launchers, with each agent independently authenticated and authorized.
 
 The staged target is ONE shared PostgreSQL canonical store on authorized
-Hetzner infrastructure. That store does not exist yet: nothing has been
-provisioned, inventoried or bound, and this section names no live database.
+Hetzner infrastructure. Observed 2026-11-15, after its own provision approval:
+container `l9-graphiti-memory-postgres` on Docker network `l9-runtime`, image
+`postgres:16`, database `l9_memory`, role `l9_memory`, no published port.
+Infisical project `l9-graphite-memory` (`l9-graphite-memory-4b-bv`, id
+`f182da62-fe69-476a-95e0-305282eedab9`), environment `prod`, path `/`.
 Each agent runs its own package-owned local stdio MCP process, which composes
 its own MemoryService, signs with that agent's own unique identity, and uses
 product-supported configuration to select that same canonical store.
@@ -474,14 +477,14 @@ deletes nothing: existing memory data stay where they are, and retiring or
 deleting them needs its own inventoried, separately authorized destructive
 campaign.
 
-Store identity is pending. Both agents must resolve the exact same store: one
-resource identity, not two stores that each count as authorized Hetzner
-infrastructure. After the store is provisioned under its own approval, record
-here its non-secret identifier and named environment, and its Infisical
-reference paths only (never values) in the existing
-`ops/secrets/infisical-cursor-governance.yaml` inventory, with evidence that
-both independently launched agents resolved that one store. Until that
-inventory is observed, the shared-store proof stays open.
+Both agents must resolve the exact same store: one resource identity, not two
+stores that each count as authorized Hetzner infrastructure. The non-secret
+identity is recorded above. The five prod names added 2026-11-15, and the
+connection name already present, are reference paths in
+`ops/secrets/infisical-cursor-governance.yaml` under `memory_prod_secret_refs`.
+That inventory holds names only. Those names stay out of `root_env_keys` and
+out of Infisical project `cursor-governance`. The shared-store proof stays open
+until both independently launched agents resolve this one store.
 
 First E2E: Claude Code creates a new canonical memory via package MCP and
 retains the server-issued record ID/receipt. After the writer exits, Cursor
