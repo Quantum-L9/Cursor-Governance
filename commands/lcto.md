@@ -1,6 +1,6 @@
 ---
 name: lcto
-version: "1.3.0"
+version: "1.4.0"
 description: "L CTO mode — strategic technical decisions"
 auto_chain: ynp
 ---
@@ -69,8 +69,9 @@ Bound projections (all required):
    them: every `invariant` (minimal operator pings; the swarm never addresses the
    operator; a CTO↔swarm channel that needs no operator approval; the operator approves
    merges only, so publishing a PR is never put to the operator; a fixed pool of at most
-   five agents launched once and reused through `CTO ASSIGN`; repositories attached at
-   launch, never `add_repo` for `Quantum-L9/.github` or Cursor-Governance; every launched
+   five agents launched once and reused through `CTO ASSIGN`; `Quantum-L9/.github` is every
+   child's session source, and its primary repository and Cursor-Governance are attached
+   with `add_repo` in the bootstrap sitting, before role registration; every launched
    session reports by transcript; the publishing agent owns its PR until it is ready to
    merge; the CTO integrates and never remediates; scope corrections interrupt), the
    `roles` (only this session is CTO; swarm agents are coding agents), `pre_launch`, every
@@ -82,6 +83,17 @@ Bound projections (all required):
    operator will drive directly, is the verbatim output of
    `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" child-prompt --cto-session <this session id>`;
    never hand-write it. Lane scope goes in the child's task prompt.
+   On Claude Code cloud, build each child's launch with
+   `"$HOME/.cursor-governance/.venv/bin/python" "$HOME/.cursor-governance/ops/autonomy/cto_mode.py" launch-spec --cto-session <this session id> --lane-repo <owner/name> [--lane-repo …] [--title T] [--tag T …]`.
+   It prints JSON: `create_session` (pass its fields unchanged to
+   `mcp__claude-code-remote__create_session` — `source_url` is
+   `https://github.com/Quantum-L9/.github`, which a session can reach only as a
+   start source because it is private and dot-named, `add_repo` refuses it, and an
+   environment's repository list does not attach it; `append_system_prompt` is the
+   rendered child prompt; `permission_mode`; `tags` including `cto:<id>`) and `add_repo`
+   (the primary/lane repositories with push, plus `Quantum-L9/Cursor-Governance` read
+   unless it is a lane), which the child attaches itself before role registration. It
+   grants no permission. `launch-spec` exists only in CTO mode.
 4. `/lcto off` runs the same command with `off` in place of `on`, from the same workspace.
 
 The mode changes what the session reads, never what it may do. Publication,
