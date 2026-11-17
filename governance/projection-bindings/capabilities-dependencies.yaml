@@ -75,6 +75,7 @@ load_condition:
   when:
     - cursor_host_default
     - architect_mode_active
+    - planner_mode_active
     - cto_mode_active
   requires_all:
     - verifier.status == ADMITTED_AND_CURRENT (mode admitted)

@@ -1,0 +1,192 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "artifact_id": "l9.schema/strategic-plan-graph@1",
+    "authority": {
+      "authority_class": "canonical",
+      "owner": "Quantum-L9/.github",
+      "scope": "l9_global_strategic_plan_graph_schema"
+    },
+    "canonical": true,
+    "canonical_source": {
+      "artifact": "strategic_plan_graph.schema.yaml",
+      "format": "yaml"
+    },
+    "governed_by": {
+      "authority_ref": "authority_model.yaml#strategic_authority",
+      "lifecycle_ref": "lifecycle.yaml",
+      "semantic_model_ref": "strategic_plan_model.yaml",
+      "strategic_cognition_ref": "strategic_cognition_model.yaml"
+    },
+    "properties": {
+      "graph_digest": {
+        "type": "semantic_digest"
+      },
+      "nodes": {
+        "items": {
+          "fields": {
+            "evidence_refs": {
+              "type": "semantic_ref_list"
+            },
+            "kind": {
+              "enum": [
+                "strategic_goal",
+                "strategic_target",
+                "strategic_hypothesis",
+                "strategic_commitment"
+              ]
+            },
+            "ref": {
+              "type": "semantic_ref"
+            },
+            "statement": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "ref",
+            "kind",
+            "statement"
+          ],
+          "type": "object"
+        },
+        "min_items": 1,
+        "type": "array"
+      },
+      "objective_refs": {
+        "type": "semantic_ref_list"
+      },
+      "plan_ref": {
+        "type": "semantic_ref"
+      },
+      "predecessor_revision_ref": {
+        "type": "semantic_ref"
+      },
+      "provenance": {
+        "type": "object"
+      },
+      "relations": {
+        "items": {
+          "fields": {
+            "hypothesis_ref": {
+              "type": "semantic_ref"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            },
+            "relation": {
+              "enum": [
+                "advances",
+                "enables",
+                "depends_on",
+                "conflicts_with",
+                "supersedes"
+              ]
+            },
+            "source_ref": {
+              "type": "semantic_ref"
+            },
+            "target_ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "relation",
+            "source_ref",
+            "target_ref"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "revision_ref": {
+        "type": "semantic_ref"
+      },
+      "schema": {
+        "const": "l9.strategic-plan-graph/v1"
+      },
+      "scope": {
+        "type": "semantic_ref_or_string"
+      },
+      "strategic_authority_ref": {
+        "type": "semantic_ref"
+      },
+      "strategic_intent_refs": {
+        "min_items": 1,
+        "type": "semantic_ref_list"
+      }
+    },
+    "purpose": "Define the minimum machine-readable node-and-relation representation of one immutable revision of the Strategy recorded by a Strategic Plan while preserving Plan ownership boundaries, external semantic ownership, and revision history. This schema defines representation only and does not add a fifth Plan primitive, a sixth strategic relation, runtime cognition, storage, graph-database semantics, execution semantics, or universal world-state ownership.\n",
+    "reference_rules": {
+      "downstream_references_governing_upstream_subjects": true,
+      "external_references_remain_externally_owned": true,
+      "local_node_identity_source": "nodes.ref",
+      "non_local_relation_endpoint_semantics": "external_semantic_ref",
+      "reverse_adjacency_is_derived": true,
+      "unresolved_external_reference_result": "unknown",
+      "upstream_objects_do_not_embed_downstream_consumer_inventories": true
+    },
+    "relation_constraints": {
+      "all": {
+        "at_least_one_endpoint_must_resolve_to_local_plan_node": true,
+        "relation_never_transfers_ownership_or_authority": true
+      },
+      "enables": {
+        "hypothesis_ref_must_resolve_to_local_kind": "strategic_hypothesis",
+        "hypothesis_ref_required": true
+      },
+      "supersedes": {
+        "source_must_resolve_to_local_plan_node": true,
+        "target_may_resolve_to_prior_revision_same_plan_lineage": true,
+        "target_must_resolve_to_same_primitive_kind": true
+      }
+    },
+    "required": [
+      "schema",
+      "plan_ref",
+      "revision_ref",
+      "strategic_authority_ref",
+      "scope",
+      "strategic_intent_refs",
+      "objective_refs",
+      "nodes",
+      "relations",
+      "provenance",
+      "graph_digest"
+    ],
+    "revision_rules": {
+      "content_change_requires_new_revision_ref": true,
+      "graph_digest_binds_exact_revision_content": true,
+      "graph_represents_exactly_one_plan_revision": true,
+      "historical_revision_content_is_immutable": true,
+      "predecessor_when_present_must_reference_prior_revision_same_plan_lineage": true,
+      "prior_revisions_remain_addressable": true
+    },
+    "schema": "l9.schema-definition/v1",
+    "semantic_rules": [
+      "strategy_is_the_integrated_meaning_of_the_graph_not_a_local_node_kind",
+      "exactly_four_plan_owned_node_kinds_are_admitted",
+      "exactly_five_strategic_relation_kinds_are_admitted",
+      "strategic_intent_is_referenced_not_plan_owned",
+      "objective_is_referenced_not_plan_owned",
+      "capability_constraint_evidence_execution_and_reality_objects_remain_externally_owned",
+      "external_semantics_are_referenced_not_copied_into_plan_ownership",
+      "affected_strategic_closure_is_computed_reasoning_not_serialized_plan_content",
+      "planning_horizon_does_not_create_node_kinds_or_required_plan_fields",
+      "confidence_probability_budget_priority_schedule_and_execution_state_are_not_admitted_plan_graph_fields",
+      "graph_storage_index_or_query_provider_never_becomes_semantic_owner",
+      "strategic_authority_ref_must_resolve_before_authoritative_plan_revision_mutation"
+    ],
+    "type": "object"
+  },
+  "projection_digest": "sha256:016bb32e7804cfc397a56428b673f62511c7f4308f5f5ec99493e78e35fdbf05",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:76bbf51d9233452d3e83e8bf4148a27eb6b8e29ff3126777c6c28d818ce1a885",
+  "source_ref": "l9.source/strategic-plan-graph-schema@1"
+}

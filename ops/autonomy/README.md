@@ -48,6 +48,7 @@ wrapper per mode:
 | `/coding-agent` | `coding_agent_mode.py` | `governance/coding-agent-mode/MODE.yaml` | `coding-agent-execution@1` |
 | `/lcto` | `cto_mode.py` | `governance/cto-mode/MODE.yaml` | technical-coordination plus seven domains |
 | `/architect` | `architect_mode.py` | `governance/architect-mode/MODE.yaml` | seven architecture and strategic-planning domains |
+| `/planner` | `planner_mode.py` | `governance/planner-mode/MODE.yaml` | six strategic-planner domains + Plan Keeper context (read-only) |
 
 - `on` records the request in `<workspace>/.l9/<name>-mode/session.json`, bound to the
   host session that made it; another session sees the mode `OFF`.
@@ -61,7 +62,7 @@ wrapper per mode:
 
 Full detail: `governance/host-bindings/README.md`. Tests:
 `tests/ops/autonomy/test_host_binding.py`, `test_coding_agent_mode.py`,
-`test_cto_mode.py`, `test_architect_mode.py`.
+`test_cto_mode.py`, `test_architect_mode.py`, `test_planner_mode.py`.
 
 ## Components
 
