@@ -82,6 +82,16 @@ FORBIDDEN_TRANSPORT_ROOTS = frozenset(
     }
 )
 
+#: The one memory-path module allowed a network transport, the roots it may
+#: import, and why (ADR-0055, CANONICAL_LAW §8.11 as amended 2026-11-17). It
+#: carries hook records to the hosted ``MemoryService`` — the canonical store,
+#: not a provider — as the machine hook principal, through ``ops/lib/safe_https``
+#: (verified TLS, no redirects), to hosts read from the onboarding config. No
+#: MCP client SDK, no socket, no event loop: only ``urllib`` request/error types.
+HOSTED_TRANSPORT_IMPORTS: dict[str, frozenset[str]] = {
+    "ops/memory/hosted_hook_transport.py": frozenset({"urllib"}),
+}
+
 #: The only modules allowed to spawn a process, and why.
 SPAWN_ALLOWED = frozenset(
     {
@@ -160,8 +170,32 @@ def test_memory_path_modules_exist() -> None:
 @pytest.mark.parametrize("rel", MEMORY_PATH_MODULES)
 def test_memory_path_imports_no_network_or_provider_transport(rel: str) -> None:
     roots = _import_roots(_module(rel))
-    leaked = sorted(roots & FORBIDDEN_TRANSPORT_ROOTS)
+    leaked = sorted(
+        roots & FORBIDDEN_TRANSPORT_ROOTS - HOSTED_TRANSPORT_IMPORTS.get(rel, frozenset())
+    )
     assert not leaked, f"{rel} imports a transport the memory boundary forbids: {leaked}"
+
+
+def test_the_hosted_transport_exception_is_exactly_one_module_and_one_root() -> None:
+    """The carve-out names a real memory-path module and nothing wider than urllib."""
+
+    assert set(HOSTED_TRANSPORT_IMPORTS) == {"ops/memory/hosted_hook_transport.py"}
+    for rel, allowed in HOSTED_TRANSPORT_IMPORTS.items():
+        assert rel in MEMORY_PATH_MODULES, rel
+        assert allowed == frozenset({"urllib"}), allowed
+        used = _import_roots(_module(rel)) & FORBIDDEN_TRANSPORT_ROOTS
+        assert used == allowed, f"{rel} uses {sorted(used)}; the exception is {sorted(allowed)}"
+
+
+def test_the_hosted_transport_names_no_host_and_reaches_https_only_through_safe_https() -> None:
+    """Hosts come from ops/config/memory-auth0-onboarding.yaml at runtime, never a literal."""
+
+    text = (ROOT / "ops/memory/hosted_hook_transport.py").read_text(encoding="utf-8")
+    assert "quantumaipartners" not in text
+    assert "auth0.com" not in text
+    assert "urlopen" not in text
+    assert "safe_https.https_exchange" in text
+    assert "http://" not in text
 
 
 @pytest.mark.parametrize("rel", MEMORY_PATH_MODULES)
