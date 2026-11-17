@@ -143,6 +143,8 @@ tiers:
     reason: control surface that routes an exact verified PE/PEC source commit to the l9-repo-template packager; it holds no birth implementation, is an explicit lifecycle boundary and never a default PE successor; disable-model-invocation
   - skill: l9-violations
     reason: Record a governance or skill-process breach inside this pack. Explicit only — invoke when an agent skipped a required skill or the user asks to record or review a violation. Not an always-on reviewer.
+  - skill: l9-strategic-plan
+    reason: 'UNTRIAGED — auto-registered by sync_generated_artifacts as the safe default when this pack appeared on disk with no tier. No one has decided whether it should be auto_invoke. Resolve via l9-wire-into-repo (Skill targets): give it a real reason here, or move it to tiers.auto_invoke.'
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context

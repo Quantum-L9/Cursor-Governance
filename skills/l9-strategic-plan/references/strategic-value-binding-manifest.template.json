@@ -2,11 +2,31 @@
   "schema": "l9.planner-strategic-value-binding-request/v1",
   "authority_revision": "REPLACE_WITH_EXACT_ADMITTED_SHA",
   "projections": [
-    {"source_class": "authority_model", "artifact_path": "REPLACE_AUTHORITY_PROJECTION.json", "receipt_path": "REPLACE_AUTHORITY_RECEIPT.json"},
-    {"source_class": "contracts", "artifact_path": "REPLACE_CONTRACT_PROJECTION.json", "receipt_path": "REPLACE_CONTRACT_RECEIPT.json"},
-    {"source_class": "invariants", "artifact_path": "REPLACE_INVARIANT_PROJECTION.json", "receipt_path": "REPLACE_INVARIANT_RECEIPT.json"},
-    {"source_class": "strategic_value_model", "artifact_path": "REPLACE_MODEL_PROJECTION.json", "receipt_path": "REPLACE_MODEL_RECEIPT.json"},
-    {"source_class": "vocabulary", "artifact_path": "REPLACE_VOCABULARY_PROJECTION.json", "receipt_path": "REPLACE_VOCABULARY_RECEIPT.json"}
+    {
+      "source_class": "authority_model",
+      "artifact_path": "REPLACE_AUTHORITY_PROJECTION.json",
+      "receipt_path": "REPLACE_AUTHORITY_RECEIPT.json"
+    },
+    {
+      "source_class": "contracts",
+      "artifact_path": "REPLACE_CONTRACT_PROJECTION.json",
+      "receipt_path": "REPLACE_CONTRACT_RECEIPT.json"
+    },
+    {
+      "source_class": "invariants",
+      "artifact_path": "REPLACE_INVARIANT_PROJECTION.json",
+      "receipt_path": "REPLACE_INVARIANT_RECEIPT.json"
+    },
+    {
+      "source_class": "strategic_value_model",
+      "artifact_path": "REPLACE_MODEL_PROJECTION.json",
+      "receipt_path": "REPLACE_MODEL_RECEIPT.json"
+    },
+    {
+      "source_class": "vocabulary",
+      "artifact_path": "REPLACE_VOCABULARY_PROJECTION.json",
+      "receipt_path": "REPLACE_VOCABULARY_RECEIPT.json"
+    }
   ],
   "composition_artifact_path": "REPLACE_COMPOSITION_ARTIFACT.json",
   "composition_receipt_path": "REPLACE_COMPOSITION_RECEIPT.json"

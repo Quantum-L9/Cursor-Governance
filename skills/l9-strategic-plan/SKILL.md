@@ -1,13 +1,12 @@
 ---
 name: l9-strategic-plan
-description: >-
-  Govern evidence-grounded strategic plans, portfolio graphs, causal dependencies,
+description: Govern evidence-grounded strategic plans, portfolio graphs, causal dependencies,
   readiness, priorities, Strategic Value assessments, bounded successor revisions,
   and strategic handoffs. Use for strategic zoom-in, branch expansion, plan graph
-  reviews, strategic prioritization, and cross-session strategic continuity.
-  Source of truth for this skill is Quantum-L9/Cursor-Governance; ChatGPT uses a
-  versioned distribution. Distinct from l9-plan and l9-plan-simple execution
-  planners. No unapproved strategy admission, execution, publication or deployment.
+  reviews, strategic prioritization, and cross-session strategic continuity. Distinct
+  from l9-plan and l9-plan-simple execution planners. No unapproved strategy admission,
+  execution, publication, or deployment.
+disable-model-invocation: true
 ---
 # L9 Strategic Plan
 
