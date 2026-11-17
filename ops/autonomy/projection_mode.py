@@ -158,8 +158,10 @@ CHILD_PROMPT_REQUIRED = (
     "CTO-STATUS: ready-to-merge",
     "CTO-STATUS: idle",
     "CTO ASSIGN",
-    # The org rules repository is never attached with add_repo (it refuses dot names).
-    "Never call add_repo for Quantum-L9/Cursor-Governance",
+    # Quantum-L9/.github is the session source (add_repo refuses dot names); the primary
+    # repository and Cursor-Governance are attached before role registration (2026-11-17).
+    "never call add_repo for it",
+    "Attach your primary repository (access push) and Quantum-L9/Cursor-Governance",
     # A pool outlives its CTO: coordinator transfer is explicit and re-registers the role,
     # and a published PR stays repairable by its owner after the owner takes another lane.
     "CTO TRANSFER <new session id>",
@@ -191,6 +193,80 @@ def render_child_prompt(contract: dict[str, Any], cto_session: str) -> str:
     if not cto_session.strip():
         raise ContractError("CTO_SESSION_UNRESOLVED")
     return str(template).replace(CTO_SESSION_PLACEHOLDER, cto_session.strip())
+
+
+LAUNCH_SPEC_SCHEMA = "l9.cto-child-launch-spec/v1"
+LAUNCH_HOST = "claude-code"
+
+
+def _repo_coordinate(value: str) -> tuple[str, str]:
+    parts = value.strip().split("/")
+    if len(parts) != 2 or not all(part.strip() for part in parts):
+        raise ContractError(f"LANE_REPO_MALFORMED: {value}")
+    return parts[0].strip(), parts[1].strip()
+
+
+def build_launch_spec(
+    contract: dict[str, Any],
+    cto_session: str,
+    lane_repos: list[str],
+    *,
+    title: str | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """The create_session arguments and the add_repo list for one swarm child.
+
+    Every value comes from the mode contract or the arguments; nothing is inferred. It
+    grants nothing: the CTO still makes the call, and the child still attaches.
+    """
+    transport = ((contract.get("operating_protocol") or {}).get("transport") or {}).get(
+        LAUNCH_HOST
+    ) or {}
+    child = transport.get("child_session")
+    if not isinstance(child, dict) or not all(
+        _nonempty_str(child.get(k))
+        for k in ("source_url", "permission_mode", "governance_repository")
+    ):
+        raise ContractError("CHILD_SESSION_UNDECLARED")
+    prompt = render_child_prompt(contract, cto_session)
+    source = str(child["source_url"]).strip()
+    source_repo = "/".join(source.rstrip("/").removesuffix(".git").split("/")[-2:]).lower()
+    governance = "/".join(_repo_coordinate(str(child["governance_repository"])))
+    if not lane_repos:
+        raise ContractError("LANE_REPO_REQUIRED")
+    attach: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for value in lane_repos:
+        owner, repo = _repo_coordinate(value)
+        key = f"{owner}/{repo}".lower()
+        # The source repository is read-only to every child, and add_repo refuses it.
+        if key == source_repo:
+            raise ContractError(f"LANE_REPO_IS_SESSION_SOURCE: {value}")
+        if key not in seen:
+            seen.add(key)
+            attach.append({"owner": owner, "repo": repo, "access": "push"})
+    if governance.lower() not in seen:
+        owner, repo = governance.split("/")
+        attach.append({"owner": owner, "repo": repo, "access": "read"})
+    session_tags = [f"cto:{cto_session.strip()}"]
+    for tag in tags or []:
+        if _nonempty_str(tag) and tag.strip() not in session_tags:
+            session_tags.append(tag.strip())
+    create: dict[str, Any] = {
+        "source_url": source,
+        "append_system_prompt": prompt,
+        "permission_mode": str(child["permission_mode"]).strip(),
+        "tags": session_tags,
+    }
+    if _nonempty_str(title):
+        create["title"] = str(title).strip()
+    return {
+        "schema": LAUNCH_SPEC_SCHEMA,
+        "grants_permission": False,
+        "host": LAUNCH_HOST,
+        "create_session": create,
+        "add_repo": attach,
+    }
 
 
 def resolve_session_id(explicit: str | None = None) -> str | None:
@@ -465,7 +541,11 @@ class ProjectionMode:
         parser = argparse.ArgumentParser(
             description=f"{self.name} mode: opt-in, session-bound projection binding"
         )
-        parser.add_argument("command", choices=("on", "off", "status", "child-prompt"))
+        commands = ["on", "off", "status", "child-prompt"]
+        # Launching swarm children is the CTO's alone; other modes keep their commands.
+        if self.name == "cto":
+            commands.append("launch-spec")
+        parser.add_argument("command", choices=commands)
         parser.add_argument(
             "--cto-session",
             help=(
@@ -473,6 +553,17 @@ class ProjectionMode:
                 "cross-session id, session_<suffix>, else its local id)"
             ),
         )
+        if self.name == "cto":
+            parser.add_argument(
+                "--lane-repo",
+                action="append",
+                default=[],
+                help="launch-spec: owner/name of a lane repository the child attaches (push)",
+            )
+            parser.add_argument("--title", help="launch-spec: the child session title")
+            parser.add_argument(
+                "--tag", action="append", default=[], help="launch-spec: an extra session tag"
+            )
         parser.add_argument("--workspace", type=Path, default=Path.cwd())
         parser.add_argument(
             "--authority-root",
@@ -501,6 +592,25 @@ class ProjectionMode:
             except ContractError as exc:
                 print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
                 return EXIT["REJECTED"]
+            return 0
+        if args.command == "launch-spec":
+            # JSON on stdout: the create_session arguments and the child's add_repo list.
+            if not args.cto_session or not args.cto_session.strip():
+                parser.error("launch-spec requires --cto-session")
+            if not args.lane_repo:
+                parser.error("launch-spec requires at least one --lane-repo")
+            try:
+                spec = build_launch_spec(
+                    self.load_contract(),
+                    args.cto_session,
+                    args.lane_repo,
+                    title=args.title,
+                    tags=args.tag,
+                )
+            except ContractError as exc:
+                print(json.dumps({"mode": "REJECTED", "reason": str(exc)}, sort_keys=True))
+                return EXIT["REJECTED"]
+            print(json.dumps(spec, indent=2, sort_keys=True))
             return 0
         if args.command == "off":
             removed = self.release(workspace)
