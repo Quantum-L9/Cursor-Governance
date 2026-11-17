@@ -148,4 +148,3 @@ The new color relation is a field, so [`plasticos_material_profile`](plasticos_m
 - `shrink-wrap`: completed
 - `specs`: completed
 - `proof`: completed
-

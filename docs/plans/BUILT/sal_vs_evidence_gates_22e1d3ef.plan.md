@@ -92,4 +92,3 @@ Bump [`plasticos_crm_sync/__manifest__.py`](plasticos_crm_sync/__manifest__.py) 
 - `sal-close`: completed
 - `vs-address-phone`: completed
 - `vs-website-title`: completed
-

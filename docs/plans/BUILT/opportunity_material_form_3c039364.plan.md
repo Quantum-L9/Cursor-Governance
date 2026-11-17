@@ -112,4 +112,3 @@ make pr-nosmoke reason="Supplier offer price on the opportunity form; install-sm
 - `opportunity-form`: completed
 - `tests-version`: completed
 - `publish-stacked`: completed
-

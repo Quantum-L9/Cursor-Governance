@@ -128,4 +128,3 @@ Runtime Odoo tests stay with `make pr-check`. Do not run `make test-module` for 
 - `readers`: completed
 - `semantic-kernel`: completed
 - `tests`: completed
-

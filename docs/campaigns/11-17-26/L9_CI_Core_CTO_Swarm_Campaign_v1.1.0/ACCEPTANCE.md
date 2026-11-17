@@ -54,4 +54,3 @@ No artificial fixtures written to protected Core main; the CTO does adversarial 
 - **Daily scheduler proven:** the first genuinely `schedule`-triggered run on Core main passed; until then preserve `SCHEDULED_PROOF_PENDING`. Cron registration and successful manual dispatch are not this proof.
 
 Parent PRs may be slow while the B conversion is pending. That is expected in the stack and cannot be used to claim that A alone achieved the speed goal.
-

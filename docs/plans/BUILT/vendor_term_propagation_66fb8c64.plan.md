@@ -73,4 +73,3 @@ Extend [`tests/test_partner_contact_hierarchy.py`](tests/test_partner_contact_hi
 - `compute-walk`: completed
 - `backfill`: completed
 - `test`: completed
-

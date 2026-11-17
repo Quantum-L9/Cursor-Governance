@@ -91,4 +91,3 @@ From the clean worktree, after the proof above passes:
 - `bump`: completed
 - `test`: completed
 - `publish`: completed
-

@@ -58,4 +58,3 @@ Bump the patch segment and the matching README `module_version`:
 - `relabel-people`: completed
 - `relabel-draft-reason`: completed
 - `drop-dead-tracking`: completed
-

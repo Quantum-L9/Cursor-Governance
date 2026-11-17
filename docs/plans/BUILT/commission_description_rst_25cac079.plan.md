@@ -48,4 +48,3 @@ Bump `"version"` from `19.0.1.4.7` to `19.0.1.4.8`. No migration folder: this is
 - todos at build time:
 - `manifest-description`: completed
 - `verify-update`: completed
-

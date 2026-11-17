@@ -70,4 +70,3 @@ Bump [`plasticos_transaction/__manifest__.py`](plasticos_transaction/__manifest_
 - `resolve-ppo`: completed
 - `link-existing`: completed
 - `tests-version`: completed
-

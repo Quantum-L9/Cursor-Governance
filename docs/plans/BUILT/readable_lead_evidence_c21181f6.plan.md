@@ -84,4 +84,3 @@ Add a pytest under `tests/` that reads `web_lead_views.xml` and asserts the thre
 - `widget`: completed
 - `views`: completed
 - `bump-test`: completed
-

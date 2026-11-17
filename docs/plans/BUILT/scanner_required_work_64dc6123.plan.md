@@ -125,4 +125,3 @@ Today Sonar is already a hard census when [`sonar-project.properties`](sonar-pro
 - `semgrep-census`: completed
 - `ci-detail-path`: completed
 - `validate`: completed
-

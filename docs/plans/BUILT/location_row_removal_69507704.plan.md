@@ -195,4 +195,3 @@ make pr-nosmoke reason="Location and material-profile row removal, stacked on PR
 - `profile-action`: completed
 - `tests-versions`: completed
 - `publish-stacked`: completed
-

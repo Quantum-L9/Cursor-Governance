@@ -87,4 +87,3 @@ Do not change the facility-profile migration, the harvest documents, `plasticos_
 - `specs`: completed
 - `matrix`: completed
 - `proof`: completed
-

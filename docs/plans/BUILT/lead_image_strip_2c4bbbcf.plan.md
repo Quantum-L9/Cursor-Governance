@@ -155,4 +155,3 @@ Upgrade `plasticos_web_leads` and `plasticos_crm_bridge` only. On a lead with tw
 - `assigned-field`: completed
 - `assignee-inherit`: completed
 - `version-bump`: completed
-

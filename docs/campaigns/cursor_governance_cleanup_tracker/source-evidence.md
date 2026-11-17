@@ -29,4 +29,3 @@ This tracker is advisory and revision-bound to the observed repository state abo
 - `ops/skill_routing/route_prompt.py` is the declared single scoring authority and currently supports one primary plus at most two supporting skills.
 - Current Cursor hook documentation exposes `composer_mode` on `sessionStart` and permits `sessionStart` to export environment variables to subsequent hooks. The documented `beforeSubmitPrompt` payload exposes prompt/attachments plus common fields but not composer mode.
 - This supports a session-mode routing prior without creating a second routing authority; because mode may become stale if changed after session start, prompt semantics must remain decisive.
-

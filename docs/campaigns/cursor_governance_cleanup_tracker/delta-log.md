@@ -38,4 +38,3 @@ CHANGED:
 - Preserve one-primary + max-two-supporting routing; the four skills compose sequentially/lazily rather than all loading together.
 - Cursor `sessionStart` can expose starting `composer_mode`; `beforeSubmitPrompt` currently does not. Carry mode forward as a session routing prior, never as the sole predicate.
 - Coding Agent is no longer planned as permanently explicit-only; its auto-route must retain a hard mutation-intent gate and cannot derive authorization from Agent Mode alone.
-

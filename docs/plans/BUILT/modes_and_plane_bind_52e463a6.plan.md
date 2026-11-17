@@ -63,4 +63,3 @@ Change that SessionStart call so a proved admitted result becomes a binding of `
 - todos at build time:
 - `slash-commands`: completed
 - `session-bind`: completed
-

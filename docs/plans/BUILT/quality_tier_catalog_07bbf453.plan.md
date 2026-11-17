@@ -120,4 +120,3 @@ Bump [plasticos_web_leads](plasticos_web_leads/__manifest__.py) from `19.0.2.11.
 - `accept-merge`: completed
 - `intake-landing`: completed
 - `proof-bump`: completed
-

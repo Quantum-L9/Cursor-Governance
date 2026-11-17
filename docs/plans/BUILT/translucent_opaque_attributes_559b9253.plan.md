@@ -84,4 +84,3 @@ Do not run `make update`. Existing database rows that still point at the corruga
 - `seed-form`: completed
 - `seed-packaging`: completed
 - `bump-version`: completed
-

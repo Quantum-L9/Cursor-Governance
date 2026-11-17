@@ -50,4 +50,3 @@ No model, ACL, view, or migration change. The packaging field is already a Many2
 - todos at build time:
 - `seed-records`: completed
 - `version-bump`: completed
-

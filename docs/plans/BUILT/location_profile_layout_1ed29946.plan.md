@@ -149,4 +149,3 @@ Static assertions live in [`tests/test_partner_contact_hierarchy.py`](tests/test
 - `people-width`: completed
 - `location-save-stays`: completed
 - `enrichment-width`: completed
-

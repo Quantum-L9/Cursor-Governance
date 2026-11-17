@@ -55,4 +55,3 @@ On the model in [plasticos_web_leads/models/web_lead.py](plasticos_web_leads/mod
 - todos at build time:
 - `drop-seller-location`: completed
 - `widen-material`: completed
-

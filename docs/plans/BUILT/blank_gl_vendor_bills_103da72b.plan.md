@@ -53,4 +53,3 @@ Bump [`plasticos_transaction/__manifest__.py`](plasticos_transaction/__manifest_
 - `write-blank-gl-bills`: completed
 - `update-test`: completed
 - `bump-version`: completed
-

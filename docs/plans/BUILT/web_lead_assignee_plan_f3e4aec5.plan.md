@@ -60,4 +60,3 @@ Confirm the form field, the list column, the intake copy, and the opportunity in
 - todos at build time:
 - `confirm-456`: completed
 - `leave-worktree`: completed
-
