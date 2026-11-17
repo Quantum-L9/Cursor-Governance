@@ -53,6 +53,9 @@ MemoryService  →  canonical store  →  outbox  →  optional Graphiti project
 | `session_state.py` | `~/.cursor/l9-memory-session-state/<session>.json`: session id, task signature, namespace request, receipt digests, explicit task satisfactions; `authority: none`; the hydration-only predicate the Cursor write gates read | any claim of memory truth; any lock |
 | `mcp_instantiation.py` | `~/.cursor/mcp.json` as a real per-machine file rendered from `environment/mcp/master.mcp.json`; drops the retired `graphiti-memory` key; delegates the memory entry to `l9-memory client cursor install/verify` against the bound runtime | authoring the memory entry |
 | `diagnostics.py` | readiness R0 `PACKAGE_BOUND` … R9 `PROJECTION_READY` | "Graphiti is up" == healthy |
+| `hook_carrier.py` | the one hook-carrier decision: `hosted` (hook credential binds) / `relay` (cloud, unbound) / `local`; `L9_MEMORY_HOOK_CARRIER` override, unknown refused; `store_of` for supersession | reading or printing a credential value |
+| `hosted_hook_transport.py` | the hosted carrier (ADR-0055): client-credentials token for the `l9-memory-hooks` hook principal, one MCP `initialize` + `tools/call` per record to the onboarding `resource.identifier`, verdict `ok` / `refused` / `unavailable`; `drain` for the Stop hook | a host literal, a redirect, a cached token outside the process, a second door after a refusal |
+| `relay.py` | the relay outbox: queue, ack (hosted receipt UUID), reject (refusal), status | talking to memory |
 
 ## Caller taxonomy (ADR-0033 two lanes; ADR-0030 items 7–9 as amended; CANONICAL_LAW §8.3 / §8.6)
 
@@ -267,6 +270,14 @@ identity), `mcp_instantiation.py` (the memory-owned MCP installer),
 `memory_state.py` git probe may spawn a process, always as an argv list; and
 `MemoryControlPlaneClient` launches exactly `binding.memory_cli` for every
 operation.
+
+One named exception (ADR-0055, CANONICAL_LAW §8.12):
+`hosted_hook_transport.py` carries hook records to the hosted `MemoryService` —
+the canonical store, not a provider — and may import `urllib` request/error
+types, used only through `ops/lib/safe_https.py` (verified TLS, no redirects)
+to hosts read from `ops/config/memory-auth0-onboarding.yaml` and its discovery
+documents. The boundary test pins the exception to exactly that module and that
+root; the semgrep rule excludes exactly that file.
 
 ## Continuation capsule (plan §12)
 
