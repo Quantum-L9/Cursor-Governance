@@ -169,6 +169,19 @@ def _no_ambient_authority_or_role(
     monkeypatch.setenv("L9_SESSION_ROLE_DIR", str(isolated / "roles"))
 
 
+@pytest.fixture(autouse=True)
+def _hook_carrier_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the memory hook carrier to ``local`` for every test.
+
+    ``ops/memory/hook_carrier.py`` defaults to ``relay`` on a Claude Code cloud
+    container (``CLAUDE_CODE_REMOTE=true``), so the same suite would test the
+    local transport on CI and the relay outbox in a cloud session. A host
+    marker must not choose what a test proves. Relay tests set
+    ``L9_MEMORY_HOOK_CARRIER=relay`` themselves; hook subprocesses inherit the pin.
+    """
+    monkeypatch.setenv("L9_MEMORY_HOOK_CARRIER", "local")
+
+
 #: Where friction intake goes under pytest: a repository that does not exist, so a
 #: delivery that slips past the in-process guard 404s instead of filing an issue.
 TEST_FRICTION_SINK = "l9-test-sink/no-such-intake"

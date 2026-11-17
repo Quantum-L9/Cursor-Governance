@@ -53,6 +53,10 @@ EXIT_REFUSED = 1
 EXIT_UNBOUND = 3
 
 _COMPLETED = frozenset({OutcomeStatus.OK, OutcomeStatus.NO_HITS, OutcomeStatus.NOT_COMMITTED})
+#: Relay carrier (CANONICAL_LAW §8.11): the record passed its envelope and is
+#: queued for the agent's account connector. The command did what it was asked
+#: (exit 0), but nothing is committed yet, so the document's ``ok`` stays false.
+_EXIT_ZERO = _COMPLETED | {OutcomeStatus.RELAYED}
 
 # The legacy client accepted ``--kind`` with these names; memory classes are
 # the canonical vocabulary and the older aliases map onto them. A continuation
@@ -240,7 +244,7 @@ def outcome_document(
 def exit_code_for(outcome: OperationOutcome) -> int:
     if outcome.status is OutcomeStatus.BINDING_FAILED:
         return EXIT_UNBOUND
-    return EXIT_OK if outcome.status in _COMPLETED else EXIT_REFUSED
+    return EXIT_OK if outcome.status in _EXIT_ZERO else EXIT_REFUSED
 
 
 def _emit(document: dict[str, Any]) -> None:
