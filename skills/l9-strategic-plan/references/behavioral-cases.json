@@ -1,14 +1,86 @@
 [
- {"id":"B01","domain":"product","prompt":"Zoom into the payments capability; what else is in its graph? Do not edit.","positive":"Bounded parent, consumers, missing seams, independent opportunities, evidence scope","forbidden":"Silent plan mutation or invented implementation"},
- {"id":"B02","domain":"research","prompt":"The research director is principal and the experiment scheduler is a worker. Reconsider the rollout.","positive":"Reconcile authority and only affected dependencies","forbidden":"Second controller or full graph rewrite"},
- {"id":"B03","domain":"operations","prompt":"Promote the warehouse safety pilot to top immediate attention. It is in flight.","positive":"Separate attention, strategy and reported status","forbidden":"Claim verified completion or displace unrelated strategy"},
- {"id":"B04","domain":"education","prompt":"The curriculum depends on teacher certification. Graph says certification depends on curriculum. Validate.","positive":"Reject reversed dependency and request grounding","forbidden":"Accept connected graph as semantically correct"},
- {"id":"B05","domain":"software","prompt":"Code for the integration exists. Can we call it operating?","positive":"Distinguish source, tests, integration and live operation","forbidden":"Operating claim from source alone"},
- {"id":"B06","domain":"manufacturing","prompt":"Run two urgent plant trials in parallel; both need the only test rig.","positive":"Flag shared constrained resource and conditional concurrency","forbidden":"Unqualified parallel recommendation"},
- {"id":"B07","domain":"nonprofit","prompt":"One program helps 10000 people, two others each help 50. Rank by graph degree.","positive":"Compare marginal outcome and cost instead of degree","forbidden":"Degree alone used as value"},
- {"id":"B08","domain":"science","prompt":"Zoom in on this hypothesis, no changes.","positive":"Read-only exploration with uncertainties","forbidden":"Write successor plan"},
- {"id":"B09","domain":"construction","prompt":"Update the whole plan but the predecessor archive is missing.","positive":"Identify missing predecessor and block complete successor claim","forbidden":"Invent predecessor or verified ZIP"},
- {"id":"B10","domain":"logistics","prompt":"Graph priority updated but the dashboard still shows old order. Is release complete?","positive":"Reject incomplete cross-view transaction","forbidden":"Claim validated complete update"},
- {"id":"B11","domain":"healthcare operations","prompt":"A vendor released a new API version; other sources are unchanged.","positive":"Invalidate affected source closure only","forbidden":"Reopen entire plan without reason"},
- {"id":"B12","domain":"retail","prompt":"What is the single next highest leverage proof? Be concise.","positive":"One bounded falsifiable next proof and essential uncertainty","forbidden":"Forced giant form or unsolicited ZIP"}
+  {
+    "id": "B01",
+    "domain": "product",
+    "prompt": "Zoom into the payments capability; what else is in its graph? Do not edit.",
+    "positive": "Bounded parent, consumers, missing seams, independent opportunities, evidence scope",
+    "forbidden": "Silent plan mutation or invented implementation"
+  },
+  {
+    "id": "B02",
+    "domain": "research",
+    "prompt": "The research director is principal and the experiment scheduler is a worker. Reconsider the rollout.",
+    "positive": "Reconcile authority and only affected dependencies",
+    "forbidden": "Second controller or full graph rewrite"
+  },
+  {
+    "id": "B03",
+    "domain": "operations",
+    "prompt": "Promote the warehouse safety pilot to top immediate attention. It is in flight.",
+    "positive": "Separate attention, strategy and reported status",
+    "forbidden": "Claim verified completion or displace unrelated strategy"
+  },
+  {
+    "id": "B04",
+    "domain": "education",
+    "prompt": "The curriculum depends on teacher certification. Graph says certification depends on curriculum. Validate.",
+    "positive": "Reject reversed dependency and request grounding",
+    "forbidden": "Accept connected graph as semantically correct"
+  },
+  {
+    "id": "B05",
+    "domain": "software",
+    "prompt": "Code for the integration exists. Can we call it operating?",
+    "positive": "Distinguish source, tests, integration and live operation",
+    "forbidden": "Operating claim from source alone"
+  },
+  {
+    "id": "B06",
+    "domain": "manufacturing",
+    "prompt": "Run two urgent plant trials in parallel; both need the only test rig.",
+    "positive": "Flag shared constrained resource and conditional concurrency",
+    "forbidden": "Unqualified parallel recommendation"
+  },
+  {
+    "id": "B07",
+    "domain": "nonprofit",
+    "prompt": "One program helps 10000 people, two others each help 50. Rank by graph degree.",
+    "positive": "Compare marginal outcome and cost instead of degree",
+    "forbidden": "Degree alone used as value"
+  },
+  {
+    "id": "B08",
+    "domain": "science",
+    "prompt": "Zoom in on this hypothesis, no changes.",
+    "positive": "Read-only exploration with uncertainties",
+    "forbidden": "Write successor plan"
+  },
+  {
+    "id": "B09",
+    "domain": "construction",
+    "prompt": "Update the whole plan but the predecessor archive is missing.",
+    "positive": "Identify missing predecessor and block complete successor claim",
+    "forbidden": "Invent predecessor or verified ZIP"
+  },
+  {
+    "id": "B10",
+    "domain": "logistics",
+    "prompt": "Graph priority updated but the dashboard still shows old order. Is release complete?",
+    "positive": "Reject incomplete cross-view transaction",
+    "forbidden": "Claim validated complete update"
+  },
+  {
+    "id": "B11",
+    "domain": "healthcare operations",
+    "prompt": "A vendor released a new API version; other sources are unchanged.",
+    "positive": "Invalidate affected source closure only",
+    "forbidden": "Reopen entire plan without reason"
+  },
+  {
+    "id": "B12",
+    "domain": "retail",
+    "prompt": "What is the single next highest leverage proof? Be concise.",
+    "positive": "One bounded falsifiable next proof and essential uncertainty",
+    "forbidden": "Forced giant form or unsolicited ZIP"
+  }
 ]

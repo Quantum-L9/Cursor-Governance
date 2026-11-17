@@ -1,5 +1,5 @@
 {
-  "generation_id": "2ca1a6facd3682762d7c5d53789eca5b65996c04653f1f2da44650d06afef40f",
+  "generation_id": "8ced492cbdf6d1b35a467081b627e057a5fdbedd2cbad99b1b31f5a4b8c16b3b",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1484,6 +1484,19 @@
       "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
     {
+      "composition_role": "general",
+      "description": "Govern evidence-grounded strategic plans, portfolio graphs, causal dependencies, readiness, priorities, Strategic Value assessments, bounded successor revisions, and strategic handoffs. Use for strategic zoom-in, branch expansion, plan graph reviews, strategic prioritization, and cross-session strategic continuity. Distinct from l9-plan and l9-plan-simple execution planners. No unapproved strategy admission, execution, publication, or deployment.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-strategic-plan",
+      "path": "skills/l9-strategic-plan",
+      "reason": "UNTRIAGED \u2014 auto-registered by sync_generated_artifacts as the safe default when this pack appeared on disk with no tier. No one has decided whether it should be auto_invoke. Resolve via l9-wire-into-repo (Skill targets): give it a real reason here, or move it to tiers.auto_invoke.",
+      "skill_md": "skills/l9-strategic-plan/SKILL.md",
+      "skill_sha256": "f67242331495b848eb9f1f1505753b8d306840984bbf93f9ff344166bdce34dc",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "Adaptive evidence-based reasoning for planning, architecture, debugging, and trade-offs. Use when the user needs root-cause reasoning or an evidence-grounded decision. Do not activate for simple facts or when a domain Skill owns the contract.",
       "disable_model_invocation": false,
@@ -1563,6 +1576,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "beef631acdce6eda03a0afd8a78040d4a56821c13a8969ed2b5e0eb3688af25f",
-  "source_skill_corpus_sha256": "5f85e17480f46bcab9c6f7ac4377c11dda75463bec42156d29738f759429f6ec"
+  "source_manifest_sha256": "0cfc1ca9eca7517332b01ad272c4805734be5f748919dc1bf8cb67acce34a5c7",
+  "source_skill_corpus_sha256": "3da86670dcad04fa2addbff574ab62d60a70360d386c43811dcf22c25e0bb78d"
 }
