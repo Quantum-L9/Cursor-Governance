@@ -41,10 +41,15 @@ def _client(bound: RuntimeBinding, cli: FakeMemoryCli, surface: str | None = Non
 # --- carrier decision --------------------------------------------------------
 
 
+def _unbound(_name: str, _env: object) -> bool:
+    """The hook credential does not bind (no host profile decides a test)."""
+    return False
+
+
 def test_carrier_defaults_to_relay_only_on_a_cloud_container() -> None:
-    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "true"}) == "relay"
-    assert resolve_carrier({}) == "local"
-    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "false"}) == "local"
+    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "true"}, binder=_unbound) == "relay"
+    assert resolve_carrier({}, binder=_unbound) == "local"
+    assert resolve_carrier({"CLAUDE_CODE_REMOTE": "false"}, binder=_unbound) == "local"
 
 
 def test_explicit_carrier_wins_in_both_directions() -> None:
@@ -58,7 +63,7 @@ def test_unknown_carrier_is_refused_not_guessed() -> None:
 
 
 def test_unknown_carrier_fails_the_write_closed(bound, fake_cli, tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv(CARRIER_ENV, "hosted")
+    monkeypatch.setenv(CARRIER_ENV, "remote")
     outcome = _client(bound, fake_cli).write(
         "fact", workspace=str(tmp_path), namespace=NS, memory_class="decision"
     )

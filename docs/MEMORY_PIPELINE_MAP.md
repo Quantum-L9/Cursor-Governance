@@ -48,17 +48,26 @@ Authority: CANONICAL_LAW §2.1 / §8 / §8.2 / §8.5, ADR-0005, ADR-0028, ADR-00
 
 Cursor-Governance gates **repository edits** on hydration (Claude `memory_gate` on `Edit|Write`, Cursor "edit-other"); it never gates a memory write. `memory_gate.py` exempts `l9-memory` / `python -m ops.memory.cli` from its `Bash` matcher the way it exempts git/gh.
 
-## Hook carrier on cloud sessions (CANONICAL_LAW §8.11, ADR-0054)
+## Hook carrier (CANONICAL_LAW §8.11–§8.12, ADR-0054, ADR-0055)
 
-On a Claude Code cloud container the local runtime's store is container scratch,
-and the shared Memory 3.0 store admits only the account connector's person
-principal. Hook-lane writes there use the **relay** carrier
-(`ops/memory/hook_carrier.py`): envelope admission as usual, then a queue entry in
-`<repo>/.l9/memory/relay/outbox.jsonl` with the connector call
-(`memory.write_agent` / `memory.ingest_governed_candidate` / `memory.close`). The
-Stop hook asks the agent to make each call and acknowledge it
-(`python -m ops.memory.relay ack <id> --receipt <uuid>`). Local surfaces are
-unchanged. The relay retires when the memory service ships a hook principal.
+`ops/memory/hook_carrier.py` makes one decision per hook-lane write:
+
+| Carrier | When | Path | Outcome |
+|---|---|---|---|
+| `hosted` | both `L9_MEMORY_HOOK_CLIENT_ID` and `L9_MEMORY_HOOK_CLIENT_SECRET` bind (`capability_bind`) | envelope admission, then `ops/memory/hosted_hook_transport.py`: client-credentials token for the `l9-memory-hooks` hook principal, one MCP `initialize` + `tools/call` to the hosted `MemoryService` | `OK` with the hosted UUID receipt; `REJECTED` on a refusal; `RELAYED` (parked in the outbox with the reason) on a transport failure |
+| `relay` | credential unbound and `CLAUDE_CODE_REMOTE=true` | envelope admission, then a queue entry in `<repo>/.l9/memory/relay/outbox.jsonl` | `RELAYED` |
+| `local` | otherwise | transport A: the bound `l9-memory` CLI | the CLI receipt |
+
+`L9_MEMORY_HOOK_CARRIER` overrides; an unknown value is refused. Tool mapping
+for both remote carriers: `write` → `memory.write_agent`, `ingest_candidate` →
+`memory.ingest_governed_candidate`, `close` → `memory.close`.
+
+The Claude Stop hook (`memory_writeback._relay_gate`) never blocks and never
+asks the agent for a connector call (operator decision 2026-11-17). On `hosted`
+it drains the outbox through the hosted transport (ack with the hosted receipt,
+or record the refusal); on `relay` it keeps the entries and prints one
+non-blocking notice per session. `python -m ops.memory.relay status` shows what
+is owed. Distill does not run on either remote carrier.
 
 ## Write paths (caller taxonomy)
 
