@@ -1,0 +1,193 @@
+audit_status: PartiallySucceeded
+readiness_status: Unknown
+convergence_status: Partial
+target_binding:
+  target: L9_CI_Core_PRFast_NightlyDeep_CTO_Swarm_Campaign_v1.zip
+  revision: source ZIP bytes present; archive SHA256 reported in final pack metadata
+  result: v1.1.0 successor; only campaign artifacts modified
+  kernel: Recursive Alignment(20261117-211303).md / recursive_architecture_alignment_auditor v1.0
+authorized_scope:
+- inspect all v1 ZIP members
+- revise campaign instructions, evidence, and PR topology
+- package and statically validate v1.1.0
+excluded_scope:
+- no modification to GitHub repositories
+- no running or merging PRs
+- no claim of live CI validation or scheduled job result
+source_authority_used:
+- authority: explicit user objective
+  scope: bounded Core-first optimization, CTO-owned swarm and gated merges
+- authority: Core repository-execution ABI and local change policy
+  scope: four-phase ABI, Repo.mk companion rule
+  source: l9-ci-core/.l9/core-repo-policy.json, tools/l9_repo/contract.py
+- authority: Cursor-Governance CTO MODE.yaml
+  scope: fixed-pool swarm, child reporting, merge and integration ownership
+- authority: .github ruleset JSON
+  scope: organization-required Core job declared source, not attested live ruleset
+architecture_adapters:
+- identifier: Quantum-L9 Core repository execution
+  status: Applied
+  scope: Core changed paths and exact ABI
+- identifier: Cursor-Governance CTO protocol v2
+  status: Applied
+  scope: swarm, publication, integration, merge
+- identifier: live .github projection and GitHub ruleset enforcement
+  status: PartiallyApplied
+  scope: source inspected; exact runtime receipts unavailable
+normalized_context:
+  objective: PR critical checks on each Core PR; exhaustive tests daily and at release
+  scope: Core pilot only; other repositories read-only
+  date: '2026-11-17'
+artifact_inventory:
+  v1_members: 15
+  v1_inspection: all ZIP members extracted/read; source code boundaries sampled in GitHub
+  v1_1_members: computed by zip validation
+boundary_map:
+  organization_ruleset: enforces Analyze (central Core) on governed repositories
+  core: owns workflow orchestration and repository execution bridge
+  consumer_repo_mk: owns Core-specific fast/deep tests; generated make-v1 unchanged
+  sdk: owns normalized provider analysis, not test scheduling
+  cto: owns coordination, combined integration tests, and operator-authorized merges
+  children: own disjoint code files, publication, PR remediation; no merge or CTO privileges
+alignment_summary: The scope and architectural ownership are sound. Corrected missing prelaunch selector allocation,
+  manufactured C→D serial edge, insufficient behavioral challenge specificity, and future cron-proof ambiguity.
+  Runtime assurance remains unverified.
+alignment_score:
+  weighted_overall: null
+  status: Unknown
+  reason: no numerical scoring of unexecuted remote CI or live governance; score never overrides blockers
+critical_violations: []
+high_violations:
+- id: H1
+  severity: High
+  confidence: Confirmed
+  rule: frozen operator-approved objective and nonduplicated critical PR verification
+  source: v1 CAMPAIGN_CONTRACT.md and ACCEPTANCE.md
+  observed: A/B test selectors unspecified at allocation time; potential duplicate or missing required cases
+  root_cause: shared fast-test census not frozen before parallel dispatch
+  owner: CTO pre-launch
+  smallest_correction: freeze per-job selected cases and expected coverage before GATE; agents implement assigned
+    selections
+  release_blocker: true
+  status: ResolvedInRevisedPack
+  closing_validation: actual cases census, fail-known-bad and good witness on combined current head
+medium_violations:
+- id: M1
+  severity: Medium
+  confidence: Confirmed
+  rule: CTO protocol assigns parallel work with real dependencies only
+  source: v1 LANE_MATRIX.md
+  observed: default chain A→B→C→D serialized independent D after C
+  root_cause: PR order used as a substitute for semantic dependency
+  owner: CTO topology
+  smallest_correction: A→B necessary; C and D sibling branches after B when needed
+  release_blocker: false
+  status: ResolvedInRevisedPack
+  closing_validation: diff intersection empty; PR bases match actual dependencies
+- id: M2
+  severity: Medium
+  confidence: Confirmed
+  rule: kernel demands behaviorally meaningful verification where feasible
+  source: v1 lanes/C_independent_regression.md
+  observed: reliance on generic assertion language could degrade to source-only checks
+  root_cause: witness contract underspecified
+  owner: C + CTO
+  smallest_correction: behavioral known-good/known-bad tests; skip redundant tests
+  release_blocker: false
+  status: ResolvedInRevisedPack
+  closing_validation: execute disposable failure witness
+- id: M3
+  severity: Medium
+  confidence: Confirmed
+  rule: do not claim executable evidence for an unobserved schedule
+  source: v1 ACCEPTANCE.md and CTO_RUNBOOK.md
+  observed: post-merge manual deep and future scheduled cron potentially conflated in closure language
+  root_cause: asynchronous external trigger beyond campaign execution
+  owner: CTO evidence
+  smallest_correction: two-stage implementation/manual proof versus future first scheduled event
+  release_blocker: false
+  status: ResolvedInRevisedPack
+  closing_validation: record exact future schedule run or keep pending
+low_violations: []
+unknowns:
+- id: U1
+  reason: No actual Core HEAD SHA / working repository snapshot in the supplied archive
+  impact: delegation baseline and currentness
+  required_evidence: CTO freezes Core HEAD before launch
+- id: U2
+  reason: No current live GitHub ruleset attestation or exact merge grants
+  impact: whether real deployment can merge
+  required_evidence: current protected branch status, operator grant per PR/head
+- id: U3
+  reason: No runner timings, test case census or actual scheduled job run
+  impact: performance and execution claims
+  required_evidence: live before/after samples, selector census and real schedule event
+- id: U4
+  reason: No producer-verified current GAR projection / authoritative semantic closure attached
+  impact: canonical projection consumption claims
+  required_evidence: host CTO binds real current projections, with status receipts
+intent_and_scope_compliance: Passed
+communication_contract_compliance: Passed
+routing_and_integration_compliance: Passed
+authority_boundary_compliance: Passed
+structure_and_source_of_truth_compliance: Passed
+schema_and_configuration_compliance: Passed
+security_compliance: Passed
+reliability_observability_compliance: Unknown
+testing_validation_compliance: Unknown
+overbuilt_vs_underbuilt:
+  overbuilt_v1: unnecessary serial C→D PR edge
+  underbuilt_v1: no frozen per-job critical-test census; behavioral proof and cron evidence not sharply separated
+  simplest_correction: make CTO freeze case coverage before dispatch, keep existing Core ABI and governance
+leverage_analysis:
+  highest: prelaunch test census avoids duplicated PR jobs and critical test loss
+  second: sibling C/D PRs maximize safe parallelism without extra writers
+correction_roadmap:
+- priority: 1
+  owner: CTO
+  action: bind current Core revision, test corpus and per-job fast selection before swarm writes
+  status: SpecifiedNotExecuted
+- priority: 2
+  owner: A/B/C/D
+  action: execute disjoint scoped PRs; preserve Core mandatory companion files per PR
+  status: SpecifiedNotExecuted
+- priority: 3
+  owner: CTO
+  action: integrate actual combined heads, test failures, obtain exact merge grants
+  status: SpecifiedNotExecuted
+- priority: 4
+  owner: CTO
+  action: verify merged main, manual deep, pending/observed future schedule and measured runtime
+  status: SpecifiedNotExecuted
+minimum_safe_next_action:
+  action: Start /lcto from current Core workspace and freeze exact current source/test census before launching
+    children
+  rationale: all dependent PR-fast selections and noncollision decisions rely on this evidence
+validation_gates:
+  target_bound: Passed
+  inventory_complete: Passed
+  source_authority_identified: Passed
+  structure_and_access_boundaries: Passed
+  packaging_and_zip: PendingFinalCheck
+  live_projection_bound: Unknown
+  live_required_checks: Unknown
+  real_combined_tests: Unknown
+  post_merge_scheduled_run: Unknown
+residual_risks:
+- Core main is the org CI production runtime; selected suite may omit a critical witness until actual census/proofs
+  run
+- Cron may be delayed; manual dispatch is not proof that the scheduled trigger fired
+- Hosted coding-agent access to private Cursor-Governance remains unverified at execution
+convergence:
+  completed_passes:
+  - context/scope
+  - authority/boundary
+  - artifact inventory
+  - contract and ownership
+  - security/reliability design
+  - testing and performance design
+  - leverage
+  - reconciliation
+  skipped_passes:
+  - 'live CI/merge/cron execution: no repository mutation or runtime session'
+  status: Partial due to remote runtime evidence not executed

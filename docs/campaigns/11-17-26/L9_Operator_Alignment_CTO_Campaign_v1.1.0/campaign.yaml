@@ -1,0 +1,320 @@
+kind: operator-alignment-cto-execution-campaign-local
+version: 1.2.0
+status: AUTONOMOUS_HANDOFF_NOT_ADMITTED_NOT_EXECUTED
+autonomy:
+  questions_during_run: 0
+  normative: HOST_AND_AUTONOMY.md
+objective: Admit exact operator-scoped Doctrine and Intent v1 records in Quantum-L9/.github and activate
+  verified, access-constrained alignment views through the existing Cursor-Governance CTO operating plane.
+  Merge specified existing PRs conditionally.
+host: Cursor IDE /lcto
+source_snapshot:
+  observed_date: '2026-11-17'
+  main_revisions:
+    Quantum-L9/.github: dd780b957b301acf5443013708105b7a76e3aa7b
+    Quantum-L9/l9-semantic-compiler-engine: f3883cbbb4f4e982f96bfac0b3eca08ad7e711a6
+    Quantum-L9/Cursor-Governance: 58e7340f846dfe960a3c58fb4e4f2ef11b221084
+  approved_subject_digest: sha256:4db9854e950737ebefa337323152d1f7776482e137aee3c0204698cdfb1951bc
+  approved_predecessor_zip_sha256: 43ff7370dc9e4f126b6f914babb57990efdc20a927569cff5b0ea91908d04c78
+  prs_snapshot: evidence/open_pr_snapshot.json
+digest_identity:
+  subject_digest_input: evidence/approved_v1_exact_subject_manifest.json
+  subject_digest_algorithm: 'canonical JSON of that file with subject_digest removed; sort_keys true; separators
+    comma and colon; UTF-8; prefix sha256:'
+  release_manifest_bytes: byte-identical to evidence/approved_v1_exact_subject_manifest.json
+  admission_record: evidence/ADMISSION.md.template
+  admission_template_sha256: sha256:ea9f5a6691e9bc4208300bd9434f4cb617fdb7d0677f409d1193932567727546
+  doctrine_lineage_zip_sha256: 43ff7370dc9e4f126b6f914babb57990efdc20a927569cff5b0ea91908d04c78
+  campaign_v1_0_0_zip_sha256: dec6475c2aa3415e08468170511d07e605d9accaaf31b048ca6b5d00ca01c72f
+  sealed_manifest_sentence: The manifest approval_basis still names a v0.6.1 ZIP. Do not edit it.
+    Execution authority is the five file digests and the subject digest.
+approval:
+  scope: 'approved v1.0.0 operator-owned Doctrine/Intent/alignment content and explicit merge request for
+    .github#255, Cursor-Governance#1011 and #1030 when gates pass'
+  not_authorized: Merge .github#254, change global semantic invariants, globalize Doctrine/Intent, bypass
+    CI or merge protection, expose private sources to coding agents, plan mutation, deploy or alter secrets
+  subject_change: If any approved source leaf/material statement changes, stop that approval-dependent step
+    and seek exact-subject authorization. Technical wiring may change within frozen design.
+  conditional_new_pr_merges: New strategy adoption, compiler, or Cursor alignment PRs are within authorized
+    implementation objective but have no blanket exact-head merge grant. CTO resolves current merge-authority
+    switch and applicable recorded owner decision, otherwise stop at MERGE_PENDING.
+  pr_check_requirement: Existing named PR merges are conditional on latest-head CI/review/threads/branch
+    protection and stack-safe method; user instruction does not bypass those gates.
+  snapshot_limit: PR and main SHAs are historical observation only; use current main, exact head, and runtime
+    contracts at each consequential operation.
+  github_writer_status: 'BLOCKED_UNTIL_EXISTING_GOVERNED_WRITER_PROVEN: Cursor CTO child_system_prompt currently
+    forbids Quantum-L9/.github cloning, branch and push even on Cursor.'
+swarm:
+  owner: single live CTO session after explicit /lcto activation
+  agents: 4
+  upper_cap: 5
+  type: Cursor Task coding-agent pool
+  reusable: true
+  child_prompt_source: governance/cto-mode/MODE.yaml via ops/autonomy/cto_mode.py child-prompt, never a hand-written
+    substitute
+  child_first_gate: /coding-agent mode ACTIVE with verified global projection before code changes
+  child_reporting: CTO-STATUS / CTO-QUESTION / CTO-BLOCKER in own transcript or Cursor Task result only;
+    never child cross-session send
+  cto_only:
+  - scope arbitration
+  - integration testing
+  - merge execution and proof
+  - final truthfulness
+  active_slot_rule: At most four concurrent Task slots for this campaign; Cursor Task continuation/re-dispatch
+    does not increase slot count; CTO does not own a pool slot.
+  authoritative_bootstrap: Use current governance/cto-mode/MODE.yaml, ops/autonomy/cto_mode.py child-prompt;
+    do not replace mandatory rendered child system prompt with these lane brief files.
+  authority_access_warning: Current /coding-agent mode requires readable global authority checkout. Whole-repository
+    read of .github is inconsistent with confidentiality of strategy/ and never proves restricted-source
+    enforcement.
+lanes:
+- id: A
+  repo: Quantum-L9/.github
+  role: 'read-only .github PR #255 integrity/merge readiness and prepared exact strategy admission, NO child
+    .github writes under current Cursor host protocol'
+  agent: pool-slot-1
+  writes: []
+  reads:
+  - .claude/skills/l9-projection-admission/**
+  - semantics/authority_model.yaml
+  - semantics/strategic_cognition_model.yaml
+  deps_start: []
+  deps_activate: []
+  outputs:
+  - verified exact candidate PR head and source digest evidence
+  - 'ready-to-merge or blocked assessment for #255'
+  - exact-source admission patch recommendation with no code mutation
+  - CTO-BLOCKER if no authorized .github writer can publish adoption or remediate existing PR
+  block_on:
+  - material subject mismatch
+  - global law promotion proposal
+  - missing owner provenance
+  - current CTO child system prompt explicitly forbids .github branch/push; do not interpret proposed repo_access
+    writable as override
+  brief: lanes/A.md
+  authorized_repositories:
+    writable: []
+    read_only:
+    - https://github.com/Quantum-L9/.github
+    - https://github.com/Quantum-L9/Cursor-Governance
+    unlisted_repositories: no_access
+  requires_current_mode: true
+  reporting_contract: only CTO-* lines in own transcript or Cursor Task result; no cross-session sends
+  publication: producer agent owns PR to ready-to-merge; CTO alone integrates and merges subject to authority
+    and host gates
+- id: B
+  repo: Quantum-L9/l9-semantic-compiler-engine
+  role: operator-owned projection producer compatibility
+  agent: pool-slot-2
+  writes:
+  - bounded existing engine/projection code and its focused tests only if mechanism proven necessary
+  reads:
+  - Quantum-L9/.github/strategy/ (read-only exact candidate or approved main)
+  - Quantum-L9/.github/semantics/ (read-only)
+  - Cursor-Governance projection driver (read-only)
+  deps_start: []
+  deps_activate:
+  - A:operator source admitted on main
+  outputs:
+  - source-backed native producer compatibility verdict
+  - 'if needed: bounded compiler PR with tests/negative controls'
+  - verified producer artifact/receipt path or exact BLOCKED reason
+  block_on:
+  - new global law required
+  - no verified operator-scoped source contract
+  - unresolved identity and integrity model
+  brief: lanes/B.md
+  authorized_repositories:
+    writable:
+    - https://github.com/Quantum-L9/l9-semantic-compiler-engine
+    read_only:
+    - https://github.com/Quantum-L9/.github
+    - https://github.com/Quantum-L9/Cursor-Governance
+    unlisted_repositories: no_access
+  requires_current_mode: true
+  reporting_contract: only CTO-* lines in own transcript or Cursor Task result; no cross-session sends
+  publication: producer agent owns PR to ready-to-merge; CTO alone integrates and merges subject to authority
+    and host gates
+- id: C
+  repo: Quantum-L9/Cursor-Governance
+  role: 'merge skill #1011 then stacked planner mode #1030'
+  agent: pool-slot-3
+  writes:
+  - 'the exact live changed-file sets of Cursor-Governance PR #1011 and PR #1030, frozen from GitHub diff
+    at dispatch; fix any other path through CTO reallocation'
+  reads:
+  - .github global semantics (read only)
+  - compiler capabilities (read only)
+  deps_start: []
+  deps_activate: []
+  outputs:
+  - '#1011 CI/review green, merged or already merged'
+  - 'then #1030 safely retargeted/restacked, CI/review green, merged or already merged'
+  - no loss of producer-issued projection receipts or planner mode contracts
+  block_on:
+  - PR head mismatch
+  - parent-child stack safety unresolved
+  - unreviewed overlap with lane D
+  - attempt to edit other agent PR branch or a path outside frozen live changed-file sets
+  brief: lanes/C.md
+  authorized_repositories:
+    writable:
+    - https://github.com/Quantum-L9/Cursor-Governance
+    read_only:
+    - https://github.com/Quantum-L9/.github
+    - https://github.com/Quantum-L9/l9-semantic-compiler-engine
+    unlisted_repositories: no_access
+  requires_current_mode: true
+  reporting_contract: only CTO-* lines in own transcript or Cursor Task result; no cross-session sends
+  publication: producer agent owns PR to ready-to-merge; CTO alone integrates and merges subject to authority
+    and host gates
+- id: D
+  repo: Quantum-L9/Cursor-Governance
+  role: consumer operator alignment modes and access enforcement
+  agent: pool-slot-4
+  writes:
+  - governance/cto-mode/MODE.yaml
+  - governance/architect-mode/MODE.yaml
+  - governance/coding-agent-mode/MODE.yaml (only after ACL proof)
+  - governance/operator-alignment/**
+  - ops/autonomy/projection_mode.py (only if existing mode cannot lawfully consume another verified view)
+  - ops/autonomy/*operator_alignment*
+  - tests/ops/autonomy/*operator_alignment*
+  - generated/governance/operator_alignment/** (only producer-emitted verified bytes)
+  - commands/lcto.md and commands/architect.md (only if required by existing mode contract)
+  reads:
+  - 'existing #1011 and #1030 diffs (read only until merged)'
+  - .github operator sources (privileged actor only)
+  - compiler producer contract (read only)
+  deps_start: []
+  deps_activate:
+  - A:operator source admitted on main
+  - B:producer verified
+  - C:planner prerequisite merged for planner activation
+  outputs:
+  - CTO opt-in view verified and ACTIVE under real source and permission checks
+  - Architect and Planner view integrations under existing modes where available
+  - Meta Planner advisory integration or explicit owner-specific BLOCKED
+  - Coding Agent delegated-only view; source confidentiality never claimed without technical ACL proof
+  block_on:
+  - no producer/verified receipt
+  - host identity or access enforcement missing
+  - 'shared ownership with #1030 in active PR'
+  - restricted source read from coding worker still possible
+  - attempt to consume strategy/ as an admitted global canonical source or produce second consumer-side projections
+  - missing approved producer-consumer receipt/interface contract
+  brief: lanes/D.md
+  authorized_repositories:
+    writable:
+    - https://github.com/Quantum-L9/Cursor-Governance
+    read_only:
+    - https://github.com/Quantum-L9/.github
+    - https://github.com/Quantum-L9/l9-semantic-compiler-engine
+    unlisted_repositories: no_access
+  requires_current_mode: true
+  reporting_contract: only CTO-* lines in own transcript or Cursor Task result; no cross-session sends
+  publication: producer agent owns PR to ready-to-merge; CTO alone integrates and merges subject to authority
+    and host gates
+activation_order:
+- A and B and C parallel start
+- D may design/test disjoint files in parallel
+- A source admission + B producer proof -> D CTO/Architect activation
+- 'C parent #1011 then child #1030 -> D Planner activation'
+- CTO integrated gates then restricted coding-agent acceptance
+- Meta Planner only if explicit eligible consumer verified
+merge_set:
+- Quantum-L9/.github#255
+- Quantum-L9/Cursor-Governance#1011
+- Quantum-L9/Cursor-Governance#1030
+excluded_merge_set:
+- Quantum-L9/.github#254
+acceptance_gates:
+- G0-authority-current
+- G1-prerequisite-prs-merged
+- G2-operator-scoped-admission
+- G3-producer-verification
+- G4-consumer-bound-verification
+- G5-identity-and-leakage-controls
+- G6-integrated-host-behavior
+- G7-final-digest-and-status
+go_no_go: No claim of full activation until G0..G7 pass. Partial role activation may be reported role-by-role;
+  never call it all-five ACTIVE.
+audit:
+  kernel: recursive_architecture_alignment_auditor@1.0
+  kernel_sha256: sha256:ce9f7d2face6e7007c27313cbc885a5d11df85335877851e60ddb87b84adb639
+  predecessor_zip_sha256: sha256:dec6475c2aa3415e08468170511d07e605d9accaaf31b048ca6b5d00ca01c72f
+  report: ALIGNMENT_AUDIT.yaml
+  status: PARTIAL_EXTERNAL_RUNTIME_UNVERIFIED
+  correction_boundary: campaign runbook, lane contracts, local verifier only; no repository changes
+lane_briefs:
+  A: lanes/A.md
+  B: lanes/B.md
+  C: lanes/C.md
+  D: lanes/D.md
+admission:
+  operator_scoped: true
+  global_semantics_unchanged: true
+  exact_approved_content_required: true
+constraints:
+  no_new_global_domain_or_source_registry: true
+  strategy_instance_must_not_be_projected_through_canonical_global_source_spoofing: true
+  operator_source_and_global_semantics_separate: true
+  coding_agent_confidentiality_default: BLOCKED_UNTIL_ENFORCED_REPO_ACCESS_SEPARATION
+  no_mode_enabled_by_repo_file_presence: true
+  producer_does_not_self_admit: true
+  unknown_never_pass: true
+  no_second_plan_ssot: true
+  skip_inapplicable_runtime_gate_is_not_pass: true
+  existing_global_profiles_remain_immutable: true
+  newly_raised_global_contract_need: STOP_AND_ROUTE_TO_GLOBAL_AUTHORITY_OWNER
+  no_github_child_branch_or_push_until_current_owner_authorizes: current Cursor-Governance governance/cto-mode/MODE.yaml#operating_protocol.child_system_prompt
+    is binding, even if lane scope text says otherwise
+workflow_joins:
+- id: J0
+  requires:
+  - live current root snapshots
+  - permission and candidate integrity check
+  unlocks:
+  - launch active lanes A,B,C,D with disjoint writers
+- id: J1
+  requires:
+  - 'PR #255 verified on main'
+  - exact strategy source adoption merged and owner-scoped admitted
+  - real permitted .github writer and publishing path for strategy adoption independently verified; child
+    A cannot branch/push .github under current host prompt
+  unlocks:
+  - admitted operator source coordinates to producer
+- id: J2
+  requires:
+  - producer compatibility demonstrated and genuine PASS receipts or explicit blocker
+  unlocks:
+  - producer bytes to privileged Cursor alignment views
+- id: J3
+  requires:
+  - 'Cursor #1011 merged'
+  - 'stacked #1030 merged and replay verified'
+  unlocks:
+  - Planner consumer integration only
+- id: J4
+  requires:
+  - privileged actor identity verified
+  - source and receipt verified
+  - CTO performs combined runtime tests
+  unlocks:
+  - role-scoped CTO,Architect,Planner activation claims only
+- id: J5
+  requires:
+  - technical denial of full .github strategy reads for coding-worker identity
+  - negative ACL probes verified
+  unlocks:
+  - Coding Agent confidentiality/host ACTIVE claim; otherwise BLOCKED
+role_release_policy:
+  CTO: can activate independently after J1+J2+J4 and existing eight global profiles current; separate from
+    repository writer requirement
+  Architect: can activate independently after J1+J2+J4 and existing global profiles current
+  Planner: requires J1+J2+J3+J4 and exact Plan Keeper authorization
+  Meta_Planner: advisory only if existing eligible consumer discovered; absent consumer -> BLOCKED_NO_CONSUMER
+  Coding_Agent: six delegated obligations only; confidentiality is BLOCKED until J5; do not substitute absent
+    source paths for ACL proof
+manual_command_policy: Do not emit executable target mutations before current repo owner/command-source verification;
+  verified canonical publication ceremony is Cursor-Governance SSOT make pr, not target Makefile.
