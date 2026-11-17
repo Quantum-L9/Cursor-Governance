@@ -237,8 +237,8 @@ def test_cli_ack_and_status(tmp_path, capsys) -> None:
     assert json.loads(capsys.readouterr().out) == {
         "total": 1,
         "acked": 1,
-        "rejected": 0,
         "pending": 0,
+        "refused": 0,
     }
 
 
@@ -249,6 +249,127 @@ def test_instruction_names_the_tool_arguments_and_ack(tmp_path) -> None:
     assert '"content": "c"' in text
     assert f"python -m ops.memory.relay ack {ident} --receipt <receipt_id>" in text
     assert "no memory.ingest, no operator CLI write" in text
+
+
+# --- connector refusals (rule 42 satisfiability) ------------------------------
+
+REASON = "namespace did not match any write grant"
+
+
+def test_refused_entry_stays_listed_with_its_refusal(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    receipt = str(uuid.uuid4())
+    row = relay.refuse(tmp_path, ident, receipt, REASON)
+    assert row == {**row, "id": ident, "receipt_id": receipt, "reason": REASON}
+    owed = relay.pending(tmp_path)
+    assert [r["id"] for r in owed] == [ident], "a refusal discharges nothing"
+    assert owed[0]["refusal"]["receipt_id"] == receipt
+    assert relay.acks(tmp_path) == {}, "a refusal is never recorded as an ack"
+
+
+def test_status_counts_refused_entries_as_still_pending(tmp_path, capsys) -> None:
+    ident = _queue(tmp_path)
+    relay.enqueue(
+        tmp_path, surface="s", operation="write", arguments={"namespace": NS, "content": "o"}
+    )
+    assert (
+        relay.main(
+            [
+                "refuse",
+                ident,
+                "--receipt",
+                str(uuid.uuid4()),
+                "--reason",
+                REASON,
+                "--workspace",
+                str(tmp_path),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert relay.main(["--workspace", str(tmp_path), "status"]) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "total": 2,
+        "acked": 0,
+        "pending": 2,
+        "refused": 1,
+    }
+
+
+def test_ack_after_refusal_supersedes_it(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    relay.refuse(tmp_path, ident, str(uuid.uuid4()), REASON)
+    receipt = str(uuid.uuid4())
+    assert relay.ack(tmp_path, ident, receipt)["receipt_id"] == receipt
+    assert relay.pending(tmp_path) == []
+
+
+def test_a_refusal_never_supersedes_an_ack(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    relay.ack(tmp_path, ident, str(uuid.uuid4()))
+    with pytest.raises(relay.RelayError, match="already acknowledged"):
+        relay.refuse(tmp_path, ident, str(uuid.uuid4()), REASON)
+    assert relay.refusals(tmp_path) == {}
+
+
+@pytest.mark.parametrize("bad", ["", "  ", "rejected", "12345"])
+def test_refusal_without_a_receipt_is_rejected(tmp_path, bad) -> None:
+    ident = _queue(tmp_path)
+    with pytest.raises(relay.RelayError, match="not a connector receipt id"):
+        relay.refuse(tmp_path, ident, bad, REASON)
+    assert relay.refusals(tmp_path) == {}
+    assert "refusal" not in relay.pending(tmp_path)[0]
+
+
+def test_cli_refusal_without_a_receipt_is_rejected(tmp_path, capsys) -> None:
+    ident = _queue(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        relay.main(["refuse", ident, "--reason", REASON, "--workspace", str(tmp_path)])
+    assert exc.value.code == 2
+    assert "--receipt" in capsys.readouterr().err
+    assert relay.refusals(tmp_path) == {}
+
+
+@pytest.mark.parametrize("bad", ["", "   \n "])
+def test_refusal_without_a_reason_is_rejected(tmp_path, bad) -> None:
+    ident = _queue(tmp_path)
+    with pytest.raises(relay.RelayError, match="must state the connector's reason"):
+        relay.refuse(tmp_path, ident, str(uuid.uuid4()), bad)
+    assert relay.refusals(tmp_path) == {}
+
+
+def test_refusal_of_an_unknown_entry_is_rejected(tmp_path) -> None:
+    _queue(tmp_path)
+    with pytest.raises(relay.RelayError, match="no outbox entry"):
+        relay.refuse(tmp_path, "0" * 16, str(uuid.uuid4()), REASON)
+
+
+def test_refusals_are_append_only_and_the_latest_is_shown(tmp_path) -> None:
+    ident = _queue(tmp_path)
+    first, second = str(uuid.uuid4()), str(uuid.uuid4())
+    relay.refuse(tmp_path, ident, first, REASON)
+    assert relay.refuse(tmp_path, ident, first, "again")["reason"] == REASON, "same receipt: no-op"
+    relay.refuse(tmp_path, ident, second, REASON)
+    lines = (relay.relay_dir(tmp_path) / relay.REFUSALS_NAME).read_text().splitlines()
+    assert [json.loads(line)["receipt_id"] for line in lines] == [first, second]
+    assert relay.pending(tmp_path)[0]["refusal"]["receipt_id"] == second
+
+
+def test_instruction_names_the_refuse_verb_and_it_parses_as_printed(tmp_path, capsys) -> None:
+    import shlex
+
+    ident = _queue(tmp_path)
+    text = relay.instruction(tmp_path, relay.pending(tmp_path))
+    line = next(row for row in text.splitlines() if "ops.memory.relay refuse" in row)
+    argv = shlex.split(line.split("refuses:", 1)[1])[3:]  # drop "python -m ops.memory.relay"
+    receipt = str(uuid.uuid4())
+    argv = [receipt if part == "<receipt_id>" else part for part in argv]
+    assert relay.main(argv) == 0
+    assert ident in capsys.readouterr().out
+    assert relay.pending(tmp_path)[0]["refusal"]["receipt_id"] == receipt
+    shown = relay.instruction(tmp_path, relay.pending(tmp_path))
+    assert f"REFUSED by the connector (receipt {receipt})" in shown
 
 
 # --- review findings on #1008 -------------------------------------------------
@@ -365,43 +486,3 @@ def test_cli_refuses_a_workspace_that_is_not_a_repository(tmp_path, capsys) -> N
     plain.mkdir()
     assert relay.main(["--workspace", str(plain), "status"]) == 1
     assert "not a repository root" in capsys.readouterr().err
-
-
-# --- refusals ----------------------------------------------------------------
-
-
-def test_a_recorded_refusal_settles_the_entry_and_stays_visible(tmp_path, capsys) -> None:
-    ident = _queue(tmp_path)
-    reason = "supersession refused: superseded record does not exist: 273f1156"
-    argv = ["--workspace", str(tmp_path), "reject", ident, "--refusal", reason]
-    assert relay.main(argv) == 0
-    capsys.readouterr()
-    assert relay.pending(tmp_path) == []
-    assert relay.rejects(tmp_path)[ident]["refusal"] == reason
-    assert relay.main(["--workspace", str(tmp_path), "status"]) == 0
-    assert json.loads(capsys.readouterr().out) == {
-        "total": 1,
-        "acked": 0,
-        "rejected": 1,
-        "pending": 0,
-    }
-
-
-def test_a_refusal_must_quote_a_reason(tmp_path) -> None:
-    ident = _queue(tmp_path)
-    with pytest.raises(relay.RelayError, match="must quote"):
-        relay.reject(tmp_path, ident, "  ")
-    assert len(relay.pending(tmp_path)) == 1
-
-
-def test_an_acknowledged_entry_cannot_be_rejected(tmp_path) -> None:
-    ident = _queue(tmp_path)
-    relay.ack(tmp_path, ident, str(uuid.uuid4()))
-    with pytest.raises(relay.RelayError, match="already acknowledged"):
-        relay.reject(tmp_path, ident, "late refusal")
-
-
-def test_instruction_names_the_refusal_route(tmp_path) -> None:
-    _queue(tmp_path)
-    text = relay.instruction(tmp_path, relay.pending(tmp_path))
-    assert "python -m ops.memory.relay reject" in text

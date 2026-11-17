@@ -57,7 +57,9 @@ principal. Hook-lane writes there use the **relay** carrier
 `<repo>/.l9/memory/relay/outbox.jsonl` with the connector call
 (`memory.write_agent` / `memory.ingest_governed_candidate` / `memory.close`). The
 Stop hook asks the agent to make each call and acknowledge it
-(`python -m ops.memory.relay ack <id> --receipt <uuid>`). Local surfaces are
+(`python -m ops.memory.relay ack <id> --receipt <uuid>`), or record a connector
+refusal (`relay refuse <id> --receipt <uuid> --reason ...`: non-blocking, still
+listed, superseded by a later ack; ADR-0054 amendment). Local surfaces are
 unchanged. The relay retires when the memory service ships a hook principal.
 
 ## Write paths (caller taxonomy)

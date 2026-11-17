@@ -83,3 +83,22 @@ Operator decision (2026-11-16): relay now, then a hook principal.
 A memory ADR adds an envelope-bound hook principal (client-credentials token
 bound server-side to its envelope); Cursor-Governance then binds 3.0 with the
 CLI's `--remote-url` against the hosted service and retires this carrier.
+
+## Amendment (2026-11-17) — connector refusals
+
+Observed: an outbox entry for namespace `seo-bot` was refused twice by the
+hosted connector (`memory.write_agent` → `status: rejected`, "namespace did not
+match any write grant"). The relay had no verb for that verdict. An `ack` would
+claim a hosted write that never landed (L9-EVIDENCE-001), so nothing the agent
+could correctly do cleared the entry, which rule 42 "Satisfiability" forbids.
+
+`python -m ops.memory.relay refuse <id> --receipt <rejection receipt_id>
+--reason "..."` records the refusal in an append-only
+`.l9/memory/relay/refusals.jsonl`. A refused entry no longer blocks Stop. It is
+still listed by `pending` (with its latest `refusal`) and counted by `status`
+(`refused`), and the Stop hook announces it on every Stop. The model is
+`session_debt.py defer`: the turn is discharged but the item stays open. A
+later `ack` supersedes the refusal. A refusal never supersedes an `ack`, and it
+needs the connector's receipt id and stated reason. The rule against retrying
+through another door is unchanged. Fixing the grant itself is a separate
+change on the memory service side.

@@ -15,17 +15,30 @@ hook-lane operation    connector tool
 
 The agent makes each call and acknowledges it with the receipt id the
 connector returned (``python -m ops.memory.relay ack``). An entry without an
-acknowledgement is still owed: the Stop hook (``memory_relay_gate.py``) asks
-for it. Nothing here talks to memory; the outbox is a queue of obligations,
-not a store, and an acknowledgement records the agent's claim of the hosted
-receipt id — the hosted receipt itself is the authority (L9-EVIDENCE-001).
+acknowledgement is still owed: the Stop hook (``memory_writeback._relay_gate``)
+asks for it. Nothing here talks to memory; the outbox is a queue of
+obligations, not a store, and an acknowledgement records the agent's claim of
+the hosted receipt id — the hosted receipt itself is the authority
+(L9-EVIDENCE-001).
 
-Files, both append-only JSON Lines under ``<workspace>/.l9/memory/relay/``:
+When the connector *refuses* the call (``status: rejected``, e.g. "namespace did
+not match any write grant") the agent records that verdict with
+``python -m ops.memory.relay refuse <id> --receipt <rejection receipt_id>
+--reason "..."``. An ack would claim a hosted write that never landed, so a
+refusal is its own record: the entry stops blocking Stop (rule 42
+"Satisfiability": no correct action could otherwise clear it) but stays listed by
+``pending``, ``status`` and the gate, exactly as ``session_debt.py defer``
+discharges the turn without closing the item. A later ``ack`` supersedes the
+refusal; a refusal never supersedes an ack.
+
+Files, all append-only JSON Lines under ``<workspace>/.l9/memory/relay/``:
 
 - ``outbox.jsonl`` — ``{id, surface, operation, tool, arguments, created_at}``.
   ``id`` is a digest of operation + tool + arguments, so re-enqueueing the same
   record (a retried hook) is a no-op rather than a duplicate obligation.
 - ``acks.jsonl`` — ``{id, receipt_id, acked_at}``.
+- ``refusals.jsonl`` — ``{id, receipt_id, reason, refused_at}``; the connector's
+  rejection receipt and reason. Several per entry are kept; the last is shown.
 """
 
 from __future__ import annotations
@@ -46,9 +59,7 @@ from typing import Any
 RELAY_REL = Path(".l9") / "memory" / "relay"
 OUTBOX_NAME = "outbox.jsonl"
 ACKS_NAME = "acks.jsonl"
-#: The connector refused the call. A refusal is the verdict (no retry through
-#: another door), so a refused entry is no longer owed; ``status`` keeps it visible.
-REJECTS_NAME = "rejects.jsonl"
+REFUSALS_NAME = "refusals.jsonl"
 
 #: Hook-lane operation -> account-connector tool. The only operations that
 #: write; reads keep their local transport and distill is not relayed (the
@@ -65,7 +76,7 @@ class RelayError(ValueError):
 
 
 #: Files the relay may open, by fixed name only.
-RELAY_FILES = frozenset({OUTBOX_NAME, ACKS_NAME, ".lock", "gate.json", REJECTS_NAME})
+RELAY_FILES = frozenset({OUTBOX_NAME, ACKS_NAME, REFUSALS_NAME, ".lock", "gate.json"})
 
 
 def relay_dir(workspace: str | Path) -> Path:
@@ -185,54 +196,50 @@ def acks(workspace: str | Path) -> dict[str, dict[str, Any]]:
     return {str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), ACKS_NAME))}
 
 
-def rejects(workspace: str | Path) -> dict[str, dict[str, Any]]:
+def refusals(workspace: str | Path) -> dict[str, dict[str, Any]]:
+    """The latest recorded connector refusal per entry id."""
+
     return {
-        str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), REJECTS_NAME))
+        str(row.get("id")): row for row in _read(relay_file(relay_dir(workspace), REFUSALS_NAME))
     }
 
 
 def pending(workspace: str | Path) -> list[dict[str, Any]]:
-    """Outbox entries with neither an acknowledgement nor a recorded refusal."""
+    """Outbox entries with no acknowledgement, oldest first.
 
-    settled = set(acks(workspace)) | set(rejects(workspace))
-    return [
-        row
-        for row in _read(relay_file(relay_dir(workspace), OUTBOX_NAME))
-        if row.get("id") not in settled
-    ]
+    A refused entry is still listed (it is not discharged), carrying its latest
+    refusal under ``"refusal"``; the Stop gate asks only for rows without one.
+    """
 
-
-def reject(workspace: str | Path, ident: str, refusal: str) -> dict[str, Any]:
-    """Record the connector's refusal of one entry, verbatim. Never a success."""
-
-    text = str(refusal).strip()
-    if not text:
-        msg = "a refusal must quote the connector's reason"
-        raise RelayError(msg)
     directory = relay_dir(workspace)
-    with _locked(directory):
-        if not any(row.get("id") == ident for row in _read(relay_file(directory, OUTBOX_NAME))):
-            msg = f"no outbox entry {ident!r} in {directory}"
-            raise RelayError(msg)
-        if any(row.get("id") == ident for row in _read(relay_file(directory, ACKS_NAME))):
-            msg = f"entry {ident!r} is already acknowledged with a receipt"
-            raise RelayError(msg)
-        existing = {str(r.get("id")): r for r in _read(relay_file(directory, REJECTS_NAME))}
-        if ident in existing:
-            return existing[ident]
-        row = {"id": ident, "refusal": text[:2000], "rejected_at": datetime.now(UTC).isoformat()}
-        _append(relay_file(directory, REJECTS_NAME), row)
-    return row
+    acked = acks(workspace)
+    refused = refusals(workspace)
+    rows: list[dict[str, Any]] = []
+    for row in _read(relay_file(directory, OUTBOX_NAME)):
+        ident = str(row.get("id"))
+        if ident in acked:
+            continue
+        if ident in refused:
+            row = {**row, "refusal": refused[ident]}
+        rows.append(row)
+    return rows
 
 
-def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
-    """Record the hosted receipt id for one entry. Refuses anything but a UUID."""
-
+def _receipt_uuid(receipt_id: str) -> str:
     try:
-        receipt = str(uuid.UUID(str(receipt_id).strip()))
+        return str(uuid.UUID(str(receipt_id).strip()))
     except ValueError as exc:
         msg = f"receipt {receipt_id!r} is not a connector receipt id (a UUID)"
         raise RelayError(msg) from exc
+
+
+def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
+    """Record the hosted receipt id for one entry. Refuses anything but a UUID.
+
+    An ack supersedes any earlier refusal of the same entry.
+    """
+
+    receipt = _receipt_uuid(receipt_id)
     directory = relay_dir(workspace)
     with _locked(directory):
         if not any(row.get("id") == ident for row in _read(relay_file(directory, OUTBOX_NAME))):
@@ -246,6 +253,46 @@ def ack(workspace: str | Path, ident: str, receipt_id: str) -> dict[str, Any]:
         entry = next(r for r in _read(relay_file(directory, OUTBOX_NAME)) if r.get("id") == ident)
     if entry.get("operation") == "close":
         _discharge_close(Path(workspace), entry.get("arguments") or {}, receipt)
+    return row
+
+
+def refuse(workspace: str | Path, ident: str, receipt_id: str, reason: str) -> dict[str, Any]:
+    """Record the connector's refusal of one entry, with its rejection receipt id.
+
+    The entry stops blocking the Stop gate but stays listed. The receipt must be
+    the connector's (a UUID) and the reason must be stated: a refusal is the
+    verdict the agent reports, never a way to silence an entry it did not try.
+    An acknowledged entry cannot be refused — a refusal never supersedes a
+    hosted receipt.
+    """
+
+    receipt = _receipt_uuid(receipt_id)
+    text = " ".join(str(reason or "").split())
+    if not text:
+        msg = "a refusal must state the connector's reason (--reason)"
+        raise RelayError(msg)
+    directory = relay_dir(workspace)
+    with _locked(directory):
+        if not any(row.get("id") == ident for row in _read(relay_file(directory, OUTBOX_NAME))):
+            msg = f"no outbox entry {ident!r} in {directory}"
+            raise RelayError(msg)
+        acked = {str(row.get("id")): row for row in _read(relay_file(directory, ACKS_NAME))}
+        if ident in acked:
+            msg = (
+                f"entry {ident!r} is already acknowledged with receipt "
+                f"{acked[ident].get('receipt_id')}; a refusal cannot supersede a hosted receipt"
+            )
+            raise RelayError(msg)
+        for row in _read(relay_file(directory, REFUSALS_NAME)):
+            if row.get("id") == ident and row.get("receipt_id") == receipt:
+                return row
+        row = {
+            "id": ident,
+            "receipt_id": receipt,
+            "reason": text,
+            "refused_at": datetime.now(UTC).isoformat(),
+        }
+        _append(relay_file(directory, REFUSALS_NAME), row)
     return row
 
 
@@ -303,11 +350,21 @@ def instruction(workspace: str | Path, entries: Sequence[Mapping[str, Any]]) -> 
             f"  then: python -m ops.memory.relay ack {row.get('id')} --receipt <receipt_id> "
             f'--workspace "{workspace}"'
         )
+        lines.append(
+            f"  or, if the connector refuses: python -m ops.memory.relay refuse {row.get('id')} "
+            f'--receipt <receipt_id> --reason "<connector reason>" --workspace "{workspace}"'
+        )
+        refusal = row.get("refusal")
+        if isinstance(refusal, Mapping):
+            lines.append(
+                f"  REFUSED by the connector (receipt {refusal.get('receipt_id')}): "
+                f"{refusal.get('reason')} — not blocking; an ack supersedes it"
+            )
     lines.append(
-        "A refusal from the connector is the verdict: report it, do not retry through another "
-        "door (no memory.ingest, no operator CLI write). Record it verbatim so the entry "
-        "is settled but stays visible: python -m ops.memory.relay reject <id> "
-        f'--refusal "<reason>" --workspace "{workspace}"'
+        "A refusal from the connector is the verdict: record it with `refuse` (the rejection "
+        "receipt_id and the connector's reason) and report it; do not retry through another "
+        "door (no memory.ingest, no operator CLI write). A refused entry stops blocking Stop "
+        "but stays listed until a later ack supersedes it."
     )
     return "\n".join(lines)
 
@@ -326,9 +383,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     ack_p = sub.add_parser("ack", parents=[after], help="record the connector receipt")
     ack_p.add_argument("id")
     ack_p.add_argument("--receipt", required=True)
-    rej_p = sub.add_parser("reject", parents=[after], help="record the connector's refusal")
-    rej_p.add_argument("id")
-    rej_p.add_argument("--refusal", required=True)
+    refuse_p = sub.add_parser(
+        "refuse", parents=[after], help="record the connector's refusal (non-blocking, visible)"
+    )
+    refuse_p.add_argument("id")
+    refuse_p.add_argument("--receipt", required=True, help="the rejection receipt_id")
+    refuse_p.add_argument("--reason", required=True, help="the connector's stated reason")
     args = parser.parse_args(argv)
     try:
         return _run(args.command, Path(args.workspace), args)
@@ -343,19 +403,22 @@ def _run(command: str, workspace: Path, args: argparse.Namespace) -> int:
     elif command == "status":
         owed = pending(workspace)
         total = len(_read(relay_file(relay_dir(workspace), OUTBOX_NAME)))
-        refused = len(rejects(workspace))
-        counts = {
-            "total": total,
-            "acked": total - len(owed) - refused,
-            "rejected": refused,
-            "pending": len(owed),
-        }
-        print(json.dumps(counts))
+        refused = sum(1 for row in owed if row.get("refusal"))
+        print(
+            json.dumps(
+                {
+                    "total": total,
+                    "acked": total - len(owed),
+                    "pending": len(owed),
+                    "refused": refused,
+                }
+            )
+        )
     elif command == "instructions":
         owed = pending(workspace)
         print(instruction(workspace, owed) if owed else "L9 MEMORY RELAY — nothing owed")
-    elif command == "reject":
-        print(json.dumps(reject(workspace, args.id, args.refusal), sort_keys=True))
+    elif command == "refuse":
+        print(json.dumps(refuse(workspace, args.id, args.receipt, args.reason), sort_keys=True))
     else:
         print(json.dumps(ack(workspace, args.id, args.receipt), sort_keys=True))
     return 0

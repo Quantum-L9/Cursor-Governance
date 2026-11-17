@@ -381,6 +381,11 @@ def _relay_gate(workspace: Path) -> str | None:
     Runs on every Stop of a parent session, independent of publication: a
     relay entry is owed from the moment a hook queued it. Fail-open by
     contract — an unreadable outbox never blocks a Stop.
+
+    An entry the connector refused (``python -m ops.memory.relay refuse``)
+    never blocks: the refusal is the verdict, and no correct action could clear
+    it (rule 42 "Satisfiability"). It is still announced on every Stop until a
+    later ack supersedes it — discharged for the turn, not closed.
     """
 
     try:
@@ -390,12 +395,16 @@ def _relay_gate(workspace: Path) -> str | None:
         return None
     reasons: list[str] = []
     exhausted: list[str] = []
+    refused_notes: list[str] = []
     for root in _relay_roots(workspace):
         try:
             owed = relay.pending(root)
             gate_path = relay.relay_file(relay.relay_dir(root), RELAY_GATE_NAME)
         except (OSError, relay.RelayError):
             continue
+        refused = [row for row in owed if row.get("refusal")]
+        refused_notes.extend(_refusal_note(root, row) for row in refused)
+        owed = [row for row in owed if not row.get("refusal")]
         if not owed:
             continue
         asks = _load_asks(gate_path)
@@ -415,7 +424,23 @@ def _relay_gate(workspace: Path) -> str | None:
             "(python -m ops.memory.relay --workspace <repo> instructions)",
             file=sys.stderr,
         )
+    if refused_notes:
+        announcement = (
+            "memory-relay: REFUSED by the connector, not blocking (a later "
+            "`python -m ops.memory.relay ack` supersedes) — " + "; ".join(refused_notes)
+        )
+        print(announcement, file=sys.stderr)
+        if reasons:
+            reasons.append(announcement)
     return "\n\n".join(reasons) or None
+
+
+def _refusal_note(root: Path, row: dict) -> str:
+    refusal = row.get("refusal") or {}
+    return (
+        f"{root}: [{row.get('id')}] {row.get('tool')} "
+        f"(receipt {refusal.get('receipt_id')}: {refusal.get('reason')})"
+    )
 
 
 def main() -> int:

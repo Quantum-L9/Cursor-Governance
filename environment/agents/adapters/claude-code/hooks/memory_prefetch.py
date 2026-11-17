@@ -282,7 +282,8 @@ def _carrier_lines(namespaces: list[str]) -> list[str]:
     )
     relay_line = (
         "relay_writes=hook records are queued for you; the Stop hook lists each connector "
-        + "call to make and the `python -m ops.memory.relay ack` to run"
+        + "call to make and the `python -m ops.memory.relay ack` to run (or `relay refuse` "
+        + "with the rejection receipt when the connector refuses)"
     )
     return [carrier_line, hydrate_line, relay_line]
 

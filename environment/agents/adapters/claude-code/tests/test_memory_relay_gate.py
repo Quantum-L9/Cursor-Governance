@@ -6,7 +6,8 @@ A relay entry is owed to the shared store from the moment a hook queues it.
 while any entry lacks an acknowledgement, clears once each is acked with a
 connector receipt id, and stops blocking (but keeps announcing) after
 ``RELAY_MAX_ASKS`` requests per entry so a session that cannot reach the
-connector is never trapped.
+connector is never trapped. An entry the connector refused (``relay refuse``)
+never blocks but is announced on every Stop until a later ack supersedes it.
 """
 
 from __future__ import annotations
@@ -115,6 +116,60 @@ class RelayGateTests(unittest.TestCase):
         self.assertIsNotNone(reason)
         assert reason is not None
         self.assertIn(new, reason)
+
+    def _refuse(self, ident: str) -> str:
+        receipt = str(uuid.uuid4())
+        self.relay.refuse(self.root, ident, receipt, "namespace did not match any write grant")
+        return receipt
+
+    def test_refused_entry_no_longer_blocks(self) -> None:
+        ident = self._queue()
+        self.assertIsNotNone(self.wb._relay_gate(self.root))
+        receipt = self._refuse(ident)
+        err = io.StringIO()
+        with redirect_stderr(err):
+            self.assertIsNone(self.wb._relay_gate(self.root))
+        self.assertIn("REFUSED by the connector, not blocking", err.getvalue())
+        self.assertIn(ident, err.getvalue())
+        self.assertIn(receipt, err.getvalue())
+
+    def test_refused_entry_stays_listed_on_every_stop(self) -> None:
+        ident = self._queue()
+        self._refuse(ident)
+        for _ in range(self.wb.RELAY_MAX_ASKS + 2):
+            err = io.StringIO()
+            with redirect_stderr(err):
+                self.assertIsNone(self.wb._relay_gate(self.root))
+            self.assertIn(ident, err.getvalue(), "announced, never silently dropped")
+        self.assertEqual([r["id"] for r in self.relay.pending(self.root)], [ident])
+
+    def test_refused_entry_is_named_alongside_a_blocking_one(self) -> None:
+        refused = self._queue("refused")
+        self._refuse(refused)
+        owed = self._queue("owed")
+        with redirect_stderr(io.StringIO()):
+            reason = self.wb._relay_gate(self.root)
+        self.assertIsNotNone(reason)
+        assert reason is not None
+        self.assertIn(f"python -m ops.memory.relay ack {owed}", reason)
+        self.assertNotIn(f"python -m ops.memory.relay ack {refused}", reason)
+        self.assertIn(f"[{refused}]", reason)
+
+    def test_ack_after_refusal_clears_it(self) -> None:
+        ident = self._queue()
+        self._refuse(ident)
+        self.relay.ack(self.root, ident, str(uuid.uuid4()))
+        err = io.StringIO()
+        with redirect_stderr(err):
+            self.assertIsNone(self.wb._relay_gate(self.root))
+        self.assertEqual(err.getvalue(), "")
+        self.assertEqual(self.relay.pending(self.root), [])
+
+    def test_block_reason_names_the_refuse_verb(self) -> None:
+        ident = self._queue()
+        reason = self.wb._relay_gate(self.root)
+        assert reason is not None
+        self.assertIn(f"python -m ops.memory.relay refuse {ident} --receipt <receipt_id>", reason)
 
     def test_the_governance_writers_outbox_is_scanned_too(self) -> None:
         """Review finding on #1008: governance_handoff_writeback queues under the
