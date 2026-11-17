@@ -69,9 +69,11 @@ Bound projections (all required):
    them: every `invariant` (minimal operator pings; the swarm never addresses the
    operator; a CTO↔swarm channel that needs no operator approval; the operator approves
    merges only, so publishing a PR is never put to the operator; a fixed pool of at most
-   five agents launched once and reused through `CTO ASSIGN`; `Quantum-L9/.github` is every
-   child's session source, and its primary repository and Cursor-Governance are attached
-   with `add_repo` in the bootstrap sitting, before role registration; every launched
+   five agents launched once and reused through `CTO ASSIGN`; on Claude Code cloud
+   `Quantum-L9/.github` is every child's session source, and its primary repository and
+   Cursor-Governance are attached with `add_repo` in the bootstrap sitting, before role
+   registration; a Cursor Task already has a local lane checkout, skips `add_repo` and
+   `register_repo_root`, and registers its role from that checkout; every launched
    session reports by transcript; the publishing agent owns its PR until it is ready to
    merge; the CTO integrates and never remediates; scope corrections interrupt), the
    `roles` (only this session is CTO; swarm agents are coding agents), `pre_launch`, every

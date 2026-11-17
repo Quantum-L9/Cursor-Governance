@@ -544,8 +544,19 @@ Cursor-Governance.
   `add_repo`, then catches its governance clone up with `ff.sh --ssot` when
   `session_role.py` is missing. Attachment stays in the bootstrap sitting, never
   mid-lane.
-- The authority root is the managed `$HOME/.l9/authority/.github`; the child never
-  clones `.github` itself.
+- The authority checkout is resolved in the same order as
+  `ops/scripts/coding_projection_status.py`: an explicit path, then
+  `L9_AUTHORITY_ROOT`, then `L9_AUTHORITY_MANAGED_ROOT` or the managed
+  `$HOME/.l9/authority/.github`, then `.github` inside or beside the workspace.
+  The child passes that resolved path to both the non-shallow check and
+  `--authority-root`. `ensure_authority_checkout.sh` does not create the default
+  path when `L9_AUTHORITY_ROOT` is set, and it provisions `L9_AUTHORITY_MANAGED_ROOT`
+  when that variable relocates the managed checkout. The row above records the
+  default path this container provisioned; that path is the fallback. The child
+  never clones `.github` itself.
+- A Cursor Task is not a Claude Code cloud session. It does not call `add_repo`
+  or `register_repo_root`. It registers its role from the local lane checkout the
+  Task was given. The attachment bullets above are the Claude Code cloud path.
 - `add_repo` may still prompt or be refused by the host's permission layer
   (observed above). That is the `permission_precondition` in the contract: reported
   once at launch, not worked around.
