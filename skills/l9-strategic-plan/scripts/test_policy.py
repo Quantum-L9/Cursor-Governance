@@ -1,32 +1,14 @@
 import json
-import sys
-from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_plan = _load_sibling("validate_working_plan")
+_plan = load_sibling("validate_working_plan")
 check_policy = _plan.check_policy
 check_unchanged = _plan.check_unchanged
 verify_policy = _plan.verify_policy
 
 
-def run():
+def test_policy_assertions():
     good = {
         "graph.json": json.dumps(
             {"edges": [{"source": "a", "target": "b", "relation": "requires"}], "priority": ["a"]}
@@ -105,8 +87,7 @@ def run():
     listed = dict(rules)
     listed["allowed_changed_paths"] = [*rules["allowed_changed_paths"], "new.json"]
     assert check_unchanged(good, bad, listed) == ["new.json"]
-    print("PASS policy checks including negative controls")
 
 
 if __name__ == "__main__":
-    run()
+    test_policy_assertions()

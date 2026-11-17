@@ -1,30 +1,16 @@
 import copy
-import sys
+import json
+import os
+import tempfile
 import unittest
 from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_claims = _load_sibling("compare_sv_claims")
+_claims = load_sibling("compare_sv_claims")
 ClaimBlocked = _claims.ClaimBlocked
 compare = _claims.compare
-fixture = _load_sibling("test_sv_assessment").fixture
+fixture = load_sibling("test_sv_assessment").fixture
 
 
 def alternatives():
@@ -82,6 +68,18 @@ class ComparisonTests(unittest.TestCase):
     def test_fewer_than_two_blocks(self):
         with self.assertRaisesRegex(ClaimBlocked, "TWO_OR_MORE"):
             compare([alternatives()[0]])
+
+    def test_cli_reads_candidates_inside_workdir(self):
+        previous = os.getcwd()
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                os.chdir(temporary)
+                Path("claims.json").write_text(json.dumps(alternatives()))
+                self.assertEqual(_claims.main(["claims.json"]), 0)
+                with self.assertRaises(ValueError):
+                    _claims.safe_path("/etc/passwd")
+        finally:
+            os.chdir(previous)
 
 
 if __name__ == "__main__":

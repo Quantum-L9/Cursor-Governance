@@ -8,9 +8,18 @@ source freshness or runtime verification. Graph JSON schema is supplied by calle
 import argparse
 import hashlib
 import json
+import os
 import sys
 import zipfile
 from pathlib import PurePosixPath
+
+
+def safe_path(path):
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(os.getcwd())
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
 
 
 def digest(b):
@@ -138,7 +147,7 @@ def verify_policy(policy):
         raise ValueError("POLICY_AUTHORITY_REQUIRED")
 
 
-def main():
+def main(argv=None):
     a = argparse.ArgumentParser()
     a.add_argument("successor")
     a.add_argument("--predecessor")
@@ -152,7 +161,7 @@ def main():
     a.add_argument("--relation-key", default="relation")
     a.add_argument("--allowed-relation", action="append", default=[])
     a.add_argument("--policy", help="Caller-authored semantic assertions JSON")
-    args = a.parse_args()
+    args = a.parse_args(argv)
     out = {
         "status": "FAIL",
         "structural": "NOT_RUN",
@@ -161,14 +170,15 @@ def main():
         "runtime": "NOT_TESTED",
     }
     try:
-        new = read_zip(args.successor)
+        successor = safe_path(args.successor)
+        new = read_zip(successor)
         out["structural"] = "PASS"
-        with open(args.successor, "rb") as handle:
+        with open(successor, "rb") as handle:
             out["successor_sha256"] = digest(handle.read())
         out["file_count"] = len(new)
         policy = None
         if args.policy:
-            with open(args.policy, encoding="utf-8") as handle:
+            with open(safe_path(args.policy), encoding="utf-8") as handle:
                 policy = json.loads(handle.read())
             verify_policy(policy)
             change_constrained = bool(policy.get("must_remain_unchanged")) or (
@@ -180,7 +190,8 @@ def main():
             out["assertions_passed"] = check_policy(new, policy)
             out["policy_assertions"] = "PASS"
         if args.predecessor:
-            old = read_zip(args.predecessor)
+            predecessor = safe_path(args.predecessor)
+            old = read_zip(predecessor)
             missing = set(old) - set(new)
             if missing != set(args.allow_removed):
                 raise ValueError(
@@ -189,7 +200,7 @@ def main():
                 )
             if policy is not None:
                 out["changed_paths"] = check_unchanged(old, new, policy)
-            with open(args.predecessor, "rb") as handle:
+            with open(predecessor, "rb") as handle:
                 out["predecessor_sha256"] = digest(handle.read())
             out["preserved_files"] = len(old) - len(missing)
         elif args.allow_removed:

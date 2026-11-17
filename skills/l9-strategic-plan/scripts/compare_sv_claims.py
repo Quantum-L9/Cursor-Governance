@@ -5,31 +5,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from decimal import Decimal
 from pathlib import Path
 
+from script_loader import load_sibling
 
-def _load_sibling(stem: str):
-    import importlib.util
-
-    name = f"l9_strategic_plan_scripts.{stem}"
-    cached = sys.modules.get(name)
-    if cached is not None:
-        return cached
-    path = Path(__file__).resolve().parent / f"{stem}.py"
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(stem)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_assessment = _load_sibling("check_sv_assessment")
+_assessment = load_sibling("check_sv_assessment")
 ClaimBlocked = _assessment.ClaimBlocked
 check = _assessment.check
+
+
+def safe_path(path):
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(os.getcwd())
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
+
 
 CONTEXT_FIELDS = (
     "objective_ref",
@@ -104,7 +98,7 @@ def main(argv=None):
     p.add_argument("input", type=Path, help="JSON array of separately declared candidate claims")
     a = p.parse_args(argv)
     try:
-        result = compare(json.loads(a.input.read_text()))
+        result = compare(json.loads(Path(safe_path(a.input)).read_text()))
         print(json.dumps(result, indent=2))
         return 0 if not result["unresolved_actions"] else 2
     except (OSError, ValueError, ClaimBlocked) as exc:
