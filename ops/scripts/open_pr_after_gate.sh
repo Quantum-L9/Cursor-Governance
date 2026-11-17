@@ -859,9 +859,10 @@ if [[ -f "$_pr_summary_py" ]]; then
     echo "WARN: pr summary receipt not written (continuing)"
 fi
 
-# A registered /lcto swarm child stands down at publication
-# (governance/cto-mode/MODE.yaml STAND DOWN): no PR watching and no remediation
-# handoff -- the CTO owns both. ops/autonomy/session_role.py `status` exits 0
+# A registered /lcto swarm child owns the PR it publishes until it is ready to merge
+# (governance/cto-mode/MODE.yaml OWN YOUR PR, protocol v2). It subscribes and remediates
+# in its own session, so no remediation handoff marker is written for a subagent to pick
+# up, and the CTO never remediates. ops/autonomy/session_role.py `status` exits 0
 # only for a session that registered itself as a child; every other session,
 # or a probe that cannot run, keeps the solo behaviour.
 _swarm_child=0
@@ -873,10 +874,8 @@ if [[ -f "$GOV_ROOT/ops/autonomy/session_role.py" ]] &&
   PR_REMEDIATE=0
 fi
 
-if [[ "$_swarm_child" == "1" ]]; then
-  echo "--- subscribe: skipped (registered /lcto swarm child; the CTO watches PR #$pr_number) ---"
-else
-  echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
+echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
+{
   # PUT repos/.../issues/{n}/subscription 404s. GraphQL updateSubscription is
   # the live path (ops/scripts/lib/gh_subscribe_pr.sh).
   # shellcheck source=lib/gh_subscribe_pr.sh
@@ -884,7 +883,7 @@ else
   if ! gh_subscribe_pr "$owner" "$name" "$pr_number"; then
     echo "WARN: could not subscribe to PR #$pr_number (continuing)"
   fi
-fi
+}
 
 handoff_dir="$WS/.l9/pr"
 mkdir -p "$handoff_dir"
@@ -959,8 +958,9 @@ INSTRUCTIONS:
 EOF
   echo "RESULT: PASS — PR open + subscribed; agent must spawn l9-pr-remediation"
 elif [[ "$_swarm_child" == "1" ]]; then
-  echo "swarm child — skipped remediation handoff marker; write CTO-STATUS: and stand down"
-  echo "RESULT: PASS — PR open; lane published"
+  echo "swarm child — you own PR #$pr_number until it is ready to merge: subscribe to its activity,"
+  echo "  fix CI and review findings, resolve every thread, then write CTO-STATUS: ready-to-merge"
+  echo "RESULT: PASS — PR open; lane published, owner remediates"
 else
   echo "PR_REMEDIATE=0 — skipped remediation handoff marker (PR still open/subscribed)"
   echo "RESULT: PASS — PR open + subscribed"
