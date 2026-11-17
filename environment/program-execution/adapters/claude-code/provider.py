@@ -218,8 +218,6 @@ class ClaudeCodeProvider:
             self._instruction_argument(request),
             "--output-format",
             "json",
-            "--max-turns",
-            str(int(request.inference_budget["max_turns"])),
             "--allowedTools",
             ",".join(permissions["allowed"]),
             "--disallowedTools",
@@ -228,6 +226,8 @@ class ClaudeCodeProvider:
             WORKER_SETTING_SOURCES,
             "--strict-mcp-config",
         ]
+        if "max_turns" in request.inference_budget:
+            argv += ["--max-turns", str(int(request.inference_budget["max_turns"]))]
         authority_environment = self._authority_environment(request)
         if authority_environment:
             argv.extend(["--settings", self._worker_settings()])

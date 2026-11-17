@@ -18,14 +18,10 @@
             "additionalProperties": false,
             "properties": {
               "max_turns": {
-                "maximum": 64,
                 "minimum": 1,
                 "type": "integer"
               }
             },
-            "required": [
-              "max_turns"
-            ],
             "type": "object"
           },
           "permission_profile_ref": {
