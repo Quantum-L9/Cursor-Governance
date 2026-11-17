@@ -390,6 +390,27 @@
         },
         "id": "l9-wip",
         "lifecycle": "current"
+      },
+      {
+        "birth_provenance": {
+          "birth_profile": "org_seeded_self_governed",
+          "born_at": "2026-11-15T16:14:16+00:00",
+          "factory": "Quantum-L9/l9-repo-template",
+          "org_policy_sha": "496842bf029996a75f17fd1533baa79029bc95db",
+          "receipt_digest": "sha256:dcf1d70fc8390e6729f2f962b595fb35f19535b25171ba2875bd0a45ec0011a0",
+          "receipt_schema": "l9.birth-receipt/v1",
+          "root_commit": "6cbe0fe16231eb9f347c64643dea6362c0e9d838",
+          "template_sha": "923ae91457ea5fb1d0099bbf2a6b4128a7eb42bb",
+          "template_version": "2.3.0"
+        },
+        "class_ref": "l9.repository-class/l9@1",
+        "coordinate": {
+          "organization": "Quantum-L9",
+          "provider": "github",
+          "repository": "l9-state"
+        },
+        "id": "l9-state",
+        "lifecycle": "current"
       }
     ],
     "repository_lifecycle": {
@@ -398,10 +419,10 @@
       "superseded": "Repository identity replaced by another canonical coordinate while retained for historical resolution.\n"
     }
   },
-  "projection_digest": "sha256:7e8d02d39439e8661e3b293b0a77850edef24486be8cb2b70503ec1edd7667ce",
+  "projection_digest": "sha256:d87f514148a15c7c0e60c73de906f6a68798dce78f48635caf7a195b0e810f43",
   "projection_profile_digest": "sha256:f4dfd0599742efb66de16d545a2c903a32fd3318d307c419ef51e89933fafec4",
   "projection_profile_ref": "l9.projection/architecture-intelligence@1",
   "schema": "l9.projection-artifact/v1",
-  "source_digest": "sha256:1c46e31f17a5c63ecd11db407ff210d4f6959fd1a4b86012306369eff38cd0ce",
+  "source_digest": "sha256:ef4a8d2a57fd12b9261582e977c27a074639a490b5e57e134f608493f67a09e8",
   "source_ref": "l9.source/repository-registry@1"
 }

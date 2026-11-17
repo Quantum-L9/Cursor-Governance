@@ -1,0 +1,1251 @@
+{
+  "components": [
+    {
+      "projection_digest": "sha256:6f49e3bbd95f4c24ebf4323136927858f0afb29aa405586dc75d8edcef71f818",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/invariants@1",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "projection_digest": "sha256:b4437374f19618946c48c1193715d998f419c9388c2ac66352ed09023f362e0d",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/contracts@1",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    },
+    {
+      "projection_digest": "sha256:4e473013d3e3d0f01404b70fa18d52fe318ebaf2ffcb3c1d70bccaf86c5c0331",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/authority-model@1",
+      "source_class": "authority_model",
+      "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+      "source_ref": "l9.source/authority-model@1"
+    },
+    {
+      "projection_digest": "sha256:56e41495990548305eabc8b292764cef534f7f7acb228532604b8e0b6b3762c4",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/strategic-cognition-model@1",
+      "source_class": "strategic_cognition_model",
+      "source_digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
+      "source_ref": "l9.source/strategic-cognition-model@1"
+    },
+    {
+      "projection_digest": "sha256:bca3fb2608eb72e1fa2c40bb7ed54bfbdbde6c5988757e11221e58d28d7b8c2e",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/strategic-plan-model@1",
+      "source_class": "strategic_plan_model",
+      "source_digest": "sha256:4fffeb59d95fa05158c718b3637288c20bad41243b58b9ed3be50121acae840a",
+      "source_ref": "l9.source/strategic-plan-model@1"
+    },
+    {
+      "projection_digest": "sha256:016bb32e7804cfc397a56428b673f62511c7f4308f5f5ec99493e78e35fdbf05",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/strategic-plan-graph-schema@1",
+      "source_class": "strategic_plan_graph_schema",
+      "source_digest": "sha256:76bbf51d9233452d3e83e8bf4148a27eb6b8e29ff3126777c6c28d818ce1a885",
+      "source_ref": "l9.source/strategic-plan-graph-schema@1"
+    },
+    {
+      "projection_digest": "sha256:f3d14194859688f19b11f3bceec4dced588fc76c2245dd3905a418edee3f3dad",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/affected-strategic-closure-schema@1",
+      "source_class": "affected_strategic_closure_schema",
+      "source_digest": "sha256:09d7a4f945771bb785340c06bd554d83ef813a9f8674cb542ffdd08bf58c68f4",
+      "source_ref": "l9.source/affected-strategic-closure-schema@1"
+    },
+    {
+      "projection_digest": "sha256:2a33208a8b71e4660b9c8c7c67b86006d7c60685567a18d13f70512bdada2f17",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/strategic-planning-episode-schema@1",
+      "source_class": "strategic_planning_episode_schema",
+      "source_digest": "sha256:017931d0f8a07e85124a6492e07f65c7781905ed86042c7978c7451a80ab8513",
+      "source_ref": "l9.source/strategic-planning-episode-schema@1"
+    },
+    {
+      "projection_digest": "sha256:23442e7952ba453b50f6ebf497386f9b2b63f0c87bcc29ebb1d53914782eaa22",
+      "projection_ref": "l9.projection/strategic-planning-context@2#l9.source/strategic-plan-revision-candidate-schema@1",
+      "source_class": "strategic_plan_revision_candidate_schema",
+      "source_digest": "sha256:48fdecd1a015f13cd739e718b3ea48948ce7891c2905311201ea90bd7d56c0fc",
+      "source_ref": "l9.source/strategic-plan-revision-candidate-schema@1"
+    }
+  ],
+  "composition_digest": "sha256:ee8a0b746a9cbe6b28544a9e00765c8f5e420d1e38fd6c9f697733cf6f391d5c",
+  "composition_profile": {
+    "digest": "sha256:933c3c33724ddeacd97bd7abe1c2a5444b4635a4656cd91c0901cf6cf430cf43",
+    "ref": "l9.compose/strategic-planning-context@2"
+  },
+  "payload": {
+    "affected_strategic_closure_schema": {
+      "artifact_id": "l9.schema/affected-strategic-closure@1",
+      "authority": {
+        "authority_class": "canonical",
+        "owner": "Quantum-L9/.github",
+        "scope": "l9_global_affected_strategic_closure_schema"
+      },
+      "canonical": true,
+      "canonical_source": {
+        "artifact": "affected_strategic_closure.schema.yaml",
+        "format": "yaml"
+      },
+      "closure_rules": {
+        "affected_refs_must_resolve_to_plan_owned_claims_in_bound_revision": true,
+        "closure_algorithm_is_not_defined_by_this_schema": true,
+        "closure_result_is_invalidated_by_bound_plan_revision_or_trigger_digest_change": true,
+        "empty_closure_is_valid_when_no_plan_owned_claim_materially_depends_on_trigger": true,
+        "unresolved_dependency_is_preserved_as_unknown": true
+      },
+      "governed_by": {
+        "semantic_model_ref": "strategic_plan_model.yaml#reasoning_concepts.affected_strategic_closure",
+        "strategic_cognition_ref": "strategic_cognition_model.yaml",
+        "strategic_plan_graph_schema_ref": "l9.schema/strategic-plan-graph@1"
+      },
+      "instance_semantics": {
+        "authoritative": false,
+        "authority_class": "derived",
+        "authority_effect": "none",
+        "disposable": true,
+        "recomputable": true
+      },
+      "properties": {
+        "affected_plan_refs": {
+          "type": "semantic_ref_list"
+        },
+        "closure_digest": {
+          "type": "semantic_digest"
+        },
+        "closure_ref": {
+          "type": "semantic_ref"
+        },
+        "plan_graph_digest": {
+          "type": "semantic_digest"
+        },
+        "plan_ref": {
+          "type": "semantic_ref"
+        },
+        "plan_revision_ref": {
+          "type": "semantic_ref"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "schema": {
+          "const": "l9.affected-strategic-closure/v1"
+        },
+        "trigger_sources": {
+          "items": {
+            "fields": {
+              "change_ref": {
+                "type": "semantic_ref"
+              },
+              "digest": {
+                "type": "semantic_digest"
+              },
+              "ref": {
+                "type": "semantic_ref"
+              }
+            },
+            "required": [
+              "ref",
+              "digest"
+            ],
+            "type": "object"
+          },
+          "min_items": 1,
+          "type": "array"
+        },
+        "unresolved_refs": {
+          "type": "semantic_ref_list"
+        }
+      },
+      "purpose": "Define the minimum provenance-bound representation of Affected Strategic Closure for one exact Strategic Plan revision and one exact set of changed authoritative inputs. This schema represents the output of selective impact reasoning; it does not define the closure algorithm, decide Strategy, mutate or invalidate the Strategic Plan, or convert a changed reality fact directly into a strategic revision.\n",
+      "required": [
+        "schema",
+        "closure_ref",
+        "plan_ref",
+        "plan_revision_ref",
+        "plan_graph_digest",
+        "trigger_sources",
+        "affected_plan_refs",
+        "provenance",
+        "closure_digest"
+      ],
+      "schema": "l9.schema-definition/v1",
+      "semantic_rules": [
+        "affected_strategic_closure_is_derived_reasoning_not_strategy",
+        "closure_identifies_reconsideration_frontier_only",
+        "closure_does_not_decide_strategy",
+        "closure_does_not_modify_or_invalidate_strategic_plan",
+        "closure_does_not_mark_plan_claims_false_or_stale_automatically",
+        "closure_does_not_transfer_truth_source_ownership",
+        "source_provenance_and_exact_digests_are_required"
+      ],
+      "type": "object"
+    },
+    "authority_model": {
+      "strategic_authority": {
+        "definition": "Explicitly granted authority to create, revise, or supersede the Strategy represented by the Strategic Plan within a bounded scope.",
+        "grant_must_be_explicit": true,
+        "may_not_be_inferred_from": [
+          "reasoning_capability",
+          "projection_consumption",
+          "metacognitive_output"
+        ],
+        "strategy_concept_ref": "strategic_cognition_model.yaml#concepts.strategy"
+      },
+      "strategic_cognition_authority": {
+        "detailed_model": "strategic_cognition_model.yaml",
+        "global_semantics_owner": "Quantum-L9/.github",
+        "invariant_ref": "L9-STRATEGY-001",
+        "metacognition_denied": [
+          "strategic_plan_mutation",
+          "strategic_plan_supersession",
+          "strategic_authority"
+        ],
+        "roles_are_actor_identities": false,
+        "rules": [
+          "reasoning_capability_does_not_confer_strategic_authority",
+          "metacognitive_output_is_advisory_to_plan_keeper",
+          "projection_consumption_does_not_transfer_truth_source_ownership",
+          "semantic_compiler_does_not_own_strategic_cognition"
+        ],
+        "strategic_plan_authority_source": "strategic_authority",
+        "strategic_plan_owner": "plan_keeper",
+        "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner"
+      }
+    },
+    "contracts": {
+      "contracts": [
+        {
+          "applies_to": [
+            "components",
+            "capabilities",
+            "validators",
+            "executors",
+            "providers",
+            "consumers"
+          ],
+          "forbidden": [
+            "self_authorization",
+            "authority_inference_from_capability",
+            "authority_inference_from_execution_success",
+            "authority_expansion_by_consumer_or_provider"
+          ],
+          "guarantees": [
+            "functional_capability_does_not_transfer_governing_authority",
+            "successful_execution_does_not_expand_authority",
+            "delegated_authority_remains_bounded_by_its_declared_scope"
+          ],
+          "id": "l9.contract/authority-boundary@1",
+          "outcomes": {
+            "satisfied": "governing_action_remains_within_declared_authority",
+            "unresolved": "required_governing_authority_cannot_be_resolved",
+            "violated": "attempted_or_effective_authority_expansion"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Preserve governing authority boundaries when a component computes, validates, recommends, transports, or executes a function.\n",
+          "requires": [
+            "governing_authority_is_resolvable_for_decisions_or_actions_that_require_authority",
+            "component_behavior_remains_within_declared_authority"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-AUTH-001",
+            "L9-AUTH-002"
+          ]
+        },
+        {
+          "applies_to": [
+            "canonical_concepts",
+            "mirrors",
+            "projections",
+            "providers",
+            "consumers",
+            "implementations",
+            "dependencies",
+            "co_located_components",
+            "shared_execution_processes",
+            "generalized_global_laws"
+          ],
+          "forbidden": [
+            "competing_canonical_sources_within_one_scope_and_revision",
+            "provider_identity_as_semantic_ownership",
+            "consumer_identity_as_semantic_ownership",
+            "ownership_transfer_by_projection_or_consumption",
+            "ownership_transfer_by_dependency_colocation_or_shared_execution"
+          ],
+          "guarantees": [
+            "one_canonical_owner_per_semantic_scope_and_revision",
+            "mirrors_and_projections_remain_non_owning",
+            "provider_and_implementation_identity_remain_non_owning",
+            "dependency_colocation_or_shared_execution_do_not_transfer_ownership",
+            "global_admission_does_not_transfer_originating_domain_ownership"
+          ],
+          "id": "l9.contract/semantic-ownership@1",
+          "outcomes": {
+            "satisfied": "canonical_owner_is_unambiguous",
+            "unresolved": "canonical_owner_cannot_be_resolved",
+            "violated": "competing_or_implicit_semantic_ownership"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Keep canonical semantic ownership singular and explicit across mirrors, projections, providers, consumers, implementations, dependencies, co-location, execution, and scope changes.\n",
+          "requires": [
+            "semantic_scope_is_declared",
+            "semantic_revision_is_resolvable_when_revisioned",
+            "canonical_owner_is_resolvable"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-OWNER-001",
+            "L9-SEM-001",
+            "L9-SCOPE-001"
+          ]
+        },
+        {
+          "applies_to": [
+            "projection_engines",
+            "projection_profiles",
+            "projection_artifacts"
+          ],
+          "forbidden": [
+            "semantic_invention",
+            "semantic_reconciliation",
+            "semantic_reinterpretation",
+            "semantic_derivation_or_synthesis_misclassified_as_projection",
+            "authority_expansion",
+            "projection_as_admission_or_promotion"
+          ],
+          "guarantees": [
+            "output_is_bounded_by_source_semantics_and_declared_selection",
+            "source_lineage_remains_resolvable",
+            "projection_remains_derived_and_non_authoritative",
+            "transformations_that_add_semantic_consequences_are_classified_under_another_governed_operation"
+          ],
+          "id": "l9.contract/projection@1",
+          "outcomes": {
+            "invalid_projection": "output_invents_reinterprets_reconciles_or_expands_source_semantics",
+            "unresolved": "source_or_projection_contract_cannot_be_resolved",
+            "valid_projection": "output_is_a_bounded_semantics_preserving_view"
+          },
+          "owner": "Quantum-L9/.github",
+          "purpose": "Define projection as a bounded source-derived view that may select or reshape representation without creating new meaning or authority.\n",
+          "requires": [
+            "source_identity",
+            "source_revision_or_digest_when_revisioned",
+            "declared_projection_profile_or_selector_contract",
+            "projection_provenance"
+          ],
+          "scope": "global",
+          "source_invariants": [
+            "L9-PROJECTION-001",
+            "L9-DERIVED-001",
+            "L9-PROV-001",
+            "L9-AUTH-001"
+          ]
+        }
+      ]
+    },
+    "invariants": {
+      "invariants": [
+        {
+          "id": "L9-AUTH-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "No component may expand its own authority.\n"
+        },
+        {
+          "id": "L9-AUTH-002",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+        },
+        {
+          "id": "L9-OWNER-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Within a given semantic scope and revision, each canonical concept has one authoritative owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution by another component does not by itself transfer ownership or create a competing canonical source.\n"
+        },
+        {
+          "id": "L9-SEM-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Provider identity does not imply semantic ownership.\n"
+        },
+        {
+          "id": "L9-SCOPE-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Global admission of a generalized law does not transfer ownership of the originating domain semantics; the admitted global law and the originating domain semantics remain separately owned.\n"
+        },
+        {
+          "id": "L9-DERIVED-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Derived artifacts do not become canonical authority automatically.\n"
+        },
+        {
+          "id": "L9-UNKNOWN-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+        },
+        {
+          "id": "L9-PROV-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+        },
+        {
+          "id": "L9-PROJECTION-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+        },
+        {
+          "id": "L9-STRATEGY-001",
+          "owner": "Quantum-L9/.github",
+          "scope": "global",
+          "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+        }
+      ]
+    },
+    "strategic_cognition_model": {
+      "authority_separation": {
+        "invariant_ref": "L9-STRATEGY-001",
+        "resolution_ref": "authority_model.yaml#strategic_cognition_authority",
+        "strategic_plan_owner": "plan_keeper",
+        "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner",
+        "teaching_relation": {
+          "authority_effect": "none",
+          "carries": "planning_cognition_lessons",
+          "from": "strategic_plan_metacognitive_reasoner",
+          "to": "plan_keeper"
+        }
+      },
+      "concepts": {
+        "current_meta_view": {
+          "artifact_class_ref": "composed_projection",
+          "authoritative": false,
+          "authority_class": "derived",
+          "canonical_source": false,
+          "component_artifact_class_ref": "projection_artifact",
+          "definition": "The bounded current view used when reasoning about Strategy, composed from relevant authoritative projections.",
+          "properties": {
+            "derived": true,
+            "disposable": true,
+            "invalidated_when_source_truth_changes": true,
+            "may_create_authority": false,
+            "may_reinterpret_source_truth": false,
+            "provenance_preserving": true
+          },
+          "schema_ref": "l9.schema/composed-projection@1"
+        },
+        "strategic_cognition": {
+          "consumes": [
+            "current_meta_view",
+            "strategic_intent",
+            "strategic_plan"
+          ],
+          "definition": "The reasoning concern through which the Plan Keeper compares current authoritative understanding and Strategic Intent with the current Strategy to determine whether the Strategic Plan should remain unchanged or be revised.",
+          "does_not_own": [
+            "underlying_truth_sources",
+            "runtime_execution",
+            "architecture_semantics",
+            "evidence_semantics",
+            "memory_semantics",
+            "capability_semantics",
+            "authority_semantics"
+          ],
+          "maintains": [
+            "strategic_plan"
+          ]
+        },
+        "strategic_intent": {
+          "authority_ref": "authority_model.yaml#strategic_authority",
+          "definition": "The purpose supplied by an applicable authority that constrains what the current Strategy is intended to advance.",
+          "owned_here": false,
+          "owner": "applicable_strategic_authority"
+        },
+        "strategic_plan": {
+          "content_defined_here": false,
+          "definition": "The authoritative maintained record of the current Strategy within a scope for which the Plan Keeper has been granted Strategic Authority.",
+          "owner_role": "plan_keeper",
+          "structure_defined_here": false
+        },
+        "strategy": {
+          "definition": "An integrated theory of intended change that identifies desired future conditions, causal beliefs about how relevant conditions and actions may influence those conditions, and chosen courses of action under uncertainty."
+        }
+      },
+      "global_rules": {
+        "metacognition_is_advisory_to_strategic_authority": true,
+        "metacognitive_analysis_is_advisory_and_cannot_mutate_strategy": true,
+        "plan_revision_candidate_is_not_strategy_until_admitted_under_strategic_authority": true,
+        "planning_episode_is_non_authoritative_reasoning_record": true,
+        "projection_consumption_does_not_transfer_truth_source_ownership": true,
+        "reasoning_capability_does_not_confer_strategic_authority": true,
+        "semantic_compiler_remains_independent_of_reasoning_plane": true,
+        "strategic_cognition_does_not_own_runtime_execution": true,
+        "strategic_cognition_does_not_own_underlying_truth_sources": true,
+        "strategic_label_does_not_create_authority_or_ownership": true,
+        "strategic_roles_are_semantic_roles_not_actor_identities": true
+      },
+      "reasoning_artifacts": {
+        "strategic_plan_revision_candidate": {
+          "authority_class": "candidate",
+          "authority_effect": "none_until_admitted",
+          "definition": "A digest-bound candidate binding an exact predecessor Strategic Plan revision, one exact proposed Strategic Plan Graph, and the planning episode that produced it. Candidate status alone does not revise Strategy.",
+          "may_not": [
+            "self_admit",
+            "mutate_strategic_plan_without_applicable_strategic_authority",
+            "float_across_changed_candidate_or_proposed_graph_digests"
+          ],
+          "producer_role": "plan_keeper",
+          "schema_ref": "l9.schema/strategic-plan-revision-candidate@1"
+        },
+        "strategic_planning_episode": {
+          "authority_class": "derived",
+          "authority_effect": "none",
+          "definition": "An immutable, non-authoritative record of one bounded Plan Keeper reasoning episode over exact planning inputs, observations, assumptions, candidate paths, evaluations, material Unknowns, and its recommendation.",
+          "may_not": [
+            "become_strategic_plan_content_by_recording",
+            "grant_strategic_authority",
+            "mutate_strategic_plan"
+          ],
+          "producer_role": "plan_keeper",
+          "schema_ref": "l9.schema/strategic-planning-episode@1"
+        }
+      },
+      "roles": {
+        "plan_keeper": {
+          "actor_identity_binding": "none",
+          "authority_source": "strategic_authority",
+          "definition": "The reasoning role responsible for maintaining the Strategic Plan within granted Strategic Authority.",
+          "does_not_own": [
+            "underlying_truth_sources",
+            "capability_semantics",
+            "evidence",
+            "memory",
+            "architecture",
+            "execution",
+            "environment_truth"
+          ],
+          "may": [
+            "revise_strategic_plan_within_granted_strategic_authority",
+            "emit_strategic_planning_episode",
+            "emit_strategic_plan_revision_candidate",
+            "consume_planning_cognition_lessons"
+          ],
+          "may_not": [
+            "acquire_truth_source_ownership_by_consuming_projections",
+            "derive_authority_from_reasoning_capability",
+            "become_execution_or_implementation_authority_by_implication",
+            "treat_planning_episode_as_strategic_plan_content",
+            "treat_revision_candidate_as_authorized_plan_revision_without_admission",
+            "revise_strategic_plan_beyond_granted_strategic_authority"
+          ],
+          "owns": [
+            "strategic_plan"
+          ],
+          "reasons_over": [
+            "current_meta_view",
+            "strategic_intent",
+            "strategic_plan"
+          ],
+          "role_kind": "semantic_role"
+        }
+      }
+    },
+    "strategic_plan_graph_schema": {
+      "artifact_id": "l9.schema/strategic-plan-graph@1",
+      "authority": {
+        "authority_class": "canonical",
+        "owner": "Quantum-L9/.github",
+        "scope": "l9_global_strategic_plan_graph_schema"
+      },
+      "canonical": true,
+      "canonical_source": {
+        "artifact": "strategic_plan_graph.schema.yaml",
+        "format": "yaml"
+      },
+      "governed_by": {
+        "authority_ref": "authority_model.yaml#strategic_authority",
+        "lifecycle_ref": "lifecycle.yaml",
+        "semantic_model_ref": "strategic_plan_model.yaml",
+        "strategic_cognition_ref": "strategic_cognition_model.yaml"
+      },
+      "properties": {
+        "graph_digest": {
+          "type": "semantic_digest"
+        },
+        "nodes": {
+          "items": {
+            "fields": {
+              "evidence_refs": {
+                "type": "semantic_ref_list"
+              },
+              "kind": {
+                "enum": [
+                  "strategic_goal",
+                  "strategic_target",
+                  "strategic_hypothesis",
+                  "strategic_commitment"
+                ]
+              },
+              "ref": {
+                "type": "semantic_ref"
+              },
+              "statement": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref",
+              "kind",
+              "statement"
+            ],
+            "type": "object"
+          },
+          "min_items": 1,
+          "type": "array"
+        },
+        "objective_refs": {
+          "type": "semantic_ref_list"
+        },
+        "plan_ref": {
+          "type": "semantic_ref"
+        },
+        "predecessor_revision_ref": {
+          "type": "semantic_ref"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "relations": {
+          "items": {
+            "fields": {
+              "hypothesis_ref": {
+                "type": "semantic_ref"
+              },
+              "ref": {
+                "type": "semantic_ref"
+              },
+              "relation": {
+                "enum": [
+                  "advances",
+                  "enables",
+                  "depends_on",
+                  "conflicts_with",
+                  "supersedes"
+                ]
+              },
+              "source_ref": {
+                "type": "semantic_ref"
+              },
+              "target_ref": {
+                "type": "semantic_ref"
+              }
+            },
+            "required": [
+              "ref",
+              "relation",
+              "source_ref",
+              "target_ref"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "revision_ref": {
+          "type": "semantic_ref"
+        },
+        "schema": {
+          "const": "l9.strategic-plan-graph/v1"
+        },
+        "scope": {
+          "type": "semantic_ref_or_string"
+        },
+        "strategic_authority_ref": {
+          "type": "semantic_ref"
+        },
+        "strategic_intent_refs": {
+          "min_items": 1,
+          "type": "semantic_ref_list"
+        }
+      },
+      "purpose": "Define the minimum machine-readable node-and-relation representation of one immutable revision of the Strategy recorded by a Strategic Plan while preserving Plan ownership boundaries, external semantic ownership, and revision history. This schema defines representation only and does not add a fifth Plan primitive, a sixth strategic relation, runtime cognition, storage, graph-database semantics, execution semantics, or universal world-state ownership.\n",
+      "reference_rules": {
+        "downstream_references_governing_upstream_subjects": true,
+        "external_references_remain_externally_owned": true,
+        "local_node_identity_source": "nodes.ref",
+        "non_local_relation_endpoint_semantics": "external_semantic_ref",
+        "reverse_adjacency_is_derived": true,
+        "unresolved_external_reference_result": "unknown",
+        "upstream_objects_do_not_embed_downstream_consumer_inventories": true
+      },
+      "relation_constraints": {
+        "all": {
+          "at_least_one_endpoint_must_resolve_to_local_plan_node": true,
+          "relation_never_transfers_ownership_or_authority": true
+        },
+        "enables": {
+          "hypothesis_ref_must_resolve_to_local_kind": "strategic_hypothesis",
+          "hypothesis_ref_required": true
+        },
+        "supersedes": {
+          "source_must_resolve_to_local_plan_node": true,
+          "target_may_resolve_to_prior_revision_same_plan_lineage": true,
+          "target_must_resolve_to_same_primitive_kind": true
+        }
+      },
+      "required": [
+        "schema",
+        "plan_ref",
+        "revision_ref",
+        "strategic_authority_ref",
+        "scope",
+        "strategic_intent_refs",
+        "objective_refs",
+        "nodes",
+        "relations",
+        "provenance",
+        "graph_digest"
+      ],
+      "revision_rules": {
+        "content_change_requires_new_revision_ref": true,
+        "graph_digest_binds_exact_revision_content": true,
+        "graph_represents_exactly_one_plan_revision": true,
+        "historical_revision_content_is_immutable": true,
+        "predecessor_when_present_must_reference_prior_revision_same_plan_lineage": true,
+        "prior_revisions_remain_addressable": true
+      },
+      "schema": "l9.schema-definition/v1",
+      "semantic_rules": [
+        "strategy_is_the_integrated_meaning_of_the_graph_not_a_local_node_kind",
+        "exactly_four_plan_owned_node_kinds_are_admitted",
+        "exactly_five_strategic_relation_kinds_are_admitted",
+        "strategic_intent_is_referenced_not_plan_owned",
+        "objective_is_referenced_not_plan_owned",
+        "capability_constraint_evidence_execution_and_reality_objects_remain_externally_owned",
+        "external_semantics_are_referenced_not_copied_into_plan_ownership",
+        "affected_strategic_closure_is_computed_reasoning_not_serialized_plan_content",
+        "planning_horizon_does_not_create_node_kinds_or_required_plan_fields",
+        "confidence_probability_budget_priority_schedule_and_execution_state_are_not_admitted_plan_graph_fields",
+        "graph_storage_index_or_query_provider_never_becomes_semantic_owner",
+        "strategic_authority_ref_must_resolve_before_authoritative_plan_revision_mutation"
+      ],
+      "type": "object"
+    },
+    "strategic_plan_model": {
+      "global_rules": {
+        "compound_causal_claims_are_expressible_by_one_strategic_hypothesis": true,
+        "outcome_of_one_primitive_does_not_establish_correctness_of_another": true,
+        "planning_horizon_does_not_create_primitive_types": true,
+        "reality_change_may_require_reconsideration_but_never_directly_modifies_or_invalidates_strategic_plan": true,
+        "reasoning_workspace_content_is_not_strategic_plan_content_without_authorized_decision": true,
+        "strategic_hypothesis_is_plan_owned_belief_not_authoritative_truth": true,
+        "strategic_plan_represents_strategy_without_absorbing_external_truth_ownership": true
+      },
+      "primitives": {
+        "strategic_commitment": {
+          "definition": "A course of action recorded in the current Strategy as chosen for pursuit under Strategic Authority, distinct from a candidate path considered during reasoning.",
+          "question": "Which path have we chosen?"
+        },
+        "strategic_goal": {
+          "definition": "A broad desired future condition represented in the current Strategy because its realization would advance Strategic Intent.",
+          "question": "What future condition do we seek?"
+        },
+        "strategic_hypothesis": {
+          "definition": "A Plan-owned causal belief represented in the current Strategy about how relevant conditions, capabilities, constraints, actions, or combinations thereof may influence realization of Strategic Goals or Targets.",
+          "question": "Why do we believe this path or condition should produce the expected consequence?"
+        },
+        "strategic_target": {
+          "definition": "A more concrete desired condition, threshold, milestone, or recognizable state represented in the current Strategy to give bounded resolution to progress toward one or more Strategic Goals.",
+          "question": "What more concrete condition would demonstrate progress toward the Goal?"
+        }
+      },
+      "reasoning_concepts": {
+        "affected_strategic_closure": {
+          "authoritative": false,
+          "authority_class": "derived",
+          "definition": "The smallest reachable set of Plan-owned claims whose current justification may materially depend on a changed belief, reference, condition, or authoritative input.",
+          "may_not": [
+            "decide_strategy",
+            "modify_strategic_plan",
+            "invalidate_strategic_plan",
+            "mark_dependent_strategy_stale_automatically"
+          ],
+          "purpose": "selective_plan_reconsideration",
+          "representation_does_not_define_closure_algorithm": true,
+          "representation_schema_ref": "l9.schema/affected-strategic-closure@1"
+        }
+      },
+      "relation_rules": {
+        "material_causal_enables_claims_remain_attributable_to_a_strategic_hypothesis": true,
+        "relations_do_not_transfer_ownership_or_authority": true
+      },
+      "relations": {
+        "advances": {
+          "meaning": "Within the current Strategy, realization of the source contributes toward realization of the target; following it upward answers why a Plan-owned object exists."
+        },
+        "conflicts_with": {
+          "meaning": "Within the current Strategy, pursuing or maintaining the source is materially incompatible with the target under the current assumptions."
+        },
+        "depends_on": {
+          "meaning": "Within the current Strategy, the source's viability is contingent on the target."
+        },
+        "enables": {
+          "meaning": "Under a Strategic Hypothesis in the current Strategy, the source is believed to make the target possible or materially more achievable."
+        },
+        "supersedes": {
+          "semantics_ref": "lifecycle.yaml#lifecycle_relations.supersedes"
+        }
+      }
+    },
+    "strategic_plan_revision_candidate_schema": {
+      "artifact_id": "l9.schema/strategic-plan-revision-candidate@1",
+      "authority": {
+        "authority_class": "canonical",
+        "owner": "Quantum-L9/.github",
+        "scope": "l9_global_strategic_plan_revision_candidate_schema"
+      },
+      "candidate_rules": {
+        "admission_must_bind_candidate_digest_and_proposed_graph_digest": true,
+        "candidate_change_requires_new_authority_decision": true,
+        "candidate_may_be_rejected_without_mutating_current_plan": true,
+        "predecessor_must_be_current_at_admission_or_admission_fails_closed": true,
+        "proposed_graph_change_requires_new_authority_decision": true,
+        "proposed_graph_must_conform_to_strategic_plan_graph_schema": true,
+        "proposed_graph_plan_ref_must_equal_candidate_plan_ref": true,
+        "proposed_graph_predecessor_must_bind_exact_predecessor": true
+      },
+      "canonical": true,
+      "canonical_source": {
+        "artifact": "strategic_plan_revision_candidate.schema.yaml",
+        "format": "yaml"
+      },
+      "governed_by": {
+        "admission_pattern_ref": "l9.pattern/authority-candidate-admission@1",
+        "authority_ref": "authority_model.yaml#strategic_authority",
+        "plan_graph_schema_ref": "l9.schema/strategic-plan-graph@1",
+        "semantic_model_ref": "strategic_cognition_model.yaml#reasoning_artifacts.strategic_plan_revision_candidate"
+      },
+      "instance_semantics": {
+        "authoritative": false,
+        "authority_class": "candidate",
+        "authority_effect": "none_until_admitted",
+        "producer_role": "plan_keeper"
+      },
+      "properties": {
+        "affected_closure": {
+          "fields": {
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "candidate_digest": {
+          "type": "semantic_digest"
+        },
+        "candidate_ref": {
+          "type": "semantic_ref"
+        },
+        "plan_ref": {
+          "type": "semantic_ref"
+        },
+        "predecessor": {
+          "fields": {
+            "graph_digest": {
+              "type": "semantic_digest"
+            },
+            "revision_ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "revision_ref",
+            "graph_digest"
+          ],
+          "type": "object"
+        },
+        "proposed_graph": {
+          "fields": {
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            },
+            "schema_ref": {
+              "const": "l9.schema/strategic-plan-graph@1"
+            }
+          },
+          "required": [
+            "ref",
+            "schema_ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "rationale_refs": {
+          "type": "semantic_ref_list"
+        },
+        "reasoning_episode": {
+          "fields": {
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "schema": {
+          "const": "l9.strategic-plan-revision-candidate/v1"
+        },
+        "strategic_authority_ref": {
+          "type": "semantic_ref"
+        }
+      },
+      "purpose": "Define the digest-bound candidate that bridges Plan Keeper reasoning and an authorized Strategic Plan revision. The candidate binds an exact predecessor, one exact proposed Strategic Plan Graph, and the exact reasoning episode that produced it. It is never Strategy merely because it exists and cannot admit, approve, or apply itself.\n",
+      "required": [
+        "schema",
+        "candidate_ref",
+        "plan_ref",
+        "predecessor",
+        "proposed_graph",
+        "reasoning_episode",
+        "strategic_authority_ref",
+        "rationale_refs",
+        "provenance",
+        "candidate_digest"
+      ],
+      "schema": "l9.schema-definition/v1",
+      "semantic_rules": [
+        "revision_candidate_is_candidate_not_strategy",
+        "revision_candidate_does_not_self_admit",
+        "revision_candidate_does_not_modify_strategic_plan",
+        "strategic_authority_ref_does_not_itself_prove_authorization",
+        "admission_is_external_to_candidate_artifact",
+        "authorization_must_bind_exact_candidate_and_proposed_graph_digests",
+        "candidate_preserves_reasoning_and_predecessor_provenance"
+      ],
+      "type": "object"
+    },
+    "strategic_planning_episode_schema": {
+      "artifact_id": "l9.schema/strategic-planning-episode@1",
+      "authority": {
+        "authority_class": "canonical",
+        "owner": "Quantum-L9/.github",
+        "scope": "l9_global_strategic_planning_episode_schema"
+      },
+      "canonical": true,
+      "canonical_source": {
+        "artifact": "strategic_planning_episode.schema.yaml",
+        "format": "yaml"
+      },
+      "governed_by": {
+        "authority_ref": "authority_model.yaml#strategic_authority",
+        "plan_graph_schema_ref": "l9.schema/strategic-plan-graph@1",
+        "semantic_model_ref": "strategic_cognition_model.yaml#reasoning_artifacts.strategic_planning_episode"
+      },
+      "instance_semantics": {
+        "authoritative": false,
+        "authority_class": "derived",
+        "authority_effect": "none",
+        "producer_role": "plan_keeper"
+      },
+      "properties": {
+        "affected_closure": {
+          "fields": {
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "current_meta_view": {
+          "fields": {
+            "digest": {
+              "type": "semantic_digest"
+            },
+            "ref": {
+              "type": "semantic_ref"
+            }
+          },
+          "required": [
+            "ref",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "episode_digest": {
+          "type": "semantic_digest"
+        },
+        "episode_ref": {
+          "type": "semantic_ref"
+        },
+        "objective_refs": {
+          "type": "semantic_ref_list"
+        },
+        "plan_graph_digest": {
+          "type": "semantic_digest"
+        },
+        "plan_ref": {
+          "type": "semantic_ref"
+        },
+        "plan_revision_ref": {
+          "type": "semantic_ref"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "recommendation": {
+          "fields": {
+            "authority_effect": {
+              "const": "none"
+            },
+            "candidate_path_ref": {
+              "type": "semantic_ref_or_null"
+            },
+            "outcome": {
+              "enum": [
+                "retain_current_plan",
+                "propose_revision",
+                "unresolved"
+              ]
+            },
+            "rationale_refs": {
+              "type": "semantic_ref_list"
+            }
+          },
+          "required": [
+            "outcome",
+            "authority_effect"
+          ],
+          "type": "object"
+        },
+        "schema": {
+          "const": "l9.strategic-planning-episode/v1"
+        },
+        "strategic_authority_ref": {
+          "type": "semantic_ref"
+        },
+        "strategic_intent_refs": {
+          "min_items": 1,
+          "type": "semantic_ref_list"
+        },
+        "trigger_sources": {
+          "items": {
+            "fields": {
+              "change_ref": {
+                "type": "semantic_ref"
+              },
+              "digest": {
+                "type": "semantic_digest"
+              },
+              "ref": {
+                "type": "semantic_ref"
+              }
+            },
+            "required": [
+              "ref",
+              "digest"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "workspace": {
+          "fields": {
+            "assumptions": {
+              "items": {
+                "fields": {
+                  "basis_refs": {
+                    "type": "semantic_ref_list"
+                  },
+                  "ref": {
+                    "type": "semantic_ref"
+                  },
+                  "statement": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "provisional",
+                      "challenged",
+                      "retained_for_episode"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref",
+                  "statement"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "candidate_paths": {
+              "items": {
+                "fields": {
+                  "disposition": {
+                    "enum": [
+                      "considered",
+                      "rejected",
+                      "recommended_for_candidate"
+                    ]
+                  },
+                  "rationale_refs": {
+                    "type": "semantic_ref_list"
+                  },
+                  "ref": {
+                    "type": "semantic_ref"
+                  },
+                  "statement": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ref",
+                  "statement",
+                  "disposition"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "decision_question": {
+              "type": "string"
+            },
+            "evaluations": {
+              "items": {
+                "fields": {
+                  "evidence_refs": {
+                    "type": "semantic_ref_list"
+                  },
+                  "objective_refs": {
+                    "type": "semantic_ref_list"
+                  },
+                  "rationale": {
+                    "type": "string"
+                  },
+                  "ref": {
+                    "type": "semantic_ref"
+                  },
+                  "result": {
+                    "enum": [
+                      "favorable",
+                      "unfavorable",
+                      "mixed",
+                      "unknown"
+                    ]
+                  },
+                  "subject_ref": {
+                    "type": "semantic_ref"
+                  }
+                },
+                "required": [
+                  "ref",
+                  "subject_ref",
+                  "result"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "material_unknowns": {
+              "type": "unknown_list"
+            },
+            "observations": {
+              "items": {
+                "fields": {
+                  "ref": {
+                    "type": "semantic_ref"
+                  },
+                  "source_refs": {
+                    "min_items": 1,
+                    "type": "semantic_ref_list"
+                  },
+                  "statement": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ref",
+                  "statement",
+                  "source_refs"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "decision_question",
+            "observations",
+            "assumptions",
+            "candidate_paths",
+            "evaluations",
+            "material_unknowns"
+          ],
+          "type": "object"
+        }
+      },
+      "purpose": "Define the minimum immutable record of one bounded Plan Keeper reasoning episode over exact planning inputs. The episode preserves observations, assumptions, candidate paths, evaluations, material Unknowns, and a recommendation without turning workspace content into Strategy or granting the episode authority to revise the Strategic Plan.\n",
+      "required": [
+        "schema",
+        "episode_ref",
+        "plan_ref",
+        "plan_revision_ref",
+        "plan_graph_digest",
+        "strategic_authority_ref",
+        "strategic_intent_refs",
+        "objective_refs",
+        "current_meta_view",
+        "trigger_sources",
+        "workspace",
+        "recommendation",
+        "provenance",
+        "episode_digest"
+      ],
+      "schema": "l9.schema-definition/v1",
+      "semantic_rules": [
+        "planning_episode_is_non_authoritative_reasoning_record",
+        "reasoning_workspace_content_is_not_strategic_plan_content_without_authorized_decision",
+        "planning_episode_may_record_alternatives_without_committing_to_them",
+        "material_unknown_must_remain_unknown",
+        "episode_cannot_modify_strategic_plan",
+        "episode_cannot_grant_or_expand_strategic_authority",
+        "episode_is_provider_model_prompt_and_storage_neutral"
+      ],
+      "type": "object",
+      "workspace_rules": {
+        "assumptions_are_provisional_reasoning_objects_not_plan_owned_beliefs": true,
+        "candidate_paths_are_not_strategic_commitments": true,
+        "changed_bound_input_digest_invalidates_episode_currentness": true,
+        "evaluations_do_not_create_objective_or_evidence_authority": true,
+        "observations_reference_sources_but_do_not_take_truth_ownership": true,
+        "propose_revision_outcome_requires_separate_revision_candidate_artifact": true,
+        "recommendation_is_not_a_strategic_decision": true
+      }
+    }
+  },
+  "schema": "l9.composed-projection/v1"
+}

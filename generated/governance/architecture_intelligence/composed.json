@@ -127,10 +127,10 @@
       "source_ref": "l9.source/binding-catalog@1"
     },
     {
-      "projection_digest": "sha256:7e8d02d39439e8661e3b293b0a77850edef24486be8cb2b70503ec1edd7667ce",
+      "projection_digest": "sha256:d87f514148a15c7c0e60c73de906f6a68798dce78f48635caf7a195b0e810f43",
       "projection_ref": "l9.projection/architecture-intelligence@1#l9.source/repository-registry@1",
       "source_class": "repository_registry",
-      "source_digest": "sha256:1c46e31f17a5c63ecd11db407ff210d4f6959fd1a4b86012306369eff38cd0ce",
+      "source_digest": "sha256:ef4a8d2a57fd12b9261582e977c27a074639a490b5e57e134f608493f67a09e8",
       "source_ref": "l9.source/repository-registry@1"
     },
     {
@@ -169,7 +169,7 @@
       "source_ref": "l9.source/semantic-dependency-model@1"
     }
   ],
-  "composition_digest": "sha256:4b1cc3c4ede6996cd7dd86669858a7e2e126c488ac6435eb2c911e5163d34ee8",
+  "composition_digest": "sha256:b55ed60ed276b2d5dc803c4bdeb3ba56e531ba724f9f8efc51f4f5116a3c96ec",
   "composition_profile": {
     "digest": "sha256:7b40fe358e3f1496a19389742874de622040fe124cb5139b8343680108df09c1",
     "ref": "l9.compose/architecture-intelligence@1"
@@ -6287,6 +6287,27 @@
             "repository": "l9-wip"
           },
           "id": "l9-wip",
+          "lifecycle": "current"
+        },
+        {
+          "birth_provenance": {
+            "birth_profile": "org_seeded_self_governed",
+            "born_at": "2026-11-15T16:14:16+00:00",
+            "factory": "Quantum-L9/l9-repo-template",
+            "org_policy_sha": "496842bf029996a75f17fd1533baa79029bc95db",
+            "receipt_digest": "sha256:dcf1d70fc8390e6729f2f962b595fb35f19535b25171ba2875bd0a45ec0011a0",
+            "receipt_schema": "l9.birth-receipt/v1",
+            "root_commit": "6cbe0fe16231eb9f347c64643dea6362c0e9d838",
+            "template_sha": "923ae91457ea5fb1d0099bbf2a6b4128a7eb42bb",
+            "template_version": "2.3.0"
+          },
+          "class_ref": "l9.repository-class/l9@1",
+          "coordinate": {
+            "organization": "Quantum-L9",
+            "provider": "github",
+            "repository": "l9-state"
+          },
+          "id": "l9-state",
           "lifecycle": "current"
         }
       ],
