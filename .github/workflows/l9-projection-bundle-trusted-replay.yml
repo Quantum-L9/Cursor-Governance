@@ -36,6 +36,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
   push:
     branches:
       - main
@@ -46,6 +47,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
       - "tools/authority/produce_projection_bundle.py"
   workflow_dispatch:
     inputs:
@@ -95,6 +97,8 @@ jobs:
             profile: l9.projection/identity-attribution@1
           - bundle: technical_coordination
             profile: l9.projection/technical-coordination@1
+          - bundle: strategic_planning_context
+            profile: l9.projection/strategic-planning-context@2
     steps:
       - name: Resolve the subject commit
         id: subject
@@ -304,7 +308,7 @@ jobs:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
                  domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
                  domain_identity_attribution,
-                 technical_coordination]
+                 technical_coordination, strategic_planning_context]
     steps:
       - name: Read this bundle's attestation (the uploaded JSON, fetched over the API)
         shell: bash

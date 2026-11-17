@@ -17,6 +17,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
       - "governance/projection-bindings/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
@@ -41,6 +42,7 @@ on:
       - "generated/governance/pr_audit/**"
       - "generated/governance/domain_*/**"
       - "generated/governance/technical_coordination/**"
+      - "generated/governance/strategic_planning_context/**"
       - "governance/projection-bindings/**"
       - "skills/l9-global-architect/integrations/ARCHITECTURE_INTELLIGENCE_BINDING.yaml"
       - "skills/l9-global-architect/scripts/verify_architecture_intelligence.py"
@@ -77,7 +79,7 @@ jobs:
         bundle: [architecture_intelligence, coding_agent_execution, pr_audit, operating_plane_v2,
                  domain_architecture, domain_governance, domain_evidence_provenance, domain_contracts_conformance, domain_capabilities_dependencies, domain_strategic_value, domain_signals,
                  domain_identity_attribution,
-                 technical_coordination]
+                 technical_coordination, strategic_planning_context]
     steps:
       - name: Checkout Cursor-Governance
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -142,7 +144,7 @@ jobs:
       # Architect-mode domain bundles (governance/architect-mode/MODE.yaml) are verified by the
       # same binding-parameterized adapter, one binding per domain.
       - name: Verify the architect-mode domain bundle at the revision it names (candidate mode)
-        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination')
+        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination' || matrix.bundle == 'strategic_planning_context')
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
@@ -219,7 +221,7 @@ jobs:
       # ADMITTED_AND_CURRENT (exit 0); a fall back to BUNDLE_VERIFIED (exit 5), REJECTED,
       # BLOCKED or STALE fails the job, and the reason is reported, not hidden.
       - name: Checkout Quantum-L9/.github main independently of the lock
-        if: steps.lock.outputs.present == 'true' && (matrix.bundle == 'architecture_intelligence' || matrix.bundle == 'pr_audit' || matrix.bundle == 'operating_plane_v2' || (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination'))
+        if: steps.lock.outputs.present == 'true' && (matrix.bundle == 'architecture_intelligence' || matrix.bundle == 'pr_audit' || matrix.bundle == 'operating_plane_v2' || (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination' || matrix.bundle == 'strategic_planning_context'))
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: Quantum-L9/.github
@@ -247,7 +249,7 @@ jobs:
           python -c 'import json,sys; r=json.load(open("admission.json")); print("status:", r["status"], "authority:", r.get("authority_status"), "reason:", r["reason"])' | tee -a "$GITHUB_STEP_SUMMARY"
           [[ $code -eq 0 ]] || exit 1
       - name: Resolve architect-mode domain admission against authority main (admitted mode)
-        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination')
+        if: steps.lock.outputs.present == 'true' && (startsWith(matrix.bundle, 'domain_') || matrix.bundle == 'technical_coordination' || matrix.bundle == 'strategic_planning_context')
         working-directory: governance
         env:
           PYTHONDONTWRITEBYTECODE: "1"
