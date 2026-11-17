@@ -126,10 +126,9 @@ class RelayGateTests(unittest.TestCase):
     def _main(self, stop_output: str = "") -> dict:
         """Run the Stop hook's ``main`` with ``_stop`` printing ``stop_output``."""
 
-        def fake_stop(_event: dict) -> int:
+        def fake_stop(_event: dict) -> None:
             if stop_output:
                 print(stop_output)
-            return 0
 
         out = io.StringIO()
         with (
@@ -189,7 +188,7 @@ class RelayGateTests(unittest.TestCase):
         with (
             mock.patch.object(sys, "stdin", io.StringIO('{"session_id": "s"}')),
             mock.patch.object(sys, "stdout", out),
-            mock.patch.object(self.wb, "_stop", lambda _e: 0),
+            mock.patch.object(self.wb, "_stop", return_value=None),
             mock.patch.object(self.wb.pp, "is_subagent", return_value=True),
         ):
             self.assertEqual(self.wb.main(), 0)

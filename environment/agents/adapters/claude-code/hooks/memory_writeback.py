@@ -498,7 +498,7 @@ def main() -> int:
     buffer = io.StringIO()
     try:
         with contextlib.redirect_stdout(buffer):
-            code = _stop(event)
+            _stop(event)
     finally:
         notice = None
         try:
@@ -507,26 +507,29 @@ def main() -> int:
         except Exception:  # noqa: BLE001 - Stop-hook contract is fail-open
             notice = None
         sys.stdout.write(_with_notice(buffer.getvalue(), notice))
-    return code
+    # Exit 0 always: the Stop hook contract is fail-open.
+    return 0
 
 
-def _stop(event: dict[str, Any]) -> int:
+def _stop(event: dict[str, Any]) -> None:
+    """The Stop hook body. Prints at most one JSON object; ``main`` exits 0."""
+
     session_id = str(event.get("session_id", "")) or "unknown-session"
 
     try:
         contract = st.load_contract()
     except (OSError, json.JSONDecodeError):
-        return 0
+        return
     if pp.is_subagent(event):
         # Authority narrowing: the parent session owns its continuation and its
         # close. A subagent inherits read evidence only and writes nothing.
         _record(contract, session_id, status="skipped_subagent")
-        return 0
+        return
     if pp.is_swarm_child(event):
         # A /lcto swarm child stands down at publication: no handoff request, no
         # PR handoff comment. Its continuation still closes at SessionEnd.
         _record(contract, session_id, status="skipped_swarm_child")
-        return 0
+        return
     # Relay carrier (CANONICAL_LAW §8.11): hook records queued for the shared
     # store are written by this agent through the account connector. Owed
     # entries block this Stop (bounded), ahead of the post-publish close.
@@ -534,7 +537,36 @@ def _stop(event: dict[str, Any]) -> int:
     if relay_reason:
         _record(contract, session_id, status="relay_requested")
         print(json.dumps({"decision": "block", "reason": relay_reason}, ensure_ascii=False))
-        return 0
+        return
+    receipt_id = _usable_receipt_id(contract, session_id, event)
+    if receipt_id is None:
+        return
+    roots = _writeback_roots(contract, receipt_id, st.workspace_root())
+    agent_id = _bound_agent(contract, session_id)
+    if not agent_id:
+        return
+    close_session = _load_close_session(contract, session_id)
+    if close_session is None:
+        return
+
+    # --- Post-publish only ---------------------------------------------------
+    # The close fires ONCE per publication, after it, carrying the agent's
+    # comprehensive handoff — never on an ordinary turn. It used to fire on the
+    # first Stop of a session, freeze a generic "Continue work in <repo>"
+    # capsule from turn one, and idempotent-skip every turn after.
+    started_at = pp.prefetch_started_at(contract, receipt_id)
+    pending = [
+        (root, pub) for root in roots if (pub := _pending_publication(root, started_at)) is not None
+    ]
+    if not pending:
+        _record(contract, session_id, status="no_publication", roots=[str(r) for r in roots])
+        return
+    _close_publications(contract, session_id, event, pending, agent_id, close_session)
+
+
+def _usable_receipt_id(contract: dict, session_id: str, event: dict[str, Any]) -> str | None:
+    """The session's prefetch receipt id, or ``None`` (announced) when unusable."""
+
     # The prefetch receipt is keyed by the writer-scoped id
     # (``<writer_agent>__<chat>``, memory_state.resolve_receipt_id), the one
     # key prefetch stamps and the write gate reads. This hook looked it up by
@@ -569,10 +601,13 @@ def _stop(event: dict[str, Any]) -> int:
             receipt_id=receipt_id,
             announcement=announced or _previous(contract, session_id).get("announcement"),
         )
-        return 0
+        return None
+    return receipt_id
 
-    workspace = st.workspace_root()
-    roots = _writeback_roots(contract, receipt_id, workspace)
+
+def _bound_agent(contract: dict, session_id: str) -> str | None:
+    """The derived memory identity, or ``None`` (announced) when unresolved."""
+
     agent_id = st.bind_identity_env()
     if not agent_id:
         # Accountability: never close under a guessed or configured author.
@@ -592,7 +627,12 @@ def _stop(event: dict[str, Any]) -> int:
             reason=reason,
             announcement=announced or _previous(contract, session_id).get("announcement"),
         )
-        return 0
+        return None
+    return str(agent_id)
+
+
+def _load_close_session(contract: dict, session_id: str) -> Any:
+    """``close_session`` from the locked runtime, or ``None`` (recorded) on failure."""
 
     mb.ensure_importable()
 
@@ -626,7 +666,7 @@ def _stop(event: dict[str, Any]) -> int:
             missing_module=str(exc.name),
             interpreter=sys.executable,
         )
-        return 0
+        return None
     except Exception as exc:  # noqa: BLE001 - Stop-hook contract is fail-open
         # Narrowing the import guard to ModuleNotFoundError alone would leave a
         # SyntaxError, a circular ImportError, or an exception raised at module
@@ -637,21 +677,18 @@ def _stop(event: dict[str, Any]) -> int:
             file=sys.stderr,
         )
         _runtime_failure(contract, session_id, error=type(exc).__name__, interpreter=sys.executable)
-        return 0
+        return None
+    return close_session
 
-    # --- Post-publish only ---------------------------------------------------
-    # The close fires ONCE per publication, after it, carrying the agent's
-    # comprehensive handoff — never on an ordinary turn. It used to fire on the
-    # first Stop of a session, freeze a generic "Continue work in <repo>"
-    # capsule from turn one, and idempotent-skip every turn after.
-    started_at = pp.prefetch_started_at(contract, receipt_id)
-    pending = [
-        (root, pub) for root in roots if (pub := _pending_publication(root, started_at)) is not None
-    ]
-    if not pending:
-        _record(contract, session_id, status="no_publication", roots=[str(r) for r in roots])
-        return 0
 
+def _close_publications(
+    contract: dict,
+    session_id: str,
+    event: dict[str, Any],
+    pending: list[tuple[Path, dict[str, Any]]],
+    agent_id: str,
+    close_session: Any,
+) -> None:
     try:
         total_budget = float(os.environ.get("L9_MEMORY_WRITEBACK_BUDGET", DEFAULT_TOTAL_BUDGET))
     except ValueError:
@@ -661,106 +698,14 @@ def _stop(event: dict[str, Any]) -> int:
     announcements: list[str] = []
     statuses: list[str] = []
     for root, pub in pending:
-        key = pub["key"]
-        handoff, handoff_error = None, ""
-        missing: dict[str, str] = {}
-        try:
-            handoff = session_handoff.load(root, pr_number=pub["number"])
-        except session_handoff.HandoffError as exc:
-            handoff_error = str(exc)
-            missing[str(session_handoff.HANDOFF_REL)] = handoff_error
-        try:
-            governance_handoff.load(root, pr_number=pub["number"])
-        except session_handoff.HandoffError as exc:
-            missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
-        ledger_rel = HANDOFF_LEDGER_REL
-        # ``requested`` alone bounds the ask to once per publication.
-        # ``stop_hook_active`` is not consulted: Claude Code sets it when ANY
-        # Stop hook caused the continuation (e.g. a cloud "please push" hook),
-        # and honouring it skipped the request and closed without a brief.
-        if missing and not pp.ledger(root, ledger_rel, key).get("requested"):
-            # Ask ONCE, for both handoffs in one reason: this is the only hook
-            # that blocks (the governance hook runs in parallel and never does).
-            # Blocking hands the agent the schemas and one more turn; the next
-            # Stop closes with what exists and each hook announces the rest.
-            pp.write_ledger(
-                root,
-                ledger_rel,
-                key,
-                {"requested": True, "request_missing": missing},
-                who="memory-writeback",
-            )
-            _record(contract, session_id, status="handoff_requested", publication=key)
-            gov_rel = str(governance_handoff.GOVERNANCE_REL)
-            print(
-                json.dumps(
-                    {
-                        "decision": "block",
-                        "reason": session_handoff.request_reason(
-                            pr_label=pub["label"],
-                            pr_number=pub["number"],
-                            missing=missing,
-                            workspace=str(root),
-                            governance=(
-                                gov_rel,
-                                governance_handoff.GOVERNANCE_SCHEMA,
-                                governance_handoff.example(pub["number"]),
-                            ),
-                        ),
-                    },
-                    ensure_ascii=False,
-                )
-            )
-            return 0
-        # Asked and the repository brief is still absent or invalid: close with
-        # what the session has, and say LOUDLY that the handoff was not captured.
-
-        left = max(MIN_ROOT_BUDGET, deadline - time.monotonic())
-        try:
-            report = close_session(
-                project_dir=root,
-                session_id=session_id,
-                reason=f"published {pub['label']}",
-                transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
-                agent_id=agent_id,
-                is_background_agent=False,
-                dry_run=False,
-                budget=left,
-                surface="claude-session-end",
-                handoff=handoff,
-                publication=key,
-            )
-        except Exception as exc:  # noqa: BLE001 - fail-open, but never silent
-            report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
-        text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
-        if handoff is not None:
-            # The brief, delivered as the PR's handoff comment (edited in place on
-            # later publications); a local copy stays under the git dir. Nothing
-            # is committed onto the PR (ops/reports/handoff_delivery.py).
-            text += "\n" + pp.publish_report(
-                "publish_session_handoff",
-                root,
-                pub,
-                session_handoff.render(handoff).splitlines(),
-                session_id=session_id,
-                agent_id=str(agent_id or ""),
-            )
-        announcements.append(text)
-        statuses.append(f"{root.name}={report.get('status')}")
-        pp.write_ledger(
-            root,
-            ledger_rel,
-            key,
-            {
-                "requested": True,
-                "closed": str(report.get("status")),
-                "handoff_captured": handoff is not None,
-                "handoff_error": handoff_error,
-                "continuation": (report.get("continuation") or {}).get("record_id"),
-                "announcement": text,
-            },
-            who="memory-writeback",
+        closed = _close_one(
+            contract, session_id, event, root, pub, agent_id, close_session, deadline
         )
+        if closed is None:
+            return  # a handoff request blocked this Stop
+        text, status = closed
+        announcements.append(text)
+        statuses.append(f"{root.name}={status}")
 
     announcement = "\n\n".join(announcements)
     # The close above may itself have queued relay records (continuation + close);
@@ -780,7 +725,7 @@ def _stop(event: dict[str, Any]) -> int:
                 ensure_ascii=False,
             )
         )
-        return 0
+        return
     _emit(announcement)
     _record(
         contract,
@@ -793,7 +738,132 @@ def _stop(event: dict[str, Any]) -> int:
     )
     # Exit 0 either way: the Stop hook contract is fail-open and must not block
     # session termination. Observability lives in the announcement and receipt.
-    return 0
+
+
+def _load_handoffs(root: Path, pub: dict[str, Any]) -> tuple[Any, str, dict[str, str]]:
+    """The repository brief (or ``None``), its error, and every missing handoff."""
+
+    handoff, handoff_error = None, ""
+    missing: dict[str, str] = {}
+    try:
+        handoff = session_handoff.load(root, pr_number=pub["number"])
+    except session_handoff.HandoffError as exc:
+        handoff_error = str(exc)
+        missing[str(session_handoff.HANDOFF_REL)] = handoff_error
+    try:
+        governance_handoff.load(root, pr_number=pub["number"])
+    except session_handoff.HandoffError as exc:
+        missing[str(governance_handoff.GOVERNANCE_REL)] = str(exc)
+    return handoff, handoff_error, missing
+
+
+def _request_handoffs(
+    contract: dict, session_id: str, root: Path, pub: dict[str, Any], missing: dict[str, str]
+) -> None:
+    # Ask ONCE, for both handoffs in one reason: this is the only hook
+    # that blocks (the governance hook runs in parallel and never does).
+    # Blocking hands the agent the schemas and one more turn; the next
+    # Stop closes with what exists and each hook announces the rest.
+    key = pub["key"]
+    pp.write_ledger(
+        root,
+        HANDOFF_LEDGER_REL,
+        key,
+        {"requested": True, "request_missing": missing},
+        who="memory-writeback",
+    )
+    _record(contract, session_id, status="handoff_requested", publication=key)
+    gov_rel = str(governance_handoff.GOVERNANCE_REL)
+    print(
+        json.dumps(
+            {
+                "decision": "block",
+                "reason": session_handoff.request_reason(
+                    pr_label=pub["label"],
+                    pr_number=pub["number"],
+                    missing=missing,
+                    workspace=str(root),
+                    governance=(
+                        gov_rel,
+                        governance_handoff.GOVERNANCE_SCHEMA,
+                        governance_handoff.example(pub["number"]),
+                    ),
+                ),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def _close_one(
+    contract: dict,
+    session_id: str,
+    event: dict[str, Any],
+    root: Path,
+    pub: dict[str, Any],
+    agent_id: str,
+    close_session: Any,
+    deadline: float,
+) -> tuple[str, object] | None:
+    """Close one publication: ``(announcement, status)``, or ``None`` when it blocked."""
+
+    key = pub["key"]
+    handoff, handoff_error, missing = _load_handoffs(root, pub)
+    # ``requested`` alone bounds the ask to once per publication.
+    # ``stop_hook_active`` is not consulted: Claude Code sets it when ANY
+    # Stop hook caused the continuation (e.g. a cloud "please push" hook),
+    # and honouring it skipped the request and closed without a brief.
+    if missing and not pp.ledger(root, HANDOFF_LEDGER_REL, key).get("requested"):
+        _request_handoffs(contract, session_id, root, pub, missing)
+        return None
+    # Asked and the repository brief is still absent or invalid: close with
+    # what the session has, and say LOUDLY that the handoff was not captured.
+
+    left = max(MIN_ROOT_BUDGET, deadline - time.monotonic())
+    try:
+        report = close_session(
+            project_dir=root,
+            session_id=session_id,
+            reason=f"published {pub['label']}",
+            transcript_path=event.get("transcript_path") or event.get("transcriptPath"),
+            agent_id=agent_id,
+            is_background_agent=False,
+            dry_run=False,
+            budget=left,
+            surface="claude-session-end",
+            handoff=handoff,
+            publication=key,
+        )
+    except Exception as exc:  # noqa: BLE001 - fail-open, but never silent
+        report = {"status": "error", "writes": [], "warnings": [type(exc).__name__]}
+    text = compose_handoff_announcement(session_id, root, pub, report, handoff, handoff_error)
+    if handoff is not None:
+        # The brief, delivered as the PR's handoff comment (edited in place on
+        # later publications); a local copy stays under the git dir. Nothing
+        # is committed onto the PR (ops/reports/handoff_delivery.py).
+        text += "\n" + pp.publish_report(
+            "publish_session_handoff",
+            root,
+            pub,
+            session_handoff.render(handoff).splitlines(),
+            session_id=session_id,
+            agent_id=str(agent_id or ""),
+        )
+    pp.write_ledger(
+        root,
+        HANDOFF_LEDGER_REL,
+        key,
+        {
+            "requested": True,
+            "closed": str(report.get("status")),
+            "handoff_captured": handoff is not None,
+            "handoff_error": handoff_error,
+            "continuation": (report.get("continuation") or {}).get("record_id"),
+            "announcement": text,
+        },
+        who="memory-writeback",
+    )
+    return text, report.get("status")
 
 
 if __name__ == "__main__":

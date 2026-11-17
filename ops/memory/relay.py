@@ -342,17 +342,16 @@ def instruction(workspace: str | Path, entries: Sequence[Mapping[str, Any]]) -> 
     ]
     for row in entries:
         args = json.dumps(row.get("arguments") or {}, sort_keys=True, ensure_ascii=False)
-        lines.append(
-            f"- [{row.get('id')}] {row.get('operation')} from {row.get('surface')}: "
-            f"call {row.get('tool')} {args}"
-        )
-        lines.append(
-            f"  then: python -m ops.memory.relay ack {row.get('id')} --receipt <receipt_id> "
-            f'--workspace "{workspace}"'
-        )
-        lines.append(
-            f"  or, if the connector refuses: python -m ops.memory.relay refuse {row.get('id')} "
-            f'--receipt <receipt_id> --reason "<connector reason>" --workspace "{workspace}"'
+        lines.extend(
+            [
+                f"- [{row.get('id')}] {row.get('operation')} from {row.get('surface')}: "
+                f"call {row.get('tool')} {args}",
+                f"  then: python -m ops.memory.relay ack {row.get('id')} --receipt <receipt_id> "
+                f'--workspace "{workspace}"',
+                f"  or, if the connector refuses: python -m ops.memory.relay refuse "
+                f"{row.get('id')} --receipt <receipt_id> "
+                f'--reason "<connector reason>" --workspace "{workspace}"',
+            ]
         )
         refusal = row.get("refusal")
         if isinstance(refusal, Mapping):
