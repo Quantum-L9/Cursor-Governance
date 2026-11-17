@@ -2916,6 +2916,19 @@ def pinned_template(owner: str, root: Path = PINNED_TEMPLATE_ROOT) -> tuple[str,
     return revision, text
 
 
+def _repository_template(workspace: Path) -> tuple[str, str] | None:
+    """The repository's own template as committed at HEAD, or None when absent.
+
+    Committed bytes only: an uncommitted edit is not part of the PR.
+    """
+    try:
+        sha = _run_git_strict(workspace, "rev-parse", "HEAD").strip()
+        text = _run_git_strict(workspace, "show", f"HEAD:{TEMPLATE_PATH}")
+    except GitRangeError:
+        return None
+    return sha, text
+
+
 def resolve_template(
     workspace: Path,
     owner: str,
@@ -2925,16 +2938,21 @@ def resolve_template(
     git: org_dotgithub.GitRead = org_dotgithub.git_read,
     pinned: PinnedLoader = pinned_template,
 ) -> TemplateSource:
-    """The organization's canonical PR template at one exact commit.
+    """The PR template this body is composed from, at one exact commit.
 
-    ``<owner>/.github`` owns the template. A consumer's local copy is never
-    read here — a divergent copy must not change what the body is composed
-    from. The live template comes first. When neither transport can read it
-    (``<owner>/.github`` is private and most agent sessions cannot reach it),
-    the copy pinned in this governance tree at an exact commit is used, and
-    only while its bytes match their receipt; its revision says so. With no
-    usable pinned copy an unreachable or invalid template is still an error.
-    The org repository composes its own PRs from the template at its own PR head.
+    Order (operator directive 2026-11-17, superseding the 2026-10-13 rule that
+    the repository's own copy is never read):
+
+    1. the repository's own ``.github/pull_request_template.md`` as committed at
+       HEAD, when it exists and passes ``validate_template``; every governed
+       repository is seeded with it, so a PR never needs another repository;
+    2. the organization's ``<owner>/.github`` template, read live;
+    3. the copy of that template pinned in this governance tree, only while its
+       bytes match their receipt.
+
+    A repository copy that fails validation falls through to the org template
+    with a NOTE. With nothing usable the result is still an error. The org
+    repository itself composes from the template at its own PR head.
     """
     if not owner:
         msg = "cannot resolve the repository owner, so the org PR template has no source"
@@ -2946,6 +2964,17 @@ def resolve_template(
         except GitRangeError as exc:
             raise TemplateError(str(exc)) from exc
     else:
+        own = _repository_template(workspace)
+        if own is not None:
+            own_sha, own_text = own
+            own_errors = validate_template(own_text)
+            if not own_errors:
+                return TemplateSource(text=own_text, revision=f"{owner}/{name}@{own_sha}")
+            print(
+                f"NOTE: {owner}/{name}'s own {TEMPLATE_PATH} at {own_sha[:12]} is not usable "
+                f"({'; '.join(own_errors)}); falling back to the {owner}/.github template",
+                file=sys.stderr,
+            )
         source = "live"
         try:
             org = org_dotgithub.read_org_file(owner, TEMPLATE_PATH, gh=gh, git=git)

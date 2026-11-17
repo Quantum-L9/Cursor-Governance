@@ -1161,6 +1161,11 @@ class InventoryGuardTests(unittest.TestCase):
         self.assertEqual(check_inventory(endpoint, rows), (["old/x.py -> new/x.py"], ["new/x.py"]))
 
 
+#: A workspace with no repository template (not even a git repository), so the
+#: org and pinned paths are what a test exercises.
+NO_TEMPLATE = Path(tempfile.mkdtemp(prefix="l9-no-template-"))
+
+
 class TemplateResolutionTests(unittest.TestCase):
     """B4/D2/F2: one canonical template, at one exact org commit, or an error."""
 
@@ -1181,14 +1186,32 @@ class TemplateResolutionTests(unittest.TestCase):
 
         return gh
 
-    def test_consumer_copy_is_ignored_and_revision_is_exact(self) -> None:
+    def test_the_repository_template_comes_first_and_needs_no_network(self) -> None:
+        """Operator directive 2026-11-17: the org template is a fallback only."""
+
+        def no_network(endpoint: str) -> object:
+            raise AssertionError(f"read {endpoint} although the repository has a template")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write(".github/pull_request_template.md", CANONICAL_TEMPLATE)
+            repo.commit("template")
+            head = repo.git("rev-parse", "HEAD").strip()
+            repo.write(".github/pull_request_template.md", "## Scratch\n")  # uncommitted
+            source = resolve_template(
+                repo.root, "Quantum-L9", "consumer", gh=no_network, pinned=lambda o: None
+            )
+        self.assertEqual(source.text, CANONICAL_TEMPLATE)
+        self.assertEqual(source.revision, f"Quantum-L9/consumer@{head}")
+
+    def test_an_unusable_repository_template_falls_back_to_the_org(self) -> None:
         calls: list[str] = []
         with tempfile.TemporaryDirectory() as tmp:
-            workspace = Path(tmp)
-            (workspace / ".github").mkdir()
-            (workspace / ".github" / "pull_request_template.md").write_text("## Divergent\n")
+            repo = _Repo(Path(tmp))
+            repo.write(".github/pull_request_template.md", "## Divergent\n")
+            repo.commit("template")
             source = resolve_template(
-                workspace, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, calls)
+                repo.root, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, calls)
             )
         self.assertEqual(source.text, CANONICAL_TEMPLATE)
         self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
@@ -1200,6 +1223,16 @@ class TemplateResolutionTests(unittest.TestCase):
         body = compose_pr_body(facts, source.text).body
         self.assertIn(f"<!-- l9-pr-template: Quantum-L9/.github@{self.SHA} -->", body)
         self.assertNotIn("## Divergent", body)
+
+    def test_a_repository_without_a_template_uses_the_org_template(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _Repo(Path(tmp))
+            repo.write("README.md", "x\n")
+            repo.commit("init")
+            source = resolve_template(
+                repo.root, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, [])
+            )
+        self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
 
     def test_template_missing_a_region_and_its_placeholder_is_rejected(self) -> None:
         for name, start, end in (
@@ -1233,13 +1266,13 @@ class TemplateResolutionTests(unittest.TestCase):
         # Both transports unreachable and no usable pinned copy: no template.
         with self.assertRaisesRegex(TemplateError, "git transport also failed.*no pinned template"):
             resolve_template(
-                Path("."), "Quantum-L9", "consumer", gh=down, git=git_down, pinned=lambda o: None
+                NO_TEMPLATE, "Quantum-L9", "consumer", gh=down, git=git_down, pinned=lambda o: None
             )
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
-            resolve_template(Path("."), "Quantum-L9", "consumer", gh=self._gh(broken, []))
+            resolve_template(NO_TEMPLATE, "Quantum-L9", "consumer", gh=self._gh(broken, []))
         with self.assertRaises(TemplateError):
-            resolve_template(Path("."), "", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []))
+            resolve_template(NO_TEMPLATE, "", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []))
 
     def test_rest_unreachable_reads_the_same_commit_over_git(self) -> None:
         """A gateway that scopes REST to the session's repos still serves git for the org repo."""
@@ -1253,7 +1286,7 @@ class TemplateResolutionTests(unittest.TestCase):
             owners.append(f"{owner}:{path}")
             return self.SHA, CANONICAL_TEMPLATE
 
-        source = resolve_template(Path("."), "Quantum-L9", "consumer", gh=scoped, git=git)
+        source = resolve_template(NO_TEMPLATE, "Quantum-L9", "consumer", gh=scoped, git=git)
         self.assertEqual(owners, ["Quantum-L9:.github/pull_request_template.md"])
         self.assertEqual(source.text, CANONICAL_TEMPLATE)
         self.assertEqual(source.revision, f"Quantum-L9/.github@{self.SHA}")
@@ -1261,7 +1294,7 @@ class TemplateResolutionTests(unittest.TestCase):
         broken = CANONICAL_TEMPLATE.replace("## Files touched", "## Files")
         with self.assertRaisesRegex(TemplateError, "missing heading '## Files touched'"):
             resolve_template(
-                Path("."), "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
+                NO_TEMPLATE, "Quantum-L9", "consumer", gh=scoped, git=lambda *_: (self.SHA, broken)
             )
 
         # REST reachable: git is never consulted.
@@ -1269,7 +1302,7 @@ class TemplateResolutionTests(unittest.TestCase):
             raise AssertionError("git transport used while REST answered")
 
         resolve_template(
-            Path("."), "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []), git=no_git
+            NO_TEMPLATE, "Quantum-L9", "consumer", gh=self._gh(CANONICAL_TEMPLATE, []), git=no_git
         )
 
     def test_org_repository_composes_from_its_own_head(self) -> None:
@@ -1412,7 +1445,7 @@ class PinnedTemplateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self._pin(Path(tmp), CANONICAL_TEMPLATE)
             source = resolve_template(
-                Path("."),
+                NO_TEMPLATE,
                 "Quantum-L9",
                 "consumer",
                 gh=gh,
@@ -1427,7 +1460,7 @@ class PinnedTemplateTests(unittest.TestCase):
             raise AssertionError("pinned copy read while the live template answered")
 
         source = resolve_template(
-            Path("."),
+            NO_TEMPLATE,
             "Quantum-L9",
             "consumer",
             gh=TemplateResolutionTests._gh(TemplateResolutionTests(), CANONICAL_TEMPLATE, []),
@@ -1443,7 +1476,7 @@ class PinnedTemplateTests(unittest.TestCase):
             self._pin(Path(tmp), CANONICAL_TEMPLATE, sha256="sha256:" + "0" * 64)
             with self.assertRaisesRegex(TemplateError, "no pinned template"):
                 resolve_template(
-                    Path("."),
+                    NO_TEMPLATE,
                     "Quantum-L9",
                     "consumer",
                     gh=gh,
@@ -1460,7 +1493,7 @@ class PinnedTemplateTests(unittest.TestCase):
             self._pin(Path(tmp), broken)
             with self.assertRaisesRegex(TemplateError, r"\(pinned\).*missing heading"):
                 resolve_template(
-                    Path("."),
+                    NO_TEMPLATE,
                     "Quantum-L9",
                     "consumer",
                     gh=gh,
