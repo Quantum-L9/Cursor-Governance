@@ -100,7 +100,7 @@ class RulesAreNarrow(unittest.TestCase):
 
     def test_no_off_switch_or_setup_script_is_pre_approved(self) -> None:
         joined = "\n".join(EXPECTED_RULES)
-        self.assertNotIn("coding_agent_mode.py\" off", joined)
+        self.assertNotIn('coding_agent_mode.py" off', joined)
         self.assertNotIn("setup.sh", joined)
 
     def test_stub_stays_backtick_free(self) -> None:
