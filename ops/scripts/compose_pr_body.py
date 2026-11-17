@@ -2901,7 +2901,16 @@ def pinned_template(owner: str, root: Path = PINNED_TEMPLATE_ROOT) -> tuple[str,
     Only bytes that still match the sha256 their receipt recorded are returned:
     a pinned copy edited by hand is no copy of the authority at all.
     """
-    directory = root / owner
+    # GitHub owner names are case-insensitive; a remote spelled "quantum-l9"
+    # still finds the pin committed under "Quantum-L9".
+    matches = (
+        [d for d in root.iterdir() if d.is_dir() and d.name.casefold() == owner.casefold()]
+        if root.is_dir()
+        else []
+    )
+    if len(matches) != 1:
+        return None
+    directory = matches[0]
     try:
         receipt = json.loads((directory / "pull_request_template.receipt.json").read_text("utf-8"))
         text = (directory / "pull_request_template.md").read_text(encoding="utf-8")

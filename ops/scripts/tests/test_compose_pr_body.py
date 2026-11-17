@@ -1501,6 +1501,14 @@ class PinnedTemplateTests(unittest.TestCase):
                     pinned=lambda owner: pinned_template(owner, Path(tmp)),
                 )
 
+    def test_the_pinned_owner_matches_case_insensitively(self) -> None:
+        from compose_pr_body import pinned_template
+
+        with tempfile.TemporaryDirectory() as tmp:
+            self._pin(Path(tmp), CANONICAL_TEMPLATE)
+            held = pinned_template("quantum-l9", Path(tmp))
+        self.assertIsNotNone(held)
+
     def test_the_committed_pin_is_a_valid_template_matching_its_receipt(self) -> None:
         from compose_pr_body import pinned_template
 
