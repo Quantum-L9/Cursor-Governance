@@ -20,6 +20,7 @@ from compose_pr_body import (  # noqa: E402
     BODY_BUDGET,
     COMPACT_FIX_NOTE,
     COMPACT_INTENT_NOTE,
+    COMPACT_INVENTORY_NOTE,
     COMPLETION_DERIVED,
     COMPLETION_NOT_APPLICABLE,
     COMPLETION_UNVERIFIED,
@@ -2724,6 +2725,28 @@ class GithubBodyLimitTests(unittest.TestCase):
         self.assertEqual(
             check_inventory(body, [parse_row(r) for r in later.changed_files]), ([], [])
         )
+
+    def test_path_list_itself_collapses_to_a_measured_token(self) -> None:
+        long = "docs/plans/" + ("directory_" * 12)
+        changed = [f"D\t{long}/removed_plan_{i:04d}.md" for i in range(400)]
+        facts = MechanicalFacts(
+            commits=["chore: remove a large filed plan shelf"],
+            commit_bodies=["The path list alone is larger than the GitHub body budget."],
+            changed_files=changed,
+            path_subjects={
+                row.split("\t")[1]: "chore: remove a large filed plan shelf" for row in changed
+            },
+            head="d" * 40,
+            shortstat="400 files changed",
+        )
+        result = compose_pr_body(facts, CANONICAL_TEMPLATE)
+        rows = [parse_row(r) for r in facts.changed_files]
+        self.assertLessEqual(len(result.body), BODY_BUDGET)
+        self.assertEqual(facts.compact, 3)
+        self.assertIn(COMPACT_INVENTORY_NOTE, result.body)
+        self.assertEqual(check_inventory(result.body, rows), ([], []))
+        mismatched = check_inventory(result.body, rows[:10])
+        self.assertEqual(mismatched[0], [row.key for row in rows[:10]])
 
 
 if __name__ == "__main__":
