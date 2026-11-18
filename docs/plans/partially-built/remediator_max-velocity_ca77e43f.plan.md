@@ -60,7 +60,7 @@ todos:
       - ops/generated/skill-registry.json
       - environment/agents/adapters/claude-code/generated/skill-registry.json
 isProject: false
-status: current
+status: partially-built
 kernel_pass:
   bound_path: remediator_max-velocity_ca77e43f.plan.md
   improve:

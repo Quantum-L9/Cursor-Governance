@@ -27,6 +27,7 @@ todos:
     content: Scoped-commit (pathspecs), l4_local.py authorize-release, PR_STACK=auto PR_REMEDIATE=0 make pr; reply must display the PR URL
     status: in_progress
 isProject: false
+status: partially-built
 ---
 
 # First-class Cursor adapter (thin, Cursor-primary)

@@ -35,6 +35,7 @@ kernel_pass:
       - "Recorded in-place close without archive_completed so the pack stays on disk"
       - "Recorded leftover worktree as report-only and dirty; no git switch on primary"
       - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+status: partially-built
 ---
 
 # Shadow-authority closeout for level3-make-pr-single-path

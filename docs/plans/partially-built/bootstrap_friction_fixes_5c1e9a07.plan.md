@@ -56,7 +56,7 @@ kernel_pass:
 isProject: false
 kind: simple
 execute_via: cursor-build
-status: current
+status: partially-built
 ---
 
 # PLAN: Claude Code bootstrap friction fixes (EIE C1 governance handoff)

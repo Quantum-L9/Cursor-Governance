@@ -18,6 +18,8 @@ todos:
     content: Pull to C1, rebuild l9-api, verify all errors resolved
     status: completed
 isProject: false
+status: built
+built: true
 ---
 
 # Fix C1 Deployment Blockers

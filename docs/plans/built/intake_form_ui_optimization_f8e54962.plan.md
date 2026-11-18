@@ -21,6 +21,8 @@ todos:
     content: Update action_match_to_buyers() to auto-create material profile if missing
     status: completed
 isProject: false
+status: built
+built: true
 ---
 
 # Intake Form UI Optimization

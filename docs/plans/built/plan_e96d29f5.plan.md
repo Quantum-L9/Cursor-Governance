@@ -27,6 +27,8 @@ todos:
     content: "Phase 7: re-run audits against new base_ref to establish first real prior-baseline"
     status: completed
 isProject: false
+status: built
+built: true
 ---
 
 # LLM-Router Unified Remediation Strategy

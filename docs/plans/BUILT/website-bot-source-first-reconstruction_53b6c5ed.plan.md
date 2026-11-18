@@ -36,6 +36,8 @@ todos:
     content: Open a scoped PR on Quantum-L9/Website-Bot with the factory patches; run make verify-all; merge only via L4 plan Build after green
     status: completed
 isProject: false
+status: built
+built: true
 ---
 
 # PLAN: Website-Bot source-first reconstruction

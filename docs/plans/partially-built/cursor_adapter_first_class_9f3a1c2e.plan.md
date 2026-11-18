@@ -55,6 +55,7 @@ kernel_pass:
       - "PLAN_DOCUMENT validated (validate_plan_document.py PASS); section receipt PASS"
       - "Property matrix bound to executed tests: 11 hydrate, receipt-isolation suite, prefetch guard, 8 installer tests, agents-env PASS"
       - "Residual unknowns U-B and U-C bounded and ledgered in tech_debt.json, not silently dropped"
+status: partially-built
 ---
 
 # First-class Cursor adapter (thin, Cursor-primary)

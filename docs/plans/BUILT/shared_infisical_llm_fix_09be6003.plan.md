@@ -24,6 +24,8 @@ todos:
     content: "OUT OF THIS BUILD. Deferred other-repo follow-on: SEO-Bot T7–T12 (CLIENT_SITE_* only in .env.example); T13–T14 after W1."
     status: cancelled
 isProject: false
+status: built
+built: true
 ---
 
 # Shared Infisical plane — probe-gated (Build this)

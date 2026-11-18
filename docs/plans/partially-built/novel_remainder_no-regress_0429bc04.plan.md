@@ -33,6 +33,7 @@ todos:
     content: prune-propose then local prune-execute for prune_candidate and archive_ref patch_id only; keep keep_push and content_superset
     status: pending
 isProject: false
+status: partially-built
 ---
 
 # Novel remainder: harvest, publish, prune

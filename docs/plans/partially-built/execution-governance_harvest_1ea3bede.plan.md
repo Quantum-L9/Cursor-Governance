@@ -44,6 +44,7 @@ kernel_pass:
       - "Same bound path. No exclusive-list ellipsis. No unresolved exclusive lock."
       - "Probe inventory rows must be transformed before harvest.json; bytes/sha256 are evidence locators only."
       - "validate_harvest.py must PASS before render_brief.py writes."
+status: partially-built
 ---
 
 # Intelligence harvest: execution-governance to Cursor-Governance
