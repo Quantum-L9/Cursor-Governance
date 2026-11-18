@@ -198,7 +198,7 @@ jobs:
 reqs = tomllib.loads((Path(os.environ["SRC"]) / "pyproject.toml").read_text())["build-system"]["requires"]
 want = os.environ["BUILD_CONSTRAINT"]
 if reqs != [want]:
-    sys.exit("build-system requires %r, binding constraint is %s" % (reqs, want))' 
+    sys.exit("build-system requires %r, binding constraint is %s" % (reqs, want))'
           frontend="${RUNNER_TEMP}/memory-build-frontend"
           uv venv "${frontend}" --python "${PYTHON_VERSION}"
           uv pip install --python "${frontend}/bin/python" "build>=1.2,<2"
