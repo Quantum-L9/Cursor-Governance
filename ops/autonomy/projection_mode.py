@@ -50,6 +50,8 @@ def _organization_policy(role: str) -> dict[str, Any]:
         return bind(role)
     except (OSError, ValueError, ImportError) as exc:
         return {"status": "MISSING", "role": role, "reason": str(exc)}
+
+
 # Host session identity, in order. An unresolvable session never activates a mode.
 SESSION_ENVS = ("CURSOR_SESSION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")
 EXIT = {"ACTIVE": 0, "OFF": 0, "BLOCKED": 3, "REJECTED": 1, "STALE": 1}
