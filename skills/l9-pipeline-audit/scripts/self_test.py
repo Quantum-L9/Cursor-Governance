@@ -37,6 +37,14 @@ def main() -> int:
     )
     if absorbed.returncode != 0:
         errors.append(f"audit_plans_self_test failed: {absorbed.stdout}{absorbed.stderr}")
+    shelf = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "shelf_plans_self_test.py")],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if shelf.returncode != 0:
+        errors.append(f"shelf_plans_self_test failed: {shelf.stdout}{shelf.stderr}")
 
     with tempfile.TemporaryDirectory(prefix="l9-pipeline-audit-") as tmp:
         ws = Path(tmp)

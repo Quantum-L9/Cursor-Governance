@@ -1,5 +1,5 @@
 {
-  "generation_id": "335ce615b25d8306c4dcddacd8dae9316b0582cc5289845ca33302a2735f8848",
+  "generation_id": "77a08dd2daf4ec59850ab1510c4f0ee54065066954351f70fdb1ebfb9b7bbc0a",
   "generator": "ops/scripts/build_claude_skill_registry.py",
   "regenerate": "make claude-skill-registry",
   "routing": {
@@ -1245,7 +1245,7 @@
       "path": "skills/l9-pipeline-audit",
       "reason": "on-demand plans harvest can emit a compiled plan; slash /l9-pipeline-audit is the explicit invoke; SessionStart does not run this pack; Program Execution campaigns are not a live audit surface; disable-model-invocation",
       "skill_md": "skills/l9-pipeline-audit/SKILL.md",
-      "skill_sha256": "0615e1ddc215b3503c90803dba72104cb85ede0808df7187d6f7134fd72ccd82",
+      "skill_sha256": "35c96415bef0e9adba42ddd728c6578e09f17be8795fa1f94ce5a893978bded4",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1564,5 +1564,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "53ea74bb05c2374533cdba95fdada71516f5e628604465ed81447a477f18197b",
-  "source_skill_corpus_sha256": "9d23a9983233da350f2695923c2bb9a84e4cfdaed89c590b7fbce0deda5cd323"
+  "source_skill_corpus_sha256": "daeeb6a98c8b04833eaeef88106e45f44dd5ba08461fe2f44ce29acf899702e3"
 }
