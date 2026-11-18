@@ -40,13 +40,16 @@ class _Subprocess:
 class ConsumerProvisioningTests(unittest.TestCase):
     def _run(self, results: list[int], cwd: Path, is_file):
         fake = _Subprocess(results)
-        with mock.patch.object(exec_env, "exec_env_root", return_value=Path("/tmp/env-root")), \
-                mock.patch.object(
-                    exec_env, "_provisioned_python", side_effect=list(PROVISION_SEQUENCE)
-                ), mock.patch.object(exec_env, "_existing_venv_python", return_value=None), \
-                mock.patch.object(exec_env.shutil, "which", return_value="/usr/local/bin/uv"), \
-                mock.patch.object(exec_env.subprocess, "run", fake), \
-                mock.patch.object(Path, "is_file", is_file):
+        with (
+            mock.patch.object(exec_env, "exec_env_root", return_value=Path("/tmp/env-root")),
+            mock.patch.object(
+                exec_env, "_provisioned_python", side_effect=list(PROVISION_SEQUENCE)
+            ),
+            mock.patch.object(exec_env, "_existing_venv_python", return_value=None),
+            mock.patch.object(exec_env.shutil, "which", return_value="/usr/local/bin/uv"),
+            mock.patch.object(exec_env.subprocess, "run", fake),
+            mock.patch.object(Path, "is_file", is_file),
+        ):
             result = exec_env._consumer_project_python(cwd)
         return result, fake
 
