@@ -1,0 +1,386 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Claude Code bootstrap & environment friction repair (gap + CG-01/02/04/05/06/08/09/10)",
+  "objective": "Repair the confirmed Claude Code bootstrap/environment defects in Quantum-L9/Cursor-Governance at their existing owners, in one PR with six commits: (U1) delegate the governance uv proof to ensure_uv_environment.sh check so Cursor-Governance is no longer permanently UNPROVEN; (U2) never mutate git-tracked project skill entries or manifests; (U3) declare hook locality once in the precommit hook contract and enforce it; (U4) gate Cursor-only wiring checks on is_cursor_host_surface; (U5) consumer-pinned ruff via uv tool run, real .venv for pip repos, full requirements fingerprint, gitleaks absolute-path resolution with one pin; (U6) prove the org PR template before push and record GitHub capabilities per transport in the bootstrap receipt. GAR 0.8.2 manifest load_order (14 artifacts) resolved and parsed; architecture recorded as already settled: repair existing owners, no new layers (full Reasoning-Foursome run not executed).",
+  "success_criteria": [
+    "session_deps_cloud.sh reports Cursor-Governance proven and a second run reports cached and proven",
+    "a consumer repo with tracked relative .claude/skills links and tracked manifest has identical git status --porcelain before and after two reconcile runs, with a tracked-owned conflict reported",
+    "cursor-skill-projection and no-hardcoded-paths are skipped in a consumer workspace; in governance each hook runs at most once; a hook without locality fails validate_precommit_hook_contract.py",
+    "check_governance_wiring.sh --machine under L9_GOVERNANCE_SURFACE=claude-code emits no ~/.cursor FAIL lines; unset surface keeps the plugin-sibling failure",
+    "a consumer pinning ruff==0.16.0 never runs governance ruff 0.16.1; unavailable pinned ruff fails before writer hooks; requirements-dev.txt changes the deps fingerprint; pip-only repo gets .venv and stamp; gitleaks in ~/.local/bin found with bare PATH",
+    "open_pr_after_gate.sh fails before git push when the org template is unreadable; bootstrap receipt carries github_capabilities with four per-transport verdicts"
+  ],
+  "scope": {
+    "in": [
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+      "ops/scripts/reconcile_claude_l9_skills.py",
+      "ops/config/precommit-hook-contract.json",
+      "ops/scripts/validate_precommit_hook_contract.py",
+      "ops/scripts/run_pr_precommit.sh",
+      "ops/scripts/check_governance_wiring.sh",
+      "ops/scripts/run_pr_security.sh",
+      "ops/scripts/compose_pr_body.py",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/scripts/lib/gh_auth_probe.sh",
+      "environment/agents/adapters/claude-code/install.sh",
+      "ops/scripts/claude_bootstrap_receipt.py",
+      "docs/DEGRADED_MODE_CONTRACT.md",
+      "tests for each unit"
+    ],
+    "out": [
+      "Odoo publish exception (CG-03) and Enterprise Docker evidence (EXT-02)",
+      "l9-deploy metadata scanner (EXT-01)",
+      "memory plane: seal_artifact_provenance.py, memory schema",
+      "GMP tool/work root (CG-07, PR #744)",
+      "CI assurance / org rulesets",
+      "resolve_template internals (owned by open PR #756)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind worktree /root/.l9/gov-worktrees/claude-code__claude-env-friction branch agent/claude-code/claude-env-friction base origin/main 60aee3be82e97984099678df4a311cf23a0e462a",
+      "pass_criteria": "agent task metadata recorded; tree clean",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "hook catalog .pre-commit-config.yaml run via PR_REMEDIATE=0 make pr (run_pr_gate.sh + run_pr_precommit.sh)",
+      "pass_criteria": "catalog present; gate green at publish",
+      "status": "pending"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "reproduce gap: uv sync --locked --extra dev --check rc=1 vs ensure_uv_environment.sh check rc=0 on governance .venv",
+      "pass_criteria": "contradiction reproduced",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "memory prefetch plan_memory_prefetch.py namespace cursor-governance",
+      "pass_criteria": "status OK, conflicts CLEAN",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "U1",
+      "task": "toolchain_proven delegates governance uv proof to ensure_uv_environment.sh <repo> check; keep raw-uv path for other uv repos; tests positive+negative",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "tests/environment/adapters/test_session_deps_cloud.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "toolchain_proven()",
+      "leverage_rank": 1,
+      "shared_root_cause": "duplicate readiness predicate disagreeing with the owner"
+    },
+    {
+      "id": "U2",
+      "task": "reconcile_scope probes _path_is_git_tracked before each remove_managed and before the state-file write; tracked => tracked-owned conflict / tracked-manifest drift, no mutation",
+      "files": [
+        "ops/scripts/reconcile_claude_l9_skills.py",
+        "ops/scripts/tests/test_reconcile_skills_ownership.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Wrap",
+      "anchor": "reconcile_scope",
+      "leverage_rank": 2,
+      "shared_root_cause": "projection authority outranks repository ownership"
+    },
+    {
+      "id": "U3",
+      "task": "locality field on every precommit hook contract entry; validator enforces it and flags governance-local entries declared any; run_pr_precommit derives _GOV_ONLY_SKIP from contract; cursor-skill-projection joins _READER_HOOKS",
+      "files": [
+        "ops/config/precommit-hook-contract.json",
+        "ops/scripts/validate_precommit_hook_contract.py",
+        "ops/scripts/run_pr_precommit.sh",
+        "tests/ops/scripts/test_gov_only_hook_skip.py",
+        "ops/scripts/test_pr_gate_attribution.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_GOV_ONLY_SKIP",
+      "leverage_rank": 3,
+      "shared_root_cause": "applicability is implicit hand-listing, not a declared contract property"
+    },
+    {
+      "id": "U4",
+      "task": "check_governance_wiring.sh --machine gates Cursor-only sections on is_cursor_host_surface; surface-neutral checks still run",
+      "files": [
+        "ops/scripts/check_governance_wiring.sh",
+        "tests/ops/scripts/test_pr_gate_surface_scope.py",
+        "tests/ops/scripts/test_wiring_rejects_plugin_siblings.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Wrap",
+      "anchor": "CHECK_MACHINE block",
+      "leverage_rank": 4,
+      "shared_root_cause": "Cursor host predicates applied on every surface"
+    },
+    {
+      "id": "U5",
+      "task": "fingerprint requirements-*.txt; pip repos get repo .venv (make venv or uv venv + uv pip install) with failures surfaced; ruff resolved from consumer pin via .venv or uv tool run before writer pass, TOOLCHAIN_UNAVAILABLE otherwise; gitleaks resolved at ~/.local/bin fallback with pin read from bootstrap_agent_environment.sh",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "ops/scripts/run_pr_precommit.sh",
+        "ops/scripts/run_pr_security.sh",
+        "tests/environment/adapters/test_session_deps_cloud.py",
+        "tests/ops/scripts/test_pr_lifecycle.py",
+        "ops/scripts/tests/test_pr_security_modes.sh"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "U1",
+        "U3"
+      ],
+      "operation": "Replace",
+      "anchor": "install_repo / _run_locked_ruff_writer / run_gitleaks",
+      "leverage_rank": 5,
+      "shared_root_cause": "tool chosen by location, not by declared pin"
+    },
+    {
+      "id": "U6",
+      "task": "compose_pr_body.py --check-template; open_pr_after_gate.sh resolves owner/name and proves template before push; gh_capability_probe per transport; receipt passthrough github_capabilities; dated DEGRADED_MODE_CONTRACT row",
+      "files": [
+        "ops/scripts/compose_pr_body.py",
+        "ops/scripts/open_pr_after_gate.sh",
+        "ops/scripts/lib/gh_auth_probe.sh",
+        "environment/agents/adapters/claude-code/install.sh",
+        "ops/scripts/claude_bootstrap_receipt.py",
+        "docs/DEGRADED_MODE_CONTRACT.md",
+        "ops/scripts/lib/README.md",
+        "ops/scripts/tests/test_compose_pr_body.py",
+        "tests/ops/scripts/test_pr_lifecycle.py",
+        "ops/scripts/tests/test_gh_auth_probe.sh",
+        "tests/ops/scripts/test_claude_bootstrap_receipt_revision.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "_push_with_bounded_recover call",
+      "leverage_rank": 6,
+      "shared_root_cause": "late unproven dependency and coarse capability boolean"
+    },
+    {
+      "id": "PUB",
+      "task": "l4_local begin/authorize-release then PR_REMEDIATE=0 make pr (PR_STACK empty: sibling chains make auto fail closed; user chose one PR off main); report PR URL",
+      "files": [],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "U1",
+        "U2",
+        "U3",
+        "U4",
+        "U5",
+        "U6"
+      ],
+      "blocker": "none",
+      "leverage_rank": 7
+    }
+  ],
+  "critical_path": [
+    "U1",
+    "U3",
+    "U5",
+    "U6",
+    "PUB"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "SessionStart no longer reports Cursor-Governance UNPROVEN",
+      "unlocks": "honest per-repo readiness for U5"
+    },
+    {
+      "id": "M2",
+      "outcome": "consumer checkouts byte-stable across bootstrap; gov-only hooks never run in consumers",
+      "unlocks": "trustworthy consumer gates"
+    },
+    {
+      "id": "M3",
+      "outcome": "pin-correct toolchain and pre-push template proof",
+      "unlocks": "gate-pass implies publish-success"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "U1",
+      "evidence_required": "test_session_deps_cloud.py green; live run prints proven applied for Cursor-Governance",
+      "no_go_action": "stop; re-diagnose predicate"
+    },
+    {
+      "id": "C2",
+      "after": "U3",
+      "evidence_required": "validate_precommit_hook_contract.py OK; test_gov_only_hook_skip.py green",
+      "no_go_action": "stop before U5 touches run_pr_precommit.sh"
+    },
+    {
+      "id": "C3",
+      "after": "U6",
+      "evidence_required": "all unit tests green; --check-template prints TEMPLATE_OK live",
+      "no_go_action": "do not authorize release"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "docs/DEGRADED_MODE_CONTRACT.md",
+      "action": "update",
+      "todo_ids": [
+        "U6"
+      ],
+      "reason": "rule 62: contradicting container observation needs a dated row"
+    },
+    {
+      "surface": "ops/scripts/lib/README.md",
+      "action": "update",
+      "todo_ids": [
+        "U6"
+      ],
+      "reason": "document gh_capability_probe"
+    },
+    {
+      "surface": "AGENTS.md / CANONICAL_LAW.md / Makefile",
+      "action": "n_a",
+      "reason": "no doctrine or target change; repairs live in existing owners"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does ensure_uv_environment.sh check miss a genuinely outdated env? (its fingerprint covers uv.lock/pyproject bytes, interpreter, uv version)",
+      "Can git ls-files from destination.parent mis-resolve in mount-root fan-out? (non-git roots answer untracked = today's behaviour)",
+      "Could deriving _GOV_ONLY_SKIP at runtime skip nothing on a read error? (must fail closed)",
+      "Does uv tool run need network? (yes on first use; offline => explicit TOOLCHAIN_UNAVAILABLE before writes)"
+    ],
+    "assumed_false_ifs": [
+      "U1 is wrong if a governance checkout can be outdated while ensure check returns 0",
+      "U2 is wrong if a governance-managed untracked link is ever reported tracked",
+      "U6 is wrong if the pre-push template check reads a different source than the composer"
+    ],
+    "blast_radius": "every Claude cloud SessionStart (U1, U2), every consumer make pr (U3, U5), governance publish path (U6); all in scripts with existing harnesses",
+    "rollback": "each unit is one commit; revert a unit via a new corrective PR, never git revert on a shared clone"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4",
+      "U5",
+      "U6",
+      "PUB"
+    ],
+    "shared_causes": [
+      "second predicate or list diverging from the declared owner (U1, U3, U4, U5)",
+      "late or coarse capability claims (U6)"
+    ],
+    "deletions_or_consolidations": [
+      "hardcoded _GOV_ONLY_SKIP list replaced by contract derivation",
+      "duplicate GITLEAKS_PIN in run_pr_security.sh removed",
+      "raw uv --check no longer used for governance checkouts"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "open PRs #756/#738 conflict textually in compose_pr_body.py _main",
+      "mitigation": "touch only argparse + a top-of-_main branch; publish gate merge-tree probe decides; rule 53 routing on conflict"
+    },
+    {
+      "risk": "#737 touches reconcile_claude_l9_skills.py",
+      "mitigation": "edits confined to reconcile_scope; #737 adds code after it"
+    },
+    {
+      "risk": "source-text tests pin current strings",
+      "mitigation": "keep anchors named in recon; update tests deliberately where structure changes"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "K1",
+      "question": "GraphQL verdict on this container",
+      "decision_effect": "content of the dated DEGRADED_MODE_CONTRACT row only",
+      "resolution": "probe"
+    },
+    {
+      "id": "K2",
+      "question": "whether the .claude/hooks copy of session_deps_cloud.sh is tracked",
+      "decision_effect": "whether U1/U5 edit one or two files",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "F1",
+      "command": "uv run pytest <unit test files> -q",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "F2",
+      "command": "bash ops/scripts/tests/test_pr_security_modes.sh && bash ops/scripts/tests/test_gh_auth_probe.sh",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "F3",
+      "command": "python3 ops/scripts/validate_precommit_hook_contract.py",
+      "pass_criteria": "OK line",
+      "status": "pending"
+    },
+    {
+      "id": "F4",
+      "command": "PR_REMEDIATE=0 make pr (runs the .pre-commit-config.yaml hook catalog via run_pr_precommit.sh)",
+      "pass_criteria": "gate green, PR URL printed",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "K1",
+      "K2"
+    ],
+    "next_skill": "l9-pr-remediation",
+    "stop_reason": "plan approved; pre_validation P1 and final_validation F1-F4 execute during Build and publish"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "files listed in todos"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Makefile",
+      "ops/memory/**",
+      "environment/generated/**",
+      "resolve_template body in compose_pr_body.py"
+    ],
+    "preserved_contracts": [
+      "make pr is the only publish path",
+      "one writer pass in run_pr_precommit",
+      "gh_auth_probe T1-T5 behaviour",
+      "COMPONENTS roll-up unchanged"
+    ],
+    "validation_commands": [
+      "uv run pytest -q <unit tests>",
+      "python3 ops/scripts/validate_precommit_hook_contract.py",
+      "PR_REMEDIATE=0 make pr"
+    ]
+  },
+  "depth": "standard"
+}

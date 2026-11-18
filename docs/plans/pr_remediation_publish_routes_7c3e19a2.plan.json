@@ -1,0 +1,259 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Restore both sanctioned publish routes in l9-pr-remediation",
+  "objective": "Make skills/l9-pr-remediation accept exactly the two CANONICAL_LAW 6.2.10 / ADR-0052 publish routes (in-scope git push, scope-expansion PR_STACK=auto PR_REMEDIATE=0 make pr) in protocol, tests and SKILL.md, and make the local gate selector run tests/skills/<name>/ when skills/<name>/scripts/*.py changes",
+  "success_criteria": [
+    "tests/skills/l9_pr_remediation/test_protocol.py passes in full, including the 4 tests failing on main f47c256 (test_gate_b_requires_clean_worktree, test_validate_plan_cli, test_gate_receipt_cli, test_gate_e_measures_git_log)",
+    "validate_plan rejects make push, gh pr create, bare make pr and empty publish values",
+    "select_pr_pytest_paths(['skills/l9-pr-remediation/scripts/protocol.py']) includes tests/skills/l9_pr_remediation",
+    "skills/l9-pr-remediation/SKILL.md carries no line forbidding bare git push for in-scope fixes",
+    "ops/scripts/tests/test_select_pr_pytest_paths.py passes"
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-pr-remediation/scripts/protocol.py publish constants and the four validators that read them",
+      "tests/skills/l9_pr_remediation/test_protocol.py new route tests",
+      "skills/l9-pr-remediation SKILL.md, references and expertise YAMLs: every stale ADR-0051-era publish line",
+      "ops/scripts/select_pr_pytest_paths.py mirror-directory mapping for skill scripts",
+      "ops/scripts/tests/test_select_pr_pytest_paths.py selector tests",
+      "regenerated skill registry artifacts that pin SKILL.md digests"
+    ],
+    "out": [
+      "ADR-0052 text reconciliation (Option C vs Decision section)",
+      "ops/autonomy/first_publication_gate.py scope enforcement",
+      "the two unrelated main failures in test_org_dotgithub.py and test_resolve_changed_files_merge_base.py",
+      "PR #794 and its held merge"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind worktree /root/.l9/gov-worktrees/claude__pr-remediation-publish-routes on agent/claude/pr-remediation-publish-routes from origin/main f47c256b; hook catalog .pre-commit-config.yaml",
+      "pass_criteria": "agent_worktree_start.sh RESULT: PASS",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "reproduce: pytest tests/skills/l9_pr_remediation/test_protocol.py on unmodified main",
+      "pass_criteria": "exactly the 4 named tests fail on publish-route assertions",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "MEMORY_PREFETCH namespace=cursor-governance conflicts=0",
+      "pass_criteria": "state HIT, conflicts CLEAN",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Define PUBLISH_IN_SCOPE, PUBLISH_SCOPE_EXPANSION and PUBLISH_COMMANDS; discover_gate_registry publishes both routes; validate_gate_registry, validate_plan and Gate E accept membership in PUBLISH_COMMANDS only",
+      "files": ["skills/l9-pr-remediation/scripts/protocol.py"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "PUBLISH_COMMAND constant and its four readers",
+      "leverage_rank": 1,
+      "shared_root_cause": "PR #688 narrowed PUBLISH_COMMAND to the stacked-only route"
+    },
+    {
+      "id": "T2",
+      "task": "Add tests: both sanctioned routes accepted by validate_plan, unsanctioned routes rejected, discovered registry names both routes and validates",
+      "files": ["tests/skills/l9_pr_remediation/test_protocol.py"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T1"],
+      "operation": "Insert",
+      "anchor": "after existing commit_policy tests",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T3",
+      "task": "Rewrite every skills/l9-pr-remediation line that forbids bare git push to the two-route rule already stated on SKILL.md lines 93-105, 168 and 306: SKILL.md lines 200, 206, 370, nine references, expertise_model.yaml and skill_intelligence_report.yaml; regenerate both skill registries with sync_generated_artifacts.py --force",
+      "files": [
+        "skills/l9-pr-remediation/SKILL.md",
+        "skills/l9-pr-remediation/references/convergence-loop.md",
+        "skills/l9-pr-remediation/references/finding-classifier.md",
+        "skills/l9-pr-remediation/references/fix-engine.md",
+        "skills/l9-pr-remediation/references/generated-heal.md",
+        "skills/l9-pr-remediation/references/merge-advise.md",
+        "skills/l9-pr-remediation/references/remediation-plan.md",
+        "skills/l9-pr-remediation/references/run-contract.md",
+        "skills/l9-pr-remediation/references/signal-ingestion.md",
+        "skills/l9-pr-remediation/references/validation-gates.md",
+        "skills/l9-pr-remediation/expertise_model.yaml",
+        "skills/l9-pr-remediation/skill_intelligence_report.yaml",
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/generated/skill-registry.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "lines naming 'Bare `git push` is forbidden'",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T4",
+      "task": "In select_pr_pytest_paths, for each changed skills/<name>/scripts/**.py add tests/skills/<name with - as _> when that directory exists, before stem inference can short-circuit with continue; keep every existing selection (the skill-contracts 'skills' owner target included); add selector tests on the real repository topology",
+      "files": [
+        "ops/scripts/select_pr_pytest_paths.py",
+        "ops/scripts/tests/test_select_pr_pytest_paths.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "py_changed loop in select_pr_pytest_paths",
+      "leverage_rank": 2,
+      "shared_root_cause": "selector routed protocol.py only to 'skills', so its mirror tests never ran on #688"
+    }
+  ],
+  "critical_path": ["T1", "T2", "T4"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "protocol accepts both routes and test_protocol.py is green",
+      "unlocks": "SKILL.md alignment"
+    },
+    {
+      "id": "M2",
+      "outcome": "selector routes skill scripts to mirror tests with its own tests green",
+      "unlocks": "publication"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "pytest tests/skills/l9_pr_remediation passes",
+      "no_go_action": "stop and diagnose before touching SKILL.md"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "pytest ops/scripts/tests/test_select_pr_pytest_paths.py passes and selector output for protocol.py includes tests/skills/l9_pr_remediation",
+      "no_go_action": "block publication"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "publication law unchanged; this aligns a skill with existing CANONICAL_LAW 6.2.10"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "law already states both routes"
+    },
+    {
+      "surface": "skills/l9-pr-remediation/SKILL.md",
+      "action": "update",
+      "todo_ids": ["T3"]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does accepting git push let a remediator widen a PR without a stacked child? No: first_publication_gate enforces file scope at push time and protocol cannot see the PR file list",
+      "Does the mirror-directory mapping over-select? tests/skills/<name>/ holds only that skill's tests, at most three files today",
+      "Could a skill tests directory be root-ignored and become an unrunnable target? _drop_unrunnable still filters it",
+      "Does a tests/ change alone still select itself? Yes: infer_test_path returns test files unchanged and directory collapsing dedupes them under the mirror directory"
+    ],
+    "assumed_false_ifs": [
+      "CANONICAL_LAW carries a later dated section retracting the in-scope git push route"
+    ],
+    "blast_radius": "remediation plans and gate receipts produced by protocol.py; local gate test selection for skill script changes",
+    "rollback": "revert the PR; protocol returns to the stacked-only constant"
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T4", "T2", "T3"],
+    "shared_causes": ["a constant narrowed without its tests running"],
+    "deletions_or_consolidations": [
+      "three stale SKILL.md lines contradicting the file's own two-route rule"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "registry digest drift after SKILL.md edit fails the gate",
+      "mitigation": "run sync_generated_artifacts.py --force and commit the regenerated files"
+    },
+    {
+      "risk": "selector test fixture registry lacks a skills suite",
+      "mitigation": "assert on the real repository topology for the mirror-directory case"
+    },
+    {
+      "risk": "plan-workflow-simple.md (2026-09-02) says stack on any open PR; rules 48/53 (2026-09-19) make stacking opt-in and the only open PR (#794) is an unrelated dependabot bump with a held merge",
+      "mitigation": "branch from fetched origin/main and publish with PR_STACK= so this PR does not inherit #794's hold; recorded in the finish report"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest tests/skills/l9_pr_remediation ops/scripts/tests/test_select_pr_pytest_paths.py -q",
+      "pass_criteria": "all pass",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "PASS via make pr gate",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated structurally; implementation not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-pr-remediation/scripts/protocol.py",
+      "skills/l9-pr-remediation/SKILL.md",
+      "skills/l9-pr-remediation/skill_intelligence_report.yaml",
+      "skills/l9-pr-remediation/expertise_model.yaml",
+      "skills/l9-pr-remediation/references/validation-gates.md",
+      "skills/l9-pr-remediation/references/signal-ingestion.md",
+      "skills/l9-pr-remediation/references/run-contract.md",
+      "skills/l9-pr-remediation/references/remediation-plan.md",
+      "skills/l9-pr-remediation/references/merge-advise.md",
+      "skills/l9-pr-remediation/references/generated-heal.md",
+      "skills/l9-pr-remediation/references/fix-engine.md",
+      "skills/l9-pr-remediation/references/finding-classifier.md",
+      "skills/l9-pr-remediation/references/convergence-loop.md",
+      "tests/skills/l9_pr_remediation/test_protocol.py",
+      "ops/scripts/select_pr_pytest_paths.py",
+      "ops/scripts/tests/test_select_pr_pytest_paths.py",
+      "ops/generated/skill-registry.json",
+      "environment/agents/adapters/claude-code/generated/skill-registry.json",
+      "docs/plans/pr_remediation_publish_routes_7c3e19a2.plan.json",
+      "docs/plans/pr_remediation_publish_routes_7c3e19a2.plan.md",
+      "docs/plans/pr_remediation_publish_routes_7c3e19a2.section-receipt.json"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "ops/autonomy/first_publication_gate.py",
+      "docs/adr/"
+    ],
+    "preserved_contracts": [
+      "CANONICAL_LAW 6.2.10 two publish routes",
+      "FORBIDDEN_VERIFY ceremony-verb check unchanged",
+      "selector never emits repo-root '.'",
+      "FORBIDDEN_VERIFY still rejects make pr variants as a verify verb"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest tests/skills/l9_pr_remediation ops/scripts/tests/test_select_pr_pytest_paths.py -q",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard",
+  "checklist": ["protocol", "tests", "SKILL.md", "selector"],
+  "estimate": "1 GMP"
+}
