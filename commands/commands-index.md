@@ -14,7 +14,7 @@ recognition_rule: rules/02-slash-commands.mdc
 delegating to one skill pack are **retired** under `commands/_archived/`.
 Invoke the skill directly (Cursor plugin / Claude Code `~/.claude/skills/` symlink).
 
-Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **21** live
+Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **24** live
 commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 
 ---
@@ -41,6 +41,7 @@ commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 | `/lcto` | L CTO strategic mode |
 | `/architect` | Architect mode: opt-in architecture + strategic-planning projections |
 | `/coding-agent` | Coding-agent mode: opt-in coding-agent execution projection |
+| `/planner` | Planner mode: opt-in strategic-planning projections + Plan Keeper context (read-only) |
 | `/spec` | Specification generator |
 | `/rules` | List governance rules from `.cursor/rules/` |
 | `/update-command` | Slash-command minimizer DAG (legacy) |

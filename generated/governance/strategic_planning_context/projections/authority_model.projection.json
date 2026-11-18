@@ -1,0 +1,44 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "strategic_authority": {
+      "definition": "Explicitly granted authority to create, revise, or supersede the Strategy represented by the Strategic Plan within a bounded scope.",
+      "grant_must_be_explicit": true,
+      "may_not_be_inferred_from": [
+        "reasoning_capability",
+        "projection_consumption",
+        "metacognitive_output"
+      ],
+      "strategy_concept_ref": "strategic_cognition_model.yaml#concepts.strategy"
+    },
+    "strategic_cognition_authority": {
+      "detailed_model": "strategic_cognition_model.yaml",
+      "global_semantics_owner": "Quantum-L9/.github",
+      "invariant_ref": "L9-STRATEGY-001",
+      "metacognition_denied": [
+        "strategic_plan_mutation",
+        "strategic_plan_supersession",
+        "strategic_authority"
+      ],
+      "roles_are_actor_identities": false,
+      "rules": [
+        "reasoning_capability_does_not_confer_strategic_authority",
+        "metacognitive_output_is_advisory_to_plan_keeper",
+        "projection_consumption_does_not_transfer_truth_source_ownership",
+        "semantic_compiler_does_not_own_strategic_cognition"
+      ],
+      "strategic_plan_authority_source": "strategic_authority",
+      "strategic_plan_owner": "plan_keeper",
+      "strategic_plan_reasoning_analysis_owner": "strategic_plan_metacognitive_reasoner"
+    }
+  },
+  "projection_digest": "sha256:4e473013d3e3d0f01404b70fa18d52fe318ebaf2ffcb3c1d70bccaf86c5c0331",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+  "source_ref": "l9.source/authority-model@1"
+}

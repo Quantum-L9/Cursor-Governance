@@ -65,6 +65,9 @@ commands:
 - slash: /plan-audit
   file: commands/plan-audit.md
   enabled: true
+- slash: /planner
+  file: commands/planner.md
+  enabled: true
 - slash: /pr
   file: commands/pr.md
   enabled: true

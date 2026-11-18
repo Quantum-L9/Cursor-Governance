@@ -1,0 +1,112 @@
+{
+  "authority": {
+    "repository": "Quantum-L9/.github",
+    "revision": "dd780b957b301acf5443013708105b7a76e3aa7b"
+  },
+  "components": [
+    {
+      "path": "projections/invariants.projection.json",
+      "projection_digest": "sha256:6f49e3bbd95f4c24ebf4323136927858f0afb29aa405586dc75d8edcef71f818",
+      "receipt": "receipts/invariants.receipt.json",
+      "sha256": "sha256:41d0bd3a849b362d28a37abf8d226969dc96e10ddcbe2bc0214e87e6aff28eb1",
+      "source_class": "invariants",
+      "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+      "source_ref": "l9.source/invariants@1"
+    },
+    {
+      "path": "projections/contracts.projection.json",
+      "projection_digest": "sha256:b4437374f19618946c48c1193715d998f419c9388c2ac66352ed09023f362e0d",
+      "receipt": "receipts/contracts.receipt.json",
+      "sha256": "sha256:8cfbcf91ceacffe5de5101bd5121a5487f9c040b5defb1e2fc7ca7c72a53617f",
+      "source_class": "contracts",
+      "source_digest": "sha256:e2c1defbba1f1ddc785e2fc6536a256fed0cdc8bd07df012b8cbc780fc5b0dc1",
+      "source_ref": "l9.source/contracts@1"
+    },
+    {
+      "path": "projections/authority_model.projection.json",
+      "projection_digest": "sha256:4e473013d3e3d0f01404b70fa18d52fe318ebaf2ffcb3c1d70bccaf86c5c0331",
+      "receipt": "receipts/authority_model.receipt.json",
+      "sha256": "sha256:cf126c889fb9f04a291db5a069ad376e855fb52c5f6b3c7f91206094c97e0aec",
+      "source_class": "authority_model",
+      "source_digest": "sha256:9303ee5910f3db2b10abe71bdcb5e360128ee77e7e4bd3ebe9e05dba77018620",
+      "source_ref": "l9.source/authority-model@1"
+    },
+    {
+      "path": "projections/strategic_cognition_model.projection.json",
+      "projection_digest": "sha256:56e41495990548305eabc8b292764cef534f7f7acb228532604b8e0b6b3762c4",
+      "receipt": "receipts/strategic_cognition_model.receipt.json",
+      "sha256": "sha256:46983ed6c413358562506ae048c224feb46d1dd763f9a03d65222e55f664d358",
+      "source_class": "strategic_cognition_model",
+      "source_digest": "sha256:af540e9607915878b66cb7632fd3ca63f57f80707b1c605fc21536d06ec81a7d",
+      "source_ref": "l9.source/strategic-cognition-model@1"
+    },
+    {
+      "path": "projections/strategic_plan_model.projection.json",
+      "projection_digest": "sha256:bca3fb2608eb72e1fa2c40bb7ed54bfbdbde6c5988757e11221e58d28d7b8c2e",
+      "receipt": "receipts/strategic_plan_model.receipt.json",
+      "sha256": "sha256:0a368fd8f1db8f12ac7a6329e2c399fdfa0b95afb370cc3c1870e411074ac53e",
+      "source_class": "strategic_plan_model",
+      "source_digest": "sha256:4fffeb59d95fa05158c718b3637288c20bad41243b58b9ed3be50121acae840a",
+      "source_ref": "l9.source/strategic-plan-model@1"
+    },
+    {
+      "path": "projections/strategic_plan_graph_schema.projection.json",
+      "projection_digest": "sha256:016bb32e7804cfc397a56428b673f62511c7f4308f5f5ec99493e78e35fdbf05",
+      "receipt": "receipts/strategic_plan_graph_schema.receipt.json",
+      "sha256": "sha256:2b766cce2a37d50ef45636ab8a089b580ddfaeab595677b16f2a24560f75a551",
+      "source_class": "strategic_plan_graph_schema",
+      "source_digest": "sha256:76bbf51d9233452d3e83e8bf4148a27eb6b8e29ff3126777c6c28d818ce1a885",
+      "source_ref": "l9.source/strategic-plan-graph-schema@1"
+    },
+    {
+      "path": "projections/affected_strategic_closure_schema.projection.json",
+      "projection_digest": "sha256:f3d14194859688f19b11f3bceec4dced588fc76c2245dd3905a418edee3f3dad",
+      "receipt": "receipts/affected_strategic_closure_schema.receipt.json",
+      "sha256": "sha256:617dd67e0b13df50e3714db0f910bdede33d59ce92b2879045703f08118d939a",
+      "source_class": "affected_strategic_closure_schema",
+      "source_digest": "sha256:09d7a4f945771bb785340c06bd554d83ef813a9f8674cb542ffdd08bf58c68f4",
+      "source_ref": "l9.source/affected-strategic-closure-schema@1"
+    },
+    {
+      "path": "projections/strategic_planning_episode_schema.projection.json",
+      "projection_digest": "sha256:2a33208a8b71e4660b9c8c7c67b86006d7c60685567a18d13f70512bdada2f17",
+      "receipt": "receipts/strategic_planning_episode_schema.receipt.json",
+      "sha256": "sha256:ab1530ae80ebe153f265ada8e07867269e6a03332d41b26c45d0fd731268d74a",
+      "source_class": "strategic_planning_episode_schema",
+      "source_digest": "sha256:017931d0f8a07e85124a6492e07f65c7781905ed86042c7978c7451a80ab8513",
+      "source_ref": "l9.source/strategic-planning-episode-schema@1"
+    },
+    {
+      "path": "projections/strategic_plan_revision_candidate_schema.projection.json",
+      "projection_digest": "sha256:23442e7952ba453b50f6ebf497386f9b2b63f0c87bcc29ebb1d53914782eaa22",
+      "receipt": "receipts/strategic_plan_revision_candidate_schema.receipt.json",
+      "sha256": "sha256:b1bb0b615dbfc85a48d3743219817883a097495a8e5068223a4e20dd5019c9ba",
+      "source_class": "strategic_plan_revision_candidate_schema",
+      "source_digest": "sha256:48fdecd1a015f13cd739e718b3ea48948ce7891c2905311201ea90bd7d56c0fc",
+      "source_ref": "l9.source/strategic-plan-revision-candidate-schema@1"
+    }
+  ],
+  "composed": {
+    "composition_digest": "sha256:ee8a0b746a9cbe6b28544a9e00765c8f5e420d1e38fd6c9f697733cf6f391d5c",
+    "path": "composed.json",
+    "receipt": "receipts/composed.receipt.json",
+    "sha256": "sha256:8d366506c28e33a65db3d4788705d2df3182f364cc9115042c59e880ce875610"
+  },
+  "composition_profile": {
+    "digest": "sha256:933c3c33724ddeacd97bd7abe1c2a5444b4635a4656cd91c0901cf6cf430cf43",
+    "ref": "l9.compose/strategic-planning-context@2"
+  },
+  "generated_by": "tools/authority/produce_projection_bundle.py",
+  "producer": {
+    "compiler": "l9-semantic-compiler",
+    "repository": "Quantum-L9/l9-semantic-compiler-engine",
+    "revision": "eeac5d28f9f1a44e72287190b9087d06aeb4d574",
+    "revision_basis": "caller_asserted",
+    "version": "0.10.0"
+  },
+  "projection_profile": {
+    "digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+    "ref": "l9.projection/strategic-planning-context@2"
+  },
+  "schema": "l9.projection-bundle/v1"
+}

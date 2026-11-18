@@ -1,0 +1,1885 @@
+schema: l9.canonical-law-revision-runbook/proposal-v1
+artifact_id: cursor-governance-canonical-law-alignment-2026-11-03-recursive-v2
+status: PROPOSED_RECURSIVELY_ALIGNED_NOT_APPLIED
+mode: READ_ONLY_REVISION_MAP_WITH_NEGATIVE_WITNESSES
+objective: Resolve identified conflicts between the effective CANONICAL_LAW and the surviving publication, validation,
+  memory, planning, secret and adapter consumers without editing historical law or manufacturing a second authority.
+operator_decisions_preserved:
+- CANONICAL_LAW.md is an additive_only protected root file.
+- Program Execution is retired as live authority; retain its corpus as inert evidence.
+- The single governed publication ceremony remains make pr, with one registered native route.
+- An in-scope open-PR remediation may push after local verification; expansion needs a new PR.
+- Merge-authorization enforcement remains disabled until separately authorized to reenable.
+- Memory 3.0 requires native authenticated Streamable HTTP; no stdio fallback.
+- Infisical is the agent secret store; AWS remains Cursor's credential bootstrap.
+- Do not mutate any source repository as part of preparing this runbook.
+- A remediator local write grant is distinct from authorization to publish a newly touched file.
+- The current source snapshot has three open PRs (811, 812, 813) not included in frozen main. Rebind before writing.
+subject:
+  repository: https://github.com/Quantum-L9/Cursor-Governance
+  branch: main
+  frozen_commit: b6b33e8e3877348e305cce30f9e37a56537a7ad6
+  frozen_commit_time_utc: '2026-11-03T13:15:15Z'
+  law_path: CANONICAL_LAW.md
+  law_git_blob_sha1: 792a6fc11accb858fab4bebd5dd9de6ee1911fd9
+  law_total_split_lines: 1849
+  law_last_content_line: 1848
+  law_last_content_exact: source (in place of a `.env`), unchanged. ADR-0053.
+  working_tree_touched: false
+  proposed_application_requires_repin: true
+  concurrent_open_pr_at_last_check:
+    number: 811
+    title: 'feat(pr-body): compose every section - nothing left for an author'
+    note: Original observation at previous audit. The live heads subsequently included PRs 811, 812 and 813; see
+      observed_open_prs_at_alignment. Re-query before execution.
+  global_authority:
+    repository: https://github.com/Quantum-L9/.github
+    frozen_commit: bc6a4a1c1f61c20528abcb46c25173c41315bd41
+    registry_path: semantics/canonical_sources.yaml
+    authority_model_path: semantics/authority_model.yaml
+    role: global_semantic_owner_not_edit_target
+  local_org_policy:
+    path: ORG_INVARIANTS.yaml
+    role: local_canonical_org_policy_not_a_derived_mirror
+    note: Do not edit or claim it was re-admitted in this runbook.
+  observed_open_prs_at_alignment:
+  - number: 811
+    head: b1a5101c25e9d2a6e51a43b154db6ec0aaefd283
+    base: main
+  - number: 812
+    head: 14d8798cf77876f873fa827b14b52331dcfc369b
+    base: main
+  - number: 813
+    head: 8739959d5181846df3b87d665d186a37d15ad455
+    base: main
+source_evidence:
+  method: read_only_github_connector_exact_ref_source_and_original_main_CI_evidence_plus_local_runbook_structural_validation
+  canonical_file_lines_verified: true
+  repository_tree_recursion_truncated: false
+  source_snapshot_bound_to_one_sha: true
+  local_runtime_tests_performed: false
+  global_semantic_projection_replay_performed: false
+  current_main_ci:
+    workflow: https://github.com/Quantum-L9/Cursor-Governance/actions/runs/41642703441
+    conclusion: FAILURE
+    root_pytest:
+      passed: 6913
+      failed: 5
+      skipped: 15
+      subtests_passed: 300
+      failures:
+      - ops/scripts/tests/test_org_dotgithub.py::SingleReaderTests::test_no_other_module_reads_the_org_repo_over_rest
+      - tests/ops/memory/test_egress_boundary.py::test_real_tree_inventory_is_fully_allowlisted_and_unexpired
+      - tests/ops/memory/test_egress_boundary.py::test_cli_entrypoint_runs_in_enforce_mode_and_passes
+      - tests/ops/scripts/test_commit_verification_validator.py::test_validator_passes_on_the_tracked_tree
+      - tests/ops/scripts/test_resolve_changed_files_merge_base.py::test_live_repo_resolves_a_real_change_set
+  distinctions:
+    source_read: confirmed
+    CI_result: observed_on_pinned_SHA
+    proposed_mutations: unexecuted
+    new_regression_test_results: unknown
+    merge_or_deploy_authorization: not_granted
+  source_retrieval_state: PARTIAL_RELEVANT_TARGET_FILES_AT_PINNED_SHA; no complete local git checkout or hosted
+    runtime execution
+  observed_live_head_matches_frozen_main_at_alignment: true
+  independent_reviewer_invoked: false
+critical_rules_for_executor:
+- name: exact_snapshot
+  rule: Refresh HEAD and target Git blob IDs before editing. Any change to the pinned law or a dependent edited
+    file requires recalculating this map; do not apply a stale line-number patch.
+- name: additive_root
+  rule: Never delete, rewrite, renumber, or replace existing CANONICAL_LAW.md lines in this campaign. Append the
+    canonical_append.payload verbatim after the exact final content line. A non-additive proposal is BLOCKED until
+    a separately justified protected-root authorization exists.
+- name: protected_root_pr_body
+  rule: Every changed additive_only root file requires the protected-root PR template stamp in CI. An append-only
+    change does not require the ALLOW-ROOT-DELETION marker, but it does require the normal PR body and repository
+    controls. The pin_bump exception does not apply to this law.
+  marker_required_in_pr_body: <!-- L9_PROTECTED_ROOT_PR -->
+- name: no_parallel_authority
+  rule: Correct executable behavior at its existing owner. Do not create an alternate publication gate, new governance
+    schema, Memory transport, Program Execution controller, or second rules corpus.
+- name: no_unverified_semantic_change
+  rule: The proposed law amendment interprets existing policy boundaries. Any newly discovered authority change
+    must be marked REOPEN_REQUIRED and sent to its true canonical owner; do not silently implement it.
+- name: batch_and_prove
+  rule: Perform independent implementation and documentation changes in a bounded batch, then test all in-scope
+    invariants at the exact candidate head. A green focused test alone does not prove full readiness.
+- name: publication
+  rule: This runbook does not grant remote publication. Once an executor has explicit mutation and release authority,
+    use the current verified Cursor-Governance make-pr dispatcher exactly once for publication. Verify workspace/base
+    and the native Odoo exception at the target.
+- name: no_original_pr_footprint_guess
+  rule: The original file scope must be bound to an immutable independently reconstructible first-publication evidence
+    source. PR current files, the mutable branch tip, a generated-path label, or a model-created receipt are insufficient.
+    If no such source exists, deny raw open-PR push and route to verified fresh PR; do not fabricate an implementation
+    or permanently block local-only work.
+- name: distinct_write_and_publish_effects
+  rule: Keep local remediator write grants and the scope of externally published changes as distinct decisions.
+    The former can include approved new paths for a stacked child; the latter cannot enlarge an existing PR original
+    footprint.
+- name: all_local_gate_selectors
+  rule: The change-set resolver, pre-commit top-level exclude, Semgrep ignore list, gitleaks allowlist and precommit
+    reader/writer invocation are separate filters. A claimed restored verification path requires all applicable
+    filters proved by negative and positive tests.
+- name: protected_root_nonadditive
+  rule: The .pre-commit-config.yaml and .gitleaks.toml corrections remove existing text, so they are non-additive
+    changes to protected-root files. They require the exact path-specific ALLOW-ROOT-DELETION justification in PR
+    commit history, protected-root PR stamp, and real L9-ORG-007 owner authorization. An agent must never invent
+    or self-grant the human authorization.
+- name: do_not_imply_ready
+  rule: The proposed amendment is machine-shape validated only. Its original-footprint evidence design, live host
+    hook reachability, full CI and global semantic projection replay remain unverified; no operational closure or
+    merge-ready verdict is authorized.
+canonical_law_line_dispositions:
+- id: L01
+  existing_lines: 24-37
+  topic: Old executable-plan, Program Execution and Peer Execution source table
+  current_effect: historical_where_program_execution_is_described_as_live
+  effective_authority: CANONICAL_LAW.md:1258-1311
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-04
+  note: Never rewrite the table in place.
+- id: L02
+  existing_lines: 169-192
+  topic: SessionEnd automatic governance push
+  current_effect: superseded
+  effective_authority: CANONICAL_LAW.md:1053-1068
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L03
+  existing_lines: 233-245
+  topic: Unqualified autonomous push and merge prohibition
+  current_effect: narrowed_by_publication_and_merge_switch
+  effective_authority: CANONICAL_LAW.md:1015-1044,1236-1253,1770-1805
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-03
+- id: L04
+  existing_lines: 254-257
+  topic: Cursor ask-first before make pr
+  current_effect: superseded_in_finished_workflow
+  effective_authority: CANONICAL_LAW.md:1255-1292; AGENTS.md:1052-1065
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L05
+  existing_lines: 259-290
+  topic: Mandatory post-finish kernels and kernel_gate.py
+  current_effect: superseded_tree_kernel_latch
+  effective_authority: CANONICAL_LAW.md:1258-1279
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L06
+  existing_lines: 400-420
+  topic: make pr and old pr-check alias
+  current_effect: pr_check_public_alias_retired
+  effective_authority: CANONICAL_LAW.md:1193-1200
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-03
+- id: L07
+  existing_lines: 423-429
+  topic: AWS secret resolver and l9-aws-secrets
+  current_effect: superseded_secrets_store
+  effective_authority: CANONICAL_LAW.md:1842-1848
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-07
+- id: L08
+  existing_lines: 433-458
+  topic: Native integration branch and runtime ownership
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:433-458; ops/config/publish-authority.json
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-06
+- id: L09
+  existing_lines: 460-471
+  topic: Program Execution declared canonical subsystem
+  current_effect: superseded
+  effective_authority: CANONICAL_LAW.md:1280-1311
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-04
+- id: L10
+  existing_lines: 475-491
+  topic: AWS PAT described as sole credential store
+  current_effect: superseded_secret_store_only
+  effective_authority: CANONICAL_LAW.md:1842-1848
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-07
+  caution: Keep the single GitHub PAT invariant.
+- id: L11
+  existing_lines: 502-511
+  topic: Plan or Program Build implies merge authorization
+  current_effect: superseded
+  effective_authority: CANONICAL_LAW.md:1338-1770 and kill switch at 1770-1805
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-08
+- id: L12
+  existing_lines: 600-612
+  topic: Live l9-plan slash and retired command location
+  current_effect: superseded_by_PE_eviction
+  effective_authority: CANONICAL_LAW.md:1296-1311
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-04
+- id: L13
+  existing_lines: 614-648
+  topic: Deprecated SessionEnd distill and export jobs
+  current_effect: historical_non_live
+  effective_authority: CANONICAL_LAW.md:1053-1068,1396-1426
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L14
+  existing_lines: 686-712
+  topic: Early campaign and remediator merge language
+  current_effect: superseded_by_later_merge_and_publication_clauses
+  effective_authority: CANONICAL_LAW.md:1236-1253,1770-1805
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-08
+- id: L15
+  existing_lines: 779-796
+  topic: Tests-once and make-pr remediation defaults
+  current_effect: partially_active
+  effective_authority: CANONICAL_LAW.md:1193-1200,1255-1292
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-03
+- id: L16
+  existing_lines: 799-808
+  topic: pr-check internal leaf
+  current_effect: superseded_internal_pr_check_leaf_removed_from_governance_dispatcher
+  effective_authority: CANONICAL_LAW.md:1193-1200; ops/make/publish.mk:67-114
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-03
+  note: The 2026-08-28 internal pr-check leaf was superseded by removal. Do not claim it is live.
+- id: L17
+  existing_lines: 810-823
+  topic: Cursor STOP and do-not-publish instruction
+  current_effect: superseded_for_finished_Cursor_work
+  effective_authority: CANONICAL_LAW.md:1255-1292; AGENTS.md:1052-1065
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L18
+  existing_lines: 871-918
+  topic: Stdio-only Memory front door
+  current_effect: superseded_transport_only
+  effective_authority: CANONICAL_LAW.md:1807-1838
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-09
+- id: L19
+  existing_lines: 997-1014
+  topic: Memory 2.4 release and stdio transport
+  current_effect: superseded_by_release_2_6_and_Memory_3_transport
+  effective_authority: CANONICAL_LAW.md:1313-1336,1807-1838
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-09
+- id: L20
+  existing_lines: 1015-1044
+  topic: First-publication and unknown-state gate
+  current_effect: active_as_refined
+  effective_authority: CANONICAL_LAW.md:1236-1253
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-01
+- id: L21
+  existing_lines: 1052-1068
+  topic: SessionEnd preservation only
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:1052-1068
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-05
+- id: L22
+  existing_lines: 1071-1129
+  topic: Evidence-bound kernel receipt history
+  current_effect: evidence_rule_active_but_tree_latch_retired
+  effective_authority: CANONICAL_LAW.md:1258-1292
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-05
+- id: L23
+  existing_lines: 1192-1200
+  topic: 'First section numbered 6.2.10: single ceremony'
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:1193-1200
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-10
+- id: L24
+  existing_lines: 1235-1253
+  topic: 'Second section numbered 6.2.10: original PR footprint'
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:1236-1253
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-01
+- id: L25
+  existing_lines: 1255-1311
+  topic: Publication assurance decoupling and PE retirement
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:1255-1311
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-04
+- id: L26
+  existing_lines: 1337-1769
+  topic: Strict-mode merge grant chain
+  current_effect: preserved_strict_mode_implementation
+  effective_authority: CANONICAL_LAW.md:1770-1805
+  operation: KEEP_DORMANT_WHILE_DISABLED
+  new_reference: CLAUSE-08
+- id: L27
+  existing_lines: 1770-1805
+  topic: Operator-accepted merge-authority kill switch
+  current_effect: active
+  effective_authority: ops/config/merge-authority.json
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-08
+- id: L28
+  existing_lines: 1807-1838
+  topic: Memory 3.0 native consumer
+  current_effect: active_but_runtime_not_proven
+  effective_authority: CANONICAL_LAW.md:1807-1838
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-09
+- id: L29
+  existing_lines: 1842-1848
+  topic: Infisical agent secret store and AWS bootstrap
+  current_effect: active
+  effective_authority: CANONICAL_LAW.md:1842-1848
+  operation: KEEP_ACTIVE
+  new_reference: CLAUSE-07
+- id: L30
+  existing_lines: 400-420
+  topic: Changed-file coverage described in older generic pre-PR law
+  current_effect: active_subject_to_proposed_full_selector_alignment
+  effective_authority: CANONICAL_LAW.md:400-420; .pre-commit-config.yaml:1-7; .gitleaks.toml:7-16; .semgrepignore:34-42
+  operation: RETAIN_HISTORY
+  new_reference: CLAUSE-02
+new_reference_resolution:
+  CLAUSE-01: 'LAW-APPEND-001: proposed section 6.2.17, original PR scope provenance and UNKNOWN denial'
+  CLAUSE-03: Existing section 6.2.10 single ceremony plus proposed 6.2.17-18
+  CLAUSE-04: Existing 2026-10-07 PE eviction plus proposed 6.2.19 item 2; retirement execution conditional on consumer
+    census
+  CLAUSE-05: Existing L4 decoupling and SessionEnd plus proposed 6.2.19 item 1
+  CLAUSE-06: Current law section 13; unchanged native publication route
+  CLAUSE-07: Current law section 14.1; proposed section 6.2.19 item 5
+  CLAUSE-08: Current law section 6.2.16; proposed section 6.2.19 item 4
+  CLAUSE-09: Current law section 8.10; proposed section 6.2.19 item 3
+  CLAUSE-10: Proposed 6.2.19 item 6, duplicate 6.2.10 labels resolved by unique existing comment anchors
+  CLAUSE-02: 'LAW-APPEND-001: proposed section 6.2.18, checker-path coverage across selectors'
+canonical_append:
+  id: LAW-APPEND-001
+  path: CANONICAL_LAW.md
+  operation: APPEND_ONLY_EXACT
+  atomic: true
+  expected_git_blob_sha1: 792a6fc11accb858fab4bebd5dd9de6ee1911fd9
+  expected_last_nonempty_line_number: 1848
+  expected_last_nonempty_line_exact: source (in place of a `.env`), unchanged. ADR-0053.
+  proposed_post_append_lines:
+    note: Computed and checked by included validator; valid only if the baseline law blob and 1848-line prefix remain
+      byte-identical.
+    marker: 1850
+    section_6_2_17: 1851
+    section_6_2_18: 1891
+    section_6_2_19: 1920
+    result_last_content_line: 1955
+  must_not_change_existing_bytes: true
+  if_anchor_or_blob_differs: STOP_AND_REBASE_REVIEW
+  requires_canonical_owner_review: true
+  introduction: Bounded effective-reading clarification of previously locked file-scope, single publish ceremony,
+    inherited scanner coverage, L4 decoupling, PE retirement, Memory native transport, disabled merge switch and
+    Infisical. No new global source or enforcement implementation is created by the prose. Original-scope proof
+    stays BLOCKED until its live evidence producer is verified.
+  payload: |2
+
+    <!-- CANONICAL_LAW_CURRENT_CONSUMER_CLOSURE_20261103_V2 -->
+    ## 6.2.17 Open-PR original scope and fail-closed publication (2026-11-03)
+
+    This append-only clarification strengthens the 2026-10-04 scope-invariant
+    PR remediation clause and the 2026-09-12 first-publication effect gate.
+    It authorizes no additional publication transport.
+
+    1. The original PR file footprint is the path set verified at the PR's
+       initial authorized publication. A current PR file list or mutable head
+       is not original-footprint proof. An initial head/creation event, its
+       authenticated source and replayable diff may supply proof only if the
+       publication owner can independently establish their immutable identity,
+       completeness and ancestry. No unverified receipt may fill that gap.
+    2. An open-PR outgoing-change comparison returns VERIFIED_IN_SCOPE,
+       VERIFIED_EXPANSION or UNKNOWN. Missing or inconsistent initial-footprint
+       evidence, open-PR identity, branch ancestry, remote head, base comparison,
+       or changed-path results produce UNKNOWN. UNKNOWN denies a raw push;
+       it must not collapse into an empty expansion list.
+    3. Compare the actual outgoing commit range. Include modified, created,
+       deleted, renamed and generated/report files. For a rename, evaluate
+       both affected paths. The generated-path label grants neither an
+       original-scope exception nor permission to skip local verification.
+       Verified in-scope remediation retains the required local verification
+       then in-scope push; expansion publishes as a separately checked stacked
+       child PR through the existing `make pr` ceremony.
+    4. A Python helper or hook that invokes Git directly cannot acquire
+       authority by avoiding the shell command parser. A report writer may
+       write and scoped-commit locally, but may push only when the existing
+       scope decision and verification obligations are demonstrably satisfied;
+       otherwise it leaves the commit local with a truthful blocked result.
+    5. Remediator grants to EDIT files locally are distinct from authority to
+       PUBLISH those files on an existing PR. New write-authorized files may
+       need a separately published stacked child and do not enlarge the parent
+       PR footprint by side effect. Preserve local work while blocking only
+       the unverified remote effect.
+    6. Implement all of the above at the current publication/verification
+       owners. No second report-specific policy engine, speculative evidence
+       file, unproved GitHub timeline inference, or fabricated live receipt.
+       Where initial PR provenance is not recoverable, report the blocker and
+       use the existing governed new-PR route when it is actually authorized.
+
+    ## 6.2.18 Changed-file coverage across the existing checker owners (2026-11-03)
+
+    This refines the pre-PR changed-files obligation and the single Make
+    publication ceremony. A changed-file list is not proof of verification
+    when a second checker excludes it without an equivalent validated path.
+
+    1. Active source and tests under `workflows/` are never blanket scratch.
+       Tracked, staged or intentionally force-added/published files under
+       `reports/` are real outgoing changes. Untracked ignored temporary
+       reports remain scratch until deliberately published.
+    2. Resolve the outgoing path set without swallowing real changed paths.
+       Then prove the applicable hooks and scanners can see those paths:
+       changed-file resolver, top-level pre-commit exclusion, Semgrep ignores,
+       gitleaks allowlist and the scoped pre-commit invocation are distinct
+       selectors and must be reconciled at their actual owning files.
+    3. If the base comparison is unavailable, deny the publication as UNKNOWN.
+       When comparison proves the tree genuinely unchanged, EMPTY is a valid
+       outcome only in an explicitly permitted diagnostic context. A synthetic
+       nonempty comparison, a skipped scanner, or a broad path ignore cannot
+       be reported as a successful validation of files it never examined.
+    4. Preserve changed-only velocity and purpose-specific scanner policies.
+       Do not turn the correction into an unbounded historical-report scan or
+       assume every tool must scan every file type. A test must prove each
+       applicable selected path reaches its real validation owner.
+    5. Publication preparation precedes non-mutating observation; after a
+       changed tree requires repair, reverify the corrected tree under its
+       existing L4 release and publication contract. Never repair inside a
+       validation step or reuse a stale release authorization.
+
+    ## 6.2.19 Effective-reader alignment index (2026-11-03)
+
+    This index disambiguates prior amendments. It does not supersede any
+    surviving stricter requirement and is not a new global semantic source.
+
+    1. Ordinary completed work uses the existing L4 tree authorization and
+       one `make pr` publication route on every surface. The Cursor `/gmp`
+       executor intentionally returns control after its scoped commit so
+       the caller publishes exactly once; adapter finalize may publish in
+       its own boundary. No tree-kernel stamp or mandatory latch is restored.
+    2. Program Execution, `l9-plan` and the PE Controller remain retired
+       live authorities. An executable legacy Make target is not permission
+       to reactivate them. Before physically removing a compatibility entry,
+       inventory actual consumers and then fail closed or route it at its
+       existing owner; retain historical corpus evidence.
+    3. Memory native authenticated Streamable HTTP in section 8.10 is the
+       selected agent transport. A stdio-only package is UPSTREAM_BLOCKED;
+       a declared OAuth resource URL is metadata, not a live network egress
+       or readiness proof. Executable provider HTTP bypass remains denied.
+    4. Section 6.2.16 retains `merge-authority.json` disabled as an accepted
+       unenforced operator-request boundary; strict-mode implementation and
+       regression tests survive unchanged. No change to GitHub required
+       checks, never-waive effects, or actual human-authority obligations.
+    5. Section 14.1 owns Infisical agent secret storage, with the existing
+       Cursor-only AWS bootstrap exception. Correct stale consumers; do not
+       reinstate AWS as the model-controlled secret value store.
+    6. The two historical section 6.2.10 labels are distinguished by the
+       `PR_CHECK_TARGET_REMOVED_V2` anchor (single ceremony) and the
+       `UNIVERSAL_PUBLICATION_AND_IMMUTABLE_PR_REMEDIATION_V1` anchor
+       (original PR file-scope rule). Do not renumber protected history.
+    7. Root `CANONICAL_LAW.md` and `AGENTS.md` are additive-only. Changing
+       the existing `.pre-commit-config.yaml` or `.gitleaks.toml` exclusions
+       is non-additive protected-root work, not a free configuration tweak:
+       the path-specific justification marker, protected-root PR body and
+       owner authorization remain applicable. The pure dependency-pin-bump
+       exception does not apply to these selector changes.
+findings:
+- id: F01
+  severity: CRITICAL
+  summary: Open PR scope UNKNOWN is treated as no detected expansion.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - 6.2.8
+  - 6.2.10 scope
+  - proposed 6.2.17
+- id: F02
+  severity: CRITICAL
+  summary: Internal report publisher can push outside the publish ceremony/scope gate.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - 6.2.10 scope
+  - proposed 6.2.17
+- id: F03
+  severity: CRITICAL
+  summary: Changed-file filters exclude active workflows and intentional reports.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - '12'
+  - proposed 6.2.18
+- id: F04
+  severity: HIGH
+  summary: Retired Program Execution remains callable through Make.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - Program Execution eviction
+  - proposed 6.2.19
+- id: F05
+  severity: MEDIUM
+  summary: Rule 48 metadata contradicts scoped remediation and shipped merge mode.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - 6.2.10 scope
+  - 6.2.16
+- id: F06
+  severity: MEDIUM
+  summary: AGENTS root protection prose ignores pin_bump and current self-approval controls.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - ORG_INVARIANTS.yaml L9-ORG-007
+  - ops/config/root-file-protection.json
+- id: F07
+  severity: HIGH
+  summary: Active Claude and Memory instructions continue advertising stdio.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - '8.10'
+- id: F08
+  severity: MEDIUM
+  summary: Historical Cursor STOP text survives without enough effective-reading guidance.
+  status: HISTORICAL_SUPERSESSION_CONFUSION
+  law_refs:
+  - 6.2.7
+  - publication assurance decoupling
+- id: F09
+  severity: MEDIUM
+  summary: SessionEnd/old kernel receipt advice remains in historical prose.
+  status: HISTORICAL_SUPERSESSION_CONFUSION
+  law_refs:
+  - 5.1 SessionEnd
+  - publication assurance decoupling
+- id: F10
+  severity: LOW
+  summary: Single-ceremony wording obscures the registered Odoo native delegation.
+  status: DOCUMENTATION_CLARIFICATION
+  law_refs:
+  - '13'
+  - 6.2.10 single ceremony
+- id: F11
+  severity: MEDIUM
+  summary: Older AGENTS and security guidance still names AWS agent secret tooling.
+  status: HISTORICAL_SUPERSESSION_CONFUSION
+  law_refs:
+  - '14.1'
+- id: F12
+  severity: LOW
+  summary: Two historical 6.2.10 headings and retired path mentions are ambiguous.
+  status: DOCUMENT_INDEX_DRIFT
+  law_refs:
+  - 6.2.10 single ceremony
+  - 6.2.10 scope
+- id: CI01
+  severity: HIGH
+  summary: Organization .github REST-only read breaks single-reader contract.
+  status: CONFIRMED_CI_FAILURE
+- id: CI02
+  severity: HIGH
+  summary: Memory egress scanner conflates OAuth resource metadata with provider egress.
+  status: CONFIRMED_CI_FAILURE_REQUIRES_NARROW_CLASSIFICATION
+- id: CI03
+  severity: HIGH
+  summary: Disposable PR integration runner emits forbidden hooksPath overrides.
+  status: CONFIRMED_CI_FAILURE
+- id: CI04
+  severity: MEDIUM
+  summary: Live-repo changed-files test requires a non-empty comparison on clean main.
+  status: CONFIRMED_CI_FAILURE_TEST_ASSUMPTION
+- id: RA01
+  severity: CRITICAL
+  summary: Global pre-commit, Semgrep and gitleaks filters still independently exclude intended workflows/reports
+    after resolver repair.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - '12'
+  - proposed 6.2.18
+- id: RA02
+  severity: HIGH
+  summary: No verified immutable first-publication file footprint producer has been located; unqualified automatic
+    rollout would block existing raw remediation.
+  status: BLOCKED_UNKNOWN
+  law_refs:
+  - 6.2.10 scope
+  - proposed 6.2.17
+- id: RA03
+  severity: MEDIUM
+  summary: Prior runbook conflated local worker file grants with authorization to push outside the parent PR footprint.
+  status: DESIGN_CORRECTED
+  law_refs:
+  - 6.2.10 scope
+  - proposed 6.2.17
+- id: RA04
+  severity: MEDIUM
+  summary: Previous runbook duplicated its changed-file test owner and wrongly described pr-check as a currently
+    live internal leaf.
+  status: MAP_CORRECTED
+  law_refs:
+  - 6.2.10 single ceremony
+- id: RA05
+  severity: HIGH
+  summary: Two necessary scanner config changes are non-additive edits in protected root files, requiring path-specific
+    justification and actual owner authority.
+  status: CONFIRMED_SOURCE
+  law_refs:
+  - ORG_INVARIANTS.yaml L9-ORG-007
+  - root-file-protection.json
+- id: RA06
+  severity: MEDIUM
+  summary: Report dirty-tree warning suppresses reports by prefix even if a tracked report becomes meaningful; requires
+    narrow behavioral witness.
+  status: VERIFY_BEFORE_EDIT
+  law_refs:
+  - proposed 6.2.18
+- id: RA07
+  severity: HIGH
+  summary: Shell host publication interception and direct helper reachability have not been demonstrated end-to-end
+    on real Cursor and Claude surfaces.
+  status: NOT_TESTED
+  law_refs:
+  - 6.2.8
+  - proposed 6.2.17
+downstream_changes:
+- id: D01
+  finding_ids:
+  - F01
+  - RA02
+  - RA07
+  phase: 1
+  path: ops/autonomy/first_publication_gate.py
+  expected_blob_sha1: 6042c250eaf85adb0a73b766bf7e903f7147433c
+  lines:
+  - 524-538
+  - 541-580
+  - 643-654
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Preserve a tri-state scope result, distinguishing an actually verified empty expansion list from an unverified
+    comparison (currently both reach a permissive falsey branch).
+  - In first_publication_verdict, `expanded is None` must return DENY before the `if expanded:` branch; do not simply
+    write `if not expanded`.
+  - '`branch_diff is None` after a failed git diff must yield UNKNOWN, not an empty set through `(branch_diff or
+    '''')`.'
+  - Missing PR original-footprint provenance must yield UNKNOWN. `gh pr view --json files` exposes the current file
+    list, which is not enough to prove the original scope if a prior expansion was pushed.
+  - Remove the unconditional is_generated_path exemption when deciding whether an outgoing path expands the original
+    PR footprint.
+  - Preserve `git push` of a verified in-scope open PR and all legitimate read-only/dry-run forms. Respect existing
+    controlled breakglass.
+  - Prove original-footprint evidence from immutable first-publication context; if no recoverable source is found,
+    UNKNOWN must deny, without labeling a mutable PR listing authoritative.
+  - Path parsing must account for rename source and destination, deletion and unusual path characters. Do not use
+    empty output from a failed command as proof.
+  - The minimal `expanded is None` denial is a safe immediate corrective step; it does not establish complete original-footprint
+    provenance.
+  mechanical_substitution:
+    expected_source_fragment: |
+      if answer is True:
+          expanded = _scope_expanding_files(push_root, form.get("branch"), form.get("remote"))
+          if expanded:
+    required_result_fragment: |
+      if answer is True:
+          expanded = _scope_expanding_files(push_root, form.get("branch"), form.get("remote"))
+          if expanded is None:
+              return _deny("git push", "open PR scope is undeterminable", is_first=False)
+          if expanded:
+    note: Fragment is the minimum necessary fix; also implement all requirements above.
+  acceptance:
+  - Unknown original PR footprint denies.
+  - Cannot fetch PR file list denies.
+  - Cannot find remote tip or diff denies.
+  - A failed base diff cannot become an empty result.
+  - Generated new path is not implicitly exempt.
+  - Proved in-scope open PR is permitted after local verification.
+  test_owner: tests/ops/autonomy/test_publish_path_gate.py
+  test_status: MUST_ADD_NEGATIVE_AND_POSITIVE_WITNESSES
+  blocked_dependency: 'RA02: authoritative original-scope source not demonstrated'
+- id: D02
+  finding_ids:
+  - F02
+  - RA07
+  phase: 1
+  path: ops/reports/publish.py
+  expected_blob_sha1: 71a8dbce4fab45b23436159964b77f834c4fa8a6
+  lines:
+  - 251-308
+  - 313-357
+  - 453-493
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Keep report rendering and pathspec-only local commits. Do not push reports merely because the branch has an
+    open PR.
+  - Before any internal push, require the same verified original-footprint and verification authority the ordinary
+    remediator requires. UNKNOWN means commit-only and a truthful blocked result.
+  - When a new report path is outside the proven original footprint, leave it committed locally and instruct publication
+    of a separate stacked PR through the existing make-pr route. Do not create an internal alternate publishing
+    route.
+  - Reject/report an unverified remote branch state instead of coercing subprocess errors or empty metadata into
+    permission.
+  - Prove actual verification on the committed report tree, not merely existence of an old PR check receipt; preserve
+    commit-only when verification is unavailable.
+  acceptance:
+  - Existing in-scope report update follows the single scope authority.
+  - New report path cannot be silently pushed to an open unrelated PR.
+  - A new report path requires a separate stacked PR or remains local.
+  - A non-report outgoing commit still blocks this publisher.
+  - Failing scope probe cannot be bypassed by `python -m ops.reports.publish`.
+  test_owner: tests/ops/reports/test_publish.py
+  test_status: UPDATE_EXISTING_EXPECTATIONS_AND_ADD_NEGATIVE_WITNESSES
+  blocked_dependency: 'RA02: shared original-scope decision and verification proof unavailable'
+- id: D03
+  finding_ids:
+  - F01
+  - F02
+  - RA03
+  phase: 1
+  path: ops/autonomy/pr_fleet.py
+  lines:
+  - 160-176
+  - 803-845
+  operation: VERIFY_WRITE_VS_PUBLISH_DISTINCTION
+  required_code_delta:
+  - Keep the local generated-file and audit-approved write grants where they allow preparing a new stacked child
+    PR; these grants are NOT equivalent to authorization to push those paths onto the existing PR.
+  - Ensure worker instructions and publication paths route a new outside-footprint path to child PR, even when a
+    current mutable PR file list or generated-path prefix would permit local editing.
+  - Only narrow worker grants if an independent authorization/claim-conflict defect is demonstrated. Do not patch
+    local scope as a surrogate for broken publication enforcement.
+  acceptance:
+  - Local authorized child-preparation edits remain possible.
+  - No generated-file write grant is interpreted as an open-PR push exception.
+  - A mutating worker that expands footprint publishes only through the new-PR route.
+  test_status: FOCUSED_CONTRACT_TESTS_REQUIRED
+  expected_blob_sha1: 96e9938fc248032ddee190cd92701f1fec6d30c7
+- id: D04
+  finding_ids:
+  - F03
+  - RA01
+  phase: 1
+  path: ops/scripts/resolve_changed_files.sh
+  expected_blob_sha1: 9b03e2a865ac08bd99ee058a6ffc004154b45940
+  lines:
+  - 23-46
+  - 123-173
+  operation: EXACT_REPLACE
+  expected_source_fragment: |
+    .venv/ node_modules/ reports/ workflows/
+  replacement_fragment: |
+    .venv/ node_modules/
+  match_occurrences_exact: 1
+  match_mode: LINE_STRIPPED_INDENT_PRESERVE_EXISTING_INDENT
+  required_code_delta:
+  - Preserve exclusions for truly inert archives and ignored scratch. Intentionally tracked/committed reports and
+    active workflows must enter the change-set exactly like ordinary source.
+  - Preserve the different states EMPTY (known clean), UNKNOWN (unresolvable comparison), and NONEMPTY (actual changed
+    files).
+  - This change alone cannot close F03/RA01; verify pre-commit root exclude, Semgrep ignore and gitleaks allowlist
+    before claiming coverage.
+  acceptance:
+  - A modification to workflows/gmp_executor.py is included.
+  - A committed reports/gmp/*.md file is included.
+  - Ignored untracked scratch is not published by default.
+  - Missing merge base remains fail closed.
+  test_owner: tests/ops/scripts/test_resolve_changed_files_merge_base.py
+- id: D05
+  finding_ids:
+  - F03
+  - RA01
+  phase: 1
+  path: ops/scripts/run_pr_security.sh
+  expected_blob_sha1: 3720eec5a284aa4816d6322b404b16d97ecb905d
+  lines:
+  - 81-87
+  operation: EXACT_REPLACE
+  expected_source_fragment: |
+    .venv/ node_modules/ reports/ workflows/
+  replacement_fragment: |
+    .venv/ node_modules/
+  match_occurrences_exact: 1
+  match_mode: LINE_STRIPPED_INDENT_PRESERVE_EXISTING_INDENT
+  required_code_delta:
+  - Keep security exclusions synchronized with the changed-file resolver.
+  - Do not claim scans ran merely because path selection returned zero.
+  - This change alone cannot close F03/RA01; verify pre-commit root exclude, Semgrep ignore and gitleaks allowlist
+    before claiming coverage.
+  acceptance:
+  - Intentionally changed workflows and tracked reports reach applicable scanners.
+  - No new global full-tree scan is added to the make-pr velocity path.
+- id: D06
+  finding_ids:
+  - F03
+  phase: 1
+  path: ops/scripts/run_pr_gate.sh
+  expected_blob_sha1: 735a6a1638d74662abda4ea067dd1b0f81310e49
+  lines:
+  - 553-574
+  operation: VERIFY_EXISTING_BEFORE_EDIT
+  required_code_delta:
+  - Preserve the current resolver error propagation if it already blocks UNKNOWN; do not introduce a redundant new
+    gate. Run a negative test proving the resolver's nonzero status never reaches the empty-file PASS.
+  - Add focused behavior proving formerly excluded active workflows receives verification and that a genuinely known-empty
+    set can pass.
+  - Edit this owner only if the negative witness exposes a real fail-open.
+  acceptance:
+  - Unknown changed-file selection denies publication.
+  - Known-empty and verified nonempty sets take distinct documented paths.
+- id: D07
+  finding_ids:
+  - F04
+  phase: 2
+  path: ops/make/program-execution.mk
+  lines:
+  - 1-26
+  - 28-53
+  - 84-147
+  operation: CENSUS_THEN_CONDITIONAL_OWNER_RETIREMENT
+  required_code_delta:
+  - Before changing any target, map exact Make invocations, included Make fragments, CI references and target-specific
+    historical/fixture contracts; classify active behavior separately from archived evidence.
+  - Reject live execution through retired PE authority unless a separately authorized compatibility need is verified.
+    Preserve legitimate historical test tooling where its ownership is inert.
+  - If target removal breaks active external consumers, stop and record a compatibility decision instead of silently
+    removing or inventing replacement aliases.
+  acceptance:
+  - '`make campaign` cannot silently launch PE as a live program owner.'
+  - '`make peer-execution-conformance` cannot be a live success prerequisite.'
+  - '`l9-plan-simple` remains an ordinary planning owner without PE authority.'
+  decision_boundary: If active external consumers actually rely on these targets, stop and obtain a separate compatibility/retirement
+    decision rather than deleting them.
+  expected_blob_sha1: 3fd1a0bec33e0b7b86c04e8f28017fe225baa6f9
+  blocked_dependency: 'U03: exact live direct/indirect Make entrypoint consumers not censused'
+- id: D08
+  finding_ids:
+  - F04
+  phase: 2
+  path: skills/l9-plan-simple/SKILL.md
+  lines:
+  - 32-43
+  - 140-151
+  - 176-184
+  operation: VERIFY_EXISTING_BEFORE_EDIT
+  required_code_delta:
+  - The existing skill already explicitly denies live PE planning and relies on archived schema/validator as historical
+    reusable schema. Do not change these references solely because they point into an archive.
+  - Edit only if a current live skill route or executable command falsely activates retired PE, with an exact regression
+    witness.
+  acceptance:
+  - Live ordinary planning is possible without Program Execution.
+  - Archived l9-plan is never advertised as a live execution authority.
+- id: D09
+  finding_ids:
+  - F05
+  phase: 2
+  path: rules/48-make-pr-remediation.mdc
+  expected_blob_sha1: ae9a9cc2693c9d4695d3528f1a3562371b11deb1
+  lines:
+  - 1-12
+  - 14-32
+  - 61-68
+  - 99-106
+  operation: APPLY_WITH_TARGET_OWNER
+  frontmatter_exact_before: 'description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation
+    remediates and merges each PR only under human authorization — the operator''s typed /l9-pr-remediation (CANONICAL_LAW
+    §6.2.15), their recorded chat instruction, or a GitHub record — else MERGE_PENDING; all remediations publish
+    as stacked PRs via make pr without bare git push'
+  frontmatter_new_plain_english: make pr is the first-publication ceremony. An in-scope open-PR remediation may
+    push only after local verification and proven original file-scope; scope expansion needs a new stacked PR. Merge
+    follows the actual merge-authority switch, with exact-head readiness and GitHub controls preserved. Never claim
+    MERGE_PENDING while disabled.
+  required_code_delta:
+  - Amend frontmatter, H1 and preface so they agree with the effective body.
+  - Increment the existing rule version and regenerate metadata from this source.
+  - Preserve the strict-mode grant instructions as conditional, not current default.
+  - Preserve the accepted disabled-mode operator-request limitation.
+  acceptance:
+  - No unconditional human-grant claim while the switch is disabled.
+  - No unconditional prohibition on verified in-scope open-PR push.
+  - No description claim that every remediation must open a stacked PR.
+- id: D10
+  finding_ids:
+  - F05
+  phase: 2
+  path: environment/generated/llm-rules/48-make-pr-remediation.md
+  lines:
+  - 1-70
+  operation: REGENERATE_FROM_SOURCE
+  source_path: rules/48-make-pr-remediation.mdc
+  never_hand_edit: true
+  acceptance:
+  - Generated body and metadata reflect the corrected source rule.
+  - Generated manifest/digest matches the projector result.
+- id: D11
+  finding_ids:
+  - F05
+  - F08
+  phase: 2
+  path: rules/88-l4-local-autonomy.mdc
+  expected_blob_sha1: f7537c2de02ff6bc6b1efe172d343915e2114ea7
+  lines:
+  - 12-25
+  - 26-75
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Explicitly cite the one-finish path for finished work and the /gmp delegated handoff.
+  - Keep merge-authorization instructions conditional on the shipped switch.
+  - Do not restore mandatory tree kernels as L4 release prerequisites.
+  acceptance:
+  - Rule, Profile and AGENTS have one coherent finish path and distinct /gmp handoff.
+- id: D12
+  finding_ids:
+  - F08
+  - F09
+  - F10
+  phase: 2
+  path: ops/autonomy/surface_profile.yaml
+  expected_blob_sha1: a5ce9c3e5243d0f242ab009d7b596749a3586ffa
+  lines:
+  - 268-325
+  - 400-412
+  - 457-486
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Reconcile text that says Governance's Makefile always owns execution with the explicitly registered native Odoo
+    delegation; Governance owns dispatch, the verified native repository owns its implementation.
+  - Preserve the ordinary finished-work authorize-release + make-pr path.
+  - Preserve /gmp Cursor executor's explicit stop and caller publication.
+  - Preserve strict-mode text as conditional on merge-authority config.
+  acceptance:
+  - No agent is instructed to invoke two publication ceremonies.
+  - The native Odoo route remains registered and single-dispatch.
+- id: D13
+  finding_ids:
+  - F06
+  - F08
+  - F09
+  - F11
+  - RA01
+  - RA05
+  - RA04
+  phase: 2
+  path: AGENTS.md
+  expected_blob_sha1: 7f5a09303c28089d5231bd304fe9f9218d259884
+  lines:
+  - 408-427
+  - 489-518
+  - 552-577
+  - 1052-1067
+  - 2377-2393
+  operation: APPEND_ONLY_EXACT
+  expected_last_section_marker: <!-- SECRETS_INFISICAL_STORE_V1 -->
+  add_after_existing_content: true
+  existing_bytes_must_survive: true
+  payload: |2
+
+    <!-- CANONICAL_LAW_CURRENT_CONSUMER_ALIGNMENT_20261103_V1 -->
+    ## Current effective reading: publication, root protection, and secrets (2026-11-03)
+
+    This append-only section preserves earlier historical instructions but
+    routes new work to CANONICAL_LAW sections 6.2.17-6.2.19, 8.10 and 14.1.
+
+    - Finished ordinary work follows L4 exact-tree release authorization
+      and the one sanctioned `make pr` dispatch. The `/gmp` Cursor executor
+      stops after its delegated work so its caller publishes exactly once.
+      Neither path restores the retired tree-kernel latch.
+    - The first-publication gate must deny UNKNOWN open-PR original scope; no current PR listing substitutes for first-publication evidence.
+      New generated or report paths are not automatic exemptions. Helpers
+      that commit reports cannot silently become another publisher.
+    - `workflows/` is active source, not a scratch blanket. Tracked or
+      intentionally published `reports/` files participate in change-set
+      validation. Unknown changed-file comparisons fail closed.
+    - Program Execution remains retired as live authority. Old Make targets
+      or archived skill files do not grant execution or validation authority.
+    - The root-file contract is `ops/config/root-file-protection.json`.
+      Pure locked version-pin bumps in its declared manifest paths are
+      conditionally exempt from the deletion marker and protected-root PR
+      body. All other changed additive_only root files require the current
+      protected-root PR template stamp. Non-additive edits require the
+      reason marker; CODEOWNERS review is not an unconditional second-human
+      requirement in the current `solo_ruleset` mode. L9-ORG-007 owner
+      authorization and actual branch protection remain separately in force.
+    - New agent secrets go to Infisical `cursor-governance`; use `l9-secrets`
+      and `capability_bind.py`. AWS is retained only for the declared Cursor
+      bootstrap. No new secret goes to AWS first.
+    - Memory's native HTTP OAuth connector is the selected future-facing
+      agent path, not stdio. When the exact package cannot supply the native
+      client, report UPSTREAM_BLOCKED rather than installing a fallback.
+    - Strict-mode merge grants remain a preserved implementation but are
+      suspended while `ops/config/merge-authority.json` is `disabled`.
+    - Changed-file coverage is a cross-selector property: the resolver,
+      root pre-commit exclusion, Semgrep ignore and gitleaks allowlist must
+      be reconciled before claiming workflows/ or published reports/ passed.
+    - Removing existing exclusions from `.pre-commit-config.yaml` or
+      `.gitleaks.toml` is non-additive protected-root work. Record each
+      path-specific ALLOW-ROOT-DELETION reason and actual owner approval;
+      an append-only change to this AGENTS file is a different operation.
+  acceptance:
+  - Existing protected-root text remains byte-identical.
+  - New section reconciles effective commands without weakening enforcement.
+  - Protected-root PR body stamp is present in the eventual PR.
+- id: D14
+  finding_ids:
+  - F07
+  phase: 2
+  path: environment/agents/adapters/claude-code/settings.template.json
+  lines:
+  - 20-33
+  - 45-58
+  operation: UPDATE_HAND_AUTHORED_COMMENTS_PRESERVE_GENERATED_OVERRIDES
+  required_code_delta:
+  - In `_comment`, replace the claim that durable agent MCP is currently a package-owned stdio server with an exact
+    description of selected native authenticated Streamable HTTP and the package-owned/Claude account connector
+    ownership. Do not alter permissions by assumption.
+  - Preserve host tool matcher names only if independently verified against a real installed native-client capability
+    listing. If native client is not available, mark availability UNKNOWN/UPSTREAM_BLOCKED; do not advertise those
+    permissions as proof of a live tool.
+  - Mark grant-required merge language conditional on strict mode. Keep existing tool safety gates and never-waive
+    effects intact.
+  - settings.template.json is partly a projection target for skillOverrides, sourced from the skill registry. Modify
+    only confirmed hand-owned _comment text; regenerate derived skillOverrides from its owner.
+  acceptance:
+  - No settings comment teaches reinstating a stdio memory front door.
+  - A settings JSON parser validates the regenerated template.
+  - Native client installation is not claimed until actual capability proof.
+  - No manual edits to generated skillOverrides survive regeneration.
+- id: D15
+  finding_ids:
+  - F07
+  phase: 2
+  path: skills/l9-graphiti-memory/SKILL.md
+  lines:
+  - 23-48
+  - 120-136
+  - 384-393
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Replace active stdio-first MCP examples with the verified native HTTP contract.
+  - Preserve `MemoryService` sole authority and agent/hook lane semantics.
+  - Keep operator CLI distinct from the agent MCP transport.
+  - Mark native installation UPSTREAM_BLOCKED when the package only exposes stdio.
+  acceptance:
+  - No instruction directs agents to install a stdio fallback.
+  - Missing OAuth issuer/client IDs are not invented.
+- id: D16
+  finding_ids:
+  - F07
+  phase: 2
+  path: ops/memory/README.md
+  lines:
+  - 5-12
+  - 59-75
+  - 337-350
+  - 440-446
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Restate native HTTP as selected transport; older stdio passages are historical.
+  - Keep exact package release binding separate from native transport readiness.
+  - Keep Cursor package-owned entry and Claude account connector distinct.
+  - Report unpublished or unavailable endpoints as UNKNOWN, not success.
+  acceptance:
+  - Documentation agrees with ops/memory/mcp_instantiation.py.
+  - No secret-bearing local fallback instructions remain.
+- id: D17
+  finding_ids:
+  - F07
+  - CI02
+  phase: 2
+  path: ops/scripts/validate_memory_egress_boundary.py
+  expected_blob_sha1: 7e80f51d3936316bd35e1bcd3ecfe4829f19baca
+  lines:
+  - 48-67
+  - 287-340
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Treat only the exact expected OAuth `resource.identifier` and `resource_identifier` YAML scalar values as declarative
+    configuration, after validating the owning file schema and data context.
+  - Do not broadly exempt the Memory host token or entire config files. Executable HTTP client references and use
+    in any other field remain subject to the existing provider-egress rule.
+  - Preserve the existing lane analysis, expiring allowlist semantics and fail-closed enforcement mode.
+  - 'A declarative-resource URL exception may not be a path-wide exemption: validate the owning field and schema
+    at each exact file, with same-host misuse in adjacent fields failing.'
+  acceptance:
+  - Both documented OAuth configuration fields pass as inert metadata.
+  - Putting the same host in executable provider egress still fails.
+  - Replacing the URL with an unauthorized resource identifier fails.
+  - Scanner unit and CLI enforce-mode checks pass.
+  test_owner: tests/ops/memory/test_egress_boundary.py
+- id: D18
+  finding_ids:
+  - F07
+  - CI02
+  phase: 2
+  path: ops/config/memory-auth0-onboarding.yaml
+  lines:
+  - 1-56
+  operation: NO_CHANGE
+  reason: Declares Auth0 issuer and public clients as unbound and names the already published path-scoped resource
+    identifier. It is not evidence of a direct provider egress. Preserve the declared UNKNOWNs.
+- id: D19
+  finding_ids:
+  - F07
+  - CI02
+  phase: 2
+  path: environment/agents/adapters/claude-code/account/memory-oauth-connector.yaml
+  lines:
+  - 1-17
+  operation: NO_CHANGE
+  reason: Describes a Claude account-managed connector and still has client_id null. Preserve this exact declarative
+    resource identity; do not move secrets into project MCP settings.
+- id: D20
+  finding_ids:
+  - F11
+  phase: 2
+  path: ops/secrets/README.md
+  lines:
+  - 1-45
+  - 100-111
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Clarify that 'No AWS bootstrap' applies to the model-controlled agent value path only.
+  - Preserve Cursor/operator AWS credential bootstrap as ADR-0053 requires.
+  - Distinguish a legacy AWS *reference string* from AWS as the agent value store.
+  - Preserve no-raw-secret-in-model and single-PAT boundaries.
+  acceptance:
+  - Every mention of AWS or Infisical has an explicit trust surface.
+  - Model-controlled processes cannot fetch raw secret values.
+- id: D21
+  finding_ids:
+  - F06
+  phase: 2
+  path: ops/config/root-file-protection.json
+  lines:
+  - 1-19
+  - 68-76
+  operation: NO_CHANGE
+  reason: Existing canonical local configuration already specifies additive_only, managed, regenerable, a verified
+    pin_bump exception, and root inventory completeness. Fix conflicting consumer instructions, not the owner.
+- id: D22
+  finding_ids:
+  - F08
+  phase: 2
+  path: commands/gmp.md
+  lines:
+  - 101-107
+  - 166-173
+  operation: NO_CHANGE
+  reason: Existing command correctly distinguishes adapter finalize that publishes once from Cursor finalize that
+    stops for the caller to publish. Reconcile other consumers to it; do not change the executor just to make every
+    surface run the same in-process step.
+- id: D23
+  finding_ids:
+  - F08
+  phase: 2
+  path: workflows/gmp_executor.py
+  lines:
+  - 105-111
+  - 1292-1295
+  - 1356-1395
+  operation: NO_CHANGE
+  reason: Existing Cursor STOP is a handoff-specific behavior, not a general prohibition on finished-work publication.
+    Preserve executor ownership; restore validation coverage by changing the changed-file selector.
+- id: D24
+  finding_ids:
+  - F10
+  phase: 2
+  path: ops/make/publish.mk
+  lines:
+  - 67-114
+  operation: NO_CHANGE
+  reason: Dispatcher already implements the one ceremony and the registered verified native route. Do not replace
+    or duplicate it.
+- id: D25
+  finding_ids:
+  - F10
+  phase: 2
+  path: ops/config/publish-authority.json
+  lines:
+  - 1-25
+  operation: NO_CHANGE
+  reason: Native Odoo integration target and its verification guards are already explicit. A routing change requires
+    separate owner/revision proof.
+- id: D26
+  finding_ids:
+  - F12
+  - F01
+  - F02
+  - F03
+  - RA01
+  - RA02
+  - RA03
+  - RA05
+  phase: 2
+  path: CANONICAL_LAW.md
+  lines:
+  - '1193'
+  - '1236'
+  operation: SATISFY_BY_LAW_APPEND
+  amendment_id: LAW-APPEND-001
+  reason: The two existing headings are both numbered 6.2.10. New section 6.2.19 gives unambiguous stable anchors
+    without violating the protected append-only file constraint.
+- id: D27
+  finding_ids:
+  - CI01
+  phase: 1
+  path: ops/scripts/lib/gh_auth_probe.sh
+  expected_blob_sha1: 894fb2437a5351495bdc3c3fa8105a6afc41c522
+  lines:
+  - 67-81
+  operation: APPLY_WITH_TARGET_OWNER
+  exact_before: |
+    _gh_capability org_template_read \
+      gh api "repos/${owner}/.github/contents/.github/pull_request_template.md"
+  required_code_delta:
+  - Route organization template capability checks through the existing ops/scripts/org_dotgithub.py `read_org_file`
+    owner, which attempts REST then Git on the exact organization HEAD. Do not recreate a second fallback implementation
+    in the shell helper.
+  - Preserve the bounded named result semantics OK, DENIED, UNKNOWN and the other independent transport probes.
+  acceptance:
+  - The single-reader corpus test no longer flags gh_auth_probe.sh.
+  - REST denied but Git succeeds produces OK for template-read capability.
+  - Both transports unavailable produce DENIED or UNKNOWN truthfully.
+  test_owner: ops/scripts/tests/test_org_dotgithub.py
+  expected_source_fragment_is_whitespace_normalized: true
+- id: D28
+  finding_ids:
+  - CI03
+  phase: 1
+  path: skills/l9-pr-integration-testing/scripts/integrate.py
+  expected_blob_sha1: 35e0906c339d966f414eaa33e76e3799cc2f0b82
+  lines:
+  - 265-286
+  - 885-901
+  operation: APPLY_WITH_TARGET_OWNER
+  exact_before_fragments:
+  - cmd = ["git", "-c", "core.hooksPath=/dev/null", *args]
+  - '"core.hooksPath=/dev/null",'
+  required_code_delta:
+  - Remove unqualified bypass flags emitted by the host and Docker Git helpers. Use genuinely fresh isolated Git
+    repositories, disabled inherited global/system Git configuration and explicit safe environmental boundaries
+    to prevent untrusted hooks from running.
+  - Do not 'fix' the CI scanner by globally exempting integrate.py or turning off the commit-verification rule.
+  - Check the actual target's verification contract before executing a test merge; a disposable simulation must
+    never be presented as a verified production commit or authorized upstream merge.
+  - Set an isolated Git template/config boundary before removing hooksPath overrides; prove a malicious test fixture
+    cannot plant hooks that execute during simulated merges. A CI scanner passing alone is not sufficient.
+  acceptance:
+  - Both static bypass findings disappear without scanner suppression.
+  - An adversarial tracked hooksPath candidate cannot execute untrusted hooks.
+  - Legitimate disposable merge simulations still work offline.
+  - Host repository and remote remain unchanged.
+  test_owner: tests/skills/l9_pr_integration_testing/test_runner_contract.py
+- id: D29
+  finding_ids:
+  - CI04
+  - F03
+  - RA04
+  phase: 1
+  path: tests/ops/scripts/test_resolve_changed_files_merge_base.py
+  lines:
+  - 93-98
+  operation: APPLY_WITH_TARGET_OWNER
+  exact_before_fragment: |
+    def test_live_repo_resolves_a_real_change_set() -> None:
+        """The regression this fixes: this branch must not resolve to nothing."""
+        result = run_resolver(REPO_ROOT)
+        if result.returncode != 0:
+            pytest.skip(f"no usable base in this checkout: {result.stderr[-200:]}")
+        assert "comparison" in result.stderr
+  required_code_delta:
+  - Replace reliance on the ambient live checkout having an actual diff with a controlled temporary Git history
+    containing a changed branch.
+  - Separately test a clean main checkout with PR_ALLOW_EMPTY=1 yields SOURCE:empty, and a genuinely missing merge
+    base still fails closed.
+  - Add a test that a changed tracked workflows/gmp_executor.py appears in output.
+  - Add a test that an intentionally committed reports/gmp/*.md appears in output.
+  - Ensure ignored, untracked scratch remains excluded.
+  acceptance:
+  - Test works on clean main and on feature branches.
+  - Regression still proves changed files are not silently lost.
+  - No skip is used to disguise a required negative witness.
+  - Selection coverage is proven by tests, not by search-string changes alone.
+  expected_blob_sha1: 3c4d1a21fd0a88e1cef0ab3860a33e9b7f02c6ca
+- id: D30
+  finding_ids:
+  - F07
+  - CI02
+  phase: 2
+  path: tests/ops/memory/test_egress_boundary.py
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Add exact declarative OAuth resource identifier positive cases.
+  - Add wrong-field and executable-provider-use negative cases.
+  - Prove enforce-mode refuses new unallowlisted executable egress.
+  acceptance:
+  - Both previously failed Memory tests pass for the right reason.
+- id: D31
+  finding_ids:
+  - F01
+  phase: 1
+  path: tests/ops/autonomy/test_publish_path_gate.py
+  expected_blob_sha1: 644603c74c649fd60bec70da706a4cd518173138
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Add UNKNOWN scope probe, failed base comparison and unreachable remote negatives.
+  - Add generated-path scope expansion negative.
+  - Add original-vs-current PR-file-footprint adversarial case.
+  - Preserve dry-run and genuine in-scope allowed controls.
+  acceptance:
+  - Every scope proof branch is exercised; zero source access never means allow.
+- id: D32
+  finding_ids:
+  - F02
+  phase: 1
+  path: tests/ops/reports/test_publish.py
+  expected_blob_sha1: 3d474cf6bcfe69394b4ea29142e4ea0c119fac46
+  operation: APPLY_WITH_TARGET_OWNER
+  required_code_delta:
+  - Replace old expectation that any open PR permits a new report push.
+  - Distinguish verified in-scope updates from out-of-scope new reports.
+  - Verify no internal Git push occurs on UNKNOWN, and non-report commits still block.
+  acceptance:
+  - A newly created report cannot expand an unrelated PR by side effect.
+- id: D34
+  finding_ids:
+  - F05
+  - F07
+  - F11
+  phase: 3
+  path: environment/generated/llm-rules/MANIFEST.json
+  operation: REGENERATE_FROM_SOURCE
+  never_hand_edit: true
+  required_code_delta:
+  - Regenerate from current source rules using the owning projector.
+  - Do not hand-edit or invent a second generated-rule producer.
+  acceptance:
+  - Every generated rule digest and body matches its source.
+- id: D35
+  finding_ids:
+  - F05
+  - F07
+  - F11
+  phase: 3
+  path: ops/generated/skill-registry.json
+  operation: REGENERATE_FROM_SOURCE
+  never_hand_edit: true
+  required_code_delta:
+  - Reconcile the registered skills and advertised routes after correcting source skills.
+  acceptance:
+  - No retired l9-plan or l9-aws-secrets live skill is reintroduced.
+- id: D36
+  finding_ids:
+  - F07
+  - F11
+  phase: 3
+  path: environment/agents/adapters/claude-code/generated/skill-registry.json
+  operation: REGENERATE_FROM_SOURCE
+  never_hand_edit: true
+  required_code_delta:
+  - Reconcile the Claude adapter registry from the single canonical skill owner.
+  acceptance:
+  - Registries refer to l9-secrets, not an archived AWS agent-secret skill.
+- id: D37
+  finding_ids:
+  - F07
+  - F11
+  phase: 3
+  path: environment/agents/adapters/claude-code/mcp.template.json
+  operation: INSPECT_THEN_KEEP_OR_REGENERATE
+  required_code_delta:
+  - Verify only the native Memory account connector (not an invented project stdio entry) is represented. Preserve
+    unrelated MCP servers.
+  acceptance:
+  - Memory native readiness is not inferred from a template alone.
+- id: D38
+  finding_ids:
+  - F11
+  phase: 3
+  path: ops/secrets/capability_bind.py
+  operation: NO_CHANGE
+  reason: Existing Infisical transport already rejects source=aws for app keys; legacy reference translation is
+    owned by ops/secrets/legacy_refs.py. Do not repair correct behavior merely because older docs are stale.
+- id: D39
+  finding_ids:
+  - F05
+  phase: 3
+  path: ops/config/merge-authority.json
+  operation: NO_CHANGE
+  reason: 'Shipped `enforcement: disabled` is an explicitly accepted operator decision. Do not silently enable strict
+    while reconciling law prose.'
+- id: D40
+  finding_ids:
+  - F06
+  phase: 3
+  path: ORG_INVARIANTS.yaml
+  operation: NO_CHANGE
+  reason: Existing L9-ORG-007 permits owner-authorized changes and explicitly states codeowner_approval_required
+    false. Its assurance state remains partially_verified; no change is authorized in this local-law runbook.
+- id: D41
+  finding_ids:
+  - F03
+  - RA01
+  - RA05
+  phase: 1
+  path: .pre-commit-config.yaml
+  expected_blob_sha1: a6c5b08d74496ce3f5766b469d363b8a84f72965
+  lines:
+  - 1-7
+  operation: PROTECTED_ROOT_REPLACE_AFTER_OWNER_AUTH
+  exact_before: 'exclude: ''(^|/)(_?archive(d)?/|current_work/|C_GOV_FILES/|reports/)|^workflows/'''
+  proposed_after: 'exclude: ''(^|/)(_?archive(d)?/|current_work/|C_GOV_FILES/)'''
+  protected_root:
+    tier: additive_only
+    non_additive: true
+    commit_marker: 'ALLOW-ROOT-DELETION: .pre-commit-config.yaml — <human-approved evidence-based reason>'
+    pr_body_stamp: <!-- L9_PROTECTED_ROOT_PR -->
+    human_owner_authorization: REQUIRED_NOT_GRANTED
+    marker_is_unfilled_template_not_authorization: true
+    non_additive_requires_owner_approval: true
+  required_code_delta:
+  - Adjust nearby comments 1-6 consistently with actual path coverage; do not claim entire workflows/reports directories
+    are scratch.
+  - Prove changed workflows/gmp_executor.py and intentionally committed reports paths reach applicable pre-commit
+    hooks; do not launch an unbounded full-tree historical report scan.
+  acceptance:
+  - Root protection passes with actual approved marker.
+  - Pre-commit hook selection sees intended paths.
+  - Archived scratch remains excluded.
+- id: D42
+  finding_ids:
+  - F03
+  - RA01
+  phase: 1
+  path: .semgrepignore
+  expected_blob_sha1: 3b0f833f74f20bb0e2c30b2f9021c3ccd3d0d4fb
+  lines:
+  - 34-42
+  operation: EXACT_REMOVE_MANAGED_IGNORE_LINES
+  exact_before_lines:
+  - reports/
+  - workflows/
+  required_code_delta:
+  - Remove both broad ignore entries only after proving Semgrep is configured to scan the supported file types and
+    selected outgoing paths.
+  - Update the scratch comment so no promise of excluding active code remains.
+  acceptance:
+  - Semgrep includes active workflows Python for applicable rules.
+  - Explicit selected report files are not automatically excluded; file types unsupported by Semgrep are not reported
+    as scanned.
+- id: D43
+  finding_ids:
+  - F03
+  - RA01
+  - RA05
+  phase: 1
+  path: .gitleaks.toml
+  expected_blob_sha1: c8946e1498f8cd92a5ffdbf4f34882883184f086
+  lines:
+  - 7-16
+  operation: PROTECTED_ROOT_REMOVE_AFTER_OWNER_AUTH
+  exact_before: '  ''''''(?i)(^|/)reports/'''''','
+  protected_root:
+    tier: additive_only
+    non_additive: true
+    commit_marker: 'ALLOW-ROOT-DELETION: .gitleaks.toml — <human-approved evidence-based reason>'
+    pr_body_stamp: <!-- L9_PROTECTED_ROOT_PR -->
+    human_owner_authorization: REQUIRED_NOT_GRANTED
+    marker_is_unfilled_template_not_authorization: true
+    non_additive_requires_owner_approval: true
+  required_code_delta:
+  - Remove report-wide gitleaks allowlisting so intentionally published reports are inspected for credentials.
+  - Prove scanner receives selected report files and still honors truly excluded scratch paths.
+  acceptance:
+  - Secret in a tracked published report is detected.
+  - Normal harmless published report does not cause a false secret block.
+  - Root protection passes with actual approved marker.
+- id: D44
+  finding_ids:
+  - RA01
+  phase: 1
+  path: ops/scripts/run_pr_precommit.sh
+  expected_blob_sha1: 661d10c6f1bcdb3bfa18b8a2450a454c2a3d36da
+  lines:
+  - 85-120
+  - 124-160
+  operation: VERIFY_EXISTING_BEFORE_EDIT
+  required_code_delta:
+  - Verify the entrypoint passes the actual selected changed-file set and the root pre-commit exclude does not suppress
+    workflows/reports; do not change SKIP lists unless a particular applicable hook is demonstrably omitted.
+  - Keep reader/writer separation and no duplicate precommit run.
+  acceptance:
+  - Selected files reach applicable hook execution.
+  - Hook catalog follows its actual declared ownership.
+- id: D45
+  finding_ids:
+  - RA06
+  phase: 1
+  path: ops/scripts/open_pr_after_gate.sh
+  expected_blob_sha1: 30cc5c3030ddc6250b5d6325ee394ebb835cfe7a
+  lines:
+  - 47-64
+  operation: VERIFY_EXISTING_BEFORE_EDIT
+  required_code_delta:
+  - Test whether a dirty tracked or staged published reports path is obscured by the scratch-only warning filter.
+    If a real publication-safe path is hidden, narrow suppression to genuinely ignored scratch; do not broadly block
+    all ordinary scratch reports.
+  acceptance:
+  - Tracked/staged report changes cannot be represented as irrelevant scratch.
+  - Ignored untracked report scratch does not block ordinary workflows.
+- id: D46
+  finding_ids:
+  - RA03
+  phase: 1
+  path: ops/scripts/pr_overlap_check.py
+  expected_blob_sha1: 3c47f3ab8a6f02edc1db6a218fc8989d4e5be982
+  lines:
+  - 52-61
+  operation: VERIFY_ONLY
+  required_code_delta:
+  - Preserve collision-only exemptions for derived artifacts if proven legitimate; those do not exempt original
+    PR footprint checks in the publication gate.
+  - Do not conflate a textual conflict tolerance with authorization to publish outside an immutable original footprint.
+  acceptance:
+  - Overlap and publication decisions remain separate and independently checked.
+validation_matrix:
+- id: V01
+  target: CANONICAL_LAW.md
+  test: Existing prefix is byte-for-byte unchanged; only canonical_append.payload added.
+  expected: PASS
+- id: V02
+  target: CANONICAL_LAW.md
+  test: Amendment marker occurs exactly once; stable identifiers unique.
+  expected: PASS
+- id: V03
+  target: protected_root_gate
+  test: PR body includes L9_PROTECTED_ROOT_PR; no deletion marker needed for append-only.
+  expected: PASS
+- id: V04
+  target: first_publication_gate
+  test: Open PR + unknown original footprint -> DENY.
+  expected: PASS
+- id: V05
+  target: first_publication_gate
+  test: Failed git diff/base lookup -> DENY, not empty expansion.
+  expected: PASS
+- id: V06
+  target: first_publication_gate
+  test: New generated outside-scope file -> DENY.
+  expected: PASS
+- id: V07
+  target: first_publication_gate
+  test: Existing in-scope open PR + verified comparison -> ALLOW.
+  expected: PASS
+- id: V08
+  target: report_publisher
+  test: New report on existing unrelated PR -> NO_PUSH.
+  expected: PASS
+- id: V09
+  target: report_publisher
+  test: Verified in-scope report edit after required verification -> allowed publication.
+  expected: PASS
+- id: V10
+  target: report_publisher
+  test: Python wrapper cannot evade the publication check.
+  expected: PASS
+- id: V11
+  target: changed_files
+  test: Tracked active workflows/ file is in resolved changes.
+  expected: PASS
+- id: V12
+  target: changed_files
+  test: Tracked published reports/ file is in resolved changes.
+  expected: PASS
+- id: V13
+  target: changed_files
+  test: Ignored untracked scratch does not enter publish by accident.
+  expected: PASS
+- id: V14
+  target: changed_files
+  test: Clean main is SOURCE:empty when permitted; unknown merge base fails.
+  expected: PASS
+- id: V15
+  target: Program_Execution
+  test: Retired Make targets cannot launch new PE work as an authority.
+  expected: PASS_OR_DOCUMENTED_COMPATIBILITY_BLOCK
+- id: V16
+  target: Memory_3_native
+  test: Stdio-only package is UPSTREAM_BLOCKED; no fallback installed.
+  expected: PASS
+- id: V17
+  target: Memory_egress
+  test: Exact OAuth metadata accepted, executable direct provider egress denied.
+  expected: PASS
+- id: V18
+  target: org_dotgithub
+  test: One org reader; REST-to-Git fallback valid.
+  expected: PASS
+- id: V19
+  target: PR_integration_runner
+  test: No forbidden Git verification bypass, no untrusted hooks, sandbox works.
+  expected: PASS
+- id: V20
+  target: root_protection
+  test: Pure pin bump distinct from non-additive root edit.
+  expected: PASS
+- id: V21
+  target: generated_rules
+  test: Regenerated LLM rules/skill registries source-equal and digest-valid.
+  expected: PASS
+- id: V22
+  target: merge_switch
+  test: Disabled mode unchanged and strict-mode code preserved/tested.
+  expected: PASS
+- id: V23
+  target: publication_dispatch
+  test: Generic make-pr and registered native Odoo dispatch remain unique.
+  expected: PASS
+- id: V24
+  target: live_ci
+  test: All five pinned-main failures remedied; no newly introduced regressions.
+  expected: PASS
+- id: V25
+  target: final_host
+  test: GitHub check results and actual PR head verified after publication.
+  expected: PASS_BEFORE_MERGE_CLAIM
+- id: V26
+  target: pre_commit_selector
+  test: A changed workflows/gmp_executor.py reaches actual pre-commit applicable hooks despite previous global exclusion.
+  expected: PASS_AFTER_REMEDIATION
+- id: V27
+  target: semgrep_selector
+  test: Active workflows Python source is included for applicable Semgrep rules, not merely in changed-file discovery.
+  expected: PASS_AFTER_REMEDIATION
+- id: V28
+  target: gitleaks_selector
+  test: A deliberately planted fake secret in a committed report fixture is detected and a harmless report stays
+    clean.
+  expected: PASS_AFTER_REMEDIATION
+- id: V29
+  target: protected_root
+  test: Approved non-additive .pre-commit-config.yaml and .gitleaks.toml changes each have an exact commit marker
+    and required protected-root PR stamp.
+  expected: PASS_WITH_OWNER_AUTHORITY
+- id: V30
+  target: pr_fleet
+  test: A generated-file local write grant permits child preparation but never gives parent-branch remote publication
+    permission.
+  expected: PASS_AFTER_REMEDIATION
+- id: V31
+  target: original_pr_scope
+  test: Prove first-publication immutable identity and recomputed original diff; adversarial mutated current PR
+    file list cannot enlarge scope.
+  expected: PASS_OR_BLOCKED_UNKNOWN
+- id: V32
+  target: host_publication
+  test: On actual Cursor and Claude host bindings, a nested Python subprocess push is governed or denied explicitly,
+    not assumed covered by shell hooks.
+  expected: PASS_OR_BLOCKED_UNKNOWN
+- id: V33
+  target: report_dirty_filter
+  test: Tracked report dirt and ignored untracked scratch are classified distinctly in PR open.
+  expected: PASS_OR_TARGETED_OWNER_FIX
+- id: V34
+  target: original_scope_paths
+  test: Rename both path endpoints, deleted paths, filenames with whitespace and Git -z output are accounted for.
+  expected: PASS_AFTER_REMEDIATION
+- id: V35
+  target: protected_root
+  test: The unchanged law prefix and the append-only AGENTS prefix are verified at source bytes, not merely parsed
+    YAML.
+  expected: PASS_AFTER_REMEDIATION
+execution_runbook:
+- stage: 0
+  name: REBIND
+  tasks:
+  - Freeze new main SHA and open PR scope; reject changed law blob unless reconciled.
+  - Verify .github authority registry/semantic binding and local ORG_INVARIANTS authority.
+  - Check current target hook, native publication and protected-root contracts.
+  - 'Resolve original PR scope evidence source by exact current first-publication owner: identify a reconstructible
+    immutable open-event/head or stop. This is a true unresolved dependency, not a placeholder to be guessed.'
+  - Check added protected root changes in .pre-commit-config.yaml and .gitleaks.toml against L9-ORG-007 approval
+    and marker contracts.
+  must_pass: source_revisions_and_authority_resolved
+- stage: 1
+  name: REPAIR_PUBLISH_AND_CI_ROOT_CAUSES
+  tasks:
+  - Implement tri-state unknown denial in D01 first; keep original-footprint proof dependency RA02 separately BLOCKED
+    until verified.
+  - Reconcile report publisher D02 and distinguish worker local-write authority D03 from remote publish authority.
+  - 'Repair ALL active scanner selectors: D04-D05 and D41-D43, verify D44-D46, not the resolver alone.'
+  - Repair actual CI causes D27-D29 and focused tests D30-D32, without suppressing security rules.
+  - Test negative and positive witnesses, including rename/delete, clean checkout and direct helper push.
+  must_pass: V04-V14,V18-V19,V26-V34; unknown original provenance remains explicit blocker
+- stage: 2
+  name: RECONCILE_SOURCE_OF_EFFECTIVE_DOCTRINE
+  tasks:
+  - Census PE direct and indirect consumers before any conditional entrypoint retirement; preserve inert test/archive
+    paths (D07-D08).
+  - Reconcile active source rule and Profile D09, D11-D12.
+  - Apply only append-only changes LAW-APPEND-001 and D13.
+  - Reconcile Memory/Secrets consumers D14-D20 and narrow scanner D17.
+  must_pass: V01-V03_and_V15-V17_and_V20_and_V22
+- stage: 3
+  name: GENERATE_AND_VERIFY
+  tasks:
+  - Regenerate every affected source-owned rule, registry and adapter projection D10, D34-D37.
+  - Run changed-file/specialist tests, root protection, governance checks and full CI.
+  - Compare actual changes against the approved file scope and exact law append.
+  - Leave accepted merge switch and global authority unchanged.
+  - Run actual pre-commit, Semgrep and gitleaks focused path witnesses; root protected gate with specific commit
+    messages, plus current CI; do not treat staged YAML validation as executed code proof.
+  must_pass: V21-V24
+- stage: 4
+  name: PUBLICATION_IF_SEPARATELY_AUTHORIZED
+  tasks:
+  - Confirm clean, correctly targeted checkout and exact L4 authorized tree.
+  - Publish once via currently verified Governance make-pr dispatcher.
+  - Resolve review and checks at actual PR head; do not treat local PASS as hosted PASS.
+  - Stop without merge unless explicit operator merge instruction is in scope.
+  - 'Re-query open PRs #811/#812/#813 and exact target head; never claim the earlier snapshot is a live branch lock.'
+  must_pass: V25
+unknowns_and_stop_conditions:
+- id: U01
+  subject: Historical immutable original PR file footprint provenance
+  status: NOT_VERIFIED_PRESENT
+  effect: Block open-PR raw pushes whose original footprint cannot be proved.
+- id: U02
+  subject: Current runtime installed Memory 3 native HTTP package / OAuth PKCE
+  status: NOT_PROVED
+  effect: No live native MCP readiness or fallback claim.
+- id: U03
+  subject: PE targets consumed by external repositories
+  status: NOT_CENSUSED
+  effect: No destructive physical removal without exact external-consumer census.
+- id: U04
+  subject: Enforcement of organization-wide human merge authority vs local disabled switch
+  status: ACCEPTED_GAP_NOT_REMEDIATED
+  effect: Do not claim org-wide strict enforcement or reenable without separate decision.
+- id: U05
+  subject: Current PR
+  status: NOT_IN_FROZEN_MAIN
+  effect: Recompute conflicts/sha before coding or publication.
+- id: U06
+  subject: Actual result of any proposed patch or new regression tests
+  status: NOT_EXECUTED
+  effect: Never declare this candidate merged or verified.
+- id: U07
+  subject: Three independent scanner ignore lists that still hide outgoing active paths
+  status: CONFIRMED_AND_PLANNED_NOT_FIXED
+  effect: No claim of restored F03 until D41-D44 are validated end to end.
+- id: U08
+  subject: Root-protected non-additive selector corrections require real authorized owner and commit marker
+  status: AUTHORIZATION_NOT_GRANTED
+  effect: No automatic root-file deletion/rewrite from this package.
+- id: U09
+  subject: Host command effect interception, nested Python subprocess and original-PR proof
+  status: NOT_EXECUTED
+  effect: Full publishing enforcement cannot be claimed from static source or YAML smoke checks.
+- id: U10
+  subject: Law proposal static integrity versus independent source authority admission
+  status: NOT_ADMITTED
+  effect: Do not report an accepted canonical law or a validated independent GAR receipt.
+closure_contract:
+  required:
+  - Every finding F01-F12 and CI01-CI04 is either fixed, proved already satisfied, or explicitly blocked.
+  - Every law historical reference remains traceable and all new anchors are unique.
+  - All changes are source-owned, with regenerated outputs not hand edited.
+  - Root-protection and workflow-scope tests pass at the final candidate head.
+  - Current CI finishes green, not merely the prior PR checks.
+  - Only authorized repositories/files are modified by the future executor.
+  - All intended outgoing active paths traverse the resolver AND the independently owned pre-commit/Semgrep/gitleaks
+    selectors.
+  - Protected-root non-additive exclusions are owner-authorized with the required per-file marker and stamped PR
+    body.
+  - Original PR footprint provenance has an authenticated reproducible source, or affected raw publish remains denied
+    with an explicit blocker.
+  - Preserve separation of local worker write scope, collision tolerance and actual remote publication scope.
+  prohibited_claims:
+  - Runbook creation constitutes a repo mutation or admitted canonical law.
+  - A green projection validator means runtime provider readiness.
+  - A current PR file list conclusively proves the original PR file footprint.
+  - CI success alone means a scope or authority violation was repaired.
+  - An accepted disabled merge switch equals enforced human merge authorization.
+  - Removal of reports/ and workflows/ from the resolver alone establishes actual precommit or security scanner
+    coverage.
+  completion_status_now: RECURSIVE_ALIGNMENT_STATIC_PASS_IMPLEMENTATION_BLOCKED_NO_MUTATION
+revision: 2.0.0
+parent_artifact:
+  name: canonical_law_revision_runbook_2026-11-03.yaml
+  sha256: b6b2c11a806ada566786fefb65ddbda0cec31855fd1ce350213479109c35dc8a
+  disposition: SUPERSEDED_BY_THIS_REVISED_PROPOSAL
+recursive_alignment:
+  status: STATICALLY_CLOSED_WITH_MATERIAL_EXECUTION_UNKNOWNS
+  passes:
+  - pass: 1
+    axis: LAW_TO_RUNTIME
+    finding_ids:
+    - F01
+    - F02
+    - F03
+    - RA01
+    - RA02
+    result: CORRECTED_REVISION_MAP
+  - pass: 2
+    axis: RUNTIME_TO_LAW
+    finding_ids:
+    - RA03
+    - RA04
+    result: CORRECTED_WRITE_VS_PUBLISH_AND_SUPERSESSION
+  - pass: 3
+    axis: CROSS_CHECKER_SELECTION
+    finding_ids:
+    - RA01
+    - RA05
+    - RA06
+    result: ALL_KNOWN_FILTER_OWNERS_EXPLICIT
+  - pass: 4
+    axis: AUTHORITY_AND_PROTECTED_ROOT
+    finding_ids:
+    - RA02
+    - RA05
+    - RA07
+    result: MATERIAL_UNKNOWNS_PRESERVED
+  - pass: 5
+    axis: NEGATIVE_WITNESS_CLOSURE
+    finding_ids:
+    - F01
+    - F02
+    - F03
+    - CI01
+    - CI02
+    - CI03
+    - CI04
+    result: TEST_CASES_SPECIFIED_NOT_EXECUTED
+  - pass: 6
+    axis: PARTIAL_PROJECTION_OWNERSHIP
+    finding_ids:
+    - F07
+    result: D14_SPLIT_HAND_AUTHORED_COMMENTS_VS_GENERATED_SKILL_OVERRIDES
+  convergence_rule: A patch is not closed until its owner, exact target revision, independent selectors, negative
+    and positive tests, host runtime effect, and hosted CI are observed. The package itself may pass static checks
+    with execution still blocked.
+  do_not_auto_apply:
+  - D07
+  - D41
+  - D43
+  obligations_still_blocked:
+  - original_PR_immutable_footprint_source
+  - protected_root_owner_authorization
+  - live_host_hook_interception
+  - independent_global_projection_replay
+  - complete_current_ci
+  parallel_nonduplicated_owner_groups:
+  - publication_effect
+  - changed_file_selection_and_scanners
+  - legacy_PE_owner
+  - documentation_consumer_alignment
+  - native_Memory_front_door
+  - CI_defects
+  fix_priority:
+  - P0 tri-state unknown deny
+  - P0 report-helper direct push guard
+  - P0 all-four-scanner selection alignment
+  - P1 existing CI failures
+  - P1 PE compatibility census
+  - P2 existing law and generated consumer alignment

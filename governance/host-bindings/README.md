@@ -78,10 +78,10 @@ Both SessionStart hooks provision the managed checkout before binding
 (`ops/scripts/ensure_authority_checkout.sh`: full clone, fetched at most every 900 s,
 fast-forward only on a clean `main`, never reset or deleted), so the binding resolves the
 same authority in every repository instead of only where a `.github` clone happens to sit
-beside the workspace. The domain verifiers
-need that checkout's `HEAD` to be its `main`; a checkout left on another branch makes the
-domains `STALE` (`AUTHORITY_REVISION_MISMATCH`) and the Cursor binding `DEGRADED`, while
-the operating plane still binds.
+beside the workspace. Domain verifiers read `origin/main` from a detached snapshot of
+that checkout (`pinned_checkout`, the same snapshot the operating plane uses). The
+clone's branch and dirty tree stay untouched, so a checkout that is not on `main` does
+not make the domains `STALE`.
 
 ## Run it by hand
 

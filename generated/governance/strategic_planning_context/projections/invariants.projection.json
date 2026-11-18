@@ -1,0 +1,76 @@
+{
+  "generated_by": {
+    "compiler": "l9-semantic-compiler",
+    "version": "0.10.0"
+  },
+  "payload": {
+    "invariants": [
+      {
+        "id": "L9-AUTH-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "No component may expand its own authority.\n"
+      },
+      {
+        "id": "L9-AUTH-002",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Capability to perform a function does not confer authority over the governing decision or action.\n"
+      },
+      {
+        "id": "L9-OWNER-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Within a given semantic scope and revision, each canonical concept has one authoritative owner; mirroring, projection, consumption, implementation, dependency, co-location, or execution by another component does not by itself transfer ownership or create a competing canonical source.\n"
+      },
+      {
+        "id": "L9-SEM-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Provider identity does not imply semantic ownership.\n"
+      },
+      {
+        "id": "L9-SCOPE-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Global admission of a generalized law does not transfer ownership of the originating domain semantics; the admitted global law and the originating domain semantics remain separately owned.\n"
+      },
+      {
+        "id": "L9-DERIVED-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Derived artifacts do not become canonical authority automatically.\n"
+      },
+      {
+        "id": "L9-UNKNOWN-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Missing, unknown, unresolved, conflicting, unavailable, or unproven inputs, claims, or results remain explicit; they must not be silently coerced, reconciled, or treated as establishing a value, compatibility, validity, authorization, or success. An applicable authoritative rule may resolve a conflict, but authority does not manufacture missing evidence or establish an unproven claim.\n"
+      },
+      {
+        "id": "L9-PROV-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Every derived semantic artifact must preserve enough provenance to resolve its authoritative inputs and the declared transformations and coordinates that produced it.\n"
+      },
+      {
+        "id": "L9-PROJECTION-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "A projection is a bounded view of existing source semantics; it may select or reshape representation but may not invent, reconcile, reinterpret, or expand source meaning or authority. A transformation that introduces semantic consequences is not projection and must be classified under another applicable governed operation.\n"
+      },
+      {
+        "id": "L9-STRATEGY-001",
+        "owner": "Quantum-L9/.github",
+        "scope": "global",
+        "statement": "Plan Keeper owns the Strategic Plan. Strategic Plan Metacognitive Reasoner owns analysis of the reasoning processes that produce the Strategic Plan. The latter may teach the former but may never modify, supersede, or become strategic authority."
+      }
+    ]
+  },
+  "projection_digest": "sha256:6f49e3bbd95f4c24ebf4323136927858f0afb29aa405586dc75d8edcef71f818",
+  "projection_profile_digest": "sha256:2940f0e2ae41676d262365c594b901f4e1de27be5249affbae9480f48633e173",
+  "projection_profile_ref": "l9.projection/strategic-planning-context@2",
+  "schema": "l9.projection-artifact/v1",
+  "source_digest": "sha256:d3eb316ee57b4bd6c2093b2ebd60caf0d06a4bcbfe32ee26f488f8d4887d9f96",
+  "source_ref": "l9.source/invariants@1"
+}

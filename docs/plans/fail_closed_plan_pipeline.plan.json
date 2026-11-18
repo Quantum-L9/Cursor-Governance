@@ -1,0 +1,416 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Fail-closed l9-plan-simple pipeline",
+  "objective": "Make /l9-plan-simple fail closed so an invocation runs l9-global-architect and emits a plan whose required sections validate with no unknown or unbound markers. GAR run gar-fail-closed-20261105 is STANDALONE (orchestration authority was not transferred). Realization mode is MUTATION by OBJECTIVE_DERIVATION RM-001. Validation is required by VD-001. Delivery is PERSISTED_REPOSITORY by DL-003. Depth profile is DEEP because the blast radius crosses the skill, the plan schema, and the hook plane. First-Order intervention, bound before architecture: one pipeline is the only admissible writer of a simple plan. Governing cause is verified from the two host plan cards and from the scripts: the host accepts a plan with no architect proof, and validate_plan_document.py plus render_plan_pe_autonomy.py treat a half-filled plan as success. Kill-pattern hypothesis KP-001 is confirmed: CreatePlan and the renderer are two writers of the same artifact with no consistency protocol. Selected architecture stays inside that intervention: run_plan_pipeline.py sequences the existing validator and renderer, a GAR run file is mandatory for this skill only, and admit_plan.py rejects any other simple plan. Standalone GAR persistence stays optional for other callers. The L9 architecture profile applies as a constraint on this governance skill and does not activate L9_INTEGRATED. Evaluator result for the host plan-tool payload is UNKNOWN (U2).",
+  "success_criteria": [
+    "V1 proves run_plan_pipeline.py exits non-zero when the GAR run file is absent",
+    "V2 proves validate_plan_document.py rejects a document that omits owner, execution_envelope, complexity, or todo layer",
+    "V3 proves the render_plan_pe_autonomy.py projection has a passing section receipt and contains no unknown or unbound marker",
+    "V4 proves admit_plan.py exits non-zero on a title-and-paragraph plan",
+    "V5 proves validate_plan_section_receipt.py exits non-zero when gar_upstream.invoked is true and the GAR run file is absent",
+    "V6 proves render_plan_pe_autonomy.py without --execute-via still emits the Program Execution heading for a complete document"
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-global-architect/scripts/write_plan_run.py",
+      "skills/l9-plan/schemas/plan-document.schema.json",
+      "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+      "skills/l9-plan/fixtures/plan_pass.json",
+      "skills/l9-plan-simple/scripts/run_plan_pipeline.py",
+      "skills/l9-plan-simple/scripts/admit_plan.py",
+      "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+      "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+      "skills/l9-plan-simple/scripts/plan_sections.py",
+      "skills/l9-plan-simple/SKILL.md",
+      "skills/l9-plan-simple/references/plan-workflow-simple.md",
+      "commands/l9-plan-build.md",
+      "ops/hooks/plan_kernel_gate.py",
+      ".pre-commit-config.yaml"
+    ],
+    "out": [
+      "Rewriting the BRS drift plan or the integration-PR plan from the screenshots",
+      "Program Execution campaign publication and Program Lock",
+      "Requiring a disk run file for every standalone GAR invoke",
+      "Cancelling the host plan-card UI",
+      "Migrating historical docs/plans JSON",
+      "Editing AGENTS.md or CANONICAL_LAW.md",
+      "The unrelated dirty file skills/l9-pr-integration-testing/references/adapters.md"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": "python3 ops/hooks/plan_memory_prefetch.py --workspace . --task fail-closed l9-plan-simple pipeline",
+      "pass_criteria": "MEMORY_PREFETCH namespace=cursor-governance snapshot_digest=d61f55afac338e26f63d0e606eda537b24b8c292d0158da42c420c8c7dc406fc checked_record_count=349 conflicts=0 policy_version=memory-phase-lock/v2",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Read skills/l9-global-architect/SKILL.md and runtime/MANIFEST.yaml load_order: catalogs/REASON_CODES.yaml, runtime/EVALUATOR_REGISTRY.yaml, contracts/EPISTEMIC_DISCIPLINE.yaml, contracts/L9_ARCHITECTURE_PROFILE.yaml, integrations/REASONING_FOURSOME_BINDING.yaml, contracts/ARCHITECTURAL_INTEGRITY.yaml, contracts/OBJECTIVE_DERIVATION.yaml, contracts/OUTCOME_OWNERSHIP.yaml, contracts/CONVERGENCE.yaml, kernels/ARCHITECT_KERNEL.yaml, catalogs/KILL_PATTERNS.yaml, runtime/RUN_STATE.yaml, integrations/L9_RUNTIME_BINDING.yaml, runtime/STATE_MACHINE.yaml; reasoning foursome 01 through 04",
+      "pass_criteria": "GAR run gar-fail-closed-20261105 reached PLAN with intervention bound and integration_mode STANDALONE",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk high --evidence partial --json",
+      "pass_criteria": "depth=deep and omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse HEAD",
+      "pass_criteria": "branch main at 7da1b739baa535bd9842b5147de9abc8ac4421f6; hook catalog is .pre-commit-config.yaml",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add write_plan_run.py that hashes GAR load_order and stores the bound intervention evidence. Standalone GAR persistence stays optional.",
+      "files": ["skills/l9-global-architect/scripts/write_plan_run.py"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file",
+      "layer": "control_plane",
+      "leverage_rank": 1,
+      "shared_root_cause": "GAR invocation is a self-attested boolean"
+    },
+    {
+      "id": "T2",
+      "task": "Require owner, estimate, execution_envelope, complexity, and the layer field on every task in the plan schema. Renderer exits non-zero on unknown or unbound markers unless --allow-draft is set.",
+      "files": [
+        "skills/l9-plan/schemas/plan-document.schema.json",
+        "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+        "skills/l9-plan/fixtures/plan_pass.json",
+        "tests/skills/l9_plan_simple/test_renderer_fill.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "required array and main return",
+      "layer": "policy",
+      "leverage_rank": 2,
+      "shared_root_cause": "validator PASS still renders unknown markers and exits 0"
+    },
+    {
+      "id": "T3",
+      "task": "Bind the section receipt to the GAR run file hash and fail when the markdown contains unknown or unbound markers.",
+      "files": [
+        "skills/l9-plan-simple/scripts/plan_sections.py",
+        "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+        "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+        "skills/l9-plan-simple/schemas/plan-section-receipt.schema.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1"],
+      "operation": "Replace",
+      "anchor": "receipt_status",
+      "layer": "assurance",
+      "leverage_rank": 3,
+      "shared_root_cause": "GAR invocation is a self-attested boolean"
+    },
+    {
+      "id": "T4",
+      "task": "Add run_plan_pipeline.py as the only writer: prefetch receipt, GAR run file, validator, renderer with required --execute-via and --workspace, then receipt generate and validate.",
+      "files": ["skills/l9-plan-simple/scripts/run_plan_pipeline.py"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T1", "T2", "T3"],
+      "operation": "Create",
+      "anchor": "new file",
+      "layer": "control_plane",
+      "leverage_rank": 4,
+      "shared_root_cause": "two writers and no consistency protocol"
+    },
+    {
+      "id": "T5",
+      "task": "Add admit_plan.py, call it from plan_kernel_gate handle_post_tool_use, append a changed-file hook to .pre-commit-config.yaml, and probe whether the host plan-tool payload is visible.",
+      "files": [
+        "skills/l9-plan-simple/scripts/admit_plan.py",
+        "ops/hooks/plan_kernel_gate.py",
+        ".pre-commit-config.yaml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T3", "T4"],
+      "operation": "Create",
+      "anchor": "handle_post_tool_use",
+      "layer": "runtime",
+      "leverage_rank": 5,
+      "shared_root_cause": "two writers and no consistency protocol"
+    },
+    {
+      "id": "T6",
+      "task": "Remove the hand-copy sentence. Point SKILL.md, plan-workflow-simple.md, and commands/l9-plan-build.md at run_plan_pipeline.py.",
+      "files": [
+        "skills/l9-plan-simple/SKILL.md",
+        "skills/l9-plan-simple/references/plan-workflow-simple.md",
+        "commands/l9-plan-build.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T4"],
+      "operation": "Replace",
+      "anchor": "hand-copy sentence",
+      "layer": "docs",
+      "leverage_rank": 6,
+      "shared_root_cause": "two writers and no consistency protocol"
+    },
+    {
+      "id": "T7",
+      "task": "Lock V1 through V6, including a title-and-paragraph fixture that admit_plan.py rejects, and update the renderer marker test to require --allow-draft.",
+      "files": [
+        "skills/l9-plan-simple/scripts/self_test.py",
+        "tests/skills/l9_plan_simple/"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T4", "T5", "T6"],
+      "operation": "Replace",
+      "anchor": "self_test.py",
+      "layer": "assurance",
+      "leverage_rank": 7,
+      "shared_root_cause": "validator PASS still renders unknown markers and exits 0"
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3", "T4", "T5", "T6", "T7"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "GAR run file and schema both refuse an incomplete plan",
+      "unlocks": "pipeline writer"
+    },
+    {
+      "id": "M2",
+      "outcome": "run_plan_pipeline.py is the only writer and admit_plan.py rejects other simple plans",
+      "unlocks": "publication hook and skill text"
+    },
+    {
+      "id": "M3",
+      "outcome": "V1 through V6 pass",
+      "unlocks": "ready to publish"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "validate_plan_document.py fails a fixture missing owner",
+      "no_go_action": "stop and fix the schema before writing the pipeline"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "admit_plan.py rejects a title-and-paragraph fixture",
+      "no_go_action": "stop and fix admission before retargeting the skill text"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "self_test.py and pytest tests/skills/l9_plan_simple exit 0",
+      "no_go_action": "block publication"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "skills/l9-plan-simple/SKILL.md",
+      "action": "update",
+      "todo_ids": ["T6"]
+    },
+    {
+      "surface": "skills/l9-plan-simple/references/plan-workflow-simple.md",
+      "action": "update",
+      "todo_ids": ["T6"]
+    },
+    {
+      "surface": "commands/l9-plan-build.md",
+      "action": "update",
+      "todo_ids": ["T6"]
+    },
+    {
+      "surface": ".pre-commit-config.yaml",
+      "action": "update",
+      "todo_ids": ["T5"]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Additive operating instructions already name l9-plan-simple. The behavior change lives in the skill, the schema, and the hooks."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Symlink law and publication law are unchanged."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If the only new check is skill prose, can the next session still emit a title-and-paragraph host plan card?",
+      "If the schema change is not paired with a renderer failure, can a valid JSON document still render unknown markers and exit 0?",
+      "If admission runs on _TEMPLATE.plan.md and on /ff corpus edits, do unrelated plan files fail publication?",
+      "If handle_post_tool_use starts enforcing kernel-pass again, do store plans gain a second ceremony this plan does not authorize?"
+    ],
+    "assumed_false_ifs": [
+      "validate_plan_document.py remains the schema owner and the renderer remains the only projection",
+      "Cursor postToolUse still receives file-write paths ending in .plan.md",
+      "beforeSubmitPrompt stays fail-open and is not the gate",
+      ".pre-commit-config.yaml runs on changed files inside make pr"
+    ],
+    "blast_radius": "Every new simple plan, the plan-pass fixture, renderer tests, and any changed kind:simple plan in a pull request. Historical plans outside the diff stay as they are. A wrong admit rule blocks publication of a legitimate plan edit until the receipt is regenerated.",
+    "rollback": "Revert the pull request. No data migration and no deployed service. Restoring the previous scripts restores the previous exit codes."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T2", "T3", "T4", "T5", "T6", "T7"],
+    "shared_causes": [
+      "GAR invocation is a self-attested boolean",
+      "validator PASS still renders unknown markers and exits 0",
+      "two writers and no consistency protocol"
+    ],
+    "deletions_or_consolidations": [
+      "Remove the hand-copy path in plan-workflow-simple.md",
+      "Remove the self-attested --gar-invoked success path"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Schema tightening breaks plan_pass.json and renderer tests that expect unknown markers and exit 0",
+      "mitigation": "Update the fixture in the same change and require --allow-draft for the marker test"
+    },
+    {
+      "risk": "Admission on every plan file blocks /ff corpus edits and the template plan",
+      "mitigation": "Exempt _TEMPLATE.plan.md and apply the gate to kind simple status current plans in the changed-file set"
+    },
+    {
+      "risk": ".pre-commit-config.yaml is a protected root file",
+      "mitigation": "Append one hook entry and use the protected-root stamp on the pull request"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U2",
+      "question": "Does postToolUse receive the host plan-tool payload, or only file writes?",
+      "decision_effect": "The file gate and the pre-commit hook land either way. A payload that includes the plan body also fails the latch when required headings are absent.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 skills/l9-plan-simple/scripts/run_plan_pipeline.py on a fixture with no GAR run file",
+      "pass_criteria": "exit non-zero",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 skills/l9-plan/scripts/validate_plan_document.py on a document missing owner, execution_envelope, complexity, or layer",
+      "pass_criteria": "exit non-zero",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 skills/l9-plan-simple/scripts/run_plan_pipeline.py --execute-via=cursor-build --workspace .",
+      "pass_criteria": "section receipt PASS and the markdown has no unknown or unbound marker",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "python3 skills/l9-plan-simple/scripts/admit_plan.py on a title-and-paragraph fixture",
+      "pass_criteria": "exit non-zero",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py on a receipt whose gar run file is absent",
+      "pass_criteria": "exit non-zero and the error names the missing run file",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": "python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py skills/l9-plan/fixtures/plan_pass.json",
+      "pass_criteria": "exit 0 and the Program Execution heading is present",
+      "status": "pending"
+    },
+    {
+      "id": "V7",
+      "command": "python3 -m pytest tests/skills/l9_plan_simple -q && python3 skills/l9-plan-simple/scripts/self_test.py && .pre-commit-config.yaml",
+      "pass_criteria": "pytest and self_test exit 0; the changed-file hook listed in .pre-commit-config.yaml runs admit_plan.py",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U2"],
+    "next_skill": "l9-plan-simple cursor-build",
+    "stop_reason": "PLAN_DOCUMENT is the planning deliverable. Implementation proofs V1-V7 are pending. U2 stays a probe and blocks converged."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-global-architect/scripts/write_plan_run.py",
+      "skills/l9-plan/schemas/plan-document.schema.json",
+      "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+      "skills/l9-plan/fixtures/plan_pass.json",
+      "tests/skills/l9_plan_simple/test_renderer_fill.py",
+      "skills/l9-plan-simple/scripts/plan_sections.py",
+      "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py",
+      "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+      "skills/l9-plan-simple/schemas/plan-section-receipt.schema.json",
+      "skills/l9-plan-simple/scripts/run_plan_pipeline.py",
+      "skills/l9-plan-simple/scripts/admit_plan.py",
+      "ops/hooks/plan_kernel_gate.py",
+      ".pre-commit-config.yaml",
+      "skills/l9-plan-simple/SKILL.md",
+      "skills/l9-plan-simple/references/plan-workflow-simple.md",
+      "commands/l9-plan-build.md",
+      "skills/l9-plan-simple/scripts/self_test.py",
+      "tests/skills/l9_plan_simple/"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "skills/l9-pr-integration-testing/references/adapters.md"
+    ],
+    "preserved_contracts": [
+      "renderer --execute-via default stays Program Execution",
+      "beforeSubmitPrompt stays fail-open",
+      "kernel-pass stays a separate latch",
+      "standalone GAR persistence stays optional"
+    ],
+    "validation_commands": [
+      "python3 skills/l9-plan/scripts/validate_plan_document.py",
+      "python3 skills/l9-plan-simple/scripts/validate_plan_section_receipt.py",
+      "python3 skills/l9-plan-simple/scripts/self_test.py",
+      "python3 -m pytest tests/skills/l9_plan_simple -q",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "GAR run gar-fail-closed-20261105",
+    "prefetch receipt",
+    "schema required fields",
+    "single pipeline writer",
+    "admission gate"
+  ],
+  "estimate": "1 PR",
+  "owner": "igor_beylin",
+  "execution_envelope": {
+    "network": {"mode": "none", "allowed_services": []},
+    "secrets": {"access": "none"}
+  },
+  "complexity": {
+    "architectural_boundaries_crossed": [
+      "skill prompt plane",
+      "PLAN_DOCUMENT schema",
+      "Cursor post-tool hook",
+      "pre-commit publication gate"
+    ],
+    "external_systems_touched": [],
+    "migration_required": false
+  }
+}

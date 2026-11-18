@@ -1,0 +1,396 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "estimate": "one feature branch from origin/Staging 9ee917e7, three module version bumps, no new model",
+  "title": "Map polymer masters, LDPE grade A, form and source, and stop note profiles",
+  "objective": "On a feature branch cut from origin/Staging at 9ee917e7, add the six missing polymer masters, make the LDPE grade A wording family resolve to LDPE film grade A with clean and dry, import form and source-type tokens that match existing masters, make the ERP worksheet line use the same phrase rules as CRM, and stop call-note sentences from creating material profiles.",
+  "success_criteria": [
+    "V1: ruff and the hooks in .pre-commit-config.yaml exit 0 on every touched file.",
+    "V2: normalize_crm_material resolves TPU, Textile, Foam - PU, PVB, UBC, and TPV to TPU, TEXTILE, PU_FOAM, PVB, UBC, and TPV, and resolves LDPE Grade A Film, LDPE Film A, LDPE A Film, LDPE Film - Grade A, LDPE Film Grade A, and 99% Clear LDPE Film to LDPE, form FILM, grade A, attributes clean and dry.",
+    "V2: the 27 call-note alias keys stay unresolved and their CSV rows are status held.",
+    "V2: a CRM section whose phrase is LDPE, whose Material Form is Bales, and whose Material Type is Post Consumer stores source POST_CONSUMER and a BALES form, and the token Stacked is a REQUIRED_MAPPING error with no new profile.",
+    "V3: plasticos_transaction/models/native_document_import.py _normalize_line calls normalize_crm_material and a worksheet LDPE grade A description classifies as LDPE film grade A with clean and dry.",
+    "V4: tests/test_phantom_enum_values.py exits 0."
+  ],
+  "scope": {
+    "in": [
+      "six plasticos.polymer seed records and their exact phrases",
+      "the LDPE grade A phrase family in _SPECS and the material map",
+      "removal of the 27 call-note aliases",
+      "form and source token classification onto existing masters",
+      "CRM section import of every comma-separated form and type token",
+      "ERP worksheet description classification through normalize_crm_material",
+      "version bumps of plasticos_material_profile, plasticos_crm_sync, and plasticos_transaction"
+    ],
+    "out": [
+      "new masters for tokens that match none: Stacked, Stretch Film (Thin), HMW, Frac Melt, Injection, Scrap/Cut, Thick Gauge, Rigid, and the rest of the no-master tail",
+      "the 38 pending_decision tokens and the held row Bottles (HD/PET)",
+      "LDPE grade B, LDPE grade C, and LDPE A Film (Clear Film In Bales)",
+      "packaging_type_id and origin_form_id",
+      "custom-table outage handling, skipped rows, and the two facility resolvers",
+      "the 30 deleted campaign docs on the current checkout",
+      "publication"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse --short HEAD && git status --porcelain",
+      "pass_criteria": "Observed docs/campaign-reorg-multiload-audit at dbecab74 with 30 deleted campaign docs. origin/Staging 9ee917e7 is an ancestor. The feature branch is cut from 9ee917e7 and those deletions stay unstaged.",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "read polymer_data.xml, _SPECS, _CRM_ALIASES, and the six no_master CSV rows",
+      "pass_criteria": "No code TPU, TEXTILE, PU_FOAM, PVB, UBC, or TPV exists. ldpe film a is grade A with empty attributes. ldpe grade a film and 99 clear ldpe film are grade A with clean and dry. The keys ldpe a film, ldpe film - grade a, ldpe film grade a, and 99% clear ldpe film are absent. Narrative aliases are present. The six CSV rows are status no_master.",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "test -f .pre-commit-config.yaml",
+      "pass_criteria": ".pre-commit-config.yaml is the hook catalog for this governed workspace.",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Insert six plasticos.polymer records in the noupdate=1 block of polymer_data.xml: polymer_tpu code TPU name TPU full_name Thermoplastic Polyurethane category engineering sequence 191; polymer_tpv code TPV name TPV full_name Thermoplastic Vulcanizate category engineering sequence 192; polymer_pvb code PVB name PVB full_name Polyvinyl Butyral category specialty sequence 221; polymer_pu_foam code PU_FOAM name PU Foam full_name Polyurethane Foam category specialty sequence 222; polymer_textile code TEXTILE name Textile full_name Textile category specialty sequence 311; polymer_ubc code UBC name UBC full_name Used Beverage Containers category specialty sequence 312. Leave resin_id_code empty. Bump plasticos_material_profile to 19.0.5.10.11.",
+      "files": [
+        "plasticos_material_profile/data/polymer_data.xml",
+        "plasticos_material_profile/__manifest__.py"
+      ],
+      "operation": "Insert",
+      "anchor": "polymer_data.xml data noupdate=1 block after polymer_1_7_commingled_bottles",
+      "effort": "small",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "shared_root_cause": "missing polymer master"
+    },
+    {
+      "id": "T2",
+      "task": "Add exact CRM phrases tpu, textile, pvb, ubc, and tpv to _CRM_EXACT with empty form, and add alias foam - pu to _CRM_ALIASES pointing at PU_FOAM with empty form.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py"
+      ],
+      "operation": "Insert",
+      "anchor": "_CRM_EXACT and _CRM_ALIASES",
+      "effort": "small",
+      "risk": "low",
+      "dependencies": ["T1"],
+      "leverage_rank": 1,
+      "shared_root_cause": "missing polymer master"
+    },
+    {
+      "id": "T3",
+      "task": "On the six CSV rows TPU, Textile, Foam - PU, PVB, UBC, and TPV, set status to mapped, fill polymer with TPU, TEXTILE, PU_FOAM, PVB, UBC, or TPV, set rule to crm_code except Foam - PU which is approved_alias, and set the note to master added 2026-11-03. Leave workbook_category as UNMAPPED. Bump plasticos_crm_sync to 19.0.1.9.16.",
+      "files": [
+        "plasticos_crm_sync/data/vanillasoft_material_mapping.csv",
+        "plasticos_crm_sync/__manifest__.py"
+      ],
+      "operation": "Replace",
+      "anchor": "vanillasoft_material_mapping.csv rows TPU through TPV",
+      "effort": "small",
+      "risk": "low",
+      "dependencies": ["T2"],
+      "leverage_rank": 2,
+      "shared_root_cause": "missing polymer master"
+    },
+    {
+      "id": "T4",
+      "task": "In _SPECS, change ldpe film a to the same tuple as ldpe grade a film: LDPE, FILM, no source, attributes clean and dry, grade A. Add ldpe a film, ldpe film - grade a, ldpe film grade a, and 99% clear ldpe film with that same tuple. Update the LDPE Film A CSV attributes column to clean dry and add mapped worksheet_phrase rows for the four new keys. Update the normalizer test that currently expects LDPE Film A to have no attributes.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/data/vanillasoft_material_mapping.csv"
+      ],
+      "operation": "Replace",
+      "anchor": "_SPECS key ldpe film a and test_material_normalizer grade_only assertion",
+      "effort": "small",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "shared_root_cause": "ldpe grade a wording"
+    },
+    {
+      "id": "T5",
+      "task": "Delete the 27 call-note keys from _CRM_ALIASES. The closed set is every current alias key matched by the narrative markers has, had, generates, generate, mentioned, mention, they, quote, sold, marketing, offered, and got, plus and occ -, .01 fob grade a mrp, ext218 - pp sacks, and the MRP quantity sentence. Set each matching CSV row to status held, clear polymer, form, grade, and attributes, and set rule to note_not_material. Freeze those 27 source tokens in a test that asserts each stays unresolved.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/data/vanillasoft_material_mapping.csv"
+      ],
+      "operation": "Delete",
+      "anchor": "_CRM_ALIASES narrative keys and their mapped CSV rows",
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "leverage_rank": 1,
+      "shared_root_cause": "call notes are not materials"
+    },
+    {
+      "id": "T6",
+      "task": "Add classify_form_token and classify_source_token in material_normalizer.py. A form token matches plasticos.material.form by name or code after whitespace collapse and case folding, with the extra alias rolls to ROLLSTOCK. A source token matches plasticos.source.type by name or code after treating hyphens as spaces, with virgin mapping to PRIME. A token that matches neither returns empty. Do not add masters.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/tests/test_material_normalizer.py"
+      ],
+      "operation": "Insert",
+      "anchor": "material_normalizer.py after normalize_crm_material",
+      "effort": "medium",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "shared_root_cause": "form and source tokens are dropped"
+    },
+    {
+      "id": "T7",
+      "task": "Make _material_field_kind treat type and type ( the same way _material_slot does. Split every hint on commas and keep every token in both _material_inputs and _parse_material_sections. After a phrase profile exists, apply each form token: fill an empty form_id, and when the profile already has a different form reuse a second profile for the same polymer and that form. Apply each source token through the existing empty-or-conflict source write. A type token that matches a form and not a source is a form token. A token that matches neither is REQUIRED_MAPPING naming the token and creates no profile. Stop the optional unsupported type hint notice for a token that classified as form or source.",
+      "files": [
+        "plasticos_crm_sync/services/orchestrator.py",
+        "plasticos_crm_sync/tests/test_orchestrator_upsert.py"
+      ],
+      "operation": "Replace",
+      "anchor": "_material_field_kind, _parse_material_sections hint branch, _import_section_materials, _write_profile_classification",
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": ["T6"],
+      "leverage_rank": 2,
+      "shared_root_cause": "form and source tokens are dropped"
+    },
+    {
+      "id": "T8",
+      "task": "Change _normalize_line to call normalize_crm_material. Bump plasticos_transaction to 19.0.2.3.50. Update both source assertions that currently require normalize_material( and forbid normalize_crm_material in native_document_import.py. Leave normalize_material itself as the _SPECS lookup.",
+      "files": [
+        "plasticos_transaction/models/native_document_import.py",
+        "plasticos_transaction/__manifest__.py",
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/tests/test_orchestrator_upsert.py"
+      ],
+      "operation": "Replace",
+      "anchor": "native_document_import.py _normalize_line and test_worksheet_import_still_calls_normalize_material",
+      "effort": "small",
+      "risk": "medium",
+      "dependencies": ["T4", "T5"],
+      "leverage_rank": 2,
+      "shared_root_cause": "erp worksheet ignores crm phrase rules"
+    },
+    {
+      "id": "T9",
+      "task": "Add tests for the six polymers, the six LDPE grade A phrases, the 27 unresolved note tokens, Bales plus Post Consumer on an LDPE section, Rolls to ROLLSTOCK, Virgin to PRIME, a comma pair Bales and Regrind as two forms, and Stacked as REQUIRED_MAPPING with no profile. Run ruff format on the edited Python.",
+      "files": [
+        "plasticos_material_profile/tests/test_material_normalizer.py",
+        "plasticos_crm_sync/tests/test_orchestrator_upsert.py"
+      ],
+      "operation": "Insert",
+      "anchor": "TestMaterialNormalizer and test_orchestrator_upsert material section tests",
+      "effort": "medium",
+      "risk": "low",
+      "dependencies": ["T3", "T4", "T5", "T7", "T8"],
+      "leverage_rank": 3
+    },
+    {
+      "id": "T10",
+      "task": "Run the V1, V2, V3, and V4 commands. If tests/test_phantom_enum_values.py flags one of the new polymer codes, add that code to GLOBAL_ALLOWLIST with a comment that it is a polymer master code.",
+      "files": [
+        "plasticos_material_profile/models/material_normalizer.py",
+        "plasticos_material_profile/__manifest__.py",
+        "plasticos_crm_sync/__manifest__.py",
+        "plasticos_transaction/__manifest__.py",
+        "tests/test_phantom_enum_values.py"
+      ],
+      "operation": "Wrap",
+      "anchor": "GLOBAL_ALLOWLIST only when the phantom-enum test fails",
+      "effort": "small",
+      "risk": "low",
+      "dependencies": ["T9"],
+      "leverage_rank": 4
+    }
+  ],
+  "critical_path": ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10"],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "The six polymers, the LDPE grade A family, and the note-alias removal agree between the phrase tables and the CSV.",
+      "unlocks": "TestVanillaSoftMaterialMap can pass and both importers share one phrase result."
+    },
+    {
+      "id": "M2",
+      "outcome": "Recognized form and source tokens are stored on profiles, and the worksheet line uses the CRM phrase function.",
+      "unlocks": "A later CRM import and a later ERP import keep grade, form, and source that the current code drops."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T1",
+      "evidence_required": "polymer_data.xml contains exactly one record per new code and the manifest version is 19.0.5.10.11.",
+      "no_go_action": "Stop before phrase edits if any new code collides with an existing record."
+    },
+    {
+      "id": "C2",
+      "after": "T5",
+      "evidence_required": "Every remaining phrase-table key has a mapped CSV row, and every held note row is unresolved.",
+      "no_go_action": "Do not switch the ERP call until the note keys are gone from both tables."
+    },
+    {
+      "id": "C3",
+      "after": "T7",
+      "evidence_required": "A fixture with Material Form Bales and Material Type Post Consumer writes those masters, and Stacked writes no profile.",
+      "no_go_action": "Stop if a token with no master created a polymer or a form."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No module is added or removed and the project structure list does not name polymer codes or phrase rules."
+    },
+    {
+      "surface": "plasticos_material_profile/README.md",
+      "action": "n_a",
+      "reason": "The README does not enumerate polymer codes or importer phrase rules."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does a seeded master with no phrase still leave the VanillaSoft token unresolved, so the map test fails if only T1 lands?",
+      "Does changing ldpe film a to clean and dry leave the CSV attributes column empty and fail the map comparison?",
+      "Does removing a note alias while its CSV row stays mapped fail the unresolved-row assertion?",
+      "Does a second form profile overwrite the phrase form FILM instead of keeping both?",
+      "Does calling normalize_crm_material from the worksheet also import the 27 note sentences if T5 is skipped?"
+    ],
+    "assumed_false_ifs": [
+      "A new xml id inside noupdate=1 is skipped on upgrade. It is not: noupdate skips later writes of an existing xml id, and a new id is inserted.",
+      "Bales and Loose belong on packaging_type_id because a packaging master shares the name. They do not in this change: the source column is Material Form and the form master is the write target.",
+      "Stacked, Stretch Film, and HMW can be assigned an existing polymer by similarity. They cannot: a token with no master is REQUIRED_MAPPING.",
+      "normalize_material itself grows the alias table. It does not: the worksheet call switches to normalize_crm_material, and _SPECS stays the worksheet-phrase table."
+    ],
+    "blast_radius": "Installed databases gain six polymer rows on the next plasticos_material_profile upgrade. CRM imports gain profiles for the six tokens and for recognized form and source values, and they stop gaining profiles from the 27 note sentences. ERP worksheet lines that match a CRM phrase, including bare polymer codes and the LDPE grade A family, classify the same way CRM does. Grade B and grade C lines are unchanged. Tokens with no master stay unmapped.",
+    "rollback": "Revert the feature branch. The new xml ids can be archived with active false if a database already loaded them. Do not drop columns or tables. Profiles already created by a note sentence are not deleted by this change."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T1", "T4", "T5", "T6", "T2", "T7", "T8", "T3", "T9", "T10"],
+    "shared_causes": [
+      "One missing master blocks each of the six tokens. The phrase and the map row move together.",
+      "One grade A tuple covers the six LDPE wordings. The ERP gap is the call site, not a second phrase table.",
+      "One classifier covers form and source. Unmatched tokens stay errors instead of becoming a second taxonomy."
+    ],
+    "deletions_or_consolidations": [
+      "The 27 note aliases are deleted rather than rewritten. No new model, field, or packaging master is added.",
+      "ERP joins the existing CRM phrase function instead of copying _SPECS, _CRM_EXACT, and _CRM_ALIASES."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Used Beverage Containers is a display expansion of UBC, not a chemical name confirmed by the workbook.",
+      "mitigation": "Code and source phrase stay UBC. Only full_name carries the expansion, and the plan records it as an accepted bound."
+    },
+    {
+      "risk": "Bare LDPE on a worksheet line becomes LDPE film once the ERP call uses the CRM function.",
+      "mitigation": "That is the CRM rule the operator asked the worksheet path to follow. Grade B and grade C phrases stay on their current tuples."
+    },
+    {
+      "risk": "An explicit Bales form beside a phrase that already inferred FILM creates two profiles.",
+      "mitigation": "The phrase profile is kept and the form token adds the second profile. The form token does not replace FILM."
+    },
+    {
+      "risk": "Cutting the branch from the current docs checkout would publish unpublished campaign docs and the 30 deletions.",
+      "mitigation": "The feature branch base is origin/Staging 9ee917e7. The deletions stay unstaged."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "What full_name does UBC display?",
+      "decision_effect": "Display text only. The code and the source phrase stay UBC either way.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Is Textile a resin or a catalog class?",
+      "decision_effect": "Category and full_name. The code stays TEXTILE and no form is inferred.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U3",
+      "question": "Which form and type tokens with no current master become new masters?",
+      "decision_effect": "Only tokens that already match a master are imported. Stacked, Stretch Film (Thin), HMW, Frac Melt, Injection, Scrap/Cut, Thick Gauge, Rigid, and the remaining unmatched tail stay REQUIRED_MAPPING until a later decision names a master.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "ruff check plasticos_material_profile plasticos_crm_sync plasticos_transaction && ruff format --check plasticos_material_profile plasticos_crm_sync plasticos_transaction && pre-commit run --config .pre-commit-config.yaml --files plasticos_material_profile/data/polymer_data.xml plasticos_material_profile/models/material_normalizer.py plasticos_material_profile/__manifest__.py plasticos_material_profile/tests/test_material_normalizer.py plasticos_crm_sync/data/vanillasoft_material_mapping.csv plasticos_crm_sync/__manifest__.py plasticos_crm_sync/services/orchestrator.py plasticos_crm_sync/tests/test_orchestrator_upsert.py plasticos_transaction/models/native_document_import.py plasticos_transaction/__manifest__.py",
+      "pass_criteria": "ruff and the .pre-commit-config.yaml hooks exit 0 on the touched files.",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make test-module m=plasticos_material_profile && make test-module m=plasticos_crm_sync",
+      "pass_criteria": "Both module test runs report zero failures. The six polymer phrases and the six LDPE grade A phrases resolve as named in the success criteria. The 27 note tokens stay unresolved. Bales and Post Consumer are stored. Stacked creates no profile.",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "make test-module m=plasticos_transaction",
+      "pass_criteria": "The transaction module tests report zero failures, and a worksheet description in the LDPE grade A family classifies as LDPE film grade A with clean and dry.",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "python3 -m pytest tests/test_phantom_enum_values.py -q",
+      "pass_criteria": "The phantom-enum test exits 0.",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "cursor-build",
+    "stop_reason": "Plan is ready for Build. V1 through V4 have not run because this step is planning only. U1, U2, and U3 are accepted bounds: unmatched form and type tokens are reported and not guessed."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "plasticos_material_profile/data/polymer_data.xml",
+      "plasticos_material_profile/models/material_normalizer.py",
+      "plasticos_material_profile/tests/test_material_normalizer.py",
+      "plasticos_material_profile/__manifest__.py",
+      "plasticos_crm_sync/data/vanillasoft_material_mapping.csv",
+      "plasticos_crm_sync/__manifest__.py",
+      "plasticos_crm_sync/services/orchestrator.py",
+      "plasticos_crm_sync/tests/test_orchestrator_upsert.py",
+      "plasticos_transaction/models/native_document_import.py",
+      "plasticos_transaction/__manifest__.py",
+      "tests/test_phantom_enum_values.py"
+    ],
+    "must_not_modify": [
+      "plasticos_material_profile/models/polymer.py",
+      "docs/campaigns/10-30-26/",
+      "packaging_type_id and origin_form_id",
+      "LDPE grade B and grade C phrases",
+      "the 38 pending_decision CSV rows",
+      "the held row Bottles (HD/PET)"
+    ],
+    "preserved_contracts": [
+      "plasticos.polymer unique code constraint",
+      "exact phrase match after whitespace collapse and case folding",
+      "new xml ids live in the noupdate=1 block",
+      "every remaining importer phrase stays listed as a mapped row",
+      "a token with no master does not create a profile",
+      "normalize_material remains the _SPECS lookup"
+    ],
+    "validation_commands": [
+      "ruff check plasticos_material_profile plasticos_crm_sync plasticos_transaction",
+      "pre-commit run --config .pre-commit-config.yaml --files <touched files>",
+      "make test-module m=plasticos_material_profile",
+      "make test-module m=plasticos_crm_sync",
+      "make test-module m=plasticos_transaction",
+      "python3 -m pytest tests/test_phantom_enum_values.py -q"
+    ]
+  }
+}

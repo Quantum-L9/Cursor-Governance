@@ -1,0 +1,47 @@
+{
+  "notes": [
+    "This is a snapshot, not merge permission or current CI proof.",
+    "GitHub mergeable=true is not readiness. mergeable_state blocked/unstable must be resolved before merge.",
+    ".github #255 is a documentation candidate, not its final strategy/ adoption."
+  ],
+  "observation_date": "2026-11-17",
+  "snapshots": [
+    {
+      "base": "main",
+      "head": "922427b28ef929917c94ef0d4bf2ffa67b1bef79",
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "number": 255,
+      "only_after_gates": true,
+      "order": 1,
+      "repo": "Quantum-L9/.github",
+      "role": "candidate staging prerequisite",
+      "state": "open"
+    },
+    {
+      "base": "main",
+      "head": "92a347ff7c3195580ab069779e63fa3454a1c11d",
+      "mergeable": true,
+      "mergeable_state": "unstable",
+      "number": 1011,
+      "only_after_gates": true,
+      "order": 1,
+      "repo": "Quantum-L9/Cursor-Governance",
+      "role": "strategic-plan skill prerequisite",
+      "state": "open"
+    },
+    {
+      "base": "skills/l9-strategic-plan",
+      "head": "5f175329a002ee819895ce6a4df3e40da7919378",
+      "mergeable": true,
+      "mergeable_state": "unstable",
+      "number": 1030,
+      "only_after_gates": true,
+      "order": 2,
+      "repo": "Quantum-L9/Cursor-Governance",
+      "role": "stacked planner mode prerequisite",
+      "state": "open"
+    }
+  ],
+  "source": "GitHub read-only connector: exact PR endpoints"
+}
