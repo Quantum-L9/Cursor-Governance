@@ -1,0 +1,14 @@
+{
+  "run_id": "gar-infisical-vault-is-the-grant",
+  "governing_cause": "root_env_keys is a second gate narrower than Infisical prod /, and SessionStart names only four secrets, so a vault name is not treated as authorized until a human repeats it.",
+  "intervention": "The live prod / listing is the authorization set. The committed allow-list mirrors it. Bind stays in-process. SessionStart publishes the name catalog. Machine-identity client secrets stay unissued. The operator-only refusal and its hosted IAM forbid are removed. MCP servers whose env name is a vault name spawn with that name bound into the child environment only.",
+  "evidence_paths": [
+    "ops/secrets/infisical-cursor-governance.yaml",
+    "ops/secrets/capability_bind.py",
+    "ops/secrets/session_start_secrets.py",
+    "ops/secrets/operator_only_iam.py",
+    "ops/secrets/vault_mcp_bridge.py",
+    "skills/l9-secrets/SKILL.md",
+    "environment/mcp/master.mcp.json"
+  ]
+}

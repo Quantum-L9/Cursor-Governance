@@ -1,0 +1,9 @@
+{
+  "run_id": "gar-unblock-operator-alignment",
+  "governing_cause": "The campaign closeout is blocked on one missing operator-scoped source class. Architect, Planner, and the consumer cannot activate until a producer receipt exists. Registering strategy/ as global canonical law, rewriting l9.compiler/generic@1, inventing a Meta Planner mode, or treating a JSON omission as an access-control boundary would clear the status by violating the admitted invariants.",
+  "intervention": "Add a successor compiler contract for an operator-scoped source class, implement only the compiler adapter that contract names, and bind the Cursor consumer to the resulting receipt. Do not edit the five sealed YAML files, do not register strategy/ in the global canonical registry, do not change Planner or CTO activation defaults, and do not overwrite the #256 admission text. Leave Coding Agent privacy and Meta Planner explicitly blocked.",
+  "evidence_paths": [
+    "docs/campaigns/11-17-26/L9_Operator_Alignment_CTO_Campaign_v1.1.0/EVIDENCE_COLLECTION.md",
+    "docs/campaigns/11-17-26/L9_Operator_Alignment_CTO_Campaign_v1.1.0/GATES.md"
+  ]
+}
