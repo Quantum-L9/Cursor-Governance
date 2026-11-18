@@ -212,6 +212,25 @@ def _consumer_project_python(cwd: Path) -> Path | None:
         timeout=600,
     )
     if installed.returncode != 0:
+        # A consumer repo without a [project] table (an Odoo addon suite, for
+        # example) cannot be editable-installed, and its canonical dev
+        # dependencies live in requirements-dev.txt. Provision from that, then
+        # requirements.txt, before giving up: an empty venv fails every
+        # validation command downstream with "No module named pytest".
+        for req in ("requirements-dev.txt", "requirements.txt"):
+            req_path = cwd / req
+            if not req_path.is_file():
+                continue
+            fallback = subprocess.run(
+                [uv, "pip", "install", "--python", str(python), "-r", str(req_path)],
+                cwd=str(root),
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=600,
+            )
+            if fallback.returncode == 0:
+                return python
         return python
     return python
 
