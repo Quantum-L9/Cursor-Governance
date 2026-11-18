@@ -113,6 +113,28 @@ class PolicyValidationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validator.load_yaml(path)
 
+    def test_mutable_canonical_ref_fails(self) -> None:
+        policy = copy.deepcopy(self.policy)
+        source = policy["metadata"]["canonical_source"]
+        source.pop("revision", None)
+        source["branch"] = "main"
+        findings = self.validate(policy)
+        self.assertIn("CANONICAL_REF_MUTABLE", self.codes(findings))
+
+    def test_unknown_critical_assertion_fails(self) -> None:
+        policy = copy.deepcopy(self.policy)
+        target = next(
+            invariant
+            for invariant in policy["invariants"]
+            if invariant.get("severity") == "critical"
+        )
+        target["assertion"] = {
+            "type": "not_a_registered_assertion",
+            "version": 1,
+        }
+        findings = self.validate(policy)
+        self.assertIn("UNKNOWN_CRITICAL_ASSERTION", self.codes(findings))
+
     def test_release_schema_requires_full_commit(self) -> None:
         schema = validator.load_yaml(ROOT / "releases" / "POLICY_RELEASE.schema.yaml")
         findings: list[Any] = []

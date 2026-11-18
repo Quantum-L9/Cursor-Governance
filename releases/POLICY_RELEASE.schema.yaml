@@ -31,10 +31,10 @@ properties:
     pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
   canonical_repository:
     type: string
-    const: Quantum-L9/Cursor-Governance
+    const: Quantum-L9/.github
   canonical_path:
     type: string
-    const: ORG_INVARIANTS.yaml
+    const: policies/ORG_INVARIANTS.yaml
   canonical_commit:
     type: string
     pattern: "^[0-9a-f]{40}$"
