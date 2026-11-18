@@ -15,7 +15,6 @@ todos:
     content: Extend test_pr_lifecycle.py and test_python_contract.py; add hook stdout fixture test
     status: in_progress
 isProject: false
-status: partially-built
 ---
 
 # Gate failure receipt — stop looping

@@ -41,7 +41,6 @@ kernel_pass:
       - "Exclusive workspace is cursor__stop-gen-snap-v2; do not write the primary clone"
       - "Do not run make campaign or admit a Program Lock"
       - "pytest and conformance stay on CI"
-status: partially-built
 ---
 
 # Remediator remaining speed (4.4.0)

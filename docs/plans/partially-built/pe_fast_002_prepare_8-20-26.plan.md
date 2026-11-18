@@ -48,7 +48,6 @@ todos:
     content: Run make improve kernels, make pr-check, then PR_BASE=origin/<PR224 head> PR_REMEDIATE=0 make pr; do not merge — ancestors land bottom-up first
     status: pending
 isProject: false
-status: partially-built
 ---
 
 # PE-FAST-002 — Zero-Friction Prepare / Resume

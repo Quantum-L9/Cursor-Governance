@@ -27,7 +27,6 @@ todos:
     content: Open PR `feat/tier2-schema-proposer-behavioral-tests` with kernel-anchored body, non-goals, and follow-up notes (ApprovalDecision duplication, fixture-shape reconciliation, potential INV-SEC PR)
     status: in_progress
 isProject: false
-status: partially-built
 ---
 
 # Tier-2 Behavioral Tests + Kernel Name-Invariant Guard for `schema_proposer`
