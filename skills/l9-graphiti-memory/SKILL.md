@@ -390,3 +390,13 @@ bash .cursor-commands/ops/graphiti/test_gate_e2e_full.sh
 5. `ops/memory/README.md` (caller taxonomy), `ops/config/memory-binding.json`, `ops/graphiti/group_registry.yaml` (hints, no grants), `environment/agents/adapters/claude-code/memory/memory-enforcement.contract.json` (`interactive_memory_write`)
 6. `skills/l9-end-session/SKILL.md` — session-close repair path
 7. `docs/decisions/ADR-0005-one-agent-memory-domain-out-of-band.md`
+
+## Hosted release 3.0.0 (2026-11-16)
+
+Append-only. Tag `v3.0.0` is the admitted hosted Memory release (source
+`d8b33870c33dc4625f177282c5e99c888356efd8`), deployed 2026-11-16 by
+Quantum-L9/l9-deploy run 43786931510. Hosted MCP is authenticated Streamable
+HTTP (CANONICAL_LAW §8.10). This checkout's bound package remains
+`l9-graphite-memory==2.6.0` (local stdio) until a separate rebind. Do not
+install 3.0.0 over that pin. The wheel is not on PyPI. The skill pack version
+above is unchanged.
